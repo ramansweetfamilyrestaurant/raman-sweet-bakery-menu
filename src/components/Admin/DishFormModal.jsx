@@ -191,6 +191,53 @@ export default function DishFormModal({ dish, categories, token, onSave, onClose
                   fontSize: '0.9rem'
                 }}
               />
+              <div style={{ display: 'flex', gap: '4px', marginTop: '6px', flexWrap: 'wrap' }}>
+                <button
+                  type="button"
+                  onClick={() => setBadge(badge === 'Must Try' ? '' : 'Must Try')}
+                  style={{
+                    fontSize: '0.68rem',
+                    fontWeight: 700,
+                    padding: '2px 8px',
+                    borderRadius: 'var(--radius-pill)',
+                    background: badge === 'Must Try' ? '#FEF3C7' : '#F3F4F6',
+                    color: badge === 'Must Try' ? '#D97706' : '#374151',
+                    border: badge === 'Must Try' ? '1px solid #F59E0B' : '1px solid #D1D5DB'
+                  }}
+                >
+                  ⭐ Must Try
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setBadge(badge === 'Bestseller' ? '' : 'Bestseller')}
+                  style={{
+                    fontSize: '0.68rem',
+                    fontWeight: 700,
+                    padding: '2px 8px',
+                    borderRadius: 'var(--radius-pill)',
+                    background: badge === 'Bestseller' ? '#FFEDD5' : '#F3F4F6',
+                    color: badge === 'Bestseller' ? '#C2410C' : '#374151',
+                    border: badge === 'Bestseller' ? '1px solid #FB923C' : '1px solid #D1D5DB'
+                  }}
+                >
+                  🔥 Bestseller
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setBadge(badge === 'Special' ? '' : 'Special')}
+                  style={{
+                    fontSize: '0.68rem',
+                    fontWeight: 700,
+                    padding: '2px 8px',
+                    borderRadius: 'var(--radius-pill)',
+                    background: badge === 'Special' ? '#E0E7FF' : '#F3F4F6',
+                    color: badge === 'Special' ? '#4338CA' : '#374151',
+                    border: badge === 'Special' ? '1px solid #818CF8' : '1px solid #D1D5DB'
+                  }}
+                >
+                  ✨ Special
+                </button>
+              </div>
             </div>
           </div>
 

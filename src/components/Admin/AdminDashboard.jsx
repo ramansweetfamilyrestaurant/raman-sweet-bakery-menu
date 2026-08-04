@@ -74,6 +74,28 @@ export default function AdminDashboard({ token, username, onLogout, onReturnToMe
     }
   };
 
+  const handleToggleMustTry = async (dish) => {
+    const isMustTry = dish.badge === 'Must Try';
+    const newBadge = isMustTry ? '' : 'Must Try';
+    try {
+      const res = await fetch(`/api/admin/dishes/${dish.id}`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({
+          ...dish,
+          badge: newBadge
+        })
+      });
+      if (!res.ok) throw new Error('Failed');
+      setDishes(dishes.map(d => d.id === dish.id ? { ...d, badge: newBadge } : d));
+    } catch (err) {
+      alert('Failed to update Must Try status');
+    }
+  };
+
   const handleDeleteDish = async (id) => {
     if (!window.confirm('Are you sure you want to delete this dish?')) return;
     try {
@@ -437,7 +459,27 @@ export default function AdminDashboard({ token, username, onLogout, onReturnToMe
                     </div>
                   </div>
 
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '4px', flexShrink: 0 }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '4px', flexShrink: 0, flexWrap: 'wrap' }}>
+                    <button
+                      onClick={() => handleToggleMustTry(dish)}
+                      title={dish.badge === 'Must Try' ? 'Remove Must Try' : 'Mark as Must Try'}
+                      style={{
+                        padding: '4px 8px',
+                        borderRadius: 'var(--radius-pill)',
+                        fontSize: '0.72rem',
+                        fontWeight: 700,
+                        background: dish.badge === 'Must Try' ? '#FEF3C7' : '#F3F4F6',
+                        color: dish.badge === 'Must Try' ? '#D97706' : '#4B5563',
+                        border: dish.badge === 'Must Try' ? '1px solid #F59E0B' : '1px solid #D1D5DB',
+                        display: 'inline-flex',
+                        alignItems: 'center',
+                        gap: '3px'
+                      }}
+                    >
+                      <Star size={11} fill={dish.badge === 'Must Try' ? '#D97706' : 'none'} color={dish.badge === 'Must Try' ? '#D97706' : '#4B5563'} />
+                      {dish.badge === 'Must Try' ? 'Must Try' : '+ Must Try'}
+                    </button>
+
                     <button
                       onClick={() => handleToggleDish(dish.id, dish.available)}
                       style={{
