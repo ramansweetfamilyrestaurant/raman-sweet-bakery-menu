@@ -343,7 +343,7 @@ export default function App() {
             const catDisplayName = (lang === 'hi' && group.category.name_hi) ? group.category.name_hi : group.category.name;
 
             return (
-              <section key={gIdx} id={`cat-sec-${group.category.id}`} style={{ marginBottom: '28px' }}>
+              <section key={gIdx} id={`cat-sec-${group.category.id}`} style={{ marginBottom: '28px', scrollMarginTop: '110px' }}>
                 {/* Category Header Banner */}
                 <div style={{
                   background: 'var(--primary-emerald)',
