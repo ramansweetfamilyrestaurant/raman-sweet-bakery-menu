@@ -2,7 +2,6 @@ import React, { useState, useEffect, useMemo } from 'react';
 import CustomerHeader from './components/CustomerHeader';
 import MenuCardItem from './components/MenuCardItem';
 import SearchBar from './components/SearchBar';
-import CategoryNav from './components/CategoryNav';
 import DishCard from './components/DishCard';
 import DishModal from './components/DishModal';
 import RestaurantInfoModal from './components/RestaurantInfoModal';
@@ -204,13 +203,7 @@ export default function App() {
         onQuickFilter={(filterVal) => setSearchQuery(filterVal)}
       />
 
-      {/* Category Horizontal Navigation Scroll */}
-      <CategoryNav
-        categories={categories}
-        selectedCategory={selectedCategory}
-        onSelectCategory={(catId) => scrollToCategory(catId)}
-        lang={lang}
-      />
+
 
       {/* Toolbar: View Switcher */}
       <div style={{
