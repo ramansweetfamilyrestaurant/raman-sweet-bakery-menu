@@ -1,0 +1,100 @@
+:root {
+  /* 7-Star Luxury Taj/Oberoi Resort Palette */
+  --bg-app: #F6F4EE;
+  --bg-card: #FFFFFF;
+  --bg-card-soft: #FAF8F5;
+  --bg-secondary: #F1EFE8;
+
+  --primary-emerald: #0A2315;
+  --emerald-gradient: linear-gradient(135deg, #0A2315 0%, #164E2A 100%);
+  --emerald-accent: #15803D;
+
+  --gold-primary: #C5A059;
+  --gold-bright: #D4AF37;
+  --gold-soft: #F9F5EB;
+  --gold-border: rgba(197, 160, 89, 0.4);
+  --gold-gradient: linear-gradient(135deg, #DFBA67 0%, #C5A059 50%, #9B7733 100%);
+
+  --text-dark: #1C1917;
+  --text-muted: #666157;
+  --text-gold: #B88E3E;
+
+  --veg-green: #15803D;
+  --veg-green-bg: #DCFCE7;
+
+  --shadow-sm: 0 2px 8px rgba(10, 35, 21, 0.04);
+  --shadow-md: 0 6px 18px rgba(10, 35, 21, 0.08);
+  --shadow-lg: 0 12px 30px rgba(10, 35, 21, 0.14);
+  --shadow-gold: 0 6px 16px rgba(197, 160, 89, 0.25);
+
+  --font-heading: 'Playfair Display', Georgia, serif;
+  --font-body: 'Plus Jakarta Sans', system-ui, -apple-system, sans-serif;
+
+  --radius-sm: 12px;
+  --radius-md: 18px;
+  --radius-lg: 24px;
+  --radius-pill: 9999px;
+
+  --transition-fast: 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+  --transition-smooth: 0.35s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+  -webkit-tap-highlight-color: transparent;
+  user-select: none;
+}
+
+body {
+  font-family: var(--font-body);
+  background-color: #0B130E; /* Dark slate outer frame for desktop */
+  color: var(--text-dark);
+  line-height: 1.4;
+  min-height: 100vh;
+  display: flex;
+  justify-content: center;
+  align-items: flex-start;
+}
+
+/* Mobile App Shell Container */
+#root {
+  width: 100%;
+  max-width: 480px;
+  min-height: 100vh;
+  background-color: var(--bg-app);
+  box-shadow: 0 0 50px rgba(0, 0, 0, 0.6);
+  margin: 0 auto;
+  position: relative;
+  overflow-x: hidden;
+  -webkit-overflow-scrolling: touch;
+}
+
+button {
+  font-family: var(--font-body);
+  cursor: pointer;
+  border: none;
+  background: none;
+}
+
+/* Animations */
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(6px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+@keyframes pulseGlow {
+  0% { box-shadow: 0 0 0 0 rgba(212, 175, 55, 0.4); }
+  70% { box-shadow: 0 0 0 8px rgba(212, 175, 55, 0); }
+  100% { box-shadow: 0 0 0 0 rgba(212, 175, 55, 0); }
+}
+
+/* Custom Scrollbar */
+::-webkit-scrollbar {
+  display: none;
+}

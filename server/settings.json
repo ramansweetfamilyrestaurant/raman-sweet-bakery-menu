@@ -1,0 +1,16 @@
+{
+  "name": "Raman Sweet Bakery & Family Restaurant",
+  "tagline": "100% Pure Vegetarian",
+  "badge": "100% Pure Veg",
+  "logo": "/uploads/logo.jpg",
+  "openingHours": "8:00 AM - 10:30 PM (Mon - Sun)",
+  "phone": "+91 98765 43210",
+  "address": "Main Market Road, Near City Clock Tower, GT Road",
+  "google_review_url": "https://g.page/r/ramansweetbakery/review",
+  "highlights": [
+    "Pure Desi Ghee Sweets",
+    "Fresh Live Bakery & Custom Cakes",
+    "Authentic Tandoori North Indian",
+    "Traditional South Indian Dosa & Idli"
+  ]
+}
