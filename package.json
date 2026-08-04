@@ -7,7 +7,7 @@
     "dev:server": "node server/index.js",
     "dev:client": "vite",
     "dev": "concurrently \"npm run dev:server\" \"npm run dev:client\"",
-    "build": "vite build",
+    "build": "npm install && vite build",
     "start": "node server/index.js"
   },
   "dependencies": {
