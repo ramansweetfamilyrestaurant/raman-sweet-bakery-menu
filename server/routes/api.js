@@ -70,13 +70,21 @@ router.get('/dishes', async (req, res) => {
     }
 
     if (q && q.trim() !== '') {
-      const searchPattern = `%${q.trim().toLowerCase()}%`;
-      params.push(searchPattern);
-      const pNum1 = params.length;
-      params.push(searchPattern);
-      const pNum2 = params.length;
-
-      sql += ` AND (LOWER(d.name) LIKE $${pNum1} OR LOWER(d.description) LIKE $${pNum2})`;
+      const trimmedQ = q.trim().toLowerCase();
+      if (trimmedQ === 'under100' || trimmedQ === '100' || trimmedQ === 'under 100') {
+        sql += ` AND d.price <= 100`;
+      } else {
+        const searchPattern = `%${trimmedQ}%`;
+        params.push(searchPattern);
+        const pNum = params.length;
+        sql += ` AND (
+          LOWER(d.name) LIKE $${pNum} 
+          OR LOWER(COALESCE(d.description, '')) LIKE $${pNum} 
+          OR LOWER(COALESCE(d.badge, '')) LIKE $${pNum} 
+          OR LOWER(COALESCE(d.ingredients, '')) LIKE $${pNum} 
+          OR LOWER(COALESCE(c.name, '')) LIKE $${pNum}
+        )`;
+      }
     }
 
     sql += ` ORDER BY d.id DESC`;

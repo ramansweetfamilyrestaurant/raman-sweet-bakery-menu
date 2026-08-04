@@ -1,20 +1,21 @@
 import React from 'react';
-import { Search, X, Sparkles } from 'lucide-react';
+import { Search, X } from 'lucide-react';
 
 export default function SearchBar({ value, onChange, onClear, onQuickFilter }) {
   const filters = [
-    { label: 'All', value: '' },
+    { label: '✨ All', value: '' },
     { label: '⭐ Must Try', value: 'Must Try' },
     { label: '🥛 Desi Ghee', value: 'Ghee' },
     { label: '🍰 Cakes', value: 'Cake' },
-    { label: '⚡ Under 100', value: '50' }
+    { label: '⚡ Under 100', value: 'under100' }
   ];
 
   return (
     <div style={{
       maxWidth: '800px',
       margin: '0 auto',
-      padding: '12px 14px 4px',
+      width: '100%',
+      padding: '10px 12px 4px',
     }}>
       {/* Search Input Box */}
       <div style={{
@@ -25,7 +26,7 @@ export default function SearchBar({ value, onChange, onClear, onQuickFilter }) {
         marginBottom: '8px'
       }}>
         <Search 
-          size={17} 
+          size={16} 
           color="var(--text-muted)" 
           style={{
             position: 'absolute',
@@ -41,12 +42,12 @@ export default function SearchBar({ value, onChange, onClear, onQuickFilter }) {
           placeholder="Search sweets, thali, dosa, cakes, chai..."
           style={{
             width: '100%',
-            padding: '10px 38px 10px 38px',
-            fontSize: '0.88rem',
+            padding: '9px 36px 9px 36px',
+            fontSize: '0.84rem',
             fontWeight: 500,
             background: '#FFFFFF',
             color: 'var(--text-dark)',
-            border: '1px solid var(--border-light)',
+            border: '1.5px solid var(--border-light)',
             borderRadius: 'var(--radius-pill)',
             boxShadow: 'var(--shadow-sm)',
             outline: 'none',
@@ -59,7 +60,7 @@ export default function SearchBar({ value, onChange, onClear, onQuickFilter }) {
             onClick={onClear}
             style={{
               position: 'absolute',
-              right: '12px',
+              right: '10px',
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
@@ -81,27 +82,32 @@ export default function SearchBar({ value, onChange, onClear, onQuickFilter }) {
         gap: '6px',
         overflowX: 'auto',
         scrollbarWidth: 'none',
-        msOverflowStyle: 'none'
+        msOverflowStyle: 'none',
+        paddingBottom: '2px'
       }}>
-        {filters.map((f, i) => (
-          <button
-            key={i}
-            onClick={() => onQuickFilter(f.value)}
-            style={{
-              fontSize: '0.7rem',
-              fontWeight: 700,
-              padding: '3px 10px',
-              borderRadius: 'var(--radius-pill)',
-              background: value === f.value ? 'var(--primary-emerald)' : '#FFFFFF',
-              color: value === f.value ? '#FFFFFF' : 'var(--text-dark)',
-              border: '1px solid var(--border-light)',
-              whiteSpace: 'nowrap',
-              transition: 'var(--transition-fast)'
-            }}
-          >
-            {f.label}
-          </button>
-        ))}
+        {filters.map((f, i) => {
+          const isSelected = value === f.value || (f.value === '' && !value);
+          return (
+            <button
+              key={i}
+              onClick={() => onQuickFilter(value === f.value ? '' : f.value)}
+              style={{
+                fontSize: '0.72rem',
+                fontWeight: 700,
+                padding: '4px 11px',
+                borderRadius: 'var(--radius-pill)',
+                background: isSelected ? 'var(--primary-emerald)' : '#FFFFFF',
+                color: isSelected ? '#FFFFFF' : 'var(--text-dark)',
+                border: isSelected ? '1.5px solid var(--gold-bright)' : '1px solid var(--border-light)',
+                whiteSpace: 'nowrap',
+                transition: 'var(--transition-fast)',
+                boxShadow: 'var(--shadow-sm)'
+              }}
+            >
+              {f.label}
+            </button>
+          );
+        })}
       </div>
     </div>
   );
