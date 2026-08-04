@@ -135,7 +135,7 @@ export default function MenuCardItem({ dish, lang, onClick }) {
                 whiteSpace: 'nowrap'
               }}
             >
-              H {dish.price_half}
+              Half {dish.price_half}
             </button>
 
             <button
@@ -155,7 +155,7 @@ export default function MenuCardItem({ dish, lang, onClick }) {
                 whiteSpace: 'nowrap'
               }}
             >
-              F {dish.price}
+              Full {dish.price}
             </button>
           </div>
         ) : (
