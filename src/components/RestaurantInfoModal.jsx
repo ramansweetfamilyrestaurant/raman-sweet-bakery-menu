@@ -150,27 +150,52 @@ export default function RestaurantInfoModal({ info, onClose }) {
             <p style={{ fontSize: '0.82rem', color: 'var(--text-muted)', paddingLeft: '24px', marginBottom: '8px' }}>
               {info?.address || 'HawaiAdda Chowk,Near katchari Gumti,Motihari,Bihar'}
             </p>
-            <a
-              href={info?.google_review_url || 'https://share.google/2M5mFMPlmS6pAXRf7'}
-              target="_blank"
-              rel="noopener noreferrer"
-              style={{
-                display: 'inline-flex',
-                alignItems: 'center',
-                gap: '6px',
-                background: 'var(--bg-secondary)',
-                color: 'var(--primary-emerald)',
-                border: '1px solid var(--border-light)',
-                padding: '6px 14px',
-                borderRadius: 'var(--radius-pill)',
-                fontSize: '0.78rem',
-                fontWeight: 700,
-                marginLeft: '24px',
-                textDecoration: 'none'
-              }}
-            >
-              📍 Get Google Maps Directions <ExternalLink size={12} />
-            </a>
+            <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', marginLeft: '24px' }}>
+              <a
+                href={info?.google_maps_url || 'https://maps.google.com/?q=HawaiAdda+Chowk,+Near+katchari+Gumti,+Motihari,+Bihar'}
+                target="_blank"
+                rel="noopener noreferrer"
+                style={{
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: '6px',
+                  background: 'var(--bg-secondary)',
+                  color: 'var(--primary-emerald)',
+                  border: '1px solid var(--border-light)',
+                  padding: '6px 14px',
+                  borderRadius: 'var(--radius-pill)',
+                  fontSize: '0.78rem',
+                  fontWeight: 700,
+                  textDecoration: 'none'
+                }}
+              >
+                📍 Get Google Maps Directions <ExternalLink size={12} />
+              </a>
+
+              {info?.google_review_url && (
+                <a
+                  href={info.google_review_url}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  style={{
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: '4px',
+                    background: 'linear-gradient(135deg, #FFD700 0%, #FFA500 100%)',
+                    color: '#0A2315',
+                    border: '1px solid #FFFFFF',
+                    padding: '6px 14px',
+                    borderRadius: 'var(--radius-pill)',
+                    fontSize: '0.78rem',
+                    fontWeight: 800,
+                    textDecoration: 'none',
+                    boxShadow: '0 2px 6px rgba(255, 215, 0, 0.3)'
+                  }}
+                >
+                  ⭐ Rate Us on Google Reviews <ExternalLink size={12} />
+                </a>
+              )}
+            </div>
           </div>
         </div>
       </div>

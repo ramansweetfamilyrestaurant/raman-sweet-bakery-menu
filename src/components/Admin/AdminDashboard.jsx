@@ -22,7 +22,8 @@ export default function AdminDashboard({ token, username, onLogout, onReturnToMe
     phone: '',
     address: '',
     openingHours: '',
-    google_review_url: ''
+    google_review_url: '',
+    google_maps_url: ''
   });
   const [settingsSavedMsg, setSettingsSavedMsg] = useState(false);
 
@@ -51,7 +52,8 @@ export default function AdminDashboard({ token, username, onLogout, onReturnToMe
           phone: infoData.phone || '+91 9708366583',
           address: infoData.address || 'HawaiAdda Chowk, Near katchari Gumti, Motihari, Bihar',
           openingHours: infoData.openingHours || '8:00 AM - 10:30 PM (Mon - Sun)',
-          google_review_url: infoData.google_review_url || ''
+          google_review_url: infoData.google_review_url || '',
+          google_maps_url: infoData.google_maps_url || ''
         });
       }
     } catch (err) {
@@ -932,24 +934,46 @@ export default function AdminDashboard({ token, username, onLogout, onReturnToMe
               />
             </div>
 
-            <div style={{ marginBottom: '20px' }}>
-              <label style={{ display: 'block', fontSize: '0.82rem', fontWeight: 700, color: 'var(--primary-emerald)', marginBottom: '6px' }}>
-                Google Maps Review Link:
-              </label>
-              <input
-                type="url"
-                value={settingsForm.google_review_url}
-                onChange={(e) => setSettingsForm({ ...settingsForm, google_review_url: e.target.value })}
-                placeholder="https://g.page/r/your-restaurant-name/review"
-                style={{
-                  width: '100%',
-                  padding: '10px 14px',
-                  borderRadius: 'var(--radius-sm)',
-                  border: '1.5px solid var(--border-light)',
-                  fontSize: '0.9rem',
-                  outline: 'none'
-                }}
-              />
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '12px', marginBottom: '20px' }}>
+              <div>
+                <label style={{ display: 'block', fontSize: '0.82rem', fontWeight: 700, color: 'var(--primary-emerald)', marginBottom: '6px' }}>
+                  📍 Google Maps Location / Directions Link:
+                </label>
+                <input
+                  type="url"
+                  value={settingsForm.google_maps_url}
+                  onChange={(e) => setSettingsForm({ ...settingsForm, google_maps_url: e.target.value })}
+                  placeholder="https://maps.google.com/?q=HawaiAdda+Chowk,+Motihari"
+                  style={{
+                    width: '100%',
+                    padding: '10px 14px',
+                    borderRadius: 'var(--radius-sm)',
+                    border: '1.5px solid var(--border-light)',
+                    fontSize: '0.88rem',
+                    outline: 'none'
+                  }}
+                />
+              </div>
+
+              <div>
+                <label style={{ display: 'block', fontSize: '0.82rem', fontWeight: 700, color: 'var(--primary-emerald)', marginBottom: '6px' }}>
+                  ⭐ Google Review Link:
+                </label>
+                <input
+                  type="url"
+                  value={settingsForm.google_review_url}
+                  onChange={(e) => setSettingsForm({ ...settingsForm, google_review_url: e.target.value })}
+                  placeholder="https://share.google/2M5mFMPlmS6pAXRf7"
+                  style={{
+                    width: '100%',
+                    padding: '10px 14px',
+                    borderRadius: 'var(--radius-sm)',
+                    border: '1.5px solid var(--border-light)',
+                    fontSize: '0.88rem',
+                    outline: 'none'
+                  }}
+                />
+              </div>
             </div>
 
             <button
