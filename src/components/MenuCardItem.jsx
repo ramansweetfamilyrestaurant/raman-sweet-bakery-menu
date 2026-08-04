@@ -1,5 +1,4 @@
 import React, { useState } from 'react';
-import { Sparkles } from 'lucide-react';
 
 export default function MenuCardItem({ dish, lang, onClick }) {
   const isAvailable = dish.available !== false;
@@ -8,13 +7,17 @@ export default function MenuCardItem({ dish, lang, onClick }) {
   const [portionMode, setPortionMode] = useState(hasHalfPrice ? 'half' : 'full');
 
   const displayName = (lang === 'hi' && dish.name_hi) ? dish.name_hi : dish.name;
+  
+  // Format prices to remove unnecessary decimal zeros (e.g. 70.00 -> 70)
+  const fullPriceNum = Math.round(Number(dish.price));
+  const halfPriceNum = hasHalfPrice ? Math.round(Number(dish.price_half)) : null;
 
   return (
     <div 
       style={{
         background: '#FFFFFF',
         borderRadius: 'var(--radius-md)',
-        padding: '12px',
+        padding: '10px 12px',
         marginBottom: '10px',
         border: '1.5px solid var(--gold-border)',
         boxShadow: 'var(--shadow-md)',
@@ -39,11 +42,11 @@ export default function MenuCardItem({ dish, lang, onClick }) {
       {/* Left Details */}
       <div style={{ flexGrow: 1, minWidth: 0, cursor: 'pointer' }} onClick={() => onClick(dish)}>
         {/* Dish Title with Veg Icon */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '3px' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '2px' }}>
           {/* FSSAI Veg Symbol */}
           <span style={{
-            width: '13px',
-            height: '13px',
+            width: '12px',
+            height: '12px',
             border: '1.5px solid var(--veg-green)',
             display: 'inline-flex',
             alignItems: 'center',
@@ -53,18 +56,18 @@ export default function MenuCardItem({ dish, lang, onClick }) {
             background: '#FFFFFF'
           }} title="100% Pure Vegetarian">
             <span style={{
-              width: '5px',
-              height: '5px',
+              width: '4px',
+              height: '4px',
               borderRadius: '50%',
               backgroundColor: 'var(--veg-green)'
             }} />
           </span>
 
           <h3 style={{
-            fontSize: '0.95rem',
+            fontSize: '0.9rem',
             fontWeight: 800,
             color: 'var(--primary-emerald)',
-            lineHeight: 1.25,
+            lineHeight: 1.2,
             wordBreak: 'break-word'
           }}>
             {displayName}
@@ -74,7 +77,7 @@ export default function MenuCardItem({ dish, lang, onClick }) {
         {/* Portion specification label */}
         {dish.portion && (
           <span style={{
-            fontSize: '0.7rem',
+            fontSize: '0.68rem',
             fontWeight: 600,
             color: 'var(--text-gold)',
             display: 'block'
@@ -86,12 +89,12 @@ export default function MenuCardItem({ dish, lang, onClick }) {
         {!isAvailable && (
           <span style={{
             display: 'inline-block',
-            marginTop: '4px',
-            fontSize: '0.68rem',
+            marginTop: '3px',
+            fontSize: '0.65rem',
             fontWeight: 800,
             color: '#DC2626',
             background: '#FEE2E2',
-            padding: '1px 8px',
+            padding: '1px 7px',
             borderRadius: 'var(--radius-pill)'
           }}>
             {lang === 'hi' ? 'अनुपलब्ध' : 'Out of Stock'}
@@ -104,14 +107,13 @@ export default function MenuCardItem({ dish, lang, onClick }) {
         display: 'flex',
         alignItems: 'center',
         gap: '6px',
-        flexShrink: 0,
-        maxWidth: '55%'
+        flexShrink: 0
       }}>
         {/* Price Badges / Half & Full Interactive Switcher */}
         {hasHalfPrice ? (
           <div style={{
             display: 'flex',
-            gap: '2px',
+            gap: '1px',
             background: 'var(--gold-soft)',
             border: '1.5px solid var(--gold-primary)',
             borderRadius: 'var(--radius-pill)',
@@ -124,18 +126,18 @@ export default function MenuCardItem({ dish, lang, onClick }) {
                 setPortionMode('half');
               }}
               style={{
-                fontSize: '0.68rem',
+                fontSize: '0.66rem',
                 fontWeight: 800,
-                padding: '3px 7px',
+                padding: '3px 6px',
                 borderRadius: 'var(--radius-pill)',
                 background: portionMode === 'half' ? 'var(--primary-emerald)' : 'transparent',
                 color: portionMode === 'half' ? '#FFFFFF' : 'var(--primary-emerald)',
-                boxShadow: portionMode === 'half' ? '0 2px 6px rgba(10, 35, 21, 0.2)' : 'none',
+                boxShadow: portionMode === 'half' ? '0 2px 5px rgba(10, 35, 21, 0.2)' : 'none',
                 transition: 'var(--transition-fast)',
                 whiteSpace: 'nowrap'
               }}
             >
-              Half {dish.price_half}
+              Half ₹{halfPriceNum}
             </button>
 
             <button
@@ -144,37 +146,38 @@ export default function MenuCardItem({ dish, lang, onClick }) {
                 setPortionMode('full');
               }}
               style={{
-                fontSize: '0.68rem',
+                fontSize: '0.66rem',
                 fontWeight: 800,
-                padding: '3px 7px',
+                padding: '3px 6px',
                 borderRadius: 'var(--radius-pill)',
                 background: portionMode === 'full' ? 'var(--primary-emerald)' : 'transparent',
                 color: portionMode === 'full' ? '#FFFFFF' : 'var(--primary-emerald)',
-                boxShadow: portionMode === 'full' ? '0 2px 6px rgba(10, 35, 21, 0.2)' : 'none',
+                boxShadow: portionMode === 'full' ? '0 2px 5px rgba(10, 35, 21, 0.2)' : 'none',
                 transition: 'var(--transition-fast)',
                 whiteSpace: 'nowrap'
               }}
             >
-              Full {dish.price}
+              Full ₹{fullPriceNum}
             </button>
           </div>
         ) : (
           <span 
             onClick={() => onClick(dish)}
             style={{
-              fontSize: '1rem',
+              fontSize: '0.92rem',
               fontWeight: 800,
               color: 'var(--primary-emerald)',
               background: 'var(--gold-soft)',
               border: '1.5px solid var(--gold-primary)',
-              padding: '3px 10px',
+              padding: '3px 9px',
               borderRadius: 'var(--radius-sm)',
               boxShadow: 'var(--shadow-sm)',
               cursor: 'pointer',
-              whiteSpace: 'nowrap'
+              whiteSpace: 'nowrap',
+              flexShrink: 0
             }}
           >
-            {Number(dish.price).toLocaleString('en-IN')}
+            ₹{fullPriceNum.toLocaleString('en-IN')}
           </span>
         )}
 
@@ -182,9 +185,10 @@ export default function MenuCardItem({ dish, lang, onClick }) {
           <div 
             onClick={() => onClick(dish)}
             style={{
-              width: '52px',
-              height: '52px',
-              minWidth: '52px',
+              width: '46px',
+              height: '46px',
+              minWidth: '46px',
+              flexShrink: 0,
               borderRadius: 'var(--radius-sm)',
               overflow: 'hidden',
               border: '1.5px solid var(--gold-border)',

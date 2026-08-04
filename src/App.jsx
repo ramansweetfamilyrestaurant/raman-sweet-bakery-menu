@@ -289,7 +289,7 @@ export default function App() {
       <main style={{
         maxWidth: '800px',
         margin: '0 auto',
-        padding: '10px 12px 90px',
+        padding: '10px 10px 120px',
         width: '100%',
         flexGrow: 1
       }}>
