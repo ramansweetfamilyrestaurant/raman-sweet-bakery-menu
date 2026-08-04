@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { fetchCategories, fetchDishes, toggleDishAvailability, deleteDish, deleteCategory, fetchRestaurantInfo } from '../../api/client';
 import DishFormModal from './DishFormModal';
 import CategoryFormModal from './CategoryFormModal';
-import { Plus, Edit, Trash2, Eye, EyeOff, LogOut, ArrowLeft, Layers, Utensils, QrCode, Printer, Settings, Star, CheckCircle } from 'lucide-react';
+import { Plus, Edit, Trash2, Eye, EyeOff, LogOut, ArrowLeft, Layers, Utensils, QrCode, Printer, Settings, Star, CheckCircle, Lock } from 'lucide-react';
 
 export default function AdminDashboard({ token, username, onLogout, onReturnToMenu }) {
   const [activeTab, setActiveTab] = useState('dishes'); // 'dishes', 'categories', 'qr-generator', 'settings'
@@ -25,6 +25,10 @@ export default function AdminDashboard({ token, username, onLogout, onReturnToMe
     google_review_url: ''
   });
   const [settingsSavedMsg, setSettingsSavedMsg] = useState(false);
+
+  // Credential Change State
+  const [credForm, setCredForm] = useState({ currentPassword: '', newUsername: '', newPassword: '', confirmPassword: '' });
+  const [credMsg, setCredMsg] = useState({ text: '', type: '' }); // type: 'success' | 'error'
 
   // Modals
   const [dishModalData, setDishModalData] = useState(null); // null (closed), 'new', or dish object
@@ -155,6 +159,60 @@ export default function AdminDashboard({ token, username, onLogout, onReturnToMe
       setTimeout(() => setSettingsSavedMsg(false), 3000);
     } catch (err) {
       alert(err.message);
+    }
+  };
+
+  const handleChangeCredentials = async () => {
+    setCredMsg({ text: '', type: '' });
+
+    if (!credForm.currentPassword) {
+      setCredMsg({ text: 'Current password is required', type: 'error' });
+      return;
+    }
+    if (!credForm.newUsername && !credForm.newPassword) {
+      setCredMsg({ text: 'Enter a new username or new password', type: 'error' });
+      return;
+    }
+    if (credForm.newPassword && credForm.newPassword !== credForm.confirmPassword) {
+      setCredMsg({ text: 'New passwords do not match', type: 'error' });
+      return;
+    }
+    if (credForm.newPassword && credForm.newPassword.length < 4) {
+      setCredMsg({ text: 'Password must be at least 4 characters', type: 'error' });
+      return;
+    }
+
+    try {
+      const res = await fetch('/api/admin/change-credentials', {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({
+          currentPassword: credForm.currentPassword,
+          newUsername: credForm.newUsername || undefined,
+          newPassword: credForm.newPassword || undefined
+        })
+      });
+
+      const data = await res.json();
+
+      if (!res.ok) {
+        setCredMsg({ text: data.error || 'Failed to update', type: 'error' });
+        return;
+      }
+
+      // Update token in localStorage if returned
+      if (data.token) {
+        localStorage.setItem('admin_token', data.token);
+        localStorage.setItem('admin_username', data.username);
+      }
+
+      setCredMsg({ text: '✅ Credentials updated! Use new login next time.', type: 'success' });
+      setCredForm({ currentPassword: '', newUsername: '', newPassword: '', confirmPassword: '' });
+    } catch (err) {
+      setCredMsg({ text: 'Network error, please try again', type: 'error' });
     }
   };
 
@@ -562,6 +620,7 @@ export default function AdminDashboard({ token, username, onLogout, onReturnToMe
 
         {/* TAB 4: RESTAURANT & REVIEW LINK SETTINGS */}
         {activeTab === 'settings' && (
+          <>
           <div style={{
             background: '#FFFFFF',
             borderRadius: 'var(--radius-md)',
@@ -733,6 +792,141 @@ export default function AdminDashboard({ token, username, onLogout, onReturnToMe
               </span>
             )}
           </div>
+
+          {/* Change Login Credentials Section */}
+          <div style={{
+            background: '#FFFFFF',
+            borderRadius: 'var(--radius-md)',
+            padding: '24px',
+            border: '1px solid var(--border-light)',
+            boxShadow: 'var(--shadow-sm)',
+            marginTop: '20px'
+          }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '12px' }}>
+              <Lock size={22} color="#D97706" />
+              <h3 style={{ fontSize: '1.2rem', fontWeight: 800, color: '#D97706' }}>
+                🔐 Change Login Credentials
+              </h3>
+            </div>
+
+            <p style={{ fontSize: '0.86rem', color: 'var(--text-muted)', marginBottom: '20px', lineHeight: 1.5 }}>
+              Change your admin username and/or password. You must enter your current password to verify.
+            </p>
+
+            <div style={{ marginBottom: '16px' }}>
+              <label style={{ display: 'block', fontSize: '0.82rem', fontWeight: 700, color: '#D97706', marginBottom: '6px' }}>
+                Current Password: *
+              </label>
+              <input
+                type="password"
+                value={credForm.currentPassword}
+                onChange={(e) => setCredForm({ ...credForm, currentPassword: e.target.value })}
+                placeholder="Enter your current password"
+                style={{
+                  width: '100%',
+                  padding: '10px 14px',
+                  borderRadius: 'var(--radius-sm)',
+                  border: '1.5px solid var(--border-light)',
+                  fontSize: '0.9rem',
+                  outline: 'none'
+                }}
+              />
+            </div>
+
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px', marginBottom: '16px' }}>
+              <div>
+                <label style={{ display: 'block', fontSize: '0.82rem', fontWeight: 700, color: '#D97706', marginBottom: '6px' }}>
+                  New Username:
+                </label>
+                <input
+                  type="text"
+                  value={credForm.newUsername}
+                  onChange={(e) => setCredForm({ ...credForm, newUsername: e.target.value })}
+                  placeholder="Leave blank to keep current"
+                  style={{
+                    width: '100%',
+                    padding: '10px 14px',
+                    borderRadius: 'var(--radius-sm)',
+                    border: '1.5px solid var(--border-light)',
+                    fontSize: '0.9rem',
+                    outline: 'none'
+                  }}
+                />
+              </div>
+
+              <div>
+                <label style={{ display: 'block', fontSize: '0.82rem', fontWeight: 700, color: '#D97706', marginBottom: '6px' }}>
+                  New Password:
+                </label>
+                <input
+                  type="password"
+                  value={credForm.newPassword}
+                  onChange={(e) => setCredForm({ ...credForm, newPassword: e.target.value })}
+                  placeholder="Leave blank to keep current"
+                  style={{
+                    width: '100%',
+                    padding: '10px 14px',
+                    borderRadius: 'var(--radius-sm)',
+                    border: '1.5px solid var(--border-light)',
+                    fontSize: '0.9rem',
+                    outline: 'none'
+                  }}
+                />
+              </div>
+            </div>
+
+            {credForm.newPassword && (
+              <div style={{ marginBottom: '16px' }}>
+                <label style={{ display: 'block', fontSize: '0.82rem', fontWeight: 700, color: '#D97706', marginBottom: '6px' }}>
+                  Confirm New Password:
+                </label>
+                <input
+                  type="password"
+                  value={credForm.confirmPassword}
+                  onChange={(e) => setCredForm({ ...credForm, confirmPassword: e.target.value })}
+                  placeholder="Re-enter new password"
+                  style={{
+                    width: '100%',
+                    padding: '10px 14px',
+                    borderRadius: 'var(--radius-sm)',
+                    border: '1.5px solid var(--border-light)',
+                    fontSize: '0.9rem',
+                    outline: 'none'
+                  }}
+                />
+              </div>
+            )}
+
+            <button
+              onClick={handleChangeCredentials}
+              style={{
+                background: '#D97706',
+                color: '#FFFFFF',
+                padding: '10px 24px',
+                borderRadius: 'var(--radius-pill)',
+                fontSize: '0.88rem',
+                fontWeight: 700,
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '8px',
+                cursor: 'pointer'
+              }}
+            >
+              <Lock size={16} /> Update Credentials
+            </button>
+
+            {credMsg.text && (
+              <span style={{
+                marginLeft: '12px',
+                color: credMsg.type === 'success' ? '#15803D' : '#DC2626',
+                fontSize: '0.84rem',
+                fontWeight: 700
+              }}>
+                {credMsg.text}
+              </span>
+            )}
+          </div>
+          </>
         )}
       </div>
 

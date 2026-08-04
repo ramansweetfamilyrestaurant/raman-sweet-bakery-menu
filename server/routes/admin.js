@@ -241,4 +241,59 @@ router.put('/settings', authenticateToken, async (req, res) => {
   }
 });
 
+// Change Admin Credentials (Username/Password)
+router.put('/change-credentials', authenticateToken, async (req, res) => {
+  try {
+    const { currentPassword, newUsername, newPassword } = req.body;
+
+    if (!currentPassword) {
+      return res.status(400).json({ error: 'Current password is required' });
+    }
+    if (!newUsername && !newPassword) {
+      return res.status(400).json({ error: 'Provide a new username or new password' });
+    }
+
+    // Verify current password
+    const admins = await query('SELECT * FROM admins WHERE id = $1', [req.user.id]);
+    if (!admins || admins.length === 0) {
+      return res.status(404).json({ error: 'Admin account not found' });
+    }
+
+    const admin = admins[0];
+    const match = await bcrypt.compare(currentPassword, admin.password_hash);
+    if (!match) {
+      return res.status(401).json({ error: 'Current password is incorrect' });
+    }
+
+    // Update username if provided
+    if (newUsername && newUsername.trim()) {
+      await query('UPDATE admins SET username = $1 WHERE id = $2', [newUsername.trim(), admin.id]);
+    }
+
+    // Update password if provided
+    if (newPassword && newPassword.trim()) {
+      if (newPassword.trim().length < 4) {
+        return res.status(400).json({ error: 'New password must be at least 4 characters' });
+      }
+      const salt = await bcrypt.genSalt(10);
+      const hash = await bcrypt.hash(newPassword.trim(), salt);
+      await query('UPDATE admins SET password_hash = $1 WHERE id = $2', [hash, admin.id]);
+    }
+
+    // Generate new token with updated username
+    const updatedUsername = (newUsername && newUsername.trim()) ? newUsername.trim() : admin.username;
+    const token = jwt.sign({ id: admin.id, username: updatedUsername }, JWT_SECRET, { expiresIn: '7d' });
+
+    res.json({ 
+      success: true, 
+      message: 'Credentials updated successfully',
+      token,
+      username: updatedUsername
+    });
+  } catch (err) {
+    console.error('Change credentials error:', err);
+    res.status(500).json({ error: 'Failed to update credentials' });
+  }
+});
+
 export default router;
