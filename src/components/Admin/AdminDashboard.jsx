@@ -227,25 +227,27 @@ export default function AdminDashboard({ token, username, onLogout, onReturnToMe
       <header style={{
         background: 'var(--primary-emerald)',
         color: '#FFFFFF',
-        padding: '16px 20px',
+        padding: '12px',
         display: 'flex',
         justifyContent: 'space-between',
         alignItems: 'center',
-        borderBottom: '2px solid #D4AF37'
+        borderBottom: '2px solid #D4AF37',
+        flexWrap: 'wrap',
+        gap: '8px'
       }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
           <button 
             onClick={onReturnToMenu}
-            style={{ color: '#FFFFFF', display: 'flex', alignItems: 'center', gap: '4px', fontSize: '0.82rem' }}
+            style={{ color: '#FFFFFF', display: 'flex', alignItems: 'center', gap: '4px', fontSize: '0.75rem' }}
           >
-            <ArrowLeft size={16} /> View Menu
+            <ArrowLeft size={14} /> Menu
           </button>
           <span style={{ opacity: 0.4 }}>|</span>
-          <h2 style={{ fontSize: '1.1rem', fontWeight: 800 }}>Manager Portal</h2>
+          <h2 style={{ fontSize: '0.95rem', fontWeight: 800 }}>Manager</h2>
         </div>
 
-        <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-          <span style={{ fontSize: '0.8rem', color: '#D4AF37', fontWeight: 700 }}>Manager: {username}</span>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+          <span style={{ fontSize: '0.72rem', color: '#D4AF37', fontWeight: 700 }}>{username}</span>
           <button
             onClick={onLogout}
             style={{
@@ -266,18 +268,18 @@ export default function AdminDashboard({ token, username, onLogout, onReturnToMe
       </header>
 
       {/* Main Container */}
-      <div style={{ maxWidth: '800px', margin: '20px auto', padding: '0 16px' }}>
+      <div style={{ maxWidth: '800px', margin: '16px auto', padding: '0 10px' }}>
         {/* Navigation Tabs */}
-        <div style={{ display: 'flex', gap: '6px', marginBottom: '20px', flexWrap: 'wrap' }}>
+        <div style={{ display: 'flex', gap: '4px', marginBottom: '16px', flexWrap: 'wrap' }}>
           <button
             onClick={() => setActiveTab('dishes')}
             style={{
               flex: 1,
-              minWidth: '110px',
-              padding: '10px 8px',
+              minWidth: '70px',
+              padding: '8px 4px',
               borderRadius: 'var(--radius-md)',
               fontWeight: 700,
-              fontSize: '0.82rem',
+              fontSize: '0.72rem',
               background: activeTab === 'dishes' ? 'var(--primary-emerald)' : '#FFFFFF',
               color: activeTab === 'dishes' ? '#FFFFFF' : 'var(--text-dark)',
               border: '1px solid var(--border-light)',
@@ -294,11 +296,11 @@ export default function AdminDashboard({ token, username, onLogout, onReturnToMe
             onClick={() => setActiveTab('categories')}
             style={{
               flex: 1,
-              minWidth: '110px',
-              padding: '10px 8px',
+              minWidth: '70px',
+              padding: '8px 4px',
               borderRadius: 'var(--radius-md)',
               fontWeight: 700,
-              fontSize: '0.82rem',
+              fontSize: '0.72rem',
               background: activeTab === 'categories' ? 'var(--primary-emerald)' : '#FFFFFF',
               color: activeTab === 'categories' ? '#FFFFFF' : 'var(--text-dark)',
               border: '1px solid var(--border-light)',
@@ -308,18 +310,18 @@ export default function AdminDashboard({ token, username, onLogout, onReturnToMe
               gap: '4px'
             }}
           >
-            <Layers size={15} /> Categories ({categories.length})
+            <Layers size={13} /> Cat
           </button>
 
           <button
             onClick={() => setActiveTab('qr-generator')}
             style={{
               flex: 1,
-              minWidth: '110px',
-              padding: '10px 8px',
+              minWidth: '70px',
+              padding: '8px 4px',
               borderRadius: 'var(--radius-md)',
               fontWeight: 700,
-              fontSize: '0.82rem',
+              fontSize: '0.72rem',
               background: activeTab === 'qr-generator' ? 'var(--primary-emerald)' : '#FFFFFF',
               color: activeTab === 'qr-generator' ? '#FFFFFF' : 'var(--text-dark)',
               border: '1px solid var(--border-light)',
@@ -329,18 +331,18 @@ export default function AdminDashboard({ token, username, onLogout, onReturnToMe
               gap: '4px'
             }}
           >
-            <QrCode size={15} /> Table QR
+            <QrCode size={13} /> QR
           </button>
 
           <button
             onClick={() => setActiveTab('settings')}
             style={{
               flex: 1,
-              minWidth: '110px',
-              padding: '10px 8px',
+              minWidth: '70px',
+              padding: '8px 4px',
               borderRadius: 'var(--radius-md)',
               fontWeight: 700,
-              fontSize: '0.82rem',
+              fontSize: '0.72rem',
               background: activeTab === 'settings' ? 'var(--primary-emerald)' : '#FFFFFF',
               color: activeTab === 'settings' ? '#FFFFFF' : 'var(--text-dark)',
               border: '1px solid var(--border-light)',
@@ -350,7 +352,7 @@ export default function AdminDashboard({ token, username, onLogout, onReturnToMe
               gap: '4px'
             }}
           >
-            <Star size={15} color="#D4AF37" /> Review Link
+            <Star size={13} color="#D4AF37" /> Settings
           </button>
         </div>
 
@@ -401,19 +403,20 @@ export default function AdminDashboard({ token, username, onLogout, onReturnToMe
                   display: 'flex',
                   alignItems: 'center',
                   justifyContent: 'space-between',
-                  gap: '12px'
+                  gap: '8px',
+                  flexWrap: 'wrap'
                 }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '12px', flexGrow: 1, minWidth: 0 }}>
-                    <img src={dish.image || '/uploads/logo.jpg'} alt="" style={{ width: '44px', height: '44px', borderRadius: 'var(--radius-sm)', objectFit: 'cover' }} />
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexGrow: 1, minWidth: 0, overflow: 'hidden' }}>
+                    <img src={dish.image || '/uploads/logo.jpg'} alt="" style={{ width: '38px', height: '38px', borderRadius: 'var(--radius-sm)', objectFit: 'cover', flexShrink: 0 }} />
                     <div style={{ minWidth: 0 }}>
-                      <h4 style={{ fontSize: '0.94rem', fontWeight: 700, color: 'var(--primary-emerald)' }}>{dish.name}</h4>
+                      <h4 style={{ fontSize: '0.85rem', fontWeight: 700, color: 'var(--primary-emerald)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{dish.name}</h4>
                       <span style={{ fontSize: '0.74rem', color: 'var(--text-muted)' }}>
                         {dish.category_name || 'Category'} • {dish.price_half ? `Half ${dish.price_half} | Full ${dish.price}` : `${dish.price}`}
                       </span>
                     </div>
                   </div>
 
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '4px', flexShrink: 0 }}>
                     <button
                       onClick={() => handleToggleDish(dish.id, dish.available)}
                       style={{
@@ -639,7 +642,7 @@ export default function AdminDashboard({ token, username, onLogout, onReturnToMe
               Update your restaurant contact number, address, opening hours, name, and Google review link below. These details will automatically update across your digital menu header, info modal, and footer.
             </p>
 
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px', marginBottom: '16px' }}>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '12px', marginBottom: '14px' }}>
               <div>
                 <label style={{ display: 'block', fontSize: '0.82rem', fontWeight: 700, color: 'var(--primary-emerald)', marginBottom: '6px' }}>
                   Restaurant Name:
@@ -681,7 +684,7 @@ export default function AdminDashboard({ token, username, onLogout, onReturnToMe
               </div>
             </div>
 
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px', marginBottom: '16px' }}>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '12px', marginBottom: '14px' }}>
               <div>
                 <label style={{ display: 'block', fontSize: '0.82rem', fontWeight: 700, color: 'var(--primary-emerald)', marginBottom: '6px' }}>
                   Tagline / Badge:
@@ -833,7 +836,7 @@ export default function AdminDashboard({ token, username, onLogout, onReturnToMe
               />
             </div>
 
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px', marginBottom: '16px' }}>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '12px', marginBottom: '14px' }}>
               <div>
                 <label style={{ display: 'block', fontSize: '0.82rem', fontWeight: 700, color: '#D97706', marginBottom: '6px' }}>
                   New Username:
