@@ -125,17 +125,32 @@ async function seedData() {
   const catCheck = await query('SELECT COUNT(*) as count FROM categories');
   const count = parseInt(catCheck[0]?.count || 0, 10);
 
-  if (count === 0) {
-    console.log('🌱 Seeding authentic real menu data for Raman Sweet Bakery & Family Restaurant...');
+  // If old categories exist (e.g. Pure Desi Ghee Sweets), check if CHAAT exists
+  const chaatCheck = await query("SELECT COUNT(*) as count FROM categories WHERE name = 'CHAAT'");
+  const hasChaat = parseInt(chaatCheck[0]?.count || 0, 10) > 0;
 
-    // Categories
+  if (count === 0 || !hasChaat) {
+    console.log('🌱 Seeding authentic menu data for Raman Restaurant...');
+    if (hasChaat === false && count > 0) {
+      await query('DELETE FROM dishes');
+      await query('DELETE FROM categories');
+    }
+
     const categoriesData = [
-      { name: 'Pure Desi Ghee Sweets', name_hi: 'शुद्ध देसी घी की मिठाइयां', image: '/uploads/sweets_hero.jpg', sort_order: 1 },
-      { name: 'Artisanal Bakery & Cakes', name_hi: 'ताजा बेकरी एवं केक्स', image: '/uploads/bakery_hero.jpg', sort_order: 2 },
-      { name: 'North Indian Royal Feast', name_hi: 'उत्तरी भारतीय शाही व्यंजन', image: '/uploads/north_indian_thali.jpg', sort_order: 3 },
-      { name: 'South Indian Delights', name_hi: 'दक्षिण भारतीय डोसा एवं इडली', image: '/uploads/masala_dosa.jpg', sort_order: 4 },
-      { name: 'Street Food & Chaat', name_hi: 'चटपटी दिल्ली चाट', image: '/uploads/logo.jpg', sort_order: 5 },
-      { name: 'Beverages & Heritage Chai', name_hi: 'पेय पदार्थ एवं कुल्हड़ चाय', image: '/uploads/logo.jpg', sort_order: 6 }
+      { name: 'CHAAT', name_hi: 'चाट', image: '/uploads/logo.jpg', sort_order: 1 },
+      { name: 'SNACKS', name_hi: 'स्नैक्स', image: '/uploads/logo.jpg', sort_order: 2 },
+      { name: 'MOMOS', name_hi: 'मोमोस', image: '/uploads/logo.jpg', sort_order: 3 },
+      { name: 'CHINESE', name_hi: 'चाइनीज', image: '/uploads/logo.jpg', sort_order: 4 },
+      { name: 'BURGER', name_hi: 'बर्गर', image: '/uploads/logo.jpg', sort_order: 5 },
+      { name: 'ROLLS', name_hi: 'रोल्स', image: '/uploads/logo.jpg', sort_order: 6 },
+      { name: 'SANDWICH', name_hi: 'सैंडविच', image: '/uploads/logo.jpg', sort_order: 7 },
+      { name: 'PIZZA', name_hi: 'पिज्जा', image: '/uploads/logo.jpg', sort_order: 8 },
+      { name: 'PANEER', name_hi: 'पनीर स्पेशल', image: '/uploads/logo.jpg', sort_order: 9 },
+      { name: 'DAL', name_hi: 'दाल', image: '/uploads/logo.jpg', sort_order: 10 },
+      { name: 'RICE', name_hi: 'राइस एवं बिरयानी', image: '/uploads/logo.jpg', sort_order: 11 },
+      { name: 'ROTI & NAAN', name_hi: 'रोटी एवं पराठा', image: '/uploads/logo.jpg', sort_order: 12 },
+      { name: 'SALADS', name_hi: 'सलाद', image: '/uploads/logo.jpg', sort_order: 13 },
+      { name: 'NORTH INDIAN BREAKFAST', name_hi: 'नॉर्थ इंडियन नाश्ता', image: '/uploads/logo.jpg', sort_order: 14 }
     ];
 
     const catMap = {};
@@ -148,380 +163,101 @@ async function seedData() {
       catMap[cat.name] = newId;
     }
 
-    // Comprehensive Real Dishes Data
     const dishesData = [
-      // 1. Sweets
-      {
-        category_id: catMap['Pure Desi Ghee Sweets'],
-        name: 'Desi Ghee Motichoor Ladoo',
-        name_hi: 'देसी घी मोतीचूर लड्डू',
-        description: 'Melt-in-your-mouth gram flour pearls fried in 100% pure cow ghee, infused with saffron & cardamom.',
-        description_hi: '100% शुद्ध गाय के देसी घी में बने केसरिया मोतीचूर लड्डू।',
-        image: '/uploads/sweets_hero.jpg',
-        price: 290,
-        price_half: 150,
-        portion: 'Available in 250g / 500g',
-        portion_half_label: '250g',
-        portion_full_label: '500g',
-        badge: 'Traditional',
-        ingredients: 'Gram Flour, Pure Ghee, Saffron, Pistachio',
-        taste_profile: 'Rich & Sweet'
-      },
-      {
-        category_id: catMap['Pure Desi Ghee Sweets'],
-        name: 'Signature Kaju Katli',
-        name_hi: 'सिग्नेचर काजू कतली',
-        description: 'Premium Goa cashew nut fudge topped with fine edible silver leaf. Pure cashew richness.',
-        description_hi: 'प्रीमियम गोवा काजू से बनी बिना मिलावट वाली शुद्ध काजू बर्फी।',
-        image: '/uploads/kaju_katli.jpg',
-        price: 540,
-        price_half: 280,
-        portion: 'Available in 250g / 500g',
-        portion_half_label: '250g',
-        portion_full_label: '500g',
-        badge: '⭐ Must Try',
-        ingredients: 'Goa Cashews, Sugar, Silver Foil',
-        taste_profile: 'Nutty & Delicate'
-      },
-      {
-        category_id: catMap['Pure Desi Ghee Sweets'],
-        name: 'Royal Kesariya Gulab Jamun',
-        name_hi: 'रॉयल केसरिया गुलाब जामुन',
-        description: 'Golden fried khoya dumplings soaked in warm saffron-rose sugar syrup.',
-        description_hi: 'देसी घी में तले हुए मावा गुलाब जामुन चाशनी के साथ।',
-        image: '/uploads/gulab_jamun.jpg',
-        price: 150,
-        price_half: 80,
-        portion: 'Available in 2 Pcs / 4 Pcs',
-        portion_half_label: '2 Pcs',
-        portion_full_label: '4 Pcs',
-        badge: '🔥 Bestseller',
-        ingredients: 'Pure Khoya, Saffron, Rose Water, Cardamom',
-        taste_profile: 'Soft & Warm Sweetness'
-      },
-      {
-        category_id: catMap['Pure Desi Ghee Sweets'],
-        name: 'Special Royal Rasmalai',
-        name_hi: 'स्पेशल रॉयल रसमलाई',
-        description: 'Soft cottage cheese patties soaked in saffron-cardamom flavoured condensed milk, topped with pistachios.',
-        description_hi: 'केसर और इलायची के गाढ़े दूध में डूबी नरम छेने की रसमलाई।',
-        image: '/uploads/gulab_jamun.jpg',
-        price: 210,
-        price_half: 110,
-        portion: 'Available in 2 Pcs / 4 Pcs',
-        portion_half_label: '2 Pcs',
-        portion_full_label: '4 Pcs',
-        badge: 'Chef Special',
-        ingredients: 'Fresh Chhena, Saffron Milk, Almonds, Pistachios',
-        taste_profile: 'Melt-in-mouth Creamy'
-      },
-      {
-        category_id: catMap['Pure Desi Ghee Sweets'],
-        name: 'Desi Ghee Milk Cake',
-        name_hi: 'देसी घी मिल्क केक',
-        description: 'Traditional slow-caramelized milk fudge cooked with pure ghee & cardamom.',
-        description_hi: 'पारंपरिक विधि से बना दानेदार मिल्क केक।',
-        image: '/uploads/sweets_hero.jpg',
-        price: 310,
-        price_half: 160,
-        portion: 'Available in 250g / 500g',
-        portion_half_label: '250g',
-        portion_full_label: '500g',
-        badge: 'Fresh Daily',
-        ingredients: 'Whole Milk, Pure Ghee, Sugar',
-        taste_profile: 'Caramelized Sweet'
-      },
-      {
-        category_id: catMap['Pure Desi Ghee Sweets'],
-        name: 'Special Dhoda Barfi',
-        name_hi: 'स्पेशल ढोढा बर्फी',
-        description: 'Rich Punjabi style germinated wheat & milk sweet studded with almonds & cashew bits.',
-        description_hi: 'मेवे और शुद्ध देसी घी से भरपूर ढोढा बर्फी।',
-        image: '/uploads/sweets_hero.jpg',
-        price: 270,
-        price_half: 140,
-        portion: 'Available in 250g / 500g',
-        portion_half_label: '250g',
-        portion_full_label: '500g',
-        badge: 'Heritage',
-        ingredients: 'Sprouted Wheat, Milk, Nuts, Ghee',
-        taste_profile: 'Chewy & Rich'
-      },
+      // 1. CHAAT
+      { category_id: catMap['CHAAT'], name: 'Aloo Tikki Chaat', name_hi: 'आलू टिक्की चाट', description: 'Crispy potato patties topped with sweet curd, spicy mint chutney & tamarind.', price: 60, badge: '⭐ Must Try' },
+      { category_id: catMap['CHAAT'], name: 'Samosa Chaat', name_hi: 'समोसा चाट', description: 'Crushed samosa topped with chhole, yogurt, chutneys & sev.', price: 50 },
+      { category_id: catMap['CHAAT'], name: 'Papdi Chaat', name_hi: 'पापड़ी चाट', description: 'Crunchy papdis layered with chickpeas, yogurt, chutneys & pomegranate.', price: 60 },
 
-      // 2. Bakery
-      {
-        category_id: catMap['Artisanal Bakery & Cakes'],
-        name: 'Belgian Dark Chocolate Truffle Cake',
-        name_hi: 'बेल्जियम डार्क चॉकलेट ट्रफल केक',
-        description: 'Rich 55% dark chocolate ganache layered over moist chocolate sponge.',
-        description_hi: 'प्रीमियम डार्क चॉकलेट ट्रफल केक।',
-        image: '/uploads/bakery_hero.jpg',
-        price: 980,
-        price_half: 550,
-        portion: 'Available in 500g / 1kg',
-        portion_half_label: '500g',
-        portion_full_label: '1kg',
-        badge: '🔥 Bestseller',
-        ingredients: 'Dark Belgian Chocolate, Cocoa, Fresh Cream',
-        taste_profile: 'Rich Dark Chocolate'
-      },
-      {
-        category_id: catMap['Artisanal Bakery & Cakes'],
-        name: 'Fresh Exotic Fruit Gateau Cake',
-        name_hi: 'फ्रेश फ्रूट गेटो केक',
-        description: 'Soft vanilla sponge layered with whipped cream & topped with fresh seasonal fruits.',
-        description_hi: 'ताजे फलों और व्हिप्ड क्रीम से सजा सॉफ्ट वैनिला केक।',
-        image: '/uploads/bakery_hero.jpg',
-        price: 880,
-        price_half: 490,
-        portion: 'Available in 500g / 1kg',
-        portion_half_label: '500g',
-        portion_full_label: '1kg',
-        badge: 'Fresh Daily',
-        ingredients: 'Vanilla Sponge, Cream, Fresh Kiwi, Strawberry',
-        taste_profile: 'Fruity & Light'
-      },
-      {
-        category_id: catMap['Artisanal Bakery & Cakes'],
-        name: 'Flaky Tandoori Paneer Patty',
-        name_hi: 'तंदूरी पनीर पैटी',
-        description: 'Golden flaky puff pastry stuffed with tandoori spiced cottage cheese & capsicum.',
-        description_hi: 'मसालेदार पनीर स्टफिंग वाली कुरकुरी बेक्ड पैटी।',
-        image: '/uploads/bakery_hero.jpg',
-        price: 50,
-        price_half: null,
-        portion: '1 Pc • Hot Baked',
-        badge: 'Snack Special',
-        ingredients: 'Puff Pastry, Spiced Paneer, Bell Peppers',
-        taste_profile: 'Crispy & Savory'
-      },
-      {
-        category_id: catMap['Artisanal Bakery & Cakes'],
-        name: 'Atta Biscuits & Elaichi Nankhatai',
-        name_hi: 'आटा बिस्कुट एवं इलायची नानखटाई',
-        description: 'Traditional desi ghee baked bakery cookies infused with cardamom.',
-        description_hi: 'शुद्ध देसी घी में पके खस्ता नानखटाई बिस्कुट।',
-        image: '/uploads/bakery_hero.jpg',
-        price: 210,
-        price_half: 110,
-        portion: 'Available in 250g / 500g',
-        portion_half_label: '250g',
-        portion_full_label: '500g',
-        badge: 'Teatime Special',
-        ingredients: 'Wheat Flour, Desi Ghee, Cardamom',
-        taste_profile: 'Crispy & Aromatic'
-      },
+      // 2. SNACKS
+      { category_id: catMap['SNACKS'], name: 'Samosa', name_hi: 'समोसा', description: 'Crispy spiced potato pastry served with mint & tamarind chutney.', price: 15 },
+      { category_id: catMap['SNACKS'], name: 'Kachori', name_hi: 'कचौड़ी', description: 'Crispy stuffed dal kachori served hot.', price: 15 },
+      { category_id: catMap['SNACKS'], name: 'Bread Pakoda', name_hi: 'ब्रेड पकोड़ा', description: 'Spiced potato stuffed bread fritters fried to perfection.', price: 25 },
+      { category_id: catMap['SNACKS'], name: 'Veg Pakoda', name_hi: 'वेज पकोड़ा', description: 'Crispy mix vegetable fritters.', price: 60 },
+      { category_id: catMap['SNACKS'], name: 'Paneer Pakoda', name_hi: 'पनीर पकोड़ा', description: 'Soft paneer cubes coated in spiced gram flour batter.', price: 90, badge: '⭐ Must Try' },
 
-      // 3. North Indian
-      {
-        category_id: catMap['North Indian Royal Feast'],
-        name: 'Royal Shahi Paneer Butter Masala',
-        name_hi: 'रॉयल शाही पनीर',
-        description: 'Fresh malai cottage cheese cubes simmered in a velvety tomato, cashew & cultured butter gravy.',
-        description_hi: 'काजू मलाई की गाढ़ी ग्रेवी में बने मखमली शाही पनीर।',
-        image: '/uploads/paneer_masala.jpg',
-        price: 260,
-        price_half: 160,
-        portion: 'Available in Half (200ml) / Full (350ml)',
-        portion_half_label: 'Half (200ml)',
-        portion_full_label: 'Full (350ml)',
-        badge: '⭐ Must Try',
-        ingredients: 'Fresh Paneer, Tomatoes, Cashew Paste, Cream',
-        taste_profile: 'Mild & Creamy'
-      },
-      {
-        category_id: catMap['North Indian Royal Feast'],
-        name: 'Handi Dal Makhani Special',
-        name_hi: 'हांडी दाल मखनी',
-        description: 'Overnight slow-cooked black lentils enriched with cultured white butter & fresh cream.',
-        description_hi: 'रात भर मंदी आंच पर पकी मक्खन और मलाई वाली दाल मखनी।',
-        image: '/uploads/north_indian_thali.jpg',
-        price: 230,
-        price_half: 140,
-        portion: 'Available in Half (200ml) / Full (350ml)',
-        portion_half_label: 'Half (200ml)',
-        portion_full_label: 'Full (350ml)',
-        badge: '🔥 Bestseller',
-        ingredients: 'Black Urad Dal, Cream, White Butter, Garlic',
-        taste_profile: 'Creamy & Smoky'
-      },
-      {
-        category_id: catMap['North Indian Royal Feast'],
-        name: 'Amritsari Kulcha with Chole',
-        name_hi: 'अमृतसरी कुलचा छोले',
-        description: 'Crispy tandoori stuffed bread served with spicy Amritsari chole & imli chutney.',
-        description_hi: 'मसालेदार आलू पनीर भरा तंदूरी कुलचा एवं छोले।',
-        image: '/uploads/north_indian_thali.jpg',
-        price: 195,
-        price_half: 120,
-        portion: 'Available in Half (1 Kulcha) / Full (2 Kulchas)',
-        portion_half_label: '1 Kulcha',
-        portion_full_label: '2 Kulchas',
-        badge: 'Punjabi Special',
-        ingredients: 'Spiced Potato Paneer, Chickpeas, Desi Butter',
-        taste_profile: 'Crispy & Tangy'
-      },
-      {
-        category_id: catMap['North Indian Royal Feast'],
-        name: 'Special Royal Maharaja Thali',
-        name_hi: 'स्पेशल रॉयल महाराजा थाली',
-        description: 'Complete royal feast: Shahi Paneer, Dal Makhani, Mix Veg, Jeera Rice, 2 Butter Naan, Raita & Gulab Jamun.',
-        description_hi: 'शाही पनीर, दाल मखनी, मिक्स वेज, जीरा राइस, 2 बटर नान, रायता एवं गुलाब जामुन।',
-        image: '/uploads/north_indian_thali.jpg',
-        price: 320,
-        price_half: null,
-        portion: 'Full Thali Meal • Serves 1',
-        badge: 'Royal Special',
-        ingredients: 'Paneer, Dal Makhani, Tandoori Naan, Jeera Rice, Sweets',
-        taste_profile: 'Full Royal Meal'
-      },
-      {
-        category_id: catMap['North Indian Royal Feast'],
-        name: 'Kadhai Paneer Special',
-        name_hi: 'कढ़ाई पनीर स्पेशल',
-        description: 'Cottage cheese tossed with bell peppers & crushed coriander in spicy tomato gravy.',
-        description_hi: 'शिमला मिर्च और साबुत धनिया मसालों के साथ भुना कढ़ाई पनीर।',
-        image: '/uploads/paneer_masala.jpg',
-        price: 270,
-        price_half: 170,
-        portion: 'Available in Half (200ml) / Full (350ml)',
-        portion_half_label: 'Half (200ml)',
-        portion_full_label: 'Full (350ml)',
-        badge: 'Medium Spiced',
-        ingredients: 'Paneer, Capsicum, Whole Coriander, Onion Gravy',
-        taste_profile: 'Spiced & Tangy'
-      },
+      // 3. MOMOS
+      { category_id: catMap['MOMOS'], name: 'Steam Momo', name_hi: 'स्टीम मोमो', description: 'Soft steamed dumplings packed with fresh minced vegetables.', price: 70, price_half: 40 },
+      { category_id: catMap['MOMOS'], name: 'Fried Momo', name_hi: 'फ्राई मोमो', description: 'Crispy deep-fried vegetable dumplings.', price: 80, price_half: 45 },
+      { category_id: catMap['MOMOS'], name: 'Kurkure Momo', name_hi: 'कुरकुरे मोमो', description: 'Crunchy coated veg dumplings served with spicy schezwan dip.', price: 110, price_half: 60, badge: '⭐ Must Try' },
+      { category_id: catMap['MOMOS'], name: 'Tandoori Momo', name_hi: 'तंदूरी मोमो', description: 'Marinated momos charred in tandoori spices.', price: 120, price_half: 70 },
 
-      // 4. South Indian
-      {
-        category_id: catMap['South Indian Delights'],
-        name: 'Mysuru Butter Masala Dosa',
-        name_hi: 'मैसूर बटर मसाला डोसा',
-        description: 'Crispy rice crepe smeared with fiery red garlic-chilli chutney, potato masala & pure butter.',
-        description_hi: 'मक्खन में बना मसालेदार आलू स्टफ्ड मैसूर डोसा।',
-        image: '/uploads/masala_dosa.jpg',
-        price: 160,
-        price_half: null,
-        portion: '1 Large Dosa • Serves 1',
-        badge: '🔥 Bestseller',
-        ingredients: 'Rice Crepe, Potato Masala, Mysore Red Chutney, Butter',
-        taste_profile: 'Crispy & Spicy'
-      },
-      {
-        category_id: catMap['South Indian Delights'],
-        name: 'Steamed Fluffy Idli with Sambar',
-        name_hi: 'इडली सांभर (2 पीस / 4 पीस)',
-        description: 'Soft steamed rice cakes served with hot lentil sambar & coconut chutney.',
-        description_hi: 'गरमा गरम इडली सांभर और नारियल की चटनी।',
-        image: '/uploads/masala_dosa.jpg',
-        price: 160,
-        price_half: 95,
-        portion: 'Available in Half (2 Pcs) / Full (4 Pcs)',
-        portion_half_label: '2 Pcs',
-        portion_full_label: '4 Pcs',
-        badge: 'Light & Healthy',
-        ingredients: 'Fermented Rice Batter, Toor Dal, Coconut',
-        taste_profile: 'Soft & Authentic'
-      },
-      {
-        category_id: catMap['South Indian Delights'],
-        name: 'Crispy Rava Onion Masala Dosa',
-        name_hi: 'रवा अनियन मसाला डोसा',
-        description: 'Lacy semolina crepe studded with chopped onions, green chillies & potato masala.',
-        description_hi: 'प्याज और हरी मिर्च वाला कुरकुरा रवा डोसा।',
-        image: '/uploads/masala_dosa.jpg',
-        price: 175,
-        price_half: null,
-        portion: '1 Large Dosa • Serves 1',
-        badge: 'Chef Special',
-        ingredients: 'Semolina, Onions, Potato Masala, Butter',
-        taste_profile: 'Super Crispy'
-      },
+      // 4. CHINESE
+      { category_id: catMap['CHINESE'], name: 'Veg Chowmein', name_hi: 'वेज चाऊमीन', description: 'Classic stir-fried noodles with fresh vegetables.', price: 80, price_half: 50 },
+      { category_id: catMap['CHINESE'], name: 'Hakka Noodles', name_hi: 'हक्का नूडल्स', description: 'Indo-Chinese style tossed noodles with peppers & cabbage.', price: 90, price_half: 55 },
+      { category_id: catMap['CHINESE'], name: 'Schezwan Noodles', name_hi: 'सेजवान नूडल्स', description: 'Spicy & tangy schezwan sauce tossed noodles.', price: 100, price_half: 60 },
+      { category_id: catMap['CHINESE'], name: 'Veg Fried Rice', name_hi: 'वेज फ्राइड राइस', description: 'Wok-tossed rice with finely chopped vegetables.', price: 90, price_half: 55 },
+      { category_id: catMap['CHINESE'], name: 'Schezwan Fried Rice', name_hi: 'सेजवान फ्राइड राइस', description: 'Spicy schezwan fried rice with veggies.', price: 100, price_half: 60 },
+      { category_id: catMap['CHINESE'], name: 'Paneer Fried Rice', name_hi: 'पनीर फ्राइड राइस', description: 'Wok-tossed fried rice studded with paneer cubes.', price: 120, price_half: 70 },
+      { category_id: catMap['CHINESE'], name: 'Veg Manchurian', name_hi: 'वेज मंचूरियन', description: 'Crispy veggie balls in rich Manchurian gravy.', price: 110, price_half: 65 },
+      { category_id: catMap['CHINESE'], name: 'Paneer Manchurian', name_hi: 'पनीर मंचूरियन', description: 'Golden paneer cubes tossed in savory Manchurian sauce.', price: 140, price_half: 80 },
+      { category_id: catMap['CHINESE'], name: 'Chilli Paneer', name_hi: 'चिल्ली पनीर', description: 'Crispy paneer tossed with capsicum, onion & dark soy chili sauce.', price: 150, price_half: 90, badge: '⭐ Must Try' },
 
-      // 5. Street Food & Chaat
-      {
-        category_id: catMap['Street Food & Chaat'],
-        name: 'Special Dahi Bhalla Chaat',
-        name_hi: 'विशेष दही भल्ला चाट',
-        description: 'Soft lentil dumplings topped with chilled sweet curd, saunth & mint chutneys.',
-        description_hi: 'मीठे दही, सौंठ और हरी चटनी वाला नरम दही भल्ला।',
-        image: '/uploads/logo.jpg',
-        price: 110,
-        price_half: null,
-        portion: '1 Plate • Serves 1',
-        badge: 'Chaat Special',
-        ingredients: 'Urad Dal Vada, Sweet Curd, Tamarind Chutney, Roasted Cumin',
-        taste_profile: 'Cool & Tangy'
-      },
-      {
-        category_id: catMap['Street Food & Chaat'],
-        name: 'Crispy Raj Kachori Special',
-        name_hi: 'राज कचौरी स्पेशल',
-        description: 'Giant crispy puri stuffed with boiled sprouts, bhalla, sweet curd & pomegranates.',
-        description_hi: 'अनार, दही और चटनी से भरी शाही राज कचौरी।',
-        image: '/uploads/logo.jpg',
-        price: 135,
-        price_half: null,
-        portion: '1 Large Pc • Serves 1-2',
-        badge: '⭐ Must Try',
-        ingredients: 'Crispy Puri, Sprouts, Curd, Chutneys, Sev',
-        taste_profile: 'Crunchy & Sweet Spiced'
-      },
-      {
-        category_id: catMap['Street Food & Chaat'],
-        name: 'Desi Ghee Aloo Tikki Chaat',
-        name_hi: 'देसी घी आलू टिक्की चाट',
-        description: 'Crispy pan-fried potato patties made in desi ghee, topped with spicy chole & curd.',
-        description_hi: 'देसी घी में सिंकी कुरकुरी आलू टिक्की और छोले।',
-        image: '/uploads/logo.jpg',
-        price: 90,
-        price_half: null,
-        portion: '2 Tikkis • Serves 1',
-        badge: '🔥 Bestseller',
-        ingredients: 'Potatoes, Pure Ghee, Chole, Chutneys',
-        taste_profile: 'Crispy & Flavorful'
-      },
+      // 5. BURGER
+      { category_id: catMap['BURGER'], name: 'Veg Burger', name_hi: 'वेज बर्गर', description: 'Crispy veg patty burger with fresh lettuce & mayo.', price: 50 },
+      { category_id: catMap['BURGER'], name: 'Cheese Burger', name_hi: 'चीज बर्गर', description: 'Classic veg burger loaded with melted cheese slice.', price: 70 },
+      { category_id: catMap['BURGER'], name: 'Paneer Burger', name_hi: 'पनीर बर्गर', description: 'Thick grilled paneer patty burger with secret sauce.', price: 80, badge: '⭐ Must Try' },
 
-      // 6. Beverages
-      {
-        category_id: catMap['Beverages & Heritage Chai'],
-        name: 'Kesar Badam Milk (Cold)',
-        name_hi: 'केसर बादाम मिल्क (ठंडा)',
-        description: 'Chilled full-cream milk slow-boiled with real saffron, crushed almonds & cardamom.',
-        description_hi: 'केसर, इलायची और पिसे हुए बादाम वाला ठंडा दूध।',
-        image: '/uploads/logo.jpg',
-        price: 90,
-        price_half: null,
-        portion: '250ml Glass • Chilled',
-        badge: '⭐ Must Try',
-        ingredients: 'Whole Milk, Saffron, Almonds, Cardamom',
-        taste_profile: 'Rich & Refreshing'
-      },
-      {
-        category_id: catMap['Beverages & Heritage Chai'],
-        name: 'Special Kulhad Masala Chai',
-        name_hi: 'विशेष कुल्हड़ मसाला चाय',
-        description: 'Brewed with fresh ginger, cardamom & secret spices, served hot in an earthen clay pot.',
-        description_hi: 'अदरक और इलायची की कड़क कुल्हड़ चाय।',
-        image: '/uploads/logo.jpg',
-        price: 45,
-        price_half: null,
-        portion: '1 Clay Kulhad • Hot',
-        badge: 'Heritage',
-        ingredients: 'Assam Tea Leaves, Ginger, Cardamom, Milk',
-        taste_profile: 'Aromatic & Spiced'
-      }
+      // 6. ROLLS
+      { category_id: catMap['ROLLS'], name: 'Veg Roll', name_hi: 'वेज रोल', description: 'Soft kathi roll packed with sauteed vegetables & chutneys.', price: 60 },
+      { category_id: catMap['ROLLS'], name: 'Paneer Roll', name_hi: 'पनीर रोल', description: 'Spiced cottage cheese filling wrapped in crispy paratha roll.', price: 90 },
+      { category_id: catMap['ROLLS'], name: 'Laccha Paneer Roll', name_hi: 'लच्छा पनीर रोल', description: 'Multi-layered flaky laccha roll loaded with tandoori paneer.', price: 110, badge: '⭐ Must Try' },
+
+      // 7. SANDWICH
+      { category_id: catMap['SANDWICH'], name: 'Veg Sandwich', name_hi: 'वेज सैंडविच', description: 'Fresh cucumber, tomato & mint chutney sandwich.', price: 50 },
+      { category_id: catMap['SANDWICH'], name: 'Grilled Sandwich', name_hi: 'ग्रिल्ड सैंडविच', description: 'Butter toasted sandwich with vegetables & herbs.', price: 70 },
+      { category_id: catMap['SANDWICH'], name: 'Cheese Sandwich', name_hi: 'चीज सैंडविच', description: 'Loaded gooey cheese grilled sandwich.', price: 80, badge: '⭐ Must Try' },
+
+      // 8. PIZZA
+      { category_id: catMap['PIZZA'], name: 'Veg Pizza', name_hi: 'वेज पिज्जा', description: 'Fresh tomato sauce pizza topped with onion, capsicum & mozzarella cheese.', price: 140, badge: '⭐ Must Try' },
+      { category_id: catMap['PIZZA'], name: 'Paneer Pizza', name_hi: 'पनीर पिज्जा', description: 'Loaded paneer & cheese pizza with Italian seasonings.', price: 180 },
+      { category_id: catMap['PIZZA'], name: 'Paneer Cheese Roll', name_hi: 'पनीर चीज रोल', description: 'Delicious roll stuffed with paneer & melted cheese.', price: 120 },
+      { category_id: catMap['PIZZA'], name: 'Masala Cheese Roll', name_hi: 'मसाला चीज रोल', description: 'Spicy Indian style cheese filled roll.', price: 110 },
+      { category_id: catMap['PIZZA'], name: 'Pizza Sandwich', name_hi: 'पिज्जा सैंडविच', description: 'Fusion grilled sandwich filled with pizza toppings & cheese.', price: 100 },
+
+      // 9. PANEER
+      { category_id: catMap['PANEER'], name: 'Paneer Butter Masala', name_hi: 'पनीर बटर मसाला', description: 'Rich creamy tomato gravy with tender paneer cubes.', price: 190, price_half: 110, badge: '⭐ Must Try' },
+      { category_id: catMap['PANEER'], name: 'Kadai Paneer', name_hi: 'कढ़ाई पनीर', description: 'Paneer tossed with capsicum, onion & fresh kadai spices.', price: 190, price_half: 110 },
+      { category_id: catMap['PANEER'], name: 'Shahi Paneer', name_hi: 'शाही पनीर', description: 'Mughlai style rich cashew-cream gravy paneer.', price: 180, price_half: 100 },
+      { category_id: catMap['PANEER'], name: 'Paneer Masala', name_hi: 'पनीर मसाला', description: 'Spiced onion-tomato gravy paneer delicacy.', price: 180, price_half: 100 },
+      { category_id: catMap['PANEER'], name: 'Paneer Do Pyaza', name_hi: 'पनीर दो प्याजा', description: 'Paneer cooked with double onions & aromatic spices.', price: 190, price_half: 110 },
+      { category_id: catMap['PANEER'], name: 'Mix Veg', name_hi: 'मिक्स वेज', description: 'Assorted garden fresh vegetables in home-style curry.', price: 140, price_half: 80 },
+
+      // 10. DAL
+      { category_id: catMap['DAL'], name: 'Dal Fry', name_hi: 'दाल फ्राई', description: 'Yellow lentils tempered with cumin, garlic & ghee.', price: 110, price_half: 65 },
+      { category_id: catMap['DAL'], name: 'Dal Tadka', name_hi: 'दाल तड़का', description: 'Yellow dal topped with double red chili ghee tadka.', price: 130, price_half: 75 },
+      { category_id: catMap['DAL'], name: 'Dal Makhani', name_hi: 'दाल मखनी', description: 'Slow-cooked black lentils in butter & rich cream.', price: 160, price_half: 95, badge: '⭐ Must Try' },
+
+      // 11. RICE
+      { category_id: catMap['RICE'], name: 'Plain Rice', name_hi: 'प्लेन राइस', description: 'Steamed long-grain basmati rice.', price: 70, price_half: 40 },
+      { category_id: catMap['RICE'], name: 'Jeera Rice', name_hi: 'जीरा राइस', description: 'Fluffy basmati rice tossed with cumin seeds & ghee.', price: 90, price_half: 50 },
+      { category_id: catMap['RICE'], name: 'Veg Biryani', name_hi: 'वेज बिरयानी', description: 'Aromatic basmati rice cooked with spiced vegetables.', price: 130, price_half: 75 },
+      { category_id: catMap['RICE'], name: 'Paneer Biryani', name_hi: 'पनीर बिरयानी', description: 'Fragrant basmati rice layered with marinated paneer.', price: 160, price_half: 95, badge: '⭐ Must Try' },
+
+      // 12. ROTI & NAAN
+      { category_id: catMap['ROTI & NAAN'], name: 'Butter Roti', name_hi: 'बटर रोटी', description: 'Soft whole wheat tandoori roti brushed with butter.', price: 15 },
+      { category_id: catMap['ROTI & NAAN'], name: 'Plain Roti', name_hi: 'प्लेन रोटी', description: 'Freshly baked tandoori wheat roti.', price: 12 },
+      { category_id: catMap['ROTI & NAAN'], name: 'Laccha Paratha', name_hi: 'लच्छा पराठा', description: 'Multi-layered crispy tandoori wheat paratha.', price: 35 },
+      { category_id: catMap['ROTI & NAAN'], name: 'Aloo Paratha', name_hi: 'आलू पराठा', description: 'Stuffed potato paratha served with butter.', price: 50 },
+      { category_id: catMap['ROTI & NAAN'], name: 'Paneer Paratha', name_hi: 'पनीर पराठा', description: 'Rich paneer stuffed paratha baked in tandoor.', price: 70, badge: '⭐ Must Try' },
+
+      // 13. SALADS
+      { category_id: catMap['SALADS'], name: 'Green Salad', name_hi: 'ग्रीन सलाद', description: 'Fresh sliced cucumber, tomato, onion, carrot & lemon.', price: 50 },
+
+      // 14. NORTH INDIAN BREAKFAST
+      { category_id: catMap['NORTH INDIAN BREAKFAST'], name: 'Chhole Bhature', name_hi: 'छोले भटूरे', description: '2 Fluffy fried bhaturas served with spicy Punjabi chhole & pickle.', price: 90, badge: '⭐ Must Try' },
+      { category_id: catMap['NORTH INDIAN BREAKFAST'], name: 'Kachori Chhole', name_hi: 'कचौड़ी छोले', description: 'Crispy dal kachoris served with flavorful chhole curry.', price: 50 }
     ];
 
     for (const d of dishesData) {
       await query(
         `INSERT INTO dishes (
-          category_id, name, name_hi, description, description_hi, image, price, price_half,
-          portion, portion_half_label, portion_full_label, badge, ingredients, taste_profile
-        ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14)`,
+          category_id, name, name_hi, description, image, price, price_half,
+          portion, portion_half_label, portion_full_label, badge, available
+        ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)`,
         [
-          d.category_id, d.name, d.name_hi || '', d.description || '', d.description_hi || '', d.image, d.price, d.price_half || null,
-          d.portion || '', d.portion_half_label || '', d.portion_full_label || '', d.badge || '', d.ingredients || '', d.taste_profile || ''
+          d.category_id, d.name, d.name_hi || '', d.description || '', '/uploads/logo.jpg', d.price, d.price_half || null,
+          d.price_half ? 'Half / Full' : '', d.price_half ? 'Half' : '', d.price_half ? 'Full' : '', d.badge || '', 1
         ]
       );
     }
@@ -544,8 +280,6 @@ async function query(text, params = []) {
     return res.rows;
   } else {
     let sql = text;
-    let paramIndex = 1;
-
     // Convert $1, $2 parameter placeholders to SQLite ?
     sql = sql.replace(/\$(\d+)/g, () => '?');
 
