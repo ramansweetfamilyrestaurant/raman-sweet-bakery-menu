@@ -11,7 +11,7 @@ export default function CustomerHeader({ info, lang, tableNum, onToggleLang, onO
     <header style={{
       background: 'linear-gradient(180deg, #0A2315 0%, #123722 100%)',
       color: '#FFFFFF',
-      padding: '16px 16px 18px',
+      padding: '12px 12px 14px',
       borderBottom: '2px solid #D4AF37',
       position: 'sticky',
       top: 0,
@@ -23,26 +23,28 @@ export default function CustomerHeader({ info, lang, tableNum, onToggleLang, onO
         display: 'flex',
         justifyContent: 'space-between',
         alignItems: 'center',
-        marginBottom: '12px'
+        marginBottom: '10px',
+        flexWrap: 'wrap',
+        gap: '6px'
       }}>
         {/* Language Switcher */}
         <button
           onClick={onToggleLang}
           style={{
-            fontSize: '0.72rem',
+            fontSize: '0.68rem',
             fontWeight: 800,
             color: '#FFFFFF',
             background: 'rgba(255, 255, 255, 0.14)',
             border: '1px solid rgba(212, 175, 55, 0.5)',
-            padding: '4px 10px',
+            padding: '3px 8px',
             borderRadius: 'var(--radius-pill)',
             display: 'inline-flex',
             alignItems: 'center',
-            gap: '5px'
+            gap: '4px'
           }}
         >
-          <Globe size={13} color="#D4AF37" />
-          {lang === 'hi' ? '🇮🇳 हिंदी (EN)' : '🇬🇧 EN (हिंदी)'}
+          <Globe size={12} color="#D4AF37" />
+          {lang === 'hi' ? 'हिंदी' : 'EN / हिंदी'}
         </button>
 
         {/* Right Action Group: Table Indicator + ⭐ Google Review Button */}
@@ -71,21 +73,21 @@ export default function CustomerHeader({ info, lang, tableNum, onToggleLang, onO
             onClick={handleReviewClick}
             title="Rate Us on Google Maps"
             style={{
-              fontSize: '0.72rem',
+              fontSize: '0.68rem',
               fontWeight: 800,
               color: '#0A2315',
               background: 'linear-gradient(135deg, #FFD700 0%, #FFA500 100%)',
               border: '1px solid #FFFFFF',
-              padding: '4px 12px',
+              padding: '3px 10px',
               borderRadius: 'var(--radius-pill)',
               display: 'inline-flex',
               alignItems: 'center',
-              gap: '4px',
+              gap: '3px',
               boxShadow: '0 2px 8px rgba(255, 215, 0, 0.4)'
             }}
           >
-            <Star size={13} color="#0A2315" fill="#0A2315" />
-            {lang === 'hi' ? 'रेटिंग दें' : 'Review Us'}
+            <Star size={12} color="#0A2315" fill="#0A2315" />
+            {lang === 'hi' ? 'रेटिंग' : 'Review Us'}
           </button>
         </div>
       </div>
@@ -94,13 +96,13 @@ export default function CustomerHeader({ info, lang, tableNum, onToggleLang, onO
       <div style={{
         display: 'flex',
         alignItems: 'center',
-        gap: '12px',
+        gap: '10px',
         textAlign: 'left'
       }}>
         {/* Logo Avatar */}
         <div style={{
-          width: '52px',
-          height: '52px',
+          width: '44px',
+          height: '44px',
           borderRadius: '50%',
           border: '2px solid #D4AF37',
           padding: '1px',
@@ -117,13 +119,15 @@ export default function CustomerHeader({ info, lang, tableNum, onToggleLang, onO
         {/* Titles */}
         <div style={{ flexGrow: 1, minWidth: 0 }}>
           <h1 style={{
-            fontSize: '1.15rem',
+            fontSize: '1rem',
             fontWeight: 800,
             color: '#FFFFFF',
             lineHeight: 1.2,
-            whiteSpace: 'nowrap',
             overflow: 'hidden',
-            textOverflow: 'ellipsis'
+            textOverflow: 'ellipsis',
+            display: '-webkit-box',
+            WebkitLineClamp: 2,
+            WebkitBoxOrient: 'vertical'
           }}>
             {info?.name || 'Raman Sweet Bakery & Restaurant'}
           </h1>

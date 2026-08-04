@@ -49,7 +49,7 @@
 
 body {
   font-family: var(--font-body);
-  background-color: #0B130E; /* Dark slate outer frame for desktop */
+  background-color: #0B130E;
   color: var(--text-dark);
   line-height: 1.4;
   min-height: 100vh;
@@ -58,10 +58,10 @@ body {
   align-items: flex-start;
 }
 
-/* Mobile App Shell Container */
+/* Mobile App Shell Container - RESPONSIVE */
 #root {
   width: 100%;
-  max-width: 480px;
+  max-width: 520px;
   min-height: 100vh;
   background-color: var(--bg-app);
   box-shadow: 0 0 50px rgba(0, 0, 0, 0.6);
@@ -76,6 +76,11 @@ button {
   cursor: pointer;
   border: none;
   background: none;
+}
+
+img {
+  max-width: 100%;
+  height: auto;
 }
 
 /* Animations */
@@ -97,4 +102,42 @@ button {
 /* Custom Scrollbar */
 ::-webkit-scrollbar {
   display: none;
+}
+
+/* ========== RESPONSIVE MEDIA QUERIES ========== */
+
+/* Very small phones (320px - Galaxy S5, iPhone SE 1st gen) */
+@media (max-width: 359px) {
+  #root {
+    max-width: 100%;
+  }
+}
+
+/* Standard small phones (360px - 399px) */
+@media (min-width: 360px) and (max-width: 399px) {
+  #root {
+    max-width: 100%;
+  }
+}
+
+/* Medium phones (400px - 479px - iPhone 14, Pixel 7) */
+@media (min-width: 400px) and (max-width: 479px) {
+  #root {
+    max-width: 100%;
+  }
+}
+
+/* Large phones and small tablets (480px+) */
+@media (min-width: 480px) {
+  #root {
+    max-width: 520px;
+  }
+}
+
+/* Tablets and desktops */
+@media (min-width: 768px) {
+  #root {
+    max-width: 520px;
+    box-shadow: 0 0 60px rgba(0, 0, 0, 0.7);
+  }
 }

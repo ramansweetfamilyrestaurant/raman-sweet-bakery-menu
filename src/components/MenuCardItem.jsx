@@ -14,17 +14,18 @@ export default function MenuCardItem({ dish, lang, onClick }) {
       style={{
         background: '#FFFFFF',
         borderRadius: 'var(--radius-md)',
-        padding: '14px 16px',
+        padding: '12px',
         marginBottom: '10px',
         border: '1.5px solid var(--gold-border)',
         boxShadow: 'var(--shadow-md)',
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'space-between',
-        gap: '12px',
+        gap: '8px',
         opacity: isAvailable ? 1 : 0.65,
         position: 'relative',
-        transition: 'var(--transition-smooth)'
+        transition: 'var(--transition-smooth)',
+        overflow: 'hidden'
       }}
       onMouseOver={(e) => {
         e.currentTarget.style.borderColor = 'var(--gold-bright)';
@@ -60,10 +61,11 @@ export default function MenuCardItem({ dish, lang, onClick }) {
           </span>
 
           <h3 style={{
-            fontSize: '1.08rem',
+            fontSize: '0.95rem',
             fontWeight: 800,
             color: 'var(--primary-emerald)',
-            lineHeight: 1.25
+            lineHeight: 1.25,
+            wordBreak: 'break-word'
           }}>
             {displayName}
           </h3>
@@ -101,8 +103,9 @@ export default function MenuCardItem({ dish, lang, onClick }) {
       <div style={{
         display: 'flex',
         alignItems: 'center',
-        gap: '10px',
-        flexShrink: 0
+        gap: '6px',
+        flexShrink: 0,
+        maxWidth: '55%'
       }}>
         {/* Price Badges / Half & Full Interactive Switcher */}
         {hasHalfPrice ? (
@@ -112,7 +115,8 @@ export default function MenuCardItem({ dish, lang, onClick }) {
             background: 'var(--gold-soft)',
             border: '1.5px solid var(--gold-primary)',
             borderRadius: 'var(--radius-pill)',
-            padding: '2px'
+            padding: '2px',
+            flexShrink: 0
           }}>
             <button
               onClick={(e) => {
@@ -120,17 +124,18 @@ export default function MenuCardItem({ dish, lang, onClick }) {
                 setPortionMode('half');
               }}
               style={{
-                fontSize: '0.74rem',
+                fontSize: '0.68rem',
                 fontWeight: 800,
-                padding: '4px 9px',
+                padding: '3px 7px',
                 borderRadius: 'var(--radius-pill)',
                 background: portionMode === 'half' ? 'var(--primary-emerald)' : 'transparent',
                 color: portionMode === 'half' ? '#FFFFFF' : 'var(--primary-emerald)',
                 boxShadow: portionMode === 'half' ? '0 2px 6px rgba(10, 35, 21, 0.2)' : 'none',
-                transition: 'var(--transition-fast)'
+                transition: 'var(--transition-fast)',
+                whiteSpace: 'nowrap'
               }}
             >
-              Half {dish.price_half}
+              H {dish.price_half}
             </button>
 
             <button
@@ -139,32 +144,34 @@ export default function MenuCardItem({ dish, lang, onClick }) {
                 setPortionMode('full');
               }}
               style={{
-                fontSize: '0.74rem',
+                fontSize: '0.68rem',
                 fontWeight: 800,
-                padding: '4px 9px',
+                padding: '3px 7px',
                 borderRadius: 'var(--radius-pill)',
                 background: portionMode === 'full' ? 'var(--primary-emerald)' : 'transparent',
                 color: portionMode === 'full' ? '#FFFFFF' : 'var(--primary-emerald)',
                 boxShadow: portionMode === 'full' ? '0 2px 6px rgba(10, 35, 21, 0.2)' : 'none',
-                transition: 'var(--transition-fast)'
+                transition: 'var(--transition-fast)',
+                whiteSpace: 'nowrap'
               }}
             >
-              Full {dish.price}
+              F {dish.price}
             </button>
           </div>
         ) : (
           <span 
             onClick={() => onClick(dish)}
             style={{
-              fontSize: '1.12rem',
+              fontSize: '1rem',
               fontWeight: 800,
               color: 'var(--primary-emerald)',
               background: 'var(--gold-soft)',
               border: '1.5px solid var(--gold-primary)',
-              padding: '4px 12px',
+              padding: '3px 10px',
               borderRadius: 'var(--radius-sm)',
               boxShadow: 'var(--shadow-sm)',
-              cursor: 'pointer'
+              cursor: 'pointer',
+              whiteSpace: 'nowrap'
             }}
           >
             {Number(dish.price).toLocaleString('en-IN')}
@@ -175,8 +182,9 @@ export default function MenuCardItem({ dish, lang, onClick }) {
           <div 
             onClick={() => onClick(dish)}
             style={{
-              width: '62px',
-              height: '62px',
+              width: '52px',
+              height: '52px',
+              minWidth: '52px',
               borderRadius: 'var(--radius-sm)',
               overflow: 'hidden',
               border: '1.5px solid var(--gold-border)',

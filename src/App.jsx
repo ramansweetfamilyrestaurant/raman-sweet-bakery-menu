@@ -208,14 +208,14 @@ export default function App() {
         maxWidth: '800px',
         margin: '0 auto',
         width: '100%',
-        padding: '14px 16px 0',
+        padding: '10px 12px 0',
         display: 'flex',
         justifyContent: 'space-between',
         alignItems: 'center'
       }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
           <h2 style={{
-            fontSize: '1.15rem',
+            fontSize: '1rem',
             fontWeight: 800,
             color: 'var(--primary-emerald)'
           }}>
@@ -287,7 +287,7 @@ export default function App() {
       <main style={{
         maxWidth: '800px',
         margin: '0 auto',
-        padding: '14px 16px 90px',
+        padding: '10px 12px 90px',
         width: '100%',
         flexGrow: 1
       }}>
@@ -347,8 +347,8 @@ export default function App() {
                   background: 'var(--primary-emerald)',
                   color: '#FFFFFF',
                   borderRadius: 'var(--radius-md)',
-                  padding: '12px 16px',
-                  marginBottom: '12px',
+                  padding: '10px 14px',
+                  marginBottom: '10px',
                   boxShadow: 'var(--shadow-md)',
                   display: 'flex',
                   alignItems: 'center',
@@ -362,7 +362,7 @@ export default function App() {
                         style={{ width: '26px', height: '26px', borderRadius: '50%', objectFit: 'cover' }} 
                       />
                     )}
-                    <h2 style={{ fontSize: '1.12rem', fontWeight: 800, color: '#FFFFFF' }}>
+                    <h2 style={{ fontSize: '1rem', fontWeight: 800, color: '#FFFFFF' }}>
                       {catDisplayName}
                     </h2>
                   </div>
