@@ -61,7 +61,7 @@ router.get('/dishes', async (req, res) => {
 
     // By default, customer view only sees available dishes
     if (!admin_view) {
-      sql += ` AND (d.available IS TRUE OR d.available = 1)`;
+      sql += ` AND d.available IS TRUE`;
     }
 
     if (category_id && category_id !== 'all') {
