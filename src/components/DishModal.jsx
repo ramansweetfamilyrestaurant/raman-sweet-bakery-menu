@@ -23,7 +23,7 @@ export default function DishModal({ dish, onClose }) {
       backdropFilter: 'blur(10px)',
       display: 'flex',
       alignItems: 'center',
-      justify: 'center',
+      justifyContent: 'center',
       padding: '20px'
     }} onClick={onClose}>
       <div 
@@ -59,7 +59,7 @@ export default function DishModal({ dish, onClose }) {
             height: '36px',
             display: 'flex',
             alignItems: 'center',
-            justify: 'center',
+            justifyContent: 'center',
             cursor: 'pointer',
             backdropFilter: 'blur(4px)'
           }}
@@ -105,7 +105,7 @@ export default function DishModal({ dish, onClose }) {
               border: '1.5px solid var(--veg-green)',
               display: 'inline-flex',
               alignItems: 'center',
-              justify: 'center',
+              justifyContent: 'center',
               borderRadius: '2px'
             }}>
               <span style={{
@@ -152,7 +152,7 @@ export default function DishModal({ dish, onClose }) {
         }}>
           <div style={{
             display: 'flex',
-            justify: 'space-between',
+            justifyContent: 'space-between',
             alignItems: 'flex-start',
             gap: '14px',
             marginBottom: '10px'
@@ -318,7 +318,7 @@ export default function DishModal({ dish, onClose }) {
             border: '1px solid var(--gold-primary)',
             display: 'flex',
             alignItems: 'center',
-            justify: 'space-between'
+            justifyContent: 'space-between'
           }}>
             <span style={{ fontSize: '0.82rem', color: 'var(--primary-emerald)', fontWeight: 600 }}>
               Availability Status

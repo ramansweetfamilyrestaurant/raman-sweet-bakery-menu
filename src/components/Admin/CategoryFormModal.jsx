@@ -77,7 +77,7 @@ export default function CategoryFormModal({ category, token, onSave, onClose }) 
           color: '#FFFFFF',
           padding: '16px 20px',
           display: 'flex',
-          justify: 'space-between',
+          justifyContent: 'space-between',
           alignItems: 'center',
           borderBottom: '1px solid var(--accent-gold)'
         }}>

@@ -50,7 +50,7 @@ export default function CategoryStories({ categories, selectedCategory, onSelect
               background: 'var(--primary-emerald)',
               display: 'flex',
               alignItems: 'center',
-              justify: 'center',
+              justifyContent: 'center',
               color: '#FFFFFF',
               fontSize: '1rem',
               fontWeight: 800

@@ -40,7 +40,7 @@ export default function Footer({ info, onOpenAdmin }) {
         <div style={{
           display: 'flex',
           flexWrap: 'wrap',
-          justify: 'center',
+          justifyContent: 'center',
           gap: '20px',
           fontSize: '0.85rem',
           color: 'rgba(255,255,255,0.9)'

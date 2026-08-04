@@ -21,7 +21,7 @@ export default function CustomerHeader({ info, lang, tableNum, onToggleLang, onO
       {/* Top Mobile Bar: Language Pill + Table Indicator + Google Review Button */}
       <div style={{
         display: 'flex',
-        justify: 'space-between',
+        justifyContent: 'space-between',
         alignItems: 'center',
         marginBottom: '12px'
       }}>

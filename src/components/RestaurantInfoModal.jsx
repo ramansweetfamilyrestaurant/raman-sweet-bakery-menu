@@ -11,7 +11,7 @@ export default function RestaurantInfoModal({ info, onClose }) {
       backdropFilter: 'blur(8px)',
       display: 'flex',
       alignItems: 'center',
-      justify: 'center',
+      justifyContent: 'center',
       padding: '20px'
     }} onClick={onClose}>
       <div 
@@ -51,7 +51,7 @@ export default function RestaurantInfoModal({ info, onClose }) {
               height: '32px',
               display: 'flex',
               alignItems: 'center',
-              justify: 'center'
+              justifyContent: 'center'
             }}
           >
             <X size={18} />

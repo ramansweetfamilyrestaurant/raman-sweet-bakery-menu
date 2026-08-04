@@ -21,7 +21,7 @@ export default function BottomDock({ categoriesCount, lang, onOpenCategories, on
         padding: '6px 12px',
         display: 'flex',
         alignItems: 'center',
-        justify: 'space-around'
+        justifyContent: 'space-around'
       }}>
         {/* Restaurant Info */}
         <button

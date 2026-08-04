@@ -229,7 +229,7 @@ export default function AdminDashboard({ token, username, onLogout, onReturnToMe
         color: '#FFFFFF',
         padding: '16px 20px',
         display: 'flex',
-        justify: 'space-between',
+        justifyContent: 'space-between',
         alignItems: 'center',
         borderBottom: '2px solid #D4AF37'
       }}>
@@ -283,7 +283,7 @@ export default function AdminDashboard({ token, username, onLogout, onReturnToMe
               border: '1px solid var(--border-light)',
               display: 'flex',
               alignItems: 'center',
-              justify: 'center',
+              justifyContent: 'center',
               gap: '4px'
             }}
           >
@@ -304,7 +304,7 @@ export default function AdminDashboard({ token, username, onLogout, onReturnToMe
               border: '1px solid var(--border-light)',
               display: 'flex',
               alignItems: 'center',
-              justify: 'center',
+              justifyContent: 'center',
               gap: '4px'
             }}
           >
@@ -325,7 +325,7 @@ export default function AdminDashboard({ token, username, onLogout, onReturnToMe
               border: '1px solid var(--border-light)',
               display: 'flex',
               alignItems: 'center',
-              justify: 'center',
+              justifyContent: 'center',
               gap: '4px'
             }}
           >
@@ -346,7 +346,7 @@ export default function AdminDashboard({ token, username, onLogout, onReturnToMe
               border: '1px solid var(--border-light)',
               display: 'flex',
               alignItems: 'center',
-              justify: 'center',
+              justifyContent: 'center',
               gap: '4px'
             }}
           >
@@ -400,7 +400,7 @@ export default function AdminDashboard({ token, username, onLogout, onReturnToMe
                   border: '1px solid var(--border-light)',
                   display: 'flex',
                   alignItems: 'center',
-                  justify: 'space-between',
+                  justifyContent: 'space-between',
                   gap: '12px'
                 }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: '12px', flexGrow: 1, minWidth: 0 }}>
@@ -473,7 +473,7 @@ export default function AdminDashboard({ token, username, onLogout, onReturnToMe
                   border: '1px solid var(--border-light)',
                   display: 'flex',
                   alignItems: 'center',
-                  justify: 'space-between'
+                  justifyContent: 'space-between'
                 }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
                     <img src={cat.image || '/uploads/logo.jpg'} alt="" style={{ width: '40px', height: '40px', borderRadius: '50%', objectFit: 'cover' }} />
@@ -561,7 +561,7 @@ export default function AdminDashboard({ token, username, onLogout, onReturnToMe
                 color: '#D4AF37',
                 display: 'flex',
                 alignItems: 'center',
-                justify: 'center',
+                justifyContent: 'center',
                 margin: '0 auto 12px',
                 border: '2px solid #D4AF37',
                 fontWeight: 800,

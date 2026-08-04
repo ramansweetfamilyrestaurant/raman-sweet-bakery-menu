@@ -20,7 +20,7 @@ export default function MenuCardItem({ dish, lang, onClick }) {
         boxShadow: 'var(--shadow-md)',
         display: 'flex',
         alignItems: 'center',
-        justify: 'space-between',
+        justifyContent: 'space-between',
         gap: '12px',
         opacity: isAvailable ? 1 : 0.65,
         position: 'relative',
@@ -46,7 +46,7 @@ export default function MenuCardItem({ dish, lang, onClick }) {
             border: '1.5px solid var(--veg-green)',
             display: 'inline-flex',
             alignItems: 'center',
-            justify: 'center',
+            justifyContent: 'center',
             borderRadius: '2px',
             flexShrink: 0,
             background: '#FFFFFF'

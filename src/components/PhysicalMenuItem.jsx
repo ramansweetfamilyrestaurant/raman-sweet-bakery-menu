@@ -24,7 +24,7 @@ export default function PhysicalMenuItem({ dish, onClick }) {
       <div style={{
         display: 'flex',
         alignItems: 'baseline',
-        justify: 'space-between',
+        justifyContent: 'space-between',
         gap: '12px',
         width: '100%'
       }}>
@@ -146,7 +146,7 @@ export default function PhysicalMenuItem({ dish, onClick }) {
       {/* Second Row: Description & Image Thumbnail */}
       <div style={{
         display: 'flex',
-        justify: 'space-between',
+        justifyContent: 'space-between',
         alignItems: 'flex-start',
         gap: '14px',
         paddingLeft: '22px'

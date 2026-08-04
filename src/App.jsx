@@ -210,7 +210,7 @@ export default function App() {
         width: '100%',
         padding: '14px 16px 0',
         display: 'flex',
-        justify: 'space-between',
+        justifyContent: 'space-between',
         alignItems: 'center'
       }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
@@ -352,7 +352,7 @@ export default function App() {
                   boxShadow: 'var(--shadow-md)',
                   display: 'flex',
                   alignItems: 'center',
-                  justify: 'space-between'
+                  justifyContent: 'space-between'
                 }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
                     {group.category.image && (
@@ -439,7 +439,7 @@ export default function App() {
           backdropFilter: 'blur(8px)',
           display: 'flex',
           alignItems: 'flex-end',
-          justify: 'center'
+          justifyContent: 'center'
         }} onClick={() => setShowCategoryDrawer(false)}>
           <div 
             onClick={(e) => e.stopPropagation()}
@@ -460,7 +460,7 @@ export default function App() {
             {/* Drawer Header */}
             <div style={{
               display: 'flex',
-              justify: 'space-between',
+              justifyContent: 'space-between',
               alignItems: 'center',
               marginBottom: '16px',
               paddingBottom: '12px',
@@ -491,7 +491,7 @@ export default function App() {
                   color: selectedCategory === 'all' ? '#FFFFFF' : 'var(--primary-emerald)',
                   display: 'flex',
                   alignItems: 'center',
-                  justify: 'space-between'
+                  justifyContent: 'space-between'
                 }}
               >
                 <span>❖ {lang === 'hi' ? 'सभी श्रेणियां (All Items)' : 'All Categories'}</span>
@@ -516,7 +516,7 @@ export default function App() {
                       color: String(selectedCategory) === String(cat.id) ? '#FFFFFF' : 'var(--text-dark)',
                       display: 'flex',
                       alignItems: 'center',
-                      justify: 'space-between'
+                      justifyContent: 'space-between'
                     }}
                   >
                     <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>

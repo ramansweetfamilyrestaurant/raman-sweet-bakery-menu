@@ -62,7 +62,7 @@ export default function SearchBar({ value, onChange, onClear, onQuickFilter }) {
               right: '12px',
               display: 'flex',
               alignItems: 'center',
-              justify: 'center',
+              justifyContent: 'center',
               padding: '4px',
               borderRadius: '50%',
               background: 'var(--bg-secondary)',

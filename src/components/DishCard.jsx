@@ -79,7 +79,7 @@ export default function DishCard({ dish, onClick }) {
             border: '1.5px solid var(--veg-green)',
             display: 'inline-flex',
             alignItems: 'center',
-            justify: 'center',
+            justifyContent: 'center',
             borderRadius: '2px'
           }}>
             <span style={{
@@ -124,7 +124,7 @@ export default function DishCard({ dish, onClick }) {
             backdropFilter: 'blur(2px)',
             display: 'flex',
             alignItems: 'center',
-            justify: 'center'
+            justifyContent: 'center'
           }}>
             <span style={{
               background: '#DC2626',
@@ -146,12 +146,12 @@ export default function DishCard({ dish, onClick }) {
         display: 'flex',
         flexDirection: 'column',
         flexGrow: 1,
-        justify: 'space-between'
+        justifyContent: 'space-between'
       }}>
         <div>
           <div style={{
             display: 'flex',
-            justify: 'space-between',
+            justifyContent: 'space-between',
             alignItems: 'flex-start',
             gap: '8px',
             marginBottom: '6px'
@@ -198,7 +198,7 @@ export default function DishCard({ dish, onClick }) {
           paddingTop: '10px',
           borderTop: '1px solid var(--border-light)',
           display: 'flex',
-          justify: 'space-between',
+          justifyContent: 'space-between',
           alignItems: 'center'
         }}>
           <span style={{

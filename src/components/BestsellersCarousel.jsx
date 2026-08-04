@@ -16,7 +16,7 @@ export default function BestsellersCarousel({ dishes, onSelectDish }) {
       <div style={{
         display: 'flex',
         alignItems: 'center',
-        justify: 'space-between',
+        justifyContent: 'space-between',
         marginBottom: '14px'
       }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
@@ -129,7 +129,7 @@ export default function BestsellersCarousel({ dishes, onSelectDish }) {
               <div style={{
                 display: 'flex',
                 alignItems: 'center',
-                justify: 'space-between',
+                justifyContent: 'space-between',
                 marginTop: '8px'
               }}>
                 <span style={{

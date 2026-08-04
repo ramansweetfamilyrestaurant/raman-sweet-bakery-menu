@@ -24,7 +24,7 @@ export default function PhysicalMenuHeader({ info, categories, selectedCategory,
         {/* Top Admin Link */}
         <div style={{
           display: 'flex',
-          justify: 'space-between',
+          justifyContent: 'space-between',
           alignItems: 'center',
           marginBottom: '16px'
         }}>
