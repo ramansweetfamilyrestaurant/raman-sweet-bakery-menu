@@ -3,7 +3,7 @@ import { ShieldCheck, Globe, Star, Info, Clock, Phone, MapPin } from 'lucide-rea
 
 export default function CustomerHeader({ info, lang, tableNum, onToggleLang, onOpenInfoModal, onOpenAdmin }) {
   const handleReviewClick = () => {
-    const reviewUrl = info?.google_review_url || 'https://g.page/r/ramansweetbakery/review';
+    const reviewUrl = info?.google_review_url || 'https://share.google/2M5mFMPlmS6pAXRf7';
     window.open(reviewUrl, '_blank', 'noopener,noreferrer');
   };
 

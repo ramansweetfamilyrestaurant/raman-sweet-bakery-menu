@@ -130,7 +130,7 @@ export default function PhysicalMenuHeader({ info, categories, selectedCategory,
           >
             <Clock size={14} color="var(--gold-bright)" /> {info?.openingHours || '8:00 AM - 10:30 PM'}
             <span style={{ opacity: 0.4 }}>|</span>
-            <Phone size={14} color="var(--gold-bright)" /> {info?.phone || '+91 98765 43210'}
+            <Phone size={14} color="var(--gold-bright)" /> {info?.phone || '+91 9708366583'}
           </button>
         </div>
 

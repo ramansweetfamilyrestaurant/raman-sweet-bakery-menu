@@ -16,7 +16,14 @@ export default function AdminDashboard({ token, username, onLogout, onReturnToMe
   const [qrGenerated, setQrGenerated] = useState(false);
 
   // Settings State
-  const [reviewUrl, setReviewUrl] = useState('');
+  const [settingsForm, setSettingsForm] = useState({
+    name: '',
+    tagline: '',
+    phone: '',
+    address: '',
+    openingHours: '',
+    google_review_url: ''
+  });
   const [settingsSavedMsg, setSettingsSavedMsg] = useState(false);
 
   // Modals
@@ -33,8 +40,15 @@ export default function AdminDashboard({ token, username, onLogout, onReturnToMe
       ]);
       setCategories(catData);
       setDishes(dishData);
-      if (infoData?.google_review_url) {
-        setReviewUrl(infoData.google_review_url);
+      if (infoData) {
+        setSettingsForm({
+          name: infoData.name || 'Raman Sweet Bakery & Family Restaurant',
+          tagline: infoData.tagline || '100% Pure Vegetarian',
+          phone: infoData.phone || '+91 9708366583',
+          address: infoData.address || 'HawaiAdda Chowk, Near katchari Gumti, Motihari, Bihar',
+          openingHours: infoData.openingHours || '8:00 AM - 10:30 PM (Mon - Sun)',
+          google_review_url: infoData.google_review_url || ''
+        });
       }
     } catch (err) {
       console.error('Error loading admin dashboard data:', err);
@@ -130,11 +144,11 @@ export default function AdminDashboard({ token, username, onLogout, onReturnToMe
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${token}`
         },
-        body: JSON.stringify({ google_review_url: reviewUrl })
+        body: JSON.stringify(settingsForm)
       });
 
       if (!res.ok) {
-        throw new Error('Failed to update Google Review URL');
+        throw new Error('Failed to update restaurant settings');
       }
 
       setSettingsSavedMsg(true);
@@ -546,7 +560,7 @@ export default function AdminDashboard({ token, username, onLogout, onReturnToMe
           </div>
         )}
 
-        {/* TAB 4: GOOGLE REVIEW LINK SETTINGS */}
+        {/* TAB 4: RESTAURANT & REVIEW LINK SETTINGS */}
         {activeTab === 'settings' && (
           <div style={{
             background: '#FFFFFF',
@@ -556,28 +570,132 @@ export default function AdminDashboard({ token, username, onLogout, onReturnToMe
             boxShadow: 'var(--shadow-sm)'
           }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '12px' }}>
-              <Star size={22} color="#D4AF37" fill="#D4AF37" />
+              <Settings size={22} color="var(--primary-emerald)" />
               <h3 style={{ fontSize: '1.2rem', fontWeight: 800, color: 'var(--primary-emerald)' }}>
-                Google Maps Review Link Settings
+                Restaurant Details & Settings
               </h3>
             </div>
             
             <p style={{ fontSize: '0.86rem', color: 'var(--text-muted)', marginBottom: '20px', lineHeight: 1.5 }}>
-              Paste your official Google Business Profile review link below. When customers tap the <strong>⭐ Review Us</strong> button on top of the menu, they will be redirected to this link to leave a 5-star review!
+              Update your restaurant contact number, address, opening hours, name, and Google review link below. These details will automatically update across your digital menu header, info modal, and footer.
             </p>
+
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px', marginBottom: '16px' }}>
+              <div>
+                <label style={{ display: 'block', fontSize: '0.82rem', fontWeight: 700, color: 'var(--primary-emerald)', marginBottom: '6px' }}>
+                  Restaurant Name:
+                </label>
+                <input
+                  type="text"
+                  value={settingsForm.name}
+                  onChange={(e) => setSettingsForm({ ...settingsForm, name: e.target.value })}
+                  placeholder="Raman Sweet Bakery & Family Restaurant"
+                  style={{
+                    width: '100%',
+                    padding: '10px 14px',
+                    borderRadius: 'var(--radius-sm)',
+                    border: '1.5px solid var(--border-light)',
+                    fontSize: '0.9rem',
+                    outline: 'none'
+                  }}
+                />
+              </div>
+
+              <div>
+                <label style={{ display: 'block', fontSize: '0.82rem', fontWeight: 700, color: 'var(--primary-emerald)', marginBottom: '6px' }}>
+                  Phone Number:
+                </label>
+                <input
+                  type="text"
+                  value={settingsForm.phone}
+                  onChange={(e) => setSettingsForm({ ...settingsForm, phone: e.target.value })}
+                  placeholder="+91 9708366583"
+                  style={{
+                    width: '100%',
+                    padding: '10px 14px',
+                    borderRadius: 'var(--radius-sm)',
+                    border: '1.5px solid var(--border-light)',
+                    fontSize: '0.9rem',
+                    outline: 'none'
+                  }}
+                />
+              </div>
+            </div>
+
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px', marginBottom: '16px' }}>
+              <div>
+                <label style={{ display: 'block', fontSize: '0.82rem', fontWeight: 700, color: 'var(--primary-emerald)', marginBottom: '6px' }}>
+                  Tagline / Badge:
+                </label>
+                <input
+                  type="text"
+                  value={settingsForm.tagline}
+                  onChange={(e) => setSettingsForm({ ...settingsForm, tagline: e.target.value })}
+                  placeholder="100% Pure Vegetarian"
+                  style={{
+                    width: '100%',
+                    padding: '10px 14px',
+                    borderRadius: 'var(--radius-sm)',
+                    border: '1.5px solid var(--border-light)',
+                    fontSize: '0.9rem',
+                    outline: 'none'
+                  }}
+                />
+              </div>
+
+              <div>
+                <label style={{ display: 'block', fontSize: '0.82rem', fontWeight: 700, color: 'var(--primary-emerald)', marginBottom: '6px' }}>
+                  Opening Hours:
+                </label>
+                <input
+                  type="text"
+                  value={settingsForm.openingHours}
+                  onChange={(e) => setSettingsForm({ ...settingsForm, openingHours: e.target.value })}
+                  placeholder="8:00 AM - 10:30 PM (Mon - Sun)"
+                  style={{
+                    width: '100%',
+                    padding: '10px 14px',
+                    borderRadius: 'var(--radius-sm)',
+                    border: '1.5px solid var(--border-light)',
+                    fontSize: '0.9rem',
+                    outline: 'none'
+                  }}
+                />
+              </div>
+            </div>
 
             <div style={{ marginBottom: '16px' }}>
               <label style={{ display: 'block', fontSize: '0.82rem', fontWeight: 700, color: 'var(--primary-emerald)', marginBottom: '6px' }}>
-                Google Maps Review URL:
+                Full Address:
+              </label>
+              <input
+                type="text"
+                value={settingsForm.address}
+                onChange={(e) => setSettingsForm({ ...settingsForm, address: e.target.value })}
+                placeholder="HawaiAdda Chowk, Near katchari Gumti, Motihari, Bihar"
+                style={{
+                  width: '100%',
+                  padding: '10px 14px',
+                  borderRadius: 'var(--radius-sm)',
+                  border: '1.5px solid var(--border-light)',
+                  fontSize: '0.9rem',
+                  outline: 'none'
+                }}
+              />
+            </div>
+
+            <div style={{ marginBottom: '20px' }}>
+              <label style={{ display: 'block', fontSize: '0.82rem', fontWeight: 700, color: 'var(--primary-emerald)', marginBottom: '6px' }}>
+                Google Maps Review Link:
               </label>
               <input
                 type="url"
-                value={reviewUrl}
-                onChange={(e) => setReviewUrl(e.target.value)}
+                value={settingsForm.google_review_url}
+                onChange={(e) => setSettingsForm({ ...settingsForm, google_review_url: e.target.value })}
                 placeholder="https://g.page/r/your-restaurant-name/review"
                 style={{
                   width: '100%',
-                  padding: '12px 14px',
+                  padding: '10px 14px',
                   borderRadius: 'var(--radius-sm)',
                   border: '1.5px solid var(--border-light)',
                   fontSize: '0.9rem',
@@ -597,10 +715,11 @@ export default function AdminDashboard({ token, username, onLogout, onReturnToMe
                 fontWeight: 700,
                 display: 'inline-flex',
                 alignItems: 'center',
-                gap: '8px'
+                gap: '8px',
+                cursor: 'pointer'
               }}
             >
-              <CheckCircle size={16} /> Save Google Review Link
+              <CheckCircle size={16} /> Save All Settings
             </button>
 
             {settingsSavedMsg && (
@@ -610,7 +729,7 @@ export default function AdminDashboard({ token, username, onLogout, onReturnToMe
                 fontSize: '0.84rem',
                 fontWeight: 700
               }}>
-                ✓ Google Review Link Saved Successfully!
+                ✓ Restaurant Settings Saved Successfully!
               </span>
             )}
           </div>

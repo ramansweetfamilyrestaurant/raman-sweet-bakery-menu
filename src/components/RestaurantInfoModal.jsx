@@ -90,10 +90,10 @@ export default function RestaurantInfoModal({ info, onClose }) {
             <ShieldCheck size={24} color="#16A34A" />
             <div>
               <h4 style={{ fontSize: '0.82rem', fontWeight: 800, color: '#16A34A' }}>
-                FSSAI Certified 100% Pure Veg Kitchen
+                FSSAI Certified 100% Pure Veg Restaurant
               </h4>
               <p style={{ fontSize: '0.74rem', color: '#15803D' }}>
-                FSSAI Lic No: 20824001000123 • Pure Desi Ghee & Fresh Dairy Only
+                FSSAI Lic No: 20824001000123 • Pure Veg.Pure Taste.Pure Happiness
               </p>
             </div>
           </div>
@@ -107,7 +107,7 @@ export default function RestaurantInfoModal({ info, onClose }) {
               </span>
             </div>
             <p style={{ fontSize: '0.82rem', color: 'var(--text-muted)', paddingLeft: '24px' }}>
-              Monday – Sunday: {info?.openingHours || '8:00 AM – 10:30 PM (Open 7 Days)'}
+              Monday – Sunday: {info?.openingHours || '8:00 AM – 9:30 PM (Open 7 Days)'}
             </p>
           </div>
 
@@ -120,7 +120,7 @@ export default function RestaurantInfoModal({ info, onClose }) {
               </span>
             </div>
             <a
-              href={`tel:${info?.phone || '+919876543210'}`}
+              href={`tel:${info?.phone || '+919708366583'}`}
               style={{
                 display: 'inline-flex',
                 alignItems: 'center',
@@ -135,7 +135,7 @@ export default function RestaurantInfoModal({ info, onClose }) {
                 textDecoration: 'none'
               }}
             >
-              📞 Call {info?.phone || '+91 98765 43210'}
+              📞 Call {info?.phone || '+91 9708366583'}
             </a>
           </div>
 
@@ -148,10 +148,10 @@ export default function RestaurantInfoModal({ info, onClose }) {
               </span>
             </div>
             <p style={{ fontSize: '0.82rem', color: 'var(--text-muted)', paddingLeft: '24px', marginBottom: '8px' }}>
-              {info?.address || 'Main Market Road, Near City Clock Tower, GT Road'}
+              {info?.address || 'HawaiAdda Chowk,Near katchari Gumti,Motihari,Bihar'}
             </p>
             <a
-              href="https://maps.google.com"
+              href={info?.google_review_url || 'https://share.google/2M5mFMPlmS6pAXRf7'}
               target="_blank"
               rel="noopener noreferrer"
               style={{

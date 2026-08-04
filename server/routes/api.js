@@ -19,13 +19,13 @@ router.get('/info', (req, res) => {
 
   res.json({
     name: 'Raman Sweet Bakery & Family Restaurant',
-    tagline: '100% Pure Vegetarian',
+    tagline: '100% Pure Vegetarian • Pure Desi Ghee Sweets • Live Bakery',
     badge: '100% Pure Veg',
     logo: '/uploads/logo.jpg',
     openingHours: '8:00 AM - 10:30 PM (Mon - Sun)',
-    phone: '+91 98765 43210',
-    address: 'Main Market Road, Near City Clock Tower, GT Road',
-    google_review_url: 'https://g.page/r/ramansweetbakery/review',
+    phone: '+91 9708366583',
+    address: 'HawaiAdda Chowk, Near katchari Gumti, Motihari, Bihar',
+    google_review_url: 'https://share.google/2M5mFMPlmS6pAXRf7',
     highlights: [
       'Pure Desi Ghee Sweets',
       'Fresh Live Bakery & Custom Cakes',

@@ -33,7 +33,7 @@ export default function Footer({ info, onOpenAdmin }) {
             color: '#A7F3D0',
             fontWeight: 600
           }}>
-            100% Pure Vegetarian • Pure Desi Ghee Sweets • Live Bakery
+            {info?.tagline || '100% Pure Vegetarian • Pure Desi Ghee Sweets • Live Bakery'}
           </p>
         </div>
 
@@ -52,7 +52,7 @@ export default function Footer({ info, onOpenAdmin }) {
 
           <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
             <Phone size={16} color="#A7F3D0" />
-            <span>{info?.phone || '+91 98765 43210'}</span>
+            <span>{info?.phone || '+91 9708366583'}</span>
           </div>
         </div>
 
@@ -63,7 +63,7 @@ export default function Footer({ info, onOpenAdmin }) {
           lineHeight: 1.4
         }}>
           <MapPin size={14} color="#A7F3D0" style={{ verticalAlign: 'middle', marginRight: '4px' }} />
-          {info?.address || 'Main Market Road, Near City Clock Tower, GT Road'}
+          {info?.address || 'HawaiAdda Chowk, Near katchari Gumti, Motihari, Bihar'}
         </div>
 
         <div style={{
@@ -75,25 +75,11 @@ export default function Footer({ info, onOpenAdmin }) {
 
         <div style={{
           width: '100%',
-          display: 'flex',
-          justify: 'space-between',
-          alignItems: 'center',
+          textAlign: 'center',
           fontSize: '0.78rem',
           color: 'rgba(255, 255, 255, 0.6)'
         }}>
           <span>© {new Date().getFullYear()} Raman Sweet Bakery. All rights reserved.</span>
-          
-          <button
-            onClick={onOpenAdmin}
-            style={{
-              color: '#A7F3D0',
-              fontWeight: 700,
-              textDecoration: 'underline',
-              fontSize: '0.78rem'
-            }}
-          >
-            Manager Login
-          </button>
         </div>
       </div>
     </footer>
