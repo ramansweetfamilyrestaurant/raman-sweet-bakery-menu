@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { fetchCategories, fetchDishes, toggleDishAvailability, deleteDish, deleteCategory, fetchRestaurantInfo } from '../../api/client';
 import DishFormModal from './DishFormModal';
 import CategoryFormModal from './CategoryFormModal';
-import { Plus, Edit, Trash2, Eye, EyeOff, LogOut, ArrowLeft, Layers, Utensils, QrCode, Printer, Settings, Star, CheckCircle, Lock } from 'lucide-react';
+import { Plus, Edit, Trash2, Eye, EyeOff, LogOut, ArrowLeft, Layers, Utensils, QrCode, Printer, Settings, Star, CheckCircle, Lock, ExternalLink } from 'lucide-react';
 
 export default function AdminDashboard({ token, username, onLogout, onReturnToMenu }) {
   const [activeTab, setActiveTab] = useState('dishes'); // 'dishes', 'categories', 'qr-generator', 'settings'
@@ -335,6 +335,27 @@ export default function AdminDashboard({ token, username, onLogout, onReturnToMe
           </button>
 
           <button
+            onClick={() => setActiveTab('review')}
+            style={{
+              flex: 1,
+              minWidth: '70px',
+              padding: '8px 4px',
+              borderRadius: 'var(--radius-md)',
+              fontWeight: 700,
+              fontSize: '0.72rem',
+              background: activeTab === 'review' ? 'var(--primary-emerald)' : '#FFFFFF',
+              color: activeTab === 'review' ? '#FFFFFF' : 'var(--text-dark)',
+              border: '1px solid var(--border-light)',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              gap: '4px'
+            }}
+          >
+            <Star size={13} color="#D4AF37" fill="#D4AF37" /> Review
+          </button>
+
+          <button
             onClick={() => setActiveTab('settings')}
             style={{
               flex: 1,
@@ -352,7 +373,7 @@ export default function AdminDashboard({ token, username, onLogout, onReturnToMe
               gap: '4px'
             }}
           >
-            <Star size={13} color="#D4AF37" /> Settings
+            <Settings size={13} /> Settings
           </button>
         </div>
 
@@ -621,7 +642,130 @@ export default function AdminDashboard({ token, username, onLogout, onReturnToMe
           </div>
         )}
 
-        {/* TAB 4: RESTAURANT & REVIEW LINK SETTINGS */}
+        {/* TAB 4: GOOGLE REVIEW LINK */}
+        {activeTab === 'review' && (
+          <div style={{
+            background: '#FFFFFF',
+            borderRadius: 'var(--radius-md)',
+            padding: '24px',
+            border: '1px solid var(--border-light)',
+            boxShadow: 'var(--shadow-sm)'
+          }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '12px' }}>
+              <Star size={22} color="#D4AF37" fill="#D4AF37" />
+              <h3 style={{ fontSize: '1.2rem', fontWeight: 800, color: 'var(--primary-emerald)' }}>
+                Google Review Link
+              </h3>
+            </div>
+            
+            <p style={{ fontSize: '0.86rem', color: 'var(--text-muted)', marginBottom: '20px', lineHeight: 1.5 }}>
+              Aapna Google Maps Review link yaha daalein. Jab customer menu header me <strong>⭐ Review Us / रेटिंग दें</strong> par click karenge, toh ye link open hoga:
+            </p>
+
+            <div style={{ marginBottom: '20px' }}>
+              <label style={{ display: 'block', fontSize: '0.82rem', fontWeight: 700, color: 'var(--primary-emerald)', marginBottom: '6px' }}>
+                Google Review Link (URL):
+              </label>
+              <input
+                type="url"
+                value={settingsForm.google_review_url}
+                onChange={(e) => setSettingsForm({ ...settingsForm, google_review_url: e.target.value })}
+                placeholder="https://share.google/2M5mFMPlmS6pAXRf7"
+                style={{
+                  width: '100%',
+                  padding: '12px 14px',
+                  borderRadius: 'var(--radius-sm)',
+                  border: '1.5px solid var(--gold-primary)',
+                  fontSize: '0.92rem',
+                  outline: 'none',
+                  background: 'var(--gold-soft)'
+                }}
+              />
+            </div>
+
+            <div style={{ display: 'flex', gap: '12px', alignItems: 'center', flexWrap: 'wrap' }}>
+              <button
+                onClick={handleSaveSettings}
+                style={{
+                  background: 'var(--primary-emerald)',
+                  color: '#FFFFFF',
+                  padding: '10px 24px',
+                  borderRadius: 'var(--radius-pill)',
+                  fontSize: '0.88rem',
+                  fontWeight: 700,
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: '8px',
+                  cursor: 'pointer'
+                }}
+              >
+                <CheckCircle size={16} /> Save Review Link
+              </button>
+
+              {settingsForm.google_review_url && (
+                <a
+                  href={settingsForm.google_review_url}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  style={{
+                    background: 'linear-gradient(135deg, #FFD700 0%, #FFA500 100%)',
+                    color: '#0A2315',
+                    padding: '10px 20px',
+                    borderRadius: 'var(--radius-pill)',
+                    fontSize: '0.88rem',
+                    fontWeight: 800,
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: '6px',
+                    textDecoration: 'none'
+                  }}
+                >
+                  <ExternalLink size={15} /> Test Link ↗
+                </a>
+              )}
+            </div>
+
+            {settingsSavedMsg && (
+              <p style={{ marginTop: '14px', color: '#15803D', fontSize: '0.84rem', fontWeight: 700 }}>
+                ✓ Google Review Link saved successfully!
+              </p>
+            )}
+
+            {/* Customer Button Live Preview */}
+            <div style={{ marginTop: '24px', paddingTop: '20px', borderTop: '1px solid var(--border-light)' }}>
+              <span style={{ fontSize: '0.78rem', fontWeight: 700, color: 'var(--text-muted)', display: 'block', marginBottom: '10px' }}>
+                CUSTOMER MENU BUTTON PREVIEW:
+              </span>
+              <button
+                onClick={() => {
+                  if (settingsForm.google_review_url) {
+                    window.open(settingsForm.google_review_url, '_blank');
+                  } else {
+                    alert('Pehle Google Review Link daal kar Save karein.');
+                  }
+                }}
+                style={{
+                  fontSize: '0.76rem',
+                  fontWeight: 800,
+                  color: '#0A2315',
+                  background: 'linear-gradient(135deg, #FFD700 0%, #FFA500 100%)',
+                  border: '1px solid #FFFFFF',
+                  padding: '6px 16px',
+                  borderRadius: 'var(--radius-pill)',
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: '5px',
+                  boxShadow: '0 2px 8px rgba(255, 215, 0, 0.4)'
+                }}
+              >
+                <Star size={14} color="#0A2315" fill="#0A2315" />
+                Review Us / रेटिंग दें
+              </button>
+            </div>
+          </div>
+        )}
+
+        {/* TAB 5: RESTAURANT SETTINGS */}
         {activeTab === 'settings' && (
           <>
           <div style={{
