@@ -73,16 +73,27 @@ router.get('/dishes', async (req, res) => {
       const trimmedQ = q.trim().toLowerCase();
       if (trimmedQ === 'under100' || trimmedQ === '100' || trimmedQ === 'under 100') {
         sql += ` AND d.price <= 100`;
+      } else if (trimmedQ === 'must try' || trimmedQ === 'musttry' || trimmedQ === 'must_try') {
+        sql += ` AND (LOWER(COALESCE(d.badge, '')) LIKE '%must try%' OR LOWER(COALESCE(d.badge, '')) LIKE '%bestseller%' OR LOWER(COALESCE(d.badge, '')) LIKE '%special%')`;
       } else {
         const searchPattern = `%${trimmedQ}%`;
         params.push(searchPattern);
-        const pNum = params.length;
+        const p1 = params.length;
+        params.push(searchPattern);
+        const p2 = params.length;
+        params.push(searchPattern);
+        const p3 = params.length;
+        params.push(searchPattern);
+        const p4 = params.length;
+        params.push(searchPattern);
+        const p5 = params.length;
+
         sql += ` AND (
-          LOWER(d.name) LIKE $${pNum} 
-          OR LOWER(COALESCE(d.description, '')) LIKE $${pNum} 
-          OR LOWER(COALESCE(d.badge, '')) LIKE $${pNum} 
-          OR LOWER(COALESCE(d.ingredients, '')) LIKE $${pNum} 
-          OR LOWER(COALESCE(c.name, '')) LIKE $${pNum}
+          LOWER(d.name) LIKE $${p1} 
+          OR LOWER(COALESCE(d.description, '')) LIKE $${p2} 
+          OR LOWER(COALESCE(d.badge, '')) LIKE $${p3} 
+          OR LOWER(COALESCE(d.ingredients, '')) LIKE $${p4} 
+          OR LOWER(COALESCE(c.name, '')) LIKE $${p5}
         )`;
       }
     }
