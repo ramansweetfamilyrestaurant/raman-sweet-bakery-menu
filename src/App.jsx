@@ -125,7 +125,7 @@ export default function App() {
       alert('WhatsApp number is not configured for this restaurant yet.');
       return;
     }
-    let msg = `👋 Hello *${info.name}*!\nI would like to place an order from table #${tableNum || '1'}:\n\n`;
+    let msg = `👋 Hello *${info.name}*!\nI would like to place an order from table #${effectiveTableNum || '1'}:\n\n`;
     let grandTotal = 0;
     cartItems.forEach(item => {
       const itemPrice = item.price * item.quantity;
@@ -138,7 +138,7 @@ export default function App() {
     window.open(`https://wa.me/${targetPhone}?text=${encodeURIComponent(msg)}`, '_blank');
   };
 
-  const [orderTableInput, setOrderTableInput] = useState(tableNum || '1');
+  const [orderTableInput, setOrderTableInput] = useState(initialTableNum || '1');
   const [customerNameInput, setCustomerNameInput] = useState('');
   const [customerPhoneInput, setCustomerPhoneInput] = useState('');
   const [orderSuccessModal, setOrderSuccessModal] = useState(null);
