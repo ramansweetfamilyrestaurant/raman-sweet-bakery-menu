@@ -912,7 +912,7 @@ export default function SuperAdminDashboard({ token, username, onLogout, onRetur
                 />
               </div>
 
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '10px' }}>
                 <div>
                   <label style={{ fontSize: '0.78rem', fontWeight: 800, color: 'var(--text-dark)', marginBottom: '4px', display: 'block' }}>
                     SUBSCRIPTION TIER
@@ -934,12 +934,26 @@ export default function SuperAdminDashboard({ token, username, onLogout, onRetur
                         google_reviews_enabled: reviews
                       });
                     }}
-                    style={{ width: '100%', padding: '11px 14px', borderRadius: '12px', border: '1.5px solid var(--border-light)', fontSize: '0.86rem', outline: 'none', fontWeight: 700 }}
+                    style={{ width: '100%', padding: '11px 12px', borderRadius: '12px', border: '1.5px solid var(--border-light)', fontSize: '0.82rem', outline: 'none', fontWeight: 700 }}
                   >
-                    <option value="basic">Basic Plan (₹499/mo) - Menu View Only</option>
-                    <option value="pro">Pro Plan (₹999/mo) - Menu + WhatsApp + Reviews</option>
-                    <option value="enterprise">Enterprise Plan (₹1,999/mo) - All Features + Table QR</option>
+                    <option value="basic">Basic Plan (₹499/mo)</option>
+                    <option value="pro">Pro Plan (₹999/mo)</option>
+                    <option value="enterprise">Enterprise Plan (₹1,999/mo)</option>
                   </select>
+                </div>
+
+                <div>
+                  <label style={{ fontSize: '0.78rem', fontWeight: 800, color: 'var(--text-dark)', marginBottom: '4px', display: 'block' }}>
+                    CUSTOM PLAN PRICE (₹)
+                  </label>
+                  <input
+                    type="number"
+                    value={form.plan_price}
+                    onChange={(e) => setForm({ ...form, plan_price: e.target.value })}
+                    placeholder="999"
+                    required
+                    style={{ width: '100%', padding: '11px 12px', borderRadius: '12px', border: '1.5px solid var(--border-light)', fontSize: '0.86rem', outline: 'none', fontWeight: 800 }}
+                  />
                 </div>
 
                 <div>
@@ -949,12 +963,12 @@ export default function SuperAdminDashboard({ token, username, onLogout, onRetur
                   <select
                     value={form.theme_color}
                     onChange={(e) => setForm({ ...form, theme_color: e.target.value })}
-                    style={{ width: '100%', padding: '11px 14px', borderRadius: '12px', border: '1.5px solid var(--border-light)', fontSize: '0.86rem', outline: 'none', fontWeight: 700 }}
+                    style={{ width: '100%', padding: '11px 12px', borderRadius: '12px', border: '1.5px solid var(--border-light)', fontSize: '0.82rem', outline: 'none', fontWeight: 700 }}
                   >
-                    <option value="gold">Gold & Forest Green</option>
-                    <option value="emerald">Emerald Mint & Deep Teal</option>
-                    <option value="crimson">Ruby Red & Gold</option>
-                    <option value="navy">Midnight Navy & Blue</option>
+                    <option value="gold">Gold & Green</option>
+                    <option value="emerald">Emerald Mint</option>
+                    <option value="crimson">Ruby Red</option>
+                    <option value="navy">Midnight Navy</option>
                   </select>
                 </div>
               </div>
@@ -1127,7 +1141,7 @@ export default function SuperAdminDashboard({ token, username, onLogout, onRetur
                 />
               </div>
 
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '10px' }}>
                 <div>
                   <label style={{ fontSize: '0.78rem', fontWeight: 800, color: 'var(--text-dark)', marginBottom: '4px', display: 'block' }}>
                     SUBSCRIPTION TIER
@@ -1149,12 +1163,26 @@ export default function SuperAdminDashboard({ token, username, onLogout, onRetur
                         google_reviews_enabled: reviews
                       });
                     }}
-                    style={{ width: '100%', padding: '11px 14px', borderRadius: '12px', border: '1.5px solid var(--border-light)', fontSize: '0.86rem', outline: 'none', fontWeight: 700 }}
+                    style={{ width: '100%', padding: '11px 12px', borderRadius: '12px', border: '1.5px solid var(--border-light)', fontSize: '0.82rem', outline: 'none', fontWeight: 700 }}
                   >
-                    <option value="basic">Basic Plan (₹499/mo) - Menu View Only</option>
-                    <option value="pro">Pro Plan (₹999/mo) - Menu + WhatsApp + Reviews</option>
-                    <option value="enterprise">Enterprise Plan (₹1,999/mo) - All Features + Table QR</option>
+                    <option value="basic">Basic Plan (₹499/mo)</option>
+                    <option value="pro">Pro Plan (₹999/mo)</option>
+                    <option value="enterprise">Enterprise Plan (₹1,999/mo)</option>
                   </select>
+                </div>
+
+                <div>
+                  <label style={{ fontSize: '0.78rem', fontWeight: 800, color: 'var(--text-dark)', marginBottom: '4px', display: 'block' }}>
+                    CUSTOM PLAN PRICE (₹)
+                  </label>
+                  <input
+                    type="number"
+                    value={editModalData.plan_price || 999}
+                    onChange={(e) => setEditModalData({ ...editModalData, plan_price: e.target.value })}
+                    placeholder="999"
+                    required
+                    style={{ width: '100%', padding: '11px 12px', borderRadius: '12px', border: '1.5px solid var(--border-light)', fontSize: '0.86rem', outline: 'none', fontWeight: 800 }}
+                  />
                 </div>
 
                 <div>
@@ -1164,12 +1192,12 @@ export default function SuperAdminDashboard({ token, username, onLogout, onRetur
                   <select
                     value={editModalData.theme_color || 'gold'}
                     onChange={(e) => setEditModalData({ ...editModalData, theme_color: e.target.value })}
-                    style={{ width: '100%', padding: '11px 14px', borderRadius: '12px', border: '1.5px solid var(--border-light)', fontSize: '0.86rem', outline: 'none', fontWeight: 700 }}
+                    style={{ width: '100%', padding: '11px 12px', borderRadius: '12px', border: '1.5px solid var(--border-light)', fontSize: '0.82rem', outline: 'none', fontWeight: 700 }}
                   >
-                    <option value="gold">Gold & Forest Green</option>
-                    <option value="emerald">Emerald Mint & Teal</option>
-                    <option value="crimson">Ruby Red & Gold</option>
-                    <option value="navy">Midnight Navy & Blue</option>
+                    <option value="gold">Gold & Green</option>
+                    <option value="emerald">Emerald Mint</option>
+                    <option value="crimson">Ruby Red</option>
+                    <option value="navy">Midnight Navy</option>
                   </select>
                 </div>
               </div>
