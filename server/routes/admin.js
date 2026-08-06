@@ -217,6 +217,15 @@ router.patch('/dishes/:id/price', authenticateToken, async (req, res) => {
     console.error('Update dish price error:', err);
     res.status(500).json({ error: 'Failed to update dish price' });
   }
+router.delete('/dishes/:id', authenticateToken, async (req, res) => {
+  try {
+    const { id } = req.params;
+    await query('DELETE FROM dishes WHERE id = $1', [id]);
+    res.json({ success: true });
+  } catch (err) {
+    console.error('Delete dish error:', err);
+    res.status(500).json({ error: 'Failed to delete dish' });
+  }
 });
 
 // Settings Route (Update Google Review URL, Phone, Hours)
