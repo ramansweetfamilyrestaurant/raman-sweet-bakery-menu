@@ -205,18 +205,19 @@ router.post('/restaurants/:id/impersonate', authenticateToken, requireSuperAdmin
 router.put('/restaurants/:id', authenticateToken, requireSuperAdmin, async (req, res) => {
   try {
     const { id } = req.params;
-    const { name, tagline, phone, address, fssai_lic_no, owner_username, owner_password, plan_tier, plan_price, plan_expires_at, whatsapp_number, whatsapp_enabled, direct_ordering_enabled, google_reviews_enabled, theme_color } = req.body;
+    const { name, tagline, logo, phone, address, fssai_lic_no, owner_username, owner_password, plan_tier, plan_price, plan_expires_at, whatsapp_number, whatsapp_enabled, direct_ordering_enabled, google_reviews_enabled, theme_color } = req.body;
 
-    // Update restaurant info & Feature Control Matrix
+    // Update restaurant info & Feature Control Matrix & Logo
     await query(`
       UPDATE restaurants
-      SET name = $1, tagline = $2, phone = $3, address = $4, fssai_lic_no = $5,
-          plan_tier = $6, plan_price = $7, plan_expires_at = $8, whatsapp_number = $9,
-          whatsapp_enabled = $10, direct_ordering_enabled = $11, google_reviews_enabled = $12, theme_color = $13
-      WHERE id = $14
+      SET name = $1, tagline = $2, logo = $3, phone = $4, address = $5, fssai_lic_no = $6,
+          plan_tier = $7, plan_price = $8, plan_expires_at = $9, whatsapp_number = $10,
+          whatsapp_enabled = $11, direct_ordering_enabled = $12, google_reviews_enabled = $13, theme_color = $14
+      WHERE id = $15
     `, [
       name,
       tagline || '',
+      logo !== undefined ? logo : '',
       phone || '',
       address || '',
       fssai_lic_no || '',

@@ -264,16 +264,18 @@ router.delete('/dishes/:id', authenticateToken, async (req, res) => {
 const handleUpdateSettings = async (req, res) => {
   try {
     const restoId = req.user.restaurant_id || 1;
-    const { name, tagline, phone, address, openingHours, google_review_url, filters_visibility, currency_symbol, fssai_lic_no, resto_type, whatsapp_number, whatsapp_enabled, theme_color } = req.body;
+    const { name, tagline, logo, phone, address, openingHours, google_review_url, filters_visibility, currency_symbol, fssai_lic_no, resto_type, whatsapp_number, whatsapp_enabled, theme_color } = req.body;
 
     const visJson = typeof filters_visibility === 'object' ? JSON.stringify(filters_visibility) : filters_visibility;
 
     await query(`
       UPDATE restaurants 
-      SET name = $1, tagline = $2, phone = $3, address = $4, opening_hours = $5, google_review_url = $6, filters_visibility = $7, currency_symbol = $8, fssai_lic_no = $9, resto_type = $10, whatsapp_number = $11, whatsapp_enabled = $12, theme_color = $13
-      WHERE id = $14
+      SET name = $1, tagline = $2, logo = $3, phone = $4, address = $5, opening_hours = $6, google_review_url = $7, filters_visibility = $8, currency_symbol = $9, fssai_lic_no = $10, resto_type = $11, whatsapp_number = $12, whatsapp_enabled = $13, theme_color = $14
+      WHERE id = $15
     `, [
-      name, tagline, phone, address, openingHours, google_review_url, visJson,
+      name, tagline,
+      logo !== undefined ? logo : '',
+      phone, address, openingHours, google_review_url, visJson,
       currency_symbol !== undefined ? currency_symbol : '₹',
       fssai_lic_no || '',
       resto_type || 'pure_veg',

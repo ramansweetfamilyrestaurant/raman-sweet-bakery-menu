@@ -152,7 +152,8 @@ export async function uploadImage(file, token) {
     headers: { Authorization: `Bearer ${token}` },
     body: formData,
   });
-  return handleResponse(res, 'Upload failed');
+  const data = await handleResponse(res, 'Upload failed');
+  return data.url;
 }
 
 export async function createCategory(categoryData, token) {
