@@ -230,6 +230,11 @@ router.put('/restaurants/:id', authenticateToken, requireSuperAdmin, async (req,
 
     // Update owner admin user if username or password provided
     if (owner_username) {
+      const userCheck = await query('SELECT * FROM admins WHERE username = $1 AND restaurant_id != $2', [owner_username, id]);
+      if (userCheck && userCheck.length > 0) {
+        return res.status(400).json({ error: `Username '${owner_username}' is already taken by another restaurant owner!` });
+      }
+
       if (owner_password && owner_password.trim() !== '') {
         const salt = await bcrypt.genSalt(10);
         const hash = await bcrypt.hash(owner_password, salt);
