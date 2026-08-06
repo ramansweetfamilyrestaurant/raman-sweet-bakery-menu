@@ -1,3 +1,4 @@
+import React, { useState, useEffect } from 'react';
 import { fetchCategories, fetchDishes, toggleDishAvailability, deleteDish, deleteCategory, fetchRestaurantInfo, updateDishPrice } from '../../api/client';
 import DishFormModal from './DishFormModal';
 import CategoryFormModal from './CategoryFormModal';
