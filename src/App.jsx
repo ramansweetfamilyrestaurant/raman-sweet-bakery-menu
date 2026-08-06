@@ -216,7 +216,7 @@ export default function App() {
         onChange={setSearchQuery}
         onClear={() => setSearchQuery('')}
         onQuickFilter={(filterVal) => setSearchQuery(filterVal)}
-        showFilterBar={info?.show_filter_bar !== false}
+        filtersVisibility={info?.filters_visibility}
       />
 
 

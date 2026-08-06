@@ -1,14 +1,24 @@
 import React from 'react';
 import { Search, X } from 'lucide-react';
 
-export default function SearchBar({ value, onChange, onClear, onQuickFilter, showFilterBar = true }) {
-  const filters = [
-    { label: '✨ All', value: '' },
-    { label: '⭐ Must Try', value: 'Must Try' },
-    { label: '🍱 Combo', value: 'Combo' },
-    { label: '✨ Special', value: 'Special' },
-    { label: '⚡ Under 100', value: 'under100' }
+export default function SearchBar({ value, onChange, onClear, onQuickFilter, filtersVisibility }) {
+  const vis = {
+    must_try: true,
+    combo: true,
+    special: true,
+    under100: true,
+    ...filtersVisibility
+  };
+
+  const allFilters = [
+    { label: '✨ All', value: '', show: true },
+    { label: '⭐ Must Try', value: 'Must Try', show: vis.must_try !== false },
+    { label: '🍱 Combo', value: 'Combo', show: vis.combo !== false },
+    { label: '✨ Special', value: 'Special', show: vis.special !== false },
+    { label: '⚡ Under 100', value: 'under100', show: vis.under100 !== false }
   ];
+
+  const filters = allFilters.filter(f => f.show);
 
   return (
     <div style={{
@@ -77,7 +87,7 @@ export default function SearchBar({ value, onChange, onClear, onQuickFilter, sho
       </div>
 
       {/* Quick Micro-Filter Pills */}
-      {showFilterBar !== false && (
+      {filters.length > 1 && (
         <div style={{
           display: 'flex',
           gap: '6px',
@@ -86,30 +96,30 @@ export default function SearchBar({ value, onChange, onClear, onQuickFilter, sho
           msOverflowStyle: 'none',
           paddingBottom: '2px'
         }}>
-        {filters.map((f, i) => {
-          const isSelected = value === f.value || (f.value === '' && !value);
-          return (
-            <button
-              key={i}
-              onClick={() => onQuickFilter(value === f.value ? '' : f.value)}
-              style={{
-                fontSize: '0.72rem',
-                fontWeight: 700,
-                padding: '4px 11px',
-                borderRadius: 'var(--radius-pill)',
-                background: isSelected ? 'var(--primary-emerald)' : '#FFFFFF',
-                color: isSelected ? '#FFFFFF' : 'var(--text-dark)',
-                border: isSelected ? '1.5px solid var(--gold-bright)' : '1px solid var(--border-light)',
-                whiteSpace: 'nowrap',
-                transition: 'var(--transition-fast)',
-                boxShadow: 'var(--shadow-sm)'
-              }}
-            >
-              {f.label}
-            </button>
-          );
-        })}
-      </div>
+          {filters.map((f, i) => {
+            const isSelected = value === f.value || (f.value === '' && !value);
+            return (
+              <button
+                key={i}
+                onClick={() => onQuickFilter(value === f.value ? '' : f.value)}
+                style={{
+                  fontSize: '0.72rem',
+                  fontWeight: 700,
+                  padding: '4px 11px',
+                  borderRadius: 'var(--radius-pill)',
+                  background: isSelected ? 'var(--primary-emerald)' : '#FFFFFF',
+                  color: isSelected ? '#FFFFFF' : 'var(--text-dark)',
+                  border: isSelected ? '1.5px solid var(--gold-bright)' : '1px solid var(--border-light)',
+                  whiteSpace: 'nowrap',
+                  transition: 'var(--transition-fast)',
+                  boxShadow: 'var(--shadow-sm)'
+                }}
+              >
+                {f.label}
+              </button>
+            );
+          })}
+        </div>
       )}
     </div>
   );

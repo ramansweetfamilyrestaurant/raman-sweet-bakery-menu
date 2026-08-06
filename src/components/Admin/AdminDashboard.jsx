@@ -27,7 +27,12 @@ export default function AdminDashboard({ token, username, onLogout, onReturnToMe
     openingHours: '',
     google_review_url: '',
     google_maps_url: '',
-    show_filter_bar: true
+    filters_visibility: {
+      must_try: true,
+      combo: true,
+      special: true,
+      under100: true
+    }
   });
   const [settingsSavedMsg, setSettingsSavedMsg] = useState(false);
 
@@ -50,6 +55,7 @@ export default function AdminDashboard({ token, username, onLogout, onReturnToMe
       setCategories(Array.isArray(catData) ? catData : []);
       setDishes(Array.isArray(dishData) ? dishData : []);
       if (infoData) {
+        const defaultVis = { must_try: true, combo: true, special: true, under100: true };
         setSettingsForm({
           name: infoData.name || 'Raman Sweet Bakery & Family Restaurant',
           tagline: infoData.tagline || '100% Pure Vegetarian',
@@ -58,7 +64,7 @@ export default function AdminDashboard({ token, username, onLogout, onReturnToMe
           openingHours: infoData.openingHours || '8:00 AM - 10:30 PM (Mon - Sun)',
           google_review_url: infoData.google_review_url || '',
           google_maps_url: infoData.google_maps_url || '',
-          show_filter_bar: infoData.show_filter_bar !== false
+          filters_visibility: { ...defaultVis, ...infoData.filters_visibility }
         });
       }
     } catch (err) {
@@ -1138,44 +1144,71 @@ export default function AdminDashboard({ token, username, onLogout, onReturnToMe
               </div>
             </div>
 
-            {/* Show / Hide Quick Filter Bar Toggle */}
+            {/* Individual Filter Buttons ON / OFF Toggles */}
             <div style={{
-              background: settingsForm.show_filter_bar !== false ? '#F0FDF4' : '#FEF2F2',
-              border: settingsForm.show_filter_bar !== false ? '1.5px solid #86EFAC' : '1.5px solid #FCA5A5',
-              padding: '14px 16px',
-              borderRadius: 'var(--radius-sm)',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'space-between',
-              marginBottom: '20px',
-              gap: '10px'
+              background: '#FAF8F5',
+              border: '1.5px solid var(--gold-primary)',
+              borderRadius: 'var(--radius-md)',
+              padding: '16px',
+              marginBottom: '20px'
             }}>
-              <div>
-                <h5 style={{ fontSize: '0.9rem', fontWeight: 800, color: settingsForm.show_filter_bar !== false ? '#166534' : '#991B1B' }}>
-                  {settingsForm.show_filter_bar !== false ? '✅ Filter Bar is VISIBLE on Customer Menu' : '🚫 Filter Bar is HIDDEN on Customer Menu'}
-                </h5>
-                <p style={{ fontSize: '0.78rem', color: 'var(--text-muted)', marginTop: '2px' }}>
-                  Customer Digital Menu par Search Bar ke niche filter buttons (Must Try, Combo, Special, Under 100) ko ON/OFF karein.
-                </p>
-              </div>
+              <h4 style={{ fontSize: '0.95rem', fontWeight: 800, color: 'var(--primary-emerald)', marginBottom: '4px' }}>
+                🎛️ Customer Menu Filter Buttons Visibility
+              </h4>
+              <p style={{ fontSize: '0.78rem', color: 'var(--text-muted)', marginBottom: '14px' }}>
+                Menu page par har ek filter button ko alag-alag ON ya OFF karein:
+              </p>
 
-              <button
-                type="button"
-                onClick={() => setSettingsForm({ ...settingsForm, show_filter_bar: !settingsForm.show_filter_bar })}
-                style={{
-                  padding: '8px 18px',
-                  borderRadius: 'var(--radius-pill)',
-                  fontWeight: 800,
-                  fontSize: '0.82rem',
-                  background: settingsForm.show_filter_bar !== false ? '#15803D' : '#DC2626',
-                  color: '#FFFFFF',
-                  border: 'none',
-                  whiteSpace: 'nowrap',
-                  cursor: 'pointer'
-                }}
-              >
-                {settingsForm.show_filter_bar !== false ? '● Visible (ON)' : '● Hidden (OFF)'}
-              </button>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '10px' }}>
+                {[
+                  { key: 'must_try', label: '⭐ Must Try Button' },
+                  { key: 'combo', label: '🍱 Combo Button' },
+                  { key: 'special', label: '✨ Special Button' },
+                  { key: 'under100', label: '⚡ Under 100 Button' }
+                ].map((item) => {
+                  const isVisible = settingsForm.filters_visibility?.[item.key] !== false;
+                  return (
+                    <div key={item.key} style={{
+                      background: isVisible ? '#F0FDF4' : '#FEF2F2',
+                      border: isVisible ? '1px solid #86EFAC' : '1px solid #FCA5A5',
+                      padding: '10px 12px',
+                      borderRadius: 'var(--radius-sm)',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'space-between'
+                    }}>
+                      <span style={{ fontSize: '0.82rem', fontWeight: 800, color: isVisible ? '#166534' : '#991B1B' }}>
+                        {item.label}
+                      </span>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          const currentVis = settingsForm.filters_visibility || {};
+                          setSettingsForm({
+                            ...settingsForm,
+                            filters_visibility: {
+                              ...currentVis,
+                              [item.key]: !isVisible
+                            }
+                          });
+                        }}
+                        style={{
+                          padding: '4px 12px',
+                          borderRadius: 'var(--radius-pill)',
+                          fontWeight: 800,
+                          fontSize: '0.74rem',
+                          background: isVisible ? '#15803D' : '#DC2626',
+                          color: '#FFFFFF',
+                          border: 'none',
+                          cursor: 'pointer'
+                        }}
+                      >
+                        {isVisible ? 'ON' : 'OFF'}
+                      </button>
+                    </div>
+                  );
+                })}
+              </div>
             </div>
 
             <button
