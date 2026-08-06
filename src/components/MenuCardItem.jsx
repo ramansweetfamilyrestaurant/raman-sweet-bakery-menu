@@ -247,18 +247,25 @@ export default function MenuCardItem({ dish, lang, onClick, onAddToCart, currenc
             </button>
           </div>
         ) : (
-          /* Single Price — no half option */
-          <span 
+          /* Single Price Pill — Enclosed in luxury price pill for 100% design consistency */
+          <div 
             style={{
-              fontSize: '1.02rem',
+              fontSize: '0.78rem',
               fontWeight: 900,
-              color: 'var(--primary-emerald)',
+              padding: '4px 10px',
+              borderRadius: 'var(--radius-pill)',
+              background: 'var(--header-gradient)',
+              color: 'var(--gold-bright)',
+              border: '1.5px solid var(--gold-bright)',
+              whiteSpace: 'nowrap',
+              lineHeight: 1.2,
+              boxShadow: 'var(--shadow-sm)',
               cursor: 'pointer'
             }}
             onClick={() => onClick(dish)}
           >
             {symbol}{fullPriceNum.toLocaleString('en-IN')}
-          </span>
+          </div>
         )}
 
         {/* Dish Thumbnail & + Add WhatsApp Button */}

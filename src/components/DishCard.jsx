@@ -225,13 +225,15 @@ export default function DishCard({ dish, onClick, onAddToCart, currencySymbol = 
             </h3>
 
             <span style={{
-              fontSize: '1.05rem',
-              fontWeight: 800,
-              color: 'var(--primary-emerald)',
-              background: 'var(--primary-emerald-light)',
-              padding: '2px 8px',
-              borderRadius: 'var(--radius-sm)',
-              whiteSpace: 'nowrap'
+              fontSize: '0.84rem',
+              fontWeight: 900,
+              color: 'var(--gold-bright)',
+              background: 'var(--header-gradient)',
+              border: '1.5px solid var(--gold-bright)',
+              padding: '3px 10px',
+              borderRadius: 'var(--radius-pill)',
+              whiteSpace: 'nowrap',
+              boxShadow: 'var(--shadow-sm)'
             }}>
               {currencySymbol}{Number(dish.price).toLocaleString('en-IN')}
             </span>
