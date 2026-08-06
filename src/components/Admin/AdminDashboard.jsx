@@ -23,6 +23,7 @@ export default function AdminDashboard({ token, username, onLogout, onReturnToMe
 
   // Live Orders (KOT) State
   const [orders, setOrders] = useState([]);
+  const [kotFilter, setKotFilter] = useState('all');
   const [prevPendingCount, setPrevPendingCount] = useState(0);
   const [restaurantInfo, setRestaurantInfo] = useState(null);
 
@@ -79,14 +80,15 @@ export default function AdminDashboard({ token, username, onLogout, onReturnToMe
   };
 
   const handlePrintKOT = (order) => {
-    const printWindow = window.open('', '_blank', 'width=400,height=600');
+    const printWindow = window.open('', '_blank', 'width=380,height=600');
     if (!printWindow) return;
     let itemsHtml = '';
     (order.items || []).forEach(i => {
+      const portionText = i.portion ? ` (${i.portion})` : '';
       itemsHtml += `
         <tr>
-          <td style="padding:6px 0;font-weight:bold;">${i.quantity}x ${i.name}</td>
-          <td style="text-align:right;">₹${i.price * i.quantity}</td>
+          <td style="padding:6px 0;font-weight:bold;font-size:14px;border-bottom:1px dashed #E5E7EB;">${i.quantity}x ${i.name}${portionText}</td>
+          <td style="text-align:right;font-weight:bold;font-size:14px;border-bottom:1px dashed #E5E7EB;">₹${i.price * i.quantity}</td>
         </tr>
       `;
     });
@@ -96,29 +98,53 @@ export default function AdminDashboard({ token, username, onLogout, onReturnToMe
         <head>
           <title>KOT Ticket - Table ${order.table_number}</title>
           <style>
-            body { font-family: monospace; padding: 20px; width: 280px; margin: 0 auto; background: #FFF; }
-            h2 { text-align: center; margin: 0 0 4px 0; font-size: 18px; }
-            .meta { border-bottom: 1px dashed #000; padding-bottom: 8px; margin-bottom: 10px; font-size: 13px; }
-            table { width: 100%; font-size: 14px; border-collapse: collapse; }
-            .total { border-top: 1px dashed #000; margin-top: 10px; padding-top: 8px; font-weight: bold; font-size: 16px; display: flex; justify-content: space-between; }
+            @media print {
+              body { margin: 0; padding: 0; width: 100%; }
+            }
+            body { font-family: 'Courier New', Courier, monospace; padding: 14px; width: 280px; margin: 0 auto; background: #FFF; color: #000; }
+            .header { text-align: center; border-bottom: 2px solid #000; padding-bottom: 8px; margin-bottom: 10px; }
+            .header h2 { margin: 0; font-size: 20px; font-weight: 900; }
+            .header h3 { margin: 4px 0 0 0; font-size: 16px; background: #000; color: #FFF; display: inline-block; padding: 2px 8px; }
+            .meta { border-bottom: 1px dashed #000; padding-bottom: 8px; margin-bottom: 10px; font-size: 13px; line-height: 1.4; }
+            table { width: 100%; font-size: 14px; border-collapse: collapse; margin-bottom: 10px; }
+            .total { border-top: 2px solid #000; border-bottom: 2px solid #000; padding: 8px 0; font-weight: 900; font-size: 18px; display: flex; justify-content: space-between; }
+            .footer { text-align: center; font-size: 11px; margin-top: 12px; font-weight: bold; }
           </style>
         </head>
         <body>
-          <h2>*** KITCHEN TICKET (KOT) ***</h2>
+          <div class="header">
+            <h2>KITCHEN ORDER TICKET</h2>
+            <h3>TABLE #${order.table_number || '1'}</h3>
+          </div>
           <div class="meta">
-            <div><strong>TABLE #${order.table_number || '1'}</strong></div>
-            <div>Order ID: #${order.id}</div>
-            <div>Guest: ${order.customer_name || 'Dine-In Customer'}</div>
-            <div>Time: ${new Date(order.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</div>
+            <div><strong>KOT Order ID:</strong> #${order.id}</div>
+            <div><strong>Customer:</strong> ${order.customer_name || 'Dine-In Guest'}</div>
+            <div><strong>Time:</strong> ${new Date(order.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</div>
           </div>
           <table>
-            ${itemsHtml}
+            <thead>
+              <tr style="border-bottom:1px solid #000;text-align:left;font-size:12px;">
+                <th>ITEM & QTY</th>
+                <th style="text-align:right;">AMOUNT</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${itemsHtml}
+            </tbody>
           </table>
           <div class="total">
-            <span>TOTAL:</span>
+            <span>TOTAL BILL:</span>
             <span>₹${order.total_amount}</span>
           </div>
-          <script>window.onload = function() { window.print(); };</script>
+          <div class="footer">
+            *** READY FOR KITCHEN PREPARATION ***
+          </div>
+          <script>
+            window.onload = function() {
+              window.print();
+              setTimeout(function() { window.close(); }, 500);
+            };
+          </script>
         </body>
       </html>
     `);
@@ -862,80 +888,110 @@ export default function AdminDashboard({ token, username, onLogout, onReturnToMe
               >
                 🔄 Refresh Now
               </button>
-            </div>
-
-            {orders.length === 0 ? (
-              <div style={{ textAlign: 'center', padding: '50px 20px', background: '#FFFFFF', borderRadius: '16px', border: '1px solid var(--border-light)' }}>
-                <Clock size={44} color="#9CA3AF" style={{ marginBottom: '12px' }} />
-                <h3 style={{ fontSize: '1rem', fontWeight: 800, color: 'var(--text-dark)', margin: '0 0 4px 0' }}>No Orders Received Yet</h3>
-                <p style={{ fontSize: '0.82rem', color: 'var(--text-muted)', margin: 0 }}>When customers place a table order from their phone, it will pop up here live!</p>
               </div>
-            ) : (
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(320px, 1fr))', gap: '14px' }}>
-                {orders.map((o) => {
-                  const statusColors = {
-                    pending: { bg: '#FEF3C7', text: '#92400E', border: '#FCD34D', label: 'Pending 🟡' },
-                    preparing: { bg: '#DBEAFE', text: '#1E40AF', border: '#93C5FD', label: 'Preparing 👨‍🍳' },
-                    served: { bg: '#D1FAE5', text: '#065F46', border: '#6EE7B7', label: 'Served 🟢' },
-                    completed: { bg: '#F3F4F6', text: '#4B5563', border: '#D1D5DB', label: 'Completed 🏁' },
-                    cancelled: { bg: '#FEE2E2', text: '#991B1B', border: '#FCA5A5', label: 'Cancelled 🔴' }
-                  };
-                  const st = statusColors[o.status] || statusColors.pending;
 
-                  return (
-                    <div
-                      key={o.id}
-                      style={{
-                        background: '#FFFFFF',
-                        borderRadius: '16px',
-                        padding: '16px',
-                        border: `2px solid ${st.border}`,
-                        boxShadow: '0 4px 16px rgba(0,0,0,0.06)',
-                        display: 'flex',
-                        flexDirection: 'column',
-                        justifyContent: 'space-between',
-                        gap: '12px'
-                      }}
-                    >
-                      <div>
-                        {/* Header: Table & Order ID */}
-                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px' }}>
-                          <span style={{
-                            background: 'linear-gradient(135deg, #0A2315 0%, #143A24 100%)',
-                            color: '#FFD700',
-                            fontWeight: 900,
-                            fontSize: '0.9rem',
-                            padding: '4px 12px',
-                            borderRadius: 'var(--radius-pill)',
-                            border: '1px solid #FFD700'
-                          }}>
-                            TABLE #{o.table_number || '1'}
-                          </span>
+              {/* KOT Status Filter Pills */}
+              <div style={{ display: 'flex', gap: '6px', overflowX: 'auto', paddingBottom: '4px', scrollbarWidth: 'none' }}>
+                {[
+                  { id: 'all', label: `🔥 All Orders (${orders.length})` },
+                  { id: 'pending', label: `🟡 Pending (${orders.filter(o => o.status === 'pending').length})` },
+                  { id: 'preparing', label: `👨‍🍳 Kitchen (${orders.filter(o => o.status === 'preparing').length})` },
+                  { id: 'served', label: `🟢 Served (${orders.filter(o => o.status === 'served').length})` },
+                  { id: 'completed', label: `🏁 Complete (${orders.filter(o => o.status === 'completed').length})` }
+                ].map(f => (
+                  <button
+                    key={f.id}
+                    onClick={() => setKotFilter(f.id)}
+                    style={{
+                      padding: '6px 12px',
+                      borderRadius: 'var(--radius-pill)',
+                      fontSize: '0.74rem',
+                      fontWeight: 800,
+                      background: kotFilter === f.id ? 'var(--header-gradient)' : '#FFFFFF',
+                      color: kotFilter === f.id ? '#FFFFFF' : 'var(--text-dark)',
+                      border: kotFilter === f.id ? 'none' : '1px solid var(--border-light)',
+                      cursor: 'pointer',
+                      whiteSpace: 'nowrap',
+                      boxShadow: kotFilter === f.id ? '0 2px 8px rgba(10,35,21,0.2)' : 'none'
+                    }}
+                  >
+                    {f.label}
+                  </button>
+                ))}
+              </div>
 
-                          <span style={{
-                            background: st.bg,
-                            color: st.text,
-                            fontSize: '0.78rem',
-                            fontWeight: 800,
-                            padding: '4px 10px',
-                            borderRadius: '12px',
-                            border: `1px solid ${st.border}`
-                          }}>
-                            {st.label}
-                          </span>
-                        </div>
+              {orders.length === 0 ? (
+                <div style={{ textAlign: 'center', padding: '50px 20px', background: '#FFFFFF', borderRadius: '16px', border: '1px solid var(--border-light)' }}>
+                  <Clock size={44} color="#9CA3AF" style={{ marginBottom: '12px' }} />
+                  <h3 style={{ fontSize: '1rem', fontWeight: 800, color: 'var(--text-dark)', margin: '0 0 4px 0' }}>No Orders Received Yet</h3>
+                  <p style={{ fontSize: '0.82rem', color: 'var(--text-muted)', margin: 0 }}>When customers place a table order from their phone, it will pop up here live!</p>
+                </div>
+              ) : (
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(320px, 1fr))', gap: '14px' }}>
+                  {orders.filter(o => kotFilter === 'all' || o.status === kotFilter).map((o) => {
+                    const statusColors = {
+                      pending: { bg: '#FEF3C7', text: '#92400E', border: '#FCD34D', label: 'Pending 🟡' },
+                      preparing: { bg: '#DBEAFE', text: '#1E40AF', border: '#93C5FD', label: 'In Kitchen 👨‍🍳' },
+                      served: { bg: '#D1FAE5', text: '#065F46', border: '#6EE7B7', label: 'Served 🟢' },
+                      completed: { bg: '#F3F4F6', text: '#4B5563', border: '#D1D5DB', label: 'Completed 🏁' },
+                      cancelled: { bg: '#FEE2E2', text: '#991B1B', border: '#FCA5A5', label: 'Cancelled 🔴' }
+                    };
+                    const st = statusColors[o.status] || statusColors.pending;
 
-                        {/* Customer details & Time */}
-                        <div style={{ fontSize: '0.78rem', color: 'var(--text-muted)', marginBottom: '10px', display: 'flex', justifyContent: 'space-between' }}>
-                          <span>Order #{o.id} • {o.customer_name || 'Guest'}</span>
-                          <span>{new Date(o.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
-                        </div>
+                    return (
+                      <div
+                        key={o.id}
+                        style={{
+                          background: '#FFFFFF',
+                          borderRadius: '16px',
+                          padding: '16px',
+                          border: `2px solid ${st.border}`,
+                          boxShadow: '0 4px 16px rgba(0,0,0,0.06)',
+                          display: 'flex',
+                          flexDirection: 'column',
+                          justifyContent: 'space-between',
+                          gap: '12px'
+                        }}
+                      >
+                        <div>
+                          {/* Header: Table & Order ID */}
+                          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px' }}>
+                            <span style={{
+                              background: 'linear-gradient(135deg, #0A2315 0%, #143A24 100%)',
+                              color: '#FFD700',
+                              fontWeight: 900,
+                              fontSize: '0.9rem',
+                              padding: '4px 12px',
+                              borderRadius: 'var(--radius-pill)',
+                              border: '1px solid #FFD700'
+                            }}>
+                              TABLE #{o.table_number || '1'}
+                            </span>
+
+                            <span style={{
+                              background: st.bg,
+                              color: st.text,
+                              fontSize: '0.78rem',
+                              fontWeight: 800,
+                              padding: '4px 10px',
+                              borderRadius: '12px',
+                              border: `1px solid ${st.border}`
+                            }}>
+                              {st.label}
+                            </span>
+                          </div>
+
+                          {/* Customer details & Time */}
+                          <div style={{ fontSize: '0.78rem', color: 'var(--text-muted)', marginBottom: '10px', display: 'flex', justifyContent: 'space-between' }}>
+                            <span>Order #{o.id} • {o.customer_name || 'Guest'}</span>
+                            <span>{new Date(o.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
+                          </div>
 
                         {/* Items List */}
                         <div style={{ background: '#F9FAFB', borderRadius: '12px', padding: '10px 12px', border: '1px solid #E5E7EB', marginBottom: '10px' }}>
                           {Array.isArray(o.items) && o.items.map((item, iIdx) => (
                             <div key={iIdx} style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.86rem', fontWeight: 700, color: '#1F2937', padding: '3px 0' }}>
-                              <span>{item.quantity}x {item.name}</span>
+                              <span>{item.quantity}x {item.name}{item.portion ? ` (${item.portion})` : ''}</span>
                               <span style={{ color: 'var(--primary-emerald)' }}>₹{item.price * item.quantity}</span>
                             </div>
                           ))}
