@@ -56,8 +56,12 @@ router.post('/login', async (req, res) => {
       return res.status(401).json({ error: 'Invalid credentials' });
     }
 
-    const token = jwt.sign({ id: admin.id, username: admin.username }, JWT_SECRET, { expiresIn: '7d' });
-    res.json({ token, username: admin.username });
+    const token = jwt.sign(
+      { id: admin.id, username: admin.username, restaurant_id: admin.restaurant_id || 1, role: admin.role || 'restaurant_admin' },
+      JWT_SECRET,
+      { expiresIn: '30d' }
+    );
+    res.json({ token, username: admin.username, restaurant_id: admin.restaurant_id || 1, role: admin.role || 'restaurant_admin' });
   } catch (err) {
     console.error('Login error:', err);
     res.status(500).json({ error: 'Internal server error during login' });
@@ -67,9 +71,10 @@ router.post('/login', async (req, res) => {
 // Admin Dashboard Summary Statistics
 router.get('/stats', authenticateToken, async (req, res) => {
   try {
-    const catRes = await query('SELECT COUNT(*) as count FROM categories');
-    const dishRes = await query('SELECT COUNT(*) as count FROM dishes');
-    const activeRes = await query('SELECT COUNT(*) as count FROM dishes WHERE available = 1');
+    const restoId = req.user.restaurant_id || 1;
+    const catRes = await query('SELECT COUNT(*) as count FROM categories WHERE restaurant_id = $1', [restoId]);
+    const dishRes = await query('SELECT COUNT(*) as count FROM dishes WHERE restaurant_id = $1', [restoId]);
+    const activeRes = await query('SELECT COUNT(*) as count FROM dishes WHERE restaurant_id = $1 AND available = 1', [restoId]);
 
     res.json({
       totalCategories: parseInt(catRes[0]?.count || 0, 10),
@@ -91,17 +96,18 @@ router.post('/upload', authenticateToken, upload.single('image'), (req, res) => 
   res.json({ url: imageUrl });
 });
 
-// Category Management
+// Category Management (Tenant Scoped)
 router.post('/categories', authenticateToken, async (req, res) => {
   try {
+    const restoId = req.user.restaurant_id || 1;
     const { name, image, sort_order } = req.body;
     if (!name) {
       return res.status(400).json({ error: 'Category name is required' });
     }
     const order = sort_order || 0;
     const result = await query(
-      'INSERT INTO categories (name, image, sort_order) VALUES ($1, $2, $3) RETURNING id',
-      [name, image || '/uploads/logo.jpg', order]
+      'INSERT INTO categories (restaurant_id, name, image, sort_order) VALUES ($1, $2, $3, $4) RETURNING id',
+      [restoId, name, image || '/uploads/logo.jpg', order]
     );
     res.json({ success: true, id: result[0]?.id || result.lastInsertRowid });
   } catch (err) {
@@ -112,11 +118,12 @@ router.post('/categories', authenticateToken, async (req, res) => {
 
 router.put('/categories/:id', authenticateToken, async (req, res) => {
   try {
+    const restoId = req.user.restaurant_id || 1;
     const { id } = req.params;
     const { name, image, sort_order } = req.body;
     await query(
-      'UPDATE categories SET name = $1, image = $2, sort_order = $3 WHERE id = $4',
-      [name, image, sort_order || 0, id]
+      'UPDATE categories SET name = $1, image = $2, sort_order = $3 WHERE id = $4 AND restaurant_id = $5',
+      [name, image, sort_order || 0, id, restoId]
     );
     res.json({ success: true });
   } catch (err) {
@@ -127,8 +134,9 @@ router.put('/categories/:id', authenticateToken, async (req, res) => {
 
 router.delete('/categories/:id', authenticateToken, async (req, res) => {
   try {
+    const restoId = req.user.restaurant_id || 1;
     const { id } = req.params;
-    await query('DELETE FROM categories WHERE id = $1', [id]);
+    await query('DELETE FROM categories WHERE id = $1 AND restaurant_id = $2', [id, restoId]);
     res.json({ success: true });
   } catch (err) {
     console.error('Delete category error:', err);
@@ -138,10 +146,11 @@ router.delete('/categories/:id', authenticateToken, async (req, res) => {
 
 router.patch('/categories/:id/toggle', authenticateToken, async (req, res) => {
   try {
+    const restoId = req.user.restaurant_id || 1;
     const { id } = req.params;
     const { active } = req.body;
     const activeBool = active === true || active === 1 || active === 'true';
-    await query('UPDATE categories SET active = $1 WHERE id = $2', [activeBool, id]);
+    await query('UPDATE categories SET active = $1 WHERE id = $2 AND restaurant_id = $3', [activeBool, id, restoId]);
     res.json({ success: true });
   } catch (err) {
     console.error('Toggle category error:', err);
@@ -149,9 +158,10 @@ router.patch('/categories/:id/toggle', authenticateToken, async (req, res) => {
   }
 });
 
-// Dish Management (Protected)
+// Dish Management (Tenant Scoped)
 router.post('/dishes', authenticateToken, async (req, res) => {
   try {
+    const restoId = req.user.restaurant_id || 1;
     const { 
       category_id, name, description, image, price, price_half, 
       portion, portion_half_label, portion_full_label, badge, ingredients, taste_profile, available 
@@ -164,11 +174,11 @@ router.post('/dishes', authenticateToken, async (req, res) => {
     const availVal = available === false ? 0 : 1;
     const result = await query(
       `INSERT INTO dishes (
-        category_id, name, description, image, price, price_half, 
+        restaurant_id, category_id, name, description, image, price, price_half, 
         portion, portion_half_label, portion_full_label, badge, ingredients, taste_profile, available
-      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13) RETURNING id`,
+      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14) RETURNING id`,
       [
-        category_id, name, description || '', image || '/uploads/logo.jpg', price, price_half || null,
+        restoId, category_id, name, description || '', image || '/uploads/logo.jpg', price, price_half || null,
         portion || '', portion_half_label || '', portion_full_label || '', badge || '', ingredients || '', taste_profile || '', availVal
       ]
     );
@@ -181,6 +191,7 @@ router.post('/dishes', authenticateToken, async (req, res) => {
 
 router.put('/dishes/:id', authenticateToken, async (req, res) => {
   try {
+    const restoId = req.user.restaurant_id || 1;
     const { id } = req.params;
     const { 
       category_id, name, description, image, price, price_half, 
@@ -193,11 +204,11 @@ router.put('/dishes/:id', authenticateToken, async (req, res) => {
        SET category_id = $1, name = $2, description = $3, image = $4, price = $5, price_half = $6,
            portion = $7, portion_half_label = $8, portion_full_label = $9, badge = $10,
            ingredients = $11, taste_profile = $12, available = $13, updated_at = CURRENT_TIMESTAMP 
-       WHERE id = $14`,
+       WHERE id = $14 AND restaurant_id = $15`,
       [
         category_id, name, description || '', image, price, price_half || null,
         portion || '', portion_half_label || '', portion_full_label || '', badge || '',
-        ingredients || '', taste_profile || '', availVal, id
+        ingredients || '', taste_profile || '', availVal, id, restoId
       ]
     );
     res.json({ success: true });
@@ -209,33 +220,36 @@ router.put('/dishes/:id', authenticateToken, async (req, res) => {
 
 router.patch('/dishes/:id/toggle', authenticateToken, async (req, res) => {
   try {
+    const restoId = req.user.restaurant_id || 1;
     const { id } = req.params;
     const { available } = req.body;
     const availVal = available ? 1 : 0;
-    await query('UPDATE dishes SET available = $1, updated_at = CURRENT_TIMESTAMP WHERE id = $2', [availVal, id]);
+    await query('UPDATE dishes SET available = $1 WHERE id = $2 AND restaurant_id = $3', [availVal, id, restoId]);
     res.json({ success: true });
   } catch (err) {
     console.error('Toggle dish error:', err);
-    res.status(500).json({ error: 'Failed to toggle dish availability' });
+    res.status(500).json({ error: 'Failed to toggle availability' });
   }
 });
 
 router.patch('/dishes/:id/price', authenticateToken, async (req, res) => {
   try {
+    const restoId = req.user.restaurant_id || 1;
     const { id } = req.params;
-    const { price, price_half } = req.body;
-    await query('UPDATE dishes SET price = $1, price_half = $2, updated_at = CURRENT_TIMESTAMP WHERE id = $3', [price, price_half || null, id]);
+    const { price } = req.body;
+    await query('UPDATE dishes SET price = $1 WHERE id = $2 AND restaurant_id = $3', [price, id, restoId]);
     res.json({ success: true });
   } catch (err) {
-    console.error('Update dish price error:', err);
-    res.status(500).json({ error: 'Failed to update dish price' });
+    console.error('Update price error:', err);
+    res.status(500).json({ error: 'Failed to update price' });
   }
 });
 
 router.delete('/dishes/:id', authenticateToken, async (req, res) => {
   try {
+    const restoId = req.user.restaurant_id || 1;
     const { id } = req.params;
-    await query('DELETE FROM dishes WHERE id = $1', [id]);
+    await query('DELETE FROM dishes WHERE id = $1 AND restaurant_id = $2', [id, restoId]);
     res.json({ success: true });
   } catch (err) {
     console.error('Delete dish error:', err);
@@ -243,42 +257,44 @@ router.delete('/dishes/:id', authenticateToken, async (req, res) => {
   }
 });
 
-// Settings Route (Update Google Review URL, Phone, Hours)
-router.put('/settings', authenticateToken, async (req, res) => {
+// Update Tenant Restaurant Settings
+router.post('/info', authenticateToken, async (req, res) => {
   try {
-    const settingsPath = path.resolve('server/settings.json');
-    let currentSettings = {};
-    if (fs.existsSync(settingsPath)) {
-      currentSettings = JSON.parse(fs.readFileSync(settingsPath, 'utf-8'));
+    const restoId = req.user.restaurant_id || 1;
+    const { name, tagline, phone, address, openingHours, google_review_url, filters_visibility } = req.body;
+
+    const visJson = typeof filters_visibility === 'object' ? JSON.stringify(filters_visibility) : filters_visibility;
+
+    await query(`
+      UPDATE restaurants 
+      SET name = $1, tagline = $2, phone = $3, address = $4, opening_hours = $5, google_review_url = $6, filters_visibility = $7
+      WHERE id = $8
+    `, [name, tagline, phone, address, openingHours, google_review_url, visJson, restoId]);
+
+    // Also update settings.json as fallback for primary restaurant
+    if (restoId === 1) {
+      const settingsPath = path.resolve('server/settings.json');
+      const updated = {
+        name, tagline, phone, address, openingHours, google_review_url,
+        filters_visibility: typeof filters_visibility === 'object' ? filters_visibility : { must_try: true, combo: true, special: true, under100: true }
+      };
+      fs.writeFileSync(settingsPath, JSON.stringify(updated, null, 2), 'utf-8');
     }
 
-    const newSettings = {
-      ...currentSettings,
-      ...req.body
-    };
-
-    fs.writeFileSync(settingsPath, JSON.stringify(newSettings, null, 2), 'utf-8');
-    res.json({ success: true, settings: newSettings });
+    res.json({ success: true, message: 'Restaurant settings updated successfully!' });
   } catch (err) {
     console.error('Update settings error:', err);
     res.status(500).json({ error: 'Failed to update settings' });
   }
 });
 
-// Change Admin Credentials (Username/Password)
-router.put('/change-credentials', authenticateToken, async (req, res) => {
+// Change Admin Password
+router.post('/change-password', authenticateToken, async (req, res) => {
   try {
     const { currentPassword, newUsername, newPassword } = req.body;
+    const adminId = req.user.id;
 
-    if (!currentPassword) {
-      return res.status(400).json({ error: 'Current password is required' });
-    }
-    if (!newUsername && !newPassword) {
-      return res.status(400).json({ error: 'Provide a new username or new password' });
-    }
-
-    // Verify current password
-    const admins = await query('SELECT * FROM admins WHERE id = $1', [req.user.id]);
+    const admins = await query('SELECT * FROM admins WHERE id = $1', [adminId]);
     if (!admins || admins.length === 0) {
       return res.status(404).json({ error: 'Admin account not found' });
     }
@@ -286,37 +302,29 @@ router.put('/change-credentials', authenticateToken, async (req, res) => {
     const admin = admins[0];
     const match = await bcrypt.compare(currentPassword, admin.password_hash);
     if (!match) {
-      return res.status(401).json({ error: 'Current password is incorrect' });
+      return res.status(400).json({ error: 'Incorrect current password' });
     }
 
-    // Update username if provided
-    if (newUsername && newUsername.trim()) {
-      await query('UPDATE admins SET username = $1 WHERE id = $2', [newUsername.trim(), admin.id]);
-    }
-
-    // Update password if provided
-    if (newPassword && newPassword.trim()) {
-      if (newPassword.trim().length < 4) {
-        return res.status(400).json({ error: 'New password must be at least 4 characters' });
+    let updatedUsername = admin.username;
+    if (newUsername && newUsername.trim() !== '') {
+      const userCheck = await query('SELECT * FROM admins WHERE username = $1 AND id != $2', [newUsername.trim(), adminId]);
+      if (userCheck.length > 0) {
+        return res.status(400).json({ error: 'Username already in use' });
       }
-      const salt = await bcrypt.genSalt(10);
-      const hash = await bcrypt.hash(newPassword.trim(), salt);
-      await query('UPDATE admins SET password_hash = $1 WHERE id = $2', [hash, admin.id]);
+      updatedUsername = newUsername.trim();
     }
 
-    // Generate new token with updated username
-    const updatedUsername = (newUsername && newUsername.trim()) ? newUsername.trim() : admin.username;
-    const token = jwt.sign({ id: admin.id, username: updatedUsername }, JWT_SECRET, { expiresIn: '7d' });
+    let updatedHash = admin.password_hash;
+    if (newPassword && newPassword.trim() !== '') {
+      const salt = await bcrypt.genSalt(10);
+      updatedHash = await bcrypt.hash(newPassword.trim(), salt);
+    }
 
-    res.json({ 
-      success: true, 
-      message: 'Credentials updated successfully',
-      token,
-      username: updatedUsername
-    });
+    await query('UPDATE admins SET username = $1, password_hash = $2 WHERE id = $3', [updatedUsername, updatedHash, adminId]);
+    res.json({ success: true, username: updatedUsername });
   } catch (err) {
-    console.error('Change credentials error:', err);
-    res.status(500).json({ error: 'Failed to update credentials' });
+    console.error('Change password error:', err);
+    res.status(500).json({ error: 'Failed to update password' });
   }
 });
 

@@ -43,8 +43,25 @@ async function initDb() {
 async function createTables() {
   if (dbType === 'postgres') {
     await pgPool.query(`
+      CREATE TABLE IF NOT EXISTS restaurants (
+        id SERIAL PRIMARY KEY,
+        name VARCHAR(255) NOT NULL,
+        slug VARCHAR(255) UNIQUE NOT NULL,
+        tagline VARCHAR(255),
+        logo VARCHAR(1000),
+        phone VARCHAR(100),
+        address VARCHAR(500),
+        opening_hours VARCHAR(255),
+        google_review_url VARCHAR(1000),
+        google_maps_url VARCHAR(1000),
+        filters_visibility JSONB,
+        active BOOLEAN DEFAULT TRUE,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+      );
+
       CREATE TABLE IF NOT EXISTS categories (
         id SERIAL PRIMARY KEY,
+        restaurant_id INT REFERENCES restaurants(id) ON DELETE CASCADE,
         name VARCHAR(255) NOT NULL,
         name_hi VARCHAR(255),
         image VARCHAR(1000),
@@ -52,10 +69,12 @@ async function createTables() {
         active BOOLEAN DEFAULT TRUE
       );
 
+      ALTER TABLE categories ADD COLUMN IF NOT EXISTS restaurant_id INT REFERENCES restaurants(id) ON DELETE CASCADE;
       ALTER TABLE categories ADD COLUMN IF NOT EXISTS active BOOLEAN DEFAULT TRUE;
 
       CREATE TABLE IF NOT EXISTS dishes (
         id SERIAL PRIMARY KEY,
+        restaurant_id INT REFERENCES restaurants(id) ON DELETE CASCADE,
         category_id INT REFERENCES categories(id) ON DELETE CASCADE,
         name VARCHAR(255) NOT NULL,
         name_hi VARCHAR(255),
@@ -75,26 +94,52 @@ async function createTables() {
         updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
       );
 
+      ALTER TABLE dishes ADD COLUMN IF NOT EXISTS restaurant_id INT REFERENCES restaurants(id) ON DELETE CASCADE;
+
       CREATE TABLE IF NOT EXISTS admins (
         id SERIAL PRIMARY KEY,
+        restaurant_id INT REFERENCES restaurants(id) ON DELETE CASCADE,
         username VARCHAR(255) UNIQUE NOT NULL,
         password_hash VARCHAR(255) NOT NULL,
+        role VARCHAR(50) DEFAULT 'restaurant_admin',
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
       );
+
+      ALTER TABLE admins ADD COLUMN IF NOT EXISTS restaurant_id INT REFERENCES restaurants(id) ON DELETE CASCADE;
+      ALTER TABLE admins ADD COLUMN IF NOT EXISTS role VARCHAR(50) DEFAULT 'restaurant_admin';
     `);
   } else {
     sqliteDb.exec(`
+      CREATE TABLE IF NOT EXISTS restaurants (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        name TEXT NOT NULL,
+        slug TEXT UNIQUE NOT NULL,
+        tagline TEXT,
+        logo TEXT,
+        phone TEXT,
+        address TEXT,
+        opening_hours TEXT,
+        google_review_url TEXT,
+        google_maps_url TEXT,
+        filters_visibility TEXT,
+        active INTEGER DEFAULT 1,
+        created_at TEXT DEFAULT CURRENT_TIMESTAMP
+      );
+
       CREATE TABLE IF NOT EXISTS categories (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
+        restaurant_id INTEGER DEFAULT 1,
         name TEXT NOT NULL,
         name_hi TEXT,
         image TEXT,
         sort_order INTEGER DEFAULT 0,
-        active INTEGER DEFAULT 1
+        active INTEGER DEFAULT 1,
+        FOREIGN KEY (restaurant_id) REFERENCES restaurants (id) ON DELETE CASCADE
       );
 
       CREATE TABLE IF NOT EXISTS dishes (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
+        restaurant_id INTEGER DEFAULT 1,
         category_id INTEGER,
         name TEXT NOT NULL,
         name_hi TEXT,
@@ -112,23 +157,33 @@ async function createTables() {
         available INTEGER DEFAULT 1,
         created_at TEXT DEFAULT CURRENT_TIMESTAMP,
         updated_at TEXT DEFAULT CURRENT_TIMESTAMP,
-        FOREIGN KEY (category_id) REFERENCES categories (id) ON DELETE CASCADE
+        FOREIGN KEY (category_id) REFERENCES categories (id) ON DELETE CASCADE,
+        FOREIGN KEY (restaurant_id) REFERENCES restaurants (id) ON DELETE CASCADE
       );
 
       CREATE TABLE IF NOT EXISTS admins (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
+        restaurant_id INTEGER DEFAULT 1,
         username TEXT UNIQUE NOT NULL,
         password_hash TEXT NOT NULL,
-        created_at TEXT DEFAULT CURRENT_TIMESTAMP
+        role TEXT DEFAULT 'restaurant_admin',
+        created_at TEXT DEFAULT CURRENT_TIMESTAMP,
+        FOREIGN KEY (restaurant_id) REFERENCES restaurants (id) ON DELETE CASCADE
       );
     `);
 
+    // Auto Migrations for SQLite
     try {
       const catCols = sqliteDb.pragma('table_info(categories)');
-      const hasActive = catCols.some(c => c.name === 'active');
-      if (!hasActive) {
-        sqliteDb.exec('ALTER TABLE categories ADD COLUMN active INTEGER DEFAULT 1');
-      }
+      if (!catCols.some(c => c.name === 'active')) sqliteDb.exec('ALTER TABLE categories ADD COLUMN active INTEGER DEFAULT 1');
+      if (!catCols.some(c => c.name === 'restaurant_id')) sqliteDb.exec('ALTER TABLE categories ADD COLUMN restaurant_id INTEGER DEFAULT 1');
+
+      const dishCols = sqliteDb.pragma('table_info(dishes)');
+      if (!dishCols.some(c => c.name === 'restaurant_id')) sqliteDb.exec('ALTER TABLE dishes ADD COLUMN restaurant_id INTEGER DEFAULT 1');
+
+      const adminCols = sqliteDb.pragma('table_info(admins)');
+      if (!adminCols.some(c => c.name === 'restaurant_id')) sqliteDb.exec('ALTER TABLE admins ADD COLUMN restaurant_id INTEGER DEFAULT 1');
+      if (!adminCols.some(c => c.name === 'role')) sqliteDb.exec("ALTER TABLE admins ADD COLUMN role TEXT DEFAULT 'restaurant_admin'");
     } catch (err) {
       console.warn('SQLite migration info:', err.message);
     }
@@ -136,16 +191,46 @@ async function createTables() {
 }
 
 async function seedData() {
-  const catCheck = await query('SELECT COUNT(*) as count FROM categories');
+  // Ensure default primary restaurant (Raman Sweet Bakery) exists
+  const restoCheck = await query('SELECT * FROM restaurants WHERE slug = $1', ['raman-sweet-bakery']);
+  let primaryRestoId = restoCheck[0]?.id;
+
+  if (!primaryRestoId) {
+    const res = await query(`
+      INSERT INTO restaurants (
+        name, slug, tagline, logo, phone, address, opening_hours, google_review_url, google_maps_url, active
+      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10) RETURNING id
+    `, [
+      'Raman Sweet Bakery & Family Restaurant',
+      'raman-sweet-bakery',
+      '100% Pure Vegetarian • Pure Desi Ghee Sweets • Live Bakery',
+      '/uploads/logo.jpg',
+      '+91 9708366583',
+      'HawaiAdda Chowk, Near katchari Gumti, Motihari, Bihar',
+      '8:00 AM - 10:30 PM (Mon - Sun)',
+      'https://r.revmeai.com/r/ee7e4c91-f85e-4a01-8767-eeaee0a89341',
+      'https://share.google/2M5mFMPlmS6pAXRf7',
+      true
+    ]);
+    primaryRestoId = res[0]?.id || res.lastInsertRowid || 1;
+    console.log(`🏨 Created primary tenant restaurant Raman Sweet Bakery (ID: ${primaryRestoId})`);
+  }
+
+  // Update existing data to link to primaryRestoId
+  await query('UPDATE categories SET restaurant_id = $1 WHERE restaurant_id IS NULL OR restaurant_id = 0', [primaryRestoId]);
+  await query('UPDATE dishes SET restaurant_id = $1 WHERE restaurant_id IS NULL OR restaurant_id = 0', [primaryRestoId]);
+  await query('UPDATE admins SET restaurant_id = $1 WHERE restaurant_id IS NULL OR restaurant_id = 0', [primaryRestoId]);
+
+  const catCheck = await query('SELECT COUNT(*) as count FROM categories WHERE restaurant_id = $1', [primaryRestoId]);
   const count = parseInt(catCheck[0]?.count || 0, 10);
 
   const imgCheck = await query("SELECT COUNT(*) as count FROM dishes WHERE image LIKE 'http%'");
   const hasRealImages = parseInt(imgCheck[0]?.count || 0, 10) > 0;
 
   if (count === 0 || !hasRealImages) {
-    console.log('🌱 Seeding authentic menu data with all custom Image URLs...');
-    await query('DELETE FROM dishes');
-    await query('DELETE FROM categories');
+    console.log('🌱 Seeding authentic menu data for Raman Sweet Bakery...');
+    await query('DELETE FROM dishes WHERE restaurant_id = $1', [primaryRestoId]);
+    await query('DELETE FROM categories WHERE restaurant_id = $1', [primaryRestoId]);
 
     const jsonPath = path.resolve('server/exported_menu_data.json');
     if (fs.existsSync(jsonPath)) {
@@ -154,8 +239,8 @@ async function seedData() {
 
       for (const cat of data.categories) {
         const res = await query(
-          'INSERT INTO categories (name, name_hi, image, sort_order) VALUES ($1, $2, $3, $4) RETURNING id',
-          [cat.name, cat.name_hi || '', cat.image || '/uploads/logo.jpg', cat.sort_order || 0]
+          'INSERT INTO categories (restaurant_id, name, name_hi, image, sort_order) VALUES ($1, $2, $3, $4, $5) RETURNING id',
+          [primaryRestoId, cat.name, cat.name_hi || '', cat.image || '/uploads/logo.jpg', cat.sort_order || 0]
         );
         const newId = res[0]?.id || res.lastInsertRowid;
         catIdMap[cat.id] = newId;
@@ -165,27 +250,37 @@ async function seedData() {
         const newCatId = catIdMap[d.category_id];
         await query(
           `INSERT INTO dishes (
-            category_id, name, name_hi, description, description_hi, image, price, price_half,
+            restaurant_id, category_id, name, name_hi, description, description_hi, image, price, price_half,
             portion, portion_half_label, portion_full_label, badge, ingredients, taste_profile, available
-          ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15)`,
+          ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16)`,
           [
-            newCatId, d.name, d.name_hi || '', d.description || '', d.description_hi || '', d.image || '/uploads/logo.jpg', d.price, d.price_half || null,
+            primaryRestoId, newCatId, d.name, d.name_hi || '', d.description || '', d.description_hi || '', d.image || '/uploads/logo.jpg', d.price, d.price_half || null,
             d.portion || '', d.portion_half_label || '', d.portion_full_label || '', d.badge || '', d.ingredients || '', d.taste_profile || '', d.available !== false ? 1 : 0
           ]
         );
       }
-      console.log(`✅ Seeded ${data.categories.length} categories and ${data.dishes.length} dishes with all custom Image URLs!`);
+      console.log(`✅ Seeded ${data.categories.length} categories and ${data.dishes.length} dishes for Raman Sweet Bakery!`);
     }
   }
 
-  // Ensure Admin user exists
-  const adminCheck = await query('SELECT COUNT(*) as count FROM admins');
+  // Ensure Admin user exists for Raman Sweet Bakery
+  const adminCheck = await query('SELECT COUNT(*) as count FROM admins WHERE username = $1', ['admin']);
   const adminCount = parseInt(adminCheck[0]?.count || 0, 10);
   if (adminCount === 0) {
     const salt = await bcrypt.genSalt(10);
     const hash = await bcrypt.hash('admin123', salt);
-    await query('INSERT INTO admins (username, password_hash) VALUES ($1, $2)', ['admin', hash]);
-    console.log('🔐 Created default admin account: admin / admin123');
+    await query('INSERT INTO admins (restaurant_id, username, password_hash, role) VALUES ($1, $2, $3, $4)', [primaryRestoId, 'admin', hash, 'restaurant_admin']);
+    console.log('🔐 Created default restaurant admin account: admin / admin123');
+  }
+
+  // Ensure Super Admin user exists
+  const superCheck = await query('SELECT COUNT(*) as count FROM admins WHERE username = $1 OR role = $2', ['superadmin', 'superadmin']);
+  const superCount = parseInt(superCheck[0]?.count || 0, 10);
+  if (superCount === 0) {
+    const salt = await bcrypt.genSalt(10);
+    const hash = await bcrypt.hash('superadmin123', salt);
+    await query('INSERT INTO admins (restaurant_id, username, password_hash, role) VALUES ($1, $2, $3, $4)', [primaryRestoId, 'superadmin', hash, 'superadmin']);
+    console.log('👑 Created Master Super Admin account: superadmin / superadmin123');
   }
 }
 

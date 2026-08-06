@@ -6,6 +6,7 @@ import dotenv from 'dotenv';
 import { initDb } from './db.js';
 import apiRoutes from './routes/api.js';
 import adminRoutes from './routes/admin.js';
+import superadminRoutes from './routes/superadmin.js';
 
 dotenv.config();
 
@@ -25,6 +26,7 @@ if (!fs.existsSync(uploadsDir)) {
 app.use('/uploads', express.static(uploadsDir));
 
 // API Routes
+app.use('/api/superadmin', superadminRoutes);
 app.use('/api/admin', adminRoutes);
 app.use('/api', apiRoutes);
 

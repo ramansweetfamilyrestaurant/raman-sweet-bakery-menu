@@ -6,19 +6,59 @@ import { query } from '../db.js';
 const router = express.Router();
 const settingsPath = path.resolve('server/settings.json');
 
-// Restaurant General Info
-router.get('/info', (req, res) => {
+// Helper to resolve target restaurant by slug (or fallback to primary raman-sweet-bakery)
+async function resolveRestaurant(slug) {
+  const targetSlug = slug || 'raman-sweet-bakery';
+  const restos = await query('SELECT * FROM restaurants WHERE slug = $1', [targetSlug]);
+  if (restos && restos.length > 0) {
+    return restos[0];
+  }
+  // Fallback to first restaurant
+  const firstResto = await query('SELECT * FROM restaurants ORDER BY id ASC LIMIT 1');
+  return firstResto[0] || null;
+}
+
+// Restaurant General Info (/api/info or /api/info?slug=royal-pizza)
+router.get('/info', async (req, res) => {
   try {
-    if (fs.existsSync(settingsPath)) {
-      const data = fs.readFileSync(settingsPath, 'utf-8');
-      return res.json(JSON.parse(data));
+    const { slug } = req.query;
+    const resto = await resolveRestaurant(slug);
+
+    if (resto) {
+      // Parse filters_visibility if stored as JSON string or object
+      let filtersVis = resto.filters_visibility;
+      if (typeof filtersVis === 'string') {
+        try { filtersVis = JSON.parse(filtersVis); } catch (e) {}
+      }
+      if (!filtersVis) {
+        filtersVis = { must_try: true, combo: true, special: true, under100: true };
+      }
+
+      return res.json({
+        id: resto.id,
+        name: resto.name,
+        slug: resto.slug,
+        tagline: resto.tagline || '100% Pure Vegetarian',
+        badge: '100% Pure Veg',
+        logo: resto.logo || '/uploads/logo.jpg',
+        openingHours: resto.opening_hours || '8:00 AM - 10:30 PM (Mon - Sun)',
+        phone: resto.phone || '+91 9708366583',
+        address: resto.address || 'HawaiAdda Chowk, Near katchari Gumti, Motihari, Bihar',
+        google_review_url: resto.google_review_url || '',
+        google_maps_url: resto.google_maps_url || '',
+        filters_visibility: filtersVis,
+        active: resto.active !== false
+      });
     }
   } catch (err) {
-    console.error('Error reading settings.json:', err);
+    console.error('Error fetching restaurant info:', err);
   }
 
+  // Fallback settings
   res.json({
+    id: 1,
     name: 'Raman Sweet Bakery & Family Restaurant',
+    slug: 'raman-sweet-bakery',
     tagline: '100% Pure Vegetarian • Pure Desi Ghee Sweets • Live Bakery',
     badge: '100% Pure Veg',
     logo: '/uploads/logo.jpg',
@@ -26,25 +66,31 @@ router.get('/info', (req, res) => {
     phone: '+91 9708366583',
     address: 'HawaiAdda Chowk, Near katchari Gumti, Motihari, Bihar',
     google_review_url: 'https://share.google/2M5mFMPlmS6pAXRf7',
-    highlights: [
-      'Pure Desi Ghee Sweets',
-      'Fresh Live Bakery & Custom Cakes',
-      'Authentic Tandoori North Indian',
-      'Traditional South Indian Dosa & Idli'
-    ]
+    filters_visibility: { must_try: true, combo: true, special: true, under100: true },
+    active: true
   });
 });
 
-// Get Categories
+// Get Categories for a specific restaurant
 router.get('/categories', async (req, res) => {
   try {
-    const { admin_view } = req.query;
-    let sql = 'SELECT * FROM categories';
+    const { admin_view, slug, restaurant_id } = req.query;
+    let targetId = restaurant_id;
+
+    if (!targetId) {
+      const resto = await resolveRestaurant(slug);
+      targetId = resto?.id || 1;
+    }
+
+    let sql = 'SELECT * FROM categories WHERE restaurant_id = $1';
+    const params = [targetId];
+
     if (!admin_view) {
-      sql += ' WHERE active IS NOT FALSE';
+      sql += ' AND active IS NOT FALSE';
     }
     sql += ' ORDER BY sort_order ASC, id ASC';
-    const categories = await query(sql);
+
+    const categories = await query(sql, params);
     res.json(categories);
   } catch (err) {
     console.error('Error fetching categories:', err);
@@ -52,18 +98,24 @@ router.get('/categories', async (req, res) => {
   }
 });
 
-// Get Dishes with search & category filter
+// Get Dishes with search & category filter for a specific restaurant
 router.get('/dishes', async (req, res) => {
   try {
-    const { q, category_id, admin_view } = req.query;
+    const { q, category_id, admin_view, slug, restaurant_id } = req.query;
+    let targetId = restaurant_id;
+
+    if (!targetId) {
+      const resto = await resolveRestaurant(slug);
+      targetId = resto?.id || 1;
+    }
 
     let sql = `
       SELECT d.*, c.name as category_name 
       FROM dishes d 
       LEFT JOIN categories c ON d.category_id = c.id
-      WHERE 1=1
+      WHERE d.restaurant_id = $1
     `;
-    const params = [];
+    const params = [targetId];
 
     // By default, customer view only sees available dishes in active categories
     if (!admin_view) {
@@ -79,46 +131,23 @@ router.get('/dishes', async (req, res) => {
       const trimmedQ = q.trim().toLowerCase();
       if (trimmedQ === 'under100' || trimmedQ === '100' || trimmedQ === 'under 100') {
         sql += ` AND d.price <= 100`;
-      } else if (trimmedQ === 'must try' || trimmedQ === 'musttry' || trimmedQ === 'must_try') {
-        sql += ` AND LOWER(COALESCE(d.badge, '')) LIKE '%must try%'`;
+      } else if (trimmedQ === 'must_try' || trimmedQ === 'must try') {
+        sql += ` AND d.badge LIKE '%Must Try%'`;
       } else if (trimmedQ === 'combo') {
-        sql += ` AND LOWER(COALESCE(d.badge, '')) LIKE '%combo%'`;
+        sql += ` AND d.badge LIKE '%Combo%'`;
       } else if (trimmedQ === 'special') {
-        sql += ` AND LOWER(COALESCE(d.badge, '')) LIKE '%special%'`;
+        sql += ` AND d.badge LIKE '%Special%'`;
       } else {
-        const searchPattern = `%${trimmedQ}%`;
-        params.push(searchPattern);
-        const p1 = params.length;
-        params.push(searchPattern);
-        const p2 = params.length;
-        params.push(searchPattern);
-        const p3 = params.length;
-        params.push(searchPattern);
-        const p4 = params.length;
-        params.push(searchPattern);
-        const p5 = params.length;
-
-        sql += ` AND (
-          LOWER(d.name) LIKE $${p1} 
-          OR LOWER(COALESCE(d.description, '')) LIKE $${p2} 
-          OR LOWER(COALESCE(d.badge, '')) LIKE $${p3} 
-          OR LOWER(COALESCE(d.ingredients, '')) LIKE $${p4} 
-          OR LOWER(COALESCE(c.name, '')) LIKE $${p5}
-        )`;
+        params.push(`%${trimmedQ}%`);
+        const pIdx = params.length;
+        sql += ` AND (LOWER(d.name) LIKE $${pIdx} OR LOWER(d.description) LIKE $${pIdx} OR LOWER(d.badge) LIKE $${pIdx})`;
       }
     }
 
     sql += ` ORDER BY d.id DESC`;
 
     const dishes = await query(sql, params);
-
-    // Normalize boolean / numeric availability
-    const normalized = dishes.map(d => ({
-      ...d,
-      available: d.available === true || d.available === 1 || d.available === '1'
-    }));
-
-    res.json(normalized);
+    res.json(dishes);
   } catch (err) {
     console.error('Error fetching dishes:', err);
     res.status(500).json({ error: 'Failed to fetch dishes' });

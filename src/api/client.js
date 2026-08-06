@@ -14,29 +14,82 @@ async function handleResponse(res, fallbackErrorMsg = 'API request failed') {
   return data;
 }
 
-export async function fetchRestaurantInfo() {
-  const res = await fetch(`${API_BASE}/info`);
+export async function fetchRestaurantInfo(slug = '') {
+  const params = new URLSearchParams();
+  if (slug) params.append('slug', slug);
+  const res = await fetch(`${API_BASE}/info?${params.toString()}`);
   return handleResponse(res, 'Failed to fetch restaurant info');
 }
 
-export async function fetchCategories({ adminView = false } = {}) {
+export async function fetchCategories({ adminView = false, slug = '' } = {}) {
   const params = new URLSearchParams();
   if (adminView) params.append('admin_view', 'true');
+  if (slug) params.append('slug', slug);
   const res = await fetch(`${API_BASE}/categories?${params.toString()}`);
   return handleResponse(res, 'Failed to fetch categories');
 }
 
-export async function fetchDishes({ query = '', category_id = 'all', adminView = false } = {}) {
+export async function fetchDishes({ query = '', category_id = 'all', adminView = false, slug = '' } = {}) {
   const params = new URLSearchParams();
   if (query) params.append('q', query);
   if (category_id) params.append('category_id', category_id);
   if (adminView) params.append('admin_view', 'true');
+  if (slug) params.append('slug', slug);
 
   const res = await fetch(`${API_BASE}/dishes?${params.toString()}`);
   return handleResponse(res, 'Failed to fetch dishes');
 }
 
-// Admin API calls
+// Super Admin API calls
+export async function superAdminLogin(username, password) {
+  const res = await fetch(`${API_BASE}/superadmin/login`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ username, password }),
+  });
+  return handleResponse(res, 'Super Admin login failed');
+}
+
+export async function fetchSuperAdminRestaurants(token) {
+  const res = await fetch(`${API_BASE}/superadmin/restaurants`, {
+    headers: { Authorization: `Bearer ${token}` },
+  });
+  return handleResponse(res, 'Failed to fetch tenant restaurants');
+}
+
+export async function createTenantRestaurant(restaurantData, token) {
+  const res = await fetch(`${API_BASE}/superadmin/restaurants`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      Authorization: `Bearer ${token}`,
+    },
+    body: JSON.stringify(restaurantData),
+  });
+  return handleResponse(res, 'Failed to create tenant restaurant');
+}
+
+export async function toggleTenantRestaurantActive(id, active, token) {
+  const res = await fetch(`${API_BASE}/superadmin/restaurants/${id}/toggle`, {
+    method: 'PATCH',
+    headers: {
+      'Content-Type': 'application/json',
+      Authorization: `Bearer ${token}`,
+    },
+    body: JSON.stringify({ active }),
+  });
+  return handleResponse(res, 'Failed to update restaurant status');
+}
+
+export async function deleteTenantRestaurant(id, token) {
+  const res = await fetch(`${API_BASE}/superadmin/restaurants/${id}`, {
+    method: 'DELETE',
+    headers: { Authorization: `Bearer ${token}` },
+  });
+  return handleResponse(res, 'Failed to delete tenant restaurant');
+}
+
+// Restaurant Admin API calls
 export async function adminLogin(username, password) {
   const res = await fetch(`${API_BASE}/admin/login`, {
     method: 'POST',

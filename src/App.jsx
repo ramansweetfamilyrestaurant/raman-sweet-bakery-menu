@@ -10,8 +10,10 @@ import BottomDock from './components/BottomDock';
 import Footer from './components/Footer';
 import AdminLogin from './components/Admin/AdminLogin';
 import AdminDashboard from './components/Admin/AdminDashboard';
+import SuperAdminLogin from './components/SuperAdmin/SuperAdminLogin';
+import SuperAdminDashboard from './components/SuperAdmin/SuperAdminDashboard';
 import { fetchRestaurantInfo, fetchCategories, fetchDishes } from './api/client';
-import { LayoutList, Grid, BookOpen, X, Sparkles, Utensils } from 'lucide-react';
+import { LayoutList, Grid, BookOpen, X, Sparkles, ShieldAlert, Phone } from 'lucide-react';
 
 export default function App() {
   // Parse Table Number from URL query parameter ?table=5
@@ -22,9 +24,10 @@ export default function App() {
   const [lang, setLang] = useState('en');
 
   // Navigation State
-  const [view, setView] = useState('menu'); // 'menu', 'admin-login', 'admin-dashboard'
+  const [view, setView] = useState('menu'); // 'menu', 'admin-login', 'admin-dashboard', 'super-admin-login', 'super-admin-dashboard'
   const [layoutMode, setLayoutMode] = useState('list'); // 'list' or 'grid'
-  
+
+  // Restaurant Admin Tokens
   const getInitialToken = () => {
     const t = localStorage.getItem('raman_admin_token');
     return (t && t !== 'undefined' && t !== 'null') ? t : '';
@@ -36,6 +39,19 @@ export default function App() {
 
   const [adminToken, setAdminToken] = useState(getInitialToken());
   const [adminUsername, setAdminUsername] = useState(getInitialUser());
+
+  // Master Super Admin Tokens
+  const getInitialSuperToken = () => {
+    const t = localStorage.getItem('saas_super_token');
+    return (t && t !== 'undefined' && t !== 'null') ? t : '';
+  };
+  const getInitialSuperUser = () => {
+    const u = localStorage.getItem('saas_super_user');
+    return (u && u !== 'undefined' && u !== 'null') ? u : '';
+  };
+
+  const [superToken, setSuperToken] = useState(getInitialSuperToken());
+  const [superUsername, setSuperUsername] = useState(getInitialSuperUser());
 
   // Menu Data State
   const [info, setInfo] = useState(null);
@@ -49,16 +65,27 @@ export default function App() {
   // Modals
   const [selectedDishModal, setSelectedDishModal] = useState(null);
   const [showInfoModal, setShowInfoModal] = useState(false);
-  const [showCategoryDrawer, setShowCategoryDrawer] = useState(false); // Zomato Floating Menu Drawer
+  const [showCategoryDrawer, setShowCategoryDrawer] = useState(false);
   const [loading, setLoading] = useState(true);
+
+  // Extract restaurant slug from URL /r/:slug
+  const getSlugFromUrl = () => {
+    const path = window.location.pathname;
+    if (path.includes('/r/')) {
+      const parts = path.split('/r/')[1].split('/');
+      return parts[0] || 'raman-sweet-bakery';
+    }
+    return 'raman-sweet-bakery';
+  };
 
   // Load Menu Data
   const loadMenuData = async () => {
+    const slug = getSlugFromUrl();
     try {
       const [infoData, catData, dishData] = await Promise.all([
-        fetchRestaurantInfo(),
-        fetchCategories(),
-        fetchDishes({ query: searchQuery })
+        fetchRestaurantInfo(slug),
+        fetchCategories({ slug }),
+        fetchDishes({ query: searchQuery, slug })
       ]);
       setInfo(infoData);
       setCategories(catData);
@@ -74,11 +101,19 @@ export default function App() {
     loadMenuData();
   }, [searchQuery]);
 
-  // Handle URL route changes (#admin or /admin)
+  // Handle URL route changes (#super-admin, #admin, /super-admin, /admin)
   useEffect(() => {
     const handleRouteCheck = () => {
-      const isRouteAdmin = window.location.hash === '#admin' || window.location.pathname.endsWith('/admin') || window.location.pathname.includes('/admin');
-      if (isRouteAdmin) {
+      const isSuperAdmin = window.location.hash === '#super-admin' || window.location.pathname.includes('/super-admin');
+      const isRouteAdmin = window.location.hash === '#admin' || window.location.pathname.endsWith('/admin');
+
+      if (isSuperAdmin) {
+        if (superToken) {
+          setView('super-admin-dashboard');
+        } else {
+          setView('super-admin-login');
+        }
+      } else if (isRouteAdmin) {
         if (adminToken) {
           setView('admin-dashboard');
         } else {
@@ -96,7 +131,7 @@ export default function App() {
       window.removeEventListener('hashchange', handleRouteCheck);
       window.removeEventListener('popstate', handleRouteCheck);
     };
-  }, [adminToken]);
+  }, [adminToken, superToken]);
 
   const handleAdminLoginSuccess = (token, username) => {
     localStorage.setItem('raman_admin_token', token);
@@ -114,7 +149,24 @@ export default function App() {
     setAdminUsername('');
     setView('menu');
     window.location.hash = '';
-    loadMenuData();
+  };
+
+  const handleSuperAdminLoginSuccess = (token, username) => {
+    localStorage.setItem('saas_super_token', token);
+    localStorage.setItem('saas_super_user', username);
+    setSuperToken(token);
+    setSuperUsername(username);
+    setView('super-admin-dashboard');
+    window.location.hash = '#super-admin';
+  };
+
+  const handleSuperAdminLogout = () => {
+    localStorage.removeItem('saas_super_token');
+    localStorage.removeItem('saas_super_user');
+    setSuperToken('');
+    setSuperUsername('');
+    setView('menu');
+    window.location.hash = '';
   };
 
   // Group dishes by category
@@ -159,7 +211,35 @@ export default function App() {
     }
   };
 
-  // Admin View Render
+  // Super Admin Portal Views
+  if (view === 'super-admin-login') {
+    return (
+      <SuperAdminLogin
+        onLoginSuccess={handleSuperAdminLoginSuccess}
+        onCancel={() => {
+          setView('menu');
+          window.location.hash = '';
+        }}
+      />
+    );
+  }
+
+  if (view === 'super-admin-dashboard') {
+    return (
+      <SuperAdminDashboard
+        token={superToken}
+        username={superUsername}
+        onLogout={handleSuperAdminLogout}
+        onReturnToMenu={() => {
+          setView('menu');
+          window.location.hash = '';
+          loadMenuData();
+        }}
+      />
+    );
+  }
+
+  // Restaurant Admin View Render
   if (view === 'admin-login') {
     return (
       <AdminLogin
@@ -184,6 +264,84 @@ export default function App() {
           loadMenuData();
         }}
       />
+    );
+  }
+
+  // Handle Suspended Restaurant Subscription Page
+  if (info && info.active === false) {
+    return (
+      <div style={{
+        minHeight: '100vh',
+        background: '#0A2315',
+        color: '#FFFFFF',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        padding: '24px',
+        textAlign: 'center'
+      }}>
+        <div style={{
+          maxWidth: '420px',
+          background: '#FFFFFF',
+          color: '#1C1917',
+          borderRadius: '24px',
+          padding: '36px 24px',
+          border: '2px solid #D4AF37',
+          boxShadow: '0 20px 50px rgba(0,0,0,0.5)'
+        }}>
+          <div style={{
+            width: '60px',
+            height: '60px',
+            borderRadius: '50%',
+            background: '#FEE2E2',
+            color: '#DC2626',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            margin: '0 auto 16px'
+          }}>
+            <ShieldAlert size={32} />
+          </div>
+
+          <h2 style={{ fontSize: '1.4rem', fontWeight: 900, color: '#0A2315', marginBottom: '8px' }}>
+            {info.name}
+          </h2>
+          <div style={{
+            background: '#FEE2E2',
+            color: '#DC2626',
+            padding: '6px 16px',
+            borderRadius: '9999px',
+            fontSize: '0.8rem',
+            fontWeight: 800,
+            display: 'inline-block',
+            marginBottom: '16px'
+          }}>
+            SUBSCRIPTION SUSPENDED
+          </div>
+
+          <p style={{ fontSize: '0.86rem', color: '#666157', marginBottom: '24px', lineHeight: 1.4 }}>
+            The Digital Menu service for this restaurant is currently suspended or past subscription renewal. Please contact restaurant administration.
+          </p>
+
+          <a
+            href={`tel:${info.phone || '+919708366583'}`}
+            style={{
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: '8px',
+              background: '#0A2315',
+              color: '#DFBA67',
+              padding: '12px 24px',
+              borderRadius: '9999px',
+              fontWeight: 800,
+              textDecoration: 'none',
+              fontSize: '0.9rem'
+            }}
+          >
+            <Phone size={16} /> Contact Restaurant Management
+          </a>
+        </div>
+      </div>
     );
   }
 
@@ -225,8 +383,6 @@ export default function App() {
         onSelectCategory={(catId) => setSelectedCategory(catId)}
       />
 
-
-
       {/* Toolbar: View Switcher */}
       <div style={{
         maxWidth: '800px',
@@ -246,197 +402,184 @@ export default function App() {
             {lang === 'hi' ? 'डिजिटल मेन्यू' : 'Digital Menu'}
           </h2>
           <span style={{
-            fontSize: '0.76rem',
-            color: 'var(--primary-emerald)',
-            background: 'var(--gold-soft)',
-            border: '1px solid var(--gold-border)',
+            fontSize: '0.75rem',
+            background: 'var(--veg-green-bg)',
+            color: 'var(--veg-green)',
             padding: '2px 8px',
             borderRadius: 'var(--radius-pill)',
             fontWeight: 700
           }}>
-            {dishes.length} {lang === 'hi' ? 'आइटम' : 'Items'}
+            {dishes.length} {lang === 'hi' ? 'व्यंजन' : 'Dishes'}
           </span>
         </div>
 
-        {/* View Switcher: Classic List vs Photo Grid */}
+        {/* List vs Grid Layout Switcher */}
         <div style={{
           display: 'flex',
-          gap: '3px',
           background: 'var(--bg-secondary)',
-          border: '1px solid var(--border-light)',
+          padding: '3px',
           borderRadius: 'var(--radius-pill)',
-          padding: '2px'
+          border: '1px solid var(--border-light)'
         }}>
           <button
             onClick={() => setLayoutMode('list')}
-            title="Menu List View"
             style={{
-              display: 'inline-flex',
-              alignItems: 'center',
-              gap: '4px',
-              padding: '5px 12px',
+              padding: '4px 10px',
               borderRadius: 'var(--radius-pill)',
-              fontSize: '0.76rem',
-              fontWeight: 700,
               background: layoutMode === 'list' ? 'var(--primary-emerald)' : 'transparent',
               color: layoutMode === 'list' ? '#FFFFFF' : 'var(--text-muted)',
+              fontSize: '0.75rem',
+              fontWeight: 700,
+              display: 'flex',
+              alignItems: 'center',
+              gap: '4px',
               transition: 'var(--transition-fast)'
             }}
           >
-            <LayoutList size={13} /> {lang === 'hi' ? 'सूची' : 'List'}
+            <LayoutList size={14} />
+            {lang === 'hi' ? 'सूची' : 'List'}
           </button>
 
           <button
             onClick={() => setLayoutMode('grid')}
-            title="Photo Grid View"
             style={{
-              display: 'inline-flex',
-              alignItems: 'center',
-              gap: '4px',
-              padding: '5px 12px',
+              padding: '4px 10px',
               borderRadius: 'var(--radius-pill)',
-              fontSize: '0.76rem',
-              fontWeight: 700,
               background: layoutMode === 'grid' ? 'var(--primary-emerald)' : 'transparent',
               color: layoutMode === 'grid' ? '#FFFFFF' : 'var(--text-muted)',
+              fontSize: '0.75rem',
+              fontWeight: 700,
+              display: 'flex',
+              alignItems: 'center',
+              gap: '4px',
               transition: 'var(--transition-fast)'
             }}
           >
-            <Grid size={13} /> {lang === 'hi' ? 'फोटो ग्रिड' : 'Grid'}
+            <Grid size={14} />
+            {lang === 'hi' ? 'ग्रिड' : 'Grid'}
           </button>
         </div>
       </div>
 
-      {/* Main Dishes Area */}
+      {/* Main Dishes List Content Area */}
       <main style={{
+        flex: 1,
         maxWidth: '800px',
         margin: '0 auto',
-        padding: '10px 10px 120px',
         width: '100%',
-        flexGrow: 1
+        padding: '12px 12px 80px'
       }}>
         {loading ? (
-          <div style={{ textAlign: 'center', padding: '60px 20px', color: 'var(--text-muted)' }}>
+          <div style={{
+            textAlign: 'center',
+            padding: '60px 20px',
+            color: 'var(--text-muted)'
+          }}>
             <div style={{
               width: '40px',
               height: '40px',
-              border: '3px solid var(--bg-secondary)',
-              borderTopColor: 'var(--primary-emerald)',
+              border: '3px solid var(--border-light)',
+              borderTopColor: 'var(--gold-primary)',
               borderRadius: '50%',
-              margin: '0 auto 16px',
-              animation: 'spin 1s linear infinite'
+              margin: '0 auto 12px',
+              animation: 'spin 0.8s linear infinite'
             }} />
-            Loading menu items...
+            <p style={{ fontSize: '0.9rem', fontWeight: 600 }}>
+              {lang === 'hi' ? 'डिजिटल मेन्यू लोड हो रहा है...' : 'Loading Digital Menu...'}
+            </p>
           </div>
         ) : groupedDishes.length === 0 ? (
           <div style={{
             textAlign: 'center',
-            padding: '50px 20px',
+            padding: '40px 20px',
             background: '#FFFFFF',
             borderRadius: 'var(--radius-md)',
-            border: '1px solid var(--border-light)',
-            boxShadow: 'var(--shadow-sm)'
+            border: '1px solid var(--border-light)'
           }}>
-            <h3 style={{ fontSize: '1.15rem', fontWeight: 800, color: 'var(--primary-emerald)', marginBottom: '6px' }}>
-              No dishes found
-            </h3>
-            <p style={{ fontSize: '0.84rem', color: 'var(--text-muted)', marginBottom: '14px' }}>
-              No menu items match "{searchQuery}".
+            <p style={{ fontSize: '1rem', fontWeight: 700, color: 'var(--text-dark)' }}>
+              {lang === 'hi' ? 'कोई व्यंजन नहीं मिला' : 'No dishes found'}
             </p>
-            <button
-              onClick={() => {
-                setSearchQuery('');
-                setSelectedCategory('all');
-              }}
-              style={{
-                background: 'var(--primary-emerald)',
-                color: '#FFFFFF',
-                padding: '8px 20px',
-                borderRadius: 'var(--radius-pill)',
-                fontSize: '0.82rem',
-                fontWeight: 700
-              }}
-            >
-              Reset Search
-            </button>
+            <p style={{ fontSize: '0.82rem', color: 'var(--text-muted)', marginTop: '4px' }}>
+              {lang === 'hi' ? 'कृपया अपनी खोज शब्द बदलें' : 'Try searching for something else'}
+            </p>
           </div>
         ) : (
-          groupedDishes.map((group, gIdx) => {
-            const catDisplayName = (lang === 'hi' && group.category.name_hi) ? group.category.name_hi : group.category.name;
-
-            return (
-              <section key={gIdx} id={`cat-sec-${group.category.id}`} style={{ marginBottom: '28px', scrollMarginTop: '110px' }}>
-                {/* Category Header Banner */}
-                <div style={{
-                  background: 'var(--primary-emerald)',
-                  color: '#FFFFFF',
-                  borderRadius: 'var(--radius-md)',
-                  padding: '10px 14px',
-                  marginBottom: '10px',
-                  boxShadow: 'var(--shadow-md)',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'space-between'
-                }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                    {group.category.image && (
-                      <img 
-                        src={group.category.image} 
-                        alt={catDisplayName} 
-                        style={{ width: '26px', height: '26px', borderRadius: '50%', objectFit: 'cover' }} 
-                      />
-                    )}
-                    <h2 style={{ fontSize: '1rem', fontWeight: 800, color: '#FFFFFF' }}>
-                      {catDisplayName}
-                    </h2>
-                  </div>
-
-                  <span style={{
-                    fontSize: '0.74rem',
-                    fontWeight: 700,
-                    color: '#4ADE80',
-                    background: 'rgba(34, 197, 94, 0.18)',
-                    padding: '3px 10px',
-                    borderRadius: 'var(--radius-pill)'
+          groupedDishes.map((group, gIdx) => (
+            <section key={gIdx} id={`cat-sec-${group.category.id}`} style={{ marginBottom: '28px', scrollMarginTop: '110px' }}>
+              {/* Category Section Header */}
+              <div style={{
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                marginBottom: '12px',
+                paddingBottom: '6px',
+                borderBottom: '2px solid var(--gold-border)'
+              }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                  {group.category.image && (
+                    <img
+                      src={group.category.image}
+                      alt=""
+                      style={{
+                        width: '26px',
+                        height: '26px',
+                        borderRadius: '50%',
+                        objectFit: 'cover'
+                      }}
+                    />
+                  )}
+                  <h3 style={{
+                    fontSize: '1.1rem',
+                    fontWeight: 800,
+                    color: 'var(--primary-emerald)'
                   }}>
-                    {group.items.length} {lang === 'hi' ? 'आइटम' : 'Items'}
-                  </span>
+                    {(lang === 'hi' && group.category.name_hi) ? group.category.name_hi : group.category.name}
+                  </h3>
                 </div>
 
-                {/* Items List / Grid */}
-                {layoutMode === 'list' ? (
-                  <div className="dish-list-grid">
-                    {group.items.map((dish) => (
-                      <MenuCardItem
-                        key={dish.id}
-                        dish={dish}
-                        lang={lang}
-                        onClick={(d) => setSelectedDishModal(d)}
-                      />
-                    ))}
-                  </div>
-                ) : (
-                  <div style={{
-                    display: 'grid',
-                    gridTemplateColumns: 'repeat(auto-fill, minmax(220px, 1fr))',
-                    gap: '14px'
-                  }}>
-                    {group.items.map((dish) => (
-                      <DishCard
-                        key={dish.id}
-                        dish={dish}
-                        onClick={(d) => setSelectedDishModal(d)}
-                      />
-                    ))}
-                  </div>
-                )}
-              </section>
-            );
-          })
+                <span style={{
+                  fontSize: '0.75rem',
+                  color: 'var(--text-muted)',
+                  fontWeight: 600
+                }}>
+                  {group.items.length} {lang === 'hi' ? 'आइटम' : 'items'}
+                </span>
+              </div>
+
+              {/* Items List or Grid Display */}
+              {layoutMode === 'list' ? (
+                <div className="dish-list-grid">
+                  {group.items.map((dish) => (
+                    <MenuCardItem
+                      key={dish.id}
+                      dish={dish}
+                      lang={lang}
+                      onClick={() => setSelectedDishModal(dish)}
+                    />
+                  ))}
+                </div>
+              ) : (
+                <div style={{
+                  display: 'grid',
+                  gridTemplateColumns: 'repeat(auto-fill, minmax(160px, 1fr))',
+                  gap: '12px'
+                }}>
+                  {group.items.map((dish) => (
+                    <DishCard
+                      key={dish.id}
+                      dish={dish}
+                      lang={lang}
+                      onClick={() => setSelectedDishModal(dish)}
+                    />
+                  ))}
+                </div>
+              )}
+            </section>
+          ))
         )}
       </main>
 
-      {/* Zomato-Style Floating Menu Button & Navigation Dock */}
+      {/* Floating Bottom Navigation Dock */}
       <BottomDock
         categoriesCount={categories.length}
         lang={lang}
@@ -453,27 +596,35 @@ export default function App() {
         }}
       />
 
-      {/* Zomato-Style Floating Menu Bottom Sheet Drawer Modal */}
+      {/* Category Selection Drawer */}
       {showCategoryDrawer && (
         <div style={{
           position: 'fixed',
-          inset: 0,
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          background: 'rgba(0, 0, 0, 0.6)',
+          backdropFilter: 'blur(4px)',
           zIndex: 3000,
-          background: 'rgba(15, 23, 42, 0.75)',
-          backdropFilter: 'blur(8px)',
           display: 'flex',
-          alignItems: 'flex-end',
-          justifyContent: 'center'
-        }} onClick={() => setShowCategoryDrawer(false)}>
-          <div 
-            onClick={(e) => e.stopPropagation()}
+          flexDirection: 'column',
+          justifyContent: 'flex-end'
+        }}>
+          <div
+            onClick={() => setShowCategoryDrawer(false)}
+            style={{ flex: 1 }}
+          />
+
+          <div
             style={{
-              background: '#FFFFFF',
+              background: 'var(--bg-app)',
               borderTopLeftRadius: 'var(--radius-lg)',
               borderTopRightRadius: 'var(--radius-lg)',
+              padding: '20px 16px 30px',
+              maxWidth: '800px',
               width: '100%',
-              maxWidth: '480px',
-              padding: '24px 20px',
+              margin: '0 auto',
               boxShadow: 'var(--shadow-lg)',
               maxHeight: '80vh',
               overflowY: 'auto',
@@ -501,7 +652,7 @@ export default function App() {
               </button>
             </div>
 
-            {/* Zomato Category List Buttons */}
+            {/* Category List Buttons */}
             <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
               <button
                 onClick={() => scrollToCategory('all')}
@@ -561,6 +712,24 @@ export default function App() {
         </div>
       )}
 
+      {/* Dish Modal Popup */}
+      {selectedDishModal && (
+        <DishModal
+          dish={selectedDishModal}
+          lang={lang}
+          onClose={() => setSelectedDishModal(null)}
+        />
+      )}
+
+      {/* Restaurant Information Modal */}
+      {showInfoModal && (
+        <RestaurantInfoModal
+          info={info}
+          lang={lang}
+          onClose={() => setShowInfoModal(false)}
+        />
+      )}
+
       {/* Footer */}
       <Footer
         info={info}
@@ -574,22 +743,6 @@ export default function App() {
           }
         }}
       />
-
-      {/* Dish Zoom Detail Modal */}
-      {selectedDishModal && (
-        <DishModal
-          dish={selectedDishModal}
-          onClose={() => setSelectedDishModal(null)}
-        />
-      )}
-
-      {/* Restaurant Hours & Location Modal */}
-      {showInfoModal && (
-        <RestaurantInfoModal
-          info={info}
-          onClose={() => setShowInfoModal(false)}
-        />
-      )}
     </div>
   );
 }
