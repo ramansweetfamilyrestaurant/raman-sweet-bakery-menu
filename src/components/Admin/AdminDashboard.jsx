@@ -3061,6 +3061,79 @@ export default function AdminDashboard({ token, username, onLogout, onReturnToMe
           onClose={() => setCatModalData(null)}
         />
       )}
+
+      {/* 🧾 Select Payment Mode Modal before Printing Bill */}
+      {billOrderModal && (
+        <div style={{
+          position: 'fixed',
+          top: 0, left: 0, right: 0, bottom: 0,
+          background: 'rgba(0,0,0,0.7)',
+          backdropFilter: 'blur(6px)',
+          zIndex: 10020,
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          padding: '16px'
+        }}>
+          <div style={{
+            background: '#FFFFFF',
+            borderRadius: '20px',
+            maxWidth: '380px',
+            width: '100%',
+            padding: '24px',
+            boxShadow: '0 20px 50px rgba(0,0,0,0.4)',
+            textAlign: 'center'
+          }}>
+            <h3 style={{ fontSize: '1.15rem', fontWeight: 900, color: '#0A2315', marginBottom: '4px' }}>
+              🧾 Print Final Customer Bill
+            </h3>
+            <span style={{ fontSize: '0.78rem', color: '#6B7280', display: 'block', marginBottom: '16px' }}>
+              Table #{billOrderModal.table_number || '1'} • Total: ₹{billOrderModal.total_amount}
+            </span>
+
+            <p style={{ fontSize: '0.84rem', fontWeight: 800, color: '#374151', marginBottom: '12px' }}>
+              Select Payment Method for Receipt:
+            </p>
+
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', marginBottom: '16px' }}>
+              {[
+                { id: 'CASH', label: '💵 CASH PAYMENT', bg: '#10B981', color: '#FFFFFF' },
+                { id: 'UPI / QR', label: '📱 UPI / GPAY / PAYTM', bg: '#2563EB', color: '#FFFFFF' },
+                { id: 'CARD', label: '💳 CREDIT / DEBIT CARD', bg: '#7C3AED', color: '#FFFFFF' }
+              ].map(m => (
+                <button
+                  key={m.id}
+                  onClick={() => {
+                    const orderToPrint = billOrderModal;
+                    setBillOrderModal(null);
+                    handlePrintCustomerBill(orderToPrint, m.id);
+                  }}
+                  style={{
+                    background: m.bg,
+                    color: m.color,
+                    border: 'none',
+                    padding: '12px',
+                    borderRadius: 'var(--radius-pill)',
+                    fontWeight: 900,
+                    fontSize: '0.88rem',
+                    cursor: 'pointer',
+                    boxShadow: '0 4px 14px rgba(0,0,0,0.15)'
+                  }}
+                >
+                  {m.label}
+                </button>
+              ))}
+            </div>
+
+            <button
+              onClick={() => setBillOrderModal(null)}
+              style={{ background: 'none', border: 'none', color: '#9CA3AF', fontSize: '0.8rem', cursor: 'pointer', textDecoration: 'underline' }}
+            >
+              Cancel
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
