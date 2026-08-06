@@ -486,6 +486,52 @@ async function seedData() {
     await query('INSERT INTO admins (restaurant_id, username, password_hash, role) VALUES ($1, $2, $3, $4)', [primaryRestoId, 'superadmin', hash, 'superadmin']);
     console.log('👑 Created Master Super Admin account: superadmin / superadmin123');
   }
+
+  // Seed default sample Combos if empty
+  try {
+    const comboCheck = await query('SELECT COUNT(*) as count FROM combos WHERE restaurant_id = $1', [primaryRestoId]);
+    const comboCount = parseInt(comboCheck[0]?.count || 0, 10);
+    if (comboCount === 0) {
+      const sampleItems1 = JSON.stringify([
+        { dish_id: 24, dish_name: "Aloo Tikki Chaat", qty: 1, portion: "full", original_price: 60 },
+        { dish_id: 31, dish_name: "Paneer Pakoda", qty: 1, portion: "full", original_price: 90 },
+        { dish_id: 28, dish_name: "Kachori", qty: 2, portion: "full", original_price: 30 }
+      ]);
+      const sampleItems2 = JSON.stringify([
+        { dish_id: 32, dish_name: "Steam Momo", qty: 1, portion: "full", original_price: 70 },
+        { dish_id: 29, dish_name: "Bread Pakoda", qty: 2, portion: "full", original_price: 50 }
+      ]);
+      await query(`
+        INSERT INTO combos (restaurant_id, name, description, price, items, badge, available, sort_order)
+        VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+      `, [
+        primaryRestoId,
+        '🌟 Raman Special Chaat & Pakoda Thali',
+        'Complete evening snacks platter with Aloo Tikki, Paneer Pakoda & 2x Kachoris',
+        149,
+        sampleItems1,
+        '⭐ Bestseller',
+        1,
+        1
+      ]);
+      await query(`
+        INSERT INTO combos (restaurant_id, name, description, price, items, badge, available, sort_order)
+        VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+      `, [
+        primaryRestoId,
+        '☕ Evening Snack Combo',
+        'Tasty Momo & Bread Pakoda combo deal',
+        99,
+        sampleItems2,
+        '💰 Value Deal',
+        1,
+        2
+      ]);
+      console.log('🛒 Seeded default sample Combo Deals into combos table');
+    }
+  } catch (err) {
+    console.warn('Combo seeding notice:', err.message);
+  }
 }
 
 async function query(text, params = []) {
