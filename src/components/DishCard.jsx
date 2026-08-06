@@ -117,22 +117,63 @@ export default function DishCard({ dish, onClick, onAddToCart, currencySymbol = 
           </span>
         </div>
 
-        {dish.badge && (
-          <div style={{
-            position: 'absolute',
-            top: '10px',
-            right: '10px',
-            background: 'var(--accent-orange)',
-            color: '#FFFFFF',
-            borderRadius: 'var(--radius-pill)',
-            padding: '3px 10px',
-            fontSize: '0.68rem',
-            fontWeight: 800,
-            boxShadow: '0 2px 6px rgba(230, 81, 0, 0.3)'
-          }}>
-            {dish.badge}
-          </div>
-        )}
+        {dish.badge && (() => {
+          const lower = dish.badge.toLowerCase();
+          let bg = 'linear-gradient(135deg, #FFFBEB 0%, #FEF3C7 100%)';
+          let color = '#92400E';
+          let border = '1px solid #D97706';
+          let icon = '🏷️';
+          
+          if (lower.includes('bestseller')) {
+            bg = 'linear-gradient(135deg, #FFFBEB 0%, #FEF3C7 100%)';
+            color = '#B45309';
+            border = '1px solid #F59E0B';
+            icon = '🔥';
+          } else if (lower.includes('must try') || lower.includes('musttry')) {
+            bg = 'linear-gradient(135deg, #FEF2F2 0%, #FEE2E2 100%)';
+            color = '#B91C1C';
+            border = '1px solid #EF4444';
+            icon = '⭐';
+          } else if (lower.includes('special')) {
+            bg = 'linear-gradient(135deg, #EEF2FF 0%, #E0E7FF 100%)';
+            color = '#4338CA';
+            border = '1px solid #6366F1';
+            icon = '✨';
+          } else if (lower.includes('combo')) {
+            bg = 'linear-gradient(135deg, #F3E8FF 0%, #E9D5FF 100%)';
+            color = '#6B21A8';
+            border = '1px solid #A855F7';
+            icon = '🍕';
+          } else if (lower.includes('100') || lower.includes('under')) {
+            bg = 'linear-gradient(135deg, #F0FDF4 0%, #DCFCE7 100%)';
+            color = '#15803D';
+            border = '1px solid #22C55E';
+            icon = '⚡';
+          }
+
+          return (
+            <div style={{
+              position: 'absolute',
+              top: '10px',
+              right: '10px',
+              background: bg,
+              color: color,
+              border: border,
+              borderRadius: 'var(--radius-pill)',
+              padding: '3px 10px',
+              fontSize: '0.68rem',
+              fontWeight: 900,
+              boxShadow: '0 2px 8px rgba(0,0,0,0.12)',
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: '4px',
+              zIndex: 5
+            }}>
+              <span>{icon}</span>
+              <span>{dish.badge}</span>
+            </div>
+          );
+        })()}
 
         {!isAvailable && (
           <div style={{

@@ -181,12 +181,14 @@ router.get('/dishes', async (req, res) => {
       const trimmedQ = q.trim().toLowerCase();
       if (trimmedQ === 'under100' || trimmedQ === '100' || trimmedQ === 'under 100') {
         sql += ` AND d.price <= 100`;
-      } else if (trimmedQ === 'must_try' || trimmedQ === 'must try') {
-        sql += ` AND d.badge LIKE '%Must Try%'`;
-      } else if (trimmedQ === 'combo') {
-        sql += ` AND d.badge LIKE '%Combo%'`;
-      } else if (trimmedQ === 'special') {
-        sql += ` AND d.badge LIKE '%Special%'`;
+      } else if (trimmedQ.includes('bestseller')) {
+        sql += ` AND LOWER(d.badge) LIKE '%bestseller%'`;
+      } else if (trimmedQ.includes('must') || trimmedQ.includes('try')) {
+        sql += ` AND LOWER(d.badge) LIKE '%must%'`;
+      } else if (trimmedQ.includes('combo')) {
+        sql += ` AND LOWER(d.badge) LIKE '%combo%'`;
+      } else if (trimmedQ.includes('special')) {
+        sql += ` AND LOWER(d.badge) LIKE '%special%'`;
       } else if (trimmedQ === 'veg') {
         sql += ` AND (d.type = 'veg' OR d.type IS NULL OR d.type = '')`;
       } else if (trimmedQ === 'nonveg' || trimmedQ === 'non-veg') {
