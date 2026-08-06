@@ -1,7 +1,7 @@
 import React from 'react';
 import { Search, X } from 'lucide-react';
 
-export default function SearchBar({ value, onChange, onClear, onQuickFilter }) {
+export default function SearchBar({ value, onChange, onClear, onQuickFilter, showFilterBar = true }) {
   const filters = [
     { label: '✨ All', value: '' },
     { label: '⭐ Must Try', value: 'Must Try' },
@@ -77,14 +77,15 @@ export default function SearchBar({ value, onChange, onClear, onQuickFilter }) {
       </div>
 
       {/* Quick Micro-Filter Pills */}
-      <div style={{
-        display: 'flex',
-        gap: '6px',
-        overflowX: 'auto',
-        scrollbarWidth: 'none',
-        msOverflowStyle: 'none',
-        paddingBottom: '2px'
-      }}>
+      {showFilterBar !== false && (
+        <div style={{
+          display: 'flex',
+          gap: '6px',
+          overflowX: 'auto',
+          scrollbarWidth: 'none',
+          msOverflowStyle: 'none',
+          paddingBottom: '2px'
+        }}>
         {filters.map((f, i) => {
           const isSelected = value === f.value || (f.value === '' && !value);
           return (
@@ -109,6 +110,7 @@ export default function SearchBar({ value, onChange, onClear, onQuickFilter }) {
           );
         })}
       </div>
+      )}
     </div>
   );
 }

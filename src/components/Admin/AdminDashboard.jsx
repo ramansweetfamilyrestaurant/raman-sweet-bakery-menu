@@ -26,7 +26,8 @@ export default function AdminDashboard({ token, username, onLogout, onReturnToMe
     address: '',
     openingHours: '',
     google_review_url: '',
-    google_maps_url: ''
+    google_maps_url: '',
+    show_filter_bar: true
   });
   const [settingsSavedMsg, setSettingsSavedMsg] = useState(false);
 
@@ -56,7 +57,8 @@ export default function AdminDashboard({ token, username, onLogout, onReturnToMe
           address: infoData.address || 'HawaiAdda Chowk, Near katchari Gumti, Motihari, Bihar',
           openingHours: infoData.openingHours || '8:00 AM - 10:30 PM (Mon - Sun)',
           google_review_url: infoData.google_review_url || '',
-          google_maps_url: infoData.google_maps_url || ''
+          google_maps_url: infoData.google_maps_url || '',
+          show_filter_bar: infoData.show_filter_bar !== false
         });
       }
     } catch (err) {
@@ -1134,6 +1136,46 @@ export default function AdminDashboard({ token, username, onLogout, onReturnToMe
                   }}
                 />
               </div>
+            </div>
+
+            {/* Show / Hide Quick Filter Bar Toggle */}
+            <div style={{
+              background: settingsForm.show_filter_bar !== false ? '#F0FDF4' : '#FEF2F2',
+              border: settingsForm.show_filter_bar !== false ? '1.5px solid #86EFAC' : '1.5px solid #FCA5A5',
+              padding: '14px 16px',
+              borderRadius: 'var(--radius-sm)',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+              marginBottom: '20px',
+              gap: '10px'
+            }}>
+              <div>
+                <h5 style={{ fontSize: '0.9rem', fontWeight: 800, color: settingsForm.show_filter_bar !== false ? '#166534' : '#991B1B' }}>
+                  {settingsForm.show_filter_bar !== false ? '✅ Filter Bar is VISIBLE on Customer Menu' : '🚫 Filter Bar is HIDDEN on Customer Menu'}
+                </h5>
+                <p style={{ fontSize: '0.78rem', color: 'var(--text-muted)', marginTop: '2px' }}>
+                  Customer Digital Menu par Search Bar ke niche filter buttons (Must Try, Combo, Special, Under 100) ko ON/OFF karein.
+                </p>
+              </div>
+
+              <button
+                type="button"
+                onClick={() => setSettingsForm({ ...settingsForm, show_filter_bar: !settingsForm.show_filter_bar })}
+                style={{
+                  padding: '8px 18px',
+                  borderRadius: 'var(--radius-pill)',
+                  fontWeight: 800,
+                  fontSize: '0.82rem',
+                  background: settingsForm.show_filter_bar !== false ? '#15803D' : '#DC2626',
+                  color: '#FFFFFF',
+                  border: 'none',
+                  whiteSpace: 'nowrap',
+                  cursor: 'pointer'
+                }}
+              >
+                {settingsForm.show_filter_bar !== false ? '● Visible (ON)' : '● Hidden (OFF)'}
+              </button>
             </div>
 
             <button
