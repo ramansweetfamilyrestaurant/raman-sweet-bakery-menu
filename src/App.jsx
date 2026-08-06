@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, lazy, Suspense } from 'react';
 import CustomerHeader from './components/CustomerHeader';
 import MenuCardItem from './components/MenuCardItem';
 import SearchBar from './components/SearchBar';
@@ -8,12 +8,16 @@ import DishModal from './components/DishModal';
 import RestaurantInfoModal from './components/RestaurantInfoModal';
 import BottomDock from './components/BottomDock';
 import Footer from './components/Footer';
-import AdminLogin from './components/Admin/AdminLogin';
-import AdminDashboard from './components/Admin/AdminDashboard';
-import SuperAdminLogin from './components/SuperAdmin/SuperAdminLogin';
-import SuperAdminDashboard from './components/SuperAdmin/SuperAdminDashboard';
-import { fetchRestaurantInfo, fetchCategories, fetchDishes } from './api/client';
-import { LayoutList, Grid, BookOpen, X, Sparkles, ShieldAlert, Phone } from 'lucide-react';
+import DishFormModal from './components/Admin/DishFormModal';
+import CategoryFormModal from './components/Admin/CategoryFormModal';
+import { fetchRestaurantInfo, fetchCategories, fetchDishes, toggleDishAvailability, deleteDish } from './api/client';
+import { LayoutList, Grid, BookOpen, X, Sparkles, ShieldAlert, Phone, Plus, Edit3, Trash2, LogOut, Settings, Crown, CheckCircle } from 'lucide-react';
+
+// Code Splitting (Lazy Loading): Super Admin & Admin JS chunks are loaded ONLY when requested!
+const AdminLogin = lazy(() => import('./components/Admin/AdminLogin'));
+const AdminDashboard = lazy(() => import('./components/Admin/AdminDashboard'));
+const SuperAdminLogin = lazy(() => import('./components/SuperAdmin/SuperAdminLogin'));
+const SuperAdminDashboard = lazy(() => import('./components/SuperAdmin/SuperAdminDashboard'));
 
 export default function App() {
   // Parse Table Number from URL query parameter ?table=5
@@ -68,6 +72,10 @@ export default function App() {
   const [showCategoryDrawer, setShowCategoryDrawer] = useState(false);
   const [loading, setLoading] = useState(true);
 
+  // In-Context Owner Modals State
+  const [ownerDishModalData, setOwnerDishModalData] = useState(null); // null, 'new', or dish object
+  const [ownerCatModalData, setOwnerCatModalData] = useState(null); // null, 'new', or cat object
+
   // Extract restaurant slug from URL /r/:slug
   const getSlugFromUrl = () => {
     const path = window.location.pathname;
@@ -79,13 +87,14 @@ export default function App() {
   };
 
   // Load Menu Data
-  const loadMenuData = async () => {
-    const slug = getSlugFromUrl();
+  const loadMenuData = async (forcedSlug) => {
+    const slug = forcedSlug || getSlugFromUrl();
+    const isAdminMode = Boolean(adminToken);
     try {
       const [infoData, catData, dishData] = await Promise.all([
         fetchRestaurantInfo(slug),
-        fetchCategories({ slug }),
-        fetchDishes({ query: searchQuery, slug })
+        fetchCategories({ slug, adminView: isAdminMode }),
+        fetchDishes({ query: searchQuery, slug, adminView: isAdminMode })
       ]);
       setInfo(infoData);
       setCategories(catData);
@@ -99,13 +108,16 @@ export default function App() {
 
   useEffect(() => {
     loadMenuData();
-  }, [searchQuery]);
+  }, [searchQuery, adminToken]);
 
-  // Handle URL route changes (#super-admin, #admin, /super-admin, /admin)
+  // Handle URL route changes (/super-admin, /admin, /r/:slug, #super-admin, #admin)
   useEffect(() => {
     const handleRouteCheck = () => {
-      const isSuperAdmin = window.location.hash === '#super-admin' || window.location.pathname.includes('/super-admin');
-      const isRouteAdmin = window.location.hash === '#admin' || window.location.pathname.endsWith('/admin');
+      const path = window.location.pathname.toLowerCase();
+      const hash = window.location.hash.toLowerCase();
+
+      const isSuperAdmin = path.startsWith('/super-admin') || path.startsWith('/superadmin') || hash === '#super-admin' || hash === '#superadmin';
+      const isRouteAdmin = (path.startsWith('/admin') || hash === '#admin') && !isSuperAdmin;
 
       if (isSuperAdmin) {
         if (superToken) {
@@ -139,7 +151,7 @@ export default function App() {
     setAdminToken(token);
     setAdminUsername(username);
     setView('admin-dashboard');
-    window.location.hash = '#admin';
+    window.history.pushState({}, '', '/admin');
   };
 
   const handleAdminLogout = () => {
@@ -148,7 +160,7 @@ export default function App() {
     setAdminToken('');
     setAdminUsername('');
     setView('menu');
-    window.location.hash = '';
+    window.history.pushState({}, '', '/');
   };
 
   const handleSuperAdminLoginSuccess = (token, username) => {
@@ -157,7 +169,7 @@ export default function App() {
     setSuperToken(token);
     setSuperUsername(username);
     setView('super-admin-dashboard');
-    window.location.hash = '#super-admin';
+    window.history.pushState({}, '', '/super-admin');
   };
 
   const handleSuperAdminLogout = () => {
@@ -166,7 +178,74 @@ export default function App() {
     setSuperToken('');
     setSuperUsername('');
     setView('menu');
-    window.location.hash = '';
+    window.history.pushState({}, '', '/');
+  };
+
+  // In-Context Owner Handlers
+  const handleSaveInlineDish = async (dishData) => {
+    const isEdit = Boolean(ownerDishModalData?.id);
+    const url = isEdit ? `/api/admin/dishes/${ownerDishModalData.id}` : '/api/admin/dishes';
+    const method = isEdit ? 'PUT' : 'POST';
+
+    const res = await fetch(url, {
+      method,
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${adminToken}`
+      },
+      body: JSON.stringify(dishData)
+    });
+
+    if (!res.ok) {
+      const data = await res.json();
+      throw new Error(data.error || 'Failed to save dish');
+    }
+
+    setOwnerDishModalData(null);
+    loadMenuData();
+  };
+
+  const handleSaveInlineCategory = async (catData) => {
+    const isEdit = Boolean(ownerCatModalData?.id);
+    const url = isEdit ? `/api/admin/categories/${ownerCatModalData.id}` : '/api/admin/categories';
+    const method = isEdit ? 'PUT' : 'POST';
+
+    const res = await fetch(url, {
+      method,
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${adminToken}`
+      },
+      body: JSON.stringify(catData)
+    });
+
+    if (!res.ok) {
+      const data = await res.json();
+      throw new Error(data.error || 'Failed to save category');
+    }
+
+    setOwnerCatModalData(null);
+    loadMenuData();
+  };
+
+  const handleInlineToggleDish = async (dishId, currentAvailable) => {
+    try {
+      const nextAvail = !currentAvailable;
+      await toggleDishAvailability(dishId, nextAvail, adminToken);
+      setDishes(dishes.map(d => d.id === dishId ? { ...d, available: nextAvail } : d));
+    } catch (err) {
+      alert(err.message || 'Failed to toggle availability');
+    }
+  };
+
+  const handleInlineDeleteDish = async (dishId, dishName) => {
+    if (!window.confirm(`Are you sure you want to delete '${dishName}'?`)) return;
+    try {
+      await deleteDish(dishId, adminToken);
+      setDishes(dishes.filter(d => d.id !== dishId));
+    } catch (err) {
+      alert(err.message || 'Failed to delete dish');
+    }
   };
 
   // Group dishes by category
@@ -214,56 +293,74 @@ export default function App() {
   // Super Admin Portal Views
   if (view === 'super-admin-login') {
     return (
-      <SuperAdminLogin
-        onLoginSuccess={handleSuperAdminLoginSuccess}
-        onCancel={() => {
-          setView('menu');
-          window.location.hash = '';
-        }}
-      />
+      <Suspense fallback={<div style={{ padding: '60px', textAlign: 'center', background: '#0A2315', color: '#DFBA67', minHeight: '100vh', fontWeight: 800 }}>👑 Loading Master Portal...</div>}>
+        <SuperAdminLogin
+          onLoginSuccess={handleSuperAdminLoginSuccess}
+          onCancel={() => {
+            setView('menu');
+            window.history.pushState({}, '', '/');
+          }}
+        />
+      </Suspense>
     );
   }
 
   if (view === 'super-admin-dashboard') {
     return (
-      <SuperAdminDashboard
-        token={superToken}
-        username={superUsername}
-        onLogout={handleSuperAdminLogout}
-        onReturnToMenu={() => {
-          setView('menu');
-          window.location.hash = '';
-          loadMenuData();
-        }}
-      />
+      <Suspense fallback={<div style={{ padding: '60px', textAlign: 'center', background: '#0A2315', color: '#DFBA67', minHeight: '100vh', fontWeight: 800 }}>👑 Loading Master Dashboard...</div>}>
+        <SuperAdminDashboard
+          token={superToken}
+          username={superUsername}
+          onLogout={handleSuperAdminLogout}
+          onImpersonate={(tenantToken, tenantUsername) => {
+            setAdminToken(tenantToken);
+            setAdminUsername(tenantUsername);
+            setView('admin-dashboard');
+            window.history.pushState({}, '', '/admin');
+          }}
+          onReturnToMenu={(tenantSlug) => {
+            const targetSlug = tenantSlug || (info && info.slug) || getSlugFromUrl() || 'raman-sweet-bakery';
+            setView('menu');
+            window.history.pushState({}, '', `/r/${targetSlug}`);
+            loadMenuData(targetSlug);
+          }}
+        />
+      </Suspense>
     );
   }
 
   // Restaurant Admin View Render
   if (view === 'admin-login') {
     return (
-      <AdminLogin
-        onLoginSuccess={handleAdminLoginSuccess}
-        onCancel={() => {
-          setView('menu');
-          window.location.hash = '';
-        }}
-      />
+      <Suspense fallback={<div style={{ padding: '60px', textAlign: 'center', background: '#0A2315', color: '#FFFFFF', minHeight: '100vh', fontWeight: 800 }}>🔑 Loading Admin Login...</div>}>
+        <AdminLogin
+          onLoginSuccess={handleAdminLoginSuccess}
+          onCancel={() => {
+            const targetSlug = getSlugFromUrl() || 'raman-sweet-bakery';
+            setView('menu');
+            window.history.pushState({}, '', `/r/${targetSlug}`);
+            loadMenuData(targetSlug);
+          }}
+        />
+      </Suspense>
     );
   }
 
   if (view === 'admin-dashboard') {
     return (
-      <AdminDashboard
-        token={adminToken}
-        username={adminUsername}
-        onLogout={handleAdminLogout}
-        onReturnToMenu={() => {
-          setView('menu');
-          window.location.hash = '';
-          loadMenuData();
-        }}
-      />
+      <Suspense fallback={<div style={{ padding: '60px', textAlign: 'center', background: '#0A2315', color: '#FFFFFF', minHeight: '100vh', fontWeight: 800 }}>⚙️ Loading Owner Dashboard...</div>}>
+        <AdminDashboard
+          token={adminToken}
+          username={adminUsername}
+          onLogout={handleAdminLogout}
+          onReturnToMenu={(tenantSlug) => {
+            const targetSlug = tenantSlug || (info && info.slug) || getSlugFromUrl() || 'raman-sweet-bakery';
+            setView('menu');
+            window.history.pushState({}, '', `/r/${targetSlug}`);
+            loadMenuData(targetSlug);
+          }}
+        />
+      </Suspense>
     );
   }
 
@@ -345,10 +442,11 @@ export default function App() {
     );
   }
 
-  // Customer Digital Menu Render
+  // Customer Digital Menu Render (Clean public view — NO admin controls)
   return (
     <div style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column', position: 'relative' }}>
-      {/* Header with Dual Language Switcher & Table Indicator */}
+
+      {/* Customer Header */}
       <CustomerHeader
         info={info}
         lang={lang}
@@ -358,10 +456,10 @@ export default function App() {
         onOpenAdmin={() => {
           if (adminToken) {
             setView('admin-dashboard');
-            window.location.hash = '#admin';
+            window.history.pushState({}, '', '/admin');
           } else {
             setView('admin-login');
-            window.location.hash = '#admin';
+            window.history.pushState({}, '', '/admin');
           }
         }}
       />
@@ -373,6 +471,7 @@ export default function App() {
         onClear={() => setSearchQuery('')}
         onQuickFilter={(filterVal) => setSearchQuery(filterVal)}
         filtersVisibility={info?.filters_visibility}
+        restoType={info?.resto_type}
       />
 
       {/* Sticky Category Quick Jump Rail */}
@@ -433,7 +532,9 @@ export default function App() {
               display: 'flex',
               alignItems: 'center',
               gap: '4px',
-              transition: 'var(--transition-fast)'
+              transition: 'var(--transition-fast)',
+              border: 'none',
+              cursor: 'pointer'
             }}
           >
             <LayoutList size={14} />
@@ -452,7 +553,9 @@ export default function App() {
               display: 'flex',
               alignItems: 'center',
               gap: '4px',
-              transition: 'var(--transition-fast)'
+              transition: 'var(--transition-fast)',
+              border: 'none',
+              cursor: 'pointer'
             }}
           >
             <Grid size={14} />
@@ -537,13 +640,14 @@ export default function App() {
                   </h3>
                 </div>
 
-                <span style={{
-                  fontSize: '0.75rem',
-                  color: 'var(--text-muted)',
-                  fontWeight: 600
-                }}>
-                  {group.items.length} {lang === 'hi' ? 'आइटम' : 'items'}
-                </span>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                  {/* Category Dish Count */}
+                  <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)', fontWeight: 600 }}>
+                    {group.items.length} {lang === 'hi' ? 'आइटम' : 'items'}
+                  </span>
+
+
+                </div>
               </div>
 
               {/* Items List or Grid Display */}
@@ -554,6 +658,7 @@ export default function App() {
                       key={dish.id}
                       dish={dish}
                       lang={lang}
+                      currencySymbol={info?.currency_symbol !== undefined ? info.currency_symbol : '₹'}
                       onClick={() => setSelectedDishModal(dish)}
                     />
                   ))}
@@ -569,6 +674,7 @@ export default function App() {
                       key={dish.id}
                       dish={dish}
                       lang={lang}
+                      currencySymbol={info?.currency_symbol !== undefined ? info.currency_symbol : '₹'}
                       onClick={() => setSelectedDishModal(dish)}
                     />
                   ))}
@@ -588,10 +694,10 @@ export default function App() {
         onOpenAdmin={() => {
           if (adminToken) {
             setView('admin-dashboard');
-            window.location.hash = '#admin';
+            window.history.pushState({}, '', '/admin');
           } else {
             setView('admin-login');
-            window.location.hash = '#admin';
+            window.history.pushState({}, '', '/admin');
           }
         }}
       />
@@ -647,7 +753,7 @@ export default function App() {
                   {lang === 'hi' ? 'मेन्यू श्रेणी (Menu Categories)' : 'Menu Categories'}
                 </h3>
               </div>
-              <button onClick={() => setShowCategoryDrawer(false)} style={{ color: 'var(--text-dark)' }}>
+              <button onClick={() => setShowCategoryDrawer(false)} style={{ color: 'var(--text-dark)', border: 'none', background: 'none', cursor: 'pointer' }}>
                 <X size={20} />
               </button>
             </div>
@@ -666,7 +772,9 @@ export default function App() {
                   color: selectedCategory === 'all' ? '#FFFFFF' : 'var(--primary-emerald)',
                   display: 'flex',
                   alignItems: 'center',
-                  justifyContent: 'space-between'
+                  justifyContent: 'space-between',
+                  border: 'none',
+                  cursor: 'pointer'
                 }}
               >
                 <span>❖ {lang === 'hi' ? 'सभी श्रेणियां (All Items)' : 'All Categories'}</span>
@@ -691,7 +799,9 @@ export default function App() {
                       color: String(selectedCategory) === String(cat.id) ? '#FFFFFF' : 'var(--text-dark)',
                       display: 'flex',
                       alignItems: 'center',
-                      justifyContent: 'space-between'
+                      justifyContent: 'space-between',
+                      border: 'none',
+                      cursor: 'pointer'
                     }}
                   >
                     <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
@@ -712,11 +822,12 @@ export default function App() {
         </div>
       )}
 
-      {/* Dish Modal Popup */}
+      {/* Customer Dish Detail Modal */}
       {selectedDishModal && (
         <DishModal
           dish={selectedDishModal}
           lang={lang}
+          currencySymbol={info?.currency_symbol !== undefined ? info.currency_symbol : '₹'}
           onClose={() => setSelectedDishModal(null)}
         />
       )}
@@ -730,16 +841,37 @@ export default function App() {
         />
       )}
 
+      {/* Owner Dish Edit/Add Form Modal */}
+      {ownerDishModalData && (
+        <DishFormModal
+          dish={ownerDishModalData === 'new' ? null : ownerDishModalData}
+          categories={categories}
+          token={adminToken}
+          onSave={handleSaveInlineDish}
+          onClose={() => setOwnerDishModalData(null)}
+        />
+      )}
+
+      {/* Owner Category Edit/Add Form Modal */}
+      {ownerCatModalData && (
+        <CategoryFormModal
+          category={ownerCatModalData === 'new' ? null : ownerCatModalData}
+          token={adminToken}
+          onSave={handleSaveInlineCategory}
+          onClose={() => setOwnerCatModalData(null)}
+        />
+      )}
+
       {/* Footer */}
       <Footer
         info={info}
         onOpenAdmin={() => {
           if (adminToken) {
             setView('admin-dashboard');
-            window.location.hash = '#admin';
+            window.history.pushState({}, '', '/admin');
           } else {
             setView('admin-login');
-            window.location.hash = '#admin';
+            window.history.pushState({}, '', '/admin');
           }
         }}
       />

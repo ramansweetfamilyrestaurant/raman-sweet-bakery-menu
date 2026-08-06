@@ -155,6 +155,73 @@ router.patch('/restaurants/:id/toggle', authenticateToken, requireSuperAdmin, as
   }
 });
 
+// POST Impersonate Tenant (Super Admin logs in as Tenant Owner in 1 Click)
+router.post('/restaurants/:id/impersonate', authenticateToken, requireSuperAdmin, async (req, res) => {
+  try {
+    const { id } = req.params;
+    const restos = await query('SELECT * FROM restaurants WHERE id = $1', [id]);
+    if (!restos || restos.length === 0) {
+      return res.status(404).json({ error: 'Restaurant tenant not found' });
+    }
+
+    const resto = restos[0];
+    const admins = await query('SELECT * FROM admins WHERE restaurant_id = $1 ORDER BY id ASC', [id]);
+    const ownerAdmin = admins && admins.length > 0 ? admins[0] : { id: 1, username: 'admin' };
+
+    // Generate JWT token scoping to this tenant restaurant
+    const token = jwt.sign(
+      { id: ownerAdmin.id, username: ownerAdmin.username, role: 'restaurant_admin', restaurant_id: resto.id },
+      JWT_SECRET,
+      { expiresIn: '1d' }
+    );
+
+    res.json({
+      success: true,
+      token,
+      username: ownerAdmin.username,
+      restaurant: resto
+    });
+  } catch (err) {
+    console.error('Impersonate tenant error:', err);
+    res.status(500).json({ error: 'Failed to impersonate tenant' });
+  }
+});
+
+// PUT Update Tenant Restaurant Details & Reset Owner Credentials
+router.put('/restaurants/:id', authenticateToken, requireSuperAdmin, async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { name, tagline, phone, address, fssai_lic_no, owner_username, owner_password } = req.body;
+
+    // Update restaurant info
+    await query(`
+      UPDATE restaurants
+      SET name = $1, tagline = $2, phone = $3, address = $4, fssai_lic_no = $5
+      WHERE id = $6
+    `, [name, tagline || '', phone || '', address || '', fssai_lic_no || '', id]);
+
+    // Update owner admin user if username or password provided
+    if (owner_username) {
+      if (owner_password && owner_password.trim() !== '') {
+        const salt = await bcrypt.genSalt(10);
+        const hash = await bcrypt.hash(owner_password, salt);
+        await query(`
+          UPDATE admins SET username = $1, password_hash = $2 WHERE restaurant_id = $3
+        `, [owner_username, hash, id]);
+      } else {
+        await query(`
+          UPDATE admins SET username = $1 WHERE restaurant_id = $2
+        `, [owner_username, id]);
+      }
+    }
+
+    res.json({ success: true, message: 'Tenant restaurant details updated successfully' });
+  } catch (err) {
+    console.error('Update tenant restaurant error:', err);
+    res.status(500).json({ error: 'Failed to update tenant restaurant' });
+  }
+});
+
 // DELETE Restaurant Tenant
 router.delete('/restaurants/:id', authenticateToken, requireSuperAdmin, async (req, res) => {
   try {

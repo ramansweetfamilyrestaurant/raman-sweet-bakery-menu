@@ -13,6 +13,7 @@ export default function DishFormModal({ dish, categories, token, onSave, onClose
   const [badge, setBadge] = useState(dish?.badge || '');
   const [ingredients, setIngredients] = useState(dish?.ingredients || '');
   const [tasteProfile, setTasteProfile] = useState(dish?.taste_profile || '');
+  const [type, setType] = useState(dish?.type || 'veg'); // 'veg', 'nonveg', 'egg'
   const [image, setImage] = useState(dish?.image || '/uploads/logo.jpg');
   const [available, setAvailable] = useState(dish?.available !== false);
   
@@ -59,6 +60,7 @@ export default function DishFormModal({ dish, categories, token, onSave, onClose
         badge,
         ingredients,
         taste_profile: tasteProfile,
+        type,
         available
       });
     } catch (err) {
@@ -150,6 +152,89 @@ export default function DishFormModal({ dish, categories, token, onSave, onClose
                 <option key={c.id} value={c.id}>{c.name}</option>
               ))}
             </select>
+          </div>
+
+          {/* Food Type Selector (Veg / Non-Veg / Egg) */}
+          <div style={{ marginBottom: '14px' }}>
+            <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: 700, color: 'var(--primary-dark-green)', marginBottom: '6px' }}>
+              Food Preference / Dietary Type:
+            </label>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '8px' }}>
+              <button
+                type="button"
+                onClick={() => setType('veg')}
+                style={{
+                  padding: '8px 10px',
+                  borderRadius: 'var(--radius-pill)',
+                  fontSize: '0.8rem',
+                  fontWeight: 800,
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  gap: '6px',
+                  background: type === 'veg' ? '#DCFCE7' : '#F9FAFB',
+                  color: type === 'veg' ? '#15803D' : '#4B5563',
+                  border: type === 'veg' ? '2px solid #16A34A' : '1px solid #E5E7EB',
+                  cursor: 'pointer',
+                  transition: 'all 0.2s ease'
+                }}
+              >
+                <span style={{ width: '10px', height: '10px', border: '1.5px solid #16A34A', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', borderRadius: '2px', background: '#FFFFFF' }}>
+                  <span style={{ width: '4px', height: '4px', borderRadius: '50%', backgroundColor: '#16A34A' }} />
+                </span>
+                Pure Veg
+              </button>
+
+              <button
+                type="button"
+                onClick={() => setType('nonveg')}
+                style={{
+                  padding: '8px 10px',
+                  borderRadius: 'var(--radius-pill)',
+                  fontSize: '0.8rem',
+                  fontWeight: 800,
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  gap: '6px',
+                  background: type === 'nonveg' ? '#FEE2E2' : '#F9FAFB',
+                  color: type === 'nonveg' ? '#B91C1C' : '#4B5563',
+                  border: type === 'nonveg' ? '2px solid #DC2626' : '1px solid #E5E7EB',
+                  cursor: 'pointer',
+                  transition: 'all 0.2s ease'
+                }}
+              >
+                <span style={{ width: '10px', height: '10px', border: '1.5px solid #DC2626', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', borderRadius: '2px', background: '#FFFFFF' }}>
+                  <span style={{ width: '4px', height: '4px', borderRadius: '50%', backgroundColor: '#DC2626' }} />
+                </span>
+                Non-Veg
+              </button>
+
+              <button
+                type="button"
+                onClick={() => setType('egg')}
+                style={{
+                  padding: '8px 10px',
+                  borderRadius: 'var(--radius-pill)',
+                  fontSize: '0.8rem',
+                  fontWeight: 800,
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  gap: '6px',
+                  background: type === 'egg' ? '#FEF3C7' : '#F9FAFB',
+                  color: type === 'egg' ? '#B45309' : '#4B5563',
+                  border: type === 'egg' ? '2px solid #D97706' : '1px solid #E5E7EB',
+                  cursor: 'pointer',
+                  transition: 'all 0.2s ease'
+                }}
+              >
+                <span style={{ width: '10px', height: '10px', border: '1.5px solid #D97706', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', borderRadius: '2px', background: '#FFFFFF' }}>
+                  <span style={{ width: '4px', height: '4px', borderRadius: '50%', backgroundColor: '#D97706' }} />
+                </span>
+                Egg
+              </button>
+            </div>
           </div>
 
           {/* Name & Badge */}

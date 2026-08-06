@@ -3,17 +3,37 @@ import fs from 'fs';
 import path from 'path';
 import { query } from '../db.js';
 
+import jwt from 'jsonwebtoken';
+
 const router = express.Router();
 const settingsPath = path.resolve('server/settings.json');
+const JWT_SECRET = process.env.JWT_SECRET || 'raman_bakery_secret_jwt_key_2026_super_secure';
 
-// Helper to resolve target restaurant by slug (or fallback to primary raman-sweet-bakery)
-async function resolveRestaurant(slug) {
+// Helper to resolve target restaurant by JWT token or slug (or fallback to primary raman-sweet-bakery)
+async function resolveRestaurant(req, slug) {
+  // 1. Check if token in Authorization header
+  if (req && req.headers && req.headers.authorization) {
+    try {
+      const authHeader = req.headers.authorization;
+      const token = authHeader.split(' ')[1];
+      if (token) {
+        const decoded = jwt.verify(token, JWT_SECRET);
+        if (decoded && decoded.restaurant_id) {
+          const restos = await query('SELECT * FROM restaurants WHERE id = $1', [decoded.restaurant_id]);
+          if (restos && restos.length > 0) return restos[0];
+        }
+      }
+    } catch (e) {}
+  }
+
+  // 2. Check slug parameter
   const targetSlug = slug || 'raman-sweet-bakery';
   const restos = await query('SELECT * FROM restaurants WHERE slug = $1', [targetSlug]);
   if (restos && restos.length > 0) {
     return restos[0];
   }
-  // Fallback to first restaurant
+
+  // 3. Fallback to first restaurant
   const firstResto = await query('SELECT * FROM restaurants ORDER BY id ASC LIMIT 1');
   return firstResto[0] || null;
 }
@@ -22,7 +42,7 @@ async function resolveRestaurant(slug) {
 router.get('/info', async (req, res) => {
   try {
     const { slug } = req.query;
-    const resto = await resolveRestaurant(slug);
+    const resto = await resolveRestaurant(req, slug);
 
     if (resto) {
       // Parse filters_visibility if stored as JSON string or object
@@ -38,15 +58,18 @@ router.get('/info', async (req, res) => {
         id: resto.id,
         name: resto.name,
         slug: resto.slug,
-        tagline: resto.tagline || '100% Pure Vegetarian',
-        badge: '100% Pure Veg',
+        tagline: resto.tagline || '',
+        badge: resto.resto_type === 'pure_veg' ? '100% Pure Veg' : 'Veg & Non-Veg',
+        resto_type: resto.resto_type || 'pure_veg',
         logo: resto.logo || '/uploads/logo.jpg',
-        openingHours: resto.opening_hours || '8:00 AM - 10:30 PM (Mon - Sun)',
-        phone: resto.phone || '+91 9708366583',
-        address: resto.address || 'HawaiAdda Chowk, Near katchari Gumti, Motihari, Bihar',
+        openingHours: resto.opening_hours || '',
+        phone: resto.phone || '',
+        address: resto.address || '',
         google_review_url: resto.google_review_url || '',
         google_maps_url: resto.google_maps_url || '',
+        fssai_lic_no: resto.fssai_lic_no || '',
         filters_visibility: filtersVis,
+        currency_symbol: (resto.currency_symbol !== null && resto.currency_symbol !== undefined) ? resto.currency_symbol : '₹',
         active: resto.active !== false
       });
     }
@@ -78,7 +101,7 @@ router.get('/categories', async (req, res) => {
     let targetId = restaurant_id;
 
     if (!targetId) {
-      const resto = await resolveRestaurant(slug);
+      const resto = await resolveRestaurant(req, slug);
       targetId = resto?.id || 1;
     }
 
@@ -105,7 +128,7 @@ router.get('/dishes', async (req, res) => {
     let targetId = restaurant_id;
 
     if (!targetId) {
-      const resto = await resolveRestaurant(slug);
+      const resto = await resolveRestaurant(req, slug);
       targetId = resto?.id || 1;
     }
 
@@ -137,10 +160,20 @@ router.get('/dishes', async (req, res) => {
         sql += ` AND d.badge LIKE '%Combo%'`;
       } else if (trimmedQ === 'special') {
         sql += ` AND d.badge LIKE '%Special%'`;
+      } else if (trimmedQ === 'veg') {
+        sql += ` AND (d.type = 'veg' OR d.type IS NULL OR d.type = '')`;
+      } else if (trimmedQ === 'nonveg' || trimmedQ === 'non-veg') {
+        sql += ` AND d.type = 'nonveg'`;
+      } else if (trimmedQ === 'egg') {
+        sql += ` AND d.type = 'egg'`;
       } else {
         params.push(`%${trimmedQ}%`);
-        const pIdx = params.length;
-        sql += ` AND (LOWER(d.name) LIKE $${pIdx} OR LOWER(d.description) LIKE $${pIdx} OR LOWER(d.badge) LIKE $${pIdx})`;
+        params.push(`%${trimmedQ}%`);
+        params.push(`%${trimmedQ}%`);
+        const p3 = params.length;
+        const p2 = p3 - 1;
+        const p1 = p3 - 2;
+        sql += ` AND (LOWER(d.name) LIKE $${p1} OR LOWER(d.description) LIKE $${p2} OR LOWER(d.badge) LIKE $${p3})`;
       }
     }
 

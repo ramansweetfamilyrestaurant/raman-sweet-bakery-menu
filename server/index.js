@@ -42,6 +42,16 @@ if (fs.existsSync(distDir)) {
   app.get('*', (req, res) => {
     res.sendFile(path.join(distDir, 'index.html'));
   });
+} else {
+  // Development fallback for clean SPA routes
+  app.get(['/super-admin', '/superadmin', '/admin', '/r/*'], (req, res) => {
+    const devHtml = path.resolve('index.html');
+    if (fs.existsSync(devHtml)) {
+      res.sendFile(devHtml);
+    } else {
+      res.send(`<!DOCTYPE html><html><head><title>SaaS Portal</title></head><body><div id="root"></div></body></html>`);
+    }
+  });
 }
 
 // Start Server

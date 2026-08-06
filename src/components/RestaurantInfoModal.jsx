@@ -1,5 +1,5 @@
 import React from 'react';
-import { X, Clock, Phone, MapPin, ShieldCheck, Award, CheckCircle, ExternalLink } from 'lucide-react';
+import { X, Clock, Phone, MapPin, ShieldCheck, ExternalLink } from 'lucide-react';
 
 export default function RestaurantInfoModal({ info, onClose }) {
   return (
@@ -51,7 +51,9 @@ export default function RestaurantInfoModal({ info, onClose }) {
               height: '32px',
               display: 'flex',
               alignItems: 'center',
-              justifyContent: 'center'
+              justifyContent: 'center',
+              border: 'none',
+              cursor: 'pointer'
             }}
           >
             <X size={18} />
@@ -65,10 +67,10 @@ export default function RestaurantInfoModal({ info, onClose }) {
             />
             <div>
               <h3 style={{ fontSize: '1.15rem', fontWeight: 800, color: '#FFFFFF', lineHeight: 1.2 }}>
-                {info?.name || 'Raman Sweet Bakery'}
+                {info?.name || 'Digital Menu'}
               </h3>
               <span style={{ fontSize: '0.74rem', color: '#4ADE80', fontWeight: 700 }}>
-                100% Pure Vegetarian Certified
+                {info?.badge || info?.tagline || 'Digital Restaurant Menu'}
               </span>
             </div>
           </div>
@@ -90,113 +92,121 @@ export default function RestaurantInfoModal({ info, onClose }) {
             <ShieldCheck size={24} color="#16A34A" />
             <div>
               <h4 style={{ fontSize: '0.82rem', fontWeight: 800, color: '#16A34A' }}>
-                FSSAI Certified 100% Pure Veg Restaurant
+                {info?.badge ? `FSSAI Certified ${info.badge}` : 'FSSAI Certified Restaurant'}
               </h4>
-              <p style={{ fontSize: '0.74rem', color: '#15803D' }}>
-                FSSAI Lic No: 20824001000123 • Pure Veg.Pure Taste.Pure Happiness
+              <p style={{ fontSize: '0.74rem', color: '#15803D', margin: 0 }}>
+                {info?.fssai_lic_no ? `FSSAI Lic No: ${info.fssai_lic_no} • ` : ''}{info?.tagline || 'Quality Food & Service'}
               </p>
             </div>
           </div>
 
           {/* Opening Hours */}
-          <div style={{ marginBottom: '16px' }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '4px' }}>
-              <Clock size={16} color="var(--primary-emerald)" />
-              <span style={{ fontSize: '0.84rem', fontWeight: 800, color: 'var(--text-dark)' }}>
-                Dining & Sweets Counter Timings
-              </span>
+          {info?.openingHours && (
+            <div style={{ marginBottom: '16px' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '4px' }}>
+                <Clock size={16} color="var(--primary-emerald)" />
+                <span style={{ fontSize: '0.84rem', fontWeight: 800, color: 'var(--text-dark)' }}>
+                  Opening Hours
+                </span>
+              </div>
+              <p style={{ fontSize: '0.82rem', color: 'var(--text-muted)', paddingLeft: '24px', margin: 0 }}>
+                {info.openingHours}
+              </p>
             </div>
-            <p style={{ fontSize: '0.82rem', color: 'var(--text-muted)', paddingLeft: '24px' }}>
-              Monday – Sunday: {info?.openingHours || '8:00 AM – 9:30 PM (Open 7 Days)'}
-            </p>
-          </div>
+          )}
 
           {/* Phone Contact & Direct Call Action Button */}
-          <div style={{ marginBottom: '16px' }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '6px' }}>
-              <Phone size={16} color="var(--primary-emerald)" />
-              <span style={{ fontSize: '0.84rem', fontWeight: 800, color: 'var(--text-dark)' }}>
-                Contact & Table Inquiries
-              </span>
-            </div>
-            <a
-              href={`tel:${info?.phone || '+919708366583'}`}
-              style={{
-                display: 'inline-flex',
-                alignItems: 'center',
-                gap: '8px',
-                background: 'var(--primary-emerald)',
-                color: '#FFFFFF',
-                padding: '8px 18px',
-                borderRadius: 'var(--radius-pill)',
-                fontSize: '0.84rem',
-                fontWeight: 700,
-                marginLeft: '24px',
-                textDecoration: 'none'
-              }}
-            >
-              📞 Call {info?.phone || '+91 9708366583'}
-            </a>
-          </div>
-
-          {/* Address & Directions Button */}
-          <div style={{ marginBottom: '16px' }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '6px' }}>
-              <MapPin size={16} color="var(--primary-emerald)" />
-              <span style={{ fontSize: '0.84rem', fontWeight: 800, color: 'var(--text-dark)' }}>
-                Restaurant Address
-              </span>
-            </div>
-            <p style={{ fontSize: '0.82rem', color: 'var(--text-muted)', paddingLeft: '24px', marginBottom: '8px' }}>
-              {info?.address || 'HawaiAdda Chowk,Near katchari Gumti,Motihari,Bihar'}
-            </p>
-            <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', marginLeft: '24px' }}>
+          {info?.phone && (
+            <div style={{ marginBottom: '16px' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '6px' }}>
+                <Phone size={16} color="var(--primary-emerald)" />
+                <span style={{ fontSize: '0.84rem', fontWeight: 800, color: 'var(--text-dark)' }}>
+                  Contact & Inquiries
+                </span>
+              </div>
               <a
-                href={info?.google_maps_url || 'https://maps.google.com/?q=HawaiAdda+Chowk,+Near+katchari+Gumti,+Motihari,+Bihar'}
-                target="_blank"
-                rel="noopener noreferrer"
+                href={`tel:${info.phone}`}
                 style={{
                   display: 'inline-flex',
                   alignItems: 'center',
-                  gap: '6px',
-                  background: 'var(--bg-secondary)',
-                  color: 'var(--primary-emerald)',
-                  border: '1px solid var(--border-light)',
-                  padding: '6px 14px',
+                  gap: '8px',
+                  background: 'var(--primary-emerald)',
+                  color: '#FFFFFF',
+                  padding: '8px 18px',
                   borderRadius: 'var(--radius-pill)',
-                  fontSize: '0.78rem',
+                  fontSize: '0.84rem',
                   fontWeight: 700,
+                  marginLeft: '24px',
                   textDecoration: 'none'
                 }}
               >
-                📍 Get Google Maps Directions <ExternalLink size={12} />
+                📞 Call {info.phone}
               </a>
-
-              {info?.google_review_url && (
-                <a
-                  href={info.google_review_url}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  style={{
-                    display: 'inline-flex',
-                    alignItems: 'center',
-                    gap: '4px',
-                    background: 'linear-gradient(135deg, #FFD700 0%, #FFA500 100%)',
-                    color: '#0A2315',
-                    border: '1px solid #FFFFFF',
-                    padding: '6px 14px',
-                    borderRadius: 'var(--radius-pill)',
-                    fontSize: '0.78rem',
-                    fontWeight: 800,
-                    textDecoration: 'none',
-                    boxShadow: '0 2px 6px rgba(255, 215, 0, 0.3)'
-                  }}
-                >
-                  ⭐ Rate Us on Google Reviews <ExternalLink size={12} />
-                </a>
-              )}
             </div>
-          </div>
+          )}
+
+          {/* Address & Directions Button */}
+          {info?.address && (
+            <div style={{ marginBottom: '16px' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '6px' }}>
+                <MapPin size={16} color="var(--primary-emerald)" />
+                <span style={{ fontSize: '0.84rem', fontWeight: 800, color: 'var(--text-dark)' }}>
+                  Restaurant Address
+                </span>
+              </div>
+              <p style={{ fontSize: '0.82rem', color: 'var(--text-muted)', paddingLeft: '24px', marginBottom: '8px' }}>
+                {info.address}
+              </p>
+              <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', marginLeft: '24px' }}>
+                {info?.google_maps_url && (
+                  <a
+                    href={info.google_maps_url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    style={{
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      gap: '6px',
+                      background: 'var(--bg-secondary)',
+                      color: 'var(--primary-emerald)',
+                      border: '1px solid var(--border-light)',
+                      padding: '6px 14px',
+                      borderRadius: 'var(--radius-pill)',
+                      fontSize: '0.78rem',
+                      fontWeight: 700,
+                      textDecoration: 'none'
+                    }}
+                  >
+                    📍 Get Google Maps Directions <ExternalLink size={12} />
+                  </a>
+                )}
+
+                {info?.google_review_url && (
+                  <a
+                    href={info.google_review_url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    style={{
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      gap: '4px',
+                      background: 'linear-gradient(135deg, #FFD700 0%, #FFA500 100%)',
+                      color: '#0A2315',
+                      border: '1px solid #FFFFFF',
+                      padding: '6px 14px',
+                      borderRadius: 'var(--radius-pill)',
+                      fontSize: '0.78rem',
+                      fontWeight: 800,
+                      textDecoration: 'none',
+                      boxShadow: '0 2px 6px rgba(255, 215, 0, 0.3)'
+                    }}
+                  >
+                    ⭐ Rate Us on Google Reviews <ExternalLink size={12} />
+                  </a>
+                )}
+              </div>
+            </div>
+          )}
         </div>
       </div>
     </div>

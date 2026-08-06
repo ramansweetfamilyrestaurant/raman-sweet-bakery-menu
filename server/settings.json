@@ -1,23 +1,15 @@
 {
   "name": "Raman Sweet Bakery & Family Restaurant",
-  "tagline": "Pure Veg • Pure Taste • Pure Happiness",
-  "badge": "100% Pure Veg",
-  "logo": "/uploads/logo.jpg",
-  "openingHours": "8:00 AM - 9:30 PM (Mon - Sun)",
+  "tagline": "100% Pure Vegetarian • Pure Desi Ghee Sweets • Live Bakery",
   "phone": "+91 9708366583",
   "address": "HawaiAdda Chowk, Near katchari Gumti, Motihari, Bihar",
+  "openingHours": "8:00 AM - 10:30 PM (Mon - Sun)",
   "google_review_url": "https://r.revmeai.com/r/ee7e4c91-f85e-4a01-8767-eeaee0a89341",
-  "google_maps_url": "https://share.google/2M5mFMPlmS6pAXRf7",
+  "currency_symbol": "",
   "filters_visibility": {
     "must_try": true,
-    "combo": false,
+    "combo": true,
     "special": true,
     "under100": true
-  },
-  "highlights": [
-    "Pure Desi Ghee Sweets",
-    "Fresh Live Bakery & Custom Cakes",
-    "Authentic Tandoori North Indian",
-    "Traditional South Indian Dosa & Idli"
-  ]
+  }
 }

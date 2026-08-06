@@ -26,15 +26,17 @@ export default function Footer({ info, onOpenAdmin }) {
             color: '#FFFFFF',
             marginBottom: '4px'
           }}>
-            {info?.name || 'Raman Sweet Bakery & Family Restaurant'}
+            {info?.name || 'Digital Menu'}
           </h3>
-          <p style={{
-            fontSize: '0.84rem',
-            color: '#A7F3D0',
-            fontWeight: 600
-          }}>
-            {info?.tagline || '100% Pure Vegetarian • Pure Desi Ghee Sweets • Live Bakery'}
-          </p>
+          {info?.tagline && (
+            <p style={{
+              fontSize: '0.84rem',
+              color: '#A7F3D0',
+              fontWeight: 600
+            }}>
+              {info.tagline}
+            </p>
+          )}
         </div>
 
         <div style={{
@@ -45,26 +47,32 @@ export default function Footer({ info, onOpenAdmin }) {
           fontSize: '0.85rem',
           color: 'rgba(255,255,255,0.9)'
         }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-            <Clock size={16} color="#A7F3D0" />
-            <span>{info?.openingHours || '8:00 AM - 10:30 PM'}</span>
-          </div>
+          {info?.openingHours && (
+            <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+              <Clock size={16} color="#A7F3D0" />
+              <span>{info.openingHours}</span>
+            </div>
+          )}
 
-          <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-            <Phone size={16} color="#A7F3D0" />
-            <span>{info?.phone || '+91 9708366583'}</span>
-          </div>
+          {info?.phone && (
+            <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+              <Phone size={16} color="#A7F3D0" />
+              <span>{info.phone}</span>
+            </div>
+          )}
         </div>
 
-        <div style={{
-          fontSize: '0.82rem',
-          color: 'rgba(255, 255, 255, 0.75)',
-          maxWidth: '450px',
-          lineHeight: 1.4
-        }}>
-          <MapPin size={14} color="#A7F3D0" style={{ verticalAlign: 'middle', marginRight: '4px' }} />
-          {info?.address || 'HawaiAdda Chowk, Near katchari Gumti, Motihari, Bihar'}
-        </div>
+        {info?.address && (
+          <div style={{
+            fontSize: '0.82rem',
+            color: 'rgba(255, 255, 255, 0.75)',
+            maxWidth: '450px',
+            lineHeight: 1.4
+          }}>
+            <MapPin size={14} color="#A7F3D0" style={{ verticalAlign: 'middle', marginRight: '4px' }} />
+            {info.address}
+          </div>
+        )}
 
         <div style={{
           width: '60px',
@@ -79,7 +87,7 @@ export default function Footer({ info, onOpenAdmin }) {
           fontSize: '0.78rem',
           color: 'rgba(255, 255, 255, 0.6)'
         }}>
-          <span>© {new Date().getFullYear()} Raman Sweet Bakery. All rights reserved.</span>
+          <span>© {new Date().getFullYear()} {info?.name || 'Digital Menu'}. All rights reserved.</span>
         </div>
       </div>
     </footer>

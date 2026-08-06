@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { X, ShieldCheck, Sparkles, Clock, Utensils, CheckCircle } from 'lucide-react';
 
-export default function DishModal({ dish, onClose }) {
+export default function DishModal({ dish, onClose, currencySymbol = '₹' }) {
   if (!dish) return null;
 
   const hasHalfPrice = dish.price_half !== null && dish.price_half !== undefined && Number(dish.price_half) > 0;
@@ -175,13 +175,33 @@ export default function DishModal({ dish, onClose }) {
                 fontSize: '1.5rem',
                 fontWeight: 700,
                 color: 'var(--primary-emerald)',
-                lineHeight: 1.2
+                lineHeight: 1.2,
+                display: 'flex',
+                alignItems: 'center',
+                gap: '8px'
               }}>
+                <span style={{
+                  width: '14px',
+                  height: '14px',
+                  border: dish.type === 'nonveg' ? '1.5px solid #DC2626' : dish.type === 'egg' ? '1.5px solid #D97706' : '1.5px solid var(--veg-green)',
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  borderRadius: '2px',
+                  flexShrink: 0
+                }}>
+                  <span style={{
+                    width: '5px',
+                    height: '5px',
+                    borderRadius: '50%',
+                    backgroundColor: dish.type === 'nonveg' ? '#DC2626' : dish.type === 'egg' ? '#D97706' : 'var(--veg-green)'
+                  }} />
+                </span>
                 {dish.name}
               </h2>
             </div>
 
-            {/* Dynamic Active Price Tag (No ₹ Symbol) */}
+            {/* Dynamic Active Price Tag */}
             <span style={{
               fontFamily: 'var(--font-heading)',
               fontSize: '1.4rem',
@@ -193,7 +213,7 @@ export default function DishModal({ dish, onClose }) {
               borderRadius: 'var(--radius-sm)',
               boxShadow: 'var(--shadow-sm)'
             }}>
-              {Number(activePrice).toLocaleString('en-IN')}
+              {currencySymbol}{Number(activePrice).toLocaleString('en-IN')}
             </span>
           </div>
 

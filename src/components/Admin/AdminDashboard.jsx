@@ -27,6 +27,9 @@ export default function AdminDashboard({ token, username, onLogout, onReturnToMe
     openingHours: '',
     google_review_url: '',
     google_maps_url: '',
+    currency_symbol: '₹',
+    fssai_lic_no: '',
+    resto_type: 'pure_veg',
     filters_visibility: {
       must_try: true,
       combo: true,
@@ -48,22 +51,25 @@ export default function AdminDashboard({ token, username, onLogout, onReturnToMe
     setLoading(true);
     try {
       const [catData, dishData, infoData] = await Promise.all([
-        fetchCategories({ adminView: true }),
-        fetchDishes({ adminView: true }),
-        fetchRestaurantInfo()
+        fetchCategories({ adminView: true, token }),
+        fetchDishes({ adminView: true, token }),
+        fetchRestaurantInfo(token)
       ]);
       setCategories(Array.isArray(catData) ? catData : []);
       setDishes(Array.isArray(dishData) ? dishData : []);
       if (infoData) {
         const defaultVis = { must_try: true, combo: true, special: true, under100: true };
         setSettingsForm({
-          name: infoData.name || 'Raman Sweet Bakery & Family Restaurant',
-          tagline: infoData.tagline || '100% Pure Vegetarian',
-          phone: infoData.phone || '+91 9708366583',
-          address: infoData.address || 'HawaiAdda Chowk, Near katchari Gumti, Motihari, Bihar',
-          openingHours: infoData.openingHours || '8:00 AM - 10:30 PM (Mon - Sun)',
+          name: infoData.name || '',
+          tagline: infoData.tagline || '',
+          phone: infoData.phone || '',
+          address: infoData.address || '',
+          openingHours: infoData.openingHours || '',
           google_review_url: infoData.google_review_url || '',
           google_maps_url: infoData.google_maps_url || '',
+          currency_symbol: (infoData.currency_symbol !== null && infoData.currency_symbol !== undefined) ? infoData.currency_symbol : '₹',
+          fssai_lic_no: infoData.fssai_lic_no || '',
+          resto_type: infoData.resto_type || 'pure_veg',
           filters_visibility: { ...defaultVis, ...infoData.filters_visibility }
         });
       }
@@ -144,13 +150,11 @@ export default function AdminDashboard({ token, username, onLogout, onReturnToMe
   };
 
   const handlePrintQR = () => {
-    const liveOrigin = window.location.origin.includes('localhost') 
-      ? 'https://raman-sweet-bakery-menu.onrender.com' 
-      : window.location.origin;
+    const liveOrigin = window.location.origin;
     const targetUrl = `${liveOrigin}/?table=${tableNumber || '1'}`;
     const qrImgUrl = `https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=${encodeURIComponent(targetUrl)}`;
-    const currentName = settingsForm.name || 'Raman Sweet Bakery & Family Restaurant';
-    const currentTagline = settingsForm.tagline || '100% Pure Vegetarian • Pure Desi Ghee Sweets • Live Bakery';
+    const currentName = settingsForm.name || 'Digital Menu';
+    const currentTagline = settingsForm.tagline || 'Scan QR Code for Digital Menu';
 
     const printWindow = window.open('', '_blank', 'width=800,height=900');
     if (!printWindow) {
@@ -428,221 +432,300 @@ export default function AdminDashboard({ token, username, onLogout, onReturnToMe
   });
 
   return (
-    <div style={{ minHeight: '100vh', background: 'var(--bg-app)', paddingBottom: '60px' }}>
+    <div style={{ minHeight: '100vh', background: 'var(--bg-app)', paddingBottom: '70px' }}>
+      <style>{`
+        @media (max-width: 768px) {
+          .admin-desktop-nav { display: none !important; }
+          .admin-mobile-nav { display: flex !important; }
+        }
+        @media (min-width: 769px) {
+          .admin-desktop-nav { display: block !important; }
+          .admin-mobile-nav { display: none !important; }
+        }
+      `}</style>
       {/* Top Header */}
       <header style={{
-        background: 'var(--primary-emerald)',
+        background: 'linear-gradient(135deg, #0A2315 0%, #164E2A 100%)',
         color: '#FFFFFF',
-        padding: '12px',
-        display: 'flex',
-        justifyContent: 'space-between',
-        alignItems: 'center',
+        padding: '10px 14px',
         borderBottom: '2px solid #D4AF37',
-        flexWrap: 'wrap',
-        gap: '8px'
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'space-between',
+        position: 'sticky',
+        top: 0,
+        zIndex: 100,
+        boxShadow: '0 4px 16px rgba(0,0,0,0.2)'
       }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-          <button 
-            onClick={onReturnToMenu}
-            style={{ color: '#FFFFFF', display: 'flex', alignItems: 'center', gap: '4px', fontSize: '0.75rem' }}
-          >
-            <ArrowLeft size={14} /> Menu
-          </button>
-          <span style={{ opacity: 0.4 }}>|</span>
-          <h2 style={{ fontSize: '0.95rem', fontWeight: 800 }}>Manager</h2>
+        {/* Left: Brand & Owner Metadata */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: '10px', minWidth: 0, overflow: 'hidden' }}>
+          <img
+            src={settingsForm.logo || '/uploads/logo.jpg'}
+            alt="Logo"
+            style={{
+              width: '34px',
+              height: '34px',
+              borderRadius: '50%',
+              border: '1.5px solid #D4AF37',
+              objectFit: 'cover',
+              flexShrink: 0
+            }}
+          />
+          <div style={{ minWidth: 0 }}>
+            <h1 style={{
+              fontSize: '0.95rem',
+              fontWeight: 800,
+              color: '#DFBA67',
+              margin: 0,
+              lineHeight: 1.1,
+              whiteSpace: 'nowrap',
+              overflow: 'hidden',
+              textOverflow: 'ellipsis'
+            }}>
+              {settingsForm.name || 'Admin Panel'}
+            </h1>
+            <span style={{ fontSize: '0.7rem', color: 'rgba(255,255,255,0.75)', fontWeight: 600, display: 'block', marginTop: '1px' }}>
+              Owner: {username}
+            </span>
+          </div>
         </div>
 
-        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-          <span style={{ fontSize: '0.72rem', color: '#D4AF37', fontWeight: 700 }}>{username}</span>
-          <button
-            onClick={onLogout}
+        {/* Right: Quick Action Pill Buttons */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flexShrink: 0 }}>
+          <button 
+            onClick={() => onReturnToMenu(settingsForm.slug)}
+            title="View Public Customer Menu"
             style={{
-              color: '#EF4444',
-              background: '#FEE2E2',
-              padding: '4px 10px',
+              background: 'rgba(255,255,255,0.15)',
+              color: '#FFFFFF',
+              padding: '6px 11px',
               borderRadius: 'var(--radius-pill)',
-              fontSize: '0.75rem',
+              fontSize: '0.74rem',
               fontWeight: 700,
+              border: '1px solid rgba(255,255,255,0.25)',
+              cursor: 'pointer',
               display: 'flex',
               alignItems: 'center',
-              gap: '4px'
+              gap: '4px',
+              whiteSpace: 'nowrap'
             }}
           >
-            <LogOut size={13} /> Logout
+            <Eye size={13} /> Menu
+          </button>
+
+          <button 
+            onClick={onLogout}
+            title="Logout Admin"
+            style={{
+              background: 'rgba(220, 38, 38, 0.85)',
+              color: '#FFFFFF',
+              padding: '6px 11px',
+              borderRadius: 'var(--radius-pill)',
+              fontSize: '0.74rem',
+              fontWeight: 700,
+              border: 'none',
+              cursor: 'pointer',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '4px',
+              whiteSpace: 'nowrap'
+            }}
+          >
+            <LogOut size={13} /> Exit
           </button>
         </div>
       </header>
 
+      {/* Sleek Royal Gold Segmented Navigation Bar */}
+      <div style={{
+        background: 'linear-gradient(180deg, #0A2315 0%, #081D10 100%)',
+        padding: '8px 12px',
+        borderBottom: '2px solid #D4AF37',
+        position: 'sticky',
+        top: '52px',
+        zIndex: 99,
+        boxShadow: '0 6px 20px rgba(0,0,0,0.25)'
+      }}>
+        <div style={{
+          maxWidth: '800px',
+          margin: '0 auto',
+          background: 'rgba(0, 0, 0, 0.35)',
+          padding: '4px',
+          borderRadius: 'var(--radius-pill)',
+          border: '1px solid rgba(212, 175, 55, 0.35)',
+          display: 'flex',
+          gap: '4px',
+          alignItems: 'center',
+          justifyContent: 'space-between'
+        }}>
+          {[
+            { id: 'dishes', label: 'Dishes', count: safeDishes.length, icon: <Utensils size={14} /> },
+            { id: 'categories', label: 'Cat', count: safeCategories.length, icon: <Layers size={14} /> },
+            { id: 'qr-generator', label: 'QR Code', icon: <QrCode size={14} /> },
+            { id: 'review', label: 'Reviews', icon: <Star size={14} /> },
+            { id: 'settings', label: 'Settings', icon: <Settings size={14} /> }
+          ].map(tab => {
+            const isActive = activeTab === tab.id;
+            return (
+              <button
+                key={tab.id}
+                onClick={() => setActiveTab(tab.id)}
+                style={{
+                  flex: 1,
+                  padding: '7px 4px',
+                  borderRadius: 'var(--radius-pill)',
+                  fontWeight: isActive ? 900 : 700,
+                  fontSize: '0.74rem',
+                  background: isActive ? 'linear-gradient(135deg, #FFD700 0%, #D4AF37 100%)' : 'transparent',
+                  color: isActive ? '#0A2315' : 'rgba(255, 255, 255, 0.85)',
+                  border: isActive ? '1px solid #FFFFFF' : '1px solid transparent',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  gap: '4px',
+                  whiteSpace: 'nowrap',
+                  cursor: 'pointer',
+                  boxShadow: isActive ? '0 4px 14px rgba(255, 215, 0, 0.45)' : 'none',
+                  transition: 'all 0.25s cubic-bezier(0.4, 0, 0.2, 1)'
+                }}
+              >
+                {tab.icon}
+                <span>
+                  {tab.label} {tab.count !== undefined ? `(${tab.count})` : ''}
+                </span>
+              </button>
+            );
+          })}
+        </div>
+      </div>
+
       {/* Main Container */}
-      <div style={{ maxWidth: '800px', margin: '16px auto', padding: '0 10px' }}>
-        {/* Navigation Tabs */}
-        <div style={{ display: 'flex', gap: '4px', marginBottom: '16px', flexWrap: 'wrap' }}>
-          <button
-            onClick={() => setActiveTab('dishes')}
-            style={{
-              flex: 1,
-              minWidth: '70px',
-              padding: '8px 4px',
-              borderRadius: 'var(--radius-md)',
-              fontWeight: 700,
-              fontSize: '0.72rem',
-              background: activeTab === 'dishes' ? 'var(--primary-emerald)' : '#FFFFFF',
-              color: activeTab === 'dishes' ? '#FFFFFF' : 'var(--text-dark)',
-              border: '1px solid var(--border-light)',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              gap: '4px'
-            }}
-          >
-            <Utensils size={15} /> Dishes ({dishes.length})
-          </button>
+      <div style={{ maxWidth: '800px', margin: '14px auto', padding: '0 12px' }}>
 
-          <button
-            onClick={() => setActiveTab('categories')}
-            style={{
-              flex: 1,
-              minWidth: '70px',
-              padding: '8px 4px',
-              borderRadius: 'var(--radius-md)',
-              fontWeight: 700,
-              fontSize: '0.72rem',
-              background: activeTab === 'categories' ? 'var(--primary-emerald)' : '#FFFFFF',
-              color: activeTab === 'categories' ? '#FFFFFF' : 'var(--text-dark)',
-              border: '1px solid var(--border-light)',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              gap: '4px'
-            }}
-          >
-            <Layers size={13} /> Cat
-          </button>
+        {/* KPI Stats Overview Bar */}
+        <div style={{
+          display: 'grid',
+          gridTemplateColumns: 'repeat(4, 1fr)',
+          gap: '8px',
+          marginBottom: '16px'
+        }}>
+          <div style={{
+            background: '#FFFFFF',
+            border: '1px solid var(--border-light)',
+            borderRadius: '12px',
+            padding: '10px 6px',
+            textAlign: 'center',
+            boxShadow: 'var(--shadow-sm)'
+          }}>
+            <span style={{ fontSize: '0.64rem', color: 'var(--text-muted)', fontWeight: 700, display: 'block', textTransform: 'uppercase' }}>Dishes</span>
+            <span style={{ fontSize: '1.1rem', fontWeight: 900, color: 'var(--primary-emerald)' }}>{safeDishes.length}</span>
+          </div>
 
-          <button
-            onClick={() => setActiveTab('qr-generator')}
-            style={{
-              flex: 1,
-              minWidth: '70px',
-              padding: '8px 4px',
-              borderRadius: 'var(--radius-md)',
-              fontWeight: 700,
-              fontSize: '0.72rem',
-              background: activeTab === 'qr-generator' ? 'var(--primary-emerald)' : '#FFFFFF',
-              color: activeTab === 'qr-generator' ? '#FFFFFF' : 'var(--text-dark)',
-              border: '1px solid var(--border-light)',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              gap: '4px'
-            }}
-          >
-            <QrCode size={13} /> QR
-          </button>
+          <div style={{
+            background: '#FFFFFF',
+            border: '1px solid var(--border-light)',
+            borderRadius: '12px',
+            padding: '10px 6px',
+            textAlign: 'center',
+            boxShadow: 'var(--shadow-sm)'
+          }}>
+            <span style={{ fontSize: '0.64rem', color: 'var(--text-muted)', fontWeight: 700, display: 'block', textTransform: 'uppercase' }}>Categories</span>
+            <span style={{ fontSize: '1.1rem', fontWeight: 900, color: '#D4AF37' }}>{safeCategories.length}</span>
+          </div>
 
-          <button
-            onClick={() => setActiveTab('review')}
-            style={{
-              flex: 1,
-              minWidth: '70px',
-              padding: '8px 4px',
-              borderRadius: 'var(--radius-md)',
-              fontWeight: 700,
-              fontSize: '0.72rem',
-              background: activeTab === 'review' ? 'var(--primary-emerald)' : '#FFFFFF',
-              color: activeTab === 'review' ? '#FFFFFF' : 'var(--text-dark)',
-              border: '1px solid var(--border-light)',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              gap: '4px'
-            }}
-          >
-            <Star size={13} color="#D4AF37" fill="#D4AF37" /> Review
-          </button>
+          <div style={{
+            background: '#ECFDF5',
+            border: '1px solid #A7F3D0',
+            borderRadius: '12px',
+            padding: '10px 6px',
+            textAlign: 'center',
+            boxShadow: 'var(--shadow-sm)'
+          }}>
+            <span style={{ fontSize: '0.64rem', color: '#166534', fontWeight: 700, display: 'block', textTransform: 'uppercase' }}>Active</span>
+            <span style={{ fontSize: '1.1rem', fontWeight: 900, color: '#15803D' }}>{safeDishes.filter(d => d.available !== false).length}</span>
+          </div>
 
-          <button
-            onClick={() => setActiveTab('settings')}
-            style={{
-              flex: 1,
-              minWidth: '70px',
-              padding: '8px 4px',
-              borderRadius: 'var(--radius-md)',
-              fontWeight: 700,
-              fontSize: '0.72rem',
-              background: activeTab === 'settings' ? 'var(--primary-emerald)' : '#FFFFFF',
-              color: activeTab === 'settings' ? '#FFFFFF' : 'var(--text-dark)',
-              border: '1px solid var(--border-light)',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              gap: '4px'
-            }}
-          >
-            <Settings size={13} /> Settings
-          </button>
+          <div style={{
+            background: '#FEF2F2',
+            border: '1px solid #FCA5A5',
+            borderRadius: '12px',
+            padding: '10px 6px',
+            textAlign: 'center',
+            boxShadow: 'var(--shadow-sm)'
+          }}>
+            <span style={{ fontSize: '0.64rem', color: '#991B1B', fontWeight: 700, display: 'block', textTransform: 'uppercase' }}>Hidden</span>
+            <span style={{ fontSize: '1.1rem', fontWeight: 900, color: '#DC2626' }}>{safeDishes.filter(d => d.available === false).length}</span>
+          </div>
         </div>
 
-        {/* TAB 1: DISHES */}
+        {/* Tab 1: Dishes Management */}
         {activeTab === 'dishes' && (
           <div>
-            {/* Category Dropdown Filter & Search Bar */}
-            <div style={{ display: 'flex', gap: '8px', marginBottom: '14px', flexWrap: 'wrap', alignItems: 'center' }}>
+            {/* Search & Actions Bar */}
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', marginBottom: '14px' }}>
               <input
                 type="text"
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
-                placeholder="🔍 Search dish by name..."
+                placeholder="🔍 Search dish name..."
                 style={{
-                  flex: 1,
-                  minWidth: '150px',
-                  padding: '8px 14px',
+                  width: '100%',
+                  padding: '9px 14px',
                   borderRadius: 'var(--radius-pill)',
-                  border: '1px solid var(--border-light)',
-                  fontSize: '0.85rem'
+                  border: '1.5px solid var(--border-light)',
+                  fontSize: '0.85rem',
+                  outline: 'none',
+                  background: '#FFFFFF'
                 }}
               />
 
-              <select
-                value={selectedCatFilter}
-                onChange={(e) => setSelectedCatFilter(e.target.value)}
-                style={{
-                  padding: '8px 12px',
-                  borderRadius: 'var(--radius-pill)',
-                  border: '1.5px solid #D4AF37',
-                  fontSize: '0.82rem',
-                  fontWeight: 700,
-                  background: '#0A2315',
-                  color: '#FFFFFF',
-                  cursor: 'pointer'
-                }}
-              >
-                <option value="all">📁 All Categories ({safeDishes.length})</option>
-                {safeCategories.map(c => (
-                  <option key={c.id} value={c.id}>
-                    {c.name} ({safeDishes.filter(d => d && Number(d.category_id) === Number(c.id)).length})
-                  </option>
-                ))}
-              </select>
+              <div style={{ display: 'flex', gap: '8px' }}>
+                <select
+                  value={selectedCatFilter}
+                  onChange={(e) => setSelectedCatFilter(e.target.value)}
+                  style={{
+                    flex: 1,
+                    padding: '8px 12px',
+                    borderRadius: 'var(--radius-pill)',
+                    border: '1.5px solid var(--primary-emerald)',
+                    fontSize: '0.8rem',
+                    fontWeight: 700,
+                    background: '#FFFFFF',
+                    color: 'var(--primary-emerald)',
+                    cursor: 'pointer',
+                    outline: 'none'
+                  }}
+                >
+                  <option value="all">📁 All Categories ({safeDishes.length})</option>
+                  {safeCategories.map(c => (
+                    <option key={c.id} value={c.id}>
+                      {c.name} ({safeDishes.filter(d => d && Number(d.category_id) === Number(c.id)).length})
+                    </option>
+                  ))}
+                </select>
 
-              <button
-                onClick={() => setDishModalData('new')}
-                style={{
-                  background: 'linear-gradient(135deg, #0A2315 0%, #164E2A 100%)',
-                  color: '#FFFFFF',
-                  padding: '8px 16px',
-                  borderRadius: 'var(--radius-pill)',
-                  fontSize: '0.82rem',
-                  fontWeight: 700,
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '6px',
-                  whiteSpace: 'nowrap',
-                  border: '1px solid #D4AF37'
-                }}
-              >
-                <Plus size={16} /> Add New Dish
-              </button>
+                <button
+                  onClick={() => setDishModalData('new')}
+                  style={{
+                    background: 'var(--primary-emerald)',
+                    color: '#FFFFFF',
+                    padding: '8px 14px',
+                    borderRadius: 'var(--radius-pill)',
+                    fontSize: '0.8rem',
+                    fontWeight: 800,
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    gap: '4px',
+                    whiteSpace: 'nowrap',
+                    border: 'none',
+                    cursor: 'pointer',
+                    boxShadow: 'var(--shadow-sm)'
+                  }}
+                >
+                  <Plus size={15} /> Add Dish
+                </button>
+              </div>
             </div>
 
             <div className="admin-dish-grid" style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
@@ -670,9 +753,28 @@ export default function AdminDashboard({ token, username, onLogout, onReturnToMe
                       <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flexGrow: 1, minWidth: 0, overflow: 'hidden' }}>
                         <img src={dish.image || '/uploads/logo.jpg'} alt="" style={{ width: '42px', height: '42px', borderRadius: 'var(--radius-sm)', objectFit: 'cover', flexShrink: 0 }} />
                         <div style={{ minWidth: 0 }}>
-                          <h4 style={{ fontSize: '0.88rem', fontWeight: 800, color: 'var(--primary-emerald)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{dish.name}</h4>
-                          <span style={{ fontSize: '0.74rem', color: 'var(--text-muted)', fontWeight: 600 }}>
-                            {dish.category_name || 'Category'} • {dish.price_half ? `Half ${Math.round(dish.price_half)} | Full ${Math.round(dish.price)}` : `${Math.round(dish.price)}`}
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                            <span style={{
+                              width: '10px',
+                              height: '10px',
+                              border: dish.type === 'nonveg' ? '1.5px solid #DC2626' : dish.type === 'egg' ? '1.5px solid #D97706' : '1.5px solid var(--veg-green)',
+                              display: 'inline-flex',
+                              alignItems: 'center',
+                              justifyContent: 'center',
+                              borderRadius: '2px',
+                              flexShrink: 0
+                            }}>
+                              <span style={{
+                                width: '4px',
+                                height: '4px',
+                                borderRadius: '50%',
+                                backgroundColor: dish.type === 'nonveg' ? '#DC2626' : dish.type === 'egg' ? '#D97706' : 'var(--veg-green)'
+                              }} />
+                            </span>
+                            <h4 style={{ fontSize: '0.88rem', fontWeight: 800, color: 'var(--primary-emerald)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', margin: 0 }}>{dish.name}</h4>
+                          </div>
+                          <span style={{ fontSize: '0.74rem', color: 'var(--text-muted)', fontWeight: 600, display: 'block', marginTop: '2px' }}>
+                            {dish.category_name || 'Category'} • {dish.price_half ? `Half ${settingsForm.currency_symbol || '₹'}${Math.round(dish.price_half)} | Full ${settingsForm.currency_symbol || '₹'}${Math.round(dish.price)}` : `${settingsForm.currency_symbol || '₹'}${Math.round(dish.price)}`}
                           </span>
                         </div>
                       </div>
@@ -1013,10 +1115,10 @@ export default function AdminDashboard({ token, username, onLogout, onReturnToMe
               </div>
 
               <h4 style={{ fontSize: '1.05rem', fontWeight: 800, color: 'var(--primary-emerald)' }}>
-                {settingsForm.name || 'Raman Sweet Bakery & Family Restaurant'}
+                {settingsForm.name || 'Digital Menu'}
               </h4>
-              <p style={{ fontSize: '0.74rem', color: 'var(--veg-green)', fontWeight: 700, marginBottom: '14px' }}>
-                {settingsForm.tagline || '100% Pure Vegetarian • Pure Desi Ghee Sweets • Live Bakery'}
+              <p style={{ fontSize: '0.74rem', color: '#D4AF37', fontWeight: 700, marginBottom: '14px', margin: 0 }}>
+                {settingsForm.tagline || 'Scan for Digital Menu'}
               </p>
 
               {/* QR Image Graphic */}
@@ -1026,10 +1128,11 @@ export default function AdminDashboard({ token, username, onLogout, onReturnToMe
                 borderRadius: 'var(--radius-sm)',
                 display: 'inline-block',
                 border: '1px solid var(--border-light)',
-                marginBottom: '14px'
+                marginBottom: '14px',
+                marginTop: '8px'
               }}>
                 <img
-                  src={`https://api.qrserver.com/v1/create-qr-code/?size=220x220&data=${encodeURIComponent((window.location.origin.includes('localhost') ? 'https://raman-sweet-bakery-menu.onrender.com' : window.location.origin) + '/?table=' + (tableNumber || '1'))}`}
+                  src={`https://api.qrserver.com/v1/create-qr-code/?size=220x220&data=${encodeURIComponent(window.location.origin + '/?table=' + (tableNumber || '1'))}`}
                   alt={`Table ${tableNumber || '1'} QR Code`}
                   style={{ width: '160px', height: '160px', display: 'block' }}
                 />
@@ -1215,7 +1318,7 @@ export default function AdminDashboard({ token, username, onLogout, onReturnToMe
                   type="text"
                   value={settingsForm.name}
                   onChange={(e) => setSettingsForm({ ...settingsForm, name: e.target.value })}
-                  placeholder="Raman Sweet Bakery & Family Restaurant"
+                  placeholder="e.g. Royal Pizza Cafe"
                   style={{
                     width: '100%',
                     padding: '10px 14px',
@@ -1235,7 +1338,7 @@ export default function AdminDashboard({ token, username, onLogout, onReturnToMe
                   type="text"
                   value={settingsForm.phone}
                   onChange={(e) => setSettingsForm({ ...settingsForm, phone: e.target.value })}
-                  placeholder="+91 9708366583"
+                  placeholder="e.g. +91 9876543210"
                   style={{
                     width: '100%',
                     padding: '10px 14px',
@@ -1245,6 +1348,50 @@ export default function AdminDashboard({ token, username, onLogout, onReturnToMe
                     outline: 'none'
                   }}
                 />
+              </div>
+            </div>
+
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '12px', marginBottom: '14px' }}>
+              <div>
+                <label style={{ display: 'block', fontSize: '0.82rem', fontWeight: 700, color: 'var(--primary-emerald)', marginBottom: '6px' }}>
+                  FSSAI License No:
+                </label>
+                <input
+                  type="text"
+                  value={settingsForm.fssai_lic_no}
+                  onChange={(e) => setSettingsForm({ ...settingsForm, fssai_lic_no: e.target.value })}
+                  placeholder="e.g. 20824001000123"
+                  style={{
+                    width: '100%',
+                    padding: '10px 14px',
+                    borderRadius: 'var(--radius-sm)',
+                    border: '1.5px solid var(--border-light)',
+                    fontSize: '0.9rem',
+                    outline: 'none'
+                  }}
+                />
+              </div>
+
+              <div>
+                <label style={{ display: 'block', fontSize: '0.82rem', fontWeight: 700, color: 'var(--primary-emerald)', marginBottom: '6px' }}>
+                  Restaurant Category / Type:
+                </label>
+                <select
+                  value={settingsForm.resto_type}
+                  onChange={(e) => setSettingsForm({ ...settingsForm, resto_type: e.target.value })}
+                  style={{
+                    width: '100%',
+                    padding: '10px 14px',
+                    borderRadius: 'var(--radius-sm)',
+                    border: '1.5px solid var(--border-light)',
+                    fontSize: '0.9rem',
+                    outline: 'none',
+                    background: '#FFFFFF'
+                  }}
+                >
+                  <option value="pure_veg">100% Pure Vegetarian 🟢</option>
+                  <option value="veg_nonveg">Veg & Non-Veg Multi-Cuisine 🔴🟢</option>
+                </select>
               </div>
             </div>
 
@@ -1350,6 +1497,38 @@ export default function AdminDashboard({ token, username, onLogout, onReturnToMe
                   }}
                 />
               </div>
+
+              {/* Currency Symbol Selector */}
+              <div>
+                <label style={{ display: 'block', fontSize: '0.82rem', fontWeight: 700, color: 'var(--primary-emerald)', marginBottom: '6px' }}>
+                  💰 Currency Symbol:
+                </label>
+                <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap' }}>
+                  {['₹', '$', '€', '£', ''].map((sym) => (
+                    <button
+                      key={sym || 'none'}
+                      onClick={() => setSettingsForm({ ...settingsForm, currency_symbol: sym })}
+                      style={{
+                        padding: '8px 16px',
+                        borderRadius: 'var(--radius-pill)',
+                        fontSize: '0.9rem',
+                        fontWeight: 800,
+                        background: settingsForm.currency_symbol === sym ? 'var(--primary-emerald)' : '#FFFFFF',
+                        color: settingsForm.currency_symbol === sym ? '#FFFFFF' : 'var(--text-dark)',
+                        border: settingsForm.currency_symbol === sym ? '2px solid var(--primary-emerald)' : '1.5px solid var(--border-light)',
+                        cursor: 'pointer',
+                        transition: 'all 0.2s ease',
+                        minWidth: '48px'
+                      }}
+                    >
+                      {sym || 'None'}
+                    </button>
+                  ))}
+                </div>
+                <p style={{ fontSize: '0.72rem', color: 'var(--text-muted)', marginTop: '4px' }}>
+                  Menu me price ke aage ye symbol dikhega. "None" choose karein agar koi symbol nahi chahiye.
+                </p>
+              </div>
             </div>
 
             {/* Individual Filter Buttons ON / OFF Toggles */}
@@ -1369,6 +1548,9 @@ export default function AdminDashboard({ token, username, onLogout, onReturnToMe
 
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '10px' }}>
                 {[
+                  { key: 'veg', label: '🟢 Veg Only Button' },
+                  { key: 'nonveg', label: '🔴 Non-Veg Button' },
+                  { key: 'egg', label: '🟡 Egg Button' },
                   { key: 'must_try', label: '⭐ Must Try Button' },
                   { key: 'combo', label: '🍱 Combo Button' },
                   { key: 'special', label: '✨ Special Button' },

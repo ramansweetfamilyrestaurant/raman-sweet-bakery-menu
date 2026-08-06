@@ -55,6 +55,9 @@ async function createTables() {
         google_review_url VARCHAR(1000),
         google_maps_url VARCHAR(1000),
         filters_visibility JSONB,
+        currency_symbol VARCHAR(10) DEFAULT '₹',
+        fssai_lic_no VARCHAR(100) DEFAULT '20824001000123',
+        resto_type VARCHAR(50) DEFAULT 'pure_veg',
         active BOOLEAN DEFAULT TRUE,
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
       );
@@ -89,6 +92,7 @@ async function createTables() {
         badge VARCHAR(100),
         ingredients VARCHAR(500),
         taste_profile VARCHAR(100),
+        type VARCHAR(20) DEFAULT 'veg',
         available BOOLEAN DEFAULT TRUE,
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
         updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
@@ -107,6 +111,10 @@ async function createTables() {
 
       ALTER TABLE admins ADD COLUMN IF NOT EXISTS restaurant_id INT REFERENCES restaurants(id) ON DELETE CASCADE;
       ALTER TABLE admins ADD COLUMN IF NOT EXISTS role VARCHAR(50) DEFAULT 'restaurant_admin';
+      ALTER TABLE restaurants ADD COLUMN IF NOT EXISTS currency_symbol VARCHAR(10) DEFAULT '₹';
+      ALTER TABLE restaurants ADD COLUMN IF NOT EXISTS fssai_lic_no VARCHAR(100) DEFAULT '20824001000123';
+      ALTER TABLE restaurants ADD COLUMN IF NOT EXISTS resto_type VARCHAR(50) DEFAULT 'pure_veg';
+      ALTER TABLE dishes ADD COLUMN IF NOT EXISTS type VARCHAR(20) DEFAULT 'veg';
     `);
   } else {
     sqliteDb.exec(`
@@ -122,6 +130,9 @@ async function createTables() {
         google_review_url TEXT,
         google_maps_url TEXT,
         filters_visibility TEXT,
+        currency_symbol TEXT DEFAULT '₹',
+        fssai_lic_no TEXT DEFAULT '20824001000123',
+        resto_type TEXT DEFAULT 'pure_veg',
         active INTEGER DEFAULT 1,
         created_at TEXT DEFAULT CURRENT_TIMESTAMP
       );
@@ -154,6 +165,7 @@ async function createTables() {
         badge TEXT,
         ingredients TEXT,
         taste_profile TEXT,
+        type TEXT DEFAULT 'veg',
         available INTEGER DEFAULT 1,
         created_at TEXT DEFAULT CURRENT_TIMESTAMP,
         updated_at TEXT DEFAULT CURRENT_TIMESTAMP,
@@ -180,10 +192,16 @@ async function createTables() {
 
       const dishCols = sqliteDb.pragma('table_info(dishes)');
       if (!dishCols.some(c => c.name === 'restaurant_id')) sqliteDb.exec('ALTER TABLE dishes ADD COLUMN restaurant_id INTEGER DEFAULT 1');
+      if (!dishCols.some(c => c.name === 'type')) sqliteDb.exec("ALTER TABLE dishes ADD COLUMN type TEXT DEFAULT 'veg'");
 
       const adminCols = sqliteDb.pragma('table_info(admins)');
       if (!adminCols.some(c => c.name === 'restaurant_id')) sqliteDb.exec('ALTER TABLE admins ADD COLUMN restaurant_id INTEGER DEFAULT 1');
       if (!adminCols.some(c => c.name === 'role')) sqliteDb.exec("ALTER TABLE admins ADD COLUMN role TEXT DEFAULT 'restaurant_admin'");
+
+      const restoCols = sqliteDb.pragma('table_info(restaurants)');
+      if (!restoCols.some(c => c.name === 'currency_symbol')) sqliteDb.exec("ALTER TABLE restaurants ADD COLUMN currency_symbol TEXT DEFAULT '₹'");
+      if (!restoCols.some(c => c.name === 'fssai_lic_no')) sqliteDb.exec("ALTER TABLE restaurants ADD COLUMN fssai_lic_no TEXT DEFAULT '20824001000123'");
+      if (!restoCols.some(c => c.name === 'resto_type')) sqliteDb.exec("ALTER TABLE restaurants ADD COLUMN resto_type TEXT DEFAULT 'pure_veg'");
     } catch (err) {
       console.warn('SQLite migration info:', err.message);
     }

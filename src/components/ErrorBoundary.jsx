@@ -29,11 +29,16 @@ export default class ErrorBoundary extends React.Component {
           justifyContent: 'center'
         }}>
           <h2 style={{ fontSize: '1.3rem', fontWeight: 800, marginBottom: '10px', color: '#D4AF37' }}>
-            Raman Sweet Bakery & Family Restaurant
+            Digital Restaurant Menu
           </h2>
-          <p style={{ fontSize: '0.88rem', marginBottom: '20px', color: '#E2E8F0' }}>
+          <p style={{ fontSize: '0.88rem', marginBottom: '10px', color: '#E2E8F0' }}>
             Temporary display glitch resolved. Please tap below to refresh menu.
           </p>
+          {this.state.error && (
+            <pre style={{ fontSize: '0.72rem', color: '#FCA5A5', background: 'rgba(0,0,0,0.5)', padding: '8px 12px', borderRadius: '8px', marginBottom: '20px', maxWidth: '90%', overflowX: 'auto' }}>
+              {this.state.error.toString()}
+            </pre>
+          )}
           <button
             onClick={() => {
               localStorage.removeItem('raman_admin_token');

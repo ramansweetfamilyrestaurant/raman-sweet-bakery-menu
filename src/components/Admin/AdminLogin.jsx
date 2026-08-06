@@ -72,7 +72,7 @@ export default function AdminLogin({ onLoginSuccess, onCancel }) {
             Manager Login
           </h2>
           <p style={{ fontSize: '0.8rem', color: 'var(--accent-gold-light)' }}>
-            Raman Sweet Bakery Admin Panel
+            Restaurant Owner Admin Portal
           </p>
         </div>
 

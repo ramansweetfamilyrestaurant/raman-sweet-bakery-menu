@@ -1,7 +1,7 @@
 import React from 'react';
 import { ChevronRight } from 'lucide-react';
 
-export default function DishCard({ dish, onClick }) {
+export default function DishCard({ dish, onClick, currencySymbol = '₹' }) {
   const isAvailable = dish.available !== false;
   const hasHalfPrice = dish.price_half !== null && dish.price_half !== undefined && Number(dish.price_half) > 0;
 
@@ -58,14 +58,14 @@ export default function DishCard({ dish, onClick }) {
           }}
         />
 
-        {/* Veg Badge */}
+        {/* Dynamic Dietary Badge */}
         <div style={{
           position: 'absolute',
           top: '10px',
           left: '10px',
           background: 'rgba(255, 255, 255, 0.95)',
           backdropFilter: 'blur(4px)',
-          border: '1px solid var(--veg-green)',
+          border: dish.type === 'nonveg' ? '1px solid #DC2626' : dish.type === 'egg' ? '1px solid #D97706' : '1px solid var(--veg-green)',
           borderRadius: 'var(--radius-pill)',
           padding: '3px 8px',
           display: 'flex',
@@ -76,7 +76,7 @@ export default function DishCard({ dish, onClick }) {
           <span style={{
             width: '10px',
             height: '10px',
-            border: '1.5px solid var(--veg-green)',
+            border: dish.type === 'nonveg' ? '1.5px solid #DC2626' : dish.type === 'egg' ? '1.5px solid #D97706' : '1.5px solid var(--veg-green)',
             display: 'inline-flex',
             alignItems: 'center',
             justifyContent: 'center',
@@ -86,16 +86,16 @@ export default function DishCard({ dish, onClick }) {
               width: '4px',
               height: '4px',
               borderRadius: '50%',
-              backgroundColor: 'var(--veg-green)'
+              backgroundColor: dish.type === 'nonveg' ? '#DC2626' : dish.type === 'egg' ? '#D97706' : 'var(--veg-green)'
             }} />
           </span>
           <span style={{
             fontSize: '0.66rem',
             fontWeight: 800,
-            color: 'var(--veg-green)',
+            color: dish.type === 'nonveg' ? '#DC2626' : dish.type === 'egg' ? '#B45309' : 'var(--veg-green)',
             letterSpacing: '0.5px'
           }}>
-            PURE VEG
+            {dish.type === 'nonveg' ? 'NON-VEG' : dish.type === 'egg' ? 'EGG' : 'PURE VEG'}
           </span>
         </div>
 
@@ -174,7 +174,7 @@ export default function DishCard({ dish, onClick }) {
               borderRadius: 'var(--radius-sm)',
               whiteSpace: 'nowrap'
             }}>
-              {Number(dish.price).toLocaleString('en-IN')}
+              {currencySymbol}{Number(dish.price).toLocaleString('en-IN')}
             </span>
           </div>
 
@@ -206,7 +206,7 @@ export default function DishCard({ dish, onClick }) {
             fontWeight: 700,
             color: 'var(--primary-emerald)'
           }}>
-            {hasHalfPrice ? `Half ${dish.price_half} | Full ${dish.price}` : (dish.portion || 'Special Portion')}
+            {hasHalfPrice ? `Half ${currencySymbol}${dish.price_half} | Full ${currencySymbol}${dish.price}` : (dish.portion || 'Special Portion')}
           </span>
 
           <span style={{

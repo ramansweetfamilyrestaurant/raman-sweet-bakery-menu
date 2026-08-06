@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 
-export default function MenuCardItem({ dish, lang, onClick }) {
+export default function MenuCardItem({ dish, lang, onClick, currencySymbol }) {
+  const symbol = currencySymbol !== undefined ? currencySymbol : '₹';
   const isAvailable = dish.available !== false;
   const hasHalfPrice = dish.price_half !== null && dish.price_half !== undefined && Number(dish.price_half) > 0;
 
@@ -8,7 +9,6 @@ export default function MenuCardItem({ dish, lang, onClick }) {
 
   const displayName = (lang === 'hi' && dish.name_hi) ? dish.name_hi : dish.name;
   
-  // Format prices to remove unnecessary decimal zeros (e.g. 70.00 -> 70)
   const fullPriceNum = Math.round(Number(dish.price));
   const halfPriceNum = hasHalfPrice ? Math.round(Number(dish.price_half)) : null;
 
@@ -19,7 +19,7 @@ export default function MenuCardItem({ dish, lang, onClick }) {
         borderRadius: 'var(--radius-md)',
         padding: '10px 12px',
         marginBottom: '10px',
-        border: '1.5px solid var(--gold-border)',
+        border: isAvailable ? '1.5px solid var(--gold-border)' : '1.5px dashed #FCA5A5',
         boxShadow: 'var(--shadow-md)',
         display: 'flex',
         alignItems: 'center',
@@ -35,7 +35,7 @@ export default function MenuCardItem({ dish, lang, onClick }) {
         e.currentTarget.style.boxShadow = 'var(--shadow-lg)';
       }}
       onMouseOut={(e) => {
-        e.currentTarget.style.borderColor = 'var(--gold-border)';
+        e.currentTarget.style.borderColor = isAvailable ? 'var(--gold-border)' : '#FCA5A5';
         e.currentTarget.style.boxShadow = 'var(--shadow-md)';
       }}
     >
@@ -43,144 +43,183 @@ export default function MenuCardItem({ dish, lang, onClick }) {
       <div style={{ flexGrow: 1, minWidth: 0, cursor: 'pointer' }} onClick={() => onClick(dish)}>
         {/* Dish Title with Veg Icon */}
         <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '2px' }}>
-          {/* FSSAI Veg Symbol */}
-          <span style={{
-            width: '12px',
-            height: '12px',
-            border: '1.5px solid var(--veg-green)',
-            display: 'inline-flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            borderRadius: '2px',
-            flexShrink: 0,
-            background: '#FFFFFF'
-          }} title="100% Pure Vegetarian">
+          {/* Dynamic FSSAI Dietary Symbol (Veg 🟢 / Non-Veg 🔴 / Egg 🟡) */}
+          {dish.type === 'nonveg' ? (
             <span style={{
-              width: '4px',
-              height: '4px',
-              borderRadius: '50%',
-              backgroundColor: 'var(--veg-green)'
-            }} />
-          </span>
+              width: '12px',
+              height: '12px',
+              border: '1.5px solid #DC2626',
+              display: 'inline-flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              borderRadius: '2px',
+              flexShrink: 0,
+              background: '#FFFFFF'
+            }} title="Non-Vegetarian">
+              <span style={{
+                width: '4px',
+                height: '4px',
+                borderRadius: '50%',
+                backgroundColor: '#DC2626'
+              }} />
+            </span>
+          ) : dish.type === 'egg' ? (
+            <span style={{
+              width: '12px',
+              height: '12px',
+              border: '1.5px solid #D97706',
+              display: 'inline-flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              borderRadius: '2px',
+              flexShrink: 0,
+              background: '#FFFFFF'
+            }} title="Contains Egg">
+              <span style={{
+                width: '4px',
+                height: '4px',
+                borderRadius: '50%',
+                backgroundColor: '#D97706'
+              }} />
+            </span>
+          ) : (
+            <span style={{
+              width: '12px',
+              height: '12px',
+              border: '1.5px solid var(--veg-green)',
+              display: 'inline-flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              borderRadius: '2px',
+              flexShrink: 0,
+              background: '#FFFFFF'
+            }} title="100% Pure Vegetarian">
+              <span style={{
+                width: '4px',
+                height: '4px',
+                borderRadius: '50%',
+                backgroundColor: 'var(--veg-green)'
+              }} />
+            </span>
+          )}
 
-          <h3 style={{
-            fontSize: '0.9rem',
-            fontWeight: 800,
-            color: 'var(--primary-emerald)',
-            lineHeight: 1.2,
-            wordBreak: 'break-word'
+          <h4 style={{
+            fontSize: '0.94rem',
+            fontWeight: 700,
+            color: 'var(--text-dark)',
+            margin: 0,
+            lineHeight: 1.25,
+            textOverflow: 'ellipsis',
+            overflow: 'hidden',
+            whiteSpace: 'nowrap'
           }}>
             {displayName}
-          </h3>
+          </h4>
+
+          {/* Badge Pill */}
+          {dish.badge && (
+            <span style={{
+              fontSize: '0.62rem',
+              fontWeight: 800,
+              color: 'var(--badge-gold-text)',
+              background: 'var(--badge-gold-bg)',
+              border: '1px solid var(--gold-border)',
+              padding: '1px 5px',
+              borderRadius: 'var(--radius-pill)',
+              whiteSpace: 'nowrap',
+              flexShrink: 0
+            }}>
+              {dish.badge}
+            </span>
+          )}
+
+          {!isAvailable && (
+            <span style={{ fontSize: '0.65rem', fontWeight: 800, color: '#DC2626', background: '#FEE2E2', padding: '1px 6px', borderRadius: '4px' }}>
+              Sold Out
+            </span>
+          )}
         </div>
 
-        {/* Portion specification label */}
-        {dish.portion && (
-          <span style={{
-            fontSize: '0.68rem',
-            fontWeight: 600,
-            color: 'var(--text-gold)',
-            display: 'block'
+        {/* Description snippet */}
+        {dish.description && (
+          <p style={{
+            fontSize: '0.74rem',
+            color: 'var(--text-muted)',
+            margin: '2px 0 0 0',
+            lineHeight: 1.25,
+            display: '-webkit-box',
+            WebkitLineClamp: 1,
+            WebkitBoxOrient: 'vertical',
+            overflow: 'hidden'
           }}>
-            {dish.portion}
-          </span>
-        )}
-
-        {!isAvailable && (
-          <span style={{
-            display: 'inline-block',
-            marginTop: '3px',
-            fontSize: '0.65rem',
-            fontWeight: 800,
-            color: '#DC2626',
-            background: '#FEE2E2',
-            padding: '1px 7px',
-            borderRadius: 'var(--radius-pill)'
-          }}>
-            {lang === 'hi' ? 'अनुपलब्ध' : 'Out of Stock'}
-          </span>
+            {dish.description}
+          </p>
         )}
       </div>
 
-      {/* Right Column: Pricing Switcher & Image Thumbnail */}
-      <div style={{
-        display: 'flex',
-        alignItems: 'center',
-        gap: '6px',
-        flexShrink: 0
-      }}>
-        {/* Price Badges / Half & Full Interactive Switcher */}
-        {hasHalfPrice ? (
-          <div style={{
-            display: 'flex',
-            gap: '1px',
-            background: 'var(--gold-soft)',
-            border: '1.5px solid var(--gold-primary)',
-            borderRadius: 'var(--radius-pill)',
-            padding: '2px',
-            flexShrink: 0
-          }}>
-            <button
-              onClick={(e) => {
-                e.stopPropagation();
-                setPortionMode('half');
-              }}
-              style={{
-                fontSize: '0.66rem',
-                fontWeight: 800,
-                padding: '3px 6px',
-                borderRadius: 'var(--radius-pill)',
-                background: portionMode === 'half' ? 'var(--primary-emerald)' : 'transparent',
-                color: portionMode === 'half' ? '#FFFFFF' : 'var(--primary-emerald)',
-                boxShadow: portionMode === 'half' ? '0 2px 5px rgba(10, 35, 21, 0.2)' : 'none',
-                transition: 'var(--transition-fast)',
-                whiteSpace: 'nowrap'
-              }}
-            >
-              Half {halfPriceNum}
-            </button>
+      {/* Right Side: Price Pills + Image */}
+      <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexShrink: 0 }}>
 
+        {/* Price Area */}
+        {hasHalfPrice ? (
+          /* Half/Full Price Pills — Both prices visible, selected one highlighted */
+          <div 
+            style={{ display: 'flex', gap: '4px' }}
+            onClick={(e) => e.stopPropagation()}
+          >
             <button
-              onClick={(e) => {
-                e.stopPropagation();
-                setPortionMode('full');
-              }}
+              onClick={() => setPortionMode('half')}
               style={{
-                fontSize: '0.66rem',
+                fontSize: '0.72rem',
                 fontWeight: 800,
-                padding: '3px 6px',
+                padding: '4px 8px',
                 borderRadius: 'var(--radius-pill)',
-                background: portionMode === 'full' ? 'var(--primary-emerald)' : 'transparent',
-                color: portionMode === 'full' ? '#FFFFFF' : 'var(--primary-emerald)',
-                boxShadow: portionMode === 'full' ? '0 2px 5px rgba(10, 35, 21, 0.2)' : 'none',
-                transition: 'var(--transition-fast)',
-                whiteSpace: 'nowrap'
+                background: portionMode === 'half' ? 'var(--primary-emerald)' : 'var(--bg-secondary)',
+                color: portionMode === 'half' ? '#FFFFFF' : 'var(--text-muted)',
+                border: portionMode === 'half' ? '1.5px solid var(--primary-emerald)' : '1.5px solid var(--border-light)',
+                cursor: 'pointer',
+                transition: 'all 0.2s ease',
+                whiteSpace: 'nowrap',
+                lineHeight: 1.2
               }}
             >
-              Full {fullPriceNum}
+              Half {symbol}{halfPriceNum}
+            </button>
+            <button
+              onClick={() => setPortionMode('full')}
+              style={{
+                fontSize: '0.72rem',
+                fontWeight: 800,
+                padding: '4px 8px',
+                borderRadius: 'var(--radius-pill)',
+                background: portionMode === 'full' ? 'var(--primary-emerald)' : 'var(--bg-secondary)',
+                color: portionMode === 'full' ? '#FFFFFF' : 'var(--text-muted)',
+                border: portionMode === 'full' ? '1.5px solid var(--primary-emerald)' : '1.5px solid var(--border-light)',
+                cursor: 'pointer',
+                transition: 'all 0.2s ease',
+                whiteSpace: 'nowrap',
+                lineHeight: 1.2
+              }}
+            >
+              Full {symbol}{fullPriceNum}
             </button>
           </div>
         ) : (
+          /* Single Price — no half option */
           <span 
-            onClick={() => onClick(dish)}
             style={{
-              fontSize: '0.92rem',
-              fontWeight: 800,
+              fontSize: '1.02rem',
+              fontWeight: 900,
               color: 'var(--primary-emerald)',
-              background: 'var(--gold-soft)',
-              border: '1.5px solid var(--gold-primary)',
-              padding: '3px 9px',
-              borderRadius: 'var(--radius-sm)',
-              boxShadow: 'var(--shadow-sm)',
-              cursor: 'pointer',
-              whiteSpace: 'nowrap',
-              flexShrink: 0
+              cursor: 'pointer'
             }}
+            onClick={() => onClick(dish)}
           >
-            {fullPriceNum.toLocaleString('en-IN')}
+            {symbol}{fullPriceNum.toLocaleString('en-IN')}
           </span>
         )}
 
+        {/* Dish Thumbnail */}
         {dish.image && (
           <div 
             onClick={() => onClick(dish)}

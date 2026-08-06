@@ -75,6 +75,7 @@ export default function PhysicalMenuHeader({ info, categories, selectedCategory,
         </div>
 
         {/* Dual English + Hindi Title */}
+        {/* Dynamic Title */}
         <h1 style={{
           fontFamily: 'var(--font-heading)',
           fontSize: '1.75rem',
@@ -83,16 +84,17 @@ export default function PhysicalMenuHeader({ info, categories, selectedCategory,
           lineHeight: 1.2,
           marginBottom: '4px'
         }}>
-          Raman Sweet Bakery & Family Restaurant
+          {info?.name || 'Digital Restaurant Menu'}
         </h1>
-        <p style={{
-          fontSize: '0.9rem',
-          color: 'var(--gold-bright)',
-          fontFamily: 'Georgia, serif',
-          marginBottom: '10px'
-        }}>
-          रमन स्वीट बेकरी एवं फैमिली रेस्टोरेंट
-        </p>
+        {info?.tagline && (
+          <p style={{
+            fontSize: '0.9rem',
+            color: 'var(--gold-bright)',
+            marginBottom: '10px'
+          }}>
+            {info.tagline}
+          </p>
+        )}
 
         {/* Ornament Divider */}
         <div style={{
@@ -107,7 +109,7 @@ export default function PhysicalMenuHeader({ info, categories, selectedCategory,
           marginBottom: '12px'
         }}>
           <span>✦ ───</span>
-          <span>100% PURE VEGETARIAN RESTAURANT</span>
+          <span>{info?.badge ? info.badge.toUpperCase() : 'QUALITY FOOD & SERVICE'}</span>
           <span>─── ✦</span>
         </div>
 
@@ -128,9 +130,9 @@ export default function PhysicalMenuHeader({ info, categories, selectedCategory,
               fontWeight: 600
             }}
           >
-            <Clock size={14} color="var(--gold-bright)" /> {info?.openingHours || '8:00 AM - 10:30 PM'}
-            <span style={{ opacity: 0.4 }}>|</span>
-            <Phone size={14} color="var(--gold-bright)" /> {info?.phone || '+91 9708366583'}
+            {info?.openingHours && <><Clock size={14} color="var(--gold-bright)" /> {info.openingHours}</>}
+            {info?.openingHours && info?.phone && <span style={{ opacity: 0.4 }}>|</span>}
+            {info?.phone && <><Phone size={14} color="var(--gold-bright)" /> {info.phone}</>}
           </button>
         </div>
 

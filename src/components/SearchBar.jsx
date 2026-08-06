@@ -1,17 +1,25 @@
 import React from 'react';
 import { Search, X } from 'lucide-react';
 
-export default function SearchBar({ value, onChange, onClear, onQuickFilter, filtersVisibility }) {
+export default function SearchBar({ value, onChange, onClear, onQuickFilter, filtersVisibility, restoType }) {
+  const isPureVeg = restoType === 'pure_veg';
+
   const vis = {
     must_try: true,
     combo: true,
     special: true,
     under100: true,
+    veg: !isPureVeg,
+    nonveg: !isPureVeg,
+    egg: !isPureVeg,
     ...filtersVisibility
   };
 
   const allFilters = [
     { label: '✨ All', value: '', show: true },
+    { label: '🟢 Veg Only', value: 'veg', show: !isPureVeg && vis.veg !== false },
+    { label: '🔴 Non-Veg', value: 'nonveg', show: !isPureVeg && vis.nonveg !== false },
+    { label: '🟡 Egg', value: 'egg', show: !isPureVeg && vis.egg !== false },
     { label: '⭐ Must Try', value: 'Must Try', show: vis.must_try !== false },
     { label: '🍱 Combo', value: 'Combo', show: vis.combo !== false },
     { label: '✨ Special', value: 'Special', show: vis.special !== false },

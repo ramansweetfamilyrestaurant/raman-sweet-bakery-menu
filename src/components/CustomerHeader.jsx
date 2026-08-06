@@ -129,7 +129,7 @@ export default function CustomerHeader({ info, lang, tableNum, onToggleLang, onO
             WebkitLineClamp: 2,
             WebkitBoxOrient: 'vertical'
           }}>
-            {info?.name || 'Raman Sweet Bakery & Restaurant'}
+            {info?.name || 'Digital Menu'}
           </h1>
 
           <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginTop: '3px' }}>
@@ -142,7 +142,7 @@ export default function CustomerHeader({ info, lang, tableNum, onToggleLang, onO
               gap: '4px'
             }}>
               <ShieldCheck size={13} color="#4ADE80" />
-              {lang === 'hi' ? '100% शुद्ध शाकाहारी' : '100% Pure Veg'}
+              {info?.badge || (lang === 'hi' ? 'डिजिटल मेन्यू' : 'Digital Menu')}
             </span>
 
             <span style={{ color: 'rgba(255,255,255,0.3)', fontSize: '0.7rem' }}>•</span>

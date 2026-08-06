@@ -164,7 +164,7 @@ router.post('/dishes', authenticateToken, async (req, res) => {
     const restoId = req.user.restaurant_id || 1;
     const { 
       category_id, name, description, image, price, price_half, 
-      portion, portion_half_label, portion_full_label, badge, ingredients, taste_profile, available 
+      portion, portion_half_label, portion_full_label, badge, ingredients, taste_profile, type, available 
     } = req.body;
 
     if (!name || !price || !category_id) {
@@ -175,11 +175,11 @@ router.post('/dishes', authenticateToken, async (req, res) => {
     const result = await query(
       `INSERT INTO dishes (
         restaurant_id, category_id, name, description, image, price, price_half, 
-        portion, portion_half_label, portion_full_label, badge, ingredients, taste_profile, available
-      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14) RETURNING id`,
+        portion, portion_half_label, portion_full_label, badge, ingredients, taste_profile, type, available
+      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15) RETURNING id`,
       [
         restoId, category_id, name, description || '', image || '/uploads/logo.jpg', price, price_half || null,
-        portion || '', portion_half_label || '', portion_full_label || '', badge || '', ingredients || '', taste_profile || '', availVal
+        portion || '', portion_half_label || '', portion_full_label || '', badge || '', ingredients || '', taste_profile || '', type || 'veg', availVal
       ]
     );
     res.json({ success: true, id: result[0]?.id || result.lastInsertRowid });
@@ -195,7 +195,7 @@ router.put('/dishes/:id', authenticateToken, async (req, res) => {
     const { id } = req.params;
     const { 
       category_id, name, description, image, price, price_half, 
-      portion, portion_half_label, portion_full_label, badge, ingredients, taste_profile, available 
+      portion, portion_half_label, portion_full_label, badge, ingredients, taste_profile, type, available 
     } = req.body;
 
     const availVal = available ? 1 : 0;
@@ -203,12 +203,12 @@ router.put('/dishes/:id', authenticateToken, async (req, res) => {
       `UPDATE dishes 
        SET category_id = $1, name = $2, description = $3, image = $4, price = $5, price_half = $6,
            portion = $7, portion_half_label = $8, portion_full_label = $9, badge = $10,
-           ingredients = $11, taste_profile = $12, available = $13, updated_at = CURRENT_TIMESTAMP 
-       WHERE id = $14 AND restaurant_id = $15`,
+           ingredients = $11, taste_profile = $12, type = $13, available = $14, updated_at = CURRENT_TIMESTAMP 
+       WHERE id = $15 AND restaurant_id = $16`,
       [
         category_id, name, description || '', image, price, price_half || null,
         portion || '', portion_half_label || '', portion_full_label || '', badge || '',
-        ingredients || '', taste_profile || '', availVal, id, restoId
+        ingredients || '', taste_profile || '', type || 'veg', availVal, id, restoId
       ]
     );
     res.json({ success: true });
@@ -257,25 +257,25 @@ router.delete('/dishes/:id', authenticateToken, async (req, res) => {
   }
 });
 
-// Update Tenant Restaurant Settings
-router.post('/info', authenticateToken, async (req, res) => {
+// Update Tenant Restaurant Settings (Supports /settings and /info with PUT or POST)
+const handleUpdateSettings = async (req, res) => {
   try {
     const restoId = req.user.restaurant_id || 1;
-    const { name, tagline, phone, address, openingHours, google_review_url, filters_visibility } = req.body;
+    const { name, tagline, phone, address, openingHours, google_review_url, filters_visibility, currency_symbol, fssai_lic_no, resto_type } = req.body;
 
     const visJson = typeof filters_visibility === 'object' ? JSON.stringify(filters_visibility) : filters_visibility;
 
     await query(`
       UPDATE restaurants 
-      SET name = $1, tagline = $2, phone = $3, address = $4, opening_hours = $5, google_review_url = $6, filters_visibility = $7
-      WHERE id = $8
-    `, [name, tagline, phone, address, openingHours, google_review_url, visJson, restoId]);
+      SET name = $1, tagline = $2, phone = $3, address = $4, opening_hours = $5, google_review_url = $6, filters_visibility = $7, currency_symbol = $8, fssai_lic_no = $9, resto_type = $10
+      WHERE id = $11
+    `, [name, tagline, phone, address, openingHours, google_review_url, visJson, currency_symbol !== undefined ? currency_symbol : '₹', fssai_lic_no || '', resto_type || 'pure_veg', restoId]);
 
     // Also update settings.json as fallback for primary restaurant
     if (restoId === 1) {
       const settingsPath = path.resolve('server/settings.json');
       const updated = {
-        name, tagline, phone, address, openingHours, google_review_url,
+        name, tagline, phone, address, openingHours, google_review_url, currency_symbol,
         filters_visibility: typeof filters_visibility === 'object' ? filters_visibility : { must_try: true, combo: true, special: true, under100: true }
       };
       fs.writeFileSync(settingsPath, JSON.stringify(updated, null, 2), 'utf-8');
@@ -286,7 +286,11 @@ router.post('/info', authenticateToken, async (req, res) => {
     console.error('Update settings error:', err);
     res.status(500).json({ error: 'Failed to update settings' });
   }
-});
+};
+
+router.put('/settings', authenticateToken, handleUpdateSettings);
+router.post('/settings', authenticateToken, handleUpdateSettings);
+router.post('/info', authenticateToken, handleUpdateSettings);
 
 // Change Admin Password
 router.post('/change-password', authenticateToken, async (req, res) => {
