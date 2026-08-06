@@ -48,8 +48,11 @@ async function createTables() {
         name VARCHAR(255) NOT NULL,
         name_hi VARCHAR(255),
         image VARCHAR(1000),
-        sort_order INT DEFAULT 0
+        sort_order INT DEFAULT 0,
+        active BOOLEAN DEFAULT TRUE
       );
+
+      ALTER TABLE categories ADD COLUMN IF NOT EXISTS active BOOLEAN DEFAULT TRUE;
 
       CREATE TABLE IF NOT EXISTS dishes (
         id SERIAL PRIMARY KEY,
@@ -86,7 +89,8 @@ async function createTables() {
         name TEXT NOT NULL,
         name_hi TEXT,
         image TEXT,
-        sort_order INTEGER DEFAULT 0
+        sort_order INTEGER DEFAULT 0,
+        active INTEGER DEFAULT 1
       );
 
       CREATE TABLE IF NOT EXISTS dishes (
@@ -118,6 +122,16 @@ async function createTables() {
         created_at TEXT DEFAULT CURRENT_TIMESTAMP
       );
     `);
+
+    try {
+      const catCols = sqliteDb.pragma('table_info(categories)');
+      const hasActive = catCols.some(c => c.name === 'active');
+      if (!hasActive) {
+        sqliteDb.exec('ALTER TABLE categories ADD COLUMN active INTEGER DEFAULT 1');
+      }
+    } catch (err) {
+      console.warn('SQLite migration info:', err.message);
+    }
   }
 }
 
