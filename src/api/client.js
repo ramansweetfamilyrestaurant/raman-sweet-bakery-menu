@@ -1,15 +1,27 @@
 const API_BASE = '/api';
 
+async function handleResponse(res, fallbackErrorMsg = 'API request failed') {
+  const text = await res.text();
+  let data;
+  try {
+    data = JSON.parse(text);
+  } catch (e) {
+    throw new Error(`Server returned HTTP ${res.status}: ${text.substring(0, 120)}`);
+  }
+  if (!res.ok) {
+    throw new Error(data.error || fallbackErrorMsg);
+  }
+  return data;
+}
+
 export async function fetchRestaurantInfo() {
   const res = await fetch(`${API_BASE}/info`);
-  if (!res.ok) throw new Error('Failed to fetch restaurant info');
-  return res.json();
+  return handleResponse(res, 'Failed to fetch restaurant info');
 }
 
 export async function fetchCategories() {
   const res = await fetch(`${API_BASE}/categories`);
-  if (!res.ok) throw new Error('Failed to fetch categories');
-  return res.json();
+  return handleResponse(res, 'Failed to fetch categories');
 }
 
 export async function fetchDishes({ query = '', category_id = 'all', adminView = false } = {}) {
@@ -19,8 +31,7 @@ export async function fetchDishes({ query = '', category_id = 'all', adminView =
   if (adminView) params.append('admin_view', 'true');
 
   const res = await fetch(`${API_BASE}/dishes?${params.toString()}`);
-  if (!res.ok) throw new Error('Failed to fetch dishes');
-  return res.json();
+  return handleResponse(res, 'Failed to fetch dishes');
 }
 
 // Admin API calls
@@ -30,17 +41,14 @@ export async function adminLogin(username, password) {
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ username, password }),
   });
-  const data = await res.json();
-  if (!res.ok) throw new Error(data.error || 'Login failed');
-  return data;
+  return handleResponse(res, 'Login failed');
 }
 
 export async function fetchAdminStats(token) {
   const res = await fetch(`${API_BASE}/admin/stats`, {
     headers: { Authorization: `Bearer ${token}` },
   });
-  if (!res.ok) throw new Error('Failed to fetch admin stats');
-  return res.json();
+  return handleResponse(res, 'Failed to fetch admin stats');
 }
 
 export async function uploadImage(file, token) {
@@ -52,9 +60,7 @@ export async function uploadImage(file, token) {
     headers: { Authorization: `Bearer ${token}` },
     body: formData,
   });
-  const data = await res.json();
-  if (!res.ok) throw new Error(data.error || 'Upload failed');
-  return data;
+  return handleResponse(res, 'Upload failed');
 }
 
 export async function createCategory(categoryData, token) {
@@ -66,9 +72,7 @@ export async function createCategory(categoryData, token) {
     },
     body: JSON.stringify(categoryData),
   });
-  const data = await res.json();
-  if (!res.ok) throw new Error(data.error || 'Failed to create category');
-  return data;
+  return handleResponse(res, 'Failed to create category');
 }
 
 export async function updateCategory(id, categoryData, token) {
@@ -80,9 +84,7 @@ export async function updateCategory(id, categoryData, token) {
     },
     body: JSON.stringify(categoryData),
   });
-  const data = await res.json();
-  if (!res.ok) throw new Error(data.error || 'Failed to update category');
-  return data;
+  return handleResponse(res, 'Failed to update category');
 }
 
 export async function deleteCategory(id, token) {
@@ -90,9 +92,7 @@ export async function deleteCategory(id, token) {
     method: 'DELETE',
     headers: { Authorization: `Bearer ${token}` },
   });
-  const data = await res.json();
-  if (!res.ok) throw new Error(data.error || 'Failed to delete category');
-  return data;
+  return handleResponse(res, 'Failed to delete category');
 }
 
 export async function toggleCategoryActive(id, active, token) {
@@ -104,9 +104,7 @@ export async function toggleCategoryActive(id, active, token) {
     },
     body: JSON.stringify({ active }),
   });
-  const data = await res.json();
-  if (!res.ok) throw new Error(data.error || 'Failed to toggle category active status');
-  return data;
+  return handleResponse(res, 'Failed to toggle category active status');
 }
 
 export async function createDish(dishData, token) {
@@ -118,9 +116,7 @@ export async function createDish(dishData, token) {
     },
     body: JSON.stringify(dishData),
   });
-  const data = await res.json();
-  if (!res.ok) throw new Error(data.error || 'Failed to create dish');
-  return data;
+  return handleResponse(res, 'Failed to create dish');
 }
 
 export async function updateDish(id, dishData, token) {
@@ -132,9 +128,7 @@ export async function updateDish(id, dishData, token) {
     },
     body: JSON.stringify(dishData),
   });
-  const data = await res.json();
-  if (!res.ok) throw new Error(data.error || 'Failed to update dish');
-  return data;
+  return handleResponse(res, 'Failed to update dish');
 }
 
 export async function toggleDishAvailability(id, available, token) {
@@ -146,9 +140,7 @@ export async function toggleDishAvailability(id, available, token) {
     },
     body: JSON.stringify({ available }),
   });
-  const data = await res.json();
-  if (!res.ok) throw new Error(data.error || 'Failed to toggle availability');
-  return data;
+  return handleResponse(res, 'Failed to toggle availability');
 }
 
 export async function updateDishPrice(id, price, token) {
@@ -160,9 +152,7 @@ export async function updateDishPrice(id, price, token) {
     },
     body: JSON.stringify({ price }),
   });
-  const data = await res.json();
-  if (!res.ok) throw new Error(data.error || 'Failed to update price');
-  return data;
+  return handleResponse(res, 'Failed to update price');
 }
 
 export async function deleteDish(id, token) {
@@ -170,7 +160,5 @@ export async function deleteDish(id, token) {
     method: 'DELETE',
     headers: { Authorization: `Bearer ${token}` },
   });
-  const data = await res.json();
-  if (!res.ok) throw new Error(data.error || 'Failed to delete dish');
-  return data;
+  return handleResponse(res, 'Failed to delete dish');
 }

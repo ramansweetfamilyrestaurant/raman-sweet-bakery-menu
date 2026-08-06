@@ -25,8 +25,13 @@ if (!fs.existsSync(uploadsDir)) {
 app.use('/uploads', express.static(uploadsDir));
 
 // API Routes
-app.use('/api', apiRoutes);
 app.use('/api/admin', adminRoutes);
+app.use('/api', apiRoutes);
+
+// API 404 Handler (Guarantees JSON error instead of index.html fallback)
+app.use('/api/*', (req, res) => {
+  res.status(404).json({ error: `API route ${req.originalUrl} not found` });
+});
 
 // Serve static built React frontend in production or if dist exists
 const distDir = path.resolve('dist');
