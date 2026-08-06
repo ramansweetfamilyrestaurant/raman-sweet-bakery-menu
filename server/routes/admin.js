@@ -271,6 +271,7 @@ router.delete('/dishes/:id', authenticateToken, async (req, res) => {
 // Update Tenant Restaurant Settings (Supports /settings and /info with PUT or POST)
 const handleUpdateSettings = async (req, res) => {
   try {
+    const restoId = req.user.restaurant_id || 1;
     const { name, tagline, logo, phone, address, openingHours, google_review_url, filters_visibility, currency_symbol, fssai_lic_no, resto_type, whatsapp_number, whatsapp_enabled, theme_color, latitude, longitude, max_distance_meters } = req.body;
 
     const visJson = typeof filters_visibility === 'object' ? JSON.stringify(filters_visibility) : filters_visibility;
