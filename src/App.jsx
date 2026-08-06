@@ -10,7 +10,7 @@ import BottomDock from './components/BottomDock';
 import Footer from './components/Footer';
 import DishFormModal from './components/Admin/DishFormModal';
 import CategoryFormModal from './components/Admin/CategoryFormModal';
-import { fetchRestaurantInfo, fetchCategories, fetchDishes, toggleDishAvailability, deleteDish, createDirectOrder, trackOrderStatus } from './api/client';
+import { fetchRestaurantInfo, fetchCategories, fetchDishes, toggleDishAvailability, deleteDish, createDirectOrder, trackOrderStatus, fetchActiveTableOrder } from './api/client';
 import { LayoutList, Grid, BookOpen, X, Sparkles, ShieldAlert, Phone, Plus, Edit3, Trash2, LogOut, Settings, Crown, CheckCircle, MessageSquare } from 'lucide-react';
 
 // Code Splitting (Lazy Loading): Super Admin & Admin JS chunks are loaded ONLY when requested!
@@ -127,20 +127,38 @@ export default function App() {
   const [activeOrderId, setActiveOrderId] = useState(localStorage.getItem('raman_active_order_id') || null);
   const [activeOrderTrack, setActiveOrderTrack] = useState(null);
 
+  // Multi-Device Table-Level Live Sync Effect
   useEffect(() => {
-    if (!activeOrderId) return;
-    const checkStatus = async () => {
+    const activeTargetTable = tableNum || orderTableInput || '1';
+    const currentSlug = getSlugFromUrl() || (info && info.slug) || 'raman-sweet-bakery';
+
+    const checkTableStatus = async () => {
       try {
-        const data = await trackOrderStatus(activeOrderId);
-        setActiveOrderTrack(data);
+        if (activeOrderId) {
+          const data = await trackOrderStatus(activeOrderId);
+          if (data) {
+            setActiveOrderTrack(data);
+            return;
+          }
+        }
+        // Multi-device table sync: fetch latest active order for this table
+        if (activeTargetTable) {
+          const tableData = await fetchActiveTableOrder(currentSlug, activeTargetTable);
+          if (tableData) {
+            setActiveOrderTrack(tableData);
+          } else {
+            setActiveOrderTrack(null);
+          }
+        }
       } catch (err) {
-        console.error('Failed to track active order:', err);
+        console.error('Failed to sync table order:', err);
       }
     };
-    checkStatus();
-    const interval = setInterval(checkStatus, 5000);
+
+    checkTableStatus();
+    const interval = setInterval(checkTableStatus, 4000);
     return () => clearInterval(interval);
-  }, [activeOrderId]);
+  }, [activeOrderId, tableNum, orderTableInput, info]);
 
   const handleSendDirectOrder = async () => {
     if (cartItems.length === 0) return;

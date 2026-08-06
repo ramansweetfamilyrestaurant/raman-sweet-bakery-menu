@@ -311,3 +311,8 @@ export async function trackOrderStatus(id) {
   const res = await fetch(`${API_BASE}/orders/track/${id}`);
   return handleResponse(res, 'Failed to track order');
 }
+
+export async function fetchActiveTableOrder(slug, tableNumber) {
+  const res = await fetch(`${API_BASE}/orders/active-table?slug=${encodeURIComponent(slug)}&table_number=${encodeURIComponent(tableNumber)}`);
+  return handleResponse(res, 'Failed to fetch active table order');
+}

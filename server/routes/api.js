@@ -273,4 +273,36 @@ router.get('/orders/track/:id', async (req, res) => {
   }
 });
 
+// GET Active Table Order Sync (Multi-Device Sync for same table)
+router.get('/orders/active-table', async (req, res) => {
+  try {
+    const { slug, table_number } = req.query;
+    if (!table_number) {
+      return res.json(null);
+    }
+    const resto = await resolveRestaurant(req, slug);
+    const targetId = resto?.id || 1;
+
+    const orders = await query(`
+      SELECT id, table_number, status, total_amount, items, created_at
+      FROM orders
+      WHERE restaurant_id = $1 AND table_number = $2 AND status IN ('pending', 'preparing', 'served')
+      ORDER BY id DESC LIMIT 1
+    `, [targetId, String(table_number)]);
+
+    if (orders.length === 0) {
+      return res.json(null);
+    }
+
+    const order = orders[0];
+    res.json({
+      ...order,
+      items: typeof order.items === 'string' ? JSON.parse(order.items) : order.items
+    });
+  } catch (err) {
+    console.error('Active table order fetch error:', err);
+    res.status(500).json({ error: 'Failed to fetch active table order' });
+  }
+});
+
 export default router;
