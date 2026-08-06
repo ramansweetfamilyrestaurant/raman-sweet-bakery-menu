@@ -3289,7 +3289,6 @@ export default function AdminDashboard({ token, username, onLogout, onReturnToMe
                   { key: 'nonveg', label: '🔴 Non-Veg Button' },
                   { key: 'egg', label: '🟡 Egg Button' },
                   { key: 'must_try', label: '⭐ Must Try Button' },
-                  { key: 'combo', label: '🍱 Combo Button' },
                   { key: 'special', label: '✨ Special Button' },
                   { key: 'under100', label: '⚡ Under 100 Button' }
                 ].map((item) => {

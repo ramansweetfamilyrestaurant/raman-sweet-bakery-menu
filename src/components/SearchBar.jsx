@@ -21,7 +21,6 @@ export default function SearchBar({ value, onChange, onClear, onQuickFilter, fil
     { label: '🔴 Non-Veg', value: 'nonveg', show: !isPureVeg && vis.nonveg !== false },
     { label: '🟡 Egg', value: 'egg', show: !isPureVeg && vis.egg !== false },
     { label: '⭐ Must Try', value: 'Must Try', show: vis.must_try !== false },
-    { label: '🍱 Combo', value: 'Combo', show: vis.combo !== false },
     { label: '✨ Special', value: 'Special', show: vis.special !== false },
     { label: '⚡ Under 100', value: 'under100', show: vis.under100 !== false }
   ];
