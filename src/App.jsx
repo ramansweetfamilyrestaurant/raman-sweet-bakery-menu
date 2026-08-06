@@ -863,7 +863,7 @@ export default function App() {
                       lang={lang}
                       currencySymbol={info?.currency_symbol !== undefined ? info.currency_symbol : '₹'}
                       onClick={() => setSelectedDishModal(dish)}
-                      onAddToCart={(info?.direct_ordering_enabled !== false || info?.whatsapp_enabled !== false) ? handleAddToCart : undefined}
+                      onAddToCart={(info?.direct_ordering_enabled === true || info?.direct_ordering_enabled === 1) ? handleAddToCart : undefined}
                     />
                   ))}
                 </div>
@@ -880,7 +880,7 @@ export default function App() {
                       lang={lang}
                       currencySymbol={info?.currency_symbol !== undefined ? info.currency_symbol : '₹'}
                       onClick={() => setSelectedDishModal(dish)}
-                      onAddToCart={(info?.direct_ordering_enabled !== false || info?.whatsapp_enabled !== false) ? handleAddToCart : undefined}
+                      onAddToCart={(info?.direct_ordering_enabled === true || info?.direct_ordering_enabled === 1) ? handleAddToCart : undefined}
                     />
                   ))}
                 </div>
@@ -891,7 +891,7 @@ export default function App() {
       </main>
 
       {/* 💬 / ⚡ Floating Order Button (Gated by Super Admin Feature Control Matrix) */}
-      {info && (info.direct_ordering_enabled !== false || info.whatsapp_enabled !== false) && (
+      {info && (info.direct_ordering_enabled || info.whatsapp_enabled) && (
         <div style={{
           position: 'fixed',
           bottom: '84px',
