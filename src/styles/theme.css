@@ -43,6 +43,40 @@
   --transition-smooth: 0.35s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
+/* ========== MULTI-TENANT BRAND THEME PRESETS ========== */
+
+/* Theme 1: Gold & Forest Green (Default Luxury) */
+[data-theme="gold"] {
+  --primary-emerald: #0A2315;
+  --gold-primary: #C5A059;
+  --gold-bright: #D4AF37;
+  --bg-app: #F6F4EE;
+}
+
+/* Theme 2: Emerald Mint & Teal */
+[data-theme="emerald"] {
+  --primary-emerald: #064E3B;
+  --gold-primary: #10B981;
+  --gold-bright: #34D399;
+  --bg-app: #F0FDF4;
+}
+
+/* Theme 3: Crimson Ruby & Gold */
+[data-theme="crimson"] {
+  --primary-emerald: #881337;
+  --gold-primary: #E11D48;
+  --gold-bright: #FB7185;
+  --bg-app: #FFF1F2;
+}
+
+/* Theme 4: Midnight Navy & Blue */
+[data-theme="navy"] {
+  --primary-emerald: #0F172A;
+  --gold-primary: #2563EB;
+  --gold-bright: #60A5FA;
+  --bg-app: #F8FAFC;
+}
+
 * {
   box-sizing: border-box;
   margin: 0;

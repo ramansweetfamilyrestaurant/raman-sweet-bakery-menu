@@ -231,6 +231,15 @@ export default function App() {
     loadMenuData();
   }, [searchQuery, adminToken]);
 
+  // Dynamic Theme Color Engine Applicator
+  useEffect(() => {
+    if (info && info.theme_color) {
+      document.documentElement.setAttribute('data-theme', info.theme_color);
+    } else {
+      document.documentElement.setAttribute('data-theme', 'gold');
+    }
+  }, [info]);
+
   // Handle URL route changes (/super-admin, /admin, /r/:slug, #super-admin, #admin)
   useEffect(() => {
     const handleRouteCheck = () => {
