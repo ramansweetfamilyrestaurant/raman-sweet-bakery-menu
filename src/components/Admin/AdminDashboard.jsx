@@ -211,6 +211,9 @@ export default function AdminDashboard({ token, username, onLogout, onReturnToMe
           currency_symbol: (infoData.currency_symbol !== null && infoData.currency_symbol !== undefined) ? infoData.currency_symbol : '₹',
           fssai_lic_no: infoData.fssai_lic_no || '',
           resto_type: infoData.resto_type || 'pure_veg',
+          latitude: infoData.latitude !== undefined && infoData.latitude !== null ? infoData.latitude : 26.6500,
+          longitude: infoData.longitude !== undefined && infoData.longitude !== null ? infoData.longitude : 84.9167,
+          max_distance_meters: infoData.max_distance_meters || 100,
           filters_visibility: { ...defaultVis, ...infoData.filters_visibility }
         });
       }
@@ -2109,6 +2112,102 @@ export default function AdminDashboard({ token, username, onLogout, onReturnToMe
                   }}
                 />
               </div>
+
+            {/* 📍 GPS Geo-Fencing Radius Configuration Card */}
+            <div style={{
+              background: '#F0FDF4',
+              border: '1.5px solid #86EFAC',
+              borderRadius: '16px',
+              padding: '16px 18px',
+              marginBottom: '20px'
+            }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px', flexWrap: 'wrap', gap: '8px' }}>
+                <div>
+                  <strong style={{ fontSize: '0.95rem', color: '#166534', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                    📍 Restaurant GPS Radius Protection (Anti-Fake Order Shield)
+                  </strong>
+                  <span style={{ fontSize: '0.78rem', color: '#15803D' }}>
+                    Prevents fake orders from customers outside the restaurant (e.g. photos of table QR codes)
+                  </span>
+                </div>
+
+                <button
+                  type="button"
+                  onClick={() => {
+                    if (navigator.geolocation) {
+                      navigator.geolocation.getCurrentPosition((pos) => {
+                        setSettingsForm(prev => ({
+                          ...prev,
+                          latitude: Number(pos.coords.latitude.toFixed(6)),
+                          longitude: Number(pos.coords.longitude.toFixed(6))
+                        }));
+                        alert(`📍 Location detected: ${pos.coords.latitude.toFixed(4)}, ${pos.coords.longitude.toFixed(4)}. Click 'Save Restaurant Settings' below to apply!`);
+                      }, (err) => {
+                        alert('Unable to detect GPS location: ' + err.message);
+                      });
+                    } else {
+                      alert('Geolocation is not supported by your browser.');
+                    }
+                  }}
+                  style={{
+                    background: 'linear-gradient(135deg, #059669 0%, #047857 100%)',
+                    color: '#FFFFFF',
+                    border: 'none',
+                    padding: '8px 14px',
+                    borderRadius: 'var(--radius-pill)',
+                    fontWeight: 900,
+                    fontSize: '0.78rem',
+                    cursor: 'pointer',
+                    whiteSpace: 'nowrap'
+                  }}
+                >
+                  📍 Detect My Current Location
+                </button>
+              </div>
+
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))', gap: '10px' }}>
+                <div>
+                  <label style={{ display: 'block', fontSize: '0.78rem', fontWeight: 800, color: '#166534', marginBottom: '4px' }}>
+                    Latitude (GPS):
+                  </label>
+                  <input
+                    type="number"
+                    step="any"
+                    value={settingsForm.latitude !== undefined ? settingsForm.latitude : ''}
+                    onChange={(e) => setSettingsForm({ ...settingsForm, latitude: e.target.value })}
+                    placeholder="e.g. 26.6500"
+                    style={{ width: '100%', padding: '8px 12px', borderRadius: '8px', border: '1px solid #A7F3D0', fontSize: '0.84rem' }}
+                  />
+                </div>
+
+                <div>
+                  <label style={{ display: 'block', fontSize: '0.78rem', fontWeight: 800, color: '#166534', marginBottom: '4px' }}>
+                    Longitude (GPS):
+                  </label>
+                  <input
+                    type="number"
+                    step="any"
+                    value={settingsForm.longitude !== undefined ? settingsForm.longitude : ''}
+                    onChange={(e) => setSettingsForm({ ...settingsForm, longitude: e.target.value })}
+                    placeholder="e.g. 84.9167"
+                    style={{ width: '100%', padding: '8px 12px', borderRadius: '8px', border: '1px solid #A7F3D0', fontSize: '0.84rem' }}
+                  />
+                </div>
+
+                <div>
+                  <label style={{ display: 'block', fontSize: '0.78rem', fontWeight: 800, color: '#166534', marginBottom: '4px' }}>
+                    Max Order Radius (Meters):
+                  </label>
+                  <input
+                    type="number"
+                    value={settingsForm.max_distance_meters || 100}
+                    onChange={(e) => setSettingsForm({ ...settingsForm, max_distance_meters: Number(e.target.value) })}
+                    placeholder="100"
+                    style={{ width: '100%', padding: '8px 12px', borderRadius: '8px', border: '1px solid #A7F3D0', fontSize: '0.84rem' }}
+                  />
+                </div>
+              </div>
+            </div>
 
               {/* Currency Symbol Selector */}
               <div>
