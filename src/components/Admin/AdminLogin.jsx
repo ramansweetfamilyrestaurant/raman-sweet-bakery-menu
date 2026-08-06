@@ -15,7 +15,7 @@ export default function AdminLogin({ onLoginSuccess, onCancel, restaurantName })
 
     try {
       const data = await adminLogin(username, password);
-      onLoginSuccess(data.token, data.username);
+      onLoginSuccess(data.token, data.username, data.slug);
     } catch (err) {
       setError(err.message || 'Invalid admin credentials');
     } finally {

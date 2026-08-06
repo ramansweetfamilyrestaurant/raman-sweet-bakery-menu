@@ -56,12 +56,15 @@ router.post('/login', async (req, res) => {
       return res.status(401).json({ error: 'Invalid credentials' });
     }
 
+    const restoRes = await query('SELECT slug FROM restaurants WHERE id = $1', [admin.restaurant_id || 1]);
+    const slug = restoRes[0]?.slug || 'raman-sweet-bakery';
+
     const token = jwt.sign(
       { id: admin.id, username: admin.username, restaurant_id: admin.restaurant_id || 1, role: admin.role || 'restaurant_admin' },
       JWT_SECRET,
       { expiresIn: '30d' }
     );
-    res.json({ token, username: admin.username, restaurant_id: admin.restaurant_id || 1, role: admin.role || 'restaurant_admin' });
+    res.json({ token, username: admin.username, restaurant_id: admin.restaurant_id || 1, slug, role: admin.role || 'restaurant_admin' });
   } catch (err) {
     console.error('Login error:', err);
     res.status(500).json({ error: 'Internal server error during login' });

@@ -31,7 +31,6 @@ export default function App() {
   const [view, setView] = useState('menu'); // 'menu', 'admin-login', 'admin-dashboard', 'super-admin-login', 'super-admin-dashboard'
   const [layoutMode, setLayoutMode] = useState('list'); // 'list' or 'grid'
 
-  // Restaurant Admin Tokens
   const getInitialToken = () => {
     const t = localStorage.getItem('raman_admin_token');
     return (t && t !== 'undefined' && t !== 'null') ? t : '';
@@ -40,9 +39,14 @@ export default function App() {
     const u = localStorage.getItem('raman_admin_user');
     return (u && u !== 'undefined' && u !== 'null') ? u : '';
   };
+  const getInitialSlug = () => {
+    const s = localStorage.getItem('raman_admin_slug');
+    return (s && s !== 'undefined' && s !== 'null') ? s : '';
+  };
 
   const [adminToken, setAdminToken] = useState(getInitialToken());
   const [adminUsername, setAdminUsername] = useState(getInitialUser());
+  const [adminSlug, setAdminSlug] = useState(getInitialSlug());
 
   // Master Super Admin Tokens
   const getInitialSuperToken = () => {
@@ -126,9 +130,19 @@ export default function App() {
           setView('super-admin-login');
         }
       } else if (isRouteAdmin) {
-        if (adminToken) {
+        const currentSlug = getSlugFromUrl() || (info && info.slug);
+        const storedSlug = localStorage.getItem('raman_admin_slug');
+        if (adminToken && storedSlug && currentSlug && storedSlug === currentSlug) {
           setView('admin-dashboard');
         } else {
+          if (storedSlug && currentSlug && storedSlug !== currentSlug) {
+            localStorage.removeItem('raman_admin_token');
+            localStorage.removeItem('raman_admin_user');
+            localStorage.removeItem('raman_admin_slug');
+            setAdminToken('');
+            setAdminUsername('');
+            setAdminSlug('');
+          }
           setView('admin-login');
         }
       } else {
@@ -143,28 +157,28 @@ export default function App() {
       window.removeEventListener('hashchange', handleRouteCheck);
       window.removeEventListener('popstate', handleRouteCheck);
     };
-  }, [adminToken, superToken]);
+  }, [adminToken, superToken, info]);
 
-  const handleAdminLoginSuccess = (token, username) => {
+  const handleAdminLoginSuccess = (token, username, slug) => {
+    const currentSlug = slug || getSlugFromUrl() || (info && info.slug) || 'raman-sweet-bakery';
     localStorage.setItem('raman_admin_token', token);
     localStorage.setItem('raman_admin_user', username);
+    localStorage.setItem('raman_admin_slug', currentSlug);
     setAdminToken(token);
     setAdminUsername(username);
+    setAdminSlug(currentSlug);
     setView('admin-dashboard');
-    const currentSlug = getSlugFromUrl() || (info && info.slug);
-    if (currentSlug) {
-      window.history.pushState({}, '', `/r/${currentSlug}/admin`);
-    } else {
-      window.history.pushState({}, '', '/admin');
-    }
+    window.history.pushState({}, '', `/r/${currentSlug}/admin`);
   };
 
   const handleAdminLogout = () => {
     const currentSlug = getSlugFromUrl() || (info && info.slug) || 'raman-sweet-bakery';
     localStorage.removeItem('raman_admin_token');
     localStorage.removeItem('raman_admin_user');
+    localStorage.removeItem('raman_admin_slug');
     setAdminToken('');
     setAdminUsername('');
+    setAdminSlug('');
     setView('menu');
     window.history.pushState({}, '', `/r/${currentSlug}`);
     loadMenuData(currentSlug);
@@ -319,11 +333,16 @@ export default function App() {
           token={superToken}
           username={superUsername}
           onLogout={handleSuperAdminLogout}
-          onImpersonate={(tenantToken, tenantUsername) => {
+          onImpersonate={(tenantToken, tenantUsername, tenantSlug) => {
+            const targetSlug = tenantSlug || (info && info.slug) || 'raman-sweet-bakery';
+            localStorage.setItem('raman_admin_token', tenantToken);
+            localStorage.setItem('raman_admin_user', tenantUsername);
+            localStorage.setItem('raman_admin_slug', targetSlug);
             setAdminToken(tenantToken);
             setAdminUsername(tenantUsername);
+            setAdminSlug(targetSlug);
             setView('admin-dashboard');
-            window.history.pushState({}, '', '/admin');
+            window.history.pushState({}, '', `/r/${targetSlug}/admin`);
           }}
           onReturnToMenu={(tenantSlug) => {
             const targetSlug = tenantSlug || (info && info.slug) || getSlugFromUrl() || 'raman-sweet-bakery';
@@ -875,9 +894,18 @@ export default function App() {
         info={info}
         onOpenAdmin={() => {
           const currentSlug = getSlugFromUrl() || (info && info.slug) || 'raman-sweet-bakery';
-          if (adminToken) {
+          const storedSlug = localStorage.getItem('raman_admin_slug');
+          if (adminToken && storedSlug && storedSlug === currentSlug) {
             setView('admin-dashboard');
           } else {
+            if (storedSlug !== currentSlug) {
+              localStorage.removeItem('raman_admin_token');
+              localStorage.removeItem('raman_admin_user');
+              localStorage.removeItem('raman_admin_slug');
+              setAdminToken('');
+              setAdminUsername('');
+              setAdminSlug('');
+            }
             setView('admin-login');
           }
           window.history.pushState({}, '', `/r/${currentSlug}/admin`);
