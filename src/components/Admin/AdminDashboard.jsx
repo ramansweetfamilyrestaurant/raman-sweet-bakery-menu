@@ -2148,24 +2148,6 @@ export default function AdminDashboard({ token, username, onLogout, onReturnToMe
                         ⭐ Must Try
                       </button>
 
-                      {/* 🍱 Combo Toggle */}
-                      <button
-                        onClick={() => handleToggleBadge(dish, 'Combo')}
-                        style={{
-                          padding: '4px 8px',
-                          borderRadius: 'var(--radius-pill)',
-                          fontSize: '0.7rem',
-                          fontWeight: 800,
-                          background: dish.badge === 'Combo' ? '#DBEAFE' : '#FFFFFF',
-                          color: dish.badge === 'Combo' ? '#1D4ED8' : '#4B5563',
-                          border: dish.badge === 'Combo' ? '1px solid #3B82F6' : '1px solid #E5E7EB',
-                          whiteSpace: 'nowrap',
-                          cursor: 'pointer'
-                        }}
-                      >
-                        🍱 Combo
-                      </button>
-
                       {/* ✨ Special Toggle */}
                       <button
                         onClick={() => handleToggleBadge(dish, 'Special')}
