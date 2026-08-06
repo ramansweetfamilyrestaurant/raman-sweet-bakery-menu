@@ -45,8 +45,8 @@ export default function AdminDashboard({ token, username, onLogout, onReturnToMe
         fetchDishes({ adminView: true }),
         fetchRestaurantInfo()
       ]);
-      setCategories(catData);
-      setDishes(dishData);
+      setCategories(Array.isArray(catData) ? catData : []);
+      setDishes(Array.isArray(dishData) ? dishData : []);
       if (infoData) {
         setSettingsForm({
           name: infoData.name || 'Raman Sweet Bakery & Family Restaurant',
@@ -253,9 +253,15 @@ export default function AdminDashboard({ token, username, onLogout, onReturnToMe
     }
   };
 
-  const filteredDishes = dishes.filter(d => {
-    const matchesSearch = d.name.toLowerCase().includes(search.toLowerCase()) || 
-      (d.name_hi && d.name_hi.toLowerCase().includes(search.toLowerCase()));
+  const safeDishes = Array.isArray(dishes) ? dishes : [];
+  const safeCategories = Array.isArray(categories) ? categories : [];
+
+  const filteredDishes = safeDishes.filter(d => {
+    if (!d) return false;
+    const nameStr = (d.name || '').toLowerCase();
+    const searchStr = (search || '').toLowerCase();
+    const matchesSearch = nameStr.includes(searchStr) || 
+      (d.name_hi && String(d.name_hi).toLowerCase().includes(searchStr));
     const matchesCategory = selectedCatFilter === 'all' || String(d.category_id) === String(selectedCatFilter);
     return matchesSearch && matchesCategory;
   });
@@ -450,10 +456,10 @@ export default function AdminDashboard({ token, username, onLogout, onReturnToMe
                   cursor: 'pointer'
                 }}
               >
-                <option value="all">📁 All Categories ({dishes.length})</option>
-                {categories.map(c => (
+                <option value="all">📁 All Categories ({safeDishes.length})</option>
+                {safeCategories.map(c => (
                   <option key={c.id} value={c.id}>
-                    {c.name} ({dishes.filter(d => Number(d.category_id) === Number(c.id)).length})
+                    {c.name} ({safeDishes.filter(d => d && Number(d.category_id) === Number(c.id)).length})
                   </option>
                 ))}
               </select>
