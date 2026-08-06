@@ -653,7 +653,8 @@ export default function App() {
                 Status: {
                   activeOrderTrack.status === 'pending' ? 'Pending Kitchen Acceptance 🟡' :
                   activeOrderTrack.status === 'preparing' ? 'Chef is Preparing 👨‍🍳' :
-                  activeOrderTrack.status === 'served' ? 'Served to Table 🟢' : 'Cancelled 🔴'
+                  activeOrderTrack.status === 'served' ? 'Served to Table 🟢' :
+                  activeOrderTrack.status === 'completed' ? 'Order Completed & Paid 🏁' : 'Cancelled 🔴'
                 }
               </span>
             </div>
