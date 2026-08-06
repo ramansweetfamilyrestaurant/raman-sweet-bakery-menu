@@ -10,7 +10,7 @@ import BottomDock from './components/BottomDock';
 import Footer from './components/Footer';
 import DishFormModal from './components/Admin/DishFormModal';
 import CategoryFormModal from './components/Admin/CategoryFormModal';
-import { fetchRestaurantInfo, fetchCategories, fetchDishes, toggleDishAvailability, deleteDish, createDirectOrder } from './api/client';
+import { fetchRestaurantInfo, fetchCategories, fetchDishes, toggleDishAvailability, deleteDish, createDirectOrder, trackOrderStatus } from './api/client';
 import { LayoutList, Grid, BookOpen, X, Sparkles, ShieldAlert, Phone, Plus, Edit3, Trash2, LogOut, Settings, Crown, CheckCircle, MessageSquare } from 'lucide-react';
 
 // Code Splitting (Lazy Loading): Super Admin & Admin JS chunks are loaded ONLY when requested!
@@ -124,6 +124,23 @@ export default function App() {
   const [customerPhoneInput, setCustomerPhoneInput] = useState('');
   const [orderSuccessModal, setOrderSuccessModal] = useState(null);
   const [placingOrder, setPlacingOrder] = useState(false);
+  const [activeOrderId, setActiveOrderId] = useState(localStorage.getItem('raman_active_order_id') || null);
+  const [activeOrderTrack, setActiveOrderTrack] = useState(null);
+
+  useEffect(() => {
+    if (!activeOrderId) return;
+    const checkStatus = async () => {
+      try {
+        const data = await trackOrderStatus(activeOrderId);
+        setActiveOrderTrack(data);
+      } catch (err) {
+        console.error('Failed to track active order:', err);
+      }
+    };
+    checkStatus();
+    const interval = setInterval(checkStatus, 5000);
+    return () => clearInterval(interval);
+  }, [activeOrderId]);
 
   const handleSendDirectOrder = async () => {
     if (cartItems.length === 0) return;
@@ -146,6 +163,11 @@ export default function App() {
         items: itemsPayload,
         total_amount: grandTotal
       });
+
+      if (res && res.order_id) {
+        localStorage.setItem('raman_active_order_id', String(res.order_id));
+        setActiveOrderId(String(res.order_id));
+      }
 
       setOrderSuccessModal(res);
       setCartItems([]);
@@ -567,6 +589,56 @@ export default function App() {
           }
         }}
       />
+
+      {/* 🛎️ Live Dine-In Customer Order Tracker Banner */}
+      {activeOrderTrack && (
+        <div style={{
+          background: 'linear-gradient(135deg, #0A2315 0%, #143A24 100%)',
+          color: '#FFFFFF',
+          padding: '10px 16px',
+          borderBottom: '2px solid var(--gold-bright)',
+          display: 'flex',
+          justifyContent: 'space-between',
+          alignItems: 'center',
+          boxShadow: '0 4px 12px rgba(0,0,0,0.2)'
+        }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+            <span style={{ fontSize: '1.2rem' }}>🛎️</span>
+            <div>
+              <strong style={{ fontSize: '0.86rem', color: 'var(--gold-bright)', display: 'block' }}>
+                Order #{activeOrderTrack.id} • Table #{activeOrderTrack.table_number || '1'}
+              </strong>
+              <span style={{ fontSize: '0.76rem', color: '#E5E7EB', fontWeight: 700 }}>
+                Status: {
+                  activeOrderTrack.status === 'pending' ? 'Pending Kitchen Acceptance 🟡' :
+                  activeOrderTrack.status === 'preparing' ? 'Chef is Preparing 👨‍🍳' :
+                  activeOrderTrack.status === 'served' ? 'Served to Table 🟢' : 'Cancelled 🔴'
+                }
+              </span>
+            </div>
+          </div>
+
+          <button
+            onClick={() => {
+              localStorage.removeItem('raman_active_order_id');
+              setActiveOrderId(null);
+              setActiveOrderTrack(null);
+            }}
+            style={{
+              background: 'rgba(255,255,255,0.15)',
+              color: '#FFFFFF',
+              border: '1px solid rgba(255,255,255,0.3)',
+              padding: '4px 10px',
+              borderRadius: 'var(--radius-pill)',
+              fontSize: '0.72rem',
+              fontWeight: 800,
+              cursor: 'pointer'
+            }}
+          >
+            Clear Banner
+          </button>
+        </div>
+      )}
 
       {/* Live Search Bar & Quick Micro-Filter Pills */}
       <SearchBar

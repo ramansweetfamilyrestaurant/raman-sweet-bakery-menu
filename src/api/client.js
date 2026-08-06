@@ -306,3 +306,8 @@ export async function updateOrderStatus(id, status, token) {
   });
   return handleResponse(res, 'Failed to update order status');
 }
+
+export async function trackOrderStatus(id) {
+  const res = await fetch(`${API_BASE}/orders/track/${id}`);
+  return handleResponse(res, 'Failed to track order');
+}

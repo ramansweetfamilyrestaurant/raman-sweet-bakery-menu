@@ -254,4 +254,23 @@ router.post('/orders', async (req, res) => {
   }
 });
 
+// GET Track Order Status (Public Customer Route)
+router.get('/orders/track/:id', async (req, res) => {
+  try {
+    const { id } = req.params;
+    const orders = await query('SELECT id, table_number, status, total_amount, items, created_at FROM orders WHERE id = $1', [id]);
+    if (orders.length === 0) {
+      return res.status(404).json({ error: 'Order not found' });
+    }
+    const order = orders[0];
+    res.json({
+      ...order,
+      items: typeof order.items === 'string' ? JSON.parse(order.items) : order.items
+    });
+  } catch (err) {
+    console.error('Track order error:', err);
+    res.status(500).json({ error: 'Failed to track order' });
+  }
+});
+
 export default router;

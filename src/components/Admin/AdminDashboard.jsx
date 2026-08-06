@@ -21,11 +21,46 @@ export default function AdminDashboard({ token, username, onLogout, onReturnToMe
 
   // Live Orders (KOT) State
   const [orders, setOrders] = useState([]);
+  const [prevPendingCount, setPrevPendingCount] = useState(0);
+
+  const playKitchenChime = () => {
+    try {
+      const ctx = new (window.AudioContext || window.webkitAudioContext)();
+      const osc1 = ctx.createOscillator();
+      const osc2 = ctx.createOscillator();
+      const gain = ctx.createGain();
+
+      osc1.type = 'sine';
+      osc1.frequency.setValueAtTime(880, ctx.currentTime);
+      osc2.type = 'sine';
+      osc2.frequency.setValueAtTime(1320, ctx.currentTime);
+
+      gain.gain.setValueAtTime(0.3, ctx.currentTime);
+      gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.8);
+
+      osc1.connect(gain);
+      osc2.connect(gain);
+      gain.connect(ctx.destination);
+
+      osc1.start();
+      osc2.start();
+      osc1.stop(ctx.currentTime + 0.8);
+      osc2.stop(ctx.currentTime + 0.8);
+    } catch (e) {
+      console.warn('Audio Context chime error:', e);
+    }
+  };
 
   const loadOrders = async () => {
     try {
       const data = await fetchAdminOrders(token);
-      setOrders(Array.isArray(data) ? data : []);
+      const safeData = Array.isArray(data) ? data : [];
+      const pendingCount = safeData.filter(o => o.status === 'pending').length;
+      if (pendingCount > prevPendingCount) {
+        playKitchenChime();
+      }
+      setPrevPendingCount(pendingCount);
+      setOrders(safeData);
     } catch (err) {
       console.error('Failed to load orders:', err);
     }
@@ -38,6 +73,53 @@ export default function AdminDashboard({ token, username, onLogout, onReturnToMe
     } catch (err) {
       alert(err.message || 'Failed to update order status');
     }
+  };
+
+  const handlePrintKOT = (order) => {
+    const printWindow = window.open('', '_blank', 'width=400,height=600');
+    if (!printWindow) return;
+    let itemsHtml = '';
+    (order.items || []).forEach(i => {
+      itemsHtml += `
+        <tr>
+          <td style="padding:6px 0;font-weight:bold;">${i.quantity}x ${i.name}</td>
+          <td style="text-align:right;">₹${i.price * i.quantity}</td>
+        </tr>
+      `;
+    });
+    printWindow.document.write(`
+      <!DOCTYPE html>
+      <html>
+        <head>
+          <title>KOT Ticket - Table ${order.table_number}</title>
+          <style>
+            body { font-family: monospace; padding: 20px; width: 280px; margin: 0 auto; background: #FFF; }
+            h2 { text-align: center; margin: 0 0 4px 0; font-size: 18px; }
+            .meta { border-bottom: 1px dashed #000; padding-bottom: 8px; margin-bottom: 10px; font-size: 13px; }
+            table { width: 100%; font-size: 14px; border-collapse: collapse; }
+            .total { border-top: 1px dashed #000; margin-top: 10px; padding-top: 8px; font-weight: bold; font-size: 16px; display: flex; justify-content: space-between; }
+          </style>
+        </head>
+        <body>
+          <h2>*** KITCHEN TICKET (KOT) ***</h2>
+          <div class="meta">
+            <div><strong>TABLE #${order.table_number || '1'}</strong></div>
+            <div>Order ID: #${order.id}</div>
+            <div>Guest: ${order.customer_name || 'Dine-In Customer'}</div>
+            <div>Time: ${new Date(order.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</div>
+          </div>
+          <table>
+            ${itemsHtml}
+          </table>
+          <div class="total">
+            <span>TOTAL:</span>
+            <span>₹${order.total_amount}</span>
+          </div>
+          <script>window.onload = function() { window.print(); };</script>
+        </body>
+      </html>
+    `);
+    printWindow.document.close();
   };
 
   useEffect(() => {
@@ -829,6 +911,26 @@ export default function AdminDashboard({ token, username, onLogout, onReturnToMe
 
                       {/* Action Buttons */}
                       <div style={{ display: 'flex', gap: '6px' }}>
+                        <button
+                          onClick={() => handlePrintKOT(o)}
+                          style={{
+                            background: '#F3F4F6',
+                            color: '#374151',
+                            border: '1px solid #D1D5DB',
+                            padding: '8px 10px',
+                            borderRadius: '10px',
+                            fontWeight: 800,
+                            fontSize: '0.76rem',
+                            cursor: 'pointer',
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: '4px'
+                          }}
+                          title="Print Kitchen Order Ticket"
+                        >
+                          <Printer size={13} /> KOT
+                        </button>
+
                         {o.status === 'pending' && (
                           <button
                             onClick={() => handleUpdateStatus(o.id, 'preparing')}
