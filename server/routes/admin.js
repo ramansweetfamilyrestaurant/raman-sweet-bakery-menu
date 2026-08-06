@@ -181,7 +181,7 @@ router.post('/dishes', authenticateToken, async (req, res) => {
         portion, portion_half_label, portion_full_label, badge, ingredients, taste_profile, type, available
       ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15) RETURNING id`,
       [
-        restoId, category_id, name, description || '', image || '/uploads/logo.jpg', price, price_half || null,
+        restoId, category_id, name, description || '', image || '', price, price_half || null,
         portion || '', portion_half_label || '', portion_full_label || '', badge || '', ingredients || '', taste_profile || '', type || 'veg', availVal
       ]
     );

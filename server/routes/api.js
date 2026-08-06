@@ -66,7 +66,7 @@ router.get('/info', async (req, res) => {
         tagline: resto.tagline || '',
         badge: resto.resto_type === 'pure_veg' ? '100% Pure Veg' : 'Veg & Non-Veg',
         resto_type: resto.resto_type || 'pure_veg',
-        logo: resto.logo || '/uploads/logo.jpg',
+        logo: resto.logo || '',
         openingHours: resto.opening_hours || '',
         phone: resto.phone || '',
         address: resto.address || '',

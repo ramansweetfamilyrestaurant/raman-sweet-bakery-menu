@@ -41,22 +41,40 @@ export default function DishCard({ dish, onClick, onAddToCart, currencySymbol = 
         backgroundColor: 'var(--bg-secondary)',
         overflow: 'hidden'
       }}>
-        <img 
-          src={dish.image || '/uploads/logo.jpg'} 
-          alt={dish.name}
-          loading="lazy"
-          style={{
+        {dish.image && dish.image !== '/uploads/logo.jpg' ? (
+          <img 
+            src={dish.image} 
+            alt={dish.name}
+            loading="lazy"
+            style={{
+              position: 'absolute',
+              top: 0,
+              left: 0,
+              width: '100%',
+              height: '100%',
+              objectFit: 'cover'
+            }}
+            onError={(e) => {
+              e.target.style.display = 'none';
+            }}
+          />
+        ) : (
+          <div style={{
             position: 'absolute',
             top: 0,
             left: 0,
             width: '100%',
             height: '100%',
-            objectFit: 'cover'
-          }}
-          onError={(e) => {
-            e.target.src = '/uploads/logo.jpg';
-          }}
-        />
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            background: 'var(--header-gradient)',
+            color: 'var(--gold-bright)',
+            fontSize: '1.8rem'
+          }}>
+            🍽️
+          </div>
+        )}
 
         {/* Dynamic Dietary Badge */}
         <div style={{

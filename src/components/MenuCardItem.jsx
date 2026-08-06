@@ -221,7 +221,7 @@ export default function MenuCardItem({ dish, lang, onClick, onAddToCart, currenc
 
         {/* Dish Thumbnail & + Add WhatsApp Button */}
         <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '4px' }}>
-          {dish.image && (
+          {dish.image && dish.image !== '/uploads/logo.jpg' && (
             <div 
               onClick={() => onClick(dish)}
               style={{

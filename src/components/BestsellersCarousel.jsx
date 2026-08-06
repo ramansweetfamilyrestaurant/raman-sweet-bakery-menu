@@ -88,12 +88,27 @@ export default function BestsellersCarousel({ dishes, onSelectDish }) {
               background: 'var(--gold-soft)',
               overflow: 'hidden'
             }}>
-              <img
-                src={dish.image || '/uploads/logo.jpg'}
-                alt={dish.name}
-                style={{ width: '100%', height: '100%', objectFit: 'cover' }}
-                onError={(e) => { e.target.src = '/uploads/logo.jpg'; }}
-              />
+              {dish.image && dish.image !== '/uploads/logo.jpg' ? (
+                <img
+                  src={dish.image}
+                  alt={dish.name}
+                  style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                  onError={(e) => { e.target.style.display = 'none'; }}
+                />
+              ) : (
+                <div style={{
+                  width: '100%',
+                  height: '100%',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  background: 'var(--header-gradient)',
+                  color: 'var(--gold-bright)',
+                  fontSize: '2rem'
+                }}>
+                  🌟
+                </div>
+              )}
 
               <div style={{
                 position: 'absolute',

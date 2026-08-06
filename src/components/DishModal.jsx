@@ -74,15 +74,31 @@ export default function DishModal({ dish, onClose, currencySymbol = '₹' }) {
           background: 'var(--gold-soft)',
           position: 'relative'
         }}>
-          <img
-            src={dish.image || '/uploads/logo.jpg'}
-            alt={dish.name}
-            style={{
+          {dish.image && dish.image !== '/uploads/logo.jpg' ? (
+            <img
+              src={dish.image}
+              alt={dish.name}
+              style={{
+                width: '100%',
+                height: '100%',
+                objectFit: 'cover'
+              }}
+              onError={(e) => { e.target.style.display = 'none'; }}
+            />
+          ) : (
+            <div style={{
               width: '100%',
               height: '100%',
-              objectFit: 'cover'
-            }}
-          />
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              background: 'var(--header-gradient)',
+              color: 'var(--gold-bright)',
+              fontSize: '3.5rem'
+            }}>
+              🍲
+            </div>
+          )}
           
           {/* FSSAI 100% Pure Veg Badge Overlay */}
           <div style={{
