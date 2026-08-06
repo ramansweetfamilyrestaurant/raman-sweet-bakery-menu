@@ -92,28 +92,43 @@ export default function AdminDashboard({ token, username, onLogout, onReturnToMe
       alert('No sales data available to export');
       return;
     }
+
+    const formatDateForExcel = (dateStr) => {
+      if (!dateStr) return 'N/A';
+      try {
+        const d = new Date(dateStr);
+        if (isNaN(d.getTime())) return String(dateStr);
+        return d.toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' }) + ' ' +
+               d.toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit', hour12: true });
+      } catch (e) {
+        return String(dateStr);
+      }
+    };
+
     const headers = ['Order ID', 'Date & Time', 'Table No', 'Total Amount (Rs)', 'Status', 'Items Ordered'];
     const rows = orders.map(o => {
       const itemsList = typeof o.items === 'string' ? JSON.parse(o.items) : (Array.isArray(o.items) ? o.items : []);
-      const itemSummary = itemsList.map(i => `${i.name} (x${i.quantity})`).join('; ');
+      const itemSummary = itemsList.map(i => `${i.name}${i.portion ? ' (' + i.portion + ')' : ''} x${i.quantity}`).join('; ');
       return [
         o.id,
-        `"${o.created_at || ''}"`,
+        `"${formatDateForExcel(o.created_at)}"`,
         `"${o.table_number || '1'}"`,
         o.total_amount,
-        `"${o.status}"`,
+        `"${o.status ? o.status.toUpperCase() : 'PENDING'}"`,
         `"${itemSummary.replace(/"/g, '""')}"`
       ].join(',');
     });
 
-    const csvContent = 'data:text/csv;charset=utf-8,' + [headers.join(','), ...rows].join('\n');
-    const encodedUri = encodeURI(csvContent);
+    const csvData = '\uFEFF' + [headers.join(','), ...rows].join('\n');
+    const blob = new Blob([csvData], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
     const link = document.createElement('a');
-    link.setAttribute('href', encodedUri);
+    link.setAttribute('href', url);
     link.setAttribute('download', `Sales_Report_${new Date().toISOString().substring(0, 10)}.csv`);
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
+    URL.revokeObjectURL(url);
   };
 
   const handleResolveServiceRequest = async (id) => {
