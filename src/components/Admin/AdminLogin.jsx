@@ -2,8 +2,8 @@ import React, { useState } from 'react';
 import { Lock, User, KeyRound, ArrowLeft, AlertCircle } from 'lucide-react';
 import { adminLogin } from '../../api/client';
 
-export default function AdminLogin({ onLoginSuccess, onCancel }) {
-  const [username, setUsername] = useState('admin');
+export default function AdminLogin({ onLoginSuccess, onCancel, restaurantName }) {
+  const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
@@ -65,14 +65,14 @@ export default function AdminLogin({ onLoginSuccess, onCancel }) {
 
           <h2 style={{
             fontFamily: 'var(--font-heading)',
-            fontSize: '1.4rem',
-            fontWeight: 700,
+            fontSize: '1.3rem',
+            fontWeight: 800,
             color: '#FFFFFF'
           }}>
-            Manager Login
+            {restaurantName ? `${restaurantName} Owner Login` : 'Restaurant Owner Login'}
           </h2>
           <p style={{ fontSize: '0.8rem', color: 'var(--accent-gold-light)' }}>
-            Restaurant Owner Admin Portal
+            Digital Menu Admin Control Panel
           </p>
         </div>
 

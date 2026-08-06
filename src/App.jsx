@@ -117,7 +117,7 @@ export default function App() {
       const hash = window.location.hash.toLowerCase();
 
       const isSuperAdmin = path.startsWith('/super-admin') || path.startsWith('/superadmin') || hash === '#super-admin' || hash === '#superadmin';
-      const isRouteAdmin = (path.startsWith('/admin') || hash === '#admin') && !isSuperAdmin;
+      const isRouteAdmin = (path.includes('/admin') || hash === '#admin') && !isSuperAdmin;
 
       if (isSuperAdmin) {
         if (superToken) {
@@ -151,16 +151,23 @@ export default function App() {
     setAdminToken(token);
     setAdminUsername(username);
     setView('admin-dashboard');
-    window.history.pushState({}, '', '/admin');
+    const currentSlug = getSlugFromUrl() || (info && info.slug);
+    if (currentSlug) {
+      window.history.pushState({}, '', `/r/${currentSlug}/admin`);
+    } else {
+      window.history.pushState({}, '', '/admin');
+    }
   };
 
   const handleAdminLogout = () => {
+    const currentSlug = getSlugFromUrl() || (info && info.slug) || 'raman-sweet-bakery';
     localStorage.removeItem('raman_admin_token');
     localStorage.removeItem('raman_admin_user');
     setAdminToken('');
     setAdminUsername('');
     setView('menu');
-    window.history.pushState({}, '', '/');
+    window.history.pushState({}, '', `/r/${currentSlug}`);
+    loadMenuData(currentSlug);
   };
 
   const handleSuperAdminLoginSuccess = (token, username) => {
@@ -334,9 +341,10 @@ export default function App() {
     return (
       <Suspense fallback={<div style={{ padding: '60px', textAlign: 'center', background: '#0A2315', color: '#FFFFFF', minHeight: '100vh', fontWeight: 800 }}>🔑 Loading Admin Login...</div>}>
         <AdminLogin
+          restaurantName={info?.name}
           onLoginSuccess={handleAdminLoginSuccess}
           onCancel={() => {
-            const targetSlug = getSlugFromUrl() || 'raman-sweet-bakery';
+            const targetSlug = getSlugFromUrl() || (info && info.slug) || 'raman-sweet-bakery';
             setView('menu');
             window.history.pushState({}, '', `/r/${targetSlug}`);
             loadMenuData(targetSlug);
@@ -866,13 +874,13 @@ export default function App() {
       <Footer
         info={info}
         onOpenAdmin={() => {
+          const currentSlug = getSlugFromUrl() || (info && info.slug) || 'raman-sweet-bakery';
           if (adminToken) {
             setView('admin-dashboard');
-            window.history.pushState({}, '', '/admin');
           } else {
             setView('admin-login');
-            window.history.pushState({}, '', '/admin');
           }
+          window.history.pushState({}, '', `/r/${currentSlug}/admin`);
         }}
       />
     </div>
