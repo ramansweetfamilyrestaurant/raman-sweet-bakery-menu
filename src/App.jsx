@@ -12,6 +12,7 @@ import DishFormModal from './components/Admin/DishFormModal';
 import CategoryFormModal from './components/Admin/CategoryFormModal';
 import { fetchRestaurantInfo, fetchCategories, fetchDishes, toggleDishAvailability, deleteDish, createDirectOrder, trackOrderStatus, fetchActiveTableOrder } from './api/client';
 import { LayoutList, Grid, BookOpen, X, Sparkles, ShieldAlert, Phone, Plus, Edit3, Trash2, LogOut, Settings, Crown, CheckCircle, MessageSquare, XCircle } from 'lucide-react';
+import { verifyCustomerLocation } from './utils/geo';
 
 // Code Splitting (Lazy Loading): Super Admin & Admin JS chunks are loaded ONLY when requested!
 const AdminLogin = lazy(() => import('./components/Admin/AdminLogin'));
@@ -230,6 +231,21 @@ export default function App() {
     if (cartItems.length === 0) return;
     setPlacingOrder(true);
     try {
+      // 📍 GPS Geo-Fencing Radius Check (Strictly for Direct Table Orders)
+      if (info && info.latitude && info.longitude) {
+        const geoCheck = await verifyCustomerLocation(
+          info.latitude,
+          info.longitude,
+          info.max_distance_meters || 100
+        );
+
+        if (!geoCheck.allowed) {
+          alert(`📍 ${geoCheck.message || 'Location verification failed.'}`);
+          setPlacingOrder(false);
+          return;
+        }
+      }
+
       const currentSlug = getSlugFromUrl() || (info && info.slug) || 'raman-sweet-bakery';
       const itemsPayload = cartItems.map(item => ({
         dish_id: item.dish.id,

@@ -84,6 +84,9 @@ router.get('/info', async (req, res) => {
         google_reviews_enabled: resto.google_reviews_enabled !== 0 && resto.google_reviews_enabled !== false,
         theme_color: resto.theme_color || 'gold',
         scan_count: resto.scan_count || 0,
+        latitude: resto.latitude !== undefined && resto.latitude !== null ? Number(resto.latitude) : 26.6500,
+        longitude: resto.longitude !== undefined && resto.longitude !== null ? Number(resto.longitude) : 84.9167,
+        max_distance_meters: resto.max_distance_meters || 100,
         active: (resto.active === 1 || resto.active === true || resto.active === '1')
       });
     }
