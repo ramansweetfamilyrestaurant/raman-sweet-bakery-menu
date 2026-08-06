@@ -922,13 +922,23 @@ export default function SuperAdminDashboard({ token, username, onLogout, onRetur
                     onChange={(e) => {
                       const tier = e.target.value;
                       const price = tier === 'basic' ? 499 : tier === 'enterprise' ? 1999 : 999;
-                      setForm({ ...form, plan_tier: tier, plan_price: price });
+                      const whatsapp = tier !== 'basic';
+                      const direct = tier === 'enterprise';
+                      const reviews = tier !== 'basic';
+                      setForm({
+                        ...form,
+                        plan_tier: tier,
+                        plan_price: price,
+                        whatsapp_enabled: whatsapp,
+                        direct_ordering_enabled: direct,
+                        google_reviews_enabled: reviews
+                      });
                     }}
                     style={{ width: '100%', padding: '11px 14px', borderRadius: '12px', border: '1.5px solid var(--border-light)', fontSize: '0.86rem', outline: 'none', fontWeight: 700 }}
                   >
-                    <option value="basic">Basic Plan (₹499/mo)</option>
-                    <option value="pro">Pro Plan (₹999/mo)</option>
-                    <option value="enterprise">Enterprise Plan (₹1,999/mo)</option>
+                    <option value="basic">Basic Plan (₹499/mo) - Menu View Only</option>
+                    <option value="pro">Pro Plan (₹999/mo) - Menu + WhatsApp + Reviews</option>
+                    <option value="enterprise">Enterprise Plan (₹1,999/mo) - All Features + Table QR</option>
                   </select>
                 </div>
 
@@ -1127,13 +1137,23 @@ export default function SuperAdminDashboard({ token, username, onLogout, onRetur
                     onChange={(e) => {
                       const tier = e.target.value;
                       const price = tier === 'basic' ? 499 : tier === 'enterprise' ? 1999 : 999;
-                      setEditModalData({ ...editModalData, plan_tier: tier, plan_price: price });
+                      const whatsapp = tier !== 'basic';
+                      const direct = tier === 'enterprise';
+                      const reviews = tier !== 'basic';
+                      setEditModalData({
+                        ...editModalData,
+                        plan_tier: tier,
+                        plan_price: price,
+                        whatsapp_enabled: whatsapp,
+                        direct_ordering_enabled: direct,
+                        google_reviews_enabled: reviews
+                      });
                     }}
                     style={{ width: '100%', padding: '11px 14px', borderRadius: '12px', border: '1.5px solid var(--border-light)', fontSize: '0.86rem', outline: 'none', fontWeight: 700 }}
                   >
-                    <option value="basic">Basic Plan (₹499/mo)</option>
-                    <option value="pro">Pro Plan (₹999/mo)</option>
-                    <option value="enterprise">Enterprise Plan (₹1,999/mo)</option>
+                    <option value="basic">Basic Plan (₹499/mo) - Menu View Only</option>
+                    <option value="pro">Pro Plan (₹999/mo) - Menu + WhatsApp + Reviews</option>
+                    <option value="enterprise">Enterprise Plan (₹1,999/mo) - All Features + Table QR</option>
                   </select>
                 </div>
 
