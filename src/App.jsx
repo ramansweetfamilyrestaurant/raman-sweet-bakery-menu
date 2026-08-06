@@ -137,7 +137,13 @@ export default function App() {
   const [customerPhoneInput, setCustomerPhoneInput] = useState('');
   const [orderSuccessModal, setOrderSuccessModal] = useState(null);
   const [placingOrder, setPlacingOrder] = useState(false);
-  const [activeOrderId, setActiveOrderId] = useState(localStorage.getItem('raman_active_order_id') || null);
+
+  // FIX: Table-specific localStorage key to prevent cross-table order leakage
+  const getOrderStorageKey = () => {
+    const t = tableNum || orderTableInput || '1';
+    return `raman_active_order_id_table_${t}`;
+  };
+  const [activeOrderId, setActiveOrderId] = useState(localStorage.getItem(getOrderStorageKey()) || null);
   const [activeOrderTrack, setActiveOrderTrack] = useState(null);
 
   // Multi-Device Table-Level Live Sync Effect
@@ -151,6 +157,14 @@ export default function App() {
           const data = await trackOrderStatus(activeOrderId);
           if (data) {
             setActiveOrderTrack(data);
+            // FIX: Auto-dismiss completed/cancelled orders after 15 seconds
+            if (data.status === 'completed' || data.status === 'cancelled') {
+              setTimeout(() => {
+                localStorage.removeItem(getOrderStorageKey());
+                setActiveOrderId(null);
+                setActiveOrderTrack(null);
+              }, 15000);
+            }
             return;
           }
         }
@@ -197,7 +211,7 @@ export default function App() {
       });
 
       if (res && res.order_id) {
-        localStorage.setItem('raman_active_order_id', String(res.order_id));
+        localStorage.setItem(getOrderStorageKey(), String(res.order_id));
         setActiveOrderId(String(res.order_id));
       }
 
@@ -662,7 +676,7 @@ export default function App() {
 
           <button
             onClick={() => {
-              localStorage.removeItem('raman_active_order_id');
+              localStorage.removeItem(getOrderStorageKey());
               setActiveOrderId(null);
               setActiveOrderTrack(null);
             }}
