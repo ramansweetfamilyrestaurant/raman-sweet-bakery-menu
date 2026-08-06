@@ -238,10 +238,12 @@ router.post('/orders', async (req, res) => {
 
     const itemsJson = typeof items === 'object' ? JSON.stringify(items) : items;
 
+    const createdAt = new Date().toISOString();
+
     const result = await query(`
       INSERT INTO orders (
-        restaurant_id, table_number, customer_name, customer_phone, items, total_amount, status
-      ) VALUES ($1, $2, $3, $4, $5, $6, $7) RETURNING id
+        restaurant_id, table_number, customer_name, customer_phone, items, total_amount, status, created_at
+      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8) RETURNING id
     `, [
       targetId,
       table_number || '1',
@@ -249,7 +251,8 @@ router.post('/orders', async (req, res) => {
       customer_phone || '',
       itemsJson,
       total_amount || 0,
-      'pending'
+      'pending',
+      createdAt
     ]);
 
     const orderId = result[0]?.id || result.lastInsertRowid;

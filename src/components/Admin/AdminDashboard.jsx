@@ -155,13 +155,23 @@ export default function AdminDashboard({ token, username, onLogout, onReturnToMe
     }
   };
 
+  const parseDateRobust = (dateStr) => {
+    if (!dateStr) return new Date();
+    let str = String(dateStr).trim();
+    if (!str.includes('Z') && !str.includes('+') && !str.includes('T')) {
+      str = str.replace(' ', 'T') + 'Z';
+    } else if (!str.includes('Z') && !str.includes('+')) {
+      str = str + 'Z';
+    }
+    let d = new Date(str);
+    if (isNaN(d.getTime())) d = new Date(dateStr);
+    return d;
+  };
+
   const formatDateTime = (dateStr) => {
     if (!dateStr) return '';
     try {
-      let d = new Date(dateStr);
-      if (isNaN(d.getTime())) {
-        d = new Date(String(dateStr).replace(' ', 'T'));
-      }
+      let d = parseDateRobust(dateStr);
       if (!isNaN(d.getTime())) {
         const datePart = d.toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' });
         const timePart = d.toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit', hour12: true });
@@ -169,6 +179,29 @@ export default function AdminDashboard({ token, username, onLogout, onReturnToMe
       }
     } catch (e) {}
     return String(dateStr);
+  };
+
+  const getSeatedTimeInfo = (dateStr) => {
+    if (!dateStr) return { timeStr: '', agoStr: '' };
+    try {
+      let d = parseDateRobust(dateStr);
+      if (!isNaN(d.getTime())) {
+        const timeStr = d.toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit', hour12: true });
+        const now = new Date();
+        const diffMs = Math.max(0, now.getTime() - d.getTime());
+        const diffMins = Math.floor(diffMs / 60000);
+
+        let agoStr = 'Just now';
+        if (diffMins >= 1 && diffMins < 60) agoStr = `${diffMins}m ago`;
+        else if (diffMins >= 60) {
+          const hrs = Math.floor(diffMins / 60);
+          const mins = diffMins % 60;
+          agoStr = `${hrs}h ${mins}m ago`;
+        }
+        return { timeStr, agoStr };
+      }
+    } catch (e) {}
+    return { timeStr: String(dateStr), agoStr: '' };
   };
 
   const handleUpdateStatus = async (orderId, newStatus) => {
@@ -1199,8 +1232,11 @@ export default function AdminDashboard({ token, username, onLogout, onReturnToMe
                             <div style={{ fontSize: '0.74rem', color: '#6B7280', marginTop: '2px' }}>
                               {t.activeOrder.customer_name || 'Dine-In Guest'} • {Array.isArray(t.activeOrder.items) ? t.activeOrder.items.length : 1} items
                             </div>
-                            <div style={{ fontSize: '0.7rem', color: '#9CA3AF', marginTop: '4px' }}>
-                              🕒 {formatDateTime(t.activeOrder.created_at)}
+                            <div style={{ fontSize: '0.72rem', fontWeight: 700, color: '#374151', marginTop: '6px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                              <span>🕒 {getSeatedTimeInfo(t.activeOrder.created_at).timeStr}</span>
+                              <span style={{ background: '#FEE2E2', color: '#991B1B', padding: '1px 6px', borderRadius: '6px', fontSize: '0.68rem', fontWeight: 800 }}>
+                                ⏳ {getSeatedTimeInfo(t.activeOrder.created_at).agoStr}
+                              </span>
                             </div>
                           </div>
                         )}
