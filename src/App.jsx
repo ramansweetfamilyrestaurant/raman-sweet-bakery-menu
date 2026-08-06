@@ -13,6 +13,7 @@ import CategoryFormModal from './components/Admin/CategoryFormModal';
 import { fetchRestaurantInfo, fetchCategories, fetchDishes, toggleDishAvailability, deleteDish, createDirectOrder, trackOrderStatus, fetchActiveTableOrder } from './api/client';
 import { LayoutList, Grid, BookOpen, X, Sparkles, ShieldAlert, Phone, Plus, Edit3, Trash2, LogOut, Settings, Crown, CheckCircle, MessageSquare, XCircle } from 'lucide-react';
 import { verifyCustomerLocation } from './utils/geo';
+import ServiceRequestModal from './components/ServiceRequestModal';
 
 // Code Splitting (Lazy Loading): Super Admin & Admin JS chunks are loaded ONLY when requested!
 const AdminLogin = lazy(() => import('./components/Admin/AdminLogin'));
@@ -81,6 +82,8 @@ export default function App() {
   const [selectedDishModal, setSelectedDishModal] = useState(null);
   const [showInfoModal, setShowInfoModal] = useState(false);
   const [showCategoryDrawer, setShowCategoryDrawer] = useState(false);
+  const [showServiceModal, setShowServiceModal] = useState(false);
+  const [serviceToastMsg, setServiceToastMsg] = useState('');
   const [loading, setLoading] = useState(true);
 
   // In-Context Owner Modals State
@@ -1005,47 +1008,108 @@ export default function App() {
         )}
       </main>
 
-      {/* 💬 / ⚡ Floating Order Button (Gated: Only visible when QR scanned with table number and session active) */}
-      {effectiveTableNum && info && (info.direct_ordering_enabled || info.whatsapp_enabled) && (
+      {/* 💬 / ⚡ / 🛎️ Floating Action Bar (Call Staff + Quick Order) */}
+      {effectiveTableNum && info && (
         <div style={{
           position: 'fixed',
           bottom: '84px',
           right: '16px',
-          zIndex: 9999
+          zIndex: 9999,
+          display: 'flex',
+          gap: '8px'
         }}>
+          {/* 🛎️ Call Staff Button */}
           <button
-            onClick={() => setShowCartDrawer(true)}
+            onClick={() => setShowServiceModal(true)}
             style={{
-              background: 'linear-gradient(135deg, #10B981 0%, #059669 100%)',
+              background: 'linear-gradient(135deg, #7C3AED 0%, #6D28D9 100%)',
               color: '#FFFFFF',
-              padding: '12px 20px',
+              padding: '12px 16px',
               borderRadius: 'var(--radius-pill)',
               fontWeight: 800,
-              fontSize: '0.88rem',
+              fontSize: '0.86rem',
               border: '2px solid #FFFFFF',
               cursor: 'pointer',
               display: 'flex',
               alignItems: 'center',
-              gap: '8px',
-              boxShadow: '0 8px 28px rgba(16, 185, 129, 0.5)'
+              gap: '6px',
+              boxShadow: '0 8px 24px rgba(124, 58, 237, 0.45)'
             }}
           >
-            <MessageSquare size={18} />
-            <span>{info.direct_ordering_enabled !== false ? '⚡ Quick Order' : '💬 WhatsApp Order'}</span>
-            {cartItems.length > 0 && (
-              <span style={{
-                background: '#FFFFFF',
-                color: '#059669',
-                fontSize: '0.78rem',
-                fontWeight: 900,
-                padding: '2px 8px',
-                borderRadius: '12px',
-                marginLeft: '2px'
-              }}>
-                {cartItems.reduce((acc, i) => acc + i.quantity, 0)}
-              </span>
-            )}
+            <span>🛎️ Call Staff</span>
           </button>
+
+          {/* ⚡ Quick Order Button */}
+          {(info.direct_ordering_enabled || info.whatsapp_enabled) && (
+            <button
+              onClick={() => setShowCartDrawer(true)}
+              style={{
+                background: 'linear-gradient(135deg, #10B981 0%, #059669 100%)',
+                color: '#FFFFFF',
+                padding: '12px 20px',
+                borderRadius: 'var(--radius-pill)',
+                fontWeight: 800,
+                fontSize: '0.88rem',
+                border: '2px solid #FFFFFF',
+                cursor: 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '8px',
+                boxShadow: '0 8px 28px rgba(16, 185, 129, 0.5)'
+              }}
+            >
+              <MessageSquare size={18} />
+              <span>{info.direct_ordering_enabled !== false ? '⚡ Quick Order' : '💬 WhatsApp Order'}</span>
+              {cartItems.length > 0 && (
+                <span style={{
+                  background: '#FFFFFF',
+                  color: '#059669',
+                  fontSize: '0.78rem',
+                  fontWeight: 900,
+                  padding: '2px 8px',
+                  borderRadius: '12px',
+                  marginLeft: '2px'
+                }}>
+                  {cartItems.reduce((acc, i) => acc + i.quantity, 0)}
+                </span>
+              )}
+            </button>
+          )}
+        </div>
+      )}
+
+      {/* 🛎️ Service Request Modal & Toast */}
+      {showServiceModal && (
+        <ServiceRequestModal
+          tableNum={effectiveTableNum}
+          slug={getSlugFromUrl() || (info && info.slug)}
+          onClose={() => setShowServiceModal(false)}
+          onSuccess={(msg) => {
+            setServiceToastMsg(msg);
+            setTimeout(() => setServiceToastMsg(''), 6000);
+          }}
+        />
+      )}
+
+      {serviceToastMsg && (
+        <div style={{
+          position: 'fixed',
+          top: '80px',
+          left: '50%',
+          transform: 'translateX(-50%)',
+          background: 'linear-gradient(135deg, #0A2315 0%, #143A24 100%)',
+          color: '#4ADE80',
+          padding: '12px 20px',
+          borderRadius: 'var(--radius-pill)',
+          border: '1.5px solid #4ADE80',
+          boxShadow: '0 10px 30px rgba(0,0,0,0.4)',
+          zIndex: 10010,
+          fontWeight: 800,
+          fontSize: '0.86rem',
+          textAlign: 'center',
+          animation: 'fadeIn 0.3s ease-out'
+        }}>
+          {serviceToastMsg}
         </div>
       )}
 

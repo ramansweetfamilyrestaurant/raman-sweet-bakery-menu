@@ -397,4 +397,35 @@ router.patch('/orders/:id/status', authenticateToken, async (req, res) => {
   }
 });
 
+// GET Live Table Service Requests / Waiter Calls
+router.get('/service-requests', authenticateToken, async (req, res) => {
+  try {
+    const restoId = req.user.restaurant_id || 1;
+    const requests = await query(
+      "SELECT * FROM service_requests WHERE restaurant_id = $1 AND status = 'pending' ORDER BY id DESC LIMIT 50",
+      [restoId]
+    );
+    res.json(requests);
+  } catch (err) {
+    console.error('Fetch service requests error:', err);
+    res.status(500).json({ error: 'Failed to fetch service requests' });
+  }
+});
+
+// PATCH Resolve Service Request
+router.patch('/service-requests/:id/resolve', authenticateToken, async (req, res) => {
+  try {
+    const restoId = req.user.restaurant_id || 1;
+    const { id } = req.params;
+    await query(
+      "UPDATE service_requests SET status = 'resolved' WHERE id = $1 AND restaurant_id = $2",
+      [id, restoId]
+    );
+    res.json({ success: true, id, status: 'resolved' });
+  } catch (err) {
+    console.error('Resolve service request error:', err);
+    res.status(500).json({ error: 'Failed to resolve service request' });
+  }
+});
+
 export default router;

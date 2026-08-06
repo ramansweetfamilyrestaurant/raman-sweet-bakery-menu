@@ -315,4 +315,35 @@ router.get('/orders/active-table', async (req, res) => {
   }
 });
 
+// POST Create Waiter Call / Service Request
+router.post('/service-requests', async (req, res) => {
+  try {
+    const { slug, table_number, request_type, note } = req.body;
+    const resto = await resolveRestaurant(req, slug);
+    if (!resto) {
+      return res.status(404).json({ error: 'Restaurant not found' });
+    }
+
+    if (!table_number || !request_type) {
+      return res.status(400).json({ error: 'Table number and request type are required' });
+    }
+
+    const result = await query(`
+      INSERT INTO service_requests (restaurant_id, table_number, request_type, note, status)
+      VALUES ($1, $2, $3, $4, 'pending') RETURNING id
+    `, [resto.id, String(table_number), request_type, note || '']);
+
+    const requestId = result[0]?.id || result.lastInsertRowid;
+
+    res.json({
+      success: true,
+      request_id: requestId,
+      message: `🛎️ Staff notified for Table #${table_number}! A waiter will attend shortly.`
+    });
+  } catch (err) {
+    console.error('Create service request error:', err);
+    res.status(500).json({ error: 'Failed to notify staff' });
+  }
+});
+
 export default router;

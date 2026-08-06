@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { fetchCategories, fetchDishes, toggleDishAvailability, toggleCategoryActive, deleteDish, deleteCategory, fetchRestaurantInfo, updateDishPrice, fetchAnnouncements, fetchAdminOrders, updateOrderStatus, uploadImage } from '../../api/client';
+import { fetchCategories, fetchDishes, toggleDishAvailability, toggleCategoryActive, deleteDish, deleteCategory, fetchRestaurantInfo, updateDishPrice, fetchAnnouncements, fetchAdminOrders, updateOrderStatus, uploadImage, fetchServiceRequests, resolveServiceRequest } from '../../api/client';
 import { getPlanDetails } from '../../config/plans';
 import DishFormModal from './DishFormModal';
 import CategoryFormModal from './CategoryFormModal';
@@ -23,6 +23,7 @@ export default function AdminDashboard({ token, username, onLogout, onReturnToMe
 
   // Live Orders (KOT) State
   const [orders, setOrders] = useState([]);
+  const [serviceRequests, setServiceRequests] = useState([]);
   const [kotFilter, setKotFilter] = useState('all');
   const [prevPendingCount, setPrevPendingCount] = useState(0);
   const [restaurantInfo, setRestaurantInfo] = useState(null);
@@ -64,16 +65,31 @@ export default function AdminDashboard({ token, username, onLogout, onReturnToMe
 
   const loadOrders = async () => {
     try {
-      const data = await fetchAdminOrders(token);
+      const [data, reqsData] = await Promise.all([
+        fetchAdminOrders(token).catch(() => []),
+        fetchServiceRequests(token).catch(() => [])
+      ]);
       const safeData = Array.isArray(data) ? data : [];
-      const pendingCount = safeData.filter(o => o.status === 'pending').length;
+      const safeReqs = Array.isArray(reqsData) ? reqsData : [];
+
+      const pendingCount = safeData.filter(o => o.status === 'pending').length + safeReqs.length;
       if (pendingCount > prevPendingCount) {
         playKitchenChime();
       }
       setPrevPendingCount(pendingCount);
       setOrders(safeData);
+      setServiceRequests(safeReqs);
     } catch (err) {
-      console.error('Failed to load orders:', err);
+      console.error('Failed to load orders & requests:', err);
+    }
+  };
+
+  const handleResolveServiceRequest = async (id) => {
+    try {
+      await resolveServiceRequest(id, token);
+      setServiceRequests(prev => prev.filter(r => r.id !== id));
+    } catch (err) {
+      alert(err.message || 'Failed to resolve request');
     }
   };
 
@@ -950,6 +966,77 @@ export default function AdminDashboard({ token, username, onLogout, onReturnToMe
                   </button>
                 ))}
               </div>
+
+              {/* 🛎️ Active Staff Calls & Table Requests Banner */}
+              {serviceRequests.length > 0 && (
+                <div style={{
+                  marginTop: '16px',
+                  background: 'linear-gradient(135deg, #7C3AED 0%, #6D28D9 100%)',
+                  borderRadius: '16px',
+                  padding: '16px 20px',
+                  color: '#FFFFFF',
+                  boxShadow: '0 8px 24px rgba(124, 58, 237, 0.35)'
+                }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
+                    <strong style={{ fontSize: '1rem', fontWeight: 900, display: 'flex', alignItems: 'center', gap: '8px' }}>
+                      🛎️ Live Staff Calls ({serviceRequests.length})
+                    </strong>
+                    <span style={{ fontSize: '0.74rem', background: '#FFFFFF', color: '#6D28D9', padding: '2px 8px', borderRadius: '12px', fontWeight: 900 }}>
+                      Action Needed
+                    </span>
+                  </div>
+
+                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(240px, 1fr))', gap: '10px' }}>
+                    {serviceRequests.map((req) => (
+                      <div
+                        key={req.id}
+                        style={{
+                          background: 'rgba(255, 255, 255, 0.15)',
+                          backdropFilter: 'blur(4px)',
+                          borderRadius: '12px',
+                          padding: '12px',
+                          border: '1px solid rgba(255, 255, 255, 0.3)',
+                          display: 'flex',
+                          justify: 'space-between',
+                          alignItems: 'center'
+                        }}
+                      >
+                        <div>
+                          <strong style={{ fontSize: '0.92rem', color: '#FEF08A', display: 'block' }}>
+                            TABLE #{req.table_number}
+                          </strong>
+                          <span style={{ fontSize: '0.84rem', fontWeight: 800 }}>
+                            {req.request_type}
+                          </span>
+                          {req.note && (
+                            <span style={{ display: 'block', fontSize: '0.74rem', opacity: 0.9, fontStyle: 'italic', marginTop: '2px' }}>
+                              "{req.note}"
+                            </span>
+                          )}
+                        </div>
+
+                        <button
+                          onClick={() => handleResolveServiceRequest(req.id)}
+                          style={{
+                            background: '#10B981',
+                            color: '#FFFFFF',
+                            border: 'none',
+                            padding: '6px 12px',
+                            borderRadius: 'var(--radius-pill)',
+                            fontWeight: 900,
+                            fontSize: '0.74rem',
+                            cursor: 'pointer',
+                            whiteSpace: 'nowrap',
+                            boxShadow: '0 2px 8px rgba(0,0,0,0.2)'
+                          }}
+                        >
+                          ✓ Done
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
 
               {orders.length === 0 ? (
                 <div style={{ textAlign: 'center', padding: '50px 20px', background: '#FFFFFF', borderRadius: '16px', border: '1px solid var(--border-light)' }}>

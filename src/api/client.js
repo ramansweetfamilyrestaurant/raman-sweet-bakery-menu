@@ -379,3 +379,27 @@ export async function fetchActiveTableOrder(slug, tableNumber) {
   const res = await fetch(`${API_BASE}/orders/active-table?slug=${encodeURIComponent(slug)}&table_number=${encodeURIComponent(tableNumber)}`);
   return handleResponse(res, 'Failed to fetch active table order');
 }
+
+export async function createServiceRequest(data) {
+  const res = await fetch(`${API_BASE}/service-requests`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(data)
+  });
+  return handleResponse(res, 'Failed to submit service request');
+}
+
+export async function fetchServiceRequests(token) {
+  const res = await fetch(`${API_BASE}/admin/service-requests`, {
+    headers: { Authorization: `Bearer ${token}` }
+  });
+  return handleResponse(res, 'Failed to fetch service requests');
+}
+
+export async function resolveServiceRequest(id, token) {
+  const res = await fetch(`${API_BASE}/admin/service-requests/${id}/resolve`, {
+    method: 'PATCH',
+    headers: { Authorization: `Bearer ${token}` }
+  });
+  return handleResponse(res, 'Failed to resolve service request');
+}

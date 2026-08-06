@@ -146,6 +146,16 @@ async function createTables() {
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
       );
 
+      CREATE TABLE IF NOT EXISTS service_requests (
+        id SERIAL PRIMARY KEY,
+        restaurant_id INT DEFAULT 1,
+        table_number VARCHAR(50) DEFAULT '1',
+        request_type VARCHAR(50) NOT NULL,
+        note TEXT,
+        status VARCHAR(20) DEFAULT 'pending',
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+      );
+
       CREATE TABLE IF NOT EXISTS saas_plans (
         id SERIAL PRIMARY KEY,
         key VARCHAR(50) UNIQUE NOT NULL,
@@ -279,6 +289,16 @@ async function createTables() {
         customer_phone TEXT,
         items TEXT,
         total_amount REAL NOT NULL,
+        status TEXT DEFAULT 'pending',
+        created_at TEXT DEFAULT CURRENT_TIMESTAMP,
+        FOREIGN KEY (restaurant_id) REFERENCES restaurants (id) ON DELETE CASCADE
+      );
+      CREATE TABLE IF NOT EXISTS service_requests (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        restaurant_id INTEGER DEFAULT 1,
+        table_number TEXT DEFAULT '1',
+        request_type TEXT NOT NULL,
+        note TEXT,
         status TEXT DEFAULT 'pending',
         created_at TEXT DEFAULT CURRENT_TIMESTAMP,
         FOREIGN KEY (restaurant_id) REFERENCES restaurants (id) ON DELETE CASCADE
