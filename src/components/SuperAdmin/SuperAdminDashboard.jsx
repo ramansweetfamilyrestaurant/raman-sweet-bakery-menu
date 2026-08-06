@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { Crown, Plus, LogOut, ExternalLink, Trash2, CheckCircle, Store, Utensils, DollarSign, Phone, MapPin, Copy, Check, Search, Edit3, Shield, ShieldCheck, RefreshCw, QrCode, Megaphone, FileText, Calendar, Palette, MessageSquare, Upload, X, XCircle } from 'lucide-react';
-import { fetchSuperAdminRestaurants, createTenantRestaurant, toggleTenantRestaurantActive, deleteTenantRestaurant, impersonateTenantRestaurant, updateTenantRestaurant, createAnnouncement, fetchSuperAnnouncements, deleteAnnouncement, clearAllAnnouncements, fetchAuditLogs, uploadImage } from '../../api/client';
+import { Crown, Plus, LogOut, ExternalLink, Trash2, CheckCircle, Store, Utensils, DollarSign, Phone, MapPin, Copy, Check, Search, Edit3, Shield, ShieldCheck, RefreshCw, QrCode, Megaphone, FileText, Calendar, Palette, MessageSquare, Upload, X, XCircle, CreditCard, Lock } from 'lucide-react';
+import { fetchSuperAdminRestaurants, createTenantRestaurant, toggleTenantRestaurantActive, deleteTenantRestaurant, impersonateTenantRestaurant, updateTenantRestaurant, createAnnouncement, fetchSuperAnnouncements, deleteAnnouncement, clearAllAnnouncements, fetchAuditLogs, uploadImage, fetchSaaSPlans, createSaaSPlan, updateSaaSPlan, deleteSaaSPlan } from '../../api/client';
 import { SAAS_PLANS, getPlanDetails } from '../../config/plans';
 
 export default function SuperAdminDashboard({ token, username, onLogout, onReturnToMenu, onImpersonate }) {
@@ -10,6 +10,22 @@ export default function SuperAdminDashboard({ token, username, onLogout, onRetur
   const [showAddModal, setShowAddModal] = useState(false);
   const [editModalData, setEditModalData] = useState(null);
   const [copiedId, setCopiedId] = useState(null);
+
+  // SaaS Plans Manager State
+  const [showPlansModal, setShowPlansModal] = useState(false);
+  const [plansList, setPlansList] = useState([]);
+  const [editingPlan, setEditingPlan] = useState(null);
+  const [showCreatePlanForm, setShowCreatePlanForm] = useState(false);
+  const [newPlanForm, setNewPlanForm] = useState({
+    key: '',
+    name: '',
+    price: 999,
+    badge: '👑 CUSTOM',
+    description: '',
+    whatsapp_enabled: true,
+    direct_ordering_enabled: false,
+    google_reviews_enabled: true
+  });
 
   // Announcement Modal State
   const [showAnnounceModal, setShowAnnounceModal] = useState(false);
@@ -41,6 +57,15 @@ export default function SuperAdminDashboard({ token, username, onLogout, onRetur
   const [formError, setFormError] = useState('');
   const [formSubmitting, setFormSubmitting] = useState(false);
 
+  const loadSaaSPlans = async () => {
+    try {
+      const data = await fetchSaaSPlans(token);
+      setPlansList(Array.isArray(data) ? data : []);
+    } catch (err) {
+      console.warn('Failed to load SaaS plans:', err.message);
+    }
+  };
+
   const loadData = async () => {
     setLoading(true);
     try {
@@ -55,6 +80,7 @@ export default function SuperAdminDashboard({ token, username, onLogout, onRetur
 
   useEffect(() => {
     loadData();
+    loadSaaSPlans();
   }, [token]);
 
   const loadAuditData = async () => {
@@ -312,15 +338,18 @@ export default function SuperAdminDashboard({ token, username, onLogout, onRetur
             </button>
 
             <button
-              onClick={handleOpenAuditModal}
+              onClick={() => {
+                loadAuditData();
+                setShowAuditModal(true);
+              }}
               style={{
-                background: 'rgba(255, 255, 255, 0.1)',
-                color: '#FFFFFF',
+                background: '#F1F5F9',
+                color: '#334155',
                 padding: '8px 14px',
                 borderRadius: 'var(--radius-pill)',
-                fontSize: '0.8rem',
-                fontWeight: 700,
-                border: '1px solid rgba(255, 255, 255, 0.2)',
+                fontSize: '0.78rem',
+                fontWeight: 800,
+                border: '1px solid #CBD5E1',
                 cursor: 'pointer',
                 display: 'flex',
                 alignItems: 'center',
@@ -329,6 +358,31 @@ export default function SuperAdminDashboard({ token, username, onLogout, onRetur
               title="View platform activity & security audit logs"
             >
               <FileText size={15} /> Audit Logs
+            </button>
+
+            {/* 💳 SaaS Plans Manager Button */}
+            <button
+              onClick={() => {
+                loadSaaSPlans();
+                setShowPlansModal(true);
+              }}
+              style={{
+                background: 'linear-gradient(135deg, #0A2315 0%, #164E2A 100%)',
+                color: '#FFFFFF',
+                padding: '8px 16px',
+                borderRadius: 'var(--radius-pill)',
+                fontSize: '0.8rem',
+                fontWeight: 800,
+                border: '1.5px solid #D4AF37',
+                cursor: 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '6px',
+                boxShadow: '0 4px 12px rgba(10,35,21,0.25)'
+              }}
+              title="Manage SaaS Plan Tiers, Pricing & Feature Matrix"
+            >
+              <CreditCard size={15} color="#DFBA67" /> 💳 SaaS Plans Matrix
             </button>
 
             <button
@@ -1573,6 +1627,384 @@ export default function SuperAdminDashboard({ token, username, onLogout, onRetur
                   </div>
                 ))
               )}
+            </div>
+          </div>
+        </div>
+      )}
+      {/* 💳 Modal: Dedicated SaaS Plan Control Center */}
+      {showPlansModal && (
+        <div style={{
+          position: 'fixed',
+          top: 0, left: 0, right: 0, bottom: 0,
+          background: 'rgba(0,0,0,0.7)',
+          backdropFilter: 'blur(8px)',
+          zIndex: 2000,
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          padding: '16px'
+        }}>
+          <div style={{
+            background: '#FFFFFF',
+            borderRadius: '24px',
+            maxWidth: '900px',
+            width: '100%',
+            padding: '28px',
+            boxShadow: '0 25px 70px rgba(0,0,0,0.45)',
+            border: '2px solid #D4AF37',
+            maxHeight: '90vh',
+            display: 'flex',
+            flexDirection: 'column'
+          }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                <div style={{ width: '44px', height: '44px', borderRadius: '14px', background: 'linear-gradient(135deg, #0A2315 0%, #164E2A 100%)', color: '#DFBA67', display: 'flex', alignItems: 'center', justifyContent: 'center', border: '1px solid #D4AF37' }}>
+                  <CreditCard size={22} />
+                </div>
+                <div>
+                  <h3 style={{ fontSize: '1.3rem', fontWeight: 900, color: 'var(--primary-emerald)', margin: 0 }}>
+                    💳 Enterprise SaaS Plans & Pricing Matrix
+                  </h3>
+                  <span style={{ fontSize: '0.78rem', color: 'var(--text-muted)' }}>Manage base plan tiers, monthly pricing, feature access matrices, and create custom plans</span>
+                </div>
+              </div>
+              
+              <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                <button
+                  onClick={() => setShowCreatePlanForm(!showCreatePlanForm)}
+                  style={{
+                    background: 'var(--header-gradient)',
+                    color: '#FFFFFF',
+                    border: 'none',
+                    padding: '8px 16px',
+                    borderRadius: 'var(--radius-pill)',
+                    fontSize: '0.78rem',
+                    fontWeight: 800,
+                    cursor: 'pointer',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '6px'
+                  }}
+                >
+                  <Plus size={16} /> {showCreatePlanForm ? 'Hide Form' : 'Create Custom SaaS Plan'}
+                </button>
+                <button onClick={() => setShowPlansModal(false)} style={{ background: 'none', border: 'none', fontSize: '1.5rem', fontWeight: 700, cursor: 'pointer', color: 'var(--text-muted)' }}>✕</button>
+              </div>
+            </div>
+
+            <div style={{ flex: 1, overflowY: 'auto', paddingRight: '4px', display: 'flex', flexDirection: 'column', gap: '20px' }}>
+              
+              {/* Create Custom SaaS Plan Accordion Form */}
+              {showCreatePlanForm && (
+                <div style={{
+                  background: '#F8FAFC',
+                  borderRadius: '16px',
+                  padding: '20px',
+                  border: '2px dashed #0A2315'
+                }}>
+                  <h4 style={{ fontSize: '0.95rem', fontWeight: 900, color: 'var(--primary-emerald)', marginBottom: '14px', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                    <Plus size={18} /> Create New Custom SaaS Subscription Plan
+                  </h4>
+                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '12px', marginBottom: '14px' }}>
+                    <div>
+                      <label style={{ fontSize: '0.76rem', fontWeight: 800, color: '#334155', display: 'block', marginBottom: '4px' }}>PLAN NAME *</label>
+                      <input
+                        type="text"
+                        placeholder="e.g. Platinum VIP Plan"
+                        value={newPlanForm.name}
+                        onChange={(e) => setNewPlanForm({ ...newPlanForm, name: e.target.value, key: e.target.value.toLowerCase().replace(/[^a-z0-9]/g, '_') })}
+                        style={{ width: '100%', padding: '9px 12px', borderRadius: '10px', border: '1.5px solid #CBD5E1', fontSize: '0.86rem', outline: 'none', fontWeight: 700 }}
+                      />
+                    </div>
+                    <div>
+                      <label style={{ fontSize: '0.76rem', fontWeight: 800, color: '#334155', display: 'block', marginBottom: '4px' }}>MONTHLY PRICE (₹) *</label>
+                      <input
+                        type="number"
+                        placeholder="2999"
+                        value={newPlanForm.price}
+                        onChange={(e) => setNewPlanForm({ ...newPlanForm, price: e.target.value })}
+                        style={{ width: '100%', padding: '9px 12px', borderRadius: '10px', border: '1.5px solid #CBD5E1', fontSize: '0.86rem', outline: 'none', fontWeight: 800 }}
+                      />
+                    </div>
+                    <div>
+                      <label style={{ fontSize: '0.76rem', fontWeight: 800, color: '#334155', display: 'block', marginBottom: '4px' }}>PLAN BADGE TEXT</label>
+                      <input
+                        type="text"
+                        placeholder="e.g. 💎 PLATINUM"
+                        value={newPlanForm.badge}
+                        onChange={(e) => setNewPlanForm({ ...newPlanForm, badge: e.target.value })}
+                        style={{ width: '100%', padding: '9px 12px', borderRadius: '10px', border: '1.5px solid #CBD5E1', fontSize: '0.86rem', outline: 'none', fontWeight: 800 }}
+                      />
+                    </div>
+                  </div>
+
+                  <div style={{ marginBottom: '14px' }}>
+                    <label style={{ fontSize: '0.76rem', fontWeight: 800, color: '#334155', display: 'block', marginBottom: '4px' }}>PLAN DESCRIPTION</label>
+                    <input
+                      type="text"
+                      placeholder="e.g. All features + Priority 24/7 VIP Phone Support"
+                      value={newPlanForm.description}
+                      onChange={(e) => setNewPlanForm({ ...newPlanForm, description: e.target.value })}
+                      style={{ width: '100%', padding: '9px 12px', borderRadius: '10px', border: '1.5px solid #CBD5E1', fontSize: '0.86rem', outline: 'none' }}
+                    />
+                  </div>
+
+                  {/* Feature Permissions Matrix */}
+                  <div style={{ background: '#FFFFFF', padding: '12px 14px', borderRadius: '12px', border: '1px solid #E2E8F0', marginBottom: '16px' }}>
+                    <strong style={{ fontSize: '0.78rem', color: '#0F172A', display: 'block', marginBottom: '8px' }}>FEATURE ACCESS MATRIX PERMISSIONS:</strong>
+                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '10px' }}>
+                      <label style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.78rem', fontWeight: 700, cursor: 'pointer' }}>
+                        <input
+                          type="checkbox"
+                          checked={newPlanForm.whatsapp_enabled}
+                          onChange={(e) => setNewPlanForm({ ...newPlanForm, whatsapp_enabled: e.target.checked })}
+                          style={{ accentColor: '#16a34a' }}
+                        /> 💬 WhatsApp Drawer
+                      </label>
+                      <label style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.78rem', fontWeight: 700, cursor: 'pointer' }}>
+                        <input
+                          type="checkbox"
+                          checked={newPlanForm.direct_ordering_enabled}
+                          onChange={(e) => setNewPlanForm({ ...newPlanForm, direct_ordering_enabled: e.target.checked })}
+                          style={{ accentColor: '#0A2315' }}
+                        /> ⚡ Direct Table QR Ordering
+                      </label>
+                      <label style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.78rem', fontWeight: 700, cursor: 'pointer' }}>
+                        <input
+                          type="checkbox"
+                          checked={newPlanForm.google_reviews_enabled}
+                          onChange={(e) => setNewPlanForm({ ...newPlanForm, google_reviews_enabled: e.target.checked })}
+                          style={{ accentColor: '#D4AF37' }}
+                        /> ⭐ Google Review Rating
+                      </label>
+                    </div>
+                  </div>
+
+                  <button
+                    onClick={async () => {
+                      if (!newPlanForm.name.trim()) return alert('Plan name is required');
+                      try {
+                        await createSaaSPlan(newPlanForm, token);
+                        alert(`Custom Plan '${newPlanForm.name}' created successfully!`);
+                        setShowCreatePlanForm(false);
+                        setNewPlanForm({ key: '', name: '', price: 999, badge: '👑 CUSTOM', description: '', whatsapp_enabled: true, direct_ordering_enabled: false, google_reviews_enabled: true });
+                        loadSaaSPlans();
+                      } catch (err) {
+                        alert(err.message || 'Failed to create plan');
+                      }
+                    }}
+                    style={{
+                      background: 'var(--primary-emerald)',
+                      color: '#FFFFFF',
+                      border: 'none',
+                      padding: '10px 20px',
+                      borderRadius: 'var(--radius-pill)',
+                      fontSize: '0.84rem',
+                      fontWeight: 800,
+                      cursor: 'pointer'
+                    }}
+                  >
+                    ✓ Save & Deploy Custom Plan
+                  </button>
+                </div>
+              )}
+
+              {/* Plans Pills / Cards Grid */}
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))', gap: '16px' }}>
+                {plansList.map(plan => (
+                  <div key={plan.key} style={{
+                    background: '#FFFFFF',
+                    borderRadius: '20px',
+                    padding: '20px',
+                    border: editingPlan?.key === plan.key ? '2px solid #0A2315' : '1.5px solid #E2E8F0',
+                    boxShadow: '0 8px 24px rgba(0,0,0,0.06)',
+                    display: 'flex',
+                    flexDirection: 'column',
+                    justify: 'space-between',
+                    position: 'relative'
+                  }}>
+                    <div>
+                      {/* Top Badges Row */}
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
+                        <span style={{
+                          background: '#FEF3C7',
+                          color: '#B45309',
+                          padding: '4px 10px',
+                          borderRadius: 'var(--radius-pill)',
+                          fontSize: '0.74rem',
+                          fontWeight: 900,
+                          border: '1px solid #FCD34D'
+                        }}>
+                          {plan.badge || '👑 PLAN'}
+                        </span>
+
+                        <span style={{
+                          background: '#E0E7FF',
+                          color: '#4338CA',
+                          padding: '3px 8px',
+                          borderRadius: 'var(--radius-pill)',
+                          fontSize: '0.72rem',
+                          fontWeight: 800
+                        }}>
+                          🏢 {plan.enrolled_count || 0} Enrolled
+                        </span>
+                      </div>
+
+                      <h4 style={{ fontSize: '1.15rem', fontWeight: 900, color: 'var(--primary-emerald)', margin: '0 0 6px 0' }}>
+                        {plan.name}
+                      </h4>
+
+                      <div style={{ fontSize: '1.5rem', fontWeight: 900, color: '#0F172A', marginBottom: '8px' }}>
+                        ₹{plan.price}<span style={{ fontSize: '0.78rem', color: 'var(--text-muted)', fontWeight: 600 }}>/month</span>
+                      </div>
+
+                      <p style={{ fontSize: '0.78rem', color: 'var(--text-muted)', marginBottom: '14px', lineHeight: 1.4, height: '36px', overflow: 'hidden' }}>
+                        {plan.description || 'Enterprise SaaS Plan'}
+                      </p>
+
+                      {/* Included Feature Pills */}
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', marginBottom: '16px', background: '#F8FAFC', padding: '10px 12px', borderRadius: '12px' }}>
+                        <div style={{ fontSize: '0.74rem', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                          {plan.whatsapp_enabled ? <CheckCircle size={14} color="#16a34a" /> : <XCircle size={14} color="#dc2626" />}
+                          <span style={{ color: plan.whatsapp_enabled ? '#15803D' : '#94A3B8', fontWeight: 700 }}>WhatsApp Drawer</span>
+                        </div>
+                        <div style={{ fontSize: '0.74rem', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                          {plan.direct_ordering_enabled ? <CheckCircle size={14} color="#16a34a" /> : <XCircle size={14} color="#dc2626" />}
+                          <span style={{ color: plan.direct_ordering_enabled ? '#15803D' : '#94A3B8', fontWeight: 700 }}>Direct Table QR Ordering</span>
+                        </div>
+                        <div style={{ fontSize: '0.74rem', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                          {plan.google_reviews_enabled ? <CheckCircle size={14} color="#16a34a" /> : <XCircle size={14} color="#dc2626" />}
+                          <span style={{ color: plan.google_reviews_enabled ? '#15803D' : '#94A3B8', fontWeight: 700 }}>Google Reviews Rating</span>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Actions Row */}
+                    <div style={{ display: 'flex', gap: '8px', paddingTop: '10px', borderTop: '1px solid #F1F5F9' }}>
+                      <button
+                        onClick={() => setEditingPlan(editingPlan?.key === plan.key ? null : { ...plan })}
+                        style={{
+                          flex: 1,
+                          background: '#F1F5F9',
+                          color: '#0F172A',
+                          border: '1px solid #CBD5E1',
+                          padding: '8px 12px',
+                          borderRadius: '10px',
+                          fontSize: '0.78rem',
+                          fontWeight: 800,
+                          cursor: 'pointer',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          gap: '4px'
+                        }}
+                      >
+                        <Edit3 size={14} /> Quick Edit
+                      </button>
+
+                      {!['basic', 'pro', 'enterprise'].includes(plan.key) && (
+                        <button
+                          onClick={async () => {
+                            if (!window.confirm(`Delete custom plan '${plan.name}'?`)) return;
+                            try {
+                              await deleteSaaSPlan(plan.key, token);
+                              loadSaaSPlans();
+                            } catch (err) {
+                              alert(err.message || 'Failed to delete');
+                            }
+                          }}
+                          style={{
+                            background: '#FEE2E2',
+                            color: '#DC2626',
+                            border: 'none',
+                            padding: '8px 12px',
+                            borderRadius: '10px',
+                            fontSize: '0.78rem',
+                            fontWeight: 800,
+                            cursor: 'pointer'
+                          }}
+                        >
+                          <Trash2 size={14} />
+                        </button>
+                      )}
+                    </div>
+
+                    {/* Inline Quick Edit Form */}
+                    {editingPlan?.key === plan.key && (
+                      <div style={{
+                        marginTop: '12px',
+                        padding: '12px',
+                        background: '#FFFBEB',
+                        borderRadius: '12px',
+                        border: '1.5px solid #FCD34D'
+                      }}>
+                        <div style={{ fontSize: '0.76rem', fontWeight: 800, color: '#B45309', marginBottom: '8px' }}>
+                          ⚡ EDIT BASE RATE & FEATURES MATRIX:
+                        </div>
+
+                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px', marginBottom: '8px' }}>
+                          <div>
+                            <label style={{ fontSize: '0.7rem', fontWeight: 700 }}>Monthly Rate (₹)</label>
+                            <input
+                              type="number"
+                              value={editingPlan.price}
+                              onChange={(e) => setEditingPlan({ ...editingPlan, price: e.target.value })}
+                              style={{ width: '100%', padding: '6px 8px', borderRadius: '6px', border: '1px solid #CBD5E1', fontSize: '0.8rem', fontWeight: 800 }}
+                            />
+                          </div>
+                          <div>
+                            <label style={{ fontSize: '0.7rem', fontWeight: 700 }}>Badge</label>
+                            <input
+                              type="text"
+                              value={editingPlan.badge}
+                              onChange={(e) => setEditingPlan({ ...editingPlan, badge: e.target.value })}
+                              style={{ width: '100%', padding: '6px 8px', borderRadius: '6px', border: '1px solid #CBD5E1', fontSize: '0.8rem', fontWeight: 800 }}
+                            />
+                          </div>
+                        </div>
+
+                        {/* Toggles */}
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', marginBottom: '10px', fontSize: '0.72rem' }}>
+                          <label style={{ display: 'flex', alignItems: 'center', gap: '4px', cursor: 'pointer' }}>
+                            <input type="checkbox" checked={editingPlan.whatsapp_enabled} onChange={(e) => setEditingPlan({ ...editingPlan, whatsapp_enabled: e.target.checked })} /> WhatsApp
+                          </label>
+                          <label style={{ display: 'flex', alignItems: 'center', gap: '4px', cursor: 'pointer' }}>
+                            <input type="checkbox" checked={editingPlan.direct_ordering_enabled} onChange={(e) => setEditingPlan({ ...editingPlan, direct_ordering_enabled: e.target.checked })} /> Table QR
+                          </label>
+                          <label style={{ display: 'flex', alignItems: 'center', gap: '4px', cursor: 'pointer' }}>
+                            <input type="checkbox" checked={editingPlan.google_reviews_enabled} onChange={(e) => setEditingPlan({ ...editingPlan, google_reviews_enabled: e.target.checked })} /> Google Reviews
+                          </label>
+                        </div>
+
+                        <button
+                          onClick={async () => {
+                            try {
+                              await updateSaaSPlan(plan.key, editingPlan, token);
+                              setEditingPlan(null);
+                              loadSaaSPlans();
+                            } catch (err) {
+                              alert('Failed to update plan');
+                            }
+                          }}
+                          style={{
+                            width: '100%',
+                            background: '#0A2315',
+                            color: '#FFFFFF',
+                            border: 'none',
+                            padding: '6px',
+                            borderRadius: '6px',
+                            fontSize: '0.74rem',
+                            fontWeight: 800,
+                            cursor: 'pointer'
+                          }}
+                        >
+                          ✓ Update Base Plan
+                        </button>
+                      </div>
+                    )}
+                  </div>
+                ))}
+              </div>
             </div>
           </div>
         </div>

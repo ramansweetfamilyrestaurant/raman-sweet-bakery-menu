@@ -296,6 +296,45 @@ export async function clearAllAnnouncements(token) {
   return handleResponse(res, 'Failed to clear all announcements');
 }
 
+export async function fetchSaaSPlans(token) {
+  const res = await fetch(`${API_BASE}/superadmin/plans`, {
+    headers: { Authorization: `Bearer ${token}` }
+  });
+  return handleResponse(res, 'Failed to fetch SaaS plans');
+}
+
+export async function createSaaSPlan(planData, token) {
+  const res = await fetch(`${API_BASE}/superadmin/plans`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      Authorization: `Bearer ${token}`
+    },
+    body: JSON.stringify(planData)
+  });
+  return handleResponse(res, 'Failed to create SaaS plan');
+}
+
+export async function updateSaaSPlan(key, planData, token) {
+  const res = await fetch(`${API_BASE}/superadmin/plans/${key}`, {
+    method: 'PUT',
+    headers: {
+      'Content-Type': 'application/json',
+      Authorization: `Bearer ${token}`
+    },
+    body: JSON.stringify(planData)
+  });
+  return handleResponse(res, 'Failed to update SaaS plan');
+}
+
+export async function deleteSaaSPlan(key, token) {
+  const res = await fetch(`${API_BASE}/superadmin/plans/${key}`, {
+    method: 'DELETE',
+    headers: { Authorization: `Bearer ${token}` }
+  });
+  return handleResponse(res, 'Failed to delete SaaS plan');
+}
+
 export async function fetchAuditLogs(token) {
   const res = await fetch(`${API_BASE}/superadmin/audit-logs`, {
     headers: { Authorization: `Bearer ${token}` }

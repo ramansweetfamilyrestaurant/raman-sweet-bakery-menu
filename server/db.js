@@ -143,6 +143,19 @@ async function createTables() {
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
       );
 
+      CREATE TABLE IF NOT EXISTS saas_plans (
+        id SERIAL PRIMARY KEY,
+        key VARCHAR(50) UNIQUE NOT NULL,
+        name VARCHAR(100) NOT NULL,
+        price NUMERIC DEFAULT 999,
+        badge VARCHAR(50) DEFAULT '👑 PRO',
+        description TEXT,
+        whatsapp_enabled INT DEFAULT 1,
+        direct_ordering_enabled INT DEFAULT 0,
+        google_reviews_enabled INT DEFAULT 1,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+      );
+
       CREATE TABLE IF NOT EXISTS audit_logs (
         id SERIAL PRIMARY KEY,
         restaurant_id INT,
@@ -185,6 +198,19 @@ async function createTables() {
         message TEXT NOT NULL,
         type TEXT DEFAULT 'info',
         active INTEGER DEFAULT 1,
+        created_at TEXT DEFAULT CURRENT_TIMESTAMP
+      );
+
+      CREATE TABLE IF NOT EXISTS saas_plans (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        key TEXT UNIQUE NOT NULL,
+        name TEXT NOT NULL,
+        price REAL DEFAULT 999,
+        badge TEXT DEFAULT '👑 PRO',
+        description TEXT,
+        whatsapp_enabled INTEGER DEFAULT 1,
+        direct_ordering_enabled INTEGER DEFAULT 0,
+        google_reviews_enabled INTEGER DEFAULT 1,
         created_at TEXT DEFAULT CURRENT_TIMESTAMP
       );
 
@@ -313,6 +339,24 @@ async function seedData() {
     ]);
     primaryRestoId = res[0]?.id || res.lastInsertRowid || 1;
     console.log(`🏨 Created primary tenant restaurant Raman Sweet Bakery (ID: ${primaryRestoId})`);
+  }
+
+  // Seed default SaaS Plans if empty
+  try {
+    const planCheck = await query('SELECT COUNT(*) as count FROM saas_plans');
+    const pCount = parseInt(planCheck[0]?.count || 0, 10);
+    if (pCount === 0) {
+      await query(`
+        INSERT INTO saas_plans (key, name, price, badge, description, whatsapp_enabled, direct_ordering_enabled, google_reviews_enabled)
+        VALUES 
+        ('basic', 'Basic Starter Plan', 499, '⚡ BASIC', 'Digital Menu Viewing & Custom Themes', 0, 0, 0),
+        ('pro', 'Pro Luxury Plan', 999, '👑 PRO', 'Menu + WhatsApp Ordering + Google Reviews', 1, 0, 1),
+        ('enterprise', 'Enterprise VIP Plan', 1999, '🚀 ENTERPRISE', 'All Features + Direct Table QR KOT Ordering & Kitchen System', 1, 1, 1)
+      `);
+      console.log('💳 Seeded default SaaS Plans into saas_plans table');
+    }
+  } catch (err) {
+    console.warn('SaaS plan seeding notice:', err.message);
   }
 
   // Update existing data to link to primaryRestoId

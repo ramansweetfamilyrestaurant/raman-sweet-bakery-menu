@@ -328,6 +328,105 @@ router.delete('/announcements', authenticateToken, requireSuperAdmin, async (req
   }
 });
 
+// GET All SaaS Plans (with restaurant count per plan)
+router.get('/plans', authenticateToken, requireSuperAdmin, async (req, res) => {
+  try {
+    const plans = await query('SELECT * FROM saas_plans ORDER BY price ASC');
+    const counts = await query('SELECT plan_tier, COUNT(*) as count FROM restaurants GROUP BY plan_tier');
+    const countMap = {};
+    (counts || []).forEach(c => { countMap[c.plan_tier] = parseInt(c.count, 10); });
+
+    const result = (plans || []).map(p => ({
+      ...p,
+      whatsapp_enabled: p.whatsapp_enabled !== 0 && p.whatsapp_enabled !== false,
+      direct_ordering_enabled: p.direct_ordering_enabled !== 0 && p.direct_ordering_enabled !== false,
+      google_reviews_enabled: p.google_reviews_enabled !== 0 && p.google_reviews_enabled !== false,
+      enrolled_count: countMap[p.key] || 0
+    }));
+    res.json(result);
+  } catch (err) {
+    console.error('Fetch SaaS plans error:', err);
+    res.status(500).json({ error: 'Failed to fetch SaaS plans' });
+  }
+});
+
+// POST Create New Custom SaaS Plan
+router.post('/plans', authenticateToken, requireSuperAdmin, async (req, res) => {
+  try {
+    const { key, name, price, badge, description, whatsapp_enabled, direct_ordering_enabled, google_reviews_enabled } = req.body;
+    if (!name || !name.trim()) return res.status(400).json({ error: 'Plan name is required' });
+
+    const cleanKey = (key || name.toLowerCase().replace(/[^a-z0-9]/g, '_')).trim();
+
+    await query(`
+      INSERT INTO saas_plans (key, name, price, badge, description, whatsapp_enabled, direct_ordering_enabled, google_reviews_enabled)
+      VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+    `, [
+      cleanKey,
+      name.trim(),
+      price ? parseFloat(price) : 999,
+      badge || '👑 CUSTOM',
+      description || '',
+      whatsapp_enabled ? 1 : 0,
+      direct_ordering_enabled ? 1 : 0,
+      google_reviews_enabled ? 1 : 0
+    ]);
+
+    await logAudit(null, 'superadmin', 'Create SaaS Plan', `Created plan '${name}' (${cleanKey})`);
+    res.json({ success: true, message: `SaaS Plan '${name}' created successfully!` });
+  } catch (err) {
+    console.error('Create SaaS plan error:', err);
+    res.status(500).json({ error: err.message || 'Failed to create SaaS plan' });
+  }
+});
+
+// PUT Update SaaS Plan Details & Features Matrix
+router.put('/plans/:key', authenticateToken, requireSuperAdmin, async (req, res) => {
+  try {
+    const { key } = req.params;
+    const { name, price, badge, description, whatsapp_enabled, direct_ordering_enabled, google_reviews_enabled } = req.body;
+
+    await query(`
+      UPDATE saas_plans
+      SET name = $1, price = $2, badge = $3, description = $4,
+          whatsapp_enabled = $5, direct_ordering_enabled = $6, google_reviews_enabled = $7
+      WHERE key = $8
+    `, [
+      name,
+      price ? parseFloat(price) : 999,
+      badge || '👑 PRO',
+      description || '',
+      whatsapp_enabled ? 1 : 0,
+      direct_ordering_enabled ? 1 : 0,
+      google_reviews_enabled ? 1 : 0,
+      key
+    ]);
+
+    await logAudit(null, 'superadmin', 'Update SaaS Plan', `Updated plan details for '${key}'`);
+    res.json({ success: true, message: `SaaS Plan '${name}' updated successfully!` });
+  } catch (err) {
+    console.error('Update SaaS plan error:', err);
+    res.status(500).json({ error: 'Failed to update SaaS plan' });
+  }
+});
+
+// DELETE Custom SaaS Plan
+router.delete('/plans/:key', authenticateToken, requireSuperAdmin, async (req, res) => {
+  try {
+    const { key } = req.params;
+    if (['basic', 'pro', 'enterprise'].includes(key)) {
+      return res.status(400).json({ error: 'Standard system plans (Basic, Pro, Enterprise) cannot be deleted.' });
+    }
+
+    await query('DELETE FROM saas_plans WHERE key = $1', [key]);
+    await logAudit(null, 'superadmin', 'Delete SaaS Plan', `Deleted SaaS Plan '${key}'`);
+    res.json({ success: true, message: 'Plan deleted successfully' });
+  } catch (err) {
+    console.error('Delete SaaS plan error:', err);
+    res.status(500).json({ error: 'Failed to delete SaaS plan' });
+  }
+});
+
 // GET Platform Audit Logs
 router.get('/audit-logs', authenticateToken, requireSuperAdmin, async (req, res) => {
   try {
