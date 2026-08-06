@@ -95,15 +95,27 @@ export default function AdminDashboard({ token, username, onLogout, onReturnToMe
 
     const getDateParts = (dateStr) => {
       if (!dateStr) return { date: 'N/A', time: 'N/A' };
-      try {
-        const d = new Date(dateStr);
-        if (isNaN(d.getTime())) return { date: String(dateStr), time: '' };
-        const dateFormatted = d.toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' });
-        const timeFormatted = d.toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit', hour12: true });
-        return { date: dateFormatted, time: timeFormatted };
-      } catch (e) {
-        return { date: String(dateStr), time: '' };
+      const str = String(dateStr).trim();
+      let d = new Date(str);
+      if (isNaN(d.getTime())) {
+        d = new Date(str.replace(' ', 'T'));
       }
+      if (!isNaN(d.getTime())) {
+        const day = String(d.getDate()).padStart(2, '0');
+        const monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+        const month = monthNames[d.getMonth()];
+        const year = d.getFullYear();
+        let hours = d.getHours();
+        const minutes = String(d.getMinutes()).padStart(2, '0');
+        const ampm = hours >= 12 ? 'PM' : 'AM';
+        hours = hours % 12;
+        hours = hours ? hours : 12;
+        const formattedHours = String(hours).padStart(2, '0');
+        return { date: `${day}-${month}-${year}`, time: `${formattedHours}:${minutes} ${ampm}` };
+      }
+      const parts = str.split(' ');
+      if (parts.length >= 2) return { date: parts[0], time: parts[1] };
+      return { date: str, time: 'N/A' };
     };
 
     const headers = ['Order ID', 'Date', 'Time', 'Table No', 'Total Amount (Rs)', 'Status', 'Items Ordered'];
