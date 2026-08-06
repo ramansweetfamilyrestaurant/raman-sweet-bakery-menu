@@ -477,6 +477,7 @@ export default function AdminDashboard({ token, username, onLogout, onReturnToMe
           gst_enabled: infoData.gst_enabled !== undefined ? infoData.gst_enabled : false,
           gstin_number: infoData.gstin_number || '',
           total_tables: infoData.total_tables || 12,
+          order_retention_days: infoData.order_retention_days || 7,
           filters_visibility: { ...defaultVis, ...infoData.filters_visibility }
         });
       }
@@ -2735,6 +2736,32 @@ export default function AdminDashboard({ token, username, onLogout, onReturnToMe
                   <ExternalLink size={15} /> Test Link ↗
                 </a>
               )}
+            {/* ⚡ Order Auto-Purge & Retention Period Card */}
+            <div style={{
+              background: '#EFF6FF',
+              border: '1.5px solid #93C5FD',
+              borderRadius: '16px',
+              padding: '16px 18px',
+              marginBottom: '20px'
+            }}>
+              <strong style={{ fontSize: '0.95rem', color: '#1E40AF', display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '4px' }}>
+                ⚡ Auto Order Purge & Archival Limit:
+              </strong>
+              <p style={{ fontSize: '0.78rem', color: '#3B82F6', margin: '0 0 10px 0' }}>
+                Select how long completed order records stay in active history before being automatically compressed into daily sales summaries.
+              </p>
+              <div>
+                <select
+                  value={settingsForm.order_retention_days || 7}
+                  onChange={(e) => setSettingsForm({ ...settingsForm, order_retention_days: Number(e.target.value) })}
+                  style={{ width: '100%', padding: '9px 12px', borderRadius: '8px', border: '1px solid #BFDBFE', fontSize: '0.88rem', fontWeight: 700, color: '#1E3A8A', background: '#FFFFFF' }}
+                >
+                  <option value={1}>⚡ 24 Hours / 1 Day (Ultra Fast & Light - Best for High Traffic)</option>
+                  <option value={7}>⚡ 7 Days (Recommended for Restaurants)</option>
+                  <option value={30}>⚡ 30 Days (1 Month History)</option>
+                  <option value={90}>⚡ 90 Days (3 Months History)</option>
+                </select>
+              </div>
             </div>
 
             {settingsSavedMsg && (
@@ -2742,6 +2769,7 @@ export default function AdminDashboard({ token, username, onLogout, onReturnToMe
                 ✓ Google Review Link saved successfully!
               </p>
             )}
+            </div>
 
             {/* Customer Button Live Preview */}
             <div style={{ marginTop: '24px', paddingTop: '20px', borderTop: '1px solid var(--border-light)' }}>

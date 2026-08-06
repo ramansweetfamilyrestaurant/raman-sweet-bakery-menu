@@ -90,6 +90,7 @@ router.get('/info', async (req, res) => {
         gst_enabled: resto.gst_enabled === 1 || resto.gst_enabled === true,
         gstin_number: resto.gstin_number || '',
         total_tables: resto.total_tables || 12,
+        order_retention_days: resto.order_retention_days || 7,
         active: (resto.active === 1 || resto.active === true || resto.active === '1')
       });
     }

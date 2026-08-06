@@ -139,6 +139,7 @@ async function createTables() {
       ALTER TABLE restaurants ADD COLUMN IF NOT EXISTS gst_enabled INT DEFAULT 0;
       ALTER TABLE restaurants ADD COLUMN IF NOT EXISTS gstin_number VARCHAR(50);
       ALTER TABLE restaurants ADD COLUMN IF NOT EXISTS total_tables INT DEFAULT 12;
+      ALTER TABLE restaurants ADD COLUMN IF NOT EXISTS order_retention_days INT DEFAULT 7;
       ALTER TABLE dishes ADD COLUMN IF NOT EXISTS type VARCHAR(20) DEFAULT 'veg';
 
       CREATE TABLE IF NOT EXISTS announcements (
@@ -393,6 +394,7 @@ async function createTables() {
       if (!restoCols.some(c => c.name === 'gst_enabled')) sqliteDb.exec("ALTER TABLE restaurants ADD COLUMN gst_enabled INTEGER DEFAULT 0");
       if (!restoCols.some(c => c.name === 'gstin_number')) sqliteDb.exec("ALTER TABLE restaurants ADD COLUMN gstin_number TEXT");
       if (!restoCols.some(c => c.name === 'total_tables')) sqliteDb.exec("ALTER TABLE restaurants ADD COLUMN total_tables INTEGER DEFAULT 12");
+      if (!restoCols.some(c => c.name === 'order_retention_days')) sqliteDb.exec("ALTER TABLE restaurants ADD COLUMN order_retention_days INTEGER DEFAULT 7");
     } catch (err) {
       console.warn('SQLite migration info:', err.message);
     }
