@@ -247,19 +247,19 @@ export default function MenuCardItem({ dish, lang, onClick, onAddToCart, currenc
             </button>
           </div>
         ) : (
-          /* Single Price Pill — Enclosed in luxury price pill for 100% design consistency */
+          /* Single Price Pill — Clean White Oval Pill matching reference screenshot */
           <div 
             style={{
-              fontSize: '0.78rem',
+              fontSize: '0.86rem',
               fontWeight: 900,
-              padding: '4px 10px',
+              padding: '3px 12px',
               borderRadius: 'var(--radius-pill)',
-              background: 'var(--header-gradient)',
-              color: 'var(--gold-bright)',
-              border: '1.5px solid var(--gold-bright)',
+              background: '#FFFFFF',
+              color: 'var(--text-dark)',
+              border: '1.5px solid var(--border-light)',
               whiteSpace: 'nowrap',
               lineHeight: 1.2,
-              boxShadow: 'var(--shadow-sm)',
+              boxShadow: '0 1px 4px rgba(0,0,0,0.06)',
               cursor: 'pointer'
             }}
             onClick={() => onClick(dish)}
