@@ -22,6 +22,7 @@ export default function AdminDashboard({ token, username, onLogout, onReturnToMe
   // Live Orders (KOT) State
   const [orders, setOrders] = useState([]);
   const [prevPendingCount, setPrevPendingCount] = useState(0);
+  const [restaurantInfo, setRestaurantInfo] = useState(null);
 
   const playKitchenChime = () => {
     try {
@@ -167,6 +168,7 @@ export default function AdminDashboard({ token, username, onLogout, onReturnToMe
       ]);
       setCategories(Array.isArray(catData) ? catData : []);
       setDishes(Array.isArray(dishData) ? dishData : []);
+      setRestaurantInfo(infoData);
       if (infoData) {
         const defaultVis = { must_try: true, combo: true, special: true, under100: true };
         setSettingsForm({
@@ -691,7 +693,7 @@ export default function AdminDashboard({ token, username, onLogout, onReturnToMe
           justifyContent: 'space-between'
         }}>
           {[
-            { id: 'orders', label: '🔔 KOT Orders', count: orders.filter(o => o.status === 'pending').length, icon: <Sparkles size={14} /> },
+            ...(restaurantInfo && (restaurantInfo.direct_ordering_enabled === false || restaurantInfo.direct_ordering_enabled === 0) ? [] : [{ id: 'orders', label: '🔔 KOT Orders', count: orders.filter(o => o.status === 'pending').length, icon: <Sparkles size={14} /> }]),
             { id: 'dishes', label: 'Dishes', count: safeDishes.length, icon: <Utensils size={14} /> },
             { id: 'categories', label: 'Cat', count: safeCategories.length, icon: <Layers size={14} /> },
             { id: 'qr-generator', label: 'QR Code', icon: <QrCode size={14} /> },

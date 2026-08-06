@@ -617,8 +617,8 @@ export default function App() {
         }}
       />
 
-      {/* 🛎️ Live Dine-In Customer Order Tracker Banner */}
-      {activeOrderTrack && (
+      {/* 🛎️ Live Dine-In Customer Order Tracker Banner (Gated by Super Admin) */}
+      {activeOrderTrack && (info?.direct_ordering_enabled !== false && info?.direct_ordering_enabled !== 0) && (
         <div style={{
           background: 'linear-gradient(135deg, #0A2315 0%, #143A24 100%)',
           color: '#FFFFFF',
