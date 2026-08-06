@@ -261,7 +261,7 @@ export default function AdminDashboard({ token, username, onLogout, onReturnToMe
   });
 
   return (
-    <div style={{ minHeight: '100vh', background: 'var(--bg-mobile-app)', paddingBottom: '60px' }}>
+    <div style={{ minHeight: '100vh', background: 'var(--bg-app)', paddingBottom: '60px' }}>
       {/* Top Header */}
       <header style={{
         background: 'var(--primary-emerald)',

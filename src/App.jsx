@@ -63,10 +63,11 @@ export default function App() {
     loadMenuData();
   }, [searchQuery, selectedCategory]);
 
-  // Handle URL hash changes (#admin)
+  // Handle URL route changes (#admin or /admin)
   useEffect(() => {
-    const handleHashChange = () => {
-      if (window.location.hash === '#admin') {
+    const handleRouteCheck = () => {
+      const isRouteAdmin = window.location.hash === '#admin' || window.location.pathname.endsWith('/admin') || window.location.pathname.includes('/admin');
+      if (isRouteAdmin) {
         if (adminToken) {
           setView('admin-dashboard');
         } else {
@@ -77,9 +78,13 @@ export default function App() {
       }
     };
 
-    handleHashChange();
-    window.addEventListener('hashchange', handleHashChange);
-    return () => window.removeEventListener('hashchange', handleHashChange);
+    handleRouteCheck();
+    window.addEventListener('hashchange', handleRouteCheck);
+    window.addEventListener('popstate', handleRouteCheck);
+    return () => {
+      window.removeEventListener('hashchange', handleRouteCheck);
+      window.removeEventListener('popstate', handleRouteCheck);
+    };
   }, [adminToken]);
 
   const handleAdminLoginSuccess = (token, username) => {
