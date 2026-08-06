@@ -222,6 +222,24 @@ router.get('/dishes', async (req, res) => {
   }
 });
 
+// GET public combos for customer menu (no auth needed)
+router.get('/combos', async (req, res) => {
+  try {
+    const slug = req.query.slug;
+    let restaurantId = 1;
+    if (slug) {
+      const rows = await query('SELECT id FROM restaurants WHERE slug = $1', [slug]);
+      if (rows.length > 0) restaurantId = rows[0].id;
+    }
+    const combos = await query('SELECT * FROM combos WHERE restaurant_id = $1 AND available = $2 ORDER BY sort_order ASC, id DESC', [restaurantId, 1]);
+    res.json(combos);
+  } catch (err) {
+    console.error('Fetch public combos error:', err);
+    res.status(500).json({ error: 'Failed to fetch combos' });
+  }
+});
+
+
 // POST Create Direct Table Order (KOT Order)
 router.post('/orders', async (req, res) => {
   try {

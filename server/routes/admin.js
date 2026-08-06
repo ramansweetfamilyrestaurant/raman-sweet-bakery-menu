@@ -538,4 +538,75 @@ router.get('/analytics', authenticateToken, async (req, res) => {
   }
 });
 
+// ========== COMBO / THALI DEALS CRUD ==========
+
+// GET all combos for admin
+router.get('/combos', authenticateToken, async (req, res) => {
+  try {
+    const combos = await query('SELECT * FROM combos WHERE restaurant_id = $1 ORDER BY sort_order ASC, id DESC', [req.user.restaurant_id]);
+    res.json(combos);
+  } catch (err) {
+    console.error('Fetch combos error:', err);
+    res.status(500).json({ error: 'Failed to fetch combos' });
+  }
+});
+
+// POST create new combo
+router.post('/combos', authenticateToken, async (req, res) => {
+  try {
+    const { name, description, price, image, items, badge, sort_order } = req.body;
+    if (!name || !price || !items) {
+      return res.status(400).json({ error: 'Name, price, and items are required' });
+    }
+    const itemsStr = typeof items === 'string' ? items : JSON.stringify(items);
+    const result = await query(
+      'INSERT INTO combos (restaurant_id, name, description, price, image, items, badge, sort_order) VALUES ($1, $2, $3, $4, $5, $6, $7, $8) RETURNING id',
+      [req.user.restaurant_id, name, description || '', price, image || '', itemsStr, badge || '', sort_order || 0]
+    );
+    res.json({ id: result[0]?.id, message: 'Combo created successfully' });
+  } catch (err) {
+    console.error('Create combo error:', err);
+    res.status(500).json({ error: 'Failed to create combo' });
+  }
+});
+
+// PUT update combo
+router.put('/combos/:id', authenticateToken, async (req, res) => {
+  try {
+    const { name, description, price, image, items, badge, sort_order, available } = req.body;
+    const itemsStr = typeof items === 'string' ? items : JSON.stringify(items);
+    await query(
+      'UPDATE combos SET name = $1, description = $2, price = $3, image = $4, items = $5, badge = $6, sort_order = $7, available = $8 WHERE id = $9 AND restaurant_id = $10',
+      [name, description || '', price, image || '', itemsStr, badge || '', sort_order || 0, available !== undefined ? available : 1, req.params.id, req.user.restaurant_id]
+    );
+    res.json({ message: 'Combo updated successfully' });
+  } catch (err) {
+    console.error('Update combo error:', err);
+    res.status(500).json({ error: 'Failed to update combo' });
+  }
+});
+
+// PATCH toggle combo availability
+router.patch('/combos/:id/toggle', authenticateToken, async (req, res) => {
+  try {
+    const { available } = req.body;
+    await query('UPDATE combos SET available = $1 WHERE id = $2 AND restaurant_id = $3', [available ? 1 : 0, req.params.id, req.user.restaurant_id]);
+    res.json({ message: 'Combo availability updated' });
+  } catch (err) {
+    console.error('Toggle combo error:', err);
+    res.status(500).json({ error: 'Failed to toggle combo' });
+  }
+});
+
+// DELETE combo
+router.delete('/combos/:id', authenticateToken, async (req, res) => {
+  try {
+    await query('DELETE FROM combos WHERE id = $1 AND restaurant_id = $2', [req.params.id, req.user.restaurant_id]);
+    res.json({ message: 'Combo deleted successfully' });
+  } catch (err) {
+    console.error('Delete combo error:', err);
+    res.status(500).json({ error: 'Failed to delete combo' });
+  }
+});
+
 export default router;

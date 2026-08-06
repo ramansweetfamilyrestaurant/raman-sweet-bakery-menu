@@ -410,3 +410,63 @@ export async function fetchAdminAnalytics(token) {
   });
   return handleResponse(res, 'Failed to fetch analytics');
 }
+
+// ========== COMBO / THALI DEALS ==========
+
+export async function fetchCombos(slug = '') {
+  const params = new URLSearchParams();
+  if (slug) params.append('slug', slug);
+  const res = await fetch(`${API_BASE}/combos?${params.toString()}`);
+  return handleResponse(res, 'Failed to fetch combos');
+}
+
+export async function fetchAdminCombos(token) {
+  const res = await fetch(`${API_BASE}/admin/combos`, {
+    headers: { Authorization: `Bearer ${token}` }
+  });
+  return handleResponse(res, 'Failed to fetch combos');
+}
+
+export async function createCombo(comboData, token) {
+  const res = await fetch(`${API_BASE}/admin/combos`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      Authorization: `Bearer ${token}`,
+    },
+    body: JSON.stringify(comboData),
+  });
+  return handleResponse(res, 'Failed to create combo');
+}
+
+export async function updateCombo(id, comboData, token) {
+  const res = await fetch(`${API_BASE}/admin/combos/${id}`, {
+    method: 'PUT',
+    headers: {
+      'Content-Type': 'application/json',
+      Authorization: `Bearer ${token}`,
+    },
+    body: JSON.stringify(comboData),
+  });
+  return handleResponse(res, 'Failed to update combo');
+}
+
+export async function deleteCombo(id, token) {
+  const res = await fetch(`${API_BASE}/admin/combos/${id}`, {
+    method: 'DELETE',
+    headers: { Authorization: `Bearer ${token}` },
+  });
+  return handleResponse(res, 'Failed to delete combo');
+}
+
+export async function toggleComboAvailability(id, available, token) {
+  const res = await fetch(`${API_BASE}/admin/combos/${id}/toggle`, {
+    method: 'PATCH',
+    headers: {
+      'Content-Type': 'application/json',
+      Authorization: `Bearer ${token}`,
+    },
+    body: JSON.stringify({ available }),
+  });
+  return handleResponse(res, 'Failed to toggle combo availability');
+}

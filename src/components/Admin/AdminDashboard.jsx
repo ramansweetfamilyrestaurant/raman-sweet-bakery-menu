@@ -1,8 +1,9 @@
 import React, { useState, useEffect } from 'react';
-import { fetchCategories, fetchDishes, toggleDishAvailability, toggleCategoryActive, deleteDish, deleteCategory, fetchRestaurantInfo, updateDishPrice, fetchAnnouncements, fetchAdminOrders, updateOrderStatus, uploadImage, fetchServiceRequests, resolveServiceRequest, fetchAdminAnalytics } from '../../api/client';
+import { fetchCategories, fetchDishes, toggleDishAvailability, toggleCategoryActive, deleteDish, deleteCategory, fetchRestaurantInfo, updateDishPrice, fetchAnnouncements, fetchAdminOrders, updateOrderStatus, uploadImage, fetchServiceRequests, resolveServiceRequest, fetchAdminAnalytics, fetchAdminCombos, createCombo, updateCombo, deleteCombo, toggleComboAvailability } from '../../api/client';
 import { getPlanDetails } from '../../config/plans';
 import DishFormModal from './DishFormModal';
 import CategoryFormModal from './CategoryFormModal';
+import ComboFormModal from './ComboFormModal';
 import { Plus, Edit, Trash2, Eye, EyeOff, LogOut, ArrowLeft, Layers, Utensils, QrCode, Printer, Settings, Star, CheckCircle, Lock, ExternalLink, Megaphone, MessageSquare, Palette, Sparkles, Clock, CheckCircle2, XCircle, Upload, X, BarChart2, TrendingUp, Download, Award, MapPin } from 'lucide-react';
 
 export default function AdminDashboard({ token, username, onLogout, onReturnToMenu }) {
@@ -29,6 +30,10 @@ export default function AdminDashboard({ token, username, onLogout, onReturnToMe
   const [kotFilter, setKotFilter] = useState('all');
   const [prevPendingCount, setPrevPendingCount] = useState(0);
   const [restaurantInfo, setRestaurantInfo] = useState(null);
+
+  // Combos State
+  const [combos, setCombos] = useState([]);
+  const [comboModalData, setComboModalData] = useState(null);
 
   const playKitchenChime = () => {
     try {
@@ -442,14 +447,16 @@ export default function AdminDashboard({ token, username, onLogout, onReturnToMe
   const loadData = async () => {
     setLoading(true);
     try {
-      const [catData, dishData, infoData] = await Promise.all([
+      const [catData, dishData, infoData, comboData] = await Promise.all([
         fetchCategories({ adminView: true, token }),
         fetchDishes({ adminView: true, token }),
-        fetchRestaurantInfo(token)
+        fetchRestaurantInfo(token),
+        fetchAdminCombos(token).catch(() => [])
       ]);
       setCategories(Array.isArray(catData) ? catData : []);
       setDishes(Array.isArray(dishData) ? dishData : []);
       setRestaurantInfo(infoData);
+      setCombos(Array.isArray(comboData) ? comboData : []);
       if (infoData) {
         const defaultVis = { must_try: true, combo: true, special: true, under100: true };
         setSettingsForm({
@@ -1044,6 +1051,7 @@ export default function AdminDashboard({ token, username, onLogout, onReturnToMe
             { id: 'analytics', label: '📊 Analytics', icon: <BarChart2 size={13} /> },
             { id: 'dishes', label: 'Dishes', count: safeDishes.length, icon: <Utensils size={13} /> },
             { id: 'categories', label: 'Categories', count: safeCategories.length, icon: <Layers size={13} /> },
+            { id: 'combos', label: '🛒 Combos', count: combos.length, icon: <Layers size={13} /> },
             { id: 'qr-generator', label: 'QR Code', icon: <QrCode size={13} /> },
             { id: 'settings', label: 'Settings', icon: <Settings size={13} /> }
           ].map(tab => {
@@ -2327,6 +2335,160 @@ export default function AdminDashboard({ token, username, onLogout, onReturnToMe
           </div>
         )}
 
+        {/* TAB: COMBOS / THALI BUILDER */}
+        {activeTab === 'combos' && (
+          <div>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '14px' }}>
+              <h3 style={{ margin: 0, fontSize: '1.05rem', fontWeight: 800, color: '#1F2937' }}>🛒 Combo Deals & Thali Manager</h3>
+              <button
+                onClick={() => setComboModalData('new')}
+                style={{
+                  padding: '8px 16px', borderRadius: '10px', border: 'none',
+                  background: 'linear-gradient(135deg, #FFD700 0%, #D4AF37 100%)',
+                  color: '#0A0A0A', fontWeight: 800, fontSize: '0.82rem', cursor: 'pointer',
+                  display: 'flex', alignItems: 'center', gap: '6px',
+                  boxShadow: '0 4px 14px rgba(255,215,0,0.35)'
+                }}
+              >
+                <Plus size={15} /> Add Combo
+              </button>
+            </div>
+
+            {combos.length === 0 ? (
+              <div style={{
+                textAlign: 'center', padding: '50px 20px', background: '#FFFFFF',
+                borderRadius: '16px', border: '1px solid #E5E7EB'
+              }}>
+                <div style={{ fontSize: '3rem', marginBottom: '12px' }}>🛒</div>
+                <h3 style={{ color: '#374151', fontWeight: 800, marginBottom: '6px' }}>No Combo Deals Yet</h3>
+                <p style={{ color: '#6B7280', fontSize: '0.88rem' }}>Create combo thalis and meal deals to offer customers great value!</p>
+                <button
+                  onClick={() => setComboModalData('new')}
+                  style={{
+                    marginTop: '14px', padding: '10px 24px', borderRadius: '12px', border: 'none',
+                    background: 'linear-gradient(135deg, #FFD700 0%, #D4AF37 100%)',
+                    color: '#0A0A0A', fontWeight: 800, fontSize: '0.88rem', cursor: 'pointer'
+                  }}
+                >+ Create First Combo</button>
+              </div>
+            ) : (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                {combos.map(combo => {
+                  let comboItems = [];
+                  try { comboItems = typeof combo.items === 'string' ? JSON.parse(combo.items) : (combo.items || []); } catch { comboItems = []; }
+                  const originalTotal = comboItems.reduce((s, i) => s + ((i.original_price || 0) * (i.qty || 1)), 0);
+                  const savings = originalTotal - combo.price;
+                  const isAvailable = combo.available === 1 || combo.available === true;
+                  return (
+                    <div key={combo.id} style={{
+                      background: '#FFFFFF', borderRadius: '16px', padding: '16px',
+                      border: `1px solid ${isAvailable ? '#E5E7EB' : '#FEE2E2'}`,
+                      boxShadow: '0 2px 8px rgba(0,0,0,0.06)',
+                      opacity: isAvailable ? 1 : 0.7,
+                      transition: 'all 0.2s'
+                    }}>
+                      <div style={{ display: 'flex', alignItems: 'flex-start', gap: '14px' }}>
+                        {combo.image && (
+                          <img src={combo.image} alt={combo.name} style={{
+                            width: '70px', height: '70px', borderRadius: '12px', objectFit: 'cover',
+                            border: '2px solid rgba(255,215,0,0.3)'
+                          }} />
+                        )}
+                        <div style={{ flex: 1 }}>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '4px' }}>
+                            <span style={{ fontWeight: 800, fontSize: '1rem', color: '#1F2937' }}>{combo.name}</span>
+                            {combo.badge && (
+                              <span style={{
+                                padding: '2px 8px', borderRadius: '6px', fontSize: '0.68rem', fontWeight: 700,
+                                background: 'linear-gradient(135deg, #FFD700, #F59E0B)', color: '#0A0A0A'
+                              }}>{combo.badge}</span>
+                            )}
+                            {!isAvailable && (
+                              <span style={{
+                                padding: '2px 8px', borderRadius: '6px', fontSize: '0.68rem', fontWeight: 700,
+                                background: '#FEE2E2', color: '#DC2626'
+                              }}>Unavailable</span>
+                            )}
+                          </div>
+                          {combo.description && (
+                            <p style={{ color: '#6B7280', fontSize: '0.78rem', margin: '0 0 6px 0' }}>{combo.description}</p>
+                          )}
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '6px' }}>
+                            <span style={{ fontWeight: 800, fontSize: '1.1rem', color: '#059669' }}>₹{combo.price}</span>
+                            {originalTotal > 0 && originalTotal > combo.price && (
+                              <>
+                                <span style={{ textDecoration: 'line-through', color: '#9CA3AF', fontSize: '0.82rem' }}>₹{originalTotal}</span>
+                                <span style={{
+                                  padding: '2px 8px', borderRadius: '6px', fontSize: '0.72rem', fontWeight: 700,
+                                  background: 'rgba(74,222,128,0.15)', color: '#059669'
+                                }}>Save ₹{savings}</span>
+                              </>
+                            )}
+                          </div>
+                          <div style={{ display: 'flex', flexWrap: 'wrap', gap: '4px' }}>
+                            {comboItems.map((item, idx) => (
+                              <span key={idx} style={{
+                                padding: '2px 8px', borderRadius: '6px', fontSize: '0.7rem',
+                                background: '#F3F4F6', color: '#374151', fontWeight: 600
+                              }}>
+                                {item.qty > 1 ? `${item.qty}x ` : ''}{item.dish_name} {item.portion === 'half' ? '(H)' : ''}
+                              </span>
+                            ))}
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Action Buttons */}
+                      <div style={{ display: 'flex', gap: '8px', marginTop: '12px', borderTop: '1px solid #F3F4F6', paddingTop: '10px' }}>
+                        <button
+                          onClick={async () => {
+                            try {
+                              await toggleComboAvailability(combo.id, !isAvailable, token);
+                              setCombos(prev => prev.map(c => c.id === combo.id ? { ...c, available: !isAvailable ? 1 : 0 } : c));
+                            } catch { alert('Failed to toggle'); }
+                          }}
+                          style={{
+                            flex: 1, padding: '8px', borderRadius: '10px', cursor: 'pointer', fontWeight: 700, fontSize: '0.78rem',
+                            border: '1px solid ' + (isAvailable ? '#FEE2E2' : '#D1FAE5'),
+                            background: isAvailable ? 'rgba(239,68,68,0.06)' : 'rgba(16,185,129,0.06)',
+                            color: isAvailable ? '#DC2626' : '#059669'
+                          }}
+                        >
+                          {isAvailable ? '🔴 Mark Unavailable' : '🟢 Mark Available'}
+                        </button>
+                        <button
+                          onClick={() => setComboModalData(combo)}
+                          style={{
+                            padding: '8px 16px', borderRadius: '10px', cursor: 'pointer', fontWeight: 700, fontSize: '0.78rem',
+                            border: '1px solid rgba(255,215,0,0.3)', background: 'rgba(255,215,0,0.08)', color: '#B45309'
+                          }}
+                        >
+                          <Edit size={13} /> Edit
+                        </button>
+                        <button
+                          onClick={async () => {
+                            if (!confirm(`Delete combo "${combo.name}"?`)) return;
+                            try {
+                              await deleteCombo(combo.id, token);
+                              setCombos(prev => prev.filter(c => c.id !== combo.id));
+                            } catch { alert('Failed to delete'); }
+                          }}
+                          style={{
+                            padding: '8px 16px', borderRadius: '10px', cursor: 'pointer', fontWeight: 700, fontSize: '0.78rem',
+                            border: '1px solid #FEE2E2', background: 'rgba(239,68,68,0.06)', color: '#DC2626'
+                          }}
+                        >
+                          <Trash2 size={13} />
+                        </button>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+          </div>
+        )}
+
         {/* TAB 3: TABLE QR GENERATOR */}
         {activeTab === 'qr-generator' && (
           <div style={{
@@ -3360,6 +3522,25 @@ export default function AdminDashboard({ token, username, onLogout, onReturnToMe
           token={token}
           onSave={handleSaveCategory}
           onClose={() => setCatModalData(null)}
+        />
+      )}
+
+      {comboModalData && (
+        <ComboFormModal
+          combo={comboModalData === 'new' ? null : comboModalData}
+          dishes={dishes}
+          token={token}
+          onSave={async (data) => {
+            if (comboModalData === 'new') {
+              await createCombo(data, token);
+            } else {
+              await updateCombo(comboModalData.id, data, token);
+            }
+            const updated = await fetchAdminCombos(token).catch(() => []);
+            setCombos(Array.isArray(updated) ? updated : []);
+            setComboModalData(null);
+          }}
+          onClose={() => setComboModalData(null)}
         />
       )}
 

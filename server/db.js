@@ -180,6 +180,20 @@ async function createTables() {
         details TEXT,
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
       );
+
+      CREATE TABLE IF NOT EXISTS combos (
+        id SERIAL PRIMARY KEY,
+        restaurant_id INT REFERENCES restaurants(id) ON DELETE CASCADE,
+        name VARCHAR(255) NOT NULL,
+        description TEXT,
+        price DECIMAL(10, 2) NOT NULL,
+        image VARCHAR(1000),
+        items JSONB NOT NULL,
+        available BOOLEAN DEFAULT TRUE,
+        badge VARCHAR(100),
+        sort_order INT DEFAULT 0,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+      );
     `);
   } else {
     sqliteDb.exec(`
@@ -303,6 +317,21 @@ async function createTables() {
         request_type TEXT NOT NULL,
         note TEXT,
         status TEXT DEFAULT 'pending',
+        created_at TEXT DEFAULT CURRENT_TIMESTAMP,
+        FOREIGN KEY (restaurant_id) REFERENCES restaurants (id) ON DELETE CASCADE
+      );
+
+      CREATE TABLE IF NOT EXISTS combos (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        restaurant_id INTEGER DEFAULT 1,
+        name TEXT NOT NULL,
+        description TEXT,
+        price REAL NOT NULL,
+        image TEXT,
+        items TEXT NOT NULL,
+        available INTEGER DEFAULT 1,
+        badge TEXT,
+        sort_order INTEGER DEFAULT 0,
         created_at TEXT DEFAULT CURRENT_TIMESTAMP,
         FOREIGN KEY (restaurant_id) REFERENCES restaurants (id) ON DELETE CASCADE
       );
