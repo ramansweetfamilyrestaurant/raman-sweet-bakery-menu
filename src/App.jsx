@@ -93,7 +93,15 @@ export default function App() {
   const handleAddToCart = (dish, portionType = 'full') => {
     const hasHalfPrice = dish.price_half !== null && dish.price_half !== undefined && Number(dish.price_half) > 0;
     const isHalf = portionType === 'half' && hasHalfPrice;
-    const portionName = isHalf ? 'Half' : (hasHalfPrice ? 'Full' : '');
+    
+    // Explicit portion label for clear Kitchen KOT receipt printing
+    let portionName = '';
+    if (hasHalfPrice) {
+      portionName = isHalf ? 'Half' : 'Full';
+    } else if (dish.portion && dish.portion.trim() !== '') {
+      portionName = dish.portion.trim();
+    }
+
     const unitPrice = isHalf ? Math.round(Number(dish.price_half)) : Math.round(Number(dish.price));
     const cartKey = `${dish.id}_${portionName || 'regular'}`;
 

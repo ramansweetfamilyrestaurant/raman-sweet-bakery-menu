@@ -982,19 +982,42 @@ export default function AdminDashboard({ token, username, onLogout, onReturnToMe
                           </div>
 
                           {/* Customer details & Time */}
-                          <div style={{ fontSize: '0.78rem', color: 'var(--text-muted)', marginBottom: '10px', display: 'flex', justifyContent: 'space-between' }}>
-                            <span>Order #{o.id} • {o.customer_name || 'Guest'}</span>
-                            <span>{new Date(o.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
+                          <div style={{ fontSize: '0.78rem', color: 'var(--text-muted)', marginBottom: '10px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                            <span style={{ fontWeight: 800, color: '#1F2937' }}>Order #{o.id} • {o.customer_name || 'Guest'}</span>
+                            <span style={{ fontWeight: 700, color: '#6B7280' }}>
+                              🕒 {new Date(o.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: true })}
+                            </span>
                           </div>
 
                         {/* Items List */}
                         <div style={{ background: '#F9FAFB', borderRadius: '12px', padding: '10px 12px', border: '1px solid #E5E7EB', marginBottom: '10px' }}>
-                          {Array.isArray(o.items) && o.items.map((item, iIdx) => (
-                            <div key={iIdx} style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.86rem', fontWeight: 700, color: '#1F2937', padding: '3px 0' }}>
-                              <span>{item.quantity}x {item.name}{item.portion ? ` (${item.portion})` : ''}</span>
-                              <span style={{ color: 'var(--primary-emerald)' }}>₹{item.price * item.quantity}</span>
-                            </div>
-                          ))}
+                          {Array.isArray(o.items) && o.items.map((item, iIdx) => {
+                            const portionLabel = item.portion || '';
+                            const isHalf = portionLabel.toLowerCase().includes('half');
+                            const isFull = portionLabel.toLowerCase().includes('full');
+
+                            return (
+                              <div key={iIdx} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '0.86rem', fontWeight: 700, color: '#1F2937', padding: '4px 0' }}>
+                                <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                                  <span>{item.quantity}x {item.name}</span>
+                                  {portionLabel && (
+                                    <span style={{
+                                      fontSize: '0.66rem',
+                                      fontWeight: 900,
+                                      padding: '1px 6px',
+                                      borderRadius: '4px',
+                                      background: isHalf ? '#FEF3C7' : (isFull ? '#D1FAE5' : '#E5E7EB'),
+                                      color: isHalf ? '#92400E' : (isFull ? '#065F46' : '#374151'),
+                                      border: isHalf ? '1px solid #F59E0B' : (isFull ? '1px solid #10B981' : '1px solid #9CA3AF')
+                                    }}>
+                                      {portionLabel.toUpperCase()}
+                                    </span>
+                                  )}
+                                </div>
+                                <span style={{ color: 'var(--primary-emerald)', fontWeight: 800 }}>₹{item.price * item.quantity}</span>
+                              </div>
+                            );
+                          })}
                           <div style={{ borderTop: '1px dashed #D1D5DB', marginTop: '6px', paddingTop: '6px', display: 'flex', justifyContent: 'space-between', fontWeight: 900, fontSize: '0.92rem', color: '#111827' }}>
                             <span>Total Bill</span>
                             <span style={{ color: 'var(--gold-primary)' }}>₹{o.total_amount}</span>

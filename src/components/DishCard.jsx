@@ -276,25 +276,68 @@ export default function DishCard({ dish, onClick, onAddToCart, currencySymbol = 
             gap: '6px'
           }}>
             {onAddToCart && isAvailable && (
-              <button
-                onClick={(e) => {
-                  e.stopPropagation();
-                  onAddToCart(dish, 'full');
-                }}
-                style={{
-                  background: 'linear-gradient(135deg, #25D366 0%, #128C7E 100%)',
-                  color: '#FFFFFF',
-                  border: 'none',
-                  padding: '3px 8px',
-                  borderRadius: 'var(--radius-pill)',
-                  fontSize: '0.7rem',
-                  fontWeight: 900,
-                  cursor: 'pointer',
-                  boxShadow: '0 2px 6px rgba(37, 211, 102, 0.4)'
-                }}
-              >
-                + Order
-              </button>
+              hasHalfPrice ? (
+                <>
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      onAddToCart(dish, 'half');
+                    }}
+                    style={{
+                      background: '#FEF3C7',
+                      color: '#92400E',
+                      border: '1px solid #F59E0B',
+                      padding: '3px 8px',
+                      borderRadius: 'var(--radius-pill)',
+                      fontSize: '0.68rem',
+                      fontWeight: 900,
+                      cursor: 'pointer',
+                      boxShadow: '0 2px 6px rgba(245, 158, 11, 0.2)'
+                    }}
+                  >
+                    + Half
+                  </button>
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      onAddToCart(dish, 'full');
+                    }}
+                    style={{
+                      background: 'linear-gradient(135deg, #25D366 0%, #128C7E 100%)',
+                      color: '#FFFFFF',
+                      border: 'none',
+                      padding: '3px 8px',
+                      borderRadius: 'var(--radius-pill)',
+                      fontSize: '0.68rem',
+                      fontWeight: 900,
+                      cursor: 'pointer',
+                      boxShadow: '0 2px 6px rgba(37, 211, 102, 0.4)'
+                    }}
+                  >
+                    + Full
+                  </button>
+                </>
+              ) : (
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onAddToCart(dish, 'full');
+                  }}
+                  style={{
+                    background: 'linear-gradient(135deg, #25D366 0%, #128C7E 100%)',
+                    color: '#FFFFFF',
+                    border: 'none',
+                    padding: '3px 8px',
+                    borderRadius: 'var(--radius-pill)',
+                    fontSize: '0.7rem',
+                    fontWeight: 900,
+                    cursor: 'pointer',
+                    boxShadow: '0 2px 6px rgba(37, 211, 102, 0.4)'
+                  }}
+                >
+                  + Order
+                </button>
+              )
             )}
 
             <span style={{

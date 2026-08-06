@@ -221,7 +221,10 @@ router.post('/orders', async (req, res) => {
   try {
     const { slug, table_number, customer_name, customer_phone, items, total_amount } = req.body;
     const resto = await resolveRestaurant(req, slug);
-    const targetId = resto?.id || 1;
+    if (!resto) {
+      return res.status(404).json({ error: 'Restaurant not found' });
+    }
+    const targetId = resto.id;
 
     if (!items || !Array.isArray(items) || items.length === 0) {
       return res.status(400).json({ error: 'Order items are required' });
