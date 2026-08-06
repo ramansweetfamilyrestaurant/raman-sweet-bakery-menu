@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 
-export default function MenuCardItem({ dish, lang, onClick, currencySymbol }) {
+export default function MenuCardItem({ dish, lang, onClick, onAddToCart, currencySymbol }) {
   const symbol = currencySymbol !== undefined ? currencySymbol : '₹';
   const isAvailable = dish.available !== false;
   const hasHalfPrice = dish.price_half !== null && dish.price_half !== undefined && Number(dish.price_half) > 0;

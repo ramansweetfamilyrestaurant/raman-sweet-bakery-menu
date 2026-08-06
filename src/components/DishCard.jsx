@@ -1,7 +1,7 @@
 import React from 'react';
 import { ChevronRight } from 'lucide-react';
 
-export default function DishCard({ dish, onClick, currencySymbol = '₹' }) {
+export default function DishCard({ dish, onClick, onAddToCart, currencySymbol = '₹' }) {
   const isAvailable = dish.available !== false;
   const hasHalfPrice = dish.price_half !== null && dish.price_half !== undefined && Number(dish.price_half) > 0;
 
