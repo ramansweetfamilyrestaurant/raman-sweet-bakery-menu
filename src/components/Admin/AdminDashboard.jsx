@@ -149,6 +149,8 @@ export default function AdminDashboard({ token, username, onLogout, onReturnToMe
       : window.location.origin;
     const targetUrl = `${liveOrigin}/?table=${tableNumber || '1'}`;
     const qrImgUrl = `https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=${encodeURIComponent(targetUrl)}`;
+    const currentName = settingsForm.name || 'Raman Sweet Bakery & Family Restaurant';
+    const currentTagline = settingsForm.tagline || '100% Pure Vegetarian • Pure Desi Ghee Sweets • Live Bakery';
 
     const printWindow = window.open('', '_blank', 'width=800,height=900');
     if (!printWindow) {
@@ -173,7 +175,7 @@ export default function AdminDashboard({ token, username, onLogout, onReturnToMe
               min-height: 100vh;
             }
             .standee-card {
-              width: 340px;
+              width: 350px;
               padding: 32px 24px;
               border: 3px double #C5A059;
               border-radius: 24px;
@@ -196,18 +198,19 @@ export default function AdminDashboard({ token, username, onLogout, onReturnToMe
             }
             .logo-title {
               font-family: 'Playfair Display', serif;
-              font-size: 1.45rem;
+              font-size: 1.35rem;
               font-weight: 900;
               color: #0A2315;
-              margin: 0 0 4px 0;
+              margin: 0 0 6px 0;
+              line-height: 1.2;
             }
             .subtitle {
-              font-size: 0.76rem;
+              font-size: 0.78rem;
               font-weight: 800;
               color: #15803D;
               letter-spacing: 0.5px;
               margin-bottom: 16px;
-              text-transform: uppercase;
+              line-height: 1.3;
             }
             .qr-box {
               background: #FFFFFF;
@@ -251,8 +254,8 @@ export default function AdminDashboard({ token, username, onLogout, onReturnToMe
         <body>
           <div class="standee-card">
             <div class="table-badge">TABLE NO. ${tableNumber || '1'}</div>
-            <h1 class="logo-title">Raman Sweet Bakery</h1>
-            <div class="subtitle">100% Pure Veg • Pure Desi Ghee Sweets • Live Bakery</div>
+            <h1 class="logo-title">${currentName}</h1>
+            <div class="subtitle">${currentTagline}</div>
 
             <div class="qr-box">
               <img src="${qrImgUrl}" alt="Table ${tableNumber || '1'} QR Code" />
@@ -262,7 +265,7 @@ export default function AdminDashboard({ token, username, onLogout, onReturnToMe
             <div class="instruction-hi">स्कैन करें और डिजिटल मेन्यू देखें</div>
 
             <div class="footer-info">
-              Raman Sweet Bakery & Family Restaurant • Phone: +91 9708366583
+              ${settingsForm.address || 'HawaiAdda Chowk, Near katchari Gumti, Motihari'} • Phone: ${settingsForm.phone || '+91 9708366583'}
             </div>
           </div>
           <script>
@@ -1010,10 +1013,10 @@ export default function AdminDashboard({ token, username, onLogout, onReturnToMe
               </div>
 
               <h4 style={{ fontSize: '1.05rem', fontWeight: 800, color: 'var(--primary-emerald)' }}>
-                Raman Sweet Bakery
+                {settingsForm.name || 'Raman Sweet Bakery & Family Restaurant'}
               </h4>
               <p style={{ fontSize: '0.74rem', color: 'var(--veg-green)', fontWeight: 700, marginBottom: '14px' }}>
-                100% PURE VEG RESTAURANT
+                {settingsForm.tagline || '100% Pure Vegetarian • Pure Desi Ghee Sweets • Live Bakery'}
               </p>
 
               {/* QR Image Graphic */}
