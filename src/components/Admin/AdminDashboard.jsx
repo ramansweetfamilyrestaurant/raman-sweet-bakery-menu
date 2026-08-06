@@ -25,6 +25,7 @@ export default function AdminDashboard({ token, username, onLogout, onReturnToMe
   const [orders, setOrders] = useState([]);
   const [serviceRequests, setServiceRequests] = useState([]);
   const [analyticsData, setAnalyticsData] = useState(null);
+  const [billOrderModal, setBillOrderModal] = useState(null);
   const [kotFilter, setKotFilter] = useState('all');
   const [prevPendingCount, setPrevPendingCount] = useState(0);
   const [restaurantInfo, setRestaurantInfo] = useState(null);
@@ -251,6 +252,125 @@ export default function AdminDashboard({ token, username, onLogout, onReturnToMe
     printWindow.document.close();
   };
 
+  const handlePrintCustomerBill = (order, paymentMode = 'CASH') => {
+    const printWindow = window.open('', '_blank', 'width=400,height=700');
+    if (!printWindow) return;
+
+    const isGst = restaurantInfo?.gst_enabled;
+    const gstin = restaurantInfo?.gstin_number || '';
+    const fssai = restaurantInfo?.fssai_lic_no || '';
+    const currency = restaurantInfo?.currency_symbol || '₹';
+
+    let subtotal = 0;
+    let itemsHtml = '';
+    (order.items || []).forEach(i => {
+      const portionText = i.portion ? ` (${i.portion})` : '';
+      const lineTotal = Number(i.price) * Number(i.quantity);
+      subtotal += lineTotal;
+      itemsHtml += `
+        <tr>
+          <td style="padding:4px 0;font-weight:bold;font-size:13px;border-bottom:1px dashed #DDD;">${i.quantity}x ${i.name}${portionText}</td>
+          <td style="text-align:right;font-weight:bold;font-size:13px;border-bottom:1px dashed #DDD;">${currency}${lineTotal}</td>
+        </tr>
+      `;
+    });
+
+    let cgst = 0;
+    let sgst = 0;
+    let grandTotal = subtotal;
+
+    if (isGst) {
+      cgst = Math.round(subtotal * 0.025 * 100) / 100;
+      sgst = Math.round(subtotal * 0.025 * 100) / 100;
+      grandTotal = Math.round((subtotal + cgst + sgst) * 100) / 100;
+    }
+
+    printWindow.document.write(`
+      <!DOCTYPE html>
+      <html>
+        <head>
+          <title>Tax Invoice / Customer Bill - Order #${order.id}</title>
+          <style>
+            @media print {
+              body { margin: 0; padding: 0; width: 100%; }
+            }
+            body { font-family: 'Courier New', Courier, monospace; padding: 14px; width: 290px; margin: 0 auto; background: #FFF; color: #000; }
+            .header { text-align: center; border-bottom: 2px double #000; padding-bottom: 8px; margin-bottom: 10px; }
+            .header h2 { margin: 0; font-size: 18px; font-weight: 900; }
+            .header p { margin: 2px 0; font-size: 11px; }
+            .badge { background: #000; color: #FFF; font-weight: 900; font-size: 12px; padding: 2px 8px; display: inline-block; margin-top: 4px; }
+            .meta { border-bottom: 1px dashed #000; padding-bottom: 8px; margin-bottom: 10px; font-size: 12px; line-height: 1.5; }
+            table { width: 100%; font-size: 13px; border-collapse: collapse; margin-bottom: 10px; }
+            .totals { border-top: 1px solid #000; border-bottom: 2px solid #000; padding: 6px 0; font-size: 13px; line-height: 1.5; }
+            .grand-total { font-weight: 900; font-size: 17px; display: flex; justify-content: space-between; margin-top: 4px; border-top: 1px dashed #000; padding-top: 4px; }
+            .footer { text-align: center; font-size: 11px; margin-top: 14px; border-top: 1px dashed #000; padding-top: 8px; }
+          </style>
+        </head>
+        <body>
+          <div class="header">
+            <h2>${restaurantInfo?.name || 'RAMAN SWEET BAKERY'}</h2>
+            <p>${restaurantInfo?.address || ''}</p>
+            <p>Ph: ${restaurantInfo?.phone || ''}</p>
+            ${fssai ? `<p>FSSAI Lic No: ${fssai}</p>` : ''}
+            ${gstin ? `<p><strong>GSTIN:</strong> ${gstin}</p>` : ''}
+            <div class="badge">${isGst ? 'TAX INVOICE' : 'FINAL BILL'}</div>
+          </div>
+          <div class="meta">
+            <div><strong>Bill No:</strong> INV-${order.id}</div>
+            <div><strong>Table:</strong> TABLE #${order.table_number || '1'}</div>
+            <div><strong>Date & Time:</strong> ${formatDateTime(order.created_at)}</div>
+            <div><strong>Customer:</strong> ${order.customer_name || 'Dine-In Guest'}</div>
+            <div><strong>Payment Mode:</strong> <span style="background:#000;color:#FFF;padding:1px 6px;">${paymentMode}</span></div>
+          </div>
+          <table>
+            <thead>
+              <tr style="border-bottom:1px solid #000;text-align:left;font-size:12px;">
+                <th>ITEM & QTY</th>
+                <th style="text-align:right;">AMOUNT</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${itemsHtml}
+            </tbody>
+          </table>
+
+          <div class="totals">
+            <div style="display:flex;justify-content:space-between;">
+              <span>Subtotal:</span>
+              <span>${currency}${subtotal}</span>
+            </div>
+            ${isGst ? `
+              <div style="display:flex;justify:space-between;font-size:11px;color:#333;">
+                <span>CGST @ 2.5%:</span>
+                <span>${currency}${cgst}</span>
+              </div>
+              <div style="display:flex;justify:space-between;font-size:11px;color:#333;">
+                <span>SGST @ 2.5%:</span>
+                <span>${currency}${sgst}</span>
+              </div>
+            ` : ''}
+            <div class="grand-total">
+              <span>GRAND TOTAL:</span>
+              <span>${currency}${grandTotal}</span>
+            </div>
+          </div>
+
+          <div class="footer">
+            <p style="margin:0;font-weight:bold;">Thank you for dining with us!</p>
+            <p style="margin:2px 0 0 0;">Please Visit Again 🙏</p>
+          </div>
+          <script>
+            window.onload = function() {
+              window.print();
+              setTimeout(function() { window.close(); }, 500);
+            };
+          </script>
+        </body>
+      </html>
+    `);
+    printWindow.document.close();
+  };
+
   useEffect(() => {
     loadOrders();
     const interval = setInterval(loadOrders, 5000);
@@ -314,6 +434,8 @@ export default function AdminDashboard({ token, username, onLogout, onReturnToMe
           latitude: infoData.latitude !== undefined && infoData.latitude !== null ? infoData.latitude : 26.6500,
           longitude: infoData.longitude !== undefined && infoData.longitude !== null ? infoData.longitude : 84.9167,
           max_distance_meters: infoData.max_distance_meters || 100,
+          gst_enabled: infoData.gst_enabled !== undefined ? infoData.gst_enabled : false,
+          gstin_number: infoData.gstin_number || '',
           filters_visibility: { ...defaultVis, ...infoData.filters_visibility }
         });
       }
@@ -1171,6 +1293,26 @@ export default function AdminDashboard({ token, username, onLogout, onReturnToMe
                           title="Print Kitchen Order Ticket"
                         >
                           <Printer size={13} /> KOT
+                        </button>
+
+                        <button
+                          onClick={() => setBillOrderModal(o)}
+                          style={{
+                            background: '#FEF3C7',
+                            color: '#B45309',
+                            border: '1px solid #FDE68A',
+                            padding: '8px 10px',
+                            borderRadius: '10px',
+                            fontWeight: 800,
+                            fontSize: '0.76rem',
+                            cursor: 'pointer',
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: '4px'
+                          }}
+                          title="Print Final Customer Bill"
+                        >
+                          <Printer size={13} /> Bill 🧾
                         </button>
 
                         {o.status === 'pending' && (
@@ -2491,6 +2633,49 @@ export default function AdminDashboard({ token, username, onLogout, onReturnToMe
                 />
               </div>
 
+            {/* 🧾 GST & Tax Invoice Settings Card */}
+            <div style={{
+              background: '#FFFBEB',
+              border: '1.5px solid #FCD34D',
+              borderRadius: '16px',
+              padding: '16px 18px',
+              marginBottom: '20px'
+            }}>
+              <strong style={{ fontSize: '0.95rem', color: '#92400E', display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '10px' }}>
+                🧾 Customer Bill & GST Tax Invoice Settings
+              </strong>
+
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '12px', alignItems: 'center' }}>
+                <div>
+                  <label style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer', fontSize: '0.86rem', fontWeight: 800, color: '#78350F' }}>
+                    <input
+                      type="checkbox"
+                      checked={!!settingsForm.gst_enabled}
+                      onChange={(e) => setSettingsForm({ ...settingsForm, gst_enabled: e.target.checked })}
+                      style={{ width: '18px', height: '18px', accentColor: '#D97706', cursor: 'pointer' }}
+                    />
+                    <span>Enable 5% GST Tax Billing (CGST 2.5% + SGST 2.5%)</span>
+                  </label>
+                  <span style={{ fontSize: '0.74rem', color: '#B45309', display: 'block', marginTop: '2px', marginLeft: '26px' }}>
+                    Calculates and prints 5% GST breakdown on customer final bills
+                  </span>
+                </div>
+
+                <div>
+                  <label style={{ display: 'block', fontSize: '0.78rem', fontWeight: 800, color: '#78350F', marginBottom: '4px' }}>
+                    GSTIN Registration Number (Optional):
+                  </label>
+                  <input
+                    type="text"
+                    value={settingsForm.gstin_number || ''}
+                    onChange={(e) => setSettingsForm({ ...settingsForm, gstin_number: e.target.value.toUpperCase() })}
+                    placeholder="e.g. 10AAAAA0000A1Z5"
+                    style={{ width: '100%', padding: '8px 12px', borderRadius: '8px', border: '1px solid #FDE68A', fontSize: '0.85rem', textTransform: 'uppercase' }}
+                  />
+                </div>
+              </div>
+            </div>
+
             {/* 📍 GPS Geo-Fencing Radius Configuration Card */}
             <div style={{
               background: '#F0FDF4',
@@ -2857,7 +3042,7 @@ export default function AdminDashboard({ token, username, onLogout, onReturnToMe
         )}
       </div>
 
-      {/* Dish Form Modal */}
+      {/* Dish & Category Form Modals */}
       {dishModalData && (
         <DishFormModal
           dish={dishModalData === 'new' ? null : dishModalData}
@@ -2868,7 +3053,6 @@ export default function AdminDashboard({ token, username, onLogout, onReturnToMe
         />
       )}
 
-      {/* Category Form Modal */}
       {catModalData && (
         <CategoryFormModal
           category={catModalData === 'new' ? null : catModalData}

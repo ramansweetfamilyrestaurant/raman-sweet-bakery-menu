@@ -272,14 +272,14 @@ router.delete('/dishes/:id', authenticateToken, async (req, res) => {
 const handleUpdateSettings = async (req, res) => {
   try {
     const restoId = req.user.restaurant_id || 1;
-    const { name, tagline, logo, phone, address, openingHours, google_review_url, filters_visibility, currency_symbol, fssai_lic_no, resto_type, whatsapp_number, whatsapp_enabled, theme_color, latitude, longitude, max_distance_meters } = req.body;
+    const { name, tagline, logo, phone, address, openingHours, google_review_url, filters_visibility, currency_symbol, fssai_lic_no, resto_type, whatsapp_number, whatsapp_enabled, theme_color, latitude, longitude, max_distance_meters, gst_enabled, gstin_number } = req.body;
 
     const visJson = typeof filters_visibility === 'object' ? JSON.stringify(filters_visibility) : filters_visibility;
 
     await query(`
       UPDATE restaurants 
-      SET name = $1, tagline = $2, logo = $3, phone = $4, address = $5, opening_hours = $6, google_review_url = $7, filters_visibility = $8, currency_symbol = $9, fssai_lic_no = $10, resto_type = $11, whatsapp_number = $12, whatsapp_enabled = $13, theme_color = $14, latitude = $15, longitude = $16, max_distance_meters = $17
-      WHERE id = $18
+      SET name = $1, tagline = $2, logo = $3, phone = $4, address = $5, opening_hours = $6, google_review_url = $7, filters_visibility = $8, currency_symbol = $9, fssai_lic_no = $10, resto_type = $11, whatsapp_number = $12, whatsapp_enabled = $13, theme_color = $14, latitude = $15, longitude = $16, max_distance_meters = $17, gst_enabled = $18, gstin_number = $19
+      WHERE id = $20
     `, [
       name, tagline,
       logo !== undefined ? logo : '',
@@ -293,6 +293,8 @@ const handleUpdateSettings = async (req, res) => {
       latitude !== undefined && latitude !== null ? Number(latitude) : 26.6500,
       longitude !== undefined && longitude !== null ? Number(longitude) : 84.9167,
       max_distance_meters || 100,
+      gst_enabled ? 1 : 0,
+      gstin_number || '',
       restoId
     ]);
 

@@ -87,6 +87,8 @@ router.get('/info', async (req, res) => {
         latitude: resto.latitude !== undefined && resto.latitude !== null ? Number(resto.latitude) : 26.6500,
         longitude: resto.longitude !== undefined && resto.longitude !== null ? Number(resto.longitude) : 84.9167,
         max_distance_meters: resto.max_distance_meters || 100,
+        gst_enabled: resto.gst_enabled === 1 || resto.gst_enabled === true,
+        gstin_number: resto.gstin_number || '',
         active: (resto.active === 1 || resto.active === true || resto.active === '1')
       });
     }
