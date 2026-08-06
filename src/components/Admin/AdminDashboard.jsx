@@ -239,6 +239,8 @@ export default function AdminDashboard({ token, username, onLogout, onReturnToMe
       setCredForm({ currentPassword: '', newUsername: '', newPassword: '', confirmPassword: '' });
     } catch (err) {
       setCredMsg({ text: 'Network error, please try again', type: 'error' });
+    }
+  };
   const handleQuickPriceSave = async (dishId) => {
     try {
       const pFull = Number(quickPriceVal.price);
