@@ -2062,16 +2062,19 @@ export default function AdminDashboard({ token, username, onLogout, onReturnToMe
                         <button
                           onClick={() => handleToggleDish(dish.id, dish.available)}
                           style={{
-                            padding: '4px 9px',
+                            padding: '4px 10px',
                             borderRadius: 'var(--radius-pill)',
-                            fontSize: '0.72rem',
-                            fontWeight: 800,
+                            fontSize: '0.74rem',
+                            fontWeight: 900,
                             background: dish.available !== false ? '#DCFCE7' : '#FEE2E2',
                             color: dish.available !== false ? '#15803D' : '#DC2626',
-                            border: dish.available !== false ? '1px solid #86EFAC' : '1px solid #FCA5A5'
+                            border: dish.available !== false ? '1px solid #86EFAC' : '1px solid #FCA5A5',
+                            cursor: 'pointer',
+                            transition: 'all 0.2s ease'
                           }}
+                          title={dish.available !== false ? 'Click to mark Out of Stock Today' : 'Click to mark Available'}
                         >
-                          {dish.available !== false ? '● Active' : '● Hidden'}
+                          {dish.available !== false ? '🟢 Available' : '🚫 Out of Stock Today'}
                         </button>
 
                         <button onClick={() => setDishModalData(dish)} style={{ color: 'var(--primary-emerald)', padding: '5px', background: '#F3F4F6', borderRadius: '6px', border: 'none', cursor: 'pointer' }} title="Full Edit">

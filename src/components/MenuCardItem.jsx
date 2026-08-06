@@ -318,6 +318,24 @@ export default function MenuCardItem({ dish, lang, onClick, onAddToCart, currenc
               + Order
             </button>
           )}
+
+          {!isAvailable && (
+            <span style={{
+              background: '#FEE2E2',
+              color: '#DC2626',
+              border: '1px solid #FCA5A5',
+              padding: '3px 8px',
+              borderRadius: 'var(--radius-pill)',
+              fontSize: '0.66rem',
+              fontWeight: 900,
+              whiteSpace: 'nowrap',
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: '2px'
+            }}>
+              🚫 {lang === 'hi' ? 'आज अनुपलब्ध' : 'Out of Stock'}
+            </span>
+          )}
         </div>
       </div>
     </div>
