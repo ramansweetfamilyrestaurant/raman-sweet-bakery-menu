@@ -841,6 +841,7 @@ export default function AdminDashboard({ token, username, onLogout, onReturnToMe
                     pending: { bg: '#FEF3C7', text: '#92400E', border: '#FCD34D', label: 'Pending 🟡' },
                     preparing: { bg: '#DBEAFE', text: '#1E40AF', border: '#93C5FD', label: 'Preparing 👨‍🍳' },
                     served: { bg: '#D1FAE5', text: '#065F46', border: '#6EE7B7', label: 'Served 🟢' },
+                    completed: { bg: '#F3F4F6', text: '#4B5563', border: '#D1D5DB', label: 'Completed 🏁' },
                     cancelled: { bg: '#FEE2E2', text: '#991B1B', border: '#FCA5A5', label: 'Cancelled 🔴' }
                   };
                   const st = statusColors[o.status] || statusColors.pending;
@@ -949,7 +950,7 @@ export default function AdminDashboard({ token, username, onLogout, onReturnToMe
                             👨‍🍳 Start Preparing
                           </button>
                         )}
-                        {o.status !== 'served' && o.status !== 'cancelled' && (
+                        {o.status === 'preparing' && (
                           <button
                             onClick={() => handleUpdateStatus(o.id, 'served')}
                             style={{
@@ -967,7 +968,25 @@ export default function AdminDashboard({ token, username, onLogout, onReturnToMe
                             ✅ Mark Served
                           </button>
                         )}
-                        {o.status !== 'cancelled' && (
+                        {o.status === 'served' && (
+                          <button
+                            onClick={() => handleUpdateStatus(o.id, 'completed')}
+                            style={{
+                              flex: 1,
+                              background: '#4B5563',
+                              color: '#FFFFFF',
+                              border: 'none',
+                              padding: '8px',
+                              borderRadius: '10px',
+                              fontWeight: 800,
+                              fontSize: '0.76rem',
+                              cursor: 'pointer'
+                            }}
+                          >
+                            🏁 Complete Table
+                          </button>
+                        )}
+                        {o.status !== 'completed' && o.status !== 'cancelled' && (
                           <button
                             onClick={() => handleUpdateStatus(o.id, 'cancelled')}
                             style={{
