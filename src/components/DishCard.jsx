@@ -212,12 +212,40 @@ export default function DishCard({ dish, onClick, currencySymbol = '₹' }) {
           <span style={{
             display: 'inline-flex',
             alignItems: 'center',
-            gap: '2px',
-            fontSize: '0.74rem',
-            fontWeight: 600,
-            color: 'var(--primary-emerald)'
+            gap: '6px'
           }}>
-            View <ChevronRight size={14} />
+            {onAddToCart && isAvailable && (
+              <button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onAddToCart(dish);
+                }}
+                style={{
+                  background: 'linear-gradient(135deg, #25D366 0%, #128C7E 100%)',
+                  color: '#FFFFFF',
+                  border: 'none',
+                  padding: '3px 8px',
+                  borderRadius: 'var(--radius-pill)',
+                  fontSize: '0.7rem',
+                  fontWeight: 900,
+                  cursor: 'pointer',
+                  boxShadow: '0 2px 6px rgba(37, 211, 102, 0.4)'
+                }}
+              >
+                + Order
+              </button>
+            )}
+
+            <span style={{
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: '2px',
+              fontSize: '0.74rem',
+              fontWeight: 600,
+              color: 'var(--primary-emerald)'
+            }}>
+              View <ChevronRight size={14} />
+            </span>
           </span>
         </div>
       </div>

@@ -219,32 +219,57 @@ export default function MenuCardItem({ dish, lang, onClick, currencySymbol }) {
           </span>
         )}
 
-        {/* Dish Thumbnail */}
-        {dish.image && (
-          <div 
-            onClick={() => onClick(dish)}
-            style={{
-              width: '46px',
-              height: '46px',
-              minWidth: '46px',
-              flexShrink: 0,
-              borderRadius: 'var(--radius-sm)',
-              overflow: 'hidden',
-              border: '1.5px solid var(--gold-border)',
-              position: 'relative',
-              background: 'var(--gold-soft)',
-              cursor: 'pointer',
-              boxShadow: 'var(--shadow-sm)'
-            }}
-          >
-            <img
-              src={dish.image}
-              alt={displayName}
-              style={{ width: '100%', height: '100%', objectFit: 'cover' }}
-              onError={(e) => { e.target.src = '/uploads/logo.jpg'; }}
-            />
-          </div>
-        )}
+        {/* Dish Thumbnail & + Add WhatsApp Button */}
+        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '4px' }}>
+          {dish.image && (
+            <div 
+              onClick={() => onClick(dish)}
+              style={{
+                width: '46px',
+                height: '46px',
+                minWidth: '46px',
+                flexShrink: 0,
+                borderRadius: 'var(--radius-sm)',
+                overflow: 'hidden',
+                border: '1.5px solid var(--gold-border)',
+                position: 'relative',
+                background: 'var(--gold-soft)',
+                cursor: 'pointer',
+                boxShadow: 'var(--shadow-sm)'
+              }}
+            >
+              <img
+                src={dish.image}
+                alt={displayName}
+                style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                onError={(e) => { e.target.src = '/uploads/logo.jpg'; }}
+              />
+            </div>
+          )}
+
+          {onAddToCart && isAvailable && (
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                onAddToCart(dish);
+              }}
+              style={{
+                background: 'linear-gradient(135deg, #25D366 0%, #128C7E 100%)',
+                color: '#FFFFFF',
+                border: 'none',
+                padding: '3px 8px',
+                borderRadius: 'var(--radius-pill)',
+                fontSize: '0.68rem',
+                fontWeight: 900,
+                cursor: 'pointer',
+                boxShadow: '0 2px 6px rgba(37, 211, 102, 0.4)'
+              }}
+              title="Add to WhatsApp Order Cart"
+            >
+              + Order
+            </button>
+          )}
+        </div>
       </div>
     </div>
   );
