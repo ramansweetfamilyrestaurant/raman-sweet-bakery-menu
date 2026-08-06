@@ -2,6 +2,7 @@ import React, { useState, useEffect, useMemo } from 'react';
 import CustomerHeader from './components/CustomerHeader';
 import MenuCardItem from './components/MenuCardItem';
 import SearchBar from './components/SearchBar';
+import CategoryJumpRail from './components/CategoryJumpRail';
 import DishCard from './components/DishCard';
 import DishModal from './components/DishModal';
 import RestaurantInfoModal from './components/RestaurantInfoModal';
@@ -217,6 +218,14 @@ export default function App() {
         onClear={() => setSearchQuery('')}
         onQuickFilter={(filterVal) => setSearchQuery(filterVal)}
         filtersVisibility={info?.filters_visibility}
+      />
+
+      {/* Sticky Category Quick Jump Rail */}
+      <CategoryJumpRail
+        categories={categories}
+        lang={lang}
+        selectedCategory={selectedCategory}
+        onSelectCategory={(catId) => setSelectedCategory(catId)}
       />
 
 
