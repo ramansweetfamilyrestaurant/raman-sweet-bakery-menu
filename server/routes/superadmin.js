@@ -239,11 +239,11 @@ router.put('/restaurants/:id', authenticateToken, requireSuperAdmin, async (req,
         const salt = await bcrypt.genSalt(10);
         const hash = await bcrypt.hash(owner_password, salt);
         await query(`
-          UPDATE admins SET username = $1, password_hash = $2 WHERE restaurant_id = $3
+          UPDATE admins SET username = $1, password_hash = $2 WHERE restaurant_id = $3 AND role = 'restaurant_admin'
         `, [owner_username, hash, id]);
       } else {
         await query(`
-          UPDATE admins SET username = $1 WHERE restaurant_id = $2
+          UPDATE admins SET username = $1 WHERE restaurant_id = $2 AND role = 'restaurant_admin'
         `, [owner_username, id]);
       }
     }
