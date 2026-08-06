@@ -3,7 +3,7 @@ import { fetchCategories, fetchDishes, toggleDishAvailability, toggleCategoryAct
 import { getPlanDetails } from '../../config/plans';
 import DishFormModal from './DishFormModal';
 import CategoryFormModal from './CategoryFormModal';
-import { Plus, Edit, Trash2, Eye, EyeOff, LogOut, ArrowLeft, Layers, Utensils, QrCode, Printer, Settings, Star, CheckCircle, Lock, ExternalLink, Megaphone, MessageSquare, Palette, Sparkles, Clock, CheckCircle2, XCircle, Upload, X, BarChart2, TrendingUp, Download, Award } from 'lucide-react';
+import { Plus, Edit, Trash2, Eye, EyeOff, LogOut, ArrowLeft, Layers, Utensils, QrCode, Printer, Settings, Star, CheckCircle, Lock, ExternalLink, Megaphone, MessageSquare, Palette, Sparkles, Clock, CheckCircle2, XCircle, Upload, X, BarChart2, TrendingUp, Download, Award, MapPin } from 'lucide-react';
 
 export default function AdminDashboard({ token, username, onLogout, onReturnToMenu }) {
   const [activeTab, setActiveTab] = useState('dishes'); // 'dishes', 'categories', 'qr-generator', 'settings'
@@ -436,6 +436,7 @@ export default function AdminDashboard({ token, username, onLogout, onReturnToMe
           max_distance_meters: infoData.max_distance_meters || 100,
           gst_enabled: infoData.gst_enabled !== undefined ? infoData.gst_enabled : false,
           gstin_number: infoData.gstin_number || '',
+          total_tables: infoData.total_tables || 12,
           filters_visibility: { ...defaultVis, ...infoData.filters_visibility }
         });
       }
@@ -801,6 +802,33 @@ export default function AdminDashboard({ token, username, onLogout, onReturnToMe
     return matchesSearch && matchesCategory;
   });
 
+  // Compute Live Table Grid (1 to total_tables)
+  const totalTablesCount = Number(settingsForm.total_tables) || 12;
+  const tableGrid = [];
+
+  for (let tNum = 1; tNum <= totalTablesCount; tNum++) {
+    const activeOrder = orders.find(o => String(o.table_number) === String(tNum) && o.status !== 'completed' && o.status !== 'cancelled');
+    const serviceRequest = serviceRequests.find(sr => String(sr.table_number) === String(tNum));
+
+    let status = 'available';
+    if (serviceRequest) {
+      status = 'service_needed';
+    } else if (activeOrder) {
+      status = 'occupied';
+    }
+
+    tableGrid.push({
+      tableNumber: tNum,
+      status,
+      activeOrder,
+      serviceRequest
+    });
+  }
+
+  const availableTablesCount = tableGrid.filter(t => t.status === 'available').length;
+  const occupiedTablesCount = tableGrid.filter(t => t.status === 'occupied').length;
+  const serviceNeededCount = tableGrid.filter(t => t.status === 'service_needed').length;
+
   return (
     <div style={{ minHeight: '100vh', background: 'var(--bg-app)', paddingBottom: '70px' }}>
       <style>{`
@@ -978,6 +1006,7 @@ export default function AdminDashboard({ token, username, onLogout, onReturnToMe
         }}>
           {[
             ...(restaurantInfo && (restaurantInfo.direct_ordering_enabled === false || restaurantInfo.direct_ordering_enabled === 0) ? [] : [{ id: 'orders', label: 'Orders', count: orders.filter(o => o.status === 'pending').length, icon: <Sparkles size={13} /> }]),
+            { id: 'floor-map', label: '🗺️ Floor Map', icon: <MapPin size={13} /> },
             { id: 'service-requests', label: '🛎️ Waiter Calls', count: serviceRequests.length, icon: <Megaphone size={13} /> },
             { id: 'analytics', label: '📊 Analytics', icon: <BarChart2 size={13} /> },
             { id: 'dishes', label: 'Dishes', count: safeDishes.length, icon: <Utensils size={13} /> },
@@ -1078,6 +1107,224 @@ export default function AdminDashboard({ token, username, onLogout, onReturnToMe
             <span style={{ fontSize: '1.1rem', fontWeight: 900, color: '#DC2626' }}>{safeDishes.filter(d => d.available === false).length}</span>
           </div>
         </div>
+
+        {/* 🗺️ REAL-TIME DINE-IN TABLE FLOOR MAP */}
+        {activeTab === 'floor-map' && (
+          <div style={{ marginBottom: '24px' }}>
+            <div style={{
+              background: '#FFFFFF',
+              borderRadius: '20px',
+              padding: '20px',
+              boxShadow: 'var(--shadow-card)',
+              border: '1.5px solid #E5E7EB'
+            }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '12px', marginBottom: '20px' }}>
+                <div>
+                  <h2 style={{ fontSize: '1.25rem', fontWeight: 900, color: '#0A2315', margin: 0, display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    <MapPin size={22} color="#059669" /> Live Dining Hall Floor Map ({totalTablesCount} Tables)
+                  </h2>
+                  <span style={{ fontSize: '0.78rem', color: '#6B7280' }}>
+                    Real-time occupancy status, active bills, seated time & waiter service alerts
+                  </span>
+                </div>
+
+                <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+                  <span style={{ background: '#D1FAE5', color: '#065F46', padding: '6px 12px', borderRadius: '20px', fontSize: '0.78rem', fontWeight: 800 }}>
+                    🟢 Available ({availableTablesCount})
+                  </span>
+                  <span style={{ background: '#FEE2E2', color: '#991B1B', padding: '6px 12px', borderRadius: '20px', fontSize: '0.78rem', fontWeight: 800 }}>
+                    🔴 Occupied ({occupiedTablesCount})
+                  </span>
+                  <span style={{ background: '#FEF3C7', color: '#92400E', padding: '6px 12px', borderRadius: '20px', fontSize: '0.78rem', fontWeight: 800 }}>
+                    🟡 Service Alert ({serviceNeededCount})
+                  </span>
+                </div>
+              </div>
+
+              {/* Table Cards Grid */}
+              <div style={{
+                display: 'grid',
+                gridTemplateColumns: 'repeat(auto-fill, minmax(210px, 1fr))',
+                gap: '16px'
+              }}>
+                {tableGrid.map(t => {
+                  const isOccupied = t.status === 'occupied';
+                  const isService = t.status === 'service_needed';
+                  const isFree = t.status === 'available';
+
+                  const cardBg = isOccupied ? '#FEF2F2' : (isService ? '#FFFBEB' : '#F0FDF4');
+                  const borderCol = isOccupied ? '#FCA5A5' : (isService ? '#FCD34D' : '#86EFAC');
+                  const statusLabel = isOccupied ? '🔴 SEATED & EATING' : (isService ? '🟡 SERVICE REQUEST' : '🟢 TABLE FREE');
+                  const badgeBg = isOccupied ? '#EF4444' : (isService ? '#F59E0B' : '#10B981');
+
+                  return (
+                    <div
+                      key={t.tableNumber}
+                      style={{
+                        background: cardBg,
+                        border: `2px solid ${borderCol}`,
+                        borderRadius: '16px',
+                        padding: '14px',
+                        display: 'flex',
+                        flexDirection: 'column',
+                        justifyContent: 'space-between',
+                        minHeight: '175px',
+                        boxShadow: '0 4px 12px rgba(0,0,0,0.03)'
+                      }}
+                    >
+                      <div>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
+                          <span style={{ fontSize: '1.05rem', fontWeight: 900, color: '#1F2937' }}>
+                            TABLE #{t.tableNumber}
+                          </span>
+                          <span style={{
+                            background: badgeBg,
+                            color: '#FFFFFF',
+                            fontSize: '0.62rem',
+                            fontWeight: 900,
+                            padding: '3px 7px',
+                            borderRadius: '10px'
+                          }}>
+                            {statusLabel}
+                          </span>
+                        </div>
+
+                        {/* Occupied Details */}
+                        {isOccupied && t.activeOrder && (
+                          <div style={{ fontSize: '0.8rem', color: '#374151', background: '#FFFFFF', padding: '8px 10px', borderRadius: '10px', border: '1px solid #FECACA', marginBottom: '10px' }}>
+                            <div style={{ display: 'flex', justifyContent: 'space-between', fontWeight: 800 }}>
+                              <span>Order #{t.activeOrder.id}</span>
+                              <span style={{ color: '#DC2626' }}>₹{t.activeOrder.total_amount}</span>
+                            </div>
+                            <div style={{ fontSize: '0.74rem', color: '#6B7280', marginTop: '2px' }}>
+                              {t.activeOrder.customer_name || 'Dine-In Guest'} • {Array.isArray(t.activeOrder.items) ? t.activeOrder.items.length : 1} items
+                            </div>
+                            <div style={{ fontSize: '0.7rem', color: '#9CA3AF', marginTop: '4px' }}>
+                              🕒 {formatDateTime(t.activeOrder.created_at)}
+                            </div>
+                          </div>
+                        )}
+
+                        {/* Service Request Details */}
+                        {isService && t.serviceRequest && (
+                          <div style={{ fontSize: '0.8rem', color: '#92400E', background: '#FFFFFF', padding: '8px 10px', borderRadius: '10px', border: '1px solid #FDE68A', marginBottom: '10px' }}>
+                            <div style={{ fontWeight: 800 }}>
+                              {t.serviceRequest.request_type}
+                            </div>
+                            {t.serviceRequest.note && (
+                              <div style={{ fontSize: '0.72rem', fontStyle: 'italic', color: '#B45309', marginTop: '2px' }}>
+                                "{t.serviceRequest.note}"
+                              </div>
+                            )}
+                          </div>
+                        )}
+
+                        {/* Free Table Info */}
+                        {isFree && (
+                          <div style={{ fontSize: '0.78rem', color: '#047857', fontStyle: 'italic', margin: '12px 0', textAlign: 'center' }}>
+                            Available for new dining guests ✨
+                          </div>
+                        )}
+                      </div>
+
+                      {/* Action Buttons */}
+                      <div style={{ display: 'flex', gap: '6px', marginTop: '8px' }}>
+                        {isOccupied && t.activeOrder && (
+                          <>
+                            <button
+                              onClick={() => setBillOrderModal(t.activeOrder)}
+                              style={{
+                                flex: 1,
+                                background: '#D97706',
+                                color: '#FFFFFF',
+                                border: 'none',
+                                padding: '6px',
+                                borderRadius: '8px',
+                                fontSize: '0.74rem',
+                                fontWeight: 800,
+                                cursor: 'pointer',
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                                gap: '3px'
+                              }}
+                            >
+                              <Printer size={12} /> Bill 🧾
+                            </button>
+
+                            <button
+                              onClick={() => handleUpdateStatus(t.activeOrder.id, 'completed')}
+                              style={{
+                                flex: 1,
+                                background: '#10B981',
+                                color: '#FFFFFF',
+                                border: 'none',
+                                padding: '6px',
+                                borderRadius: '8px',
+                                fontSize: '0.74rem',
+                                fontWeight: 800,
+                                cursor: 'pointer'
+                              }}
+                              title="Mark order complete and clear table"
+                            >
+                              🏁 Clear
+                            </button>
+                          </>
+                        )}
+
+                        {isService && t.serviceRequest && (
+                          <button
+                            onClick={async () => {
+                              await resolveServiceRequest(t.serviceRequest.id, token);
+                              const reqs = await fetchServiceRequests(token);
+                              setServiceRequests(reqs);
+                            }}
+                            style={{
+                              width: '100%',
+                              background: '#D97706',
+                              color: '#FFFFFF',
+                              border: 'none',
+                              padding: '7px',
+                              borderRadius: '8px',
+                              fontSize: '0.74rem',
+                              fontWeight: 800,
+                              cursor: 'pointer'
+                            }}
+                          >
+                            ✓ Attend Request
+                          </button>
+                        )}
+
+                        {isFree && (
+                          <button
+                            onClick={() => setActiveTab('qr-generator')}
+                            style={{
+                              width: '100%',
+                              background: '#ECFDF5',
+                              color: '#047857',
+                              border: '1px solid #A7F3D0',
+                              padding: '6px',
+                              borderRadius: '8px',
+                              fontSize: '0.74rem',
+                              fontWeight: 700,
+                              cursor: 'pointer',
+                              display: 'flex',
+                              alignItems: 'center',
+                              justifyContent: 'center',
+                              gap: '4px'
+                            }}
+                          >
+                            <QrCode size={12} /> Table QR Code
+                          </button>
+                        )}
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          </div>
+        )}
 
         {/* 🔔 LIVE KITCHEN ORDERS TERMINAL (KOT) */}
         {activeTab === 'orders' && (
@@ -2671,6 +2918,21 @@ export default function AdminDashboard({ token, username, onLogout, onReturnToMe
                     onChange={(e) => setSettingsForm({ ...settingsForm, gstin_number: e.target.value.toUpperCase() })}
                     placeholder="e.g. 10AAAAA0000A1Z5"
                     style={{ width: '100%', padding: '8px 12px', borderRadius: '8px', border: '1px solid #FDE68A', fontSize: '0.85rem', textTransform: 'uppercase' }}
+                  />
+                </div>
+
+                <div>
+                  <label style={{ display: 'block', fontSize: '0.78rem', fontWeight: 800, color: '#78350F', marginBottom: '4px' }}>
+                    Total Dining Tables in Hall:
+                  </label>
+                  <input
+                    type="number"
+                    min="1"
+                    max="100"
+                    value={settingsForm.total_tables || 12}
+                    onChange={(e) => setSettingsForm({ ...settingsForm, total_tables: Math.max(1, parseInt(e.target.value) || 12) })}
+                    placeholder="e.g. 12"
+                    style={{ width: '100%', padding: '8px 12px', borderRadius: '8px', border: '1px solid #FDE68A', fontSize: '0.85rem' }}
                   />
                 </div>
               </div>

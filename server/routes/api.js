@@ -89,6 +89,7 @@ router.get('/info', async (req, res) => {
         max_distance_meters: resto.max_distance_meters || 100,
         gst_enabled: resto.gst_enabled === 1 || resto.gst_enabled === true,
         gstin_number: resto.gstin_number || '',
+        total_tables: resto.total_tables || 12,
         active: (resto.active === 1 || resto.active === true || resto.active === '1')
       });
     }
