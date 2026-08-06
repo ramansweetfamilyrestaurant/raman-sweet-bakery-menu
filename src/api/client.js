@@ -403,3 +403,10 @@ export async function resolveServiceRequest(id, token) {
   });
   return handleResponse(res, 'Failed to resolve service request');
 }
+
+export async function fetchAdminAnalytics(token) {
+  const res = await fetch(`${API_BASE}/admin/analytics`, {
+    headers: { Authorization: `Bearer ${token}` }
+  });
+  return handleResponse(res, 'Failed to fetch analytics');
+}

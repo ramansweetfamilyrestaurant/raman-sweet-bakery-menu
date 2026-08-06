@@ -1,9 +1,9 @@
 import React, { useState, useEffect } from 'react';
-import { fetchCategories, fetchDishes, toggleDishAvailability, toggleCategoryActive, deleteDish, deleteCategory, fetchRestaurantInfo, updateDishPrice, fetchAnnouncements, fetchAdminOrders, updateOrderStatus, uploadImage, fetchServiceRequests, resolveServiceRequest } from '../../api/client';
+import { fetchCategories, fetchDishes, toggleDishAvailability, toggleCategoryActive, deleteDish, deleteCategory, fetchRestaurantInfo, updateDishPrice, fetchAnnouncements, fetchAdminOrders, updateOrderStatus, uploadImage, fetchServiceRequests, resolveServiceRequest, fetchAdminAnalytics } from '../../api/client';
 import { getPlanDetails } from '../../config/plans';
 import DishFormModal from './DishFormModal';
 import CategoryFormModal from './CategoryFormModal';
-import { Plus, Edit, Trash2, Eye, EyeOff, LogOut, ArrowLeft, Layers, Utensils, QrCode, Printer, Settings, Star, CheckCircle, Lock, ExternalLink, Megaphone, MessageSquare, Palette, Sparkles, Clock, CheckCircle2, XCircle, Upload, X } from 'lucide-react';
+import { Plus, Edit, Trash2, Eye, EyeOff, LogOut, ArrowLeft, Layers, Utensils, QrCode, Printer, Settings, Star, CheckCircle, Lock, ExternalLink, Megaphone, MessageSquare, Palette, Sparkles, Clock, CheckCircle2, XCircle, Upload, X, BarChart2, TrendingUp, Download, Award } from 'lucide-react';
 
 export default function AdminDashboard({ token, username, onLogout, onReturnToMenu }) {
   const [activeTab, setActiveTab] = useState('dishes'); // 'dishes', 'categories', 'qr-generator', 'settings'
@@ -21,9 +21,10 @@ export default function AdminDashboard({ token, username, onLogout, onReturnToMe
   const [tableNumber, setTableNumber] = useState('1');
   const [qrGenerated, setQrGenerated] = useState(false);
 
-  // Live Orders (KOT) State
+  // Live Orders (KOT) & Analytics State
   const [orders, setOrders] = useState([]);
   const [serviceRequests, setServiceRequests] = useState([]);
+  const [analyticsData, setAnalyticsData] = useState(null);
   const [kotFilter, setKotFilter] = useState('all');
   const [prevPendingCount, setPrevPendingCount] = useState(0);
   const [restaurantInfo, setRestaurantInfo] = useState(null);
@@ -65,9 +66,10 @@ export default function AdminDashboard({ token, username, onLogout, onReturnToMe
 
   const loadOrders = async () => {
     try {
-      const [data, reqsData] = await Promise.all([
+      const [data, reqsData, analytics] = await Promise.all([
         fetchAdminOrders(token).catch(() => []),
-        fetchServiceRequests(token).catch(() => [])
+        fetchServiceRequests(token).catch(() => []),
+        fetchAdminAnalytics(token).catch(() => null)
       ]);
       const safeData = Array.isArray(data) ? data : [];
       const safeReqs = Array.isArray(reqsData) ? reqsData : [];
@@ -79,9 +81,39 @@ export default function AdminDashboard({ token, username, onLogout, onReturnToMe
       setPrevPendingCount(pendingCount);
       setOrders(safeData);
       setServiceRequests(safeReqs);
+      if (analytics) setAnalyticsData(analytics);
     } catch (err) {
       console.error('Failed to load orders & requests:', err);
     }
+  };
+
+  const handleDownloadSalesReport = () => {
+    if (!orders || orders.length === 0) {
+      alert('No sales data available to export');
+      return;
+    }
+    const headers = ['Order ID', 'Date & Time', 'Table No', 'Total Amount (Rs)', 'Status', 'Items Ordered'];
+    const rows = orders.map(o => {
+      const itemsList = typeof o.items === 'string' ? JSON.parse(o.items) : (Array.isArray(o.items) ? o.items : []);
+      const itemSummary = itemsList.map(i => `${i.name} (x${i.quantity})`).join('; ');
+      return [
+        o.id,
+        `"${o.created_at || ''}"`,
+        `"${o.table_number || '1'}"`,
+        o.total_amount,
+        `"${o.status}"`,
+        `"${itemSummary.replace(/"/g, '""')}"`
+      ].join(',');
+    });
+
+    const csvContent = 'data:text/csv;charset=utf-8,' + [headers.join(','), ...rows].join('\n');
+    const encodedUri = encodeURI(csvContent);
+    const link = document.createElement('a');
+    link.setAttribute('href', encodedUri);
+    link.setAttribute('download', `Sales_Report_${new Date().toISOString().substring(0, 10)}.csv`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
   };
 
   const handleResolveServiceRequest = async (id) => {
@@ -780,6 +812,7 @@ export default function AdminDashboard({ token, username, onLogout, onReturnToMe
           {[
             ...(restaurantInfo && (restaurantInfo.direct_ordering_enabled === false || restaurantInfo.direct_ordering_enabled === 0) ? [] : [{ id: 'orders', label: 'Orders', count: orders.filter(o => o.status === 'pending').length, icon: <Sparkles size={13} /> }]),
             { id: 'service-requests', label: '🛎️ Waiter Calls', count: serviceRequests.length, icon: <Megaphone size={13} /> },
+            { id: 'analytics', label: '📊 Analytics', icon: <BarChart2 size={13} /> },
             { id: 'dishes', label: 'Dishes', count: safeDishes.length, icon: <Utensils size={13} /> },
             { id: 'categories', label: 'Categories', count: safeCategories.length, icon: <Layers size={13} /> },
             { id: 'qr-generator', label: 'QR Code', icon: <QrCode size={13} /> },
@@ -1175,7 +1208,171 @@ export default function AdminDashboard({ token, username, onLogout, onReturnToMe
           </div>
         )}
 
-        {/* TAB 5: Live Waiter Calls & Table Service Requests */}
+        {/* TAB: Live Sales Analytics & Best Selling Dishes */}
+        {activeTab === 'analytics' && (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
+            {/* Header & CSV Download Bar */}
+            <div style={{
+              background: '#FFFFFF',
+              borderRadius: 'var(--radius-md)',
+              padding: '20px',
+              border: '1px solid var(--border-light)',
+              display: 'flex',
+              justify: 'space-between',
+              alignItems: 'center',
+              flexWrap: 'wrap',
+              gap: '12px'
+            }}>
+              <div>
+                <h3 style={{ fontSize: '1.25rem', fontWeight: 900, color: 'var(--primary-emerald)', margin: 0, display: 'flex', alignItems: 'center', gap: '8px' }}>
+                  <TrendingUp size={24} color="#10B981" /> Restaurant Sales & Revenue Analytics
+                </h3>
+                <span style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>
+                  Real-time sales insights, order breakdown, and best-selling dishes
+                </span>
+              </div>
+
+              <button
+                onClick={handleDownloadSalesReport}
+                style={{
+                  background: 'linear-gradient(135deg, #059669 0%, #047857 100%)',
+                  color: '#FFFFFF',
+                  border: 'none',
+                  padding: '10px 18px',
+                  borderRadius: 'var(--radius-pill)',
+                  fontWeight: 900,
+                  fontSize: '0.84rem',
+                  cursor: 'pointer',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '6px',
+                  boxShadow: '0 4px 14px rgba(5, 150, 105, 0.35)'
+                }}
+              >
+                <Download size={16} /> Download Sales CSV Report
+              </button>
+            </div>
+
+            {/* 4 KPI Revenue Metric Cards */}
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(170px, 1fr))', gap: '12px' }}>
+              <div style={{ background: 'linear-gradient(135deg, #ECFDF5 0%, #D1FAE5 100%)', border: '1px solid #A7F3D0', borderRadius: '16px', padding: '16px' }}>
+                <span style={{ fontSize: '0.76rem', fontWeight: 800, color: '#047857', display: 'block', textTransform: 'uppercase' }}>Today's Revenue</span>
+                <strong style={{ fontSize: '1.4rem', fontWeight: 900, color: '#065F46' }}>
+                  ₹{analyticsData ? analyticsData.today_sales.toLocaleString('en-IN') : 0}
+                </strong>
+                <span style={{ fontSize: '0.74rem', color: '#047857', display: 'block', marginTop: '2px' }}>
+                  {analyticsData ? analyticsData.today_orders : 0} orders today
+                </span>
+              </div>
+
+              <div style={{ background: 'linear-gradient(135deg, #FEF3C7 0%, #FDE68A 100%)', border: '1px solid #FDE68A', borderRadius: '16px', padding: '16px' }}>
+                <span style={{ fontSize: '0.76rem', fontWeight: 800, color: '#B45309', display: 'block', textTransform: 'uppercase' }}>7-Day Revenue</span>
+                <strong style={{ fontSize: '1.4rem', fontWeight: 900, color: '#92400E' }}>
+                  ₹{analyticsData ? analyticsData.weekly_sales.toLocaleString('en-IN') : 0}
+                </strong>
+                <span style={{ fontSize: '0.74rem', color: '#B45309', display: 'block', marginTop: '2px' }}>Last 7 days total</span>
+              </div>
+
+              <div style={{ background: 'linear-gradient(135deg, #F0F9FF 0%, #E0F2FE 100%)', border: '1px solid #BAE6FD', borderRadius: '16px', padding: '16px' }}>
+                <span style={{ fontSize: '0.76rem', fontWeight: 800, color: '#0369A1', display: 'block', textTransform: 'uppercase' }}>30-Day Revenue</span>
+                <strong style={{ fontSize: '1.4rem', fontWeight: 900, color: '#075985' }}>
+                  ₹{analyticsData ? analyticsData.monthly_sales.toLocaleString('en-IN') : 0}
+                </strong>
+                <span style={{ fontSize: '0.74rem', color: '#0369A1', display: 'block', marginTop: '2px' }}>Last 30 days total</span>
+              </div>
+
+              <div style={{ background: 'linear-gradient(135deg, #F5F3FF 0%, #EDE9FE 100%)', border: '1px solid #DDD6FE', borderRadius: '16px', padding: '16px' }}>
+                <span style={{ fontSize: '0.76rem', fontWeight: 800, color: '#6D28D9', display: 'block', textTransform: 'uppercase' }}>All-Time Sales</span>
+                <strong style={{ fontSize: '1.4rem', fontWeight: 900, color: '#5B21B6' }}>
+                  ₹{analyticsData ? analyticsData.total_sales.toLocaleString('en-IN') : 0}
+                </strong>
+                <span style={{ fontSize: '0.74rem', color: '#6D28D9', display: 'block', marginTop: '2px' }}>
+                  {analyticsData ? analyticsData.total_orders : 0} total orders
+                </span>
+              </div>
+            </div>
+
+            {/* Top 5 Best-Selling Dishes & 7-Day Revenue Visual Grid */}
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))', gap: '16px' }}>
+
+              {/* 🏆 Top 5 Best-Selling Dishes */}
+              <div style={{ background: '#FFFFFF', borderRadius: '18px', padding: '20px', border: '1px solid var(--border-light)', boxShadow: 'var(--shadow-sm)' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '16px' }}>
+                  <Award size={22} color="#D97706" />
+                  <h4 style={{ fontSize: '1.05rem', fontWeight: 900, color: '#92400E', margin: 0 }}>
+                    🏆 Top 5 Best-Selling Dishes
+                  </h4>
+                </div>
+
+                {(!analyticsData || !analyticsData.top_dishes || analyticsData.top_dishes.length === 0) ? (
+                  <div style={{ textAlign: 'center', padding: '30px', color: '#9CA3AF', fontSize: '0.84rem' }}>
+                    No dish sales data recorded yet.
+                  </div>
+                ) : (
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                    {analyticsData.top_dishes.map((dish, idx) => {
+                      const maxQty = analyticsData.top_dishes[0]?.quantity || 1;
+                      const percent = Math.round((dish.quantity / maxQty) * 100);
+                      const medals = ['🥇', '🥈', '🥉', '4️⃣', '5️⃣'];
+
+                      return (
+                        <div key={dish.name} style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                            <span style={{ fontSize: '0.86rem', fontWeight: 800, color: '#1F2937' }}>
+                              {medals[idx]} {dish.name}
+                            </span>
+                            <span style={{ fontSize: '0.8rem', fontWeight: 900, color: '#059669' }}>
+                              {dish.quantity} sold (₹{dish.revenue.toLocaleString('en-IN')})
+                            </span>
+                          </div>
+                          <div style={{ width: '100%', height: '8px', background: '#F3F4F6', borderRadius: '4px', overflow: 'hidden' }}>
+                            <div style={{ width: `${percent}%`, height: '100%', background: 'linear-gradient(90deg, #10B981 0%, #059669 100%)', borderRadius: '4px' }} />
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
+              </div>
+
+              {/* 📊 7-Day Revenue Visual Bar Chart */}
+              <div style={{ background: '#FFFFFF', borderRadius: '18px', padding: '20px', border: '1px solid var(--border-light)', boxShadow: 'var(--shadow-sm)' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '16px' }}>
+                  <BarChart2 size={22} color="#059669" />
+                  <h4 style={{ fontSize: '1.05rem', fontWeight: 900, color: '#065F46', margin: 0 }}>
+                    📊 7-Day Daily Revenue Trend
+                  </h4>
+                </div>
+
+                {(!analyticsData || !analyticsData.daily_chart || analyticsData.daily_chart.length === 0) ? (
+                  <div style={{ textAlign: 'center', padding: '30px', color: '#9CA3AF', fontSize: '0.84rem' }}>
+                    No daily revenue chart data yet.
+                  </div>
+                ) : (
+                  <div style={{ display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between', height: '160px', paddingTop: '20px' }}>
+                    {analyticsData.daily_chart.map(item => {
+                      const maxDaily = Math.max(...analyticsData.daily_chart.map(d => d.sales), 1);
+                      const barHeightPercent = Math.max(Math.round((item.sales / maxDaily) * 100), 8);
+
+                      return (
+                        <div key={item.date} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', flex: 1, gap: '6px' }}>
+                          <span style={{ fontSize: '0.68rem', fontWeight: 800, color: '#059669' }}>
+                            ₹{item.sales}
+                          </span>
+                          <div style={{ width: '60%', maxWidth: '28px', height: `${barHeightPercent}%`, background: 'linear-gradient(180deg, #34D399 0%, #059669 100%)', borderRadius: '6px 6px 0 0' }} />
+                          <span style={{ fontSize: '0.7rem', color: '#6B7280', fontWeight: 700 }}>
+                            {item.displayDate}
+                          </span>
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
+              </div>
+
+            </div>
+          </div>
+        )}
         {activeTab === 'service-requests' && (
           <div style={{
             background: '#FFFFFF',

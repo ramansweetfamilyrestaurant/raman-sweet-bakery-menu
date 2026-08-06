@@ -428,4 +428,111 @@ router.patch('/service-requests/:id/resolve', authenticateToken, async (req, res
   }
 });
 
+// GET Sales & Product Analytics
+router.get('/analytics', authenticateToken, async (req, res) => {
+  try {
+    const restoId = req.user.restaurant_id || 1;
+
+    // Fetch all non-cancelled orders
+    const orders = await query(
+      "SELECT id, total_amount, status, items, created_at FROM orders WHERE restaurant_id = $1 AND status != 'cancelled' ORDER BY id DESC",
+      [restoId]
+    );
+
+    const now = new Date();
+    const todayStr = now.toISOString().split('T')[0];
+
+    const sevenDaysAgo = new Date();
+    sevenDaysAgo.setDate(now.getDate() - 7);
+
+    const thirtyDaysAgo = new Date();
+    thirtyDaysAgo.setDate(now.getDate() - 30);
+
+    let todaySales = 0;
+    let todayOrders = 0;
+    let weeklySales = 0;
+    let monthlySales = 0;
+    let totalSales = 0;
+
+    const dishSalesMap = {};
+    const dailySalesMap = {};
+
+    // Pre-fill last 7 days in dailySalesMap
+    for (let i = 6; i >= 0; i--) {
+      const d = new Date();
+      d.setDate(now.getDate() - i);
+      const ds = d.toISOString().split('T')[0];
+      dailySalesMap[ds] = 0;
+    }
+
+    orders.forEach(o => {
+      const amt = Number(o.total_amount) || 0;
+      totalSales += amt;
+
+      const createdAtDate = new Date(o.created_at);
+      const dateStr = o.created_at ? o.created_at.substring(0, 10) : '';
+
+      if (dateStr === todayStr) {
+        todaySales += amt;
+        todayOrders += 1;
+      }
+
+      if (createdAtDate >= sevenDaysAgo) {
+        weeklySales += amt;
+      }
+
+      if (createdAtDate >= thirtyDaysAgo) {
+        monthlySales += amt;
+      }
+
+      if (dateStr && dailySalesMap[dateStr] !== undefined) {
+        dailySalesMap[dateStr] += amt;
+      }
+
+      // Aggregate item counts
+      let itemsList = [];
+      try {
+        itemsList = typeof o.items === 'string' ? JSON.parse(o.items) : (Array.isArray(o.items) ? o.items : []);
+      } catch (e) {}
+
+      itemsList.forEach(item => {
+        const dishName = item.name || item.title || 'Unknown Dish';
+        const qty = Number(item.quantity) || 1;
+        const price = Number(item.price) || 0;
+        const lineTotal = price * qty;
+
+        if (!dishSalesMap[dishName]) {
+          dishSalesMap[dishName] = { name: dishName, quantity: 0, revenue: 0 };
+        }
+        dishSalesMap[dishName].quantity += qty;
+        dishSalesMap[dishName].revenue += lineTotal;
+      });
+    });
+
+    const topDishes = Object.values(dishSalesMap)
+      .sort((a, b) => b.quantity - a.quantity)
+      .slice(0, 5);
+
+    const dailyChartData = Object.keys(dailySalesMap).map(dateKey => ({
+      date: dateKey,
+      displayDate: new Date(dateKey).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
+      sales: dailySalesMap[dateKey]
+    }));
+
+    res.json({
+      today_sales: todaySales,
+      today_orders: todayOrders,
+      weekly_sales: weeklySales,
+      monthly_sales: monthlySales,
+      total_sales: totalSales,
+      total_orders: orders.length,
+      top_dishes: topDishes,
+      daily_chart: dailyChartData
+    });
+  } catch (err) {
+    console.error('Fetch analytics error:', err);
+    res.status(500).json({ error: 'Failed to fetch analytics' });
+  }
+});
+
 export default router;
