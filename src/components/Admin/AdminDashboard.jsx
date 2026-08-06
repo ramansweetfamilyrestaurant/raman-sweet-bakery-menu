@@ -1685,6 +1685,60 @@ export default function AdminDashboard({ token, username, onLogout, onReturnToMe
         {/* TAB 5: RESTAURANT SETTINGS */}
         {activeTab === 'settings' && (
           <>
+          {/* Active SaaS Subscription Plan Badge */}
+          <div style={{
+            background: 'linear-gradient(135deg, #0A2315 0%, #164E2A 100%)',
+            color: '#FFFFFF',
+            borderRadius: 'var(--radius-md)',
+            padding: '20px',
+            marginBottom: '20px',
+            border: '2px solid #D4AF37',
+            boxShadow: '0 8px 24px rgba(10,35,21,0.25)'
+          }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '12px', marginBottom: '14px' }}>
+              <div>
+                <span style={{ fontSize: '0.72rem', fontWeight: 800, color: '#DFBA67', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+                  ACTIVE SAAS SUBSCRIPTION PLAN
+                </span>
+                <h3 style={{ fontSize: '1.25rem', fontWeight: 900, color: '#FFFFFF', margin: '2px 0 0 0' }}>
+                  👑 {(restaurantInfo?.plan_tier || 'PRO').toUpperCase()} PLAN ({restaurantInfo?.currency_symbol || '₹'}{restaurantInfo?.plan_price || 999}/mo)
+                </h3>
+              </div>
+              <span style={{
+                background: restaurantInfo?.active !== false ? '#DCFCE7' : '#FEE2E2',
+                color: restaurantInfo?.active !== false ? '#15803D' : '#DC2626',
+                padding: '4px 12px',
+                borderRadius: 'var(--radius-pill)',
+                fontSize: '0.78rem',
+                fontWeight: 900
+              }}>
+                {restaurantInfo?.active !== false ? '● ACTIVE SUBSCRIPTION' : '● SUSPENDED'}
+              </span>
+            </div>
+
+            {/* Feature Access Matrix Status */}
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '10px', paddingTop: '12px', borderTop: '1px solid rgba(212,175,55,0.3)' }}>
+              <div style={{ fontSize: '0.78rem', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                <span>🟢 Direct Table Ordering:</span>
+                <strong style={{ color: restaurantInfo?.direct_ordering_enabled ? '#4ADE80' : '#FCA5A5' }}>
+                  {restaurantInfo?.direct_ordering_enabled ? 'Active ✅' : 'Disabled 🔒'}
+                </strong>
+              </div>
+              <div style={{ fontSize: '0.78rem', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                <span>💬 WhatsApp Drawer:</span>
+                <strong style={{ color: restaurantInfo?.whatsapp_enabled ? '#4ADE80' : '#FCA5A5' }}>
+                  {restaurantInfo?.whatsapp_enabled ? 'Active ✅' : 'Disabled 🔒'}
+                </strong>
+              </div>
+              <div style={{ fontSize: '0.78rem', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                <span>⭐ Google Review Rating:</span>
+                <strong style={{ color: restaurantInfo?.google_reviews_enabled ? '#4ADE80' : '#FCA5A5' }}>
+                  {restaurantInfo?.google_reviews_enabled ? 'Active ✅' : 'Disabled 🔒'}
+                </strong>
+              </div>
+            </div>
+          </div>
+
           <div style={{
             background: '#FFFFFF',
             borderRadius: 'var(--radius-md)',
