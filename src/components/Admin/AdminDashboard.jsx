@@ -721,14 +721,16 @@ export default function AdminDashboard({ token, username, onLogout, onReturnToMe
           display: 'flex',
           gap: '4px',
           alignItems: 'center',
-          justifyContent: 'space-between'
+          overflowX: 'auto',
+          scrollbarWidth: 'none',
+          msOverflowStyle: 'none'
         }}>
           {[
-            ...(restaurantInfo && (restaurantInfo.direct_ordering_enabled === false || restaurantInfo.direct_ordering_enabled === 0) ? [] : [{ id: 'orders', label: '🔔 KOT Orders', count: orders.filter(o => o.status === 'pending').length, icon: <Sparkles size={14} /> }]),
-            { id: 'dishes', label: 'Dishes', count: safeDishes.length, icon: <Utensils size={14} /> },
-            { id: 'categories', label: 'Cat', count: safeCategories.length, icon: <Layers size={14} /> },
-            { id: 'qr-generator', label: 'QR Code', icon: <QrCode size={14} /> },
-            { id: 'settings', label: 'Settings', icon: <Settings size={14} /> }
+            ...(restaurantInfo && (restaurantInfo.direct_ordering_enabled === false || restaurantInfo.direct_ordering_enabled === 0) ? [] : [{ id: 'orders', label: 'Orders', count: orders.filter(o => o.status === 'pending').length, icon: <Sparkles size={13} /> }]),
+            { id: 'dishes', label: 'Dishes', count: safeDishes.length, icon: <Utensils size={13} /> },
+            { id: 'categories', label: 'Categories', count: safeCategories.length, icon: <Layers size={13} /> },
+            { id: 'qr-generator', label: 'QR Code', icon: <QrCode size={13} /> },
+            { id: 'settings', label: 'Settings', icon: <Settings size={13} /> }
           ].map(tab => {
             const isActive = activeTab === tab.id;
             return (
@@ -737,12 +739,13 @@ export default function AdminDashboard({ token, username, onLogout, onReturnToMe
                 onClick={() => setActiveTab(tab.id)}
                 style={{
                   flex: 1,
-                  padding: '7px 4px',
+                  minWidth: 'max-content',
+                  padding: '7px 10px',
                   borderRadius: 'var(--radius-pill)',
                   fontWeight: isActive ? 900 : 700,
                   fontSize: '0.74rem',
                   background: isActive ? 'linear-gradient(135deg, #FFD700 0%, #D4AF37 100%)' : 'transparent',
-                  color: isActive ? '#0A2315' : 'rgba(255, 255, 255, 0.85)',
+                  color: isActive ? '#0A2315' : 'rgba(255, 255, 255, 0.9)',
                   border: isActive ? '1px solid #FFFFFF' : '1px solid transparent',
                   display: 'flex',
                   alignItems: 'center',
