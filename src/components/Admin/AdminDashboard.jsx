@@ -1,5 +1,4 @@
-import React, { useState, useEffect } from 'react';
-import { fetchCategories, fetchDishes, toggleDishAvailability, deleteDish, deleteCategory, fetchRestaurantInfo } from '../../api/client';
+import { fetchCategories, fetchDishes, toggleDishAvailability, deleteDish, deleteCategory, fetchRestaurantInfo, updateDishPrice } from '../../api/client';
 import DishFormModal from './DishFormModal';
 import CategoryFormModal from './CategoryFormModal';
 import { Plus, Edit, Trash2, Eye, EyeOff, LogOut, ArrowLeft, Layers, Utensils, QrCode, Printer, Settings, Star, CheckCircle, Lock, ExternalLink } from 'lucide-react';
@@ -10,6 +9,9 @@ export default function AdminDashboard({ token, username, onLogout, onReturnToMe
   const [dishes, setDishes] = useState([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
+  const [selectedCatFilter, setSelectedCatFilter] = useState('all');
+  const [editingPriceId, setEditingPriceId] = useState(null);
+  const [quickPriceVal, setQuickPriceVal] = useState({ price: '', price_half: '' });
 
   // QR Code Generator State
   const [tableNumber, setTableNumber] = useState('1');
@@ -237,13 +239,24 @@ export default function AdminDashboard({ token, username, onLogout, onReturnToMe
       setCredForm({ currentPassword: '', newUsername: '', newPassword: '', confirmPassword: '' });
     } catch (err) {
       setCredMsg({ text: 'Network error, please try again', type: 'error' });
+  const handleQuickPriceSave = async (dishId) => {
+    try {
+      const pFull = Number(quickPriceVal.price);
+      const pHalf = quickPriceVal.price_half ? Number(quickPriceVal.price_half) : null;
+      await updateDishPrice(dishId, pFull, pHalf, token);
+      setDishes(dishes.map(d => d.id === dishId ? { ...d, price: pFull, price_half: pHalf } : d));
+      setEditingPriceId(null);
+    } catch (err) {
+      alert('Failed to update price');
     }
   };
 
-  const filteredDishes = dishes.filter(d => 
-    d.name.toLowerCase().includes(search.toLowerCase()) || 
-    (d.name_hi && d.name_hi.toLowerCase().includes(search.toLowerCase()))
-  );
+  const filteredDishes = dishes.filter(d => {
+    const matchesSearch = d.name.toLowerCase().includes(search.toLowerCase()) || 
+      (d.name_hi && d.name_hi.toLowerCase().includes(search.toLowerCase()));
+    const matchesCategory = selectedCatFilter === 'all' || String(d.category_id) === String(selectedCatFilter);
+    return matchesSearch && matchesCategory;
+  });
 
   return (
     <div style={{ minHeight: '100vh', background: 'var(--bg-mobile-app)', paddingBottom: '60px' }}>
@@ -404,14 +417,16 @@ export default function AdminDashboard({ token, username, onLogout, onReturnToMe
         {/* TAB 1: DISHES */}
         {activeTab === 'dishes' && (
           <div>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '14px', gap: '10px' }}>
+            {/* Category Dropdown Filter & Search Bar */}
+            <div style={{ display: 'flex', gap: '8px', marginBottom: '14px', flexWrap: 'wrap', alignItems: 'center' }}>
               <input
                 type="text"
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
-                placeholder="Filter dishes by name..."
+                placeholder="🔍 Search dish by name..."
                 style={{
-                  flexGrow: 1,
+                  flex: 1,
+                  minWidth: '150px',
                   padding: '8px 14px',
                   borderRadius: 'var(--radius-pill)',
                   border: '1px solid var(--border-light)',
@@ -419,10 +434,32 @@ export default function AdminDashboard({ token, username, onLogout, onReturnToMe
                 }}
               />
 
+              <select
+                value={selectedCatFilter}
+                onChange={(e) => setSelectedCatFilter(e.target.value)}
+                style={{
+                  padding: '8px 12px',
+                  borderRadius: 'var(--radius-pill)',
+                  border: '1.5px solid #D4AF37',
+                  fontSize: '0.82rem',
+                  fontWeight: 700,
+                  background: '#0A2315',
+                  color: '#FFFFFF',
+                  cursor: 'pointer'
+                }}
+              >
+                <option value="all">📁 All Categories ({dishes.length})</option>
+                {categories.map(c => (
+                  <option key={c.id} value={c.id}>
+                    {c.name} ({dishes.filter(d => Number(d.category_id) === Number(c.id)).length})
+                  </option>
+                ))}
+              </select>
+
               <button
                 onClick={() => setDishModalData('new')}
                 style={{
-                  background: 'var(--primary-emerald)',
+                  background: 'linear-gradient(135deg, #0A2315 0%, #164E2A 100%)',
                   color: '#FFFFFF',
                   padding: '8px 16px',
                   borderRadius: 'var(--radius-pill)',
@@ -431,7 +468,8 @@ export default function AdminDashboard({ token, username, onLogout, onReturnToMe
                   display: 'flex',
                   alignItems: 'center',
                   gap: '6px',
-                  whiteSpace: 'nowrap'
+                  whiteSpace: 'nowrap',
+                  border: '1px solid #D4AF37'
                 }}
               >
                 <Plus size={16} /> Add New Dish
@@ -439,73 +477,158 @@ export default function AdminDashboard({ token, username, onLogout, onReturnToMe
             </div>
 
             <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
-              {filteredDishes.map((dish) => (
-                <div key={dish.id} style={{
-                  background: '#FFFFFF',
-                  borderRadius: 'var(--radius-md)',
-                  padding: '12px 16px',
-                  border: '1px solid var(--border-light)',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'space-between',
-                  gap: '8px',
-                  flexWrap: 'wrap'
-                }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexGrow: 1, minWidth: 0, overflow: 'hidden' }}>
-                    <img src={dish.image || '/uploads/logo.jpg'} alt="" style={{ width: '38px', height: '38px', borderRadius: 'var(--radius-sm)', objectFit: 'cover', flexShrink: 0 }} />
-                    <div style={{ minWidth: 0 }}>
-                      <h4 style={{ fontSize: '0.85rem', fontWeight: 700, color: 'var(--primary-emerald)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{dish.name}</h4>
-                      <span style={{ fontSize: '0.74rem', color: 'var(--text-muted)' }}>
-                        {dish.category_name || 'Category'} • {dish.price_half ? `Half ${dish.price_half} | Full ${dish.price}` : `${dish.price}`}
-                      </span>
+              {filteredDishes.map((dish) => {
+                const isEditingThisPrice = editingPriceId === dish.id;
+
+                return (
+                  <div key={dish.id} style={{
+                    background: '#FFFFFF',
+                    borderRadius: 'var(--radius-md)',
+                    padding: '12px 14px',
+                    border: '1px solid var(--border-light)',
+                    display: 'flex',
+                    flexDirection: 'column',
+                    gap: '8px'
+                  }}>
+                    <div style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'space-between',
+                      gap: '8px',
+                      flexWrap: 'wrap'
+                    }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexGrow: 1, minWidth: 0, overflow: 'hidden' }}>
+                        <img src={dish.image || '/uploads/logo.jpg'} alt="" style={{ width: '38px', height: '38px', borderRadius: 'var(--radius-sm)', objectFit: 'cover', flexShrink: 0 }} />
+                        <div style={{ minWidth: 0 }}>
+                          <h4 style={{ fontSize: '0.85rem', fontWeight: 700, color: 'var(--primary-emerald)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{dish.name}</h4>
+                          <span style={{ fontSize: '0.74rem', color: 'var(--text-muted)' }}>
+                            {dish.category_name || 'Category'} • {dish.price_half ? `Half ₹${Math.round(dish.price_half)} | Full ₹${Math.round(dish.price)}` : `₹${Math.round(dish.price)}`}
+                          </span>
+                        </div>
+                      </div>
+
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '4px', flexShrink: 0, flexWrap: 'wrap' }}>
+                        {/* Quick 1-Click Price Editor Toggle Button */}
+                        <button
+                          onClick={() => {
+                            if (isEditingThisPrice) {
+                              setEditingPriceId(null);
+                            } else {
+                              setEditingPriceId(dish.id);
+                              setQuickPriceVal({ price: Math.round(dish.price), price_half: dish.price_half ? Math.round(dish.price_half) : '' });
+                            }
+                          }}
+                          style={{
+                            padding: '4px 8px',
+                            borderRadius: 'var(--radius-pill)',
+                            fontSize: '0.72rem',
+                            fontWeight: 700,
+                            background: isEditingThisPrice ? '#FEF3C7' : '#F3F4F6',
+                            color: isEditingThisPrice ? '#D97706' : '#1F2937',
+                            border: '1px solid #D1D5DB'
+                          }}
+                        >
+                          ⚡ Quick Price
+                        </button>
+
+                        <button
+                          onClick={() => handleToggleMustTry(dish)}
+                          title={dish.badge === 'Must Try' ? 'Remove Must Try' : 'Mark as Must Try'}
+                          style={{
+                            padding: '4px 8px',
+                            borderRadius: 'var(--radius-pill)',
+                            fontSize: '0.72rem',
+                            fontWeight: 700,
+                            background: dish.badge === 'Must Try' ? '#FEF3C7' : '#F3F4F6',
+                            color: dish.badge === 'Must Try' ? '#D97706' : '#4B5563',
+                            border: dish.badge === 'Must Try' ? '1px solid #F59E0B' : '1px solid #D1D5DB',
+                            display: 'inline-flex',
+                            alignItems: 'center',
+                            gap: '3px'
+                          }}
+                        >
+                          <Star size={11} fill={dish.badge === 'Must Try' ? '#D97706' : 'none'} color={dish.badge === 'Must Try' ? '#D97706' : '#4B5563'} />
+                          {dish.badge === 'Must Try' ? 'Must Try' : '+ Must Try'}
+                        </button>
+
+                        <button
+                          onClick={() => handleToggleDish(dish.id, dish.available)}
+                          style={{
+                            padding: '4px 10px',
+                            borderRadius: 'var(--radius-pill)',
+                            fontSize: '0.72rem',
+                            fontWeight: 700,
+                            background: dish.available !== false ? '#DCFCE7' : '#FEE2E2',
+                            color: dish.available !== false ? '#15803D' : '#DC2626'
+                          }}
+                        >
+                          {dish.available !== false ? '● Active' : '● Hidden'}
+                        </button>
+
+                        <button onClick={() => setDishModalData(dish)} style={{ color: 'var(--primary-emerald)', padding: '4px' }} title="Full Edit">
+                          <Edit size={16} />
+                        </button>
+
+                        <button onClick={() => handleDeleteDish(dish.id)} style={{ color: '#EF4444', padding: '4px' }} title="Delete Dish">
+                          <Trash2 size={16} />
+                        </button>
+                      </div>
                     </div>
-                  </div>
 
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '4px', flexShrink: 0, flexWrap: 'wrap' }}>
-                    <button
-                      onClick={() => handleToggleMustTry(dish)}
-                      title={dish.badge === 'Must Try' ? 'Remove Must Try' : 'Mark as Must Try'}
-                      style={{
-                        padding: '4px 8px',
-                        borderRadius: 'var(--radius-pill)',
-                        fontSize: '0.72rem',
-                        fontWeight: 700,
-                        background: dish.badge === 'Must Try' ? '#FEF3C7' : '#F3F4F6',
-                        color: dish.badge === 'Must Try' ? '#D97706' : '#4B5563',
-                        border: dish.badge === 'Must Try' ? '1px solid #F59E0B' : '1px solid #D1D5DB',
-                        display: 'inline-flex',
+                    {/* Inline Quick Price Editing Row */}
+                    {isEditingThisPrice && (
+                      <div style={{
+                        background: '#FFFBEB',
+                        border: '1px solid #FCD34D',
+                        borderRadius: 'var(--radius-sm)',
+                        padding: '8px 12px',
+                        display: 'flex',
                         alignItems: 'center',
-                        gap: '3px'
-                      }}
-                    >
-                      <Star size={11} fill={dish.badge === 'Must Try' ? '#D97706' : 'none'} color={dish.badge === 'Must Try' ? '#D97706' : '#4B5563'} />
-                      {dish.badge === 'Must Try' ? 'Must Try' : '+ Must Try'}
-                    </button>
+                        gap: '8px',
+                        flexWrap: 'wrap'
+                      }}>
+                        <span style={{ fontSize: '0.75rem', fontWeight: 800, color: '#92400E' }}>⚡ Quick Price:</span>
+                        
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                          <label style={{ fontSize: '0.72rem', fontWeight: 700, color: '#78350F' }}>Full ₹</label>
+                          <input
+                            type="number"
+                            value={quickPriceVal.price}
+                            onChange={(e) => setQuickPriceVal({ ...quickPriceVal, price: e.target.value })}
+                            style={{ width: '60px', padding: '3px 6px', borderRadius: '4px', border: '1px solid #F59E0B', fontSize: '0.8rem', fontWeight: 700 }}
+                          />
+                        </div>
 
-                    <button
-                      onClick={() => handleToggleDish(dish.id, dish.available)}
-                      style={{
-                        padding: '4px 10px',
-                        borderRadius: 'var(--radius-pill)',
-                        fontSize: '0.72rem',
-                        fontWeight: 700,
-                        background: dish.available !== false ? '#DCFCE7' : '#FEE2E2',
-                        color: dish.available !== false ? '#15803D' : '#DC2626'
-                      }}
-                    >
-                      {dish.available !== false ? '● Active' : '● Hidden'}
-                    </button>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                          <label style={{ fontSize: '0.72rem', fontWeight: 700, color: '#78350F' }}>Half ₹</label>
+                          <input
+                            type="number"
+                            value={quickPriceVal.price_half}
+                            onChange={(e) => setQuickPriceVal({ ...quickPriceVal, price_half: e.target.value })}
+                            placeholder="Optional"
+                            style={{ width: '60px', padding: '3px 6px', borderRadius: '4px', border: '1px solid #F59E0B', fontSize: '0.8rem', fontWeight: 700 }}
+                          />
+                        </div>
 
-                    <button onClick={() => setDishModalData(dish)} style={{ color: 'var(--primary-emerald)', padding: '4px' }}>
-                      <Edit size={16} />
-                    </button>
-
-                    <button onClick={() => handleDeleteDish(dish.id)} style={{ color: '#EF4444', padding: '4px' }}>
-                      <Trash2 size={16} />
-                    </button>
+                        <button
+                          onClick={() => handleSaveQuickPrice(dish.id)}
+                          style={{
+                            background: '#D97706',
+                            color: '#FFFFFF',
+                            padding: '3px 12px',
+                            borderRadius: 'var(--radius-pill)',
+                            fontSize: '0.75rem',
+                            fontWeight: 800,
+                            border: 'none'
+                          }}
+                        >
+                          ✓ Save Price
+                        </button>
+                      </div>
+                    )}
                   </div>
-                </div>
-              ))}
+                );
+              })}
             </div>
           </div>
         )}
