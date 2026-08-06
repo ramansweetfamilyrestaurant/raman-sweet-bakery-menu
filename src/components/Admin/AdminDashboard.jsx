@@ -102,8 +102,7 @@ export default function AdminDashboard({ token, username, onLogout, onReturnToMe
       }
       if (!isNaN(d.getTime())) {
         const day = String(d.getDate()).padStart(2, '0');
-        const monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
-        const month = monthNames[d.getMonth()];
+        const month = String(d.getMonth() + 1).padStart(2, '0');
         const year = d.getFullYear();
         let hours = d.getHours();
         const minutes = String(d.getMinutes()).padStart(2, '0');
@@ -111,7 +110,7 @@ export default function AdminDashboard({ token, username, onLogout, onReturnToMe
         hours = hours % 12;
         hours = hours ? hours : 12;
         const formattedHours = String(hours).padStart(2, '0');
-        return { date: `${day}-${month}-${year}`, time: `${formattedHours}:${minutes} ${ampm}` };
+        return { date: `${day}/${month}/${year}`, time: `${formattedHours}:${minutes} ${ampm}` };
       }
       const parts = str.split(' ');
       if (parts.length >= 2) return { date: parts[0], time: parts[1] };
