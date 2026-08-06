@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { fetchCategories, fetchDishes, toggleDishAvailability, toggleCategoryActive, deleteDish, deleteCategory, fetchRestaurantInfo, updateDishPrice, fetchAnnouncements, fetchAdminOrders, updateOrderStatus, uploadImage, fetchServiceRequests, resolveServiceRequest, fetchAdminAnalytics, fetchAdminCombos, createCombo, updateCombo, deleteCombo, toggleComboAvailability } from '../../api/client';
+import { fetchCategories, fetchDishes, toggleDishAvailability, toggleCategoryActive, deleteDish, deleteCategory, fetchRestaurantInfo, updateDishPrice, fetchAnnouncements, fetchAdminOrders, updateOrderStatus, uploadImage, fetchServiceRequests, resolveServiceRequest, fetchAdminAnalytics, fetchAdminCombos, createCombo, updateCombo, deleteCombo, toggleComboAvailability, optimizeDatabase } from '../../api/client';
 import { getPlanDetails } from '../../config/plans';
 import DishFormModal from './DishFormModal';
 import CategoryFormModal from './CategoryFormModal';
@@ -1846,6 +1846,65 @@ export default function AdminDashboard({ token, username, onLogout, onReturnToMe
                     })}
                   </div>
                 )}
+              </div>
+
+              {/* ⚡ Database Optimization & 90-Day Archival Card */}
+              <div style={{
+                background: 'linear-gradient(135deg, #1F2937 0%, #111827 100%)',
+                borderRadius: '18px',
+                padding: '20px',
+                marginTop: '20px',
+                color: '#FFFFFF',
+                boxShadow: '0 10px 30px rgba(0,0,0,0.2)',
+                border: '1px solid rgba(255,255,255,0.1)'
+              }}>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '10px' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                    <span style={{ fontSize: '1.5rem' }}>⚡</span>
+                    <div>
+                      <h4 style={{ margin: 0, fontSize: '1rem', fontWeight: 800, color: '#FBBF24' }}>
+                        Database Optimization & 90-Day Auto Archival
+                      </h4>
+                      <span style={{ fontSize: '0.76rem', color: '#9CA3AF' }}>
+                        Compresses individual order records older than 3 months into daily rollups to maintain lightning speed.
+                      </span>
+                    </div>
+                  </div>
+                  {analyticsData?.summarized_days_count !== undefined && (
+                    <span style={{
+                      padding: '4px 10px', borderRadius: '20px', fontSize: '0.72rem', fontWeight: 800,
+                      background: 'rgba(251,191,36,0.15)', color: '#FBBF24', border: '1px solid rgba(251,191,36,0.3)'
+                    }}>
+                      {analyticsData.summarized_days_count} Archived Days
+                    </span>
+                  )}
+                </div>
+
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', background: 'rgba(255,255,255,0.05)', padding: '12px 16px', borderRadius: '12px', marginTop: '12px' }}>
+                  <span style={{ fontSize: '0.82rem', color: '#D1D5DB' }}>
+                    💡 Historical sales & total revenue remain 100% accurate down to the rupee.
+                  </span>
+                  <button
+                    onClick={async () => {
+                      if (!confirm('Run database optimization? Orders older than 90 days will be compressed into daily sales summaries.')) return;
+                      try {
+                        const res = await optimizeDatabase(90, token);
+                        alert(res.message || 'Database optimization completed successfully!');
+                        fetchAdminAnalytics(token).then(data => setAnalyticsData(data));
+                      } catch (err) {
+                        alert('Optimization failed: ' + err.message);
+                      }
+                    }}
+                    style={{
+                      padding: '8px 18px', borderRadius: '10px', border: 'none',
+                      background: 'linear-gradient(135deg, #F59E0B 0%, #D97706 100%)',
+                      color: '#FFFFFF', fontWeight: 800, fontSize: '0.82rem', cursor: 'pointer',
+                      boxShadow: '0 4px 14px rgba(245,158,11,0.35)', whiteSpace: 'nowrap'
+                    }}
+                  >
+                    ⚡ Run Optimization Now
+                  </button>
+                </div>
               </div>
 
             </div>

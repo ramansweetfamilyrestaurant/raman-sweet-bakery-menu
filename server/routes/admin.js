@@ -4,7 +4,7 @@ import jwt from 'jsonwebtoken';
 import multer from 'multer';
 import path from 'path';
 import fs from 'fs';
-import { query } from '../db.js';
+import { query, runAutoDataSummarization } from '../db.js';
 import { authenticateToken } from '../middleware/auth.js';
 
 const router = express.Router();
@@ -512,6 +512,27 @@ router.get('/analytics', authenticateToken, async (req, res) => {
       });
     });
 
+    // Query aggregated historical summaries
+    const summaries = await query(
+      'SELECT summary_date, total_sales, total_orders, top_dishes_summary FROM daily_sales_summaries WHERE restaurant_id = $1',
+      [restoId]
+    );
+
+    summaries.forEach(s => {
+      const amt = Number(s.total_sales) || 0;
+      const count = Number(s.total_orders) || 0;
+      totalSales += amt;
+
+      const dDate = new Date(s.summary_date);
+      if (dDate >= sevenDaysAgo) weeklySales += amt;
+      if (dDate >= thirtyDaysAgo) monthlySales += amt;
+      if (s.summary_date && dailySalesMap[s.summary_date] !== undefined) {
+        dailySalesMap[s.summary_date] += amt;
+      }
+    });
+
+    const totalOrdersCount = orders.length + summaries.reduce((acc, s) => acc + (Number(s.total_orders) || 0), 0);
+
     const topDishes = Object.values(dishSalesMap)
       .sort((a, b) => b.quantity - a.quantity)
       .slice(0, 5);
@@ -528,13 +549,27 @@ router.get('/analytics', authenticateToken, async (req, res) => {
       weekly_sales: weeklySales,
       monthly_sales: monthlySales,
       total_sales: totalSales,
-      total_orders: orders.length,
+      total_orders: totalOrdersCount,
       top_dishes: topDishes,
-      daily_chart: dailyChartData
+      daily_chart: dailyChartData,
+      summarized_days_count: summaries.length
     });
   } catch (err) {
     console.error('Fetch analytics error:', err);
     res.status(500).json({ error: 'Failed to fetch analytics' });
+  }
+});
+
+// POST 1-Click Database Optimization & 90-Day Archival
+router.post('/optimize-db', authenticateToken, async (req, res) => {
+  try {
+    const restoId = req.user.restaurant_id || 1;
+    const daysOld = req.body.daysOld || 90;
+    const result = await runAutoDataSummarization(daysOld, restoId);
+    res.json(result);
+  } catch (err) {
+    console.error('Database optimization error:', err);
+    res.status(500).json({ error: 'Failed to run database optimization' });
   }
 });
 

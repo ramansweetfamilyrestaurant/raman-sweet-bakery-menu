@@ -470,3 +470,15 @@ export async function toggleComboAvailability(id, available, token) {
   });
   return handleResponse(res, 'Failed to toggle combo availability');
 }
+
+export async function optimizeDatabase(daysOld = 90, token) {
+  const res = await fetch(`${API_BASE}/admin/optimize-db`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      Authorization: `Bearer ${token}`,
+    },
+    body: JSON.stringify({ daysOld }),
+  });
+  return handleResponse(res, 'Failed to optimize database');
+}

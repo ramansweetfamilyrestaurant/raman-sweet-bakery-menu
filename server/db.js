@@ -194,6 +194,17 @@ async function createTables() {
         sort_order INT DEFAULT 0,
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
       );
+
+      CREATE TABLE IF NOT EXISTS daily_sales_summaries (
+        id SERIAL PRIMARY KEY,
+        restaurant_id INT REFERENCES restaurants(id) ON DELETE CASCADE,
+        summary_date VARCHAR(50) NOT NULL,
+        total_sales DECIMAL(10, 2) NOT NULL DEFAULT 0,
+        total_orders INT NOT NULL DEFAULT 0,
+        top_dishes_summary TEXT,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        UNIQUE (restaurant_id, summary_date)
+      );
     `);
   } else {
     sqliteDb.exec(`
@@ -333,6 +344,18 @@ async function createTables() {
         badge TEXT,
         sort_order INTEGER DEFAULT 0,
         created_at TEXT DEFAULT CURRENT_TIMESTAMP,
+        FOREIGN KEY (restaurant_id) REFERENCES restaurants (id) ON DELETE CASCADE
+      );
+
+      CREATE TABLE IF NOT EXISTS daily_sales_summaries (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        restaurant_id INTEGER DEFAULT 1,
+        summary_date TEXT NOT NULL,
+        total_sales REAL DEFAULT 0,
+        total_orders INTEGER DEFAULT 0,
+        top_dishes_summary TEXT,
+        created_at TEXT DEFAULT CURRENT_TIMESTAMP,
+        UNIQUE (restaurant_id, summary_date),
         FOREIGN KEY (restaurant_id) REFERENCES restaurants (id) ON DELETE CASCADE
       );
     `);
@@ -572,4 +595,120 @@ async function logAudit(restaurantId, actorRole, action, details) {
   }
 }
 
-export { initDb, query, logAudit };
+async function runAutoDataSummarization(daysOld = 90, targetRestaurantId = null) {
+  try {
+    const cutoffDate = new Date();
+    cutoffDate.setDate(cutoffDate.getDate() - daysOld);
+    const cutoffISO = cutoffDate.toISOString().split('T')[0] + ' 23:59:59';
+
+    let sql = 'SELECT * FROM orders WHERE created_at <= $1';
+    const params = [cutoffISO];
+    if (targetRestaurantId) {
+      sql += ' AND restaurant_id = $2';
+      params.push(targetRestaurantId);
+    }
+    sql += ' ORDER BY created_at ASC';
+
+    const oldOrders = await query(sql, params);
+    if (!oldOrders || oldOrders.length === 0) {
+      return { summarized_days: 0, purged_orders: 0, message: 'No orders older than ' + daysOld + ' days found to summarize' };
+    }
+
+    const grouped = {};
+    for (const o of oldOrders) {
+      const restoId = o.restaurant_id || 1;
+      let dStr = '';
+      if (o.created_at) {
+        dStr = String(o.created_at).substring(0, 10);
+      }
+      if (!dStr || dStr.length < 10) continue;
+
+      const key = `${restoId}_${dStr}`;
+      if (!grouped[key]) {
+        grouped[key] = {
+          restaurant_id: restoId,
+          summary_date: dStr,
+          total_sales: 0,
+          total_orders: 0,
+          itemsMap: {},
+          orderIds: []
+        };
+      }
+
+      grouped[key].total_sales += Number(o.total_amount) || 0;
+      grouped[key].total_orders += 1;
+      grouped[key].orderIds.push(o.id);
+
+      let itemsList = [];
+      try {
+        itemsList = typeof o.items === 'string' ? JSON.parse(o.items) : (o.items || []);
+      } catch (e) { itemsList = []; }
+
+      if (Array.isArray(itemsList)) {
+        for (const item of itemsList) {
+          const name = item.name || item.dish_name || 'Item';
+          const qty = Number(item.quantity || item.qty || 1);
+          grouped[key].itemsMap[name] = (grouped[key].itemsMap[name] || 0) + qty;
+        }
+      }
+    }
+
+    let summarizedDaysCount = 0;
+    let purgedOrdersCount = 0;
+
+    for (const key in grouped) {
+      const summary = grouped[key];
+      const topDishes = Object.entries(summary.itemsMap)
+        .map(([name, qty]) => ({ name, qty }))
+        .sort((a, b) => b.qty - a.qty)
+        .slice(0, 5);
+
+      const topDishesJson = JSON.stringify(topDishes);
+
+      if (dbType === 'postgres') {
+        await query(`
+          INSERT INTO daily_sales_summaries (restaurant_id, summary_date, total_sales, total_orders, top_dishes_summary)
+          VALUES ($1, $2, $3, $4, $5)
+          ON CONFLICT (restaurant_id, summary_date)
+          DO UPDATE SET total_sales = daily_sales_summaries.total_sales + EXCLUDED.total_sales,
+                        total_orders = daily_sales_summaries.total_orders + EXCLUDED.total_orders,
+                        top_dishes_summary = EXCLUDED.top_dishes_summary
+        `, [summary.restaurant_id, summary.summary_date, summary.total_sales, summary.total_orders, topDishesJson]);
+      } else {
+        const existing = await query('SELECT * FROM daily_sales_summaries WHERE restaurant_id = $1 AND summary_date = $2', [summary.restaurant_id, summary.summary_date]);
+        if (existing && existing.length > 0) {
+          await query(`
+            UPDATE daily_sales_summaries
+            SET total_sales = total_sales + $1, total_orders = total_orders + $2, top_dishes_summary = $3
+            WHERE restaurant_id = $4 AND summary_date = $5
+          `, [summary.total_sales, summary.total_orders, topDishesJson, summary.restaurant_id, summary.summary_date]);
+        } else {
+          await query(`
+            INSERT INTO daily_sales_summaries (restaurant_id, summary_date, total_sales, total_orders, top_dishes_summary)
+            VALUES ($1, $2, $3, $4, $5)
+          `, [summary.restaurant_id, summary.summary_date, summary.total_sales, summary.total_orders, topDishesJson]);
+        }
+      }
+
+      for (const orderId of summary.orderIds) {
+        await query('DELETE FROM orders WHERE id = $1', [orderId]);
+        purgedOrdersCount++;
+      }
+
+      summarizedDaysCount++;
+    }
+
+    await logAudit(targetRestaurantId || 1, 'SYSTEM', 'AUTO_SUMMARIZATION', `Summarized ${summarizedDaysCount} days, purged ${purgedOrdersCount} old individual orders older than ${daysOld} days`);
+
+    return {
+      summarized_days: summarizedDaysCount,
+      purged_orders: purgedOrdersCount,
+      message: `Successfully summarized ${summarizedDaysCount} days and compressed ${purgedOrdersCount} individual order records into daily rollups!`
+    };
+  } catch (err) {
+    console.error('Data Summarization Engine Error:', err);
+    throw err;
+  }
+}
+
+export { initDb, query, logAudit, runAutoDataSummarization };
