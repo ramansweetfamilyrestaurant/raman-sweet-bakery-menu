@@ -757,37 +757,37 @@ export default function App() {
       {info && info.whatsapp_enabled !== false && (
         <div style={{
           position: 'fixed',
-          bottom: '80px',
+          bottom: '90px',
           right: '18px',
-          zIndex: 990
+          zIndex: 1200
         }}>
           <button
             onClick={() => setShowCartDrawer(true)}
             style={{
               background: 'linear-gradient(135deg, #25D366 0%, #128C7E 100%)',
               color: '#FFFFFF',
-              padding: '10px 16px',
+              padding: '12px 18px',
               borderRadius: 'var(--radius-pill)',
               fontWeight: 900,
-              fontSize: '0.84rem',
+              fontSize: '0.88rem',
               border: '2px solid #FFFFFF',
               cursor: 'pointer',
               display: 'flex',
               alignItems: 'center',
-              gap: '6px',
-              boxShadow: '0 8px 24px rgba(37, 211, 102, 0.55)'
+              gap: '8px',
+              boxShadow: '0 8px 28px rgba(37, 211, 102, 0.6)'
             }}
           >
-            <MessageSquare size={16} />
+            <MessageSquare size={18} />
             <span>Order on WhatsApp</span>
             {cartItems.length > 0 && (
               <span style={{
                 background: '#FFFFFF',
                 color: '#128C7E',
-                fontSize: '0.72rem',
+                fontSize: '0.78rem',
                 fontWeight: 900,
-                padding: '2px 6px',
-                borderRadius: '10px',
+                padding: '2px 8px',
+                borderRadius: '12px',
                 marginLeft: '2px'
               }}>
                 {cartItems.reduce((acc, i) => acc + i.quantity, 0)}
@@ -802,52 +802,59 @@ export default function App() {
         <div style={{
           position: 'fixed',
           top: 0, left: 0, right: 0, bottom: 0,
-          background: 'rgba(0,0,0,0.65)',
-          backdropFilter: 'blur(6px)',
-          zIndex: 2000,
+          background: 'rgba(0,0,0,0.75)',
+          backdropFilter: 'blur(8px)',
+          zIndex: 10000,
           display: 'flex',
           alignItems: 'flex-end',
           justifyContent: 'center'
         }}>
           <div style={{
             background: '#FFFFFF',
-            borderRadius: '24px 24px 0 0',
-            maxWidth: '500px',
+            borderRadius: '28px 28px 0 0',
+            maxWidth: '520px',
             width: '100%',
-            padding: '24px',
-            boxShadow: '0 -10px 40px rgba(0,0,0,0.3)',
-            maxHeight: '80vh',
+            padding: '24px 20px 36px 20px',
+            boxShadow: '0 -10px 40px rgba(0,0,0,0.5)',
+            maxHeight: '85vh',
             display: 'flex',
             flexDirection: 'column'
           }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                <MessageSquare size={22} color="#25D366" />
-                <h3 style={{ fontSize: '1.2rem', fontWeight: 900, color: 'var(--primary-emerald)', margin: 0 }}>
-                  WhatsApp Direct Order
-                </h3>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px', borderBottom: '1px solid var(--border-light)', paddingBottom: '12px' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                <div style={{ width: '38px', height: '38px', borderRadius: '50%', background: '#DCFCE7', color: '#15803D', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                  <MessageSquare size={20} color="#15803D" />
+                </div>
+                <div>
+                  <h3 style={{ fontSize: '1.15rem', fontWeight: 900, color: 'var(--primary-emerald)', margin: 0 }}>
+                    WhatsApp Direct Order
+                  </h3>
+                  <span style={{ fontSize: '0.74rem', color: 'var(--text-muted)' }}>Send order directly to restaurant WhatsApp</span>
+                </div>
               </div>
-              <button onClick={() => setShowCartDrawer(false)} style={{ background: 'none', border: 'none', fontSize: '1.4rem', fontWeight: 700, cursor: 'pointer', color: 'var(--text-muted)' }}>✕</button>
+              <button onClick={() => setShowCartDrawer(false)} style={{ background: '#F3F4F6', border: 'none', width: '32px', height: '32px', borderRadius: '50%', fontSize: '1.2rem', fontWeight: 700, cursor: 'pointer', color: 'var(--text-dark)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>✕</button>
             </div>
 
             {cartItems.length === 0 ? (
-              <div style={{ textAlign: 'center', padding: '30px 10px', color: 'var(--text-muted)' }}>
-                <p style={{ fontSize: '0.9rem', margin: '0 0 8px 0', fontWeight: 700 }}>Your order cart is empty.</p>
-                <p style={{ fontSize: '0.8rem', opacity: 0.75 }}>Tap <strong>"+ Order"</strong> on any dish to add items to your WhatsApp order!</p>
+              <div style={{ textAlign: 'center', padding: '40px 10px', color: 'var(--text-muted)' }}>
+                <MessageSquare size={40} color="#25D366" style={{ marginBottom: '10px', opacity: 0.6 }} />
+                <p style={{ fontSize: '0.95rem', margin: '0 0 6px 0', fontWeight: 800, color: 'var(--text-dark)' }}>Your order cart is empty.</p>
+                <p style={{ fontSize: '0.8rem', opacity: 0.75, margin: 0 }}>Tap <strong>"+ Order"</strong> on any dish to add items to your WhatsApp order!</p>
               </div>
             ) : (
               <div style={{ flex: 1, overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '10px', marginBottom: '16px' }}>
                 {cartItems.map(({ dish, quantity }) => (
-                  <div key={dish.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: 'var(--bg-app)', padding: '10px 14px', borderRadius: '14px', border: '1px solid var(--border-light)' }}>
+                  <div key={dish.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: 'var(--bg-app)', padding: '12px 14px', borderRadius: '16px', border: '1px solid var(--border-light)' }}>
                     <div>
-                      <strong style={{ fontSize: '0.9rem', color: 'var(--text-dark)', display: 'block' }}>{dish.name}</strong>
-                      <span style={{ fontSize: '0.8rem', color: 'var(--gold-primary)', fontWeight: 700 }}>
+                      <strong style={{ fontSize: '0.92rem', color: 'var(--text-dark)', display: 'block' }}>{dish.name}</strong>
+                      <span style={{ fontSize: '0.82rem', color: 'var(--gold-primary)', fontWeight: 800 }}>
                         {info?.currency_symbol || '₹'}{dish.price} x {quantity} = {info?.currency_symbol || '₹'}{dish.price * quantity}
                       </span>
                     </div>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                      <button onClick={() => handleAddToCart(dish)} style={{ background: 'var(--primary-emerald)', color: '#FFF', border: 'none', width: '26px', height: '26px', borderRadius: '50%', fontWeight: 800, cursor: 'pointer' }}>+</button>
-                      <button onClick={() => handleRemoveFromCart(dish.id)} style={{ background: '#FEE2E2', color: '#DC2626', border: 'none', width: '26px', height: '26px', borderRadius: '50%', fontWeight: 800, cursor: 'pointer' }}>✕</button>
+                      <button onClick={() => handleAddToCart(dish)} style={{ background: 'var(--primary-emerald)', color: '#FFF', border: 'none', width: '28px', height: '28px', borderRadius: '50%', fontWeight: 900, cursor: 'pointer', fontSize: '1rem' }}>+</button>
+                      <span style={{ fontSize: '0.9rem', fontWeight: 800 }}>{quantity}</span>
+                      <button onClick={() => handleRemoveFromCart(dish.id)} style={{ background: '#FEE2E2', color: '#DC2626', border: 'none', width: '28px', height: '28px', borderRadius: '50%', fontWeight: 900, cursor: 'pointer', fontSize: '0.9rem' }}>✕</button>
                     </div>
                   </div>
                 ))}
@@ -861,20 +868,22 @@ export default function App() {
                   width: '100%',
                   background: 'linear-gradient(135deg, #25D366 0%, #128C7E 100%)',
                   color: '#FFFFFF',
-                  padding: '14px',
+                  padding: '16px 20px',
                   borderRadius: 'var(--radius-pill)',
                   fontWeight: 900,
-                  fontSize: '0.95rem',
-                  border: 'none',
+                  fontSize: '1rem',
+                  border: '2px solid #FFFFFF',
                   cursor: 'pointer',
                   display: 'flex',
                   alignItems: 'center',
                   justifyContent: 'center',
-                  gap: '8px',
-                  boxShadow: '0 6px 20px rgba(37, 211, 102, 0.4)'
+                  gap: '10px',
+                  boxShadow: '0 8px 28px rgba(37, 211, 102, 0.55)',
+                  marginTop: 'auto'
                 }}
               >
-                <MessageSquare size={18} /> Send Order to WhatsApp ({info?.currency_symbol || '₹'}{cartItems.reduce((sum, i) => sum + i.dish.price * i.quantity, 0)})
+                <MessageSquare size={20} color="#FFFFFF" />
+                <span>SEND ORDER TO WHATSAPP ({info?.currency_symbol || '₹'}{cartItems.reduce((sum, i) => sum + i.dish.price * i.quantity, 0)})</span>
               </button>
             )}
           </div>
