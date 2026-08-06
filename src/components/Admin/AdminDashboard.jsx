@@ -493,7 +493,7 @@ export default function AdminDashboard({ token, username, onLogout, onReturnToMe
               </button>
             </div>
 
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+            <div className="admin-dish-grid" style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
               {filteredDishes.map((dish) => {
                 const isEditingThisPrice = editingPriceId === dish.id;
 

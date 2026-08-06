@@ -108,40 +108,49 @@ img {
   display: none;
 }
 
-/* ========== RESPONSIVE MEDIA QUERIES ========== */
+/* ========== RESPONSIVE MEDIA QUERIES FOR PHONES, TABLETS & DESKTOPS ========== */
 
-/* Very small phones (320px - Galaxy S5, iPhone SE 1st gen) */
-@media (max-width: 359px) {
+/* Mobile Phones (up to 767px) */
+@media (max-width: 767px) {
   #root {
+    width: 100%;
     max-width: 100%;
+    margin: 0;
+    border-radius: 0;
+    box-shadow: none;
   }
 }
 
-/* Standard small phones (360px - 399px) */
-@media (min-width: 360px) and (max-width: 399px) {
+/* Tablets & iPads (768px - 1024px) */
+@media (min-width: 768px) and (max-width: 1024px) {
   #root {
-    max-width: 100%;
+    width: 94%;
+    max-width: 860px;
+    margin: 20px auto;
+    border-radius: 20px;
+    box-shadow: 0 10px 40px rgba(0, 0, 0, 0.5);
+  }
+
+  .admin-dish-grid {
+    display: grid !important;
+    grid-template-columns: repeat(2, 1fr) !important;
+    gap: 12px !important;
   }
 }
 
-/* Medium phones (400px - 479px - iPhone 14, Pixel 7) */
-@media (min-width: 400px) and (max-width: 479px) {
+/* Laptops & Large Screens (1025px+) */
+@media (min-width: 1025px) {
   #root {
-    max-width: 100%;
+    width: 90%;
+    max-width: 980px;
+    margin: 30px auto;
+    border-radius: 24px;
+    box-shadow: 0 15px 50px rgba(0, 0, 0, 0.6);
   }
-}
 
-/* Large phones and small tablets (480px+) */
-@media (min-width: 480px) {
-  #root {
-    max-width: 520px;
-  }
-}
-
-/* Tablets and desktops */
-@media (min-width: 768px) {
-  #root {
-    max-width: 520px;
-    box-shadow: 0 0 60px rgba(0, 0, 0, 0.7);
+  .admin-dish-grid {
+    display: grid !important;
+    grid-template-columns: repeat(2, 1fr) !important;
+    gap: 14px !important;
   }
 }
