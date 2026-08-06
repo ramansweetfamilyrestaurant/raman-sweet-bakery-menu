@@ -1,8 +1,8 @@
 import React, { useState, useEffect } from 'react';
-import { fetchCategories, fetchDishes, toggleDishAvailability, toggleCategoryActive, deleteDish, deleteCategory, fetchRestaurantInfo, updateDishPrice, fetchAnnouncements, fetchAdminOrders, updateOrderStatus } from '../../api/client';
+import { fetchCategories, fetchDishes, toggleDishAvailability, toggleCategoryActive, deleteDish, deleteCategory, fetchRestaurantInfo, updateDishPrice, fetchAnnouncements, fetchAdminOrders, updateOrderStatus, uploadImage } from '../../api/client';
 import DishFormModal from './DishFormModal';
 import CategoryFormModal from './CategoryFormModal';
-import { Plus, Edit, Trash2, Eye, EyeOff, LogOut, ArrowLeft, Layers, Utensils, QrCode, Printer, Settings, Star, CheckCircle, Lock, ExternalLink, Megaphone, MessageSquare, Palette, Sparkles, Clock, CheckCircle2, XCircle } from 'lucide-react';
+import { Plus, Edit, Trash2, Eye, EyeOff, LogOut, ArrowLeft, Layers, Utensils, QrCode, Printer, Settings, Star, CheckCircle, Lock, ExternalLink, Megaphone, MessageSquare, Palette, Sparkles, Clock, CheckCircle2, XCircle, Upload } from 'lucide-react';
 
 export default function AdminDashboard({ token, username, onLogout, onReturnToMenu }) {
   const [activeTab, setActiveTab] = useState('dishes'); // 'dishes', 'categories', 'qr-generator', 'settings'
@@ -1677,8 +1677,89 @@ export default function AdminDashboard({ token, username, onLogout, onReturnToMe
             </div>
             
             <p style={{ fontSize: '0.86rem', color: 'var(--text-muted)', marginBottom: '20px', lineHeight: 1.5 }}>
-              Update your restaurant contact number, address, opening hours, name, and Google review link below. These details will automatically update across your digital menu header, info modal, and footer.
+              Update your restaurant contact number, address, opening hours, logo, and Google review link below. These details will automatically update across your digital menu header, info modal, and footer.
             </p>
+
+            {/* Restaurant Brand Logo Uploader */}
+            <div style={{
+              marginBottom: '20px',
+              padding: '16px',
+              background: 'var(--bg-secondary)',
+              borderRadius: 'var(--radius-sm)',
+              border: '1.5px dashed var(--gold-border)',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '16px'
+            }}>
+              {settingsForm.logo && settingsForm.logo !== '/uploads/logo.jpg' ? (
+                <img
+                  src={settingsForm.logo}
+                  alt="Logo Preview"
+                  style={{
+                    width: '64px',
+                    height: '64px',
+                    borderRadius: '50%',
+                    objectFit: 'cover',
+                    border: '2px solid var(--gold-bright)'
+                  }}
+                  onError={(e) => { e.target.style.display = 'none'; }}
+                />
+              ) : (
+                <div style={{
+                  width: '64px',
+                  height: '64px',
+                  borderRadius: '50%',
+                  background: 'var(--header-gradient)',
+                  color: 'var(--gold-bright)',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  fontWeight: 900,
+                  fontSize: '1.4rem'
+                }}>
+                  {(settingsForm.name || 'R').charAt(0).toUpperCase()}
+                </div>
+              )}
+
+              <div>
+                <label style={{ display: 'block', fontSize: '0.88rem', fontWeight: 800, color: 'var(--primary-emerald)', marginBottom: '4px' }}>
+                  🖼️ Restaurant Brand Logo
+                </label>
+                <p style={{ fontSize: '0.76rem', color: 'var(--text-muted)', marginBottom: '8px' }}>
+                  Upload PNG/JPG logo (Recommended: 200x200px round logo)
+                </p>
+                <label style={{
+                  cursor: 'pointer',
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: '6px',
+                  background: 'var(--header-gradient)',
+                  color: '#FFFFFF',
+                  padding: '6px 14px',
+                  borderRadius: 'var(--radius-pill)',
+                  fontSize: '0.78rem',
+                  fontWeight: 700
+                }}>
+                  <Upload size={14} /> Upload Logo File
+                  <input
+                    type="file"
+                    accept="image/*"
+                    style={{ display: 'none' }}
+                    onChange={async (e) => {
+                      const file = e.target.files[0];
+                      if (!file) return;
+                      try {
+                        const url = await uploadImage(file, token);
+                        setSettingsForm(prev => ({ ...prev, logo: url }));
+                        setToastMessage('Logo uploaded! Click "Save Restaurant Settings" below.');
+                      } catch (err) {
+                        setToastMessage('Logo upload failed');
+                      }
+                    }}
+                  />
+                </label>
+              </div>
+            </div>
 
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '12px', marginBottom: '14px' }}>
               <div>
