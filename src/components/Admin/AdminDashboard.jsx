@@ -93,26 +93,29 @@ export default function AdminDashboard({ token, username, onLogout, onReturnToMe
       return;
     }
 
-    const formatDateForExcel = (dateStr) => {
-      if (!dateStr) return 'N/A';
+    const getDateParts = (dateStr) => {
+      if (!dateStr) return { date: 'N/A', time: 'N/A' };
       try {
         const d = new Date(dateStr);
-        if (isNaN(d.getTime())) return String(dateStr);
-        return d.toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' }) + ' ' +
-               d.toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit', hour12: true });
+        if (isNaN(d.getTime())) return { date: String(dateStr), time: '' };
+        const dateFormatted = d.toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' });
+        const timeFormatted = d.toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit', hour12: true });
+        return { date: dateFormatted, time: timeFormatted };
       } catch (e) {
-        return String(dateStr);
+        return { date: String(dateStr), time: '' };
       }
     };
 
-    const headers = ['Order ID', 'Date & Time', 'Table No', 'Total Amount (Rs)', 'Status', 'Items Ordered'];
+    const headers = ['Order ID', 'Date', 'Time', 'Table No', 'Total Amount (Rs)', 'Status', 'Items Ordered'];
     const rows = orders.map(o => {
       const itemsList = typeof o.items === 'string' ? JSON.parse(o.items) : (Array.isArray(o.items) ? o.items : []);
       const itemSummary = itemsList.map(i => `${i.name}${i.portion ? ' (' + i.portion + ')' : ''} x${i.quantity}`).join('; ');
+      const { date, time } = getDateParts(o.created_at);
       return [
         o.id,
-        `"${formatDateForExcel(o.created_at)}"`,
-        `"${o.table_number || '1'}"`,
+        `"${date}"`,
+        `"${time}"`,
+        `"Table ${o.table_number || '1'}"`,
         o.total_amount,
         `"${o.status ? o.status.toUpperCase() : 'PENDING'}"`,
         `"${itemSummary.replace(/"/g, '""')}"`
