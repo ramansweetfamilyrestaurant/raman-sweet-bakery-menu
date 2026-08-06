@@ -19,8 +19,10 @@ export async function fetchRestaurantInfo() {
   return handleResponse(res, 'Failed to fetch restaurant info');
 }
 
-export async function fetchCategories() {
-  const res = await fetch(`${API_BASE}/categories`);
+export async function fetchCategories({ adminView = false } = {}) {
+  const params = new URLSearchParams();
+  if (adminView) params.append('admin_view', 'true');
+  const res = await fetch(`${API_BASE}/categories?${params.toString()}`);
   return handleResponse(res, 'Failed to fetch categories');
 }
 

@@ -48,7 +48,7 @@ export default function AdminDashboard({ token, username, onLogout, onReturnToMe
     setLoading(true);
     try {
       const [catData, dishData, infoData] = await Promise.all([
-        fetchCategories(),
+        fetchCategories({ adminView: true }),
         fetchDishes({ adminView: true }),
         fetchRestaurantInfo()
       ]);
