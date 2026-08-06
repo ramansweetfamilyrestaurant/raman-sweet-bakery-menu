@@ -261,6 +261,13 @@ export async function fetchAnnouncements() {
   return handleResponse(res, 'Failed to fetch announcements');
 }
 
+export async function fetchSuperAnnouncements(token) {
+  const res = await fetch(`${API_BASE}/superadmin/announcements`, {
+    headers: { Authorization: `Bearer ${token}` }
+  });
+  return handleResponse(res, 'Failed to fetch announcements');
+}
+
 export async function createAnnouncement(message, type, token) {
   const res = await fetch(`${API_BASE}/superadmin/announcements`, {
     method: 'POST',
@@ -271,6 +278,22 @@ export async function createAnnouncement(message, type, token) {
     body: JSON.stringify({ message, type })
   });
   return handleResponse(res, 'Failed to create announcement');
+}
+
+export async function deleteAnnouncement(id, token) {
+  const res = await fetch(`${API_BASE}/superadmin/announcements/${id}`, {
+    method: 'DELETE',
+    headers: { Authorization: `Bearer ${token}` }
+  });
+  return handleResponse(res, 'Failed to delete announcement');
+}
+
+export async function clearAllAnnouncements(token) {
+  const res = await fetch(`${API_BASE}/superadmin/announcements`, {
+    method: 'DELETE',
+    headers: { Authorization: `Bearer ${token}` }
+  });
+  return handleResponse(res, 'Failed to clear all announcements');
 }
 
 export async function fetchAuditLogs(token) {

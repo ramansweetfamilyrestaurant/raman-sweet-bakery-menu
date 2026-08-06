@@ -274,6 +274,17 @@ router.delete('/restaurants/:id', authenticateToken, requireSuperAdmin, async (r
   }
 });
 
+// GET Global System Announcements (All history)
+router.get('/announcements', authenticateToken, requireSuperAdmin, async (req, res) => {
+  try {
+    const list = await query('SELECT * FROM announcements ORDER BY id DESC');
+    res.json(list);
+  } catch (err) {
+    console.error('Fetch announcements error:', err);
+    res.status(500).json({ error: 'Failed to fetch announcements' });
+  }
+});
+
 // POST Create Global System Announcement
 router.post('/announcements', authenticateToken, requireSuperAdmin, async (req, res) => {
   try {
@@ -282,12 +293,38 @@ router.post('/announcements', authenticateToken, requireSuperAdmin, async (req, 
       return res.status(400).json({ error: 'Announcement message is required' });
     }
 
+    // Optional: deactivate old active announcements if wanted or keep all
     await query('INSERT INTO announcements (message, type, active) VALUES ($1, $2, 1)', [message.trim(), type || 'info']);
     await logAudit(null, 'superadmin', 'Post Announcement', `Posted announcement: "${message.substring(0, 50)}..."`);
     res.json({ success: true, message: 'System announcement broadcasted successfully!' });
   } catch (err) {
     console.error('Post announcement error:', err);
     res.status(500).json({ error: 'Failed to post announcement' });
+  }
+});
+
+// DELETE Single Announcement
+router.delete('/announcements/:id', authenticateToken, requireSuperAdmin, async (req, res) => {
+  try {
+    const { id } = req.params;
+    await query('DELETE FROM announcements WHERE id = $1', [id]);
+    await logAudit(null, 'superadmin', 'Delete Announcement', `Deleted announcement ID ${id}`);
+    res.json({ success: true, message: 'Announcement deleted successfully' });
+  } catch (err) {
+    console.error('Delete announcement error:', err);
+    res.status(500).json({ error: 'Failed to delete announcement' });
+  }
+});
+
+// DELETE Clear All Active Announcements
+router.delete('/announcements', authenticateToken, requireSuperAdmin, async (req, res) => {
+  try {
+    await query('DELETE FROM announcements');
+    await logAudit(null, 'superadmin', 'Clear All Announcements', 'Cleared all system announcements');
+    res.json({ success: true, message: 'All system announcements cleared successfully' });
+  } catch (err) {
+    console.error('Clear announcements error:', err);
+    res.status(500).json({ error: 'Failed to clear announcements' });
   }
 });
 

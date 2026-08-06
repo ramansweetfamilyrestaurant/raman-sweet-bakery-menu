@@ -2,13 +2,14 @@ import React, { useState, useEffect } from 'react';
 import { fetchCategories, fetchDishes, toggleDishAvailability, toggleCategoryActive, deleteDish, deleteCategory, fetchRestaurantInfo, updateDishPrice, fetchAnnouncements, fetchAdminOrders, updateOrderStatus, uploadImage } from '../../api/client';
 import DishFormModal from './DishFormModal';
 import CategoryFormModal from './CategoryFormModal';
-import { Plus, Edit, Trash2, Eye, EyeOff, LogOut, ArrowLeft, Layers, Utensils, QrCode, Printer, Settings, Star, CheckCircle, Lock, ExternalLink, Megaphone, MessageSquare, Palette, Sparkles, Clock, CheckCircle2, XCircle, Upload } from 'lucide-react';
+import { Plus, Edit, Trash2, Eye, EyeOff, LogOut, ArrowLeft, Layers, Utensils, QrCode, Printer, Settings, Star, CheckCircle, Lock, ExternalLink, Megaphone, MessageSquare, Palette, Sparkles, Clock, CheckCircle2, XCircle, Upload, X } from 'lucide-react';
 
 export default function AdminDashboard({ token, username, onLogout, onReturnToMenu }) {
   const [activeTab, setActiveTab] = useState('dishes'); // 'dishes', 'categories', 'qr-generator', 'settings'
   const [categories, setCategories] = useState([]);
   const [dishes, setDishes] = useState([]);
   const [announcements, setAnnouncements] = useState([]);
+  const [dismissedNotice, setDismissedNotice] = useState(false);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
   const [selectedCatFilter, setSelectedCatFilter] = useState('all');
@@ -661,7 +662,7 @@ export default function AdminDashboard({ token, username, onLogout, onReturnToMe
       </header>
 
       {/* 📢 Global System Announcement Banner */}
-      {announcements.length > 0 && (
+      {announcements.length > 0 && !dismissedNotice && (
         <div style={{
           background: 'linear-gradient(135deg, #1E1B4B 0%, #312E81 100%)',
           color: '#E0E7FF',
@@ -670,12 +671,32 @@ export default function AdminDashboard({ token, username, onLogout, onReturnToMe
           fontWeight: 700,
           display: 'flex',
           alignItems: 'center',
-          justifyContent: 'center',
+          justifyContent: 'space-between',
           gap: '8px',
           borderBottom: '1px solid #6366F1'
         }}>
-          <Megaphone size={16} color="#FBBF24" />
-          <span><strong>Notice from SaaS Master:</strong> {announcements[0].message}</span>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+            <Megaphone size={16} color="#FBBF24" />
+            <span><strong>Notice from SaaS Master:</strong> {announcements[0].message}</span>
+          </div>
+          <button
+            onClick={() => setDismissedNotice(true)}
+            style={{
+              background: 'rgba(255, 255, 255, 0.15)',
+              border: 'none',
+              color: '#FFFFFF',
+              cursor: 'pointer',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              padding: '4px',
+              borderRadius: '50%',
+              transition: 'all 0.2s ease'
+            }}
+            title="Dismiss Notice"
+          >
+            <X size={14} />
+          </button>
         </div>
       )}
 

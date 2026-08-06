@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { Crown, Plus, LogOut, ExternalLink, Trash2, CheckCircle, Store, Utensils, DollarSign, Phone, MapPin, Copy, Check, Search, Edit3, Shield, ShieldCheck, RefreshCw, QrCode, Megaphone, FileText, Calendar, Palette, MessageSquare, Upload } from 'lucide-react';
-import { fetchSuperAdminRestaurants, createTenantRestaurant, toggleTenantRestaurantActive, deleteTenantRestaurant, impersonateTenantRestaurant, updateTenantRestaurant, createAnnouncement, fetchAuditLogs, uploadImage } from '../../api/client';
+import { Crown, Plus, LogOut, ExternalLink, Trash2, CheckCircle, Store, Utensils, DollarSign, Phone, MapPin, Copy, Check, Search, Edit3, Shield, ShieldCheck, RefreshCw, QrCode, Megaphone, FileText, Calendar, Palette, MessageSquare, Upload, X } from 'lucide-react';
+import { fetchSuperAdminRestaurants, createTenantRestaurant, toggleTenantRestaurantActive, deleteTenantRestaurant, impersonateTenantRestaurant, updateTenantRestaurant, createAnnouncement, fetchSuperAnnouncements, deleteAnnouncement, clearAllAnnouncements, fetchAuditLogs, uploadImage } from '../../api/client';
 
 export default function SuperAdminDashboard({ token, username, onLogout, onReturnToMenu, onImpersonate }) {
   const [restaurants, setRestaurants] = useState([]);
@@ -15,6 +15,7 @@ export default function SuperAdminDashboard({ token, username, onLogout, onRetur
   const [announceMsg, setAnnounceMsg] = useState('');
   const [announceType, setAnnounceType] = useState('info');
   const [announceSubmitting, setAnnounceSubmitting] = useState(false);
+  const [announcementsList, setAnnouncementsList] = useState([]);
 
   // Audit Log Drawer State
   const [showAuditModal, setShowAuditModal] = useState(false);
@@ -116,6 +117,42 @@ export default function SuperAdminDashboard({ token, username, onLogout, onRetur
     }
   };
 
+  const loadSuperAnnouncements = async () => {
+    try {
+      const data = await fetchSuperAnnouncements(token);
+      setAnnouncementsList(data);
+    } catch (err) {
+      console.error('Failed to load super announcements:', err);
+    }
+  };
+
+  const handleOpenBroadcastModal = () => {
+    loadSuperAnnouncements();
+    setShowAnnounceModal(true);
+  };
+
+  const handleDeleteAnnouncement = async (id) => {
+    if (!window.confirm('Delete this broadcast announcement? It will be removed from all tenant dashboards immediately.')) return;
+    try {
+      await deleteAnnouncement(id, token);
+      loadSuperAnnouncements();
+      alert('📢 Announcement deleted successfully!');
+    } catch (err) {
+      alert(err.message || 'Failed to delete announcement');
+    }
+  };
+
+  const handleClearAllAnnouncements = async () => {
+    if (!window.confirm('Clear ALL active broadcast notices across all tenant dashboards?')) return;
+    try {
+      await clearAllAnnouncements(token);
+      loadSuperAnnouncements();
+      alert('✨ All active broadcast notices cleared successfully!');
+    } catch (err) {
+      alert(err.message || 'Failed to clear announcements');
+    }
+  };
+
   const handleCreateAnnouncementSubmit = async (e) => {
     e.preventDefault();
     if (!announceMsg.trim()) return;
@@ -124,7 +161,7 @@ export default function SuperAdminDashboard({ token, username, onLogout, onRetur
       await createAnnouncement(announceMsg.trim(), announceType, token);
       alert('📢 Announcement broadcasted successfully to all tenant dashboards!');
       setAnnounceMsg('');
-      setShowAnnounceModal(false);
+      loadSuperAnnouncements();
     } catch (err) {
       alert(err.message || 'Failed to broadcast announcement');
     } finally {
@@ -254,7 +291,7 @@ export default function SuperAdminDashboard({ token, username, onLogout, onRetur
           {/* Master Header Actions */}
           <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
             <button
-              onClick={() => setShowAnnounceModal(true)}
+              onClick={handleOpenBroadcastModal}
               style={{
                 background: 'rgba(212, 175, 55, 0.15)',
                 color: '#DFBA67',
@@ -1340,6 +1377,74 @@ export default function SuperAdminDashboard({ token, username, onLogout, onRetur
                 </button>
               </div>
             </form>
+
+            {/* Active Notices Management Section */}
+            {announcementsList && announcementsList.length > 0 && (
+              <div style={{ marginTop: '20px', paddingTop: '16px', borderTop: '2px dashed var(--border-light)' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px' }}>
+                  <h4 style={{ fontSize: '0.85rem', fontWeight: 800, color: 'var(--primary-emerald)', margin: 0 }}>
+                    ACTIVE BROADCAST NOTICES ({announcementsList.length})
+                  </h4>
+                  <button
+                    type="button"
+                    onClick={handleClearAllAnnouncements}
+                    style={{
+                      background: '#FEE2E2',
+                      color: '#DC2626',
+                      border: '1px solid #FCA5A5',
+                      padding: '3px 8px',
+                      borderRadius: 'var(--radius-pill)',
+                      fontSize: '0.7rem',
+                      fontWeight: 800,
+                      cursor: 'pointer'
+                    }}
+                  >
+                    🗑️ Clear All
+                  </button>
+                </div>
+
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', maxHeight: '180px', overflowY: 'auto' }}>
+                  {announcementsList.map(a => (
+                    <div 
+                      key={a.id}
+                      style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'space-between',
+                        padding: '8px 12px',
+                        background: 'var(--bg-secondary)',
+                        borderRadius: '10px',
+                        fontSize: '0.78rem',
+                        gap: '8px',
+                        border: '1px solid var(--border-light)'
+                      }}
+                    >
+                      <span style={{ flexGrow: 1, wordBreak: 'break-word', fontWeight: 600, color: 'var(--text-dark)' }}>
+                        {a.message}
+                      </span>
+                      <button
+                        type="button"
+                        onClick={() => handleDeleteAnnouncement(a.id)}
+                        style={{
+                          background: '#DC2626',
+                          color: '#FFFFFF',
+                          border: 'none',
+                          padding: '3px 7px',
+                          borderRadius: '6px',
+                          fontSize: '0.7rem',
+                          fontWeight: 700,
+                          cursor: 'pointer',
+                          flexShrink: 0
+                        }}
+                        title="Delete this notice"
+                      >
+                        Delete
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
           </div>
         </div>
       )}
