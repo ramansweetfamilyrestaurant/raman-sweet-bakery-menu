@@ -421,7 +421,7 @@ export default function App() {
           </p>
 
           <a
-            href={`tel:${info.phone || '+919708366583'}`}
+            href={`tel:${info.phone || ''}`}
             style={{
               display: 'inline-flex',
               alignItems: 'center',

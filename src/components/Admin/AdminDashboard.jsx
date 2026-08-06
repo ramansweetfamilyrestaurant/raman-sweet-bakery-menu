@@ -273,7 +273,7 @@ export default function AdminDashboard({ token, username, onLogout, onReturnToMe
             <div class="instruction-hi">स्कैन करें और डिजिटल मेन्यू देखें</div>
 
             <div class="footer-info">
-              ${settingsForm.address || 'HawaiAdda Chowk, Near katchari Gumti, Motihari'} • Phone: ${settingsForm.phone || '+91 9708366583'}
+              ${settingsForm.address || ''}${settingsForm.phone ? ' • Phone: ' + settingsForm.phone : ''}
             </div>
           </div>
           <script>
