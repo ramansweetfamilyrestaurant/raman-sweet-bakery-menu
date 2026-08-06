@@ -84,19 +84,31 @@ export default function App() {
   const [cartItems, setCartItems] = useState([]);
   const [showCartDrawer, setShowCartDrawer] = useState(false);
 
-  const handleAddToCart = (dish) => {
-    const existingIndex = cartItems.findIndex(i => i.dish.id === dish.id);
+  const handleAddToCart = (dish, portionType = 'full') => {
+    const hasHalfPrice = dish.price_half !== null && dish.price_half !== undefined && Number(dish.price_half) > 0;
+    const isHalf = portionType === 'half' && hasHalfPrice;
+    const portionName = isHalf ? 'Half' : (hasHalfPrice ? 'Full' : '');
+    const unitPrice = isHalf ? Math.round(Number(dish.price_half)) : Math.round(Number(dish.price));
+    const cartKey = `${dish.id}_${portionName || 'regular'}`;
+
+    const existingIndex = cartItems.findIndex(i => (i.key === cartKey) || (i.dish.id === dish.id && i.portion === portionName));
     if (existingIndex > -1) {
       const updated = [...cartItems];
       updated[existingIndex].quantity += 1;
       setCartItems(updated);
     } else {
-      setCartItems([...cartItems, { dish, quantity: 1 }]);
+      setCartItems([...cartItems, {
+        key: cartKey,
+        dish,
+        portion: portionName,
+        price: unitPrice,
+        quantity: 1
+      }]);
     }
   };
 
-  const handleRemoveFromCart = (dishId) => {
-    setCartItems(cartItems.filter(i => i.dish.id !== dishId));
+  const handleRemoveFromCart = (cartKey) => {
+    setCartItems(cartItems.filter(i => (i.key || i.dish.id) !== cartKey));
   };
 
   const handleSendWhatsAppOrder = () => {
@@ -109,10 +121,11 @@ export default function App() {
     }
     let msg = `👋 Hello *${info.name}*!\nI would like to place an order from table #${tableNum || '1'}:\n\n`;
     let grandTotal = 0;
-    cartItems.forEach(({ dish, quantity }) => {
-      const itemPrice = dish.price * quantity;
+    cartItems.forEach(item => {
+      const itemPrice = item.price * item.quantity;
       grandTotal += itemPrice;
-      msg += `• ${quantity}x *${dish.name}* - ${info.currency_symbol || '₹'}${itemPrice}\n`;
+      const portionText = item.portion ? ` (${item.portion})` : '';
+      msg += `• ${item.quantity}x *${item.dish.name}${portionText}* - ${info.currency_symbol || '₹'}${itemPrice}\n`;
     });
     msg += `\n*Total Amount:* ${info.currency_symbol || '₹'}${grandTotal}\n\nThank you!`;
     const targetPhone = phone.length === 10 ? `91${phone}` : phone;
@@ -165,13 +178,14 @@ export default function App() {
     setPlacingOrder(true);
     try {
       const currentSlug = getSlugFromUrl() || (info && info.slug) || 'raman-sweet-bakery';
-      const itemsPayload = cartItems.map(({ dish, quantity }) => ({
-        dish_id: dish.id,
-        name: dish.name,
-        price: dish.price,
-        quantity
+      const itemsPayload = cartItems.map(item => ({
+        dish_id: item.dish.id,
+        name: item.dish.name,
+        portion: item.portion || '',
+        price: item.price,
+        quantity: item.quantity
       }));
-      const grandTotal = cartItems.reduce((sum, i) => sum + i.dish.price * i.quantity, 0);
+      const grandTotal = cartItems.reduce((sum, i) => sum + i.price * i.quantity, 0);
 
       const res = await createDirectOrder({
         slug: currentSlug,
@@ -970,18 +984,25 @@ export default function App() {
               </div>
             ) : (
               <div style={{ flex: 1, overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '10px', marginBottom: '16px' }}>
-                {cartItems.map(({ dish, quantity }) => (
-                  <div key={dish.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: 'var(--bg-app)', padding: '12px 14px', borderRadius: '16px', border: '1px solid var(--border-light)' }}>
+                {cartItems.map((item) => (
+                  <div key={item.key || item.dish.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: 'var(--bg-app)', padding: '12px 14px', borderRadius: '16px', border: '1px solid var(--border-light)' }}>
                     <div>
-                      <strong style={{ fontSize: '0.92rem', color: 'var(--text-dark)', display: 'block' }}>{dish.name}</strong>
+                      <strong style={{ fontSize: '0.92rem', color: 'var(--text-dark)', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                        {item.dish.name}
+                        {item.portion && (
+                          <span style={{ background: '#FEF3C7', color: '#B45309', fontSize: '0.72rem', padding: '2px 7px', borderRadius: '4px', border: '1px solid #FCD34D', fontWeight: 900 }}>
+                            {item.portion}
+                          </span>
+                        )}
+                      </strong>
                       <span style={{ fontSize: '0.82rem', color: 'var(--gold-primary)', fontWeight: 800 }}>
-                        {info?.currency_symbol || '₹'}{dish.price} x {quantity} = {info?.currency_symbol || '₹'}{dish.price * quantity}
+                        {info?.currency_symbol || '₹'}{item.price} x {item.quantity} = {info?.currency_symbol || '₹'}{item.price * item.quantity}
                       </span>
                     </div>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                      <button onClick={() => handleAddToCart(dish)} style={{ background: 'var(--primary-emerald)', color: '#FFF', border: 'none', width: '28px', height: '28px', borderRadius: '50%', fontWeight: 900, cursor: 'pointer', fontSize: '1rem' }}>+</button>
-                      <span style={{ fontSize: '0.9rem', fontWeight: 800 }}>{quantity}</span>
-                      <button onClick={() => handleRemoveFromCart(dish.id)} style={{ background: '#FEE2E2', color: '#DC2626', border: 'none', width: '28px', height: '28px', borderRadius: '50%', fontWeight: 900, cursor: 'pointer', fontSize: '0.9rem' }}>✕</button>
+                      <button onClick={() => handleAddToCart(item.dish, item.portion === 'Half' ? 'half' : 'full')} style={{ background: 'var(--primary-emerald)', color: '#FFF', border: 'none', width: '28px', height: '28px', borderRadius: '50%', fontWeight: 900, cursor: 'pointer', fontSize: '1rem' }}>+</button>
+                      <span style={{ fontSize: '0.9rem', fontWeight: 800 }}>{item.quantity}</span>
+                      <button onClick={() => handleRemoveFromCart(item.key || item.dish.id)} style={{ background: '#FEE2E2', color: '#DC2626', border: 'none', width: '28px', height: '28px', borderRadius: '50%', fontWeight: 900, cursor: 'pointer', fontSize: '0.9rem' }}>✕</button>
                     </div>
                   </div>
                 ))}
@@ -1038,7 +1059,7 @@ export default function App() {
                     }}
                   >
                     <Sparkles size={18} color="#FDE047" />
-                    <span>{placingOrder ? 'Sending to Kitchen...' : `⚡ PLACE DIRECT KITCHEN ORDER (${info?.currency_symbol || '₹'}${cartItems.reduce((sum, i) => sum + i.dish.price * i.quantity, 0)})`}</span>
+                    <span>{placingOrder ? 'Sending to Kitchen...' : `⚡ PLACE DIRECT KITCHEN ORDER (${info?.currency_symbol || '₹'}${cartItems.reduce((sum, i) => sum + i.price * i.quantity, 0)})`}</span>
                   </button>
                 )}
 
