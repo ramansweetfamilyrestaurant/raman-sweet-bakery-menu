@@ -198,16 +198,19 @@ async function query(text, params = []) {
     // Convert $1, $2 parameter placeholders to SQLite ?
     sql = sql.replace(/\$(\d+)/g, () => '?');
 
+    // Convert booleans to 1 or 0 for SQLite (better-sqlite3 only accepts numbers/strings)
+    const sanitizedParams = params.map(p => (typeof p === 'boolean' ? (p ? 1 : 0) : p));
+
     const stmt = sqliteDb.prepare(sql);
     if (sql.trim().toUpperCase().startsWith('SELECT')) {
-      return stmt.all(params);
+      return stmt.all(sanitizedParams);
     } else if (sql.trim().toUpperCase().startsWith('INSERT') && sql.toUpperCase().includes('RETURNING')) {
       const sqlNoReturning = sql.replace(/RETURNING\s+\w+/i, '');
       const stmtNoRet = sqliteDb.prepare(sqlNoReturning);
-      const info = stmtNoRet.run(params);
+      const info = stmtNoRet.run(sanitizedParams);
       return [{ id: info.lastInsertRowid }];
     } else {
-      return stmt.run(params);
+      return stmt.run(sanitizedParams);
     }
   }
 }
