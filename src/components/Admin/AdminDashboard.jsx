@@ -129,10 +129,15 @@ export default function AdminDashboard({ token, username, onLogout, onReturnToMe
     }
   };
 
+  const isCatActive = (activeVal) => {
+    return activeVal === true || activeVal === 1 || activeVal === '1' || activeVal === 'true' || activeVal === undefined;
+  };
+
   const handleToggleCategory = async (catId, currentActive) => {
     try {
-      await toggleCategoryActive(catId, !currentActive, token);
-      setCategories(categories.map(c => c.id === catId ? { ...c, active: !currentActive } : c));
+      const nextActive = !currentActive;
+      await toggleCategoryActive(catId, nextActive, token);
+      setCategories(categories.map(c => c.id === catId ? { ...c, active: nextActive } : c));
     } catch (err) {
       alert(err.message || 'Failed to update category status');
     }
@@ -767,19 +772,19 @@ export default function AdminDashboard({ token, username, onLogout, onReturnToMe
 
                   <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                     <button
-                      onClick={() => handleToggleCategory(cat.id, cat.active !== false)}
+                      onClick={() => handleToggleCategory(cat.id, isCatActive(cat.active))}
                       style={{
-                        padding: '4px 10px',
+                        padding: '6px 12px',
                         borderRadius: 'var(--radius-pill)',
-                        fontSize: '0.72rem',
+                        fontSize: '0.74rem',
                         fontWeight: 800,
-                        background: cat.active !== false ? '#DCFCE7' : '#FEE2E2',
-                        color: cat.active !== false ? '#15803D' : '#DC2626',
-                        border: cat.active !== false ? '1px solid #86EFAC' : '1px solid #FCA5A5',
+                        background: isCatActive(cat.active) ? '#DCFCE7' : '#FEE2E2',
+                        color: isCatActive(cat.active) ? '#15803D' : '#DC2626',
+                        border: isCatActive(cat.active) ? '1.5px solid #86EFAC' : '1.5px solid #FCA5A5',
                         cursor: 'pointer'
                       }}
                     >
-                      {cat.active !== false ? '● Active' : '● Hidden'}
+                      {isCatActive(cat.active) ? '● Active' : '● Inactive (Hidden)'}
                     </button>
 
                     <button onClick={() => setCatModalData(cat)} style={{ color: 'var(--primary-emerald)', padding: '5px', background: '#F3F4F6', borderRadius: '6px', border: 'none', cursor: 'pointer' }} title="Edit Category">
