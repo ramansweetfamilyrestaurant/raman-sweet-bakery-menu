@@ -124,8 +124,8 @@ export default function AdminDashboard({ token, username, onLogout, onReturnToMe
       const { date, time } = getDateParts(o.created_at);
       return [
         o.id,
-        `"${date}"`,
-        `"${time}"`,
+        `"'${date}"`,
+        `"'${time}"`,
         `"Table ${o.table_number || '1'}"`,
         o.total_amount,
         `"${o.status ? o.status.toUpperCase() : 'PENDING'}"`,
