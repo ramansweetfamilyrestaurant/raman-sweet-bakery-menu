@@ -23,8 +23,18 @@ export default function App() {
   // Navigation State
   const [view, setView] = useState('menu'); // 'menu', 'admin-login', 'admin-dashboard'
   const [layoutMode, setLayoutMode] = useState('list'); // 'list' or 'grid'
-  const [adminToken, setAdminToken] = useState(localStorage.getItem('raman_admin_token') || '');
-  const [adminUsername, setAdminUsername] = useState(localStorage.getItem('raman_admin_user') || '');
+  
+  const getInitialToken = () => {
+    const t = localStorage.getItem('raman_admin_token');
+    return (t && t !== 'undefined' && t !== 'null') ? t : '';
+  };
+  const getInitialUser = () => {
+    const u = localStorage.getItem('raman_admin_user');
+    return (u && u !== 'undefined' && u !== 'null') ? u : '';
+  };
+
+  const [adminToken, setAdminToken] = useState(getInitialToken());
+  const [adminUsername, setAdminUsername] = useState(getInitialUser());
 
   // Menu Data State
   const [info, setInfo] = useState(null);
