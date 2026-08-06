@@ -399,7 +399,7 @@ export default function App() {
 
                 {/* Items List / Grid */}
                 {layoutMode === 'list' ? (
-                  <div>
+                  <div className="dish-list-grid">
                     {group.items.map((dish) => (
                       <MenuCardItem
                         key={dish.id}
