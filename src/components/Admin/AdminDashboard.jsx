@@ -29,27 +29,34 @@ export default function AdminDashboard({ token, username, onLogout, onReturnToMe
 
   const playKitchenChime = () => {
     try {
-      const ctx = new (window.AudioContext || window.webkitAudioContext)();
-      const osc1 = ctx.createOscillator();
-      const osc2 = ctx.createOscillator();
-      const gain = ctx.createGain();
+      const AudioCtx = window.AudioContext || window.webkitAudioContext;
+      if (!AudioCtx) return;
+      const ctx = new AudioCtx();
 
-      osc1.type = 'sine';
-      osc1.frequency.setValueAtTime(880, ctx.currentTime);
-      osc2.type = 'sine';
-      osc2.frequency.setValueAtTime(1320, ctx.currentTime);
+      // Rich 3-Note Melodic Restaurant Order Bell Chime: G5 (783Hz) -> C6 (1046Hz) -> E6 (1318Hz)
+      const notes = [
+        { freq: 783.99, time: 0, duration: 0.25 },     // G5
+        { freq: 1046.50, time: 0.14, duration: 0.35 },  // C6
+        { freq: 1318.51, time: 0.28, duration: 0.65 }   // E6
+      ];
 
-      gain.gain.setValueAtTime(0.3, ctx.currentTime);
-      gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.8);
+      notes.forEach(n => {
+        const osc = ctx.createOscillator();
+        const gain = ctx.createGain();
 
-      osc1.connect(gain);
-      osc2.connect(gain);
-      gain.connect(ctx.destination);
+        osc.type = 'triangle'; // Warm metallic bell chime
+        osc.frequency.setValueAtTime(n.freq, ctx.currentTime + n.time);
 
-      osc1.start();
-      osc2.start();
-      osc1.stop(ctx.currentTime + 0.8);
-      osc2.stop(ctx.currentTime + 0.8);
+        // Exponential volume decay for realistic brass bell resonance
+        gain.gain.setValueAtTime(0.45, ctx.currentTime + n.time);
+        gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + n.time + n.duration);
+
+        osc.connect(gain);
+        gain.connect(ctx.destination);
+
+        osc.start(ctx.currentTime + n.time);
+        osc.stop(ctx.currentTime + n.time + n.duration);
+      });
     } catch (e) {
       console.warn('Audio Context chime error:', e);
     }
@@ -876,21 +883,42 @@ export default function AdminDashboard({ token, username, onLogout, onReturnToMe
                   Auto-refreshes every 5 seconds • Real-time table orders from customers
                 </span>
               </div>
-              <button
-                onClick={loadOrders}
-                style={{
-                  background: 'var(--gold-primary)',
-                  color: '#0A2315',
-                  border: 'none',
-                  padding: '8px 14px',
-                  borderRadius: 'var(--radius-pill)',
-                  fontWeight: 900,
-                  fontSize: '0.78rem',
-                  cursor: 'pointer'
-                }}
-              >
-                🔄 Refresh Now
-              </button>
+              <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+                <button
+                  onClick={playKitchenChime}
+                  title="Test Order Bell Sound"
+                  style={{
+                    background: '#ECFDF5',
+                    color: '#047857',
+                    border: '1px solid #6EE7B7',
+                    padding: '8px 14px',
+                    borderRadius: 'var(--radius-pill)',
+                    fontWeight: 900,
+                    fontSize: '0.78rem',
+                    cursor: 'pointer',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '4px'
+                  }}
+                >
+                  🔊 Test Order Bell
+                </button>
+                <button
+                  onClick={loadOrders}
+                  style={{
+                    background: 'var(--gold-primary)',
+                    color: '#0A2315',
+                    border: 'none',
+                    padding: '8px 14px',
+                    borderRadius: 'var(--radius-pill)',
+                    fontWeight: 900,
+                    fontSize: '0.78rem',
+                    cursor: 'pointer'
+                  }}
+                >
+                  🔄 Refresh Now
+                </button>
+              </div>
               </div>
 
               {/* KOT Status Filter Pills */}
