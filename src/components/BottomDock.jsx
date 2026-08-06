@@ -13,10 +13,10 @@ export default function BottomDock({ categoriesCount, lang, onOpenCategories, on
       maxWidth: '440px'
     }}>
       <div style={{
-        background: 'rgba(10, 35, 21, 0.94)',
+        background: 'var(--dock-gradient, linear-gradient(135deg, #0A2315 0%, #143A24 100%))',
         backdropFilter: 'blur(16px)',
         borderRadius: 'var(--radius-pill)',
-        border: '1.5px solid #D4AF37',
+        border: '1.5px solid var(--gold-bright)',
         boxShadow: '0 8px 30px rgba(10, 35, 21, 0.4)',
         padding: '6px 12px',
         display: 'flex',

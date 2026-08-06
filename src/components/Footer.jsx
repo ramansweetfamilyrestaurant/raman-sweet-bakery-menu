@@ -4,11 +4,11 @@ import { Phone, Clock, MapPin, ShieldCheck } from 'lucide-react';
 export default function Footer({ info, onOpenAdmin }) {
   return (
     <footer style={{
-      background: 'var(--primary-emerald)',
+      background: 'var(--footer-gradient, linear-gradient(180deg, #05140B 0%, #0A2315 100%))',
       color: '#FFFFFF',
       marginTop: '40px',
       padding: '40px 20px 70px',
-      borderTop: '3px solid var(--veg-green-border)'
+      borderTop: '3px solid var(--gold-bright)'
     }}>
       <div style={{
         maxWidth: '800px',

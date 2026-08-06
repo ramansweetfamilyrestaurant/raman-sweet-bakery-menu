@@ -12,10 +12,10 @@ export default function CustomerHeader({ info, lang, tableNum, onToggleLang, onO
 
   return (
     <header style={{
-      background: 'linear-gradient(180deg, #0A2315 0%, #123722 100%)',
+      background: 'var(--header-gradient, linear-gradient(180deg, #0A2315 0%, #123722 100%))',
       color: '#FFFFFF',
       padding: '12px 12px 14px',
-      borderBottom: '2px solid #D4AF37',
+      borderBottom: '2px solid var(--gold-bright)',
       position: 'sticky',
       top: 0,
       zIndex: 1000,

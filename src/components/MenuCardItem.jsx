@@ -242,7 +242,7 @@ export default function MenuCardItem({ dish, lang, onClick, onAddToCart, currenc
                 src={dish.image}
                 alt={displayName}
                 style={{ width: '100%', height: '100%', objectFit: 'cover' }}
-                onError={(e) => { e.target.src = '/uploads/logo.jpg'; }}
+                onError={(e) => { e.target.style.display = 'none'; }}
               />
             </div>
           )}
