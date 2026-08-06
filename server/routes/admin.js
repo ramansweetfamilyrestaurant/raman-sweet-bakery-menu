@@ -140,12 +140,12 @@ router.patch('/categories/:id/toggle', authenticateToken, async (req, res) => {
   try {
     const { id } = req.params;
     const { active } = req.body;
-    const activeVal = active ? 1 : 0;
-    await query('UPDATE categories SET active = $1 WHERE id = $2', [activeVal, id]);
+    const activeBool = active === true || active === 1 || active === 'true';
+    await query('UPDATE categories SET active = $1 WHERE id = $2', [activeBool, id]);
     res.json({ success: true });
   } catch (err) {
     console.error('Toggle category error:', err);
-    res.status(500).json({ error: 'Failed to toggle category' });
+    res.status(500).json({ error: err.message || 'Failed to toggle category' });
   }
 });
 

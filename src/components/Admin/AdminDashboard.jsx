@@ -134,7 +134,7 @@ export default function AdminDashboard({ token, username, onLogout, onReturnToMe
       await toggleCategoryActive(catId, !currentActive, token);
       setCategories(categories.map(c => c.id === catId ? { ...c, active: !currentActive } : c));
     } catch (err) {
-      alert('Failed to update category status');
+      alert(err.message || 'Failed to update category status');
     }
   };
 
