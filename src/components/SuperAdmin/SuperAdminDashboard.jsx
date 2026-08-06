@@ -170,6 +170,11 @@ export default function SuperAdminDashboard({ token, username, onLogout, onRetur
       setEditModalData(null);
       loadData();
     } catch (err) {
+      if (err.message && (err.message.includes('expired') || err.message.includes('token') || err.message.includes('Access denied'))) {
+        alert('Super Admin session expired. Please log in again.');
+        if (onLogout) onLogout();
+        return;
+      }
       alert(err.message || 'Failed to update tenant info');
     }
   };
