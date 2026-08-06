@@ -6,12 +6,16 @@
   --bg-secondary: #F1EFE8;
 
   --primary-emerald: #0A2315;
+  --primary-dark-green: #0A2315;
   --emerald-gradient: linear-gradient(135deg, #0A2315 0%, #164E2A 100%);
   --emerald-accent: #15803D;
 
   --gold-primary: #C5A059;
   --gold-bright: #D4AF37;
+  --accent-gold: #D4AF37;
   --gold-soft: #F9F5EB;
+  --bg-cream-primary: #F9F5EB;
+  --bg-cream-secondary: #F4EFE6;
   --gold-border: rgba(197, 160, 89, 0.4);
   --gold-gradient: linear-gradient(135deg, #DFBA67 0%, #C5A059 50%, #9B7733 100%);
 

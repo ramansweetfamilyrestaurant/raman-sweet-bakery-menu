@@ -214,16 +214,18 @@ export default function CategoryFormModal({ category, token, onSave, onClose }) 
               type="submit"
               disabled={saving || uploading}
               style={{
-                padding: '8px 24px',
+                padding: '10px 26px',
                 borderRadius: 'var(--radius-pill)',
-                background: 'var(--primary-dark-green)',
+                background: 'linear-gradient(135deg, #0A2315 0%, #143A24 100%)',
                 color: '#FFFFFF',
-                border: '1px solid var(--accent-gold)',
-                fontSize: '0.85rem',
-                fontWeight: 700
+                border: '1.5px solid #D4AF37',
+                fontSize: '0.88rem',
+                fontWeight: 800,
+                boxShadow: '0 4px 14px rgba(10, 35, 21, 0.35)',
+                cursor: (saving || uploading) ? 'not-allowed' : 'pointer'
               }}
             >
-              {saving ? 'Saving...' : 'Save Category'}
+              {saving ? 'Saving...' : (category ? '✓ Update Category' : '✓ Save Category')}
             </button>
           </div>
         </form>
