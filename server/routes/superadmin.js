@@ -1,7 +1,7 @@
 import express from 'express';
 import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
-import { query } from '../db.js';
+import { query, logAudit } from '../db.js';
 import { authenticateToken } from '../middleware/auth.js';
 
 const router = express.Router();
@@ -40,6 +40,8 @@ router.post('/login', async (req, res) => {
       JWT_SECRET,
       { expiresIn: '30d' }
     );
+
+    await logAudit(null, 'superadmin', 'Super Admin Login', `Master user '${username}' logged in successfully`);
 
     res.json({ token, username: admin.username, role: 'superadmin' });
   } catch (err) {
@@ -81,7 +83,7 @@ router.get('/restaurants', authenticateToken, requireSuperAdmin, async (req, res
 // POST Create New Tenant Restaurant
 router.post('/restaurants', authenticateToken, requireSuperAdmin, async (req, res) => {
   try {
-    const { name, slug, owner_username, owner_password, phone, address, tagline } = req.body;
+    const { name, slug, owner_username, owner_password, phone, address, tagline, plan_tier, plan_price, plan_expires_at, whatsapp_number, theme_color } = req.body;
 
     if (!name || !slug || !owner_username || !owner_password) {
       return res.status(400).json({ error: 'Restaurant Name, URL Slug, Owner Username and Password are required' });
@@ -102,10 +104,12 @@ router.post('/restaurants', authenticateToken, requireSuperAdmin, async (req, re
     }
 
     // 1. Create Restaurant Entry
+    const expiryDate = plan_expires_at || new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString();
+
     const restoRes = await query(`
       INSERT INTO restaurants (
-        name, slug, tagline, logo, phone, address, opening_hours, active
-      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8) RETURNING id
+        name, slug, tagline, logo, phone, address, opening_hours, plan_tier, plan_price, plan_expires_at, whatsapp_number, theme_color, active
+      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13) RETURNING id
     `, [
       name,
       cleanSlug,
@@ -114,6 +118,11 @@ router.post('/restaurants', authenticateToken, requireSuperAdmin, async (req, re
       phone || '',
       address || '',
       '8:00 AM - 10:30 PM',
+      plan_tier || 'pro',
+      plan_price ? parseFloat(plan_price) : 999,
+      expiryDate,
+      whatsapp_number || phone || '',
+      theme_color || 'gold',
       true
     ]);
 
@@ -127,6 +136,8 @@ router.post('/restaurants', authenticateToken, requireSuperAdmin, async (req, re
       INSERT INTO admins (restaurant_id, username, password_hash, role)
       VALUES ($1, $2, $3, $4)
     `, [newRestoId, owner_username, hash, 'restaurant_admin']);
+
+    await logAudit(newRestoId, 'superadmin', 'Create Tenant', `Created restaurant '${name}' (Slug: ${cleanSlug}, Owner: ${owner_username})`);
 
     res.json({
       success: true,
@@ -148,6 +159,7 @@ router.patch('/restaurants/:id/toggle', authenticateToken, requireSuperAdmin, as
     const activeBool = active === true || active === 1 || active === 'true';
 
     await query('UPDATE restaurants SET active = $1 WHERE id = $2', [activeBool, id]);
+    await logAudit(id, 'superadmin', activeBool ? 'Activate Tenant' : 'Suspend Tenant', `Tenant ID ${id} active status set to ${activeBool}`);
     res.json({ success: true, active: activeBool });
   } catch (err) {
     console.error('Toggle restaurant active error:', err);
@@ -175,6 +187,8 @@ router.post('/restaurants/:id/impersonate', authenticateToken, requireSuperAdmin
       { expiresIn: '1d' }
     );
 
+    await logAudit(resto.id, 'superadmin', 'Impersonation Login', `Super Admin impersonated tenant '${resto.name}'`);
+
     res.json({
       success: true,
       token,
@@ -191,14 +205,28 @@ router.post('/restaurants/:id/impersonate', authenticateToken, requireSuperAdmin
 router.put('/restaurants/:id', authenticateToken, requireSuperAdmin, async (req, res) => {
   try {
     const { id } = req.params;
-    const { name, tagline, phone, address, fssai_lic_no, owner_username, owner_password } = req.body;
+    const { name, tagline, phone, address, fssai_lic_no, owner_username, owner_password, plan_tier, plan_price, plan_expires_at, whatsapp_number, whatsapp_enabled, theme_color } = req.body;
 
     // Update restaurant info
     await query(`
       UPDATE restaurants
-      SET name = $1, tagline = $2, phone = $3, address = $4, fssai_lic_no = $5
-      WHERE id = $6
-    `, [name, tagline || '', phone || '', address || '', fssai_lic_no || '', id]);
+      SET name = $1, tagline = $2, phone = $3, address = $4, fssai_lic_no = $5,
+          plan_tier = $6, plan_price = $7, plan_expires_at = $8, whatsapp_number = $9, whatsapp_enabled = $10, theme_color = $11
+      WHERE id = $12
+    `, [
+      name,
+      tagline || '',
+      phone || '',
+      address || '',
+      fssai_lic_no || '',
+      plan_tier || 'pro',
+      plan_price ? parseFloat(plan_price) : 999,
+      plan_expires_at || null,
+      whatsapp_number || phone || '',
+      whatsapp_enabled !== false && whatsapp_enabled !== 0 ? 1 : 0,
+      theme_color || 'gold',
+      id
+    ]);
 
     // Update owner admin user if username or password provided
     if (owner_username) {
@@ -215,6 +243,8 @@ router.put('/restaurants/:id', authenticateToken, requireSuperAdmin, async (req,
       }
     }
 
+    await logAudit(id, 'superadmin', 'Update Tenant', `Updated details for tenant ID ${id} (${name})`);
+
     res.json({ success: true, message: 'Tenant restaurant details updated successfully' });
   } catch (err) {
     console.error('Update tenant restaurant error:', err);
@@ -227,10 +257,39 @@ router.delete('/restaurants/:id', authenticateToken, requireSuperAdmin, async (r
   try {
     const { id } = req.params;
     await query('DELETE FROM restaurants WHERE id = $1', [id]);
+    await logAudit(id, 'superadmin', 'Delete Tenant', `Deleted tenant ID ${id}`);
     res.json({ success: true });
   } catch (err) {
     console.error('Delete restaurant error:', err);
     res.status(500).json({ error: 'Failed to delete restaurant' });
+  }
+});
+
+// POST Create Global System Announcement
+router.post('/announcements', authenticateToken, requireSuperAdmin, async (req, res) => {
+  try {
+    const { message, type } = req.body;
+    if (!message || !message.trim()) {
+      return res.status(400).json({ error: 'Announcement message is required' });
+    }
+
+    await query('INSERT INTO announcements (message, type, active) VALUES ($1, $2, 1)', [message.trim(), type || 'info']);
+    await logAudit(null, 'superadmin', 'Post Announcement', `Posted announcement: "${message.substring(0, 50)}..."`);
+    res.json({ success: true, message: 'System announcement broadcasted successfully!' });
+  } catch (err) {
+    console.error('Post announcement error:', err);
+    res.status(500).json({ error: 'Failed to post announcement' });
+  }
+});
+
+// GET Platform Audit Logs
+router.get('/audit-logs', authenticateToken, requireSuperAdmin, async (req, res) => {
+  try {
+    const logs = await query('SELECT * FROM audit_logs ORDER BY id DESC LIMIT 50');
+    res.json(logs);
+  } catch (err) {
+    console.error('Fetch audit logs error:', err);
+    res.status(500).json({ error: 'Failed to fetch audit logs' });
   }
 });
 

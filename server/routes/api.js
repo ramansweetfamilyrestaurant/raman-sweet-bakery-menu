@@ -54,6 +54,11 @@ router.get('/info', async (req, res) => {
         filtersVis = { must_try: true, combo: true, special: true, under100: true };
       }
 
+      // Increment QR scan count silently if public customer request (no JWT token)
+      if (!req.headers || !req.headers.authorization) {
+        query('UPDATE restaurants SET scan_count = COALESCE(scan_count, 0) + 1 WHERE id = $1', [resto.id]).catch(() => {});
+      }
+
       return res.json({
         id: resto.id,
         name: resto.name,
@@ -70,6 +75,13 @@ router.get('/info', async (req, res) => {
         fssai_lic_no: resto.fssai_lic_no || '',
         filters_visibility: filtersVis,
         currency_symbol: (resto.currency_symbol !== null && resto.currency_symbol !== undefined) ? resto.currency_symbol : '₹',
+        plan_tier: resto.plan_tier || 'pro',
+        plan_price: resto.plan_price || 999,
+        plan_expires_at: resto.plan_expires_at || null,
+        whatsapp_number: resto.whatsapp_number || resto.phone || '',
+        whatsapp_enabled: resto.whatsapp_enabled !== 0 && resto.whatsapp_enabled !== false,
+        theme_color: resto.theme_color || 'gold',
+        scan_count: resto.scan_count || 0,
         active: resto.active !== false
       });
     }
@@ -90,8 +102,21 @@ router.get('/info', async (req, res) => {
     address: 'HawaiAdda Chowk, Near katchari Gumti, Motihari, Bihar',
     google_review_url: 'https://share.google/2M5mFMPlmS6pAXRf7',
     filters_visibility: { must_try: true, combo: true, special: true, under100: true },
+    plan_tier: 'pro',
+    plan_price: 999,
+    theme_color: 'gold',
     active: true
   });
+});
+
+// Get Active Global System Announcements
+router.get('/announcements', async (req, res) => {
+  try {
+    const list = await query('SELECT * FROM announcements WHERE active IS NOT FALSE ORDER BY id DESC LIMIT 5');
+    res.json(list);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
 });
 
 // Get Categories for a specific restaurant

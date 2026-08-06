@@ -114,7 +114,31 @@ async function createTables() {
       ALTER TABLE restaurants ADD COLUMN IF NOT EXISTS currency_symbol VARCHAR(10) DEFAULT '₹';
       ALTER TABLE restaurants ADD COLUMN IF NOT EXISTS fssai_lic_no VARCHAR(100) DEFAULT '20824001000123';
       ALTER TABLE restaurants ADD COLUMN IF NOT EXISTS resto_type VARCHAR(50) DEFAULT 'pure_veg';
+      ALTER TABLE restaurants ADD COLUMN IF NOT EXISTS plan_tier VARCHAR(50) DEFAULT 'pro';
+      ALTER TABLE restaurants ADD COLUMN IF NOT EXISTS plan_price NUMERIC DEFAULT 999;
+      ALTER TABLE restaurants ADD COLUMN IF NOT EXISTS plan_expires_at VARCHAR(100);
+      ALTER TABLE restaurants ADD COLUMN IF NOT EXISTS whatsapp_number VARCHAR(50);
+      ALTER TABLE restaurants ADD COLUMN IF NOT EXISTS whatsapp_enabled INT DEFAULT 1;
+      ALTER TABLE restaurants ADD COLUMN IF NOT EXISTS theme_color VARCHAR(50) DEFAULT 'gold';
+      ALTER TABLE restaurants ADD COLUMN IF NOT EXISTS scan_count INT DEFAULT 0;
       ALTER TABLE dishes ADD COLUMN IF NOT EXISTS type VARCHAR(20) DEFAULT 'veg';
+
+      CREATE TABLE IF NOT EXISTS announcements (
+        id SERIAL PRIMARY KEY,
+        message TEXT NOT NULL,
+        type VARCHAR(20) DEFAULT 'info',
+        active INT DEFAULT 1,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+      );
+
+      CREATE TABLE IF NOT EXISTS audit_logs (
+        id SERIAL PRIMARY KEY,
+        restaurant_id INT,
+        actor_role VARCHAR(50),
+        action VARCHAR(100),
+        details TEXT,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+      );
     `);
   } else {
     sqliteDb.exec(`
@@ -133,7 +157,31 @@ async function createTables() {
         currency_symbol TEXT DEFAULT '₹',
         fssai_lic_no TEXT DEFAULT '20824001000123',
         resto_type TEXT DEFAULT 'pure_veg',
+        plan_tier TEXT DEFAULT 'pro',
+        plan_price REAL DEFAULT 999,
+        plan_expires_at TEXT,
+        whatsapp_number TEXT,
+        whatsapp_enabled INTEGER DEFAULT 1,
+        theme_color TEXT DEFAULT 'gold',
+        scan_count INTEGER DEFAULT 0,
         active INTEGER DEFAULT 1,
+        created_at TEXT DEFAULT CURRENT_TIMESTAMP
+      );
+
+      CREATE TABLE IF NOT EXISTS announcements (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        message TEXT NOT NULL,
+        type TEXT DEFAULT 'info',
+        active INTEGER DEFAULT 1,
+        created_at TEXT DEFAULT CURRENT_TIMESTAMP
+      );
+
+      CREATE TABLE IF NOT EXISTS audit_logs (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        restaurant_id INTEGER,
+        actor_role TEXT,
+        action TEXT,
+        details TEXT,
         created_at TEXT DEFAULT CURRENT_TIMESTAMP
       );
 
@@ -202,6 +250,13 @@ async function createTables() {
       if (!restoCols.some(c => c.name === 'currency_symbol')) sqliteDb.exec("ALTER TABLE restaurants ADD COLUMN currency_symbol TEXT DEFAULT '₹'");
       if (!restoCols.some(c => c.name === 'fssai_lic_no')) sqliteDb.exec("ALTER TABLE restaurants ADD COLUMN fssai_lic_no TEXT DEFAULT '20824001000123'");
       if (!restoCols.some(c => c.name === 'resto_type')) sqliteDb.exec("ALTER TABLE restaurants ADD COLUMN resto_type TEXT DEFAULT 'pure_veg'");
+      if (!restoCols.some(c => c.name === 'plan_tier')) sqliteDb.exec("ALTER TABLE restaurants ADD COLUMN plan_tier TEXT DEFAULT 'pro'");
+      if (!restoCols.some(c => c.name === 'plan_price')) sqliteDb.exec("ALTER TABLE restaurants ADD COLUMN plan_price REAL DEFAULT 999");
+      if (!restoCols.some(c => c.name === 'plan_expires_at')) sqliteDb.exec("ALTER TABLE restaurants ADD COLUMN plan_expires_at TEXT");
+      if (!restoCols.some(c => c.name === 'whatsapp_number')) sqliteDb.exec("ALTER TABLE restaurants ADD COLUMN whatsapp_number TEXT");
+      if (!restoCols.some(c => c.name === 'whatsapp_enabled')) sqliteDb.exec("ALTER TABLE restaurants ADD COLUMN whatsapp_enabled INTEGER DEFAULT 1");
+      if (!restoCols.some(c => c.name === 'theme_color')) sqliteDb.exec("ALTER TABLE restaurants ADD COLUMN theme_color TEXT DEFAULT 'gold'");
+      if (!restoCols.some(c => c.name === 'scan_count')) sqliteDb.exec("ALTER TABLE restaurants ADD COLUMN scan_count INTEGER DEFAULT 0");
     } catch (err) {
       console.warn('SQLite migration info:', err.message);
     }
@@ -319,8 +374,6 @@ async function query(text, params = []) {
       return stmt.all(sanitizedParams);
     } else if (sql.trim().toUpperCase().startsWith('INSERT') && sql.toUpperCase().includes('RETURNING')) {
       const sqlNoReturning = sql.replace(/RETURNING\s+\w+/i, '');
-      const stmtNoRet = sqliteDb.prepare(sqlNoReturning);
-      const info = stmtNoRet.run(sanitizedParams);
       return [{ id: info.lastInsertRowid }];
     } else {
       return stmt.run(sanitizedParams);
@@ -328,4 +381,15 @@ async function query(text, params = []) {
   }
 }
 
-export { initDb, query };
+async function logAudit(restaurantId, actorRole, action, details) {
+  try {
+    await query(
+      'INSERT INTO audit_logs (restaurant_id, actor_role, action, details) VALUES ($1, $2, $3, $4)',
+      [restaurantId || null, actorRole, action, details]
+    );
+  } catch (e) {
+    console.error('Audit log error:', e.message);
+  }
+}
+
+export { initDb, query, logAudit };

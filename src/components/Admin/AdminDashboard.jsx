@@ -1,13 +1,14 @@
 import React, { useState, useEffect } from 'react';
-import { fetchCategories, fetchDishes, toggleDishAvailability, toggleCategoryActive, deleteDish, deleteCategory, fetchRestaurantInfo, updateDishPrice } from '../../api/client';
+import { fetchCategories, fetchDishes, toggleDishAvailability, toggleCategoryActive, deleteDish, deleteCategory, fetchRestaurantInfo, updateDishPrice, fetchAnnouncements } from '../../api/client';
 import DishFormModal from './DishFormModal';
 import CategoryFormModal from './CategoryFormModal';
-import { Plus, Edit, Trash2, Eye, EyeOff, LogOut, ArrowLeft, Layers, Utensils, QrCode, Printer, Settings, Star, CheckCircle, Lock, ExternalLink } from 'lucide-react';
+import { Plus, Edit, Trash2, Eye, EyeOff, LogOut, ArrowLeft, Layers, Utensils, QrCode, Printer, Settings, Star, CheckCircle, Lock, ExternalLink, Megaphone, MessageSquare, Palette } from 'lucide-react';
 
 export default function AdminDashboard({ token, username, onLogout, onReturnToMenu }) {
   const [activeTab, setActiveTab] = useState('dishes'); // 'dishes', 'categories', 'qr-generator', 'settings'
   const [categories, setCategories] = useState([]);
   const [dishes, setDishes] = useState([]);
+  const [announcements, setAnnouncements] = useState([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
   const [selectedCatFilter, setSelectedCatFilter] = useState('all');
@@ -82,6 +83,9 @@ export default function AdminDashboard({ token, username, onLogout, onReturnToMe
 
   useEffect(() => {
     loadData();
+    fetchAnnouncements().then(data => {
+      if (Array.isArray(data)) setAnnouncements(data);
+    }).catch(() => {});
   }, []);
 
   const handleToggleDish = async (id, currentVal) => {
@@ -535,6 +539,25 @@ export default function AdminDashboard({ token, username, onLogout, onReturnToMe
           </button>
         </div>
       </header>
+
+      {/* 📢 Global System Announcement Banner */}
+      {announcements.length > 0 && (
+        <div style={{
+          background: 'linear-gradient(135deg, #1E1B4B 0%, #312E81 100%)',
+          color: '#E0E7FF',
+          padding: '10px 16px',
+          fontSize: '0.82rem',
+          fontWeight: 700,
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          gap: '8px',
+          borderBottom: '1px solid #6366F1'
+        }}>
+          <Megaphone size={16} color="#FBBF24" />
+          <span><strong>Notice from SaaS Master:</strong> {announcements[0].message}</span>
+        </div>
+      )}
 
       {/* Sleek Royal Gold Segmented Navigation Bar */}
       <div style={{

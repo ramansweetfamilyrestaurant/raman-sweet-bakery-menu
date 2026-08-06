@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { Crown, Plus, LogOut, ArrowLeft, ExternalLink, Trash2, CheckCircle, XCircle, Store, Utensils, DollarSign, Phone, MapPin, Copy, Check, Search, Edit3, Key, Shield, RefreshCw } from 'lucide-react';
-import { fetchSuperAdminRestaurants, createTenantRestaurant, toggleTenantRestaurantActive, deleteTenantRestaurant, impersonateTenantRestaurant, updateTenantRestaurant } from '../../api/client';
+import { Crown, Plus, LogOut, ExternalLink, Trash2, CheckCircle, Store, Utensils, DollarSign, Phone, MapPin, Copy, Check, Search, Edit3, Shield, RefreshCw, QrCode, Megaphone, FileText, Calendar, Palette, MessageSquare } from 'lucide-react';
+import { fetchSuperAdminRestaurants, createTenantRestaurant, toggleTenantRestaurantActive, deleteTenantRestaurant, impersonateTenantRestaurant, updateTenantRestaurant, createAnnouncement, fetchAuditLogs } from '../../api/client';
 
 export default function SuperAdminDashboard({ token, username, onLogout, onReturnToMenu, onImpersonate }) {
   const [restaurants, setRestaurants] = useState([]);
@@ -10,6 +10,17 @@ export default function SuperAdminDashboard({ token, username, onLogout, onRetur
   const [editModalData, setEditModalData] = useState(null);
   const [copiedId, setCopiedId] = useState(null);
 
+  // Announcement Modal State
+  const [showAnnounceModal, setShowAnnounceModal] = useState(false);
+  const [announceMsg, setAnnounceMsg] = useState('');
+  const [announceType, setAnnounceType] = useState('info');
+  const [announceSubmitting, setAnnounceSubmitting] = useState(false);
+
+  // Audit Log Drawer State
+  const [showAuditModal, setShowAuditModal] = useState(false);
+  const [auditLogs, setAuditLogs] = useState([]);
+  const [auditLoading, setAuditLoading] = useState(false);
+
   // New Restaurant Form State
   const [form, setForm] = useState({
     name: '',
@@ -18,7 +29,12 @@ export default function SuperAdminDashboard({ token, username, onLogout, onRetur
     owner_password: '',
     phone: '',
     address: '',
-    tagline: '100% Quality Food & Customer Service'
+    tagline: '100% Quality Food & Customer Service',
+    plan_tier: 'pro',
+    plan_price: 999,
+    plan_expires_at: '',
+    whatsapp_number: '',
+    theme_color: 'gold'
   });
   const [formError, setFormError] = useState('');
   const [formSubmitting, setFormSubmitting] = useState(false);
@@ -39,7 +55,24 @@ export default function SuperAdminDashboard({ token, username, onLogout, onRetur
     loadData();
   }, [token]);
 
-  // Auto-generate URL slug from restaurant name input
+  const loadAuditData = async () => {
+    setAuditLoading(true);
+    try {
+      const logs = await fetchAuditLogs(token);
+      setAuditLogs(Array.isArray(logs) ? logs : []);
+    } catch (err) {
+      console.error('Error fetching audit logs:', err);
+    } finally {
+      setAuditLoading(false);
+    }
+  };
+
+  const handleOpenAuditModal = () => {
+    setShowAuditModal(true);
+    loadAuditData();
+  };
+
+  // Auto-generate URL slug & username from restaurant name input
   const handleNameChange = (e) => {
     const val = e.target.value;
     const autoSlug = val.toLowerCase().replace(/[^a-z0-9]/g, '-').replace(/-+/g, '-').replace(/^-|-$/g, '');
@@ -68,13 +101,34 @@ export default function SuperAdminDashboard({ token, username, onLogout, onRetur
         owner_password: '',
         phone: '',
         address: '',
-        tagline: '100% Quality Food & Customer Service'
+        tagline: '100% Quality Food & Customer Service',
+        plan_tier: 'pro',
+        plan_price: 999,
+        plan_expires_at: '',
+        whatsapp_number: '',
+        theme_color: 'gold'
       });
       loadData();
     } catch (err) {
       setFormError(err.message || 'Failed to create restaurant');
     } finally {
       setFormSubmitting(false);
+    }
+  };
+
+  const handleCreateAnnouncementSubmit = async (e) => {
+    e.preventDefault();
+    if (!announceMsg.trim()) return;
+    setAnnounceSubmitting(true);
+    try {
+      await createAnnouncement(announceMsg.trim(), announceType, token);
+      alert('📢 Announcement broadcasted successfully to all tenant dashboards!');
+      setAnnounceMsg('');
+      setShowAnnounceModal(false);
+    } catch (err) {
+      alert(err.message || 'Failed to broadcast announcement');
+    } finally {
+      setAnnounceSubmitting(false);
     }
   };
 
@@ -120,14 +174,13 @@ export default function SuperAdminDashboard({ token, username, onLogout, onRetur
     }
   };
 
-  const handleCopyLink = (slug, id) => {
-    const liveOrigin = window.location.origin.includes('localhost')
-      ? 'http://localhost:5000'
-      : window.location.origin;
-    const url = `${liveOrigin}/r/${slug}`;
-    navigator.clipboard.writeText(url);
-    setCopiedId(id);
-    setTimeout(() => setCopiedId(null), 2000);
+  const getDaysRemaining = (expiryStr) => {
+    if (!expiryStr) return null;
+    const expiry = new Date(expiryStr);
+    const now = new Date();
+    const diffTime = expiry - now;
+    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+    return diffDays;
   };
 
   // Filtered restaurants by search query
@@ -139,7 +192,8 @@ export default function SuperAdminDashboard({ token, username, onLogout, onRetur
 
   const totalActive = restaurants.filter(r => r.active !== false).length;
   const totalDishes = restaurants.reduce((acc, r) => acc + (r.dish_count || 0), 0);
-  const estimatedRevenue = totalActive * 999;
+  const totalScans = restaurants.reduce((acc, r) => acc + (r.scan_count || 0), 0);
+  const estimatedRevenue = restaurants.filter(r => r.active !== false).reduce((acc, r) => acc + (parseFloat(r.plan_price) || 999), 0);
 
   return (
     <div style={{ minHeight: '100vh', background: 'var(--bg-app)', color: 'var(--text-dark)', fontFamily: 'system-ui, -apple-system, sans-serif' }}>
@@ -179,7 +233,7 @@ export default function SuperAdminDashboard({ token, username, onLogout, onRetur
             </div>
             <div>
               <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                <h1 style={{ fontSize: '1.25rem', fontWeight: 900, color: '#DFBA67', margin: 0, tracking: '0.5px' }}>
+                <h1 style={{ fontSize: '1.25rem', fontWeight: 900, color: '#DFBA67', margin: 0 }}>
                   SaaS Master Control Portal
                 </h1>
                 <span style={{ background: '#DFBA67', color: '#0A2315', fontSize: '0.68rem', fontWeight: 900, padding: '2px 8px', borderRadius: '12px' }}>
@@ -187,13 +241,53 @@ export default function SuperAdminDashboard({ token, username, onLogout, onRetur
                 </span>
               </div>
               <span style={{ fontSize: '0.78rem', color: 'rgba(255,255,255,0.7)', fontWeight: 600 }}>
-                Platform Master: {username} • Multi-Tenant SaaS Architecture
+                Platform Master: {username} • Enterprise Multi-Tenant Engine
               </span>
             </div>
           </div>
 
           {/* Master Header Actions */}
-          <div style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
+          <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+            <button
+              onClick={() => setShowAnnounceModal(true)}
+              style={{
+                background: 'rgba(212, 175, 55, 0.15)',
+                color: '#DFBA67',
+                padding: '8px 14px',
+                borderRadius: 'var(--radius-pill)',
+                fontSize: '0.8rem',
+                fontWeight: 800,
+                border: '1px solid rgba(212, 175, 55, 0.4)',
+                cursor: 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '6px'
+              }}
+              title="Broadcast global announcement banner to all tenant dashboards"
+            >
+              <Megaphone size={15} /> Broadcast Notice
+            </button>
+
+            <button
+              onClick={handleOpenAuditModal}
+              style={{
+                background: 'rgba(255, 255, 255, 0.1)',
+                color: '#FFFFFF',
+                padding: '8px 14px',
+                borderRadius: 'var(--radius-pill)',
+                fontSize: '0.8rem',
+                fontWeight: 700,
+                border: '1px solid rgba(255, 255, 255, 0.2)',
+                cursor: 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '6px'
+              }}
+              title="View platform activity & security audit logs"
+            >
+              <FileText size={15} /> Audit Logs
+            </button>
+
             <button
               onClick={onLogout}
               style={{
@@ -201,7 +295,7 @@ export default function SuperAdminDashboard({ token, username, onLogout, onRetur
                 color: '#FFFFFF',
                 padding: '8px 16px',
                 borderRadius: 'var(--radius-pill)',
-                fontSize: '0.82rem',
+                fontSize: '0.8rem',
                 fontWeight: 800,
                 border: 'none',
                 cursor: 'pointer',
@@ -211,39 +305,39 @@ export default function SuperAdminDashboard({ token, username, onLogout, onRetur
                 boxShadow: '0 2px 10px rgba(220, 38, 38, 0.3)'
               }}
             >
-              <LogOut size={15} /> Logout Super Admin
+              <LogOut size={15} /> Logout
             </button>
           </div>
         </div>
       </header>
 
-      {/* Main Container */}
+      {/* Main Dashboard Container */}
       <main style={{ maxWidth: '1200px', margin: '0 auto', padding: '24px 16px' }}>
         
-        {/* Banner Metrics Alignment Grid */}
+        {/* KPI Analytics Summary Cards Grid */}
         <div style={{
           display: 'grid',
-          gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))',
+          gridTemplateColumns: 'repeat(auto-fit, minmax(210px, 1fr))',
           gap: '16px',
-          marginBottom: '28px'
+          marginBottom: '24px'
         }}>
-          {/* Card 1: Total Restaurants */}
+          {/* Card 1: Registered Tenants */}
           <div style={{
             background: '#FFFFFF',
             borderRadius: '20px',
-            padding: '20px',
+            padding: '18px',
             border: '1px solid var(--border-light)',
             boxShadow: 'var(--shadow-sm)',
             display: 'flex',
             alignItems: 'center',
-            gap: '16px'
+            gap: '14px'
           }}>
-            <div style={{ width: '52px', height: '52px', borderRadius: '16px', background: '#DCFCE7', color: '#15803D', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-              <Store size={26} />
+            <div style={{ width: '48px', height: '48px', borderRadius: '14px', background: '#DCFCE7', color: '#15803D', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+              <Store size={24} />
             </div>
             <div>
-              <div style={{ fontSize: '1.75rem', fontWeight: 900, color: 'var(--primary-emerald)', lineHeight: 1.1 }}>{restaurants.length}</div>
-              <div style={{ fontSize: '0.8rem', fontWeight: 700, color: 'var(--text-muted)' }}>Registered Restaurants</div>
+              <div style={{ fontSize: '1.6rem', fontWeight: 900, color: 'var(--primary-emerald)', lineHeight: 1.1 }}>{restaurants.length}</div>
+              <div style={{ fontSize: '0.78rem', fontWeight: 700, color: 'var(--text-muted)' }}>Tenants Hosted</div>
             </div>
           </div>
 
@@ -251,19 +345,19 @@ export default function SuperAdminDashboard({ token, username, onLogout, onRetur
           <div style={{
             background: '#FFFFFF',
             borderRadius: '20px',
-            padding: '20px',
+            padding: '18px',
             border: '1px solid var(--border-light)',
             boxShadow: 'var(--shadow-sm)',
             display: 'flex',
             alignItems: 'center',
-            gap: '16px'
+            gap: '14px'
           }}>
-            <div style={{ width: '52px', height: '52px', borderRadius: '16px', background: '#FEF3C7', color: '#B45309', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-              <CheckCircle size={26} />
+            <div style={{ width: '48px', height: '48px', borderRadius: '14px', background: '#FEF3C7', color: '#B45309', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+              <CheckCircle size={24} />
             </div>
             <div>
-              <div style={{ fontSize: '1.75rem', fontWeight: 900, color: '#B45309', lineHeight: 1.1 }}>{totalActive}</div>
-              <div style={{ fontSize: '0.8rem', fontWeight: 700, color: 'var(--text-muted)' }}>Active Subscriptions</div>
+              <div style={{ fontSize: '1.6rem', fontWeight: 900, color: '#B45309', lineHeight: 1.1 }}>{totalActive}</div>
+              <div style={{ fontSize: '0.78rem', fontWeight: 700, color: 'var(--text-muted)' }}>Active Subscriptions</div>
             </div>
           </div>
 
@@ -271,40 +365,60 @@ export default function SuperAdminDashboard({ token, username, onLogout, onRetur
           <div style={{
             background: '#FFFFFF',
             borderRadius: '20px',
-            padding: '20px',
+            padding: '18px',
             border: '1px solid var(--border-light)',
             boxShadow: 'var(--shadow-sm)',
             display: 'flex',
             alignItems: 'center',
-            gap: '16px'
+            gap: '14px'
           }}>
-            <div style={{ width: '52px', height: '52px', borderRadius: '16px', background: '#E0E7FF', color: '#4338CA', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-              <Utensils size={26} />
+            <div style={{ width: '48px', height: '48px', borderRadius: '14px', background: '#E0E7FF', color: '#4338CA', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+              <Utensils size={24} />
             </div>
             <div>
-              <div style={{ fontSize: '1.75rem', fontWeight: 900, color: '#4338CA', lineHeight: 1.1 }}>{totalDishes}</div>
-              <div style={{ fontSize: '0.8rem', fontWeight: 700, color: 'var(--text-muted)' }}>Total Dishes Hosted</div>
+              <div style={{ fontSize: '1.6rem', fontWeight: 900, color: '#4338CA', lineHeight: 1.1 }}>{totalDishes}</div>
+              <div style={{ fontSize: '0.78rem', fontWeight: 700, color: 'var(--text-muted)' }}>Dishes Hosted</div>
             </div>
           </div>
 
-          {/* Card 4: Est. Monthly SaaS Revenue */}
+          {/* Card 4: Total QR Code Scans */}
+          <div style={{
+            background: '#FFFFFF',
+            borderRadius: '20px',
+            padding: '18px',
+            border: '1px solid var(--border-light)',
+            boxShadow: 'var(--shadow-sm)',
+            display: 'flex',
+            alignItems: 'center',
+            gap: '14px'
+          }}>
+            <div style={{ width: '48px', height: '48px', borderRadius: '14px', background: '#F3E8FF', color: '#7E22CE', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+              <QrCode size={24} />
+            </div>
+            <div>
+              <div style={{ fontSize: '1.6rem', fontWeight: 900, color: '#7E22CE', lineHeight: 1.1 }}>{totalScans}</div>
+              <div style={{ fontSize: '0.78rem', fontWeight: 700, color: 'var(--text-muted)' }}>Total QR Scans</div>
+            </div>
+          </div>
+
+          {/* Card 5: Est. Monthly SaaS Revenue */}
           <div style={{
             background: 'linear-gradient(135deg, #0A2315 0%, #164E2A 100%)',
             color: '#FFFFFF',
             borderRadius: '20px',
-            padding: '20px',
+            padding: '18px',
             border: '1.5px solid #D4AF37',
             boxShadow: '0 8px 24px rgba(10,35,21,0.25)',
             display: 'flex',
             alignItems: 'center',
-            gap: '16px'
+            gap: '14px'
           }}>
-            <div style={{ width: '52px', height: '52px', borderRadius: '16px', background: 'linear-gradient(135deg, #DFBA67 0%, #C5A059 100%)', color: '#0A2315', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-              <DollarSign size={28} color="#0A2315" />
+            <div style={{ width: '48px', height: '48px', borderRadius: '14px', background: 'linear-gradient(135deg, #DFBA67 0%, #C5A059 100%)', color: '#0A2315', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+              <DollarSign size={26} color="#0A2315" />
             </div>
             <div>
-              <div style={{ fontSize: '1.75rem', fontWeight: 900, color: '#DFBA67', lineHeight: 1.1 }}>₹{estimatedRevenue.toLocaleString()}</div>
-              <div style={{ fontSize: '0.8rem', fontWeight: 700, color: 'rgba(255,255,255,0.85)' }}>Est. Monthly Revenue</div>
+              <div style={{ fontSize: '1.6rem', fontWeight: 900, color: '#DFBA67', lineHeight: 1.1 }}>₹{estimatedRevenue.toLocaleString()}</div>
+              <div style={{ fontSize: '0.78rem', fontWeight: 700, color: 'rgba(255,255,255,0.85)' }}>Est. SaaS Revenue</div>
             </div>
           </div>
         </div>
@@ -324,18 +438,18 @@ export default function SuperAdminDashboard({ token, username, onLogout, onRetur
           gap: '14px'
         }}>
           <div>
-            <h2 style={{ fontSize: '1.25rem', fontWeight: 900, color: 'var(--primary-emerald)', margin: 0 }}>
+            <h2 style={{ fontSize: '1.15rem', fontWeight: 900, color: 'var(--primary-emerald)', margin: 0 }}>
               Tenant Restaurants Directory ({filteredRestaurants.length})
             </h2>
-            <p style={{ fontSize: '0.82rem', color: 'var(--text-muted)', margin: '2px 0 0 0' }}>
-              Manage clients, view live menus, credentials, and toggle subscription access
+            <p style={{ fontSize: '0.78rem', color: 'var(--text-muted)', margin: '2px 0 0 0', fontWeight: 600 }}>
+              Manage client subscriptions, plans, QR scans, credentials, and impersonate access
             </p>
           </div>
 
-          <div style={{ display: 'flex', alignItems: 'center', gap: '12px', flexWrap: 'wrap' }}>
-            {/* Search Input Bar */}
-            <div style={{ position: 'relative', minWidth: '220px' }}>
-              <Search size={16} color="var(--text-muted)" style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)' }} />
+          <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap' }}>
+            {/* Search Input */}
+            <div style={{ position: 'relative', width: '220px' }}>
+              <Search size={15} style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-muted)' }} />
               <input
                 type="text"
                 placeholder="Search restaurant..."
@@ -343,10 +457,10 @@ export default function SuperAdminDashboard({ token, username, onLogout, onRetur
                 onChange={(e) => setSearchQuery(e.target.value)}
                 style={{
                   width: '100%',
-                  padding: '8px 12px 8px 36px',
+                  padding: '8px 12px 8px 34px',
                   borderRadius: 'var(--radius-pill)',
                   border: '1px solid var(--border-light)',
-                  fontSize: '0.85rem',
+                  fontSize: '0.82rem',
                   outline: 'none'
                 }}
               />
@@ -354,22 +468,21 @@ export default function SuperAdminDashboard({ token, username, onLogout, onRetur
 
             <button
               onClick={loadData}
+              title="Refresh Directory"
               style={{
                 background: 'var(--bg-secondary)',
-                color: 'var(--primary-emerald)',
-                padding: '9px 14px',
-                borderRadius: 'var(--radius-pill)',
-                fontSize: '0.82rem',
-                fontWeight: 700,
                 border: '1px solid var(--border-light)',
+                borderRadius: 'var(--radius-pill)',
+                padding: '8px 12px',
+                fontSize: '0.8rem',
+                fontWeight: 700,
                 cursor: 'pointer',
                 display: 'flex',
                 alignItems: 'center',
-                gap: '6px'
+                gap: '5px'
               }}
-              title="Refresh Directory"
             >
-              <RefreshCw size={15} /> Refresh
+              <RefreshCw size={14} className={loading ? 'spin' : ''} /> Refresh
             </button>
 
             <button
@@ -377,126 +490,190 @@ export default function SuperAdminDashboard({ token, username, onLogout, onRetur
               style={{
                 background: 'linear-gradient(135deg, #0A2315 0%, #164E2A 100%)',
                 color: '#DFBA67',
-                padding: '9px 20px',
+                padding: '8px 16px',
                 borderRadius: 'var(--radius-pill)',
-                fontSize: '0.88rem',
+                fontSize: '0.82rem',
                 fontWeight: 900,
                 border: '1.5px solid #D4AF37',
                 cursor: 'pointer',
                 display: 'flex',
                 alignItems: 'center',
-                gap: '8px',
-                boxShadow: '0 4px 16px rgba(10,35,21,0.25)'
+                gap: '6px',
+                boxShadow: '0 4px 12px rgba(10,35,21,0.2)'
               }}
             >
-              <Plus size={18} color="#DFBA67" /> Add New Restaurant
+              <Plus size={16} /> Add New Restaurant
             </button>
           </div>
         </div>
 
-        {/* Directory Grid Listing */}
+        {/* Directory Grid */}
         {loading ? (
-          <div style={{ textAlign: 'center', padding: '60px 0', color: 'var(--text-muted)' }}>
-            <div style={{ width: '40px', height: '40px', border: '3px solid var(--border-light)', borderTopColor: '#DFBA67', borderRadius: '50%', margin: '0 auto 12px', animation: 'spin 0.8s linear infinite' }} />
-            Loading tenant restaurants...
+          <div style={{ textAlign: 'center', padding: '60px', color: 'var(--gold-primary)', fontWeight: 800 }}>
+            👑 Loading Tenant Restaurants Directory...
           </div>
         ) : filteredRestaurants.length === 0 ? (
-          <div style={{ textAlign: 'center', padding: '60px 20px', background: '#FFFFFF', borderRadius: '20px', border: '1px solid var(--border-light)' }}>
+          <div style={{ textAlign: 'center', padding: '60px', background: '#FFFFFF', borderRadius: '24px', border: '1px dashed var(--border-light)' }}>
             <Store size={48} color="var(--text-muted)" style={{ marginBottom: '12px' }} />
-            <h3 style={{ fontSize: '1.1rem', fontWeight: 800 }}>No Matching Restaurants Found</h3>
-            <p style={{ fontSize: '0.84rem', color: 'var(--text-muted)', marginBottom: '20px' }}>
-              {searchQuery ? `No restaurant found matching '${searchQuery}'` : "Click 'Add New Restaurant' to onboard your first client restaurant!"}
-            </p>
-            <button
-              onClick={() => { setSearchQuery(''); setShowAddModal(true); }}
-              style={{
-                background: 'var(--primary-emerald)',
-                color: '#FFFFFF',
-                padding: '10px 20px',
-                borderRadius: 'var(--radius-pill)',
-                fontWeight: 700,
-                border: 'none',
-                cursor: 'pointer'
-              }}
-            >
-              + Add New Restaurant
-            </button>
+            <h3 style={{ fontSize: '1.1rem', fontWeight: 800, margin: '0 0 6px 0' }}>No tenant restaurants found</h3>
+            <p style={{ fontSize: '0.85rem', color: 'var(--text-muted)', margin: 0 }}>Try clearing your search query or onboard a new client.</p>
           </div>
         ) : (
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(340px, 1fr))', gap: '20px' }}>
-            {filteredRestaurants.map((r) => {
-              const liveOrigin = window.location.origin.includes('localhost')
-                ? 'http://localhost:5000'
-                : window.location.origin;
-              const menuUrl = `${liveOrigin}/r/${r.slug}`;
-              const isActive = r.active !== false;
+          <div style={{
+            display: 'grid',
+            gridTemplateColumns: 'repeat(auto-fill, minmax(340px, 1fr))',
+            gap: '20px'
+          }}>
+            {filteredRestaurants.map(r => {
+              const daysLeft = getDaysRemaining(r.plan_expires_at);
+              const isExpired = daysLeft !== null && daysLeft <= 0;
 
               return (
-                <div key={r.id} style={{
-                  background: '#FFFFFF',
-                  borderRadius: '24px',
-                  padding: '22px',
-                  border: isActive ? '1.5px solid var(--border-light)' : '2px solid #FCA5A5',
-                  boxShadow: 'var(--shadow-md)',
-                  display: 'flex',
-                  flexDirection: 'column',
-                  justifyContent: 'space-between',
-                  position: 'relative',
-                  transition: 'all 0.2s ease-in-out'
-                }}>
-                  {/* Status Pill Badge */}
-                  <div style={{ position: 'absolute', top: '18px', right: '18px' }}>
-                    <button
-                      onClick={() => handleToggleActive(r.id, isActive)}
-                      style={{
-                        padding: '5px 14px',
-                        borderRadius: 'var(--radius-pill)',
-                        fontSize: '0.74rem',
-                        fontWeight: 800,
-                        background: isActive ? '#DCFCE7' : '#FEE2E2',
-                        color: isActive ? '#15803D' : '#DC2626',
-                        border: isActive ? '1.5px solid #86EFAC' : '1.5px solid #FCA5A5',
-                        cursor: 'pointer',
-                        display: 'flex',
-                        alignItems: 'center',
-                        gap: '5px'
-                      }}
-                      title="Click to Toggle Subscription Active / Suspended"
-                    >
-                      {isActive ? <CheckCircle size={13} color="#15803D" /> : <XCircle size={13} color="#DC2626" />}
-                      {isActive ? 'Active' : 'Suspended'}
-                    </button>
-                  </div>
-
+                <div
+                  key={r.id}
+                  style={{
+                    background: '#FFFFFF',
+                    borderRadius: '24px',
+                    padding: '20px',
+                    border: r.active !== false ? '1.5px solid var(--border-light)' : '1.5px solid #FCA5A5',
+                    boxShadow: '0 4px 16px rgba(0,0,0,0.05)',
+                    display: 'flex',
+                    flexDirection: 'column',
+                    justifyContent: 'space-between',
+                    gap: '16px',
+                    position: 'relative'
+                  }}
+                >
+                  {/* Top Bar */}
                   <div>
-                    {/* Header Info */}
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '14px', marginBottom: '14px' }}>
-                      <img
-                        src={r.logo || '/uploads/logo.jpg'}
-                        alt=""
-                        style={{ width: '52px', height: '52px', borderRadius: '16px', objectFit: 'cover', border: '1px solid var(--border-light)' }}
-                      />
-                      <div style={{ paddingRight: '90px' }}>
-                        <h3 style={{ fontSize: '1.1rem', fontWeight: 900, color: 'var(--primary-emerald)', margin: 0, lineHeight: 1.2 }}>
-                          {r.name}
-                        </h3>
-                        <span style={{ fontSize: '0.76rem', color: 'var(--gold-primary)', fontWeight: 800 }}>
-                          /r/{r.slug}
-                        </span>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '12px' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                        <img
+                          src={r.logo || '/uploads/logo.jpg'}
+                          alt={r.name}
+                          style={{
+                            width: '46px',
+                            height: '46px',
+                            borderRadius: '50%',
+                            objectFit: 'cover',
+                            border: '2px solid #D4AF37'
+                          }}
+                        />
+                        <div>
+                          <h3 style={{ fontSize: '1.05rem', fontWeight: 900, margin: 0, color: 'var(--text-dark)', lineHeight: 1.2 }}>
+                            {r.name}
+                          </h3>
+                          <span style={{ fontSize: '0.74rem', color: 'var(--gold-primary)', fontWeight: 800 }}>
+                            /r/{r.slug}
+                          </span>
+                        </div>
                       </div>
+
+                      {/* Active Status Badge */}
+                      <button
+                        onClick={() => handleToggleActive(r.id, r.active)}
+                        style={{
+                          background: r.active !== false ? '#DCFCE7' : '#FEE2E2',
+                          color: r.active !== false ? '#15803D' : '#DC2626',
+                          border: `1px solid ${r.active !== false ? '#86EFAC' : '#FCA5A5'}`,
+                          padding: '4px 10px',
+                          borderRadius: 'var(--radius-pill)',
+                          fontSize: '0.7rem',
+                          fontWeight: 900,
+                          cursor: 'pointer',
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: '4px'
+                        }}
+                        title="Click to Toggle Active / Suspended Subscription"
+                      >
+                        {r.active !== false ? <CheckCircle size={12} /> : <XCircle size={12} />}
+                        {r.active !== false ? 'Active' : 'Suspended'}
+                      </button>
                     </div>
 
-                    <p style={{ fontSize: '0.82rem', color: 'var(--text-muted)', marginBottom: '14px', lineHeight: 1.3, fontWeight: 500 }}>
-                      {r.tagline || '100% Quality Food & Service'}
+                    <p style={{ fontSize: '0.78rem', color: 'var(--text-muted)', margin: '0 0 12px 0', lineHeight: 1.3 }}>
+                      {r.tagline || 'No tagline set'}
                     </p>
 
-                    {/* Metadata Card Info */}
-                    <div style={{ background: '#FAF8F5', borderRadius: '16px', padding: '12px 14px', marginBottom: '16px', fontSize: '0.8rem', display: 'flex', flexDirection: 'column', gap: '8px', border: '1px solid var(--border-light)' }}>
+                    {/* SaaS Badges Row */}
+                    <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap', marginBottom: '12px' }}>
+                      {/* Plan Badge */}
+                      <span style={{
+                        background: '#FEF3C7',
+                        color: '#B45309',
+                        padding: '3px 8px',
+                        borderRadius: '6px',
+                        fontSize: '0.68rem',
+                        fontWeight: 900,
+                        textTransform: 'uppercase',
+                        border: '1px solid #FCD34D'
+                      }}>
+                        👑 {(r.plan_tier || 'pro').toUpperCase()} (₹{r.plan_price || 999}/mo)
+                      </span>
+
+                      {/* Expiry Badge */}
+                      {daysLeft !== null && (
+                        <span style={{
+                          background: isExpired ? '#FEE2E2' : daysLeft <= 7 ? '#FEF3C7' : '#DCFCE7',
+                          color: isExpired ? '#DC2626' : daysLeft <= 7 ? '#B45309' : '#15803D',
+                          padding: '3px 8px',
+                          borderRadius: '6px',
+                          fontSize: '0.68rem',
+                          fontWeight: 800,
+                          display: 'inline-flex',
+                          alignItems: 'center',
+                          gap: '3px'
+                        }}>
+                          <Calendar size={10} /> {isExpired ? 'Expired' : `${daysLeft} days left`}
+                        </span>
+                      )}
+
+                      {/* Scans Badge */}
+                      <span style={{
+                        background: '#F3E8FF',
+                        color: '#7E22CE',
+                        padding: '3px 8px',
+                        borderRadius: '6px',
+                        fontSize: '0.68rem',
+                        fontWeight: 800,
+                        display: 'inline-flex',
+                        alignItems: 'center',
+                        gap: '3px'
+                      }}>
+                        📲 {r.scan_count || 0} scans
+                      </span>
+
+                      {/* Theme Badge */}
+                      <span style={{
+                        background: 'var(--bg-secondary)',
+                        color: 'var(--text-dark)',
+                        padding: '3px 8px',
+                        borderRadius: '6px',
+                        fontSize: '0.68rem',
+                        fontWeight: 700,
+                        border: '1px solid var(--border-light)'
+                      }}>
+                        🎨 {r.theme_color || 'gold'}
+                      </span>
+                    </div>
+
+                    {/* Metadata Table */}
+                    <div style={{
+                      background: 'var(--bg-app)',
+                      borderRadius: '14px',
+                      padding: '10px 12px',
+                      fontSize: '0.78rem',
+                      display: 'flex',
+                      flexDirection: 'column',
+                      gap: '6px',
+                      border: '1px solid var(--border-light)'
+                    }}>
                       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                         <span style={{ color: 'var(--text-muted)', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '4px' }}>
-                          <Key size={13} color="var(--gold-primary)" /> Owner Login:
+                          <Shield size={13} color="var(--gold-primary)" /> Owner Login:
                         </span>
-                        <strong style={{ color: 'var(--primary-emerald)', background: '#FFFFFF', padding: '2px 8px', borderRadius: '6px', border: '1px solid var(--border-light)' }}>
+                        <strong style={{ fontFamily: 'monospace', color: 'var(--text-dark)' }}>
                           {r.owner_username}
                         </strong>
                       </div>
@@ -563,7 +740,7 @@ export default function SuperAdminDashboard({ token, username, onLogout, onRetur
                         alignItems: 'center',
                         gap: '4px'
                       }}
-                      title="Edit Tenant Details & Reset Owner Credentials"
+                      title="Edit Tenant Details, Plan, Expiry & Credentials"
                     >
                       <Edit3 size={13} /> Edit
                     </button>
@@ -619,10 +796,7 @@ export default function SuperAdminDashboard({ token, username, onLogout, onRetur
       {showAddModal && (
         <div style={{
           position: 'fixed',
-          top: 0,
-          left: 0,
-          right: 0,
-          bottom: 0,
+          top: 0, left: 0, right: 0, bottom: 0,
           background: 'rgba(0,0,0,0.65)',
           backdropFilter: 'blur(6px)',
           zIndex: 2000,
@@ -634,7 +808,7 @@ export default function SuperAdminDashboard({ token, username, onLogout, onRetur
           <div style={{
             background: '#FFFFFF',
             borderRadius: '24px',
-            maxWidth: '520px',
+            maxWidth: '540px',
             width: '100%',
             padding: '28px 24px',
             boxShadow: '0 20px 60px rgba(0,0,0,0.4)',
@@ -667,7 +841,7 @@ export default function SuperAdminDashboard({ token, username, onLogout, onRetur
                 </label>
                 <input
                   type="text"
-                  placeholder="e.g. Royal Pizza & Bakery"
+                  placeholder="e.g. Royal Pizza & Cafe"
                   value={form.name}
                   onChange={handleNameChange}
                   required
@@ -687,6 +861,43 @@ export default function SuperAdminDashboard({ token, username, onLogout, onRetur
                   required
                   style={{ width: '100%', padding: '11px 14px', borderRadius: '12px', border: '1.5px solid var(--border-light)', fontSize: '0.9rem', fontWeight: 800, color: 'var(--gold-primary)', outline: 'none' }}
                 />
+              </div>
+
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+                <div>
+                  <label style={{ fontSize: '0.78rem', fontWeight: 800, color: 'var(--text-dark)', marginBottom: '4px', display: 'block' }}>
+                    SUBSCRIPTION TIER
+                  </label>
+                  <select
+                    value={form.plan_tier}
+                    onChange={(e) => {
+                      const tier = e.target.value;
+                      const price = tier === 'basic' ? 499 : tier === 'enterprise' ? 1999 : 999;
+                      setForm({ ...form, plan_tier: tier, plan_price: price });
+                    }}
+                    style={{ width: '100%', padding: '11px 14px', borderRadius: '12px', border: '1.5px solid var(--border-light)', fontSize: '0.86rem', outline: 'none', fontWeight: 700 }}
+                  >
+                    <option value="basic">Basic Plan (₹499/mo)</option>
+                    <option value="pro">Pro Plan (₹999/mo)</option>
+                    <option value="enterprise">Enterprise Plan (₹1,999/mo)</option>
+                  </select>
+                </div>
+
+                <div>
+                  <label style={{ fontSize: '0.78rem', fontWeight: 800, color: 'var(--text-dark)', marginBottom: '4px', display: 'block' }}>
+                    BRAND THEME COLOR
+                  </label>
+                  <select
+                    value={form.theme_color}
+                    onChange={(e) => setForm({ ...form, theme_color: e.target.value })}
+                    style={{ width: '100%', padding: '11px 14px', borderRadius: '12px', border: '1.5px solid var(--border-light)', fontSize: '0.86rem', outline: 'none', fontWeight: 700 }}
+                  >
+                    <option value="gold">Gold & Forest Green</option>
+                    <option value="emerald">Emerald Mint & Deep Teal</option>
+                    <option value="crimson">Ruby Red & Gold</option>
+                    <option value="navy">Midnight Navy & Blue</option>
+                  </select>
+                </div>
               </div>
 
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
@@ -721,13 +932,13 @@ export default function SuperAdminDashboard({ token, username, onLogout, onRetur
 
               <div>
                 <label style={{ fontSize: '0.78rem', fontWeight: 800, color: 'var(--text-dark)', marginBottom: '4px', display: 'block' }}>
-                  PHONE NUMBER
+                  PHONE & WHATSAPP NUMBER
                 </label>
                 <input
                   type="text"
                   placeholder="+91 9876543210"
                   value={form.phone}
-                  onChange={(e) => setForm({ ...form, phone: e.target.value })}
+                  onChange={(e) => setForm({ ...form, phone: e.target.value, whatsapp_number: e.target.value })}
                   style={{ width: '100%', padding: '11px 14px', borderRadius: '12px', border: '1.5px solid var(--border-light)', fontSize: '0.86rem', outline: 'none' }}
                 />
               </div>
@@ -741,19 +952,6 @@ export default function SuperAdminDashboard({ token, username, onLogout, onRetur
                   placeholder="Main Road, Motihari"
                   value={form.address}
                   onChange={(e) => setForm({ ...form, address: e.target.value })}
-                  style={{ width: '100%', padding: '11px 14px', borderRadius: '12px', border: '1.5px solid var(--border-light)', fontSize: '0.86rem', outline: 'none' }}
-                />
-              </div>
-
-              <div>
-                <label style={{ fontSize: '0.78rem', fontWeight: 800, color: 'var(--text-dark)', marginBottom: '4px', display: 'block' }}>
-                  TAGLINE
-                </label>
-                <input
-                  type="text"
-                  placeholder="Fresh Woodfired Pizza & Bakery"
-                  value={form.tagline}
-                  onChange={(e) => setForm({ ...form, tagline: e.target.value })}
                   style={{ width: '100%', padding: '11px 14px', borderRadius: '12px', border: '1.5px solid var(--border-light)', fontSize: '0.86rem', outline: 'none' }}
                 />
               </div>
@@ -804,7 +1002,7 @@ export default function SuperAdminDashboard({ token, username, onLogout, onRetur
           <div style={{
             background: '#FFFFFF',
             borderRadius: '24px',
-            maxWidth: '520px',
+            maxWidth: '540px',
             width: '100%',
             padding: '28px 24px',
             boxShadow: '0 20px 60px rgba(0,0,0,0.4)',
@@ -838,6 +1036,43 @@ export default function SuperAdminDashboard({ token, username, onLogout, onRetur
                 />
               </div>
 
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+                <div>
+                  <label style={{ fontSize: '0.78rem', fontWeight: 800, color: 'var(--text-dark)', marginBottom: '4px', display: 'block' }}>
+                    SUBSCRIPTION TIER
+                  </label>
+                  <select
+                    value={editModalData.plan_tier || 'pro'}
+                    onChange={(e) => {
+                      const tier = e.target.value;
+                      const price = tier === 'basic' ? 499 : tier === 'enterprise' ? 1999 : 999;
+                      setEditModalData({ ...editModalData, plan_tier: tier, plan_price: price });
+                    }}
+                    style={{ width: '100%', padding: '11px 14px', borderRadius: '12px', border: '1.5px solid var(--border-light)', fontSize: '0.86rem', outline: 'none', fontWeight: 700 }}
+                  >
+                    <option value="basic">Basic Plan (₹499/mo)</option>
+                    <option value="pro">Pro Plan (₹999/mo)</option>
+                    <option value="enterprise">Enterprise Plan (₹1,999/mo)</option>
+                  </select>
+                </div>
+
+                <div>
+                  <label style={{ fontSize: '0.78rem', fontWeight: 800, color: 'var(--text-dark)', marginBottom: '4px', display: 'block' }}>
+                    THEME COLOR
+                  </label>
+                  <select
+                    value={editModalData.theme_color || 'gold'}
+                    onChange={(e) => setEditModalData({ ...editModalData, theme_color: e.target.value })}
+                    style={{ width: '100%', padding: '11px 14px', borderRadius: '12px', border: '1.5px solid var(--border-light)', fontSize: '0.86rem', outline: 'none', fontWeight: 700 }}
+                  >
+                    <option value="gold">Gold & Forest Green</option>
+                    <option value="emerald">Emerald Mint & Teal</option>
+                    <option value="crimson">Ruby Red & Gold</option>
+                    <option value="navy">Midnight Navy & Blue</option>
+                  </select>
+                </div>
+              </div>
+
               <div>
                 <label style={{ fontSize: '0.78rem', fontWeight: 800, color: 'var(--text-dark)', marginBottom: '4px', display: 'block' }}>
                   FSSAI LICENSE NO
@@ -867,7 +1102,7 @@ export default function SuperAdminDashboard({ token, username, onLogout, onRetur
 
                 <div>
                   <label style={{ fontSize: '0.78rem', fontWeight: 800, color: 'var(--text-dark)', marginBottom: '4px', display: 'block' }}>
-                    RESET PASSWORD (OPTIONAL)
+                    RESET PASSWORD
                   </label>
                   <input
                     type="text"
@@ -881,12 +1116,13 @@ export default function SuperAdminDashboard({ token, username, onLogout, onRetur
 
               <div>
                 <label style={{ fontSize: '0.78rem', fontWeight: 800, color: 'var(--text-dark)', marginBottom: '4px', display: 'block' }}>
-                  PHONE NUMBER
+                  WHATSAPP ORDERING NUMBER
                 </label>
                 <input
                   type="text"
-                  value={editModalData.phone || ''}
-                  onChange={(e) => setEditModalData({ ...editModalData, phone: e.target.value })}
+                  value={editModalData.whatsapp_number || editModalData.phone || ''}
+                  onChange={(e) => setEditModalData({ ...editModalData, whatsapp_number: e.target.value })}
+                  placeholder="+91 9708366583"
                   style={{ width: '100%', padding: '11px 14px', borderRadius: '12px', border: '1.5px solid var(--border-light)', fontSize: '0.86rem', outline: 'none' }}
                 />
               </div>
@@ -928,6 +1164,186 @@ export default function SuperAdminDashboard({ token, username, onLogout, onRetur
                 </button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+
+      {/* 📢 Modal: Broadcast Global System Announcement */}
+      {showAnnounceModal && (
+        <div style={{
+          position: 'fixed',
+          top: 0, left: 0, right: 0, bottom: 0,
+          background: 'rgba(0,0,0,0.65)',
+          backdropFilter: 'blur(6px)',
+          zIndex: 2000,
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          padding: '16px'
+        }}>
+          <div style={{
+            background: '#FFFFFF',
+            borderRadius: '24px',
+            maxWidth: '500px',
+            width: '100%',
+            padding: '24px',
+            boxShadow: '0 20px 60px rgba(0,0,0,0.4)',
+            border: '2px solid #DFBA67'
+          }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                <div style={{ width: '38px', height: '38px', borderRadius: '12px', background: '#FEF3C7', color: '#B45309', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                  <Megaphone size={20} />
+                </div>
+                <h3 style={{ fontSize: '1.2rem', fontWeight: 900, color: 'var(--primary-emerald)', margin: 0 }}>
+                  Broadcast Announcement Notice
+                </h3>
+              </div>
+              <button onClick={() => setShowAnnounceModal(false)} style={{ background: 'none', border: 'none', fontSize: '1.4rem', fontWeight: 700, cursor: 'pointer', color: 'var(--text-muted)' }}>✕</button>
+            </div>
+
+            <form onSubmit={handleCreateAnnouncementSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
+              <div>
+                <label style={{ fontSize: '0.78rem', fontWeight: 800, color: 'var(--text-dark)', marginBottom: '4px', display: 'block' }}>
+                  ANNOUNCEMENT MESSAGE FOR ALL TENANTS *
+                </label>
+                <textarea
+                  rows={4}
+                  placeholder="e.g. ⚡ New Feature Added: WhatsApp Direct Ordering is now live! Update your WhatsApp number in Settings."
+                  value={announceMsg}
+                  onChange={(e) => setAnnounceMsg(e.target.value)}
+                  required
+                  style={{ width: '100%', padding: '12px', borderRadius: '14px', border: '1.5px solid var(--border-light)', fontSize: '0.88rem', outline: 'none', resize: 'vertical' }}
+                />
+              </div>
+
+              <div>
+                <label style={{ fontSize: '0.78rem', fontWeight: 800, color: 'var(--text-dark)', marginBottom: '4px', display: 'block' }}>
+                  NOTICE TYPE
+                </label>
+                <select
+                  value={announceType}
+                  onChange={(e) => setAnnounceType(e.target.value)}
+                  style={{ width: '100%', padding: '11px', borderRadius: '12px', border: '1.5px solid var(--border-light)', fontSize: '0.86rem', outline: 'none', fontWeight: 700 }}
+                >
+                  <option value="info">ℹ️ Info Announcement (Blue)</option>
+                  <option value="success">🎉 Success & Feature Release (Green)</option>
+                  <option value="warning">⚠️ Maintenance / Warning (Gold)</option>
+                </select>
+              </div>
+
+              <div style={{ display: 'flex', gap: '12px', marginTop: '10px' }}>
+                <button
+                  type="button"
+                  onClick={() => setShowAnnounceModal(false)}
+                  style={{ flex: 1, padding: '12px', borderRadius: 'var(--radius-pill)', border: '1px solid var(--border-light)', fontWeight: 700, cursor: 'pointer', background: 'var(--bg-secondary)' }}
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={announceSubmitting}
+                  style={{
+                    flex: 1,
+                    background: 'linear-gradient(135deg, #0A2315 0%, #164E2A 100%)',
+                    color: '#DFBA67',
+                    padding: '12px',
+                    borderRadius: 'var(--radius-pill)',
+                    fontWeight: 900,
+                    border: '1.5px solid #D4AF37',
+                    cursor: 'pointer'
+                  }}
+                >
+                  {announceSubmitting ? 'Broadcasting...' : '📢 Broadcast Notice'}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* 📜 Modal: Platform Audit Logs */}
+      {showAuditModal && (
+        <div style={{
+          position: 'fixed',
+          top: 0, left: 0, right: 0, bottom: 0,
+          background: 'rgba(0,0,0,0.65)',
+          backdropFilter: 'blur(6px)',
+          zIndex: 2000,
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          padding: '16px'
+        }}>
+          <div style={{
+            background: '#FFFFFF',
+            borderRadius: '24px',
+            maxWidth: '650px',
+            width: '100%',
+            padding: '24px',
+            boxShadow: '0 20px 60px rgba(0,0,0,0.4)',
+            border: '2px solid #D4AF37',
+            maxHeight: '85vh',
+            display: 'flex',
+            flexDirection: 'column'
+          }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                <div style={{ width: '38px', height: '38px', borderRadius: '12px', background: '#E0E7FF', color: '#4338CA', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                  <FileText size={20} />
+                </div>
+                <div>
+                  <h3 style={{ fontSize: '1.2rem', fontWeight: 900, color: 'var(--primary-emerald)', margin: 0 }}>
+                    Platform Activity & Security Audit Logs
+                  </h3>
+                  <span style={{ fontSize: '0.74rem', color: 'var(--text-muted)' }}>Real-time logging of logins, tenant creations, and admin actions</span>
+                </div>
+              </div>
+              <button onClick={() => setShowAuditModal(false)} style={{ background: 'none', border: 'none', fontSize: '1.4rem', fontWeight: 700, cursor: 'pointer', color: 'var(--text-muted)' }}>✕</button>
+            </div>
+
+            <div style={{ flex: 1, overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '10px', paddingRight: '4px' }}>
+              {auditLoading ? (
+                <div style={{ textAlign: 'center', padding: '40px', color: 'var(--gold-primary)', fontWeight: 800 }}>
+                  📜 Loading audit logs...
+                </div>
+              ) : auditLogs.length === 0 ? (
+                <div style={{ textAlign: 'center', padding: '40px', color: 'var(--text-muted)' }}>
+                  No audit logs recorded yet.
+                </div>
+              ) : (
+                auditLogs.map(log => (
+                  <div
+                    key={log.id}
+                    style={{
+                      background: 'var(--bg-app)',
+                      borderRadius: '14px',
+                      padding: '12px 14px',
+                      border: '1px solid var(--border-light)',
+                      display: 'flex',
+                      justifyContent: 'space-between',
+                      alignItems: 'center',
+                      fontSize: '0.82rem'
+                    }}
+                  >
+                    <div>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '4px' }}>
+                        <span style={{ background: '#0A2315', color: '#DFBA67', fontSize: '0.66rem', fontWeight: 900, padding: '2px 7px', borderRadius: '6px' }}>
+                          {log.actor_role.toUpperCase()}
+                        </span>
+                        <strong style={{ color: 'var(--primary-emerald)' }}>{log.action}</strong>
+                      </div>
+                      <div style={{ color: 'var(--text-dark)', fontWeight: 600 }}>
+                        {log.details}
+                      </div>
+                    </div>
+                    <span style={{ fontSize: '0.7rem', color: 'var(--text-muted)', fontWeight: 600, flexShrink: 0, marginLeft: '12px' }}>
+                      {new Date(log.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                    </span>
+                  </div>
+                ))
+              )}
+            </div>
           </div>
         </div>
       )}

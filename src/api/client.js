@@ -254,3 +254,27 @@ export async function deleteDish(id, token) {
   });
   return handleResponse(res, 'Failed to delete dish');
 }
+
+export async function fetchAnnouncements() {
+  const res = await fetch(`${API_BASE}/announcements`);
+  return handleResponse(res, 'Failed to fetch announcements');
+}
+
+export async function createAnnouncement(message, type, token) {
+  const res = await fetch(`${API_BASE}/superadmin/announcements`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      Authorization: `Bearer ${token}`
+    },
+    body: JSON.stringify({ message, type })
+  });
+  return handleResponse(res, 'Failed to create announcement');
+}
+
+export async function fetchAuditLogs(token) {
+  const res = await fetch(`${API_BASE}/superadmin/audit-logs`, {
+    headers: { Authorization: `Bearer ${token}` }
+  });
+  return handleResponse(res, 'Failed to fetch audit logs');
+}
