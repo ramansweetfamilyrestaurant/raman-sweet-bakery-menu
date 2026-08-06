@@ -26,7 +26,7 @@ export default function CategoryJumpRail({ categories, lang, selectedCategory, o
       position: 'sticky',
       top: 0,
       zIndex: 90,
-      background: 'rgba(246, 244, 238, 0.96)',
+      background: 'var(--bg-app)',
       backdropFilter: 'blur(10px)',
       borderBottom: '1px solid var(--border-light)',
       padding: '8px 0',

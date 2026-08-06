@@ -104,12 +104,13 @@ export default function MenuCardItem({ dish, lang, onClick, onAddToCart, currenc
           )}
 
           <h4 style={{
-            fontSize: '0.95rem',
+            fontSize: '0.9rem',
             fontWeight: 800,
             color: 'var(--text-dark)',
             margin: 0,
-            lineHeight: 1.3,
-            wordBreak: 'break-word'
+            lineHeight: 1.25,
+            whiteSpace: 'normal',
+            wordBreak: 'keep-all'
           }}>
             {displayName}
           </h4>
