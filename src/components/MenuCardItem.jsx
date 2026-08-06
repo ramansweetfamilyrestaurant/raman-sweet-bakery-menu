@@ -104,80 +104,82 @@ export default function MenuCardItem({ dish, lang, onClick, onAddToCart, currenc
           )}
 
           <h4 style={{
-            fontSize: '0.94rem',
-            fontWeight: 700,
+            fontSize: '0.95rem',
+            fontWeight: 800,
             color: 'var(--text-dark)',
             margin: 0,
-            lineHeight: 1.25,
-            textOverflow: 'ellipsis',
-            overflow: 'hidden',
-            whiteSpace: 'nowrap'
+            lineHeight: 1.3,
+            wordBreak: 'break-word'
           }}>
             {displayName}
           </h4>
-
-          {/* Badge Pill */}
-          {dish.badge && (() => {
-            const lower = dish.badge.toLowerCase();
-            let bg = 'linear-gradient(135deg, #FFFBEB 0%, #FEF3C7 100%)';
-            let color = '#92400E';
-            let border = '1px solid #D97706';
-            let icon = '🏷️';
-            
-            if (lower.includes('bestseller')) {
-              bg = 'linear-gradient(135deg, #FFFBEB 0%, #FEF3C7 100%)';
-              color = '#B45309';
-              border = '1px solid #F59E0B';
-              icon = '🔥';
-            } else if (lower.includes('must try') || lower.includes('musttry')) {
-              bg = 'linear-gradient(135deg, #FEF2F2 0%, #FEE2E2 100%)';
-              color = '#B91C1C';
-              border = '1px solid #EF4444';
-              icon = '⭐';
-            } else if (lower.includes('special')) {
-              bg = 'linear-gradient(135deg, #EEF2FF 0%, #E0E7FF 100%)';
-              color = '#4338CA';
-              border = '1px solid #6366F1';
-              icon = '✨';
-            } else if (lower.includes('combo')) {
-              bg = 'linear-gradient(135deg, #F3E8FF 0%, #E9D5FF 100%)';
-              color = '#6B21A8';
-              border = '1px solid #A855F7';
-              icon = '🍕';
-            } else if (lower.includes('100') || lower.includes('under')) {
-              bg = 'linear-gradient(135deg, #F0FDF4 0%, #DCFCE7 100%)';
-              color = '#15803D';
-              border = '1px solid #22C55E';
-              icon = '⚡';
-            }
-
-            return (
-              <span style={{
-                fontSize: '0.64rem',
-                fontWeight: 900,
-                color: color,
-                background: bg,
-                border: border,
-                padding: '2px 7px',
-                borderRadius: 'var(--radius-pill)',
-                whiteSpace: 'nowrap',
-                display: 'inline-flex',
-                alignItems: 'center',
-                gap: '3px',
-                flexShrink: 0
-              }}>
-                <span>{icon}</span>
-                <span>{dish.badge}</span>
-              </span>
-            );
-          })()}
-
-          {!isAvailable && (
-            <span style={{ fontSize: '0.65rem', fontWeight: 800, color: '#DC2626', background: '#FEE2E2', padding: '1px 6px', borderRadius: '4px' }}>
-              Sold Out
-            </span>
-          )}
         </div>
+
+        {/* Badge Pill & Sold Out Indicator Row */}
+        {(dish.badge || !isAvailable) && (
+          <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginTop: '4px', flexWrap: 'wrap' }}>
+            {dish.badge && (() => {
+              const lower = dish.badge.toLowerCase();
+              let bg = 'linear-gradient(135deg, #FFFBEB 0%, #FEF3C7 100%)';
+              let color = '#92400E';
+              let border = '1px solid #D97706';
+              let icon = '🏷️';
+              
+              if (lower.includes('bestseller')) {
+                bg = 'linear-gradient(135deg, #FFFBEB 0%, #FEF3C7 100%)';
+                color = '#B45309';
+                border = '1px solid #F59E0B';
+                icon = '🔥';
+              } else if (lower.includes('must try') || lower.includes('musttry')) {
+                bg = 'linear-gradient(135deg, #FEF2F2 0%, #FEE2E2 100%)';
+                color = '#B91C1C';
+                border = '1px solid #EF4444';
+                icon = '⭐';
+              } else if (lower.includes('special')) {
+                bg = 'linear-gradient(135deg, #EEF2FF 0%, #E0E7FF 100%)';
+                color = '#4338CA';
+                border = '1px solid #6366F1';
+                icon = '✨';
+              } else if (lower.includes('combo')) {
+                bg = 'linear-gradient(135deg, #F3E8FF 0%, #E9D5FF 100%)';
+                color = '#6B21A8';
+                border = '1px solid #A855F7';
+                icon = '🍕';
+              } else if (lower.includes('100') || lower.includes('under')) {
+                bg = 'linear-gradient(135deg, #F0FDF4 0%, #DCFCE7 100%)';
+                color = '#15803D';
+                border = '1px solid #22C55E';
+                icon = '⚡';
+              }
+
+              return (
+                <span style={{
+                  fontSize: '0.64rem',
+                  fontWeight: 900,
+                  color: color,
+                  background: bg,
+                  border: border,
+                  padding: '2px 7px',
+                  borderRadius: 'var(--radius-pill)',
+                  whiteSpace: 'nowrap',
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: '3px',
+                  flexShrink: 0
+                }}>
+                  <span>{icon}</span>
+                  <span>{dish.badge}</span>
+                </span>
+              );
+            })()}
+
+            {!isAvailable && (
+              <span style={{ fontSize: '0.65rem', fontWeight: 800, color: '#DC2626', background: '#FEE2E2', padding: '1px 6px', borderRadius: '4px' }}>
+                Sold Out
+              </span>
+            )}
+          </div>
+        )}
 
         {/* Description snippet */}
         {dish.description && (
