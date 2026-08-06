@@ -58,7 +58,7 @@ export default function App() {
       const [infoData, catData, dishData] = await Promise.all([
         fetchRestaurantInfo(),
         fetchCategories(),
-        fetchDishes({ query: searchQuery, category_id: selectedCategory })
+        fetchDishes({ query: searchQuery })
       ]);
       setInfo(infoData);
       setCategories(catData);
@@ -72,7 +72,7 @@ export default function App() {
 
   useEffect(() => {
     loadMenuData();
-  }, [searchQuery, selectedCategory]);
+  }, [searchQuery]);
 
   // Handle URL route changes (#admin or /admin)
   useEffect(() => {
@@ -119,14 +119,6 @@ export default function App() {
 
   // Group dishes by category
   const groupedDishes = useMemo(() => {
-    if (selectedCategory !== 'all') {
-      const targetCat = categories.find(c => String(c.id) === String(selectedCategory));
-      return [{
-        category: targetCat || { name: 'Filtered Items' },
-        items: dishes
-      }];
-    }
-
     const map = {};
     categories.forEach(c => {
       map[c.id] = { category: c, items: [] };
@@ -143,7 +135,12 @@ export default function App() {
       }
     });
 
-    return Object.values(map).filter(group => group.items.length > 0);
+    const results = Object.values(map).filter(group => group.items.length > 0);
+    
+    if (selectedCategory !== 'all') {
+      return results.filter(g => String(g.category.id) === String(selectedCategory));
+    }
+    return results;
   }, [dishes, categories, selectedCategory]);
 
   const scrollToCategory = (catId) => {
