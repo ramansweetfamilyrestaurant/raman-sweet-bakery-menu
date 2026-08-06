@@ -22,7 +22,13 @@ const SuperAdminDashboard = lazy(() => import('./components/SuperAdmin/SuperAdmi
 export default function App() {
   // Parse Table Number from URL query parameter ?table=5
   const urlParams = new URLSearchParams(window.location.search);
-  const tableNum = urlParams.get('table') || '';
+  const initialTableNum = urlParams.get('table') || '';
+  const [currentTableNum, setCurrentTableNum] = useState(initialTableNum);
+  const [sessionExpired, setSessionExpired] = useState(false);
+  const [autoKillSeconds, setAutoKillSeconds] = useState(null);
+
+  // Effective Table Number (Empty if session expired or no QR scanned)
+  const effectiveTableNum = sessionExpired ? '' : currentTableNum;
 
   // Language State ('en' or 'hi')
   const [lang, setLang] = useState('en');
@@ -140,15 +146,48 @@ export default function App() {
 
   // FIX: Table-specific localStorage key to prevent cross-table order leakage
   const getOrderStorageKey = () => {
-    const t = tableNum || orderTableInput || '1';
+    const t = effectiveTableNum || orderTableInput || '1';
     return `raman_active_order_id_table_${t}`;
   };
   const [activeOrderId, setActiveOrderId] = useState(localStorage.getItem(getOrderStorageKey()) || null);
   const [activeOrderTrack, setActiveOrderTrack] = useState(null);
 
+  // 2-Minute (120s) Auto-Kill Timer Effect after order completion
+  useEffect(() => {
+    if (activeOrderTrack && (activeOrderTrack.status === 'completed' || activeOrderTrack.status === 'cancelled')) {
+      if (autoKillSeconds === null) {
+        setAutoKillSeconds(120); // 2 minutes countdown
+      }
+    } else {
+      setAutoKillSeconds(null);
+    }
+  }, [activeOrderTrack?.status]);
+
+  useEffect(() => {
+    if (autoKillSeconds === null) return;
+    if (autoKillSeconds <= 0) {
+      // Auto-kill session after 2 mins
+      localStorage.removeItem(getOrderStorageKey());
+      setActiveOrderId(null);
+      setActiveOrderTrack(null);
+      setCurrentTableNum('');
+      setSessionExpired(true);
+      setAutoKillSeconds(null);
+      // Clean URL parameter without reloading page
+      window.history.replaceState({}, '', window.location.pathname);
+      return;
+    }
+
+    const timer = setInterval(() => {
+      setAutoKillSeconds(prev => (prev !== null && prev > 0 ? prev - 1 : 0));
+    }, 1000);
+
+    return () => clearInterval(timer);
+  }, [autoKillSeconds]);
+
   // Multi-Device Table-Level Live Sync Effect
   useEffect(() => {
-    const activeTargetTable = tableNum || orderTableInput || '1';
+    const activeTargetTable = effectiveTableNum || orderTableInput || '1';
     const currentSlug = getSlugFromUrl() || (info && info.slug) || 'raman-sweet-bakery';
 
     const checkTableStatus = async () => {
@@ -157,19 +196,11 @@ export default function App() {
           const data = await trackOrderStatus(activeOrderId);
           if (data) {
             setActiveOrderTrack(data);
-            // FIX: Auto-dismiss completed/cancelled orders after 15 seconds
-            if (data.status === 'completed' || data.status === 'cancelled') {
-              setTimeout(() => {
-                localStorage.removeItem(getOrderStorageKey());
-                setActiveOrderId(null);
-                setActiveOrderTrack(null);
-              }, 15000);
-            }
             return;
           }
         }
         // Multi-device table sync: fetch latest active order for this table
-        if (activeTargetTable) {
+        if (activeTargetTable && !sessionExpired) {
           const tableData = await fetchActiveTableOrder(currentSlug, activeTargetTable);
           if (tableData) {
             setActiveOrderTrack(tableData);
@@ -185,7 +216,7 @@ export default function App() {
     checkTableStatus();
     const interval = setInterval(checkTableStatus, 4000);
     return () => clearInterval(interval);
-  }, [activeOrderId, tableNum, orderTableInput, info]);
+  }, [activeOrderId, effectiveTableNum, orderTableInput, info, sessionExpired]);
 
   const handleSendDirectOrder = async () => {
     if (cartItems.length === 0) return;
@@ -631,7 +662,7 @@ export default function App() {
       <CustomerHeader
         info={info}
         lang={lang}
-        tableNum={tableNum}
+        tableNum={effectiveTableNum}
         onToggleLang={() => setLang(lang === 'en' ? 'hi' : 'en')}
         onOpenInfoModal={() => setShowInfoModal(true)}
         onOpenAdmin={() => {
@@ -645,7 +676,7 @@ export default function App() {
         }}
       />
 
-      {/* 🛎️ Live Dine-In Customer Order Tracker Banner (Gated by Super Admin) */}
+      {/* 🛎️ Live Dine-In Customer Order Tracker Banner */}
       {activeOrderTrack && (info?.direct_ordering_enabled !== false && info?.direct_ordering_enabled !== 0) && (
         <div style={{
           background: 'linear-gradient(135deg, #0A2315 0%, #143A24 100%)',
@@ -668,9 +699,14 @@ export default function App() {
                   activeOrderTrack.status === 'pending' ? 'Pending Kitchen Acceptance 🟡' :
                   activeOrderTrack.status === 'preparing' ? 'Chef is Preparing 👨‍🍳' :
                   activeOrderTrack.status === 'served' ? 'Served to Table 🟢' :
-                  activeOrderTrack.status === 'completed' ? 'Order Completed & Paid 🏁' : 'Cancelled 🔴'
+                  activeOrderTrack.status === 'completed' ? `Order Completed & Paid 🏁` : 'Cancelled 🔴'
                 }
               </span>
+              {(activeOrderTrack.status === 'completed' || activeOrderTrack.status === 'cancelled') && (
+                <div style={{ fontSize: '0.72rem', color: '#FCD34D', fontWeight: 700, marginTop: '3px' }}>
+                  ⏳ Session expire hone me: <strong>{autoKillSeconds !== null ? `${Math.floor(autoKillSeconds/60)}m ${String(autoKillSeconds%60).padStart(2,'0')}s` : '2m 00s'}</strong> (Naya order karne ke liye QR dobara scan karein)
+                </div>
+              )}
             </div>
           </div>
 
@@ -679,6 +715,9 @@ export default function App() {
               localStorage.removeItem(getOrderStorageKey());
               setActiveOrderId(null);
               setActiveOrderTrack(null);
+              setCurrentTableNum('');
+              setSessionExpired(true);
+              window.history.replaceState({}, '', window.location.pathname);
             }}
             style={{
               background: 'rgba(255,255,255,0.15)',
@@ -691,7 +730,30 @@ export default function App() {
               cursor: 'pointer'
             }}
           >
-            Clear Banner
+            End Session
+          </button>
+        </div>
+      )}
+
+      {/* ⌛ Session Expired Toast / Warning Banner */}
+      {sessionExpired && (
+        <div style={{
+          background: 'linear-gradient(135deg, #7F1D1D 0%, #991B1B 100%)',
+          color: '#FFFFFF',
+          padding: '10px 16px',
+          borderBottom: '2px solid #F87171',
+          display: 'flex',
+          justifyContent: 'space-between',
+          alignItems: 'center',
+          fontSize: '0.8rem',
+          fontWeight: 700
+        }}>
+          <span>⌛ <strong>Session Expired:</strong> Order complete ho chuka hai! Naya order karne ke liye table QR dubara scan karein.</span>
+          <button
+            onClick={() => setSessionExpired(false)}
+            style={{ background: 'transparent', border: 'none', color: '#FFFFFF', fontWeight: 900, cursor: 'pointer', fontSize: '1rem' }}
+          >
+            ✕
           </button>
         </div>
       )}
@@ -892,7 +954,7 @@ export default function App() {
                       lang={lang}
                       currencySymbol={info?.currency_symbol !== undefined ? info.currency_symbol : '₹'}
                       onClick={() => setSelectedDishModal(dish)}
-                      onAddToCart={(tableNum && (info?.direct_ordering_enabled === true || info?.direct_ordering_enabled === 1)) ? handleAddToCart : undefined}
+                      onAddToCart={(effectiveTableNum && (info?.direct_ordering_enabled === true || info?.direct_ordering_enabled === 1)) ? handleAddToCart : undefined}
                     />
                   ))}
                 </div>
@@ -909,7 +971,7 @@ export default function App() {
                       lang={lang}
                       currencySymbol={info?.currency_symbol !== undefined ? info.currency_symbol : '₹'}
                       onClick={() => setSelectedDishModal(dish)}
-                      onAddToCart={(tableNum && (info?.direct_ordering_enabled === true || info?.direct_ordering_enabled === 1)) ? handleAddToCart : undefined}
+                      onAddToCart={(effectiveTableNum && (info?.direct_ordering_enabled === true || info?.direct_ordering_enabled === 1)) ? handleAddToCart : undefined}
                     />
                   ))}
                 </div>
@@ -919,8 +981,8 @@ export default function App() {
         )}
       </main>
 
-      {/* 💬 / ⚡ Floating Order Button (Gated: Only visible when QR scanned with table number) */}
-      {tableNum && info && (info.direct_ordering_enabled || info.whatsapp_enabled) && (
+      {/* 💬 / ⚡ Floating Order Button (Gated: Only visible when QR scanned with table number and session active) */}
+      {effectiveTableNum && info && (info.direct_ordering_enabled || info.whatsapp_enabled) && (
         <div style={{
           position: 'fixed',
           bottom: '84px',
@@ -1050,8 +1112,8 @@ export default function App() {
                   </div>
                 </div>
 
-                {/* ⚡ 1-Click Direct Table Order Button (Only when QR scanned) */}
-                {tableNum && info && info.direct_ordering_enabled !== false && (
+                {/* ⚡ 1-Click Direct Table Order Button (Only when QR scanned and session active) */}
+                {effectiveTableNum && info && info.direct_ordering_enabled !== false && (
                   <button
                     onClick={handleSendDirectOrder}
                     disabled={placingOrder}

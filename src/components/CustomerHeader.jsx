@@ -52,8 +52,8 @@ export default function CustomerHeader({ info, lang, tableNum, onToggleLang, onO
 
         {/* Right Action Group: Table Indicator + ⭐ Google Review Button */}
         <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-          {/* Table Indicator */}
-          {tableNum && (
+          {/* Table Indicator / View-Only Badge */}
+          {tableNum ? (
             <span style={{
               fontSize: '0.7rem',
               fontWeight: 800,
@@ -68,6 +68,21 @@ export default function CustomerHeader({ info, lang, tableNum, onToggleLang, onO
             }}>
               <span style={{ width: '5px', height: '5px', borderRadius: '50%', backgroundColor: '#4ADE80' }} />
               T-#{tableNum}
+            </span>
+          ) : (
+            <span style={{
+              fontSize: '0.68rem',
+              fontWeight: 800,
+              color: '#E2E8F0',
+              background: 'rgba(255, 255, 255, 0.12)',
+              border: '1px solid rgba(255, 255, 255, 0.25)',
+              padding: '3px 8px',
+              borderRadius: 'var(--radius-pill)',
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: '4px'
+            }}>
+              📖 View Only Menu
             </span>
           )}
 
