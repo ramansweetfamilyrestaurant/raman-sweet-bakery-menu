@@ -344,4 +344,44 @@ router.post('/change-password', authenticateToken, async (req, res) => {
   }
 });
 
+// GET Live Orders for Tenant Restaurant
+router.get('/orders', authenticateToken, async (req, res) => {
+  try {
+    const restoId = req.user.restaurant_id || 1;
+    const orders = await query(
+      'SELECT * FROM orders WHERE restaurant_id = $1 ORDER BY id DESC LIMIT 100',
+      [restoId]
+    );
+
+    const formatted = orders.map(o => ({
+      ...o,
+      items: typeof o.items === 'string' ? JSON.parse(o.items) : o.items
+    }));
+
+    res.json(formatted);
+  } catch (err) {
+    console.error('Fetch orders error:', err);
+    res.status(500).json({ error: 'Failed to fetch orders' });
+  }
+});
+
+// PATCH Update Order Status
+router.patch('/orders/:id/status', authenticateToken, async (req, res) => {
+  try {
+    const restoId = req.user.restaurant_id || 1;
+    const { id } = req.params;
+    const { status } = req.body;
+
+    await query(
+      'UPDATE orders SET status = $1 WHERE id = $2 AND restaurant_id = $3',
+      [status, id, restoId]
+    );
+
+    res.json({ success: true, id, status });
+  } catch (err) {
+    console.error('Update order status error:', err);
+    res.status(500).json({ error: 'Failed to update order status' });
+  }
+});
+
 export default router;

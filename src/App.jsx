@@ -10,7 +10,7 @@ import BottomDock from './components/BottomDock';
 import Footer from './components/Footer';
 import DishFormModal from './components/Admin/DishFormModal';
 import CategoryFormModal from './components/Admin/CategoryFormModal';
-import { fetchRestaurantInfo, fetchCategories, fetchDishes, toggleDishAvailability, deleteDish } from './api/client';
+import { fetchRestaurantInfo, fetchCategories, fetchDishes, toggleDishAvailability, deleteDish, createDirectOrder } from './api/client';
 import { LayoutList, Grid, BookOpen, X, Sparkles, ShieldAlert, Phone, Plus, Edit3, Trash2, LogOut, Settings, Crown, CheckCircle, MessageSquare } from 'lucide-react';
 
 // Code Splitting (Lazy Loading): Super Admin & Admin JS chunks are loaded ONLY when requested!
@@ -117,6 +117,44 @@ export default function App() {
     msg += `\n*Total Amount:* ${info.currency_symbol || '₹'}${grandTotal}\n\nThank you!`;
     const targetPhone = phone.length === 10 ? `91${phone}` : phone;
     window.open(`https://wa.me/${targetPhone}?text=${encodeURIComponent(msg)}`, '_blank');
+  };
+
+  const [orderTableInput, setOrderTableInput] = useState(tableNum || '1');
+  const [customerNameInput, setCustomerNameInput] = useState('');
+  const [customerPhoneInput, setCustomerPhoneInput] = useState('');
+  const [orderSuccessModal, setOrderSuccessModal] = useState(null);
+  const [placingOrder, setPlacingOrder] = useState(false);
+
+  const handleSendDirectOrder = async () => {
+    if (cartItems.length === 0) return;
+    setPlacingOrder(true);
+    try {
+      const currentSlug = getSlugFromUrl() || (info && info.slug) || 'raman-sweet-bakery';
+      const itemsPayload = cartItems.map(({ dish, quantity }) => ({
+        dish_id: dish.id,
+        name: dish.name,
+        price: dish.price,
+        quantity
+      }));
+      const grandTotal = cartItems.reduce((sum, i) => sum + i.dish.price * i.quantity, 0);
+
+      const res = await createDirectOrder({
+        slug: currentSlug,
+        table_number: orderTableInput || '1',
+        customer_name: customerNameInput || 'Dine-In Customer',
+        customer_phone: customerPhoneInput || '',
+        items: itemsPayload,
+        total_amount: grandTotal
+      });
+
+      setOrderSuccessModal(res);
+      setCartItems([]);
+      setShowCartDrawer(false);
+    } catch (err) {
+      alert(err.message || 'Failed to place order.');
+    } finally {
+      setPlacingOrder(false);
+    }
   };
 
   // Extract restaurant slug from URL /r/:slug
@@ -862,30 +900,174 @@ export default function App() {
             )}
 
             {cartItems.length > 0 && (
-              <button
-                onClick={handleSendWhatsAppOrder}
-                style={{
-                  width: '100%',
-                  background: 'linear-gradient(135deg, #25D366 0%, #128C7E 100%)',
-                  color: '#FFFFFF',
-                  padding: '16px 20px',
-                  borderRadius: 'var(--radius-pill)',
-                  fontWeight: 900,
-                  fontSize: '1rem',
-                  border: '2px solid #FFFFFF',
-                  cursor: 'pointer',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  gap: '10px',
-                  boxShadow: '0 8px 28px rgba(37, 211, 102, 0.55)',
-                  marginTop: 'auto'
-                }}
-              >
-                <MessageSquare size={20} color="#FFFFFF" />
-                <span>SEND ORDER TO WHATSAPP ({info?.currency_symbol || '₹'}{cartItems.reduce((sum, i) => sum + i.dish.price * i.quantity, 0)})</span>
-              </button>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', marginTop: 'auto', borderTop: '1px solid var(--border-light)', paddingTop: '14px' }}>
+                {/* Table Number & Customer Name Inputs */}
+                <div style={{ display: 'flex', gap: '8px' }}>
+                  <div style={{ flex: 1 }}>
+                    <label style={{ fontSize: '0.72rem', fontWeight: 800, color: 'var(--text-muted)', display: 'block', marginBottom: '2px' }}>TABLE #</label>
+                    <input
+                      type="text"
+                      value={orderTableInput}
+                      onChange={(e) => setOrderTableInput(e.target.value)}
+                      placeholder="e.g. 4"
+                      style={{
+                        width: '100%',
+                        padding: '8px 12px',
+                        borderRadius: '10px',
+                        border: '1.5px solid var(--gold-border)',
+                        fontWeight: 900,
+                        fontSize: '0.9rem',
+                        boxSizing: 'border-box'
+                      }}
+                    />
+                  </div>
+
+                  <div style={{ flex: 2 }}>
+                    <label style={{ fontSize: '0.72rem', fontWeight: 800, color: 'var(--text-muted)', display: 'block', marginBottom: '2px' }}>NAME (OPTIONAL)</label>
+                    <input
+                      type="text"
+                      value={customerNameInput}
+                      onChange={(e) => setCustomerNameInput(e.target.value)}
+                      placeholder="Your Name"
+                      style={{
+                        width: '100%',
+                        padding: '8px 12px',
+                        borderRadius: '10px',
+                        border: '1.5px solid var(--border-light)',
+                        fontSize: '0.86rem',
+                        boxSizing: 'border-box'
+                      }}
+                    />
+                  </div>
+                </div>
+
+                {/* 1-Click Instant Direct Kitchen Order Button */}
+                <button
+                  onClick={handleSendDirectOrder}
+                  disabled={placingOrder}
+                  style={{
+                    width: '100%',
+                    background: 'linear-gradient(135deg, #059669 0%, #047857 100%)',
+                    color: '#FFFFFF',
+                    padding: '14px 18px',
+                    borderRadius: 'var(--radius-pill)',
+                    fontWeight: 900,
+                    fontSize: '0.96rem',
+                    border: 'none',
+                    cursor: placingOrder ? 'not-allowed' : 'pointer',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    gap: '8px',
+                    boxShadow: '0 6px 20px rgba(5, 150, 105, 0.45)',
+                    opacity: placingOrder ? 0.7 : 1
+                  }}
+                >
+                  <Sparkles size={18} color="#FDE047" />
+                  <span>{placingOrder ? 'Sending to Kitchen...' : `⚡ PLACE DIRECT KITCHEN ORDER (${info?.currency_symbol || '₹'}${cartItems.reduce((sum, i) => sum + i.dish.price * i.quantity, 0)})`}</span>
+                </button>
+
+                {/* WhatsApp Alternative Order Button */}
+                {info && info.whatsapp_enabled !== false && (
+                  <button
+                    onClick={handleSendWhatsAppOrder}
+                    style={{
+                      width: '100%',
+                      background: '#F0FDF4',
+                      color: '#15803D',
+                      padding: '10px 14px',
+                      borderRadius: 'var(--radius-pill)',
+                      fontWeight: 800,
+                      fontSize: '0.82rem',
+                      border: '1.5px solid #86EFAC',
+                      cursor: 'pointer',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      gap: '6px'
+                    }}
+                  >
+                    <MessageSquare size={16} color="#15803D" />
+                    <span>Or Send via WhatsApp</span>
+                  </button>
+                )}
+              </div>
             )}
+          </div>
+        </div>
+      )}
+
+      {/* 🎉 Direct Kitchen Order Success Confirmation Modal */}
+      {orderSuccessModal && (
+        <div style={{
+          position: 'fixed',
+          top: 0, left: 0, right: 0, bottom: 0,
+          background: 'rgba(0,0,0,0.85)',
+          backdropFilter: 'blur(10px)',
+          zIndex: 20000,
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          padding: '20px'
+        }}>
+          <div style={{
+            background: 'linear-gradient(135deg, #0A2315 0%, #143A24 100%)',
+            border: '2px solid var(--gold-bright)',
+            borderRadius: '24px',
+            maxWidth: '420px',
+            width: '100%',
+            padding: '30px 24px',
+            textAlign: 'center',
+            boxShadow: 'var(--shadow-gold)',
+            color: '#FFFFFF'
+          }}>
+            <div style={{
+              width: '64px', height: '64px',
+              borderRadius: '50%',
+              background: 'linear-gradient(135deg, #25D366 0%, #10B981 100%)',
+              color: '#FFFFFF',
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+              margin: '0 auto 16px',
+              fontSize: '2rem',
+              boxShadow: '0 8px 24px rgba(37, 211, 102, 0.5)'
+            }}>
+              ✓
+            </div>
+
+            <h2 style={{ fontSize: '1.4rem', fontWeight: 900, color: 'var(--gold-bright)', marginBottom: '8px' }}>
+              Order Placed Successfully!
+            </h2>
+
+            <div style={{ background: 'rgba(255,255,255,0.08)', borderRadius: '16px', padding: '16px', margin: '16px 0', border: '1px solid rgba(255,255,255,0.15)' }}>
+              <p style={{ fontSize: '1.1rem', fontWeight: 900, color: '#34D399', margin: '0 0 4px 0' }}>
+                Order #{orderSuccessModal.order_id} • Table #{orderSuccessModal.table_number}
+              </p>
+              <p style={{ fontSize: '0.82rem', color: '#D1D5DB', margin: 0 }}>
+                Status: <strong style={{ color: '#FBBF24' }}>Pending Kitchen Acceptance 🟡</strong>
+              </p>
+            </div>
+
+            <p style={{ fontSize: '0.86rem', color: '#E5E7EB', lineHeight: 1.5, marginBottom: '20px' }}>
+              Your order has been sent directly to the kitchen terminal! Our staff will prepare and serve it to your table shortly.
+            </p>
+
+            <button
+              onClick={() => setOrderSuccessModal(null)}
+              style={{
+                width: '100%',
+                background: 'linear-gradient(135deg, #EAB308 0%, #CA8A04 100%)',
+                color: '#0A2315',
+                padding: '14px',
+                borderRadius: 'var(--radius-pill)',
+                fontWeight: 900,
+                fontSize: '1rem',
+                border: 'none',
+                cursor: 'pointer',
+                boxShadow: 'var(--shadow-gold)'
+              }}
+            >
+              Great, Thanks!
+            </button>
           </div>
         </div>
       )}

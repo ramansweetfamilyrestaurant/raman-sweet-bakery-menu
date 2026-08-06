@@ -278,3 +278,31 @@ export async function fetchAuditLogs(token) {
   });
   return handleResponse(res, 'Failed to fetch audit logs');
 }
+
+export async function createDirectOrder(orderData) {
+  const res = await fetch(`${API_BASE}/orders`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(orderData),
+  });
+  return handleResponse(res, 'Failed to place order');
+}
+
+export async function fetchAdminOrders(token) {
+  const res = await fetch(`${API_BASE}/admin/orders`, {
+    headers: { Authorization: `Bearer ${token}` }
+  });
+  return handleResponse(res, 'Failed to fetch orders');
+}
+
+export async function updateOrderStatus(id, status, token) {
+  const res = await fetch(`${API_BASE}/admin/orders/${id}/status`, {
+    method: 'PATCH',
+    headers: {
+      'Content-Type': 'application/json',
+      Authorization: `Bearer ${token}`
+    },
+    body: JSON.stringify({ status })
+  });
+  return handleResponse(res, 'Failed to update order status');
+}

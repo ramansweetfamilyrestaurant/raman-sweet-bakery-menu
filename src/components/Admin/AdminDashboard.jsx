@@ -1,8 +1,8 @@
 import React, { useState, useEffect } from 'react';
-import { fetchCategories, fetchDishes, toggleDishAvailability, toggleCategoryActive, deleteDish, deleteCategory, fetchRestaurantInfo, updateDishPrice, fetchAnnouncements } from '../../api/client';
+import { fetchCategories, fetchDishes, toggleDishAvailability, toggleCategoryActive, deleteDish, deleteCategory, fetchRestaurantInfo, updateDishPrice, fetchAnnouncements, fetchAdminOrders, updateOrderStatus } from '../../api/client';
 import DishFormModal from './DishFormModal';
 import CategoryFormModal from './CategoryFormModal';
-import { Plus, Edit, Trash2, Eye, EyeOff, LogOut, ArrowLeft, Layers, Utensils, QrCode, Printer, Settings, Star, CheckCircle, Lock, ExternalLink, Megaphone, MessageSquare, Palette } from 'lucide-react';
+import { Plus, Edit, Trash2, Eye, EyeOff, LogOut, ArrowLeft, Layers, Utensils, QrCode, Printer, Settings, Star, CheckCircle, Lock, ExternalLink, Megaphone, MessageSquare, Palette, Sparkles, Clock, CheckCircle2, XCircle } from 'lucide-react';
 
 export default function AdminDashboard({ token, username, onLogout, onReturnToMenu }) {
   const [activeTab, setActiveTab] = useState('dishes'); // 'dishes', 'categories', 'qr-generator', 'settings'
@@ -18,6 +18,33 @@ export default function AdminDashboard({ token, username, onLogout, onReturnToMe
   // QR Code Generator State
   const [tableNumber, setTableNumber] = useState('1');
   const [qrGenerated, setQrGenerated] = useState(false);
+
+  // Live Orders (KOT) State
+  const [orders, setOrders] = useState([]);
+
+  const loadOrders = async () => {
+    try {
+      const data = await fetchAdminOrders(token);
+      setOrders(Array.isArray(data) ? data : []);
+    } catch (err) {
+      console.error('Failed to load orders:', err);
+    }
+  };
+
+  const handleUpdateStatus = async (orderId, newStatus) => {
+    try {
+      await updateOrderStatus(orderId, newStatus, token);
+      setOrders(orders.map(o => o.id === orderId ? { ...o, status: newStatus } : o));
+    } catch (err) {
+      alert(err.message || 'Failed to update order status');
+    }
+  };
+
+  useEffect(() => {
+    loadOrders();
+    const interval = setInterval(loadOrders, 5000);
+    return () => clearInterval(interval);
+  }, [token]);
 
   // Settings State
   const [settingsForm, setSettingsForm] = useState({
@@ -582,10 +609,10 @@ export default function AdminDashboard({ token, username, onLogout, onReturnToMe
           justifyContent: 'space-between'
         }}>
           {[
+            { id: 'orders', label: '🔔 KOT Orders', count: orders.filter(o => o.status === 'pending').length, icon: <Sparkles size={14} /> },
             { id: 'dishes', label: 'Dishes', count: safeDishes.length, icon: <Utensils size={14} /> },
             { id: 'categories', label: 'Cat', count: safeCategories.length, icon: <Layers size={14} /> },
             { id: 'qr-generator', label: 'QR Code', icon: <QrCode size={14} /> },
-            { id: 'review', label: 'Reviews', icon: <Star size={14} /> },
             { id: 'settings', label: 'Settings', icon: <Settings size={14} /> }
           ].map(tab => {
             const isActive = activeTab === tab.id;
@@ -680,6 +707,189 @@ export default function AdminDashboard({ token, username, onLogout, onReturnToMe
             <span style={{ fontSize: '1.1rem', fontWeight: 900, color: '#DC2626' }}>{safeDishes.filter(d => d.available === false).length}</span>
           </div>
         </div>
+
+        {/* 🔔 LIVE KITCHEN ORDERS TERMINAL (KOT) */}
+        {activeTab === 'orders' && (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '14px', marginBottom: '20px' }}>
+            <div style={{
+              background: '#FFFFFF',
+              borderRadius: '16px',
+              padding: '16px 20px',
+              border: '1.5px solid var(--gold-border)',
+              display: 'flex',
+              justifyContent: 'space-between',
+              alignItems: 'center',
+              boxShadow: 'var(--shadow-md)'
+            }}>
+              <div>
+                <h2 style={{ fontSize: '1.15rem', fontWeight: 900, color: 'var(--primary-emerald)', margin: 0, display: 'flex', alignItems: 'center', gap: '8px' }}>
+                  <Sparkles size={20} color="#D4AF37" /> Live Dine-In Kitchen Orders (KOT)
+                </h2>
+                <span style={{ fontSize: '0.78rem', color: 'var(--text-muted)' }}>
+                  Auto-refreshes every 5 seconds • Real-time table orders from customers
+                </span>
+              </div>
+              <button
+                onClick={loadOrders}
+                style={{
+                  background: 'var(--gold-primary)',
+                  color: '#0A2315',
+                  border: 'none',
+                  padding: '8px 14px',
+                  borderRadius: 'var(--radius-pill)',
+                  fontWeight: 900,
+                  fontSize: '0.78rem',
+                  cursor: 'pointer'
+                }}
+              >
+                🔄 Refresh Now
+              </button>
+            </div>
+
+            {orders.length === 0 ? (
+              <div style={{ textAlign: 'center', padding: '50px 20px', background: '#FFFFFF', borderRadius: '16px', border: '1px solid var(--border-light)' }}>
+                <Clock size={44} color="#9CA3AF" style={{ marginBottom: '12px' }} />
+                <h3 style={{ fontSize: '1rem', fontWeight: 800, color: 'var(--text-dark)', margin: '0 0 4px 0' }}>No Orders Received Yet</h3>
+                <p style={{ fontSize: '0.82rem', color: 'var(--text-muted)', margin: 0 }}>When customers place a table order from their phone, it will pop up here live!</p>
+              </div>
+            ) : (
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(320px, 1fr))', gap: '14px' }}>
+                {orders.map((o) => {
+                  const statusColors = {
+                    pending: { bg: '#FEF3C7', text: '#92400E', border: '#FCD34D', label: 'Pending 🟡' },
+                    preparing: { bg: '#DBEAFE', text: '#1E40AF', border: '#93C5FD', label: 'Preparing 👨‍🍳' },
+                    served: { bg: '#D1FAE5', text: '#065F46', border: '#6EE7B7', label: 'Served 🟢' },
+                    cancelled: { bg: '#FEE2E2', text: '#991B1B', border: '#FCA5A5', label: 'Cancelled 🔴' }
+                  };
+                  const st = statusColors[o.status] || statusColors.pending;
+
+                  return (
+                    <div
+                      key={o.id}
+                      style={{
+                        background: '#FFFFFF',
+                        borderRadius: '16px',
+                        padding: '16px',
+                        border: `2px solid ${st.border}`,
+                        boxShadow: '0 4px 16px rgba(0,0,0,0.06)',
+                        display: 'flex',
+                        flexDirection: 'column',
+                        justifyContent: 'space-between',
+                        gap: '12px'
+                      }}
+                    >
+                      <div>
+                        {/* Header: Table & Order ID */}
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px' }}>
+                          <span style={{
+                            background: 'linear-gradient(135deg, #0A2315 0%, #143A24 100%)',
+                            color: '#FFD700',
+                            fontWeight: 900,
+                            fontSize: '0.9rem',
+                            padding: '4px 12px',
+                            borderRadius: 'var(--radius-pill)',
+                            border: '1px solid #FFD700'
+                          }}>
+                            TABLE #{o.table_number || '1'}
+                          </span>
+
+                          <span style={{
+                            background: st.bg,
+                            color: st.text,
+                            fontSize: '0.78rem',
+                            fontWeight: 800,
+                            padding: '4px 10px',
+                            borderRadius: '12px',
+                            border: `1px solid ${st.border}`
+                          }}>
+                            {st.label}
+                          </span>
+                        </div>
+
+                        {/* Customer details & Time */}
+                        <div style={{ fontSize: '0.78rem', color: 'var(--text-muted)', marginBottom: '10px', display: 'flex', justifyContent: 'space-between' }}>
+                          <span>Order #{o.id} • {o.customer_name || 'Guest'}</span>
+                          <span>{new Date(o.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
+                        </div>
+
+                        {/* Items List */}
+                        <div style={{ background: '#F9FAFB', borderRadius: '12px', padding: '10px 12px', border: '1px solid #E5E7EB', marginBottom: '10px' }}>
+                          {Array.isArray(o.items) && o.items.map((item, iIdx) => (
+                            <div key={iIdx} style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.86rem', fontWeight: 700, color: '#1F2937', padding: '3px 0' }}>
+                              <span>{item.quantity}x {item.name}</span>
+                              <span style={{ color: 'var(--primary-emerald)' }}>₹{item.price * item.quantity}</span>
+                            </div>
+                          ))}
+                          <div style={{ borderTop: '1px dashed #D1D5DB', marginTop: '6px', paddingTop: '6px', display: 'flex', justifyContent: 'space-between', fontWeight: 900, fontSize: '0.92rem', color: '#111827' }}>
+                            <span>Total Bill</span>
+                            <span style={{ color: 'var(--gold-primary)' }}>₹{o.total_amount}</span>
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Action Buttons */}
+                      <div style={{ display: 'flex', gap: '6px' }}>
+                        {o.status === 'pending' && (
+                          <button
+                            onClick={() => handleUpdateStatus(o.id, 'preparing')}
+                            style={{
+                              flex: 1,
+                              background: '#2563EB',
+                              color: '#FFFFFF',
+                              border: 'none',
+                              padding: '8px',
+                              borderRadius: '10px',
+                              fontWeight: 800,
+                              fontSize: '0.76rem',
+                              cursor: 'pointer'
+                            }}
+                          >
+                            👨‍🍳 Start Preparing
+                          </button>
+                        )}
+                        {o.status !== 'served' && o.status !== 'cancelled' && (
+                          <button
+                            onClick={() => handleUpdateStatus(o.id, 'served')}
+                            style={{
+                              flex: 1,
+                              background: '#059669',
+                              color: '#FFFFFF',
+                              border: 'none',
+                              padding: '8px',
+                              borderRadius: '10px',
+                              fontWeight: 800,
+                              fontSize: '0.76rem',
+                              cursor: 'pointer'
+                            }}
+                          >
+                            ✅ Mark Served
+                          </button>
+                        )}
+                        {o.status !== 'cancelled' && (
+                          <button
+                            onClick={() => handleUpdateStatus(o.id, 'cancelled')}
+                            style={{
+                              background: '#FEE2E2',
+                              color: '#DC2626',
+                              border: 'none',
+                              padding: '8px 10px',
+                              borderRadius: '10px',
+                              fontWeight: 800,
+                              fontSize: '0.76rem',
+                              cursor: 'pointer'
+                            }}
+                          >
+                            Cancel
+                          </button>
+                        )}
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+          </div>
+        )}
 
         {/* Tab 1: Dishes Management */}
         {activeTab === 'dishes' && (

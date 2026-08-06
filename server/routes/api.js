@@ -212,4 +212,46 @@ router.get('/dishes', async (req, res) => {
   }
 });
 
+// POST Create Direct Table Order (KOT Order)
+router.post('/orders', async (req, res) => {
+  try {
+    const { slug, table_number, customer_name, customer_phone, items, total_amount } = req.body;
+    const resto = await resolveRestaurant(req, slug);
+    const targetId = resto?.id || 1;
+
+    if (!items || !Array.isArray(items) || items.length === 0) {
+      return res.status(400).json({ error: 'Order items are required' });
+    }
+
+    const itemsJson = typeof items === 'object' ? JSON.stringify(items) : items;
+
+    const result = await query(`
+      INSERT INTO orders (
+        restaurant_id, table_number, customer_name, customer_phone, items, total_amount, status
+      ) VALUES ($1, $2, $3, $4, $5, $6, $7) RETURNING id
+    `, [
+      targetId,
+      table_number || '1',
+      customer_name || 'Dine-In Customer',
+      customer_phone || '',
+      itemsJson,
+      total_amount || 0,
+      'pending'
+    ]);
+
+    const orderId = result[0]?.id || result.lastInsertRowid;
+
+    res.json({
+      success: true,
+      order_id: orderId,
+      status: 'pending',
+      table_number: table_number || '1',
+      message: `🎉 Order #${orderId} placed successfully for Table #${table_number || '1'}!`
+    });
+  } catch (err) {
+    console.error('Create order error:', err);
+    res.status(500).json({ error: 'Failed to place order' });
+  }
+});
+
 export default router;
