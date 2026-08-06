@@ -967,45 +967,31 @@ export default function SuperAdminDashboard({ token, username, onLogout, onRetur
                 />
               </div>
 
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '10px' }}>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
                 <div>
                   <label style={{ fontSize: '0.78rem', fontWeight: 800, color: 'var(--text-dark)', marginBottom: '4px', display: 'block' }}>
-                    SUBSCRIPTION TIER
+                    SUBSCRIPTION TIER PLAN
                   </label>
                   <select
                     value={form.plan_tier}
                     onChange={(e) => {
                       const tier = e.target.value;
-                      const plan = getPlanDetails(tier);
+                      const selectedPlan = (plansList || []).find(p => p.key === tier) || getPlanDetails(tier);
                       setForm({
                         ...form,
                         plan_tier: tier,
-                        plan_price: plan.price,
-                        whatsapp_enabled: plan.features.whatsapp_enabled,
-                        direct_ordering_enabled: plan.features.direct_ordering_enabled,
-                        google_reviews_enabled: plan.features.google_reviews_enabled
+                        plan_price: selectedPlan.price,
+                        whatsapp_enabled: selectedPlan.whatsapp_enabled !== false && selectedPlan.whatsapp_enabled !== 0,
+                        direct_ordering_enabled: selectedPlan.direct_ordering_enabled !== false && selectedPlan.direct_ordering_enabled !== 0,
+                        google_reviews_enabled: selectedPlan.google_reviews_enabled !== false && selectedPlan.google_reviews_enabled !== 0
                       });
                     }}
-                    style={{ width: '100%', padding: '11px 12px', borderRadius: '12px', border: '1.5px solid var(--border-light)', fontSize: '0.82rem', outline: 'none', fontWeight: 700 }}
+                    style={{ width: '100%', padding: '11px 14px', borderRadius: '12px', border: '1.5px solid var(--border-light)', fontSize: '0.86rem', outline: 'none', fontWeight: 700 }}
                   >
-                    {Object.values(SAAS_PLANS).map(p => (
-                      <option key={p.id} value={p.id}>{p.name} (₹{p.price}/mo)</option>
+                    {(plansList.length > 0 ? plansList : Object.values(SAAS_PLANS)).map(p => (
+                      <option key={p.key || p.id} value={p.key || p.id}>{p.name} (₹{p.price}/mo)</option>
                     ))}
                   </select>
-                </div>
-
-                <div>
-                  <label style={{ fontSize: '0.78rem', fontWeight: 800, color: 'var(--text-dark)', marginBottom: '4px', display: 'block' }}>
-                    CUSTOM PLAN PRICE (₹)
-                  </label>
-                  <input
-                    type="number"
-                    value={form.plan_price}
-                    onChange={(e) => setForm({ ...form, plan_price: e.target.value })}
-                    placeholder="999"
-                    required
-                    style={{ width: '100%', padding: '11px 12px', borderRadius: '12px', border: '1.5px solid var(--border-light)', fontSize: '0.86rem', outline: 'none', fontWeight: 800 }}
-                  />
                 </div>
 
                 <div>
@@ -1015,12 +1001,12 @@ export default function SuperAdminDashboard({ token, username, onLogout, onRetur
                   <select
                     value={form.theme_color}
                     onChange={(e) => setForm({ ...form, theme_color: e.target.value })}
-                    style={{ width: '100%', padding: '11px 12px', borderRadius: '12px', border: '1.5px solid var(--border-light)', fontSize: '0.82rem', outline: 'none', fontWeight: 700 }}
+                    style={{ width: '100%', padding: '11px 14px', borderRadius: '12px', border: '1.5px solid var(--border-light)', fontSize: '0.86rem', outline: 'none', fontWeight: 700 }}
                   >
-                    <option value="gold">Gold & Green</option>
-                    <option value="emerald">Emerald Mint</option>
-                    <option value="crimson">Ruby Red</option>
-                    <option value="navy">Midnight Navy</option>
+                    <option value="gold">Gold & Forest Green</option>
+                    <option value="emerald">Emerald Mint & Teal</option>
+                    <option value="crimson">Ruby Red & Gold</option>
+                    <option value="navy">Midnight Navy & Blue</option>
                   </select>
                 </div>
               </div>
@@ -1193,45 +1179,31 @@ export default function SuperAdminDashboard({ token, username, onLogout, onRetur
                 />
               </div>
 
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '10px' }}>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
                 <div>
                   <label style={{ fontSize: '0.78rem', fontWeight: 800, color: 'var(--text-dark)', marginBottom: '4px', display: 'block' }}>
-                    SUBSCRIPTION TIER
+                    SUBSCRIPTION TIER PLAN
                   </label>
                   <select
                     value={editModalData.plan_tier || 'pro'}
                     onChange={(e) => {
                       const tier = e.target.value;
-                      const plan = getPlanDetails(tier);
+                      const selectedPlan = (plansList || []).find(p => p.key === tier) || getPlanDetails(tier);
                       setEditModalData({
                         ...editModalData,
                         plan_tier: tier,
-                        plan_price: plan.price,
-                        whatsapp_enabled: plan.features.whatsapp_enabled,
-                        direct_ordering_enabled: plan.features.direct_ordering_enabled,
-                        google_reviews_enabled: plan.features.google_reviews_enabled
+                        plan_price: selectedPlan.price,
+                        whatsapp_enabled: selectedPlan.whatsapp_enabled !== false && selectedPlan.whatsapp_enabled !== 0,
+                        direct_ordering_enabled: selectedPlan.direct_ordering_enabled !== false && selectedPlan.direct_ordering_enabled !== 0,
+                        google_reviews_enabled: selectedPlan.google_reviews_enabled !== false && selectedPlan.google_reviews_enabled !== 0
                       });
                     }}
-                    style={{ width: '100%', padding: '11px 12px', borderRadius: '12px', border: '1.5px solid var(--border-light)', fontSize: '0.82rem', outline: 'none', fontWeight: 700 }}
+                    style={{ width: '100%', padding: '11px 14px', borderRadius: '12px', border: '1.5px solid var(--border-light)', fontSize: '0.86rem', outline: 'none', fontWeight: 700 }}
                   >
-                    {Object.values(SAAS_PLANS).map(p => (
-                      <option key={p.id} value={p.id}>{p.name} (Base ₹{p.price}/mo)</option>
+                    {(plansList.length > 0 ? plansList : Object.values(SAAS_PLANS)).map(p => (
+                      <option key={p.key || p.id} value={p.key || p.id}>{p.name} (₹{p.price}/mo)</option>
                     ))}
                   </select>
-                </div>
-
-                <div>
-                  <label style={{ fontSize: '0.78rem', fontWeight: 800, color: 'var(--text-dark)', marginBottom: '4px', display: 'block' }}>
-                    CUSTOM PLAN PRICE (₹)
-                  </label>
-                  <input
-                    type="number"
-                    value={editModalData.plan_price || 999}
-                    onChange={(e) => setEditModalData({ ...editModalData, plan_price: e.target.value })}
-                    placeholder="999"
-                    required
-                    style={{ width: '100%', padding: '11px 12px', borderRadius: '12px', border: '1.5px solid var(--border-light)', fontSize: '0.86rem', outline: 'none', fontWeight: 800 }}
-                  />
                 </div>
 
                 <div>
@@ -1241,12 +1213,12 @@ export default function SuperAdminDashboard({ token, username, onLogout, onRetur
                   <select
                     value={editModalData.theme_color || 'gold'}
                     onChange={(e) => setEditModalData({ ...editModalData, theme_color: e.target.value })}
-                    style={{ width: '100%', padding: '11px 12px', borderRadius: '12px', border: '1.5px solid var(--border-light)', fontSize: '0.82rem', outline: 'none', fontWeight: 700 }}
+                    style={{ width: '100%', padding: '11px 14px', borderRadius: '12px', border: '1.5px solid var(--border-light)', fontSize: '0.86rem', outline: 'none', fontWeight: 700 }}
                   >
-                    <option value="gold">Gold & Green</option>
-                    <option value="emerald">Emerald Mint</option>
-                    <option value="crimson">Ruby Red</option>
-                    <option value="navy">Midnight Navy</option>
+                    <option value="gold">Gold & Forest Green</option>
+                    <option value="emerald">Emerald Mint & Teal</option>
+                    <option value="crimson">Ruby Red & Gold</option>
+                    <option value="navy">Midnight Navy & Blue</option>
                   </select>
                 </div>
               </div>
