@@ -136,6 +136,19 @@ router.delete('/categories/:id', authenticateToken, async (req, res) => {
   }
 });
 
+router.patch('/categories/:id/toggle', authenticateToken, async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { active } = req.body;
+    const activeVal = active ? 1 : 0;
+    await query('UPDATE categories SET active = $1 WHERE id = $2', [activeVal, id]);
+    res.json({ success: true });
+  } catch (err) {
+    console.error('Toggle category error:', err);
+    res.status(500).json({ error: 'Failed to toggle category' });
+  }
+});
+
 // Dish Management (Protected)
 router.post('/dishes', authenticateToken, async (req, res) => {
   try {

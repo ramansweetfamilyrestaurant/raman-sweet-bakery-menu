@@ -38,7 +38,13 @@ router.get('/info', (req, res) => {
 // Get Categories
 router.get('/categories', async (req, res) => {
   try {
-    const categories = await query('SELECT * FROM categories ORDER BY sort_order ASC, id ASC');
+    const { admin_view } = req.query;
+    let sql = 'SELECT * FROM categories';
+    if (!admin_view) {
+      sql += ' WHERE active IS NOT FALSE';
+    }
+    sql += ' ORDER BY sort_order ASC, id ASC';
+    const categories = await query(sql);
     res.json(categories);
   } catch (err) {
     console.error('Error fetching categories:', err);
@@ -59,9 +65,9 @@ router.get('/dishes', async (req, res) => {
     `;
     const params = [];
 
-    // By default, customer view only sees available dishes
+    // By default, customer view only sees available dishes in active categories
     if (!admin_view) {
-      sql += ` AND d.available IS TRUE`;
+      sql += ` AND d.available IS TRUE AND (c.active IS NOT FALSE OR c.id IS NULL)`;
     }
 
     if (category_id && category_id !== 'all') {

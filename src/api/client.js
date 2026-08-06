@@ -95,6 +95,20 @@ export async function deleteCategory(id, token) {
   return data;
 }
 
+export async function toggleCategoryActive(id, active, token) {
+  const res = await fetch(`${API_BASE}/admin/categories/${id}/toggle`, {
+    method: 'PATCH',
+    headers: {
+      'Content-Type': 'application/json',
+      Authorization: `Bearer ${token}`,
+    },
+    body: JSON.stringify({ active }),
+  });
+  const data = await res.json();
+  if (!res.ok) throw new Error(data.error || 'Failed to toggle category active status');
+  return data;
+}
+
 export async function createDish(dishData, token) {
   const res = await fetch(`${API_BASE}/admin/dishes`, {
     method: 'POST',

@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { fetchCategories, fetchDishes, toggleDishAvailability, deleteDish, deleteCategory, fetchRestaurantInfo, updateDishPrice } from '../../api/client';
+import { fetchCategories, fetchDishes, toggleDishAvailability, toggleCategoryActive, deleteDish, deleteCategory, fetchRestaurantInfo, updateDishPrice } from '../../api/client';
 import DishFormModal from './DishFormModal';
 import CategoryFormModal from './CategoryFormModal';
 import { Plus, Edit, Trash2, Eye, EyeOff, LogOut, ArrowLeft, Layers, Utensils, QrCode, Printer, Settings, Star, CheckCircle, Lock, ExternalLink } from 'lucide-react';
@@ -126,6 +126,15 @@ export default function AdminDashboard({ token, username, onLogout, onReturnToMe
       loadData();
     } catch (err) {
       alert('Failed to delete category');
+    }
+  };
+
+  const handleToggleCategory = async (catId, currentActive) => {
+    try {
+      await toggleCategoryActive(catId, !currentActive, token);
+      setCategories(categories.map(c => c.id === catId ? { ...c, active: !currentActive } : c));
+    } catch (err) {
+      alert('Failed to update category status');
     }
   };
 
@@ -756,11 +765,28 @@ export default function AdminDashboard({ token, username, onLogout, onReturnToMe
                     </div>
                   </div>
 
-                  <div style={{ display: 'flex', gap: '8px' }}>
-                    <button onClick={() => setCatModalData(cat)} style={{ color: 'var(--primary-emerald)', padding: '4px' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    <button
+                      onClick={() => handleToggleCategory(cat.id, cat.active !== false)}
+                      style={{
+                        padding: '4px 10px',
+                        borderRadius: 'var(--radius-pill)',
+                        fontSize: '0.72rem',
+                        fontWeight: 800,
+                        background: cat.active !== false ? '#DCFCE7' : '#FEE2E2',
+                        color: cat.active !== false ? '#15803D' : '#DC2626',
+                        border: cat.active !== false ? '1px solid #86EFAC' : '1px solid #FCA5A5',
+                        cursor: 'pointer'
+                      }}
+                    >
+                      {cat.active !== false ? '● Active' : '● Hidden'}
+                    </button>
+
+                    <button onClick={() => setCatModalData(cat)} style={{ color: 'var(--primary-emerald)', padding: '5px', background: '#F3F4F6', borderRadius: '6px', border: 'none', cursor: 'pointer' }} title="Edit Category">
                       <Edit size={16} />
                     </button>
-                    <button onClick={() => handleDeleteCategory(cat.id)} style={{ color: '#EF4444', padding: '4px' }}>
+
+                    <button onClick={() => handleDeleteCategory(cat.id)} style={{ color: '#EF4444', padding: '5px', background: '#FEE2E2', borderRadius: '6px', border: 'none', cursor: 'pointer' }} title="Delete Category">
                       <Trash2 size={16} />
                     </button>
                   </div>
