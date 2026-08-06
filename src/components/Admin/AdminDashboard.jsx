@@ -143,6 +143,141 @@ export default function AdminDashboard({ token, username, onLogout, onReturnToMe
     }
   };
 
+  const handlePrintQR = () => {
+    const liveOrigin = window.location.origin.includes('localhost') 
+      ? 'https://raman-sweet-bakery-menu.onrender.com' 
+      : window.location.origin;
+    const targetUrl = `${liveOrigin}/?table=${tableNumber || '1'}`;
+    const qrImgUrl = `https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=${encodeURIComponent(targetUrl)}`;
+
+    const printWindow = window.open('', '_blank', 'width=800,height=900');
+    if (!printWindow) {
+      alert('Please allow popups for this site to print the QR Standee.');
+      return;
+    }
+    printWindow.document.write(`
+      <!DOCTYPE html>
+      <html>
+        <head>
+          <title>Table Standee QR - Table ${tableNumber || '1'}</title>
+          <style>
+            @import url('https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700;800;900&family=Plus+Jakarta+Sans:wght@600;700;800&display=swap');
+            body {
+              margin: 0;
+              padding: 40px;
+              background-color: #FFFFFF;
+              font-family: 'Plus Jakarta Sans', sans-serif;
+              display: flex;
+              justify-content: center;
+              align-items: center;
+              min-height: 100vh;
+            }
+            .standee-card {
+              width: 340px;
+              padding: 32px 24px;
+              border: 3px double #C5A059;
+              border-radius: 24px;
+              background: linear-gradient(180deg, #FFFFFF 0%, #FAF8F5 100%);
+              text-align: center;
+              box-shadow: 0 10px 30px rgba(10, 35, 21, 0.1);
+              position: relative;
+            }
+            .table-badge {
+              display: inline-block;
+              background: #0A2315;
+              color: #DFBA67;
+              padding: 6px 22px;
+              border-radius: 9999px;
+              font-size: 1.05rem;
+              font-weight: 800;
+              border: 1.5px solid #C5A059;
+              letter-spacing: 1px;
+              margin-bottom: 16px;
+            }
+            .logo-title {
+              font-family: 'Playfair Display', serif;
+              font-size: 1.45rem;
+              font-weight: 900;
+              color: #0A2315;
+              margin: 0 0 4px 0;
+            }
+            .subtitle {
+              font-size: 0.76rem;
+              font-weight: 800;
+              color: #15803D;
+              letter-spacing: 0.5px;
+              margin-bottom: 16px;
+              text-transform: uppercase;
+            }
+            .qr-box {
+              background: #FFFFFF;
+              padding: 16px;
+              border-radius: 16px;
+              border: 1px solid #E5E7EB;
+              display: inline-block;
+              box-shadow: 0 4px 12px rgba(0,0,0,0.06);
+              margin-bottom: 16px;
+            }
+            .qr-box img {
+              width: 200px;
+              height: 200px;
+              display: block;
+            }
+            .instruction-en {
+              font-size: 0.88rem;
+              font-weight: 800;
+              color: #0A2315;
+              margin-bottom: 4px;
+            }
+            .instruction-hi {
+              font-size: 0.82rem;
+              font-weight: 700;
+              color: #666157;
+              margin-bottom: 16px;
+            }
+            .footer-info {
+              font-size: 0.72rem;
+              font-weight: 700;
+              color: #B88E3E;
+              border-top: 1px dashed rgba(197, 160, 89, 0.4);
+              padding-top: 12px;
+            }
+            @media print {
+              body { padding: 0; background: none; }
+              .standee-card { box-shadow: none; page-break-inside: avoid; }
+            }
+          </style>
+        </head>
+        <body>
+          <div class="standee-card">
+            <div class="table-badge">TABLE NO. ${tableNumber || '1'}</div>
+            <h1 class="logo-title">Raman Sweet Bakery</h1>
+            <div class="subtitle">100% Pure Veg • Pure Desi Ghee Sweets • Live Bakery</div>
+
+            <div class="qr-box">
+              <img src="${qrImgUrl}" alt="Table ${tableNumber || '1'} QR Code" />
+            </div>
+
+            <div class="instruction-en">📱 SCAN FOR DIGITAL MENU & ORDER</div>
+            <div class="instruction-hi">स्कैन करें और डिजिटल मेन्यू देखें</div>
+
+            <div class="footer-info">
+              Raman Sweet Bakery & Family Restaurant • Phone: +91 9708366583
+            </div>
+          </div>
+          <script>
+            window.onload = function() {
+              setTimeout(function() {
+                window.print();
+              }, 500);
+            };
+          </script>
+        </body>
+      </html>
+    `);
+    printWindow.document.close();
+  };
+
   const handleSaveDish = async (dishData) => {
     const isEdit = Boolean(dishModalData?.id);
     const url = isEdit ? `/api/admin/dishes/${dishModalData.id}` : '/api/admin/dishes';
@@ -891,32 +1026,34 @@ export default function AdminDashboard({ token, username, onLogout, onReturnToMe
                 marginBottom: '14px'
               }}>
                 <img
-                  src={`https://api.qrserver.com/v1/create-qr-code/?size=180x180&data=http://localhost:5000/?table=${tableNumber}`}
-                  alt={`Table ${tableNumber} QR Code`}
+                  src={`https://api.qrserver.com/v1/create-qr-code/?size=220x220&data=${encodeURIComponent((window.location.origin.includes('localhost') ? 'https://raman-sweet-bakery-menu.onrender.com' : window.location.origin) + '/?table=' + (tableNumber || '1'))}`}
+                  alt={`Table ${tableNumber || '1'} QR Code`}
                   style={{ width: '160px', height: '160px', display: 'block' }}
                 />
               </div>
 
               <p style={{ fontSize: '0.78rem', fontWeight: 800, color: 'var(--primary-emerald)' }}>
-                SCAN TO VIEW DIGITAL MENU
+                SCAN TO VIEW DIGITAL MENU (TABLE {tableNumber || '1'})
               </p>
 
               <button
-                onClick={() => window.print()}
+                onClick={handlePrintQR}
                 style={{
                   marginTop: '16px',
                   background: 'var(--primary-emerald)',
                   color: '#FFFFFF',
-                  padding: '8px 20px',
+                  padding: '10px 22px',
                   borderRadius: 'var(--radius-pill)',
-                  fontSize: '0.82rem',
-                  fontWeight: 700,
+                  fontSize: '0.85rem',
+                  fontWeight: 800,
                   display: 'inline-flex',
                   alignItems: 'center',
-                  gap: '6px'
+                  gap: '8px',
+                  boxShadow: 'var(--shadow-gold)',
+                  cursor: 'pointer'
                 }}
               >
-                <Printer size={15} /> Print Table Sticker
+                <Printer size={16} /> Print Table Standee Sticker
               </button>
             </div>
           </div>
