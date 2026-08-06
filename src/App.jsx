@@ -892,7 +892,7 @@ export default function App() {
                       lang={lang}
                       currencySymbol={info?.currency_symbol !== undefined ? info.currency_symbol : '₹'}
                       onClick={() => setSelectedDishModal(dish)}
-                      onAddToCart={(info?.direct_ordering_enabled === true || info?.direct_ordering_enabled === 1) ? handleAddToCart : undefined}
+                      onAddToCart={(tableNum && (info?.direct_ordering_enabled === true || info?.direct_ordering_enabled === 1)) ? handleAddToCart : undefined}
                     />
                   ))}
                 </div>
@@ -909,7 +909,7 @@ export default function App() {
                       lang={lang}
                       currencySymbol={info?.currency_symbol !== undefined ? info.currency_symbol : '₹'}
                       onClick={() => setSelectedDishModal(dish)}
-                      onAddToCart={(info?.direct_ordering_enabled === true || info?.direct_ordering_enabled === 1) ? handleAddToCart : undefined}
+                      onAddToCart={(tableNum && (info?.direct_ordering_enabled === true || info?.direct_ordering_enabled === 1)) ? handleAddToCart : undefined}
                     />
                   ))}
                 </div>
@@ -919,8 +919,8 @@ export default function App() {
         )}
       </main>
 
-      {/* 💬 / ⚡ Floating Order Button (Gated by Super Admin Feature Control Matrix) */}
-      {info && (info.direct_ordering_enabled || info.whatsapp_enabled) && (
+      {/* 💬 / ⚡ Floating Order Button (Gated: Only visible when QR scanned with table number) */}
+      {tableNum && info && (info.direct_ordering_enabled || info.whatsapp_enabled) && (
         <div style={{
           position: 'fixed',
           bottom: '84px',
@@ -1050,8 +1050,8 @@ export default function App() {
                   </div>
                 </div>
 
-                {/* ⚡ 1-Click Direct Table Order Button (Gated by Super Admin) */}
-                {info && info.direct_ordering_enabled !== false && (
+                {/* ⚡ 1-Click Direct Table Order Button (Only when QR scanned) */}
+                {tableNum && info && info.direct_ordering_enabled !== false && (
                   <button
                     onClick={handleSendDirectOrder}
                     disabled={placingOrder}
