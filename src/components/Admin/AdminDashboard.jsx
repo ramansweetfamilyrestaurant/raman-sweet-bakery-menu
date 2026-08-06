@@ -505,119 +505,140 @@ export default function AdminDashboard({ token, username, onLogout, onReturnToMe
                     border: '1px solid var(--border-light)',
                     display: 'flex',
                     flexDirection: 'column',
-                    gap: '8px'
+                    gap: '10px',
+                    boxShadow: 'var(--shadow-sm)'
                   }}>
+                    {/* Top Row: Dish Metadata & Master Controls */}
                     <div style={{
                       display: 'flex',
                       alignItems: 'center',
                       justifyContent: 'space-between',
-                      gap: '8px',
-                      flexWrap: 'wrap'
+                      gap: '8px'
                     }}>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexGrow: 1, minWidth: 0, overflow: 'hidden' }}>
-                        <img src={dish.image || '/uploads/logo.jpg'} alt="" style={{ width: '38px', height: '38px', borderRadius: 'var(--radius-sm)', objectFit: 'cover', flexShrink: 0 }} />
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flexGrow: 1, minWidth: 0, overflow: 'hidden' }}>
+                        <img src={dish.image || '/uploads/logo.jpg'} alt="" style={{ width: '42px', height: '42px', borderRadius: 'var(--radius-sm)', objectFit: 'cover', flexShrink: 0 }} />
                         <div style={{ minWidth: 0 }}>
-                          <h4 style={{ fontSize: '0.85rem', fontWeight: 700, color: 'var(--primary-emerald)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{dish.name}</h4>
-                          <span style={{ fontSize: '0.74rem', color: 'var(--text-muted)' }}>
-                            {dish.category_name || 'Category'} • {dish.price_half ? `Half ₹${Math.round(dish.price_half)} | Full ₹${Math.round(dish.price)}` : `₹${Math.round(dish.price)}`}
+                          <h4 style={{ fontSize: '0.88rem', fontWeight: 800, color: 'var(--primary-emerald)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{dish.name}</h4>
+                          <span style={{ fontSize: '0.74rem', color: 'var(--text-muted)', fontWeight: 600 }}>
+                            {dish.category_name || 'Category'} • {dish.price_half ? `Half ${Math.round(dish.price_half)} | Full ${Math.round(dish.price)}` : `${Math.round(dish.price)}`}
                           </span>
                         </div>
                       </div>
 
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '4px', flexShrink: 0, flexWrap: 'wrap' }}>
-                        {/* Quick 1-Click Price Editor Toggle Button */}
-                        <button
-                          onClick={() => {
-                            if (isEditingThisPrice) {
-                              setEditingPriceId(null);
-                            } else {
-                              setEditingPriceId(dish.id);
-                              setQuickPriceVal({ price: Math.round(dish.price), price_half: dish.price_half ? Math.round(dish.price_half) : '' });
-                            }
-                          }}
-                          style={{
-                            padding: '4px 8px',
-                            borderRadius: 'var(--radius-pill)',
-                            fontSize: '0.72rem',
-                            fontWeight: 700,
-                            background: isEditingThisPrice ? '#FEF3C7' : '#F3F4F6',
-                            color: isEditingThisPrice ? '#D97706' : '#1F2937',
-                            border: '1px solid #D1D5DB'
-                          }}
-                        >
-                          ⚡ Quick Price
-                        </button>
-
-                        {/* ⭐ Must Try Toggle */}
-                        <button
-                          onClick={() => handleToggleBadge(dish, 'Must Try')}
-                          style={{
-                            padding: '4px 7px',
-                            borderRadius: 'var(--radius-pill)',
-                            fontSize: '0.7rem',
-                            fontWeight: 700,
-                            background: dish.badge === 'Must Try' ? '#FEF3C7' : '#F3F4F6',
-                            color: dish.badge === 'Must Try' ? '#D97706' : '#4B5563',
-                            border: dish.badge === 'Must Try' ? '1px solid #F59E0B' : '1px solid #D1D5DB'
-                          }}
-                        >
-                          ⭐ Must Try
-                        </button>
-
-                        {/* 🍱 Combo Toggle */}
-                        <button
-                          onClick={() => handleToggleBadge(dish, 'Combo')}
-                          style={{
-                            padding: '4px 7px',
-                            borderRadius: 'var(--radius-pill)',
-                            fontSize: '0.7rem',
-                            fontWeight: 700,
-                            background: dish.badge === 'Combo' ? '#DBEAFE' : '#F3F4F6',
-                            color: dish.badge === 'Combo' ? '#1D4ED8' : '#4B5563',
-                            border: dish.badge === 'Combo' ? '1px solid #3B82F6' : '1px solid #D1D5DB'
-                          }}
-                        >
-                          🍱 Combo
-                        </button>
-
-                        {/* ✨ Special Toggle */}
-                        <button
-                          onClick={() => handleToggleBadge(dish, 'Special')}
-                          style={{
-                            padding: '4px 7px',
-                            borderRadius: 'var(--radius-pill)',
-                            fontSize: '0.7rem',
-                            fontWeight: 700,
-                            background: dish.badge === 'Special' ? '#FCE7F3' : '#F3F4F6',
-                            color: dish.badge === 'Special' ? '#BE185D' : '#4B5563',
-                            border: dish.badge === 'Special' ? '1px solid #EC4899' : '1px solid #D1D5DB'
-                          }}
-                        >
-                          ✨ Special
-                        </button>
-
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flexShrink: 0 }}>
                         <button
                           onClick={() => handleToggleDish(dish.id, dish.available)}
                           style={{
-                            padding: '4px 10px',
+                            padding: '4px 9px',
                             borderRadius: 'var(--radius-pill)',
                             fontSize: '0.72rem',
-                            fontWeight: 700,
+                            fontWeight: 800,
                             background: dish.available !== false ? '#DCFCE7' : '#FEE2E2',
-                            color: dish.available !== false ? '#15803D' : '#DC2626'
+                            color: dish.available !== false ? '#15803D' : '#DC2626',
+                            border: dish.available !== false ? '1px solid #86EFAC' : '1px solid #FCA5A5'
                           }}
                         >
                           {dish.available !== false ? '● Active' : '● Hidden'}
                         </button>
 
-                        <button onClick={() => setDishModalData(dish)} style={{ color: 'var(--primary-emerald)', padding: '4px' }} title="Full Edit">
-                          <Edit size={16} />
+                        <button onClick={() => setDishModalData(dish)} style={{ color: 'var(--primary-emerald)', padding: '5px', background: '#F3F4F6', borderRadius: '6px', border: 'none', cursor: 'pointer' }} title="Full Edit">
+                          <Edit size={15} />
                         </button>
 
-                        <button onClick={() => handleDeleteDish(dish.id)} style={{ color: '#EF4444', padding: '4px' }} title="Delete Dish">
-                          <Trash2 size={16} />
+                        <button onClick={() => handleDeleteDish(dish.id)} style={{ color: '#EF4444', padding: '5px', background: '#FEE2E2', borderRadius: '6px', border: 'none', cursor: 'pointer' }} title="Delete Dish">
+                          <Trash2 size={15} />
                         </button>
                       </div>
+                    </div>
+
+                    {/* Bottom Row: Quick Action Toolbar (Quick Price & Preset Badges) */}
+                    <div style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '6px',
+                      overflowX: 'auto',
+                      scrollbarWidth: 'none',
+                      paddingTop: '6px',
+                      borderTop: '1px solid #F3F4F6'
+                    }}>
+                      {/* Quick 1-Click Price Editor Toggle Button */}
+                      <button
+                        onClick={() => {
+                          if (isEditingThisPrice) {
+                            setEditingPriceId(null);
+                          } else {
+                            setEditingPriceId(dish.id);
+                            setQuickPriceVal({ price: Math.round(dish.price), price_half: dish.price_half ? Math.round(dish.price_half) : '' });
+                          }
+                        }}
+                        style={{
+                          padding: '4px 9px',
+                          borderRadius: 'var(--radius-pill)',
+                          fontSize: '0.7rem',
+                          fontWeight: 800,
+                          background: isEditingThisPrice ? '#FEF3C7' : '#F3F4F6',
+                          color: isEditingThisPrice ? '#D97706' : '#1F2937',
+                          border: '1px solid #D1D5DB',
+                          whiteSpace: 'nowrap',
+                          cursor: 'pointer'
+                        }}
+                      >
+                        ⚡ Quick Price
+                      </button>
+
+                      {/* ⭐ Must Try Toggle */}
+                      <button
+                        onClick={() => handleToggleBadge(dish, 'Must Try')}
+                        style={{
+                          padding: '4px 8px',
+                          borderRadius: 'var(--radius-pill)',
+                          fontSize: '0.7rem',
+                          fontWeight: 800,
+                          background: dish.badge === 'Must Try' ? '#FEF3C7' : '#FFFFFF',
+                          color: dish.badge === 'Must Try' ? '#D97706' : '#4B5563',
+                          border: dish.badge === 'Must Try' ? '1px solid #F59E0B' : '1px solid #E5E7EB',
+                          whiteSpace: 'nowrap',
+                          cursor: 'pointer'
+                        }}
+                      >
+                        ⭐ Must Try
+                      </button>
+
+                      {/* 🍱 Combo Toggle */}
+                      <button
+                        onClick={() => handleToggleBadge(dish, 'Combo')}
+                        style={{
+                          padding: '4px 8px',
+                          borderRadius: 'var(--radius-pill)',
+                          fontSize: '0.7rem',
+                          fontWeight: 800,
+                          background: dish.badge === 'Combo' ? '#DBEAFE' : '#FFFFFF',
+                          color: dish.badge === 'Combo' ? '#1D4ED8' : '#4B5563',
+                          border: dish.badge === 'Combo' ? '1px solid #3B82F6' : '1px solid #E5E7EB',
+                          whiteSpace: 'nowrap',
+                          cursor: 'pointer'
+                        }}
+                      >
+                        🍱 Combo
+                      </button>
+
+                      {/* ✨ Special Toggle */}
+                      <button
+                        onClick={() => handleToggleBadge(dish, 'Special')}
+                        style={{
+                          padding: '4px 8px',
+                          borderRadius: 'var(--radius-pill)',
+                          fontSize: '0.7rem',
+                          fontWeight: 800,
+                          background: dish.badge === 'Special' ? '#FCE7F3' : '#FFFFFF',
+                          color: dish.badge === 'Special' ? '#BE185D' : '#4B5563',
+                          border: dish.badge === 'Special' ? '1px solid #EC4899' : '1px solid #E5E5E5',
+                          whiteSpace: 'nowrap',
+                          cursor: 'pointer'
+                        }}
+                      >
+                        ✨ Special
+                      </button>
                     </div>
 
                     {/* Inline Quick Price Editing Row */}
@@ -635,23 +656,23 @@ export default function AdminDashboard({ token, username, onLogout, onReturnToMe
                         <span style={{ fontSize: '0.75rem', fontWeight: 800, color: '#92400E' }}>⚡ Quick Price:</span>
                         
                         <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
-                          <label style={{ fontSize: '0.72rem', fontWeight: 700, color: '#78350F' }}>Full ₹</label>
+                          <label style={{ fontSize: '0.72rem', fontWeight: 700, color: '#78350F' }}>Full</label>
                           <input
                             type="number"
                             value={quickPriceVal.price}
                             onChange={(e) => setQuickPriceVal({ ...quickPriceVal, price: e.target.value })}
-                            style={{ width: '60px', padding: '3px 6px', borderRadius: '4px', border: '1px solid #F59E0B', fontSize: '0.8rem', fontWeight: 700 }}
+                            style={{ width: '65px', padding: '4px 6px', borderRadius: '4px', border: '1px solid #F59E0B', fontSize: '0.82rem', fontWeight: 800 }}
                           />
                         </div>
 
                         <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
-                          <label style={{ fontSize: '0.72rem', fontWeight: 700, color: '#78350F' }}>Half ₹</label>
+                          <label style={{ fontSize: '0.72rem', fontWeight: 700, color: '#78350F' }}>Half</label>
                           <input
                             type="number"
                             value={quickPriceVal.price_half}
                             onChange={(e) => setQuickPriceVal({ ...quickPriceVal, price_half: e.target.value })}
-                            placeholder="Optional"
-                            style={{ width: '60px', padding: '3px 6px', borderRadius: '4px', border: '1px solid #F59E0B', fontSize: '0.8rem', fontWeight: 700 }}
+                            placeholder="Opt"
+                            style={{ width: '65px', padding: '4px 6px', borderRadius: '4px', border: '1px solid #F59E0B', fontSize: '0.82rem', fontWeight: 800 }}
                           />
                         </div>
 
@@ -660,14 +681,30 @@ export default function AdminDashboard({ token, username, onLogout, onReturnToMe
                           style={{
                             background: '#D97706',
                             color: '#FFFFFF',
-                            padding: '3px 12px',
+                            padding: '4px 12px',
                             borderRadius: 'var(--radius-pill)',
                             fontSize: '0.75rem',
                             fontWeight: 800,
-                            border: 'none'
+                            border: 'none',
+                            cursor: 'pointer'
                           }}
                         >
-                          ✓ Save Price
+                          ✓ Save
+                        </button>
+
+                        <button
+                          onClick={() => setEditingPriceId(null)}
+                          style={{
+                            background: 'transparent',
+                            color: '#78350F',
+                            padding: '4px 8px',
+                            fontSize: '0.75rem',
+                            fontWeight: 700,
+                            border: 'none',
+                            cursor: 'pointer'
+                          }}
+                        >
+                          Cancel
                         </button>
                       </div>
                     )}
