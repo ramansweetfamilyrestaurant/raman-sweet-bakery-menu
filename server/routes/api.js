@@ -84,7 +84,7 @@ router.get('/info', async (req, res) => {
         google_reviews_enabled: resto.google_reviews_enabled !== 0 && resto.google_reviews_enabled !== false,
         theme_color: resto.theme_color || 'gold',
         scan_count: resto.scan_count || 0,
-        active: resto.active !== false
+        active: (resto.active === 1 || resto.active === true || resto.active === '1')
       });
     }
   } catch (err) {

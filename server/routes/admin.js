@@ -56,8 +56,16 @@ router.post('/login', async (req, res) => {
       return res.status(401).json({ error: 'Invalid credentials' });
     }
 
-    const restoRes = await query('SELECT slug FROM restaurants WHERE id = $1', [admin.restaurant_id || 1]);
-    const slug = restoRes[0]?.slug || 'raman-sweet-bakery';
+    const restoRes = await query('SELECT slug, active, name FROM restaurants WHERE id = $1', [admin.restaurant_id || 1]);
+    const resto = restoRes[0];
+    const slug = resto?.slug || 'raman-sweet-bakery';
+    const isActive = (resto?.active === 1 || resto?.active === true || resto?.active === '1');
+
+    if (!isActive && admin.role !== 'superadmin') {
+      return res.status(403).json({
+        error: `🚫 Account Suspended: '${resto?.name || 'Restaurant'}' subscription is currently suspended. Please contact SaaS Master to renew subscription.`
+      });
+    }
 
     const token = jwt.sign(
       { id: admin.id, username: admin.username, restaurant_id: admin.restaurant_id || 1, role: admin.role || 'restaurant_admin' },
