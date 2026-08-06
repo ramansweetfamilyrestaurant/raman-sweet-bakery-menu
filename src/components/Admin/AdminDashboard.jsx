@@ -779,6 +779,7 @@ export default function AdminDashboard({ token, username, onLogout, onReturnToMe
         }}>
           {[
             ...(restaurantInfo && (restaurantInfo.direct_ordering_enabled === false || restaurantInfo.direct_ordering_enabled === 0) ? [] : [{ id: 'orders', label: 'Orders', count: orders.filter(o => o.status === 'pending').length, icon: <Sparkles size={13} /> }]),
+            { id: 'service-requests', label: '🛎️ Waiter Calls', count: serviceRequests.length, icon: <Megaphone size={13} /> },
             { id: 'dishes', label: 'Dishes', count: safeDishes.length, icon: <Utensils size={13} /> },
             { id: 'categories', label: 'Categories', count: safeCategories.length, icon: <Layers size={13} /> },
             { id: 'qr-generator', label: 'QR Code', icon: <QrCode size={13} /> },
@@ -966,77 +967,6 @@ export default function AdminDashboard({ token, username, onLogout, onReturnToMe
                   </button>
                 ))}
               </div>
-
-              {/* 🛎️ Active Staff Calls & Table Requests Banner */}
-              {serviceRequests.length > 0 && (
-                <div style={{
-                  marginTop: '16px',
-                  background: 'linear-gradient(135deg, #7C3AED 0%, #6D28D9 100%)',
-                  borderRadius: '16px',
-                  padding: '16px 20px',
-                  color: '#FFFFFF',
-                  boxShadow: '0 8px 24px rgba(124, 58, 237, 0.35)'
-                }}>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
-                    <strong style={{ fontSize: '1rem', fontWeight: 900, display: 'flex', alignItems: 'center', gap: '8px' }}>
-                      🛎️ Live Staff Calls ({serviceRequests.length})
-                    </strong>
-                    <span style={{ fontSize: '0.74rem', background: '#FFFFFF', color: '#6D28D9', padding: '2px 8px', borderRadius: '12px', fontWeight: 900 }}>
-                      Action Needed
-                    </span>
-                  </div>
-
-                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(240px, 1fr))', gap: '10px' }}>
-                    {serviceRequests.map((req) => (
-                      <div
-                        key={req.id}
-                        style={{
-                          background: 'rgba(255, 255, 255, 0.15)',
-                          backdropFilter: 'blur(4px)',
-                          borderRadius: '12px',
-                          padding: '12px',
-                          border: '1px solid rgba(255, 255, 255, 0.3)',
-                          display: 'flex',
-                          justify: 'space-between',
-                          alignItems: 'center'
-                        }}
-                      >
-                        <div>
-                          <strong style={{ fontSize: '0.92rem', color: '#FEF08A', display: 'block' }}>
-                            TABLE #{req.table_number}
-                          </strong>
-                          <span style={{ fontSize: '0.84rem', fontWeight: 800 }}>
-                            {req.request_type}
-                          </span>
-                          {req.note && (
-                            <span style={{ display: 'block', fontSize: '0.74rem', opacity: 0.9, fontStyle: 'italic', marginTop: '2px' }}>
-                              "{req.note}"
-                            </span>
-                          )}
-                        </div>
-
-                        <button
-                          onClick={() => handleResolveServiceRequest(req.id)}
-                          style={{
-                            background: '#10B981',
-                            color: '#FFFFFF',
-                            border: 'none',
-                            padding: '6px 12px',
-                            borderRadius: 'var(--radius-pill)',
-                            fontWeight: 900,
-                            fontSize: '0.74rem',
-                            cursor: 'pointer',
-                            whiteSpace: 'nowrap',
-                            boxShadow: '0 2px 8px rgba(0,0,0,0.2)'
-                          }}
-                        >
-                          ✓ Done
-                        </button>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              )}
 
               {orders.length === 0 ? (
                 <div style={{ textAlign: 'center', padding: '50px 20px', background: '#FFFFFF', borderRadius: '16px', border: '1px solid var(--border-light)' }}>
@@ -1240,6 +1170,97 @@ export default function AdminDashboard({ token, username, onLogout, onReturnToMe
                     </div>
                   );
                 })}
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* TAB 5: Live Waiter Calls & Table Service Requests */}
+        {activeTab === 'service-requests' && (
+          <div style={{
+            background: '#FFFFFF',
+            borderRadius: 'var(--radius-md)',
+            padding: '24px',
+            border: '1px solid var(--border-light)',
+            boxShadow: 'var(--shadow-sm)'
+          }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <Megaphone size={22} color="#7C3AED" />
+                <h3 style={{ fontSize: '1.2rem', fontWeight: 800, color: '#7C3AED' }}>
+                  🛎️ Live Waiter Calls & Table Requests
+                </h3>
+              </div>
+              <button
+                onClick={loadOrders}
+                style={{
+                  background: '#7C3AED',
+                  color: '#FFFFFF',
+                  border: 'none',
+                  padding: '6px 12px',
+                  borderRadius: 'var(--radius-pill)',
+                  fontWeight: 800,
+                  fontSize: '0.78rem',
+                  cursor: 'pointer'
+                }}
+              >
+                🔄 Refresh
+              </button>
+            </div>
+
+            {serviceRequests.length === 0 ? (
+              <div style={{ textAlign: 'center', padding: '40px 20px', color: '#6B7280' }}>
+                <CheckCircle size={40} color="#10B981" style={{ marginBottom: '8px' }} />
+                <p style={{ fontWeight: 700, fontSize: '0.95rem' }}>No pending waiter calls right now!</p>
+                <span style={{ fontSize: '0.78rem' }}>When a customer taps 'Call Staff' on their table, requests appear here instantly.</span>
+              </div>
+            ) : (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                {serviceRequests.map((req) => (
+                  <div
+                    key={req.id}
+                    style={{
+                      background: '#F5F3FF',
+                      border: '1.5px solid #DDD6FE',
+                      borderRadius: '16px',
+                      padding: '16px',
+                      display: 'flex',
+                      justifyContent: 'space-between',
+                      alignItems: 'center'
+                    }}
+                  >
+                    <div>
+                      <span style={{ background: '#7C3AED', color: '#FFFFFF', padding: '3px 10px', borderRadius: '10px', fontWeight: 900, fontSize: '0.78rem' }}>
+                        TABLE #{req.table_number}
+                      </span>
+                      <h4 style={{ fontSize: '1.05rem', fontWeight: 900, color: '#4C1D95', margin: '6px 0 2px 0' }}>
+                        {req.request_type}
+                      </h4>
+                      {req.note && (
+                        <p style={{ fontSize: '0.82rem', color: '#6D28D9', margin: 0, fontStyle: 'italic' }}>
+                          Note: "{req.note}"
+                        </p>
+                      )}
+                    </div>
+
+                    <button
+                      onClick={() => handleResolveServiceRequest(req.id)}
+                      style={{
+                        background: 'linear-gradient(135deg, #10B981 0%, #059669 100%)',
+                        color: '#FFFFFF',
+                        border: 'none',
+                        padding: '10px 18px',
+                        borderRadius: 'var(--radius-pill)',
+                        fontWeight: 900,
+                        fontSize: '0.84rem',
+                        cursor: 'pointer',
+                        boxShadow: '0 4px 14px rgba(16, 185, 129, 0.4)'
+                      }}
+                    >
+                      ✓ Mark Attended
+                    </button>
+                  </div>
+                ))}
               </div>
             )}
           </div>
@@ -2600,7 +2621,7 @@ export default function AdminDashboard({ token, username, onLogout, onReturnToMe
           dish={dishModalData === 'new' ? null : dishModalData}
           categories={categories}
           token={token}
-          onSave={handleSaveDish}
+          onSave={loadData}
           onClose={() => setDishModalData(null)}
         />
       )}
