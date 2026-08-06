@@ -74,7 +74,11 @@ router.get('/dishes', async (req, res) => {
       if (trimmedQ === 'under100' || trimmedQ === '100' || trimmedQ === 'under 100') {
         sql += ` AND d.price <= 100`;
       } else if (trimmedQ === 'must try' || trimmedQ === 'musttry' || trimmedQ === 'must_try') {
-        sql += ` AND (LOWER(COALESCE(d.badge, '')) LIKE '%must try%' OR LOWER(COALESCE(d.badge, '')) LIKE '%bestseller%' OR LOWER(COALESCE(d.badge, '')) LIKE '%special%')`;
+        sql += ` AND LOWER(COALESCE(d.badge, '')) LIKE '%must try%'`;
+      } else if (trimmedQ === 'combo') {
+        sql += ` AND LOWER(COALESCE(d.badge, '')) LIKE '%combo%'`;
+      } else if (trimmedQ === 'special') {
+        sql += ` AND LOWER(COALESCE(d.badge, '')) LIKE '%special%'`;
       } else {
         const searchPattern = `%${trimmedQ}%`;
         params.push(searchPattern);

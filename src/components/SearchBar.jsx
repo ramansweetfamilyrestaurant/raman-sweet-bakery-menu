@@ -5,7 +5,8 @@ export default function SearchBar({ value, onChange, onClear, onQuickFilter }) {
   const filters = [
     { label: '✨ All', value: '' },
     { label: '⭐ Must Try', value: 'Must Try' },
-    { label: '🔥 Bestseller', value: 'Bestseller' },
+    { label: '🍱 Combo', value: 'Combo' },
+    { label: '✨ Special', value: 'Special' },
     { label: '⚡ Under 100', value: 'under100' }
   ];
 

@@ -79,9 +79,9 @@ export default function AdminDashboard({ token, username, onLogout, onReturnToMe
     }
   };
 
-  const handleToggleMustTry = async (dish) => {
-    const isMustTry = dish.badge === 'Must Try';
-    const newBadge = isMustTry ? '' : 'Must Try';
+  const handleToggleBadge = async (dish, targetBadge) => {
+    const isTarget = dish.badge === targetBadge;
+    const newBadge = isTarget ? '' : targetBadge;
     try {
       const res = await fetch(`/api/admin/dishes/${dish.id}`, {
         method: 'PUT',
@@ -97,7 +97,7 @@ export default function AdminDashboard({ token, username, onLogout, onReturnToMe
       if (!res.ok) throw new Error('Failed');
       setDishes(dishes.map(d => d.id === dish.id ? { ...d, badge: newBadge } : d));
     } catch (err) {
-      alert('Failed to update Must Try status');
+      alert(`Failed to update ${targetBadge} badge`);
     }
   };
 
@@ -540,24 +540,52 @@ export default function AdminDashboard({ token, username, onLogout, onReturnToMe
                           ⚡ Quick Price
                         </button>
 
+                        {/* ⭐ Must Try Toggle */}
                         <button
-                          onClick={() => handleToggleMustTry(dish)}
-                          title={dish.badge === 'Must Try' ? 'Remove Must Try' : 'Mark as Must Try'}
+                          onClick={() => handleToggleBadge(dish, 'Must Try')}
                           style={{
-                            padding: '4px 8px',
+                            padding: '4px 7px',
                             borderRadius: 'var(--radius-pill)',
-                            fontSize: '0.72rem',
+                            fontSize: '0.7rem',
                             fontWeight: 700,
                             background: dish.badge === 'Must Try' ? '#FEF3C7' : '#F3F4F6',
                             color: dish.badge === 'Must Try' ? '#D97706' : '#4B5563',
-                            border: dish.badge === 'Must Try' ? '1px solid #F59E0B' : '1px solid #D1D5DB',
-                            display: 'inline-flex',
-                            alignItems: 'center',
-                            gap: '3px'
+                            border: dish.badge === 'Must Try' ? '1px solid #F59E0B' : '1px solid #D1D5DB'
                           }}
                         >
-                          <Star size={11} fill={dish.badge === 'Must Try' ? '#D97706' : 'none'} color={dish.badge === 'Must Try' ? '#D97706' : '#4B5563'} />
-                          {dish.badge === 'Must Try' ? 'Must Try' : '+ Must Try'}
+                          ⭐ Must Try
+                        </button>
+
+                        {/* 🍱 Combo Toggle */}
+                        <button
+                          onClick={() => handleToggleBadge(dish, 'Combo')}
+                          style={{
+                            padding: '4px 7px',
+                            borderRadius: 'var(--radius-pill)',
+                            fontSize: '0.7rem',
+                            fontWeight: 700,
+                            background: dish.badge === 'Combo' ? '#DBEAFE' : '#F3F4F6',
+                            color: dish.badge === 'Combo' ? '#1D4ED8' : '#4B5563',
+                            border: dish.badge === 'Combo' ? '1px solid #3B82F6' : '1px solid #D1D5DB'
+                          }}
+                        >
+                          🍱 Combo
+                        </button>
+
+                        {/* ✨ Special Toggle */}
+                        <button
+                          onClick={() => handleToggleBadge(dish, 'Special')}
+                          style={{
+                            padding: '4px 7px',
+                            borderRadius: 'var(--radius-pill)',
+                            fontSize: '0.7rem',
+                            fontWeight: 700,
+                            background: dish.badge === 'Special' ? '#FCE7F3' : '#F3F4F6',
+                            color: dish.badge === 'Special' ? '#BE185D' : '#4B5563',
+                            border: dish.badge === 'Special' ? '1px solid #EC4899' : '1px solid #D1D5DB'
+                          }}
+                        >
+                          ✨ Special
                         </button>
 
                         <button
