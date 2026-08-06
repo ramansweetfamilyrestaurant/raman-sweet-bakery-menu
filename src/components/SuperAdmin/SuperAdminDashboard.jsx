@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { Crown, Plus, LogOut, ExternalLink, Trash2, CheckCircle, Store, Utensils, DollarSign, Phone, MapPin, Copy, Check, Search, Edit3, Shield, ShieldCheck, RefreshCw, QrCode, Megaphone, FileText, Calendar, Palette, MessageSquare } from 'lucide-react';
-import { fetchSuperAdminRestaurants, createTenantRestaurant, toggleTenantRestaurantActive, deleteTenantRestaurant, impersonateTenantRestaurant, updateTenantRestaurant, createAnnouncement, fetchAuditLogs } from '../../api/client';
+import { Crown, Plus, LogOut, ExternalLink, Trash2, CheckCircle, Store, Utensils, DollarSign, Phone, MapPin, Copy, Check, Search, Edit3, Shield, ShieldCheck, RefreshCw, QrCode, Megaphone, FileText, Calendar, Palette, MessageSquare, Upload } from 'lucide-react';
+import { fetchSuperAdminRestaurants, createTenantRestaurant, toggleTenantRestaurantActive, deleteTenantRestaurant, impersonateTenantRestaurant, updateTenantRestaurant, createAnnouncement, fetchAuditLogs, uploadImage } from '../../api/client';
 
 export default function SuperAdminDashboard({ token, username, onLogout, onReturnToMenu, onImpersonate }) {
   const [restaurants, setRestaurants] = useState([]);
@@ -1035,6 +1035,38 @@ export default function SuperAdminDashboard({ token, username, onLogout, onRetur
             </div>
 
             <form onSubmit={handleUpdateRestaurant} style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
+              {/* Logo Uploader in Super Admin Edit Modal */}
+              <div style={{ display: 'flex', alignItems: 'center', gap: '14px', background: '#F8FAFC', padding: '12px 16px', borderRadius: '14px', border: '1.5px solid #CBD5E1' }}>
+                {editModalData.logo && editModalData.logo !== '/uploads/logo.jpg' ? (
+                  <img src={editModalData.logo} alt="Logo" style={{ width: '48px', height: '48px', borderRadius: '50%', objectFit: 'cover', border: '2px solid #D4AF37' }} onError={(e) => { e.target.style.display = 'none'; }} />
+                ) : (
+                  <div style={{ width: '48px', height: '48px', borderRadius: '50%', background: '#0A2315', color: '#DFBA67', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 900, fontSize: '1.2rem', flexShrink: 0 }}>
+                    {(editModalData.name || 'R').charAt(0).toUpperCase()}
+                  </div>
+                )}
+                <div style={{ flexGrow: 1 }}>
+                  <label style={{ fontSize: '0.8rem', fontWeight: 800, color: 'var(--text-dark)', display: 'block', marginBottom: '4px' }}>RESTAURANT BRAND LOGO</label>
+                  <label style={{ cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: '6px', background: '#0A2315', color: '#DFBA67', padding: '5px 12px', borderRadius: 'var(--radius-pill)', fontSize: '0.76rem', fontWeight: 800 }}>
+                    <Upload size={13} /> Upload Logo File
+                    <input
+                      type="file"
+                      accept="image/*"
+                      style={{ display: 'none' }}
+                      onChange={async (e) => {
+                        const file = e.target.files[0];
+                        if (!file) return;
+                        try {
+                          const url = await uploadImage(file, token);
+                          setEditModalData(prev => ({ ...prev, logo: url }));
+                        } catch (err) {
+                          alert('Logo upload failed');
+                        }
+                      }}
+                    />
+                  </label>
+                </div>
+              </div>
+
               <div>
                 <label style={{ fontSize: '0.78rem', fontWeight: 800, color: 'var(--text-dark)', marginBottom: '4px', display: 'block' }}>
                   RESTAURANT NAME
