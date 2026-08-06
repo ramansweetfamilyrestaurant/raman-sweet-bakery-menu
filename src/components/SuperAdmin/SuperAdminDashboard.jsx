@@ -553,17 +553,24 @@ export default function SuperAdminDashboard({ token, username, onLogout, onRetur
                   <div>
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '12px' }}>
                       <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                        <img
-                          src={r.logo || '/uploads/logo.jpg'}
-                          alt={r.name}
-                          style={{
-                            width: '46px',
-                            height: '46px',
-                            borderRadius: '50%',
-                            objectFit: 'cover',
-                            border: '2px solid #D4AF37'
-                          }}
-                        />
+                        {r.logo && r.logo !== '/uploads/logo.jpg' ? (
+                          <img
+                            src={r.logo}
+                            alt={r.name}
+                            style={{
+                              width: '46px',
+                              height: '46px',
+                              borderRadius: '50%',
+                              objectFit: 'cover',
+                              border: '2px solid #D4AF37'
+                            }}
+                            onError={(e) => { e.target.style.display = 'none'; }}
+                          />
+                        ) : (
+                          <div style={{ width: '46px', height: '46px', borderRadius: '50%', background: 'linear-gradient(135deg, #0A2315 0%, #164E2A 100%)', color: '#FFD700', border: '2px solid #D4AF37', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 900, fontSize: '1.2rem', flexShrink: 0 }}>
+                            {r.name.charAt(0).toUpperCase()}
+                          </div>
+                        )}
                         <div>
                           <h3 style={{ fontSize: '1.05rem', fontWeight: 900, margin: 0, color: 'var(--text-dark)', lineHeight: 1.2 }}>
                             {r.name}

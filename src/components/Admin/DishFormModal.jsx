@@ -14,7 +14,7 @@ export default function DishFormModal({ dish, categories, token, onSave, onClose
   const [ingredients, setIngredients] = useState(dish?.ingredients || '');
   const [tasteProfile, setTasteProfile] = useState(dish?.taste_profile || '');
   const [type, setType] = useState(dish?.type || 'veg'); // 'veg', 'nonveg', 'egg'
-  const [image, setImage] = useState(dish?.image || '/uploads/logo.jpg');
+  const [image, setImage] = useState(dish?.image && dish.image !== '/uploads/logo.jpg' ? dish.image : '');
   const [available, setAvailable] = useState(dish?.available !== false);
   
   const [uploading, setUploading] = useState(false);
@@ -461,17 +461,34 @@ export default function DishFormModal({ dish, categories, token, onSave, onClose
               Dish Image
             </label>
             <div style={{ display: 'flex', gap: '10px', alignItems: 'center', marginBottom: '8px' }}>
-              <img
-                src={image || '/uploads/logo.jpg'}
-                alt="Preview"
-                style={{
+              {image ? (
+                <img
+                  src={image}
+                  alt="Preview"
+                  style={{
+                    width: '54px',
+                    height: '54px',
+                    borderRadius: 'var(--radius-sm)',
+                    objectFit: 'cover',
+                    border: '1px solid var(--accent-gold)'
+                  }}
+                  onError={(e) => { e.target.style.display = 'none'; }}
+                />
+              ) : (
+                <div style={{
                   width: '54px',
                   height: '54px',
                   borderRadius: 'var(--radius-sm)',
-                  objectFit: 'cover',
-                  border: '1px solid var(--accent-gold)'
-                }}
-              />
+                  background: 'var(--header-gradient)',
+                  color: 'var(--gold-bright)',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  fontSize: '1.4rem'
+                }}>
+                  🍲
+                </div>
+              )}
               <label style={{
                 cursor: 'pointer',
                 display: 'inline-flex',

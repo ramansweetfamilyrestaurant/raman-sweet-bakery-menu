@@ -574,18 +574,25 @@ export default function AdminDashboard({ token, username, onLogout, onReturnToMe
       }}>
         {/* Left: Brand & Owner Metadata */}
         <div style={{ display: 'flex', alignItems: 'center', gap: '10px', minWidth: 0, overflow: 'hidden' }}>
-          <img
-            src={settingsForm.logo || '/uploads/logo.jpg'}
-            alt="Logo"
-            style={{
-              width: '34px',
-              height: '34px',
-              borderRadius: '50%',
-              border: '1.5px solid #D4AF37',
-              objectFit: 'cover',
-              flexShrink: 0
-            }}
-          />
+          {settingsForm.logo && settingsForm.logo !== '/uploads/logo.jpg' ? (
+            <img
+              src={settingsForm.logo}
+              alt="Logo"
+              style={{
+                width: '34px',
+                height: '34px',
+                borderRadius: '50%',
+                border: '1.5px solid #D4AF37',
+                objectFit: 'cover',
+                flexShrink: 0
+              }}
+              onError={(e) => { e.target.style.display = 'none'; }}
+            />
+          ) : (
+            <div style={{ width: '34px', height: '34px', borderRadius: '50%', background: '#D4AF37', color: '#0A2315', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 900, fontSize: '0.9rem', flexShrink: 0 }}>
+              {(settingsForm.name || 'R').charAt(0).toUpperCase()}
+            </div>
+          )}
           <div style={{ minWidth: 0 }}>
             <h1 style={{
               fontSize: '0.95rem',
@@ -1107,7 +1114,11 @@ export default function AdminDashboard({ token, username, onLogout, onReturnToMe
                       gap: '8px'
                     }}>
                       <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flexGrow: 1, minWidth: 0, overflow: 'hidden' }}>
-                        <img src={dish.image || '/uploads/logo.jpg'} alt="" style={{ width: '42px', height: '42px', borderRadius: 'var(--radius-sm)', objectFit: 'cover', flexShrink: 0 }} />
+                        {dish.image && dish.image !== '/uploads/logo.jpg' ? (
+                          <img src={dish.image} alt="" style={{ width: '42px', height: '42px', borderRadius: 'var(--radius-sm)', objectFit: 'cover', flexShrink: 0 }} onError={(e) => { e.target.style.display = 'none'; }} />
+                        ) : (
+                          <div style={{ width: '42px', height: '42px', borderRadius: 'var(--radius-sm)', background: 'var(--header-gradient)', color: 'var(--gold-bright)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 900, fontSize: '1rem', flexShrink: 0 }}>🍲</div>
+                        )}
                         <div style={{ minWidth: 0 }}>
                           <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
                             <span style={{
@@ -1359,7 +1370,11 @@ export default function AdminDashboard({ token, username, onLogout, onReturnToMe
                   justifyContent: 'space-between'
                 }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                    <img src={cat.image || '/uploads/logo.jpg'} alt="" style={{ width: '40px', height: '40px', borderRadius: '50%', objectFit: 'cover' }} />
+                    {cat.image && cat.image !== '/uploads/logo.jpg' ? (
+                      <img src={cat.image} alt="" style={{ width: '40px', height: '40px', borderRadius: '50%', objectFit: 'cover' }} onError={(e) => { e.target.style.display = 'none'; }} />
+                    ) : (
+                      <div style={{ width: '40px', height: '40px', borderRadius: '50%', background: 'var(--header-gradient)', color: 'var(--gold-bright)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 900, fontSize: '0.9rem' }}>{cat.name.charAt(0).toUpperCase()}</div>
+                    )}
                     <div>
                       <h4 style={{ fontSize: '0.95rem', fontWeight: 700, color: 'var(--primary-emerald)' }}>{cat.name}</h4>
                       <span style={{ fontSize: '0.74rem', color: 'var(--text-muted)' }}>{cat.name_hi || ''}</span>
