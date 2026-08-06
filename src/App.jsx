@@ -863,7 +863,7 @@ export default function App() {
                       lang={lang}
                       currencySymbol={info?.currency_symbol !== undefined ? info.currency_symbol : '₹'}
                       onClick={() => setSelectedDishModal(dish)}
-                      onAddToCart={handleAddToCart}
+                      onAddToCart={(info?.direct_ordering_enabled !== false || info?.whatsapp_enabled !== false) ? handleAddToCart : undefined}
                     />
                   ))}
                 </div>
@@ -880,7 +880,7 @@ export default function App() {
                       lang={lang}
                       currencySymbol={info?.currency_symbol !== undefined ? info.currency_symbol : '₹'}
                       onClick={() => setSelectedDishModal(dish)}
-                      onAddToCart={handleAddToCart}
+                      onAddToCart={(info?.direct_ordering_enabled !== false || info?.whatsapp_enabled !== false) ? handleAddToCart : undefined}
                     />
                   ))}
                 </div>
