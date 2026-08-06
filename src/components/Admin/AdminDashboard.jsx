@@ -155,6 +155,22 @@ export default function AdminDashboard({ token, username, onLogout, onReturnToMe
     }
   };
 
+  const formatDateTime = (dateStr) => {
+    if (!dateStr) return '';
+    try {
+      let d = new Date(dateStr);
+      if (isNaN(d.getTime())) {
+        d = new Date(String(dateStr).replace(' ', 'T'));
+      }
+      if (!isNaN(d.getTime())) {
+        const datePart = d.toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' });
+        const timePart = d.toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit', hour12: true });
+        return `${datePart} • ${timePart}`;
+      }
+    } catch (e) {}
+    return String(dateStr);
+  };
+
   const handleUpdateStatus = async (orderId, newStatus) => {
     try {
       await updateOrderStatus(orderId, newStatus, token);
@@ -204,7 +220,7 @@ export default function AdminDashboard({ token, username, onLogout, onReturnToMe
           <div class="meta">
             <div><strong>KOT Order ID:</strong> #${order.id}</div>
             <div><strong>Customer:</strong> ${order.customer_name || 'Dine-In Guest'}</div>
-            <div><strong>Time:</strong> ${new Date(order.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</div>
+            <div><strong>Date & Time:</strong> ${formatDateTime(order.created_at)}</div>
           </div>
           <table>
             <thead>
@@ -1092,11 +1108,11 @@ export default function AdminDashboard({ token, username, onLogout, onReturnToMe
                             </span>
                           </div>
 
-                          {/* Customer details & Time */}
-                          <div style={{ fontSize: '0.78rem', color: 'var(--text-muted)', marginBottom: '10px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                          {/* Customer details & Date / Time */}
+                          <div style={{ fontSize: '0.78rem', color: 'var(--text-muted)', marginBottom: '10px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '4px' }}>
                             <span style={{ fontWeight: 800, color: '#1F2937' }}>Order #{o.id} • {o.customer_name || 'Guest'}</span>
-                            <span style={{ fontWeight: 700, color: '#6B7280' }}>
-                              🕒 {new Date(o.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: true })}
+                            <span style={{ fontWeight: 700, color: '#374151', background: '#F3F4F6', padding: '2px 8px', borderRadius: '6px', fontSize: '0.74rem' }}>
+                              📅 {formatDateTime(o.created_at)}
                             </span>
                           </div>
 
