@@ -137,7 +137,7 @@ export default function MenuCardItem({ dish, lang, onClick }) {
                 whiteSpace: 'nowrap'
               }}
             >
-              Half ₹{halfPriceNum}
+              Half {halfPriceNum}
             </button>
 
             <button
@@ -157,7 +157,7 @@ export default function MenuCardItem({ dish, lang, onClick }) {
                 whiteSpace: 'nowrap'
               }}
             >
-              Full ₹{fullPriceNum}
+              Full {fullPriceNum}
             </button>
           </div>
         ) : (
@@ -177,7 +177,7 @@ export default function MenuCardItem({ dish, lang, onClick }) {
               flexShrink: 0
             }}
           >
-            ₹{fullPriceNum.toLocaleString('en-IN')}
+            {fullPriceNum.toLocaleString('en-IN')}
           </span>
         )}
 

@@ -106,7 +106,7 @@ export default function PhysicalMenuItem({ dish, onClick }) {
                 color: selectedPortion === 'half' ? '#FFFFFF' : 'var(--primary-emerald)'
               }}
             >
-              Half ₹{dish.price_half}
+              Half {dish.price_half}
             </button>
 
             <button
@@ -123,7 +123,7 @@ export default function PhysicalMenuItem({ dish, onClick }) {
                 color: selectedPortion === 'full' ? '#FFFFFF' : 'var(--primary-emerald)'
               }}
             >
-              Full ₹{dish.price}
+              Full {dish.price}
             </button>
           </div>
         ) : (
@@ -138,7 +138,7 @@ export default function PhysicalMenuItem({ dish, onClick }) {
               cursor: 'pointer'
             }}
           >
-            ₹{Number(dish.price).toLocaleString('en-IN')}
+            {Number(dish.price).toLocaleString('en-IN')}
           </span>
         )}
       </div>

@@ -10,7 +10,7 @@
   "google_maps_url": "https://share.google/2M5mFMPlmS6pAXRf7",
   "filters_visibility": {
     "must_try": true,
-    "combo": true,
+    "combo": false,
     "special": true,
     "under100": true
   },

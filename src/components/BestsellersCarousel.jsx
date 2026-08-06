@@ -138,7 +138,7 @@ export default function BestsellersCarousel({ dishes, onSelectDish }) {
                   fontWeight: 800,
                   color: 'var(--primary-emerald)'
                 }}>
-                  ₹{Number(dish.price_half || dish.price).toLocaleString('en-IN')}
+                  {Number(dish.price_half || dish.price).toLocaleString('en-IN')}
                 </span>
 
                 <span style={{
