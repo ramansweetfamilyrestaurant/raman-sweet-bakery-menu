@@ -174,6 +174,7 @@ export default function AdminDashboard({ token, username, onLogout, onReturnToMe
         setSettingsForm({
           name: infoData.name || '',
           tagline: infoData.tagline || '',
+          logo: infoData.logo || '',
           phone: infoData.phone || '',
           address: infoData.address || '',
           openingHours: infoData.openingHours || '',
@@ -462,6 +463,7 @@ export default function AdminDashboard({ token, username, onLogout, onReturnToMe
       }
 
       setSettingsSavedMsg(true);
+      await loadData();
       setTimeout(() => setSettingsSavedMsg(false), 3000);
     } catch (err) {
       alert(err.message);
