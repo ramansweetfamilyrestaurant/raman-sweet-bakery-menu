@@ -71,27 +71,29 @@ export default function CustomerHeader({ info, lang, tableNum, onToggleLang, onO
             </span>
           )}
 
-          {/* ⭐ Top Right Google Review Button */}
-          <button
-            onClick={handleReviewClick}
-            title="Rate Us on Google Maps"
-            style={{
-              fontSize: '0.68rem',
-              fontWeight: 800,
-              color: '#0A2315',
-              background: 'linear-gradient(135deg, #FFD700 0%, #FFA500 100%)',
-              border: '1px solid #FFFFFF',
-              padding: '3px 10px',
-              borderRadius: 'var(--radius-pill)',
-              display: 'inline-flex',
-              alignItems: 'center',
-              gap: '3px',
-              boxShadow: '0 2px 8px rgba(255, 215, 0, 0.4)'
-            }}
-          >
-            <Star size={12} color="#0A2315" fill="#0A2315" />
-            {lang === 'hi' ? 'रेटिंग' : 'Review Us'}
-          </button>
+          {/* ⭐ Top Right Google Review Button (Super Admin Feature Gated) */}
+          {(info?.google_reviews_enabled !== false && info?.google_reviews_enabled !== 0) && (
+            <button
+              onClick={handleReviewClick}
+              title="Rate Us on Google Maps"
+              style={{
+                fontSize: '0.68rem',
+                fontWeight: 800,
+                color: '#0A2315',
+                background: 'linear-gradient(135deg, #FFD700 0%, #FFA500 100%)',
+                border: '1px solid #FFFFFF',
+                padding: '3px 10px',
+                borderRadius: 'var(--radius-pill)',
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '3px',
+                boxShadow: '0 2px 8px rgba(255, 215, 0, 0.4)'
+              }}
+            >
+              <Star size={12} color="#0A2315" fill="#0A2315" />
+              {lang === 'hi' ? 'रेटिंग' : 'Review Us'}
+            </button>
+          )}
         </div>
       </div>
 

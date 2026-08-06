@@ -1078,6 +1078,44 @@ export default function SuperAdminDashboard({ token, username, onLogout, onRetur
                 </div>
               </div>
 
+              {/* ⚡ SAAS FEATURE ACCESS CONTROL MATRIX */}
+              <div style={{ background: '#F8FAFC', border: '1.5px solid #CBD5E1', borderRadius: '14px', padding: '14px 16px', marginTop: '6px' }}>
+                <strong style={{ fontSize: '0.82rem', color: '#0F172A', display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '10px' }}>
+                  <ShieldCheck size={16} color="#059669" /> SAAS FEATURE ACCESS CONTROL MATRIX
+                </strong>
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
+                  <label style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '0.8rem', fontWeight: 700, color: '#334155', cursor: 'pointer' }}>
+                    <input
+                      type="checkbox"
+                      checked={editModalData.direct_ordering_enabled !== false && editModalData.direct_ordering_enabled !== 0}
+                      onChange={(e) => setEditModalData({ ...editModalData, direct_ordering_enabled: e.target.checked })}
+                      style={{ width: '16px', height: '16px', accentColor: '#0A2315' }}
+                    />
+                    ⚡ Direct Table KOT Ordering
+                  </label>
+
+                  <label style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '0.8rem', fontWeight: 700, color: '#334155', cursor: 'pointer' }}>
+                    <input
+                      type="checkbox"
+                      checked={editModalData.whatsapp_enabled !== false && editModalData.whatsapp_enabled !== 0}
+                      onChange={(e) => setEditModalData({ ...editModalData, whatsapp_enabled: e.target.checked })}
+                      style={{ width: '16px', height: '16px', accentColor: '#16a34a' }}
+                    />
+                    💬 WhatsApp Order Drawer
+                  </label>
+
+                  <label style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '0.8rem', fontWeight: 700, color: '#334155', cursor: 'pointer' }}>
+                    <input
+                      type="checkbox"
+                      checked={editModalData.google_reviews_enabled !== false && editModalData.google_reviews_enabled !== 0}
+                      onChange={(e) => setEditModalData({ ...editModalData, google_reviews_enabled: e.target.checked })}
+                      style={{ width: '16px', height: '16px', accentColor: '#d97706' }}
+                    />
+                    ⭐ Google Review Button
+                  </label>
+                </div>
+              </div>
+
               <div>
                 <label style={{ fontSize: '0.78rem', fontWeight: 800, color: 'var(--text-dark)', marginBottom: '4px', display: 'block' }}>
                   FSSAI LICENSE NO

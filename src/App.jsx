@@ -890,37 +890,37 @@ export default function App() {
         )}
       </main>
 
-      {/* 📲 Floating WhatsApp Order Button */}
-      {info && info.whatsapp_enabled !== false && (
+      {/* 💬 / ⚡ Floating Order Button (Gated by Super Admin Feature Control Matrix) */}
+      {info && (info.direct_ordering_enabled !== false || info.whatsapp_enabled !== false) && (
         <div style={{
           position: 'fixed',
-          bottom: '90px',
-          right: '18px',
-          zIndex: 1200
+          bottom: '84px',
+          right: '16px',
+          zIndex: 9999
         }}>
           <button
             onClick={() => setShowCartDrawer(true)}
             style={{
-              background: 'linear-gradient(135deg, #25D366 0%, #128C7E 100%)',
+              background: 'linear-gradient(135deg, #10B981 0%, #059669 100%)',
               color: '#FFFFFF',
-              padding: '12px 18px',
+              padding: '12px 20px',
               borderRadius: 'var(--radius-pill)',
-              fontWeight: 900,
+              fontWeight: 800,
               fontSize: '0.88rem',
               border: '2px solid #FFFFFF',
               cursor: 'pointer',
               display: 'flex',
               alignItems: 'center',
               gap: '8px',
-              boxShadow: '0 8px 28px rgba(37, 211, 102, 0.6)'
+              boxShadow: '0 8px 28px rgba(16, 185, 129, 0.5)'
             }}
           >
             <MessageSquare size={18} />
-            <span>Order on WhatsApp</span>
+            <span>{info.direct_ordering_enabled !== false ? '⚡ Quick Order' : '💬 WhatsApp Order'}</span>
             {cartItems.length > 0 && (
               <span style={{
                 background: '#FFFFFF',
-                color: '#128C7E',
+                color: '#059669',
                 fontSize: '0.78rem',
                 fontWeight: 900,
                 padding: '2px 8px',
@@ -934,7 +934,7 @@ export default function App() {
         </div>
       )}
 
-      {/* 📲 WhatsApp Order Cart Drawer */}
+      {/* 📲 Order Cart Drawer */}
       {showCartDrawer && (
         <div style={{
           position: 'fixed',
@@ -958,25 +958,15 @@ export default function App() {
             flexDirection: 'column'
           }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px', borderBottom: '1px solid var(--border-light)', paddingBottom: '12px' }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                <div style={{ width: '38px', height: '38px', borderRadius: '50%', background: '#DCFCE7', color: '#15803D', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                  <MessageSquare size={20} color="#15803D" />
-                </div>
-                <div>
-                  <h3 style={{ fontSize: '1.15rem', fontWeight: 900, color: 'var(--primary-emerald)', margin: 0 }}>
-                    WhatsApp Direct Order
-                  </h3>
-                  <span style={{ fontSize: '0.74rem', color: 'var(--text-muted)' }}>Send order directly to restaurant WhatsApp</span>
-                </div>
-              </div>
-              <button onClick={() => setShowCartDrawer(false)} style={{ background: '#F3F4F6', border: 'none', width: '32px', height: '32px', borderRadius: '50%', fontSize: '1.2rem', fontWeight: 700, cursor: 'pointer', color: 'var(--text-dark)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>✕</button>
+              <strong style={{ fontSize: '1.1rem', color: 'var(--primary-emerald)' }}>🛒 My Order Items ({cartItems.reduce((acc, i) => acc + i.quantity, 0)})</strong>
+              <button onClick={() => setShowCartDrawer(false)} style={{ background: '#F3F4F6', color: '#374151', border: 'none', width: '32px', height: '32px', borderRadius: '50%', cursor: 'pointer', fontWeight: 900 }}>✕</button>
             </div>
 
             {cartItems.length === 0 ? (
               <div style={{ textAlign: 'center', padding: '40px 10px', color: 'var(--text-muted)' }}>
-                <MessageSquare size={40} color="#25D366" style={{ marginBottom: '10px', opacity: 0.6 }} />
+                <MessageSquare size={40} color="#10B981" style={{ marginBottom: '10px', opacity: 0.6 }} />
                 <p style={{ fontSize: '0.95rem', margin: '0 0 6px 0', fontWeight: 800, color: 'var(--text-dark)' }}>Your order cart is empty.</p>
-                <p style={{ fontSize: '0.8rem', opacity: 0.75, margin: 0 }}>Tap <strong>"+ Order"</strong> on any dish to add items to your WhatsApp order!</p>
+                <p style={{ fontSize: '0.8rem', opacity: 0.75, margin: 0 }}>Tap <strong>"+ Order"</strong> on any dish to add items!</p>
               </div>
             ) : (
               <div style={{ flex: 1, overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '10px', marginBottom: '16px' }}>
@@ -1009,64 +999,50 @@ export default function App() {
                       value={orderTableInput}
                       onChange={(e) => setOrderTableInput(e.target.value)}
                       placeholder="e.g. 4"
-                      style={{
-                        width: '100%',
-                        padding: '8px 12px',
-                        borderRadius: '10px',
-                        border: '1.5px solid var(--gold-border)',
-                        fontWeight: 900,
-                        fontSize: '0.9rem',
-                        boxSizing: 'border-box'
-                      }}
+                      style={{ width: '100%', padding: '8px 12px', borderRadius: '10px', border: '1.5px solid #CBD5E1', fontSize: '0.86rem', fontWeight: 800 }}
                     />
                   </div>
-
                   <div style={{ flex: 2 }}>
-                    <label style={{ fontSize: '0.72rem', fontWeight: 800, color: 'var(--text-muted)', display: 'block', marginBottom: '2px' }}>NAME (OPTIONAL)</label>
+                    <label style={{ fontSize: '0.72rem', fontWeight: 800, color: 'var(--text-muted)', display: 'block', marginBottom: '2px' }}>YOUR NAME (OPTIONAL)</label>
                     <input
                       type="text"
                       value={customerNameInput}
                       onChange={(e) => setCustomerNameInput(e.target.value)}
-                      placeholder="Your Name"
-                      style={{
-                        width: '100%',
-                        padding: '8px 12px',
-                        borderRadius: '10px',
-                        border: '1.5px solid var(--border-light)',
-                        fontSize: '0.86rem',
-                        boxSizing: 'border-box'
-                      }}
+                      placeholder="e.g. Rahul"
+                      style={{ width: '100%', padding: '8px 12px', borderRadius: '10px', border: '1.5px solid #CBD5E1', fontSize: '0.86rem' }}
                     />
                   </div>
                 </div>
 
-                {/* 1-Click Instant Direct Kitchen Order Button */}
-                <button
-                  onClick={handleSendDirectOrder}
-                  disabled={placingOrder}
-                  style={{
-                    width: '100%',
-                    background: 'linear-gradient(135deg, #059669 0%, #047857 100%)',
-                    color: '#FFFFFF',
-                    padding: '14px 18px',
-                    borderRadius: 'var(--radius-pill)',
-                    fontWeight: 900,
-                    fontSize: '0.96rem',
-                    border: 'none',
-                    cursor: placingOrder ? 'not-allowed' : 'pointer',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    gap: '8px',
-                    boxShadow: '0 6px 20px rgba(5, 150, 105, 0.45)',
-                    opacity: placingOrder ? 0.7 : 1
-                  }}
-                >
-                  <Sparkles size={18} color="#FDE047" />
-                  <span>{placingOrder ? 'Sending to Kitchen...' : `⚡ PLACE DIRECT KITCHEN ORDER (${info?.currency_symbol || '₹'}${cartItems.reduce((sum, i) => sum + i.dish.price * i.quantity, 0)})`}</span>
-                </button>
+                {/* ⚡ 1-Click Direct Table Order Button (Gated by Super Admin) */}
+                {info && info.direct_ordering_enabled !== false && (
+                  <button
+                    onClick={handleSendDirectOrder}
+                    disabled={placingOrder}
+                    style={{
+                      width: '100%',
+                      background: 'linear-gradient(135deg, #059669 0%, #047857 100%)',
+                      color: '#FFFFFF',
+                      padding: '14px 18px',
+                      borderRadius: 'var(--radius-pill)',
+                      fontWeight: 900,
+                      fontSize: '0.96rem',
+                      border: 'none',
+                      cursor: placingOrder ? 'not-allowed' : 'pointer',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      gap: '8px',
+                      boxShadow: '0 6px 20px rgba(5, 150, 105, 0.45)',
+                      opacity: placingOrder ? 0.7 : 1
+                    }}
+                  >
+                    <Sparkles size={18} color="#FDE047" />
+                    <span>{placingOrder ? 'Sending to Kitchen...' : `⚡ PLACE DIRECT KITCHEN ORDER (${info?.currency_symbol || '₹'}${cartItems.reduce((sum, i) => sum + i.dish.price * i.quantity, 0)})`}</span>
+                  </button>
+                )}
 
-                {/* WhatsApp Alternative Order Button */}
+                {/* 💬 WhatsApp Alternative Order Button (Gated by Super Admin) */}
                 {info && info.whatsapp_enabled !== false && (
                   <button
                     onClick={handleSendWhatsAppOrder}

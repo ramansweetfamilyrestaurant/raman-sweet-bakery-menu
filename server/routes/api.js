@@ -80,6 +80,8 @@ router.get('/info', async (req, res) => {
         plan_expires_at: resto.plan_expires_at || null,
         whatsapp_number: resto.whatsapp_number || resto.phone || '',
         whatsapp_enabled: resto.whatsapp_enabled !== 0 && resto.whatsapp_enabled !== false,
+        direct_ordering_enabled: resto.direct_ordering_enabled !== 0 && resto.direct_ordering_enabled !== false,
+        google_reviews_enabled: resto.google_reviews_enabled !== 0 && resto.google_reviews_enabled !== false,
         theme_color: resto.theme_color || 'gold',
         scan_count: resto.scan_count || 0,
         active: resto.active !== false

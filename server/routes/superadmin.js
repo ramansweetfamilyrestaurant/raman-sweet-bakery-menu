@@ -205,14 +205,15 @@ router.post('/restaurants/:id/impersonate', authenticateToken, requireSuperAdmin
 router.put('/restaurants/:id', authenticateToken, requireSuperAdmin, async (req, res) => {
   try {
     const { id } = req.params;
-    const { name, tagline, phone, address, fssai_lic_no, owner_username, owner_password, plan_tier, plan_price, plan_expires_at, whatsapp_number, whatsapp_enabled, theme_color } = req.body;
+    const { name, tagline, phone, address, fssai_lic_no, owner_username, owner_password, plan_tier, plan_price, plan_expires_at, whatsapp_number, whatsapp_enabled, direct_ordering_enabled, google_reviews_enabled, theme_color } = req.body;
 
-    // Update restaurant info
+    // Update restaurant info & Feature Control Matrix
     await query(`
       UPDATE restaurants
       SET name = $1, tagline = $2, phone = $3, address = $4, fssai_lic_no = $5,
-          plan_tier = $6, plan_price = $7, plan_expires_at = $8, whatsapp_number = $9, whatsapp_enabled = $10, theme_color = $11
-      WHERE id = $12
+          plan_tier = $6, plan_price = $7, plan_expires_at = $8, whatsapp_number = $9,
+          whatsapp_enabled = $10, direct_ordering_enabled = $11, google_reviews_enabled = $12, theme_color = $13
+      WHERE id = $14
     `, [
       name,
       tagline || '',
@@ -223,7 +224,9 @@ router.put('/restaurants/:id', authenticateToken, requireSuperAdmin, async (req,
       plan_price ? parseFloat(plan_price) : 999,
       plan_expires_at || null,
       whatsapp_number || phone || '',
-      whatsapp_enabled !== false && whatsapp_enabled !== 0 ? 1 : 0,
+      whatsapp_enabled !== false && whatsapp_enabled !== 0 && whatsapp_enabled !== 'false' ? 1 : 0,
+      direct_ordering_enabled !== false && direct_ordering_enabled !== 0 && direct_ordering_enabled !== 'false' ? 1 : 0,
+      google_reviews_enabled !== false && google_reviews_enabled !== 0 && google_reviews_enabled !== 'false' ? 1 : 0,
       theme_color || 'gold',
       id
     ]);

@@ -279,6 +279,8 @@ async function createTables() {
       if (!restoCols.some(c => c.name === 'plan_expires_at')) sqliteDb.exec("ALTER TABLE restaurants ADD COLUMN plan_expires_at TEXT");
       if (!restoCols.some(c => c.name === 'whatsapp_number')) sqliteDb.exec("ALTER TABLE restaurants ADD COLUMN whatsapp_number TEXT");
       if (!restoCols.some(c => c.name === 'whatsapp_enabled')) sqliteDb.exec("ALTER TABLE restaurants ADD COLUMN whatsapp_enabled INTEGER DEFAULT 1");
+      if (!restoCols.some(c => c.name === 'direct_ordering_enabled')) sqliteDb.exec("ALTER TABLE restaurants ADD COLUMN direct_ordering_enabled INTEGER DEFAULT 1");
+      if (!restoCols.some(c => c.name === 'google_reviews_enabled')) sqliteDb.exec("ALTER TABLE restaurants ADD COLUMN google_reviews_enabled INTEGER DEFAULT 1");
       if (!restoCols.some(c => c.name === 'theme_color')) sqliteDb.exec("ALTER TABLE restaurants ADD COLUMN theme_color TEXT DEFAULT 'gold'");
       if (!restoCols.some(c => c.name === 'scan_count')) sqliteDb.exec("ALTER TABLE restaurants ADD COLUMN scan_count INTEGER DEFAULT 0");
     } catch (err) {
