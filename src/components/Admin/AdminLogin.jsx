@@ -3,16 +3,59 @@ import { Lock, User, KeyRound, ArrowLeft, AlertCircle } from 'lucide-react';
 import { adminLogin } from '../../api/client';
 
 export default function AdminLogin({ onLoginSuccess, onCancel, restaurantName }) {
+  const [mode, setMode] = useState('login'); // 'login' | 'forgot'
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
+  const [newPassword, setNewPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+  const [successMsg, setSuccessMsg] = useState('');
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError('');
-    setLoading(true);
+    setSuccessMsg('');
 
+    if (mode === 'forgot') {
+      if (!username.trim() || !newPassword) {
+        setError('Please fill in all fields');
+        return;
+      }
+      if (newPassword.length < 4) {
+        setError('New password must be at least 4 characters long');
+        return;
+      }
+      if (newPassword !== confirmPassword) {
+        setError('Passwords do not match');
+        return;
+      }
+
+      setLoading(true);
+      try {
+        const res = await fetch('/api/admin/forgot-password', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            phone_or_username: username,
+            new_password: newPassword
+          })
+        });
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.error || 'Failed to reset password');
+
+        setSuccessMsg(data.message || 'Password reset successfully!');
+        setMode('login');
+        setPassword('');
+      } catch (err) {
+        setError(err.message);
+      } finally {
+        setLoading(false);
+      }
+      return;
+    }
+
+    setLoading(true);
     try {
       const data = await adminLogin(username, password);
       onLoginSuccess(data.token, data.username, data.slug);
@@ -82,15 +125,25 @@ export default function AdminLogin({ onLoginSuccess, onCancel, restaurantName })
             fontWeight: 800,
             color: '#FFFFFF'
           }}>
-            {restaurantName ? `${restaurantName} Owner Login` : 'Restaurant Owner Login'}
+            {mode === 'forgot' ? 'Reset Password' : (restaurantName ? `${restaurantName} Owner Login` : 'Restaurant Owner Login')}
           </h2>
           <p style={{ fontSize: '0.8rem', color: 'var(--accent-gold-light)' }}>
-            Digital Menu Admin Control Panel
+            {mode === 'forgot' ? 'Reset your admin password securely' : 'Digital Menu Admin Control Panel'}
           </p>
         </div>
 
         {/* Form */}
         <form onSubmit={handleSubmit} style={{ padding: '24px' }}>
+          {successMsg && (
+            <div style={{
+              background: '#ECFDF5', border: '1px solid #6EE7B7',
+              borderRadius: 'var(--radius-sm)', padding: '10px 14px', marginBottom: '18px',
+              color: '#065F46', fontSize: '0.84rem', textAlign: 'center', fontWeight: 700
+            }}>
+              {successMsg}
+            </div>
+          )}
+
           {error && (
             <div style={{
               background: '#FEF2F2',
@@ -117,7 +170,7 @@ export default function AdminLogin({ onLoginSuccess, onCancel, restaurantName })
               color: 'var(--text-dark)',
               marginBottom: '6px'
             }}>
-              Username
+              {mode === 'forgot' ? 'Username or Registered Phone Number' : 'Username'}
             </label>
             <div style={{ position: 'relative', display: 'flex', alignItems: 'center' }}>
               <User size={16} color="var(--text-muted)" style={{ position: 'absolute', left: '12px' }} />
@@ -126,7 +179,7 @@ export default function AdminLogin({ onLoginSuccess, onCancel, restaurantName })
                 required
                 value={username}
                 onChange={(e) => setUsername(e.target.value)}
-                placeholder="Enter admin username"
+                placeholder={mode === 'forgot' ? 'e.g. admin or 9876543210' : 'Enter admin username'}
                 style={{
                   width: '100%',
                   padding: '10px 12px 10px 36px',
@@ -139,35 +192,89 @@ export default function AdminLogin({ onLoginSuccess, onCancel, restaurantName })
             </div>
           </div>
 
-          <div style={{ marginBottom: '24px' }}>
-            <label style={{
-              display: 'block',
-              fontSize: '0.8rem',
-              fontWeight: 600,
-              color: 'var(--text-dark)',
-              marginBottom: '6px'
-            }}>
-              Password
-            </label>
-            <div style={{ position: 'relative', display: 'flex', alignItems: 'center' }}>
-              <KeyRound size={16} color="var(--text-muted)" style={{ position: 'absolute', left: '12px' }} />
-              <input
-                type="password"
-                required
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                placeholder="Enter password"
-                style={{
-                  width: '100%',
-                  padding: '10px 12px 10px 36px',
-                  fontSize: '0.9rem',
-                  borderRadius: 'var(--radius-sm)',
-                  border: '1px solid rgba(197, 160, 89, 0.4)',
-                  outline: 'none'
-                }}
-              />
+          {mode === 'login' ? (
+            <div style={{ marginBottom: '20px' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '6px' }}>
+                <label style={{
+                  fontSize: '0.8rem',
+                  fontWeight: 600,
+                  color: 'var(--text-dark)'
+                }}>
+                  Password
+                </label>
+                <button
+                  type="button"
+                  onClick={() => { setMode('forgot'); setError(''); setSuccessMsg(''); }}
+                  style={{
+                    background: 'none', border: 'none', color: '#059669',
+                    fontSize: '0.78rem', fontWeight: 700, cursor: 'pointer'
+                  }}
+                >
+                  🔑 Forgot Password?
+                </button>
+              </div>
+              <div style={{ position: 'relative', display: 'flex', alignItems: 'center' }}>
+                <KeyRound size={16} color="var(--text-muted)" style={{ position: 'absolute', left: '12px' }} />
+                <input
+                  type="password"
+                  required
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  placeholder="Enter password"
+                  style={{
+                    width: '100%',
+                    padding: '10px 12px 10px 36px',
+                    fontSize: '0.9rem',
+                    borderRadius: 'var(--radius-sm)',
+                    border: '1px solid rgba(197, 160, 89, 0.4)',
+                    outline: 'none'
+                  }}
+                />
+              </div>
             </div>
-          </div>
+          ) : (
+            <>
+              <div style={{ marginBottom: '16px' }}>
+                <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: 600, color: 'var(--text-dark)', marginBottom: '6px' }}>
+                  New Password
+                </label>
+                <div style={{ position: 'relative', display: 'flex', alignItems: 'center' }}>
+                  <KeyRound size={16} color="var(--text-muted)" style={{ position: 'absolute', left: '12px' }} />
+                  <input
+                    type="password"
+                    required
+                    value={newPassword}
+                    onChange={(e) => setNewPassword(e.target.value)}
+                    placeholder="Enter new password (min 4 chars)"
+                    style={{
+                      width: '100%', padding: '10px 12px 10px 36px', fontSize: '0.9rem',
+                      borderRadius: 'var(--radius-sm)', border: '1px solid rgba(197, 160, 89, 0.4)', outline: 'none'
+                    }}
+                  />
+                </div>
+              </div>
+
+              <div style={{ marginBottom: '20px' }}>
+                <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: 600, color: 'var(--text-dark)', marginBottom: '6px' }}>
+                  Confirm New Password
+                </label>
+                <div style={{ position: 'relative', display: 'flex', alignItems: 'center' }}>
+                  <KeyRound size={16} color="var(--text-muted)" style={{ position: 'absolute', left: '12px' }} />
+                  <input
+                    type="password"
+                    required
+                    value={confirmPassword}
+                    onChange={(e) => setConfirmPassword(e.target.value)}
+                    placeholder="Repeat new password"
+                    style={{
+                      width: '100%', padding: '10px 12px 10px 36px', fontSize: '0.9rem',
+                      borderRadius: 'var(--radius-sm)', border: '1px solid rgba(197, 160, 89, 0.4)', outline: 'none'
+                    }}
+                  />
+                </div>
+              </div>
+            </>
+          )}
 
           <button
             type="submit"
@@ -185,26 +292,42 @@ export default function AdminLogin({ onLoginSuccess, onCancel, restaurantName })
               cursor: loading ? 'not-allowed' : 'pointer'
             }}
           >
-            {loading ? 'Authenticating...' : 'Log In to Panel'}
+            {loading ? 'Processing...' : (mode === 'forgot' ? '🔑 Update Password' : 'Log In to Panel')}
           </button>
 
-          <button
-            type="button"
-            onClick={onCancel}
-            style={{
-              width: '100%',
-              marginTop: '12px',
-              padding: '10px',
-              color: 'var(--text-muted)',
-              fontSize: '0.85rem',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              gap: '6px'
-            }}
-          >
-            <ArrowLeft size={16} /> Return to Customer Menu
-          </button>
+          {mode === 'forgot' ? (
+            <button
+              type="button"
+              onClick={() => { setMode('login'); setError(''); setSuccessMsg(''); }}
+              style={{
+                width: '100%', marginTop: '12px', padding: '10px', color: '#059669',
+                fontSize: '0.85rem', fontWeight: 700, border: 'none', background: 'none', cursor: 'pointer'
+              }}
+            >
+              ← Back to Owner Login
+            </button>
+          ) : (
+            <button
+              type="button"
+              onClick={onCancel}
+              style={{
+                width: '100%',
+                marginTop: '12px',
+                padding: '10px',
+                color: 'var(--text-muted)',
+                fontSize: '0.85rem',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                gap: '6px',
+                border: 'none',
+                background: 'none',
+                cursor: 'pointer'
+              }}
+            >
+              <ArrowLeft size={16} /> Return to Customer Menu
+            </button>
+          )}
         </form>
       </div>
     </div>

@@ -93,6 +93,55 @@ router.post('/login', async (req, res) => {
   }
 });
 
+// POST /api/admin/forgot-password - Reset password using registered phone or username
+router.post('/forgot-password', async (req, res) => {
+  try {
+    const { phone_or_username, new_password } = req.body;
+
+    if (!phone_or_username || !new_password) {
+      return res.status(400).json({ error: 'Phone/Username and New Password are required' });
+    }
+
+    if (new_password.length < 4) {
+      return res.status(400).json({ error: 'New password must be at least 4 characters long' });
+    }
+
+    const trimmedInput = phone_or_username.trim();
+
+    // 1. Try finding admin by exact username
+    let admins = await query('SELECT * FROM admins WHERE username = $1', [trimmedInput]);
+
+    // 2. Fallback: Try finding restaurant by phone number
+    if (!admins || admins.length === 0) {
+      const restos = await query('SELECT id FROM restaurants WHERE phone = $1 OR whatsapp_number = $1', [trimmedInput]);
+      if (restos && restos.length > 0) {
+        const targetRestoId = restos[0].id;
+        admins = await query('SELECT * FROM admins WHERE restaurant_id = $1 ORDER BY id ASC LIMIT 1', [targetRestoId]);
+      }
+    }
+
+    if (!admins || admins.length === 0) {
+      return res.status(404).json({ error: 'No account found matching this Username or Phone number.' });
+    }
+
+    const targetAdmin = admins[0];
+
+    // Hash new password & update
+    const salt = await bcrypt.genSalt(10);
+    const newHash = await bcrypt.hash(new_password, salt);
+
+    await query('UPDATE admins SET password_hash = $1 WHERE id = $2', [newHash, targetAdmin.id]);
+
+    res.json({
+      success: true,
+      message: `🔑 Password for '${targetAdmin.username}' updated successfully! You can now log in.`
+    });
+  } catch (err) {
+    console.error('Forgot password error:', err);
+    res.status(500).json({ error: 'Failed to reset password. Please try again or contact Super Admin.' });
+  }
+});
+
 // Admin Dashboard Summary Statistics
 router.get('/stats', authenticateToken, async (req, res) => {
   try {

@@ -741,9 +741,36 @@ export default function App() {
                 </div>
 
                 <div style={{ marginBottom: '20px' }}>
-                  <label style={{ display: 'block', fontSize: '0.78rem', fontWeight: 800, color: '#DFBA67', marginBottom: '6px' }}>
-                    PASSWORD *
-                  </label>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '6px' }}>
+                    <label style={{ fontSize: '0.78rem', fontWeight: 800, color: '#DFBA67' }}>
+                      PASSWORD *
+                    </label>
+                    <button
+                      type="button"
+                      onClick={async () => {
+                        const input = prompt('Enter your Username or Registered Phone Number to reset password:');
+                        if (!input) return;
+                        const newPass = prompt('Enter your NEW Password (minimum 4 characters):');
+                        if (!newPass) return;
+                        if (newPass.length < 4) { alert('Password must be at least 4 characters long'); return; }
+                        try {
+                          const res = await fetch('/api/admin/forgot-password', {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({ phone_or_username: input, new_password: newPass })
+                          });
+                          const data = await res.json();
+                          if (!res.ok) throw new Error(data.error || 'Failed to reset password');
+                          alert(data.message || 'Password updated successfully!');
+                        } catch (err) {
+                          alert(err.message);
+                        }
+                      }}
+                      style={{ background: 'none', border: 'none', color: '#34D399', fontSize: '0.74rem', fontWeight: 700, cursor: 'pointer' }}
+                    >
+                      🔑 Forgot Password?
+                    </button>
+                  </div>
                   <input
                     type="password"
                     required
