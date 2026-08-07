@@ -43,13 +43,13 @@ if (fs.existsSync(distDir)) {
     res.sendFile(path.join(distDir, 'index.html'));
   });
 } else {
-  // Development fallback for clean SPA routes
-  app.get(['/super-admin', '/superadmin', '/admin', '/r/*'], (req, res) => {
+  // Fallback for SPA routing when dist directory is building or missing
+  app.get('*', (req, res) => {
     const devHtml = path.resolve('index.html');
     if (fs.existsSync(devHtml)) {
       res.sendFile(devHtml);
     } else {
-      res.send(`<!DOCTYPE html><html><head><title>SaaS Portal</title></head><body><div id="root"></div></body></html>`);
+      res.send(`<!DOCTYPE html><html><head><title>Khana Master SaaS</title></head><body><div id="root"></div></body></html>`);
     }
   });
 }
