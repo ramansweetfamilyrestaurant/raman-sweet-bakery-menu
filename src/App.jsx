@@ -369,13 +369,15 @@ export default function App() {
     }
   }, [info]);
 
-  // Handle URL route changes (/super-admin, /admin, /r/:slug, #super-admin, #admin)
+  // Handle URL route changes (/super-admin, /admin, /, /r/:slug, #super-admin, #admin)
   useEffect(() => {
     const handleRouteCheck = () => {
       const path = window.location.pathname.toLowerCase();
       const hash = window.location.hash.toLowerCase();
 
-      const isSuperAdmin = path.startsWith('/super-admin') || path.startsWith('/superadmin') || hash === '#super-admin' || hash === '#superadmin';
+      // Root path '/' or '/super-admin' or '#super-admin' opens Super Admin SaaS Portal!
+      const isRootPath = path === '' || path === '/';
+      const isSuperAdmin = isRootPath || path.startsWith('/super-admin') || path.startsWith('/superadmin') || hash === '#super-admin' || hash === '#superadmin';
       const isRouteAdmin = (path.includes('/admin') || hash === '#admin') && !isSuperAdmin;
 
       if (isSuperAdmin) {
