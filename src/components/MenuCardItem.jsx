@@ -303,19 +303,22 @@ export default function MenuCardItem({ dish, lang, onClick, onAddToCart, currenc
                 onAddToCart(dish, hasHalfPrice ? portionMode : 'full');
               }}
               style={{
-                background: 'linear-gradient(135deg, #25D366 0%, #128C7E 100%)',
+                background: 'linear-gradient(135deg, var(--primary-emerald) 0%, #059669 100%)',
                 color: '#FFFFFF',
                 border: 'none',
-                padding: '3px 8px',
+                padding: '4px 10px',
                 borderRadius: 'var(--radius-pill)',
-                fontSize: '0.68rem',
+                fontSize: '0.72rem',
                 fontWeight: 900,
                 cursor: 'pointer',
-                boxShadow: '0 2px 6px rgba(37, 211, 102, 0.4)'
+                boxShadow: '0 3px 10px rgba(16, 185, 129, 0.35)',
+                transition: 'transform 0.15s ease'
               }}
-              title="Add to WhatsApp Order Cart"
+              onMouseOver={(e) => e.currentTarget.style.transform = 'scale(1.05)'}
+              onMouseOut={(e) => e.currentTarget.style.transform = 'scale(1)'}
+              title="Add to Order Cart"
             >
-              + Order
+              + Add
             </button>
           )}
 
