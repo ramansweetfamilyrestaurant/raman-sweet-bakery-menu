@@ -116,6 +116,30 @@ export default function AdminDashboard({ token, username, onLogout, onReturnToMe
     }
   };
 
+  const triggerBackgroundNotification = (count) => {
+    try {
+      if ('Notification' in window && Notification.permission === 'granted') {
+        const notif = new Notification('🛎️ NEW LIVE ORDER RECEIVED!', {
+          body: `You have ${count} new pending order(s)! Click to view order details & print KOT.`,
+          icon: '/favicon.svg',
+          badge: '/favicon.svg',
+          tag: 'new-order',
+          requireInteraction: true, // Keeps notification active on screen until clicked
+          vibrate: [300, 100, 300, 100, 300]
+        });
+        notif.onclick = () => {
+          window.focus();
+          notif.close();
+        };
+      }
+      if ('vibrate' in navigator) {
+        navigator.vibrate([300, 100, 300, 100, 300]);
+      }
+    } catch (e) {
+      console.warn('Background notification error:', e);
+    }
+  };
+
   const loadOrders = async () => {
     try {
       const [data, reqsData, analytics] = await Promise.all([
@@ -129,6 +153,7 @@ export default function AdminDashboard({ token, username, onLogout, onReturnToMe
       const pendingCount = safeData.filter(o => o.status === 'pending').length + safeReqs.length;
       if (pendingCount > prevPendingCount) {
         playKitchenChime();
+        triggerBackgroundNotification(pendingCount);
       }
       setPrevPendingCount(pendingCount);
       setOrders(safeData);
