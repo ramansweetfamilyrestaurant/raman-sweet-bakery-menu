@@ -380,6 +380,12 @@ export default function App() {
         window.history.replaceState({}, '', '/');
       }
 
+      // If someone types bare /admin without restaurant slug, redirect to explicit /tenant-slug/admin
+      if (path === '/admin' || path === '/admin/') {
+        const storedSlug = localStorage.getItem('raman_admin_slug') || 'raman-sweet-bakery';
+        window.history.replaceState({}, '', `/${storedSlug}/admin`);
+      }
+
       const isRootPath = path === '' || path === '/' || path.startsWith('/super-admin') || path.startsWith('/superadmin');
       const isSuperAdmin = isRootPath || hash === '#super-admin' || hash === '#superadmin';
       const isRouteAdmin = (path.includes('/admin') || hash === '#admin') && !isSuperAdmin;
