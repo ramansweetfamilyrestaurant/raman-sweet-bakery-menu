@@ -19,7 +19,7 @@ export default function CategoryFormModal({ category, token, onSave, onClose }) 
     setError('');
     try {
       const res = await uploadImage(file, token);
-      setImage(res.url);
+      setImage(res);
     } catch (err) {
       setError(err.message || 'Image upload failed');
     } finally {
