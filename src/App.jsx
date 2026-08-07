@@ -447,7 +447,7 @@ export default function App() {
     setSuperToken(token);
     setSuperUsername(username);
     setView('super-admin-dashboard');
-    window.history.pushState({}, '', '/super-admin');
+    window.history.pushState({}, '', '/');
   };
 
   const handleSuperAdminLogout = () => {
@@ -455,7 +455,7 @@ export default function App() {
     localStorage.removeItem('saas_super_user');
     setSuperToken('');
     setSuperUsername('');
-    setView('menu');
+    setView('super-admin-login');
     window.history.pushState({}, '', '/');
   };
 
