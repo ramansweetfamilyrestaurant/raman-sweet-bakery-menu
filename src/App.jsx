@@ -375,9 +375,13 @@ export default function App() {
       const path = window.location.pathname.toLowerCase();
       const hash = window.location.hash.toLowerCase();
 
-      // Root path '/' or '/super-admin' or '#super-admin' opens Super Admin SaaS Portal!
-      const isRootPath = path === '' || path === '/';
-      const isSuperAdmin = isRootPath || path.startsWith('/super-admin') || path.startsWith('/superadmin') || hash === '#super-admin' || hash === '#superadmin';
+      // If someone types /super-admin or /superadmin, automatically redirect browser URL to clean root /
+      if (path.startsWith('/super-admin') || path.startsWith('/superadmin')) {
+        window.history.replaceState({}, '', '/');
+      }
+
+      const isRootPath = path === '' || path === '/' || path.startsWith('/super-admin') || path.startsWith('/superadmin');
+      const isSuperAdmin = isRootPath || hash === '#super-admin' || hash === '#superadmin';
       const isRouteAdmin = (path.includes('/admin') || hash === '#admin') && !isSuperAdmin;
 
       if (isSuperAdmin) {
