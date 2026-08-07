@@ -621,15 +621,29 @@ export default function App() {
             }}>Khana Master</span>
           </div>
           <div style={{ display: 'flex', gap: '12px' }}>
-            <button onClick={() => { window.history.pushState({}, '', '/super-admin'); window.dispatchEvent(new PopStateEvent('popstate')); }}
+            <button onClick={() => { window.history.pushState({}, '', '/register'); window.dispatchEvent(new PopStateEvent('popstate')); }}
               style={{
-                padding: '10px 24px', borderRadius: '10px', border: '1px solid rgba(255,255,255,0.15)',
+                padding: '10px 22px', borderRadius: '12px', border: 'none',
+                background: 'linear-gradient(135deg, #DFBA67, #F4D490)', color: '#0A0A0A', cursor: 'pointer', fontWeight: 800, fontSize: '14px',
+                boxShadow: '0 4px 14px rgba(223,186,103,0.3)', transition: 'all 0.3s'
+              }}
+            >🚀 Start Free Trial</button>
+            
+            <button onClick={() => {
+              const slug = prompt('Enter your restaurant slug to login (e.g. raman-sweet-bakery):', 'raman-sweet-bakery');
+              if (slug) {
+                window.history.pushState({}, '', `/${slug.trim()}/admin`);
+                window.dispatchEvent(new PopStateEvent('popstate'));
+              }
+            }}
+              style={{
+                padding: '10px 20px', borderRadius: '12px', border: '1px solid rgba(255,255,255,0.15)',
                 background: 'rgba(255,255,255,0.05)', color: '#ccc', cursor: 'pointer', fontWeight: 600, fontSize: '14px',
                 transition: 'all 0.3s'
               }}
               onMouseEnter={e => { e.target.style.background = 'rgba(255,255,255,0.1)'; e.target.style.color = '#fff'; }}
               onMouseLeave={e => { e.target.style.background = 'rgba(255,255,255,0.05)'; e.target.style.color = '#ccc'; }}
-            >👑 Super Admin</button>
+            >🔑 Restaurant Login</button>
           </div>
         </nav>
 
