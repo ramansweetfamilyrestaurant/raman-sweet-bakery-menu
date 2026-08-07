@@ -1123,27 +1123,50 @@ export default function AdminDashboard({ token, username, onLogout, onReturnToMe
 
         {/* Right: Quick Action Pill Buttons */}
         <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flexShrink: 0 }}>
-          <button 
-            onClick={() => playKitchenChime()}
-            title="Test Loud Restaurant Order Siren Sound"
-            style={{
-              background: '#DFBA67',
-              color: '#0A0A0A',
-              padding: '6px 11px',
-              borderRadius: 'var(--radius-pill)',
-              fontSize: '0.74rem',
-              fontWeight: 900,
-              border: 'none',
-              cursor: 'pointer',
-              display: 'flex',
-              alignItems: 'center',
-              gap: '4px',
-              whiteSpace: 'nowrap',
-              boxShadow: '0 2px 8px rgba(223,186,103,0.4)'
-            }}
-          >
-            🔊 Test Sound
-          </button>
+          {!permissionsGranted ? (
+            <button 
+              onClick={requestDevicePermissions}
+              title="Enable Mobile Ringtone, Push Notifications & GPS Location"
+              style={{
+                background: 'linear-gradient(135deg, #F59E0B 0%, #D97706 100%)',
+                color: '#FFFFFF',
+                padding: '6px 12px',
+                borderRadius: 'var(--radius-pill)',
+                fontSize: '0.74rem',
+                fontWeight: 900,
+                border: 'none',
+                cursor: 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '4px',
+                whiteSpace: 'nowrap',
+                boxShadow: '0 2px 8px rgba(245,158,11,0.35)'
+              }}
+            >
+              🔔 Enable Order Alerts
+            </button>
+          ) : (
+            <button 
+              onClick={() => playKitchenChime()}
+              title="Order Ringtone Active! Click to Test Loud Siren Sound"
+              style={{
+                background: '#DCFCE7',
+                color: '#15803D',
+                padding: '6px 12px',
+                borderRadius: 'var(--radius-pill)',
+                fontSize: '0.74rem',
+                fontWeight: 900,
+                border: '1px solid #86EFAC',
+                cursor: 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '4px',
+                whiteSpace: 'nowrap'
+              }}
+            >
+              🔊 Sound Active (Test)
+            </button>
+          )}
 
           <button 
             onClick={() => onReturnToMenu(settingsForm.slug)}
@@ -1188,52 +1211,6 @@ export default function AdminDashboard({ token, username, onLogout, onReturnToMe
           </button>
         </div>
       </header>
-
-      {/* 📱 Mobile & Browser Device Permissions Bar */}
-      {!permissionsGranted && (
-        <div style={{
-          background: 'linear-gradient(135deg, #1E1B4B 0%, #312E81 100%)',
-          borderBottom: '2px solid #6366F1',
-          padding: '12px 18px',
-          display: 'flex',
-          alignItems: 'center',
-          justify: 'space-between',
-          flexWrap: 'wrap',
-          gap: '10px',
-          color: '#FFFFFF',
-          boxShadow: '0 4px 14px rgba(99,102,241,0.25)'
-        }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-            <span style={{ fontSize: '22px' }}>🔔</span>
-            <div>
-              <strong style={{ fontSize: '0.88rem', color: '#EEF2FF', display: 'block' }}>
-                Enable Mobile Sound, Order Notifications & GPS Location Permissions
-              </strong>
-              <span style={{ fontSize: '0.75rem', color: '#C7D2FE' }}>
-                Allow permissions so your phone rings loudly & notifies you when a customer places an order!
-              </span>
-            </div>
-          </div>
-
-          <button
-            onClick={requestDevicePermissions}
-            style={{
-              background: 'linear-gradient(135deg, #DFBA67, #F4D490)',
-              color: '#0A0A0A',
-              padding: '8px 16px',
-              borderRadius: '12px',
-              border: 'none',
-              fontWeight: 900,
-              fontSize: '0.8rem',
-              cursor: 'pointer',
-              boxShadow: '0 4px 12px rgba(223,186,103,0.4)',
-              whiteSpace: 'nowrap'
-            }}
-          >
-            🔊 Enable Sound, Notifications & Location
-          </button>
-        </div>
-      )}
 
       {/* 📢 Global System Announcement Banner */}
       {announcements.length > 0 && !dismissedNotice && (
