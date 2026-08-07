@@ -482,3 +482,15 @@ export async function optimizeDatabase(daysOld = 90, token) {
   });
   return handleResponse(res, 'Failed to optimize database');
 }
+
+export async function superAdminOptimizeDatabase(daysOld = 90, token) {
+  const res = await fetch(`${API_BASE}/superadmin/optimize-db`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      Authorization: `Bearer ${token}`,
+    },
+    body: JSON.stringify({ daysOld }),
+  });
+  return handleResponse(res, 'Failed to run global database optimization');
+}

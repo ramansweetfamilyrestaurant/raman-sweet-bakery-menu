@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Crown, Plus, LogOut, ExternalLink, Trash2, CheckCircle, Store, Utensils, DollarSign, Phone, MapPin, Copy, Check, Search, Edit3, Shield, ShieldCheck, RefreshCw, QrCode, Megaphone, FileText, Calendar, Palette, MessageSquare, Upload, X, XCircle, CreditCard, Lock } from 'lucide-react';
-import { fetchSuperAdminRestaurants, createTenantRestaurant, toggleTenantRestaurantActive, deleteTenantRestaurant, impersonateTenantRestaurant, updateTenantRestaurant, createAnnouncement, fetchSuperAnnouncements, deleteAnnouncement, clearAllAnnouncements, fetchAuditLogs, uploadImage, fetchSaaSPlans, createSaaSPlan, updateSaaSPlan, deleteSaaSPlan } from '../../api/client';
+import { fetchSuperAdminRestaurants, createTenantRestaurant, toggleTenantRestaurantActive, deleteTenantRestaurant, impersonateTenantRestaurant, updateTenantRestaurant, createAnnouncement, fetchSuperAnnouncements, deleteAnnouncement, clearAllAnnouncements, fetchAuditLogs, uploadImage, fetchSaaSPlans, createSaaSPlan, updateSaaSPlan, deleteSaaSPlan, superAdminOptimizeDatabase } from '../../api/client';
 import { SAAS_PLANS, getPlanDetails } from '../../config/plans';
 
 export default function SuperAdminDashboard({ token, username, onLogout, onReturnToMenu, onImpersonate }) {
@@ -335,6 +335,35 @@ export default function SuperAdminDashboard({ token, username, onLogout, onRetur
               title="Broadcast global announcement banner to all tenant dashboards"
             >
               <Megaphone size={15} /> Broadcast Notice
+            </button>
+
+            <button
+              onClick={async () => {
+                if (!confirm('Run global database optimization across all restaurants? Orders older than retention limits will be compressed into daily sales summaries.')) return;
+                try {
+                  const res = await superAdminOptimizeDatabase(90, token);
+                  alert(res.message || 'Global database optimization completed successfully!');
+                } catch (err) {
+                  alert('Optimization failed: ' + err.message);
+                }
+              }}
+              style={{
+                background: 'linear-gradient(135deg, #F59E0B 0%, #D97706 100%)',
+                color: '#FFFFFF',
+                padding: '8px 14px',
+                borderRadius: 'var(--radius-pill)',
+                fontSize: '0.78rem',
+                fontWeight: 800,
+                border: 'none',
+                cursor: 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '6px',
+                boxShadow: '0 4px 14px rgba(245,158,11,0.35)'
+              }}
+              title="Compress old order records across all tenant restaurants"
+            >
+              ⚡ Global DB Compress
             </button>
 
             <button
@@ -1259,6 +1288,23 @@ export default function SuperAdminDashboard({ token, username, onLogout, onRetur
                     ⭐ Google Review Button
                   </label>
                 </div>
+              </div>
+
+              {/* ⚡ DATA RETENTION & COMPACTION POLICY */}
+              <div style={{ background: '#EFF6FF', border: '1.5px solid #93C5FD', borderRadius: '14px', padding: '14px 16px', marginTop: '6px' }}>
+                <strong style={{ fontSize: '0.82rem', color: '#1E40AF', display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '6px' }}>
+                  ⚡ DATA COMPACTION & ORDER RETENTION POLICY
+                </strong>
+                <select
+                  value={editModalData.order_retention_days || 7}
+                  onChange={(e) => setEditModalData({ ...editModalData, order_retention_days: Number(e.target.value) })}
+                  style={{ width: '100%', padding: '8px 12px', borderRadius: '8px', border: '1px solid #BFDBFE', fontSize: '0.84rem', fontWeight: 800, color: '#1E3A8A', background: '#FFFFFF' }}
+                >
+                  <option value={1}>⚡ 24 Hours / 1 Day (Ultra Light - High Traffic)</option>
+                  <option value={7}>⚡ 7 Days (Recommended for Restaurants)</option>
+                  <option value={30}>⚡ 30 Days (1 Month History)</option>
+                  <option value={90}>⚡ 90 Days (3 Months History)</option>
+                </select>
               </div>
 
               <div>
