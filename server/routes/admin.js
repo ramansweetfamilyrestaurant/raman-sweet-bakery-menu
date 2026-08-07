@@ -296,7 +296,7 @@ const handleUpdateSettings = async (req, res) => {
       gst_enabled ? 1 : 0,
       gstin_number || '',
       total_tables || 12,
-      order_retention_days || 7,
+      order_retention_days || 90,
       restoId
     ]);
 

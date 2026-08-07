@@ -230,7 +230,7 @@ router.put('/restaurants/:id', authenticateToken, requireSuperAdmin, async (req,
       direct_ordering_enabled !== false && direct_ordering_enabled !== 0 && direct_ordering_enabled !== 'false' ? 1 : 0,
       google_reviews_enabled !== false && google_reviews_enabled !== 0 && google_reviews_enabled !== 'false' ? 1 : 0,
       theme_color || 'gold',
-      order_retention_days ? parseInt(order_retention_days, 10) : 7,
+      order_retention_days ? parseInt(order_retention_days, 10) : 90,
       id
     ]);
 

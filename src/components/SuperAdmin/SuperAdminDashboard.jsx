@@ -1296,7 +1296,7 @@ export default function SuperAdminDashboard({ token, username, onLogout, onRetur
                   ⚡ DATA COMPACTION & ORDER RETENTION POLICY
                 </strong>
                 <select
-                  value={editModalData.order_retention_days || 7}
+                  value={editModalData.order_retention_days || 90}
                   onChange={(e) => setEditModalData({ ...editModalData, order_retention_days: Number(e.target.value) })}
                   style={{ width: '100%', padding: '8px 12px', borderRadius: '8px', border: '1px solid #BFDBFE', fontSize: '0.84rem', fontWeight: 800, color: '#1E3A8A', background: '#FFFFFF' }}
                 >
