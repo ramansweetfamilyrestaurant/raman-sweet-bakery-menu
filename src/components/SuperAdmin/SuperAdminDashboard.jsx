@@ -252,11 +252,15 @@ export default function SuperAdminDashboard({ token, username, onLogout, onRetur
     return diffDays;
   };
 
-  // Filtered restaurants by search query
+  const [statusFilter, setStatusFilter] = useState('all'); // 'all', 'active', 'suspended'
+
+  // Filtered restaurants by search query and status
   const filteredRestaurants = restaurants.filter(r => {
+    if (statusFilter === 'active' && r.active === false) return false;
+    if (statusFilter === 'suspended' && r.active !== false) return false;
     if (!searchQuery.trim()) return true;
     const q = searchQuery.toLowerCase();
-    return r.name.toLowerCase().includes(q) || r.slug.toLowerCase().includes(q) || (r.owner_username && r.owner_username.toLowerCase().includes(q));
+    return r.name.toLowerCase().includes(q) || r.slug.toLowerCase().includes(q) || (r.owner_username && r.owner_username.toLowerCase().includes(q)) || (r.phone && r.phone.includes(q));
   });
 
   const totalActive = restaurants.filter(r => r.active !== false).length;
@@ -552,6 +556,40 @@ export default function SuperAdminDashboard({ token, username, onLogout, onRetur
           </div>
 
           <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap' }}>
+            {/* Status Filter Pills */}
+            <div style={{ display: 'flex', gap: '4px', background: 'var(--bg-secondary)', padding: '3px', borderRadius: 'var(--radius-pill)', border: '1px solid var(--border-light)' }}>
+              <button
+                onClick={() => setStatusFilter('all')}
+                style={{
+                  padding: '4px 10px', borderRadius: 'var(--radius-pill)', fontSize: '0.72rem', fontWeight: 800, border: 'none', cursor: 'pointer',
+                  background: statusFilter === 'all' ? 'var(--primary-emerald)' : 'transparent',
+                  color: statusFilter === 'all' ? '#FFFFFF' : 'var(--text-muted)'
+                }}
+              >
+                All ({restaurants.length})
+              </button>
+              <button
+                onClick={() => setStatusFilter('active')}
+                style={{
+                  padding: '4px 10px', borderRadius: 'var(--radius-pill)', fontSize: '0.72rem', fontWeight: 800, border: 'none', cursor: 'pointer',
+                  background: statusFilter === 'active' ? '#15803D' : 'transparent',
+                  color: statusFilter === 'active' ? '#FFFFFF' : 'var(--text-muted)'
+                }}
+              >
+                🟢 Active ({totalActive})
+              </button>
+              <button
+                onClick={() => setStatusFilter('suspended')}
+                style={{
+                  padding: '4px 10px', borderRadius: 'var(--radius-pill)', fontSize: '0.72rem', fontWeight: 800, border: 'none', cursor: 'pointer',
+                  background: statusFilter === 'suspended' ? '#DC2626' : 'transparent',
+                  color: statusFilter === 'suspended' ? '#FFFFFF' : 'var(--text-muted)'
+                }}
+              >
+                🔴 Suspended ({restaurants.length - totalActive})
+              </button>
+            </div>
+
             {/* Search Input */}
             <div style={{ position: 'relative', width: '220px' }}>
               <Search size={15} style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-muted)' }} />
