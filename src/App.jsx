@@ -260,8 +260,8 @@ export default function App() {
     if (cartItems.length === 0) return;
     setPlacingOrder(true);
     try {
-      // 📍 GPS Geo-Fencing Radius Check (Bypassed for Table QR orders - Scanning physical Table QR is 100% proof of presence!)
-      if (!effectiveTableNum && info && (info.geofencing_enabled === true || info.geofencing_enabled === 1) && info.latitude && info.longitude) {
+      // 📍 GPS Geo-Fencing Radius Check (Verifies customer is physically within restaurant radius)
+      if (info && info.latitude && info.longitude) {
         const geoCheck = await verifyCustomerLocation(
           info.latitude,
           info.longitude,
