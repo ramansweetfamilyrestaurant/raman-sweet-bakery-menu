@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Crown, Plus, LogOut, ExternalLink, Trash2, CheckCircle, Store, Utensils, DollarSign, Phone, MapPin, Copy, Check, Search, Edit3, Shield, ShieldCheck, RefreshCw, QrCode, Megaphone, FileText, Calendar, Palette, MessageSquare, Upload, X, XCircle, CreditCard, Lock } from 'lucide-react';
-import { fetchSuperAdminRestaurants, createTenantRestaurant, toggleTenantRestaurantActive, deleteTenantRestaurant, impersonateTenantRestaurant, updateTenantRestaurant, createAnnouncement, fetchSuperAnnouncements, deleteAnnouncement, clearAllAnnouncements, fetchAuditLogs, uploadImage, fetchSaaSPlans, createSaaSPlan, updateSaaSPlan, deleteSaaSPlan, superAdminOptimizeDatabase } from '../../api/client';
+import { fetchSuperAdminRestaurants, createTenantRestaurant, toggleTenantRestaurantActive, deleteTenantRestaurant, impersonateTenantRestaurant, updateTenantRestaurant, createAnnouncement, fetchSuperAnnouncements, deleteAnnouncement, clearAllAnnouncements, fetchAuditLogs, uploadImage, fetchSaaSPlans, createSaaSPlan, updateSaaSPlan, deleteSaaSPlan, superAdminOptimizeDatabase, updateSuperAdminCredentials } from '../../api/client';
 import { SAAS_PLANS, getPlanDetails } from '../../config/plans';
 
 export default function SuperAdminDashboard({ token, username, onLogout, onReturnToMenu, onImpersonate }) {
@@ -10,6 +10,18 @@ export default function SuperAdminDashboard({ token, username, onLogout, onRetur
   const [showAddModal, setShowAddModal] = useState(false);
   const [editModalData, setEditModalData] = useState(null);
   const [copiedId, setCopiedId] = useState(null);
+
+  // Security Credentials Modal State
+  const [showSecurityModal, setShowSecurityModal] = useState(false);
+  const [securityForm, setSecurityForm] = useState({
+    currentPassword: '',
+    newUsername: username || '',
+    newPassword: '',
+    confirmPassword: ''
+  });
+  const [securitySubmitting, setSecuritySubmitting] = useState(false);
+  const [securityError, setSecurityError] = useState('');
+  const [securitySuccess, setSecuritySuccess] = useState('');
 
   // SaaS Plans Manager State
   const [showPlansModal, setShowPlansModal] = useState(false);
@@ -227,6 +239,52 @@ export default function SuperAdminDashboard({ token, username, onLogout, onRetur
     }
   };
 
+  const handleSecuritySubmit = async (e) => {
+    e.preventDefault();
+    setSecurityError('');
+    setSecuritySuccess('');
+
+    if (!securityForm.currentPassword) {
+      setSecurityError('Current password is required.');
+      return;
+    }
+
+    if (securityForm.newPassword && securityForm.newPassword !== securityForm.confirmPassword) {
+      setSecurityError('New password and confirm password do not match.');
+      return;
+    }
+
+    setSecuritySubmitting(true);
+    try {
+      const res = await updateSuperAdminCredentials({
+        currentPassword: securityForm.currentPassword,
+        newUsername: securityForm.newUsername,
+        newPassword: securityForm.newPassword
+      }, token);
+
+      if (res && res.token) {
+        localStorage.setItem('saas_super_token', res.token);
+        if (res.username) localStorage.setItem('saas_super_user', res.username);
+      }
+
+      setSecuritySuccess('✨ Master credentials updated successfully!');
+      setSecurityForm({
+        currentPassword: '',
+        newUsername: res.username || username,
+        newPassword: '',
+        confirmPassword: ''
+      });
+      setTimeout(() => {
+        setShowSecurityModal(false);
+        setSecuritySuccess('');
+      }, 2000);
+    } catch (err) {
+      setSecurityError(err.message || 'Failed to update credentials');
+    } finally {
+      setSecuritySubmitting(false);
+    }
+  };
+
   const handleUpdateRestaurant = async (e) => {
     e.preventDefault();
     try {
@@ -390,6 +448,38 @@ export default function SuperAdminDashboard({ token, username, onLogout, onRetur
               title="Manage SaaS Plan Tiers, Pricing & Feature Matrix"
             >
               <CreditCard size={14} color="#DFBA67" /> SaaS Plans
+            </button>
+
+            {/* 🔑 Security & Credentials Button */}
+            <button
+              onClick={() => {
+                setSecurityError('');
+                setSecuritySuccess('');
+                setSecurityForm({
+                  currentPassword: '',
+                  newUsername: username || 'superadmin',
+                  newPassword: '',
+                  confirmPassword: ''
+                });
+                setShowSecurityModal(true);
+              }}
+              style={{
+                background: 'rgba(255,255,255,0.1)',
+                color: '#FFFFFF',
+                padding: '7px 12px',
+                borderRadius: 'var(--radius-pill)',
+                fontSize: '0.76rem',
+                fontWeight: 800,
+                border: '1px solid rgba(255,255,255,0.25)',
+                cursor: 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '5px',
+                whiteSpace: 'nowrap'
+              }}
+              title="Change Super Admin Username & Password"
+            >
+              <Lock size={14} color="#DFBA67" /> Security
             </button>
 
             <button
@@ -2041,6 +2131,198 @@ export default function SuperAdminDashboard({ token, username, onLogout, onRetur
                 ))}
               </div>
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* 🔑 Modal: Super Admin Master Credentials Security */}
+      {showSecurityModal && (
+        <div style={{
+          position: 'fixed',
+          top: 0, left: 0, right: 0, bottom: 0,
+          background: 'rgba(0,0,0,0.75)',
+          backdropFilter: 'blur(8px)',
+          zIndex: 3000,
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          padding: '16px'
+        }}>
+          <div style={{
+            background: '#FFFFFF',
+            borderRadius: '24px',
+            maxWidth: '460px',
+            width: '100%',
+            padding: '24px',
+            boxShadow: '0 20px 50px rgba(0,0,0,0.5)',
+            border: '2px solid #D4AF37',
+            position: 'relative'
+          }}>
+            <button
+              onClick={() => setShowSecurityModal(false)}
+              style={{
+                position: 'absolute',
+                top: '16px',
+                right: '16px',
+                background: '#F3F4F6',
+                border: 'none',
+                width: '32px',
+                height: '32px',
+                borderRadius: '50%',
+                cursor: 'pointer',
+                fontWeight: 900,
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center'
+              }}
+            >
+              ✕
+            </button>
+
+            <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '16px' }}>
+              <div style={{
+                width: '40px',
+                height: '40px',
+                borderRadius: '50%',
+                background: 'linear-gradient(135deg, #0A2315 0%, #164E2A 100%)',
+                color: '#DFBA67',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center'
+              }}>
+                <Lock size={20} />
+              </div>
+              <div>
+                <h3 style={{ margin: 0, fontSize: '1.15rem', fontWeight: 900, color: 'var(--text-dark)' }}>
+                  Change Master Credentials
+                </h3>
+                <span style={{ fontSize: '0.74rem', color: 'var(--text-muted)' }}>
+                  Super Admin Account Security Settings
+                </span>
+              </div>
+            </div>
+
+            {securityError && (
+              <div style={{ background: '#FEE2E2', border: '1px solid #EF4444', color: '#B91C1C', padding: '10px', borderRadius: '10px', fontSize: '0.8rem', fontWeight: 700, marginBottom: '14px' }}>
+                ⚠️ {securityError}
+              </div>
+            )}
+
+            {securitySuccess && (
+              <div style={{ background: '#ECFDF5', border: '1px solid #10B981', color: '#047857', padding: '10px', borderRadius: '10px', fontSize: '0.8rem', fontWeight: 700, marginBottom: '14px' }}>
+                {securitySuccess}
+              </div>
+            )}
+
+            <form onSubmit={handleSecuritySubmit} style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+              <div>
+                <label style={{ display: 'block', fontSize: '0.78rem', fontWeight: 800, color: 'var(--text-dark)', marginBottom: '4px' }}>
+                  🔑 Current Password (Required) *
+                </label>
+                <input
+                  type="password"
+                  required
+                  placeholder="Enter current password (e.g. superadmin123)"
+                  value={securityForm.currentPassword}
+                  onChange={(e) => setSecurityForm({ ...securityForm, currentPassword: e.target.value })}
+                  style={{
+                    width: '100%',
+                    padding: '10px 12px',
+                    borderRadius: '10px',
+                    border: '1.5px solid var(--border-light)',
+                    fontSize: '0.86rem',
+                    boxSizing: 'border-box'
+                  }}
+                />
+              </div>
+
+              <div>
+                <label style={{ display: 'block', fontSize: '0.78rem', fontWeight: 800, color: 'var(--text-dark)', marginBottom: '4px' }}>
+                  👤 Master Username
+                </label>
+                <input
+                  type="text"
+                  required
+                  placeholder="e.g. superadmin"
+                  value={securityForm.newUsername}
+                  onChange={(e) => setSecurityForm({ ...securityForm, newUsername: e.target.value })}
+                  style={{
+                    width: '100%',
+                    padding: '10px 12px',
+                    borderRadius: '10px',
+                    border: '1.5px solid var(--border-light)',
+                    fontSize: '0.86rem',
+                    boxSizing: 'border-box'
+                  }}
+                />
+              </div>
+
+              <div>
+                <label style={{ display: 'block', fontSize: '0.78rem', fontWeight: 800, color: 'var(--text-dark)', marginBottom: '4px' }}>
+                  🔒 New Master Password (Leave blank to keep unchanged)
+                </label>
+                <input
+                  type="password"
+                  placeholder="Enter new password"
+                  value={securityForm.newPassword}
+                  onChange={(e) => setSecurityForm({ ...securityForm, newPassword: e.target.value })}
+                  style={{
+                    width: '100%',
+                    padding: '10px 12px',
+                    borderRadius: '10px',
+                    border: '1.5px solid var(--border-light)',
+                    fontSize: '0.86rem',
+                    boxSizing: 'border-box'
+                  }}
+                />
+              </div>
+
+              {securityForm.newPassword && (
+                <div>
+                  <label style={{ display: 'block', fontSize: '0.78rem', fontWeight: 800, color: 'var(--text-dark)', marginBottom: '4px' }}>
+                    🔒 Confirm New Master Password
+                  </label>
+                  <input
+                    type="password"
+                    placeholder="Confirm new password"
+                    value={securityForm.confirmPassword}
+                    onChange={(e) => setSecurityForm({ ...securityForm, confirmPassword: e.target.value })}
+                    style={{
+                      width: '100%',
+                      padding: '10px 12px',
+                      borderRadius: '10px',
+                      border: '1.5px solid var(--border-light)',
+                      fontSize: '0.86rem',
+                      boxSizing: 'border-box'
+                    }}
+                  />
+                </div>
+              )}
+
+              <button
+                type="submit"
+                disabled={securitySubmitting}
+                style={{
+                  marginTop: '8px',
+                  width: '100%',
+                  padding: '12px',
+                  borderRadius: 'var(--radius-pill)',
+                  border: 'none',
+                  background: 'linear-gradient(135deg, #0A2315 0%, #164E2A 100%)',
+                  color: '#DFBA67',
+                  fontWeight: 900,
+                  fontSize: '0.9rem',
+                  cursor: 'pointer',
+                  boxShadow: '0 4px 14px rgba(10,35,21,0.3)',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  gap: '6px'
+                }}
+              >
+                <Lock size={16} /> {securitySubmitting ? 'Updating...' : 'Save Master Credentials'}
+              </button>
+            </form>
           </div>
         </div>
       )}

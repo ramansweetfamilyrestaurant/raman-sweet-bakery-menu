@@ -513,3 +513,15 @@ export async function superAdminOptimizeDatabase(daysOld = 90, token) {
   });
   return handleResponse(res, 'Failed to run global database optimization');
 }
+
+export async function updateSuperAdminCredentials(credentialsData, token) {
+  const res = await fetch(`${API_BASE}/superadmin/change-credentials`, {
+    method: 'PUT',
+    headers: {
+      'Content-Type': 'application/json',
+      Authorization: `Bearer ${token}`,
+    },
+    body: JSON.stringify(credentialsData),
+  });
+  return handleResponse(res, 'Failed to update master credentials');
+}

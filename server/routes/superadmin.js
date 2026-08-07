@@ -452,4 +452,58 @@ router.post('/optimize-db', authenticateToken, requireSuperAdmin, async (req, re
   }
 });
 
+// PUT Change Super Admin Username & Password
+router.put('/change-credentials', authenticateToken, requireSuperAdmin, async (req, res) => {
+  try {
+    const { currentPassword, newUsername, newPassword } = req.body;
+    if (!currentPassword) {
+      return res.status(400).json({ error: 'Current password is required to verify identity' });
+    }
+
+    const admins = await query("SELECT * FROM admins WHERE id = $1 AND role = 'superadmin'", [req.user.id]);
+    if (!admins || admins.length === 0) {
+      return res.status(404).json({ error: 'Super Admin account not found' });
+    }
+
+    const admin = admins[0];
+    const valid = await bcrypt.compare(currentPassword, admin.password_hash);
+    if (!valid) {
+      return res.status(400).json({ error: 'Incorrect current password' });
+    }
+
+    let updatedUsername = admin.username;
+    if (newUsername && newUsername.trim()) {
+      updatedUsername = newUsername.trim();
+    }
+
+    let updatedHash = admin.password_hash;
+    if (newPassword && newPassword.trim()) {
+      const salt = await bcrypt.genSalt(10);
+      updatedHash = await bcrypt.hash(newPassword.trim(), salt);
+    }
+
+    await query(
+      "UPDATE admins SET username = $1, password_hash = $2 WHERE id = $3 AND role = 'superadmin'",
+      [updatedUsername, updatedHash, req.user.id]
+    );
+
+    const token = jwt.sign(
+      { id: admin.id, username: updatedUsername, role: 'superadmin', restaurant_id: admin.restaurant_id },
+      JWT_SECRET,
+      { expiresIn: '30d' }
+    );
+
+    await logAudit(null, 'superadmin', 'Change Credentials', `Super Admin updated credentials (New Username: ${updatedUsername})`);
+
+    res.json({
+      message: 'Master credentials updated successfully!',
+      token,
+      username: updatedUsername
+    });
+  } catch (err) {
+    console.error('Change superadmin credentials error:', err);
+    res.status(500).json({ error: 'Failed to update credentials' });
+  }
+});
+
 export default router;
