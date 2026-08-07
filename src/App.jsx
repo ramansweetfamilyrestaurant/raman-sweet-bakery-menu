@@ -5,6 +5,7 @@ import SearchBar from './components/SearchBar';
 import CategoryJumpRail from './components/CategoryJumpRail';
 import DishCard from './components/DishCard';
 import DishModal from './components/DishModal';
+import ComboModal from './components/ComboModal';
 import RestaurantInfoModal from './components/RestaurantInfoModal';
 import BottomDock from './components/BottomDock';
 import Footer from './components/Footer';
@@ -80,6 +81,7 @@ export default function App() {
 
   // Modals
   const [selectedDishModal, setSelectedDishModal] = useState(null);
+  const [selectedComboModal, setSelectedComboModal] = useState(null);
   const [showInfoModal, setShowInfoModal] = useState(false);
   const [showCategoryDrawer, setShowCategoryDrawer] = useState(false);
   const [showServiceModal, setShowServiceModal] = useState(false);
@@ -1011,11 +1013,16 @@ export default function App() {
                   const savings = originalTotal - combo.price;
                   const canOrder = effectiveTableNum && (info?.direct_ordering_enabled === true || info?.direct_ordering_enabled === 1);
                   return (
-                    <div key={combo.id} style={{
-                      background: '#FFFFFF', borderRadius: 'var(--radius-md)', padding: '14px',
-                      border: '1px solid var(--border-light)', boxShadow: 'var(--shadow-sm)',
-                      position: 'relative', overflow: 'hidden'
-                    }}>
+                    <div 
+                      key={combo.id}
+                      onClick={() => setSelectedComboModal(combo)}
+                      style={{
+                        background: '#FFFFFF', borderRadius: 'var(--radius-md)', padding: '14px',
+                        border: '1px solid var(--border-light)', boxShadow: 'var(--shadow-sm)',
+                        position: 'relative', overflow: 'hidden', cursor: 'pointer',
+                        transition: 'all 0.2s ease'
+                      }}
+                    >
                       {/* Savings ribbon */}
                       {savings > 0 && (
                         <div style={{
@@ -1068,7 +1075,10 @@ export default function App() {
                             </div>
                             {canOrder && (
                               <button
-                                onClick={() => handleAddComboToCart(combo)}
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  handleAddComboToCart(combo);
+                                }}
                                 style={{
                                   padding: '7px 16px', borderRadius: '10px', border: 'none',
                                   background: 'linear-gradient(135deg, var(--primary-emerald), #059669)',
@@ -1626,6 +1636,17 @@ export default function App() {
           lang={lang}
           currencySymbol={info?.currency_symbol !== undefined ? info.currency_symbol : '₹'}
           onClose={() => setSelectedDishModal(null)}
+        />
+      )}
+
+      {/* Customer Thali / Combo Detail Modal */}
+      {selectedComboModal && (
+        <ComboModal
+          combo={selectedComboModal}
+          onClose={() => setSelectedComboModal(null)}
+          onAddToCart={handleAddComboToCart}
+          canOrder={Boolean(effectiveTableNum && (info?.direct_ordering_enabled === true || info?.direct_ordering_enabled === 1))}
+          currencySymbol={info?.currency_symbol || '₹'}
         />
       )}
 
