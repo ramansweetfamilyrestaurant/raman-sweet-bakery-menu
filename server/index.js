@@ -4,6 +4,7 @@ import path from 'path';
 import fs from 'fs';
 import dotenv from 'dotenv';
 import { initDb, runAutoDataSummarization } from './db.js';
+import { startSubscriptionCron } from './subscriptionCron.js';
 import apiRoutes from './routes/api.js';
 import adminRoutes from './routes/admin.js';
 import superadminRoutes from './routes/superadmin.js';
@@ -58,6 +59,7 @@ if (fs.existsSync(distDir)) {
 async function startServer(portToTry = PORT) {
   try {
     await initDb();
+    startSubscriptionCron();
     
     // ⚡ 100% Hands-Free Automated Background Compaction Engine
     // Runs automatically on server startup and every 24 hours in background

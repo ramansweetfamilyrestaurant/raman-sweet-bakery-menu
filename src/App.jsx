@@ -21,6 +21,7 @@ const AdminLogin = lazy(() => import('./components/Admin/AdminLogin'));
 const AdminDashboard = lazy(() => import('./components/Admin/AdminDashboard'));
 const SuperAdminLogin = lazy(() => import('./components/SuperAdmin/SuperAdminLogin'));
 const SuperAdminDashboard = lazy(() => import('./components/SuperAdmin/SuperAdminDashboard'));
+const RegisterPage = lazy(() => import('./components/RegisterPage'));
 
 export default function App() {
   // Parse Table Number from URL query parameter ?table=5
@@ -786,35 +787,19 @@ export default function App() {
     );
   }
 
-  // Register Page View — Placeholder (full component coming next)
+  // Register Page View — Self-Service 14-Day Free Trial Registration Wizard
   if (view === 'register') {
     return (
-      <div style={{
-        minHeight: '100vh',
-        background: 'linear-gradient(135deg, #0A0A0A 0%, #1A0A2E 50%, #0A0A0A 100%)',
-        display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
-        color: '#fff', fontFamily: "'Inter', 'Segoe UI', sans-serif", padding: '40px 20px'
-      }}>
-        <div style={{
-          background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.1)',
-          borderRadius: '24px', padding: '48px 36px', maxWidth: '480px', width: '100%', textAlign: 'center'
-        }}>
-          <div style={{ fontSize: '48px', marginBottom: '16px' }}>🚀</div>
-          <h1 style={{ fontSize: '28px', fontWeight: 800, marginBottom: '12px' }}>
-            <span style={{ background: 'linear-gradient(135deg, #DFBA67, #F4D490)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>Registration Coming Soon!</span>
-          </h1>
-          <p style={{ color: 'rgba(255,255,255,0.5)', fontSize: '16px', lineHeight: 1.7, marginBottom: '32px' }}>
-            Self-service registration system jald hi launch hoga. Abhi ke liye contact karein.
-          </p>
-          <button onClick={() => { window.history.pushState({}, '', '/'); window.dispatchEvent(new PopStateEvent('popstate')); }}
-            style={{
-              padding: '14px 32px', borderRadius: '12px', border: 'none',
-              background: 'linear-gradient(135deg, #DFBA67, #C9A44A)', color: '#0A0A0A',
-              fontWeight: 700, fontSize: '16px', cursor: 'pointer'
-            }}
-          >← Back to Home</button>
+      <Suspense fallback={
+        <div style={{ minHeight: '100vh', background: '#0A0A0A', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#DFBA67', fontWeight: 800 }}>
+          Loading Registration System...
         </div>
-      </div>
+      }>
+        <RegisterPage onRegisterSuccess={(res) => {
+          window.history.pushState({}, '', `/${res.slug}/admin`);
+          window.dispatchEvent(new PopStateEvent('popstate'));
+        }} />
+      </Suspense>
     );
   }
 

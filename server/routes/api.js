@@ -363,11 +363,159 @@ router.post('/service-requests', async (req, res) => {
     res.json({
       success: true,
       request_id: requestId,
-      message: `🛎️ Staff notified for Table #${table_number}! A waiter will attend shortly.`
+      message: `🛎️ Staff notified for Table ${table_number}! A waiter will attend shortly.`
     });
   } catch (err) {
     console.error('Create service request error:', err);
     res.status(500).json({ error: 'Failed to notify staff' });
+  }
+});
+
+// POST /api/register - Public Self-Service 14-Day Free Trial Signup for Restaurants
+router.post('/register', async (req, res) => {
+  try {
+    const { name, phone, owner_username, owner_password, plan_tier } = req.body;
+
+    if (!name || !owner_username || !owner_password) {
+      return res.status(400).json({ error: 'Restaurant Name, Username, and Password are required!' });
+    }
+
+    if (owner_password.length < 4) {
+      return res.status(400).json({ error: 'Password must be at least 4 characters long!' });
+    }
+
+    // 1. Generate clean slug from restaurant name
+    let baseSlug = name
+      .toLowerCase()
+      .trim()
+      .replace(/[^a-z0-9\s-]/g, '')
+      .replace(/[\s_]+/g, '-')
+      .replace(/-+/g, '-');
+
+    if (!baseSlug || baseSlug.length < 2) {
+      baseSlug = 'resto-' + Math.floor(1000 + Math.random() * 9000);
+    }
+
+    // Ensure slug uniqueness
+    let cleanSlug = baseSlug;
+    let counter = 1;
+    while (true) {
+      const existing = await query('SELECT id FROM restaurants WHERE slug = $1', [cleanSlug]);
+      if (existing.length === 0) break;
+      cleanSlug = `${baseSlug}-${counter}`;
+      counter++;
+    }
+
+    // Check if owner username is taken
+    const adminCheck = await query('SELECT id FROM admins WHERE username = $1', [owner_username.trim()]);
+    if (adminCheck.length > 0) {
+      return res.status(400).json({ error: `Username '${owner_username}' is already taken! Please choose a different username.` });
+    }
+
+    // 2. Set 14-Day Free Trial expiry date
+    const expiryDate = new Date(Date.now() + 14 * 24 * 60 * 60 * 1000).toISOString();
+    const selectedPlan = plan_tier || 'pro';
+    const planPrice = selectedPlan === 'basic' ? 499 : selectedPlan === 'enterprise' ? 1999 : 999;
+
+    // 3. Create Restaurant Record
+    const restoRes = await query(`
+      INSERT INTO restaurants (
+        name, slug, tagline, logo, phone, address, opening_hours, plan_tier, plan_price, plan_expires_at, whatsapp_number, theme_color, active, total_tables
+      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14) RETURNING id
+    `, [
+      name.trim(),
+      cleanSlug,
+      '100% Fresh & Authentic Food',
+      'https://images.unsplash.com/photo-1555396273-367ea4eb4db5?w=500&auto=format&fit=crop&q=80',
+      phone || '',
+      'Main Market Street, City Center',
+      '8:00 AM - 10:30 PM',
+      selectedPlan,
+      planPrice,
+      expiryDate,
+      phone || '',
+      'gold',
+      true,
+      12
+    ]);
+
+    const newRestoId = restoRes[0]?.id || restoRes.lastInsertRowid;
+
+    // 4. Create Owner Admin Account
+    const salt = await bcrypt.genSalt(10);
+    const hash = await bcrypt.hash(owner_password, salt);
+
+    const adminRes = await query(`
+      INSERT INTO admins (restaurant_id, username, password_hash, role)
+      VALUES ($1, $2, $3, $4) RETURNING id
+    `, [newRestoId, owner_username.trim(), hash, 'restaurant_admin']);
+
+    const adminId = adminRes[0]?.id || adminRes.lastInsertRowid;
+
+    // 5. Seed Starter Categories & Starter Dishes for instant ready-to-use menu
+    try {
+      const cat1 = await query('INSERT INTO categories (restaurant_id, name, image, sort_order) VALUES ($1, $2, $3, $4) RETURNING id', [
+        newRestoId, '⭐ Special Starters', 'https://images.unsplash.com/photo-1601050690597-df0568f70950?w=500&auto=format&fit=crop&q=80', 1
+      ]);
+      const cat2 = await query('INSERT INTO categories (restaurant_id, name, image, sort_order) VALUES ($1, $2, $3, $4) RETURNING id', [
+        newRestoId, '🍛 Main Course & Thalis', 'https://images.unsplash.com/photo-1546833999-b9f581a1996d?w=500&auto=format&fit=crop&q=80', 2
+      ]);
+      const cat3 = await query('INSERT INTO categories (restaurant_id, name, image, sort_order) VALUES ($1, $2, $3, $4) RETURNING id', [
+        newRestoId, '🥤 Beverages & Shakes', 'https://images.unsplash.com/photo-1544145945-f90425340c7e?w=500&auto=format&fit=crop&q=80', 3
+      ]);
+
+      const cat1Id = cat1[0]?.id || cat1.lastInsertRowid;
+      const cat2Id = cat2[0]?.id || cat2.lastInsertRowid;
+      const cat3Id = cat3[0]?.id || cat3.lastInsertRowid;
+
+      if (cat1Id) {
+        await query('INSERT INTO dishes (restaurant_id, category_id, name, price, description, image, is_veg, must_try) VALUES ($1, $2, $3, $4, $5, $6, $7, $8)', [
+          newRestoId, cat1Id, 'Crispy Paneer Tikka', 240, 'Juicy cottage cheese cubes marinated in spices and grilled in tandoor', 'https://images.unsplash.com/photo-1567188040759-fb8a883dc6d8?w=500&auto=format&fit=crop&q=80', true, true
+        ]);
+      }
+      if (cat2Id) {
+        await query('INSERT INTO dishes (restaurant_id, category_id, name, price, description, image, is_veg, must_try) VALUES ($1, $2, $3, $4, $5, $6, $7, $8)', [
+          newRestoId, cat2Id, 'Royal Butter Paneer & Naan Thali', 290, 'Rich butter paneer gravy served with 2 butter naans, dal makhani, and rice', 'https://images.unsplash.com/photo-1585937421612-70a008356fbe?w=500&auto=format&fit=crop&q=80', true, true
+        ]);
+      }
+      if (cat3Id) {
+        await query('INSERT INTO dishes (restaurant_id, category_id, name, price, description, image, is_veg) VALUES ($1, $2, $3, $4, $5, $6, $7)', [
+          newRestoId, cat3Id, 'Cold Coffee with Ice Cream', 120, 'Creamy chilled coffee topped with dark chocolate and vanilla ice cream', 'https://images.unsplash.com/photo-1572490122747-3968b75cc699?w=500&auto=format&fit=crop&q=80', true
+        ]);
+      }
+    } catch (seedErr) {
+      console.error('Starter menu seed error:', seedErr);
+    }
+
+    // 6. Generate JWT Auth Token for automatic login
+    const token = jwt.sign(
+      {
+        id: adminId,
+        username: owner_username.trim(),
+        role: 'restaurant_admin',
+        restaurant_id: newRestoId,
+        slug: cleanSlug
+      },
+      JWT_SECRET,
+      { expiresIn: '7d' }
+    );
+
+    res.json({
+      success: true,
+      token,
+      slug: cleanSlug,
+      restaurant: {
+        id: newRestoId,
+        name: name.trim(),
+        slug: cleanSlug,
+        plan_tier: selectedPlan,
+        plan_expires_at: expiryDate
+      },
+      message: '🎉 Congratulations! Your 14-Day Free Trial has been activated successfully.'
+    });
+  } catch (err) {
+    console.error('Self-service registration error:', err);
+    res.status(500).json({ error: err.message || 'Failed to complete registration' });
   }
 });
 
