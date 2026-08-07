@@ -313,7 +313,7 @@ export default function App() {
   // Extract restaurant slug from URL (/slug, /r/:slug, or default)
   const getSlugFromUrl = () => {
     const path = window.location.pathname;
-    if (!path || path === '/' || path === '/admin' || path === '/super-admin' || path === '/superadmin') {
+    if (!path || path === '/' || path === '/admin' || path === '/super-admin' || path === '/superadmin' || path === '/register') {
       return 'raman-sweet-bakery';
     }
     
@@ -329,7 +329,7 @@ export default function App() {
     const candidate = parts[0];
     
     // Filter out system routes
-    if (['admin', 'superadmin', 'super-admin', 'api', 'uploads', 'assets'].includes(candidate)) {
+    if (['admin', 'superadmin', 'super-admin', 'api', 'uploads', 'assets', 'register'].includes(candidate)) {
       return 'raman-sweet-bakery';
     }
     
@@ -377,20 +377,25 @@ export default function App() {
       const path = window.location.pathname.toLowerCase();
       const hash = window.location.hash.toLowerCase();
 
-      // If someone types /super-admin or /superadmin, automatically redirect browser URL to clean root /
-      if (path.startsWith('/super-admin') || path.startsWith('/superadmin')) {
-        window.history.replaceState({}, '', '/');
-      }
-
       // If someone types bare /admin without restaurant slug, redirect to explicit /tenant-slug/admin
       if (path === '/admin' || path === '/admin/') {
         const storedSlug = localStorage.getItem('raman_admin_slug') || 'raman-sweet-bakery';
         window.history.replaceState({}, '', `/${storedSlug}/admin`);
       }
 
-      const isRootPath = path === '' || path === '/' || path.startsWith('/super-admin') || path.startsWith('/superadmin');
-      const isSuperAdmin = isRootPath || hash === '#super-admin' || hash === '#superadmin';
+      // Route: /super-admin or /superadmin → Super Admin Portal
+      const isSuperAdminPath = path.startsWith('/super-admin') || path.startsWith('/superadmin');
+      const isSuperAdminHash = hash === '#super-admin' || hash === '#superadmin';
+      const isSuperAdmin = isSuperAdminPath || isSuperAdminHash;
+
+      // Route: /register → Registration Page
+      const isRegister = path === '/register' || path === '/register/';
+
+      // Route: /:slug/admin → Restaurant Admin
       const isRouteAdmin = (path.includes('/admin') || hash === '#admin') && !isSuperAdmin;
+
+      // Route: / (root) → Landing Page
+      const isRootPath = path === '' || path === '/';
 
       if (isSuperAdmin) {
         if (superToken) {
@@ -398,6 +403,8 @@ export default function App() {
         } else {
           setView('super-admin-login');
         }
+      } else if (isRegister) {
+        setView('register');
       } else if (isRouteAdmin) {
         const currentSlug = getSlugFromUrl() || (info && info.slug);
         const storedSlug = localStorage.getItem('raman_admin_slug');
@@ -414,6 +421,8 @@ export default function App() {
           }
           setView('admin-login');
         }
+      } else if (isRootPath) {
+        setView('landing');
       } else {
         setView('menu');
       }
@@ -468,7 +477,7 @@ export default function App() {
     setSuperToken('');
     setSuperUsername('');
     setView('super-admin-login');
-    window.history.pushState({}, '', '/');
+    window.history.pushState({}, '', '/super-admin');
   };
 
   // In-Context Owner Handlers
@@ -580,6 +589,235 @@ export default function App() {
     }
   };
 
+  // Landing Page View — Public SaaS Home
+  if (view === 'landing') {
+    return (
+      <div style={{
+        minHeight: '100vh',
+        background: 'linear-gradient(135deg, #0A0A0A 0%, #1A0A2E 30%, #0D1B2A 70%, #0A0A0A 100%)',
+        color: '#FFFFFF',
+        fontFamily: "'Inter', 'Segoe UI', sans-serif",
+        overflow: 'hidden'
+      }}>
+        {/* Animated background particles */}
+        <div style={{
+          position: 'fixed', top: 0, left: 0, width: '100%', height: '100%', zIndex: 0, pointerEvents: 'none',
+          background: 'radial-gradient(ellipse at 20% 50%, rgba(120, 80, 255, 0.08) 0%, transparent 50%), radial-gradient(ellipse at 80% 20%, rgba(255, 180, 50, 0.06) 0%, transparent 50%), radial-gradient(ellipse at 50% 80%, rgba(0, 200, 150, 0.05) 0%, transparent 50%)'
+        }} />
+
+        {/* Navigation */}
+        <nav style={{
+          display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+          padding: '20px 40px', position: 'relative', zIndex: 10,
+          borderBottom: '1px solid rgba(255,255,255,0.06)'
+        }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+            <span style={{ fontSize: '32px' }}>🍽️</span>
+            <span style={{
+              fontSize: '24px', fontWeight: 800,
+              background: 'linear-gradient(135deg, #DFBA67, #F4D490)',
+              WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent'
+            }}>Khana Master</span>
+          </div>
+          <div style={{ display: 'flex', gap: '12px' }}>
+            <button onClick={() => { window.history.pushState({}, '', '/super-admin'); window.dispatchEvent(new PopStateEvent('popstate')); }}
+              style={{
+                padding: '10px 24px', borderRadius: '10px', border: '1px solid rgba(255,255,255,0.15)',
+                background: 'rgba(255,255,255,0.05)', color: '#ccc', cursor: 'pointer', fontWeight: 600, fontSize: '14px',
+                transition: 'all 0.3s'
+              }}
+              onMouseEnter={e => { e.target.style.background = 'rgba(255,255,255,0.1)'; e.target.style.color = '#fff'; }}
+              onMouseLeave={e => { e.target.style.background = 'rgba(255,255,255,0.05)'; e.target.style.color = '#ccc'; }}
+            >👑 Super Admin</button>
+          </div>
+        </nav>
+
+        {/* Hero Section */}
+        <div style={{
+          display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
+          textAlign: 'center', padding: '80px 20px 60px', position: 'relative', zIndex: 5
+        }}>
+          <div style={{
+            display: 'inline-block', padding: '6px 18px', borderRadius: '50px',
+            background: 'linear-gradient(135deg, rgba(223,186,103,0.15), rgba(223,186,103,0.05))',
+            border: '1px solid rgba(223,186,103,0.3)', fontSize: '13px', color: '#DFBA67',
+            fontWeight: 600, marginBottom: '30px', letterSpacing: '1px'
+          }}>🚀 INDIA's #1 DIGITAL MENU PLATFORM</div>
+
+          <h1 style={{
+            fontSize: 'clamp(36px, 6vw, 72px)', fontWeight: 900, lineHeight: 1.1,
+            marginBottom: '24px', maxWidth: '800px'
+          }}>
+            <span style={{ color: '#FFFFFF' }}>Apne Restaurant Ka </span>
+            <span style={{
+              background: 'linear-gradient(135deg, #DFBA67, #F4D490, #DFBA67)',
+              WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent'
+            }}>Digital Menu</span>
+            <span style={{ color: '#FFFFFF' }}> Banayein</span>
+          </h1>
+
+          <p style={{
+            fontSize: 'clamp(16px, 2.5vw, 20px)', color: 'rgba(255,255,255,0.6)',
+            maxWidth: '600px', lineHeight: 1.7, marginBottom: '40px'
+          }}>
+            QR Code se Digital Menu, WhatsApp Ordering, Google Reviews — sab kuch ek jagah. 
+            <strong style={{ color: '#DFBA67' }}> 14 din free trial</strong>, koi credit card nahi chahiye!
+          </p>
+
+          <div style={{ display: 'flex', gap: '16px', flexWrap: 'wrap', justifyContent: 'center' }}>
+            <button onClick={() => { window.history.pushState({}, '', '/register'); window.dispatchEvent(new PopStateEvent('popstate')); }}
+              style={{
+                padding: '16px 40px', borderRadius: '14px', border: 'none',
+                background: 'linear-gradient(135deg, #DFBA67, #C9A44A)', color: '#0A0A0A',
+                fontWeight: 800, fontSize: '18px', cursor: 'pointer',
+                boxShadow: '0 8px 30px rgba(223,186,103,0.3)',
+                transition: 'all 0.3s ease', transform: 'scale(1)'
+              }}
+              onMouseEnter={e => { e.target.style.transform = 'scale(1.05)'; e.target.style.boxShadow = '0 12px 40px rgba(223,186,103,0.5)'; }}
+              onMouseLeave={e => { e.target.style.transform = 'scale(1)'; e.target.style.boxShadow = '0 8px 30px rgba(223,186,103,0.3)'; }}
+            >🚀 Free Trial Shuru Karein</button>
+            <button onClick={() => window.open('https://khana-master.onrender.com/raman-sweet-bakery', '_blank')}
+              style={{
+                padding: '16px 32px', borderRadius: '14px',
+                border: '2px solid rgba(223,186,103,0.3)', background: 'transparent',
+                color: '#DFBA67', fontWeight: 700, fontSize: '16px', cursor: 'pointer',
+                transition: 'all 0.3s'
+              }}
+              onMouseEnter={e => { e.target.style.background = 'rgba(223,186,103,0.1)'; }}
+              onMouseLeave={e => { e.target.style.background = 'transparent'; }}
+            >👁️ Live Demo Dekhein</button>
+          </div>
+        </div>
+
+        {/* Features Grid */}
+        <div style={{
+          display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))',
+          gap: '24px', padding: '60px 40px', maxWidth: '1100px', margin: '0 auto',
+          position: 'relative', zIndex: 5
+        }}>
+          {[
+            { icon: '📱', title: 'Digital QR Menu', desc: 'Customer QR scan kare aur luxury menu dekhe — no app download required' },
+            { icon: '💬', title: 'WhatsApp Ordering', desc: 'Customer seedha WhatsApp pe order bhej sake — zero commission' },
+            { icon: '⭐', title: 'Google Reviews', desc: 'One-click Google review collection — 5-star ratings badhayein' },
+            { icon: '🎨', title: 'Premium Themes', desc: 'Gold, Rose, Emerald — 10+ luxury themes apne brand ke hisaab se' },
+            { icon: '📊', title: 'Admin Dashboard', desc: 'Menu manage karein, orders dekhein, analytics — sab ek jagah' },
+            { icon: '🚀', title: 'Instant Setup', desc: '5 minute me ready — registration karein aur turant shuru karein' }
+          ].map((f, i) => (
+            <div key={i} style={{
+              background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.08)',
+              borderRadius: '20px', padding: '32px', transition: 'all 0.3s',
+              cursor: 'default'
+            }}
+              onMouseEnter={e => { e.currentTarget.style.background = 'rgba(255,255,255,0.06)'; e.currentTarget.style.borderColor = 'rgba(223,186,103,0.3)'; e.currentTarget.style.transform = 'translateY(-4px)'; }}
+              onMouseLeave={e => { e.currentTarget.style.background = 'rgba(255,255,255,0.03)'; e.currentTarget.style.borderColor = 'rgba(255,255,255,0.08)'; e.currentTarget.style.transform = 'translateY(0)'; }}
+            >
+              <div style={{ fontSize: '40px', marginBottom: '16px' }}>{f.icon}</div>
+              <h3 style={{ fontSize: '20px', fontWeight: 700, marginBottom: '8px', color: '#DFBA67' }}>{f.title}</h3>
+              <p style={{ fontSize: '14px', color: 'rgba(255,255,255,0.5)', lineHeight: 1.6 }}>{f.desc}</p>
+            </div>
+          ))}
+        </div>
+
+        {/* Pricing Section */}
+        <div style={{
+          padding: '80px 20px', textAlign: 'center', position: 'relative', zIndex: 5
+        }}>
+          <h2 style={{ fontSize: '36px', fontWeight: 800, marginBottom: '12px' }}>
+            <span style={{ background: 'linear-gradient(135deg, #DFBA67, #F4D490)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>Simple Pricing</span>
+          </h2>
+          <p style={{ color: 'rgba(255,255,255,0.5)', fontSize: '16px', marginBottom: '48px' }}>Har plan me 14-din ka free trial included hai</p>
+          
+          <div style={{
+            display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))',
+            gap: '24px', maxWidth: '900px', margin: '0 auto', padding: '0 20px'
+          }}>
+            {[
+              { name: 'Basic', price: '₹499', period: '/month', badge: '⚡', features: ['Digital QR Menu', 'Premium Themes', 'Admin Dashboard', 'Unlimited Items'], popular: false },
+              { name: 'Pro', price: '₹999', period: '/month', badge: '👑', features: ['Everything in Basic', 'WhatsApp Ordering', 'Google Reviews', 'Priority Support'], popular: true },
+              { name: 'Enterprise', price: '₹1,999', period: '/month', badge: '🚀', features: ['Everything in Pro', 'Direct Table Ordering', 'KOT Kitchen System', 'Custom Branding'], popular: false }
+            ].map((plan, i) => (
+              <div key={i} style={{
+                background: plan.popular ? 'linear-gradient(135deg, rgba(223,186,103,0.12), rgba(223,186,103,0.04))' : 'rgba(255,255,255,0.03)',
+                border: plan.popular ? '2px solid rgba(223,186,103,0.5)' : '1px solid rgba(255,255,255,0.08)',
+                borderRadius: '24px', padding: '36px 28px', position: 'relative',
+                transition: 'all 0.3s', transform: plan.popular ? 'scale(1.05)' : 'scale(1)'
+              }}>
+                {plan.popular && <div style={{
+                  position: 'absolute', top: '-12px', left: '50%', transform: 'translateX(-50%)',
+                  background: 'linear-gradient(135deg, #DFBA67, #C9A44A)', color: '#0A0A0A',
+                  padding: '4px 20px', borderRadius: '50px', fontSize: '12px', fontWeight: 800
+                }}>MOST POPULAR</div>}
+                <div style={{ fontSize: '28px', marginBottom: '8px' }}>{plan.badge}</div>
+                <h3 style={{ fontSize: '22px', fontWeight: 700, color: '#fff', marginBottom: '8px' }}>{plan.name}</h3>
+                <div style={{ marginBottom: '24px' }}>
+                  <span style={{ fontSize: '40px', fontWeight: 900, color: '#DFBA67' }}>{plan.price}</span>
+                  <span style={{ color: 'rgba(255,255,255,0.4)', fontSize: '14px' }}>{plan.period}</span>
+                </div>
+                <ul style={{ listStyle: 'none', padding: 0, marginBottom: '28px', textAlign: 'left' }}>
+                  {plan.features.map((f, j) => (
+                    <li key={j} style={{ padding: '8px 0', fontSize: '14px', color: 'rgba(255,255,255,0.7)', borderBottom: '1px solid rgba(255,255,255,0.05)' }}>
+                      ✅ {f}
+                    </li>
+                  ))}
+                </ul>
+                <button onClick={() => { window.history.pushState({}, '', '/register'); window.dispatchEvent(new PopStateEvent('popstate')); }}
+                  style={{
+                    width: '100%', padding: '14px', borderRadius: '12px', border: 'none',
+                    background: plan.popular ? 'linear-gradient(135deg, #DFBA67, #C9A44A)' : 'rgba(255,255,255,0.1)',
+                    color: plan.popular ? '#0A0A0A' : '#DFBA67', fontWeight: 700, fontSize: '15px',
+                    cursor: 'pointer', transition: 'all 0.3s'
+                  }}
+                >Start Free Trial</button>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        {/* Footer */}
+        <footer style={{
+          textAlign: 'center', padding: '40px 20px', borderTop: '1px solid rgba(255,255,255,0.06)',
+          position: 'relative', zIndex: 5
+        }}>
+          <p style={{ color: 'rgba(255,255,255,0.3)', fontSize: '13px' }}>
+            © 2025 Khana Master — India's Premium Digital Menu SaaS Platform
+          </p>
+        </footer>
+      </div>
+    );
+  }
+
+  // Register Page View — Placeholder (full component coming next)
+  if (view === 'register') {
+    return (
+      <div style={{
+        minHeight: '100vh',
+        background: 'linear-gradient(135deg, #0A0A0A 0%, #1A0A2E 50%, #0A0A0A 100%)',
+        display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
+        color: '#fff', fontFamily: "'Inter', 'Segoe UI', sans-serif", padding: '40px 20px'
+      }}>
+        <div style={{
+          background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.1)',
+          borderRadius: '24px', padding: '48px 36px', maxWidth: '480px', width: '100%', textAlign: 'center'
+        }}>
+          <div style={{ fontSize: '48px', marginBottom: '16px' }}>🚀</div>
+          <h1 style={{ fontSize: '28px', fontWeight: 800, marginBottom: '12px' }}>
+            <span style={{ background: 'linear-gradient(135deg, #DFBA67, #F4D490)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>Registration Coming Soon!</span>
+          </h1>
+          <p style={{ color: 'rgba(255,255,255,0.5)', fontSize: '16px', lineHeight: 1.7, marginBottom: '32px' }}>
+            Self-service registration system jald hi launch hoga. Abhi ke liye contact karein.
+          </p>
+          <button onClick={() => { window.history.pushState({}, '', '/'); window.dispatchEvent(new PopStateEvent('popstate')); }}
+            style={{
+              padding: '14px 32px', borderRadius: '12px', border: 'none',
+              background: 'linear-gradient(135deg, #DFBA67, #C9A44A)', color: '#0A0A0A',
+              fontWeight: 700, fontSize: '16px', cursor: 'pointer'
+            }}
+          >← Back to Home</button>
+        </div>
+      </div>
+    );
+  }
+
   // Super Admin Portal Views
   if (view === 'super-admin-login') {
     return (
@@ -587,7 +825,7 @@ export default function App() {
         <SuperAdminLogin
           onLoginSuccess={handleSuperAdminLoginSuccess}
           onCancel={() => {
-            setView('menu');
+            setView('landing');
             window.history.pushState({}, '', '/');
           }}
         />
