@@ -3,7 +3,7 @@ import cors from 'cors';
 import path from 'path';
 import fs from 'fs';
 import dotenv from 'dotenv';
-import { initDb } from './db.js';
+import { initDb, runAutoDataSummarization } from './db.js';
 import apiRoutes from './routes/api.js';
 import adminRoutes from './routes/admin.js';
 import superadminRoutes from './routes/superadmin.js';
@@ -58,6 +58,23 @@ if (fs.existsSync(distDir)) {
 async function startServer(portToTry = PORT) {
   try {
     await initDb();
+    
+    // ⚡ 100% Hands-Free Automated Background Compaction Engine
+    // Runs automatically on server startup and every 24 hours in background
+    runAutoDataSummarization().then(res => {
+      if (res && res.purged_orders > 0) {
+        console.log(`⚡ [AUTO COMPACTION] Automatically summarized ${res.summarized_days} days and purged ${res.purged_orders} old order records.`);
+      }
+    }).catch(err => console.warn('Auto summarization notice:', err.message));
+
+    setInterval(() => {
+      runAutoDataSummarization().then(res => {
+        if (res && res.purged_orders > 0) {
+          console.log(`⚡ [AUTO COMPACTION NIGHTLY] Automatically summarized ${res.summarized_days} days and purged ${res.purged_orders} old order records.`);
+        }
+      }).catch(err => console.warn('Nightly auto summarization notice:', err.message));
+    }, 24 * 60 * 60 * 1000);
+
     const server = app.listen(portToTry, () => {
       console.log(`✨ Raman Sweet Bakery Server running on http://localhost:${portToTry}`);
     });

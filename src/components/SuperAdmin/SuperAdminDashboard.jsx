@@ -338,35 +338,6 @@ export default function SuperAdminDashboard({ token, username, onLogout, onRetur
             </button>
 
             <button
-              onClick={async () => {
-                if (!confirm('Run global database optimization across all restaurants? Orders older than retention limits will be compressed into daily sales summaries.')) return;
-                try {
-                  const res = await superAdminOptimizeDatabase(90, token);
-                  alert(res.message || 'Global database optimization completed successfully!');
-                } catch (err) {
-                  alert('Optimization failed: ' + err.message);
-                }
-              }}
-              style={{
-                background: 'linear-gradient(135deg, #F59E0B 0%, #D97706 100%)',
-                color: '#FFFFFF',
-                padding: '8px 14px',
-                borderRadius: 'var(--radius-pill)',
-                fontSize: '0.78rem',
-                fontWeight: 800,
-                border: 'none',
-                cursor: 'pointer',
-                display: 'flex',
-                alignItems: 'center',
-                gap: '6px',
-                boxShadow: '0 4px 14px rgba(245,158,11,0.35)'
-              }}
-              title="Compress old order records across all tenant restaurants"
-            >
-              ⚡ Global DB Compress
-            </button>
-
-            <button
               onClick={() => {
                 loadAuditData();
                 setShowAuditModal(true);
