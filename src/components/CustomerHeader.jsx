@@ -1,7 +1,7 @@
 import React from 'react';
 import { ShieldCheck, Globe, Star, Info, Clock, Phone, MapPin } from 'lucide-react';
 
-export default function CustomerHeader({ info, lang, tableNum, onToggleLang, onOpenInfoModal, onOpenAdmin }) {
+export default function CustomerHeader({ info, lang, tableNum, onToggleLang, onOpenInfoModal, onOpenAdmin, onCallStaff }) {
   const handleReviewClick = () => {
     if (info?.google_review_url && info.google_review_url.trim() !== '') {
       window.open(info.google_review_url, '_blank', 'noopener,noreferrer');
@@ -23,7 +23,7 @@ export default function CustomerHeader({ info, lang, tableNum, onToggleLang, onO
       zIndex: 1000,
       boxShadow: '0 8px 24px rgba(0,0,0,0.18)'
     }}>
-      {/* Top Mobile Bar: Language Pill + Table Indicator + Google Review Button */}
+      {/* Top Mobile Bar: Language Pill + Table Indicator + Call Staff + Google Review Button */}
       <div style={{
         display: 'flex',
         justifyContent: 'space-between',
@@ -52,25 +52,48 @@ export default function CustomerHeader({ info, lang, tableNum, onToggleLang, onO
           {lang === 'hi' ? 'हिंदी' : 'EN / हिंदी'}
         </button>
 
-        {/* Right Action Group: Table Indicator + ⭐ Google Review Button */}
+        {/* Right Action Group: Table Indicator + Call Staff + ⭐ Google Review Button */}
         <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
           {/* Table Indicator / View-Only Badge */}
           {tableNum ? (
-            <span style={{
-              fontSize: '0.7rem',
-              fontWeight: 800,
-              color: '#4ADE80',
-              background: 'rgba(34, 197, 94, 0.18)',
-              border: '1px solid rgba(34, 197, 94, 0.4)',
-              padding: '3px 8px',
-              borderRadius: 'var(--radius-pill)',
-              display: 'inline-flex',
-              alignItems: 'center',
-              gap: '4px'
-            }}>
-              <span style={{ width: '5px', height: '5px', borderRadius: '50%', backgroundColor: '#4ADE80' }} />
-              T-#{tableNum}
-            </span>
+            <>
+              <span style={{
+                fontSize: '0.7rem',
+                fontWeight: 800,
+                color: '#4ADE80',
+                background: 'rgba(34, 197, 94, 0.18)',
+                border: '1px solid rgba(34, 197, 94, 0.4)',
+                padding: '3px 8px',
+                borderRadius: 'var(--radius-pill)',
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '4px'
+              }}>
+                <span style={{ width: '5px', height: '5px', borderRadius: '50%', backgroundColor: '#4ADE80' }} />
+                T-#{tableNum}
+              </span>
+
+              {onCallStaff && (
+                <button
+                  onClick={onCallStaff}
+                  style={{
+                    fontSize: '0.68rem',
+                    fontWeight: 800,
+                    color: '#FFFFFF',
+                    background: 'linear-gradient(135deg, #7C3AED 0%, #6D28D9 100%)',
+                    border: '1px solid #C4B5FD',
+                    padding: '3px 9px',
+                    borderRadius: 'var(--radius-pill)',
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: '3px',
+                    boxShadow: '0 2px 8px rgba(124, 58, 237, 0.3)'
+                  }}
+                >
+                  🛎️ Call Staff
+                </button>
+              )}
+            </>
           ) : (
             <span style={{
               fontSize: '0.68rem',

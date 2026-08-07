@@ -719,6 +719,7 @@ export default function App() {
         tableNum={effectiveTableNum}
         onToggleLang={() => setLang(lang === 'en' ? 'hi' : 'en')}
         onOpenInfoModal={() => setShowInfoModal(true)}
+        onCallStaff={() => setShowServiceModal(true)}
         onOpenAdmin={() => {
           if (adminToken) {
             setView('admin-dashboard');
@@ -1142,73 +1143,50 @@ export default function App() {
         )}
       </main>
 
-      {/* 💬 / ⚡ / 🛎️ Floating Action Bar (Call Staff + Quick Order) */}
-      {effectiveTableNum && info && (
+      {/* 🛒 Zomato-Style Floating Cart Bar (Appears ONLY when cart has items) */}
+      {cartItems.length > 0 && (
         <div style={{
           position: 'fixed',
-          bottom: '84px',
-          right: '16px',
+          bottom: '78px',
+          left: '50%',
+          transform: 'translateX(-50%)',
           zIndex: 9999,
-          display: 'flex',
-          gap: '8px'
+          width: 'calc(100% - 32px)',
+          maxWidth: '440px'
         }}>
-          {/* 🛎️ Call Staff Button */}
           <button
-            onClick={() => setShowServiceModal(true)}
+            onClick={() => setShowCartDrawer(true)}
             style={{
-              background: 'linear-gradient(135deg, #7C3AED 0%, #6D28D9 100%)',
+              width: '100%',
+              background: 'linear-gradient(135deg, #10B981 0%, #059669 100%)',
               color: '#FFFFFF',
-              padding: '12px 16px',
+              padding: '12px 20px',
               borderRadius: 'var(--radius-pill)',
-              fontWeight: 800,
-              fontSize: '0.86rem',
+              fontWeight: 900,
+              fontSize: '0.9rem',
               border: '2px solid #FFFFFF',
               cursor: 'pointer',
               display: 'flex',
               alignItems: 'center',
-              gap: '6px',
-              boxShadow: '0 8px 24px rgba(124, 58, 237, 0.45)'
+              justifyContent: 'space-between',
+              boxShadow: '0 10px 30px rgba(16, 185, 129, 0.45)',
+              animation: 'fadeIn 0.25s ease-out'
             }}
           >
-            <span>🛎️ Call Staff</span>
-          </button>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <span style={{ background: '#FFFFFF', color: '#059669', width: '22px', height: '22px', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.78rem', fontWeight: 900 }}>
+                {cartItems.reduce((acc, i) => acc + i.quantity, 0)}
+              </span>
+              <span>{lang === 'hi' ? 'कार्ट देखें' : 'View Cart'}</span>
+            </div>
 
-          {/* ⚡ Quick Order Button */}
-          {(info.direct_ordering_enabled || info.whatsapp_enabled) && (
-            <button
-              onClick={() => setShowCartDrawer(true)}
-              style={{
-                background: 'linear-gradient(135deg, #10B981 0%, #059669 100%)',
-                color: '#FFFFFF',
-                padding: '12px 20px',
-                borderRadius: 'var(--radius-pill)',
-                fontWeight: 800,
-                fontSize: '0.88rem',
-                border: '2px solid #FFFFFF',
-                cursor: 'pointer',
-                display: 'flex',
-                alignItems: 'center',
-                gap: '8px',
-                boxShadow: '0 8px 28px rgba(16, 185, 129, 0.5)'
-              }}
-            >
-              <MessageSquare size={18} />
-              <span>{info.direct_ordering_enabled !== false ? '⚡ Quick Order' : '💬 WhatsApp Order'}</span>
-              {cartItems.length > 0 && (
-                <span style={{
-                  background: '#FFFFFF',
-                  color: '#059669',
-                  fontSize: '0.78rem',
-                  fontWeight: 900,
-                  padding: '2px 8px',
-                  borderRadius: '12px',
-                  marginLeft: '2px'
-                }}>
-                  {cartItems.reduce((acc, i) => acc + i.quantity, 0)}
-                </span>
-              )}
-            </button>
-          )}
+            <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+              <span style={{ fontSize: '1rem', fontWeight: 900, color: '#FFFFFF' }}>
+                ₹{cartItems.reduce((sum, item) => sum + (item.price * item.quantity), 0)}
+              </span>
+              <span>→</span>
+            </div>
+          </button>
         </div>
       )}
 
