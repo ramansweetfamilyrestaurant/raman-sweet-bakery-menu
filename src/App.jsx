@@ -1261,61 +1261,85 @@ export default function App() {
                         transition: 'all 0.2s ease'
                       }}
                     >
-                      {/* Savings ribbon */}
-                      {savings > 0 && (
+                      <div style={{ display: 'flex', gap: '14px', alignItems: 'flex-start' }}>
+                        {/* Food Image Container */}
                         <div style={{
-                          position: 'absolute', top: '10px', right: '-28px', transform: 'rotate(45deg)',
-                          background: 'linear-gradient(135deg, #059669, #10B981)', color: '#fff',
-                          padding: '3px 32px', fontSize: '0.65rem', fontWeight: 800, zIndex: 2
-                        }}>SAVE ₹{savings}</div>
-                      )}
-                      <div style={{ display: 'flex', gap: '12px', alignItems: 'flex-start' }}>
-                        <div style={{
-                          width: '90px', height: '76px', borderRadius: '14px', overflow: 'hidden',
-                          background: 'linear-gradient(135deg, rgba(223,186,103,0.15), rgba(10,35,21,0.5))',
-                          border: '1.5px solid var(--gold-border)', flexShrink: 0,
-                          display: 'flex', alignItems: 'center', justifyContent: 'center', position: 'relative',
-                          boxShadow: '0 2px 8px rgba(0,0,0,0.12)'
+                          width: '94px', height: '78px', borderRadius: '14px', overflow: 'hidden',
+                          background: '#F9FAFB', border: '1.5px solid var(--gold-border)', flexShrink: 0,
+                          position: 'relative', boxShadow: '0 2px 8px rgba(0,0,0,0.08)'
                         }}>
                           {combo.image && combo.image !== '/uploads/logo.jpg' ? (
-                            <img src={combo.image} alt={combo.name} style={{
-                              width: '100%', height: '100%', objectFit: 'cover'
-                            }} onError={(e) => { e.target.style.display = 'none'; }} />
+                            <img 
+                              src={combo.image} 
+                              alt={combo.name} 
+                              style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }} 
+                              onError={(e) => {
+                                e.target.style.display = 'none';
+                                if (e.target.nextSibling) e.target.nextSibling.style.display = 'flex';
+                              }} 
+                            />
                           ) : null}
-                          <span style={{ fontSize: '2.2rem', position: 'absolute', pointerEvents: 'none', zIndex: 0 }}>🍱</span>
-                        </div>
-                        <div style={{ flex: 1 }}>
-                          <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '3px' }}>
-                            <span style={{ fontWeight: 800, fontSize: '0.95rem', color: 'var(--text-dark)' }}>{combo.name}</span>
-                            {combo.badge && (
-                              <span style={{
-                                padding: '1px 7px', borderRadius: '5px', fontSize: '0.62rem', fontWeight: 700,
-                                background: 'linear-gradient(135deg, #FFD700, #F59E0B)', color: '#0A0A0A'
-                              }}>{combo.badge}</span>
-                            )}
+                          <div style={{
+                            width: '100%', height: '100%',
+                            display: (combo.image && combo.image !== '/uploads/logo.jpg') ? 'none' : 'flex',
+                            alignItems: 'center', justifyContent: 'center', fontSize: '2.2rem',
+                            background: 'linear-gradient(135deg, rgba(223,186,103,0.15), rgba(10,35,21,0.5))'
+                          }}>
+                            🍱
                           </div>
+                        </div>
+
+                        {/* Combo Details */}
+                        <div style={{ flex: 1, minWidth: 0 }}>
+                          {/* Title & Badges Row */}
+                          <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: '8px', marginBottom: '4px' }}>
+                            <span style={{ fontWeight: 800, fontSize: '0.96rem', color: 'var(--text-dark)', lineHeight: 1.25 }}>
+                              {combo.name}
+                            </span>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '4px', flexShrink: 0, flexWrap: 'wrap', justifyContent: 'flex-end' }}>
+                              {combo.badge && (
+                                <span style={{
+                                  padding: '2px 7px', borderRadius: '6px', fontSize: '0.62rem', fontWeight: 800,
+                                  background: 'linear-gradient(135deg, #FFD700, #F59E0B)', color: '#0A0A0A',
+                                  whiteSpace: 'nowrap'
+                                }}>{combo.badge}</span>
+                              )}
+                              {savings > 0 && (
+                                <span style={{
+                                  padding: '2px 7px', borderRadius: '6px', fontSize: '0.62rem', fontWeight: 900,
+                                  background: 'linear-gradient(135deg, #059669, #10B981)', color: '#FFFFFF',
+                                  whiteSpace: 'nowrap'
+                                }}>SAVE ₹{Math.round(savings)}</span>
+                              )}
+                            </div>
+                          </div>
+
                           {combo.description && (
-                            <p style={{ color: 'var(--text-muted)', fontSize: '0.76rem', margin: '0 0 5px 0' }}>{combo.description}</p>
+                            <p style={{ color: 'var(--text-muted)', fontSize: '0.76rem', margin: '0 0 6px 0', lineHeight: 1.3 }}>{combo.description}</p>
                           )}
-                          <div style={{ display: 'flex', flexWrap: 'wrap', gap: '3px', marginBottom: '6px' }}>
+
+                          {/* Included Dishes Pills */}
+                          <div style={{ display: 'flex', flexWrap: 'wrap', gap: '4px', marginBottom: '8px' }}>
                             {comboItems.map((item, idx) => (
                               <span key={idx} style={{
-                                padding: '2px 6px', borderRadius: '5px', fontSize: '0.65rem',
-                                background: 'var(--bg-app)', color: 'var(--text-muted)', fontWeight: 600,
-                                border: '1px solid var(--border-light)'
+                                padding: '2px 7px', borderRadius: '6px', fontSize: '0.66rem',
+                                background: '#F3F4F6', color: '#374151', fontWeight: 700,
+                                border: '1px solid #E5E7EB'
                               }}>
                                 {item.qty > 1 ? `${item.qty}x ` : ''}{item.dish_name}{item.portion === 'half' ? ' (H)' : ''}
                               </span>
                             ))}
                           </div>
-                          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+
+                          {/* Price & Add Button */}
+                          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: '4px' }}>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
                               <span style={{ fontWeight: 900, fontSize: '1.15rem', color: 'var(--primary-emerald)' }}>
-                                {info?.currency_symbol || '₹'}{combo.price}
+                                {info?.currency_symbol || '₹'}{Math.round(Number(combo.price))}
                               </span>
                               {originalTotal > 0 && originalTotal > combo.price && (
-                                <span style={{ textDecoration: 'line-through', color: '#9CA3AF', fontSize: '0.8rem' }}>
-                                  ₹{originalTotal}
+                                <span style={{ textDecoration: 'line-through', color: '#9CA3AF', fontSize: '0.8rem', fontWeight: 600 }}>
+                                  ₹{Math.round(originalTotal)}
                                 </span>
                               )}
                             </div>

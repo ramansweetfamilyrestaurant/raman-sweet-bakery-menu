@@ -2463,17 +2463,29 @@ export default function AdminDashboard({ token, username, onLogout, onReturnToMe
                     }}>
                       <div style={{ display: 'flex', alignItems: 'flex-start', gap: '14px' }}>
                         <div style={{
-                          width: '90px', height: '76px', borderRadius: '14px', overflow: 'hidden',
-                          background: 'linear-gradient(135deg, rgba(255,215,0,0.15), rgba(10,35,21,0.1))',
-                          border: '1.5px solid rgba(255,215,0,0.3)', flexShrink: 0,
-                          display: 'flex', alignItems: 'center', justifyContent: 'center', position: 'relative'
+                          width: '94px', height: '78px', borderRadius: '14px', overflow: 'hidden',
+                          background: '#F9FAFB', border: '1.5px solid rgba(255,215,0,0.4)', flexShrink: 0,
+                          position: 'relative', boxShadow: '0 2px 8px rgba(0,0,0,0.06)'
                         }}>
                           {combo.image && combo.image !== '/uploads/logo.jpg' ? (
-                            <img src={combo.image} alt={combo.name} style={{
-                              width: '100%', height: '100%', objectFit: 'cover'
-                            }} onError={(e) => { e.target.style.display = 'none'; }} />
+                            <img 
+                              src={combo.image} 
+                              alt={combo.name} 
+                              style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }} 
+                              onError={(e) => {
+                                e.target.style.display = 'none';
+                                if (e.target.nextSibling) e.target.nextSibling.style.display = 'flex';
+                              }} 
+                            />
                           ) : null}
-                          <span style={{ fontSize: '2.2rem', position: 'absolute', pointerEvents: 'none', zIndex: 0 }}>🍱</span>
+                          <div style={{
+                            width: '100%', height: '100%',
+                            display: (combo.image && combo.image !== '/uploads/logo.jpg') ? 'none' : 'flex',
+                            alignItems: 'center', justifyContent: 'center', fontSize: '2.2rem',
+                            background: 'linear-gradient(135deg, rgba(255,215,0,0.15), rgba(10,35,21,0.1))'
+                          }}>
+                            🍱
+                          </div>
                         </div>
                         <div style={{ flex: 1 }}>
                           <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '4px' }}>
