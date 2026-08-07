@@ -1291,28 +1291,33 @@ export default function App() {
 
                         {/* Combo Details */}
                         <div style={{ flex: 1, minWidth: 0 }}>
-                          {/* Title & Badges Row */}
-                          <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: '8px', marginBottom: '4px' }}>
-                            <span style={{ fontWeight: 800, fontSize: '0.96rem', color: 'var(--text-dark)', lineHeight: 1.25 }}>
-                              {combo.name}
-                            </span>
-                            <div style={{ display: 'flex', alignItems: 'center', gap: '4px', flexShrink: 0, flexWrap: 'wrap', justifyContent: 'flex-end' }}>
+                          {/* Badges Row */}
+                          {(combo.badge || savings > 0) && (
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '5px', marginBottom: '4px', flexWrap: 'wrap' }}>
                               {combo.badge && (
                                 <span style={{
-                                  padding: '2px 7px', borderRadius: '6px', fontSize: '0.62rem', fontWeight: 800,
+                                  padding: '2px 8px', borderRadius: '6px', fontSize: '0.64rem', fontWeight: 800,
                                   background: 'linear-gradient(135deg, #FFD700, #F59E0B)', color: '#0A0A0A',
                                   whiteSpace: 'nowrap'
                                 }}>{combo.badge}</span>
                               )}
                               {savings > 0 && (
                                 <span style={{
-                                  padding: '2px 7px', borderRadius: '6px', fontSize: '0.62rem', fontWeight: 900,
+                                  padding: '2px 8px', borderRadius: '6px', fontSize: '0.64rem', fontWeight: 900,
                                   background: 'linear-gradient(135deg, #059669, #10B981)', color: '#FFFFFF',
                                   whiteSpace: 'nowrap'
                                 }}>SAVE ₹{Math.round(savings)}</span>
                               )}
                             </div>
-                          </div>
+                          )}
+
+                          {/* Full-width Title */}
+                          <h3 style={{
+                            fontWeight: 800, fontSize: '0.98rem', color: 'var(--text-dark)',
+                            margin: '0 0 5px 0', lineHeight: 1.3
+                          }}>
+                            {combo.name}
+                          </h3>
 
                           {combo.description && (
                             <p style={{ color: 'var(--text-muted)', fontSize: '0.76rem', margin: '0 0 6px 0', lineHeight: 1.3 }}>{combo.description}</p>
