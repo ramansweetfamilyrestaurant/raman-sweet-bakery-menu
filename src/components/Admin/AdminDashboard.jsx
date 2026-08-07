@@ -2462,12 +2462,19 @@ export default function AdminDashboard({ token, username, onLogout, onReturnToMe
                       transition: 'all 0.2s'
                     }}>
                       <div style={{ display: 'flex', alignItems: 'flex-start', gap: '14px' }}>
-                        {combo.image && (
-                          <img src={combo.image} alt={combo.name} style={{
-                            width: '70px', height: '70px', borderRadius: '12px', objectFit: 'cover',
-                            border: '2px solid rgba(255,215,0,0.3)'
-                          }} />
-                        )}
+                        <div style={{
+                          width: '70px', height: '70px', borderRadius: '12px', overflow: 'hidden',
+                          background: 'linear-gradient(135deg, rgba(255,215,0,0.15), rgba(10,35,21,0.1))',
+                          border: '2px solid rgba(255,215,0,0.3)', flexShrink: 0,
+                          display: 'flex', alignItems: 'center', justifyContent: 'center', position: 'relative'
+                        }}>
+                          {combo.image && combo.image !== '/uploads/logo.jpg' ? (
+                            <img src={combo.image} alt={combo.name} style={{
+                              width: '100%', height: '100%', objectFit: 'cover'
+                            }} onError={(e) => { e.target.style.display = 'none'; }} />
+                          ) : null}
+                          <span style={{ fontSize: '2rem', position: 'absolute', pointerEvents: 'none', zIndex: 0 }}>🍱</span>
+                        </div>
                         <div style={{ flex: 1 }}>
                           <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '4px' }}>
                             <span style={{ fontWeight: 800, fontSize: '1rem', color: '#1F2937' }}>{combo.name}</span>

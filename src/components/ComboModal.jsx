@@ -74,31 +74,25 @@ export default function ComboModal({ combo, onClose, onAddToCart, canOrder = fal
           height: '240px',
           background: 'linear-gradient(135deg, #05140B 0%, #0A2315 100%)',
           position: 'relative',
-          overflow: 'hidden'
+          overflow: 'hidden',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center'
         }}>
-          {combo.image && combo.image !== '/uploads/logo.jpg' ? (
+          <span style={{ fontSize: '5rem', color: '#DFBA67', position: 'absolute', pointerEvents: 'none' }}>🍱</span>
+          {combo.image && combo.image !== '/uploads/logo.jpg' && (
             <img
               src={combo.image}
               alt={combo.name}
               style={{
                 width: '100%',
                 height: '100%',
-                objectFit: 'cover'
+                objectFit: 'cover',
+                position: 'relative',
+                zIndex: 1
               }}
               onError={(e) => { e.target.style.display = 'none'; }}
             />
-          ) : (
-            <div style={{
-              width: '100%',
-              height: '100%',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              color: '#DFBA67',
-              fontSize: '4rem'
-            }}>
-              🍱
-            </div>
           )}
 
           {/* Savings Ribbon */}

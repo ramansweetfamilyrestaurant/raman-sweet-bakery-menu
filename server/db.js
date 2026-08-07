@@ -603,26 +603,28 @@ async function seedData() {
         { dish_id: 29, dish_name: "Bread Pakoda", qty: 2, portion: "full", original_price: 50 }
       ]);
       await query(`
-        INSERT INTO combos (restaurant_id, name, description, price, items, badge, available, sort_order)
-        VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+        INSERT INTO combos (restaurant_id, name, description, price, image, items, badge, available, sort_order)
+        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
       `, [
         primaryRestoId,
         '🌟 Raman Special Chaat & Pakoda Thali',
         'Complete evening snacks platter with Aloo Tikki, Paneer Pakoda & 2x Kachoris',
         149,
+        'https://images.unsplash.com/photo-1617692855027-33b14f061079?w=600&auto=format&fit=crop&q=80',
         sampleItems1,
         '⭐ Bestseller',
         1,
         1
       ]);
       await query(`
-        INSERT INTO combos (restaurant_id, name, description, price, items, badge, available, sort_order)
-        VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+        INSERT INTO combos (restaurant_id, name, description, price, image, items, badge, available, sort_order)
+        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
       `, [
         primaryRestoId,
         '☕ Evening Snack Combo',
         'Tasty Momo & Bread Pakoda combo deal',
         99,
+        'https://images.unsplash.com/photo-1601050690597-df0568f70950?w=600&auto=format&fit=crop&q=80',
         sampleItems2,
         '💰 Value Deal',
         1,
@@ -630,6 +632,12 @@ async function seedData() {
       ]);
       console.log('🛒 Seeded default sample Combo Deals into combos table');
     }
+
+    // Auto-fix any combo without valid image
+    await query(`
+      UPDATE combos SET image = 'https://images.unsplash.com/photo-1617692855027-33b14f061079?w=600&auto=format&fit=crop&q=80'
+      WHERE image IS NULL OR image = '' OR image = '/uploads/logo.jpg'
+    `);
   } catch (err) {
     console.warn('Combo seeding notice:', err.message);
   }

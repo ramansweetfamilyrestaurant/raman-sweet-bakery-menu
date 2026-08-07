@@ -1270,12 +1270,19 @@ export default function App() {
                         }}>SAVE ₹{savings}</div>
                       )}
                       <div style={{ display: 'flex', gap: '12px', alignItems: 'flex-start' }}>
-                        {combo.image && (
-                          <img src={combo.image} alt={combo.name} style={{
-                            width: '72px', height: '72px', borderRadius: '12px', objectFit: 'cover',
-                            border: '2px solid var(--gold-border)'
-                          }} />
-                        )}
+                        <div style={{
+                          width: '72px', height: '72px', borderRadius: '12px', overflow: 'hidden',
+                          background: 'linear-gradient(135deg, rgba(223,186,103,0.15), rgba(10,35,21,0.5))',
+                          border: '2px solid var(--gold-border)', flexShrink: 0,
+                          display: 'flex', alignItems: 'center', justifyContent: 'center', position: 'relative'
+                        }}>
+                          {combo.image && combo.image !== '/uploads/logo.jpg' ? (
+                            <img src={combo.image} alt={combo.name} style={{
+                              width: '100%', height: '100%', objectFit: 'cover'
+                            }} onError={(e) => { e.target.style.display = 'none'; }} />
+                          ) : null}
+                          <span style={{ fontSize: '2.2rem', position: 'absolute', pointerEvents: 'none', zIndex: 0 }}>🍱</span>
+                        </div>
                         <div style={{ flex: 1 }}>
                           <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '3px' }}>
                             <span style={{ fontWeight: 800, fontSize: '0.95rem', color: 'var(--text-dark)' }}>{combo.name}</span>
