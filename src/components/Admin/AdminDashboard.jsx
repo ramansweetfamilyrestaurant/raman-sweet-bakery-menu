@@ -1021,73 +1021,162 @@ export default function AdminDashboard({ token, username, onLogout, onReturnToMe
         </div>
       )}
 
-      {/* Sleek Royal Gold Segmented Navigation Bar */}
+      {/* 🧭 Sub-Grouped Navigation Bar (Option 2: Clean 4-Main Group Tabs + Sub-Pills) */}
       <div style={{
-        background: 'linear-gradient(180deg, #0A2315 0%, #081D10 100%)',
-        padding: '8px 12px',
-        borderBottom: '2px solid #D4AF37',
+        background: 'rgba(10, 35, 21, 0.95)',
+        backdropFilter: 'blur(12px)',
+        WebkitBackdropFilter: 'blur(12px)',
+        padding: '6px 12px',
         position: 'sticky',
         top: '52px',
         zIndex: 99,
-        boxShadow: '0 6px 20px rgba(0,0,0,0.25)'
+        boxShadow: '0 6px 20px rgba(0,0,0,0.25)',
+        borderBottom: '1px solid rgba(212, 175, 55, 0.3)'
       }}>
-        <div style={{
-          maxWidth: '800px',
-          margin: '0 auto',
-          background: 'rgba(0, 0, 0, 0.35)',
-          padding: '4px',
-          borderRadius: 'var(--radius-pill)',
-          border: '1px solid rgba(212, 175, 55, 0.35)',
-          display: 'flex',
-          gap: '4px',
-          alignItems: 'center',
-          overflowX: 'auto',
-          scrollbarWidth: 'none',
-          msOverflowStyle: 'none'
-        }}>
-          {[
-            ...(restaurantInfo && (restaurantInfo.direct_ordering_enabled === false || restaurantInfo.direct_ordering_enabled === 0) ? [] : [{ id: 'orders', label: 'Orders', count: orders.filter(o => o.status === 'pending').length, icon: <Sparkles size={13} /> }]),
-            { id: 'floor-map', label: '🗺️ Floor Map', icon: <MapPin size={13} /> },
-            { id: 'service-requests', label: '🛎️ Waiter Calls', count: serviceRequests.length, icon: <Megaphone size={13} /> },
-            { id: 'analytics', label: '📊 Analytics', icon: <BarChart2 size={13} /> },
-            { id: 'dishes', label: 'Dishes', count: safeDishes.length, icon: <Utensils size={13} /> },
-            { id: 'categories', label: 'Categories', count: safeCategories.length, icon: <Layers size={13} /> },
-            { id: 'combos', label: '🛒 Combos', count: combos.length, icon: <Layers size={13} /> },
-            { id: 'qr-generator', label: 'QR Code', icon: <QrCode size={13} /> },
-            { id: 'settings', label: 'Settings', icon: <Settings size={13} /> }
-          ].map(tab => {
-            const isActive = activeTab === tab.id;
+        <div style={{ maxWidth: '800px', margin: '0 auto', display: 'flex', flexDirection: 'column', gap: '6px' }}>
+          {/* Main Group Tabs (4 Compact Tabs) */}
+          <div style={{
+            background: 'rgba(0, 0, 0, 0.4)',
+            padding: '3px',
+            borderRadius: 'var(--radius-pill)',
+            border: '1px solid rgba(212, 175, 55, 0.35)',
+            display: 'grid',
+            gridTemplateColumns: 'repeat(4, 1fr)',
+            gap: '4px'
+          }}>
+            {[
+              {
+                id: 'orders-group',
+                label: '📋 Orders',
+                subTabs: ['orders', 'floor-map', 'service-requests'],
+                badge: (orders.filter(o => o.status === 'pending').length + serviceRequests.length) || null,
+                defaultTab: 'orders'
+              },
+              {
+                id: 'analytics-group',
+                label: '📊 Analytics',
+                subTabs: ['analytics'],
+                defaultTab: 'analytics'
+              },
+              {
+                id: 'menu-group',
+                label: '🍲 Menu',
+                subTabs: ['dishes', 'categories', 'combos'],
+                defaultTab: 'dishes'
+              },
+              {
+                id: 'setup-group',
+                label: '⚙️ Setup',
+                subTabs: ['qr-generator', 'settings'],
+                defaultTab: 'qr-generator'
+              }
+            ].map(group => {
+              const isGroupActive = group.subTabs.includes(activeTab);
+              return (
+                <button
+                  key={group.id}
+                  onClick={() => {
+                    if (!group.subTabs.includes(activeTab)) {
+                      setActiveTab(group.defaultTab);
+                    }
+                  }}
+                  style={{
+                    padding: '7px 4px',
+                    borderRadius: 'var(--radius-pill)',
+                    fontWeight: isGroupActive ? 900 : 700,
+                    fontSize: '0.76rem',
+                    background: isGroupActive ? 'linear-gradient(135deg, #FFD700 0%, #D4AF37 100%)' : 'transparent',
+                    color: isGroupActive ? '#0A2315' : 'rgba(255, 255, 255, 0.85)',
+                    border: 'none',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    gap: '4px',
+                    cursor: 'pointer',
+                    boxShadow: isGroupActive ? '0 4px 12px rgba(255, 215, 0, 0.4)' : 'none',
+                    transition: 'all 0.2s ease'
+                  }}
+                >
+                  <span>{group.label}</span>
+                  {group.badge ? (
+                    <span style={{
+                      background: isGroupActive ? '#0A2315' : '#EF4444',
+                      color: '#FFFFFF',
+                      fontSize: '0.62rem',
+                      fontWeight: 900,
+                      padding: '1px 5px',
+                      borderRadius: '99px'
+                    }}>
+                      {group.badge}
+                    </span>
+                  ) : null}
+                </button>
+              );
+            })}
+          </div>
+
+          {/* Sub-Nav Pills Row (Appears dynamically based on active group) */}
+          {(() => {
+            let currentSubTabs = [];
+            if (['orders', 'floor-map', 'service-requests'].includes(activeTab)) {
+              currentSubTabs = [
+                ...(restaurantInfo && (restaurantInfo.direct_ordering_enabled === false || restaurantInfo.direct_ordering_enabled === 0) ? [] : [{ id: 'orders', label: 'Live Orders', count: orders.filter(o => o.status === 'pending').length }]),
+                { id: 'floor-map', label: '🗺️ Floor Map' },
+                { id: 'service-requests', label: '🛎️ Waiter Calls', count: serviceRequests.length }
+              ];
+            } else if (['dishes', 'categories', 'combos'].includes(activeTab)) {
+              currentSubTabs = [
+                { id: 'dishes', label: 'Dishes', count: safeDishes.length },
+                { id: 'categories', label: 'Categories', count: safeCategories.length },
+                { id: 'combos', label: '🛒 Combos', count: combos.length }
+              ];
+            } else if (['qr-generator', 'settings'].includes(activeTab)) {
+              currentSubTabs = [
+                { id: 'qr-generator', label: '📱 QR Generator' },
+                { id: 'settings', label: '⚙️ Settings' }
+              ];
+            }
+
+            if (currentSubTabs.length <= 1) return null;
+
             return (
-              <button
-                key={tab.id}
-                onClick={() => setActiveTab(tab.id)}
-                style={{
-                  flex: 1,
-                  minWidth: 'max-content',
-                  padding: '7px 10px',
-                  borderRadius: 'var(--radius-pill)',
-                  fontWeight: isActive ? 900 : 700,
-                  fontSize: '0.74rem',
-                  background: isActive ? 'linear-gradient(135deg, #FFD700 0%, #D4AF37 100%)' : 'transparent',
-                  color: isActive ? '#0A2315' : 'rgba(255, 255, 255, 0.9)',
-                  border: isActive ? '1px solid #FFFFFF' : '1px solid transparent',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  gap: '4px',
-                  whiteSpace: 'nowrap',
-                  cursor: 'pointer',
-                  boxShadow: isActive ? '0 4px 14px rgba(255, 215, 0, 0.45)' : 'none',
-                  transition: 'all 0.25s cubic-bezier(0.4, 0, 0.2, 1)'
-                }}
-              >
-                {tab.icon}
-                <span>
-                  {tab.label} {tab.count !== undefined ? `(${tab.count})` : ''}
-                </span>
-              </button>
+              <div style={{
+                display: 'flex',
+                gap: '6px',
+                justifyContent: 'center',
+                paddingTop: '2px'
+              }}>
+                {currentSubTabs.map(sub => {
+                  const isSubActive = activeTab === sub.id;
+                  return (
+                    <button
+                      key={sub.id}
+                      onClick={() => setActiveTab(sub.id)}
+                      style={{
+                        padding: '4px 12px',
+                        borderRadius: 'var(--radius-pill)',
+                        fontSize: '0.7rem',
+                        fontWeight: isSubActive ? 800 : 600,
+                        background: isSubActive ? 'rgba(255, 255, 255, 0.95)' : 'rgba(255, 255, 255, 0.12)',
+                        color: isSubActive ? '#0A2315' : 'rgba(255, 255, 255, 0.8)',
+                        border: isSubActive ? '1px solid #DFBA67' : '1px solid rgba(255, 255, 255, 0.15)',
+                        cursor: 'pointer',
+                        transition: 'all 0.15s ease',
+                        display: 'inline-flex',
+                        alignItems: 'center',
+                        gap: '4px'
+                      }}
+                    >
+                      <span>{sub.label}</span>
+                      {sub.count !== undefined && (
+                        <span style={{ opacity: 0.85, fontSize: '0.65rem' }}>({sub.count})</span>
+                      )}
+                    </button>
+                  );
+                })}
+              </div>
             );
-          })}
+          })()}
         </div>
       </div>
 
