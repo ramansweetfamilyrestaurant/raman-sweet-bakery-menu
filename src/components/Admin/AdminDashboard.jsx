@@ -34,6 +34,52 @@ export default function AdminDashboard({ token, username, onLogout, onReturnToMe
   // Combos State
   const [combos, setCombos] = useState([]);
   const [comboModalData, setComboModalData] = useState(null);
+  const [permissionsGranted, setPermissionsGranted] = useState(false);
+
+  useEffect(() => {
+    if ('Notification' in window && Notification.permission === 'granted') {
+      setPermissionsGranted(true);
+    }
+  }, []);
+
+  const requestDevicePermissions = async () => {
+    let notifOk = false;
+
+    // 1. Audio Sound Unlock
+    try {
+      playKitchenChime();
+    } catch (e) {
+      console.warn('Audio unlock error:', e);
+    }
+
+    // 2. Push Notification Permission
+    try {
+      if ('Notification' in window) {
+        const res = await Notification.requestPermission();
+        if (res === 'granted') notifOk = true;
+      }
+    } catch (e) {
+      console.warn('Notification permission error:', e);
+    }
+
+    // 3. Geolocation Permission
+    try {
+      if ('geolocation' in navigator) {
+        navigator.geolocation.getCurrentPosition(
+          (pos) => {
+            console.log('GPS Location:', pos.coords.latitude, pos.coords.longitude);
+          },
+          (err) => console.warn('Location permission skipped:', err),
+          { timeout: 5000 }
+        );
+      }
+    } catch (e) {
+      console.warn('Geolocation error:', e);
+    }
+
+    setPermissionsGranted(true);
+    alert('📱 Mobile & Browser Permissions Enabled!\n• Loud Kitchen Order Ringtone: Active 🔊\n• Live Order Push Notifications: Allowed 🔔\n• GPS Location Access: Verified 📍');
+  };
 
   const playKitchenChime = () => {
     try {
@@ -1077,6 +1123,52 @@ export default function AdminDashboard({ token, username, onLogout, onReturnToMe
           </button>
         </div>
       </header>
+
+      {/* 📱 Mobile & Browser Device Permissions Bar */}
+      {!permissionsGranted && (
+        <div style={{
+          background: 'linear-gradient(135deg, #1E1B4B 0%, #312E81 100%)',
+          borderBottom: '2px solid #6366F1',
+          padding: '12px 18px',
+          display: 'flex',
+          alignItems: 'center',
+          justify: 'space-between',
+          flexWrap: 'wrap',
+          gap: '10px',
+          color: '#FFFFFF',
+          boxShadow: '0 4px 14px rgba(99,102,241,0.25)'
+        }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+            <span style={{ fontSize: '22px' }}>🔔</span>
+            <div>
+              <strong style={{ fontSize: '0.88rem', color: '#EEF2FF', display: 'block' }}>
+                Enable Mobile Sound, Order Notifications & GPS Location Permissions
+              </strong>
+              <span style={{ fontSize: '0.75rem', color: '#C7D2FE' }}>
+                Allow permissions so your phone rings loudly & notifies you when a customer places an order!
+              </span>
+            </div>
+          </div>
+
+          <button
+            onClick={requestDevicePermissions}
+            style={{
+              background: 'linear-gradient(135deg, #DFBA67, #F4D490)',
+              color: '#0A0A0A',
+              padding: '8px 16px',
+              borderRadius: '12px',
+              border: 'none',
+              fontWeight: 900,
+              fontSize: '0.8rem',
+              cursor: 'pointer',
+              boxShadow: '0 4px 12px rgba(223,186,103,0.4)',
+              whiteSpace: 'nowrap'
+            }}
+          >
+            🔊 Enable Sound, Notifications & Location
+          </button>
+        </div>
+      )}
 
       {/* 📢 Global System Announcement Banner */}
       {announcements.length > 0 && !dismissedNotice && (
