@@ -65,6 +65,16 @@ export default function App() {
   const [loginErrMessage, setLoginErrMessage] = useState('');
   const [landingSuccessMessage, setLandingSuccessMessage] = useState('');
   const [landingLoginLoading, setLandingLoginLoading] = useState(false);
+  const [masterSupportPhone, setMasterSupportPhone] = useState('919876543210');
+
+  useEffect(() => {
+    fetch('/api/settings')
+      .then(res => res.json())
+      .then(data => {
+        if (data && data.support_whatsapp) setMasterSupportPhone(data.support_whatsapp);
+      })
+      .catch(console.error);
+  }, []);
 
   // Master Super Admin Tokens
   const getInitialSuperToken = () => {
@@ -867,7 +877,7 @@ export default function App() {
                     }}>
                       <span>Dono Username & Phone bhool gaye? </span>
                       <a
-                        href="https://wa.me/?text=Hello%20Super%20Admin%2C%20I%20forgot%20my%20restaurant%20login%20details.%20Please%20help%20recover%20my%20account."
+                        href={`https://wa.me/${(masterSupportPhone || '919876543210').replace(/[^0-9]/g, '')}?text=${encodeURIComponent('Hello Super Admin, I forgot my restaurant login details. Please help me recover my account.')}`}
                         target="_blank"
                         rel="noopener noreferrer"
                         style={{ color: '#DFBA67', fontWeight: 800, textDecoration: 'none' }}

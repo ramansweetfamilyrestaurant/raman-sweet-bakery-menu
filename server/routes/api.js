@@ -9,6 +9,19 @@ const router = express.Router();
 const settingsPath = path.resolve('server/settings.json');
 const JWT_SECRET = process.env.JWT_SECRET || 'raman_bakery_secret_jwt_key_2026_super_secure';
 
+// GET public system settings (e.g. Master Super Admin WhatsApp Support Number)
+router.get('/settings', async (req, res) => {
+  try {
+    const rows = await query('SELECT * FROM system_settings');
+    const settings = { support_whatsapp: '919876543210' };
+    (rows || []).forEach(r => { settings[r.key] = r.value; });
+    res.json(settings);
+  } catch (err) {
+    console.error('Fetch public settings error:', err);
+    res.json({ support_whatsapp: '919876543210' });
+  }
+});
+
 // Helper to resolve target restaurant by JWT token or slug (or fallback to primary raman-sweet-bakery)
 async function resolveRestaurant(req, slug) {
   // 1. Check if token in Authorization header

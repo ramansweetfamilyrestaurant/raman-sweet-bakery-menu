@@ -506,4 +506,35 @@ router.put('/change-credentials', authenticateToken, requireSuperAdmin, async (r
   }
 });
 
+// GET System Settings for Super Admin
+router.get('/settings', authenticateToken, requireSuperAdmin, async (req, res) => {
+  try {
+    const rows = await query('SELECT * FROM system_settings');
+    const settings = {};
+    (rows || []).forEach(r => { settings[r.key] = r.value; });
+    res.json(settings);
+  } catch (err) {
+    console.error('Fetch system settings error:', err);
+    res.status(500).json({ error: 'Failed to fetch settings' });
+  }
+});
+
+// POST Update System Settings for Super Admin
+router.post('/settings', authenticateToken, requireSuperAdmin, async (req, res) => {
+  try {
+    const { support_whatsapp } = req.body;
+    if (support_whatsapp !== undefined) {
+      const cleanNum = support_whatsapp.replace(/[^0-9]/g, '');
+      await query(
+        'INSERT INTO system_settings (key, value) VALUES ($1, $2) ON CONFLICT (key) DO UPDATE SET value = EXCLUDED.value',
+        ['support_whatsapp', cleanNum]
+      );
+    }
+    res.json({ message: 'Master System Settings updated successfully' });
+  } catch (err) {
+    console.error('Update system settings error:', err);
+    res.status(500).json({ error: 'Failed to update settings' });
+  }
+});
+
 export default router;

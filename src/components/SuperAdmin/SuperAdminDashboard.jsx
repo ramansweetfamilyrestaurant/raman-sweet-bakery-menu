@@ -13,6 +13,17 @@ export default function SuperAdminDashboard({ token, username, onLogout, onRetur
 
   // Security Credentials Modal State
   const [showSecurityModal, setShowSecurityModal] = useState(false);
+  const [showWhatsappModal, setShowWhatsappModal] = useState(false);
+  const [masterWhatsapp, setMasterWhatsapp] = useState('919876543210');
+
+  useEffect(() => {
+    fetch('/api/settings')
+      .then(res => res.json())
+      .then(data => {
+        if (data && data.support_whatsapp) setMasterWhatsapp(data.support_whatsapp);
+      })
+      .catch(console.error);
+  }, []);
   const [securityForm, setSecurityForm] = useState({
     currentPassword: '',
     newUsername: username || '',
@@ -422,6 +433,27 @@ export default function SuperAdminDashboard({ token, username, onLogout, onRetur
               title="View platform activity & security audit logs"
             >
               <FileText size={14} /> Audit Logs
+            </button>
+
+            <button
+              onClick={() => setShowWhatsappModal(true)}
+              style={{
+                background: 'rgba(34, 197, 94, 0.15)',
+                color: '#22C55E',
+                padding: '7px 12px',
+                borderRadius: 'var(--radius-pill)',
+                fontSize: '0.76rem',
+                fontWeight: 800,
+                border: '1px solid rgba(34, 197, 94, 0.4)',
+                cursor: 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '5px',
+                whiteSpace: 'nowrap'
+              }}
+              title="Set Master Super Admin WhatsApp Support Number"
+            >
+              <MessageSquare size={14} /> Support WhatsApp
             </button>
 
             {/* 💳 SaaS Plans Manager Button */}
@@ -2321,6 +2353,79 @@ export default function SuperAdminDashboard({ token, username, onLogout, onRetur
                 }}
               >
                 <Lock size={16} /> {securitySubmitting ? 'Updating...' : 'Save Master Credentials'}
+              </button>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* 💬 Master Super Admin WhatsApp Support Modal */}
+      {showWhatsappModal && (
+        <div style={{
+          position: 'fixed', inset: 0, zIndex: 10000,
+          background: 'rgba(10, 35, 21, 0.85)', backdropFilter: 'blur(8px)',
+          display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '16px'
+        }} onClick={() => setShowWhatsappModal(false)}>
+          <div onClick={e => e.stopPropagation()} style={{
+            background: '#FFFFFF', borderRadius: '24px', maxWidth: '440px', width: '100%',
+            padding: '28px 24px', boxShadow: '0 20px 60px rgba(0,0,0,0.4)', border: '2px solid #22C55E'
+          }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                <div style={{ width: '38px', height: '38px', borderRadius: '12px', background: '#DCFCE7', color: '#15803D', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                  <MessageSquare size={20} />
+                </div>
+                <h3 style={{ fontSize: '1.15rem', fontWeight: 900, color: 'var(--primary-emerald)', margin: 0 }}>
+                  Super Admin WhatsApp Support
+                </h3>
+              </div>
+              <button onClick={() => setShowWhatsappModal(false)} style={{ background: 'none', border: 'none', fontSize: '1.4rem', cursor: 'pointer', color: '#6B7280' }}>✕</button>
+            </div>
+
+            <p style={{ fontSize: '0.84rem', color: '#4B5563', lineHeight: 1.5, marginBottom: '20px' }}>
+              Enter your Master WhatsApp Support Mobile Number. When restaurant owners click <strong>"Contact Super Admin Support"</strong> on Forgot Password or Support screens, they will be directed to this WhatsApp number!
+            </p>
+
+            <form onSubmit={async (e) => {
+              e.preventDefault();
+              try {
+                const res = await fetch('/api/superadmin/settings', {
+                  method: 'POST',
+                  headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${token}`
+                  },
+                  body: JSON.stringify({ support_whatsapp: masterWhatsapp })
+                });
+                const data = await res.json();
+                if (!res.ok) throw new Error(data.error || 'Failed to update');
+                alert('✅ Master Super Admin WhatsApp Support Number updated successfully!');
+                setShowWhatsappModal(false);
+              } catch (err) {
+                alert('⚠️ ' + err.message);
+              }
+            }}>
+              <label style={{ display: 'block', fontSize: '0.78rem', fontWeight: 800, color: '#374151', marginBottom: '6px' }}>
+                SUPER ADMIN WHATSAPP NUMBER *
+              </label>
+              <input
+                type="tel"
+                required
+                placeholder="e.g. 919876543210 (with country code)"
+                value={masterWhatsapp}
+                onChange={e => setMasterWhatsapp(e.target.value)}
+                style={{
+                  width: '100%', padding: '12px 14px', borderRadius: '12px',
+                  border: '1.5px solid #CBD5E1', fontSize: '0.95rem', outline: 'none', marginBottom: '20px'
+                }}
+              />
+
+              <button type="submit" style={{
+                width: '100%', padding: '14px', borderRadius: '14px', border: 'none',
+                background: 'linear-gradient(135deg, #15803D, #22C55E)', color: '#FFFFFF',
+                fontWeight: 900, fontSize: '0.9rem', cursor: 'pointer', boxShadow: '0 4px 14px rgba(34,197,94,0.4)'
+              }}>
+                💾 Save Master Support WhatsApp Number
               </button>
             </form>
           </div>

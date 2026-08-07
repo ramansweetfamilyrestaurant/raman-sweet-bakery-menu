@@ -213,6 +213,12 @@ async function createTables() {
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
       );
 
+      CREATE TABLE IF NOT EXISTS system_settings (
+        key VARCHAR(255) PRIMARY KEY,
+        value TEXT NOT NULL
+      );
+      INSERT INTO system_settings (key, value) VALUES ('support_whatsapp', '919876543210') ON CONFLICT (key) DO NOTHING;
+
       CREATE TABLE IF NOT EXISTS combos (
         id SERIAL PRIMARY KEY,
         restaurant_id INT REFERENCES restaurants(id) ON DELETE CASCADE,
@@ -378,6 +384,12 @@ async function createTables() {
         created_at TEXT DEFAULT CURRENT_TIMESTAMP,
         FOREIGN KEY (restaurant_id) REFERENCES restaurants (id) ON DELETE CASCADE
       );
+
+      CREATE TABLE IF NOT EXISTS system_settings (
+        key TEXT PRIMARY KEY,
+        value TEXT NOT NULL
+      );
+      INSERT OR IGNORE INTO system_settings (key, value) VALUES ('support_whatsapp', '919876543210');
 
       CREATE TABLE IF NOT EXISTS daily_sales_summaries (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
