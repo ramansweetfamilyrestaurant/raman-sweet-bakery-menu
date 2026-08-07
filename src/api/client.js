@@ -144,12 +144,31 @@ export async function fetchAdminStats(token) {
 }
 
 export async function uploadImage(file, token) {
+  // 1. Primary: Upload to ImgBB Free Cloud Storage CDN
+  try {
+    const imgbbFormData = new FormData();
+    imgbbFormData.append('image', file);
+
+    const imgbbRes = await fetch('https://api.imgbb.com/1/upload?key=6d207e02198a847aa98d0a2a901485a5', {
+      method: 'POST',
+      body: imgbbFormData,
+    });
+    const imgbbData = await imgbbRes.json();
+    if (imgbbData && imgbbData.data && imgbbData.data.url) {
+      console.log('⚡ Uploaded image to ImgBB Free Cloud CDN:', imgbbData.data.url);
+      return imgbbData.data.url;
+    }
+  } catch (err) {
+    console.warn('ImgBB Cloud upload notice, using server fallback:', err.message);
+  }
+
+  // 2. Fallback: Upload to backend server endpoint
   const formData = new FormData();
   formData.append('image', file);
 
   const res = await fetch(`${API_BASE}/admin/upload`, {
     method: 'POST',
-    headers: { Authorization: `Bearer ${token}` },
+    headers: token ? { Authorization: `Bearer ${token}` } : {},
     body: formData,
   });
   const data = await handleResponse(res, 'Upload failed');
