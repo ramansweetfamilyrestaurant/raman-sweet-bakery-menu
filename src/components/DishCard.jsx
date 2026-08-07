@@ -76,104 +76,116 @@ export default function DishCard({ dish, onClick, onAddToCart, currencySymbol = 
           </div>
         )}
 
-        {/* Dynamic Dietary Badge */}
+        {/* Badges Container Overlay - Prevents Overlapping on All Mobile/Grid Widths */}
         <div style={{
           position: 'absolute',
-          top: '10px',
-          left: '10px',
-          background: 'rgba(255, 255, 255, 0.95)',
-          backdropFilter: 'blur(4px)',
-          border: dish.type === 'nonveg' ? '1px solid #DC2626' : dish.type === 'egg' ? '1px solid #D97706' : '1px solid var(--veg-green)',
-          borderRadius: 'var(--radius-pill)',
-          padding: '3px 8px',
+          top: '8px',
+          left: '8px',
+          right: '8px',
           display: 'flex',
+          flexWrap: 'wrap',
+          justifyContent: 'space-between',
           alignItems: 'center',
           gap: '4px',
-          boxShadow: '0 2px 6px rgba(0,0,0,0.1)'
+          zIndex: 5,
+          pointerEvents: 'none'
         }}>
-          <span style={{
-            width: '10px',
-            height: '10px',
-            border: dish.type === 'nonveg' ? '1.5px solid #DC2626' : dish.type === 'egg' ? '1.5px solid #D97706' : '1.5px solid var(--veg-green)',
+          {/* Dynamic Dietary Badge */}
+          <div style={{
+            background: 'rgba(255, 255, 255, 0.95)',
+            backdropFilter: 'blur(4px)',
+            border: dish.type === 'nonveg' ? '1px solid #DC2626' : dish.type === 'egg' ? '1px solid #D97706' : '1px solid var(--veg-green)',
+            borderRadius: 'var(--radius-pill)',
+            padding: '2px 6px',
             display: 'inline-flex',
             alignItems: 'center',
-            justifyContent: 'center',
-            borderRadius: '2px'
+            gap: '3px',
+            boxShadow: '0 2px 6px rgba(0,0,0,0.15)',
+            whiteSpace: 'nowrap'
           }}>
             <span style={{
-              width: '4px',
-              height: '4px',
-              borderRadius: '50%',
-              backgroundColor: dish.type === 'nonveg' ? '#DC2626' : dish.type === 'egg' ? '#D97706' : 'var(--veg-green)'
-            }} />
-          </span>
-          <span style={{
-            fontSize: '0.66rem',
-            fontWeight: 800,
-            color: dish.type === 'nonveg' ? '#DC2626' : dish.type === 'egg' ? '#B45309' : 'var(--veg-green)',
-            letterSpacing: '0.5px'
-          }}>
-            {dish.type === 'nonveg' ? 'NON-VEG' : dish.type === 'egg' ? 'EGG' : 'PURE VEG'}
-          </span>
-        </div>
-
-        {dish.badge && (() => {
-          const lower = dish.badge.toLowerCase();
-          let bg = 'linear-gradient(135deg, #FFFBEB 0%, #FEF3C7 100%)';
-          let color = '#92400E';
-          let border = '1px solid #D97706';
-          let icon = '🏷️';
-          
-          if (lower.includes('bestseller')) {
-            bg = 'linear-gradient(135deg, #FFFBEB 0%, #FEF3C7 100%)';
-            color = '#B45309';
-            border = '1px solid #F59E0B';
-            icon = '🔥';
-          } else if (lower.includes('must try') || lower.includes('musttry')) {
-            bg = 'linear-gradient(135deg, #FEF2F2 0%, #FEE2E2 100%)';
-            color = '#B91C1C';
-            border = '1px solid #EF4444';
-            icon = '⭐';
-          } else if (lower.includes('special')) {
-            bg = 'linear-gradient(135deg, #EEF2FF 0%, #E0E7FF 100%)';
-            color = '#4338CA';
-            border = '1px solid #6366F1';
-            icon = '✨';
-          } else if (lower.includes('combo')) {
-            bg = 'linear-gradient(135deg, #F3E8FF 0%, #E9D5FF 100%)';
-            color = '#6B21A8';
-            border = '1px solid #A855F7';
-            icon = '🍕';
-          } else if (lower.includes('100') || lower.includes('under')) {
-            bg = 'linear-gradient(135deg, #F0FDF4 0%, #DCFCE7 100%)';
-            color = '#15803D';
-            border = '1px solid #22C55E';
-            icon = '⚡';
-          }
-
-          return (
-            <div style={{
-              position: 'absolute',
-              top: '10px',
-              right: '10px',
-              background: bg,
-              color: color,
-              border: border,
-              borderRadius: 'var(--radius-pill)',
-              padding: '3px 10px',
-              fontSize: '0.68rem',
-              fontWeight: 900,
-              boxShadow: '0 2px 8px rgba(0,0,0,0.12)',
+              width: '8px',
+              height: '8px',
+              border: dish.type === 'nonveg' ? '1.5px solid #DC2626' : dish.type === 'egg' ? '1.5px solid #D97706' : '1.5px solid var(--veg-green)',
               display: 'inline-flex',
               alignItems: 'center',
-              gap: '4px',
-              zIndex: 5
+              justifyContent: 'center',
+              borderRadius: '2px'
             }}>
-              <span>{icon}</span>
-              <span>{dish.badge}</span>
-            </div>
-          );
-        })()}
+              <span style={{
+                width: '3px',
+                height: '3px',
+                borderRadius: '50%',
+                backgroundColor: dish.type === 'nonveg' ? '#DC2626' : dish.type === 'egg' ? '#D97706' : 'var(--veg-green)'
+              }} />
+            </span>
+            <span style={{
+              fontSize: '0.6rem',
+              fontWeight: 800,
+              color: dish.type === 'nonveg' ? '#DC2626' : dish.type === 'egg' ? '#B45309' : 'var(--veg-green)',
+              letterSpacing: '0.3px'
+            }}>
+              {dish.type === 'nonveg' ? 'NON-VEG' : dish.type === 'egg' ? 'EGG' : 'PURE VEG'}
+            </span>
+          </div>
+
+          {/* Dynamic Custom Badge (Must Try, Bestseller, etc.) */}
+          {dish.badge && (() => {
+            const lower = dish.badge.toLowerCase();
+            let bg = 'linear-gradient(135deg, #FFFBEB 0%, #FEF3C7 100%)';
+            let color = '#92400E';
+            let border = '1px solid #D97706';
+            let icon = '🏷️';
+            
+            if (lower.includes('bestseller')) {
+              bg = 'linear-gradient(135deg, #FFFBEB 0%, #FEF3C7 100%)';
+              color = '#B45309';
+              border = '1px solid #F59E0B';
+              icon = '🔥';
+            } else if (lower.includes('must try') || lower.includes('musttry')) {
+              bg = 'linear-gradient(135deg, #FEF2F2 0%, #FEE2E2 100%)';
+              color = '#B91C1C';
+              border = '1px solid #EF4444';
+              icon = '⭐';
+            } else if (lower.includes('special')) {
+              bg = 'linear-gradient(135deg, #EEF2FF 0%, #E0E7FF 100%)';
+              color = '#4338CA';
+              border = '1px solid #6366F1';
+              icon = '✨';
+            } else if (lower.includes('combo')) {
+              bg = 'linear-gradient(135deg, #F3E8FF 0%, #E9D5FF 100%)';
+              color = '#6B21A8';
+              border = '1px solid #A855F7';
+              icon = '🍕';
+            } else if (lower.includes('100') || lower.includes('under')) {
+              bg = 'linear-gradient(135deg, #F0FDF4 0%, #DCFCE7 100%)';
+              color = '#15803D';
+              border = '1px solid #22C55E';
+              icon = '⚡';
+            }
+
+            return (
+              <div style={{
+                background: bg,
+                color: color,
+                border: border,
+                borderRadius: 'var(--radius-pill)',
+                padding: '2px 7px',
+                fontSize: '0.62rem',
+                fontWeight: 900,
+                boxShadow: '0 2px 6px rgba(0,0,0,0.12)',
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '3px',
+                whiteSpace: 'nowrap',
+                marginLeft: 'auto'
+              }}>
+                <span>{icon}</span>
+                <span>{dish.badge}</span>
+              </div>
+            );
+          })()}
+        </div>
 
         {!isAvailable && (
           <div style={{
