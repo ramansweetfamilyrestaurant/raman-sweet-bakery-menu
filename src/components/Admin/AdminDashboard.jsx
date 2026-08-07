@@ -628,9 +628,37 @@ export default function AdminDashboard({ token, username, onLogout, onReturnToMe
     }
   };
 
-  const handlePrintQR = () => {
+  const ensureTableCreated = async (numStr) => {
+    const num = parseInt(numStr, 10);
+    if (isNaN(num) || num <= 0) return;
+    const currentCount = Number(settingsForm.total_tables) || 12;
+    if (num > currentCount) {
+      const updatedForm = { ...settingsForm, total_tables: num };
+      setSettingsForm(updatedForm);
+      setToastMessage(`✨ Table #${num} automatically created!`);
+
+      try {
+        await fetch('/api/admin/settings', {
+          method: 'PUT',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${token}`
+          },
+          body: JSON.stringify(updatedForm)
+        });
+        loadData();
+      } catch (err) {
+        console.error('Failed to auto-create table:', err);
+      }
+    }
+  };
+
+  const handlePrintQR = (overrideNum) => {
+    const activeTableNum = overrideNum || tableNumber || '1';
+    ensureTableCreated(activeTableNum);
+
     const liveOrigin = window.location.origin;
-    const targetUrl = `${liveOrigin}/${settingsForm.slug || 'raman-sweet-bakery'}?table=${tableNumber || '1'}`;
+    const targetUrl = `${liveOrigin}/${settingsForm.slug || 'raman-sweet-bakery'}?table=${activeTableNum}`;
     const qrImgUrl = `https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=${encodeURIComponent(targetUrl)}`;
     const currentName = settingsForm.name || 'Digital Menu';
     const currentTagline = settingsForm.tagline || 'Scan QR Code for Digital Menu';
