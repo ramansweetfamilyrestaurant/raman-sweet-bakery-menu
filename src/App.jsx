@@ -308,14 +308,30 @@ export default function App() {
     }
   };
 
-  // Extract restaurant slug from URL /r/:slug
+  // Extract restaurant slug from URL (/slug, /r/:slug, or default)
   const getSlugFromUrl = () => {
     const path = window.location.pathname;
-    if (path.includes('/r/')) {
+    if (!path || path === '/' || path === '/admin' || path === '/super-admin' || path === '/superadmin') {
+      return 'raman-sweet-bakery';
+    }
+    
+    // Support legacy /r/:slug format
+    if (path.startsWith('/r/')) {
       const parts = path.split('/r/')[1].split('/');
       return parts[0] || 'raman-sweet-bakery';
     }
-    return 'raman-sweet-bakery';
+
+    // Support clean direct /:slug format (e.g., /raja-restaurant or /raja-restaurant/admin)
+    const cleanPath = path.startsWith('/') ? path.slice(1) : path;
+    const parts = cleanPath.split('/');
+    const candidate = parts[0];
+    
+    // Filter out system routes
+    if (['admin', 'superadmin', 'super-admin', 'api', 'uploads', 'assets'].includes(candidate)) {
+      return 'raman-sweet-bakery';
+    }
+    
+    return candidate || 'raman-sweet-bakery';
   };
 
   // Load Menu Data
@@ -407,7 +423,7 @@ export default function App() {
     setAdminUsername(username);
     setAdminSlug(currentSlug);
     setView('admin-dashboard');
-    window.history.pushState({}, '', `/r/${currentSlug}/admin`);
+    window.history.pushState({}, '', `/${currentSlug}/admin`);
   };
 
   const handleAdminLogout = () => {
@@ -419,7 +435,7 @@ export default function App() {
     setAdminUsername('');
     setAdminSlug('');
     setView('menu');
-    window.history.pushState({}, '', `/r/${currentSlug}`);
+    window.history.pushState({}, '', `/${currentSlug}`);
     loadMenuData(currentSlug);
   };
 

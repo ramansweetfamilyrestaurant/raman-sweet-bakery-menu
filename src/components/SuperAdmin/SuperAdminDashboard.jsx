@@ -714,7 +714,7 @@ export default function SuperAdminDashboard({ token, username, onLogout, onRetur
                             {r.name}
                           </h3>
                           <span style={{ fontSize: '0.74rem', color: 'var(--gold-primary)', fontWeight: 800 }}>
-                            /r/{r.slug}
+                            /{r.slug}
                           </span>
                         </div>
                       </div>
@@ -896,7 +896,7 @@ export default function SuperAdminDashboard({ token, username, onLogout, onRetur
                     </button>
 
                     <a
-                      href={`/r/${r.slug}`}
+                      href={`/${r.slug}`}
                       target="_blank"
                       rel="noopener noreferrer"
                       style={{
@@ -1001,7 +1001,7 @@ export default function SuperAdminDashboard({ token, username, onLogout, onRetur
 
               <div>
                 <label style={{ fontSize: '0.78rem', fontWeight: 800, color: 'var(--text-dark)', marginBottom: '4px', display: 'block' }}>
-                  CUSTOM URL SLUG (yourdomain.com/r/slug) *
+                  CUSTOM URL SLUG (yourdomain.com/slug) *
                 </label>
                 <input
                   type="text"
