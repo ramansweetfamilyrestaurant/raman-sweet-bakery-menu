@@ -930,42 +930,75 @@ export default function SuperAdminDashboard({ token, username, onLogout, onRetur
                       </span>
                     </div>
 
-                    {/* Metadata Table */}
+                    {/* 📱 Owner Contact & Account Credentials Box */}
                     <div style={{
-                      background: 'var(--bg-app)',
-                      borderRadius: '14px',
-                      padding: '10px 12px',
-                      fontSize: '0.78rem',
+                      background: 'linear-gradient(135deg, #F8FAFC 0%, #EDF2F7 100%)',
+                      borderRadius: '16px',
+                      padding: '12px 14px',
+                      fontSize: '0.82rem',
                       display: 'flex',
                       flexDirection: 'column',
-                      gap: '6px',
-                      border: '1px solid var(--border-light)'
+                      gap: '8px',
+                      border: '1.5px solid #CBD5E1',
+                      boxShadow: 'inset 0 1px 3px rgba(0,0,0,0.03)'
                     }}>
                       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                        <span style={{ color: 'var(--text-muted)', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '4px' }}>
-                          <Shield size={13} color="var(--gold-primary)" /> Owner Login:
+                        <span style={{ color: '#475569', fontWeight: 700, display: 'flex', alignItems: 'center', gap: '5px' }}>
+                          <Shield size={14} color="#D4AF37" /> Admin Username:
                         </span>
-                        <strong style={{ fontFamily: 'monospace', color: 'var(--text-dark)' }}>
-                          {r.owner_username}
-                        </strong>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                          <strong style={{ fontFamily: 'monospace', fontSize: '0.88rem', color: '#0F172A', background: '#FFFFFF', padding: '2px 8px', borderRadius: '6px', border: '1px solid #CBD5E1' }}>
+                            {r.owner_username || 'admin'}
+                          </strong>
+                          <button
+                            onClick={() => {
+                              navigator.clipboard.writeText(r.owner_username || 'admin');
+                              setCopiedId(r.id + '-user');
+                              setTimeout(() => setCopiedId(null), 2000);
+                            }}
+                            style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 0 }}
+                            title="Copy Username"
+                          >
+                            {copiedId === r.id + '-user' ? <Check size={13} color="#166534" /> : <Copy size={13} color="#64748B" />}
+                          </button>
+                        </div>
                       </div>
 
                       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                        <span style={{ color: 'var(--text-muted)', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '4px' }}>
-                          <Utensils size={13} color="var(--gold-primary)" /> Dishes Hosted:
+                        <span style={{ color: '#475569', fontWeight: 700, display: 'flex', alignItems: 'center', gap: '5px' }}>
+                          <Phone size={14} color="#D4AF37" /> Mobile / WhatsApp:
                         </span>
-                        <strong style={{ color: 'var(--primary-emerald)' }}>{r.dish_count} Items</strong>
+                        {r.phone || r.whatsapp_number ? (
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                            <strong style={{ color: '#0A2315', fontWeight: 900 }}>
+                              {r.phone || r.whatsapp_number}
+                            </strong>
+                            <a
+                              href={`https://wa.me/${(r.phone || r.whatsapp_number || '').replace(/[^0-9]/g, '')}`}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              style={{ background: '#22C55E', color: '#FFF', padding: '2px 6px', borderRadius: '6px', fontSize: '0.68rem', fontWeight: 900, textDecoration: 'none', display: 'flex', alignItems: 'center', gap: '2px' }}
+                              title="Chat on WhatsApp"
+                            >
+                              💬 Chat
+                            </a>
+                          </div>
+                        ) : (
+                          <span style={{ color: '#94A3B8', italic: 'true', fontSize: '0.78rem' }}>Not Provided</span>
+                        )}
                       </div>
 
-                      {r.phone && (
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '6px', color: 'var(--text-dark)' }}>
-                          <Phone size={13} color="var(--gold-primary)" /> {r.phone}
-                        </div>
-                      )}
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                        <span style={{ color: '#475569', fontWeight: 700, display: 'flex', alignItems: 'center', gap: '5px' }}>
+                          <Utensils size={14} color="#D4AF37" /> Dishes Hosted:
+                        </span>
+                        <strong style={{ color: '#15803D', fontWeight: 800 }}>{r.dish_count || 0} Items</strong>
+                      </div>
 
                       {r.address && (
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '6px', color: 'var(--text-dark)' }}>
-                          <MapPin size={13} color="var(--gold-primary)" /> {r.address}
+                        <div style={{ display: 'flex', alignItems: 'flex-start', gap: '5px', color: '#334155', fontSize: '0.78rem', paddingTop: '2px', borderTop: '1px stroke #E2E8F0' }}>
+                          <MapPin size={13} color="#D4AF37" style={{ flexShrink: 0, marginTop: '2px' }} />
+                          <span style={{ lineHeight: 1.3 }}>{r.address}</span>
                         </div>
                       )}
                     </div>
