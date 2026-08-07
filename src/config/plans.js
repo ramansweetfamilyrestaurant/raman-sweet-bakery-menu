@@ -6,6 +6,7 @@ export const SAAS_PLANS = {
     price: 499,
     badge: '⚡ BASIC',
     description: 'Digital Menu Viewing & Luxury Theme Engine',
+    max_combos: 3,
     features: {
       whatsapp_enabled: false,
       direct_ordering_enabled: false,
@@ -18,6 +19,7 @@ export const SAAS_PLANS = {
     price: 999,
     badge: '👑 PRO',
     description: 'Digital Menu + WhatsApp Ordering + Google Reviews',
+    max_combos: 10,
     features: {
       whatsapp_enabled: true,
       direct_ordering_enabled: false,
@@ -30,6 +32,7 @@ export const SAAS_PLANS = {
     price: 1999,
     badge: '🚀 ENTERPRISE',
     description: 'All Features + Direct Table QR KOT Ordering & Kitchen System',
+    max_combos: 9999,
     features: {
       whatsapp_enabled: true,
       direct_ordering_enabled: true,

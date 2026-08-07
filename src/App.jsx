@@ -1097,6 +1097,7 @@ export default function App() {
         lang={lang}
         selectedCategory={selectedCategory}
         onSelectCategory={(catId) => setSelectedCategory(catId)}
+        hasCombos={combos.length > 0}
       />
 
       {/* Toolbar: View Switcher */}
@@ -1227,23 +1228,31 @@ export default function App() {
           <>
           {/* 🛒 COMBO DEALS SECTION */}
           {combos.length > 0 && !searchQuery && (
-            <section style={{ marginBottom: '28px', scrollMarginTop: '110px' }}>
+            <section id="combos-section" style={{ marginBottom: '28px', scrollMarginTop: '110px' }}>
               <div style={{
                 display: 'flex', alignItems: 'center', justifyContent: 'space-between',
                 marginBottom: '12px', paddingBottom: '6px', borderBottom: '2px solid var(--gold-border)'
               }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                  <span style={{ fontSize: '1.2rem' }}>🛒</span>
+                  <span style={{ fontSize: '1.2rem' }}>🍱</span>
                   <h2 style={{ margin: 0, fontSize: '1.05rem', fontWeight: 800, color: 'var(--text-dark)' }}>
                     {lang === 'hi' ? 'कॉम्बो डील्स & थाली' : 'Combo Deals & Thalis'}
                   </h2>
+                  <span style={{
+                    fontSize: '0.72rem', fontWeight: 800, color: '#B45309',
+                    background: '#FEF3C7', padding: '2px 8px', borderRadius: '12px',
+                    border: '1px solid #FCD34D'
+                  }}>{combos.length}</span>
                 </div>
                 <span style={{
-                  padding: '3px 10px', borderRadius: '20px', fontSize: '0.72rem', fontWeight: 800,
-                  background: 'linear-gradient(135deg, #FFD700, #F59E0B)', color: '#0A0A0A'
-                }}>💰 SAVE</span>
+                  fontSize: '0.72rem', fontWeight: 800, color: '#059669'
+                }}>👉 Swipe ({combos.length})</span>
               </div>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+              <div style={{
+                display: 'flex', gap: '14px', overflowX: 'auto', paddingBottom: '10px',
+                scrollSnapType: 'x mandatory', WebkitOverflowScrolling: 'touch',
+                scrollbarWidth: 'none', msOverflowStyle: 'none'
+              }}>
                 {combos.map(combo => {
                   let comboItems = [];
                   try { comboItems = typeof combo.items === 'string' ? JSON.parse(combo.items) : (combo.items || []); } catch { comboItems = []; }
@@ -1255,6 +1264,7 @@ export default function App() {
                       key={combo.id}
                       onClick={() => setSelectedComboModal(combo)}
                       style={{
+                        minWidth: '290px', maxWidth: '320px', flexShrink: 0, scrollSnapAlign: 'start',
                         background: '#FFFFFF', borderRadius: 'var(--radius-md)', padding: '14px',
                         border: '1px solid var(--border-light)', boxShadow: 'var(--shadow-sm)',
                         position: 'relative', overflow: 'hidden', cursor: 'pointer',

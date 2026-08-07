@@ -594,6 +594,31 @@ router.post('/combos', authenticateToken, async (req, res) => {
     if (!name || !price || !items) {
       return res.status(400).json({ error: 'Name, price, and items are required' });
     }
+
+    // Dynamic Plan Combo Limit Check
+    const restoRows = await query('SELECT plan_tier FROM restaurants WHERE id = $1', [req.user.restaurant_id]);
+    const planTier = (restoRows[0]?.plan_tier || 'pro').toLowerCase();
+
+    // Fetch plan details from saas_plans if available
+    const planRows = await query('SELECT max_combos FROM saas_plans WHERE LOWER(key) = $1', [planTier]);
+    let maxCombos = planRows[0]?.max_combos;
+    if (!maxCombos) {
+      if (planTier === 'basic') maxCombos = 3;
+      else if (planTier === 'enterprise') maxCombos = 9999;
+      else maxCombos = 10;
+    }
+
+    const countRows = await query('SELECT COUNT(*) as count FROM combos WHERE restaurant_id = $1', [req.user.restaurant_id]);
+    const currentCount = parseInt(countRows[0]?.count || 0, 10);
+
+    if (currentCount >= maxCombos) {
+      return res.status(403).json({
+        error: `Combo limit reached! Your ${planTier.toUpperCase()} plan allows a maximum of ${maxCombos} combos. Please upgrade your SaaS plan to add more.`,
+        limit_reached: true,
+        max_combos: maxCombos
+      });
+    }
+
     const itemsStr = typeof items === 'string' ? items : JSON.stringify(items);
     const result = await query(
       'INSERT INTO combos (restaurant_id, name, description, price, image, items, badge, sort_order) VALUES ($1, $2, $3, $4, $5, $6, $7, $8) RETURNING id',

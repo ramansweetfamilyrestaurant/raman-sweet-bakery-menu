@@ -443,6 +443,25 @@ export default function AdminDashboard({ token, username, onLogout, onReturnToMe
   // Modals
   const [dishModalData, setDishModalData] = useState(null); // null (closed), 'new', or dish object
   const [catModalData, setCatModalData] = useState(null);
+  const [comboModalData, setComboModalData] = useState(null);
+  const [comboLimitModalInfo, setComboLimitModalInfo] = useState(null);
+
+  const handleOpenCreateCombo = () => {
+    const currentCount = (combos || []).length;
+    const planKey = (settingsForm.plan_tier || (info && info.plan_tier) || 'pro').toLowerCase();
+    const planInfo = getPlanDetails(planKey);
+    const maxCombos = planInfo?.max_combos !== undefined ? planInfo.max_combos : (planKey === 'basic' ? 3 : planKey === 'pro' ? 10 : 9999);
+
+    if (currentCount >= maxCombos) {
+      setComboLimitModalInfo({
+        currentCount,
+        maxCombos,
+        planTier: planKey.toUpperCase()
+      });
+      return;
+    }
+    setComboModalData('new');
+  };
 
   const loadData = async () => {
     setLoading(true);
@@ -2415,7 +2434,7 @@ export default function AdminDashboard({ token, username, onLogout, onReturnToMe
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '14px' }}>
               <h3 style={{ margin: 0, fontSize: '1.05rem', fontWeight: 800, color: '#1F2937' }}>🛒 Combo Deals & Thali Manager</h3>
               <button
-                onClick={() => setComboModalData('new')}
+                onClick={handleOpenCreateCombo}
                 style={{
                   padding: '8px 16px', borderRadius: '10px', border: 'none',
                   background: 'linear-gradient(135deg, #FFD700 0%, #D4AF37 100%)',
@@ -2437,7 +2456,7 @@ export default function AdminDashboard({ token, username, onLogout, onReturnToMe
                 <h3 style={{ color: '#374151', fontWeight: 800, marginBottom: '6px' }}>No Combo Deals Yet</h3>
                 <p style={{ color: '#6B7280', fontSize: '0.88rem' }}>Create combo thalis and meal deals to offer customers great value!</p>
                 <button
-                  onClick={() => setComboModalData('new')}
+                  onClick={handleOpenCreateCombo}
                   style={{
                     marginTop: '14px', padding: '10px 24px', borderRadius: '12px', border: 'none',
                     background: 'linear-gradient(135deg, #FFD700 0%, #D4AF37 100%)',
@@ -3635,6 +3654,53 @@ export default function AdminDashboard({ token, username, onLogout, onReturnToMe
           }}
           onClose={() => setComboModalData(null)}
         />
+      )}
+
+      {/* 🔒 SaaS Plan Combo Limit Exceeded Modal */}
+      {comboLimitModalInfo && (
+        <div style={{
+          position: 'fixed', inset: 0, zIndex: 10050,
+          background: 'rgba(10, 35, 21, 0.85)', backdropFilter: 'blur(8px)',
+          display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '16px'
+        }} onClick={() => setComboLimitModalInfo(null)}>
+          <div onClick={e => e.stopPropagation()} style={{
+            background: '#111827', border: '2px solid #F59E0B', borderRadius: '24px',
+            padding: '32px 24px', maxWidth: '440px', width: '100%',
+            color: '#FFFFFF', boxShadow: '0 20px 50px rgba(0,0,0,0.5)', textAlign: 'center'
+          }}>
+            <div style={{ fontSize: '3.5rem', marginBottom: '12px' }}>🔒</div>
+            <h2 style={{ fontSize: '1.3rem', fontWeight: 900, color: '#F59E0B', margin: '0 0 8px 0' }}>
+              Combo Limit Reached!
+            </h2>
+            <p style={{ color: '#9CA3AF', fontSize: '0.88rem', lineHeight: 1.6, margin: '0 0 20px 0' }}>
+              Your <strong style={{ color: '#FFD700' }}>{comboLimitModalInfo.planTier}</strong> plan allows a maximum of <strong style={{ color: '#FFFFFF' }}>{comboLimitModalInfo.maxCombos} combos</strong>. You currently have {comboLimitModalInfo.currentCount} active combos.
+            </p>
+            <div style={{
+              background: 'rgba(255,255,255,0.05)', borderRadius: '14px', padding: '14px',
+              border: '1px solid rgba(255,215,0,0.2)', marginBottom: '20px', textAlign: 'left'
+            }}>
+              <div style={{ fontSize: '0.82rem', fontWeight: 800, color: '#FFD700', marginBottom: '6px' }}>👑 Upgrade your SaaS Plan to unlock:</div>
+              <div style={{ fontSize: '0.78rem', color: '#D1D5DB', lineHeight: 1.5 }}>
+                • <strong>Pro Plan:</strong> Up to 10 Combos & Thalis<br/>
+                • <strong>Enterprise Plan:</strong> Unlimited Combos & Direct Table Ordering
+              </div>
+            </div>
+            <div style={{ display: 'flex', gap: '10px' }}>
+              <button onClick={() => setComboLimitModalInfo(null)} style={{
+                flex: 1, padding: '12px', borderRadius: '12px', border: '1px solid rgba(255,255,255,0.2)',
+                background: 'transparent', color: '#CCCCCC', fontWeight: 700, cursor: 'pointer'
+              }}>Close</button>
+              <button onClick={() => {
+                alert('Please contact SaaS Master Super Admin to upgrade your subscription plan!');
+                setComboLimitModalInfo(null);
+              }} style={{
+                flex: 1, padding: '12px', borderRadius: '12px', border: 'none',
+                background: 'linear-gradient(135deg, #FFD700, #F59E0B)', color: '#0A0A0A',
+                fontWeight: 900, cursor: 'pointer', boxShadow: '0 4px 14px rgba(245,158,11,0.4)'
+              }}>🚀 Upgrade Plan</button>
+            </div>
+          </div>
+        </div>
       )}
 
       {/* 🧾 Select Payment Mode Modal before Printing Bill */}

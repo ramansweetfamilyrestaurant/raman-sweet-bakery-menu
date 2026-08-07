@@ -495,15 +495,25 @@ async function seedData() {
 
   // Seed default SaaS Plans if empty
   try {
+    // Migration: Add max_combos column if not existing
+    try {
+      await query('ALTER TABLE saas_plans ADD COLUMN max_combos INT DEFAULT 10');
+      await query("UPDATE saas_plans SET max_combos = 3 WHERE key = 'basic'");
+      await query("UPDATE saas_plans SET max_combos = 10 WHERE key = 'pro'");
+      await query("UPDATE saas_plans SET max_combos = 9999 WHERE key = 'enterprise'");
+    } catch {
+      // Column already exists
+    }
+
     const planCheck = await query('SELECT COUNT(*) as count FROM saas_plans');
     const pCount = parseInt(planCheck[0]?.count || 0, 10);
     if (pCount === 0) {
       await query(`
-        INSERT INTO saas_plans (key, name, price, badge, description, whatsapp_enabled, direct_ordering_enabled, google_reviews_enabled)
+        INSERT INTO saas_plans (key, name, price, badge, description, whatsapp_enabled, direct_ordering_enabled, google_reviews_enabled, max_combos)
         VALUES 
-        ('basic', 'Basic Starter Plan', 499, '⚡ BASIC', 'Digital Menu Viewing & Custom Themes', 0, 0, 0),
-        ('pro', 'Pro Luxury Plan', 999, '👑 PRO', 'Menu + WhatsApp Ordering + Google Reviews', 1, 0, 1),
-        ('enterprise', 'Enterprise VIP Plan', 1999, '🚀 ENTERPRISE', 'All Features + Direct Table QR KOT Ordering & Kitchen System', 1, 1, 1)
+        ('basic', 'Basic Starter Plan', 499, '⚡ BASIC', 'Digital Menu Viewing & Custom Themes', 0, 0, 0, 3),
+        ('pro', 'Pro Luxury Plan', 999, '👑 PRO', 'Menu + WhatsApp Ordering + Google Reviews', 1, 0, 1, 10),
+        ('enterprise', 'Enterprise VIP Plan', 1999, '🚀 ENTERPRISE', 'All Features + Direct Table QR KOT Ordering & Kitchen System', 1, 1, 1, 9999)
       `);
       console.log('💳 Seeded default SaaS Plans into saas_plans table');
     }
