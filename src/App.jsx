@@ -370,6 +370,11 @@ export default function App() {
       setCategories(catData);
       setDishes(dishData);
       setCombos(Array.isArray(comboData) ? comboData : []);
+      if (infoData && infoData.name && window.location.pathname !== '/' && window.location.pathname !== '/register') {
+        document.title = `${infoData.name} - Digital Menu & Ordering`;
+      } else if (window.location.pathname === '/') {
+        document.title = 'KhanaMaster - Digital Menu & QR Ordering Platform';
+      }
     } catch (err) {
       console.error('Error loading digital menu data:', err);
     } finally {
@@ -442,8 +447,12 @@ export default function App() {
         }
       } else if (isRootPath) {
         setView('landing');
+        document.title = 'KhanaMaster - Digital Menu & QR Ordering Platform';
       } else {
         setView('menu');
+        if (info && info.name) {
+          document.title = `${info.name} - Digital Menu & Ordering`;
+        }
       }
     };
 
