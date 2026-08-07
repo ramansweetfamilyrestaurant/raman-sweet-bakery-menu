@@ -462,6 +462,56 @@ export default function AdminDashboard({ token, username, onLogout, onReturnToMe
     setComboModalData('new');
   };
 
+  const handleAddTable = async () => {
+    const currentCount = Number(settingsForm.total_tables) || 12;
+    const newCount = currentCount + 1;
+    const updatedForm = { ...settingsForm, total_tables: newCount };
+    setSettingsForm(updatedForm);
+    setToastMessage(`Table #${newCount} added successfully! Saving...`);
+
+    try {
+      await fetch('/api/admin/settings', {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify(updatedForm)
+      });
+      loadData();
+    } catch (err) {
+      console.error('Failed to add table:', err);
+    }
+  };
+
+  const handleDeleteTable = async (tableNumToDelete) => {
+    const currentCount = Number(settingsForm.total_tables) || 12;
+    if (currentCount <= 1) {
+      alert('Restaurant must have at least 1 table!');
+      return;
+    }
+    if (!window.confirm(`Are you sure you want to delete Table #${tableNumToDelete}?`)) return;
+
+    const newCount = currentCount - 1;
+    const updatedForm = { ...settingsForm, total_tables: newCount };
+    setSettingsForm(updatedForm);
+    setToastMessage(`Table #${tableNumToDelete} deleted! Saving...`);
+
+    try {
+      await fetch('/api/admin/settings', {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify(updatedForm)
+      });
+      loadData();
+    } catch (err) {
+      console.error('Failed to delete table:', err);
+    }
+  };
+
   const loadData = async () => {
     setLoading(true);
     try {
@@ -2600,126 +2650,254 @@ export default function AdminDashboard({ token, username, onLogout, onReturnToMe
           </div>
         )}
 
-        {/* TAB 3: TABLE QR GENERATOR */}
+        {/* TAB 3: TABLE & QR MANAGER */}
         {activeTab === 'qr-generator' && (
-          <div style={{
-            background: '#FFFFFF',
-            borderRadius: 'var(--radius-md)',
-            padding: '24px',
-            border: '1px solid var(--border-light)',
-            boxShadow: 'var(--shadow-sm)',
-            textAlign: 'center'
-          }}>
-            <h3 style={{ fontSize: '1.2rem', fontWeight: 800, color: 'var(--primary-emerald)', marginBottom: '8px' }}>
-              Table QR Code Printable Sticker Generator
-            </h3>
-            <p style={{ fontSize: '0.84rem', color: 'var(--text-muted)', marginBottom: '20px' }}>
-              Enter table number to generate a printable QR sticker for your restaurant dining tables.
-            </p>
+          <div>
+            {/* Top Action Bar */}
+            <div style={{
+              background: '#FFFFFF',
+              borderRadius: 'var(--radius-md)',
+              padding: '20px 24px',
+              border: '1px solid var(--border-light)',
+              boxShadow: 'var(--shadow-sm)',
+              marginBottom: '20px',
+              display: 'flex',
+              flexWrap: 'wrap',
+              justifyContent: 'space-between',
+              alignItems: 'center',
+              gap: '16px'
+            }}>
+              <div>
+                <h3 style={{ fontSize: '1.25rem', fontWeight: 900, color: 'var(--primary-emerald)', margin: '0 0 4px 0', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                  <QrCode size={22} /> Restaurant Dining Tables & QR Manager
+                </h3>
+                <p style={{ fontSize: '0.84rem', color: 'var(--text-muted)', margin: 0 }}>
+                  Manage tables, add new dining tables, delete tables, and print QR standees for your restaurant.
+                </p>
+              </div>
 
-            <div style={{ display: 'flex', gap: '10px', justifyContent: 'center', maxWidth: '300px', margin: '0 auto 20px' }}>
-              <input
-                type="text"
-                value={tableNumber}
-                onChange={(e) => setTableNumber(e.target.value)}
-                placeholder="Table Number (e.g. 5)"
-                style={{
-                  padding: '10px',
-                  borderRadius: 'var(--radius-sm)',
-                  border: '1px solid var(--border-light)',
-                  fontSize: '0.9rem',
-                  width: '100%'
-                }}
-              />
-              <button
-                onClick={() => setQrGenerated(true)}
-                style={{
-                  background: 'var(--primary-emerald)',
-                  color: '#FFFFFF',
-                  padding: '10px 18px',
-                  borderRadius: 'var(--radius-sm)',
-                  fontWeight: 700,
-                  fontSize: '0.85rem',
-                  whiteSpace: 'nowrap'
-                }}
-              >
-                Generate QR
-              </button>
+              <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
+                <button
+                  onClick={handleAddTable}
+                  style={{
+                    padding: '10px 18px',
+                    borderRadius: '12px',
+                    border: 'none',
+                    background: 'linear-gradient(135deg, #FFD700 0%, #D4AF37 100%)',
+                    color: '#0A0A0A',
+                    fontWeight: 900,
+                    fontSize: '0.85rem',
+                    cursor: 'pointer',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '6px',
+                    boxShadow: '0 4px 14px rgba(255,215,0,0.35)'
+                  }}
+                >
+                  <Plus size={16} /> + Add New Table (Table #{totalTablesCount + 1})
+                </button>
+
+                <button
+                  onClick={() => {
+                    setTableNumber('1');
+                    handlePrintQR();
+                  }}
+                  style={{
+                    padding: '10px 18px',
+                    borderRadius: '12px',
+                    border: 'none',
+                    background: 'linear-gradient(135deg, var(--primary-emerald), #059669)',
+                    color: '#FFFFFF',
+                    fontWeight: 800,
+                    fontSize: '0.85rem',
+                    cursor: 'pointer',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '6px'
+                  }}
+                >
+                  <Printer size={16} /> Quick Print QR
+                </button>
+              </div>
             </div>
 
-            {/* Generated QR Display Card */}
+            {/* Table Cards Grid */}
             <div style={{
-              maxWidth: '320px',
-              margin: '0 auto',
-              padding: '24px',
-              border: '2px double #D4AF37',
-              borderRadius: 'var(--radius-md)',
-              background: '#FAFAFA'
+              display: 'grid',
+              gridTemplateColumns: 'repeat(auto-fill, minmax(220px, 1fr))',
+              gap: '16px',
+              marginBottom: '28px'
             }}>
-              <div style={{
-                width: '60px',
-                height: '60px',
-                borderRadius: '50%',
-                background: '#0A2315',
-                color: '#D4AF37',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                margin: '0 auto 12px',
-                border: '2px solid #D4AF37',
-                fontWeight: 800,
-                fontSize: '1.2rem'
-              }}>
-                T-{tableNumber || '1'}
-              </div>
+              {Array.from({ length: totalTablesCount }, (_, i) => i + 1).map((tNum) => {
+                const tableInfo = tableGrid.find(t => t.tableNumber === tNum);
+                const isOccupied = tableInfo?.status === 'occupied';
+                const isService = tableInfo?.status === 'service_needed';
+                const qrDataUrl = `https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(window.location.origin + '/' + (settingsForm.slug || 'raman-sweet-bakery') + '?table=' + tNum)}`;
 
-              <h4 style={{ fontSize: '1.05rem', fontWeight: 800, color: 'var(--primary-emerald)' }}>
-                {settingsForm.name || 'Digital Menu'}
+                return (
+                  <div key={tNum} style={{
+                    background: '#FFFFFF',
+                    borderRadius: '18px',
+                    padding: '18px',
+                    border: isService ? '2px solid #F59E0B' : isOccupied ? '2px solid #EF4444' : '1px solid var(--border-light)',
+                    boxShadow: '0 4px 12px rgba(0,0,0,0.05)',
+                    textAlign: 'center',
+                    position: 'relative',
+                    transition: 'all 0.2s'
+                  }}>
+                    {/* Card Top: Number + Delete Button */}
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
+                      <span style={{
+                        background: '#0A2315',
+                        color: '#DFBA67',
+                        padding: '4px 12px',
+                        borderRadius: 'var(--radius-pill)',
+                        fontSize: '0.82rem',
+                        fontWeight: 900,
+                        border: '1px solid #C5A059'
+                      }}>
+                        Table #{tNum}
+                      </span>
+
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                        {/* Delete Button */}
+                        <button
+                          onClick={() => handleDeleteTable(tNum)}
+                          title={`Delete Table #${tNum}`}
+                          style={{
+                            background: '#FEE2E2',
+                            color: '#DC2626',
+                            border: 'none',
+                            borderRadius: '50%',
+                            width: '30px',
+                            height: '30px',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            cursor: 'pointer',
+                            transition: 'all 0.2s'
+                          }}
+                          onMouseEnter={e => e.currentTarget.style.background = '#FCA5A5'}
+                          onMouseLeave={e => e.currentTarget.style.background = '#FEE2E2'}
+                        >
+                          <Trash2 size={14} />
+                        </button>
+                      </div>
+                    </div>
+
+                    {/* QR Code Graphic Preview */}
+                    <div style={{
+                      background: '#FAFAFA',
+                      padding: '12px',
+                      borderRadius: '14px',
+                      border: '1px solid #F3F4F6',
+                      display: 'inline-block',
+                      marginBottom: '12px'
+                    }}>
+                      <img
+                        src={qrDataUrl}
+                        alt={`Table ${tNum}`}
+                        style={{ width: '120px', height: '120px', display: 'block' }}
+                      />
+                    </div>
+
+                    {/* Live Status Badge */}
+                    <div style={{ marginBottom: '14px' }}>
+                      {isService ? (
+                        <span style={{ padding: '3px 10px', borderRadius: '12px', fontSize: '0.72rem', fontWeight: 800, background: '#FEF3C7', color: '#B45309' }}>
+                          🔔 Call Staff Request
+                        </span>
+                      ) : isOccupied ? (
+                        <span style={{ padding: '3px 10px', borderRadius: '12px', fontSize: '0.72rem', fontWeight: 800, background: '#FEE2E2', color: '#DC2626' }}>
+                          🔴 Occupied (Order Active)
+                        </span>
+                      ) : (
+                        <span style={{ padding: '3px 10px', borderRadius: '12px', fontSize: '0.72rem', fontWeight: 800, background: '#DCFCE7', color: '#15803D' }}>
+                          🟢 Available
+                        </span>
+                      )}
+                    </div>
+
+                    {/* Quick Print Button */}
+                    <button
+                      onClick={() => {
+                        setTableNumber(String(tNum));
+                        handlePrintQR();
+                      }}
+                      style={{
+                        width: '100%',
+                        padding: '9px',
+                        borderRadius: '10px',
+                        border: 'none',
+                        background: 'var(--primary-emerald)',
+                        color: '#FFFFFF',
+                        fontSize: '0.78rem',
+                        fontWeight: 800,
+                        cursor: 'pointer',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        gap: '6px'
+                      }}
+                    >
+                      <Printer size={14} /> Print Standee QR
+                    </button>
+                  </div>
+                );
+              })}
+            </div>
+
+            {/* Custom Single QR Standee Generator */}
+            <div style={{
+              background: '#FFFFFF',
+              borderRadius: 'var(--radius-md)',
+              padding: '24px',
+              border: '1px solid var(--border-light)',
+              boxShadow: 'var(--shadow-sm)',
+              textAlign: 'center',
+              maxWidth: '440px',
+              margin: '0 auto'
+            }}>
+              <h4 style={{ fontSize: '1rem', fontWeight: 800, color: 'var(--primary-emerald)', marginBottom: '8px' }}>
+                🖨️ Print Custom Table QR Standee
               </h4>
-              <p style={{ fontSize: '0.74rem', color: '#D4AF37', fontWeight: 700, marginBottom: '14px', margin: 0 }}>
-                {settingsForm.tagline || 'Scan for Digital Menu'}
+              <p style={{ fontSize: '0.8rem', color: 'var(--text-muted)', marginBottom: '16px' }}>
+                Type any custom table number or label below to preview & print a standee sticker:
               </p>
 
-              {/* QR Image Graphic */}
-              <div style={{
-                background: '#FFFFFF',
-                padding: '16px',
-                borderRadius: 'var(--radius-sm)',
-                display: 'inline-block',
-                border: '1px solid var(--border-light)',
-                marginBottom: '14px',
-                marginTop: '8px'
-              }}>
-                <img
-                  src={`https://api.qrserver.com/v1/create-qr-code/?size=220x220&data=${encodeURIComponent(window.location.origin + '/' + (settingsForm.slug || 'raman-sweet-bakery') + '?table=' + (tableNumber || '1'))}`}
-                  alt={`Table ${tableNumber || '1'} QR Code`}
-                  style={{ width: '160px', height: '160px', display: 'block' }}
+              <div style={{ display: 'flex', gap: '10px', justifyContent: 'center', marginBottom: '16px' }}>
+                <input
+                  type="text"
+                  value={tableNumber}
+                  onChange={(e) => setTableNumber(e.target.value)}
+                  placeholder="Table Number (e.g. 5, VIP-1)"
+                  style={{
+                    padding: '10px 14px',
+                    borderRadius: 'var(--radius-sm)',
+                    border: '1px solid var(--border-light)',
+                    fontSize: '0.9rem',
+                    width: '100%'
+                  }}
                 />
+                <button
+                  onClick={handlePrintQR}
+                  style={{
+                    background: 'var(--primary-emerald)',
+                    color: '#FFFFFF',
+                    padding: '10px 18px',
+                    borderRadius: 'var(--radius-sm)',
+                    fontWeight: 800,
+                    fontSize: '0.85rem',
+                    whiteSpace: 'nowrap',
+                    cursor: 'pointer',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '6px'
+                  }}
+                >
+                  <Printer size={15} /> Print
+                </button>
               </div>
-
-              <p style={{ fontSize: '0.78rem', fontWeight: 800, color: 'var(--primary-emerald)' }}>
-                SCAN TO VIEW DIGITAL MENU (TABLE {tableNumber || '1'})
-              </p>
-
-              <button
-                onClick={handlePrintQR}
-                style={{
-                  marginTop: '16px',
-                  background: 'var(--primary-emerald)',
-                  color: '#FFFFFF',
-                  padding: '10px 22px',
-                  borderRadius: 'var(--radius-pill)',
-                  fontSize: '0.85rem',
-                  fontWeight: 800,
-                  display: 'inline-flex',
-                  alignItems: 'center',
-                  gap: '8px',
-                  boxShadow: 'var(--shadow-gold)',
-                  cursor: 'pointer'
-                }}
-              >
-                <Printer size={16} /> Print Table Standee Sticker
-              </button>
             </div>
           </div>
         )}
