@@ -59,6 +59,9 @@ export default function App() {
   const [adminSlug, setAdminSlug] = useState(getInitialSlug());
   const [showLandingLoginModal, setShowLandingLoginModal] = useState(false);
   const [loginSlugInput, setLoginSlugInput] = useState('');
+  const [loginPassInput, setLoginPassInput] = useState('');
+  const [loginErrMessage, setLoginErrMessage] = useState('');
+  const [landingLoginLoading, setLandingLoginLoading] = useState(false);
 
   // Master Super Admin Tokens
   const getInitialSuperToken = () => {
@@ -666,42 +669,101 @@ export default function App() {
                 Restaurant Admin Login
               </h2>
               <p style={{ color: '#9CA3AF', fontSize: '0.84rem', lineHeight: 1.5, margin: '0 0 20px 0', textAlign: 'center' }}>
-                Enter your restaurant name or URL slug to access your Admin Dashboard
+                Enter your Admin Username & Password to access your Dashboard
               </p>
 
-              <form onSubmit={(e) => {
-                e.preventDefault();
-                const targetSlug = loginSlugInput.trim() ? loginSlugInput.toLowerCase().trim().replace(/[^a-z0-9-]/g, '-') : 'raman-sweet-bakery';
-                setShowLandingLoginModal(false);
-                window.history.pushState({}, '', `/${targetSlug}/admin`);
-                window.dispatchEvent(new PopStateEvent('popstate'));
-              }}>
-                <label style={{ display: 'block', fontSize: '0.78rem', fontWeight: 800, color: '#DFBA67', marginBottom: '6px' }}>
-                  RESTAURANT SLUG / NAME
-                </label>
-                <input
-                  type="text"
-                  required
-                  autoFocus
-                  placeholder="e.g. raman-sweet-bakery or royal-sweets"
-                  value={loginSlugInput}
-                  onChange={e => setLoginSlugInput(e.target.value)}
-                  style={{
-                    width: '100%', padding: '12px 14px', borderRadius: '12px',
-                    border: '1px solid rgba(255,255,255,0.2)', background: '#1F2937',
-                    color: '#FFFFFF', fontSize: '0.9rem', outline: 'none', marginBottom: '8px'
-                  }}
-                />
-                <p style={{ fontSize: '0.72rem', color: '#6B7280', margin: '0 0 20px 0' }}>
-                  Target URL: khana-master.onrender.com/<span style={{ color: '#34D399' }}>{loginSlugInput ? loginSlugInput.toLowerCase().trim().replace(/[^a-z0-9-]/g, '-') : 'raman-sweet-bakery'}</span>/admin
-                </p>
+              {loginErrMessage && (
+                <div style={{
+                  background: 'rgba(239, 68, 68, 0.15)', border: '1px solid rgba(239, 68, 68, 0.4)',
+                  color: '#FCA5A5', padding: '10px 14px', borderRadius: '12px',
+                  fontSize: '0.82rem', marginBottom: '16px', textAlign: 'center'
+                }}>
+                  ⚠️ {loginErrMessage}
+                </div>
+              )}
 
-                <button type="submit" style={{
+              <form onSubmit={async (e) => {
+                e.preventDefault();
+                setLoginErrMessage('');
+                if (!loginSlugInput.trim() || !loginPassInput) return;
+
+                setLandingLoginLoading(true);
+                try {
+                  const res = await fetch('/api/admin/login', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                      username: loginSlugInput.trim(),
+                      password: loginPassInput
+                    })
+                  });
+
+                  const data = await res.json();
+                  if (!res.ok) {
+                    throw new Error(data.error || 'Login failed');
+                  }
+
+                  // Save admin session tokens
+                  localStorage.setItem('raman_admin_token', data.token);
+                  localStorage.setItem('raman_admin_user', data.username);
+                  localStorage.setItem('raman_admin_slug', data.slug);
+                  setAdminToken(data.token);
+                  setAdminUsername(data.username);
+                  setAdminSlug(data.slug);
+
+                  setShowLandingLoginModal(false);
+                  window.history.pushState({}, '', `/${data.slug}/admin`);
+                  window.dispatchEvent(new PopStateEvent('popstate'));
+                } catch (err) {
+                  console.error('Landing login error:', err);
+                  setLoginErrMessage(err.message);
+                } finally {
+                  setLandingLoginLoading(false);
+                }
+              }}>
+                <div style={{ marginBottom: '14px' }}>
+                  <label style={{ display: 'block', fontSize: '0.78rem', fontWeight: 800, color: '#DFBA67', marginBottom: '6px' }}>
+                    ADMIN USERNAME *
+                  </label>
+                  <input
+                    type="text"
+                    required
+                    autoFocus
+                    placeholder="Enter your admin username"
+                    value={loginSlugInput}
+                    onChange={e => setLoginSlugInput(e.target.value)}
+                    style={{
+                      width: '100%', padding: '12px 14px', borderRadius: '12px',
+                      border: '1px solid rgba(255,255,255,0.2)', background: '#1F2937',
+                      color: '#FFFFFF', fontSize: '0.9rem', outline: 'none'
+                    }}
+                  />
+                </div>
+
+                <div style={{ marginBottom: '20px' }}>
+                  <label style={{ display: 'block', fontSize: '0.78rem', fontWeight: 800, color: '#DFBA67', marginBottom: '6px' }}>
+                    PASSWORD *
+                  </label>
+                  <input
+                    type="password"
+                    required
+                    placeholder="Enter your password"
+                    value={loginPassInput}
+                    onChange={e => setLoginPassInput(e.target.value)}
+                    style={{
+                      width: '100%', padding: '12px 14px', borderRadius: '12px',
+                      border: '1px solid rgba(255,255,255,0.2)', background: '#1F2937',
+                      color: '#FFFFFF', fontSize: '0.9rem', outline: 'none'
+                    }}
+                  />
+                </div>
+
+                <button type="submit" disabled={landingLoginLoading} style={{
                   width: '100%', padding: '14px', borderRadius: '14px', border: 'none',
                   background: 'linear-gradient(135deg, #DFBA67, #F4D490)', color: '#0A0A0A',
-                  fontWeight: 900, fontSize: '0.9rem', cursor: 'pointer', boxShadow: '0 4px 14px rgba(223,186,103,0.4)'
+                  fontWeight: 900, fontSize: '0.9rem', cursor: landingLoginLoading ? 'wait' : 'pointer', boxShadow: '0 4px 14px rgba(223,186,103,0.4)'
                 }}>
-                  Go to Admin Login ➔
+                  {landingLoginLoading ? 'Logging In...' : '🚀 Log In & Open Dashboard ➔'}
                 </button>
               </form>
             </div>
