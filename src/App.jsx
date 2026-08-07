@@ -58,9 +58,12 @@ export default function App() {
   const [adminUsername, setAdminUsername] = useState(getInitialUser());
   const [adminSlug, setAdminSlug] = useState(getInitialSlug());
   const [showLandingLoginModal, setShowLandingLoginModal] = useState(false);
+  const [landingLoginMode, setLandingLoginMode] = useState('login'); // 'login' | 'forgot'
   const [loginSlugInput, setLoginSlugInput] = useState('');
   const [loginPassInput, setLoginPassInput] = useState('');
+  const [landingNewPassInput, setLandingNewPassInput] = useState('');
   const [loginErrMessage, setLoginErrMessage] = useState('');
+  const [landingSuccessMessage, setLandingSuccessMessage] = useState('');
   const [landingLoginLoading, setLandingLoginLoading] = useState(false);
 
   // Master Super Admin Tokens
@@ -646,31 +649,45 @@ export default function App() {
           </div>
         </nav>
 
-        {/* 🔑 Restaurant Admin Login Modal */}
+        {/* 🔑 Restaurant Admin Login & Forgot Password Modal */}
         {showLandingLoginModal && (
           <div style={{
             position: 'fixed', inset: 0, zIndex: 10050,
             background: 'rgba(10, 35, 21, 0.85)', backdropFilter: 'blur(8px)',
             display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '16px'
-          }} onClick={() => setShowLandingLoginModal(false)}>
+          }} onClick={() => { setShowLandingLoginModal(false); setLandingLoginMode('login'); }}>
             <div onClick={e => e.stopPropagation()} style={{
               background: '#111827', border: '2px solid #DFBA67', borderRadius: '24px',
               padding: '32px 24px', maxWidth: '420px', width: '100%',
               color: '#FFFFFF', boxShadow: '0 20px 50px rgba(0,0,0,0.6)', position: 'relative'
             }}>
-              <button onClick={() => setShowLandingLoginModal(false)} style={{
+              <button onClick={() => { setShowLandingLoginModal(false); setLandingLoginMode('login'); }} style={{
                 position: 'absolute', top: '16px', right: '16px', background: 'rgba(255,255,255,0.1)',
                 border: 'none', borderRadius: '50%', width: '32px', height: '32px', color: '#FFF',
                 cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center'
               }}>✕</button>
 
-              <div style={{ fontSize: '2.8rem', textAlign: 'center', marginBottom: '12px' }}>🔑</div>
+              <div style={{ fontSize: '2.8rem', textAlign: 'center', marginBottom: '12px' }}>
+                {landingLoginMode === 'forgot' ? '🔒' : '🔑'}
+              </div>
               <h2 style={{ fontSize: '1.3rem', fontWeight: 900, color: '#DFBA67', margin: '0 0 6px 0', textAlign: 'center' }}>
-                Restaurant Admin Login
+                {landingLoginMode === 'forgot' ? 'Reset Admin Password' : 'Restaurant Admin Login'}
               </h2>
               <p style={{ color: '#9CA3AF', fontSize: '0.84rem', lineHeight: 1.5, margin: '0 0 20px 0', textAlign: 'center' }}>
-                Enter your Admin Username & Password to access your Dashboard
+                {landingLoginMode === 'forgot'
+                  ? 'Enter your registered Username or Phone Number to set a new password'
+                  : 'Enter your Admin Username & Password to access your Dashboard'}
               </p>
+
+              {landingSuccessMessage && (
+                <div style={{
+                  background: 'rgba(52, 211, 153, 0.15)', border: '1px solid rgba(52, 211, 153, 0.4)',
+                  color: '#34D399', padding: '10px 14px', borderRadius: '12px',
+                  fontSize: '0.82rem', marginBottom: '16px', textAlign: 'center', fontWeight: 700
+                }}>
+                  {landingSuccessMessage}
+                </div>
+              )}
 
               {loginErrMessage && (
                 <div style={{
@@ -685,6 +702,41 @@ export default function App() {
               <form onSubmit={async (e) => {
                 e.preventDefault();
                 setLoginErrMessage('');
+                setLandingSuccessMessage('');
+
+                if (landingLoginMode === 'forgot') {
+                  if (!loginSlugInput.trim() || !landingNewPassInput) {
+                    setLoginErrMessage('Please fill in all fields');
+                    return;
+                  }
+                  if (landingNewPassInput.length < 4) {
+                    setLoginErrMessage('New password must be at least 4 characters long');
+                    return;
+                  }
+                  setLandingLoginLoading(true);
+                  try {
+                    const res = await fetch('/api/admin/forgot-password', {
+                      method: 'POST',
+                      headers: { 'Content-Type': 'application/json' },
+                      body: JSON.stringify({
+                        phone_or_username: loginSlugInput.trim(),
+                        new_password: landingNewPassInput
+                      })
+                    });
+                    const data = await res.json();
+                    if (!res.ok) throw new Error(data.error || 'Failed to reset password');
+
+                    setLandingSuccessMessage(data.message || 'Password reset successfully!');
+                    setLandingLoginMode('login');
+                    setLoginPassInput('');
+                  } catch (err) {
+                    setLoginErrMessage(err.message);
+                  } finally {
+                    setLandingLoginLoading(false);
+                  }
+                  return;
+                }
+
                 if (!loginSlugInput.trim() || !loginPassInput) return;
 
                 setLandingLoginLoading(true);
@@ -723,13 +775,13 @@ export default function App() {
               }}>
                 <div style={{ marginBottom: '14px' }}>
                   <label style={{ display: 'block', fontSize: '0.78rem', fontWeight: 800, color: '#DFBA67', marginBottom: '6px' }}>
-                    ADMIN USERNAME *
+                    {landingLoginMode === 'forgot' ? 'USERNAME OR REGISTERED PHONE NUMBER *' : 'ADMIN USERNAME *'}
                   </label>
                   <input
                     type="text"
                     required
                     autoFocus
-                    placeholder="Enter your admin username"
+                    placeholder={landingLoginMode === 'forgot' ? 'e.g. admin or 9876543210' : 'Enter your admin username'}
                     value={loginSlugInput}
                     onChange={e => setLoginSlugInput(e.target.value)}
                     style={{
@@ -740,58 +792,75 @@ export default function App() {
                   />
                 </div>
 
-                <div style={{ marginBottom: '20px' }}>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '6px' }}>
-                    <label style={{ fontSize: '0.78rem', fontWeight: 800, color: '#DFBA67' }}>
-                      PASSWORD *
-                    </label>
-                    <button
-                      type="button"
-                      onClick={async () => {
-                        const input = prompt('Enter your Username or Registered Phone Number to reset password:');
-                        if (!input) return;
-                        const newPass = prompt('Enter your NEW Password (minimum 4 characters):');
-                        if (!newPass) return;
-                        if (newPass.length < 4) { alert('Password must be at least 4 characters long'); return; }
-                        try {
-                          const res = await fetch('/api/admin/forgot-password', {
-                            method: 'POST',
-                            headers: { 'Content-Type': 'application/json' },
-                            body: JSON.stringify({ phone_or_username: input, new_password: newPass })
-                          });
-                          const data = await res.json();
-                          if (!res.ok) throw new Error(data.error || 'Failed to reset password');
-                          alert(data.message || 'Password updated successfully!');
-                        } catch (err) {
-                          alert(err.message);
-                        }
+                {landingLoginMode === 'login' ? (
+                  <div style={{ marginBottom: '20px' }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '6px' }}>
+                      <label style={{ fontSize: '0.78rem', fontWeight: 800, color: '#DFBA67' }}>
+                        PASSWORD *
+                      </label>
+                      <button
+                        type="button"
+                        onClick={() => { setLandingLoginMode('forgot'); setLoginErrMessage(''); setLandingSuccessMessage(''); }}
+                        style={{ background: 'none', border: 'none', color: '#34D399', fontSize: '0.74rem', fontWeight: 700, cursor: 'pointer' }}
+                      >
+                        🔑 Forgot Password?
+                      </button>
+                    </div>
+                    <input
+                      type="password"
+                      required
+                      placeholder="Enter your password"
+                      value={loginPassInput}
+                      onChange={e => setLoginPassInput(e.target.value)}
+                      style={{
+                        width: '100%', padding: '12px 14px', borderRadius: '12px',
+                        border: '1px solid rgba(255,255,255,0.2)', background: '#1F2937',
+                        color: '#FFFFFF', fontSize: '0.9rem', outline: 'none'
                       }}
-                      style={{ background: 'none', border: 'none', color: '#34D399', fontSize: '0.74rem', fontWeight: 700, cursor: 'pointer' }}
-                    >
-                      🔑 Forgot Password?
-                    </button>
+                    />
                   </div>
-                  <input
-                    type="password"
-                    required
-                    placeholder="Enter your password"
-                    value={loginPassInput}
-                    onChange={e => setLoginPassInput(e.target.value)}
-                    style={{
-                      width: '100%', padding: '12px 14px', borderRadius: '12px',
-                      border: '1px solid rgba(255,255,255,0.2)', background: '#1F2937',
-                      color: '#FFFFFF', fontSize: '0.9rem', outline: 'none'
-                    }}
-                  />
-                </div>
+                ) : (
+                  <div style={{ marginBottom: '20px' }}>
+                    <label style={{ display: 'block', fontSize: '0.78rem', fontWeight: 800, color: '#DFBA67', marginBottom: '6px' }}>
+                      NEW PASSWORD *
+                    </label>
+                    <input
+                      type="password"
+                      required
+                      placeholder="Enter new password (min 4 chars)"
+                      value={landingNewPassInput}
+                      onChange={e => setLandingNewPassInput(e.target.value)}
+                      style={{
+                        width: '100%', padding: '12px 14px', borderRadius: '12px',
+                        border: '1px solid rgba(255,255,255,0.2)', background: '#1F2937',
+                        color: '#FFFFFF', fontSize: '0.9rem', outline: 'none'
+                      }}
+                    />
+                  </div>
+                )}
 
                 <button type="submit" disabled={landingLoginLoading} style={{
                   width: '100%', padding: '14px', borderRadius: '14px', border: 'none',
                   background: 'linear-gradient(135deg, #DFBA67, #F4D490)', color: '#0A0A0A',
                   fontWeight: 900, fontSize: '0.9rem', cursor: landingLoginLoading ? 'wait' : 'pointer', boxShadow: '0 4px 14px rgba(223,186,103,0.4)'
                 }}>
-                  {landingLoginLoading ? 'Logging In...' : '🚀 Log In & Open Dashboard ➔'}
+                  {landingLoginLoading
+                    ? 'Processing...'
+                    : (landingLoginMode === 'forgot' ? '🔑 Update Password' : '🚀 Log In & Open Dashboard ➔')}
                 </button>
+
+                {landingLoginMode === 'forgot' && (
+                  <button
+                    type="button"
+                    onClick={() => { setLandingLoginMode('login'); setLoginErrMessage(''); setLandingSuccessMessage(''); }}
+                    style={{
+                      width: '100%', marginTop: '12px', padding: '8px', color: '#34D399',
+                      fontSize: '0.82rem', fontWeight: 700, border: 'none', background: 'none', cursor: 'pointer'
+                    }}
+                  >
+                    ← Back to Owner Login
+                  </button>
+                )}
               </form>
             </div>
           </div>
