@@ -562,7 +562,7 @@ export default function AdminDashboard({ token, username, onLogout, onReturnToMe
 
   const handlePrintQR = () => {
     const liveOrigin = window.location.origin;
-    const targetUrl = `${liveOrigin}/?table=${tableNumber || '1'}`;
+    const targetUrl = `${liveOrigin}/${settingsForm.slug || 'raman-sweet-bakery'}?table=${tableNumber || '1'}`;
     const qrImgUrl = `https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=${encodeURIComponent(targetUrl)}`;
     const currentName = settingsForm.name || 'Digital Menu';
     const currentTagline = settingsForm.tagline || 'Scan QR Code for Digital Menu';
@@ -2654,7 +2654,7 @@ export default function AdminDashboard({ token, username, onLogout, onReturnToMe
                 marginTop: '8px'
               }}>
                 <img
-                  src={`https://api.qrserver.com/v1/create-qr-code/?size=220x220&data=${encodeURIComponent(window.location.origin + '/?table=' + (tableNumber || '1'))}`}
+                  src={`https://api.qrserver.com/v1/create-qr-code/?size=220x220&data=${encodeURIComponent(window.location.origin + '/' + (settingsForm.slug || 'raman-sweet-bakery') + '?table=' + (tableNumber || '1'))}`}
                   alt={`Table ${tableNumber || '1'} QR Code`}
                   style={{ width: '160px', height: '160px', display: 'block' }}
                 />
