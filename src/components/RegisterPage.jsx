@@ -81,7 +81,10 @@ export default function RegisterPage({ onRegisterSuccess }) {
         return;
       }
 
-      // Store Auth Token in localStorage
+      // Store Auth Tokens in localStorage for instant automatic login
+      localStorage.setItem('raman_admin_token', data.token);
+      localStorage.setItem('raman_admin_user', data.username);
+      localStorage.setItem('raman_admin_slug', data.slug);
       localStorage.setItem('adminToken', data.token);
 
       if (onRegisterSuccess) {

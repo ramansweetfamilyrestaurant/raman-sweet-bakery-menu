@@ -1057,8 +1057,7 @@ export default function App() {
         </div>
       }>
         <RegisterPage onRegisterSuccess={(res) => {
-          window.history.pushState({}, '', `/${res.slug}/admin`);
-          window.dispatchEvent(new PopStateEvent('popstate'));
+          handleAdminLoginSuccess(res.token, res.username || 'Admin', res.slug);
         }} />
       </Suspense>
     );
