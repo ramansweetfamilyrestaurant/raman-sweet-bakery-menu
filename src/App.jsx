@@ -1271,10 +1271,11 @@ export default function App() {
                       )}
                       <div style={{ display: 'flex', gap: '12px', alignItems: 'flex-start' }}>
                         <div style={{
-                          width: '72px', height: '72px', borderRadius: '12px', overflow: 'hidden',
+                          width: '90px', height: '76px', borderRadius: '14px', overflow: 'hidden',
                           background: 'linear-gradient(135deg, rgba(223,186,103,0.15), rgba(10,35,21,0.5))',
-                          border: '2px solid var(--gold-border)', flexShrink: 0,
-                          display: 'flex', alignItems: 'center', justifyContent: 'center', position: 'relative'
+                          border: '1.5px solid var(--gold-border)', flexShrink: 0,
+                          display: 'flex', alignItems: 'center', justifyContent: 'center', position: 'relative',
+                          boxShadow: '0 2px 8px rgba(0,0,0,0.12)'
                         }}>
                           {combo.image && combo.image !== '/uploads/logo.jpg' ? (
                             <img src={combo.image} alt={combo.name} style={{

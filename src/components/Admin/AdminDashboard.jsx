@@ -2463,9 +2463,9 @@ export default function AdminDashboard({ token, username, onLogout, onReturnToMe
                     }}>
                       <div style={{ display: 'flex', alignItems: 'flex-start', gap: '14px' }}>
                         <div style={{
-                          width: '70px', height: '70px', borderRadius: '12px', overflow: 'hidden',
+                          width: '90px', height: '76px', borderRadius: '14px', overflow: 'hidden',
                           background: 'linear-gradient(135deg, rgba(255,215,0,0.15), rgba(10,35,21,0.1))',
-                          border: '2px solid rgba(255,215,0,0.3)', flexShrink: 0,
+                          border: '1.5px solid rgba(255,215,0,0.3)', flexShrink: 0,
                           display: 'flex', alignItems: 'center', justifyContent: 'center', position: 'relative'
                         }}>
                           {combo.image && combo.image !== '/uploads/logo.jpg' ? (
@@ -2473,7 +2473,7 @@ export default function AdminDashboard({ token, username, onLogout, onReturnToMe
                               width: '100%', height: '100%', objectFit: 'cover'
                             }} onError={(e) => { e.target.style.display = 'none'; }} />
                           ) : null}
-                          <span style={{ fontSize: '2rem', position: 'absolute', pointerEvents: 'none', zIndex: 0 }}>🍱</span>
+                          <span style={{ fontSize: '2.2rem', position: 'absolute', pointerEvents: 'none', zIndex: 0 }}>🍱</span>
                         </div>
                         <div style={{ flex: 1 }}>
                           <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '4px' }}>

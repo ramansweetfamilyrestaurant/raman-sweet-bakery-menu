@@ -633,10 +633,10 @@ async function seedData() {
       console.log('🛒 Seeded default sample Combo Deals into combos table');
     }
 
-    // Auto-fix any combo without valid image
+    // Auto-fix any combo without valid cloud image
     await query(`
-      UPDATE combos SET image = 'https://images.unsplash.com/photo-1617692855027-33b14f061079?w=600&auto=format&fit=crop&q=80'
-      WHERE image IS NULL OR image = '' OR image = '/uploads/logo.jpg'
+      UPDATE combos SET image = 'https://images.unsplash.com/photo-1626777552726-4a6b54c97e46?w=800&auto=format&fit=crop&q=80'
+      WHERE image IS NULL OR image = '' OR image = '/uploads/logo.jpg' OR image LIKE '/uploads/%'
     `);
   } catch (err) {
     console.warn('Combo seeding notice:', err.message);
