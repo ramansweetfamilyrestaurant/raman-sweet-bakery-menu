@@ -18,7 +18,8 @@ async function initDb() {
     try {
       const pool = new pg.Pool({
         connectionString: process.env.DATABASE_URL,
-        connectionTimeoutMillis: 3000,
+        ssl: { rejectUnauthorized: false },
+        connectionTimeoutMillis: 10000,
       });
       await pool.query('SELECT 1');
       pgPool = pool;
@@ -123,7 +124,7 @@ async function createTables() {
 
       ALTER TABLE admins ADD COLUMN IF NOT EXISTS restaurant_id INT REFERENCES restaurants(id) ON DELETE CASCADE;
       ALTER TABLE admins ADD COLUMN IF NOT EXISTS role VARCHAR(50) DEFAULT 'restaurant_admin';
-      ALTER TABLE restaurants ALTER COLUMN code DROP NOT NULL;
+      DO $$ BEGIN ALTER TABLE restaurants ALTER COLUMN code DROP NOT NULL; EXCEPTION WHEN OTHERS THEN NULL; END $$;
       ALTER TABLE restaurants ADD COLUMN IF NOT EXISTS tagline TEXT;
       ALTER TABLE restaurants ADD COLUMN IF NOT EXISTS logo TEXT;
       ALTER TABLE restaurants ADD COLUMN IF NOT EXISTS phone TEXT;
