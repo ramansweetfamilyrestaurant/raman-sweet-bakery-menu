@@ -37,7 +37,7 @@ const upload = multer({
   }
 });
 
-// Admin Login
+// Admin Login (Supports login by Username, Restaurant Slug, or Phone number)
 router.post('/login', async (req, res) => {
   try {
     const { username, password } = req.body;
@@ -45,15 +45,29 @@ router.post('/login', async (req, res) => {
       return res.status(400).json({ error: 'Username and password are required' });
     }
 
-    const admins = await query('SELECT * FROM admins WHERE username = $1', [username]);
+    const trimmedIdentifier = username.trim();
+
+    // 1. Try finding admin by exact username
+    let admins = await query('SELECT * FROM admins WHERE username = $1', [trimmedIdentifier]);
+
+    // 2. Fallback: Try finding restaurant by slug or phone, then fetch its primary admin
     if (!admins || admins.length === 0) {
-      return res.status(401).json({ error: 'Invalid credentials' });
+      const cleanSlug = trimmedIdentifier.toLowerCase().replace(/[^a-z0-9-]/g, '-');
+      const restos = await query('SELECT id, slug, active, name FROM restaurants WHERE slug = $1 OR slug = $2 OR phone = $3', [trimmedIdentifier, cleanSlug, trimmedIdentifier]);
+      if (restos && restos.length > 0) {
+        const targetRestoId = restos[0].id;
+        admins = await query('SELECT * FROM admins WHERE restaurant_id = $1 ORDER BY id ASC LIMIT 1', [targetRestoId]);
+      }
+    }
+
+    if (!admins || admins.length === 0) {
+      return res.status(401).json({ error: 'Invalid credentials. Username or restaurant not found.' });
     }
 
     const admin = admins[0];
     const match = await bcrypt.compare(password, admin.password_hash);
     if (!match) {
-      return res.status(401).json({ error: 'Invalid credentials' });
+      return res.status(401).json({ error: 'Invalid password. Please check your credentials.' });
     }
 
     const restoRes = await query('SELECT slug, active, name FROM restaurants WHERE id = $1', [admin.restaurant_id || 1]);
