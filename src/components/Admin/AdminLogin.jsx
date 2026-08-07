@@ -328,6 +328,23 @@ export default function AdminLogin({ onLoginSuccess, onCancel, restaurantName })
               <ArrowLeft size={16} /> Return to Customer Menu
             </button>
           )}
+
+          {mode === 'forgot' && (
+            <div style={{
+              marginTop: '16px', paddingTop: '14px', borderTop: '1px solid rgba(0,0,0,0.1)',
+              textAlign: 'center', fontSize: '0.78rem', color: '#4B5563'
+            }}>
+              <span>Username & Phone dono bhool gaye? </span>
+              <a
+                href="https://wa.me/?text=Hello%20Super%20Admin%2C%20I%20forgot%20my%20restaurant%20login%20details.%20Please%20help%20recover%20my%20account."
+                target="_blank"
+                rel="noopener noreferrer"
+                style={{ color: '#059669', fontWeight: 800, textDecoration: 'none' }}
+              >
+                💬 Contact Super Admin Support
+              </a>
+            </div>
+          )}
         </form>
       </div>
     </div>

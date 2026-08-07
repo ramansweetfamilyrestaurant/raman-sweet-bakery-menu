@@ -850,16 +850,32 @@ export default function App() {
                 </button>
 
                 {landingLoginMode === 'forgot' && (
-                  <button
-                    type="button"
-                    onClick={() => { setLandingLoginMode('login'); setLoginErrMessage(''); setLandingSuccessMessage(''); }}
-                    style={{
-                      width: '100%', marginTop: '12px', padding: '8px', color: '#34D399',
-                      fontSize: '0.82rem', fontWeight: 700, border: 'none', background: 'none', cursor: 'pointer'
-                    }}
-                  >
-                    ← Back to Owner Login
-                  </button>
+                  <>
+                    <button
+                      type="button"
+                      onClick={() => { setLandingLoginMode('login'); setLoginErrMessage(''); setLandingSuccessMessage(''); }}
+                      style={{
+                        width: '100%', marginTop: '12px', padding: '8px', color: '#34D399',
+                        fontSize: '0.82rem', fontWeight: 700, border: 'none', background: 'none', cursor: 'pointer'
+                      }}
+                    >
+                      ← Back to Owner Login
+                    </button>
+                    <div style={{
+                      marginTop: '14px', paddingTop: '12px', borderTop: '1px solid rgba(255,255,255,0.1)',
+                      textAlign: 'center', fontSize: '0.76rem', color: '#9CA3AF'
+                    }}>
+                      <span>Dono Username & Phone bhool gaye? </span>
+                      <a
+                        href="https://wa.me/?text=Hello%20Super%20Admin%2C%20I%20forgot%20my%20restaurant%20login%20details.%20Please%20help%20recover%20my%20account."
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        style={{ color: '#DFBA67', fontWeight: 800, textDecoration: 'none' }}
+                      >
+                        💬 WhatsApp Support
+                      </a>
+                    </div>
+                  </>
                 )}
               </form>
             </div>
