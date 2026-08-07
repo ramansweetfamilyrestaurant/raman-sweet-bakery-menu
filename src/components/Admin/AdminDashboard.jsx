@@ -86,33 +86,51 @@ export default function AdminDashboard({ token, username, onLogout, onReturnToMe
       const AudioCtx = window.AudioContext || window.webkitAudioContext;
       if (!AudioCtx) return;
       const ctx = new AudioCtx();
+      if (ctx.state === 'suspended') {
+        ctx.resume();
+      }
 
-      // Rich 3-Note Melodic Restaurant Order Bell Chime: G5 (783Hz) -> C6 (1046Hz) -> E6 (1318Hz)
-      const notes = [
-        { freq: 783.99, time: 0, duration: 0.25 },     // G5
-        { freq: 1046.50, time: 0.14, duration: 0.35 },  // C6
-        { freq: 1318.51, time: 0.28, duration: 0.65 }   // E6
+      // 🚨 Super Loud Zomato/Swiggy Style 6-Cycle Emergency Order Siren Ringtone 🚨
+      const pulses = [
+        { freq1: 1050, freq2: 1550, start: 0.0 },
+        { freq1: 1250, freq2: 1750, start: 0.35 },
+        { freq1: 1050, freq2: 1550, start: 0.70 },
+        { freq1: 1400, freq2: 1950, start: 1.05 },
+        { freq1: 1250, freq2: 1750, start: 1.40 },
+        { freq1: 1550, freq2: 2100, start: 1.75 }
       ];
 
-      notes.forEach(n => {
-        const osc = ctx.createOscillator();
-        const gain = ctx.createGain();
+      pulses.forEach(p => {
+        const t = ctx.currentTime + p.start;
 
-        osc.type = 'triangle'; // Warm metallic bell chime
-        osc.frequency.setValueAtTime(n.freq, ctx.currentTime + n.time);
+        // Sharp Piercing Siren Tone 1 (Sawtooth)
+        const osc1 = ctx.createOscillator();
+        const gain1 = ctx.createGain();
+        osc1.type = 'sawtooth';
+        osc1.frequency.setValueAtTime(p.freq1, t);
+        osc1.frequency.linearRampToValueAtTime(p.freq2, t + 0.14);
+        gain1.gain.setValueAtTime(0.8, t);
+        gain1.gain.exponentialRampToValueAtTime(0.001, t + 0.28);
+        osc1.connect(gain1);
+        gain1.connect(ctx.destination);
+        osc1.start(t);
+        osc1.stop(t + 0.28);
 
-        // Exponential volume decay for realistic brass bell resonance
-        gain.gain.setValueAtTime(0.45, ctx.currentTime + n.time);
-        gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + n.time + n.duration);
-
-        osc.connect(gain);
-        gain.connect(ctx.destination);
-
-        osc.start(ctx.currentTime + n.time);
-        osc.stop(ctx.currentTime + n.time + n.duration);
+        // High Alarm Resonance Tone 2 (Square)
+        const osc2 = ctx.createOscillator();
+        const gain2 = ctx.createGain();
+        osc2.type = 'square';
+        osc2.frequency.setValueAtTime(p.freq2, t + 0.12);
+        osc2.frequency.linearRampToValueAtTime(p.freq1, t + 0.26);
+        gain2.gain.setValueAtTime(0.7, t + 0.12);
+        gain2.gain.exponentialRampToValueAtTime(0.001, t + 0.30);
+        osc2.connect(gain2);
+        gain2.connect(ctx.destination);
+        osc2.start(t + 0.12);
+        osc2.stop(t + 0.30);
       });
     } catch (e) {
-      console.warn('Audio Context chime error:', e);
+      console.warn('Loud Kitchen Alarm error:', e);
     }
   };
 
@@ -1105,6 +1123,28 @@ export default function AdminDashboard({ token, username, onLogout, onReturnToMe
 
         {/* Right: Quick Action Pill Buttons */}
         <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flexShrink: 0 }}>
+          <button 
+            onClick={() => playKitchenChime()}
+            title="Test Loud Restaurant Order Siren Sound"
+            style={{
+              background: '#DFBA67',
+              color: '#0A0A0A',
+              padding: '6px 11px',
+              borderRadius: 'var(--radius-pill)',
+              fontSize: '0.74rem',
+              fontWeight: 900,
+              border: 'none',
+              cursor: 'pointer',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '4px',
+              whiteSpace: 'nowrap',
+              boxShadow: '0 2px 8px rgba(223,186,103,0.4)'
+            }}
+          >
+            🔊 Test Sound
+          </button>
+
           <button 
             onClick={() => onReturnToMenu(settingsForm.slug)}
             title="View Public Customer Menu"
