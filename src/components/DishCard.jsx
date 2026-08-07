@@ -284,16 +284,19 @@ export default function DishCard({ dish, onClick, onAddToCart, currencySymbol = 
                       onAddToCart(dish, 'half');
                     }}
                     style={{
-                      background: '#FEF3C7',
+                      background: 'linear-gradient(135deg, #FEF3C7 0%, #FDE68A 100%)',
                       color: '#92400E',
                       border: '1px solid #F59E0B',
-                      padding: '3px 8px',
+                      padding: '4px 10px',
                       borderRadius: 'var(--radius-pill)',
-                      fontSize: '0.68rem',
+                      fontSize: '0.7rem',
                       fontWeight: 900,
                       cursor: 'pointer',
-                      boxShadow: '0 2px 6px rgba(245, 158, 11, 0.2)'
+                      boxShadow: '0 2px 8px rgba(245, 158, 11, 0.25)',
+                      transition: 'transform 0.15s ease'
                     }}
+                    onMouseOver={(e) => e.currentTarget.style.transform = 'scale(1.05)'}
+                    onMouseOut={(e) => e.currentTarget.style.transform = 'scale(1)'}
                   >
                     + Half
                   </button>
@@ -303,16 +306,19 @@ export default function DishCard({ dish, onClick, onAddToCart, currencySymbol = 
                       onAddToCart(dish, 'full');
                     }}
                     style={{
-                      background: 'linear-gradient(135deg, #25D366 0%, #128C7E 100%)',
+                      background: 'linear-gradient(135deg, var(--primary-emerald) 0%, #059669 100%)',
                       color: '#FFFFFF',
                       border: 'none',
-                      padding: '3px 8px',
+                      padding: '4px 12px',
                       borderRadius: 'var(--radius-pill)',
-                      fontSize: '0.68rem',
+                      fontSize: '0.7rem',
                       fontWeight: 900,
                       cursor: 'pointer',
-                      boxShadow: '0 2px 6px rgba(37, 211, 102, 0.4)'
+                      boxShadow: '0 3px 10px rgba(16, 185, 129, 0.35)',
+                      transition: 'transform 0.15s ease'
                     }}
+                    onMouseOver={(e) => e.currentTarget.style.transform = 'scale(1.05)'}
+                    onMouseOut={(e) => e.currentTarget.style.transform = 'scale(1)'}
                   >
                     + Full
                   </button>
@@ -324,18 +330,21 @@ export default function DishCard({ dish, onClick, onAddToCart, currencySymbol = 
                     onAddToCart(dish, 'full');
                   }}
                   style={{
-                    background: 'linear-gradient(135deg, #25D366 0%, #128C7E 100%)',
+                    background: 'linear-gradient(135deg, var(--primary-emerald) 0%, #059669 100%)',
                     color: '#FFFFFF',
                     border: 'none',
-                    padding: '3px 8px',
+                    padding: '4px 14px',
                     borderRadius: 'var(--radius-pill)',
-                    fontSize: '0.7rem',
+                    fontSize: '0.74rem',
                     fontWeight: 900,
                     cursor: 'pointer',
-                    boxShadow: '0 2px 6px rgba(37, 211, 102, 0.4)'
+                    boxShadow: '0 3px 10px rgba(16, 185, 129, 0.35)',
+                    transition: 'transform 0.15s ease'
                   }}
+                  onMouseOver={(e) => e.currentTarget.style.transform = 'scale(1.05)'}
+                  onMouseOut={(e) => e.currentTarget.style.transform = 'scale(1)'}
                 >
-                  + Order
+                  + Add
                 </button>
               )
             )}
@@ -345,7 +354,7 @@ export default function DishCard({ dish, onClick, onAddToCart, currencySymbol = 
               alignItems: 'center',
               gap: '2px',
               fontSize: '0.74rem',
-              fontWeight: 600,
+              fontWeight: 700,
               color: 'var(--primary-emerald)'
             }}>
               View <ChevronRight size={14} />

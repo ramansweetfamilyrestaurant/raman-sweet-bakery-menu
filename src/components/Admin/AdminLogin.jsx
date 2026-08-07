@@ -26,28 +26,41 @@ export default function AdminLogin({ onLoginSuccess, onCancel, restaurantName })
   return (
     <div style={{
       minHeight: '100vh',
-      background: 'linear-gradient(135deg, #0F2C1D 0%, #163826 100%)',
+      background: 'linear-gradient(135deg, #05140B 0%, #0A2315 50%, #164E2A 100%)',
       display: 'flex',
       alignItems: 'center',
       justifyContent: 'center',
-      padding: '20px'
+      padding: '20px',
+      position: 'relative',
+      overflow: 'hidden'
     }}>
+      {/* Background Ambient Glow */}
       <div style={{
-        background: 'var(--bg-card)',
-        borderRadius: 'var(--radius-lg)',
+        position: 'absolute', width: '300px', height: '300px',
+        borderRadius: '50%', background: 'radial-gradient(circle, rgba(212,175,55,0.15) 0%, rgba(0,0,0,0) 70%)',
+        top: '10%', left: '20%', pointerEvents: 'none'
+      }} />
+
+      <div style={{
+        background: 'rgba(255, 255, 255, 0.96)',
+        backdropFilter: 'blur(20px)',
+        WebkitBackdropFilter: 'blur(20px)',
+        borderRadius: '24px',
         width: '100%',
         maxWidth: '420px',
-        boxShadow: 'var(--shadow-lg)',
-        border: '1.5px solid var(--accent-gold)',
-        overflow: 'hidden'
+        boxShadow: '0 20px 60px rgba(0, 0, 0, 0.4)',
+        border: '1.5px solid rgba(212, 175, 55, 0.4)',
+        overflow: 'hidden',
+        position: 'relative',
+        zIndex: 2
       }}>
         {/* Header */}
         <div style={{
-          background: 'var(--primary-dark-green)',
-          padding: '24px',
+          background: 'linear-gradient(135deg, #0A2315 0%, #123722 100%)',
+          padding: '28px 24px',
           color: '#FFFFFF',
           textAlign: 'center',
-          borderBottom: '1px solid var(--accent-gold)'
+          borderBottom: '2px solid #D4AF37'
         }}>
           <div style={{
             width: '54px',

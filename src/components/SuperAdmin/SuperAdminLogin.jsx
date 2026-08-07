@@ -26,22 +26,34 @@ export default function SuperAdminLogin({ onLoginSuccess, onCancel }) {
   return (
     <div style={{
       minHeight: '100vh',
-      background: 'linear-gradient(135deg, #05140B 0%, #0A2315 100%)',
+      background: 'linear-gradient(135deg, #05140B 0%, #0A2315 50%, #164E2A 100%)',
       display: 'flex',
       alignItems: 'center',
       justifyContent: 'center',
-      padding: '20px'
+      padding: '20px',
+      position: 'relative',
+      overflow: 'hidden'
     }}>
+      {/* Background Radial Glow */}
+      <div style={{
+        position: 'absolute', width: '360px', height: '360px',
+        borderRadius: '50%', background: 'radial-gradient(circle, rgba(223,186,103,0.2) 0%, rgba(0,0,0,0) 70%)',
+        top: '15%', left: '30%', pointerEvents: 'none'
+      }} />
+
       <div style={{
         maxWidth: '420px',
         width: '100%',
-        background: '#FFFFFF',
-        borderRadius: '24px',
-        padding: '32px 24px',
-        boxShadow: '0 20px 50px rgba(0,0,0,0.5)',
+        background: 'rgba(255, 255, 255, 0.96)',
+        backdropFilter: 'blur(20px)',
+        WebkitBackdropFilter: 'blur(20px)',
+        borderRadius: '28px',
+        padding: '36px 26px 28px',
+        boxShadow: '0 25px 70px rgba(0, 0, 0, 0.45)',
         border: '2px solid #D4AF37',
         textAlign: 'center',
-        position: 'relative'
+        position: 'relative',
+        zIndex: 2
       }}>
         {/* Back Button */}
         <button

@@ -12,14 +12,16 @@ export default function CustomerHeader({ info, lang, tableNum, onToggleLang, onO
 
   return (
     <header style={{
-      background: 'var(--header-gradient, linear-gradient(180deg, #0A2315 0%, #123722 100%))',
+      background: 'var(--header-gradient, linear-gradient(180deg, rgba(10, 35, 21, 0.94) 0%, rgba(18, 55, 34, 0.94) 100%))',
+      backdropFilter: 'blur(12px)',
+      WebkitBackdropFilter: 'blur(12px)',
       color: '#FFFFFF',
-      padding: '12px 12px 14px',
-      borderBottom: '2px solid var(--gold-bright)',
+      padding: '12px 14px 14px',
+      borderBottom: '1.5px solid rgba(212, 175, 55, 0.4)',
       position: 'sticky',
       top: 0,
       zIndex: 1000,
-      boxShadow: '0 4px 16px rgba(0,0,0,0.15)'
+      boxShadow: '0 8px 24px rgba(0,0,0,0.18)'
     }}>
       {/* Top Mobile Bar: Language Pill + Table Indicator + Google Review Button */}
       <div style={{

@@ -13,12 +13,13 @@ export default function BottomDock({ categoriesCount, lang, onOpenCategories, on
       maxWidth: '440px'
     }}>
       <div style={{
-        background: 'var(--dock-gradient, linear-gradient(135deg, #0A2315 0%, #143A24 100%))',
+        background: 'var(--dock-gradient, linear-gradient(135deg, rgba(10, 35, 21, 0.92) 0%, rgba(20, 58, 36, 0.92) 100%))',
         backdropFilter: 'blur(16px)',
+        WebkitBackdropFilter: 'blur(16px)',
         borderRadius: 'var(--radius-pill)',
-        border: '1.5px solid var(--gold-bright)',
-        boxShadow: '0 8px 30px rgba(10, 35, 21, 0.4)',
-        padding: '6px 12px',
+        border: '1.5px solid rgba(212, 175, 55, 0.5)',
+        boxShadow: '0 12px 36px rgba(10, 35, 21, 0.45)',
+        padding: '7px 14px',
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'space-around'
@@ -44,6 +45,7 @@ export default function BottomDock({ categoriesCount, lang, onOpenCategories, on
         {/* Zomato-Style Floating Menu Pill Button (Center Highlight) */}
         <button
           onClick={onOpenCategories}
+          className="btn-pulse"
           style={{
             display: 'flex',
             alignItems: 'center',
@@ -52,9 +54,9 @@ export default function BottomDock({ categoriesCount, lang, onOpenCategories, on
             color: '#0A2315',
             fontSize: '0.82rem',
             fontWeight: 900,
-            padding: '8px 20px',
+            padding: '9px 22px',
             borderRadius: 'var(--radius-pill)',
-            boxShadow: '0 4px 16px rgba(212, 175, 55, 0.5)',
+            boxShadow: '0 4px 20px rgba(212, 175, 55, 0.6)',
             letterSpacing: '0.5px'
           }}
         >
