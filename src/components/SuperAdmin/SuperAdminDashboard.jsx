@@ -419,103 +419,107 @@ export default function SuperAdminDashboard({ token, username, onLogout, onRetur
           marginBottom: '24px'
         }}>
           {/* Card 1: Registered Tenants */}
-          <div style={{
-            background: '#FFFFFF',
+          <div className="hover-lift" style={{
+            background: 'rgba(255, 255, 255, 0.95)',
+            backdropFilter: 'blur(10px)',
             borderRadius: '20px',
             padding: '18px',
-            border: '1px solid var(--border-light)',
-            boxShadow: 'var(--shadow-sm)',
+            border: '1px solid rgba(16, 185, 129, 0.25)',
+            boxShadow: '0 8px 24px rgba(10, 35, 21, 0.06)',
             display: 'flex',
             alignItems: 'center',
             gap: '14px'
           }}>
-            <div style={{ width: '48px', height: '48px', borderRadius: '14px', background: '#DCFCE7', color: '#15803D', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+            <div style={{ width: '48px', height: '48px', borderRadius: '14px', background: 'linear-gradient(135deg, #DCFCE7 0%, #BBF7D0 100%)', color: '#15803D', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, boxShadow: '0 4px 12px rgba(34, 197, 94, 0.2)' }}>
               <Store size={24} />
             </div>
             <div>
-              <div style={{ fontSize: '1.6rem', fontWeight: 900, color: 'var(--primary-emerald)', lineHeight: 1.1 }}>{restaurants.length}</div>
+              <div style={{ fontSize: '1.65rem', fontWeight: 900, color: 'var(--primary-emerald)', lineHeight: 1.1 }}>{restaurants.length}</div>
               <div style={{ fontSize: '0.78rem', fontWeight: 700, color: 'var(--text-muted)' }}>Tenants Hosted</div>
             </div>
           </div>
 
           {/* Card 2: Active Subscriptions */}
-          <div style={{
-            background: '#FFFFFF',
+          <div className="hover-lift" style={{
+            background: 'rgba(255, 255, 255, 0.95)',
+            backdropFilter: 'blur(10px)',
             borderRadius: '20px',
             padding: '18px',
-            border: '1px solid var(--border-light)',
-            boxShadow: 'var(--shadow-sm)',
+            border: '1px solid rgba(245, 158, 11, 0.25)',
+            boxShadow: '0 8px 24px rgba(10, 35, 21, 0.06)',
             display: 'flex',
             alignItems: 'center',
             gap: '14px'
           }}>
-            <div style={{ width: '48px', height: '48px', borderRadius: '14px', background: '#FEF3C7', color: '#B45309', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+            <div style={{ width: '48px', height: '48px', borderRadius: '14px', background: 'linear-gradient(135deg, #FEF3C7 0%, #FDE68A 100%)', color: '#B45309', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, boxShadow: '0 4px 12px rgba(245, 158, 11, 0.2)' }}>
               <CheckCircle size={24} />
             </div>
             <div>
-              <div style={{ fontSize: '1.6rem', fontWeight: 900, color: '#B45309', lineHeight: 1.1 }}>{totalActive}</div>
+              <div style={{ fontSize: '1.65rem', fontWeight: 900, color: '#B45309', lineHeight: 1.1 }}>{totalActive}</div>
               <div style={{ fontSize: '0.78rem', fontWeight: 700, color: 'var(--text-muted)' }}>Active Subscriptions</div>
             </div>
           </div>
 
           {/* Card 3: Total Dishes Hosted */}
-          <div style={{
-            background: '#FFFFFF',
+          <div className="hover-lift" style={{
+            background: 'rgba(255, 255, 255, 0.95)',
+            backdropFilter: 'blur(10px)',
             borderRadius: '20px',
             padding: '18px',
-            border: '1px solid var(--border-light)',
-            boxShadow: 'var(--shadow-sm)',
+            border: '1px solid rgba(99, 102, 241, 0.25)',
+            boxShadow: '0 8px 24px rgba(10, 35, 21, 0.06)',
             display: 'flex',
             alignItems: 'center',
             gap: '14px'
           }}>
-            <div style={{ width: '48px', height: '48px', borderRadius: '14px', background: '#E0E7FF', color: '#4338CA', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+            <div style={{ width: '48px', height: '48px', borderRadius: '14px', background: 'linear-gradient(135deg, #EEF2FF 0%, #E0E7FF 100%)', color: '#4338CA', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, boxShadow: '0 4px 12px rgba(99, 102, 241, 0.2)' }}>
               <Utensils size={24} />
             </div>
             <div>
-              <div style={{ fontSize: '1.6rem', fontWeight: 900, color: '#4338CA', lineHeight: 1.1 }}>{totalDishes}</div>
+              <div style={{ fontSize: '1.65rem', fontWeight: 900, color: '#4338CA', lineHeight: 1.1 }}>{totalDishes}</div>
               <div style={{ fontSize: '0.78rem', fontWeight: 700, color: 'var(--text-muted)' }}>Dishes Hosted</div>
             </div>
           </div>
 
           {/* Card 4: Total QR Code Scans */}
-          <div style={{
-            background: '#FFFFFF',
+          <div className="hover-lift" style={{
+            background: 'rgba(255, 255, 255, 0.95)',
+            backdropFilter: 'blur(10px)',
             borderRadius: '20px',
             padding: '18px',
-            border: '1px solid var(--border-light)',
-            boxShadow: 'var(--shadow-sm)',
+            border: '1px solid rgba(168, 85, 247, 0.25)',
+            boxShadow: '0 8px 24px rgba(10, 35, 21, 0.06)',
             display: 'flex',
             alignItems: 'center',
             gap: '14px'
           }}>
-            <div style={{ width: '48px', height: '48px', borderRadius: '14px', background: '#F3E8FF', color: '#7E22CE', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+            <div style={{ width: '48px', height: '48px', borderRadius: '14px', background: 'linear-gradient(135deg, #F3E8FF 0%, #E9D5FF 100%)', color: '#7E22CE', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, boxShadow: '0 4px 12px rgba(168, 85, 247, 0.2)' }}>
               <QrCode size={24} />
             </div>
             <div>
-              <div style={{ fontSize: '1.6rem', fontWeight: 900, color: '#7E22CE', lineHeight: 1.1 }}>{totalScans}</div>
+              <div style={{ fontSize: '1.65rem', fontWeight: 900, color: '#7E22CE', lineHeight: 1.1 }}>{totalScans}</div>
               <div style={{ fontSize: '0.78rem', fontWeight: 700, color: 'var(--text-muted)' }}>Total QR Scans</div>
             </div>
           </div>
 
           {/* Card 5: Est. Monthly SaaS Revenue */}
-          <div style={{
+          <div className="hover-lift btn-pulse" style={{
             background: 'linear-gradient(135deg, #0A2315 0%, #164E2A 100%)',
             color: '#FFFFFF',
             borderRadius: '20px',
             padding: '18px',
-            border: '1.5px solid #D4AF37',
-            boxShadow: '0 8px 24px rgba(10,35,21,0.25)',
+            border: '1.5px solid #DFBA67',
+            boxShadow: '0 10px 30px rgba(10,35,21,0.35)',
             display: 'flex',
             alignItems: 'center',
             gap: '14px'
           }}>
-            <div style={{ width: '48px', height: '48px', borderRadius: '14px', background: 'linear-gradient(135deg, #DFBA67 0%, #C5A059 100%)', color: '#0A2315', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+            <div style={{ width: '48px', height: '48px', borderRadius: '14px', background: 'linear-gradient(135deg, #DFBA67 0%, #C5A059 100%)', color: '#0A2315', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, boxShadow: '0 4px 14px rgba(212,175,55,0.4)' }}>
               <DollarSign size={26} color="#0A2315" />
             </div>
             <div>
-              <div style={{ fontSize: '1.6rem', fontWeight: 900, color: '#DFBA67', lineHeight: 1.1 }}>₹{estimatedRevenue.toLocaleString()}</div>
-              <div style={{ fontSize: '0.78rem', fontWeight: 700, color: 'rgba(255,255,255,0.85)' }}>Est. SaaS Revenue</div>
+              <div style={{ fontSize: '1.65rem', fontWeight: 900, color: '#DFBA67', lineHeight: 1.1 }}>₹{estimatedRevenue.toLocaleString()}</div>
+              <div style={{ fontSize: '0.78rem', fontWeight: 700, color: 'rgba(255,255,255,0.9)' }}>Est. SaaS Revenue (MRR)</div>
             </div>
           </div>
         </div>
