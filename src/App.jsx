@@ -636,35 +636,35 @@ export default function App() {
         {/* Navigation */}
         <nav style={{
           display: 'flex', justifyContent: 'space-between', alignItems: 'center',
-          padding: '20px 40px', position: 'relative', zIndex: 10,
+          padding: '16px 20px', position: 'relative', zIndex: 10, flexWrap: 'wrap', gap: '12px',
           borderBottom: '1px solid rgba(255,255,255,0.06)'
         }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-            <span style={{ fontSize: '32px' }}>🍽️</span>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+            <span style={{ fontSize: '28px' }}>🍽️</span>
             <span style={{
-              fontSize: '24px', fontWeight: 800,
+              fontSize: '20px', fontWeight: 800,
               background: 'linear-gradient(135deg, #DFBA67, #F4D490)',
               WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent'
             }}>Khana Master</span>
           </div>
-          <div style={{ display: 'flex', gap: '12px' }}>
+          <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
             <button onClick={() => { window.history.pushState({}, '', '/register'); window.dispatchEvent(new PopStateEvent('popstate')); }}
               style={{
-                padding: '10px 22px', borderRadius: '12px', border: 'none',
-                background: 'linear-gradient(135deg, #DFBA67, #F4D490)', color: '#0A0A0A', cursor: 'pointer', fontWeight: 800, fontSize: '14px',
-                boxShadow: '0 4px 14px rgba(223,186,103,0.3)', transition: 'all 0.3s'
+                padding: '8px 16px', borderRadius: '10px', border: 'none',
+                background: 'linear-gradient(135deg, #DFBA67, #F4D490)', color: '#0A0A0A', cursor: 'pointer', fontWeight: 800, fontSize: '13px',
+                boxShadow: '0 4px 14px rgba(223,186,103,0.3)', transition: 'all 0.3s', whiteSpace: 'nowrap'
               }}
             >🚀 Start Free Trial</button>
             
             <button onClick={() => setShowLandingLoginModal(true)}
               style={{
-                padding: '10px 20px', borderRadius: '12px', border: '1px solid rgba(255,255,255,0.15)',
-                background: 'rgba(255,255,255,0.05)', color: '#ccc', cursor: 'pointer', fontWeight: 600, fontSize: '14px',
-                transition: 'all 0.3s'
+                padding: '8px 14px', borderRadius: '10px', border: '1px solid rgba(255,255,255,0.15)',
+                background: 'rgba(255,255,255,0.05)', color: '#ccc', cursor: 'pointer', fontWeight: 600, fontSize: '13px',
+                transition: 'all 0.3s', whiteSpace: 'nowrap'
               }}
               onMouseEnter={e => { e.target.style.background = 'rgba(255,255,255,0.1)'; e.target.style.color = '#fff'; }}
               onMouseLeave={e => { e.target.style.background = 'rgba(255,255,255,0.05)'; e.target.style.color = '#ccc'; }}
-            >🔑 Restaurant Login</button>
+            >🔑 Login</button>
           </div>
         </nav>
 
@@ -673,26 +673,26 @@ export default function App() {
           <div style={{
             position: 'fixed', inset: 0, zIndex: 10050,
             background: 'rgba(10, 35, 21, 0.85)', backdropFilter: 'blur(8px)',
-            display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '16px'
+            display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '12px'
           }} onClick={() => { setShowLandingLoginModal(false); setLandingLoginMode('login'); }}>
             <div onClick={e => e.stopPropagation()} style={{
               background: '#111827', border: '2px solid #DFBA67', borderRadius: '24px',
-              padding: '32px 24px', maxWidth: '420px', width: '100%',
+              padding: '24px 18px', maxWidth: '400px', width: '95%', maxHeight: '90vh', overflowY: 'auto',
               color: '#FFFFFF', boxShadow: '0 20px 50px rgba(0,0,0,0.6)', position: 'relative'
             }}>
               <button onClick={() => { setShowLandingLoginModal(false); setLandingLoginMode('login'); }} style={{
-                position: 'absolute', top: '16px', right: '16px', background: 'rgba(255,255,255,0.1)',
+                position: 'absolute', top: '14px', right: '14px', background: 'rgba(255,255,255,0.1)',
                 border: 'none', borderRadius: '50%', width: '32px', height: '32px', color: '#FFF',
                 cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center'
               }}>✕</button>
 
-              <div style={{ fontSize: '2.8rem', textAlign: 'center', marginBottom: '12px' }}>
+              <div style={{ fontSize: '2.5rem', textAlign: 'center', marginBottom: '10px' }}>
                 {landingLoginMode === 'forgot' ? '🔒' : '🔑'}
               </div>
-              <h2 style={{ fontSize: '1.3rem', fontWeight: 900, color: '#DFBA67', margin: '0 0 6px 0', textAlign: 'center' }}>
+              <h2 style={{ fontSize: '1.25rem', fontWeight: 900, color: '#DFBA67', margin: '0 0 6px 0', textAlign: 'center' }}>
                 {landingLoginMode === 'forgot' ? 'Reset Admin Password' : 'Restaurant Admin Login'}
               </h2>
-              <p style={{ color: '#9CA3AF', fontSize: '0.84rem', lineHeight: 1.5, margin: '0 0 20px 0', textAlign: 'center' }}>
+              <p style={{ color: '#9CA3AF', fontSize: '0.82rem', lineHeight: 1.4, margin: '0 0 16px 0', textAlign: 'center' }}>
                 {landingLoginMode === 'forgot'
                   ? 'Enter your registered Username or Phone Number to set a new password'
                   : 'Enter your Admin Username & Password to access your Dashboard'}
@@ -794,7 +794,7 @@ export default function App() {
               }}>
                 <div style={{ marginBottom: '14px' }}>
                   <label style={{ display: 'block', fontSize: '0.78rem', fontWeight: 800, color: '#DFBA67', marginBottom: '6px' }}>
-                    {landingLoginMode === 'forgot' ? 'USERNAME OR REGISTERED PHONE NUMBER *' : 'ADMIN USERNAME *'}
+                    {landingLoginMode === 'forgot' ? 'USERNAME OR PHONE NUMBER *' : 'ADMIN USERNAME *'}
                   </label>
                   <input
                     type="text"
@@ -904,18 +904,18 @@ export default function App() {
         {/* Hero Section */}
         <div style={{
           display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
-          textAlign: 'center', padding: '80px 20px 60px', position: 'relative', zIndex: 5
+          textAlign: 'center', padding: '50px 16px 40px', position: 'relative', zIndex: 5
         }}>
           <div style={{
-            display: 'inline-block', padding: '6px 18px', borderRadius: '50px',
+            display: 'inline-block', padding: '6px 14px', borderRadius: '50px',
             background: 'linear-gradient(135deg, rgba(223,186,103,0.15), rgba(223,186,103,0.05))',
-            border: '1px solid rgba(223,186,103,0.3)', fontSize: '13px', color: '#DFBA67',
-            fontWeight: 600, marginBottom: '30px', letterSpacing: '1px'
+            border: '1px solid rgba(223,186,103,0.3)', fontSize: '12px', color: '#DFBA67',
+            fontWeight: 700, marginBottom: '20px', letterSpacing: '0.5px'
           }}>🚀 INDIA's #1 DIGITAL MENU PLATFORM</div>
 
           <h1 style={{
-            fontSize: 'clamp(36px, 6vw, 72px)', fontWeight: 900, lineHeight: 1.1,
-            marginBottom: '24px', maxWidth: '800px'
+            fontSize: 'clamp(28px, 7vw, 60px)', fontWeight: 900, lineHeight: 1.2,
+            marginBottom: '18px', maxWidth: '800px', width: '100%'
           }}>
             <span style={{ color: '#FFFFFF' }}>Apne Restaurant Ka </span>
             <span style={{
@@ -926,42 +926,38 @@ export default function App() {
           </h1>
 
           <p style={{
-            fontSize: 'clamp(16px, 2.5vw, 20px)', color: 'rgba(255,255,255,0.6)',
-            maxWidth: '600px', lineHeight: 1.7, marginBottom: '40px'
+            fontSize: 'clamp(14px, 3.5vw, 18px)', color: 'rgba(255,255,255,0.7)',
+            maxWidth: '560px', lineHeight: 1.6, marginBottom: '32px', padding: '0 8px'
           }}>
             QR Code se Digital Menu, WhatsApp Ordering, Google Reviews — sab kuch ek jagah. 
             <strong style={{ color: '#DFBA67' }}> 14 din free trial</strong>, koi credit card nahi chahiye!
           </p>
 
-          <div style={{ display: 'flex', gap: '16px', flexWrap: 'wrap', justifyContent: 'center' }}>
+          <div style={{ display: 'flex', gap: '12px', flexWrap: 'wrap', justifyContent: 'center', width: '100%', maxWidth: '480px' }}>
             <button onClick={() => { window.history.pushState({}, '', '/register'); window.dispatchEvent(new PopStateEvent('popstate')); }}
               style={{
-                padding: '16px 40px', borderRadius: '14px', border: 'none',
+                flex: '1 1 200px', padding: '14px 24px', borderRadius: '14px', border: 'none',
                 background: 'linear-gradient(135deg, #DFBA67, #C9A44A)', color: '#0A0A0A',
-                fontWeight: 800, fontSize: '18px', cursor: 'pointer',
-                boxShadow: '0 8px 30px rgba(223,186,103,0.3)',
-                transition: 'all 0.3s ease', transform: 'scale(1)'
+                fontWeight: 900, fontSize: '16px', cursor: 'pointer',
+                boxShadow: '0 8px 24px rgba(223,186,103,0.3)',
+                transition: 'all 0.3s ease', textAlign: 'center'
               }}
-              onMouseEnter={e => { e.target.style.transform = 'scale(1.05)'; e.target.style.boxShadow = '0 12px 40px rgba(223,186,103,0.5)'; }}
-              onMouseLeave={e => { e.target.style.transform = 'scale(1)'; e.target.style.boxShadow = '0 8px 30px rgba(223,186,103,0.3)'; }}
             >🚀 Free Trial Shuru Karein</button>
             <button onClick={() => window.open('https://khana-master.onrender.com/raman-sweet-bakery', '_blank')}
               style={{
-                padding: '16px 32px', borderRadius: '14px',
-                border: '2px solid rgba(223,186,103,0.3)', background: 'transparent',
-                color: '#DFBA67', fontWeight: 700, fontSize: '16px', cursor: 'pointer',
-                transition: 'all 0.3s'
+                flex: '1 1 160px', padding: '14px 20px', borderRadius: '14px',
+                border: '2px solid rgba(223,186,103,0.4)', background: 'rgba(223,186,103,0.05)',
+                color: '#DFBA67', fontWeight: 800, fontSize: '15px', cursor: 'pointer',
+                transition: 'all 0.3s', textAlign: 'center'
               }}
-              onMouseEnter={e => { e.target.style.background = 'rgba(223,186,103,0.1)'; }}
-              onMouseLeave={e => { e.target.style.background = 'transparent'; }}
             >👁️ Live Demo Dekhein</button>
           </div>
         </div>
 
         {/* Features Grid */}
         <div style={{
-          display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))',
-          gap: '24px', padding: '60px 40px', maxWidth: '1100px', margin: '0 auto',
+          display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))',
+          gap: '16px', padding: '40px 16px', maxWidth: '1100px', margin: '0 auto',
           position: 'relative', zIndex: 5
         }}>
           {[
@@ -974,31 +970,28 @@ export default function App() {
           ].map((f, i) => (
             <div key={i} style={{
               background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.08)',
-              borderRadius: '20px', padding: '32px', transition: 'all 0.3s',
+              borderRadius: '18px', padding: '24px 20px', transition: 'all 0.3s',
               cursor: 'default'
-            }}
-              onMouseEnter={e => { e.currentTarget.style.background = 'rgba(255,255,255,0.06)'; e.currentTarget.style.borderColor = 'rgba(223,186,103,0.3)'; e.currentTarget.style.transform = 'translateY(-4px)'; }}
-              onMouseLeave={e => { e.currentTarget.style.background = 'rgba(255,255,255,0.03)'; e.currentTarget.style.borderColor = 'rgba(255,255,255,0.08)'; e.currentTarget.style.transform = 'translateY(0)'; }}
-            >
-              <div style={{ fontSize: '40px', marginBottom: '16px' }}>{f.icon}</div>
-              <h3 style={{ fontSize: '20px', fontWeight: 700, marginBottom: '8px', color: '#DFBA67' }}>{f.title}</h3>
-              <p style={{ fontSize: '14px', color: 'rgba(255,255,255,0.5)', lineHeight: 1.6 }}>{f.desc}</p>
+            }}>
+              <div style={{ fontSize: '32px', marginBottom: '12px' }}>{f.icon}</div>
+              <h3 style={{ fontSize: '18px', fontWeight: 800, marginBottom: '6px', color: '#DFBA67' }}>{f.title}</h3>
+              <p style={{ fontSize: '13px', color: 'rgba(255,255,255,0.6)', lineHeight: 1.5, margin: 0 }}>{f.desc}</p>
             </div>
           ))}
         </div>
 
         {/* Pricing Section */}
         <div style={{
-          padding: '80px 20px', textAlign: 'center', position: 'relative', zIndex: 5
+          padding: '50px 16px', textAlign: 'center', position: 'relative', zIndex: 5
         }}>
-          <h2 style={{ fontSize: '36px', fontWeight: 800, marginBottom: '12px' }}>
+          <h2 style={{ fontSize: 'clamp(26px, 5vw, 36px)', fontWeight: 900, marginBottom: '8px' }}>
             <span style={{ background: 'linear-gradient(135deg, #DFBA67, #F4D490)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>Simple Pricing</span>
           </h2>
-          <p style={{ color: 'rgba(255,255,255,0.5)', fontSize: '16px', marginBottom: '48px' }}>Har plan me 14-din ka free trial included hai</p>
+          <p style={{ color: 'rgba(255,255,255,0.6)', fontSize: '14px', marginBottom: '32px' }}>Har plan me 14-din ka free trial included hai</p>
           
           <div style={{
-            display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))',
-            gap: '24px', maxWidth: '900px', margin: '0 auto', padding: '0 20px'
+            display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))',
+            gap: '20px', maxWidth: '900px', margin: '0 auto'
           }}>
             {[
               { name: 'Basic', price: '₹499', period: '/month', badge: '⚡', features: ['Digital QR Menu', 'Premium Themes', 'Admin Dashboard', 'Unlimited Items'], popular: false },
@@ -1007,33 +1000,33 @@ export default function App() {
             ].map((plan, i) => (
               <div key={i} style={{
                 background: plan.popular ? 'linear-gradient(135deg, rgba(223,186,103,0.12), rgba(223,186,103,0.04))' : 'rgba(255,255,255,0.03)',
-                border: plan.popular ? '2px solid rgba(223,186,103,0.5)' : '1px solid rgba(255,255,255,0.08)',
-                borderRadius: '24px', padding: '36px 28px', position: 'relative',
-                transition: 'all 0.3s', transform: plan.popular ? 'scale(1.05)' : 'scale(1)'
+                border: plan.popular ? '2px solid rgba(223,186,103,0.6)' : '1px solid rgba(255,255,255,0.08)',
+                borderRadius: '20px', padding: '28px 20px', position: 'relative',
+                transition: 'all 0.3s'
               }}>
                 {plan.popular && <div style={{
                   position: 'absolute', top: '-12px', left: '50%', transform: 'translateX(-50%)',
                   background: 'linear-gradient(135deg, #DFBA67, #C9A44A)', color: '#0A0A0A',
-                  padding: '4px 20px', borderRadius: '50px', fontSize: '12px', fontWeight: 800
+                  padding: '3px 16px', borderRadius: '50px', fontSize: '11px', fontWeight: 900
                 }}>MOST POPULAR</div>}
-                <div style={{ fontSize: '28px', marginBottom: '8px' }}>{plan.badge}</div>
-                <h3 style={{ fontSize: '22px', fontWeight: 700, color: '#fff', marginBottom: '8px' }}>{plan.name}</h3>
-                <div style={{ marginBottom: '24px' }}>
-                  <span style={{ fontSize: '40px', fontWeight: 900, color: '#DFBA67' }}>{plan.price}</span>
-                  <span style={{ color: 'rgba(255,255,255,0.4)', fontSize: '14px' }}>{plan.period}</span>
+                <div style={{ fontSize: '26px', marginBottom: '6px' }}>{plan.badge}</div>
+                <h3 style={{ fontSize: '20px', fontWeight: 800, color: '#fff', marginBottom: '6px' }}>{plan.name}</h3>
+                <div style={{ marginBottom: '20px' }}>
+                  <span style={{ fontSize: '36px', fontWeight: 900, color: '#DFBA67' }}>{plan.price}</span>
+                  <span style={{ color: 'rgba(255,255,255,0.5)', fontSize: '13px' }}>{plan.period}</span>
                 </div>
-                <ul style={{ listStyle: 'none', padding: 0, marginBottom: '28px', textAlign: 'left' }}>
+                <ul style={{ listStyle: 'none', padding: 0, marginBottom: '24px', textAlign: 'left' }}>
                   {plan.features.map((f, j) => (
-                    <li key={j} style={{ padding: '8px 0', fontSize: '14px', color: 'rgba(255,255,255,0.7)', borderBottom: '1px solid rgba(255,255,255,0.05)' }}>
+                    <li key={j} style={{ padding: '7px 0', fontSize: '13px', color: 'rgba(255,255,255,0.75)', borderBottom: '1px solid rgba(255,255,255,0.05)' }}>
                       ✅ {f}
                     </li>
                   ))}
                 </ul>
                 <button onClick={() => { window.history.pushState({}, '', '/register'); window.dispatchEvent(new PopStateEvent('popstate')); }}
                   style={{
-                    width: '100%', padding: '14px', borderRadius: '12px', border: 'none',
+                    width: '100%', padding: '12px', borderRadius: '12px', border: 'none',
                     background: plan.popular ? 'linear-gradient(135deg, #DFBA67, #C9A44A)' : 'rgba(255,255,255,0.1)',
-                    color: plan.popular ? '#0A0A0A' : '#DFBA67', fontWeight: 700, fontSize: '15px',
+                    color: plan.popular ? '#0A0A0A' : '#DFBA67', fontWeight: 800, fontSize: '14px',
                     cursor: 'pointer', transition: 'all 0.3s'
                   }}
                 >Start Free Trial</button>
