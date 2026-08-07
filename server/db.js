@@ -123,6 +123,18 @@ async function createTables() {
 
       ALTER TABLE admins ADD COLUMN IF NOT EXISTS restaurant_id INT REFERENCES restaurants(id) ON DELETE CASCADE;
       ALTER TABLE admins ADD COLUMN IF NOT EXISTS role VARCHAR(50) DEFAULT 'restaurant_admin';
+      ALTER TABLE restaurants ALTER COLUMN code DROP NOT NULL;
+      ALTER TABLE restaurants ADD COLUMN IF NOT EXISTS tagline TEXT;
+      ALTER TABLE restaurants ADD COLUMN IF NOT EXISTS logo TEXT;
+      ALTER TABLE restaurants ADD COLUMN IF NOT EXISTS phone TEXT;
+      ALTER TABLE restaurants ADD COLUMN IF NOT EXISTS address TEXT;
+      ALTER TABLE restaurants ADD COLUMN IF NOT EXISTS opening_hours TEXT;
+      ALTER TABLE restaurants ADD COLUMN IF NOT EXISTS google_review_url TEXT;
+      ALTER TABLE restaurants ADD COLUMN IF NOT EXISTS google_maps_url TEXT;
+      ALTER TABLE restaurants ADD COLUMN IF NOT EXISTS active INT DEFAULT 1;
+      ALTER TABLE restaurants ADD COLUMN IF NOT EXISTS filters_visibility TEXT;
+      ALTER TABLE restaurants ADD COLUMN IF NOT EXISTS direct_ordering_enabled INT DEFAULT 1;
+      ALTER TABLE restaurants ADD COLUMN IF NOT EXISTS google_reviews_enabled INT DEFAULT 1;
       ALTER TABLE restaurants ADD COLUMN IF NOT EXISTS currency_symbol VARCHAR(10) DEFAULT '₹';
       ALTER TABLE restaurants ADD COLUMN IF NOT EXISTS fssai_lic_no VARCHAR(100) DEFAULT '20824001000123';
       ALTER TABLE restaurants ADD COLUMN IF NOT EXISTS resto_type VARCHAR(50) DEFAULT 'pure_veg';
@@ -141,6 +153,24 @@ async function createTables() {
       ALTER TABLE restaurants ADD COLUMN IF NOT EXISTS total_tables INT DEFAULT 12;
       ALTER TABLE restaurants ADD COLUMN IF NOT EXISTS order_retention_days INT DEFAULT 90;
       ALTER TABLE dishes ADD COLUMN IF NOT EXISTS type VARCHAR(20) DEFAULT 'veg';
+      ALTER TABLE dishes ADD COLUMN IF NOT EXISTS name_hi TEXT;
+      ALTER TABLE dishes ADD COLUMN IF NOT EXISTS description_hi TEXT;
+      ALTER TABLE dishes ADD COLUMN IF NOT EXISTS image TEXT;
+      ALTER TABLE dishes ADD COLUMN IF NOT EXISTS portion TEXT;
+      ALTER TABLE dishes ADD COLUMN IF NOT EXISTS portion_half_label TEXT;
+      ALTER TABLE dishes ADD COLUMN IF NOT EXISTS portion_full_label TEXT;
+      ALTER TABLE dishes ADD COLUMN IF NOT EXISTS price_half NUMERIC DEFAULT 0;
+      ALTER TABLE dishes ADD COLUMN IF NOT EXISTS available INT DEFAULT 1;
+      ALTER TABLE dishes ADD COLUMN IF NOT EXISTS is_spicy INT DEFAULT 0;
+      ALTER TABLE dishes ADD COLUMN IF NOT EXISTS is_bestseller INT DEFAULT 0;
+      ALTER TABLE dishes ADD COLUMN IF NOT EXISTS badge TEXT;
+      ALTER TABLE dishes ADD COLUMN IF NOT EXISTS sort_order INT DEFAULT 0;
+      ALTER TABLE dishes ADD COLUMN IF NOT EXISTS ingredients TEXT;
+      ALTER TABLE dishes ADD COLUMN IF NOT EXISTS preparation_time TEXT;
+      ALTER TABLE dishes ADD COLUMN IF NOT EXISTS taste_profile TEXT;
+      ALTER TABLE categories ADD COLUMN IF NOT EXISTS name_hi TEXT;
+      ALTER TABLE categories ADD COLUMN IF NOT EXISTS image TEXT;
+      ALTER TABLE categories ADD COLUMN IF NOT EXISTS sort_order INT DEFAULT 0;
 
       CREATE TABLE IF NOT EXISTS announcements (
         id SERIAL PRIMARY KEY,
@@ -421,10 +451,45 @@ async function seedData() {
       '8:00 AM - 10:30 PM (Mon - Sun)',
       'https://r.revmeai.com/r/ee7e4c91-f85e-4a01-8767-eeaee0a89341',
       'https://share.google/2M5mFMPlmS6pAXRf7',
-      true
+      1
     ]);
     primaryRestoId = res[0]?.id || res.lastInsertRowid || 1;
     console.log(`🏨 Created primary tenant restaurant Raman Sweet Bakery (ID: ${primaryRestoId})`);
+  }
+
+  // Ensure Raja Restaurant exists by default
+  try {
+    const rajaCheck = await query('SELECT * FROM restaurants WHERE slug = $1', ['raja-restaurant']);
+    if (!rajaCheck || rajaCheck.length === 0) {
+      const rajaRes = await query(`
+        INSERT INTO restaurants (
+          name, slug, tagline, logo, phone, address, opening_hours, active, plan_tier, plan_price, order_retention_days
+        ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11) RETURNING id
+      `, [
+        'raja restaurant',
+        'raja-restaurant',
+        'Authentic Indian Sweets & Fast Food',
+        '/uploads/logo.jpg',
+        '+919999999999',
+        'Motihari, Bihar',
+        '8:00 AM - 10:30 PM',
+        1,
+        'enterprise',
+        1990,
+        90
+      ]);
+      const rajaId = rajaRes[0]?.id || rajaRes.lastInsertRowid;
+      
+      const salt = await bcrypt.genSalt(10);
+      const hash = await bcrypt.hash('admin123', salt);
+      await query(`
+        INSERT INTO admins (restaurant_id, username, password_hash, role)
+        VALUES ($1, $2, $3, $4)
+      `, [rajaId, 'admin', hash, 'restaurant_admin']);
+      console.log(`🏨 Seeded tenant restaurant Raja Restaurant (ID: ${rajaId})`);
+    }
+  } catch (err) {
+    console.warn('Raja restaurant seeding notice:', err.message);
   }
 
   // Seed default SaaS Plans if empty
@@ -458,8 +523,14 @@ async function seedData() {
 
   if (count === 0 || !hasRealImages) {
     console.log('🌱 Seeding authentic menu data for Raman Sweet Bakery...');
-    await query('DELETE FROM dishes WHERE restaurant_id = $1', [primaryRestoId]);
-    await query('DELETE FROM categories WHERE restaurant_id = $1', [primaryRestoId]);
+    try {
+      await query('DELETE FROM order_items WHERE order_id IN (SELECT id FROM orders WHERE restaurant_id = $1)', [primaryRestoId]);
+      await query('DELETE FROM orders WHERE restaurant_id = $1', [primaryRestoId]);
+      await query('DELETE FROM dishes WHERE restaurant_id = $1', [primaryRestoId]);
+      await query('DELETE FROM categories WHERE restaurant_id = $1', [primaryRestoId]);
+    } catch (e) {
+      console.warn('Seeding cleanup notice:', e.message);
+    }
 
     const jsonPath = path.resolve('server/exported_menu_data.json');
     if (fs.existsSync(jsonPath)) {
@@ -477,16 +548,20 @@ async function seedData() {
 
       for (const d of data.dishes) {
         const newCatId = catIdMap[d.category_id];
-        await query(
-          `INSERT INTO dishes (
-            restaurant_id, category_id, name, name_hi, description, description_hi, image, price, price_half,
-            portion, portion_half_label, portion_full_label, badge, ingredients, taste_profile, available
-          ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16)`,
-          [
-            primaryRestoId, newCatId, d.name, d.name_hi || '', d.description || '', d.description_hi || '', d.image || '/uploads/logo.jpg', d.price, d.price_half || null,
-            d.portion || '', d.portion_half_label || '', d.portion_full_label || '', d.badge || '', d.ingredients || '', d.taste_profile || '', d.available !== false ? 1 : 0
-          ]
-        );
+        try {
+          await query(
+            `INSERT INTO dishes (
+              restaurant_id, category_id, name, name_hi, description, description_hi, image, price, price_half,
+              portion, portion_half_label, portion_full_label, badge, ingredients, taste_profile, available
+            ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16)`,
+            [
+              primaryRestoId, newCatId, d.name, d.name_hi || '', d.description || '', d.description_hi || '', d.image || '/uploads/logo.jpg', d.price, d.price_half || null,
+              d.portion || '', d.portion_half_label || '', d.portion_full_label || '', d.badge || '', d.ingredients || '', d.taste_profile || '', d.available !== false ? 1 : 0
+            ]
+          );
+        } catch (e) {
+          console.warn('Skipping existing dish:', d.name);
+        }
       }
       console.log(`✅ Seeded ${data.categories.length} categories and ${data.dishes.length} dishes for Raman Sweet Bakery!`);
     }
