@@ -32,6 +32,11 @@ export default function RegisterPage({ onRegisterSuccess }) {
       setError('Please enter your Restaurant Name');
       return;
     }
+    const cleanPhone = formData.phone.replace(/[^0-9]/g, '');
+    if (!cleanPhone || cleanPhone.length !== 10 || !/^[6-9]\d{9}$/.test(cleanPhone)) {
+      setError('Please enter a valid 10-digit Mobile Number (e.g. 9876543210)');
+      return;
+    }
     if (!formData.owner_username.trim()) {
       setError('Please enter an Owner Username for logging into Admin Panel');
       return;
@@ -231,15 +236,17 @@ export default function RegisterPage({ onRegisterSuccess }) {
             {/* Phone Number */}
             <div>
               <label style={{ display: 'block', fontSize: '0.78rem', fontWeight: 800, color: '#DFBA67', marginBottom: '6px' }}>
-                CONTACT / WHATSAPP PHONE NUMBER
+                CONTACT / WHATSAPP MOBILE NUMBER *
               </label>
               <div style={{ position: 'relative' }}>
                 <Phone size={18} color="#9CA3AF" style={{ position: 'absolute', left: '14px', top: '50%', transform: 'translateY(-50%)' }} />
                 <input
                   type="tel"
-                  placeholder="e.g. 9876543210"
+                  required
+                  maxLength={10}
+                  placeholder="10-digit mobile (e.g. 9876543210)"
                   value={formData.phone}
-                  onChange={e => setFormData({ ...formData, phone: e.target.value })}
+                  onChange={e => setFormData({ ...formData, phone: e.target.value.replace(/[^0-9]/g, '') })}
                   style={{
                     width: '100%', padding: '12px 14px 12px 42px', borderRadius: '12px',
                     border: '1px solid rgba(255,255,255,0.15)', background: '#1F2937',

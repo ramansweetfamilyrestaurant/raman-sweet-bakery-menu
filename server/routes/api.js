@@ -376,8 +376,13 @@ router.post('/register', async (req, res) => {
   try {
     const { name, phone, owner_username, owner_password, plan_tier } = req.body;
 
-    if (!name || !owner_username || !owner_password) {
-      return res.status(400).json({ error: 'Restaurant Name, Username, and Password are required!' });
+    if (!name || !phone || !owner_username || !owner_password) {
+      return res.status(400).json({ error: 'Restaurant Name, Mobile Number, Username, and Password are required!' });
+    }
+
+    const cleanPhone = (phone || '').replace(/[^0-9]/g, '');
+    if (!cleanPhone || cleanPhone.length !== 10) {
+      return res.status(400).json({ error: 'A valid 10-digit Mobile Number is compulsory for registration!' });
     }
 
     if (owner_password.length < 4) {
