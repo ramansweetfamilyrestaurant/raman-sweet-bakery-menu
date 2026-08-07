@@ -76,14 +76,13 @@ export default function DishCard({ dish, onClick, onAddToCart, currencySymbol = 
           </div>
         )}
 
-        {/* Badges Container Overlay - Prevents Overlapping on All Mobile/Grid Widths */}
+        {/* Ultra-Clean Non-Overlapping Badges Overlay */}
         <div style={{
           position: 'absolute',
-          top: '8px',
-          left: '8px',
-          right: '8px',
+          top: '6px',
+          left: '6px',
+          right: '6px',
           display: 'flex',
-          flexWrap: 'wrap',
           justifyContent: 'space-between',
           alignItems: 'center',
           gap: '4px',
@@ -92,44 +91,46 @@ export default function DishCard({ dish, onClick, onAddToCart, currencySymbol = 
         }}>
           {/* Dynamic Dietary Badge */}
           <div style={{
-            background: 'rgba(255, 255, 255, 0.95)',
-            backdropFilter: 'blur(4px)',
+            background: 'rgba(255, 255, 255, 0.96)',
+            backdropFilter: 'blur(6px)',
             border: dish.type === 'nonveg' ? '1px solid #DC2626' : dish.type === 'egg' ? '1px solid #D97706' : '1px solid var(--veg-green)',
             borderRadius: 'var(--radius-pill)',
-            padding: '2px 6px',
+            padding: '1.5px 5px',
             display: 'inline-flex',
             alignItems: 'center',
             gap: '3px',
             boxShadow: '0 2px 6px rgba(0,0,0,0.15)',
-            whiteSpace: 'nowrap'
+            whiteSpace: 'nowrap',
+            maxWidth: '50%'
           }}>
             <span style={{
-              width: '8px',
-              height: '8px',
+              width: '7px',
+              height: '7px',
               border: dish.type === 'nonveg' ? '1.5px solid #DC2626' : dish.type === 'egg' ? '1.5px solid #D97706' : '1.5px solid var(--veg-green)',
               display: 'inline-flex',
               alignItems: 'center',
               justifyContent: 'center',
-              borderRadius: '2px'
+              borderRadius: '2px',
+              flexShrink: 0
             }}>
               <span style={{
-                width: '3px',
-                height: '3px',
+                width: '2.5px',
+                height: '2.5px',
                 borderRadius: '50%',
                 backgroundColor: dish.type === 'nonveg' ? '#DC2626' : dish.type === 'egg' ? '#D97706' : 'var(--veg-green)'
               }} />
             </span>
             <span style={{
-              fontSize: '0.6rem',
-              fontWeight: 800,
+              fontSize: '0.56rem',
+              fontWeight: 900,
               color: dish.type === 'nonveg' ? '#DC2626' : dish.type === 'egg' ? '#B45309' : 'var(--veg-green)',
-              letterSpacing: '0.3px'
+              letterSpacing: '0.2px'
             }}>
-              {dish.type === 'nonveg' ? 'NON-VEG' : dish.type === 'egg' ? 'EGG' : 'PURE VEG'}
+              {dish.type === 'nonveg' ? 'NON-VEG' : dish.type === 'egg' ? 'EGG' : 'VEG'}
             </span>
           </div>
 
-          {/* Dynamic Custom Badge (Must Try, Bestseller, etc.) */}
+          {/* Dynamic Custom Special Badge (Must Try, Bestseller, etc.) */}
           {dish.badge && (() => {
             const lower = dish.badge.toLowerCase();
             let bg = 'linear-gradient(135deg, #FFFBEB 0%, #FEF3C7 100%)';
@@ -170,18 +171,21 @@ export default function DishCard({ dish, onClick, onAddToCart, currencySymbol = 
                 color: color,
                 border: border,
                 borderRadius: 'var(--radius-pill)',
-                padding: '2px 7px',
-                fontSize: '0.62rem',
+                padding: '1.5px 6px',
+                fontSize: '0.56rem',
                 fontWeight: 900,
                 boxShadow: '0 2px 6px rgba(0,0,0,0.12)',
                 display: 'inline-flex',
                 alignItems: 'center',
-                gap: '3px',
+                gap: '2px',
                 whiteSpace: 'nowrap',
+                maxWidth: '50%',
+                overflow: 'hidden',
+                textOverflow: 'ellipsis',
                 marginLeft: 'auto'
               }}>
-                <span>{icon}</span>
-                <span>{dish.badge}</span>
+                <span style={{ fontSize: '0.62rem' }}>{icon}</span>
+                <span style={{ overflow: 'hidden', textOverflow: 'ellipsis' }}>{dish.badge}</span>
               </div>
             );
           })()}
