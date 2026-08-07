@@ -4,6 +4,7 @@ import path from 'path';
 import { query } from '../db.js';
 
 import jwt from 'jsonwebtoken';
+import bcrypt from 'bcryptjs';
 
 const router = express.Router();
 const settingsPath = path.resolve('server/settings.json');
