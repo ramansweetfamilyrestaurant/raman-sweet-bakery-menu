@@ -468,7 +468,7 @@ export default function App() {
     setSuperToken(token);
     setSuperUsername(username);
     setView('super-admin-dashboard');
-    window.history.pushState({}, '', '/');
+    window.history.pushState({}, '', '/super-admin');
   };
 
   const handleSuperAdminLogout = () => {
