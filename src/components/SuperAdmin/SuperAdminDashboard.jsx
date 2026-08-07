@@ -316,25 +316,26 @@ export default function SuperAdminDashboard({ token, username, onLogout, onRetur
           </div>
 
           {/* Master Header Actions */}
-          <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+          <div style={{ display: 'flex', gap: '8px', alignItems: 'center', flexWrap: 'wrap' }}>
             <button
               onClick={handleOpenBroadcastModal}
               style={{
                 background: 'rgba(212, 175, 55, 0.15)',
                 color: '#DFBA67',
-                padding: '8px 14px',
+                padding: '7px 12px',
                 borderRadius: 'var(--radius-pill)',
-                fontSize: '0.8rem',
+                fontSize: '0.76rem',
                 fontWeight: 800,
                 border: '1px solid rgba(212, 175, 55, 0.4)',
                 cursor: 'pointer',
                 display: 'flex',
                 alignItems: 'center',
-                gap: '6px'
+                gap: '5px',
+                whiteSpace: 'nowrap'
               }}
               title="Broadcast global announcement banner to all tenant dashboards"
             >
-              <Megaphone size={15} /> Broadcast Notice
+              <Megaphone size={14} /> Broadcast
             </button>
 
             <button
@@ -345,19 +346,20 @@ export default function SuperAdminDashboard({ token, username, onLogout, onRetur
               style={{
                 background: '#F1F5F9',
                 color: '#334155',
-                padding: '8px 14px',
+                padding: '7px 12px',
                 borderRadius: 'var(--radius-pill)',
-                fontSize: '0.78rem',
+                fontSize: '0.76rem',
                 fontWeight: 800,
                 border: '1px solid #CBD5E1',
                 cursor: 'pointer',
                 display: 'flex',
                 alignItems: 'center',
-                gap: '6px'
+                gap: '5px',
+                whiteSpace: 'nowrap'
               }}
               title="View platform activity & security audit logs"
             >
-              <FileText size={15} /> Audit Logs
+              <FileText size={14} /> Audit Logs
             </button>
 
             {/* 💳 SaaS Plans Manager Button */}
@@ -369,20 +371,21 @@ export default function SuperAdminDashboard({ token, username, onLogout, onRetur
               style={{
                 background: 'linear-gradient(135deg, #0A2315 0%, #164E2A 100%)',
                 color: '#FFFFFF',
-                padding: '8px 16px',
+                padding: '7px 14px',
                 borderRadius: 'var(--radius-pill)',
-                fontSize: '0.8rem',
+                fontSize: '0.76rem',
                 fontWeight: 800,
                 border: '1.5px solid #D4AF37',
                 cursor: 'pointer',
                 display: 'flex',
                 alignItems: 'center',
-                gap: '6px',
+                gap: '5px',
+                whiteSpace: 'nowrap',
                 boxShadow: '0 4px 12px rgba(10,35,21,0.25)'
               }}
               title="Manage SaaS Plan Tiers, Pricing & Feature Matrix"
             >
-              <CreditCard size={15} color="#DFBA67" /> 💳 SaaS Plans Matrix
+              <CreditCard size={14} color="#DFBA67" /> SaaS Plans
             </button>
 
             <button
@@ -390,52 +393,53 @@ export default function SuperAdminDashboard({ token, username, onLogout, onRetur
               style={{
                 background: '#DC2626',
                 color: '#FFFFFF',
-                padding: '8px 16px',
+                padding: '7px 12px',
                 borderRadius: 'var(--radius-pill)',
-                fontSize: '0.8rem',
+                fontSize: '0.76rem',
                 fontWeight: 800,
                 border: 'none',
                 cursor: 'pointer',
                 display: 'flex',
                 alignItems: 'center',
-                gap: '6px',
+                gap: '5px',
+                whiteSpace: 'nowrap',
                 boxShadow: '0 2px 10px rgba(220, 38, 38, 0.3)'
               }}
             >
-              <LogOut size={15} /> Logout
+              <LogOut size={14} /> Logout
             </button>
           </div>
         </div>
       </header>
 
       {/* Main Dashboard Container */}
-      <main style={{ maxWidth: '1200px', margin: '0 auto', padding: '24px 16px' }}>
+      <main style={{ maxWidth: '1200px', margin: '0 auto', padding: '16px 12px' }}>
         
         {/* KPI Analytics Summary Cards Grid */}
         <div style={{
           display: 'grid',
-          gridTemplateColumns: 'repeat(auto-fit, minmax(210px, 1fr))',
-          gap: '16px',
-          marginBottom: '24px'
+          gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))',
+          gap: '10px',
+          marginBottom: '20px'
         }}>
           {/* Card 1: Registered Tenants */}
           <div className="hover-lift" style={{
             background: 'rgba(255, 255, 255, 0.95)',
             backdropFilter: 'blur(10px)',
-            borderRadius: '20px',
-            padding: '18px',
+            borderRadius: '16px',
+            padding: '12px 14px',
             border: '1px solid rgba(16, 185, 129, 0.25)',
-            boxShadow: '0 8px 24px rgba(10, 35, 21, 0.06)',
+            boxShadow: '0 4px 16px rgba(10, 35, 21, 0.06)',
             display: 'flex',
             alignItems: 'center',
-            gap: '14px'
+            gap: '10px'
           }}>
-            <div style={{ width: '48px', height: '48px', borderRadius: '14px', background: 'linear-gradient(135deg, #DCFCE7 0%, #BBF7D0 100%)', color: '#15803D', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, boxShadow: '0 4px 12px rgba(34, 197, 94, 0.2)' }}>
-              <Store size={24} />
+            <div style={{ width: '38px', height: '38px', borderRadius: '10px', background: 'linear-gradient(135deg, #DCFCE7 0%, #BBF7D0 100%)', color: '#15803D', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+              <Store size={18} />
             </div>
             <div>
-              <div style={{ fontSize: '1.65rem', fontWeight: 900, color: 'var(--primary-emerald)', lineHeight: 1.1 }}>{restaurants.length}</div>
-              <div style={{ fontSize: '0.78rem', fontWeight: 700, color: 'var(--text-muted)' }}>Tenants Hosted</div>
+              <div style={{ fontSize: '1.3rem', fontWeight: 900, color: 'var(--primary-emerald)', lineHeight: 1.1 }}>{restaurants.length}</div>
+              <div style={{ fontSize: '0.72rem', fontWeight: 700, color: 'var(--text-muted)' }}>Tenants</div>
             </div>
           </div>
 
@@ -443,20 +447,20 @@ export default function SuperAdminDashboard({ token, username, onLogout, onRetur
           <div className="hover-lift" style={{
             background: 'rgba(255, 255, 255, 0.95)',
             backdropFilter: 'blur(10px)',
-            borderRadius: '20px',
-            padding: '18px',
+            borderRadius: '16px',
+            padding: '12px 14px',
             border: '1px solid rgba(245, 158, 11, 0.25)',
-            boxShadow: '0 8px 24px rgba(10, 35, 21, 0.06)',
+            boxShadow: '0 4px 16px rgba(10, 35, 21, 0.06)',
             display: 'flex',
             alignItems: 'center',
-            gap: '14px'
+            gap: '10px'
           }}>
-            <div style={{ width: '48px', height: '48px', borderRadius: '14px', background: 'linear-gradient(135deg, #FEF3C7 0%, #FDE68A 100%)', color: '#B45309', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, boxShadow: '0 4px 12px rgba(245, 158, 11, 0.2)' }}>
-              <CheckCircle size={24} />
+            <div style={{ width: '38px', height: '38px', borderRadius: '10px', background: 'linear-gradient(135deg, #FEF3C7 0%, #FDE68A 100%)', color: '#B45309', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+              <CheckCircle size={18} />
             </div>
             <div>
-              <div style={{ fontSize: '1.65rem', fontWeight: 900, color: '#B45309', lineHeight: 1.1 }}>{totalActive}</div>
-              <div style={{ fontSize: '0.78rem', fontWeight: 700, color: 'var(--text-muted)' }}>Active Subscriptions</div>
+              <div style={{ fontSize: '1.3rem', fontWeight: 900, color: '#B45309', lineHeight: 1.1 }}>{totalActive}</div>
+              <div style={{ fontSize: '0.72rem', fontWeight: 700, color: 'var(--text-muted)' }}>Active</div>
             </div>
           </div>
 
@@ -464,20 +468,20 @@ export default function SuperAdminDashboard({ token, username, onLogout, onRetur
           <div className="hover-lift" style={{
             background: 'rgba(255, 255, 255, 0.95)',
             backdropFilter: 'blur(10px)',
-            borderRadius: '20px',
-            padding: '18px',
+            borderRadius: '16px',
+            padding: '12px 14px',
             border: '1px solid rgba(99, 102, 241, 0.25)',
-            boxShadow: '0 8px 24px rgba(10, 35, 21, 0.06)',
+            boxShadow: '0 4px 16px rgba(10, 35, 21, 0.06)',
             display: 'flex',
             alignItems: 'center',
-            gap: '14px'
+            gap: '10px'
           }}>
-            <div style={{ width: '48px', height: '48px', borderRadius: '14px', background: 'linear-gradient(135deg, #EEF2FF 0%, #E0E7FF 100%)', color: '#4338CA', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, boxShadow: '0 4px 12px rgba(99, 102, 241, 0.2)' }}>
-              <Utensils size={24} />
+            <div style={{ width: '38px', height: '38px', borderRadius: '10px', background: 'linear-gradient(135deg, #EEF2FF 0%, #E0E7FF 100%)', color: '#4338CA', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+              <Utensils size={18} />
             </div>
             <div>
-              <div style={{ fontSize: '1.65rem', fontWeight: 900, color: '#4338CA', lineHeight: 1.1 }}>{totalDishes}</div>
-              <div style={{ fontSize: '0.78rem', fontWeight: 700, color: 'var(--text-muted)' }}>Dishes Hosted</div>
+              <div style={{ fontSize: '1.3rem', fontWeight: 900, color: '#4338CA', lineHeight: 1.1 }}>{totalDishes}</div>
+              <div style={{ fontSize: '0.72rem', fontWeight: 700, color: 'var(--text-muted)' }}>Dishes</div>
             </div>
           </div>
 
@@ -485,20 +489,20 @@ export default function SuperAdminDashboard({ token, username, onLogout, onRetur
           <div className="hover-lift" style={{
             background: 'rgba(255, 255, 255, 0.95)',
             backdropFilter: 'blur(10px)',
-            borderRadius: '20px',
-            padding: '18px',
+            borderRadius: '16px',
+            padding: '12px 14px',
             border: '1px solid rgba(168, 85, 247, 0.25)',
-            boxShadow: '0 8px 24px rgba(10, 35, 21, 0.06)',
+            boxShadow: '0 4px 16px rgba(10, 35, 21, 0.06)',
             display: 'flex',
             alignItems: 'center',
-            gap: '14px'
+            gap: '10px'
           }}>
-            <div style={{ width: '48px', height: '48px', borderRadius: '14px', background: 'linear-gradient(135deg, #F3E8FF 0%, #E9D5FF 100%)', color: '#7E22CE', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, boxShadow: '0 4px 12px rgba(168, 85, 247, 0.2)' }}>
-              <QrCode size={24} />
+            <div style={{ width: '38px', height: '38px', borderRadius: '10px', background: 'linear-gradient(135deg, #F3E8FF 0%, #E9D5FF 100%)', color: '#7E22CE', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+              <QrCode size={18} />
             </div>
             <div>
-              <div style={{ fontSize: '1.65rem', fontWeight: 900, color: '#7E22CE', lineHeight: 1.1 }}>{totalScans}</div>
-              <div style={{ fontSize: '0.78rem', fontWeight: 700, color: 'var(--text-muted)' }}>Total QR Scans</div>
+              <div style={{ fontSize: '1.3rem', fontWeight: 900, color: '#7E22CE', lineHeight: 1.1 }}>{totalScans}</div>
+              <div style={{ fontSize: '0.72rem', fontWeight: 700, color: 'var(--text-muted)' }}>QR Scans</div>
             </div>
           </div>
 
@@ -506,20 +510,20 @@ export default function SuperAdminDashboard({ token, username, onLogout, onRetur
           <div className="hover-lift btn-pulse" style={{
             background: 'linear-gradient(135deg, #0A2315 0%, #164E2A 100%)',
             color: '#FFFFFF',
-            borderRadius: '20px',
-            padding: '18px',
+            borderRadius: '16px',
+            padding: '12px 14px',
             border: '1.5px solid #DFBA67',
-            boxShadow: '0 10px 30px rgba(10,35,21,0.35)',
+            boxShadow: '0 6px 20px rgba(10,35,21,0.3)',
             display: 'flex',
             alignItems: 'center',
-            gap: '14px'
+            gap: '10px'
           }}>
-            <div style={{ width: '48px', height: '48px', borderRadius: '14px', background: 'linear-gradient(135deg, #DFBA67 0%, #C5A059 100%)', color: '#0A2315', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, boxShadow: '0 4px 14px rgba(212,175,55,0.4)' }}>
-              <DollarSign size={26} color="#0A2315" />
+            <div style={{ width: '38px', height: '38px', borderRadius: '10px', background: 'linear-gradient(135deg, #DFBA67 0%, #C5A059 100%)', color: '#0A2315', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+              <DollarSign size={20} color="#0A2315" />
             </div>
             <div>
-              <div style={{ fontSize: '1.65rem', fontWeight: 900, color: '#DFBA67', lineHeight: 1.1 }}>₹{estimatedRevenue.toLocaleString()}</div>
-              <div style={{ fontSize: '0.78rem', fontWeight: 700, color: 'rgba(255,255,255,0.9)' }}>Est. SaaS Revenue (MRR)</div>
+              <div style={{ fontSize: '1.3rem', fontWeight: 900, color: '#DFBA67', lineHeight: 1.1 }}>₹{estimatedRevenue.toLocaleString()}</div>
+              <div style={{ fontSize: '0.72rem', fontWeight: 700, color: 'rgba(255,255,255,0.9)' }}>Revenue</div>
             </div>
           </div>
         </div>
