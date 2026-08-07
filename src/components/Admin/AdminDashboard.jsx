@@ -443,7 +443,6 @@ export default function AdminDashboard({ token, username, onLogout, onReturnToMe
   // Modals
   const [dishModalData, setDishModalData] = useState(null); // null (closed), 'new', or dish object
   const [catModalData, setCatModalData] = useState(null);
-  const [comboModalData, setComboModalData] = useState(null);
   const [comboLimitModalInfo, setComboLimitModalInfo] = useState(null);
 
   const handleOpenCreateCombo = () => {
