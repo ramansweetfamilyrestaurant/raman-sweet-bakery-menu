@@ -57,6 +57,8 @@ export default function App() {
   const [adminToken, setAdminToken] = useState(getInitialToken());
   const [adminUsername, setAdminUsername] = useState(getInitialUser());
   const [adminSlug, setAdminSlug] = useState(getInitialSlug());
+  const [showLandingLoginModal, setShowLandingLoginModal] = useState(false);
+  const [loginSlugInput, setLoginSlugInput] = useState('');
 
   // Master Super Admin Tokens
   const getInitialSuperToken = () => {
@@ -629,13 +631,7 @@ export default function App() {
               }}
             >🚀 Start Free Trial</button>
             
-            <button onClick={() => {
-              const slug = prompt('Enter your restaurant slug to login (e.g. raman-sweet-bakery):', 'raman-sweet-bakery');
-              if (slug) {
-                window.history.pushState({}, '', `/${slug.trim()}/admin`);
-                window.dispatchEvent(new PopStateEvent('popstate'));
-              }
-            }}
+            <button onClick={() => setShowLandingLoginModal(true)}
               style={{
                 padding: '10px 20px', borderRadius: '12px', border: '1px solid rgba(255,255,255,0.15)',
                 background: 'rgba(255,255,255,0.05)', color: '#ccc', cursor: 'pointer', fontWeight: 600, fontSize: '14px',
@@ -646,6 +642,71 @@ export default function App() {
             >🔑 Restaurant Login</button>
           </div>
         </nav>
+
+        {/* 🔑 Restaurant Admin Login Modal */}
+        {showLandingLoginModal && (
+          <div style={{
+            position: 'fixed', inset: 0, zIndex: 10050,
+            background: 'rgba(10, 35, 21, 0.85)', backdropFilter: 'blur(8px)',
+            display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '16px'
+          }} onClick={() => setShowLandingLoginModal(false)}>
+            <div onClick={e => e.stopPropagation()} style={{
+              background: '#111827', border: '2px solid #DFBA67', borderRadius: '24px',
+              padding: '32px 24px', maxWidth: '420px', width: '100%',
+              color: '#FFFFFF', boxShadow: '0 20px 50px rgba(0,0,0,0.6)', position: 'relative'
+            }}>
+              <button onClick={() => setShowLandingLoginModal(false)} style={{
+                position: 'absolute', top: '16px', right: '16px', background: 'rgba(255,255,255,0.1)',
+                border: 'none', borderRadius: '50%', width: '32px', height: '32px', color: '#FFF',
+                cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center'
+              }}>✕</button>
+
+              <div style={{ fontSize: '2.8rem', textAlign: 'center', marginBottom: '12px' }}>🔑</div>
+              <h2 style={{ fontSize: '1.3rem', fontWeight: 900, color: '#DFBA67', margin: '0 0 6px 0', textAlign: 'center' }}>
+                Restaurant Admin Login
+              </h2>
+              <p style={{ color: '#9CA3AF', fontSize: '0.84rem', lineHeight: 1.5, margin: '0 0 20px 0', textAlign: 'center' }}>
+                Enter your restaurant name or URL slug to access your Admin Dashboard
+              </p>
+
+              <form onSubmit={(e) => {
+                e.preventDefault();
+                const targetSlug = loginSlugInput.trim() ? loginSlugInput.toLowerCase().trim().replace(/[^a-z0-9-]/g, '-') : 'raman-sweet-bakery';
+                setShowLandingLoginModal(false);
+                window.history.pushState({}, '', `/${targetSlug}/admin`);
+                window.dispatchEvent(new PopStateEvent('popstate'));
+              }}>
+                <label style={{ display: 'block', fontSize: '0.78rem', fontWeight: 800, color: '#DFBA67', marginBottom: '6px' }}>
+                  RESTAURANT SLUG / NAME
+                </label>
+                <input
+                  type="text"
+                  required
+                  autoFocus
+                  placeholder="e.g. raman-sweet-bakery or royal-sweets"
+                  value={loginSlugInput}
+                  onChange={e => setLoginSlugInput(e.target.value)}
+                  style={{
+                    width: '100%', padding: '12px 14px', borderRadius: '12px',
+                    border: '1px solid rgba(255,255,255,0.2)', background: '#1F2937',
+                    color: '#FFFFFF', fontSize: '0.9rem', outline: 'none', marginBottom: '8px'
+                  }}
+                />
+                <p style={{ fontSize: '0.72rem', color: '#6B7280', margin: '0 0 20px 0' }}>
+                  Target URL: khana-master.onrender.com/<span style={{ color: '#34D399' }}>{loginSlugInput ? loginSlugInput.toLowerCase().trim().replace(/[^a-z0-9-]/g, '-') : 'raman-sweet-bakery'}</span>/admin
+                </p>
+
+                <button type="submit" style={{
+                  width: '100%', padding: '14px', borderRadius: '14px', border: 'none',
+                  background: 'linear-gradient(135deg, #DFBA67, #F4D490)', color: '#0A0A0A',
+                  fontWeight: 900, fontSize: '0.9rem', cursor: 'pointer', boxShadow: '0 4px 14px rgba(223,186,103,0.4)'
+                }}>
+                  Go to Admin Login ➔
+                </button>
+              </form>
+            </div>
+          </div>
+        )}
 
         {/* Hero Section */}
         <div style={{
