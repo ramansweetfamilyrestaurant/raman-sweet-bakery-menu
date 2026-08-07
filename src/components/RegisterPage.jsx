@@ -13,6 +13,7 @@ export default function RegisterPage({ onRegisterSuccess }) {
 
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+  const [pendingApprovalData, setPendingApprovalData] = useState(null);
 
   // Compute live URL slug preview
   const liveSlug = formData.name
@@ -75,6 +76,11 @@ export default function RegisterPage({ onRegisterSuccess }) {
         throw new Error(data.error || 'Registration failed. Please try again.');
       }
 
+      if (data.pending_approval) {
+        setPendingApprovalData(data);
+        return;
+      }
+
       // Store Auth Token in localStorage
       localStorage.setItem('adminToken', data.token);
 
@@ -92,6 +98,69 @@ export default function RegisterPage({ onRegisterSuccess }) {
       setLoading(false);
     }
   };
+
+  if (pendingApprovalData) {
+    return (
+      <div style={{
+        minHeight: '100vh',
+        background: 'linear-gradient(135deg, #0A0A0A 0%, #0D1B2A 100%)',
+        display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '20px'
+      }}>
+        <div style={{
+          background: '#111827', border: '2px solid #DFBA67', borderRadius: '24px',
+          padding: '40px 24px', maxWidth: '480px', width: '100%', textAlign: 'center', color: '#FFFFFF',
+          boxShadow: '0 20px 50px rgba(0,0,0,0.6)'
+        }}>
+          <div style={{ fontSize: '3.5rem', marginBottom: '16px' }}>⏳</div>
+          <h2 style={{ fontSize: '1.4rem', fontWeight: 900, color: '#DFBA67', marginBottom: '10px' }}>
+            Registration Submitted!
+          </h2>
+          <p style={{ color: '#E2E8F0', fontSize: '0.92rem', lineHeight: 1.6, marginBottom: '24px' }}>
+            Your restaurant <strong>'{pendingApprovalData.restaurant?.name}'</strong> has been submitted for Super Admin verification and approval.
+          </p>
+
+          <div style={{
+            background: 'rgba(223,186,103,0.1)', border: '1px solid rgba(223,186,103,0.3)',
+            borderRadius: '16px', padding: '16px', marginBottom: '28px', textAlign: 'left', fontSize: '0.84rem'
+          }}>
+            <div style={{ color: '#DFBA67', fontWeight: 800, marginBottom: '6px' }}>📋 Registration Summary:</div>
+            <div style={{ marginBottom: '4px' }}>• <strong>Admin Username:</strong> {pendingApprovalData.username}</div>
+            <div style={{ marginBottom: '4px' }}>• <strong>Mobile Number:</strong> {formData.phone}</div>
+            <div>• <strong>Status:</strong> <span style={{ color: '#F59E0B', fontWeight: 800 }}>Pending Super Admin Approval</span></div>
+          </div>
+
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+            <button
+              onClick={() => {
+                const msg = `Hello Super Admin, I registered my restaurant '${pendingApprovalData.restaurant?.name}' (Username: ${pendingApprovalData.username}). Please approve my account.`;
+                window.open(`https://wa.me/?text=${encodeURIComponent(msg)}`, '_blank');
+              }}
+              style={{
+                width: '100%', padding: '14px', borderRadius: '14px', border: 'none',
+                background: 'linear-gradient(135deg, #15803D, #22C55E)', color: '#FFFFFF',
+                fontWeight: 900, fontSize: '0.9rem', cursor: 'pointer', boxShadow: '0 4px 14px rgba(34,197,94,0.4)'
+              }}
+            >
+              💬 Request Quick WhatsApp Approval
+            </button>
+
+            <button
+              onClick={() => {
+                window.history.pushState({}, '', '/');
+                window.dispatchEvent(new PopStateEvent('popstate'));
+              }}
+              style={{
+                width: '100%', padding: '12px', borderRadius: '14px', border: '1px solid rgba(255,255,255,0.2)',
+                background: 'rgba(255,255,255,0.05)', color: '#9CA3AF', fontWeight: 700, fontSize: '0.85rem', cursor: 'pointer'
+              }}
+            >
+              ← Return to Home
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div style={{

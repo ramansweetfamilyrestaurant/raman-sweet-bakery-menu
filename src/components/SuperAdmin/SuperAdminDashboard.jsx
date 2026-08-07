@@ -321,18 +321,21 @@ export default function SuperAdminDashboard({ token, username, onLogout, onRetur
     return diffDays;
   };
 
-  const [statusFilter, setStatusFilter] = useState('all'); // 'all', 'active', 'suspended'
+  const [statusFilter, setStatusFilter] = useState('all'); // 'all', 'active', 'suspended', 'pending'
 
   // Filtered restaurants by search query and status
   const filteredRestaurants = restaurants.filter(r => {
-    if (statusFilter === 'active' && r.active === false) return false;
-    if (statusFilter === 'suspended' && r.active !== false) return false;
+    const isPendingOrSuspended = (r.active === false || r.active === 0 || r.active === '0');
+    if (statusFilter === 'active' && isPendingOrSuspended) return false;
+    if (statusFilter === 'suspended' && !isPendingOrSuspended) return false;
+    if (statusFilter === 'pending' && !isPendingOrSuspended) return false;
     if (!searchQuery.trim()) return true;
     const q = searchQuery.toLowerCase();
     return r.name.toLowerCase().includes(q) || r.slug.toLowerCase().includes(q) || (r.owner_username && r.owner_username.toLowerCase().includes(q)) || (r.phone && r.phone.includes(q));
   });
 
-  const totalActive = restaurants.filter(r => r.active !== false).length;
+  const totalPending = restaurants.filter(r => r.active === false || r.active === 0 || r.active === '0').length;
+  const totalActive = restaurants.filter(r => r.active !== false && r.active !== 0 && r.active !== '0').length;
   const totalDishes = restaurants.reduce((acc, r) => acc + (r.dish_count || 0), 0);
   const totalScans = restaurants.reduce((acc, r) => acc + (r.scan_count || 0), 0);
   const estimatedRevenue = restaurants.filter(r => r.active !== false).reduce((acc, r) => acc + (parseFloat(r.plan_price) || 999), 0);
@@ -654,6 +657,46 @@ export default function SuperAdminDashboard({ token, username, onLogout, onRetur
           </div>
         </div>
 
+        {/* Pending Approvals Alert Banner */}
+        {totalPending > 0 && (
+          <div style={{
+            background: 'linear-gradient(135deg, #FEF3C7 0%, #FDE68A 100%)',
+            border: '2px solid #F59E0B',
+            borderRadius: '20px',
+            padding: '16px 20px',
+            marginBottom: '24px',
+            display: 'flex',
+            alignItems: 'center',
+            justify: 'space-between',
+            flexWrap: 'wrap',
+            gap: '12px',
+            boxShadow: '0 4px 16px rgba(245,158,11,0.2)'
+          }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+              <div style={{ fontSize: '28px' }}>🔔</div>
+              <div>
+                <h3 style={{ fontSize: '1rem', fontWeight: 900, color: '#B45309', margin: 0 }}>
+                  {totalPending} New Registration{totalPending > 1 ? 's' : ''} Pending Super Admin Approval!
+                </h3>
+                <p style={{ fontSize: '0.78rem', color: '#78350F', margin: '2px 0 0 0', fontWeight: 600 }}>
+                  New restaurant owners signed up and are waiting for your permission to start their trial.
+                </p>
+              </div>
+            </div>
+
+            <button
+              onClick={() => setStatusFilter('pending')}
+              style={{
+                background: '#B45309', color: '#FFFFFF', padding: '10px 18px', borderRadius: '12px',
+                border: 'none', fontWeight: 900, fontSize: '0.82rem', cursor: 'pointer',
+                boxShadow: '0 4px 12px rgba(180,83,9,0.3)'
+              }}
+            >
+              👀 View & Approve Pending Registrations ({totalPending}) ➔
+            </button>
+          </div>
+        )}
+
         {/* Directory Controls Bar */}
         <div style={{
           background: '#FFFFFF',
@@ -710,6 +753,18 @@ export default function SuperAdminDashboard({ token, username, onLogout, onRetur
               >
                 🔴 Suspended ({restaurants.length - totalActive})
               </button>
+              {totalPending > 0 && (
+                <button
+                  onClick={() => setStatusFilter('pending')}
+                  style={{
+                    padding: '4px 10px', borderRadius: 'var(--radius-pill)', fontSize: '0.72rem', fontWeight: 800, border: 'none', cursor: 'pointer',
+                    background: statusFilter === 'pending' ? '#D97706' : '#FEF3C7',
+                    color: statusFilter === 'pending' ? '#FFFFFF' : '#B45309'
+                  }}
+                >
+                  ⏳ Pending ({totalPending})
+                </button>
+              )}
             </div>
 
             {/* Search Input */}
@@ -1006,6 +1061,31 @@ export default function SuperAdminDashboard({ token, username, onLogout, onRetur
 
                   {/* Actions Footer */}
                   <div style={{ display: 'flex', gap: '6px', borderTop: '1px solid var(--border-light)', paddingTop: '14px', flexWrap: 'wrap' }}>
+                    {(r.active === false || r.active === 0 || r.active === '0') ? (
+                      <button
+                        onClick={() => handleToggleActive(r.id, false)}
+                        style={{
+                          width: '100%',
+                          background: 'linear-gradient(135deg, #15803D 0%, #22C55E 100%)',
+                          color: '#FFFFFF',
+                          padding: '10px 14px',
+                          borderRadius: 'var(--radius-pill)',
+                          fontSize: '0.84rem',
+                          fontWeight: 900,
+                          border: 'none',
+                          cursor: 'pointer',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          gap: '6px',
+                          boxShadow: '0 4px 14px rgba(34,197,94,0.4)',
+                          marginBottom: '6px'
+                        }}
+                      >
+                        <CheckCircle size={16} /> ✅ Approve & Activate 14-Day Trial
+                      </button>
+                    ) : null}
+
                     <button
                       onClick={() => handleImpersonate(r.id, r.name)}
                       style={{

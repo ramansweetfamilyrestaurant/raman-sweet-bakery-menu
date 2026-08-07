@@ -435,6 +435,14 @@ router.post('/register', async (req, res) => {
     const selectedPlan = plan_tier || 'pro';
     const planPrice = selectedPlan === 'basic' ? 499 : selectedPlan === 'enterprise' ? 1999 : 999;
 
+    // Check if Super Admin approval is required for new signups
+    const approvalSetting = await query("SELECT value FROM system_settings WHERE key = 'require_registration_approval'");
+    const requireApproval = (approvalSetting && approvalSetting.length > 0)
+      ? (approvalSetting[0].value === '1' || approvalSetting[0].value === 'true')
+      : true; // Default: Super Admin Approval Required!
+
+    const isActive = !requireApproval;
+
     // 3. Create Restaurant Record
     const restoRes = await query(`
       INSERT INTO restaurants (
@@ -453,7 +461,7 @@ router.post('/register', async (req, res) => {
       expiryDate,
       phone || '',
       'gold',
-      true,
+      isActive ? 1 : 0,
       12
     ]);
 
@@ -520,6 +528,7 @@ router.post('/register', async (req, res) => {
 
     res.json({
       success: true,
+      pending_approval: !isActive,
       token,
       slug: cleanSlug,
       restaurant: {
@@ -527,9 +536,12 @@ router.post('/register', async (req, res) => {
         name: name.trim(),
         slug: cleanSlug,
         plan_tier: selectedPlan,
-        plan_expires_at: expiryDate
+        plan_expires_at: expiryDate,
+        active: isActive
       },
-      message: '🎉 Congratulations! Your 14-Day Free Trial has been activated successfully.'
+      message: !isActive
+        ? `⏳ Registration Submitted! Your restaurant '${name.trim()}' is pending Super Admin verification and approval.`
+        : '🎉 Congratulations! Your 14-Day Free Trial has been activated successfully.'
     });
   } catch (err) {
     console.error('Self-service registration error:', err);
