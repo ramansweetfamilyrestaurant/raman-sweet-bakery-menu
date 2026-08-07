@@ -435,11 +435,11 @@ router.post('/register', async (req, res) => {
     const selectedPlan = plan_tier || 'pro';
     const planPrice = selectedPlan === 'basic' ? 499 : selectedPlan === 'enterprise' ? 1999 : 999;
 
-    // Check if Super Admin approval is required for new signups
+    // Check if Super Admin approval is required for new signups (Default: false = 100% Fully Automated Instant Trial!)
     const approvalSetting = await query("SELECT value FROM system_settings WHERE key = 'require_registration_approval'");
     const requireApproval = (approvalSetting && approvalSetting.length > 0)
       ? (approvalSetting[0].value === '1' || approvalSetting[0].value === 'true')
-      : true; // Default: Super Admin Approval Required!
+      : false; // Default: 100% Fully Automated Instant Activation!
 
     const isActive = !requireApproval;
 

@@ -407,6 +407,18 @@ export default function RegisterPage({ onRegisterSuccess }) {
               <span style={{ fontSize: '0.75rem', fontWeight: 900, color: '#34D399' }}>₹0 Today</span>
             </div>
 
+            {/* Automated Permission & Terms Agreement */}
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', marginTop: '6px', fontSize: '0.74rem', color: '#9CA3AF' }}>
+              <label style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer' }}>
+                <input type="checkbox" defaultChecked required style={{ accentColor: '#DFBA67', width: '15px', height: '15px' }} />
+                <span>Allow 1-Click WhatsApp & Order Notification Permissions</span>
+              </label>
+              <label style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer' }}>
+                <input type="checkbox" defaultChecked required style={{ accentColor: '#DFBA67', width: '15px', height: '15px' }} />
+                <span>I agree to KhanaMaster SaaS Terms & 14-Day Free Trial</span>
+              </label>
+            </div>
+
             {/* Submit Button */}
             <button
               type="submit"
