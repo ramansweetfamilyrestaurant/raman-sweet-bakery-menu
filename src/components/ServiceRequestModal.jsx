@@ -27,7 +27,7 @@ export default function ServiceRequestModal({ tableNum, slug, onClose, onSuccess
       });
 
       if (onSuccess) {
-        onSuccess(res?.message || `🛎️ Staff notified for Table #${tableNum || '1'}!`);
+        onSuccess(res?.message || `🛎️ Staff notified for Table ${tableNum || '1'}!`);
       }
       onClose();
     } catch (err) {
@@ -66,7 +66,7 @@ export default function ServiceRequestModal({ tableNum, slug, onClose, onSuccess
             </div>
             <div>
               <strong style={{ fontSize: '1.05rem', color: '#0A2315', display: 'block' }}>Call Table Staff / Waiter</strong>
-              <span style={{ fontSize: '0.74rem', color: '#059669', fontWeight: 800 }}>Table #{tableNum || '1'}</span>
+              <span style={{ fontSize: '0.74rem', color: '#059669', fontWeight: 800 }}>Table {tableNum || '1'}</span>
             </div>
           </div>
           <button onClick={onClose} style={{ background: '#F1F5F9', border: 'none', width: '32px', height: '32px', borderRadius: '50%', cursor: 'pointer', fontWeight: 900 }}>✕</button>

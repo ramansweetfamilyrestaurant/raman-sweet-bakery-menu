@@ -1015,7 +1015,7 @@ export default function App() {
             <span style={{ fontSize: '1.2rem' }}>🛎️</span>
             <div>
               <strong style={{ fontSize: '0.86rem', color: 'var(--gold-bright)', display: 'block' }}>
-                Order #{activeOrderTrack.id} • Table #{activeOrderTrack.table_number || '1'}
+                Order #{activeOrderTrack.id} • Table {activeOrderTrack.table_number || '1'}
               </strong>
               <span style={{ fontSize: '0.76rem', color: '#E5E7EB', fontWeight: 700 }}>
                 Status: {
@@ -1745,7 +1745,7 @@ export default function App() {
 
             <div style={{ background: 'rgba(255,255,255,0.08)', borderRadius: '16px', padding: '16px', margin: '16px 0', border: '1px solid rgba(255,255,255,0.15)' }}>
               <p style={{ fontSize: '1.1rem', fontWeight: 900, color: '#34D399', margin: '0 0 4px 0' }}>
-                Order #{orderSuccessModal.order_id} • Table #{orderSuccessModal.table_number}
+                Order #{orderSuccessModal.order_id} • Table {orderSuccessModal.table_number}
               </p>
               <p style={{ fontSize: '0.82rem', color: '#D1D5DB', margin: 0 }}>
                 Status: <strong style={{ color: '#FBBF24' }}>Pending Kitchen Acceptance 🟡</strong>

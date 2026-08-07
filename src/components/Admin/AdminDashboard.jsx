@@ -467,7 +467,7 @@ export default function AdminDashboard({ token, username, onLogout, onReturnToMe
     const newCount = currentCount + 1;
     const updatedForm = { ...settingsForm, total_tables: newCount };
     setSettingsForm(updatedForm);
-    setToastMessage(`Table #${newCount} added successfully! Saving...`);
+    setToastMessage(`Table ${newCount} added successfully! Saving...`);
 
     try {
       await fetch('/api/admin/settings', {
@@ -490,12 +490,12 @@ export default function AdminDashboard({ token, username, onLogout, onReturnToMe
       alert('Restaurant must have at least 1 table!');
       return;
     }
-    if (!window.confirm(`Are you sure you want to delete Table #${tableNumToDelete}?`)) return;
+    if (!window.confirm(`Are you sure you want to delete Table ${tableNumToDelete}?`)) return;
 
     const newCount = currentCount - 1;
     const updatedForm = { ...settingsForm, total_tables: newCount };
     setSettingsForm(updatedForm);
-    setToastMessage(`Table #${tableNumToDelete} deleted! Saving...`);
+    setToastMessage(`Table ${tableNumToDelete} deleted! Saving...`);
 
     try {
       await fetch('/api/admin/settings', {
@@ -635,7 +635,7 @@ export default function AdminDashboard({ token, username, onLogout, onReturnToMe
     if (num > currentCount) {
       const updatedForm = { ...settingsForm, total_tables: num };
       setSettingsForm(updatedForm);
-      setToastMessage(`✨ Table #${num} automatically created!`);
+      setToastMessage(`✨ Table ${num} automatically created!`);
 
       try {
         await fetch('/api/admin/settings', {
@@ -2722,7 +2722,7 @@ export default function AdminDashboard({ token, username, onLogout, onReturnToMe
                     boxShadow: '0 4px 14px rgba(255,215,0,0.35)'
                   }}
                 >
-                  <Plus size={16} /> + Add New Table (Table #{totalTablesCount + 1})
+                  <Plus size={16} /> + Add New Table (Table ${totalTablesCount + 1})
                 </button>
 
                 <button
@@ -2784,14 +2784,14 @@ export default function AdminDashboard({ token, username, onLogout, onReturnToMe
                         fontWeight: 900,
                         border: '1px solid #C5A059'
                       }}>
-                        Table #{tNum}
+                        Table {tNum}
                       </span>
 
                       <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
                         {/* Delete Button */}
                         <button
                           onClick={() => handleDeleteTable(tNum)}
-                          title={`Delete Table #${tNum}`}
+                          title={`Delete Table ${tNum}`}
                           style={{
                             background: '#FEE2E2',
                             color: '#DC2626',
