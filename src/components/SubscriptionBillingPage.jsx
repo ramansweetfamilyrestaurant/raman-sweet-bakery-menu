@@ -77,41 +77,12 @@ export default function SubscriptionBillingPage({ restoInfo, token, onProceedToD
         return;
       }
 
-      // Launch Cashfree Web JS SDK Modal Checkout
-      if (res.subscription_session_id) {
-        if (!window.Cashfree) {
-          await new Promise((resolve, reject) => {
-            const script = document.createElement('script');
-            script.src = 'https://sdk.cashfree.com/js/v3/cashfree.js';
-            script.onload = resolve;
-            script.onerror = () => reject(new Error('Failed to load Cashfree JS SDK'));
-            document.body.appendChild(script);
-          });
-        }
-
-        if (window.Cashfree) {
-          const cashfree = window.Cashfree({ mode: res.is_sandbox ? 'sandbox' : 'production' });
-          cashfree.checkout({
-            paymentSessionId: res.subscription_session_id,
-            redirectTarget: '_modal'
-          });
-
-          setStatusMsg('🚀 Cashfree Sandbox Mandate Checkout launched! Complete authorization in popup.');
-          setAuthorizing(false);
-
-          // Poll server verification after authorization
-          setTimeout(() => {
-            handleVerifySubscription(res.subscription_id);
-          }, 4000);
-          return;
-        }
-      }
-
+      // Redirect to Cashfree Mandate Authorization Page
       if (res.auth_link) {
-        setStatusMsg('🔗 Redirecting to Cashfree Mandate Authorization page...');
+        setStatusMsg('🔗 Opening Cashfree Mandate Authorization page...');
         setTimeout(() => {
           window.location.href = res.auth_link;
-        }, 1000);
+        }, 600);
         return;
       }
 
