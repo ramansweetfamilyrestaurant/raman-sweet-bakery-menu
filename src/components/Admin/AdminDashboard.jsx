@@ -35,6 +35,30 @@ export default function AdminDashboard({ token, username, onLogout, onReturnToMe
   const [combos, setCombos] = useState([]);
   const [comboModalData, setComboModalData] = useState(null);
   const [permissionsGranted, setPermissionsGranted] = useState(false);
+  const [masterSupportPhone, setMasterSupportPhone] = useState('919876543210');
+
+  useEffect(() => {
+    fetch('/api/settings')
+      .then(res => res.json())
+      .then(data => {
+        if (data && data.support_whatsapp) {
+          setMasterSupportPhone(data.support_whatsapp);
+        }
+      })
+      .catch(() => {});
+  }, []);
+
+  const getDaysRemaining = (expiryStr) => {
+    if (!expiryStr) return null;
+    const expiry = new Date(expiryStr);
+    const now = new Date();
+    const diffTime = expiry - now;
+    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+    return diffDays;
+  };
+
+  const daysLeft = getDaysRemaining(restaurantInfo?.plan_expires_at);
+  const isExpired = (daysLeft !== null && daysLeft <= 0) || (restaurantInfo?.active === false || restaurantInfo?.active === 0);
 
   useEffect(() => {
     // 🔔 1. Auto-Prompt Browser Push Notification Permission
@@ -1244,6 +1268,114 @@ export default function AdminDashboard({ token, username, onLogout, onReturnToMe
           >
             <X size={14} />
           </button>
+        </div>
+      )}
+
+      {/* ⏳ Trial Expiry Warning Banner (3 Days Remaining) */}
+      {daysLeft !== null && daysLeft <= 3 && daysLeft > 0 && (
+        <div style={{
+          background: 'linear-gradient(135deg, #FEF3C7 0%, #FDE68A 100%)',
+          borderBottom: '2px solid #F59E0B',
+          padding: '10px 16px',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          flexWrap: 'wrap',
+          gap: '10px',
+          color: '#78350F'
+        }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+            <span style={{ fontSize: '20px' }}>⏳</span>
+            <span style={{ fontSize: '0.82rem', fontWeight: 700 }}>
+              Your 14-Day Free Pro Trial expires in <strong style={{ color: '#B45309', fontSize: '0.88rem' }}>{daysLeft} day{daysLeft > 1 ? 's' : ''}</strong>! Renew now to prevent menu interruption.
+            </span>
+          </div>
+          <a
+            href={`https://wa.me/${(masterSupportPhone || '919876543210').replace(/[^0-9]/g, '')}?text=${encodeURIComponent(`Hello Super Admin, I want to renew/upgrade my restaurant subscription plan for '${restaurantInfo?.name || 'my restaurant'}'.`)}`}
+            target="_blank"
+            rel="noopener noreferrer"
+            style={{
+              background: '#B45309', color: '#FFFFFF', padding: '6px 14px', borderRadius: '10px',
+              textDecoration: 'none', fontWeight: 900, fontSize: '0.78rem', boxShadow: '0 2px 8px rgba(180,83,9,0.3)', whiteSpace: 'nowrap'
+            }}
+          >
+            💬 Renew Subscription on WhatsApp
+          </a>
+        </div>
+      )}
+
+      {/* 🔒 SUBSCRIPTION EXPIRED / TRIAL LOCKED OVERLAY */}
+      {isExpired && (
+        <div style={{
+          position: 'fixed', inset: 0, zIndex: 10000,
+          background: 'rgba(10, 15, 25, 0.96)', backdropFilter: 'blur(12px)',
+          display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '20px'
+        }}>
+          <div style={{
+            background: '#111827', border: '2px solid #DFBA67', borderRadius: '24px',
+            padding: '36px 24px', maxWidth: '500px', width: '100%', textAlign: 'center', color: '#FFFFFF',
+            boxShadow: '0 25px 60px rgba(0,0,0,0.8)'
+          }}>
+            <div style={{ fontSize: '3.5rem', marginBottom: '14px' }}>🔒</div>
+            <h2 style={{ fontSize: '1.4rem', fontWeight: 900, color: '#DFBA67', margin: '0 0 8px 0' }}>
+              Subscription Plan Expired!
+            </h2>
+            <p style={{ color: '#9CA3AF', fontSize: '0.88rem', lineHeight: 1.5, margin: '0 0 24px 0' }}>
+              The 14-day free trial or subscription plan for <strong>'{restaurantInfo?.name || 'your restaurant'}'</strong> has ended.
+              Renew your plan to reactivate your Digital Menu & QR Orders.
+            </p>
+
+            {/* Plan Upgrade Options */}
+            <div style={{
+              background: 'rgba(223,186,103,0.08)', border: '1px solid rgba(223,186,103,0.25)',
+              borderRadius: '16px', padding: '16px', marginBottom: '24px', textAlign: 'left'
+            }}>
+              <div style={{ color: '#DFBA67', fontWeight: 800, fontSize: '0.85rem', marginBottom: '10px' }}>
+                💳 Select Renewal Plan & Contact Super Admin:
+              </div>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', fontSize: '0.82rem' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', borderBottom: '1px solid rgba(255,255,255,0.08)', paddingBottom: '6px' }}>
+                  <span>⚡ <strong>Basic Plan:</strong> Digital Menu & QR</span>
+                  <strong style={{ color: '#DFBA67' }}>₹499/mo</strong>
+                </div>
+                <div style={{ display: 'flex', justifyContent: 'space-between', borderBottom: '1px solid rgba(255,255,255,0.08)', paddingBottom: '6px' }}>
+                  <span>👑 <strong>Pro Plan:</strong> WhatsApp + Reviews</span>
+                  <strong style={{ color: '#DFBA67' }}>₹999/mo</strong>
+                </div>
+                <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                  <span>🚀 <strong>Enterprise Plan:</strong> KOT + Table Orders</span>
+                  <strong style={{ color: '#DFBA67' }}>₹1,999/mo</strong>
+                </div>
+              </div>
+            </div>
+
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+              <a
+                href={`https://wa.me/${(masterSupportPhone || '919876543210').replace(/[^0-9]/g, '')}?text=${encodeURIComponent(`Hello Super Admin, my restaurant subscription for '${restaurantInfo?.name || username}' has expired. Please renew my plan.`)}`}
+                target="_blank"
+                rel="noopener noreferrer"
+                style={{
+                  width: '100%', padding: '14px', borderRadius: '14px', border: 'none',
+                  background: 'linear-gradient(135deg, #15803D, #22C55E)', color: '#FFFFFF',
+                  fontWeight: 900, fontSize: '0.92rem', textDecoration: 'none',
+                  display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: '8px',
+                  boxShadow: '0 4px 16px rgba(34,197,94,0.4)'
+                }}
+              >
+                💬 1-Click WhatsApp Renewal & Super Admin Support
+              </a>
+
+              <button
+                onClick={onLogout}
+                style={{
+                  width: '100%', padding: '12px', borderRadius: '14px', border: '1px solid rgba(255,255,255,0.2)',
+                  background: 'rgba(255,255,255,0.05)', color: '#9CA3AF', fontWeight: 700, fontSize: '0.84rem', cursor: 'pointer'
+                }}
+              >
+                ← Exit / Logout
+              </button>
+            </div>
+          </div>
         </div>
       )}
 
