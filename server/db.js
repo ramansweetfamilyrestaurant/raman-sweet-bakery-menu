@@ -285,6 +285,7 @@ async function createTables() {
       `ALTER TABLE payments ADD COLUMN IF NOT EXISTS gateway_payment_id VARCHAR(255);`,
       `ALTER TABLE payments ADD COLUMN IF NOT EXISTS payment_type VARCHAR(50);`,
       `ALTER TABLE payments ADD COLUMN IF NOT EXISTS paid_at TIMESTAMP;`,
+      `ALTER TABLE payments ALTER COLUMN order_id DROP NOT NULL;`,
       `CREATE INDEX IF NOT EXISTS idx_restaurants_active_expires ON restaurants(active, plan_expires_at);`,
       `CREATE INDEX IF NOT EXISTS idx_subscriptions_restaurant ON subscriptions(restaurant_id);`,
       `CREATE INDEX IF NOT EXISTS idx_subscriptions_status ON subscriptions(status);`,
