@@ -50,6 +50,15 @@ export default function SubscriptionBillingPage({ restoInfo, token, onProceedToD
     }
   };
 
+  // Check return URL or pending subscription on load
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const subIdParam = params.get('subscription_id') || params.get('sub_id') || localStorage.getItem('pending_subscription_id');
+    if (subIdParam) {
+      handleVerifySubscription(subIdParam);
+    }
+  }, []);
+
   // Initiate Cashfree Subscription Mandate Checkout
   const handleStartFreeTrialMandate = async () => {
     setAuthorizing(true);
@@ -77,7 +86,43 @@ export default function SubscriptionBillingPage({ restoInfo, token, onProceedToD
         return;
       }
 
-      // Redirect to Cashfree Mandate Authorization Page
+      // 1. Preserve subscription_id in localStorage for post-return verification
+      if (res.subscription_id) {
+        localStorage.setItem('pending_subscription_id', res.subscription_id);
+      }
+
+      // 2. Ensure Cashfree SDK v3 is loaded
+      if (!window.Cashfree) {
+        try {
+          await new Promise((resolve, reject) => {
+            const script = document.createElement('script');
+            script.src = 'https://sdk.cashfree.com/js/v3/cashfree.js';
+            script.onload = resolve;
+            script.onerror = () => reject(new Error('Failed to load Cashfree JS SDK'));
+            document.body.appendChild(script);
+          });
+        } catch (sdkLoadErr) {
+          console.warn('Cashfree JS SDK script load warning:', sdkLoadErr.message);
+        }
+      }
+
+      // 3. Primary Checkout: Official Cashfree Subscriptions SDK Checkout
+      if (res.subscription_session_id && window.Cashfree) {
+        try {
+          const cashfree = window.Cashfree({ mode: res.is_sandbox ? 'sandbox' : 'production' });
+          setStatusMsg('🚀 Opening Cashfree Subscription Mandate Checkout...');
+          cashfree.subscriptionsCheckout({
+            subsSessionId: res.subscription_session_id,
+            redirectTarget: '_self'
+          });
+          setAuthorizing(false);
+          return;
+        } catch (sdkErr) {
+          console.warn('subscriptionsCheckout SDK error, falling back to auth_link:', sdkErr.message);
+        }
+      }
+
+      // 4. Fallback Checkout: Official auth_link URL from backend
       if (res.auth_link) {
         setStatusMsg('🔗 Opening Cashfree Mandate Authorization page...');
         setTimeout(() => {
@@ -86,7 +131,8 @@ export default function SubscriptionBillingPage({ restoInfo, token, onProceedToD
         return;
       }
 
-      setStatusMsg(`📌 Cashfree Subscription initialized (ID: ${res.subscription_id}). Verification pending.`);
+      // 5. Checkout Load Failure
+      setErrorMsg('Payment checkout could not be loaded. Please try again.');
       setAuthorizing(false);
     } catch (err) {
       console.error('Cashfree setup error:', err);
