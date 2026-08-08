@@ -25,51 +25,61 @@ export function verifyCustomerLocation(targetLat, targetLng, maxRadiusMeters = 1
       });
     }
 
-    navigator.geolocation.getCurrentPosition(
-      (position) => {
-        const userLat = position.coords.latitude;
-        const userLng = position.coords.longitude;
-        
-        // If target restaurant coordinates are not configured, default to allowed
-        if (!targetLat || !targetLng) {
-          return resolve({ allowed: true, distanceMeters: 0 });
-        }
+    // If target restaurant coordinates are not configured or invalid, default to allowed
+    if (!targetLat || !targetLng || isNaN(targetLat) || isNaN(targetLng)) {
+      return resolve({ allowed: true, distanceMeters: 0 });
+    }
 
-        const distanceMeters = getDistanceMeters(userLat, userLng, Number(targetLat), Number(targetLng));
+    const checkLocation = (enableHighAccuracy, timeout, maximumAge, isRetry = false) => {
+      navigator.geolocation.getCurrentPosition(
+        (position) => {
+          const userLat = position.coords.latitude;
+          const userLng = position.coords.longitude;
+          const distanceMeters = getDistanceMeters(userLat, userLng, Number(targetLat), Number(targetLng));
 
-        if (distanceMeters <= maxRadiusMeters) {
-          resolve({ allowed: true, distanceMeters });
-        } else {
+          if (distanceMeters <= maxRadiusMeters) {
+            resolve({ allowed: true, distanceMeters });
+          } else {
+            resolve({
+              allowed: false,
+              reason: 'outside_radius',
+              distanceMeters,
+              message: `Aap restaurant se ${distanceMeters > 1000 ? (distanceMeters/1000).toFixed(1) + ' km' : distanceMeters + ' meters'} door hain. Table order sirf restaurant ke andar se ho sakta hai.`
+            });
+          }
+        },
+        (error) => {
+          // If first high-accuracy attempt timed out or failed, retry with fast Cellular/Wi-Fi location fallback!
+          if (!isRetry && (error.code === error.TIMEOUT || error.code === error.POSITION_UNAVAILABLE)) {
+            console.log('📍 Indoor GPS timeout: Retrying with cellular/Wi-Fi location fallback...');
+            return checkLocation(false, 10000, 60000, true);
+          }
+
+          let errorMsg = 'Please turn ON GPS Location on your device to place a table order.';
+          if (error.code === error.PERMISSION_DENIED) {
+            errorMsg = 'Location permission is denied. Please allow location access in your browser address bar to place a table order.';
+          } else if (error.code === error.POSITION_UNAVAILABLE) {
+            errorMsg = 'Unable to determine your GPS location. Please check if your phone GPS is turned ON.';
+          } else if (error.code === error.TIMEOUT) {
+            errorMsg = 'GPS location request timed out. Please tap Order again.';
+          }
+
           resolve({
             allowed: false,
-            reason: 'outside_radius',
-            distanceMeters,
-            message: `Aap restaurant se ${distanceMeters > 1000 ? (distanceMeters/1000).toFixed(1) + ' km' : distanceMeters + ' meters'} door hain. Table order sirf restaurant ke andar se ho sakta hai.`
+            reason: 'location_error',
+            code: error.code,
+            message: errorMsg
           });
+        },
+        {
+          enableHighAccuracy,
+          timeout,
+          maximumAge
         }
-      },
-      (error) => {
-        let errorMsg = 'Please turn ON GPS Location on your device to place a table order.';
-        if (error.code === error.PERMISSION_DENIED) {
-          errorMsg = 'Location permission is denied. Please allow location access in your browser settings to place a table order.';
-        } else if (error.code === error.POSITION_UNAVAILABLE) {
-          errorMsg = 'Unable to determine your GPS location. Please check if your phone GPS is turned ON.';
-        } else if (error.code === error.TIMEOUT) {
-          errorMsg = 'GPS location request timed out. Please try again.';
-        }
+      );
+    };
 
-        resolve({
-          allowed: false,
-          reason: 'location_error',
-          code: error.code,
-          message: errorMsg
-        });
-      },
-      {
-        enableHighAccuracy: true,
-        timeout: 10000,
-        maximumAge: 0
-      }
-    );
+    // Start with 4-second high accuracy check
+    checkLocation(true, 4000, 10000, false);
   });
 }
