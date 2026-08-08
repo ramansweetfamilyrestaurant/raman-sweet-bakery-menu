@@ -2309,14 +2309,24 @@ export default function SuperAdminDashboard({ token, username, onLogout, onRetur
                           ⚡ EDIT BASE RATE & FEATURES MATRIX:
                         </div>
 
-                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px', marginBottom: '8px' }}>
+                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '8px', marginBottom: '8px' }}>
                           <div>
-                            <label style={{ fontSize: '0.7rem', fontWeight: 700 }}>Monthly Rate (₹)</label>
+                            <label style={{ fontSize: '0.7rem', fontWeight: 700 }}>Actual Price (₹)</label>
                             <input
                               type="number"
                               value={editingPlan.price}
                               onChange={(e) => setEditingPlan({ ...editingPlan, price: e.target.value })}
                               style={{ width: '100%', padding: '6px 8px', borderRadius: '6px', border: '1px solid #CBD5E1', fontSize: '0.8rem', fontWeight: 800 }}
+                            />
+                          </div>
+                          <div>
+                            <label style={{ fontSize: '0.7rem', fontWeight: 700 }}>Cut MRP Price (₹)</label>
+                            <input
+                              type="number"
+                              placeholder="e.g. 1999"
+                              value={editingPlan.original_price || ''}
+                              onChange={(e) => setEditingPlan({ ...editingPlan, original_price: e.target.value })}
+                              style={{ width: '100%', padding: '6px 8px', borderRadius: '6px', border: '1px solid #CBD5E1', fontSize: '0.8rem', fontWeight: 800, color: '#DC2626' }}
                             />
                           </div>
                           <div>

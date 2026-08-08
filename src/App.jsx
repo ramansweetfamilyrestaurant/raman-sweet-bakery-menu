@@ -1133,24 +1133,31 @@ export default function App() {
             display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))',
             gap: '22px', maxWidth: '980px', margin: '0 auto'
           }}>
-            {(publicPlans.length > 0 ? publicPlans.map(p => ({
-              name: p.name,
-              price: `₹${p.price}`,
-              originalPrice: p.original_price ? `₹${p.original_price}` : `₹${p.price * 2 - 1}`,
-              period: '/month',
-              badge: p.badge || '👑 PLAN',
-              features: [
-                'Digital QR Menu & Themes',
-                ...(p.whatsapp_enabled ? ['WhatsApp Direct Ordering'] : []),
-                ...(p.google_reviews_enabled ? ['⭐ Smart AI Google Reviews'] : []),
-                ...(p.direct_ordering_enabled ? ['⚡ Direct Table QR KOT Ordering', '📋 Live Kitchen Siren System', '🖨️ Thermal Printer KOT & Bills', '🗺️ Hall Floor Map & Grid'] : []),
-                `Up to ${p.max_combos > 100 ? 'Unlimited' : p.max_combos} Combo Deals`
-              ],
-              popular: p.key === 'pro'
-            })) : [
-              { name: 'Basic Starter', price: '₹499', originalPrice: '₹999', period: '/month', badge: '⚡ BASIC', features: ['Digital QR Menu', 'Luxury Themes', 'Admin Dashboard', 'Unlimited Dishes & Categories', 'Up to 3 Combo Deals'], popular: false },
-              { name: 'Pro Luxury', price: '₹999', originalPrice: '₹1,999', period: '/month', badge: '👑 PRO', features: ['Everything in Basic', 'WhatsApp Direct Ordering', '⭐ Smart AI Google Reviews', 'Up to 10 Combo Deals', 'Priority 24/7 Phone Support'], popular: true },
-              { name: 'Enterprise VIP', price: '₹1,999', originalPrice: '₹3,999', period: '/month', badge: '🚀 ENTERPRISE', features: ['Everything in Pro', '⚡ Direct Table QR Ordering', '📋 Live KOT Kitchen System & Siren', '🖨️ Thermal Printer KOT & Bills', '🗺️ Hall Floor Map & Table Grid', 'Unlimited Combo Deals'], popular: false }
+            {(publicPlans.length > 0 ? publicPlans.map(p => {
+              const priceNum = Number(p.price) || 0;
+              const origNum = p.original_price ? Number(p.original_price) : (priceNum > 0 ? priceNum * 2 - 1 : 0);
+              const discountPct = (origNum > priceNum && origNum > 0) ? Math.round(((origNum - priceNum) / origNum) * 100) : 0;
+              return {
+                key: p.key,
+                name: p.name,
+                price: `₹${p.price}`,
+                originalPrice: origNum > priceNum ? `₹${origNum}` : null,
+                discountTag: discountPct > 0 ? `${discountPct}% OFF` : null,
+                period: '/month',
+                badge: p.badge || '👑 PLAN',
+                features: [
+                  'Digital QR Menu & Themes',
+                  ...(p.whatsapp_enabled ? ['WhatsApp Direct Ordering'] : []),
+                  ...(p.google_reviews_enabled ? ['⭐ Smart AI Google Reviews'] : []),
+                  ...(p.direct_ordering_enabled ? ['⚡ Direct Table QR KOT Ordering', '📋 Live Kitchen Siren System', '🖨️ Thermal Printer KOT & Bills', '🗺️ Hall Floor Map & Grid'] : []),
+                  `Up to ${p.max_combos > 100 ? 'Unlimited' : (p.max_combos || 10)} Combo Deals`
+                ],
+                popular: p.key === 'pro'
+              };
+            }) : [
+              { key: 'basic', name: 'Basic Starter Plan', price: '₹499', originalPrice: '₹999', discountTag: '50% OFF', period: '/month', badge: '⚡ BASIC', features: ['Digital QR Menu', 'Luxury Themes', 'Admin Dashboard', 'Unlimited Dishes & Categories', 'Up to 3 Combo Deals'], popular: false },
+              { key: 'pro', name: 'Pro Luxury Plan', price: '₹999', originalPrice: '₹1,999', discountTag: '50% OFF', period: '/month', badge: '👑 PRO', features: ['Everything in Basic', 'WhatsApp Direct Ordering', '⭐ Smart AI Google Reviews', 'Up to 10 Combo Deals', 'Priority 24/7 Phone Support'], popular: true },
+              { key: 'enterprise', name: 'Enterprise VIP Plan', price: '₹1,999', originalPrice: '₹3,999', discountTag: '50% OFF', period: '/month', badge: '🚀 ENTERPRISE', features: ['Everything in Pro', '⚡ Direct Table QR Ordering', '📋 Live KOT Kitchen System & Siren', '🖨️ Thermal Printer KOT & Bills', '🗺️ Hall Floor Map & Table Grid', 'Unlimited Combo Deals'], popular: false }
             ]).map((plan, i) => (
               <div key={i} style={{
                 background: plan.popular ? 'linear-gradient(135deg, rgba(223,186,103,0.15), rgba(223,186,103,0.04))' : 'rgba(255,255,255,0.03)',
@@ -1171,7 +1178,7 @@ export default function App() {
                   {plan.originalPrice && (
                     <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px', marginBottom: '2px' }}>
                       <span style={{ fontSize: '1.05rem', color: '#9CA3AF', textDecoration: 'line-through', fontWeight: 600 }}>{plan.originalPrice}</span>
-                      <span style={{ background: '#DC2626', color: '#FFFFFF', fontSize: '0.66rem', fontWeight: 900, padding: '2px 6px', borderRadius: '6px' }}>50% OFF</span>
+                      {plan.discountTag && <span style={{ background: '#DC2626', color: '#FFFFFF', fontSize: '0.66rem', fontWeight: 900, padding: '2px 6px', borderRadius: '6px' }}>{plan.discountTag}</span>}
                     </div>
                   )}
                   <span style={{ fontSize: '2.5rem', fontWeight: 900, color: '#DFBA67' }}>{plan.price}</span>

@@ -372,18 +372,19 @@ router.get('/plans', authenticateToken, requireSuperAdmin, async (req, res) => {
 // POST Create New Custom SaaS Plan
 router.post('/plans', authenticateToken, requireSuperAdmin, async (req, res) => {
   try {
-    const { key, name, price, badge, description, whatsapp_enabled, direct_ordering_enabled, google_reviews_enabled } = req.body;
+    const { key, name, price, original_price, badge, description, whatsapp_enabled, direct_ordering_enabled, google_reviews_enabled } = req.body;
     if (!name || !name.trim()) return res.status(400).json({ error: 'Plan name is required' });
 
     const cleanKey = (key || name.toLowerCase().replace(/[^a-z0-9]/g, '_')).trim();
 
     await query(`
-      INSERT INTO saas_plans (key, name, price, badge, description, whatsapp_enabled, direct_ordering_enabled, google_reviews_enabled)
-      VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+      INSERT INTO saas_plans (key, name, price, original_price, badge, description, whatsapp_enabled, direct_ordering_enabled, google_reviews_enabled)
+      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
     `, [
       cleanKey,
       name.trim(),
       price ? parseFloat(price) : 999,
+      original_price ? parseFloat(original_price) : (price ? parseFloat(price) * 2 - 1 : 1999),
       badge || '👑 CUSTOM',
       description || '',
       whatsapp_enabled ? 1 : 0,
@@ -403,16 +404,17 @@ router.post('/plans', authenticateToken, requireSuperAdmin, async (req, res) => 
 router.put('/plans/:key', authenticateToken, requireSuperAdmin, async (req, res) => {
   try {
     const { key } = req.params;
-    const { name, price, badge, description, whatsapp_enabled, direct_ordering_enabled, google_reviews_enabled } = req.body;
+    const { name, price, original_price, badge, description, whatsapp_enabled, direct_ordering_enabled, google_reviews_enabled } = req.body;
 
     await query(`
       UPDATE saas_plans
-      SET name = $1, price = $2, badge = $3, description = $4,
-          whatsapp_enabled = $5, direct_ordering_enabled = $6, google_reviews_enabled = $7
-      WHERE key = $8
+      SET name = $1, price = $2, original_price = $3, badge = $4, description = $5,
+          whatsapp_enabled = $6, direct_ordering_enabled = $7, google_reviews_enabled = $8
+      WHERE key = $9
     `, [
       name,
       price ? parseFloat(price) : 999,
+      original_price ? parseFloat(original_price) : null,
       badge || '👑 PRO',
       description || '',
       whatsapp_enabled ? 1 : 0,
