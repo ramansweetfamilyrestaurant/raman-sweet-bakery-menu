@@ -133,17 +133,17 @@ export default function RegisterPage({ onRegisterSuccess }) {
         return;
       }
 
-      // Store Auth Tokens in localStorage for instant automatic login
+      // Store Auth Tokens & Selected Plan in localStorage for instant billing onboarding
       localStorage.setItem('raman_admin_token', data.token);
       localStorage.setItem('raman_admin_user', data.username || formData.owner_username);
       localStorage.setItem('raman_admin_slug', data.slug);
       localStorage.setItem('adminToken', data.token);
+      localStorage.setItem('selected_plan_tier', formData.plan_tier || data.plan_tier || 'pro');
+      sessionStorage.setItem('selected_plan_tier', formData.plan_tier || data.plan_tier || 'pro');
 
       setRegisteredData(data);
       if (onRegisterSuccess) {
         onRegisterSuccess(data);
-      } else {
-        window.location.href = `/${data.slug}/admin`;
       }
     } catch (err) {
       console.error('Registration error:', err);

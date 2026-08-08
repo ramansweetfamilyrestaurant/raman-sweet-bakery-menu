@@ -23,6 +23,7 @@ const AdminDashboard = lazy(() => import('./components/Admin/AdminDashboard'));
 const SuperAdminLogin = lazy(() => import('./components/SuperAdmin/SuperAdminLogin'));
 const SuperAdminDashboard = lazy(() => import('./components/SuperAdmin/SuperAdminDashboard'));
 const RegisterPage = lazy(() => import('./components/RegisterPage'));
+const SubscriptionBillingPage = lazy(() => import('./components/SubscriptionBillingPage'));
 
 export default function App() {
   // Parse Table Number from URL query parameter ?table=5
@@ -58,6 +59,7 @@ export default function App() {
   const [adminToken, setAdminToken] = useState(getInitialToken());
   const [adminUsername, setAdminUsername] = useState(getInitialUser());
   const [adminSlug, setAdminSlug] = useState(getInitialSlug());
+  const [newlyRegisteredResto, setNewlyRegisteredResto] = useState(null);
   const [showLandingLoginModal, setShowLandingLoginModal] = useState(false);
   const [landingLoginMode, setLandingLoginMode] = useState('login'); // 'login' | 'forgot'
   const [loginSlugInput, setLoginSlugInput] = useState('');
@@ -1162,8 +1164,31 @@ export default function App() {
         </div>
       }>
         <RegisterPage onRegisterSuccess={(res) => {
-          handleAdminLoginSuccess(res.token, res.username || 'Admin', res.slug);
+          setAdminToken(res.token);
+          setAdminUsername(res.username || 'Admin');
+          setAdminSlug(res.slug);
+          setNewlyRegisteredResto(res);
+          setView('billing');
         }} />
+      </Suspense>
+    );
+  }
+
+  // Subscription Billing & Onboarding View
+  if (view === 'billing' || view === 'subscription') {
+    return (
+      <Suspense fallback={
+        <div style={{ minHeight: '100vh', background: '#0A2315', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#DFBA67', fontWeight: 800 }}>
+          💳 Loading Subscription & Billing Page...
+        </div>
+      }>
+        <SubscriptionBillingPage
+          restoInfo={newlyRegisteredResto}
+          token={adminToken}
+          onProceedToDashboard={() => {
+            handleAdminLoginSuccess(adminToken, adminUsername, adminSlug);
+          }}
+        />
       </Suspense>
     );
   }
