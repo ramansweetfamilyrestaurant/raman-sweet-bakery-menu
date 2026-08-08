@@ -279,6 +279,8 @@ async function createTables() {
       `ALTER TABLE restaurants ADD COLUMN IF NOT EXISTS trial_ends_at VARCHAR(100);`,
       `ALTER TABLE restaurants ADD COLUMN IF NOT EXISTS auto_debit_enabled INT DEFAULT 1;`,
       `ALTER TABLE restaurants ADD COLUMN IF NOT EXISTS trial_started_at VARCHAR(100);`,
+      `ALTER TABLE payments ADD COLUMN IF NOT EXISTS gateway VARCHAR(50) DEFAULT 'cashfree';`,
+      `ALTER TABLE payments ADD COLUMN IF NOT EXISTS gateway_payment_id VARCHAR(255);`,
       `CREATE INDEX IF NOT EXISTS idx_restaurants_active_expires ON restaurants(active, plan_expires_at);`,
       `CREATE INDEX IF NOT EXISTS idx_subscriptions_restaurant ON subscriptions(restaurant_id);`,
       `CREATE INDEX IF NOT EXISTS idx_subscriptions_status ON subscriptions(status);`,
