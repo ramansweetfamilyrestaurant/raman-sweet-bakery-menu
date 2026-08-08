@@ -175,15 +175,13 @@ router.get('/subscription-status', authenticateToken, async (req, res) => {
     const isAllowed = Boolean(isRuleA || isRuleB || isRuleC || isRuleD || isRuleE);
 
     // 2. BILLING REDIRECT CONDITIONS:
-    // Redirect ONLY when action is required:
-    // - mandate_status === "pending" for a newly registered account (has trial_started_at)
-    // - subscription.status === "expired"
-    // - subscription.status === "cancelled" and access period ended
-    const isNewSignupPendingMandate = Boolean(r.trial_started_at) && mandateStatus !== 'active';
+    // Redirect ONLY when access is not allowed or trial/subscription has expired:
+    // - subscription.status === "expired" (trial and grace period ended)
+    // - subscription.status === "cancelled" and trial ended
     const isExpired = subStatus === 'expired' && !isTrialActive && !isGracePeriodActive;
     const isCancelled = subStatus === 'cancelled' && !isTrialActive;
 
-    const billingRequired = !isAllowed || isNewSignupPendingMandate || isExpired || isCancelled;
+    const billingRequired = !isAllowed || isExpired || isCancelled;
 
     res.json({
       status: subStatus,
