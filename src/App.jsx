@@ -459,36 +459,39 @@ export default function App() {
   const [subscriptionLoading, setSubscriptionLoading] = useState(false);
 
   // Check restaurant mandate / subscription status server-side to gate Admin Dashboard access
-  const checkMandateGating = async (tokenToCheck, slugToCheck) => {
-    if (!tokenToCheck) return { is_allowed: false, billing_required: true };
-    try {
-      const res = await fetch('/api/admin/subscription-status', {
-        headers: { Authorization: `Bearer ${tokenToCheck}` }
-      });
-      if (res.ok) {
-        const data = await res.json();
-        return {
-          is_allowed: data.is_allowed !== undefined ? Boolean(data.is_allowed) : (data.active === true || data.status === 'active' || data.status === 'trialing'),
-          billing_required: data.billing_required !== undefined ? Boolean(data.billing_required) : false,
-          mandate_status: data.mandate_status,
-          status: data.status,
-          raw: data
-        };
+  const checkMandateGating = async (tokenToCheck, slugToCheck, retries = 2) => {
+    if (!tokenToCheck) return false;
+    for (let attempt = 0; attempt <= retries; attempt++) {
+      try {
+        const res = await fetch('/api/admin/subscription-status', {
+          headers: { Authorization: `Bearer ${tokenToCheck}` }
+        });
+        if (res.ok) {
+          const data = await res.json();
+          const isAllowed = data.is_allowed !== undefined ? Boolean(data.is_allowed) : (data.active === true || data.status === 'active' || data.status === 'trialing');
+          const billingReq = data.billing_required !== undefined ? Boolean(data.billing_required) : false;
+          return isAllowed && !billingReq;
+        }
+        if (res.status === 401 || res.status === 403) {
+          console.warn('Expired token detected in checkMandateGating. Clearing stored credentials.');
+          localStorage.removeItem('raman_admin_token');
+          localStorage.removeItem('raman_admin_user');
+          localStorage.removeItem('raman_admin_slug');
+          localStorage.removeItem('adminToken');
+          setAdminToken('');
+          setAdminUsername('');
+          setAdminSlug('');
+          return false;
+        }
+      } catch (e) {
+        console.warn(`Attempt ${attempt + 1} failed to verify mandate gating:`, e);
+        if (attempt < retries) {
+          await new Promise(r => setTimeout(r, 400));
+        }
       }
-      if (res.status === 401 || res.status === 403) {
-        console.warn('Expired token detected in checkMandateGating. Clearing stored credentials.');
-        localStorage.removeItem('raman_admin_token');
-        localStorage.removeItem('raman_admin_user');
-        localStorage.removeItem('raman_admin_slug');
-        localStorage.removeItem('adminToken');
-        setAdminToken('');
-        setAdminUsername('');
-        setAdminSlug('');
-      }
-    } catch (e) {
-      console.warn('Failed to verify mandate gating:', e);
     }
-    return { is_allowed: false, billing_required: true };
+    // Network retry exhausted: default to allowing access if token exists (don't force to billing on network lag)
+    return true;
   };
 
   // Handle URL route changes (/super-admin, /admin, /, /r/:slug, #super-admin, #admin)
@@ -532,8 +535,8 @@ export default function App() {
         if (adminToken) {
           setSubscriptionLoading(true);
           const currentSlug = localStorage.getItem('raman_admin_slug');
-          const subGate = await checkMandateGating(adminToken, currentSlug);
-          if (subGate.is_allowed && !subGate.billing_required) {
+          const mandateActive = await checkMandateGating(adminToken, currentSlug);
+          if (mandateActive) {
             window.history.replaceState({}, '', currentSlug ? `/${currentSlug}/admin` : '/admin');
             setView('admin-dashboard');
           } else {
@@ -557,8 +560,8 @@ export default function App() {
         const effectiveSlug = currentSlug || storedSlug;
 
         if (adminToken && effectiveSlug) {
-          const subGate = await checkMandateGating(adminToken, effectiveSlug);
-          if (subGate.is_allowed && !subGate.billing_required) {
+          const mandateActive = await checkMandateGating(adminToken, effectiveSlug);
+          if (mandateActive) {
             if (path === '/admin' || path === '/admin/') {
               window.history.replaceState({}, '', `/${effectiveSlug}/admin`);
             }
