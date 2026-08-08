@@ -1132,16 +1132,16 @@ export default function App() {
           {/* Action CTAs */}
           <div className="landing-cta-container" style={{
             display: 'flex', gap: '12px', flexWrap: 'wrap', justifyContent: 'center',
-            width: '100%', maxWidth: '580px', marginBottom: '40px'
+            width: '100%', maxWidth: '580px', marginBottom: '32px'
           }}>
             <button
               className="landing-cta-button"
               onClick={() => { window.history.pushState({}, '', '/register'); window.dispatchEvent(new PopStateEvent('popstate')); }}
               style={{
-                flex: '1 1 220px', padding: '16px 28px', borderRadius: '16px', border: 'none',
+                padding: '16px 28px', borderRadius: '16px', border: 'none',
                 background: 'linear-gradient(135deg, #DFBA67 0%, #C5A059 100%)', color: '#0A2315',
                 fontWeight: 900, fontSize: '1.05rem', cursor: 'pointer',
-                boxShadow: '0 10px 30px rgba(223,186,103,0.4)', textAlign: 'center'
+                boxShadow: '0 10px 30px rgba(223,186,103,0.4)'
               }}
             >🚀 Start {trialDays}-Day Free Trial</button>
 
@@ -1149,10 +1149,9 @@ export default function App() {
               className="landing-cta-button"
               onClick={() => window.open('/raman-sweet-bakery', '_blank')}
               style={{
-                flex: '1 1 170px', padding: '16px 22px', borderRadius: '16px',
+                padding: '16px 22px', borderRadius: '16px',
                 border: '2px solid rgba(223,186,103,0.5)', background: 'rgba(223,186,103,0.1)',
-                color: '#DFBA67', fontWeight: 800, fontSize: '0.96rem', cursor: 'pointer',
-                textAlign: 'center'
+                color: '#DFBA67', fontWeight: 800, fontSize: '0.96rem', cursor: 'pointer'
               }}
             >👁️ View Live Menu Demo</button>
 
@@ -1162,10 +1161,9 @@ export default function App() {
               rel="noopener noreferrer"
               className="landing-cta-button"
               style={{
-                flex: '1 1 160px', padding: '16px 20px', borderRadius: '16px',
+                padding: '16px 20px', borderRadius: '16px',
                 border: '2px solid #22C55E', background: 'rgba(34, 197, 94, 0.12)',
-                color: '#4ADE80', fontWeight: 800, fontSize: '0.94rem', textDecoration: 'none',
-                display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: '6px'
+                color: '#4ADE80', fontWeight: 800, fontSize: '0.94rem', textDecoration: 'none'
               }}
             >
               💬 WhatsApp Chat
