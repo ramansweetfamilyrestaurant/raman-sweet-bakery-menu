@@ -464,6 +464,7 @@ export default function App() {
         headers: { Authorization: `Bearer ${tokenToCheck}` }
       });
       if (res.ok) {
+        const data = await res.json();
         const isAuthorized = data.active === true || data.status === 'active' || data.status === 'trialing';
         return isAuthorized;
       }
