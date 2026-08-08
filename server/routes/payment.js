@@ -62,37 +62,6 @@ const handleCreateSubscription = async (req, res) => {
     const trialEndISO = subTrailRows[0]?.trial_end || new Date(Date.now() + 14 * 86400 * 1000).toISOString();
 
     // 2. Duplicate Subscription Protection (Race-condition safe check)
-    const existingSubRows = await query(`
-      SELECT * FROM subscriptions 
-      WHERE restaurant_id = $1 AND gateway = 'cashfree' AND gateway_subscription_id IS NOT NULL AND status IN ('pending', 'trialing')
-      ORDER BY id DESC LIMIT 1
-    `, [targetRestoId]);
-
-    if (existingSubRows && existingSubRows.length > 0) {
-      const existingSub = existingSubRows[0];
-      const config = await getCashfreeConfigAsync();
-      console.log(`♻️ Found existing Cashfree subscription (${existingSub.gateway_subscription_id}) for restaurant ${targetRestoId}. Reusing.`);
-
-      return res.json({
-        success: true,
-        reused: true,
-        configured: config.isConfigured,
-        subscription_id: existingSub.gateway_subscription_id,
-        customer_id: existingSub.gateway_customer_id,
-        subscription_status: existingSub.status,
-        subscription_session_id: null,
-        auth_link: null,
-        is_sandbox: config.isSandbox,
-        plan: {
-          id: dbPlan.id,
-          key: dbPlan.key,
-          name: dbPlan.name,
-          price: Number(dbPlan.price)
-        },
-        message: 'Existing subscription session retrieved successfully.'
-      });
-    }
-
     // 3. Call Cashfree Sandbox Client Service (v2026-01-01)
     const cfResult = await createCashfreeSubscriptionSession({
       restaurantId: targetRestoId,
@@ -123,20 +92,34 @@ const handleCreateSubscription = async (req, res) => {
       });
     }
 
-    // 4. Store Real Gateway Identifiers in Database `subscriptions` Table
+    // 4. Store/Update Real Gateway Identifiers in Database `subscriptions` Table
     const nowISO = new Date().toISOString();
-    await query(`
-      INSERT INTO subscriptions (
-        restaurant_id, plan_id, gateway, gateway_subscription_id, gateway_customer_id, status, amount, currency, billing_cycle, trial_start
-      ) VALUES ($1, $2, 'cashfree', $3, $4, 'pending', $5, 'INR', 'monthly', $6)
-    `, [
-      targetRestoId,
-      dbPlan.id || 2,
-      cfResult.subscription_id,
-      cfResult.customer_id, // Merchant-defined customer reference
-      Number(dbPlan.price),
-      nowISO
-    ]);
+    const existingSubRows = await query(`
+      SELECT id FROM subscriptions 
+      WHERE restaurant_id = $1 AND gateway = 'cashfree' AND status IN ('pending', 'trialing')
+      ORDER BY id DESC LIMIT 1
+    `, [targetRestoId]);
+
+    if (existingSubRows && existingSubRows.length > 0) {
+      await query(`
+        UPDATE subscriptions 
+        SET gateway_subscription_id = $1, gateway_customer_id = $2, plan_id = $3, amount = $4
+        WHERE id = $5
+      `, [cfResult.subscription_id, cfResult.customer_id, dbPlan.id || 2, Number(dbPlan.price), existingSubRows[0].id]);
+    } else {
+      await query(`
+        INSERT INTO subscriptions (
+          restaurant_id, plan_id, gateway, gateway_subscription_id, gateway_customer_id, status, amount, currency, billing_cycle, trial_start
+        ) VALUES ($1, $2, 'cashfree', $3, $4, 'pending', $5, 'INR', 'monthly', $6)
+      `, [
+        targetRestoId,
+        dbPlan.id || 2,
+        cfResult.subscription_id,
+        cfResult.customer_id,
+        Number(dbPlan.price),
+        nowISO
+      ]);
+    }
 
     // Update `restaurants` table mandate references
     await query(`
