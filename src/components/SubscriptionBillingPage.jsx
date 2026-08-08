@@ -63,7 +63,7 @@ export default function SubscriptionBillingPage({ restoInfo, token, onProceedToD
     }
   }, [restoInfo, token]);
 
-  // 2. Read stored plan, restaurant info, and auto-validate saved coupon
+  // 2. Read stored plan and restaurant info
   useEffect(() => {
     const activeResto = currentResto || restoInfo;
     const urlParams = new URLSearchParams(window.location.search);
@@ -186,7 +186,7 @@ export default function SubscriptionBillingPage({ restoInfo, token, onProceedToD
       }
 
       console.log('[Cashfree Checkout] Initiating subscription for plan_tier:', planKey);
-      const subRes = await createCashfreeSubscription(planKey, null, authToken);
+      const subRes = await createCashfreeSubscription(planKey, authToken);
 
       if (!subRes || (!subRes.subscription_id && !subRes.payment_session_id)) {
         throw new Error(subRes?.error || subRes?.message || 'Failed to generate Cashfree subscription session');

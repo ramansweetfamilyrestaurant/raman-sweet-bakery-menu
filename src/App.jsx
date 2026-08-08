@@ -1025,9 +1025,7 @@ export default function App() {
           boxShadow: '0 2px 10px rgba(217, 119, 6, 0.3)',
           flexWrap: 'wrap'
         }}>
-          <span>🔥 LIMITED TIME LAUNCH OFFER: Use Coupon Code</span>
-          <span style={{ background: '#FFFFFF', color: '#B45309', padding: '2px 8px', borderRadius: '6px', fontWeight: 900, fontFamily: 'monospace' }}>LAUNCH50</span>
-          <span>for FLAT 50% OFF on All Plans!</span>
+          <span>🔥 SPECIAL LAUNCH OFFER: Get 14 DAYS FREE TRIAL on All SaaS Plans! Instant Setup & Zero Risk!</span>
         </div>
 
         {/* Hero Section */}
