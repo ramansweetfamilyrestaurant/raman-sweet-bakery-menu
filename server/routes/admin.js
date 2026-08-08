@@ -116,10 +116,10 @@ router.get('/me', authenticateToken, async (req, res) => {
 router.get('/subscription-status', authenticateToken, async (req, res) => {
   try {
     const restoId = req.user?.restaurant_id;
-    if (!restoId && req.user?.role !== 'superadmin') {
+    if (!restoId) {
       return res.status(401).json({ error: 'Unauthorized: Restaurant session required' });
     }
-    const targetId = restoId || 1;
+    const targetId = restoId;
 
     const subInfo = await checkSubscriptionStatus(targetId);
     const restos = await query('SELECT plan_tier, plan_price, plan_expires_at, trial_started_at, trial_ends_at, mandate_id, mandate_status, auto_debit_enabled FROM restaurants WHERE id = $1', [targetId]);

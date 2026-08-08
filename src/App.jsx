@@ -498,7 +498,19 @@ export default function App() {
           setView('super-admin-login');
         }
       } else if (isBilling) {
-        setView('billing');
+        if (adminToken) {
+          const currentSlug = localStorage.getItem('raman_admin_slug');
+          const mandateActive = await checkMandateGating(adminToken, currentSlug);
+          if (mandateActive) {
+            window.history.replaceState({}, '', currentSlug ? `/${currentSlug}/admin` : '/admin');
+            setView('admin-dashboard');
+          } else {
+            setView('billing');
+          }
+        } else {
+          window.history.replaceState({}, '', '/register');
+          setView('register');
+        }
       } else if (isRegister) {
         setView('register');
       } else if (isRouteAdmin) {
