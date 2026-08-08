@@ -49,39 +49,105 @@ router.get('/plans', async (req, res) => {
 // POST validate coupon code
 router.post('/coupons/validate', async (req, res) => {
   try {
-    const { code, planPrice } = req.body;
-    if (!code || typeof code !== 'string') {
-      return res.status(400).json({ error: 'Coupon code is required' });
+    const { code, plan_tier, restaurant_id } = req.body;
+    if (!code || typeof code !== 'string' || !code.trim()) {
+      return res.status(400).json({ valid: false, error: 'Coupon code is required' });
     }
-    const rows = await query('SELECT * FROM coupons WHERE UPPER(code) = $1 AND active = 1', [code.trim().toUpperCase()]);
+
+    const normalizedCode = code.trim().toUpperCase();
+    const requestedTier = (plan_tier || 'pro').toLowerCase().trim();
+
+    // 1. Authoritative Plan Resolution from Database saas_plans Table
+    const planRows = await query('SELECT * FROM saas_plans WHERE LOWER(key) = $1', [requestedTier]);
+    const dbPlan = planRows[0] || { price: 999, key: 'pro' };
+    const originalAmount = Number(dbPlan.price) || 999;
+
+    // 2. Fetch Coupon from Database
+    const rows = await query(`
+      SELECT * FROM coupons WHERE UPPER(code) = $1
+    `, [normalizedCode]);
+
     if (!rows || rows.length === 0) {
-      return res.status(404).json({ error: 'Invalid or expired promo coupon code' });
+      return res.status(404).json({ valid: false, error: 'Invalid promo coupon code' });
     }
+
     const coupon = rows[0];
-    if (coupon.max_uses > 0 && coupon.used_count >= coupon.max_uses) {
-      return res.status(400).json({ error: 'Promo code usage limit reached' });
+    const isActive = Boolean(coupon.is_active !== undefined ? coupon.is_active : (coupon.active !== undefined ? coupon.active : 1));
+
+    if (!isActive) {
+      return res.status(400).json({ valid: false, error: 'This coupon code is currently disabled' });
     }
-    const original = Number(planPrice) || 999;
-    let discount = 0;
-    if (coupon.discount_percent > 0) {
-      discount = Math.round((original * coupon.discount_percent) / 100);
-    } else if (coupon.discount_amount > 0) {
-      discount = Math.min(original, Number(coupon.discount_amount));
+
+    // 3. Expiry Checks (valid_from & valid_until)
+    const now = new Date();
+    if (coupon.valid_from && new Date(coupon.valid_from) > now) {
+      return res.status(400).json({ valid: false, error: 'This coupon is not active yet' });
     }
-    const finalPrice = Math.max(0, original - discount);
+    if (coupon.valid_until && new Date(coupon.valid_until) < now) {
+      return res.status(400).json({ valid: false, error: 'This coupon code has expired' });
+    }
+
+    // 4. Usage Limit Checks
+    const maxTotal = Number(coupon.max_total_uses || coupon.max_uses || 100);
+    const usedCount = Number(coupon.used_count || 0);
+    if (maxTotal > 0 && usedCount >= maxTotal) {
+      return res.status(400).json({ valid: false, error: 'Coupon total usage limit reached' });
+    }
+
+    // 5. Per-Restaurant Usage Check
+    if (restaurant_id) {
+      const redemptions = await query(`
+        SELECT COUNT(*) as count FROM coupon_redemptions WHERE coupon_id = $1 AND restaurant_id = $2
+      `, [coupon.id, restaurant_id]);
+      const restoRedeemedCount = Number(redemptions[0]?.count || 0);
+      const maxPerResto = Number(coupon.max_uses_per_restaurant || 1);
+      if (restoRedeemedCount >= maxPerResto) {
+        return res.status(400).json({ valid: false, error: 'This coupon has already been used for this restaurant' });
+      }
+    }
+
+    // 6. Plan Applicability Check
+    const applicable = (coupon.applicable_plans || 'all').toLowerCase();
+    if (applicable !== 'all' && !applicable.includes(requestedTier)) {
+      return res.status(400).json({ valid: false, error: `This coupon is not applicable for the ${requestedTier.toUpperCase()} plan` });
+    }
+
+    // 7. Minimum Plan Amount Check
+    const minAmount = Number(coupon.minimum_plan_amount || 0);
+    if (minAmount > 0 && originalAmount < minAmount) {
+      return res.status(400).json({ valid: false, error: `Minimum plan price of ₹${minAmount} required for this coupon` });
+    }
+
+    // 8. Server-side Discount Calculation
+    const discountType = (coupon.discount_type || (coupon.discount_percent > 0 ? 'PERCENTAGE' : 'FIXED_AMOUNT')).toUpperCase();
+    const discountValue = Number(coupon.discount_value || coupon.discount_percent || coupon.discount_amount || 0);
+
+    let discountAmount = 0;
+    if (discountType === 'PERCENTAGE') {
+      const cappedPercent = Math.min(100, Math.max(0, discountValue));
+      discountAmount = (originalAmount * cappedPercent) / 100;
+    } else {
+      discountAmount = Math.min(originalAmount, Math.max(0, discountValue));
+    }
+
+    const finalAmount = Math.max(0, originalAmount - discountAmount);
+
     res.json({
       valid: true,
+      id: coupon.id,
       code: coupon.code,
-      discount,
-      discount_percent: coupon.discount_percent,
-      discount_amount: coupon.discount_amount,
-      original_price: original,
-      final_price: finalPrice,
-      message: `Coupon '${coupon.code}' applied! Saved ₹${discount}`
+      discount_type: discountType,
+      discount_value: discountValue,
+      original_amount: originalAmount,
+      discount_amount: discountAmount,
+      final_first_payment_amount: finalAmount,
+      currency: 'INR',
+      first_payment_only: Boolean(coupon.first_payment_only !== undefined ? coupon.first_payment_only : true),
+      message: `Coupon '${coupon.code}' applied! Saved ₹${discountAmount} on your first paid month.`
     });
   } catch (err) {
     console.error('Validate coupon error:', err);
-    res.status(500).json({ error: 'Failed to validate coupon' });
+    res.status(500).json({ valid: false, error: 'Failed to validate coupon' });
   }
 });
 

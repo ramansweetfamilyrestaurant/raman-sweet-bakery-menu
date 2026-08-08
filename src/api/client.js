@@ -536,14 +536,14 @@ export async function fetchPaymentConfig() {
   return handleResponse(res, 'Failed to fetch payment config');
 }
 
-export async function createCashfreeSubscription(planTier, token, returnUrl) {
+export async function createCashfreeSubscription(planTier, token, returnUrl, couponCode) {
   const res = await fetch(`${API_BASE}/payment/create-subscription`, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
       Authorization: `Bearer ${token}`,
     },
-    body: JSON.stringify({ plan_tier: planTier, return_url: returnUrl }),
+    body: JSON.stringify({ plan_tier: planTier, return_url: returnUrl, coupon_code: couponCode }),
   });
   return handleResponse(res, 'Failed to create subscription session');
 }

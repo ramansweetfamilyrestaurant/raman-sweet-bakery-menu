@@ -233,12 +233,53 @@ async function createTables() {
         processed_at TIMESTAMP,
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
         UNIQUE (gateway, event_id)
+      );`,
+
+      `CREATE TABLE IF NOT EXISTS coupons (
+        id SERIAL PRIMARY KEY,
+        code VARCHAR(100) UNIQUE NOT NULL,
+        discount_type VARCHAR(50) NOT NULL DEFAULT 'PERCENTAGE',
+        discount_value DECIMAL(10, 2) NOT NULL,
+        applicable_plans VARCHAR(255) DEFAULT 'all',
+        valid_from TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        valid_until TIMESTAMP,
+        max_total_uses INT DEFAULT 100,
+        max_uses_per_restaurant INT DEFAULT 1,
+        first_payment_only BOOLEAN DEFAULT TRUE,
+        minimum_plan_amount DECIMAL(10, 2) DEFAULT 0,
+        is_active BOOLEAN DEFAULT TRUE,
+        used_count INT DEFAULT 0,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+      );`,
+
+      `CREATE TABLE IF NOT EXISTS coupon_redemptions (
+        id SERIAL PRIMARY KEY,
+        coupon_id INT REFERENCES coupons(id) ON DELETE CASCADE,
+        restaurant_id INT REFERENCES restaurants(id) ON DELETE CASCADE,
+        subscription_id INT REFERENCES subscriptions(id) ON DELETE SET NULL,
+        original_amount DECIMAL(10, 2) NOT NULL,
+        discount_amount DECIMAL(10, 2) NOT NULL,
+        final_amount DECIMAL(10, 2) NOT NULL,
+        billing_cycle INT DEFAULT 1,
+        status VARCHAR(50) DEFAULT 'applied',
+        redeemed_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        UNIQUE (coupon_id, restaurant_id, subscription_id)
       );`
     ];
 
     for (const q of pgTables) {
       try { await pgPool.query(q); } catch (e) { console.warn('Postgres table query notice:', e.message); }
     }
+
+    try {
+      await pgPool.query(`
+        INSERT INTO coupons (code, discount_type, discount_value, applicable_plans, max_total_uses, max_uses_per_restaurant, first_payment_only, is_active)
+        VALUES ('LAUNCH50', 'PERCENTAGE', 50, 'all', 100, 1, TRUE, TRUE)
+        ON CONFLICT (code) DO NOTHING;
+      `);
+    } catch (e) {}
 
     const pgAlters = [
       `ALTER TABLE categories ADD COLUMN IF NOT EXISTS restaurant_id INT REFERENCES restaurants(id) ON DELETE CASCADE;`,
@@ -506,6 +547,45 @@ async function createTables() {
         created_at TEXT DEFAULT CURRENT_TIMESTAMP,
         UNIQUE (gateway, event_id)
       );
+
+      CREATE TABLE IF NOT EXISTS coupons (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        code TEXT UNIQUE NOT NULL,
+        discount_type TEXT NOT NULL DEFAULT 'PERCENTAGE',
+        discount_value REAL NOT NULL,
+        applicable_plans TEXT DEFAULT 'all',
+        valid_from TEXT DEFAULT CURRENT_TIMESTAMP,
+        valid_until TEXT,
+        max_total_uses INTEGER DEFAULT 100,
+        max_uses_per_restaurant INTEGER DEFAULT 1,
+        first_payment_only INTEGER DEFAULT 1,
+        minimum_plan_amount REAL DEFAULT 0,
+        is_active INTEGER DEFAULT 1,
+        used_count INTEGER DEFAULT 0,
+        created_at TEXT DEFAULT CURRENT_TIMESTAMP,
+        updated_at TEXT DEFAULT CURRENT_TIMESTAMP
+      );
+
+      CREATE TABLE IF NOT EXISTS coupon_redemptions (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        coupon_id INTEGER NOT NULL,
+        restaurant_id INTEGER NOT NULL,
+        subscription_id INTEGER,
+        original_amount REAL NOT NULL,
+        discount_amount REAL NOT NULL,
+        final_amount REAL NOT NULL,
+        billing_cycle INTEGER DEFAULT 1,
+        status TEXT DEFAULT 'applied',
+        redeemed_at TEXT DEFAULT CURRENT_TIMESTAMP,
+        created_at TEXT DEFAULT CURRENT_TIMESTAMP,
+        UNIQUE (coupon_id, restaurant_id, subscription_id),
+        FOREIGN KEY (coupon_id) REFERENCES coupons (id) ON DELETE CASCADE,
+        FOREIGN KEY (restaurant_id) REFERENCES restaurants (id) ON DELETE CASCADE,
+        FOREIGN KEY (subscription_id) REFERENCES subscriptions (id) ON DELETE SET NULL
+      );
+
+      INSERT OR IGNORE INTO coupons (code, discount_type, discount_value, applicable_plans, max_total_uses, max_uses_per_restaurant, first_payment_only, is_active)
+      VALUES ('LAUNCH50', 'PERCENTAGE', 50, 'all', 100, 1, 1, 1);
     `);
 
     // Auto Migrations for SQLite

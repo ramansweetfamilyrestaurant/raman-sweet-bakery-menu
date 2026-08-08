@@ -196,7 +196,7 @@ export async function createCashfreeSubscriptionSession({
 
     if (subRes.ok && (subData.subscription_id || subData.subscription_session_id || subData.auth_link || subData.authLink)) {
       const sessionId = subData.subscription_session_id || null;
-      const authLink = subData.auth_link || subData.authLink || subData.sub_auth_url || (sessionId ? `https://sandbox.cashfree.com/pg/orders/subs?session_id=${sessionId}` : null);
+      const authLink = subData.auth_link || subData.authLink || subData.sub_auth_url || null;
 
       return {
         success: true,

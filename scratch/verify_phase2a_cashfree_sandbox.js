@@ -1,8 +1,8 @@
 import { initDb, query } from '../server/db.js';
-import { getCashfreeConfig } from '../server/services/cashfree.js';
+import { getCashfreeConfig, formatISTISO, createCashfreeSubscriptionSession } from '../server/services/cashfree.js';
 
 async function runPhase2aVerification() {
-  console.log('🧪 Starting Phase 2A Cashfree Sandbox Integration Suite...\n');
+  console.log('🧪 Starting Phase 2A Cashfree Sandbox Integration Suite (v2026-01-01)...\n');
   await initDb();
 
   const results = [];
@@ -12,15 +12,30 @@ async function runPhase2aVerification() {
     console.log(`${statusLabel}: ${name} ${details ? `(${details})` : ''}`);
   };
 
-  // 1. Environment Variable Configuration Check
+  // 1. Environment Variable Configuration & API Version Check
   const config = getCashfreeConfig();
-  if (config.isConfigured) {
-    recordResult('1. Environment Configuration Check', true, '✅ PASS', `Credentials present (Client ID: ${config.clientId.substring(0, 6)}...)`);
+  if (config.apiVersion === '2026-01-01') {
+    recordResult('1. API Version Check', true, '✅ PASS', `API Version set to ${config.apiVersion}`);
   } else {
-    recordResult('1. Environment Configuration Check', false, '⚠️ BLOCKED — SANDBOX CREDENTIALS REQUIRED', 'CASHFREE_CLIENT_ID or CASHFREE_CLIENT_SECRET missing in environment');
+    recordResult('1. API Version Check', false, '❌ FAIL', `Expected 2026-01-01, got ${config.apiVersion}`);
   }
 
-  // 2. Authoritative Backend Plan Resolution Test
+  if (config.isConfigured) {
+    recordResult('2. Sandbox Credentials Check', true, '✅ PASS', `Credentials present (Client ID: ${config.clientId.substring(0, 6)}...)`);
+  } else {
+    recordResult('2. Sandbox Credentials Check', false, '⚠️ BLOCKED — SANDBOX CREDENTIALS REQUIRED', 'CASHFREE_CLIENT_ID or CASHFREE_CLIENT_SECRET missing in environment');
+  }
+
+  // 3. IST ISO 8601 Trial Schedule Formatter Test
+  const testDate = new Date('2026-08-22T10:00:00Z');
+  const formattedIst = formatISTISO(testDate);
+  if (formattedIst.endsWith('+05:30')) {
+    recordResult('3. IST ISO 8601 Trial Schedule Formatter', true, '✅ PASS', `Formatted IST: ${formattedIst}`);
+  } else {
+    recordResult('3. IST ISO 8601 Trial Schedule Formatter', false, '❌ FAIL', `Invalid IST format: ${formattedIst}`);
+  }
+
+  // 4. Authoritative Backend Plan Resolution Test
   const planTiers = ['basic', 'pro', 'enterprise'];
   let planResPassed = true;
   for (const tier of planTiers) {
@@ -31,12 +46,12 @@ async function runPhase2aVerification() {
     }
   }
   if (planResPassed) {
-    recordResult('2. DB Plan Resolution Check', true, '✅ PASS', 'Resolved Basic (₹499), Pro (₹999), Enterprise (₹1999) from saas_plans');
+    recordResult('4. DB Plan Resolution Check', true, '✅ PASS', 'Resolved Basic (₹499), Pro (₹999), Enterprise (₹1999) from saas_plans');
   } else {
-    recordResult('2. DB Plan Resolution Check', false, '❌ FAIL', 'Failed to resolve plans from saas_plans DB table');
+    recordResult('4. DB Plan Resolution Check', false, '❌ FAIL', 'Failed to resolve plans from saas_plans DB table');
   }
 
-  // 3. Setup Test Restaurant for Verification
+  // 5. Setup Test Restaurant for Verification
   const testPhone = '9876599999';
   const testSlug = 'verify-phase2a-' + Date.now();
   const now = new Date();
@@ -53,12 +68,12 @@ async function runPhase2aVerification() {
     `, ['Phase 2A Test Resto', testSlug, testPhone, expiryISO, nowISO, expiryISO]);
 
     restoId = restoRes[0]?.id || restoRes.lastInsertRowid;
-    recordResult('3. Test Business Setup', true, '✅ PASS', `Resto ID: ${restoId}`);
+    recordResult('5. Test Business Setup', true, '✅ PASS', `Resto ID: ${restoId}`);
   } catch (err) {
-    recordResult('3. Test Business Setup', false, '❌ FAIL', err.message);
+    recordResult('5. Test Business Setup', false, '❌ FAIL', err.message);
   }
 
-  // 4. Duplicate Subscription Protection Test
+  // 6. Duplicate Subscription Protection Test
   const dummySubId = `sub_${restoId}_test_duplicate`;
   try {
     await query(`
@@ -72,31 +87,51 @@ async function runPhase2aVerification() {
     `, [restoId]);
 
     if (existingRows.length === 1 && existingRows[0].gateway_subscription_id === dummySubId) {
-      recordResult('4. Duplicate Subscription Protection', true, '✅ PASS', 'Detected existing pending Cashfree subscription');
+      recordResult('6. Duplicate Subscription Protection', true, '✅ PASS', 'Detected existing pending Cashfree subscription');
     } else {
-      recordResult('4. Duplicate Subscription Protection', false, '❌ FAIL', 'Failed to detect duplicate subscription');
+      recordResult('6. Duplicate Subscription Protection', false, '❌ FAIL', 'Failed to detect duplicate subscription');
     }
   } catch (err) {
-    recordResult('4. Duplicate Subscription Protection', false, '❌ FAIL', err.message);
+    recordResult('6. Duplicate Subscription Protection', false, '❌ FAIL', err.message);
   }
 
-  // 5. 14-Day Free Trial Architecture Integrity Check
+  // 7. 14-Day Free Trial Architecture Integrity Check
   const restoCheck = await query('SELECT trial_started_at, trial_ends_at FROM restaurants WHERE id = $1', [restoId]);
   const r = restoCheck[0];
   if (r) {
     const diffDays = Math.round((new Date(r.trial_ends_at) - new Date(r.trial_started_at)) / (1000 * 60 * 60 * 24));
     if (diffDays === 14) {
-      recordResult('5. 14-Day Trial Architecture Integrity', true, '✅ PASS', `Trial duration preserved (${diffDays} days)`);
+      recordResult('7. 14-Day Trial Architecture Integrity', true, '✅ PASS', `Trial duration preserved (${diffDays} days)`);
     } else {
-      recordResult('5. 14-Day Trial Architecture Integrity', false, '❌ FAIL', `Expected 14 days, got ${diffDays}`);
+      recordResult('7. 14-Day Trial Architecture Integrity', false, '❌ FAIL', `Expected 14 days, got ${diffDays}`);
     }
   }
 
-  // 6. Live Cashfree Sandbox API Call Status
+  // 8. Live Cashfree Sandbox API Call Status
   if (config.isConfigured) {
-    recordResult('6. Live Cashfree Sandbox Checkout API Call', true, '✅ PASS', 'Credentials configured, API endpoint active');
+    try {
+      const liveRes = await createCashfreeSubscriptionSession({
+        restaurantId: restoId,
+        planKey: 'pro',
+        planName: 'Khana Master Pro Plan',
+        planPrice: 999,
+        trialEndISO: expiryISO,
+        customerName: 'Test Owner',
+        customerPhone: '9876543210',
+        customerEmail: 'test@khanamaster.com',
+        returnUrl: 'https://khanamaster.com/test'
+      });
+
+      if (liveRes.success) {
+        recordResult('8. Live Cashfree Sandbox API Call', true, '✅ PASS', `Subscription ID: ${liveRes.subscription_id}, Auth Link: ${Boolean(liveRes.auth_link)}`);
+      } else {
+        recordResult('8. Live Cashfree Sandbox API Call', false, '❌ FAIL', liveRes.message || 'API error');
+      }
+    } catch (apiErr) {
+      recordResult('8. Live Cashfree Sandbox API Call', false, '❌ FAIL', apiErr.message);
+    }
   } else {
-    recordResult('6. Live Cashfree Sandbox Checkout API Call', false, '⚠️ BLOCKED — SANDBOX CREDENTIALS REQUIRED', 'Live API call requires CASHFREE_CLIENT_ID & CASHFREE_CLIENT_SECRET in .env');
+    recordResult('8. Live Cashfree Sandbox API Call', false, '⚠️ BLOCKED — SANDBOX CREDENTIALS REQUIRED', 'Live API call requires CASHFREE_CLIENT_ID & CASHFREE_CLIENT_SECRET in .env');
   }
 
   // Cleanup test data
@@ -113,3 +148,4 @@ async function runPhase2aVerification() {
 }
 
 runPhase2aVerification();
+

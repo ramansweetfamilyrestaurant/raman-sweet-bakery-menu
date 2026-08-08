@@ -51,9 +51,16 @@ export default function SuperAdminDashboard({ token, username, onLogout, onRetur
   });
 
   // Promo Coupons Manager State
-  const [showCouponsModal, setShowCouponsModal] = useState(false);
-  const [couponsList, setCouponsList] = useState([]);
-  const [newCouponForm, setNewCouponForm] = useState({ code: '', discount_percent: 50, discount_amount: 0, max_uses: 1000 });
+  const [newCouponForm, setNewCouponForm] = useState({
+    code: '',
+    discount_type: 'PERCENTAGE',
+    discount_value: 50,
+    applicable_plans: 'all',
+    max_total_uses: 100,
+    max_uses_per_restaurant: 1,
+    first_payment_only: true,
+    is_active: true
+  });
 
   // Payment Gateway API Keys State
   const [paymentKeys, setPaymentKeys] = useState({
@@ -2470,11 +2477,11 @@ export default function SuperAdminDashboard({ token, username, onLogout, onRetur
             {/* Create Coupon Box */}
             <div style={{ background: '#F8FAFC', border: '1.5px dashed #10B981', borderRadius: '16px', padding: '16px', marginBottom: '20px' }}>
               <strong style={{ fontSize: '0.82rem', color: '#047857', display: 'block', marginBottom: '10px' }}>
-                ➕ Create New Promo Coupon Code:
+                ➕ Create New SaaS Subscription Coupon Code:
               </strong>
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))', gap: '10px', marginBottom: '12px' }}>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(130px, 1fr))', gap: '10px', marginBottom: '12px' }}>
                 <div>
-                  <label style={{ fontSize: '0.72rem', fontWeight: 800, color: '#334155', display: 'block', marginBottom: '4px' }}>COUPON CODE *</label>
+                  <label style={{ fontSize: '0.72rem', fontWeight: 800, color: '#334155', display: 'block', marginBottom: '4px' }}>CODE *</label>
                   <input
                     type="text"
                     placeholder="e.g. LAUNCH50"
@@ -2484,32 +2491,48 @@ export default function SuperAdminDashboard({ token, username, onLogout, onRetur
                   />
                 </div>
                 <div>
-                  <label style={{ fontSize: '0.72rem', fontWeight: 800, color: '#334155', display: 'block', marginBottom: '4px' }}>DISCOUNT PERCENT (%)</label>
+                  <label style={{ fontSize: '0.72rem', fontWeight: 800, color: '#334155', display: 'block', marginBottom: '4px' }}>DISCOUNT TYPE</label>
+                  <select
+                    value={newCouponForm.discount_type}
+                    onChange={(e) => setNewCouponForm({ ...newCouponForm, discount_type: e.target.value })}
+                    style={{ width: '100%', padding: '8px 10px', borderRadius: '8px', border: '1px solid #CBD5E1', fontSize: '0.84rem', fontWeight: 800, background: '#FFF' }}
+                  >
+                    <option value="PERCENTAGE">PERCENTAGE (%)</option>
+                    <option value="FIXED_AMOUNT">FIXED AMOUNT (₹)</option>
+                  </select>
+                </div>
+                <div>
+                  <label style={{ fontSize: '0.72rem', fontWeight: 800, color: '#334155', display: 'block', marginBottom: '4px' }}>
+                    VALUE ({newCouponForm.discount_type === 'PERCENTAGE' ? '%' : '₹'})
+                  </label>
                   <input
                     type="number"
                     placeholder="50"
-                    value={newCouponForm.discount_percent}
-                    onChange={(e) => setNewCouponForm({ ...newCouponForm, discount_percent: Number(e.target.value), discount_amount: 0 })}
+                    value={newCouponForm.discount_value}
+                    onChange={(e) => setNewCouponForm({ ...newCouponForm, discount_value: Number(e.target.value) })}
                     style={{ width: '100%', padding: '8px 10px', borderRadius: '8px', border: '1px solid #CBD5E1', fontSize: '0.84rem', fontWeight: 800 }}
                   />
                 </div>
                 <div>
-                  <label style={{ fontSize: '0.72rem', fontWeight: 800, color: '#334155', display: 'block', marginBottom: '4px' }}>FLAT RUPEE OFF (₹)</label>
-                  <input
-                    type="number"
-                    placeholder="200"
-                    value={newCouponForm.discount_amount}
-                    onChange={(e) => setNewCouponForm({ ...newCouponForm, discount_amount: Number(e.target.value), discount_percent: 0 })}
-                    style={{ width: '100%', padding: '8px 10px', borderRadius: '8px', border: '1px solid #CBD5E1', fontSize: '0.84rem', fontWeight: 800 }}
-                  />
+                  <label style={{ fontSize: '0.72rem', fontWeight: 800, color: '#334155', display: 'block', marginBottom: '4px' }}>APPLICABLE PLANS</label>
+                  <select
+                    value={newCouponForm.applicable_plans}
+                    onChange={(e) => setNewCouponForm({ ...newCouponForm, applicable_plans: e.target.value })}
+                    style={{ width: '100%', padding: '8px 10px', borderRadius: '8px', border: '1px solid #CBD5E1', fontSize: '0.84rem', fontWeight: 800, background: '#FFF' }}
+                  >
+                    <option value="all">ALL PLANS</option>
+                    <option value="basic">BASIC</option>
+                    <option value="pro">PRO</option>
+                    <option value="enterprise">ENTERPRISE</option>
+                  </select>
                 </div>
                 <div>
-                  <label style={{ fontSize: '0.72rem', fontWeight: 800, color: '#334155', display: 'block', marginBottom: '4px' }}>MAX USES LIMIT</label>
+                  <label style={{ fontSize: '0.72rem', fontWeight: 800, color: '#334155', display: 'block', marginBottom: '4px' }}>MAX USES</label>
                   <input
                     type="number"
-                    placeholder="1000"
-                    value={newCouponForm.max_uses}
-                    onChange={(e) => setNewCouponForm({ ...newCouponForm, max_uses: Number(e.target.value) })}
+                    placeholder="100"
+                    value={newCouponForm.max_total_uses}
+                    onChange={(e) => setNewCouponForm({ ...newCouponForm, max_total_uses: Number(e.target.value) })}
                     style={{ width: '100%', padding: '8px 10px', borderRadius: '8px', border: '1px solid #CBD5E1', fontSize: '0.84rem', fontWeight: 800 }}
                   />
                 </div>
@@ -2527,7 +2550,16 @@ export default function SuperAdminDashboard({ token, username, onLogout, onRetur
                     const data = await res.json();
                     if (res.ok) {
                       alert(data.message);
-                      setNewCouponForm({ code: '', discount_percent: 50, discount_amount: 0, max_uses: 1000 });
+                      setNewCouponForm({
+                        code: '',
+                        discount_type: 'PERCENTAGE',
+                        discount_value: 50,
+                        applicable_plans: 'all',
+                        max_total_uses: 100,
+                        max_uses_per_restaurant: 1,
+                        first_payment_only: true,
+                        is_active: true
+                      });
                       loadCoupons();
                     } else {
                       alert(data.error || 'Failed to create coupon');
@@ -2551,51 +2583,66 @@ export default function SuperAdminDashboard({ token, username, onLogout, onRetur
               </button>
             </div>
 
-            {/* Coupons List */}
+            {/* Coupons List & Revenue Impact Analytics */}
             <div style={{ flex: 1, overflowY: 'auto' }}>
               <div style={{ fontSize: '0.8rem', fontWeight: 800, color: '#475569', marginBottom: '10px' }}>
-                ACTIVE PROMO COUPONS:
+                DEPLOYED SAAS PROMO COUPONS:
               </div>
               <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                {couponsList.map((c) => (
-                  <div key={c.id} style={{
-                    background: '#F1F5F9',
-                    borderRadius: '12px',
-                    padding: '12px 14px',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'space-between',
-                    border: '1px solid #CBD5E1'
-                  }}>
-                    <div>
-                      <span style={{ background: '#0F172A', color: '#FFD700', padding: '3px 8px', borderRadius: '6px', fontSize: '0.82rem', fontWeight: 900, fontFamily: 'monospace', marginRight: '10px' }}>
-                        {c.code}
-                      </span>
-                      <span style={{ fontSize: '0.8rem', fontWeight: 800, color: '#059669' }}>
-                        {c.discount_percent > 0 ? `${c.discount_percent}% OFF` : `₹${c.discount_amount} FLAT OFF`}
-                      </span>
-                      <span style={{ fontSize: '0.74rem', color: '#64748B', marginLeft: '12px' }}>
-                        Used: {c.used_count} / {c.max_uses}
-                      </span>
-                    </div>
+                {couponsList.map((c) => {
+                  const type = c.discount_type || (c.discount_percent > 0 ? 'PERCENTAGE' : 'FIXED_AMOUNT');
+                  const val = c.discount_value || c.discount_percent || c.discount_amount || 0;
+                  const discountStr = type === 'PERCENTAGE' ? `${val}% OFF` : `₹${val} FLAT OFF`;
+                  const used = c.real_used_count !== undefined ? Number(c.real_used_count) : Number(c.used_count || 0);
+                  const maxLimit = Number(c.max_total_uses || c.max_uses || 100);
+                  const totalDiscountGiven = Number(c.total_discount_given || 0);
+                  const plansStr = (c.applicable_plans || 'all').toUpperCase();
 
-                    <button
-                      onClick={async () => {
-                        if (!window.confirm(`Delete coupon '${c.code}'?`)) return;
-                        try {
-                          await fetch(`/api/superadmin/coupons/${c.id}`, {
-                            method: 'DELETE',
-                            headers: { Authorization: `Bearer ${token}` }
-                          });
-                          loadCoupons();
-                        } catch (e) {}
-                      }}
-                      style={{ background: '#FEE2E2', color: '#DC2626', border: 'none', padding: '6px 10px', borderRadius: '8px', fontSize: '0.74rem', fontWeight: 800, cursor: 'pointer' }}
-                    >
-                      Delete
-                    </button>
-                  </div>
-                ))}
+                  return (
+                    <div key={c.id} style={{
+                      background: '#F1F5F9',
+                      borderRadius: '12px',
+                      padding: '12px 14px',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'space-between',
+                      border: '1px solid #CBD5E1'
+                    }}>
+                      <div>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '4px' }}>
+                          <span style={{ background: '#0F172A', color: '#FFD700', padding: '3px 8px', borderRadius: '6px', fontSize: '0.82rem', fontWeight: 900, fontFamily: 'monospace' }}>
+                            {c.code}
+                          </span>
+                          <span style={{ fontSize: '0.8rem', fontWeight: 900, color: '#059669' }}>
+                            {discountStr} ({plansStr})
+                          </span>
+                        </div>
+                        <div style={{ fontSize: '0.74rem', color: '#64748B', display: 'flex', gap: '12px' }}>
+                          <span>Used: <strong>{used} / {maxLimit}</strong></span>
+                          <span>Revenue Impact: <strong style={{ color: '#059669' }}>₹{totalDiscountGiven.toLocaleString('en-IN')} discount given</strong></span>
+                        </div>
+                      </div>
+
+                      <div style={{ display: 'flex', gap: '6px' }}>
+                        <button
+                          onClick={async () => {
+                            if (!window.confirm(`Delete coupon '${c.code}'?`)) return;
+                            try {
+                              await fetch(`/api/superadmin/coupons/${c.id}`, {
+                                method: 'DELETE',
+                                headers: { Authorization: `Bearer ${token}` }
+                              });
+                              loadCoupons();
+                            } catch (e) {}
+                          }}
+                          style={{ background: '#FEE2E2', color: '#DC2626', border: 'none', padding: '6px 10px', borderRadius: '8px', fontSize: '0.74rem', fontWeight: 800, cursor: 'pointer' }}
+                        >
+                          Delete
+                        </button>
+                      </div>
+                    </div>
+                  );
+                })}
               </div>
             </div>
           </div>

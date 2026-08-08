@@ -23,7 +23,7 @@ export default function RegisterPage({ onRegisterSuccess }) {
   const [error, setError] = useState('');
   const [pendingApprovalData, setPendingApprovalData] = useState(null);
   const [registeredData, setRegisteredData] = useState(null);
-  const [couponInput, setCouponInput] = useState('LAUNCH50');
+  const [couponInput, setCouponInput] = useState('');
   const [appliedCoupon, setAppliedCoupon] = useState(null);
   const [couponMsg, setCouponMsg] = useState('');
   const [couponLoading, setCouponLoading] = useState(false);
@@ -45,23 +45,24 @@ export default function RegisterPage({ onRegisterSuccess }) {
     setCouponLoading(true);
     setCouponMsg('');
     try {
-      const basePrice = getBasePlanPrice(formData.plan_tier);
       const res = await fetch('/api/coupons/validate', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ code: couponInput.trim(), planPrice: basePrice })
+        body: JSON.stringify({ code: couponInput.trim(), plan_tier: formData.plan_tier })
       });
       const data = await res.json();
       if (res.ok && data.valid) {
         setAppliedCoupon(data);
-        setCouponMsg(data.message || `Coupon '${data.code}' applied successfully! Saved ₹${data.discount}`);
+        localStorage.setItem('applied_coupon_code', data.code);
+        setCouponMsg(data.message || `✓ Coupon '${data.code}' applied! Saved ₹${data.discount_amount} on your first paid month.`);
       } else {
         setAppliedCoupon(null);
-        setCouponMsg(data.error || 'Invalid or expired coupon code');
+        localStorage.removeItem('applied_coupon_code');
+        setCouponMsg(data.error || '❌ Invalid or expired coupon code');
       }
     } catch (e) {
       setAppliedCoupon(null);
-      setCouponMsg('Failed to validate coupon code');
+      setCouponMsg('❌ Failed to validate coupon code');
     } finally {
       setCouponLoading(false);
     }

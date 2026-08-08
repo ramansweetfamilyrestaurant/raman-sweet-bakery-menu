@@ -448,10 +448,16 @@ router.delete('/plans/:key', authenticateToken, requireSuperAdmin, async (req, r
 
 // ========== PROMO COUPON CODES CRUD ==========
 
-// GET all coupons
+// GET all coupons with redemption analytics
 router.get('/coupons', authenticateToken, requireSuperAdmin, async (req, res) => {
   try {
-    const coupons = await query('SELECT * FROM coupons ORDER BY id DESC');
+    const coupons = await query(`
+      SELECT c.*, 
+        COALESCE((SELECT SUM(discount_amount) FROM coupon_redemptions WHERE coupon_id = c.id), 0) as total_discount_given,
+        COALESCE((SELECT COUNT(*) FROM coupon_redemptions WHERE coupon_id = c.id), 0) as real_used_count
+      FROM coupons c 
+      ORDER BY c.id DESC
+    `);
     res.json(coupons || []);
   } catch (err) {
     console.error('Fetch coupons error:', err);
@@ -462,20 +468,61 @@ router.get('/coupons', authenticateToken, requireSuperAdmin, async (req, res) =>
 // POST create coupon
 router.post('/coupons', authenticateToken, requireSuperAdmin, async (req, res) => {
   try {
-    const { code, discount_percent, discount_amount, max_uses } = req.body;
+    const {
+      code, discount_type, discount_value, applicable_plans,
+      valid_from, valid_until, max_total_uses, max_uses_per_restaurant,
+      first_payment_only, minimum_plan_amount, is_active
+    } = req.body;
+
     if (!code || typeof code !== 'string' || !code.trim()) {
       return res.status(400).json({ error: 'Coupon code is required' });
     }
     const cleanCode = code.trim().toUpperCase();
-    await query(
-      'INSERT INTO coupons (code, discount_percent, discount_amount, max_uses, active) VALUES ($1, $2, $3, $4, 1)',
-      [cleanCode, Number(discount_percent) || 0, Number(discount_amount) || 0, Number(max_uses) || 100]
-    );
+    const type = (discount_type || 'PERCENTAGE').toUpperCase();
+    const val = Number(discount_value) || 0;
+    const plans = (applicable_plans || 'all').trim().toLowerCase();
+    const maxTotal = Number(max_total_uses || 100);
+    const maxPerResto = Number(max_uses_per_restaurant || 1);
+    const minPlanAmt = Number(minimum_plan_amount || 0);
+    const firstOnly = first_payment_only !== false && first_payment_only !== 0;
+    const active = is_active !== false && is_active !== 0 ? true : false;
+
+    await query(`
+      INSERT INTO coupons (
+        code, discount_type, discount_value, applicable_plans, valid_from, valid_until,
+        max_total_uses, max_uses_per_restaurant, first_payment_only, minimum_plan_amount, is_active
+      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
+    `, [
+      cleanCode, type, val, plans,
+      valid_from || new Date().toISOString(), valid_until || null,
+      maxTotal, maxPerResto, firstOnly, minPlanAmt, active
+    ]);
+
     await logAudit(null, 'superadmin', 'Create Coupon', `Created promo coupon '${cleanCode}'`);
     res.json({ success: true, message: `Coupon '${cleanCode}' created successfully` });
   } catch (err) {
     console.error('Create coupon error:', err);
     res.status(500).json({ error: 'Failed to create coupon (code may already exist)' });
+  }
+});
+
+// PUT update coupon
+router.put('/coupons/:id', authenticateToken, requireSuperAdmin, async (req, res) => {
+  try {
+    const { is_active, max_total_uses, valid_until } = req.body;
+    await query(`
+      UPDATE coupons SET 
+        is_active = COALESCE($1, is_active),
+        max_total_uses = COALESCE($2, max_total_uses),
+        valid_until = COALESCE($3, valid_until),
+        updated_at = CURRENT_TIMESTAMP
+      WHERE id = $4
+    `, [is_active !== undefined ? (is_active ? true : false) : null, max_total_uses || null, valid_until || null, req.params.id]);
+
+    res.json({ success: true, message: 'Coupon updated successfully' });
+  } catch (err) {
+    console.error('Update coupon error:', err);
+    res.status(500).json({ error: 'Failed to update coupon' });
   }
 });
 
