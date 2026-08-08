@@ -2435,25 +2435,6 @@ export default function AdminDashboard({ token, username, onLogout, onReturnToMe
 
                       {/* Action Buttons */}
                       <div style={{ display: 'flex', gap: '6px' }}>
-                        <button
-                          onClick={() => handleDirectBluetoothPrint(o, 'kot')}
-                          style={{
-                            background: '#ECFDF5',
-                            color: '#047857',
-                            border: '1px solid #6EE7B7',
-                            padding: '8px 10px',
-                            borderRadius: '10px',
-                            fontWeight: 800,
-                            fontSize: '0.76rem',
-                            cursor: 'pointer',
-                            display: 'flex',
-                            alignItems: 'center',
-                            gap: '4px'
-                          }}
-                          title="Instant 0.5s Bluetooth Thermal KOT Print"
-                        >
-                          ⚡ BT KOT
-                        </button>
 
                         <button
                           onClick={() => handlePrintKOT(o)}
@@ -5072,19 +5053,19 @@ export default function AdminDashboard({ token, username, onLogout, onReturnToMe
             </div>
 
             <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', fontSize: '0.84rem', color: '#E2E8F0' }}>
-              <div style={{ background: '#1F2937', padding: '12px 14px', borderRadius: '12px', border: '1px solid #374151' }}>
-                <strong style={{ color: '#38BDF8', display: 'block', marginBottom: '4px' }}>📱 Step 1: Pair Printer in Mobile Settings</strong>
-                Turn on your Bluetooth Thermal Printer, open your Android/iOS Phone Bluetooth Settings, & tap to pair device (Pin: 0000 or 1234).
+              <div style={{ background: '#1F2937', padding: '12px 14px', borderRadius: '12px', border: '1px solid #38BDF8' }}>
+                <strong style={{ color: '#38BDF8', display: 'block', marginBottom: '4px', fontSize: '0.9rem' }}>💻 Counter Laptop / PC Setup:</strong>
+                Agar Laptop/PC counter par hai: <strong>Direct 0-second instant print bina kisi app ke 100% possible hai!</strong> (Chrome <code>--kiosk-printing</code> mode).
+              </div>
+
+              <div style={{ background: '#1F2937', padding: '12px 14px', borderRadius: '12px', border: '1px solid #DFBA67' }}>
+                <strong style={{ color: '#DFBA67', display: 'block', marginBottom: '4px', fontSize: '0.9rem' }}>📱 Mobile Phone Setup:</strong>
+                Agar Mobile phone se chala rahe hain: <strong>[ 🖨️ KOT ]</strong> dabaane par Receipt Preview dikhega ➔ 1 tap me bill nikal jayega!
               </div>
 
               <div style={{ background: '#1F2937', padding: '12px 14px', borderRadius: '12px', border: '1px solid #374151' }}>
-                <strong style={{ color: '#38BDF8', display: 'block', marginBottom: '4px' }}>⚡ Step 2: Install Free RawBT App (Optional)</strong>
-                For 0.5-second instant background printing without preview popups, install the free <strong>RawBT app</strong> from Play Store.
-              </div>
-
-              <div style={{ background: '#1F2937', padding: '12px 14px', borderRadius: '12px', border: '1px solid #374151' }}>
-                <strong style={{ color: '#38BDF8', display: 'block', marginBottom: '4px' }}>🧾 Step 3: Print Live Orders</strong>
-                On any live kitchen order card, click <strong>"⚡ BT KOT"</strong> for instant receipt print!
+                <strong style={{ color: '#9CA3AF', display: 'block', marginBottom: '4px' }}>📶 Bluetooth Thermal Printer Pairing:</strong>
+                Printer ka switch ON karein, Mobile Bluetooth Settings me jaakar <code>POS-58</code> / <code>POS-80</code> device ko pair karein (Pin: 0000 ya 1234).
               </div>
             </div>
 
