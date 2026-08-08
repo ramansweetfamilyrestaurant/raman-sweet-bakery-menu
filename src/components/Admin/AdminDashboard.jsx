@@ -701,8 +701,11 @@ export default function AdminDashboard({ token, username, onLogout, onReturnToMe
   const handleOpenCreateCombo = () => {
     const currentCount = (combos || []).length;
     const planKey = (settingsForm.plan_tier || (info && info.plan_tier) || 'pro').toLowerCase();
-    const planInfo = getPlanDetails(planKey);
-    const maxCombos = planInfo?.max_combos !== undefined ? planInfo.max_combos : (planKey === 'basic' ? 3 : planKey === 'pro' ? 10 : 9999);
+    const maxCombos = (restaurantInfo?.max_combos !== undefined && restaurantInfo?.max_combos !== null) 
+      ? Number(restaurantInfo.max_combos) 
+      : ((info?.max_combos !== undefined && info?.max_combos !== null) 
+          ? Number(info.max_combos) 
+          : (planInfo?.max_combos !== undefined ? planInfo.max_combos : (planKey === 'basic' ? 3 : planKey === 'pro' ? 10 : 9999)));
 
     if (currentCount >= maxCombos) {
       setComboLimitModalInfo({
@@ -5112,7 +5115,7 @@ export default function AdminDashboard({ token, username, onLogout, onReturnToMe
         <PaymentModal
           restoInfo={restaurantInfo}
           planTier={restaurantInfo?.plan_tier || 'pro'}
-          planPrice={restaurantInfo?.plan_tier === 'enterprise' ? 1999 : restaurantInfo?.plan_tier === 'basic' ? 499 : 999}
+          planPrice={restaurantInfo?.plan_price || (restaurantInfo?.plan_tier === 'enterprise' ? 1999 : restaurantInfo?.plan_tier === 'basic' ? 499 : 999)}
           onClose={() => setShowPaymentModal(false)}
           onSuccess={() => {
             setToastMessage('🎉 Cashfree Subscription Authorized! Mandate registered for automatic billing after trial.');

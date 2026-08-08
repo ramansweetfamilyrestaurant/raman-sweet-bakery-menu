@@ -119,6 +119,16 @@ router.get('/info', async (req, res) => {
       query('UPDATE restaurants SET scan_count = COALESCE(scan_count, 0) + 1 WHERE id = $1', [resto.id]).catch(() => {});
     }
 
+    const planTierKey = (resto.plan_tier || 'pro').toLowerCase();
+    const planRows = await query('SELECT * FROM saas_plans WHERE LOWER(key) = $1', [planTierKey]);
+    const saasPlan = planRows[0] || {};
+
+    const planPrice = Number(resto.plan_price || saasPlan.price || (planTierKey === 'enterprise' ? 1999 : planTierKey === 'basic' ? 499 : 999));
+    const whatsappEnabled = saasPlan.whatsapp_enabled !== undefined ? (saasPlan.whatsapp_enabled === 1 || saasPlan.whatsapp_enabled === true || saasPlan.whatsapp_enabled === '1') : (planTierKey !== 'basic');
+    const directOrderingEnabled = saasPlan.direct_ordering_enabled !== undefined ? (saasPlan.direct_ordering_enabled === 1 || saasPlan.direct_ordering_enabled === true || saasPlan.direct_ordering_enabled === '1') : (planTierKey === 'enterprise');
+    const googleReviewsEnabled = saasPlan.google_reviews_enabled !== undefined ? (saasPlan.google_reviews_enabled === 1 || saasPlan.google_reviews_enabled === true || saasPlan.google_reviews_enabled === '1') : (planTierKey !== 'basic');
+    const maxCombos = saasPlan.max_combos !== undefined ? Number(saasPlan.max_combos) : (planTierKey === 'basic' ? 3 : planTierKey === 'pro' ? 10 : 9999);
+
     return res.json({
       id: resto.id,
       name: resto.name,
@@ -136,12 +146,13 @@ router.get('/info', async (req, res) => {
       filters_visibility: filtersVis,
       currency_symbol: (resto.currency_symbol !== null && resto.currency_symbol !== undefined) ? resto.currency_symbol : '₹',
       plan_tier: resto.plan_tier || 'pro',
-      plan_price: resto.plan_price || 999,
+      plan_price: planPrice,
       plan_expires_at: resto.plan_expires_at || null,
       whatsapp_number: resto.whatsapp_number || resto.phone || '',
-      whatsapp_enabled: resto.whatsapp_enabled !== 0 && resto.whatsapp_enabled !== false,
-      direct_ordering_enabled: resto.direct_ordering_enabled !== 0 && resto.direct_ordering_enabled !== false,
-      google_reviews_enabled: resto.google_reviews_enabled !== 0 && resto.google_reviews_enabled !== false,
+      whatsapp_enabled: whatsappEnabled,
+      direct_ordering_enabled: directOrderingEnabled,
+      google_reviews_enabled: googleReviewsEnabled,
+      max_combos: maxCombos,
       theme_color: resto.theme_color || 'gold',
       scan_count: resto.scan_count || 0,
       latitude: resto.latitude !== undefined && resto.latitude !== null ? Number(resto.latitude) : 26.6500,

@@ -124,14 +124,25 @@ router.get('/subscription-status', authenticateToken, async (req, res) => {
     const subInfo = await checkSubscriptionStatus(targetId);
     const restos = await query('SELECT plan_tier, plan_price, plan_expires_at, trial_started_at, trial_ends_at, mandate_id, mandate_status, auto_debit_enabled FROM restaurants WHERE id = $1', [targetId]);
     const r = restos[0] || {};
+    const tierKey = (r.plan_tier || 'pro').toLowerCase();
+    const planRows = await query('SELECT * FROM saas_plans WHERE LOWER(key) = $1', [tierKey]);
+    const saasPlan = planRows[0] || {};
 
-    const subRows = await query('SELECT * FROM subscriptions WHERE restaurant_id = $1 ORDER BY id DESC LIMIT 1', [targetId]);
+    const planPrice = Number(r.plan_price || saasPlan.price || (tierKey === 'enterprise' ? 1999 : tierKey === 'basic' ? 499 : 999));
+    const whatsappEnabled = saasPlan.whatsapp_enabled !== undefined ? (saasPlan.whatsapp_enabled === 1 || saasPlan.whatsapp_enabled === true || saasPlan.whatsapp_enabled === '1') : (tierKey !== 'basic');
+    const directOrderingEnabled = saasPlan.direct_ordering_enabled !== undefined ? (saasPlan.direct_ordering_enabled === 1 || saasPlan.direct_ordering_enabled === true || saasPlan.direct_ordering_enabled === '1') : (tierKey === 'enterprise');
+    const googleReviewsEnabled = saasPlan.google_reviews_enabled !== undefined ? (saasPlan.google_reviews_enabled === 1 || saasPlan.google_reviews_enabled === true || saasPlan.google_reviews_enabled === '1') : (tierKey !== 'basic');
+    const maxCombos = saasPlan.max_combos !== undefined ? Number(saasPlan.max_combos) : (tierKey === 'basic' ? 3 : tierKey === 'pro' ? 10 : 9999);
 
     res.json({
       status: subInfo.status,
       active: subInfo.active,
       plan_tier: r.plan_tier || 'pro',
-      plan_price: Number(r.plan_price || 999),
+      plan_price: planPrice,
+      whatsapp_enabled: whatsappEnabled,
+      direct_ordering_enabled: directOrderingEnabled,
+      google_reviews_enabled: googleReviewsEnabled,
+      max_combos: maxCombos,
       trial_started_at: r.trial_started_at,
       trial_ends_at: r.trial_ends_at || r.plan_expires_at,
       plan_expires_at: r.plan_expires_at,
