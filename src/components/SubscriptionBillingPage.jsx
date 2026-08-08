@@ -429,11 +429,40 @@ export default function SubscriptionBillingPage({ restoInfo, token, onProceedToD
             </div>
 
             <div style={{ borderTop: '1px solid rgba(255,255,255,0.12)', paddingTop: '8px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-              <span style={{ color: '#F1F5F9', fontWeight: 800 }}>First Charge (Day 15):</span>
+              <span style={{ color: '#F1F5F9', fontWeight: 800 }}>1st Month Charge ({formatDate(trialEnd)}):</span>
               <span style={{ fontSize: '1.15rem', fontWeight: 900, color: '#FFD700' }}>
                 ₹{firstPaymentPrice}
               </span>
             </div>
+
+            {appliedCoupon && Number(appliedCoupon.discount_amount) > 0 && (
+              <div style={{ display: 'flex', justifyContent: 'space-between', color: '#F59E0B', fontWeight: 700, fontSize: '0.8rem' }}>
+                <span>⚡ Coupon applies to 1st month only</span>
+                <span style={{ color: '#F59E0B' }}>One-time discount</span>
+              </div>
+            )}
+
+            <div style={{ display: 'flex', justifyContent: 'space-between', color: '#94A3B8' }}>
+              <span>2nd Month Onwards (Every Month):</span>
+              <span style={{ color: '#E2E8F0', fontWeight: 800 }}>₹{originalPrice}/month</span>
+            </div>
+          </div>
+
+          {/* Clear Visual Payment Timeline */}
+          <div style={{
+            background: 'rgba(0,0,0,0.3)',
+            borderRadius: '10px',
+            padding: '10px 12px',
+            border: '1px solid rgba(255,255,255,0.08)',
+            marginBottom: '14px',
+            fontSize: '0.74rem',
+            color: '#94A3B8',
+            lineHeight: 1.6
+          }}>
+            <div style={{ fontWeight: 800, color: '#DFBA67', marginBottom: '4px', fontSize: '0.72rem' }}>📋 PAYMENT TIMELINE:</div>
+            <div>🎁 <strong style={{ color: '#86EFAC' }}>Today → {formatDate(trialEnd)}</strong> — 14-Day Free Trial (₹0)</div>
+            <div>💳 <strong style={{ color: '#FFD700' }}>{formatDate(trialEnd)}</strong> — 1st Payment: <strong style={{ color: '#FFD700' }}>₹{firstPaymentPrice}</strong>{appliedCoupon ? ` (with ${appliedCoupon.code} coupon)` : ''}</div>
+            <div>🔄 <strong style={{ color: '#E2E8F0' }}>Every month after</strong> — Regular: <strong style={{ color: '#E2E8F0' }}>₹{originalPrice}/month</strong> (no coupon)</div>
           </div>
 
           {/* Promo / Coupon Input */}
