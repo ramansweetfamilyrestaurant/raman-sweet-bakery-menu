@@ -726,10 +726,19 @@ async function seedData() {
     } catch {}
 
     try {
+      await query('ALTER TABLE restaurants ADD COLUMN grace_period_expires_at TIMESTAMP');
+      await query('ALTER TABLE subscriptions ADD COLUMN grace_period_expires_at TIMESTAMP');
+    } catch {}
+
+    try {
       await query('DROP TABLE IF EXISTS coupon_redemptions CASCADE');
       await query('DROP TABLE IF EXISTS coupons CASCADE');
       await query("DELETE FROM service_requests WHERE status = 'resolved'");
       await query("DELETE FROM system_settings WHERE key LIKE '%razorpay%' OR key LIKE '%rzp%'");
+      if (dbType === 'postgres') {
+        await query("INSERT INTO system_settings (key, value) VALUES ('default_trial_days', '14') ON CONFLICT (key) DO NOTHING");
+        await query("INSERT INTO system_settings (key, value) VALUES ('support_whatsapp', '919876543210') ON CONFLICT (key) DO NOTHING");
+      }
     } catch {}
 
     const planCheck = await query('SELECT COUNT(*) as count FROM saas_plans');

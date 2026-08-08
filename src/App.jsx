@@ -456,17 +456,24 @@ export default function App() {
     }
   }, [info]);
 
+  const [subscriptionLoading, setSubscriptionLoading] = useState(false);
+
   // Check restaurant mandate / subscription status server-side to gate Admin Dashboard access
   const checkMandateGating = async (tokenToCheck, slugToCheck) => {
-    if (!tokenToCheck) return false;
+    if (!tokenToCheck) return { is_allowed: false, billing_required: true };
     try {
       const res = await fetch('/api/admin/subscription-status', {
         headers: { Authorization: `Bearer ${tokenToCheck}` }
       });
       if (res.ok) {
         const data = await res.json();
-        const isAuthorized = data.active === true || data.status === 'active' || data.status === 'trialing';
-        return isAuthorized;
+        return {
+          is_allowed: data.is_allowed !== undefined ? Boolean(data.is_allowed) : (data.active === true || data.status === 'active' || data.status === 'trialing'),
+          billing_required: data.billing_required !== undefined ? Boolean(data.billing_required) : false,
+          mandate_status: data.mandate_status,
+          status: data.status,
+          raw: data
+        };
       }
       if (res.status === 401 || res.status === 403) {
         console.warn('Expired token detected in checkMandateGating. Clearing stored credentials.');
@@ -481,7 +488,7 @@ export default function App() {
     } catch (e) {
       console.warn('Failed to verify mandate gating:', e);
     }
-    return false;
+    return { is_allowed: false, billing_required: true };
   };
 
   // Handle URL route changes (/super-admin, /admin, /, /r/:slug, #super-admin, #admin)
@@ -523,13 +530,16 @@ export default function App() {
         }
       } else if (isBilling) {
         if (adminToken) {
-          setView('billing');
+          setSubscriptionLoading(true);
           const currentSlug = localStorage.getItem('raman_admin_slug');
-          const mandateActive = await checkMandateGating(adminToken, currentSlug);
-          if (mandateActive) {
+          const subGate = await checkMandateGating(adminToken, currentSlug);
+          if (subGate.is_allowed && !subGate.billing_required) {
             window.history.replaceState({}, '', currentSlug ? `/${currentSlug}/admin` : '/admin');
             setView('admin-dashboard');
+          } else {
+            setView('billing');
           }
+          setSubscriptionLoading(false);
         } else {
           window.history.replaceState({}, '', '/register');
           setView('register');
@@ -537,6 +547,7 @@ export default function App() {
       } else if (isRegister) {
         setView('register');
       } else if (isRouteAdmin) {
+        setSubscriptionLoading(true);
         const storedSlug = localStorage.getItem('raman_admin_slug');
         let currentSlug = getSlugFromUrl() || (info && info.slug);
         if (!currentSlug || currentSlug === 'admin') {
@@ -546,20 +557,21 @@ export default function App() {
         const effectiveSlug = currentSlug || storedSlug;
 
         if (adminToken && effectiveSlug) {
-          const mandateActive = await checkMandateGating(adminToken, effectiveSlug);
-          if (mandateActive) {
+          const subGate = await checkMandateGating(adminToken, effectiveSlug);
+          if (subGate.is_allowed && !subGate.billing_required) {
             if (path === '/admin' || path === '/admin/') {
               window.history.replaceState({}, '', `/${effectiveSlug}/admin`);
             }
             setView('admin-dashboard');
           } else {
-            // Subscription / Trial expired → Redirect to billing page
+            // Subscription action required → Redirect to billing page
             window.history.replaceState({}, '', '/billing');
             setView('billing');
           }
         } else {
           setView('admin-login');
         }
+        setSubscriptionLoading(false);
       } else if (isRootPath) {
         setView('landing');
         document.title = 'KhanaMaster - Digital Menu & QR Ordering Platform';
@@ -1234,6 +1246,30 @@ export default function App() {
             © 2026 Khana Master — India's Premier Smart AI Digital Menu & Restaurant Management Platform
           </p>
         </footer>
+      </div>
+    );
+  }
+
+  // Explicit Subscription Status Loading Guard (Requirement 4: Never redirect while subscription state is still loading)
+  if (subscriptionLoading && adminToken) {
+    return (
+      <div style={{
+        minHeight: '100vh',
+        background: '#0A0A0A',
+        display: 'flex',
+        flexDirection: 'column',
+        alignItems: 'center',
+        justifyContent: 'center',
+        color: '#DFBA67',
+        fontFamily: "'Plus Jakarta Sans', sans-serif"
+      }}>
+        <div style={{ fontSize: '2.4rem', marginBottom: '14px' }}>🔐</div>
+        <div style={{ fontSize: '1.05rem', fontWeight: 800, color: '#FFFFFF', letterSpacing: '0.2px' }}>
+          Verifying Access & Subscription Status...
+        </div>
+        <div style={{ fontSize: '0.82rem', color: '#9CA3AF', marginTop: '6px' }}>
+          Please wait while backend authorization resolves
+        </div>
       </div>
     );
   }

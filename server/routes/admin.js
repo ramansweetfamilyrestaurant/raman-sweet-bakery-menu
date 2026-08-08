@@ -122,8 +122,11 @@ router.get('/subscription-status', authenticateToken, async (req, res) => {
     const targetId = restoId;
 
     const subInfo = await checkSubscriptionStatus(targetId);
-    const restos = await query('SELECT plan_tier, plan_price, plan_expires_at, trial_started_at, trial_ends_at, mandate_id, mandate_status, auto_debit_enabled FROM restaurants WHERE id = $1', [targetId]);
+    const restos = await query('SELECT active, plan_tier, plan_price, plan_expires_at, trial_started_at, trial_ends_at, grace_period_expires_at, mandate_id, mandate_status, auto_debit_enabled FROM restaurants WHERE id = $1', [targetId]);
     const r = restos[0] || {};
+    const subRows = await query('SELECT * FROM subscriptions WHERE restaurant_id = $1 ORDER BY id DESC LIMIT 1', [targetId]);
+    const sub = subRows[0] || null;
+
     const tierKey = (r.plan_tier || 'pro').toLowerCase();
     const planRows = await query('SELECT * FROM saas_plans WHERE LOWER(key) = $1', [tierKey]);
     const saasPlan = planRows[0] || {};
@@ -134,9 +137,61 @@ router.get('/subscription-status', authenticateToken, async (req, res) => {
     const googleReviewsEnabled = saasPlan.google_reviews_enabled !== undefined ? (saasPlan.google_reviews_enabled === 1 || saasPlan.google_reviews_enabled === true || saasPlan.google_reviews_enabled === '1') : (tierKey !== 'basic');
     const maxCombos = saasPlan.max_combos !== undefined ? Number(saasPlan.max_combos) : (tierKey === 'basic' ? 3 : tierKey === 'pro' ? 10 : 9999);
 
+    const parseDate = (val) => {
+      if (!val) return null;
+      if (val instanceof Date) return val;
+      const str = String(val);
+      return new Date(str.includes('T') ? str : `${str}T23:59:59Z`);
+    };
+
+    const now = new Date();
+    let isTrialActive = false;
+    const expDate = parseDate(r.trial_ends_at || r.plan_expires_at || sub?.trial_end || sub?.current_period_end);
+    if (expDate && !isNaN(expDate.getTime()) && expDate >= now) {
+      isTrialActive = true;
+    }
+
+    let isGracePeriodActive = false;
+    const graceDate = parseDate(r.grace_period_expires_at || sub?.grace_period_expires_at);
+    if (graceDate && !isNaN(graceDate.getTime()) && graceDate >= now) {
+      isGracePeriodActive = true;
+    }
+
+    const subStatus = sub?.status || subInfo.status || (isTrialActive ? 'trialing' : (r.active ? 'trialing' : 'expired'));
+    const mandateStatus = (r.mandate_status || (r.mandate_id ? 'active' : 'pending')).toLowerCase();
+
+    // 1. REQUIRED ADMIN ACCESS RULES:
+    // A) subscription.status === "trialing" AND mandate_status === "active"
+    // B) subscription.status === "active"
+    // C) subscription.status === "payment_failed" AND grace period active
+    // D) subscription.status === "grace_period"
+    // E) Existing active restaurant (active === 1 and not expired)
+    const isRuleA = (subStatus === 'trialing' || isTrialActive) && mandateStatus === 'active';
+    const isRuleB = subStatus === 'active';
+    const isRuleC = subStatus === 'payment_failed' && isGracePeriodActive;
+    const isRuleD = subStatus === 'grace_period';
+    const isRuleE = (r.active === 1 || r.active === true) && (mandateStatus === 'active' || !r.trial_started_at || isTrialActive);
+
+    const isAllowed = Boolean(isRuleA || isRuleB || isRuleC || isRuleD || isRuleE);
+
+    // 2. BILLING REDIRECT CONDITIONS:
+    // Redirect ONLY when action is required:
+    // - mandate_status === "pending" for a newly registered account (has trial_started_at)
+    // - subscription.status === "expired"
+    // - subscription.status === "cancelled" and access period ended
+    const isNewSignupPendingMandate = Boolean(r.trial_started_at) && mandateStatus !== 'active';
+    const isExpired = subStatus === 'expired' && !isTrialActive && !isGracePeriodActive;
+    const isCancelled = subStatus === 'cancelled' && !isTrialActive;
+
+    const billingRequired = !isAllowed || isNewSignupPendingMandate || isExpired || isCancelled;
+
     res.json({
-      status: subInfo.status,
+      status: subStatus,
       active: subInfo.active,
+      is_allowed: isAllowed,
+      billing_required: billingRequired,
+      billing_setup: mandateStatus === 'active' ? 'complete' : 'incomplete',
+      grace_period_active: isGracePeriodActive,
       plan_tier: r.plan_tier || 'pro',
       plan_price: planPrice,
       whatsapp_enabled: whatsappEnabled,
@@ -146,10 +201,11 @@ router.get('/subscription-status', authenticateToken, async (req, res) => {
       trial_started_at: r.trial_started_at,
       trial_ends_at: r.trial_ends_at || r.plan_expires_at,
       plan_expires_at: r.plan_expires_at,
+      grace_period_expires_at: r.grace_period_expires_at || null,
       mandate_id: r.mandate_id || null,
-      mandate_status: r.mandate_status || 'pending',
+      mandate_status: mandateStatus,
       auto_debit_enabled: Boolean(r.auto_debit_enabled),
-      subscription: subRows[0] || null
+      subscription: sub
     });
   } catch (err) {
     console.error('Fetch subscription status error:', err);
