@@ -1,7 +1,7 @@
 import express from 'express';
 import fs from 'fs';
 import path from 'path';
-import { query } from '../db.js';
+import { query, withTransaction } from '../db.js';
 
 import jwt from 'jsonwebtoken';
 import bcrypt from 'bcryptjs';
