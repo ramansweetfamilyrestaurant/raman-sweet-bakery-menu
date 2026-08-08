@@ -1510,7 +1510,7 @@ export default function SuperAdminDashboard({ token, username, onLogout, onRetur
                 <strong style={{ fontSize: '0.82rem', color: '#0F172A', display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '10px' }}>
                   <ShieldCheck size={16} color="#059669" /> SAAS FEATURE ACCESS CONTROL MATRIX
                 </strong>
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '10px' }}>
                   <label style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '0.8rem', fontWeight: 700, color: '#334155', cursor: 'pointer' }}>
                     <input
                       type="checkbox"
@@ -1538,7 +1538,37 @@ export default function SuperAdminDashboard({ token, username, onLogout, onRetur
                       onChange={(e) => setEditModalData({ ...editModalData, google_reviews_enabled: e.target.checked })}
                       style={{ width: '16px', height: '16px', accentColor: '#d97706' }}
                     />
-                    ⭐ Google Review Button
+                    ⭐ Smart AI Google Reviews
+                  </label>
+
+                  <label style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '0.8rem', fontWeight: 700, color: '#334155', cursor: 'pointer' }}>
+                    <input
+                      type="checkbox"
+                      checked={editModalData.direct_ordering_enabled !== false && editModalData.direct_ordering_enabled !== 0}
+                      style={{ width: '16px', height: '16px', accentColor: '#2563eb' }}
+                      readOnly
+                    />
+                    🍱 Thali & Combos Builder
+                  </label>
+
+                  <label style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '0.8rem', fontWeight: 700, color: '#334155', cursor: 'pointer' }}>
+                    <input
+                      type="checkbox"
+                      checked={editModalData.direct_ordering_enabled !== false && editModalData.direct_ordering_enabled !== 0}
+                      style={{ width: '16px', height: '16px', accentColor: '#059669' }}
+                      readOnly
+                    />
+                    🖨️ Thermal Printer (KOT & Bills)
+                  </label>
+
+                  <label style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '0.8rem', fontWeight: 700, color: '#334155', cursor: 'pointer' }}>
+                    <input
+                      type="checkbox"
+                      checked={editModalData.direct_ordering_enabled !== false && editModalData.direct_ordering_enabled !== 0}
+                      style={{ width: '16px', height: '16px', accentColor: '#7c3aed' }}
+                      readOnly
+                    />
+                    🗺️ Hall Floor Map & Table Grid
                   </label>
                 </div>
               </div>
@@ -2136,16 +2166,28 @@ export default function SuperAdminDashboard({ token, username, onLogout, onRetur
                       {/* Included Feature Pills */}
                       <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', marginBottom: '16px', background: '#F8FAFC', padding: '10px 12px', borderRadius: '12px' }}>
                         <div style={{ fontSize: '0.74rem', display: 'flex', alignItems: 'center', gap: '6px' }}>
-                          {plan.whatsapp_enabled ? <CheckCircle size={14} color="#16a34a" /> : <XCircle size={14} color="#dc2626" />}
-                          <span style={{ color: plan.whatsapp_enabled ? '#15803D' : '#94A3B8', fontWeight: 700 }}>WhatsApp Drawer</span>
+                          <CheckCircle size={14} color="#16a34a" />
+                          <span style={{ color: '#15803D', fontWeight: 700 }}>📱 Digital QR Menu & Themes</span>
                         </div>
                         <div style={{ fontSize: '0.74rem', display: 'flex', alignItems: 'center', gap: '6px' }}>
-                          {plan.direct_ordering_enabled ? <CheckCircle size={14} color="#16a34a" /> : <XCircle size={14} color="#dc2626" />}
-                          <span style={{ color: plan.direct_ordering_enabled ? '#15803D' : '#94A3B8', fontWeight: 700 }}>Direct Table QR Ordering</span>
+                          {plan.whatsapp_enabled ? <CheckCircle size={14} color="#16a34a" /> : <XCircle size={14} color="#dc2626" />}
+                          <span style={{ color: plan.whatsapp_enabled ? '#15803D' : '#94A3B8', fontWeight: 700 }}>💬 WhatsApp Direct Order</span>
                         </div>
                         <div style={{ fontSize: '0.74rem', display: 'flex', alignItems: 'center', gap: '6px' }}>
                           {plan.google_reviews_enabled ? <CheckCircle size={14} color="#16a34a" /> : <XCircle size={14} color="#dc2626" />}
-                          <span style={{ color: plan.google_reviews_enabled ? '#15803D' : '#94A3B8', fontWeight: 700 }}>Google Reviews Rating</span>
+                          <span style={{ color: plan.google_reviews_enabled ? '#15803D' : '#94A3B8', fontWeight: 700 }}>⭐ Smart AI Google Reviews</span>
+                        </div>
+                        <div style={{ fontSize: '0.74rem', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                          {plan.direct_ordering_enabled ? <CheckCircle size={14} color="#16a34a" /> : <XCircle size={14} color="#dc2626" />}
+                          <span style={{ color: plan.direct_ordering_enabled ? '#15803D' : '#94A3B8', fontWeight: 700 }}>⚡ Direct Table QR KOT Ordering</span>
+                        </div>
+                        <div style={{ fontSize: '0.74rem', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                          {plan.direct_ordering_enabled ? <CheckCircle size={14} color="#16a34a" /> : <XCircle size={14} color="#dc2626" />}
+                          <span style={{ color: plan.direct_ordering_enabled ? '#15803D' : '#94A3B8', fontWeight: 700 }}>🖨️ Thermal Printer KOT & Bills</span>
+                        </div>
+                        <div style={{ fontSize: '0.74rem', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                          {plan.direct_ordering_enabled ? <CheckCircle size={14} color="#16a34a" /> : <XCircle size={14} color="#dc2626" />}
+                          <span style={{ color: plan.direct_ordering_enabled ? '#15803D' : '#94A3B8', fontWeight: 700 }}>🗺️ Hall Floor Map & Table Grid</span>
                         </div>
                       </div>
                     </div>
