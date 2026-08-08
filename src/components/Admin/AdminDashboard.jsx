@@ -1425,7 +1425,7 @@ export default function AdminDashboard({ token, username, onLogout, onReturnToMe
               {
                 id: 'setup-group',
                 label: '⚙️ Setup',
-                subTabs: ['qr-generator', 'settings', 'permissions'],
+                subTabs: ['qr-generator', 'settings'],
                 defaultTab: 'qr-generator'
               }
             ].map(group => {
@@ -1488,11 +1488,10 @@ export default function AdminDashboard({ token, username, onLogout, onReturnToMe
                 { id: 'categories', label: 'Categories', count: safeCategories.length },
                 { id: 'combos', label: '🛒 Combos', count: combos.length }
               ];
-            } else if (['qr-generator', 'settings', 'permissions'].includes(activeTab)) {
+            } else if (['qr-generator', 'settings'].includes(activeTab)) {
               currentSubTabs = [
                 { id: 'qr-generator', label: '📱 QR Generator' },
-                { id: 'settings', label: '⚙️ Settings' },
-                { id: 'permissions', label: '🛡️ Permissions' }
+                { id: 'settings', label: '⚙️ Settings' }
               ];
             }
 
@@ -3948,6 +3947,85 @@ export default function AdminDashboard({ token, username, onLogout, onReturnToMe
             )}
           </div>
 
+          {/* 🔔 Order Alarm Siren & Mobile Device Permissions Card */}
+          <div style={{
+            background: '#FFFFFF',
+            borderRadius: 'var(--radius-md)',
+            padding: '24px',
+            border: '1px solid var(--border-light)',
+            boxShadow: 'var(--shadow-sm)',
+            marginTop: '20px'
+          }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '12px' }}>
+              <span style={{ fontSize: '22px' }}>🔔</span>
+              <h3 style={{ fontSize: '1.2rem', fontWeight: 800, color: 'var(--primary-emerald)', margin: 0 }}>
+                Order Alarm Ringtone & Mobile Device Permissions
+              </h3>
+            </div>
+
+            <p style={{ fontSize: '0.86rem', color: 'var(--text-muted)', marginBottom: '16px', lineHeight: 1.5 }}>
+              Configure your phone or laptop sound siren, desktop push notifications, and GPS location permissions.
+            </p>
+
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '12px' }}>
+              {/* Sound Ringtone Control */}
+              <div style={{ background: '#F8FAFC', border: '1px solid #E2E8F0', borderRadius: '12px', padding: '14px' }}>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '8px' }}>
+                  <strong style={{ fontSize: '0.85rem', color: '#1E293B' }}>🔊 Order Siren Sound:</strong>
+                  <span style={{ fontSize: '0.7rem', fontWeight: 900, color: permissionsGranted ? '#15803D' : '#B45309', background: permissionsGranted ? '#DCFCE7' : '#FEF3C7', padding: '2px 6px', borderRadius: '4px' }}>
+                    {permissionsGranted ? 'Active' : 'Needs Unlock'}
+                  </span>
+                </div>
+                <div style={{ display: 'flex', gap: '6px' }}>
+                  <button
+                    onClick={() => playKitchenChime()}
+                    style={{ flex: 1, padding: '7px', borderRadius: '8px', background: '#DFBA67', color: '#0A0A0A', border: 'none', fontWeight: 800, fontSize: '0.78rem', cursor: 'pointer' }}
+                  >
+                    🔊 Test Alarm
+                  </button>
+                  <button
+                    onClick={requestDevicePermissions}
+                    style={{ flex: 1, padding: '7px', borderRadius: '8px', background: '#0A2315', color: '#FFD700', border: 'none', fontWeight: 800, fontSize: '0.78rem', cursor: 'pointer' }}
+                  >
+                    ⚡ Enable
+                  </button>
+                </div>
+              </div>
+
+              {/* Push Notifications Control */}
+              <div style={{ background: '#F8FAFC', border: '1px solid #E2E8F0', borderRadius: '12px', padding: '14px' }}>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '8px' }}>
+                  <strong style={{ fontSize: '0.85rem', color: '#1E293B' }}>🔔 Push Notifications:</strong>
+                  <span style={{ fontSize: '0.7rem', fontWeight: 900, color: ('Notification' in window && Notification.permission === 'granted') ? '#15803D' : '#DC2626', background: ('Notification' in window && Notification.permission === 'granted') ? '#DCFCE7' : '#FEE2E2', padding: '2px 6px', borderRadius: '4px' }}>
+                    {('Notification' in window && Notification.permission === 'granted') ? 'Allowed' : 'Blocked'}
+                  </span>
+                </div>
+                <button
+                  onClick={requestDevicePermissions}
+                  style={{ width: '100%', padding: '7px', borderRadius: '8px', background: '#312E81', color: '#FFFFFF', border: 'none', fontWeight: 800, fontSize: '0.78rem', cursor: 'pointer' }}
+                >
+                  🔔 Request Access
+                </button>
+              </div>
+
+              {/* GPS Location Control */}
+              <div style={{ background: '#F8FAFC', border: '1px solid #E2E8F0', borderRadius: '12px', padding: '14px' }}>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '8px' }}>
+                  <strong style={{ fontSize: '0.85rem', color: '#1E293B' }}>📍 GPS Location:</strong>
+                  <span style={{ fontSize: '0.7rem', fontWeight: 900, color: '#15803D', background: '#DCFCE7', padding: '2px 6px', borderRadius: '4px' }}>
+                    Enabled
+                  </span>
+                </div>
+                <button
+                  onClick={requestDevicePermissions}
+                  style={{ width: '100%', padding: '7px', borderRadius: '8px', background: '#E2E8F0', color: '#1E293B', border: 'none', fontWeight: 800, fontSize: '0.78rem', cursor: 'pointer' }}
+                >
+                  📍 Detect GPS
+                </button>
+              </div>
+            </div>
+          </div>
+
           {/* Change Login Credentials Section */}
           <div style={{
             background: '#FFFFFF',
@@ -4084,153 +4162,6 @@ export default function AdminDashboard({ token, username, onLogout, onReturnToMe
           </>
         )}
 
-        {/* 🛡️ DEDICATED TAB: DEVICE & BROWSER PERMISSIONS */}
-        {activeTab === 'permissions' && (
-          <div style={{
-            background: 'var(--bg-secondary)',
-            borderRadius: '24px',
-            padding: '24px',
-            border: '1px solid var(--border-light)',
-            boxShadow: '0 4px 20px rgba(0,0,0,0.06)'
-          }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '20px', borderBottom: '2px solid var(--border-light)', paddingBottom: '16px' }}>
-              <div style={{ width: '48px', height: '48px', borderRadius: '16px', background: 'linear-gradient(135deg, #0A2315 0%, #164E2A 100%)', color: '#FFD700', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '24px', border: '1.5px solid #D4AF37' }}>
-                🛡️
-              </div>
-              <div>
-                <h2 style={{ fontSize: '1.25rem', fontWeight: 900, color: 'var(--primary-emerald)', margin: 0 }}>
-                  Device Permissions & Sound Control Center
-                </h2>
-                <p style={{ fontSize: '0.8rem', color: 'var(--text-muted)', margin: '2px 0 0 0', fontWeight: 600 }}>
-                  Manage live kitchen order siren, desktop push notifications, and GPS location access
-                </p>
-              </div>
-            </div>
-
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-              
-              {/* 1. Loud Order Alarm Ringtone Card */}
-              <div style={{
-                background: 'var(--bg-app)', border: '1.5px solid var(--border-light)', borderRadius: '18px', padding: '18px 20px',
-                display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '14px'
-              }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '14px' }}>
-                  <div style={{ fontSize: '32px' }}>🔊</div>
-                  <div>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '4px' }}>
-                      <strong style={{ fontSize: '0.95rem', color: 'var(--text-dark)' }}>Loud Restaurant Order Ringtone (Zomato/Swiggy Siren)</strong>
-                      <span style={{
-                        background: permissionsGranted ? '#DCFCE7' : '#FEF3C7',
-                        color: permissionsGranted ? '#15803D' : '#B45309',
-                        fontSize: '0.7rem', fontWeight: 900, padding: '2px 8px', borderRadius: '6px'
-                      }}>
-                        {permissionsGranted ? '🟢 SOUND UNLOCKED & ACTIVE' : '🟡 NEEDS AUDIO UNLOCK'}
-                      </span>
-                    </div>
-                    <p style={{ fontSize: '0.78rem', color: 'var(--text-muted)', margin: 0, lineHeight: 1.4 }}>
-                      Plays a loud 6-cycle emergency alarm siren whenever a customer places a new table order or service call.
-                    </p>
-                  </div>
-                </div>
-
-                <div style={{ display: 'flex', gap: '8px' }}>
-                  <button
-                    onClick={() => playKitchenChime()}
-                    style={{
-                      background: 'linear-gradient(135deg, #0A2315, #164E2A)', color: '#FFD700',
-                      padding: '10px 18px', borderRadius: '12px', border: '1px solid #D4AF37',
-                      fontWeight: 900, fontSize: '0.82rem', cursor: 'pointer', boxShadow: '0 4px 12px rgba(10,35,21,0.2)'
-                    }}
-                  >
-                    🔊 Test Siren Ringtone
-                  </button>
-                  <button
-                    onClick={requestDevicePermissions}
-                    style={{
-                      background: 'linear-gradient(135deg, #DFBA67, #F4D490)', color: '#0A0A0A',
-                      padding: '10px 18px', borderRadius: '12px', border: 'none',
-                      fontWeight: 900, fontSize: '0.82rem', cursor: 'pointer', boxShadow: '0 4px 12px rgba(223,186,103,0.3)'
-                    }}
-                  >
-                    ⚡ Enable Audio
-                  </button>
-                </div>
-              </div>
-
-              {/* 2. System Push Notifications Card */}
-              <div style={{
-                background: 'var(--bg-app)', border: '1.5px solid var(--border-light)', borderRadius: '18px', padding: '18px 20px',
-                display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '14px'
-              }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '14px' }}>
-                  <div style={{ fontSize: '32px' }}>🔔</div>
-                  <div>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '4px' }}>
-                      <strong style={{ fontSize: '0.95rem', color: 'var(--text-dark)' }}>Desktop & Mobile System Push Notifications</strong>
-                      <span style={{
-                        background: ('Notification' in window && Notification.permission === 'granted') ? '#DCFCE7' : '#FEE2E2',
-                        color: ('Notification' in window && Notification.permission === 'granted') ? '#15803D' : '#DC2626',
-                        fontSize: '0.7rem', fontWeight: 900, padding: '2px 8px', borderRadius: '6px'
-                      }}>
-                        {('Notification' in window && Notification.permission === 'granted') ? '🟢 PERMISSION GRANTED' : '🔴 NOT GRANTED'}
-                      </span>
-                    </div>
-                    <p style={{ fontSize: '0.78rem', color: 'var(--text-muted)', margin: 0, lineHeight: 1.4 }}>
-                      Shows pop-up order alerts on your phone/laptop screen even when the browser is minimized or screen is locked.
-                    </p>
-                  </div>
-                </div>
-
-                <button
-                  onClick={requestDevicePermissions}
-                  style={{
-                    background: 'linear-gradient(135deg, #1E1B4B 0%, #312E81 100%)', color: '#FFFFFF',
-                    padding: '10px 18px', borderRadius: '12px', border: '1px solid #6366F1',
-                    fontWeight: 900, fontSize: '0.82rem', cursor: 'pointer', boxShadow: '0 4px 12px rgba(99,102,241,0.3)'
-                  }}
-                >
-                  🔔 Request Push Notification Permission
-                </button>
-              </div>
-
-              {/* 3. GPS Location Access Card */}
-              <div style={{
-                background: 'var(--bg-app)', border: '1.5px solid var(--border-light)', borderRadius: '18px', padding: '18px 20px',
-                display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '14px'
-              }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '14px' }}>
-                  <div style={{ fontSize: '32px' }}>📍</div>
-                  <div>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '4px' }}>
-                      <strong style={{ fontSize: '0.95rem', color: 'var(--text-dark)' }}>GPS Geolocation & Maps Sync</strong>
-                      <span style={{
-                        background: '#DCFCE7', color: '#15803D',
-                        fontSize: '0.7rem', fontWeight: 900, padding: '2px 8px', borderRadius: '6px'
-                      }}>
-                        🟢 GPS COMPATIBLE
-                      </span>
-                    </div>
-                    <p style={{ fontSize: '0.78rem', color: 'var(--text-muted)', margin: 0, lineHeight: 1.4 }}>
-                      Detects your restaurant's exact GPS coordinates for customer location verification & Google Maps links.
-                    </p>
-                  </div>
-                </div>
-
-                <button
-                  onClick={requestDevicePermissions}
-                  style={{
-                    background: '#F3F4F6', color: '#1F2937',
-                    padding: '10px 18px', borderRadius: '12px', border: '1px solid #D1D5DB',
-                    fontWeight: 800, fontSize: '0.82rem', cursor: 'pointer'
-                  }}
-                >
-                  📍 Detect Current GPS Location
-                </button>
-              </div>
-
-            </div>
-          </div>
-        )}
       </div>
 
       {/* Dish & Category Form Modals */}
