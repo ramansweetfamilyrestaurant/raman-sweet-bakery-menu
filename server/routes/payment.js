@@ -39,7 +39,7 @@ const handleCreateSubscription = async (req, res) => {
     }
     const targetRestoId = restoId || 1;
 
-    const { plan_tier, coupon_code, return_url } = req.body;
+    const { plan_tier, return_url } = req.body;
     const requestedPlanKey = (plan_tier || 'pro').toLowerCase().trim();
 
     // 1. Authoritative Plan Resolution from Database saas_plans Table
@@ -52,38 +52,6 @@ const handleCreateSubscription = async (req, res) => {
     };
 
     const originalPrice = Number(dbPlan.price) || 999;
-    let finalFirstPrice = originalPrice;
-    let validatedCoupon = null;
-
-    if (coupon_code && typeof coupon_code === 'string' && coupon_code.trim()) {
-      const normCode = coupon_code.trim().toUpperCase();
-      const cRows = await query(`
-        SELECT * FROM coupons WHERE UPPER(code) = $1
-      `, [normCode]);
-      if (cRows && cRows.length > 0) {
-        const c = cRows[0];
-        const isActive = Boolean(c.is_active !== undefined ? c.is_active : (c.active !== undefined ? c.active : true));
-        if (isActive) {
-          const type = (c.discount_type || 'PERCENTAGE').toUpperCase();
-          const val = Number(c.discount_value || c.discount_percent || c.discount_amount || 0);
-          let discount = 0;
-          if (type === 'PERCENTAGE') {
-            discount = (originalPrice * Math.min(100, Math.max(0, val))) / 100;
-          } else {
-            discount = Math.min(originalPrice, Math.max(0, val));
-          }
-          finalFirstPrice = Math.max(0, originalPrice - discount);
-          validatedCoupon = {
-            id: c.id,
-            code: c.code,
-            discount_type: type,
-            discount_value: val,
-            discount_amount: discount,
-            final_first_payment_amount: finalFirstPrice
-          };
-        }
-      }
-    }
 
     // Fetch Restaurant & Owner Details from DB
     const restoRows = await query('SELECT id, name, phone, slug FROM restaurants WHERE id = $1', [targetRestoId]);

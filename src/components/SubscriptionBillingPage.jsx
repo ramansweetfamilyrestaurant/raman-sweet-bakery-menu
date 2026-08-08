@@ -18,10 +18,6 @@ export default function SubscriptionBillingPage({ restoInfo, token, onProceedToD
   const [errorMsg, setErrorMsg] = useState('');
   const [mandateActive, setMandateActive] = useState(false);
 
-  const [couponInput, setCouponInput] = useState('');
-  const [appliedCoupon, setAppliedCoupon] = useState(null);
-  const [couponMsg, setCouponMsg] = useState('');
-  const [couponLoading, setCouponLoading] = useState(false);
 
   // 1. Fetch current restaurant details & subscription status server-side if restoInfo is empty
   useEffect(() => {
@@ -86,10 +82,6 @@ export default function SubscriptionBillingPage({ restoInfo, token, onProceedToD
       setPlanDetails({ name: 'Pro Luxury Plan', price: 999, badge: '👑 PRO' });
     }
 
-    // Auto-validate default launch promo LAUNCH50 or saved coupon code against targetTier
-    const savedCoupon = localStorage.getItem('applied_coupon_code') || 'LAUNCH50';
-    setCouponInput(savedCoupon);
-    validateCoupon(savedCoupon, targetTier);
 
     // Check if mandate is already active in database
     if (activeResto?.mandate_status === 'active') {
@@ -131,33 +123,6 @@ export default function SubscriptionBillingPage({ restoInfo, token, onProceedToD
     return () => clearInterval(pollInterval);
   }, [mandateActive, token, onProceedToDashboard]);
 
-  const validateCoupon = async (codeToValidate, tierToValidate) => {
-    if (!codeToValidate || !codeToValidate.trim()) return;
-    setCouponLoading(true);
-    setCouponMsg('');
-    try {
-      const res = await fetch('/api/coupons/validate', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ code: codeToValidate.trim(), plan_tier: tierToValidate || planKey, restaurant_id: restoInfo?.id })
-      });
-      const data = await res.json();
-      if (res.ok && data.valid) {
-        setAppliedCoupon(data);
-        localStorage.setItem('applied_coupon_code', data.code);
-        setCouponMsg(`✓ Coupon '${data.code}' applied! Saved ₹${data.discount_amount} on your first paid month.`);
-      } else {
-        setAppliedCoupon(null);
-        localStorage.removeItem('applied_coupon_code');
-        setCouponMsg(data.error || '❌ Invalid or expired coupon code');
-      }
-    } catch (e) {
-      setAppliedCoupon(null);
-      setCouponMsg('❌ Failed to validate coupon code');
-    } finally {
-      setCouponLoading(false);
-    }
-  };
 
   // Calculate Trial Dates
   const activeResto = currentResto || restoInfo;
@@ -220,10 +185,8 @@ export default function SubscriptionBillingPage({ restoInfo, token, onProceedToD
         throw new Error('Admin session token missing. Please register or log in again.');
       }
 
-      const activeCouponCode = appliedCoupon ? appliedCoupon.code : localStorage.getItem('applied_coupon_code');
-
-      console.log('[Cashfree Checkout] Initiating subscription for plan_tier:', planKey, 'coupon:', activeCouponCode);
-      const subRes = await createCashfreeSubscription(planKey, activeCouponCode, authToken);
+      console.log('[Cashfree Checkout] Initiating subscription for plan_tier:', planKey);
+      const subRes = await createCashfreeSubscription(planKey, null, authToken);
 
       if (!subRes || (!subRes.subscription_id && !subRes.payment_session_id)) {
         throw new Error(subRes?.error || subRes?.message || 'Failed to generate Cashfree subscription session');
@@ -310,10 +273,7 @@ export default function SubscriptionBillingPage({ restoInfo, token, onProceedToD
     }
   };
 
-  const originalPrice = planDetails.price;
-  const discountAmount = appliedCoupon ? Number(appliedCoupon.discount_amount) : 0;
-  const discountPercent = appliedCoupon ? (appliedCoupon.discount_type === 'PERCENTAGE' ? `${appliedCoupon.discount_value}%` : `₹${appliedCoupon.discount_value}`) : '';
-  const firstPaymentPrice = Math.max(0, originalPrice - discountAmount);
+  const monthlyPrice = planDetails.price;
 
   return (
     <div style={{
@@ -408,43 +368,24 @@ export default function SubscriptionBillingPage({ restoInfo, token, onProceedToD
           }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', color: '#94A3B8' }}>
               <span>Monthly Subscription Rate:</span>
-              <span style={{ color: '#E2E8F0', fontWeight: 700 }}>₹{originalPrice}/month</span>
+              <span style={{ color: '#E2E8F0', fontWeight: 700 }}>₹{monthlyPrice}/month</span>
             </div>
 
-            {appliedCoupon && Number(appliedCoupon.discount_amount) > 0 && (
-              <div style={{ display: 'flex', justifyContent: 'space-between', color: '#34D399', fontWeight: 800 }}>
-                <span>Coupon ({appliedCoupon.code}):</span>
-                <span>-{discountPercent} (-₹{discountAmount})</span>
-              </div>
-            )}
-
             <div style={{ display: 'flex', justifyContent: 'space-between', color: '#86EFAC', fontWeight: 800 }}>
-              <span>Charge Today (Trial Period):</span>
+              <span>Charge Today:</span>
               <span>₹0 (FREE TODAY)</span>
             </div>
 
             <div style={{ display: 'flex', justifyContent: 'space-between', color: '#94A3B8' }}>
-              <span>Free Trial Duration:</span>
+              <span>Free Trial:</span>
               <span style={{ color: '#86EFAC', fontWeight: 700 }}>14 Days (Until {formatDate(trialEnd)})</span>
             </div>
 
             <div style={{ borderTop: '1px solid rgba(255,255,255,0.12)', paddingTop: '8px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-              <span style={{ color: '#F1F5F9', fontWeight: 800 }}>1st Month Charge ({formatDate(trialEnd)}):</span>
+              <span style={{ color: '#F1F5F9', fontWeight: 800 }}>Monthly Charge After Trial:</span>
               <span style={{ fontSize: '1.15rem', fontWeight: 900, color: '#FFD700' }}>
-                ₹{firstPaymentPrice}
+                ₹{monthlyPrice}/month
               </span>
-            </div>
-
-            {appliedCoupon && Number(appliedCoupon.discount_amount) > 0 && (
-              <div style={{ display: 'flex', justifyContent: 'space-between', color: '#F59E0B', fontWeight: 700, fontSize: '0.8rem' }}>
-                <span>⚡ Coupon applies to 1st month only</span>
-                <span style={{ color: '#F59E0B' }}>One-time discount</span>
-              </div>
-            )}
-
-            <div style={{ display: 'flex', justifyContent: 'space-between', color: '#94A3B8' }}>
-              <span>2nd Month Onwards (Every Month):</span>
-              <span style={{ color: '#E2E8F0', fontWeight: 800 }}>₹{originalPrice}/month</span>
             </div>
           </div>
 
@@ -461,56 +402,7 @@ export default function SubscriptionBillingPage({ restoInfo, token, onProceedToD
           }}>
             <div style={{ fontWeight: 800, color: '#DFBA67', marginBottom: '4px', fontSize: '0.72rem' }}>📋 PAYMENT TIMELINE:</div>
             <div>🎁 <strong style={{ color: '#86EFAC' }}>Today → {formatDate(trialEnd)}</strong> — 14-Day Free Trial (₹0)</div>
-            <div>💳 <strong style={{ color: '#FFD700' }}>{formatDate(trialEnd)}</strong> — 1st Payment: <strong style={{ color: '#FFD700' }}>₹{firstPaymentPrice}</strong>{appliedCoupon ? ` (with ${appliedCoupon.code} coupon)` : ''}</div>
-            <div>🔄 <strong style={{ color: '#E2E8F0' }}>Every month after</strong> — Regular: <strong style={{ color: '#E2E8F0' }}>₹{originalPrice}/month</strong> (no coupon)</div>
-          </div>
-
-          {/* Promo / Coupon Input */}
-          <div>
-            <label style={{ display: 'block', fontSize: '0.72rem', fontWeight: 800, color: '#DFBA67', marginBottom: '4px' }}>
-              🎟️ HAVE A PROMO CODE?
-            </label>
-            <div style={{ display: 'flex', gap: '6px' }}>
-              <input
-                type="text"
-                placeholder="Enter code (e.g. LAUNCH50)"
-                value={couponInput}
-                onChange={(e) => setCouponInput(e.target.value.toUpperCase())}
-                style={{
-                  flex: 1,
-                  padding: '8px 10px',
-                  borderRadius: '10px',
-                  border: '1px solid rgba(255,255,255,0.2)',
-                  background: 'rgba(0,0,0,0.4)',
-                  color: '#FFD700',
-                  fontSize: '0.82rem',
-                  fontWeight: 800,
-                  textTransform: 'uppercase'
-                }}
-              />
-              <button
-                type="button"
-                onClick={() => validateCoupon(couponInput, planKey)}
-                disabled={couponLoading || !couponInput.trim()}
-                style={{
-                  background: 'linear-gradient(135deg, #10B981 0%, #059669 100%)',
-                  color: '#FFFFFF',
-                  border: 'none',
-                  padding: '8px 12px',
-                  borderRadius: '10px',
-                  fontWeight: 800,
-                  fontSize: '0.76rem',
-                  cursor: couponLoading || !couponInput.trim() ? 'not-allowed' : 'pointer'
-                }}
-              >
-                {couponLoading ? '...' : 'Apply'}
-              </button>
-            </div>
-            {couponMsg && (
-              <div style={{ fontSize: '0.72rem', fontWeight: 800, color: appliedCoupon ? '#34D399' : '#EF4444', marginTop: '4px' }}>
-                {couponMsg}
-              </div>
-            )}
+            <div>💳 <strong style={{ color: '#E2E8F0' }}>{formatDate(trialEnd)} onwards</strong> — ₹{monthlyPrice}/month via UPI AutoPay</div>
           </div>
         </div>
 

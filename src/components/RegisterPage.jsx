@@ -22,10 +22,6 @@ export default function RegisterPage({ onRegisterSuccess }) {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [pendingApprovalData, setPendingApprovalData] = useState(null);
-  const [couponInput, setCouponInput] = useState('');
-  const [appliedCoupon, setAppliedCoupon] = useState(null);
-  const [couponMsg, setCouponMsg] = useState('');
-  const [couponLoading, setCouponLoading] = useState(false);
 
   const getBasePlanPrice = (tier) => {
     if (tier === 'basic') return 499;
@@ -33,33 +29,7 @@ export default function RegisterPage({ onRegisterSuccess }) {
     return 999;
   };
 
-  const handleApplyCoupon = async () => {
-    if (!couponInput.trim()) return;
-    setCouponLoading(true);
-    setCouponMsg('');
-    try {
-      const res = await fetch('/api/coupons/validate', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ code: couponInput.trim(), plan_tier: formData.plan_tier })
-      });
-      const data = await res.json();
-      if (res.ok && data.valid) {
-        setAppliedCoupon(data);
-        localStorage.setItem('applied_coupon_code', data.code);
-        setCouponMsg(data.message || `✓ Coupon '${data.code}' applied! Saved ₹${data.discount_amount} on first paid cycle.`);
-      } else {
-        setAppliedCoupon(null);
-        localStorage.removeItem('applied_coupon_code');
-        setCouponMsg(data.error || '❌ Invalid or expired coupon code');
-      }
-    } catch (e) {
-      setAppliedCoupon(null);
-      setCouponMsg('❌ Failed to validate coupon code');
-    } finally {
-      setCouponLoading(false);
-    }
-  };
+
 
   // Compute live URL slug preview
   const liveSlug = formData.name
@@ -135,7 +105,6 @@ export default function RegisterPage({ onRegisterSuccess }) {
       localStorage.setItem('adminToken', data.token);
       localStorage.setItem('selected_plan_tier', formData.plan_tier || data.plan_tier || 'pro');
       sessionStorage.setItem('selected_plan_tier', formData.plan_tier || data.plan_tier || 'pro');
-      localStorage.setItem('applied_coupon_code', couponInput.trim() || 'LAUNCH50');
 
       if (onRegisterSuccess) {
         onRegisterSuccess(data);
@@ -438,8 +407,6 @@ export default function RegisterPage({ onRegisterSuccess }) {
                     key={p.key}
                     onClick={() => {
                       setFormData({ ...formData, plan_tier: p.key });
-                      setAppliedCoupon(null);
-                      setCouponMsg('');
                     }}
                     style={{
                       border: formData.plan_tier === p.key ? '2px solid #FFD700' : '1px solid rgba(255,255,255,0.15)',
@@ -454,47 +421,6 @@ export default function RegisterPage({ onRegisterSuccess }) {
                   </div>
                 ))}
               </div>
-            </div>
-
-            {/* 🎟️ Promo Code Input Field */}
-            <div>
-              <label style={{ display: 'block', fontSize: '0.72rem', fontWeight: 800, color: '#DFBA67', marginBottom: '4px' }}>
-                🎟️ PROMO / COUPON CODE (OPTIONAL):
-              </label>
-              <div style={{ display: 'flex', gap: '6px' }}>
-                <input
-                  type="text"
-                  placeholder="e.g. LAUNCH50"
-                  value={couponInput}
-                  onChange={(e) => {
-                    setCouponInput(e.target.value.toUpperCase());
-                    setAppliedCoupon(null);
-                    setCouponMsg('');
-                  }}
-                  style={{
-                    flex: 1, padding: '8px 10px', borderRadius: '10px',
-                    border: '1px solid rgba(255,255,255,0.2)', background: '#1F2937',
-                    color: '#FFD700', fontSize: '0.82rem', fontWeight: 800, textTransform: 'uppercase'
-                  }}
-                />
-                <button
-                  type="button"
-                  onClick={handleApplyCoupon}
-                  disabled={couponLoading || !couponInput.trim()}
-                  style={{
-                    background: 'linear-gradient(135deg, #10B981 0%, #059669 100%)',
-                    color: '#FFFFFF', border: 'none', padding: '8px 12px', borderRadius: '10px',
-                    fontWeight: 800, fontSize: '0.76rem', cursor: couponLoading || !couponInput.trim() ? 'not-allowed' : 'pointer'
-                  }}
-                >
-                  {couponLoading ? '...' : 'Apply'}
-                </button>
-              </div>
-              {couponMsg && (
-                <div style={{ fontSize: '0.72rem', fontWeight: 800, color: appliedCoupon ? '#34D399' : '#EF4444', marginTop: '4px' }}>
-                  {couponMsg}
-                </div>
-              )}
             </div>
 
             {/* Submit Button */}
