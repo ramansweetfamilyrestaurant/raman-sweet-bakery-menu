@@ -24,14 +24,24 @@ router.get('/settings', async (req, res) => {
 });
 
 // Helper to resolve target restaurant by JWT token or slug (or fallback to primary raman-sweet-bakery)
-// Helper to resolve target restaurant by JWT token or slug (or default to primary when no slug is provided)
+// Helper to resolve target restaurant by slug or JWT token
 async function resolveRestaurant(req, slug) {
-  // 1. Check if token in Authorization header
+  // 1. If an explicit slug parameter is passed in URL/query, prioritize searching by slug!
+  if (slug && typeof slug === 'string' && slug.trim() !== '') {
+    const restos = await query('SELECT * FROM restaurants WHERE slug = $1', [slug.trim()]);
+    if (restos && restos.length > 0) {
+      return restos[0];
+    }
+    // Explicit slug requested but restaurant DOES NOT exist in DB (deleted or invalid link) -> return null! DO NOT FALLBACK!
+    return null;
+  }
+
+  // 2. If NO slug was specified in URL, check if JWT token is in Authorization header
   if (req && req.headers && req.headers.authorization) {
     try {
       const authHeader = req.headers.authorization;
       const token = authHeader.split(' ')[1];
-      if (token) {
+      if (token && token !== 'undefined' && token !== 'null') {
         const decoded = jwt.verify(token, JWT_SECRET);
         if (decoded && decoded.restaurant_id) {
           const restos = await query('SELECT * FROM restaurants WHERE id = $1', [decoded.restaurant_id]);
@@ -39,16 +49,6 @@ async function resolveRestaurant(req, slug) {
         }
       }
     } catch (e) {}
-  }
-
-  // 2. If a specific slug parameter was requested
-  if (slug) {
-    const restos = await query('SELECT * FROM restaurants WHERE slug = $1', [slug]);
-    if (restos && restos.length > 0) {
-      return restos[0];
-    }
-    // Explicit slug requested but restaurant DOES NOT exist (deleted or invalid link) -> return null! DO NOT FALLBACK!
-    return null;
   }
 
   // 3. Fallback ONLY if NO slug parameter was provided at all (e.g. visiting bare domain root /)
@@ -152,7 +152,8 @@ router.get('/categories', async (req, res) => {
 
     if (!targetId) {
       const resto = await resolveRestaurant(req, slug);
-      targetId = resto?.id || 1;
+      if (!resto) return res.json([]);
+      targetId = resto.id;
     }
 
     let sql = 'SELECT * FROM categories WHERE restaurant_id = $1';
@@ -179,7 +180,8 @@ router.get('/dishes', async (req, res) => {
 
     if (!targetId) {
       const resto = await resolveRestaurant(req, slug);
-      targetId = resto?.id || 1;
+      if (!resto) return res.json([]);
+      targetId = resto.id;
     }
 
     let sql = `
@@ -243,12 +245,9 @@ router.get('/dishes', async (req, res) => {
 router.get('/combos', async (req, res) => {
   try {
     const slug = req.query.slug;
-    let restaurantId = 1;
-    if (slug) {
-      const rows = await query('SELECT id FROM restaurants WHERE slug = $1', [slug]);
-      if (rows.length > 0) restaurantId = rows[0].id;
-    }
-    const combos = await query('SELECT * FROM combos WHERE restaurant_id = $1 AND available = $2 ORDER BY sort_order ASC, id DESC', [restaurantId, 1]);
+    const resto = await resolveRestaurant(req, slug);
+    if (!resto) return res.json([]);
+    const combos = await query('SELECT * FROM combos WHERE restaurant_id = $1 AND available = $2 ORDER BY sort_order ASC, id DESC', [resto.id, 1]);
     res.json(combos);
   } catch (err) {
     console.error('Fetch public combos error:', err);
