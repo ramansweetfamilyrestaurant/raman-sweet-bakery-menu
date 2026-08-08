@@ -57,7 +57,7 @@ async function createTables() {
         google_maps_url VARCHAR(1000),
         filters_visibility JSONB,
         currency_symbol VARCHAR(10) DEFAULT '₹',
-        fssai_lic_no VARCHAR(100) DEFAULT '20824001000123',
+        fssai_lic_no VARCHAR(100) DEFAULT '',
         resto_type VARCHAR(50) DEFAULT 'pure_veg',
         active BOOLEAN DEFAULT TRUE,
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
@@ -137,7 +137,7 @@ async function createTables() {
       ALTER TABLE restaurants ADD COLUMN IF NOT EXISTS direct_ordering_enabled INT DEFAULT 1;
       ALTER TABLE restaurants ADD COLUMN IF NOT EXISTS google_reviews_enabled INT DEFAULT 1;
       ALTER TABLE restaurants ADD COLUMN IF NOT EXISTS currency_symbol VARCHAR(10) DEFAULT '₹';
-      ALTER TABLE restaurants ADD COLUMN IF NOT EXISTS fssai_lic_no VARCHAR(100) DEFAULT '20824001000123';
+      ALTER TABLE restaurants ADD COLUMN IF NOT EXISTS fssai_lic_no VARCHAR(100) DEFAULT '';
       ALTER TABLE restaurants ADD COLUMN IF NOT EXISTS resto_type VARCHAR(50) DEFAULT 'pure_veg';
       ALTER TABLE restaurants ADD COLUMN IF NOT EXISTS plan_tier VARCHAR(50) DEFAULT 'pro';
       ALTER TABLE restaurants ADD COLUMN IF NOT EXISTS plan_price NUMERIC DEFAULT 999;
@@ -259,7 +259,7 @@ async function createTables() {
         google_maps_url TEXT,
         filters_visibility TEXT,
         currency_symbol TEXT DEFAULT '₹',
-        fssai_lic_no TEXT DEFAULT '20824001000123',
+        fssai_lic_no TEXT DEFAULT '',
         resto_type TEXT DEFAULT 'pure_veg',
         plan_tier TEXT DEFAULT 'pro',
         plan_price REAL DEFAULT 999,
@@ -420,7 +420,7 @@ async function createTables() {
 
       const restoCols = sqliteDb.pragma('table_info(restaurants)');
       if (!restoCols.some(c => c.name === 'currency_symbol')) sqliteDb.exec("ALTER TABLE restaurants ADD COLUMN currency_symbol TEXT DEFAULT '₹'");
-      if (!restoCols.some(c => c.name === 'fssai_lic_no')) sqliteDb.exec("ALTER TABLE restaurants ADD COLUMN fssai_lic_no TEXT DEFAULT '20824001000123'");
+      if (!restoCols.some(c => c.name === 'fssai_lic_no')) sqliteDb.exec("ALTER TABLE restaurants ADD COLUMN fssai_lic_no TEXT DEFAULT ''");
       if (!restoCols.some(c => c.name === 'resto_type')) sqliteDb.exec("ALTER TABLE restaurants ADD COLUMN resto_type TEXT DEFAULT 'pure_veg'");
       if (!restoCols.some(c => c.name === 'plan_tier')) sqliteDb.exec("ALTER TABLE restaurants ADD COLUMN plan_tier TEXT DEFAULT 'pro'");
       if (!restoCols.some(c => c.name === 'plan_price')) sqliteDb.exec("ALTER TABLE restaurants ADD COLUMN plan_price REAL DEFAULT 999");
