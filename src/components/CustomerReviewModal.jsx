@@ -41,7 +41,10 @@ export default function CustomerReviewModal({ info, onClose }) {
 
     setTimeout(() => {
       setCopiedToast(false);
-      const googleUrl = info?.google_review_url || `https://www.google.com/search?q=${encodeURIComponent(restoName + ' ' + (info?.address || ''))}`;
+      const hasCustomUrl = info?.google_review_url && typeof info.google_review_url === 'string' && info.google_review_url.trim() !== '';
+      const googleUrl = hasCustomUrl
+        ? info.google_review_url.trim()
+        : `https://www.google.com/search?q=${encodeURIComponent(restoName + ' ' + (info?.address || ''))}`;
       window.open(googleUrl, '_blank');
     }, 1200);
   };
