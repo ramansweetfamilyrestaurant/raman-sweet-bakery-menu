@@ -728,6 +728,7 @@ async function seedData() {
     try {
       await query('DROP TABLE IF EXISTS coupon_redemptions CASCADE');
       await query('DROP TABLE IF EXISTS coupons CASCADE');
+      await query("DELETE FROM service_requests WHERE status = 'resolved'");
     } catch {}
 
     const planCheck = await query('SELECT COUNT(*) as count FROM saas_plans');

@@ -620,10 +620,10 @@ router.patch('/service-requests/:id/resolve', authenticateToken, requireActiveSu
     const targetId = restoId || 1;
     const { id } = req.params;
     await query(
-      "UPDATE service_requests SET status = 'resolved' WHERE id = $1 AND restaurant_id = $2",
+      "DELETE FROM service_requests WHERE id = $1 AND restaurant_id = $2",
       [id, targetId]
     );
-    res.json({ success: true, id, status: 'resolved' });
+    res.json({ success: true, id, status: 'resolved', deleted: true });
   } catch (err) {
     console.error('Resolve service request error:', err);
     res.status(500).json({ error: 'Failed to resolve service request' });
