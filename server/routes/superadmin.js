@@ -50,12 +50,13 @@ router.post('/login', async (req, res) => {
   }
 });
 
-// GET All Tenant Restaurants with stats
+// GET All Tenant Restaurants with stats & subscription lifecycle details
 router.get('/restaurants', authenticateToken, requireSuperAdmin, async (req, res) => {
   try {
     const restaurants = await query('SELECT * FROM restaurants ORDER BY id DESC');
     const dishesCount = await query('SELECT restaurant_id, COUNT(*) as count FROM dishes GROUP BY restaurant_id');
     const adminsList = await query("SELECT id, restaurant_id, username FROM admins WHERE role = 'restaurant_admin'");
+    const subsList = await query('SELECT * FROM subscriptions ORDER BY id DESC').catch(() => []);
 
     const countMap = {};
     dishesCount.forEach(row => {
@@ -67,11 +68,28 @@ router.get('/restaurants', authenticateToken, requireSuperAdmin, async (req, res
       adminMap[a.restaurant_id] = a.username;
     });
 
-    const result = restaurants.map(r => ({
-      ...r,
-      dish_count: countMap[r.id] || 0,
-      owner_username: adminMap[r.id] || 'N/A'
-    }));
+    const subMap = {};
+    (subsList || []).forEach(s => {
+      if (!subMap[s.restaurant_id]) {
+        subMap[s.restaurant_id] = s;
+      }
+    });
+
+    const result = restaurants.map(r => {
+      const sub = subMap[r.id];
+      return {
+        ...r,
+        dish_count: countMap[r.id] || 0,
+        owner_username: adminMap[r.id] || 'N/A',
+        subscription_status: sub?.status || (r.trial_ends_at ? 'trialing' : 'active'),
+        cancel_requested_at: sub?.cancel_requested_at || null,
+        auto_renew: sub?.auto_renew !== undefined ? Number(sub.auto_renew) : 1,
+        scheduled_plan_key: sub?.scheduled_plan_key || null,
+        plan_change_effective_at: sub?.plan_change_effective_at || null,
+        cancellation_reason: sub?.cancellation_reason || null,
+        access_until: sub?.current_period_end || r.trial_ends_at || r.plan_expires_at || null
+      };
+    });
 
     res.json(result);
   } catch (err) {

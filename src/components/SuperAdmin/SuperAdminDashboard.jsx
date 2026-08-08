@@ -90,6 +90,9 @@ export default function SuperAdminDashboard({ token, username, onLogout, onRetur
   const [auditLogs, setAuditLogs] = useState([]);
   const [auditLoading, setAuditLoading] = useState(false);
 
+  // Phase 4: Subscription Requests Overview Modal State
+  const [showSubRequestsModal, setShowSubRequestsModal] = useState(false);
+
   // New Restaurant Form State
   const [form, setForm] = useState({
     name: '',
@@ -511,6 +514,29 @@ export default function SuperAdminDashboard({ token, username, onLogout, onRetur
               title="Manage SaaS Plan Tiers, Pricing & Feature Matrix"
             >
               <CreditCard size={14} color="#DFBA67" /> SaaS Plans
+            </button>
+
+            {/* 📋 Subscription Requests & Lifecycle Button */}
+            <button
+              onClick={() => setShowSubRequestsModal(true)}
+              style={{
+                background: '#FEF3C7',
+                color: '#92400E',
+                padding: '7px 14px',
+                borderRadius: 'var(--radius-pill)',
+                fontSize: '0.76rem',
+                fontWeight: 900,
+                border: '1.5px solid #FDE68A',
+                cursor: 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '5px',
+                whiteSpace: 'nowrap',
+                boxShadow: '0 4px 12px rgba(180,83,9,0.15)'
+              }}
+              title="View all subscription cancellations, plan change requests & billing status"
+            >
+              <Calendar size={14} color="#92400E" /> Subscription Lifecycle
             </button>
 
 
@@ -970,6 +996,36 @@ export default function SuperAdminDashboard({ token, username, onLogout, onRetur
                       }}>
                         👑 {(r.plan_tier || 'pro').toUpperCase()} (₹{r.plan_price || 999}/mo)
                       </span>
+
+                      {/* Phase 4: Cancellation Scheduled Badge */}
+                      {r.cancel_requested_at && (
+                        <span style={{
+                          background: '#FEF3C7',
+                          color: '#92400E',
+                          padding: '3px 8px',
+                          borderRadius: '6px',
+                          fontSize: '0.68rem',
+                          fontWeight: 900,
+                          border: '1px solid #FDE68A'
+                        }} title={`Cancellation requested on ${new Date(r.cancel_requested_at).toLocaleDateString('en-IN')}`}>
+                          ⏸️ CANCELLATION SCHEDULED
+                        </span>
+                      )}
+
+                      {/* Phase 4: Scheduled Plan Change Badge */}
+                      {r.scheduled_plan_key && (
+                        <span style={{
+                          background: '#EFF6FF',
+                          color: '#1E40AF',
+                          padding: '3px 8px',
+                          borderRadius: '6px',
+                          fontSize: '0.68rem',
+                          fontWeight: 900,
+                          border: '1px solid #BFDBFE'
+                        }} title={`Switching to ${r.scheduled_plan_key.toUpperCase()} on ${r.plan_change_effective_at ? new Date(r.plan_change_effective_at).toLocaleDateString('en-IN') : 'next cycle'}`}>
+                          📋 SWITCHING TO {r.scheduled_plan_key.toUpperCase()}
+                        </span>
+                      )}
 
                       {/* Expiry Badge */}
                       {daysLeft !== null && (
@@ -2734,6 +2790,119 @@ export default function SuperAdminDashboard({ token, username, onLogout, onRetur
                 💾 Save Master Support WhatsApp Number
               </button>
             </form>
+          </div>
+        </div>
+      )}
+
+      {/* ==================== SUBSCRIPTION LIFECYCLE OVERVIEW MODAL ==================== */}
+      {showSubRequestsModal && (
+        <div style={{
+          position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
+          background: 'rgba(0,0,0,0.6)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 10000, padding: '20px'
+        }}>
+          <div style={{ background: '#FFFFFF', borderRadius: '24px', padding: '28px', maxWidth: '820px', width: '100%', maxHeight: '85vh', overflowY: 'auto', boxShadow: '0 20px 60px rgba(0,0,0,0.3)' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px', borderBottom: '1px solid #E2E8F0', paddingBottom: '16px' }}>
+              <div>
+                <h3 style={{ fontSize: '1.2rem', fontWeight: 900, color: '#0F172A', margin: 0, display: 'flex', alignItems: 'center', gap: '8px' }}>
+                  💳 Subscription Lifecycle & Billing Overview
+                </h3>
+                <span style={{ fontSize: '0.78rem', color: '#64748B' }}>
+                  Real-time Super Admin monitoring for plan change requests, cancellations, and active AutoPay mandates
+                </span>
+              </div>
+              <button onClick={() => setShowSubRequestsModal(false)} style={{ background: 'none', border: 'none', cursor: 'pointer', padding: '4px' }}>
+                <X size={22} color="#64748B" />
+              </button>
+            </div>
+
+            {/* KPI Summary Grid */}
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '12px', marginBottom: '20px' }}>
+              <div style={{ background: '#F8FAFC', border: '1px solid #E2E8F0', padding: '14px', borderRadius: '14px', textAlign: 'center' }}>
+                <span style={{ fontSize: '0.72rem', color: '#64748B', fontWeight: 800, display: 'block' }}>TOTAL TENANTS</span>
+                <strong style={{ fontSize: '1.4rem', fontWeight: 900, color: '#0F172A' }}>{restaurants.length}</strong>
+              </div>
+              <div style={{ background: '#FEF3C7', border: '1px solid #FDE68A', padding: '14px', borderRadius: '14px', textAlign: 'center' }}>
+                <span style={{ fontSize: '0.72rem', color: '#92400E', fontWeight: 800, display: 'block' }}>PENDING CANCELLATIONS</span>
+                <strong style={{ fontSize: '1.4rem', fontWeight: 900, color: '#92400E' }}>
+                  {restaurants.filter(r => r.cancel_requested_at).length}
+                </strong>
+              </div>
+              <div style={{ background: '#EFF6FF', border: '1px solid #BFDBFE', padding: '14px', borderRadius: '14px', textAlign: 'center' }}>
+                <span style={{ fontSize: '0.72rem', color: '#1E40AF', fontWeight: 800, display: 'block' }}>SCHEDULED PLAN CHANGES</span>
+                <strong style={{ fontSize: '1.4rem', fontWeight: 900, color: '#1E40AF' }}>
+                  {restaurants.filter(r => r.scheduled_plan_key).length}
+                </strong>
+              </div>
+              <div style={{ background: '#DCFCE7', border: '1px solid #86EFAC', padding: '14px', borderRadius: '14px', textAlign: 'center' }}>
+                <span style={{ fontSize: '0.72rem', color: '#15803D', fontWeight: 800, display: 'block' }}>ACTIVE TENANTS</span>
+                <strong style={{ fontSize: '1.4rem', fontWeight: 900, color: '#15803D' }}>
+                  {restaurants.filter(r => r.active !== false).length}
+                </strong>
+              </div>
+            </div>
+
+            {/* Subscriptions Table */}
+            <div style={{ border: '1px solid #E2E8F0', borderRadius: '16px', overflow: 'hidden' }}>
+              <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.82rem', textAlign: 'left' }}>
+                <thead>
+                  <tr style={{ background: '#F8FAFC', borderBottom: '1px solid #E2E8F0' }}>
+                    <th style={{ padding: '12px 14px', color: '#475569', fontWeight: 800 }}>RESTAURANT</th>
+                    <th style={{ padding: '12px 14px', color: '#475569', fontWeight: 800 }}>CURRENT PLAN</th>
+                    <th style={{ padding: '12px 14px', color: '#475569', fontWeight: 800 }}>STATUS</th>
+                    <th style={{ padding: '12px 14px', color: '#475569', fontWeight: 800 }}>AUTO-RENEW</th>
+                    <th style={{ padding: '12px 14px', color: '#475569', fontWeight: 800 }}>ACCESS UNTIL</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {restaurants.map(r => (
+                    <tr key={r.id} style={{ borderBottom: '1px solid #F1F5F9' }}>
+                      <td style={{ padding: '12px 14px', fontWeight: 800, color: '#0F172A' }}>
+                        {r.name}
+                        <span style={{ display: 'block', fontSize: '0.7rem', color: '#64748B', fontWeight: 600 }}>/{r.slug}</span>
+                      </td>
+                      <td style={{ padding: '12px 14px' }}>
+                        <span style={{ fontWeight: 800, color: '#059669' }}>{(r.plan_tier || 'pro').toUpperCase()}</span>
+                        <span style={{ fontSize: '0.72rem', color: '#64748B', display: 'block' }}>₹{r.plan_price || 999}/mo</span>
+                      </td>
+                      <td style={{ padding: '12px 14px' }}>
+                        {r.cancel_requested_at ? (
+                          <span style={{ background: '#FEF3C7', color: '#92400E', padding: '3px 8px', borderRadius: '50px', fontSize: '0.72rem', fontWeight: 900 }}>
+                            ⏸️ Cancellation Requested
+                          </span>
+                        ) : r.scheduled_plan_key ? (
+                          <span style={{ background: '#EFF6FF', color: '#1E40AF', padding: '3px 8px', borderRadius: '50px', fontSize: '0.72rem', fontWeight: 900 }}>
+                            📋 Plan Change ({r.scheduled_plan_key.toUpperCase()})
+                          </span>
+                        ) : r.active !== false ? (
+                          <span style={{ background: '#DCFCE7', color: '#15803D', padding: '3px 8px', borderRadius: '50px', fontSize: '0.72rem', fontWeight: 900 }}>
+                            🟢 Active
+                          </span>
+                        ) : (
+                          <span style={{ background: '#FEE2E2', color: '#DC2626', padding: '3px 8px', borderRadius: '50px', fontSize: '0.72rem', fontWeight: 900 }}>
+                            🔴 Suspended / Expired
+                          </span>
+                        )}
+                      </td>
+                      <td style={{ padding: '12px 14px', fontWeight: 800, color: (r.auto_renew === 0 || r.auto_renew === false) ? '#DC2626' : '#059669' }}>
+                        {(r.auto_renew === 0 || r.auto_renew === false) ? '❌ OFF' : '✅ ON'}
+                      </td>
+                      <td style={{ padding: '12px 14px', color: '#334155', fontWeight: 700 }}>
+                        {r.access_until ? new Date(r.access_until).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' }) : 'N/A'}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+
+            <div style={{ marginTop: '20px', textAlign: 'right' }}>
+              <button
+                onClick={() => setShowSubRequestsModal(false)}
+                style={{ background: '#0F172A', color: '#FFFFFF', padding: '10px 24px', borderRadius: '10px', border: 'none', fontWeight: 800, cursor: 'pointer' }}
+              >
+                Close Window
+              </button>
+            </div>
           </div>
         </div>
       )}
