@@ -37,6 +37,8 @@ export default function AdminDashboard({ token, username, onLogout, onReturnToMe
   const [masterSupportPhone, setMasterSupportPhone] = useState('919876543210');
   const [showOnboardingGuide, setShowOnboardingGuide] = useState(true);
   const [showHelpModal, setShowHelpModal] = useState(false);
+  const [showPrinterModal, setShowPrinterModal] = useState(false);
+  const [toastMessage, setToastMessage] = useState('');
 
   // Settings Accordion Folders State
   const [openSettingsSections, setOpenSettingsSections] = useState({
@@ -131,52 +133,69 @@ export default function AdminDashboard({ token, username, onLogout, onReturnToMe
     };
   }, [token]);
 
-  const requestDevicePermissions = async () => {
-    let notifOk = false;
-
-    // 1. Audio Sound Unlock & Ringtone Test
+  const requestAudioPermission = () => {
     try {
       playKitchenChime();
+      setPermissionsGranted(true);
+      setToastMessage('🔊 Order Siren Alarm Active & Ringtone Sound Unlocked!');
+      setTimeout(() => setToastMessage(''), 4000);
     } catch (e) {
-      console.warn('Audio unlock error:', e);
+      console.warn('Audio test error:', e);
     }
+  };
 
-    // 2. Push Notification Permission
+  const requestNotificationPermission = async () => {
     try {
       if ('Notification' in window) {
         const res = await Notification.requestPermission();
-        if (res === 'granted') notifOk = true;
+        if (res === 'granted') {
+          setToastMessage('🔔 Push Notifications Granted! You will receive live order popups.');
+        } else {
+          setToastMessage('⚠️ Notifications Blocked. Please allow notifications in browser permissions.');
+        }
+      } else {
+        setToastMessage('⚠️ Push notifications not supported on this browser.');
       }
+      setTimeout(() => setToastMessage(''), 4000);
     } catch (e) {
-      console.warn('Notification permission error:', e);
+      console.warn('Notification error:', e);
     }
+  };
 
-    // 3. Geolocation Permission & Instant Auto-Save
-    try {
-      if ('geolocation' in navigator) {
-        navigator.geolocation.getCurrentPosition(
-          (pos) => {
-            const lat = pos.coords.latitude;
-            const lng = pos.coords.longitude;
-            console.log('📍 GPS Location captured:', lat, lng);
-            setSettingsForm(prev => ({ ...prev, latitude: lat, longitude: lng }));
-            if (token) {
-              updateTenantSettings(token, { latitude: lat, longitude: lng }).then(() => {
-                alert(`📱 Permissions & GPS Location Auto-Saved!\n• Loud Kitchen Order Ringtone: Active 🔊\n• Live Push Notifications: ${notifOk ? 'Allowed 🔔' : 'Pending'}\n• GPS Restaurant Coordinates: Auto-Saved (${lat.toFixed(4)}, ${lng.toFixed(4)}) 📍`);
-              }).catch(e => console.warn('GPS save error:', e));
-            }
-          },
-          (err) => {
-            alert('📱 Permissions Enabled!\n• Loud Kitchen Ringtone: Active 🔊\n• Push Notifications: Active 🔔\n• GPS Location: Skipped or Denied (You can enter coordinates manually in Settings)');
-          },
-          { enableHighAccuracy: true, timeout: 8000 }
-        );
-      }
-    } catch (e) {
-      console.warn('Geolocation error:', e);
+  const requestGpsPermission = () => {
+    if (!('geolocation' in navigator)) {
+      setToastMessage('⚠️ GPS Geolocation not supported on this device.');
+      setTimeout(() => setToastMessage(''), 4000);
+      return;
     }
+    setToastMessage('📍 Detecting GPS Location...');
+    navigator.geolocation.getCurrentPosition(
+      (pos) => {
+        const lat = pos.coords.latitude;
+        const lng = pos.coords.longitude;
+        setSettingsForm(prev => ({ ...prev, latitude: lat, longitude: lng }));
+        if (token) {
+          updateTenantSettings(token, { latitude: lat, longitude: lng }).then(() => {
+            setToastMessage(`✨ GPS Coordinates Captured & Auto-Saved! (${lat.toFixed(4)}, ${lng.toFixed(4)})`);
+            setTimeout(() => setToastMessage(''), 5000);
+          }).catch(() => {
+            setToastMessage(`📍 GPS Coordinates Captured! (${lat.toFixed(4)}, ${lng.toFixed(4)})`);
+            setTimeout(() => setToastMessage(''), 5000);
+          });
+        }
+      },
+      (err) => {
+        setToastMessage('⚠️ GPS Access Denied. Please enable Location in browser settings.');
+        setTimeout(() => setToastMessage(''), 5000);
+      },
+      { enableHighAccuracy: true, timeout: 8000 }
+    );
+  };
 
-    setPermissionsGranted(true);
+  const requestDevicePermissions = async () => {
+    requestAudioPermission();
+    requestNotificationPermission();
+    requestGpsPermission();
   };
 
   const playKitchenChime = () => {
@@ -4517,13 +4536,13 @@ export default function AdminDashboard({ token, username, onLogout, onReturnToMe
                   </div>
                   <div style={{ display: 'flex', gap: '6px' }}>
                     <button
-                      onClick={() => playKitchenChime()}
+                      onClick={requestAudioPermission}
                       style={{ flex: 1, padding: '7px', borderRadius: '8px', background: '#DFBA67', color: '#0A0A0A', border: 'none', fontWeight: 800, fontSize: '0.78rem', cursor: 'pointer' }}
                     >
                       🔊 Test Alarm
                     </button>
                     <button
-                      onClick={requestDevicePermissions}
+                      onClick={requestAudioPermission}
                       style={{ flex: 1, padding: '7px', borderRadius: '8px', background: '#0A2315', color: '#FFD700', border: 'none', fontWeight: 800, fontSize: '0.78rem', cursor: 'pointer' }}
                     >
                       ⚡ Enable
@@ -4540,7 +4559,7 @@ export default function AdminDashboard({ token, username, onLogout, onReturnToMe
                     </span>
                   </div>
                   <button
-                    onClick={requestDevicePermissions}
+                    onClick={requestNotificationPermission}
                     style={{ width: '100%', padding: '7px', borderRadius: '8px', background: '#312E81', color: '#FFFFFF', border: 'none', fontWeight: 800, fontSize: '0.78rem', cursor: 'pointer' }}
                   >
                     🔔 Request Access
@@ -4556,7 +4575,7 @@ export default function AdminDashboard({ token, username, onLogout, onReturnToMe
                     </span>
                   </div>
                   <button
-                    onClick={requestDevicePermissions}
+                    onClick={requestGpsPermission}
                     style={{ width: '100%', padding: '7px', borderRadius: '8px', background: '#E2E8F0', color: '#1E293B', border: 'none', fontWeight: 800, fontSize: '0.78rem', cursor: 'pointer' }}
                   >
                     📍 Detect GPS
@@ -4572,10 +4591,10 @@ export default function AdminDashboard({ token, username, onLogout, onReturnToMe
                     </span>
                   </div>
                   <button
-                    onClick={() => alert("🖨️ Bluetooth Thermal Printing Tip:\n\n1. Pair your 58mm/80mm Bluetooth Thermal Printer in your Phone/Tablet Bluetooth Settings.\n2. For 0.5-second instant background printing without preview popups, install free RawBT App on Android.\n3. Click '⚡ BT KOT' on any live order!")}
+                    onClick={() => setShowPrinterModal(true)}
                     style={{ width: '100%', padding: '7px', borderRadius: '8px', background: 'linear-gradient(135deg, #0EA5E9 0%, #0284C7 100%)', color: '#FFFFFF', border: 'none', fontWeight: 800, fontSize: '0.78rem', cursor: 'pointer' }}
                   >
-                    🖨️ View Printer Pairing Tip
+                    🖨️ View Printer Setup Guide
                   </button>
                 </div>
               </div>
@@ -5013,6 +5032,99 @@ export default function AdminDashboard({ token, username, onLogout, onReturnToMe
               ✅ Got it! Return to Dashboard
             </button>
           </div>
+        </div>
+      )}
+
+      {/* 🖨️ Custom Bluetooth Thermal Printer Setup Modal */}
+      {showPrinterModal && (
+        <div style={{
+          position: 'fixed', inset: 0, zIndex: 11000,
+          background: 'rgba(0, 0, 0, 0.85)', backdropFilter: 'blur(8px)',
+          display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '16px'
+        }}>
+          <div style={{
+            background: '#111827', border: '2px solid #0EA5E9', borderRadius: '24px',
+            padding: '24px', maxWidth: '540px', width: '100%', color: '#FFFFFF',
+            boxShadow: '0 25px 60px rgba(0,0,0,0.9)', position: 'relative'
+          }}>
+            <button
+              onClick={() => setShowPrinterModal(false)}
+              style={{
+                position: 'absolute', top: '16px', right: '16px',
+                background: 'rgba(255,255,255,0.12)', border: 'none',
+                color: '#FFFFFF', borderRadius: '50%', width: '32px', height: '32px',
+                cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center'
+              }}
+            >
+              <X size={18} />
+            </button>
+
+            <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '16px', borderBottom: '1px solid #1F2937', paddingBottom: '14px' }}>
+              <span style={{ fontSize: '2rem' }}>🖨️</span>
+              <div>
+                <h3 style={{ margin: 0, fontSize: '1.2rem', fontWeight: 900, color: '#38BDF8' }}>
+                  Bluetooth Thermal Printer Pairing Guide
+                </h3>
+                <span style={{ fontSize: '0.8rem', color: '#9CA3AF' }}>
+                  58mm & 80mm ESC/POS Thermal Printers
+                </span>
+              </div>
+            </div>
+
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', fontSize: '0.84rem', color: '#E2E8F0' }}>
+              <div style={{ background: '#1F2937', padding: '12px 14px', borderRadius: '12px', border: '1px solid #374151' }}>
+                <strong style={{ color: '#38BDF8', display: 'block', marginBottom: '4px' }}>📱 Step 1: Pair Printer in Mobile Settings</strong>
+                Turn on your Bluetooth Thermal Printer, open your Android/iOS Phone Bluetooth Settings, & tap to pair device (Pin: 0000 or 1234).
+              </div>
+
+              <div style={{ background: '#1F2937', padding: '12px 14px', borderRadius: '12px', border: '1px solid #374151' }}>
+                <strong style={{ color: '#38BDF8', display: 'block', marginBottom: '4px' }}>⚡ Step 2: Install Free RawBT App (Optional)</strong>
+                For 0.5-second instant background printing without preview popups, install the free <strong>RawBT app</strong> from Play Store.
+              </div>
+
+              <div style={{ background: '#1F2937', padding: '12px 14px', borderRadius: '12px', border: '1px solid #374151' }}>
+                <strong style={{ color: '#38BDF8', display: 'block', marginBottom: '4px' }}>🧾 Step 3: Print Live Orders</strong>
+                On any live kitchen order card, click <strong>"⚡ BT KOT"</strong> for instant receipt print!
+              </div>
+            </div>
+
+            <div style={{ display: 'flex', gap: '10px', marginTop: '20px' }}>
+              <button
+                onClick={() => {
+                  setShowPrinterModal(false);
+                  handleDirectBluetoothPrint({ id: 999, table_number: '1', customer_name: 'Test Guest', total_amount: 150, items: [{ name: 'Paneer Butter Masala', quantity: 1, price: 150 }] }, 'kot');
+                }}
+                style={{
+                  flex: 1, padding: '12px', borderRadius: '9999px', border: 'none',
+                  background: 'linear-gradient(135deg, #0EA5E9 0%, #0284C7 100%)',
+                  color: '#FFFFFF', fontWeight: 900, fontSize: '0.85rem', cursor: 'pointer'
+                }}
+              >
+                ⚡ Test Sample Print
+              </button>
+              <button
+                onClick={() => setShowPrinterModal(false)}
+                style={{
+                  padding: '12px 20px', borderRadius: '9999px', border: '1px solid #374151',
+                  background: 'rgba(255,255,255,0.08)', color: '#FFFFFF', fontWeight: 800, fontSize: '0.85rem', cursor: 'pointer'
+                }}
+              >
+                Close
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* 🔔 Floating Toast Notification Banner */}
+      {toastMessage && (
+        <div style={{
+          position: 'fixed', bottom: '24px', left: '50%', transform: 'translateX(-50%)',
+          zIndex: 12000, background: '#0A2315', color: '#DFBA67', border: '2px solid #DFBA67',
+          padding: '12px 24px', borderRadius: '9999px', fontWeight: 900, fontSize: '0.88rem',
+          boxShadow: '0 10px 30px rgba(0,0,0,0.6)', display: 'flex', alignItems: 'center', gap: '8px'
+        }}>
+          {toastMessage}
         </div>
       )}
     </div>
