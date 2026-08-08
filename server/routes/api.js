@@ -640,6 +640,11 @@ router.post('/register', async (req, res) => {
       restaurant: {
         id: result.newRestoId,
         name: name.trim(),
+        slug: result.cleanSlug,
+        plan_tier: selectedPlanKey,
+        active: result.isActive
+      },
+      message: !result.isActive
         ? `⏳ Registration Submitted! Your restaurant '${name.trim()}' is pending Super Admin verification and approval.`
         : '🎉 Congratulations! Your 14-Day Free Trial has been activated successfully.'
     });
