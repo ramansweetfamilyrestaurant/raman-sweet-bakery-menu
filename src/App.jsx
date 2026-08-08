@@ -454,6 +454,16 @@ export default function App() {
         const isAuthorized = data.mandate_status === 'active';
         return isAuthorized;
       }
+      if (res.status === 401 || res.status === 403) {
+        console.warn('Expired token detected in checkMandateGating. Clearing stored credentials.');
+        localStorage.removeItem('raman_admin_token');
+        localStorage.removeItem('raman_admin_user');
+        localStorage.removeItem('raman_admin_slug');
+        localStorage.removeItem('adminToken');
+        setAdminToken('');
+        setAdminUsername('');
+        setAdminSlug('');
+      }
     } catch (e) {
       console.warn('Failed to verify mandate gating:', e);
     }

@@ -30,7 +30,18 @@ export default function SubscriptionBillingPage({ restoInfo, token, onProceedToD
       fetch('/api/admin/subscription-status', {
         headers: { Authorization: `Bearer ${authToken}` }
       })
-        .then(res => res.json())
+        .then(res => {
+          if (res.status === 401 || res.status === 403) {
+            console.warn('[Billing] Stale/expired token detected. Clearing storage...');
+            localStorage.removeItem('raman_admin_token');
+            localStorage.removeItem('adminToken');
+            localStorage.removeItem('raman_admin_user');
+            localStorage.removeItem('raman_admin_slug');
+            window.location.href = '/register';
+            return null;
+          }
+          return res.json();
+        })
         .then(data => {
           if (data && !data.error) {
             setCurrentResto({
@@ -44,6 +55,10 @@ export default function SubscriptionBillingPage({ restoInfo, token, onProceedToD
             if (data.mandate_status === 'active') {
               setMandateActive(true);
             }
+          } else if (data && data.error && (data.error.includes('token') || data.error.includes('expired'))) {
+            localStorage.removeItem('raman_admin_token');
+            localStorage.removeItem('adminToken');
+            window.location.href = '/register';
           }
         })
         .catch(console.error);
