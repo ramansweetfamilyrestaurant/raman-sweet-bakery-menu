@@ -3,6 +3,7 @@ import { ShieldCheck, Sparkles, CreditCard, ArrowRight, CheckCircle2, AlertCircl
 import { createCashfreeSubscription, verifyCashfreeSubscription } from '../api/client';
 
 export default function SubscriptionBillingPage({ restoInfo, token, onProceedToDashboard }) {
+  const [currentResto, setCurrentResto] = useState(restoInfo || null);
   const [planKey, setPlanKey] = useState('pro');
   const [planDetails, setPlanDetails] = useState({
     name: 'Pro Luxury Plan',
@@ -22,10 +23,40 @@ export default function SubscriptionBillingPage({ restoInfo, token, onProceedToD
   const [couponMsg, setCouponMsg] = useState('');
   const [couponLoading, setCouponLoading] = useState(false);
 
-  // Read stored plan, restaurant info, and auto-validate saved coupon
+  // 1. Fetch current restaurant details & subscription status server-side if restoInfo is empty
   useEffect(() => {
+    const authToken = token || localStorage.getItem('raman_admin_token') || localStorage.getItem('adminToken');
+    if (!restoInfo && authToken) {
+      fetch('/api/admin/subscription-status', {
+        headers: { Authorization: `Bearer ${authToken}` }
+      })
+        .then(res => res.json())
+        .then(data => {
+          if (data && !data.error) {
+            setCurrentResto({
+              name: data.restaurant_name || localStorage.getItem('raman_admin_user') || 'Your Restaurant',
+              plan_tier: data.plan_tier || 'pro',
+              mandate_status: data.mandate_status || 'pending',
+              auto_debit_enabled: data.auto_debit_enabled,
+              trial_started_at: data.trial_started_at,
+              trial_ends_at: data.trial_ends_at || data.plan_expires_at
+            });
+            if (data.mandate_status === 'active' || data.auto_debit_enabled) {
+              setMandateActive(true);
+            }
+          }
+        })
+        .catch(console.error);
+    } else if (restoInfo) {
+      setCurrentResto(restoInfo);
+    }
+  }, [restoInfo, token]);
+
+  // 2. Read stored plan, restaurant info, and auto-validate saved coupon
+  useEffect(() => {
+    const activeResto = currentResto || restoInfo;
     const savedPlan = localStorage.getItem('selected_plan_tier') || sessionStorage.getItem('selected_plan_tier');
-    const tier = (savedPlan || restoInfo?.plan_tier || 'pro').toLowerCase();
+    const tier = (planKey || savedPlan || activeResto?.plan_tier || 'pro').toLowerCase();
     setPlanKey(tier);
 
     if (tier === 'basic') {
@@ -38,16 +69,16 @@ export default function SubscriptionBillingPage({ restoInfo, token, onProceedToD
 
     // Check saved coupon code from registration or previous attempt
     const savedCoupon = localStorage.getItem('applied_coupon_code');
-    if (savedCoupon) {
+    if (savedCoupon && !appliedCoupon) {
       setCouponInput(savedCoupon);
       validateCoupon(savedCoupon, tier);
     }
 
     // Check if mandate is already active in database
-    if (restoInfo?.mandate_status === 'active' || restoInfo?.auto_debit_enabled) {
+    if (activeResto?.mandate_status === 'active' || activeResto?.auto_debit_enabled) {
       setMandateActive(true);
     }
-  }, [restoInfo]);
+  }, [currentResto, restoInfo, planKey]);
 
   const validateCoupon = async (codeToValidate, tierToValidate) => {
     if (!codeToValidate || !codeToValidate.trim()) return;
@@ -78,9 +109,10 @@ export default function SubscriptionBillingPage({ restoInfo, token, onProceedToD
   };
 
   // Calculate Trial Dates
+  const activeResto = currentResto || restoInfo;
   const now = new Date();
-  const trialStart = restoInfo?.trial_started_at ? new Date(restoInfo.trial_started_at) : now;
-  const trialEnd = restoInfo?.trial_ends_at ? new Date(restoInfo.trial_ends_at) : new Date(now.getTime() + 14 * 86400 * 1000);
+  const trialStart = activeResto?.trial_started_at ? new Date(activeResto.trial_started_at) : now;
+  const trialEnd = activeResto?.trial_ends_at ? new Date(activeResto.trial_ends_at) : new Date(now.getTime() + 14 * 86400 * 1000);
 
   const formatDate = (d) => {
     try {
@@ -262,7 +294,7 @@ export default function SubscriptionBillingPage({ restoInfo, token, onProceedToD
           Complete Your Subscription Setup 🚀
         </h1>
         <p style={{ fontSize: '0.88rem', color: '#A7F3D0', margin: '0 0 20px 0', lineHeight: 1.5 }}>
-          Your restaurant account <strong>{restoInfo?.name || 'Restaurant'}</strong> has been created. Activate your 14-day free trial by authorizing your subscription.
+          Your restaurant account <strong>{activeResto?.name || localStorage.getItem('raman_admin_user') || 'Restaurant'}</strong> has been created. Activate your 14-day free trial by authorizing your subscription.
         </p>
 
         {/* Transparent Notice Tag */}
