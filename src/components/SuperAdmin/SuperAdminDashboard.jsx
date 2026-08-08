@@ -2053,8 +2053,8 @@ export default function SuperAdminDashboard({ token, username, onLogout, onRetur
                   {/* Feature Permissions Matrix */}
                   <div style={{ background: '#FFFFFF', padding: '12px 14px', borderRadius: '12px', border: '1px solid #E2E8F0', marginBottom: '16px' }}>
                     <strong style={{ fontSize: '0.78rem', color: '#0F172A', display: 'block', marginBottom: '8px' }}>FEATURE ACCESS MATRIX PERMISSIONS:</strong>
-                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '10px' }}>
-                      <label style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.78rem', fontWeight: 700, cursor: 'pointer' }}>
+                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '8px' }}>
+                      <label style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.76rem', fontWeight: 700, cursor: 'pointer' }}>
                         <input
                           type="checkbox"
                           checked={newPlanForm.whatsapp_enabled}
@@ -2062,21 +2062,45 @@ export default function SuperAdminDashboard({ token, username, onLogout, onRetur
                           style={{ accentColor: '#16a34a' }}
                         /> 💬 WhatsApp Drawer
                       </label>
-                      <label style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.78rem', fontWeight: 700, cursor: 'pointer' }}>
+                      <label style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.76rem', fontWeight: 700, cursor: 'pointer' }}>
                         <input
                           type="checkbox"
                           checked={newPlanForm.direct_ordering_enabled}
                           onChange={(e) => setNewPlanForm({ ...newPlanForm, direct_ordering_enabled: e.target.checked })}
                           style={{ accentColor: '#0A2315' }}
-                        /> ⚡ Direct Table QR Ordering
+                        /> ⚡ Direct Table KOT Ordering
                       </label>
-                      <label style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.78rem', fontWeight: 700, cursor: 'pointer' }}>
+                      <label style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.76rem', fontWeight: 700, cursor: 'pointer' }}>
                         <input
                           type="checkbox"
                           checked={newPlanForm.google_reviews_enabled}
                           onChange={(e) => setNewPlanForm({ ...newPlanForm, google_reviews_enabled: e.target.checked })}
                           style={{ accentColor: '#D4AF37' }}
-                        /> ⭐ Google Review Rating
+                        /> ⭐ Smart AI Google Reviews
+                      </label>
+                      <label style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.76rem', fontWeight: 700, cursor: 'pointer' }}>
+                        <input
+                          type="checkbox"
+                          checked={newPlanForm.direct_ordering_enabled}
+                          onChange={(e) => setNewPlanForm({ ...newPlanForm, direct_ordering_enabled: e.target.checked })}
+                          style={{ accentColor: '#2563eb' }}
+                        /> 🍱 Thali & Combos Builder
+                      </label>
+                      <label style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.76rem', fontWeight: 700, cursor: 'pointer' }}>
+                        <input
+                          type="checkbox"
+                          checked={newPlanForm.direct_ordering_enabled}
+                          onChange={(e) => setNewPlanForm({ ...newPlanForm, direct_ordering_enabled: e.target.checked })}
+                          style={{ accentColor: '#059669' }}
+                        /> 🖨️ Thermal Printer (KOT & Bills)
+                      </label>
+                      <label style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.76rem', fontWeight: 700, cursor: 'pointer' }}>
+                        <input
+                          type="checkbox"
+                          checked={newPlanForm.direct_ordering_enabled}
+                          onChange={(e) => setNewPlanForm({ ...newPlanForm, direct_ordering_enabled: e.target.checked })}
+                          style={{ accentColor: '#7c3aed' }}
+                        /> 🗺️ Hall Floor Map & Grid
                       </label>
                     </div>
                   </div>
