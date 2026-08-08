@@ -232,6 +232,64 @@ img {
   gap: 10px;
 }
 
+/* Phones & Small Screens (< 768px) */
+@media (max-width: 768px) {
+  html, body {
+    font-size: 14px;
+    overflow-x: hidden;
+  }
+
+  /* Single column grids on mobile */
+  .dish-list-grid,
+  .admin-dish-grid,
+  .responsive-grid {
+    display: flex !important;
+    flex-direction: column !important;
+    gap: 12px !important;
+  }
+
+  /* Responsive Tables */
+  .table-responsive, table {
+    display: block !important;
+    width: 100% !important;
+    overflow-x: auto !important;
+    -webkit-overflow-scrolling: touch;
+    white-space: nowrap !important;
+  }
+
+  /* Touch-friendly Inputs & Buttons */
+  button, input, select, textarea {
+    min-height: 44px;
+    touch-action: manipulation;
+  }
+
+  /* Header & Navigation Mobile Optimizations */
+  .customer-header {
+    padding: 10px 14px !important;
+  }
+
+  /* Safe Area Padding for iOS / Android bottom bar */
+  .bottom-dock {
+    padding-bottom: calc(12px + env(safe-area-inset-bottom, 0px)) !important;
+  }
+
+  /* Typography Adjustments */
+  h1 { font-size: 1.4rem !important; }
+  h2 { font-size: 1.25rem !important; }
+  h3 { font-size: 1.1rem !important; }
+
+  /* Mobile Full Width Modals */
+  .mobile-modal {
+    width: 94vw !important;
+    max-width: 94vw !important;
+    margin: 10px !important;
+    padding: 16px !important;
+    border-radius: 20px !important;
+    max-height: 90vh !important;
+    overflow-y: auto !important;
+  }
+}
+
 /* Tablets & Laptops (640px+) */
 @media (min-width: 640px) {
   .dish-list-grid,
@@ -241,3 +299,11 @@ img {
     gap: 14px !important;
   }
 }
+
+/* Desktops (1024px+) */
+@media (min-width: 1024px) {
+  .admin-dish-grid {
+    grid-template-columns: repeat(3, 1fr) !important;
+  }
+}
+
