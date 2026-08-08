@@ -464,7 +464,7 @@ router.post('/register', async (req, res) => {
       phone || '',
       'gold',
       isActive ? 1 : 0,
-      12
+      0
     ]);
 
     const newRestoId = restoRes[0]?.id || restoRes.lastInsertRowid;
