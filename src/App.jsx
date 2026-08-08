@@ -760,15 +760,15 @@ export default function App() {
     const faqItems = [
       {
         q: 'What is included in the 14-Day Free Trial?',
-        a: 'You get full access to all SaaS features for 14 days, including Digital QR Menu Creation, WhatsApp Direct Ordering, ⭐ Smart AI Google Reviews Booster, KOT Kitchen Siren, and Thermal Printing. No credit card is required to sign up!'
+        a: 'You get full access to all SaaS features for 14 days, including Digital QR Menu Creation, Direct Ordering, ⭐ Smart AI Google Reviews Booster, KOT Kitchen Siren, and Thermal Printing. No credit card is required to sign up!'
       },
       {
         q: 'Do customers need to download an App to scan the QR Menu?',
         a: 'No app download is required! Customers simply open their smartphone camera, scan your Table QR code, and your instant digital menu loads in less than 0.3 seconds.'
       },
       {
-        q: 'How does WhatsApp Direct Ordering work?',
-        a: 'When a customer places an order on your digital menu, the complete itemized order details (with table number, total price, and customer notes) are sent directly to your restaurant WhatsApp number with 0% commission.'
+        q: 'How does Direct Table Ordering & Kitchen KOT work?',
+        a: 'When a customer places an order on your digital menu, the itemized order details trigger an instant loud siren sound in your kitchen/billing dashboard and generate a KOT receipt.'
       },
       {
         q: 'Can I connect a Thermal Printer for KOT & Customer Invoices?',
@@ -783,80 +783,61 @@ export default function App() {
     return (
       <div style={{
         minHeight: '100vh',
-        background: 'linear-gradient(135deg, #05140B 0%, #0A2315 35%, #081B10 70%, #020904 100%)',
+        background: 'linear-gradient(135deg, #070B12 0%, #0F172A 40%, #090E1A 70%, #030712 100%)',
         color: '#FFFFFF',
         fontFamily: "'Plus Jakarta Sans', 'Inter', system-ui, sans-serif",
-        overflowX: 'hidden',
-        paddingBottom: '70px' // Space for mobile bottom bar
+        overflowX: 'hidden'
       }}>
-        {/* Ambient Glow Particles */}
+        {/* Ambient Glow Effects */}
         <div style={{
           position: 'fixed', top: 0, left: 0, width: '100%', height: '100%', zIndex: 0, pointerEvents: 'none',
-          background: 'radial-gradient(ellipse at 20% 20%, rgba(223, 186, 103, 0.08) 0%, transparent 60%), radial-gradient(ellipse at 80% 80%, rgba(34, 197, 94, 0.06) 0%, transparent 60%)'
+          background: 'radial-gradient(circle at 50% 0%, rgba(223, 186, 103, 0.12) 0%, transparent 50%), radial-gradient(circle at 100% 50%, rgba(59, 130, 246, 0.08) 0%, transparent 50%)'
         }} />
 
-        {/* 🔥 Top Launch Promo Ticker Banner */}
+        {/* Top Launch Promo Ticker Banner */}
         <div style={{
-          background: 'linear-gradient(90deg, #92400E 0%, #D97706 50%, #92400E 100%)',
+          background: 'linear-gradient(90deg, #B45309 0%, #D97706 50%, #B45309 100%)',
           color: '#FFFFFF',
           padding: '8px 16px',
           textAlign: 'center',
-          fontSize: '0.82rem',
+          fontSize: '0.8rem',
           fontWeight: 800,
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          gap: '8px',
           letterSpacing: '0.3px',
-          boxShadow: '0 2px 10px rgba(217, 119, 6, 0.3)',
           position: 'relative',
           zIndex: 20
         }}>
-          <span>🔥 LAUNCH OFFER: Get <strong>{trialDays} DAYS FREE TRIAL</strong> on All SaaS Plans! Instant Setup & Zero Risk!</span>
+          🔥 SPECIAL OFFER: Get <strong>{trialDays} DAYS FREE TRIAL</strong> on All SaaS Plans! Instant Setup & Zero Credit Card!
         </div>
 
-        {/* Top Navigation */}
+        {/* Top Navigation Bar */}
         <nav style={{
           display: 'flex', justifyContent: 'space-between', alignItems: 'center',
           padding: '14px 20px', position: 'sticky', top: 0, zIndex: 100,
-          background: 'rgba(10, 35, 21, 0.92)', backdropFilter: 'blur(20px)',
-          borderBottom: '1px solid rgba(223, 186, 103, 0.2)'
+          background: 'rgba(15, 23, 42, 0.92)', backdropFilter: 'blur(20px)',
+          borderBottom: '1px solid rgba(223, 186, 103, 0.25)'
         }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-            <span style={{ fontSize: '26px' }}>🍱</span>
-            <div>
-              <span style={{
-                fontSize: '1.25rem', fontWeight: 900,
-                background: 'linear-gradient(135deg, #DFBA67, #F4D490)',
-                WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent',
-                letterSpacing: '-0.3px'
-              }}>KhanaMaster</span>
-              <span style={{ fontSize: '0.65rem', background: '#DFBA67', color: '#0A2315', fontWeight: 900, padding: '1px 6px', borderRadius: '4px', marginLeft: '6px' }}>SaaS</span>
-            </div>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+            <span style={{ fontSize: '24px' }}>🍱</span>
+            <span style={{
+              fontSize: '1.2rem', fontWeight: 900,
+              background: 'linear-gradient(135deg, #DFBA67, #F4D490)',
+              WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent',
+              letterSpacing: '-0.3px'
+            }}>KhanaMaster</span>
+            <span style={{ fontSize: '0.65rem', background: '#DFBA67', color: '#0F172A', fontWeight: 900, padding: '2px 6px', borderRadius: '4px' }}>SaaS</span>
           </div>
 
-          <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+          <div style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
             <button
               onClick={() => setShowLandingLoginModal(true)}
               style={{
-                padding: '8px 16px', borderRadius: '10px',
-                border: '1px solid rgba(223,186,103,0.4)',
-                background: 'rgba(223,186,103,0.1)', color: '#DFBA67',
-                cursor: 'pointer', fontWeight: 800, fontSize: '0.84rem',
-                transition: 'all 0.2s ease', whiteSpace: 'nowrap'
+                padding: '8px 18px', borderRadius: '10px',
+                border: '1.5px solid #DFBA67', background: 'rgba(223,186,103,0.1)',
+                color: '#DFBA67', cursor: 'pointer', fontWeight: 900, fontSize: '0.84rem'
               }}
-            >🔑 Owner Login</button>
-
-            <button
-              onClick={() => { window.history.pushState({}, '', '/register'); window.dispatchEvent(new PopStateEvent('popstate')); }}
-              style={{
-                padding: '8px 18px', borderRadius: '10px', border: 'none',
-                background: 'linear-gradient(135deg, #DFBA67, #C5A059)', color: '#0A2315',
-                cursor: 'pointer', fontWeight: 900, fontSize: '0.84rem',
-                boxShadow: '0 4px 14px rgba(223,186,103,0.35)', transition: 'all 0.2s ease',
-                whiteSpace: 'nowrap'
-              }}
-            >🚀 Start Free Trial</button>
+            >
+              🔑 Owner Login
+            </button>
           </div>
         </nav>
 
@@ -864,11 +845,11 @@ export default function App() {
         {showLandingLoginModal && (
           <div style={{
             position: 'fixed', inset: 0, zIndex: 10050,
-            background: 'rgba(10, 35, 21, 0.88)', backdropFilter: 'blur(12px)',
+            background: 'rgba(3, 7, 18, 0.9)', backdropFilter: 'blur(12px)',
             display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '12px'
           }} onClick={() => { setShowLandingLoginModal(false); setLandingLoginMode('login'); }}>
             <div onClick={e => e.stopPropagation()} style={{
-              background: '#0D2617', border: '2px solid #DFBA67', borderRadius: '24px',
+              background: '#0F172A', border: '2px solid #DFBA67', borderRadius: '24px',
               padding: '24px 20px', maxWidth: '400px', width: '95%', maxHeight: '90vh', overflowY: 'auto',
               color: '#FFFFFF', boxShadow: '0 25px 60px rgba(0,0,0,0.85)', position: 'relative'
             }}>
@@ -884,7 +865,7 @@ export default function App() {
               <h2 style={{ fontSize: '1.25rem', fontWeight: 900, color: '#DFBA67', margin: '0 0 6px 0', textAlign: 'center' }}>
                 {landingLoginMode === 'forgot' ? 'Reset Admin Password' : 'Restaurant Admin Login'}
               </h2>
-              <p style={{ color: '#A7F3D0', fontSize: '0.82rem', lineHeight: 1.4, margin: '0 0 16px 0', textAlign: 'center' }}>
+              <p style={{ color: '#94A3B8', fontSize: '0.82rem', lineHeight: 1.4, margin: '0 0 16px 0', textAlign: 'center' }}>
                 {landingLoginMode === 'forgot'
                   ? 'Enter your registered Username or Phone Number to set a new password'
                   : 'Enter your Admin Username & Password to access your Dashboard'}
@@ -997,7 +978,7 @@ export default function App() {
                     onChange={e => setLoginSlugInput(e.target.value)}
                     style={{
                       width: '100%', padding: '12px 14px', borderRadius: '12px',
-                      border: '1px solid rgba(223,186,103,0.3)', background: '#07180E',
+                      border: '1px solid rgba(223,186,103,0.3)', background: '#020617',
                       color: '#FFFFFF', fontSize: '0.9rem', outline: 'none'
                     }}
                   />
@@ -1012,7 +993,7 @@ export default function App() {
                       <button
                         type="button"
                         onClick={() => { setLandingLoginMode('forgot'); setLoginErrMessage(''); setLandingSuccessMessage(''); }}
-                        style={{ background: 'none', border: 'none', color: '#34D399', fontSize: '0.74rem', fontWeight: 700, cursor: 'pointer' }}
+                        style={{ background: 'none', border: 'none', color: '#38BDF8', fontSize: '0.74rem', fontWeight: 700, cursor: 'pointer' }}
                       >
                         🔑 Forgot Password?
                       </button>
@@ -1025,7 +1006,7 @@ export default function App() {
                       onChange={e => setLoginPassInput(e.target.value)}
                       style={{
                         width: '100%', padding: '12px 14px', borderRadius: '12px',
-                        border: '1px solid rgba(223,186,103,0.3)', background: '#07180E',
+                        border: '1px solid rgba(223,186,103,0.3)', background: '#020617',
                         color: '#FFFFFF', fontSize: '0.9rem', outline: 'none'
                       }}
                     />
@@ -1043,7 +1024,7 @@ export default function App() {
                       onChange={e => setLandingNewPassInput(e.target.value)}
                       style={{
                         width: '100%', padding: '12px 14px', borderRadius: '12px',
-                        border: '1px solid rgba(223,186,103,0.3)', background: '#07180E',
+                        border: '1px solid rgba(223,186,103,0.3)', background: '#020617',
                         color: '#FFFFFF', fontSize: '0.9rem', outline: 'none'
                       }}
                     />
@@ -1052,7 +1033,7 @@ export default function App() {
 
                 <button type="submit" disabled={landingLoginLoading} style={{
                   width: '100%', padding: '14px', borderRadius: '14px', border: 'none',
-                  background: 'linear-gradient(135deg, #DFBA67, #F4D490)', color: '#0A0A0A',
+                  background: 'linear-gradient(135deg, #DFBA67, #F4D490)', color: '#0F172A',
                   fontWeight: 900, fontSize: '0.9rem', cursor: landingLoginLoading ? 'wait' : 'pointer', boxShadow: '0 4px 14px rgba(223,186,103,0.4)'
                 }}>
                   {landingLoginLoading
@@ -1061,32 +1042,16 @@ export default function App() {
                 </button>
 
                 {landingLoginMode === 'forgot' && (
-                  <>
-                    <button
-                      type="button"
-                      onClick={() => { setLandingLoginMode('login'); setLoginErrMessage(''); setLandingSuccessMessage(''); }}
-                      style={{
-                        width: '100%', marginTop: '12px', padding: '8px', color: '#34D399',
-                        fontSize: '0.82rem', fontWeight: 700, border: 'none', background: 'none', cursor: 'pointer'
-                      }}
-                    >
-                      ← Back to Owner Login
-                    </button>
-                    <div style={{
-                      marginTop: '14px', paddingTop: '12px', borderTop: '1px solid rgba(255,255,255,0.1)',
-                      textAlign: 'center', fontSize: '0.76rem', color: '#9CA3AF'
-                    }}>
-                      <span>Forgot both details? </span>
-                      <a
-                        href={`https://wa.me/${(masterSupportPhone || '919876543210').replace(/[^0-9]/g, '')}?text=${encodeURIComponent('Hello Super Admin, I forgot my restaurant login details. Please help me recover my account.')}`}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        style={{ color: '#DFBA67', fontWeight: 800, textDecoration: 'none' }}
-                      >
-                        💬 WhatsApp Support
-                      </a>
-                    </div>
-                  </>
+                  <button
+                    type="button"
+                    onClick={() => { setLandingLoginMode('login'); setLoginErrMessage(''); setLandingSuccessMessage(''); }}
+                    style={{
+                      width: '100%', marginTop: '12px', padding: '8px', color: '#38BDF8',
+                      fontSize: '0.82rem', fontWeight: 700, border: 'none', background: 'none', cursor: 'pointer'
+                    }}
+                  >
+                    ← Back to Owner Login
+                  </button>
                 )}
               </form>
             </div>
@@ -1096,22 +1061,22 @@ export default function App() {
         {/* Hero Section */}
         <div style={{
           display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
-          textAlign: 'center', padding: '50px 16px 36px', position: 'relative', zIndex: 5
+          textAlign: 'center', padding: '48px 16px 32px', position: 'relative', zIndex: 5
         }}>
-          {/* Pulsing Badge */}
-          <div className="glow-pulse" style={{
-            display: 'inline-flex', alignItems: 'center', gap: '8px', padding: '8px 20px', borderRadius: '50px',
-            background: 'linear-gradient(135deg, rgba(223,186,103,0.22), rgba(223,186,103,0.06))',
-            border: '1.5px solid #DFBA67', fontSize: '0.82rem', color: '#DFBA67',
-            fontWeight: 900, marginBottom: '22px', letterSpacing: '0.5px'
+          {/* Badge */}
+          <div style={{
+            display: 'inline-flex', alignItems: 'center', gap: '6px', padding: '6px 18px', borderRadius: '50px',
+            background: 'rgba(223, 186, 103, 0.12)', border: '1px solid rgba(223, 186, 103, 0.35)',
+            fontSize: '0.78rem', color: '#DFBA67', fontWeight: 900, marginBottom: '20px', letterSpacing: '0.5px'
           }}>
-            <span>🔥</span>
-            <span>INDIA'S #1 SMART AI DIGITAL QR MENU SAAS PLATFORM</span>
+            <span>✨</span>
+            <span>SMART AI DIGITAL QR MENU PLATFORM</span>
           </div>
 
-          <h1 className="landing-hero-title" style={{
-            fontSize: 'clamp(32px, 6.5vw, 60px)', fontWeight: 900, lineHeight: 1.15,
-            marginBottom: '18px', maxWidth: '920px', width: '100%', letterSpacing: '-0.5px'
+          {/* Headline */}
+          <h1 style={{
+            fontSize: 'clamp(28px, 6vw, 56px)', fontWeight: 900, lineHeight: 1.2,
+            marginBottom: '16px', maxWidth: '860px', width: '100%', letterSpacing: '-0.5px'
           }}>
             <span style={{ color: '#FFFFFF' }}>Apne Restaurant Ka </span>
             <span style={{
@@ -1121,122 +1086,108 @@ export default function App() {
             <span style={{ color: '#FFFFFF' }}> Banayein</span>
           </h1>
 
+          {/* Subtitle */}
           <p style={{
-            fontSize: 'clamp(15px, 3.5vw, 19px)', color: '#CBD5E1',
-            maxWidth: '720px', lineHeight: 1.6, marginBottom: '32px', padding: '0 8px'
+            fontSize: 'clamp(14px, 3.2vw, 18px)', color: '#94A3B8',
+            maxWidth: '680px', lineHeight: 1.6, marginBottom: '28px', padding: '0 8px'
           }}>
-            QR Scan Digital Menu, WhatsApp Direct Ordering, <strong style={{ color: '#FFD700' }}>⭐ Smart AI Google Reviews Booster</strong>, Live Kitchen KOT Siren & Thermal Printing — sab kuch ek jagah.
-            <strong style={{ color: '#86EFAC', display: 'block', marginTop: '6px' }}>🎉 {trialDays} Din Free Trial — Instant Setup, Credit Card Ki Zaroorat Nahi!</strong>
+            QR Scan Menu, Digital Table Ordering, <strong style={{ color: '#FFD700' }}>⭐ Smart AI Google Reviews Booster</strong>, Live Kitchen Siren & Thermal Printing.
+            <strong style={{ color: '#4ADE80', display: 'block', marginTop: '6px' }}>🎉 {trialDays} Din Free Trial — Instant Setup, Credit Card Ki Zaroorat Nahi!</strong>
           </p>
 
-          {/* Action CTAs */}
-          <div className="landing-cta-container" style={{
+          {/* Hero Action Buttons */}
+          <div style={{
             display: 'flex', gap: '12px', flexWrap: 'wrap', justifyContent: 'center',
-            width: '100%', maxWidth: '580px', marginBottom: '32px'
+            width: '100%', maxWidth: '480px', marginBottom: '36px'
           }}>
             <button
-              className="landing-cta-button"
               onClick={() => { window.history.pushState({}, '', '/register'); window.dispatchEvent(new PopStateEvent('popstate')); }}
               style={{
-                padding: '16px 28px', borderRadius: '16px', border: 'none',
-                background: 'linear-gradient(135deg, #DFBA67 0%, #C5A059 100%)', color: '#0A2315',
-                fontWeight: 900, fontSize: '1.05rem', cursor: 'pointer',
-                boxShadow: '0 10px 30px rgba(223,186,103,0.4)'
-              }}
-            >🚀 Start {trialDays}-Day Free Trial</button>
-
-            <button
-              className="landing-cta-button"
-              onClick={() => window.open('/raman-sweet-bakery', '_blank')}
-              style={{
-                padding: '16px 22px', borderRadius: '16px',
-                border: '2px solid rgba(223,186,103,0.5)', background: 'rgba(223,186,103,0.1)',
-                color: '#DFBA67', fontWeight: 800, fontSize: '0.96rem', cursor: 'pointer'
-              }}
-            >👁️ View Live Menu Demo</button>
-
-            <a
-              href={`https://wa.me/${(masterSupportPhone || '919876543210').replace(/[^0-9]/g, '')}?text=${encodeURIComponent('Hello KhanaMaster SaaS team! I want to know more about setting up a digital QR menu for my restaurant.')}`}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="landing-cta-button"
-              style={{
-                padding: '16px 20px', borderRadius: '16px',
-                border: '2px solid #22C55E', background: 'rgba(34, 197, 94, 0.12)',
-                color: '#4ADE80', fontWeight: 800, fontSize: '0.94rem', textDecoration: 'none'
+                flex: '1 1 200px', maxWidth: '320px', width: '100%', padding: '15px 24px', borderRadius: '14px', border: 'none',
+                background: 'linear-gradient(135deg, #DFBA67 0%, #C5A059 100%)', color: '#0F172A',
+                fontWeight: 900, fontSize: '1rem', cursor: 'pointer',
+                boxShadow: '0 8px 25px rgba(223,186,103,0.35)', textAlign: 'center'
               }}
             >
-              💬 WhatsApp Chat
-            </a>
+              🚀 Start {trialDays}-Day Free Trial
+            </button>
+
+            <button
+              onClick={() => window.open('/raman-sweet-bakery', '_blank')}
+              style={{
+                flex: '1 1 160px', padding: '15px 20px', borderRadius: '14px',
+                border: '1.5px solid rgba(223,186,103,0.4)', background: 'rgba(223,186,103,0.08)',
+                color: '#DFBA67', fontWeight: 800, fontSize: '0.92rem', cursor: 'pointer',
+                textAlign: 'center'
+              }}
+            >
+              👁️ View Live Demo
+            </button>
           </div>
 
-          {/* Social Proof Trust Bar */}
+          {/* Trust Counter Cards */}
           <div style={{
             display: 'grid',
-            gridTemplateColumns: 'repeat(auto-fit, minmax(130px, 1fr))',
-            gap: '12px',
-            maxWidth: '820px',
+            gridTemplateColumns: 'repeat(auto-fit, minmax(120px, 1fr))',
+            gap: '10px',
+            maxWidth: '740px',
             width: '100%',
-            background: 'rgba(13, 35, 23, 0.7)',
-            border: '1px solid rgba(223, 186, 103, 0.25)',
-            backdropFilter: 'blur(16px)',
-            borderRadius: '20px',
-            padding: '16px 14px'
+            background: 'rgba(15, 23, 42, 0.7)',
+            border: '1px solid rgba(255, 255, 255, 0.1)',
+            borderRadius: '18px',
+            padding: '14px 12px'
           }}>
             <div>
-              <div style={{ fontSize: '1.25rem', fontWeight: 900, color: '#DFBA67' }}>10,000+</div>
-              <div style={{ fontSize: '0.72rem', color: '#94A3B8', fontWeight: 700 }}>ACTIVE OUTLETS</div>
+              <div style={{ fontSize: '1.2rem', fontWeight: 900, color: '#DFBA67' }}>10,000+</div>
+              <div style={{ fontSize: '0.7rem', color: '#94A3B8', fontWeight: 700 }}>OUTLETS</div>
             </div>
             <div>
-              <div style={{ fontSize: '1.25rem', fontWeight: 900, color: '#4ADE80' }}>⭐ 4.9 / 5</div>
-              <div style={{ fontSize: '0.72rem', color: '#94A3B8', fontWeight: 700 }}>CUSTOMER RATING</div>
+              <div style={{ fontSize: '1.2rem', fontWeight: 900, color: '#4ADE80' }}>⭐ 4.9 / 5</div>
+              <div style={{ fontSize: '0.7rem', color: '#94A3B8', fontWeight: 700 }}>RATING</div>
             </div>
             <div>
-              <div style={{ fontSize: '1.25rem', fontWeight: 900, color: '#38BDF8' }}>0.3 SEC</div>
-              <div style={{ fontSize: '0.72rem', color: '#94A3B8', fontWeight: 700 }}>INSTANT QR SCAN</div>
+              <div style={{ fontSize: '1.2rem', fontWeight: 900, color: '#38BDF8' }}>0.3 SEC</div>
+              <div style={{ fontSize: '0.7rem', color: '#94A3B8', fontWeight: 700 }}>QR SPEED</div>
             </div>
             <div>
-              <div style={{ fontSize: '1.25rem', fontWeight: 900, color: '#F472B6' }}>0% COMM.</div>
-              <div style={{ fontSize: '0.72rem', color: '#94A3B8', fontWeight: 700 }}>DIRECT ORDERS</div>
+              <div style={{ fontSize: '1.2rem', fontWeight: 900, color: '#F472B6' }}>0% COMM.</div>
+              <div style={{ fontSize: '0.7rem', color: '#94A3B8', fontWeight: 700 }}>DIRECT ORDERS</div>
             </div>
           </div>
         </div>
 
-        {/* Feature Showcase Banner */}
+        {/* Feature Showcase Box */}
         <div style={{
-          padding: '20px 16px 40px', maxWidth: '1100px', margin: '0 auto', position: 'relative', zIndex: 5
+          padding: '16px 16px 36px', maxWidth: '1000px', margin: '0 auto', position: 'relative', zIndex: 5
         }}>
           <div style={{
-            background: 'linear-gradient(135deg, rgba(13,35,23,0.9), rgba(5,20,11,0.95))',
-            border: '2px solid #DFBA67', borderRadius: '24px', padding: '24px 20px',
-            boxShadow: '0 20px 50px rgba(0,0,0,0.7)', textAlign: 'center'
+            background: 'rgba(15, 23, 42, 0.8)',
+            border: '1.5px solid rgba(223, 186, 103, 0.3)', borderRadius: '20px', padding: '20px 16px',
+            textAlign: 'center'
           }}>
-            <div style={{ fontSize: '0.78rem', fontWeight: 800, color: '#86EFAC', textTransform: 'uppercase', letterSpacing: '1px', marginBottom: '6px' }}>
-              POWERFUL RESTAURANT OPERATIONAL PLATFORM
+            <div style={{ fontSize: '0.74rem', fontWeight: 800, color: '#38BDF8', textTransform: 'uppercase', letterSpacing: '1px', marginBottom: '4px' }}>
+              RESTAURANT MANAGEMENT SUITE
             </div>
-            <h2 style={{ fontSize: 'clamp(22px, 4.5vw, 32px)', fontWeight: 900, color: '#FFFFFF', margin: '0 0 16px 0' }}>
-              Everything Your Restaurant Needs To Scale Orders & Profit
+            <h2 style={{ fontSize: 'clamp(18px, 4vw, 26px)', fontWeight: 900, color: '#FFFFFF', margin: '0 0 14px 0' }}>
+              Everything Your Restaurant Needs To Grow
             </h2>
-            <div style={{
-              display: 'flex', flexWrap: 'wrap', gap: '8px', justifyContent: 'center'
-            }}>
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px', justifyContent: 'center' }}>
               {[
                 '📱 Digital QR Menu',
-                '💬 WhatsApp Ordering',
                 '⭐ Smart AI Google Reviews',
-                '⚡ Live KOT Kitchen Siren',
+                '⚡ Live Kitchen Siren KOT',
                 '🖨️ Thermal Printer Billing',
-                '🗺️ Table Floor Map Grid',
+                '🗺️ Hall Floor Table Map',
                 '🍱 Thali & Combo Deals',
-                '🛎️ Waiter Call Summons'
+                '🛎️ Waiter Call Bell'
               ].map((pill, idx) => (
                 <span key={idx} style={{
-                  background: 'rgba(223, 186, 103, 0.15)',
-                  border: '1px solid rgba(223, 186, 103, 0.35)',
+                  background: 'rgba(223, 186, 103, 0.1)',
+                  border: '1px solid rgba(223, 186, 103, 0.3)',
                   color: '#DFBA67',
-                  padding: '6px 14px',
+                  padding: '6px 12px',
                   borderRadius: '50px',
-                  fontSize: '0.82rem',
+                  fontSize: '0.78rem',
                   fontWeight: 800
                 }}>
                   {pill}
@@ -1248,40 +1199,38 @@ export default function App() {
 
         {/* Core Features Grid */}
         <div style={{
-          padding: '40px 16px', maxWidth: '1140px', margin: '0 auto',
-          position: 'relative', zIndex: 5
+          padding: '30px 16px', maxWidth: '1100px', margin: '0 auto', position: 'relative', zIndex: 5
         }}>
-          <div style={{ textAlign: 'center', marginBottom: '32px' }}>
-            <h2 style={{ fontSize: 'clamp(24px, 5vw, 36px)', fontWeight: 900, color: '#FFFFFF', marginBottom: '8px' }}>
-              Why Restaurants Choose <span style={{ color: '#DFBA67' }}>KhanaMaster</span>
+          <div style={{ textAlign: 'center', marginBottom: '28px' }}>
+            <h2 style={{ fontSize: 'clamp(22px, 4.5vw, 32px)', fontWeight: 900, color: '#FFFFFF', marginBottom: '6px' }}>
+              Why Choose <span style={{ color: '#DFBA67' }}>KhanaMaster</span>
             </h2>
-            <p style={{ color: '#94A3B8', fontSize: '0.92rem', margin: 0 }}>
-              Designed specifically for Indian Restaurants, Sweets Shops, Cafes, Bakeries & Dhabas
+            <p style={{ color: '#94A3B8', fontSize: '0.88rem', margin: 0 }}>
+              Tailored for Indian Restaurants, Sweet Shops, Cafes, Bakeries & Dhabas
             </p>
           </div>
 
-          <div className="landing-feature-grid" style={{
-            display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))',
-            gap: '18px'
+          <div style={{
+            display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))',
+            gap: '16px'
           }}>
             {[
-              { icon: '📱', title: 'Digital QR Menu & Themes', desc: 'Customer QR scan kare aur luxury gold/emerald menu dekhe — 0.3s ultra-fast loading without app download.' },
-              { icon: '⭐', title: 'Smart AI Google Reviews', desc: 'Zero-cost client-side AI review booster — 5-star Google ratings and customer feedback fast-track karein.' },
-              { icon: '💬', title: 'WhatsApp Direct Ordering', desc: 'Customer seedha WhatsApp par order bhej sake — 0% commission direct order collection.' },
+              { icon: '📱', title: 'Digital QR Menu & Themes', desc: 'Customer QR scan kare aur luxury themes dekhe — 0.3s fast loading without app download.' },
+              { icon: '⭐', title: 'Smart AI Google Reviews', desc: 'Client-side AI review booster — 5-star Google ratings and customer feedback fast-track karein.' },
               { icon: '⚡', title: 'Live Table KOT & Kitchen Siren', desc: 'Table QR code scanning se direct Kitchen KOT receipt aur loud sound siren ringtone.' },
               { icon: '🖨️', title: '0.5s Thermal Printing', desc: 'PC & Mobile se instant Bluetooth/USB thermal KOT receipts and customer GST tax invoices.' },
               { icon: '🍱', title: 'Thali & Combos Deals Builder', desc: 'Slim, mobile-friendly combo deals aur thali packages set karke billing revenue badhayein.' },
               { icon: '🗺️', title: 'Hall Floor Map & Grid', desc: 'Real-time dining hall table status (Occupied, Free, KOT Pending) live track karein.' },
-              { icon: '🛎️', title: 'Waiter Call & Staff Bell', desc: 'Customer phone se 1-tap waiter summons with instant admin notification siren.' }
+              { icon: '🛎️', title: 'Waiter Call & Staff Bell', desc: 'Customer phone se 1-tap waiter summons with instant admin notification siren.' },
+              { icon: '🔐', title: 'Multi-Tenant Isolation', desc: 'Independent restaurant data, unique QR link, domain isolation and encrypted security.' }
             ].map((f, i) => (
               <div key={i} style={{
-                background: 'rgba(13, 35, 23, 0.65)', border: '1px solid rgba(223,186,103,0.2)',
-                borderRadius: '20px', padding: '22px 18px', boxShadow: '0 8px 24px rgba(0,0,0,0.3)',
-                textAlign: 'left'
+                background: 'rgba(15, 23, 42, 0.7)', border: '1px solid rgba(255,255,255,0.08)',
+                borderRadius: '18px', padding: '20px 16px', textAlign: 'left'
               }}>
-                <div style={{ fontSize: '32px', marginBottom: '10px' }}>{f.icon}</div>
-                <h3 style={{ fontSize: '1.08rem', fontWeight: 800, marginBottom: '6px', color: '#DFBA67' }}>{f.title}</h3>
-                <p style={{ fontSize: '0.84rem', color: '#CBD5E1', lineHeight: 1.5, margin: 0 }}>{f.desc}</p>
+                <div style={{ fontSize: '30px', marginBottom: '8px' }}>{f.icon}</div>
+                <h3 style={{ fontSize: '1rem', fontWeight: 800, marginBottom: '6px', color: '#DFBA67' }}>{f.title}</h3>
+                <p style={{ fontSize: '0.82rem', color: '#94A3B8', lineHeight: 1.5, margin: 0 }}>{f.desc}</p>
               </div>
             ))}
           </div>
@@ -1289,20 +1238,20 @@ export default function App() {
 
         {/* Pricing Section */}
         <div style={{
-          padding: '50px 16px', textAlign: 'center', position: 'relative', zIndex: 5
+          padding: '40px 16px', textAlign: 'center', position: 'relative', zIndex: 5
         }}>
-          <h2 style={{ fontSize: 'clamp(26px, 5vw, 38px)', fontWeight: 900, marginBottom: '8px' }}>
+          <h2 style={{ fontSize: 'clamp(24px, 4.5vw, 36px)', fontWeight: 900, marginBottom: '6px' }}>
             <span style={{ background: 'linear-gradient(135deg, #DFBA67, #F4D490)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>
               Transparent & Affordable Pricing
             </span>
           </h2>
-          <p style={{ color: '#94A3B8', fontSize: '0.95rem', marginBottom: '32px' }}>
+          <p style={{ color: '#94A3B8', fontSize: '0.9rem', marginBottom: '28px' }}>
             Har plan me <strong>{trialDays}-din ka free trial</strong> included hai. Upgrade or cancel anytime!
           </p>
 
-          <div className="landing-pricing-grid" style={{
-            display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(270px, 1fr))',
-            gap: '20px', maxWidth: '1020px', margin: '0 auto'
+          <div style={{
+            display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))',
+            gap: '18px', maxWidth: '980px', margin: '0 auto'
           }}>
             {(publicPlans.length > 0 ? publicPlans.map(p => {
               const priceNum = Number(p.price) || 0;
@@ -1318,8 +1267,7 @@ export default function App() {
                 badge: p.badge || '👑 PLAN',
                 features: [
                   'Digital QR Menu & Custom Themes',
-                  ...(p.whatsapp_enabled ? ['WhatsApp Direct Ordering'] : []),
-                  ...(p.google_reviews_enabled ? ['⭐ Smart AI Google Reviews'] : []),
+                  '⭐ Smart AI Google Reviews',
                   ...(p.direct_ordering_enabled ? ['⚡ Direct Table QR KOT Ordering', '📋 Live Kitchen Siren System', '🖨️ Thermal Printer KOT & Bills', '🗺️ Hall Floor Map & Grid'] : []),
                   `Up to ${p.max_combos > 100 ? 'Unlimited' : (p.max_combos || 10)} Combo Deals`
                 ],
@@ -1327,45 +1275,44 @@ export default function App() {
               };
             }) : [
               { key: 'basic', name: 'Basic Starter Plan', price: '₹499', originalPrice: '₹999', discountTag: '50% OFF', period: '/month', badge: '⚡ BASIC', features: ['Digital QR Menu', 'Luxury Themes', 'Admin Dashboard', 'Unlimited Dishes & Categories', 'Up to 3 Combo Deals'], popular: false },
-              { key: 'pro', name: 'Pro Luxury Plan', price: '₹999', originalPrice: '₹1,999', discountTag: '50% OFF', period: '/month', badge: '👑 PRO', features: ['Everything in Basic', 'WhatsApp Direct Ordering', '⭐ Smart AI Google Reviews', 'Up to 10 Combo Deals', 'Priority 24/7 Phone Support'], popular: true },
+              { key: 'pro', name: 'Pro Luxury Plan', price: '₹999', originalPrice: '₹1,999', discountTag: '50% OFF', period: '/month', badge: '👑 PRO', features: ['Everything in Basic', '⭐ Smart AI Google Reviews', 'Up to 10 Combo Deals', 'Priority 24/7 Support'], popular: true },
               { key: 'enterprise', name: 'Enterprise VIP Plan', price: '₹1,999', originalPrice: '₹3,999', discountTag: '50% OFF', period: '/month', badge: '🚀 ENTERPRISE', features: ['Everything in Pro', '⚡ Direct Table QR Ordering', '📋 Live KOT Kitchen System & Siren', '🖨️ Thermal Printer KOT & Bills', '🗺️ Hall Floor Map & Table Grid', 'Unlimited Combo Deals'], popular: false }
             ]).map((plan, i) => (
               <div key={i} style={{
-                background: plan.popular ? 'linear-gradient(135deg, rgba(223,186,103,0.2), rgba(13,35,23,0.95))' : 'rgba(13,35,23,0.7)',
-                border: plan.popular ? '2.5px solid #DFBA67' : '1px solid rgba(223,186,103,0.25)',
-                borderRadius: '24px', padding: '28px 20px', position: 'relative',
-                boxShadow: plan.popular ? '0 15px 45px rgba(223,186,103,0.25)' : '0 8px 24px rgba(0,0,0,0.3)',
+                background: plan.popular ? 'linear-gradient(135deg, rgba(223,186,103,0.18), rgba(15,23,42,0.95))' : 'rgba(15, 23, 42, 0.7)',
+                border: plan.popular ? '2px solid #DFBA67' : '1px solid rgba(255,255,255,0.1)',
+                borderRadius: '20px', padding: '24px 18px', position: 'relative',
                 display: 'flex', flexDirection: 'column', justifyContent: 'space-between'
               }}>
                 {plan.popular && (
                   <div style={{
-                    position: 'absolute', top: '-14px', left: '50%', transform: 'translateX(-50%)',
-                    background: 'linear-gradient(135deg, #DFBA67, #C5A059)', color: '#0A2315',
-                    padding: '4px 16px', borderRadius: '50px', fontSize: '11px', fontWeight: 900,
-                    boxShadow: '0 4px 12px rgba(223,186,103,0.4)', whiteSpace: 'nowrap'
+                    position: 'absolute', top: '-12px', left: '50%', transform: 'translateX(-50%)',
+                    background: 'linear-gradient(135deg, #DFBA67, #C5A059)', color: '#0F172A',
+                    padding: '3px 14px', borderRadius: '50px', fontSize: '10px', fontWeight: 900,
+                    whiteSpace: 'nowrap'
                   }}>
                     RECOMMENDED CHOICE
                   </div>
                 )}
 
                 <div>
-                  <div style={{ fontSize: '1rem', fontWeight: 900, color: '#DFBA67', marginBottom: '4px' }}>{plan.badge}</div>
-                  <h3 style={{ fontSize: '1.2rem', fontWeight: 900, color: '#FFFFFF', marginBottom: '10px' }}>{plan.name}</h3>
+                  <div style={{ fontSize: '0.9rem', fontWeight: 900, color: '#DFBA67', marginBottom: '2px' }}>{plan.badge}</div>
+                  <h3 style={{ fontSize: '1.15rem', fontWeight: 900, color: '#FFFFFF', marginBottom: '10px' }}>{plan.name}</h3>
 
-                  <div style={{ marginBottom: '20px' }}>
+                  <div style={{ marginBottom: '18px' }}>
                     {plan.originalPrice && (
                       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px', marginBottom: '2px' }}>
-                        <span style={{ fontSize: '1rem', color: '#94A3B8', textDecoration: 'line-through', fontWeight: 600 }}>{plan.originalPrice}</span>
-                        {plan.discountTag && <span style={{ background: '#DC2626', color: '#FFFFFF', fontSize: '0.66rem', fontWeight: 900, padding: '2px 6px', borderRadius: '6px' }}>{plan.discountTag}</span>}
+                        <span style={{ fontSize: '0.9rem', color: '#94A3B8', textDecoration: 'line-through' }}>{plan.originalPrice}</span>
+                        {plan.discountTag && <span style={{ background: '#DC2626', color: '#FFFFFF', fontSize: '0.62rem', fontWeight: 900, padding: '2px 6px', borderRadius: '4px' }}>{plan.discountTag}</span>}
                       </div>
                     )}
-                    <span style={{ fontSize: '2.4rem', fontWeight: 900, color: '#FFFFFF' }}>{plan.price}</span>
-                    <span style={{ color: '#94A3B8', fontSize: '0.84rem' }}>{plan.period}</span>
+                    <span style={{ fontSize: '2.2rem', fontWeight: 900, color: '#FFFFFF' }}>{plan.price}</span>
+                    <span style={{ color: '#94A3B8', fontSize: '0.8rem' }}>{plan.period}</span>
                   </div>
 
-                  <ul style={{ listStyle: 'none', padding: 0, marginBottom: '24px', textAlign: 'left' }}>
+                  <ul style={{ listStyle: 'none', padding: 0, marginBottom: '20px', textAlign: 'left' }}>
                     {plan.features.map((f, j) => (
-                      <li key={j} style={{ padding: '7px 0', fontSize: '0.84rem', color: '#E2E8F0', borderBottom: '1px solid rgba(255,255,255,0.08)', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                      <li key={j} style={{ padding: '6px 0', fontSize: '0.82rem', color: '#CBD5E1', borderBottom: '1px solid rgba(255,255,255,0.06)', display: 'flex', alignItems: 'center', gap: '8px' }}>
                         <span style={{ color: '#4ADE80', fontWeight: 900 }}>✓</span>
                         <span>{f}</span>
                       </li>
@@ -1380,10 +1327,10 @@ export default function App() {
                     window.dispatchEvent(new PopStateEvent('popstate'));
                   }}
                   style={{
-                    width: '100%', padding: '14px', borderRadius: '14px', border: 'none',
+                    width: '100%', padding: '13px', borderRadius: '12px', border: 'none',
                     background: plan.popular ? 'linear-gradient(135deg, #DFBA67, #C5A059)' : 'rgba(255,255,255,0.1)',
-                    color: plan.popular ? '#0A2315' : '#DFBA67', fontWeight: 900, fontSize: '0.92rem',
-                    cursor: 'pointer', transition: 'all 0.2s', boxShadow: plan.popular ? '0 6px 20px rgba(223,186,103,0.3)' : 'none'
+                    color: plan.popular ? '#0F172A' : '#DFBA67', fontWeight: 900, fontSize: '0.88rem',
+                    cursor: 'pointer'
                   }}
                 >
                   Start {trialDays}-Day Free Trial
@@ -1395,18 +1342,18 @@ export default function App() {
 
         {/* FAQ Accordion Section */}
         <div style={{
-          padding: '40px 16px', maxWidth: '800px', margin: '0 auto', position: 'relative', zIndex: 5
+          padding: '30px 16px', maxWidth: '780px', margin: '0 auto', position: 'relative', zIndex: 5
         }}>
-          <div style={{ textAlign: 'center', marginBottom: '28px' }}>
-            <h2 style={{ fontSize: 'clamp(22px, 4.5vw, 32px)', fontWeight: 900, color: '#FFFFFF', marginBottom: '6px' }}>
+          <div style={{ textAlign: 'center', marginBottom: '24px' }}>
+            <h2 style={{ fontSize: 'clamp(20px, 4vw, 30px)', fontWeight: 900, color: '#FFFFFF', marginBottom: '4px' }}>
               Frequently Asked Questions (FAQ)
             </h2>
-            <p style={{ color: '#94A3B8', fontSize: '0.88rem', margin: 0 }}>
-              Got questions? We have answers.
+            <p style={{ color: '#94A3B8', fontSize: '0.84rem', margin: 0 }}>
+              Everything you need to know about KhanaMaster SaaS
             </p>
           </div>
 
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
             {faqItems.map((faq, index) => {
               const isOpen = openFaqIndex === index;
               return (
@@ -1414,25 +1361,24 @@ export default function App() {
                   key={index}
                   onClick={() => setOpenFaqIndex(isOpen ? null : index)}
                   style={{
-                    background: 'rgba(13, 35, 23, 0.8)',
-                    border: `1.5px solid ${isOpen ? '#DFBA67' : 'rgba(223,186,103,0.2)'}`,
-                    borderRadius: '16px',
-                    padding: '16px 18px',
+                    background: 'rgba(15, 23, 42, 0.8)',
+                    border: `1.5px solid ${isOpen ? '#DFBA67' : 'rgba(255,255,255,0.08)'}`,
+                    borderRadius: '14px',
+                    padding: '14px 16px',
                     cursor: 'pointer',
-                    transition: 'all 0.2s ease',
                     textAlign: 'left'
                   }}
                 >
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '12px' }}>
-                    <span style={{ fontSize: '0.95rem', fontWeight: 800, color: isOpen ? '#DFBA67' : '#FFFFFF' }}>
+                    <span style={{ fontSize: '0.9rem', fontWeight: 800, color: isOpen ? '#DFBA67' : '#FFFFFF' }}>
                       {faq.q}
                     </span>
-                    <span style={{ fontSize: '1.2rem', color: '#DFBA67', fontWeight: 900 }}>
+                    <span style={{ fontSize: '1.1rem', color: '#DFBA67', fontWeight: 900 }}>
                       {isOpen ? '−' : '+'}
                     </span>
                   </div>
                   {isOpen && (
-                    <div style={{ marginTop: '10px', paddingTop: '10px', borderTop: '1px solid rgba(255,255,255,0.08)', fontSize: '0.85rem', color: '#CBD5E1', lineHeight: 1.5 }}>
+                    <div style={{ marginTop: '8px', paddingTop: '8px', borderTop: '1px solid rgba(255,255,255,0.06)', fontSize: '0.82rem', color: '#CBD5E1', lineHeight: 1.5 }}>
                       {faq.a}
                     </div>
                   )}
@@ -1444,64 +1390,21 @@ export default function App() {
 
         {/* Footer */}
         <footer style={{
-          textAlign: 'center', padding: '36px 20px', borderTop: '1px solid rgba(223,186,103,0.15)',
-          position: 'relative', zIndex: 5, background: 'rgba(5, 20, 11, 0.95)'
+          textAlign: 'center', padding: '32px 20px', borderTop: '1px solid rgba(255,255,255,0.08)',
+          position: 'relative', zIndex: 5, background: '#020617'
         }}>
-          <div style={{ fontSize: '1.2rem', fontWeight: 900, color: '#DFBA67', marginBottom: '6px' }}>
+          <div style={{ fontSize: '1.1rem', fontWeight: 900, color: '#DFBA67', marginBottom: '6px' }}>
             🍽️ KhanaMaster Digital QR Menu SaaS
           </div>
-          <p style={{ color: '#94A3B8', fontSize: '0.82rem', margin: '0 0 12px 0' }}>
+          <p style={{ color: '#64748B', fontSize: '0.8rem', margin: '0 0 10px 0' }}>
             © 2026 Khana Master — India's Premier Smart AI Digital Menu & Restaurant Management Platform
           </p>
-          <div style={{ display: 'flex', gap: '16px', justifyContent: 'center', fontSize: '0.8rem', color: '#DFBA67' }}>
+          <div style={{ display: 'flex', gap: '14px', justifyContent: 'center', fontSize: '0.78rem', color: '#DFBA67' }}>
             <span onClick={() => setShowLandingLoginModal(true)} style={{ cursor: 'pointer', textDecoration: 'underline' }}>Owner Login</span>
             <span>•</span>
             <span onClick={() => { window.history.pushState({}, '', '/register'); window.dispatchEvent(new PopStateEvent('popstate')); }} style={{ cursor: 'pointer', textDecoration: 'underline' }}>Register {trialDays}-Day Free Trial</span>
-            <span>•</span>
-            <a href={`https://wa.me/${(masterSupportPhone || '919876543210').replace(/[^0-9]/g, '')}`} target="_blank" rel="noopener noreferrer" style={{ color: '#DFBA67', textDecoration: 'underline' }}>WhatsApp Help</a>
           </div>
         </footer>
-
-        {/* Mobile Sticky Floating Bottom Action Dock */}
-        <div style={{
-          position: 'fixed',
-          bottom: 0,
-          left: 0,
-          right: 0,
-          zIndex: 1000,
-          background: 'rgba(10, 35, 21, 0.96)',
-          backdropFilter: 'blur(16px)',
-          borderTop: '1.5px solid #DFBA67',
-          padding: '10px 14px',
-          display: 'flex',
-          gap: '8px',
-          alignItems: 'center',
-          justifyContent: 'center',
-          boxShadow: '0 -10px 25px rgba(0,0,0,0.8)'
-        }}>
-          <button
-            onClick={() => { window.history.pushState({}, '', '/register'); window.dispatchEvent(new PopStateEvent('popstate')); }}
-            style={{
-              flex: 2, padding: '12px', borderRadius: '12px', border: 'none',
-              background: 'linear-gradient(135deg, #DFBA67, #C5A059)', color: '#0A2315',
-              fontWeight: 900, fontSize: '0.88rem', cursor: 'pointer',
-              boxShadow: '0 4px 12px rgba(223,186,103,0.3)', whiteSpace: 'nowrap'
-            }}
-          >
-            🚀 Start {trialDays}-Day Free Trial
-          </button>
-          <button
-            onClick={() => setShowLandingLoginModal(true)}
-            style={{
-              flex: 1, padding: '12px', borderRadius: '12px',
-              border: '1px solid rgba(223,186,103,0.4)', background: 'rgba(223,186,103,0.12)',
-              color: '#DFBA67', fontWeight: 800, fontSize: '0.82rem', cursor: 'pointer',
-              whiteSpace: 'nowrap'
-            }}
-          >
-            🔑 Login
-          </button>
-        </div>
       </div>
     );
   }
