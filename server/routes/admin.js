@@ -358,7 +358,7 @@ const handleUpdateSettings = async (req, res) => {
       max_distance_meters || 100,
       gst_enabled ? 1 : 0,
       gstin_number || '',
-      total_tables || 12,
+      total_tables !== undefined && total_tables !== null ? Number(total_tables) : 0,
       order_retention_days || 90,
       restoId
     ]);

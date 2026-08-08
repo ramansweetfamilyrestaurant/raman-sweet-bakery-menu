@@ -631,7 +631,7 @@ export default function AdminDashboard({ token, username, onLogout, onReturnToMe
   };
 
   const handleAddTable = async () => {
-    const currentCount = Number(settingsForm.total_tables) || 12;
+    const currentCount = Number(settingsForm.total_tables) || 0;
     const newCount = currentCount + 1;
     const updatedForm = { ...settingsForm, total_tables: newCount };
     setSettingsForm(updatedForm);
@@ -653,9 +653,9 @@ export default function AdminDashboard({ token, username, onLogout, onReturnToMe
   };
 
   const handleDeleteTable = async (tableNumToDelete) => {
-    const currentCount = Number(settingsForm.total_tables) || 12;
-    if (currentCount <= 1) {
-      alert('Restaurant must have at least 1 table!');
+    const currentCount = Number(settingsForm.total_tables) || 0;
+    if (currentCount <= 0) {
+      alert('No tables to delete!');
       return;
     }
     if (!window.confirm(`Are you sure you want to delete Table ${tableNumToDelete}?`)) return;
@@ -712,7 +712,7 @@ export default function AdminDashboard({ token, username, onLogout, onReturnToMe
           max_distance_meters: infoData.max_distance_meters || 100,
           gst_enabled: infoData.gst_enabled !== undefined ? infoData.gst_enabled : false,
           gstin_number: infoData.gstin_number || '',
-          total_tables: infoData.total_tables || 12,
+          total_tables: infoData.total_tables !== undefined && infoData.total_tables !== null ? Number(infoData.total_tables) : 0,
           order_retention_days: infoData.order_retention_days || 7,
           filters_visibility: { ...defaultVis, ...infoData.filters_visibility }
         });
@@ -961,7 +961,11 @@ export default function AdminDashboard({ token, username, onLogout, onReturnToMe
   };
 
   const handlePrintAllQRs = () => {
-    const totalCount = Number(settingsForm.total_tables) || 12;
+    const totalCount = Number(settingsForm.total_tables) || 0;
+    if (totalCount === 0) {
+      alert('No tables added yet! Click "+ Add New Table" to create dining table QRs.');
+      return;
+    }
     const liveOrigin = window.location.origin;
     const currentName = settingsForm.name || 'Digital Menu';
     const currentTagline = settingsForm.tagline || 'Scan QR Code for Digital Menu';
@@ -1231,7 +1235,7 @@ export default function AdminDashboard({ token, username, onLogout, onReturnToMe
   });
 
   // Compute Live Table Grid (1 to total_tables)
-  const totalTablesCount = Number(settingsForm.total_tables) || 12;
+  const totalTablesCount = Number(settingsForm.total_tables) || 0;
   const tableGrid = [];
 
   for (let tNum = 1; tNum <= totalTablesCount; tNum++) {
@@ -3169,130 +3173,158 @@ export default function AdminDashboard({ token, username, onLogout, onReturnToMe
             </div>
 
             {/* Table Cards Grid */}
-            <div style={{
-              display: 'grid',
-              gridTemplateColumns: 'repeat(auto-fill, minmax(220px, 1fr))',
-              gap: '16px',
-              marginBottom: '28px'
-            }}>
-              {Array.from({ length: totalTablesCount }, (_, i) => i + 1).map((tNum) => {
-                const tableInfo = tableGrid.find(t => t.tableNumber === tNum);
-                const isOccupied = tableInfo?.status === 'occupied';
-                const isService = tableInfo?.status === 'service_needed';
-                const qrDataUrl = `https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(window.location.origin + '/' + (settingsForm.slug || 'raman-sweet-bakery') + '?table=' + tNum)}`;
+            {totalTablesCount === 0 ? (
+              <div style={{
+                textAlign: 'center',
+                padding: '50px 20px',
+                background: '#FFFFFF',
+                borderRadius: '20px',
+                border: '1.5px dashed var(--border-light)',
+                boxShadow: 'var(--shadow-sm)',
+                marginBottom: '28px'
+              }}>
+                <div style={{ fontSize: '3.5rem', marginBottom: '12px' }}>📱</div>
+                <h3 style={{ fontSize: '1.25rem', fontWeight: 900, color: 'var(--primary-emerald)', margin: '0 0 6px 0' }}>
+                  No Table QR Codes Generated Yet
+                </h3>
+                <p style={{ fontSize: '0.86rem', color: 'var(--text-muted)', maxWidth: '440px', margin: '0 auto 20px auto', lineHeight: 1.5 }}>
+                  Click <strong>+ Add New Table</strong> to generate your first dining table QR standee sticker!
+                </p>
+                <button
+                  onClick={handleAddTable}
+                  style={{
+                    padding: '12px 24px', borderRadius: '12px', border: 'none',
+                    background: 'linear-gradient(135deg, #FFD700 0%, #D4AF37 100%)',
+                    color: '#0A0A0A', fontWeight: 900, fontSize: '0.9rem', cursor: 'pointer',
+                    boxShadow: '0 4px 14px rgba(255,215,0,0.35)'
+                  }}
+                >
+                  ➕ Add Table 1 (Generate First QR)
+                </button>
+              </div>
+            ) : (
+              <div style={{
+                display: 'grid',
+                gridTemplateColumns: 'repeat(auto-fill, minmax(220px, 1fr))',
+                gap: '16px',
+                marginBottom: '28px'
+              }}>
+                {Array.from({ length: totalTablesCount }, (_, i) => i + 1).map((tNum) => {
+                  const tableInfo = tableGrid.find(t => t.tableNumber === tNum);
+                  const isOccupied = tableInfo?.status === 'occupied';
+                  const isService = tableInfo?.status === 'service_needed';
+                  const qrDataUrl = `https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(window.location.origin + '/' + (settingsForm.slug || 'raman-sweet-bakery') + '?table=' + tNum)}`;
 
-                return (
-                  <div key={tNum} style={{
-                    background: '#FFFFFF',
-                    borderRadius: '18px',
-                    padding: '18px',
-                    border: isService ? '2px solid #F59E0B' : isOccupied ? '2px solid #EF4444' : '1px solid var(--border-light)',
-                    boxShadow: '0 4px 12px rgba(0,0,0,0.05)',
-                    textAlign: 'center',
-                    position: 'relative',
-                    transition: 'all 0.2s'
-                  }}>
-                    {/* Card Top: Number + Delete Button */}
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
-                      <span style={{
-                        background: '#0A2315',
-                        color: '#DFBA67',
-                        padding: '4px 12px',
-                        borderRadius: 'var(--radius-pill)',
-                        fontSize: '0.82rem',
-                        fontWeight: 900,
-                        border: '1px solid #C5A059'
-                      }}>
-                        Table {tNum}
-                      </span>
-
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                        {/* Delete Button */}
-                        <button
-                          onClick={() => handleDeleteTable(tNum)}
-                          title={`Delete Table ${tNum}`}
-                          style={{
-                            background: '#FEE2E2',
-                            color: '#DC2626',
-                            border: 'none',
-                            borderRadius: '50%',
-                            width: '30px',
-                            height: '30px',
-                            display: 'flex',
-                            alignItems: 'center',
-                            justifyContent: 'center',
-                            cursor: 'pointer',
-                            transition: 'all 0.2s'
-                          }}
-                          onMouseEnter={e => e.currentTarget.style.background = '#FCA5A5'}
-                          onMouseLeave={e => e.currentTarget.style.background = '#FEE2E2'}
-                        >
-                          <Trash2 size={14} />
-                        </button>
-                      </div>
-                    </div>
-
-                    {/* QR Code Graphic Preview */}
-                    <div style={{
-                      background: '#FAFAFA',
-                      padding: '12px',
-                      borderRadius: '14px',
-                      border: '1px solid #F3F4F6',
-                      display: 'inline-block',
-                      marginBottom: '12px'
+                  return (
+                    <div key={tNum} style={{
+                      background: '#FFFFFF',
+                      borderRadius: '18px',
+                      padding: '18px',
+                      border: isService ? '2px solid #F59E0B' : isOccupied ? '2px solid #EF4444' : '1px solid var(--border-light)',
+                      boxShadow: '0 4px 12px rgba(0,0,0,0.05)',
+                      textAlign: 'center',
+                      position: 'relative',
+                      transition: 'all 0.2s'
                     }}>
-                      <img
-                        src={qrDataUrl}
-                        alt={`Table ${tNum}`}
-                        style={{ width: '120px', height: '120px', display: 'block' }}
-                      />
-                    </div>
+                      {/* Card Top: Number + Delete Button */}
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
+                        <span style={{
+                          background: '#0A2315',
+                          color: '#DFBA67',
+                          padding: '4px 12px',
+                          borderRadius: 'var(--radius-pill)',
+                          fontSize: '0.82rem',
+                          fontWeight: 900,
+                          border: '1px solid #C5A059'
+                        }}>
+                          Table {tNum}
+                        </span>
 
-                    {/* Live Status Badge */}
-                    <div style={{ marginBottom: '14px' }}>
-                      {isService ? (
-                        <span style={{ padding: '3px 10px', borderRadius: '12px', fontSize: '0.72rem', fontWeight: 800, background: '#FEF3C7', color: '#B45309' }}>
-                          🔔 Call Staff Request
-                        </span>
-                      ) : isOccupied ? (
-                        <span style={{ padding: '3px 10px', borderRadius: '12px', fontSize: '0.72rem', fontWeight: 800, background: '#FEE2E2', color: '#DC2626' }}>
-                          🔴 Occupied (Order Active)
-                        </span>
-                      ) : (
-                        <span style={{ padding: '3px 10px', borderRadius: '12px', fontSize: '0.72rem', fontWeight: 800, background: '#DCFCE7', color: '#15803D' }}>
-                          🟢 Available
-                        </span>
-                      )}
-                    </div>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                          {/* Delete Button */}
+                          <button
+                            onClick={() => handleDeleteTable(tNum)}
+                            title={`Delete Table ${tNum}`}
+                            style={{
+                              background: '#FEE2E2',
+                              color: '#DC2626',
+                              border: 'none',
+                              borderRadius: '50%',
+                              width: '26px',
+                              height: '26px',
+                              display: 'flex',
+                              alignItems: 'center',
+                              justifyContent: 'center',
+                              cursor: 'pointer'
+                            }}
+                          >
+                            <Trash2 size={13} />
+                          </button>
+                        </div>
+                      </div>
 
-                    {/* Quick Print Button */}
-                    <button
-                      onClick={() => {
-                        setTableNumber(String(tNum));
-                        handlePrintQR();
-                      }}
-                      style={{
-                        width: '100%',
-                        padding: '9px',
-                        borderRadius: '10px',
-                        border: 'none',
-                        background: 'var(--primary-emerald)',
-                        color: '#FFFFFF',
-                        fontSize: '0.78rem',
-                        fontWeight: 800,
-                        cursor: 'pointer',
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        gap: '6px'
-                      }}
-                    >
-                      <Printer size={14} /> Print Standee QR
-                    </button>
-                  </div>
-                );
-              })}
-            </div>
+                      {/* QR Code Graphic Preview */}
+                      <div style={{
+                        background: '#FAFAFA',
+                        padding: '12px',
+                        borderRadius: '14px',
+                        border: '1px solid #F3F4F6',
+                        display: 'inline-block',
+                        marginBottom: '12px'
+                      }}>
+                        <img
+                          src={qrDataUrl}
+                          alt={`Table ${tNum}`}
+                          style={{ width: '120px', height: '120px', display: 'block' }}
+                        />
+                      </div>
+
+                      {/* Live Status Badge */}
+                      <div style={{ marginBottom: '14px' }}>
+                        {isService ? (
+                          <span style={{ padding: '3px 10px', borderRadius: '12px', fontSize: '0.72rem', fontWeight: 800, background: '#FEF3C7', color: '#B45309' }}>
+                            🔔 Call Staff Request
+                          </span>
+                        ) : isOccupied ? (
+                          <span style={{ padding: '3px 10px', borderRadius: '12px', fontSize: '0.72rem', fontWeight: 800, background: '#FEE2E2', color: '#DC2626' }}>
+                            🔴 Occupied (Order Active)
+                          </span>
+                        ) : (
+                          <span style={{ padding: '3px 10px', borderRadius: '12px', fontSize: '0.72rem', fontWeight: 800, background: '#DCFCE7', color: '#15803D' }}>
+                            🟢 Available
+                          </span>
+                        )}
+                      </div>
+
+                      {/* Quick Print Button */}
+                      <button
+                        onClick={() => {
+                          setTableNumber(String(tNum));
+                          handlePrintQR();
+                        }}
+                        style={{
+                          width: '100%',
+                          padding: '9px',
+                          borderRadius: '10px',
+                          border: 'none',
+                          background: 'var(--primary-emerald)',
+                          color: '#FFFFFF',
+                          fontSize: '0.78rem',
+                          fontWeight: 800,
+                          cursor: 'pointer',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          gap: '6px'
+                        }}
+                      >
+                        <Printer size={14} /> Print Standee QR
+                      </button>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
 
             {/* Custom Single QR Standee Generator */}
             <div style={{

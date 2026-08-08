@@ -103,7 +103,7 @@ router.get('/info', async (req, res) => {
         max_distance_meters: resto.max_distance_meters || 100,
         gst_enabled: resto.gst_enabled === 1 || resto.gst_enabled === true,
         gstin_number: resto.gstin_number || '',
-        total_tables: resto.total_tables || 12,
+        total_tables: resto.total_tables !== undefined && resto.total_tables !== null ? Number(resto.total_tables) : 0,
         order_retention_days: resto.order_retention_days || 7,
         active: (resto.active === 1 || resto.active === true || resto.active === '1')
       });
