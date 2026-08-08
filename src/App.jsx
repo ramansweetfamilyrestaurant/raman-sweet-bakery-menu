@@ -106,6 +106,7 @@ export default function App() {
   const [showCategoryDrawer, setShowCategoryDrawer] = useState(false);
   const [showServiceModal, setShowServiceModal] = useState(false);
   const [showReviewModal, setShowReviewModal] = useState(false);
+  const [publicPlans, setPublicPlans] = useState([]);
   const [serviceToastMsg, setServiceToastMsg] = useState('');
   const [loading, setLoading] = useState(true);
   const [restaurantStatus, setRestaurantStatus] = useState('active'); // 'active' | 'not_found' | 'suspended'
@@ -115,6 +116,15 @@ export default function App() {
     if (params.get('review') === 'true' || params.get('review') === '1') {
       setShowReviewModal(true);
     }
+
+    fetch('/api/plans')
+      .then(res => res.json())
+      .then(data => {
+        if (Array.isArray(data) && data.length > 0) {
+          setPublicPlans(data);
+        }
+      })
+      .catch(() => {});
   }, []);
 
   // In-Context Owner Modals State
@@ -1038,11 +1048,24 @@ export default function App() {
             display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))',
             gap: '22px', maxWidth: '980px', margin: '0 auto'
           }}>
-            {[
+            {(publicPlans.length > 0 ? publicPlans.map(p => ({
+              name: p.name,
+              price: `₹${p.price}`,
+              period: '/month',
+              badge: p.badge || '👑 PLAN',
+              features: [
+                'Digital QR Menu & Themes',
+                ...(p.whatsapp_enabled ? ['WhatsApp Direct Ordering'] : []),
+                ...(p.google_reviews_enabled ? ['⭐ Smart AI Google Reviews'] : []),
+                ...(p.direct_ordering_enabled ? ['⚡ Direct Table QR KOT Ordering', '📋 Live Kitchen Siren System', '🖨️ Thermal Printer KOT & Bills', '🗺️ Hall Floor Map & Grid'] : []),
+                `Up to ${p.max_combos > 100 ? 'Unlimited' : p.max_combos} Combo Deals`
+              ],
+              popular: p.key === 'pro'
+            })) : [
               { name: 'Basic Starter', price: '₹499', period: '/month', badge: '⚡ BASIC', features: ['Digital QR Menu', 'Luxury Themes', 'Admin Dashboard', 'Unlimited Dishes & Categories', 'Up to 3 Combo Deals'], popular: false },
               { name: 'Pro Luxury', price: '₹999', period: '/month', badge: '👑 PRO', features: ['Everything in Basic', 'WhatsApp Direct Ordering', '⭐ Smart AI Google Reviews', 'Up to 10 Combo Deals', 'Priority 24/7 Phone Support'], popular: true },
               { name: 'Enterprise VIP', price: '₹1,999', period: '/month', badge: '🚀 ENTERPRISE', features: ['Everything in Pro', '⚡ Direct Table QR Ordering', '📋 Live KOT Kitchen System & Siren', '🖨️ Thermal Printer KOT & Bills', '🗺️ Hall Floor Map & Table Grid', 'Unlimited Combo Deals'], popular: false }
-            ].map((plan, i) => (
+            ]).map((plan, i) => (
               <div key={i} style={{
                 background: plan.popular ? 'linear-gradient(135deg, rgba(223,186,103,0.15), rgba(223,186,103,0.04))' : 'rgba(255,255,255,0.03)',
                 border: plan.popular ? '2.5px solid #DFBA67' : '1px solid rgba(255,255,255,0.1)',

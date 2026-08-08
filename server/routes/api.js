@@ -23,6 +23,28 @@ router.get('/settings', async (req, res) => {
   }
 });
 
+// GET public SaaS plans for Landing Page & Registration (no auth required)
+router.get('/plans', async (req, res) => {
+  try {
+    const plans = await query('SELECT * FROM saas_plans ORDER BY price ASC');
+    const result = (plans || []).map(p => ({
+      key: p.key,
+      name: p.name,
+      price: Number(p.price) || 0,
+      badge: p.badge || '👑 PLAN',
+      description: p.description || '',
+      whatsapp_enabled: Boolean(p.whatsapp_enabled),
+      direct_ordering_enabled: Boolean(p.direct_ordering_enabled),
+      google_reviews_enabled: Boolean(p.google_reviews_enabled),
+      max_combos: Number(p.max_combos) || 10
+    }));
+    res.json(result);
+  } catch (err) {
+    console.error('Fetch public plans error:', err);
+    res.json([]);
+  }
+});
+
 // Helper to resolve target restaurant by JWT token or slug (or fallback to primary raman-sweet-bakery)
 // Helper to resolve target restaurant by slug or JWT token
 async function resolveRestaurant(req, slug) {
