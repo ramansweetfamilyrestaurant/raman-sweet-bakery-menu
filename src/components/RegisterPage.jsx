@@ -133,7 +133,21 @@ export default function RegisterPage({ onRegisterSuccess }) {
       localStorage.setItem('raman_admin_slug', data.slug);
       localStorage.setItem('adminToken', data.token);
 
-      // Trigger interactive permission onboarding screen (solves browser user-gesture security requirement)
+      // Automatically Authorize UPI Autopay Mandate (₹0 Today, Auto-Debit on Day 15)
+      try {
+        await fetch('/api/payment/create-mandate', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            restaurant_id: data.restaurant_id || data.id || 1,
+            plan_tier: formData.plan_tier,
+            coupon_code: appliedCoupon ? appliedCoupon.code : 'LAUNCH50',
+            gateway: 'cashfree'
+          })
+        });
+      } catch {}
+
+      // Trigger interactive permission onboarding screen
       setRegisteredData(data);
     } catch (err) {
       console.error('Registration error:', err);

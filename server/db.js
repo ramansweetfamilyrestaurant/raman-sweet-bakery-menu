@@ -153,6 +153,10 @@ async function createTables() {
       ALTER TABLE restaurants ADD COLUMN IF NOT EXISTS gstin_number VARCHAR(50);
       ALTER TABLE restaurants ADD COLUMN IF NOT EXISTS total_tables INT DEFAULT 0;
       ALTER TABLE restaurants ADD COLUMN IF NOT EXISTS order_retention_days INT DEFAULT 90;
+      ALTER TABLE restaurants ADD COLUMN IF NOT EXISTS mandate_id VARCHAR(255);
+      ALTER TABLE restaurants ADD COLUMN IF NOT EXISTS mandate_status VARCHAR(50) DEFAULT 'pending';
+      ALTER TABLE restaurants ADD COLUMN IF NOT EXISTS trial_ends_at VARCHAR(100);
+      ALTER TABLE restaurants ADD COLUMN IF NOT EXISTS auto_debit_enabled INT DEFAULT 1;
       ALTER TABLE dishes ADD COLUMN IF NOT EXISTS type VARCHAR(20) DEFAULT 'veg';
       ALTER TABLE dishes ADD COLUMN IF NOT EXISTS name_hi TEXT;
       ALTER TABLE dishes ADD COLUMN IF NOT EXISTS description_hi TEXT;
@@ -438,6 +442,10 @@ async function createTables() {
       if (!restoCols.some(c => c.name === 'gstin_number')) sqliteDb.exec("ALTER TABLE restaurants ADD COLUMN gstin_number TEXT");
       if (!restoCols.some(c => c.name === 'total_tables')) sqliteDb.exec("ALTER TABLE restaurants ADD COLUMN total_tables INTEGER DEFAULT 0");
       if (!restoCols.some(c => c.name === 'order_retention_days')) sqliteDb.exec("ALTER TABLE restaurants ADD COLUMN order_retention_days INTEGER DEFAULT 90");
+      if (!restoCols.some(c => c.name === 'mandate_id')) sqliteDb.exec("ALTER TABLE restaurants ADD COLUMN mandate_id TEXT");
+      if (!restoCols.some(c => c.name === 'mandate_status')) sqliteDb.exec("ALTER TABLE restaurants ADD COLUMN mandate_status TEXT DEFAULT 'pending'");
+      if (!restoCols.some(c => c.name === 'trial_ends_at')) sqliteDb.exec("ALTER TABLE restaurants ADD COLUMN trial_ends_at TEXT");
+      if (!restoCols.some(c => c.name === 'auto_debit_enabled')) sqliteDb.exec("ALTER TABLE restaurants ADD COLUMN auto_debit_enabled INTEGER DEFAULT 1");
     } catch (err) {
       console.warn('SQLite migration info:', err.message);
     }

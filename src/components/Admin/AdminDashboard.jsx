@@ -4535,15 +4535,44 @@ export default function AdminDashboard({ token, username, onLogout, onReturnToMe
 
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', fontSize: '0.82rem', borderTop: '1px solid #E2E8F0', paddingTop: '12px' }}>
                   <div>
-                    <span style={{ color: '#64748B', display: 'block', fontSize: '0.72rem', fontWeight: 700 }}>PLAN EXPIRY DATE:</span>
-                    <strong style={{ color: '#0F172A' }}>{restaurantInfo?.plan_expires_at || '14-Day Free Trial'}</strong>
+                    <span style={{ color: '#64748B', display: 'block', fontSize: '0.72rem', fontWeight: 700 }}>PLAN EXPIRY / TRIAL ENDS:</span>
+                    <strong style={{ color: '#0F172A' }}>{restaurantInfo?.trial_ends_at || restaurantInfo?.plan_expires_at || '14-Day Free Trial'}</strong>
                   </div>
                   <div>
-                    <span style={{ color: '#64748B', display: 'block', fontSize: '0.72rem', fontWeight: 700 }}>MONTHLY RATE:</span>
+                    <span style={{ color: '#64748B', display: 'block', fontSize: '0.72rem', fontWeight: 700 }}>MONTHLY AUTOPAY RATE:</span>
                     <strong style={{ color: '#059669' }}>
-                      ₹{restaurantInfo?.plan_tier === 'enterprise' ? 1999 : restaurantInfo?.plan_tier === 'basic' ? 499 : 999} / month
+                      ₹{restaurantInfo?.plan_price || (restaurantInfo?.plan_tier === 'enterprise' ? 1999 : restaurantInfo?.plan_tier === 'basic' ? 499 : 999)} / month
                     </strong>
                   </div>
+                </div>
+
+                <div style={{ marginTop: '12px', background: '#FFFBEB', border: '1px solid #FDE68A', padding: '10px 14px', borderRadius: '10px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <div style={{ fontSize: '0.76rem', color: '#B45309', fontWeight: 800 }}>
+                    ⚡ RECURRING AUTOPAY: <span style={{ color: restaurantInfo?.mandate_status === 'cancelled' ? '#DC2626' : '#059669' }}>{restaurantInfo?.mandate_status === 'cancelled' ? '🔴 CANCELLED' : '🟢 ACTIVE (UPI Autopay Authorized)'}</span>
+                  </div>
+                  {restaurantInfo?.mandate_status !== 'cancelled' && (
+                    <button
+                      onClick={async () => {
+                        if (window.confirm('Are you sure you want to cancel your automatic UPI Autopay recurring subscription?')) {
+                          try {
+                            const res = await fetch('/api/payment/cancel-mandate', {
+                              method: 'POST',
+                              headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+                              body: JSON.stringify({ restaurant_id: restaurantInfo?.id || 1 })
+                            });
+                            const data = await res.json();
+                            alert(data.message || 'Autopay Cancelled');
+                            loadData();
+                          } catch {
+                            alert('Failed to cancel Autopay mandate');
+                          }
+                        }
+                      }}
+                      style={{ background: '#FEE2E2', color: '#B91C1C', border: '1px solid #FCA5A5', padding: '4px 10px', borderRadius: '6px', fontSize: '0.7rem', fontWeight: 900, cursor: 'pointer' }}
+                    >
+                      🛑 Cancel Autopay
+                    </button>
+                  )}
                 </div>
               </div>
 

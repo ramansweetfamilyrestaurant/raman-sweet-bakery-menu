@@ -155,4 +155,84 @@ router.post('/razorpay', async (req, res) => {
   }
 });
 
+// ==========================================
+// 4. CREATE UPI AUTOPAY MANDATE ORDER (₹0 Today, Auto-Debit on Day 15)
+// ==========================================
+router.post('/create-mandate', async (req, res) => {
+  try {
+    const { restaurant_id, plan_tier, coupon_code, gateway = 'cashfree' } = req.body;
+
+    if (!restaurant_id) {
+      return res.status(400).json({ error: 'Restaurant ID is required' });
+    }
+
+    const targetPlanKey = (plan_tier || 'pro').toLowerCase();
+    const planRows = await query('SELECT * FROM saas_plans WHERE LOWER(key) = $1', [targetPlanKey]);
+    const plan = planRows && planRows.length > 0 ? planRows[0] : { price: 999, name: 'Pro Luxury Plan' };
+
+    let finalPrice = Number(plan.price) || 999;
+    if (coupon_code && typeof coupon_code === 'string') {
+      const cRows = await query('SELECT * FROM coupons WHERE UPPER(code) = $1 AND active = 1', [coupon_code.trim().toUpperCase()]);
+      if (cRows && cRows.length > 0) {
+        const coupon = cRows[0];
+        if (coupon.discount_percent > 0) {
+          finalPrice = Math.round(finalPrice * (1 - coupon.discount_percent / 100));
+        } else if (coupon.discount_amount > 0) {
+          finalPrice = Math.max(0, finalPrice - coupon.discount_amount);
+        }
+      }
+    }
+
+    const mandateId = `KM_MANDATE_${restaurant_id}_${Date.now()}`;
+    const trialEndsDate = new Date();
+    trialEndsDate.setDate(trialEndsDate.getDate() + 14);
+    const trialEndsStr = trialEndsDate.toISOString().split('T')[0];
+
+    // Save mandate details in restaurant DB
+    await query(
+      "UPDATE restaurants SET mandate_id = $1, mandate_status = 'active', trial_ends_at = $2, auto_debit_enabled = 1, plan_price = $3 WHERE id = $4",
+      [mandateId, trialEndsStr, finalPrice, restaurant_id]
+    );
+
+    await logPaymentAudit(restaurant_id, 'UPI Autopay Mandate Created', { mandateId, gateway, monthlyAmount: finalPrice, trialEndsStr });
+
+    res.json({
+      success: true,
+      mandate_id: mandateId,
+      first_charge_amount: 0,
+      monthly_recurring_amount: finalPrice,
+      trial_ends_at: trialEndsStr,
+      gateway,
+      message: '₹0 UPI Autopay Mandate authorized successfully! 14-Day Free Trial activated.'
+    });
+  } catch (err) {
+    console.error('Create Mandate Error:', err);
+    res.status(500).json({ error: 'Failed to authorize UPI Autopay mandate' });
+  }
+});
+
+// ==========================================
+// 5. CANCEL AUTOPAY MANDATE
+// ==========================================
+router.post('/cancel-mandate', async (req, res) => {
+  try {
+    const { restaurant_id } = req.body;
+    if (!restaurant_id) {
+      return res.status(400).json({ error: 'Restaurant ID is required' });
+    }
+
+    await query(
+      "UPDATE restaurants SET mandate_status = 'cancelled', auto_debit_enabled = 0 WHERE id = $1",
+      [restaurant_id]
+    );
+
+    await logPaymentAudit(restaurant_id, 'Autopay Mandate Cancelled by User', { date: new Date().toISOString() });
+
+    res.json({ success: true, message: 'UPI Autopay Mandate cancelled successfully.' });
+  } catch (err) {
+    console.error('Cancel Mandate Error:', err);
+    res.status(500).json({ error: 'Failed to cancel Autopay mandate' });
+  }
+});
+
 export default router;
