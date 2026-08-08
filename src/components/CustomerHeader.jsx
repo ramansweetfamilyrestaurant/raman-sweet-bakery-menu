@@ -70,7 +70,7 @@ export default function CustomerHeader({ info, lang, tableNum, onToggleLang, onO
                 gap: '4px'
               }}>
                 <span style={{ width: '5px', height: '5px', borderRadius: '50%', backgroundColor: '#4ADE80' }} />
-                T-${tableNum}
+                Table #{tableNum}
               </span>
 
               {onCallStaff && (

@@ -1649,28 +1649,28 @@ export default function App() {
           <>
           {/* 🛒 COMBO DEALS SECTION */}
           {combos.length > 0 && !searchQuery && (
-            <section id="combos-section" style={{ marginBottom: '28px', scrollMarginTop: '110px' }}>
+            <section id="combos-section" style={{ marginBottom: '16px', scrollMarginTop: '110px' }}>
               <div style={{
                 display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-                marginBottom: '12px', paddingBottom: '6px', borderBottom: '2px solid var(--gold-border)'
+                marginBottom: '8px', paddingBottom: '4px', borderBottom: '2px solid var(--gold-border)'
               }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                  <span style={{ fontSize: '1.2rem' }}>🍱</span>
-                  <h2 style={{ margin: 0, fontSize: '1.05rem', fontWeight: 800, color: 'var(--text-dark)' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                  <span style={{ fontSize: '1.1rem' }}>🍱</span>
+                  <h2 style={{ margin: 0, fontSize: '0.95rem', fontWeight: 800, color: 'var(--text-dark)' }}>
                     {lang === 'hi' ? 'कॉम्बो डील्स & थाली' : 'Combo Deals & Thalis'}
                   </h2>
                   <span style={{
-                    fontSize: '0.72rem', fontWeight: 800, color: '#B45309',
-                    background: '#FEF3C7', padding: '2px 8px', borderRadius: '12px',
+                    fontSize: '0.68rem', fontWeight: 800, color: '#B45309',
+                    background: '#FEF3C7', padding: '1px 6px', borderRadius: '10px',
                     border: '1px solid #FCD34D'
                   }}>{combos.length}</span>
                 </div>
                 <span style={{
-                  fontSize: '0.72rem', fontWeight: 800, color: '#059669'
+                  fontSize: '0.68rem', fontWeight: 800, color: '#059669'
                 }}>👉 Swipe ({combos.length})</span>
               </div>
               <div style={{
-                display: 'flex', gap: '14px', overflowX: 'auto', paddingBottom: '10px',
+                display: 'flex', gap: '10px', overflowX: 'auto', paddingBottom: '6px',
                 scrollSnapType: 'x mandatory', WebkitOverflowScrolling: 'touch',
                 scrollbarWidth: 'none', msOverflowStyle: 'none'
               }}>
@@ -1685,19 +1685,19 @@ export default function App() {
                       key={combo.id}
                       onClick={() => setSelectedComboModal(combo)}
                       style={{
-                        minWidth: '290px', maxWidth: '320px', flexShrink: 0, scrollSnapAlign: 'start',
-                        background: '#FFFFFF', borderRadius: 'var(--radius-md)', padding: '14px',
-                        border: '1px solid var(--border-light)', boxShadow: 'var(--shadow-sm)',
+                        minWidth: '250px', maxWidth: '275px', flexShrink: 0, scrollSnapAlign: 'start',
+                        background: '#FFFFFF', borderRadius: '14px', padding: '10px 12px',
+                        border: '1.5px solid var(--gold-border)', boxShadow: '0 2px 8px rgba(0,0,0,0.04)',
                         position: 'relative', overflow: 'hidden', cursor: 'pointer',
                         transition: 'all 0.2s ease'
                       }}
                     >
-                      <div style={{ display: 'flex', gap: '14px', alignItems: 'flex-start' }}>
+                      <div style={{ display: 'flex', gap: '10px', alignItems: 'flex-start' }}>
                         {/* Food Image Container */}
                         <div style={{
-                          width: '94px', height: '78px', borderRadius: '14px', overflow: 'hidden',
-                          background: '#F9FAFB', border: '1.5px solid var(--gold-border)', flexShrink: 0,
-                          position: 'relative', boxShadow: '0 2px 8px rgba(0,0,0,0.08)'
+                          width: '74px', height: '66px', borderRadius: '10px', overflow: 'hidden',
+                          background: '#F9FAFB', border: '1px solid var(--gold-border)', flexShrink: 0,
+                          position: 'relative', boxShadow: '0 2px 6px rgba(0,0,0,0.06)'
                         }}>
                           {combo.image && combo.image !== '/uploads/logo.jpg' ? (
                             <img 
