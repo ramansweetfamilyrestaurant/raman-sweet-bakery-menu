@@ -106,6 +106,7 @@ export default function App() {
   const [showServiceModal, setShowServiceModal] = useState(false);
   const [serviceToastMsg, setServiceToastMsg] = useState('');
   const [loading, setLoading] = useState(true);
+  const [restaurantStatus, setRestaurantStatus] = useState('active'); // 'active' | 'not_found' | 'suspended'
 
   // In-Context Owner Modals State
   const [ownerDishModalData, setOwnerDishModalData] = useState(null); // null, 'new', or dish object
