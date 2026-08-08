@@ -35,6 +35,8 @@ export default function AdminDashboard({ token, username, onLogout, onReturnToMe
   const [comboModalData, setComboModalData] = useState(null);
   const [permissionsGranted, setPermissionsGranted] = useState(false);
   const [masterSupportPhone, setMasterSupportPhone] = useState('919876543210');
+  const [showOnboardingGuide, setShowOnboardingGuide] = useState(true);
+  const [showHelpModal, setShowHelpModal] = useState(false);
 
   // Settings Accordion Folders State
   const [openSettingsSections, setOpenSettingsSections] = useState({
@@ -1347,6 +1349,27 @@ export default function AdminDashboard({ token, username, onLogout, onReturnToMe
         {/* Right: Quick Action Pill Buttons */}
         <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flexShrink: 0 }}>
           <button 
+            onClick={() => setShowHelpModal(true)}
+            title="Open Interactive System Guide & Help Center"
+            style={{
+              background: 'linear-gradient(135deg, #F59E0B 0%, #D97706 100%)',
+              color: '#FFFFFF',
+              padding: '6px 11px',
+              borderRadius: 'var(--radius-pill)',
+              fontSize: '0.74rem',
+              fontWeight: 800,
+              border: 'none',
+              cursor: 'pointer',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '4px',
+              whiteSpace: 'nowrap',
+              boxShadow: '0 2px 8px rgba(245,158,11,0.4)'
+            }}
+          >
+            📖 Guide
+          </button>
+          <button 
             onClick={() => onReturnToMenu(settingsForm.slug)}
             title="View Public Customer Menu"
             style={{
@@ -1745,6 +1768,172 @@ export default function AdminDashboard({ token, username, onLogout, onReturnToMe
 
       {/* Main Container */}
       <div style={{ maxWidth: '800px', margin: '14px auto', padding: '0 12px' }}>
+
+        {/* 🚀 New Restaurant Owner Interactive Quick-Start Setup Guide */}
+        {showOnboardingGuide && (
+          <div style={{
+            background: 'linear-gradient(135deg, #0A2315 0%, #164E2A 100%)',
+            borderRadius: '20px',
+            padding: '18px 20px',
+            marginBottom: '20px',
+            border: '2px solid #DFBA67',
+            color: '#FFFFFF',
+            boxShadow: '0 12px 30px rgba(10,35,21,0.3)',
+            position: 'relative'
+          }}>
+            <button
+              onClick={() => setShowOnboardingGuide(false)}
+              style={{
+                position: 'absolute', top: '14px', right: '14px',
+                background: 'rgba(255,255,255,0.15)', border: 'none',
+                color: '#FFFFFF', borderRadius: '50%', width: '28px', height: '28px',
+                cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center'
+              }}
+              title="Dismiss Setup Guide"
+            >
+              <X size={16} />
+            </button>
+
+            <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '12px' }}>
+              <span style={{ fontSize: '1.8rem' }}>🚀</span>
+              <div>
+                <h3 style={{ margin: 0, fontSize: '1.05rem', fontWeight: 900, color: '#DFBA67' }}>
+                  Welcome to KhanaMaster! Restaurant Setup Guide
+                </h3>
+                <span style={{ fontSize: '0.78rem', color: '#E2E8F0' }}>
+                  Follow these 4 simple steps to set up your menu & QR codes today:
+                </span>
+              </div>
+            </div>
+
+            {/* 4 Setup Steps */}
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))', gap: '10px', marginTop: '14px' }}>
+              
+              {/* Step 1: Add Category */}
+              <div style={{
+                background: 'rgba(255,255,255,0.08)', borderRadius: '14px', padding: '12px',
+                border: '1px solid rgba(223,186,103,0.3)'
+              }}>
+                <div style={{ fontSize: '0.7rem', fontWeight: 900, color: '#DFBA67', textTransform: 'uppercase', marginBottom: '4px' }}>
+                  Step 1 • Categories
+                </div>
+                <strong style={{ fontSize: '0.86rem', display: 'block', color: '#FFFFFF', marginBottom: '4px' }}>
+                  📁 Create Categories
+                </strong>
+                <p style={{ fontSize: '0.74rem', color: '#CBD5E1', margin: '0 0 10px 0', lineHeight: 1.3 }}>
+                  Add menu sections (e.g. Starters, Sweets, Drinks).
+                </p>
+                <button
+                  onClick={() => {
+                    setCatModalData('new');
+                    setActiveTab('categories');
+                  }}
+                  style={{
+                    width: '100%', background: '#DFBA67', color: '#0A2315', border: 'none',
+                    padding: '7px', borderRadius: '8px', fontWeight: 900, fontSize: '0.74rem', cursor: 'pointer'
+                  }}
+                >
+                  + Add Category
+                </button>
+              </div>
+
+              {/* Step 2: Add Dish */}
+              <div style={{
+                background: 'rgba(255,255,255,0.08)', borderRadius: '14px', padding: '12px',
+                border: '1px solid rgba(223,186,103,0.3)'
+              }}>
+                <div style={{ fontSize: '0.7rem', fontWeight: 900, color: '#DFBA67', textTransform: 'uppercase', marginBottom: '4px' }}>
+                  Step 2 • Dishes & Items
+                </div>
+                <strong style={{ fontSize: '0.86rem', display: 'block', color: '#FFFFFF', marginBottom: '4px' }}>
+                  🍲 Add Food Items
+                </strong>
+                <p style={{ fontSize: '0.74rem', color: '#CBD5E1', margin: '0 0 10px 0', lineHeight: 1.3 }}>
+                  Add items with prices, photos, half/full & veg badges.
+                </p>
+                <button
+                  onClick={() => {
+                    setDishModalData('new');
+                    setActiveTab('dishes');
+                  }}
+                  style={{
+                    width: '100%', background: '#DFBA67', color: '#0A2315', border: 'none',
+                    padding: '7px', borderRadius: '8px', fontWeight: 900, fontSize: '0.74rem', cursor: 'pointer'
+                  }}
+                >
+                  + Add New Dish
+                </button>
+              </div>
+
+              {/* Step 3: Print Table QRs */}
+              <div style={{
+                background: 'rgba(255,255,255,0.08)', borderRadius: '14px', padding: '12px',
+                border: '1px solid rgba(223,186,103,0.3)'
+              }}>
+                <div style={{ fontSize: '0.7rem', fontWeight: 900, color: '#DFBA67', textTransform: 'uppercase', marginBottom: '4px' }}>
+                  Step 3 • Table Standees
+                </div>
+                <strong style={{ fontSize: '0.86rem', display: 'block', color: '#FFFFFF', marginBottom: '4px' }}>
+                  🖨️ Table QR Stickers
+                </strong>
+                <p style={{ fontSize: '0.74rem', color: '#CBD5E1', margin: '0 0 10px 0', lineHeight: 1.3 }}>
+                  Print uniform gold QR standees for your hall tables.
+                </p>
+                <button
+                  onClick={() => setActiveTab('qr-generator')}
+                  style={{
+                    width: '100%', background: '#DFBA67', color: '#0A2315', border: 'none',
+                    padding: '7px', borderRadius: '8px', fontWeight: 900, fontSize: '0.74rem', cursor: 'pointer'
+                  }}
+                >
+                  🖨️ QR Generator
+                </button>
+              </div>
+
+              {/* Step 4: Live KOT Orders */}
+              <div style={{
+                background: 'rgba(255,255,255,0.08)', borderRadius: '14px', padding: '12px',
+                border: '1px solid rgba(223,186,103,0.3)'
+              }}>
+                <div style={{ fontSize: '0.7rem', fontWeight: 900, color: '#DFBA67', textTransform: 'uppercase', marginBottom: '4px' }}>
+                  Step 4 • Siren Alarm
+                </div>
+                <strong style={{ fontSize: '0.86rem', display: 'block', color: '#FFFFFF', marginBottom: '4px' }}>
+                  🛎️ Receive KOT Orders
+                </strong>
+                <p style={{ fontSize: '0.74rem', color: '#CBD5E1', margin: '0 0 10px 0', lineHeight: 1.3 }}>
+                  Incoming orders ring siren alarm & print receipts.
+                </p>
+                <button
+                  onClick={() => setActiveTab('orders')}
+                  style={{
+                    width: '100%', background: '#DFBA67', color: '#0A2315', border: 'none',
+                    padding: '7px', borderRadius: '8px', fontWeight: 900, fontSize: '0.74rem', cursor: 'pointer'
+                  }}
+                >
+                  📋 View Orders
+                </button>
+              </div>
+
+            </div>
+
+            <div style={{ marginTop: '14px', paddingTop: '12px', borderTop: '1px dashed rgba(223,186,103,0.3)', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '8px' }}>
+              <span style={{ fontSize: '0.76rem', color: '#E2E8F0', fontWeight: 600 }}>
+                💡 Need full step-by-step help? Click <strong>System Guide</strong> anytime.
+              </span>
+              <button
+                onClick={() => setShowHelpModal(true)}
+                style={{
+                  background: 'rgba(255,255,255,0.15)', color: '#FFD700', border: '1px solid #FFD700',
+                  padding: '5px 12px', borderRadius: '9999px', fontWeight: 800, fontSize: '0.76rem', cursor: 'pointer'
+                }}
+              >
+                📖 Open Full System Guide & Help
+              </button>
+            </div>
+
+          </div>
+        )}
 
         {/* KPI Stats Overview Bar */}
         <div style={{
@@ -4627,6 +4816,121 @@ export default function AdminDashboard({ token, username, onLogout, onReturnToMe
               style={{ background: 'none', border: 'none', color: '#9CA3AF', fontSize: '0.8rem', cursor: 'pointer', textDecoration: 'underline' }}
             >
               Cancel
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* 📖 Interactive System Help & Video Guide Modal */}
+      {showHelpModal && (
+        <div style={{
+          position: 'fixed', inset: 0, zIndex: 11000,
+          background: 'rgba(0, 0, 0, 0.85)', backdropFilter: 'blur(8px)',
+          display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '16px'
+        }}>
+          <div style={{
+            background: '#111827', border: '2px solid #DFBA67', borderRadius: '24px',
+            padding: '24px', maxWidth: '640px', width: '100%', maxHeight: '90vh',
+            overflowY: 'auto', color: '#FFFFFF', boxShadow: '0 25px 60px rgba(0,0,0,0.9)',
+            position: 'relative'
+          }}>
+            <button
+              onClick={() => setShowHelpModal(false)}
+              style={{
+                position: 'absolute', top: '16px', right: '16px',
+                background: 'rgba(255,255,255,0.12)', border: 'none',
+                color: '#FFFFFF', borderRadius: '50%', width: '32px', height: '32px',
+                cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center'
+              }}
+            >
+              <X size={18} />
+            </button>
+
+            <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '16px', borderBottom: '1px solid #1F2937', paddingBottom: '14px' }}>
+              <span style={{ fontSize: '2rem' }}>📖</span>
+              <div>
+                <h3 style={{ margin: 0, fontSize: '1.2rem', fontWeight: 900, color: '#DFBA67' }}>
+                  KhanaMaster Owner Guide & Help Center
+                </h3>
+                <span style={{ fontSize: '0.82rem', color: '#9CA3AF' }}>
+                  Learn how to manage your digital menu, QR standees, & live orders
+                </span>
+              </div>
+            </div>
+
+            {/* Quick 5 Step System Visual Guide */}
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
+
+              {/* Guide 1: Categories & Dishes */}
+              <div style={{ background: '#1F2937', borderRadius: '16px', padding: '16px', border: '1px solid #374151' }}>
+                <div style={{ fontSize: '0.92rem', fontWeight: 900, color: '#FFD700', marginBottom: '6px' }}>
+                  📁 1. How to Add Categories & Dishes (व्यंजन कैसे जोड़ें)
+                </div>
+                <ul style={{ margin: 0, paddingLeft: '20px', fontSize: '0.82rem', color: '#D1D5DB', lineHeight: 1.6 }}>
+                  <li>Click <strong>Menu Tab ➔ Category Manager ➔ "+ Add Category"</strong> (e.g. Starters, Sweets, Beverages).</li>
+                  <li>Click <strong>"+ Add New Dish"</strong>: Enter dish name, Full/Half price, upload photo URL, and set veg/non-veg badge.</li>
+                  <li>Toggle availability switches anytime to show or hide items live on customer smartphones.</li>
+                </ul>
+              </div>
+
+              {/* Guide 2: Thali & Combo Deals */}
+              <div style={{ background: '#1F2937', borderRadius: '16px', padding: '16px', border: '1px solid #374151' }}>
+                <div style={{ fontSize: '0.92rem', fontWeight: 900, color: '#FFD700', marginBottom: '6px' }}>
+                  🍱 2. Thali & Combo Builder (थाली और कॉम्बो कैसे बनाएं)
+                </div>
+                <ul style={{ margin: 0, paddingLeft: '20px', fontSize: '0.82rem', color: '#D1D5DB', lineHeight: 1.6 }}>
+                  <li>Go to <strong>Menu Tab ➔ Combo Deals ➔ "+ Add Combo Deal"</strong>.</li>
+                  <li>Enter Combo Title (e.g. Executive Thali), set discounted price, and select included dishes (e.g. Paneer + 2 Roti + Rice).</li>
+                </ul>
+              </div>
+
+              {/* Guide 3: Table QR Generator & Printing */}
+              <div style={{ background: '#1F2937', borderRadius: '16px', padding: '16px', border: '1px solid #374151' }}>
+                <div style={{ fontSize: '0.92rem', fontWeight: 900, color: '#FFD700', marginBottom: '6px' }}>
+                  🖨️ 3. Table QR Generator & Printing (क्यूआर कोड स्टीकर)
+                </div>
+                <ul style={{ margin: 0, paddingLeft: '20px', fontSize: '0.82rem', color: '#D1D5DB', lineHeight: 1.6 }}>
+                  <li>Go to <strong>Setup Tab ➔ QR Generator</strong>.</li>
+                  <li>Click <strong>"+ Add New Table"</strong> to add tables (Table 1, Table 2, Table 3...).</li>
+                  <li>Click <strong>"🖨️ Print All Table QRs (Uniform)"</strong> to print identical gold-framed standee stickers for all tables in 1-click!</li>
+                </ul>
+              </div>
+
+              {/* Guide 4: Live Kitchen Orders & Siren */}
+              <div style={{ background: '#1F2937', borderRadius: '16px', padding: '16px', border: '1px solid #374151' }}>
+                <div style={{ fontSize: '0.92rem', fontWeight: 900, color: '#FFD700', marginBottom: '6px' }}>
+                  🔔 4. Live Kitchen Siren & KOT Management (लाइव ऑर्डर सायरन)
+                </div>
+                <ul style={{ margin: 0, paddingLeft: '20px', fontSize: '0.82rem', color: '#D1D5DB', lineHeight: 1.6 }}>
+                  <li>When a customer scans QR on Table 4 and orders, your phone/laptop will ring a loud Swiggy/Zomato style <strong>Emergency Siren Ringtone 🔊</strong>.</li>
+                  <li>Click <strong>"Accept Order" ➔ "Chef Preparing" ➔ "Served to Table" ➔ "Complete & Paid"</strong>.</li>
+                  <li>Click <strong>"🖨️ Print Thermal Receipt KOT"</strong> for kitchen printing.</li>
+                </ul>
+              </div>
+
+              {/* Guide 5: GPS Location & Settings */}
+              <div style={{ background: '#1F2937', borderRadius: '16px', padding: '16px', border: '1px solid #374151' }}>
+                <div style={{ fontSize: '0.92rem', fontWeight: 900, color: '#FFD700', marginBottom: '6px' }}>
+                  📍 5. GPS Geo-Fencing & Profile Settings (सुरक्षा और प्रोफाइल)
+                </div>
+                <ul style={{ margin: 0, paddingLeft: '20px', fontSize: '0.82rem', color: '#D1D5DB', lineHeight: 1.6 }}>
+                  <li>Go to <strong>Setup Tab ➔ Settings</strong> to update Logo, Phone Number, FSSAI License, & Currency.</li>
+                  <li>Click <strong>"Enable Location"</strong> to auto-save GPS coordinates so customers outside your restaurant hall cannot place fake orders.</li>
+                </ul>
+              </div>
+
+            </div>
+
+            <button
+              onClick={() => setShowHelpModal(false)}
+              style={{
+                width: '100%', marginTop: '20px', padding: '13px', borderRadius: '9999px',
+                border: 'none', background: 'linear-gradient(135deg, #FFD700 0%, #D4AF37 100%)',
+                color: '#0A0A0A', fontWeight: 900, fontSize: '0.9rem', cursor: 'pointer',
+                boxShadow: '0 4px 14px rgba(255,215,0,0.3)'
+              }}
+            >
+              ✅ Got it! Return to Dashboard
             </button>
           </div>
         </div>
