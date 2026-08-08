@@ -237,21 +237,23 @@ export default function SubscriptionBillingPage({ restoInfo, token, onProceedToD
 
       setStatusMsg('🚀 Session generated! Opening Cashfree UPI AutoPay Checkout...');
 
-      // Mode A: Handle direct auth_url / payment_link returned by Cashfree
-      if (subRes.auth_url || subRes.payment_link) {
-        const checkoutUrl = subRes.auth_url || subRes.payment_link;
-        console.log('[Cashfree Checkout] Redirecting to auth_url:', checkoutUrl);
+      // Mode A: Direct redirect to Cashfree Subscription Authorization Page (auth_link / auth_url / payment_link)
+      const checkoutUrl = subRes.auth_link || subRes.auth_url || subRes.payment_link;
+      if (checkoutUrl) {
+        console.log('[Cashfree Checkout] Redirecting browser to Cashfree Checkout URL:', checkoutUrl);
+        setStatusMsg('🚀 Redirecting to Cashfree Official UPI AutoPay Checkout...');
         window.location.href = checkoutUrl;
         return;
       }
 
       // Mode B: Launch SDK Checkout Modal using Cashfree JS SDK v3
-      if (window.Cashfree && subRes.payment_session_id) {
+      const sessionId = subRes.subscription_session_id || subRes.payment_session_id;
+      if (sessionId && typeof window.Cashfree === 'function') {
         const cashfree = window.Cashfree({ mode: subRes.environment || 'sandbox' });
-        console.log('[Cashfree SDK] Launching checkout for session:', subRes.payment_session_id);
+        console.log('[Cashfree SDK] Launching checkout for session:', sessionId);
         
         cashfree.checkout({
-          paymentSessionId: subRes.payment_session_id,
+          paymentSessionId: sessionId,
           returnUrl: subRes.return_url || `${window.location.origin}/api/payment/subscription-return?subscription_id=${subscriptionId}`
         }).then(result => {
           if (result.error) {
@@ -259,13 +261,11 @@ export default function SubscriptionBillingPage({ restoInfo, token, onProceedToD
             setErrorMsg(`Checkout error: ${result.error.message || 'Payment interrupted'}`);
             setAuthorizing(false);
           }
-          if (result.redirect) {
-            console.log('[Cashfree SDK Redirecting...]');
-          }
         });
-      } else {
-        throw new Error('Cashfree Payment Gateway unavailable. Please refresh and try again.');
+        return;
       }
+
+      throw new Error(subRes.message || 'Failed to initialize Cashfree Payment Checkout. Please try again.');
     } catch (err) {
       console.error('[Cashfree Subscription Error]', err);
       setErrorMsg(err.message || 'Failed to start Cashfree checkout. Please try again.');
