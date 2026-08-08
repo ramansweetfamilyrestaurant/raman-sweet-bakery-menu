@@ -55,30 +55,32 @@ export default function SubscriptionBillingPage({ restoInfo, token, onProceedToD
   // 2. Read stored plan, restaurant info, and auto-validate saved coupon
   useEffect(() => {
     const activeResto = currentResto || restoInfo;
+    const urlParams = new URLSearchParams(window.location.search);
+    const urlPlan = urlParams.get('plan');
     const savedPlan = localStorage.getItem('selected_plan_tier') || sessionStorage.getItem('selected_plan_tier');
-    const tier = (planKey || savedPlan || activeResto?.plan_tier || 'pro').toLowerCase();
-    setPlanKey(tier);
+    
+    // Authoritative Tier Resolution: URL ?plan -> DB activeResto.plan_tier -> localStorage -> fallback 'pro'
+    const targetTier = (urlPlan || activeResto?.plan_tier || savedPlan || 'pro').toLowerCase().trim();
+    setPlanKey(targetTier);
 
-    if (tier === 'basic') {
+    if (targetTier === 'basic') {
       setPlanDetails({ name: 'Basic Starter Plan', price: 499, badge: '⚡ BASIC' });
-    } else if (tier === 'enterprise') {
+    } else if (targetTier === 'enterprise') {
       setPlanDetails({ name: 'Enterprise VIP Plan', price: 1999, badge: '🚀 ENTERPRISE' });
     } else {
       setPlanDetails({ name: 'Pro Luxury Plan', price: 999, badge: '👑 PRO' });
     }
 
-    // Auto-validate default launch promo LAUNCH50 or saved coupon code
+    // Auto-validate default launch promo LAUNCH50 or saved coupon code against targetTier
     const savedCoupon = localStorage.getItem('applied_coupon_code') || 'LAUNCH50';
-    if (!appliedCoupon) {
-      setCouponInput(savedCoupon);
-      validateCoupon(savedCoupon, tier);
-    }
+    setCouponInput(savedCoupon);
+    validateCoupon(savedCoupon, targetTier);
 
     // Check if mandate is already active in database
     if (activeResto?.mandate_status === 'active') {
       setMandateActive(true);
     }
-  }, [currentResto, restoInfo, planKey]);
+  }, [currentResto, restoInfo]);
 
   // 3. Active 3-second Subscription Status Polling: Detects live Cashfree payment/mandate authorization automatically
   useEffect(() => {

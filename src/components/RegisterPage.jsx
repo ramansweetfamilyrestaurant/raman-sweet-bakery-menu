@@ -13,7 +13,7 @@ export default function RegisterPage({ onRegisterSuccess }) {
 
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
-    const p = params.get('plan');
+    const p = params.get('plan') || localStorage.getItem('selected_plan_tier') || sessionStorage.getItem('selected_plan_tier');
     if (p && ['basic', 'pro', 'enterprise'].includes(p.toLowerCase())) {
       setFormData(prev => ({ ...prev, plan_tier: p.toLowerCase() }));
     }
