@@ -141,9 +141,10 @@ export default function RegisterPage({ onRegisterSuccess }) {
       localStorage.setItem('selected_plan_tier', formData.plan_tier || data.plan_tier || 'pro');
       sessionStorage.setItem('selected_plan_tier', formData.plan_tier || data.plan_tier || 'pro');
 
-      setRegisteredData(data);
       if (onRegisterSuccess) {
         onRegisterSuccess(data);
+      } else {
+        window.location.href = '/billing';
       }
     } catch (err) {
       console.error('Registration error:', err);

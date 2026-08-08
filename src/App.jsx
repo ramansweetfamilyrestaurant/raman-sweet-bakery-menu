@@ -465,12 +465,17 @@ export default function App() {
       // Route: / (root) → Landing Page
       const isRootPath = path === '' || path === '/';
 
+      // Route: /billing → Subscription Billing Page
+      const isBilling = path === '/billing' || path === '/billing/';
+
       if (isSuperAdmin) {
         if (superToken) {
           setView('super-admin-dashboard');
         } else {
           setView('super-admin-login');
         }
+      } else if (isBilling) {
+        setView('billing');
       } else if (isRegister) {
         setView('register');
       } else if (isRouteAdmin) {
@@ -1168,6 +1173,7 @@ export default function App() {
           setAdminUsername(res.username || 'Admin');
           setAdminSlug(res.slug);
           setNewlyRegisteredResto(res);
+          window.history.pushState({}, '', '/billing');
           setView('billing');
         }} />
       </Suspense>
