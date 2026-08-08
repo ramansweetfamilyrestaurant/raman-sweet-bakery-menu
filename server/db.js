@@ -345,12 +345,7 @@ async function createTables() {
       await pgPool.query(`
         UPDATE restaurants SET auto_debit_enabled = 0 WHERE mandate_status IS NULL OR mandate_status != 'active';
       `);
-      await pgPool.query(`
-        INSERT INTO coupons (code, discount_type, discount_value, applicable_plans, max_total_uses, max_uses_per_restaurant, first_payment_only, is_active)
-        VALUES ('LAUNCH50', 'PERCENTAGE', 50, 'all', 100, 1, TRUE, TRUE)
-        ON CONFLICT (code) DO NOTHING;
-      `);
-    } catch (e) { console.warn('Postgres seed coupon notice:', e.message); }
+    } catch (e) { console.warn('Postgres init notice:', e.message); }
   } else {
     sqliteDb.exec(`
       CREATE TABLE IF NOT EXISTS restaurants (
@@ -593,14 +588,9 @@ async function createTables() {
         status TEXT DEFAULT 'applied',
         redeemed_at TEXT DEFAULT CURRENT_TIMESTAMP,
         created_at TEXT DEFAULT CURRENT_TIMESTAMP,
-        UNIQUE (coupon_id, restaurant_id, subscription_id),
-        FOREIGN KEY (coupon_id) REFERENCES coupons (id) ON DELETE CASCADE,
         FOREIGN KEY (restaurant_id) REFERENCES restaurants (id) ON DELETE CASCADE,
         FOREIGN KEY (subscription_id) REFERENCES subscriptions (id) ON DELETE SET NULL
       );
-
-      INSERT OR IGNORE INTO coupons (code, discount_type, discount_value, applicable_plans, max_total_uses, max_uses_per_restaurant, first_payment_only, is_active)
-      VALUES ('LAUNCH50', 'PERCENTAGE', 50, 'all', 100, 1, 1, 1);
     `);
 
     // Auto Migrations for SQLite
@@ -733,52 +723,12 @@ async function seedData() {
       await query("UPDATE saas_plans SET original_price = 999 WHERE key = 'basic'");
       await query("UPDATE saas_plans SET original_price = 1999 WHERE key = 'pro'");
       await query("UPDATE saas_plans SET original_price = 3999 WHERE key = 'enterprise'");
-    } catch {
-      // Column already exists
-    }
+    } catch {}
 
-    // Coupons Table (PostgreSQL & SQLite)
     try {
-      await query(`
-        CREATE TABLE IF NOT EXISTS coupons (
-          id SERIAL PRIMARY KEY,
-          code VARCHAR(50) UNIQUE NOT NULL,
-          discount_percent INT DEFAULT 0,
-          discount_amount NUMERIC DEFAULT 0,
-          max_uses INT DEFAULT 100,
-          used_count INT DEFAULT 0,
-          active INT DEFAULT 1,
-          created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-        )
-      `);
-
-      const couponCheck = await query('SELECT COUNT(*) as count FROM coupons');
-      if (parseInt(couponCheck[0]?.count || 0, 10) === 0) {
-        await query(`
-          INSERT INTO coupons (code, discount_percent, discount_amount, max_uses, active)
-          VALUES 
-          ('LAUNCH50', 50, 0, 1000, 1),
-          ('FIRST100', 30, 0, 100, 1),
-          ('FLAT200', 0, 200, 500, 1)
-        `);
-        console.log('🎟️ Seeded default promo coupons into coupons table');
-      }
-    } catch (e) {
-      try {
-        await query(`
-          CREATE TABLE IF NOT EXISTS coupons (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            code TEXT UNIQUE NOT NULL,
-            discount_percent INTEGER DEFAULT 0,
-            discount_amount REAL DEFAULT 0,
-            max_uses INTEGER DEFAULT 100,
-            used_count INTEGER DEFAULT 0,
-            active INTEGER DEFAULT 1,
-            created_at TEXT DEFAULT CURRENT_TIMESTAMP
-          )
-        `);
-      } catch {}
-    }
+      await query('DROP TABLE IF EXISTS coupon_redemptions CASCADE');
+      await query('DROP TABLE IF EXISTS coupons CASCADE');
+    } catch {}
 
     const planCheck = await query('SELECT COUNT(*) as count FROM saas_plans');
     const pCount = parseInt(planCheck[0]?.count || 0, 10);
