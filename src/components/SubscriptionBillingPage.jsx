@@ -237,7 +237,7 @@ export default function SubscriptionBillingPage({ restoInfo, token, onProceedToD
 
       setStatusMsg('🚀 Session generated! Opening Cashfree UPI AutoPay Checkout...');
 
-      // Mode A: Direct redirect to Cashfree Subscription Authorization Page (auth_link / auth_url / payment_link)
+      // Mode A: Direct redirect if Cashfree returned an auth_link / auth_url / payment_link
       const checkoutUrl = subRes.auth_link || subRes.auth_url || subRes.payment_link;
       if (checkoutUrl) {
         console.log('[Cashfree Checkout] Redirecting browser to Cashfree Checkout URL:', checkoutUrl);
@@ -246,22 +246,34 @@ export default function SubscriptionBillingPage({ restoInfo, token, onProceedToD
         return;
       }
 
-      // Mode B: Launch SDK Checkout Modal using Cashfree JS SDK v3
+      // Mode B: Launch Cashfree JS SDK v3 Subscriptions Checkout (subsSessionId)
       const sessionId = subRes.subscription_session_id || subRes.payment_session_id;
       if (sessionId && typeof window.Cashfree === 'function') {
         const cashfree = window.Cashfree({ mode: subRes.environment || 'sandbox' });
-        console.log('[Cashfree SDK] Launching checkout for session:', sessionId);
+        console.log('[Cashfree SDK] Launching subscription checkout for session:', sessionId);
         
-        cashfree.checkout({
-          paymentSessionId: sessionId,
-          returnUrl: subRes.return_url || `${window.location.origin}/api/payment/subscription-return?subscription_id=${subscriptionId}`
-        }).then(result => {
-          if (result.error) {
-            console.error('[Cashfree SDK Error]', result.error);
-            setErrorMsg(`Checkout error: ${result.error.message || 'Payment interrupted'}`);
-            setAuthorizing(false);
-          }
-        });
+        if (typeof cashfree.subscriptionsCheckout === 'function') {
+          cashfree.subscriptionsCheckout({
+            subsSessionId: sessionId,
+            subscriptionSessionId: sessionId,
+            redirectTarget: '_self'
+          });
+          return;
+        } else if (typeof cashfree.checkout === 'function') {
+          cashfree.checkout({
+            subsSessionId: sessionId,
+            subscriptionSessionId: sessionId,
+            redirectTarget: '_self'
+          });
+          return;
+        }
+      }
+
+      // Mode C: Fallback Direct URL Redirect for Cashfree Subscriptions Sandbox
+      if (sessionId) {
+        const directSubUrl = `https://sandbox.cashfree.com/subscriptions/auth?sub_session_id=${encodeURIComponent(sessionId)}`;
+        console.log('[Cashfree Checkout] Redirecting to direct subscription URL:', directSubUrl);
+        window.location.href = directSubUrl;
         return;
       }
 
