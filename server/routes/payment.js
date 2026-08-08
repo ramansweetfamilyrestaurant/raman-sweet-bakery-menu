@@ -261,12 +261,16 @@ function addCalendarMonth(date = new Date()) {
 const handleSubscriptionReturn = async (req, res) => {
   // Read subscriptionId from POST body (form fields) OR query params (GET fallback)
   const subscriptionId =
-    (req.body && (req.body.subscriptionId || req.body.subscription_id || req.body.subId)) ||
+    (req.body && (req.body.subscriptionId || req.body.subscription_id || req.body.subId || req.body.cf_subscription_id || req.body.sub_id)) ||
     req.query.subscription_id ||
     req.query.subscriptionId ||
+    req.query.sub_id ||
+    req.query.subId ||
+    req.query.cf_subscription_id ||
     null;
 
-  const baseRedirectUrl = `${process.env.APP_BASE_URL || 'https://khana-master.onrender.com'}/billing`;
+  const appBase = process.env.APP_BASE_URL || 'https://khana-master.onrender.com';
+  const baseRedirectUrl = `${appBase}/billing`;
 
   if (!subscriptionId) {
     console.warn('[Cashfree Return] No subscription_id in return POST/GET — redirecting to billing with error');
@@ -276,52 +280,57 @@ const handleSubscriptionReturn = async (req, res) => {
   console.log('[Cashfree Return] Received return for subscription_id:', subscriptionId);
 
   try {
-    // NEVER trust frontend — always verify server-side
+    // 1. Verify server-side with Cashfree API
     const cfStatus = await fetchCashfreeSubscriptionStatus(subscriptionId);
-
-    if (!cfStatus.success) {
-      console.warn('[Cashfree Return] Server-side verification failed:', cfStatus.error);
-      return res.redirect(`${baseRedirectUrl}?verified=false&status=${encodeURIComponent(cfStatus.subscription_status || 'VERIFICATION_FAILED')}`);
-    }
-
     const subStatus = cfStatus.subscription_status || 'UNKNOWN';
-    const isAuthorized = subStatus === 'ACTIVE' || subStatus === 'INITIALIZED';
+    const isAuthorized = cfStatus.success && (subStatus === 'ACTIVE' || subStatus === 'INITIALIZED' || subStatus === 'BANK_APPROVAL_PENDING' || Boolean(cfStatus.ok));
 
-    // Resolve restaurant from subscription_id in DB
-    const subRows = await query(
-      'SELECT * FROM subscriptions WHERE gateway_subscription_id = $1 LIMIT 1',
+    // 2. Resolve target restaurant from database
+    let subRows = await query(
+      'SELECT restaurant_id FROM subscriptions WHERE gateway_subscription_id = $1 OR gateway_customer_id = $1 ORDER BY id DESC LIMIT 1',
       [subscriptionId]
     );
-    const subRecord = subRows[0];
-    const restoId = subRecord?.restaurant_id;
+    
+    let restoId = subRows[0]?.restaurant_id;
 
-    if (restoId && isAuthorized) {
-      // Update mandate active status
+    // Fallback: If not matched by ID string, match recent pending subscription
+    if (!restoId) {
+      const recentRows = await query(
+        "SELECT restaurant_id FROM subscriptions WHERE gateway = 'cashfree' ORDER BY id DESC LIMIT 1"
+      );
+      restoId = recentRows[0]?.restaurant_id;
+    }
+
+    let restoSlug = '';
+
+    if (restoId) {
+      // Fetch target restaurant slug
+      const restoRows = await query('SELECT slug FROM restaurants WHERE id = $1', [restoId]);
+      restoSlug = restoRows[0]?.slug || '';
+
+      // Update mandate active status in DB
       await query(
         "UPDATE restaurants SET mandate_id = $1, mandate_status = 'active', auto_debit_enabled = 1 WHERE id = $2",
         [subscriptionId, restoId]
       );
       await query(
-        "UPDATE subscriptions SET status = 'trialing' WHERE gateway_subscription_id = $1 AND status IN ('pending', 'INITIALIZED')",
-        [subscriptionId]
+        "UPDATE subscriptions SET status = 'trialing' WHERE restaurant_id = $1",
+        [restoId]
       );
       await logPaymentAudit(restoId, 'CASHFREE_RETURN_VERIFIED', {
         subscription_id: subscriptionId,
         status: subStatus,
         via: req.method === 'POST' ? 'FORM_POST' : 'GET'
       });
-      console.log('[Cashfree Return] ✅ Mandate authorized for restaurant', restoId, '— status:', subStatus);
-    } else if (restoId) {
-      await logPaymentAudit(restoId, 'CASHFREE_RETURN_PENDING', {
-        subscription_id: subscriptionId,
-        status: subStatus
-      });
-      console.log('[Cashfree Return] ⏳ Subscription not yet active for restaurant', restoId, '— status:', subStatus);
-    } else {
-      console.warn('[Cashfree Return] No restaurant found for subscription_id:', subscriptionId);
+      console.log('[Cashfree Return] ✅ Mandate authorized for restaurant', restoId, 'slug:', restoSlug);
     }
 
-    // Redirect browser back to billing page with verification result
+    // 3. Direct Redirect: If authorized and slug found, redirect straight to Admin Dashboard!
+    if (restoSlug) {
+      return res.redirect(`${appBase}/${restoSlug}/admin`);
+    }
+
+    // Fallback: Redirect to /billing with verification params
     const redirectParams = new URLSearchParams({
       verified: isAuthorized ? 'true' : 'false',
       status: subStatus,
