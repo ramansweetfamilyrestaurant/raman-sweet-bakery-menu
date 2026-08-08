@@ -917,7 +917,7 @@ async function logAudit(restaurantId, actorRole, action, details) {
   }
 }
 
-async function runAutoDataSummarization(daysOld = 90, targetRestaurantId = null) {
+async function runAutoDataSummarization(daysOld = 30, targetRestaurantId = null) {
   try {
     const cutoffDate = new Date();
     cutoffDate.setDate(cutoffDate.getDate() - daysOld);
