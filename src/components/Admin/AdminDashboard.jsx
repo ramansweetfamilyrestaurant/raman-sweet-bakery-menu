@@ -88,12 +88,20 @@ export default function AdminDashboard({ token, username, onLogout, onReturnToMe
       }
     }
 
-    // 📍 2. Auto-Prompt GPS Geolocation Permission
+    // 📍 2. Auto-Prompt GPS Geolocation Permission & Auto-Save Coordinates to DB
     if ('geolocation' in navigator) {
       navigator.geolocation.getCurrentPosition(
-        (pos) => console.log('Auto GPS location granted:', pos.coords.latitude, pos.coords.longitude),
+        (pos) => {
+          const lat = pos.coords.latitude;
+          const lng = pos.coords.longitude;
+          console.log('📍 Auto GPS location granted:', lat, lng);
+          setSettingsForm(prev => ({ ...prev, latitude: lat, longitude: lng }));
+          if (token) {
+            updateTenantSettings(token, { latitude: lat, longitude: lng }).catch(e => console.warn('Auto GPS save error:', e));
+          }
+        },
         (err) => console.warn('Auto GPS location skipped:', err),
-        { timeout: 5000 }
+        { enableHighAccuracy: true, timeout: 8000 }
       );
     }
 
@@ -119,12 +127,12 @@ export default function AdminDashboard({ token, username, onLogout, onReturnToMe
       window.removeEventListener('click', unlockAudioOnTouch);
       window.removeEventListener('touchstart', unlockAudioOnTouch);
     };
-  }, []);
+  }, [token]);
 
   const requestDevicePermissions = async () => {
     let notifOk = false;
 
-    // 1. Audio Sound Unlock
+    // 1. Audio Sound Unlock & Ringtone Test
     try {
       playKitchenChime();
     } catch (e) {
@@ -141,15 +149,25 @@ export default function AdminDashboard({ token, username, onLogout, onReturnToMe
       console.warn('Notification permission error:', e);
     }
 
-    // 3. Geolocation Permission
+    // 3. Geolocation Permission & Instant Auto-Save
     try {
       if ('geolocation' in navigator) {
         navigator.geolocation.getCurrentPosition(
           (pos) => {
-            console.log('GPS Location:', pos.coords.latitude, pos.coords.longitude);
+            const lat = pos.coords.latitude;
+            const lng = pos.coords.longitude;
+            console.log('📍 GPS Location captured:', lat, lng);
+            setSettingsForm(prev => ({ ...prev, latitude: lat, longitude: lng }));
+            if (token) {
+              updateTenantSettings(token, { latitude: lat, longitude: lng }).then(() => {
+                alert(`📱 Permissions & GPS Location Auto-Saved!\n• Loud Kitchen Order Ringtone: Active 🔊\n• Live Push Notifications: ${notifOk ? 'Allowed 🔔' : 'Pending'}\n• GPS Restaurant Coordinates: Auto-Saved (${lat.toFixed(4)}, ${lng.toFixed(4)}) 📍`);
+              }).catch(e => console.warn('GPS save error:', e));
+            }
           },
-          (err) => console.warn('Location permission skipped:', err),
-          { timeout: 5000 }
+          (err) => {
+            alert('📱 Permissions Enabled!\n• Loud Kitchen Ringtone: Active 🔊\n• Push Notifications: Active 🔔\n• GPS Location: Skipped or Denied (You can enter coordinates manually in Settings)');
+          },
+          { enableHighAccuracy: true, timeout: 8000 }
         );
       }
     } catch (e) {
@@ -157,7 +175,6 @@ export default function AdminDashboard({ token, username, onLogout, onReturnToMe
     }
 
     setPermissionsGranted(true);
-    alert('📱 Mobile & Browser Permissions Enabled!\n• Loud Kitchen Order Ringtone: Active 🔊\n• Live Order Push Notifications: Allowed 🔔\n• GPS Location Access: Verified 📍');
   };
 
   const playKitchenChime = () => {
@@ -1408,6 +1425,53 @@ export default function AdminDashboard({ token, username, onLogout, onReturnToMe
             title="Dismiss Notice"
           >
             <X size={14} />
+          </button>
+        </div>
+      )}
+
+      {/* 🔔📍 Live Order Siren & GPS Location Unlock Banner */}
+      {!permissionsGranted && (
+        <div style={{
+          background: 'linear-gradient(135deg, #0F172A 0%, #1E293B 100%)',
+          color: '#FFFFFF',
+          padding: '12px 16px',
+          borderBottom: '2px solid #38BDF8',
+          display: 'flex',
+          flexWrap: 'wrap',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          gap: '10px',
+          boxShadow: '0 4px 12px rgba(0,0,0,0.3)'
+        }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '10px', minWidth: '240px' }}>
+            <span style={{ fontSize: '1.5rem' }}>🔔📍</span>
+            <div>
+              <strong style={{ fontSize: '0.88rem', color: '#38BDF8', display: 'block' }}>
+                Auto-Save GPS Location & Enable Live Order Siren Alarm
+              </strong>
+              <span style={{ fontSize: '0.76rem', color: '#94A3B8', fontWeight: 600 }}>
+                Automatic order ringtone & customer distance verification require browser permissions.
+              </span>
+            </div>
+          </div>
+          <button
+            onClick={() => requestDevicePermissions()}
+            style={{
+              background: 'linear-gradient(135deg, #0EA5E9 0%, #0284C7 100%)',
+              color: '#FFFFFF',
+              border: 'none',
+              padding: '8px 16px',
+              borderRadius: '9999px',
+              fontWeight: 900,
+              fontSize: '0.8rem',
+              cursor: 'pointer',
+              boxShadow: '0 4px 12px rgba(14,165,233,0.35)',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '6px'
+            }}
+          >
+            ⚡ Enable Location & Loud Ringtone
           </button>
         </div>
       )}
