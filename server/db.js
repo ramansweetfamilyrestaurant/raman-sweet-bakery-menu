@@ -744,6 +744,55 @@ async function seedData() {
       `);
       console.log('💳 Seeded default SaaS Plans into saas_plans table');
     }
+
+    // Auto-sync missing subscriptions records for existing restaurants (e.g. Raman Sweet Bakery, Raman Gourmet, Raja Restaurant)
+    try {
+      const restosWithoutSub = await query(`
+        SELECT r.id, r.name, r.plan_tier, r.trial_started_at, r.trial_ends_at 
+        FROM restaurants r 
+        LEFT JOIN subscriptions s ON r.id = s.restaurant_id 
+        WHERE s.id IS NULL
+      `);
+
+      if (restosWithoutSub && restosWithoutSub.length > 0) {
+        const plans = await query("SELECT id, key, price FROM saas_plans");
+        const planMap = {};
+        (plans || []).forEach(p => { planMap[p.key] = p; });
+
+        const now = new Date();
+        const defaultTrialEnd = new Date(now.getTime() + 14 * 86400 * 1000);
+
+        for (const r of restosWithoutSub) {
+          const tier = r.plan_tier || 'pro';
+          const p = planMap[tier] || planMap['pro'] || { id: 2, price: 999 };
+          
+          const tStart = r.trial_started_at ? new Date(r.trial_started_at) : now;
+          const tEnd = r.trial_ends_at ? new Date(r.trial_ends_at) : defaultTrialEnd;
+
+          await query(`
+            INSERT INTO subscriptions (
+              restaurant_id, plan_id, gateway, status, amount, currency, billing_cycle,
+              trial_start, trial_end, current_period_start, current_period_end
+            ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
+          `, [
+            r.id,
+            p.id,
+            'none',
+            'trialing',
+            p.price,
+            'INR',
+            'monthly',
+            tStart.toISOString(),
+            tEnd.toISOString(),
+            tStart.toISOString(),
+            tEnd.toISOString()
+          ]);
+          console.log(`✅ Synced missing subscriptions record for restaurant ID ${r.id} (${r.name || 'Resto'})`);
+        }
+      }
+    } catch (e) {
+      console.warn('Subscription auto-sync notice:', e.message);
+    }
   } catch (err) {
     console.warn('SaaS plan seeding notice:', err.message);
   }
