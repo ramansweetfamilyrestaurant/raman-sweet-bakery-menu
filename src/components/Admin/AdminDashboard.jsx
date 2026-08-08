@@ -816,7 +816,7 @@ export default function AdminDashboard({ token, username, onLogout, onReturnToMe
   const ensureTableCreated = async (numStr) => {
     const num = parseInt(numStr, 10);
     if (isNaN(num) || num <= 0) return;
-    const currentCount = Number(settingsForm.total_tables) || 12;
+    const currentCount = (settingsForm.total_tables !== undefined && settingsForm.total_tables !== null) ? Number(settingsForm.total_tables) : 0;
     if (num > currentCount) {
       const updatedForm = { ...settingsForm, total_tables: num };
       setSettingsForm(updatedForm);
@@ -4008,11 +4008,11 @@ export default function AdminDashboard({ token, username, onLogout, onReturnToMe
                   </label>
                   <input
                     type="number"
-                    min="1"
+                    min="0"
                     max="100"
-                    value={settingsForm.total_tables || 12}
-                    onChange={(e) => setSettingsForm({ ...settingsForm, total_tables: Math.max(1, parseInt(e.target.value) || 12) })}
-                    placeholder="e.g. 12"
+                    value={settingsForm.total_tables !== undefined && settingsForm.total_tables !== null ? settingsForm.total_tables : 0}
+                    onChange={(e) => setSettingsForm({ ...settingsForm, total_tables: Math.max(0, parseInt(e.target.value) || 0) })}
+                    placeholder="e.g. 0"
                     style={{ width: '100%', padding: '8px 12px', borderRadius: '8px', border: '1px solid #FDE68A', fontSize: '0.85rem' }}
                   />
                 </div>
