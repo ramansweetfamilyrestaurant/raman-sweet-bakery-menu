@@ -2301,15 +2301,24 @@ export default function SuperAdminDashboard({ token, username, onLogout, onRetur
                         </div>
 
                         {/* Toggles */}
-                        <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', marginBottom: '10px', fontSize: '0.72rem' }}>
+                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '6px', marginBottom: '10px', fontSize: '0.72rem', fontWeight: 700 }}>
                           <label style={{ display: 'flex', alignItems: 'center', gap: '4px', cursor: 'pointer' }}>
-                            <input type="checkbox" checked={editingPlan.whatsapp_enabled} onChange={(e) => setEditingPlan({ ...editingPlan, whatsapp_enabled: e.target.checked })} /> WhatsApp
+                            <input type="checkbox" checked={editingPlan.whatsapp_enabled} onChange={(e) => setEditingPlan({ ...editingPlan, whatsapp_enabled: e.target.checked })} style={{ accentColor: '#16a34a' }} /> 💬 WhatsApp
                           </label>
                           <label style={{ display: 'flex', alignItems: 'center', gap: '4px', cursor: 'pointer' }}>
-                            <input type="checkbox" checked={editingPlan.direct_ordering_enabled} onChange={(e) => setEditingPlan({ ...editingPlan, direct_ordering_enabled: e.target.checked })} /> Table QR
+                            <input type="checkbox" checked={editingPlan.direct_ordering_enabled} onChange={(e) => setEditingPlan({ ...editingPlan, direct_ordering_enabled: e.target.checked })} style={{ accentColor: '#0A2315' }} /> ⚡ Table KOT
                           </label>
                           <label style={{ display: 'flex', alignItems: 'center', gap: '4px', cursor: 'pointer' }}>
-                            <input type="checkbox" checked={editingPlan.google_reviews_enabled} onChange={(e) => setEditingPlan({ ...editingPlan, google_reviews_enabled: e.target.checked })} /> Google Reviews
+                            <input type="checkbox" checked={editingPlan.google_reviews_enabled} onChange={(e) => setEditingPlan({ ...editingPlan, google_reviews_enabled: e.target.checked })} style={{ accentColor: '#d97706' }} /> ⭐ AI Reviews
+                          </label>
+                          <label style={{ display: 'flex', alignItems: 'center', gap: '4px', cursor: 'pointer' }}>
+                            <input type="checkbox" checked={editingPlan.direct_ordering_enabled} onChange={(e) => setEditingPlan({ ...editingPlan, direct_ordering_enabled: e.target.checked })} style={{ accentColor: '#2563eb' }} /> 🍱 Combos
+                          </label>
+                          <label style={{ display: 'flex', alignItems: 'center', gap: '4px', cursor: 'pointer' }}>
+                            <input type="checkbox" checked={editingPlan.direct_ordering_enabled} onChange={(e) => setEditingPlan({ ...editingPlan, direct_ordering_enabled: e.target.checked })} style={{ accentColor: '#059669' }} /> 🖨️ Printer KOT
+                          </label>
+                          <label style={{ display: 'flex', alignItems: 'center', gap: '4px', cursor: 'pointer' }}>
+                            <input type="checkbox" checked={editingPlan.direct_ordering_enabled} onChange={(e) => setEditingPlan({ ...editingPlan, direct_ordering_enabled: e.target.checked })} style={{ accentColor: '#7c3aed' }} /> 🗺️ Floor Map
                           </label>
                         </div>
 
