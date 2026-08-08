@@ -1130,6 +1130,33 @@ export default function App() {
     );
   }
 
+  // Global Initial Loading Screen Guard (Prevents ANY layout/header flashing on refresh)
+  if (loading && ['menu', 'admin-login', 'admin-dashboard'].includes(view)) {
+    return (
+      <div style={{
+        minHeight: '100vh', display: 'flex', flexDirection: 'column',
+        alignItems: 'center', justifyContent: 'center',
+        background: 'linear-gradient(135deg, #0A2315 0%, #164E2A 100%)',
+        color: '#DFBA67', textAlign: 'center', padding: '20px'
+      }}>
+        <div style={{
+          width: '48px', height: '48px',
+          border: '4px solid rgba(223,186,103,0.25)',
+          borderTopColor: '#FFD700',
+          borderRadius: '50%',
+          marginBottom: '20px',
+          animation: 'spin 0.8s linear infinite'
+        }} />
+        <div style={{ fontSize: '1.25rem', fontWeight: 900, color: '#FFD700', letterSpacing: '0.5px' }}>
+          KhanaMaster Digital Menu
+        </div>
+        <p style={{ fontSize: '0.84rem', color: '#E2E8F0', marginTop: '6px', fontWeight: 600 }}>
+          Verifying restaurant details & loading menu...
+        </p>
+      </div>
+    );
+  }
+
   // Check if requested restaurant is deleted / not found
   if (restaurantStatus === 'not_found') {
     return (
