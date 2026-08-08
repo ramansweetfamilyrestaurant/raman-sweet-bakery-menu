@@ -19,6 +19,16 @@ export default function RegisterPage({ onRegisterSuccess }) {
     }
   }, []);
 
+  const [trialDays, setTrialDays] = useState(14);
+  useEffect(() => {
+    fetch('/api/settings')
+      .then(res => res.json())
+      .then(data => {
+        if (data && data.default_trial_days) setTrialDays(Math.max(1, parseInt(data.default_trial_days, 10) || 14));
+      })
+      .catch(() => {});
+  }, []);
+
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [pendingApprovalData, setPendingApprovalData] = useState(null);
@@ -220,7 +230,7 @@ export default function RegisterPage({ onRegisterSuccess }) {
             borderRadius: '50px', padding: '6px 14px', fontSize: '0.76rem', fontWeight: 800,
             color: '#DFBA67', marginBottom: '16px'
           }}>
-            <Sparkles size={14} /> 14-DAY FREE TRIAL • ₹0 TODAY
+            <Sparkles size={14} /> {trialDays}-DAY FREE TRIAL • ₹0 TODAY
           </div>
 
           <h1 style={{ fontSize: '2.1rem', fontWeight: 900, lineHeight: 1.2, marginBottom: '14px', letterSpacing: '-0.5px' }}>
@@ -263,7 +273,7 @@ export default function RegisterPage({ onRegisterSuccess }) {
             Create Restaurant Account 🚀
           </h2>
           <p style={{ fontSize: '0.8rem', color: '#9CA3AF', textAlign: 'center', margin: '0 0 20px 0' }}>
-            Instant setup • 14-day unrestricted trial access
+            Instant setup • {trialDays}-day unrestricted trial access
           </p>
 
           {error && (

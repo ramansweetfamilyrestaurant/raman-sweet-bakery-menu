@@ -124,11 +124,15 @@ export default function SubscriptionBillingPage({ restoInfo, token, onProceedToD
   }, [mandateActive, token, onProceedToDashboard]);
 
 
-  // Calculate Trial Dates
+  // Calculate Trial Dates & Duration
   const activeResto = currentResto || restoInfo;
   const now = new Date();
   const trialStart = activeResto?.trial_started_at ? new Date(activeResto.trial_started_at) : now;
   const trialEnd = activeResto?.trial_ends_at ? new Date(activeResto.trial_ends_at) : new Date(now.getTime() + 14 * 86400 * 1000);
+  
+  const calcDays = (activeResto?.trial_started_at && activeResto?.trial_ends_at) 
+    ? Math.max(1, Math.round((new Date(activeResto.trial_ends_at) - new Date(activeResto.trial_started_at)) / (86400 * 1000)))
+    : 14;
 
   const formatDate = (d) => {
     try {
@@ -378,7 +382,7 @@ export default function SubscriptionBillingPage({ restoInfo, token, onProceedToD
 
             <div style={{ display: 'flex', justifyContent: 'space-between', color: '#94A3B8' }}>
               <span>Free Trial:</span>
-              <span style={{ color: '#86EFAC', fontWeight: 700 }}>14 Days (Until {formatDate(trialEnd)})</span>
+              <span style={{ color: '#86EFAC', fontWeight: 700 }}>{calcDays} Days (Until {formatDate(trialEnd)})</span>
             </div>
 
             <div style={{ borderTop: '1px solid rgba(255,255,255,0.12)', paddingTop: '8px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
@@ -401,7 +405,7 @@ export default function SubscriptionBillingPage({ restoInfo, token, onProceedToD
             lineHeight: 1.6
           }}>
             <div style={{ fontWeight: 800, color: '#DFBA67', marginBottom: '4px', fontSize: '0.72rem' }}>📋 PAYMENT TIMELINE:</div>
-            <div>🎁 <strong style={{ color: '#86EFAC' }}>Today → {formatDate(trialEnd)}</strong> — 14-Day Free Trial (₹0)</div>
+            <div>🎁 <strong style={{ color: '#86EFAC' }}>Today → {formatDate(trialEnd)}</strong> — {calcDays}-Day Free Trial (₹0)</div>
             <div>💳 <strong style={{ color: '#E2E8F0' }}>{formatDate(trialEnd)} onwards</strong> — ₹{monthlyPrice}/month via UPI AutoPay</div>
           </div>
         </div>

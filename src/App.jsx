@@ -69,12 +69,14 @@ export default function App() {
   const [landingSuccessMessage, setLandingSuccessMessage] = useState('');
   const [landingLoginLoading, setLandingLoginLoading] = useState(false);
   const [masterSupportPhone, setMasterSupportPhone] = useState('919876543210');
+  const [trialDays, setTrialDays] = useState(14);
 
   useEffect(() => {
     fetch('/api/settings')
       .then(res => res.json())
       .then(data => {
         if (data && data.support_whatsapp) setMasterSupportPhone(data.support_whatsapp);
+        if (data && data.default_trial_days) setTrialDays(Math.max(1, parseInt(data.default_trial_days, 10) || 14));
       })
       .catch(console.error);
   }, []);
@@ -1025,7 +1027,7 @@ export default function App() {
           boxShadow: '0 2px 10px rgba(217, 119, 6, 0.3)',
           flexWrap: 'wrap'
         }}>
-          <span>🔥 SPECIAL LAUNCH OFFER: Get 14 DAYS FREE TRIAL on All SaaS Plans! Instant Setup & Zero Risk!</span>
+          <span>🔥 SPECIAL LAUNCH OFFER: Get {trialDays} DAYS FREE TRIAL on All SaaS Plans! Instant Setup & Zero Risk!</span>
         </div>
 
         {/* Hero Section */}
@@ -1057,7 +1059,7 @@ export default function App() {
             maxWidth: '680px', lineHeight: 1.6, marginBottom: '34px', padding: '0 8px'
           }}>
             QR Code se Instant Digital Menu, WhatsApp Ordering, <strong style={{ color: '#FFD700' }}>⭐ Smart AI Google Reviews Booster</strong>, Live Kitchen KOT Siren & Thermal Printing — sab kuch ek jagah. 
-            <strong style={{ color: '#DFBA67', display: 'block', marginTop: '6px' }}>🎉 14 Din Free Trial — Koi Credit Card Nahi Chahiye!</strong>
+            <strong style={{ color: '#DFBA67', display: 'block', marginTop: '6px' }}>🎉 {trialDays} Din Free Trial — Koi Credit Card Nahi Chahiye!</strong>
           </p>
 
           <div style={{ display: 'flex', gap: '14px', flexWrap: 'wrap', justifyContent: 'center', width: '100%', maxWidth: '520px' }}>
@@ -1127,7 +1129,7 @@ export default function App() {
           <h2 style={{ fontSize: 'clamp(26px, 5vw, 38px)', fontWeight: 900, marginBottom: '8px' }}>
             <span style={{ background: 'linear-gradient(135deg, #DFBA67, #F4D490)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>Transparent & Scalable Pricing</span>
           </h2>
-          <p style={{ color: 'rgba(255,255,255,0.65)', fontSize: '0.95rem', marginBottom: '36px' }}>Har plan me 14-din ka free trial included hai. Upgrade or cancel anytime!</p>
+          <p style={{ color: 'rgba(255,255,255,0.65)', fontSize: '0.95rem', marginBottom: '36px' }}>Har plan me {trialDays}-din ka free trial included hai. Upgrade or cancel anytime!</p>
           
           <div style={{
             display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))',
@@ -1202,7 +1204,7 @@ export default function App() {
                     color: plan.popular ? '#0A0A0A' : '#DFBA67', fontWeight: 900, fontSize: '0.92rem',
                     cursor: 'pointer', transition: 'all 0.3s', boxShadow: plan.popular ? '0 6px 20px rgba(223,186,103,0.3)' : 'none'
                   }}
-                >Start 14-Day Free Trial</button>
+                >Start {trialDays}-Day Free Trial</button>
               </div>
             ))}
           </div>

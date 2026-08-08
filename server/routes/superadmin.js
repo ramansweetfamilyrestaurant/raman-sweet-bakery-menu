@@ -543,12 +543,13 @@ router.get('/settings', authenticateToken, requireSuperAdmin, async (req, res) =
 // POST Update System Settings for Super Admin
 router.post('/settings', authenticateToken, requireSuperAdmin, async (req, res) => {
   try {
-    const { support_whatsapp, cashfree_app_id, cashfree_secret_key } = req.body;
+    const { support_whatsapp, cashfree_app_id, cashfree_secret_key, default_trial_days } = req.body;
     
     const settingsToSave = {
       support_whatsapp: support_whatsapp ? support_whatsapp.replace(/[^0-9]/g, '') : undefined,
       cashfree_app_id: cashfree_app_id !== undefined ? String(cashfree_app_id).trim() : undefined,
-      cashfree_secret_key: cashfree_secret_key !== undefined ? String(cashfree_secret_key).trim() : undefined
+      cashfree_secret_key: cashfree_secret_key !== undefined ? String(cashfree_secret_key).trim() : undefined,
+      default_trial_days: default_trial_days !== undefined ? String(Math.max(1, parseInt(default_trial_days, 10) || 14)) : undefined
     };
 
     for (const [k, v] of Object.entries(settingsToSave)) {
@@ -566,8 +567,8 @@ router.post('/settings', authenticateToken, requireSuperAdmin, async (req, res) 
       }
     }
 
-    await logAudit(null, 'superadmin', 'Update Payment API Keys', 'Updated Payment Gateway & System Settings');
-    res.json({ message: 'Master Payment Gateway API Keys updated successfully!' });
+    await logAudit(null, 'superadmin', 'Update System Settings', 'Updated Payment Gateway & SaaS Trial Settings');
+    res.json({ message: 'System Settings & API Keys updated successfully!' });
   } catch (err) {
     console.error('Update system settings error:', err);
     res.status(500).json({ error: 'Failed to update settings' });

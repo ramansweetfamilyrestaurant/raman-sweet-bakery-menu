@@ -497,6 +497,7 @@ async function createTables() {
         value TEXT NOT NULL
       );
       INSERT OR IGNORE INTO system_settings (key, value) VALUES ('support_whatsapp', '919876543210');
+      INSERT OR IGNORE INTO system_settings (key, value) VALUES ('default_trial_days', '14');
 
       CREATE TABLE IF NOT EXISTS daily_sales_summaries (
         id INTEGER PRIMARY KEY AUTOINCREMENT,

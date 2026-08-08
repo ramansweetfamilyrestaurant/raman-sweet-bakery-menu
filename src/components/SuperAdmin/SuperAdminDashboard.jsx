@@ -50,11 +50,12 @@ export default function SuperAdminDashboard({ token, username, onLogout, onRetur
     google_reviews_enabled: true
   });
 
-  // Payment Gateway API Keys State
+  // Payment Gateway API Keys & System Settings State
   const [paymentKeys, setPaymentKeys] = useState({
     cashfree_app_id: '',
     cashfree_secret_key: '',
-    support_whatsapp: '919876543210'
+    support_whatsapp: '919876543210',
+    default_trial_days: '14'
   });
   const [keysSaving, setKeysSaving] = useState(false);
   const [keysMsg, setKeysMsg] = useState('');
@@ -70,7 +71,8 @@ export default function SuperAdminDashboard({ token, username, onLogout, onRetur
           ...prev,
           cashfree_app_id: data.cashfree_app_id || '',
           cashfree_secret_key: data.cashfree_secret_key || '',
-          support_whatsapp: data.support_whatsapp || '919876543210'
+          support_whatsapp: data.support_whatsapp || '919876543210',
+          default_trial_days: data.default_trial_days || '14'
         }));
       }
     } catch {}
@@ -2486,6 +2488,23 @@ export default function SuperAdminDashboard({ token, username, onLogout, onRetur
               )}
 
               <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', fontSize: '0.78rem' }}>
+                {/* Free Trial Days */}
+                <div style={{ background: '#FFFBEB', padding: '10px', borderRadius: '8px', border: '1px solid #FCD34D' }}>
+                  <span style={{ fontWeight: 800, color: '#B45309', display: 'block', marginBottom: '4px' }}>🎁 SAAS FREE TRIAL DURATION:</span>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    <input
+                      type="number"
+                      min="1"
+                      max="365"
+                      placeholder="14"
+                      value={paymentKeys.default_trial_days}
+                      onChange={(e) => setPaymentKeys({ ...paymentKeys, default_trial_days: e.target.value })}
+                      style={{ width: '90px', padding: '6px 8px', borderRadius: '6px', border: '1px solid #CBD5E1', fontSize: '0.82rem', fontWeight: 900, color: '#0F172A' }}
+                    />
+                    <span style={{ fontSize: '0.74rem', fontWeight: 700, color: '#92400E' }}>Days Free Trial for New Registrations</span>
+                  </div>
+                </div>
+
                 {/* Cashfree */}
                 <div style={{ background: '#FFFFFF', padding: '10px', borderRadius: '8px', border: '1px solid #CBD5E1' }}>
                   <span style={{ fontWeight: 800, color: '#059669', display: 'block', marginBottom: '4px' }}>🚀 CASHFREE GATEWAY (PRIMARY):</span>

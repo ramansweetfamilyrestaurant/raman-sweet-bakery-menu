@@ -471,7 +471,9 @@ router.post('/register', async (req, res) => {
       };
 
       const now = new Date();
-      const trialEnd = new Date(now.getTime() + 14 * 24 * 60 * 60 * 1000);
+      const trialDaysRow = await txQuery("SELECT value FROM system_settings WHERE key = 'default_trial_days'");
+      const trialDays = Math.max(1, parseInt(trialDaysRow[0]?.value || '14', 10));
+      const trialEnd = new Date(now.getTime() + trialDays * 24 * 60 * 60 * 1000);
       const nowISO = now.toISOString();
       const expiryDateISO = trialEnd.toISOString();
 
