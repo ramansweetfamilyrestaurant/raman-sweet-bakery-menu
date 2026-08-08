@@ -729,6 +729,7 @@ async function seedData() {
       await query('DROP TABLE IF EXISTS coupon_redemptions CASCADE');
       await query('DROP TABLE IF EXISTS coupons CASCADE');
       await query("DELETE FROM service_requests WHERE status = 'resolved'");
+      await query("DELETE FROM system_settings WHERE key LIKE '%razorpay%' OR key LIKE '%rzp%'");
     } catch {}
 
     const planCheck = await query('SELECT COUNT(*) as count FROM saas_plans');
