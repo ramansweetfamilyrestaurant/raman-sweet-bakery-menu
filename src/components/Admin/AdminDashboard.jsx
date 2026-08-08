@@ -2046,12 +2046,11 @@ export default function AdminDashboard({ token, username, onLogout, onReturnToMe
               </div>
               <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
                 <button
-                  onClick={playKitchenChime}
-                  title="Test Order Bell Sound"
+                  onClick={loadOrders}
                   style={{
-                    background: '#ECFDF5',
-                    color: '#047857',
-                    border: '1px solid #6EE7B7',
+                    background: 'var(--gold-primary)',
+                    color: '#0A2315',
+                    border: 'none',
                     padding: '8px 14px',
                     borderRadius: 'var(--radius-pill)',
                     fontWeight: 900,
@@ -2062,22 +2061,7 @@ export default function AdminDashboard({ token, username, onLogout, onReturnToMe
                     gap: '4px'
                   }}
                 >
-                  🔊 Test Order Bell
-                </button>
-                <button
-                  onClick={loadOrders}
-                  style={{
-                    background: 'var(--gold-primary)',
-                    color: '#0A2315',
-                    border: 'none',
-                    padding: '8px 14px',
-                    borderRadius: 'var(--radius-pill)',
-                    fontWeight: 900,
-                    fontSize: '0.78rem',
-                    cursor: 'pointer'
-                  }}
-                >
-                  🔄 Refresh Now
+                  <RefreshCw size={12} /> Refresh Now
                 </button>
               </div>
               </div>
