@@ -357,11 +357,25 @@ export default function App() {
 
   // Load Menu Data
   const loadMenuData = async (forcedSlug) => {
+    setLoading(true);
+    setRestaurantStatus('active');
     const slug = forcedSlug || getSlugFromUrl();
     const isAdminMode = Boolean(adminToken);
     try {
-      const [infoData, catData, dishData, comboData] = await Promise.all([
-        fetchRestaurantInfo(slug),
+      const infoData = await fetchRestaurantInfo(slug);
+      if (!infoData || infoData.notFound) {
+        setRestaurantStatus('not_found');
+        setLoading(false);
+        return;
+      }
+      if (infoData.suspended) {
+        setRestaurantStatus('suspended');
+        setInfo(infoData);
+        setLoading(false);
+        return;
+      }
+
+      const [catData, dishData, comboData] = await Promise.all([
         fetchCategories({ slug, adminView: isAdminMode }),
         fetchDishes({ query: searchQuery, slug, adminView: isAdminMode }),
         fetchCombos(slug).catch(() => [])
@@ -377,6 +391,12 @@ export default function App() {
       }
     } catch (err) {
       console.error('Error loading digital menu data:', err);
+      const errMsg = String(err.message || '');
+      if (errMsg.includes('404') || errMsg.toLowerCase().includes('not found')) {
+        setRestaurantStatus('not_found');
+      } else if (errMsg.includes('403') || errMsg.toLowerCase().includes('suspended')) {
+        setRestaurantStatus('suspended');
+      }
     } finally {
       setLoading(false);
     }
@@ -1452,6 +1472,58 @@ export default function App() {
             }} />
             <p style={{ fontSize: '0.9rem', fontWeight: 600 }}>
               {lang === 'hi' ? 'डिजिटल मेन्यू लोड हो रहा है...' : 'Loading Digital Menu...'}
+            </p>
+          </div>
+        ) : restaurantStatus === 'not_found' ? (
+          <div style={{
+            textAlign: 'center',
+            padding: '60px 20px',
+            background: '#FFFFFF',
+            borderRadius: '24px',
+            border: '1.5px solid #FEE2E2',
+            boxShadow: '0 10px 30px rgba(0,0,0,0.06)',
+            margin: '20px 0'
+          }}>
+            <div style={{ fontSize: '4rem', marginBottom: '14px' }}>❌</div>
+            <h2 style={{ fontSize: '1.4rem', fontWeight: 900, color: '#DC2626', margin: '0 0 8px 0' }}>
+              Restaurant Not Found / Deleted
+            </h2>
+            <p style={{ fontSize: '0.88rem', color: '#64748B', maxWidth: '420px', margin: '0 auto 20px auto', lineHeight: 1.5 }}>
+              Yeh restaurant ab platform par active nahi hai ya iska link delete kar diya gaya hai.
+            </p>
+            <button
+              onClick={() => { window.location.href = '/'; }}
+              style={{
+                padding: '12px 26px',
+                borderRadius: '9999px',
+                border: 'none',
+                background: 'linear-gradient(135deg, #0A2315 0%, #164E2A 100%)',
+                color: '#FFD700',
+                fontWeight: 900,
+                fontSize: '0.88rem',
+                cursor: 'pointer',
+                boxShadow: '0 4px 14px rgba(10,35,21,0.25)'
+              }}
+            >
+              🏠 Go to Main Platform
+            </button>
+          </div>
+        ) : restaurantStatus === 'suspended' ? (
+          <div style={{
+            textAlign: 'center',
+            padding: '60px 20px',
+            background: '#FFFFFF',
+            borderRadius: '24px',
+            border: '1.5px solid #FEF3C7',
+            boxShadow: '0 10px 30px rgba(0,0,0,0.06)',
+            margin: '20px 0'
+          }}>
+            <div style={{ fontSize: '4rem', marginBottom: '14px' }}>🔒</div>
+            <h2 style={{ fontSize: '1.4rem', fontWeight: 900, color: '#B45309', margin: '0 0 8px 0' }}>
+              Restaurant Temporarily Offline
+            </h2>
+            <p style={{ fontSize: '0.88rem', color: '#64748B', maxWidth: '420px', margin: '0 auto 20px auto', lineHeight: 1.5 }}>
+              <strong>{info?.name || 'Yeh restaurant'}</strong> ki digital menu service filhal suspended hai. Kripya restaurant owner se sampark karein.
             </p>
           </div>
         ) : groupedDishes.length === 0 ? (

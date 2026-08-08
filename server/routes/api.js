@@ -24,6 +24,7 @@ router.get('/settings', async (req, res) => {
 });
 
 // Helper to resolve target restaurant by JWT token or slug (or fallback to primary raman-sweet-bakery)
+// Helper to resolve target restaurant by JWT token or slug (or default to primary when no slug is provided)
 async function resolveRestaurant(req, slug) {
   // 1. Check if token in Authorization header
   if (req && req.headers && req.headers.authorization) {
@@ -40,15 +41,18 @@ async function resolveRestaurant(req, slug) {
     } catch (e) {}
   }
 
-  // 2. Check slug parameter
-  const targetSlug = slug || 'raman-sweet-bakery';
-  const restos = await query('SELECT * FROM restaurants WHERE slug = $1', [targetSlug]);
-  if (restos && restos.length > 0) {
-    return restos[0];
+  // 2. If a specific slug parameter was requested
+  if (slug) {
+    const restos = await query('SELECT * FROM restaurants WHERE slug = $1', [slug]);
+    if (restos && restos.length > 0) {
+      return restos[0];
+    }
+    // Explicit slug requested but restaurant DOES NOT exist (deleted or invalid link) -> return null! DO NOT FALLBACK!
+    return null;
   }
 
-  // 3. Fallback to first restaurant
-  const firstResto = await query('SELECT * FROM restaurants ORDER BY id ASC LIMIT 1');
+  // 3. Fallback ONLY if NO slug parameter was provided at all (e.g. visiting bare domain root /)
+  const firstResto = await query("SELECT * FROM restaurants WHERE slug = 'raman-sweet-bakery' OR id = 1 ORDER BY id ASC LIMIT 1");
   return firstResto[0] || null;
 }
 
@@ -58,78 +62,76 @@ router.get('/info', async (req, res) => {
     const { slug } = req.query;
     const resto = await resolveRestaurant(req, slug);
 
-    if (resto) {
-      // Parse filters_visibility if stored as JSON string or object
-      let filtersVis = resto.filters_visibility;
-      if (typeof filtersVis === 'string') {
-        try { filtersVis = JSON.parse(filtersVis); } catch (e) {}
-      }
-      if (!filtersVis) {
-        filtersVis = { must_try: true, combo: true, special: true, under100: true };
-      }
-
-      // Increment QR scan count silently if public customer request (no JWT token)
-      if (!req.headers || !req.headers.authorization) {
-        query('UPDATE restaurants SET scan_count = COALESCE(scan_count, 0) + 1 WHERE id = $1', [resto.id]).catch(() => {});
-      }
-
-      return res.json({
-        id: resto.id,
-        name: resto.name,
-        slug: resto.slug,
-        tagline: resto.tagline || '',
-        badge: resto.resto_type === 'pure_veg' ? '100% Pure Veg' : 'Veg & Non-Veg',
-        resto_type: resto.resto_type || 'pure_veg',
-        logo: resto.logo || '',
-        openingHours: resto.opening_hours || '',
-        phone: resto.phone || '',
-        address: resto.address || '',
-        google_review_url: resto.google_review_url || '',
-        google_maps_url: resto.google_maps_url || '',
-        fssai_lic_no: resto.fssai_lic_no || '',
-        filters_visibility: filtersVis,
-        currency_symbol: (resto.currency_symbol !== null && resto.currency_symbol !== undefined) ? resto.currency_symbol : '₹',
-        plan_tier: resto.plan_tier || 'pro',
-        plan_price: resto.plan_price || 999,
-        plan_expires_at: resto.plan_expires_at || null,
-        whatsapp_number: resto.whatsapp_number || resto.phone || '',
-        whatsapp_enabled: resto.whatsapp_enabled !== 0 && resto.whatsapp_enabled !== false,
-        direct_ordering_enabled: resto.direct_ordering_enabled !== 0 && resto.direct_ordering_enabled !== false,
-        google_reviews_enabled: resto.google_reviews_enabled !== 0 && resto.google_reviews_enabled !== false,
-        theme_color: resto.theme_color || 'gold',
-        scan_count: resto.scan_count || 0,
-        latitude: resto.latitude !== undefined && resto.latitude !== null ? Number(resto.latitude) : 26.6500,
-        longitude: resto.longitude !== undefined && resto.longitude !== null ? Number(resto.longitude) : 84.9167,
-        max_distance_meters: resto.max_distance_meters || 100,
-        gst_enabled: resto.gst_enabled === 1 || resto.gst_enabled === true,
-        gstin_number: resto.gstin_number || '',
-        total_tables: resto.total_tables !== undefined && resto.total_tables !== null ? Number(resto.total_tables) : 0,
-        order_retention_days: resto.order_retention_days || 7,
-        active: (resto.active === 1 || resto.active === true || resto.active === '1')
+    if (!resto) {
+      return res.status(404).json({
+        error: 'Restaurant Not Found',
+        notFound: true,
+        requestedSlug: slug || ''
       });
     }
+
+    const isActive = resto.active === 1 || resto.active === true || resto.active === '1' || resto.active === undefined;
+    if (!isActive) {
+      return res.status(403).json({
+        error: 'Restaurant Suspended',
+        suspended: true,
+        name: resto.name,
+        slug: resto.slug
+      });
+    }
+
+    // Parse filters_visibility if stored as JSON string or object
+    let filtersVis = resto.filters_visibility;
+    if (typeof filtersVis === 'string') {
+      try { filtersVis = JSON.parse(filtersVis); } catch (e) {}
+    }
+    if (!filtersVis) {
+      filtersVis = { must_try: true, combo: true, special: true, under100: true };
+    }
+
+    // Increment QR scan count silently if public customer request (no JWT token)
+    if (!req.headers || !req.headers.authorization) {
+      query('UPDATE restaurants SET scan_count = COALESCE(scan_count, 0) + 1 WHERE id = $1', [resto.id]).catch(() => {});
+    }
+
+    return res.json({
+      id: resto.id,
+      name: resto.name,
+      slug: resto.slug,
+      tagline: resto.tagline || '',
+      badge: resto.resto_type === 'pure_veg' ? '100% Pure Veg' : 'Veg & Non-Veg',
+      resto_type: resto.resto_type || 'pure_veg',
+      logo: resto.logo || '',
+      openingHours: resto.opening_hours || '',
+      phone: resto.phone || '',
+      address: resto.address || '',
+      google_review_url: resto.google_review_url || '',
+      google_maps_url: resto.google_maps_url || '',
+      fssai_lic_no: resto.fssai_lic_no || '',
+      filters_visibility: filtersVis,
+      currency_symbol: (resto.currency_symbol !== null && resto.currency_symbol !== undefined) ? resto.currency_symbol : '₹',
+      plan_tier: resto.plan_tier || 'pro',
+      plan_price: resto.plan_price || 999,
+      plan_expires_at: resto.plan_expires_at || null,
+      whatsapp_number: resto.whatsapp_number || resto.phone || '',
+      whatsapp_enabled: resto.whatsapp_enabled !== 0 && resto.whatsapp_enabled !== false,
+      direct_ordering_enabled: resto.direct_ordering_enabled !== 0 && resto.direct_ordering_enabled !== false,
+      google_reviews_enabled: resto.google_reviews_enabled !== 0 && resto.google_reviews_enabled !== false,
+      theme_color: resto.theme_color || 'gold',
+      scan_count: resto.scan_count || 0,
+      latitude: resto.latitude !== undefined && resto.latitude !== null ? Number(resto.latitude) : 26.6500,
+      longitude: resto.longitude !== undefined && resto.longitude !== null ? Number(resto.longitude) : 84.9167,
+      max_distance_meters: resto.max_distance_meters || 100,
+      gst_enabled: resto.gst_enabled === 1 || resto.gst_enabled === true,
+      gstin_number: resto.gstin_number || '',
+      total_tables: resto.total_tables !== undefined && resto.total_tables !== null ? Number(resto.total_tables) : 0,
+      order_retention_days: resto.order_retention_days || 7,
+      active: true
+    });
   } catch (err) {
     console.error('Error fetching restaurant info:', err);
+    res.status(500).json({ error: 'Failed to fetch restaurant info' });
   }
-
-  // Fallback settings
-  res.json({
-    id: 1,
-    name: 'Raman Sweet Bakery & Family Restaurant',
-    slug: 'raman-sweet-bakery',
-    tagline: '100% Pure Vegetarian • Pure Desi Ghee Sweets • Live Bakery',
-    badge: '100% Pure Veg',
-    logo: '/uploads/logo.jpg',
-    openingHours: '8:00 AM - 10:30 PM (Mon - Sun)',
-    phone: '+91 9708366583',
-    address: 'HawaiAdda Chowk, Near katchari Gumti, Motihari, Bihar',
-    google_review_url: 'https://share.google/2M5mFMPlmS6pAXRf7',
-    filters_visibility: { must_try: true, combo: true, special: true, under100: true },
-    plan_tier: 'pro',
-    plan_price: 999,
-    theme_color: 'gold',
-    active: true
-  });
 });
 
 // Get Active Global System Announcements
