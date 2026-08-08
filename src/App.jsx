@@ -536,26 +536,27 @@ export default function App() {
       } else if (isRegister) {
         setView('register');
       } else if (isRouteAdmin) {
-        const currentSlug = getSlugFromUrl() || (info && info.slug);
         const storedSlug = localStorage.getItem('raman_admin_slug');
-        if (adminToken && storedSlug && currentSlug && storedSlug === currentSlug) {
-          const mandateActive = await checkMandateGating(adminToken, currentSlug);
+        let currentSlug = getSlugFromUrl() || (info && info.slug);
+        if (!currentSlug || currentSlug === 'admin') {
+          currentSlug = storedSlug;
+        }
+
+        const effectiveSlug = currentSlug || storedSlug;
+
+        if (adminToken && effectiveSlug) {
+          const mandateActive = await checkMandateGating(adminToken, effectiveSlug);
           if (mandateActive) {
+            if (path === '/admin' || path === '/admin/') {
+              window.history.replaceState({}, '', `/${effectiveSlug}/admin`);
+            }
             setView('admin-dashboard');
           } else {
-            // Mandate pending or incomplete → Force Billing page
+            // Subscription / Trial expired → Redirect to billing page
             window.history.replaceState({}, '', '/billing');
             setView('billing');
           }
         } else {
-          if (storedSlug && currentSlug && storedSlug !== currentSlug) {
-            localStorage.removeItem('raman_admin_token');
-            localStorage.removeItem('raman_admin_user');
-            localStorage.removeItem('raman_admin_slug');
-            setAdminToken('');
-            setAdminUsername('');
-            setAdminSlug('');
-          }
           setView('admin-login');
         }
       } else if (isRootPath) {
