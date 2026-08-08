@@ -90,11 +90,32 @@ export default function SubscriptionBillingPage({ restoInfo, token, onProceedToD
     }
   };
 
-  // Check return URL or pending subscription on load
+  // 1. Eagerly load Cashfree SDK v3 on component mount
+  useEffect(() => {
+    if (!window.Cashfree) {
+      const script = document.createElement('script');
+      script.src = 'https://sdk.cashfree.com/js/v3/cashfree.js';
+      script.async = true;
+      script.onload = () => console.log('⚡ Cashfree JS SDK loaded eagerly');
+      script.onerror = () => console.warn('⚠️ Cashfree JS SDK load error');
+      document.body.appendChild(script);
+    }
+  }, []);
+
+  // 2. Check return URL parameters (from backend subscription-return redirect) or pending subscription on load
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
+    const verifiedParam = params.get('verified');
+    const statusParam = params.get('status');
     const subIdParam = params.get('subscription_id') || params.get('sub_id') || localStorage.getItem('pending_subscription_id');
-    if (subIdParam) {
+
+    if (verifiedParam === 'true') {
+      setMandateActive(true);
+      setStatusMsg('✅ Cashfree Mandate Authorized Successfully! 14-Day Free Trial is Active.');
+      if (subIdParam) localStorage.removeItem('pending_subscription_id');
+    } else if (verifiedParam === 'false') {
+      setErrorMsg(`⚠️ Mandate authorization pending or not completed. Status: ${statusParam || 'PENDING'}`);
+    } else if (subIdParam) {
       handleVerifySubscription(subIdParam);
     }
   }, []);
@@ -104,6 +125,7 @@ export default function SubscriptionBillingPage({ restoInfo, token, onProceedToD
     setAuthorizing(true);
     setErrorMsg('');
     setStatusMsg('');
+    localStorage.removeItem('pending_subscription_id');
 
     try {
       const authToken = token || localStorage.getItem('raman_admin_token') || localStorage.getItem('adminToken');
@@ -111,7 +133,8 @@ export default function SubscriptionBillingPage({ restoInfo, token, onProceedToD
         throw new Error('Authentication session token missing. Please log in again.');
       }
 
-      const returnUrl = window.location.href;
+      // Backend subscription-return endpoint handles the Cashfree form POST and redirects back
+      const returnUrl = `${window.location.origin}/api/payment/subscription-return`;
       const couponCodeToPass = appliedCoupon?.code || localStorage.getItem('applied_coupon_code') || null;
       const res = await createCashfreeSubscription(planKey, authToken, returnUrl, couponCodeToPass);
 
@@ -121,58 +144,41 @@ export default function SubscriptionBillingPage({ restoInfo, token, onProceedToD
         return;
       }
 
-      if (!res.success) {
+      if (!res.success || !res.subscription_session_id) {
         setErrorMsg(res.message || 'Failed to initialize Cashfree subscription session.');
         setAuthorizing(false);
         return;
       }
 
-      // 1. Preserve subscription_id in localStorage for post-return verification
+      // 1. Preserve subscription_id in localStorage for post-return verification fallback
       if (res.subscription_id) {
         localStorage.setItem('pending_subscription_id', res.subscription_id);
       }
 
-      // 2. Ensure Cashfree SDK v3 is loaded
+      // 2. Ensure Cashfree SDK is ready (loaded eagerly, but fallback script append if needed)
       if (!window.Cashfree) {
-        try {
-          await new Promise((resolve, reject) => {
-            const script = document.createElement('script');
-            script.src = 'https://sdk.cashfree.com/js/v3/cashfree.js';
-            script.onload = resolve;
-            script.onerror = () => reject(new Error('Failed to load Cashfree JS SDK'));
-            document.body.appendChild(script);
-          });
-        } catch (sdkLoadErr) {
-          console.warn('Cashfree JS SDK script load warning:', sdkLoadErr.message);
-        }
+        await new Promise((resolve, reject) => {
+          const script = document.createElement('script');
+          script.src = 'https://sdk.cashfree.com/js/v3/cashfree.js';
+          script.onload = resolve;
+          script.onerror = () => reject(new Error('Failed to load Cashfree JS SDK'));
+          document.body.appendChild(script);
+        });
       }
 
-      // 3. Primary Checkout: Official Cashfree Subscriptions SDK Checkout
-      if (res.subscription_session_id && window.Cashfree) {
-        try {
-          const cashfree = window.Cashfree({ mode: res.is_sandbox ? 'sandbox' : 'production' });
-          setStatusMsg('🚀 Opening Cashfree Subscription Mandate Checkout...');
-          cashfree.subscriptionsCheckout({
-            subsSessionId: res.subscription_session_id,
-            redirectTarget: '_self'
-          });
-          setAuthorizing(false);
-          return;
-        } catch (sdkErr) {
-          console.warn('subscriptionsCheckout SDK error, falling back to auth_link:', sdkErr.message);
-        }
-      }
-
-      // 4. Fallback Checkout: Official auth_link URL from backend
-      if (res.auth_link) {
-        setStatusMsg('🔗 Opening Cashfree Mandate Authorization page...');
-        setTimeout(() => {
-          window.location.href = res.auth_link;
-        }, 600);
+      // 3. Primary Checkout: Official Cashfree Subscriptions SDK Checkout using exact subscription_session_id
+      if (window.Cashfree && res.subscription_session_id) {
+        setStatusMsg('🚀 Opening Cashfree Subscription Mandate Checkout...');
+        const cashfree = window.Cashfree({ mode: res.is_sandbox ? 'sandbox' : 'production' });
+        
+        // DO NOT set authorizing=false here to prevent UI button state blinking before redirect!
+        cashfree.subscriptionsCheckout({
+          subsSessionId: res.subscription_session_id,
+          redirectTarget: '_self'
+        });
         return;
       }
 
-      // 5. Checkout Load Failure
       setErrorMsg('Payment checkout could not be loaded. Please try again.');
       setAuthorizing(false);
     } catch (err) {
@@ -190,7 +196,7 @@ export default function SubscriptionBillingPage({ restoInfo, token, onProceedToD
       const authToken = token || localStorage.getItem('raman_admin_token') || localStorage.getItem('adminToken');
       const res = await verifyCashfreeSubscription(subId, authToken);
 
-      if (res.authorized || res.subscription_status === 'ACTIVE') {
+      if (res.authorized || res.subscription_status === 'ACTIVE' || res.subscription_status === 'INITIALIZED') {
         setMandateActive(true);
         setStatusMsg('✅ Cashfree Mandate Authorized Successfully! 14-Day Free Trial is Active.');
       } else {

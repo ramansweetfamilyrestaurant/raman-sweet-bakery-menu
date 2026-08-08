@@ -51,6 +51,8 @@ export default function SuperAdminDashboard({ token, username, onLogout, onRetur
   });
 
   // Promo Coupons Manager State
+  const [showCouponsModal, setShowCouponsModal] = useState(false);
+  const [couponsList, setCouponsList] = useState([]);
   const [newCouponForm, setNewCouponForm] = useState({
     code: '',
     discount_type: 'PERCENTAGE',

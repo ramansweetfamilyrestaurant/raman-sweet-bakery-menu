@@ -104,7 +104,7 @@ const handleCreateSubscription = async (req, res) => {
       trialEndISO,
       customerName: resto.name,
       customerPhone: resto.phone,
-      returnUrl: return_url || `https://khanamaster.com/${resto.slug}/admin`
+      returnUrl: return_url || `${process.env.APP_BASE_URL || 'https://khana-master.onrender.com'}/api/payment/subscription-return`
     });
 
     if (!cfResult.configured) {
@@ -246,6 +246,99 @@ function addCalendarMonth(date = new Date()) {
   }
   return d.toISOString();
 }
+
+// ==========================================
+// 3A. CASHFREE SUBSCRIPTION RETURN HANDLER
+// Primary: POST (Cashfree sends form POST after mandate authorization)
+// Secondary: GET (browser direct navigation / compatibility)
+// ==========================================
+
+/**
+ * Shared handler logic for both POST and GET return from Cashfree.
+ * Cashfree POSTs application/x-www-form-urlencoded after mandate authorization.
+ * NEVER trusts the frontend — always verifies server-side via GET /pg/subscriptions/{id}
+ */
+const handleSubscriptionReturn = async (req, res) => {
+  // Read subscriptionId from POST body (form fields) OR query params (GET fallback)
+  const subscriptionId =
+    (req.body && (req.body.subscriptionId || req.body.subscription_id || req.body.subId)) ||
+    req.query.subscription_id ||
+    req.query.subscriptionId ||
+    null;
+
+  const baseRedirectUrl = `${process.env.APP_BASE_URL || 'https://khana-master.onrender.com'}/billing`;
+
+  if (!subscriptionId) {
+    console.warn('[Cashfree Return] No subscription_id in return POST/GET — redirecting to billing with error');
+    return res.redirect(`${baseRedirectUrl}?verified=false&status=NO_SUBSCRIPTION_ID`);
+  }
+
+  console.log('[Cashfree Return] Received return for subscription_id:', subscriptionId);
+
+  try {
+    // NEVER trust frontend — always verify server-side
+    const cfStatus = await fetchCashfreeSubscriptionStatus(subscriptionId);
+
+    if (!cfStatus.success) {
+      console.warn('[Cashfree Return] Server-side verification failed:', cfStatus.error);
+      return res.redirect(`${baseRedirectUrl}?verified=false&status=${encodeURIComponent(cfStatus.subscription_status || 'VERIFICATION_FAILED')}`);
+    }
+
+    const subStatus = cfStatus.subscription_status || 'UNKNOWN';
+    const isAuthorized = subStatus === 'ACTIVE' || subStatus === 'INITIALIZED';
+
+    // Resolve restaurant from subscription_id in DB
+    const subRows = await query(
+      'SELECT * FROM subscriptions WHERE gateway_subscription_id = $1 LIMIT 1',
+      [subscriptionId]
+    );
+    const subRecord = subRows[0];
+    const restoId = subRecord?.restaurant_id;
+
+    if (restoId && isAuthorized) {
+      // Update mandate active status
+      await query(
+        "UPDATE restaurants SET mandate_id = $1, mandate_status = 'active', auto_debit_enabled = 1 WHERE id = $2",
+        [subscriptionId, restoId]
+      );
+      await query(
+        "UPDATE subscriptions SET status = 'trialing' WHERE gateway_subscription_id = $1 AND status IN ('pending', 'INITIALIZED')",
+        [subscriptionId]
+      );
+      await logPaymentAudit(restoId, 'CASHFREE_RETURN_VERIFIED', {
+        subscription_id: subscriptionId,
+        status: subStatus,
+        via: req.method === 'POST' ? 'FORM_POST' : 'GET'
+      });
+      console.log('[Cashfree Return] ✅ Mandate authorized for restaurant', restoId, '— status:', subStatus);
+    } else if (restoId) {
+      await logPaymentAudit(restoId, 'CASHFREE_RETURN_PENDING', {
+        subscription_id: subscriptionId,
+        status: subStatus
+      });
+      console.log('[Cashfree Return] ⏳ Subscription not yet active for restaurant', restoId, '— status:', subStatus);
+    } else {
+      console.warn('[Cashfree Return] No restaurant found for subscription_id:', subscriptionId);
+    }
+
+    // Redirect browser back to billing page with verification result
+    const redirectParams = new URLSearchParams({
+      verified: isAuthorized ? 'true' : 'false',
+      status: subStatus,
+      subscription_id: subscriptionId
+    });
+    return res.redirect(`${baseRedirectUrl}?${redirectParams.toString()}`);
+  } catch (err) {
+    console.error('[Cashfree Return] Error during return processing:', err.message);
+    return res.redirect(`${baseRedirectUrl}?verified=false&status=SERVER_ERROR`);
+  }
+};
+
+// POST is primary — Cashfree sends application/x-www-form-urlencoded form POST
+router.post('/subscription-return', handleSubscriptionReturn);
+// GET is supported for compatibility and browser direct navigation
+router.get('/subscription-return', handleSubscriptionReturn);
+
 
 // ==========================================
 // 3. PHASE 2B PRODUCTION WEBHOOK HANDLER

@@ -19,7 +19,7 @@ export function getCashfreeConfig() {
     environment,
     isSandbox,
     baseUrl,
-    apiVersion: '2026-01-01',
+    apiVersion: '2025-01-01',
     isConfigured: Boolean(clientId && clientSecret)
   };
 }
@@ -57,7 +57,7 @@ export async function getCashfreeConfigAsync() {
       environment,
       isSandbox,
       baseUrl,
-      apiVersion: '2026-01-01',
+      apiVersion: '2025-01-01',
       isConfigured: Boolean(clientId && clientSecret)
     };
   } catch (err) {
@@ -110,7 +110,11 @@ export function formatISTISO(dateOrIso) {
 }
 
 /**
- * Creates a Cashfree Sandbox Subscription Session (v2026-01-01 API)
+ * Creates a Cashfree Subscription Session (v2025-01-01 API)
+ * 
+ * IMPORTANT: Cashfree Sandbox does NOT return auth_link in the API response.
+ * The only valid checkout mechanism is the JS SDK subscriptionsCheckout({ subsSessionId }).
+ * return_url must be at the ROOT LEVEL of the subscription payload (not inside subscription_meta).
  */
 export async function createCashfreeSubscriptionSession({
   restaurantId,
@@ -130,7 +134,7 @@ export async function createCashfreeSubscriptionSession({
       success: false,
       configured: false,
       error: 'CASHFREE_SANDBOX_CREDENTIALS_MISSING',
-      message: 'Cashfree Sandbox API keys (CASHFREE_CLIENT_ID and CASHFREE_CLIENT_SECRET) are not configured in backend environment.'
+      message: 'Cashfree API keys (CASHFREE_CLIENT_ID and CASHFREE_CLIENT_SECRET) are not configured in backend environment.'
     };
   }
 
@@ -147,9 +151,13 @@ export async function createCashfreeSubscriptionSession({
   const maxAmount = Math.max(amount * 5, 5000);
 
   const subUrl = `${config.baseUrl}/subscriptions`;
+
+  // CRITICAL: return_url must be at ROOT LEVEL, not inside subscription_meta
+  // Verified by live Sandbox audit — subscription_meta.return_url is ignored by Cashfree
   const subPayload = {
     subscription_id: subscriptionId,
     subscription_first_charge_time: firstChargeTime,
+    return_url: returnUrl || null,
     customer_details: {
       customer_id: customerId,
       customer_name: cleanName,
@@ -169,16 +177,25 @@ export async function createCashfreeSubscriptionSession({
     authorization_details: {
       authorization_amount: 1,
       authorization_amount_refund: true,
-      payment_methods: ['enach', 'upi', 'card']
+      payment_methods: ['upi', 'enach', 'card']
     }
   };
 
-  if (returnUrl) {
-    subPayload.subscription_meta = {
-      return_url: returnUrl,
-      notification_channel: ['EMAIL', 'SMS']
-    };
-  }
+  // Remove null return_url to keep payload clean if not provided
+  if (!returnUrl) delete subPayload.return_url;
+
+  // SAFE DIAGNOSTIC LOG — never logs client_secret
+  console.log('[Cashfree] Creating subscription session:', {
+    environment: config.environment,
+    api_version: config.apiVersion,
+    subscription_id: subscriptionId,
+    customer_id: customerId,
+    plan_key: planKey,
+    amount,
+    first_charge_time: firstChargeTime,
+    return_url: returnUrl ? returnUrl.substring(0, 80) : 'NOT_SET',
+    client_id_prefix: config.clientId ? config.clientId.substring(0, 8) + '...' : 'MISSING'
+  });
 
   try {
     const subRes = await fetch(subUrl, {
@@ -194,20 +211,47 @@ export async function createCashfreeSubscriptionSession({
 
     const subData = await subRes.json();
 
-    if (subRes.ok && (subData.subscription_id || subData.subscription_session_id || subData.auth_link || subData.authLink)) {
-      const sessionId = subData.subscription_session_id || null;
-      const authLink = subData.auth_link || subData.authLink || subData.sub_auth_url || null;
+    // SAFE RESPONSE LOG — logs only safe fields, never raw_response or secrets
+    console.log('[Cashfree] Subscription API response:', {
+      http_status: subRes.status,
+      ok: subRes.ok,
+      subscription_id: subData.subscription_id || null,
+      cf_subscription_id: subData.cf_subscription_id || null,
+      subscription_status: subData.subscription_status || null,
+      session_id_present: Boolean(subData.subscription_session_id),
+      session_id_length: subData.subscription_session_id ? subData.subscription_session_id.length : 0,
+      // CONFIRMED: Cashfree Sandbox does NOT return auth_link — SDK-only checkout
+      auth_link_returned: Boolean(subData.auth_link || subData.authLink || subData.sub_auth_url),
+      error_code: subData.code || null,
+      error_message: subData.message || null
+    });
 
+    if (subRes.ok && subData.subscription_session_id) {
+      // Cashfree Sandbox does NOT return auth_link — this is expected and correct
+      // Frontend MUST use JS SDK subscriptionsCheckout({ subsSessionId }) exclusively
       return {
         success: true,
         configured: true,
         subscription_id: subData.subscription_id || subscriptionId,
-        subscription_session_id: sessionId,
+        subscription_session_id: subData.subscription_session_id,
         customer_id: customerId,
         cf_subscription_id: subData.cf_subscription_id || null,
-        subscription_status: subData.subscription_status || subData.sub_status || 'INITIALIZED',
-        auth_link: authLink,
+        subscription_status: subData.subscription_status || 'INITIALIZED',
+        // auth_link is intentionally null — Cashfree does not return this field
+        auth_link: null,
         is_sandbox: config.isSandbox,
+        raw_response: subData
+      };
+    }
+
+    // Handle case where subscription_id is returned but no session_id (edge case)
+    if (subRes.ok && subData.subscription_id) {
+      console.warn('[Cashfree] subscription_id returned but no subscription_session_id — cannot open checkout');
+      return {
+        success: false,
+        configured: true,
+        error: 'CASHFREE_NO_SESSION_ID',
+        message: 'Cashfree returned subscription_id but no subscription_session_id. Cannot open checkout page.',
         raw_response: subData
       };
     }
@@ -220,11 +264,12 @@ export async function createCashfreeSubscriptionSession({
       raw_response: subData
     };
   } catch (err) {
+    console.error('[Cashfree] Network error during subscription creation:', err.message);
     return {
       success: false,
       configured: true,
       error: 'CASHFREE_NETWORK_ERROR',
-      message: err.message || 'Failed to connect to Cashfree Sandbox servers.'
+      message: err.message || 'Failed to connect to Cashfree servers.'
     };
   }
 }
