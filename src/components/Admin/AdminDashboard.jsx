@@ -960,6 +960,129 @@ export default function AdminDashboard({ token, username, onLogout, onReturnToMe
     printWindow.document.close();
   };
 
+  const handlePrintAllQRs = () => {
+    const totalCount = Number(settingsForm.total_tables) || 12;
+    const liveOrigin = window.location.origin;
+    const currentName = settingsForm.name || 'Digital Menu';
+    const currentTagline = settingsForm.tagline || 'Scan QR Code for Digital Menu';
+
+    const printWindow = window.open('', '_blank', 'width=950,height=900');
+    if (!printWindow) {
+      alert('Please allow popups for this site to print all Table QR Standees.');
+      return;
+    }
+
+    let cardsHtml = '';
+    for (let tNum = 1; tNum <= totalCount; tNum++) {
+      const targetUrl = `${liveOrigin}/${settingsForm.slug || 'raman-sweet-bakery'}?table=${tNum}`;
+      const qrImgUrl = `https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=${encodeURIComponent(targetUrl)}`;
+      cardsHtml += `
+        <div class="standee-card">
+          <div class="table-badge">TABLE NO. ${tNum}</div>
+          <h2 class="logo-title">${currentName}</h2>
+          <div class="subtitle">${currentTagline}</div>
+          <div class="qr-box">
+            <img src="${qrImgUrl}" alt="Table ${tNum} QR Code" />
+          </div>
+          <div class="instruction-en">📱 SCAN FOR DIGITAL MENU & ORDER</div>
+          <div class="instruction-hi">स्कैन करें और डिजिटल मेन्यू देखें</div>
+          <div class="footer-info">
+            ${settingsForm.address || ''}${settingsForm.phone ? ' • Phone: ' + settingsForm.phone : ''}
+          </div>
+        </div>
+      `;
+    }
+
+    printWindow.document.write(`
+      <!DOCTYPE html>
+      <html>
+        <head>
+          <title>All Table QR Standees - ${currentName}</title>
+          <style>
+            @import url('https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700;800;900&family=Plus+Jakarta+Sans:wght@600;700;800&display=swap');
+            body {
+              margin: 0;
+              padding: 30px;
+              background-color: #FFFFFF;
+              font-family: 'Plus Jakarta Sans', sans-serif;
+              display: flex;
+              flex-wrap: wrap;
+              gap: 24px;
+              justify-content: center;
+            }
+            .standee-card {
+              width: 320px;
+              padding: 28px 20px;
+              border: 3px double #C5A059;
+              border-radius: 20px;
+              background: linear-gradient(180deg, #FFFFFF 0%, #FAF8F5 100%);
+              text-align: center;
+              box-shadow: 0 6px 20px rgba(10, 35, 21, 0.08);
+              page-break-inside: avoid;
+              margin-bottom: 20px;
+            }
+            .table-badge {
+              display: inline-block;
+              background: #0A2315;
+              color: #DFBA67;
+              padding: 5px 18px;
+              border-radius: 9999px;
+              font-size: 0.95rem;
+              font-weight: 800;
+              border: 1.5px solid #C5A059;
+              letter-spacing: 1px;
+              margin-bottom: 12px;
+            }
+            .logo-title {
+              font-family: 'Playfair Display', serif;
+              font-size: 1.25rem;
+              font-weight: 900;
+              color: #0A2315;
+              margin: 0 0 4px 0;
+            }
+            .subtitle {
+              font-size: 0.75rem;
+              font-weight: 800;
+              color: #15803D;
+              margin-bottom: 14px;
+            }
+            .qr-box {
+              background: #FFFFFF;
+              padding: 12px;
+              border-radius: 14px;
+              border: 1px solid #E5E7EB;
+              display: inline-block;
+              margin-bottom: 12px;
+            }
+            .qr-box img {
+              width: 180px;
+              height: 180px;
+              display: block;
+            }
+            .instruction-en { font-size: 0.82rem; font-weight: 800; color: #0A2315; margin-bottom: 2px; }
+            .instruction-hi { font-size: 0.78rem; font-weight: 700; color: #666157; margin-bottom: 12px; }
+            .footer-info { font-size: 0.7rem; font-weight: 700; color: #B88E3E; border-top: 1px dashed rgba(197, 160, 89, 0.4); padding-top: 10px; }
+            @media print {
+              body { padding: 0; background: none; }
+              .standee-card { box-shadow: none; page-break-inside: avoid; }
+            }
+          </style>
+        </head>
+        <body>
+          ${cardsHtml}
+          <script>
+            window.onload = function() {
+              setTimeout(function() {
+                window.print();
+              }, 600);
+            };
+          </script>
+        </body>
+      </html>
+    `);
+    printWindow.document.close();
+  };
+
   const handleSaveDish = async (dishData) => {
     const isEdit = Boolean(dishModalData?.id);
     const url = isEdit ? `/api/admin/dishes/${dishModalData.id}` : '/api/admin/dishes';
@@ -3021,6 +3144,26 @@ export default function AdminDashboard({ token, username, onLogout, onReturnToMe
                   }}
                 >
                   <Printer size={16} /> Quick Print QR
+                </button>
+
+                <button
+                  onClick={handlePrintAllQRs}
+                  style={{
+                    padding: '10px 18px',
+                    borderRadius: '12px',
+                    border: 'none',
+                    background: 'linear-gradient(135deg, #1E1B4B 0%, #312E81 100%)',
+                    color: '#FFFFFF',
+                    fontWeight: 900,
+                    fontSize: '0.85rem',
+                    cursor: 'pointer',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '6px',
+                    boxShadow: '0 4px 14px rgba(99,102,241,0.3)'
+                  }}
+                >
+                  <Printer size={16} /> 🖨️ Print All Table QRs (Uniform)
                 </button>
               </div>
             </div>
