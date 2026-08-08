@@ -1130,6 +1130,64 @@ export default function App() {
     );
   }
 
+  // Check if requested restaurant is deleted / not found
+  if (restaurantStatus === 'not_found') {
+    return (
+      <div style={{
+        minHeight: '100vh', display: 'flex', flexDirection: 'column',
+        alignItems: 'center', justifyContent: 'center', padding: '32px 20px',
+        background: 'linear-gradient(135deg, #0F172A 0%, #1E293B 100%)',
+        color: '#FFFFFF', textAlign: 'center'
+      }}>
+        <div style={{
+          fontSize: '4.5rem', marginBottom: '16px', filter: 'drop-shadow(0 4px 16px rgba(239,68,68,0.3))'
+        }}>❌</div>
+        <h1 style={{ fontSize: '1.75rem', fontWeight: 900, color: '#F87171', margin: '0 0 8px 0' }}>
+          Restaurant Not Found / Deleted
+        </h1>
+        <p style={{ fontSize: '0.92rem', color: '#94A3B8', maxWidth: '440px', margin: '0 auto 24px auto', lineHeight: 1.6 }}>
+          Yeh restaurant ab platform par active nahi hai ya iska URL delete kar diya gaya hai.
+        </p>
+        <button
+          onClick={() => { window.location.href = '/'; }}
+          style={{
+            padding: '13px 30px',
+            borderRadius: '9999px',
+            border: 'none',
+            background: 'linear-gradient(135deg, #FFD700 0%, #D4AF37 100%)',
+            color: '#0A0A0A',
+            fontWeight: 900,
+            fontSize: '0.92rem',
+            cursor: 'pointer',
+            boxShadow: '0 4px 16px rgba(255,215,0,0.3)'
+          }}
+        >
+          🏠 Go to KhanaMaster Homepage
+        </button>
+      </div>
+    );
+  }
+
+  // Check if requested restaurant is suspended by Super Admin
+  if (restaurantStatus === 'suspended') {
+    return (
+      <div style={{
+        minHeight: '100vh', display: 'flex', flexDirection: 'column',
+        alignItems: 'center', justifyContent: 'center', padding: '32px 20px',
+        background: 'linear-gradient(135deg, #0A2315 0%, #164E2A 100%)',
+        color: '#FFFFFF', textAlign: 'center'
+      }}>
+        <div style={{ fontSize: '4.5rem', marginBottom: '16px' }}>🔒</div>
+        <h1 style={{ fontSize: '1.75rem', fontWeight: 900, color: '#FFD700', margin: '0 0 8px 0' }}>
+          Restaurant Temporarily Offline
+        </h1>
+        <p style={{ fontSize: '0.92rem', color: '#E2E8F0', maxWidth: '440px', margin: '0 auto 24px auto', lineHeight: 1.6 }}>
+          <strong>{info?.name || 'Yeh restaurant'}</strong> ki digital menu service filhal suspended hai. Kripya restaurant manager se sampark karein.
+        </p>
+      </div>
+    );
+  }
+
   // Restaurant Admin View Render
   if (view === 'admin-login') {
     return (
@@ -1138,9 +1196,9 @@ export default function App() {
           restaurantName={info?.name}
           onLoginSuccess={handleAdminLoginSuccess}
           onCancel={() => {
-            const targetSlug = getSlugFromUrl() || (info && info.slug) || 'raman-sweet-bakery';
+            const targetSlug = getSlugFromUrl() || (info && info.slug) || '';
             setView('menu');
-            window.history.pushState({}, '', `/r/${targetSlug}`);
+            window.history.pushState({}, '', targetSlug ? `/${targetSlug}` : '/');
             loadMenuData(targetSlug);
           }}
         />
@@ -1156,9 +1214,9 @@ export default function App() {
           username={adminUsername}
           onLogout={handleAdminLogout}
           onReturnToMenu={(tenantSlug) => {
-            const targetSlug = tenantSlug || (info && info.slug) || getSlugFromUrl() || 'raman-sweet-bakery';
+            const targetSlug = tenantSlug || (info && info.slug) || getSlugFromUrl() || '';
             setView('menu');
-            window.history.pushState({}, '', `/r/${targetSlug}`);
+            window.history.pushState({}, '', targetSlug ? `/${targetSlug}` : '/');
             loadMenuData(targetSlug);
           }}
         />
@@ -1240,62 +1298,6 @@ export default function App() {
             <Phone size={16} /> Contact Restaurant Management
           </a>
         </div>
-      </div>
-    );
-  }
-
-  if (restaurantStatus === 'not_found') {
-    return (
-      <div style={{
-        minHeight: '100vh', display: 'flex', flexDirection: 'column',
-        alignItems: 'center', justifyContent: 'center', padding: '32px 20px',
-        background: 'linear-gradient(135deg, #0F172A 0%, #1E293B 100%)',
-        color: '#FFFFFF', textAlign: 'center'
-      }}>
-        <div style={{
-          fontSize: '4.5rem', marginBottom: '16px', filter: 'drop-shadow(0 4px 16px rgba(239,68,68,0.3))'
-        }}>❌</div>
-        <h1 style={{ fontSize: '1.75rem', fontWeight: 900, color: '#F87171', margin: '0 0 8px 0' }}>
-          Restaurant Not Found / Deleted
-        </h1>
-        <p style={{ fontSize: '0.92rem', color: '#94A3B8', maxWidth: '440px', margin: '0 auto 24px auto', lineHeight: 1.6 }}>
-          Yeh restaurant ab platform par active nahi hai ya iska URL delete kar diya gaya hai.
-        </p>
-        <button
-          onClick={() => { window.location.href = '/'; }}
-          style={{
-            padding: '13px 30px',
-            borderRadius: '9999px',
-            border: 'none',
-            background: 'linear-gradient(135deg, #FFD700 0%, #D4AF37 100%)',
-            color: '#0A0A0A',
-            fontWeight: 900,
-            fontSize: '0.92rem',
-            cursor: 'pointer',
-            boxShadow: '0 4px 16px rgba(255,215,0,0.3)'
-          }}
-        >
-          🏠 Go to KhanaMaster Homepage
-        </button>
-      </div>
-    );
-  }
-
-  if (restaurantStatus === 'suspended') {
-    return (
-      <div style={{
-        minHeight: '100vh', display: 'flex', flexDirection: 'column',
-        alignItems: 'center', justifyContent: 'center', padding: '32px 20px',
-        background: 'linear-gradient(135deg, #0A2315 0%, #164E2A 100%)',
-        color: '#FFFFFF', textAlign: 'center'
-      }}>
-        <div style={{ fontSize: '4.5rem', marginBottom: '16px' }}>🔒</div>
-        <h1 style={{ fontSize: '1.75rem', fontWeight: 900, color: '#FFD700', margin: '0 0 8px 0' }}>
-          Restaurant Temporarily Offline
-        </h1>
-        <p style={{ fontSize: '0.92rem', color: '#E2E8F0', maxWidth: '440px', margin: '0 auto 24px auto', lineHeight: 1.6 }}>
-          <strong>{info?.name || 'Yeh restaurant'}</strong> ki digital menu service filhal suspended hai. Kripya restaurant manager se sampark karein.
-        </p>
       </div>
     );
   }
