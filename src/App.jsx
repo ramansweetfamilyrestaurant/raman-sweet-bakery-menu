@@ -442,9 +442,27 @@ export default function App() {
     }
   }, [info]);
 
+  // Check restaurant mandate / subscription status server-side to gate Admin Dashboard access
+  const checkMandateGating = async (tokenToCheck, slugToCheck) => {
+    if (!tokenToCheck) return false;
+    try {
+      const res = await fetch('/api/admin/subscription-status', {
+        headers: { Authorization: `Bearer ${tokenToCheck}` }
+      });
+      if (res.ok) {
+        const data = await res.json();
+        const isAuthorized = data.mandate_status === 'active' || data.auto_debit_enabled;
+        return isAuthorized;
+      }
+    } catch (e) {
+      console.warn('Failed to verify mandate gating:', e);
+    }
+    return false;
+  };
+
   // Handle URL route changes (/super-admin, /admin, /, /r/:slug, #super-admin, #admin)
   useEffect(() => {
-    const handleRouteCheck = () => {
+    const handleRouteCheck = async () => {
       const path = window.location.pathname.toLowerCase();
       const hash = window.location.hash.toLowerCase();
 
@@ -487,7 +505,15 @@ export default function App() {
         const currentSlug = getSlugFromUrl() || (info && info.slug);
         const storedSlug = localStorage.getItem('raman_admin_slug');
         if (adminToken && storedSlug && currentSlug && storedSlug === currentSlug) {
-          setView('admin-dashboard');
+          // Gate Admin Dashboard access: Verify mandate status server-side
+          const mandateActive = await checkMandateGating(adminToken, currentSlug);
+          if (mandateActive) {
+            setView('admin-dashboard');
+          } else {
+            // Mandate pending or incomplete → Force Billing page
+            window.history.replaceState({}, '', '/billing');
+            setView('billing');
+          }
         } else {
           if (storedSlug && currentSlug && storedSlug !== currentSlug) {
             localStorage.removeItem('raman_admin_token');
@@ -519,7 +545,7 @@ export default function App() {
     };
   }, [adminToken, superToken, info]);
 
-  const handleAdminLoginSuccess = (token, username, slug) => {
+  const handleAdminLoginSuccess = async (token, username, slug) => {
     const currentSlug = slug || getSlugFromUrl() || (info && info.slug) || '';
     localStorage.setItem('raman_admin_token', token);
     localStorage.setItem('raman_admin_user', username);
@@ -527,8 +553,15 @@ export default function App() {
     setAdminToken(token);
     setAdminUsername(username);
     setAdminSlug(currentSlug);
-    setView('admin-dashboard');
-    window.history.pushState({}, '', currentSlug ? `/${currentSlug}/admin` : '/admin');
+
+    const mandateActive = await checkMandateGating(token, currentSlug);
+    if (mandateActive) {
+      setView('admin-dashboard');
+      window.history.pushState({}, '', currentSlug ? `/${currentSlug}/admin` : '/admin');
+    } else {
+      setView('billing');
+      window.history.pushState({}, '', '/billing');
+    }
   };
 
   const handleAdminLogout = () => {

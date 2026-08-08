@@ -211,8 +211,13 @@ export default function SubscriptionBillingPage({ restoInfo, token, onProceedToD
 
   // Calculated Pricing Breakdown
   const originalPrice = planDetails.price;
-  const discountAmount = appliedCoupon ? appliedCoupon.discount_amount : 0;
-  const firstPaymentPrice = Math.max(0, originalPrice - discountAmount);
+  const discountAmount = appliedCoupon ? Number(appliedCoupon.discount_amount || 0) : 0;
+  const firstPaymentPrice = appliedCoupon && appliedCoupon.final_first_payment_amount !== undefined
+    ? Number(appliedCoupon.final_first_payment_amount)
+    : Math.max(0, originalPrice - discountAmount);
+  const discountPercent = appliedCoupon?.discount_type === 'PERCENTAGE'
+    ? `${appliedCoupon.discount_value}% OFF`
+    : (appliedCoupon ? `₹${discountAmount} OFF` : null);
 
   return (
     <div style={{
@@ -226,7 +231,7 @@ export default function SubscriptionBillingPage({ restoInfo, token, onProceedToD
       fontFamily: 'Inter, system-ui, sans-serif'
     }}>
       <div style={{
-        maxWidth: '560px',
+        maxWidth: '580px',
         width: '100%',
         background: '#0D1F15',
         borderRadius: '28px',
@@ -254,11 +259,28 @@ export default function SubscriptionBillingPage({ restoInfo, token, onProceedToD
         </div>
 
         <h1 style={{ fontSize: '1.6rem', fontWeight: 900, color: '#FFFFFF', margin: '0 0 6px 0', letterSpacing: '-0.5px' }}>
-          Welcome to KhanaMaster SaaS 🚀
+          Complete Your Subscription Setup 🚀
         </h1>
-        <p style={{ fontSize: '0.88rem', color: '#A7F3D0', margin: '0 0 24px 0' }}>
-          Your digital QR menu account <strong>{restoInfo?.name || 'Restaurant'}</strong> is created!
+        <p style={{ fontSize: '0.88rem', color: '#A7F3D0', margin: '0 0 20px 0', lineHeight: 1.5 }}>
+          Your restaurant account <strong>{restoInfo?.name || 'Restaurant'}</strong> has been created. Activate your 14-day free trial by authorizing your subscription.
         </p>
+
+        {/* Transparent Notice Tag */}
+        <div style={{
+          display: 'inline-flex',
+          alignItems: 'center',
+          gap: '6px',
+          background: 'rgba(223,186,103,0.12)',
+          border: '1px solid rgba(223,186,103,0.3)',
+          borderRadius: '50px',
+          padding: '6px 14px',
+          fontSize: '0.76rem',
+          fontWeight: 800,
+          color: '#DFBA67',
+          marginBottom: '22px'
+        }}>
+          🛡️ 14-Day Free Trial • ₹0 Today • UPI AutoPay Authorization Required
+        </div>
 
         {/* Selected Plan Summary Box */}
         <div style={{
@@ -292,9 +314,9 @@ export default function SubscriptionBillingPage({ restoInfo, token, onProceedToD
             </span>
           </div>
 
-          {/* Pricing Table / Breakdown */}
+          {/* Detailed Subscription Billing Breakdown */}
           <div style={{
-            background: 'rgba(0,0,0,0.35)',
+            background: 'rgba(0,0,0,0.4)',
             borderRadius: '14px',
             padding: '14px 16px',
             border: '1px solid rgba(255,255,255,0.1)',
@@ -302,7 +324,7 @@ export default function SubscriptionBillingPage({ restoInfo, token, onProceedToD
             display: 'flex',
             flexDirection: 'column',
             gap: '8px',
-            fontSize: '0.86rem'
+            fontSize: '0.84rem'
           }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', color: '#94A3B8' }}>
               <span>Normal Plan Price:</span>
@@ -310,24 +332,44 @@ export default function SubscriptionBillingPage({ restoInfo, token, onProceedToD
             </div>
 
             {appliedCoupon && (
-              <div style={{ display: 'flex', justifyContent: 'space-between', color: '#34D399', fontWeight: 800 }}>
-                <span>Coupon ({appliedCoupon.code}):</span>
-                <span>-₹{discountAmount} (First Month)</span>
-              </div>
+              <>
+                <div style={{ display: 'flex', justifyContent: 'space-between', color: '#34D399', fontWeight: 800 }}>
+                  <span>Applied Coupon Code:</span>
+                  <span>{appliedCoupon.code}</span>
+                </div>
+                <div style={{ display: 'flex', justifyContent: 'space-between', color: '#34D399', fontWeight: 800 }}>
+                  <span>Discount:</span>
+                  <span>-{discountPercent} (-₹{discountAmount})</span>
+                </div>
+              </>
             )}
 
-            <div style={{ borderTop: '1px solid rgba(255,255,255,0.1)', paddingTop: '8px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', color: '#86EFAC', fontWeight: 800 }}>
+              <span>Charge Today (Trial Period):</span>
+              <span>₹0 (FREE TODAY)</span>
+            </div>
+
+            <div style={{ display: 'flex', justifyContent: 'space-between', color: '#94A3B8' }}>
+              <span>Free Trial Duration:</span>
+              <span>14 Days</span>
+            </div>
+
+            <div style={{ borderTop: '1px solid rgba(255,255,255,0.12)', paddingTop: '8px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
               <span style={{ color: '#F1F5F9', fontWeight: 800 }}>First Paid Cycle Charge:</span>
               <span style={{ fontSize: '1.25rem', fontWeight: 900, color: '#FFD700' }}>
                 ₹{firstPaymentPrice}
               </span>
             </div>
 
-            {appliedCoupon && (
-              <div style={{ fontSize: '0.72rem', color: '#94A3B8', textAlign: 'right' }}>
-                * Future billing cycles return to normal ₹{originalPrice}/month
-              </div>
-            )}
+            <div style={{ display: 'flex', justifyContent: 'space-between', color: '#94A3B8', fontSize: '0.78rem' }}>
+              <span>First Charge Date:</span>
+              <span style={{ color: '#86EFAC', fontWeight: 700 }}>{formatDate(trialEnd)}</span>
+            </div>
+
+            <div style={{ display: 'flex', justifyContent: 'space-between', color: '#94A3B8', fontSize: '0.78rem' }}>
+              <span>Future Monthly Charges:</span>
+              <span style={{ color: '#E2E8F0', fontWeight: 700 }}>₹{originalPrice}/month</span>
+            </div>
           </div>
 
           {/* 🎟️ Promo Code Input inside Billing Page */}
@@ -405,7 +447,7 @@ export default function SubscriptionBillingPage({ restoInfo, token, onProceedToD
           </div>
 
           <p style={{ fontSize: '0.76rem', color: '#94A3B8', margin: '12px 0 0 0', lineHeight: 1.4 }}>
-            🔒 <strong>Zero charge today (₹0 Today)</strong>. Your first recurring charge of ₹{planDetails.price} will occur on {formatDate(trialEnd)} when the trial ends.
+            🔒 <strong>₹0 will be charged today</strong>. Your first paid charge of ₹{firstPaymentPrice} will occur after the 14-day free trial on {formatDate(trialEnd)}. The coupon applies to the first paid cycle only.
           </p>
         </div>
 
@@ -463,7 +505,7 @@ export default function SubscriptionBillingPage({ restoInfo, token, onProceedToD
               fontSize: '0.92rem',
               marginBottom: '20px'
             }}>
-              ✅ UPI Autopay Mandate Active • 14-Day Free Trial Authorized
+              ✅ Cashfree Mandate Authorized • UPI AutoPay Active • 14-Day Free Trial Activated
             </div>
 
             <button
@@ -512,23 +554,25 @@ export default function SubscriptionBillingPage({ restoInfo, token, onProceedToD
               }}
             >
               <ShieldCheck size={22} />
-              <span>{authorizing ? 'Opening Cashfree Mandate...' : '🚀 Start 14-Day Free Trial & Authorize Mandate'}</span>
+              <span>{authorizing ? 'Opening Cashfree Mandate...' : '🚀 Start 14-Day Free Trial & Authorize UPI AutoPay'}</span>
             </button>
 
             <button
-              onClick={onProceedToDashboard}
+              onClick={() => {
+                alert('⚠️ Subscription authorization is incomplete. Please click "Start 14-Day Free Trial & Authorize UPI AutoPay" to activate your subscription and access the Admin Dashboard.');
+              }}
               style={{
                 background: 'transparent',
-                border: '1px solid rgba(255,255,255,0.2)',
-                color: '#CBD5E1',
+                border: '1px solid rgba(255,255,255,0.15)',
+                color: '#94A3B8',
                 padding: '12px',
                 borderRadius: '9999px',
-                fontSize: '0.84rem',
+                fontSize: '0.82rem',
                 fontWeight: 700,
                 cursor: 'pointer'
               }}
             >
-              Continue to Admin Dashboard (Mandate Authorization Pending) →
+              🔒 Admin Dashboard Locked (Subscription Authorization Pending)
             </button>
           </div>
         )}
