@@ -288,8 +288,6 @@ async function createTables() {
     for (const alt of pgAlters) {
       try { await pgPool.query(alt); } catch (e) { console.warn('Postgres alter query notice:', e.message); }
     }
-  }
-    `);
   } else {
     sqliteDb.exec(`
       CREATE TABLE IF NOT EXISTS restaurants (
