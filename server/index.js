@@ -8,6 +8,7 @@ import { startSubscriptionCron } from './subscriptionCron.js';
 import apiRoutes from './routes/api.js';
 import adminRoutes from './routes/admin.js';
 import superadminRoutes from './routes/superadmin.js';
+import paymentRoutes from './routes/payment.js';
 
 dotenv.config();
 
@@ -29,6 +30,8 @@ app.use('/uploads', express.static(uploadsDir));
 // API Routes
 app.use('/api/superadmin', superadminRoutes);
 app.use('/api/admin', adminRoutes);
+app.use('/api/payment', paymentRoutes);
+app.use('/api/webhooks', paymentRoutes);
 app.use('/api', apiRoutes);
 
 // API 404 Handler (Guarantees JSON error instead of index.html fallback)
