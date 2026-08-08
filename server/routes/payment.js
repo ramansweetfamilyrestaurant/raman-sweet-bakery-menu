@@ -51,9 +51,64 @@ router.post('/create-order', async (req, res) => {
 
     const orderId = `KM_SUB_${restaurant_id}_${Date.now()}`;
 
+    // Fetch Super Admin Cashfree API Keys from DB
+    let cashfreeAppId = process.env.CASHFREE_APP_ID;
+    let cashfreeSecret = process.env.CASHFREE_SECRET_KEY;
+
+    try {
+      const sysRows = await query("SELECT key, value FROM system_settings WHERE key IN ('cashfree_app_id', 'cashfree_secret_key')");
+      (sysRows || []).forEach(r => {
+        if (r.key === 'cashfree_app_id' && r.value) cashfreeAppId = r.value.trim();
+        if (r.key === 'cashfree_secret_key' && r.value) cashfreeSecret = r.value.trim();
+      });
+    } catch {}
+
+    let paymentSessionId = null;
+    let isSandbox = !cashfreeAppId || cashfreeAppId.startsWith('TEST');
+
+    if (cashfreeAppId && cashfreeSecret && gateway === 'cashfree') {
+      try {
+        const cashfreeUrl = isSandbox 
+          ? 'https://sandbox.cashfree.com/pg/orders' 
+          : 'https://api.cashfree.com/pg/orders';
+
+        const cfResponse = await fetch(cashfreeUrl, {
+          method: 'POST',
+          headers: {
+            'x-api-version': '2023-08-01',
+            'x-client-id': cashfreeAppId,
+            'x-client-secret': cashfreeSecret,
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({
+            order_id: orderId,
+            order_amount: finalPrice,
+            order_currency: 'INR',
+            customer_details: {
+              customer_id: `CUST_${restaurant_id}`,
+              customer_phone: '9876543210',
+              customer_name: `Restaurant_${restaurant_id}`
+            }
+          })
+        });
+
+        const cfData = await cfResponse.json();
+        if (cfData && cfData.payment_session_id) {
+          paymentSessionId = cfData.payment_session_id;
+          console.log('⚡ Cashfree Order Created Successfully! Session ID:', paymentSessionId);
+        } else {
+          console.warn('Cashfree API Notice:', cfData?.message || JSON.stringify(cfData));
+        }
+      } catch (cfErr) {
+        console.error('Cashfree API call error:', cfErr.message);
+      }
+    }
+
     res.json({
       success: true,
       order_id: orderId,
+      payment_session_id: paymentSessionId,
+      is_sandbox: isSandbox,
       gateway,
       amount: finalPrice,
       currency: 'INR',

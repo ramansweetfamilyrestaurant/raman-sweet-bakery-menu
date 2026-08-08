@@ -62,7 +62,28 @@ export default function PaymentModal({ restoInfo, planTier = 'pro', planPrice = 
         throw new Error(orderData.error || 'Failed to create payment order');
       }
 
-      // In production/demo mode: simulate instant webhook callback for seamless user testing
+      if (orderData.payment_session_id) {
+        // Load Cashfree Checkout SDK dynamically
+        if (!window.Cashfree) {
+          await new Promise((resolve) => {
+            const script = document.createElement('script');
+            script.src = 'https://sdk.cashfree.com/js/v3/cashfree.js';
+            script.onload = resolve;
+            document.body.appendChild(script);
+          });
+        }
+        if (window.Cashfree) {
+          const cashfree = window.Cashfree({ mode: orderData.is_sandbox ? 'sandbox' : 'production' });
+          cashfree.checkout({
+            paymentSessionId: orderData.payment_session_id,
+            redirectTarget: '_modal'
+          });
+          setPaymentLoading(false);
+          return;
+        }
+      }
+
+      // Fallback/Demo mode: simulate instant webhook callback for seamless user testing
       const webhookRes = await fetch(`/api/webhooks/${selectedGateway}`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
