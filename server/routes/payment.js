@@ -292,16 +292,16 @@ const handleSubscriptionReturn = async (req, res) => {
   }
 
   console.log('[Cashfree Return] Processing return for subscription_id:', subscriptionId);
-
   try {
-    // 2. Fetch Cashfree Subscription Status server-side (if API keys present)
-    let isAuthorized = true;
-    let subStatus = 'ACTIVE';
+    // 2. Fetch Cashfree Subscription Status server-side
+    let isAuthorized = false;
+    let subStatus = 'PENDING';
 
     if (subscriptionId) {
       const cfStatus = await fetchCashfreeSubscriptionStatus(subscriptionId);
-      subStatus = cfStatus.subscription_status || 'ACTIVE';
-      isAuthorized = cfStatus.success ? (subStatus === 'ACTIVE' || subStatus === 'INITIALIZED' || subStatus === 'BANK_APPROVAL_PENDING' || Boolean(cfStatus.ok)) : true;
+      subStatus = cfStatus.subscription_status || 'PENDING';
+      // ONLY 'ACTIVE' status means UPI AutoPay Mandate is authorized!
+      isAuthorized = cfStatus.success && (subStatus === 'ACTIVE' || subStatus === 'BANK_APPROVAL_PENDING');
     }
 
     // 3. Resolve target restaurant from database
@@ -318,46 +318,47 @@ const handleSubscriptionReturn = async (req, res) => {
       const recentRows = await query(
         "SELECT id FROM restaurants WHERE mandate_status = 'pending' ORDER BY id DESC LIMIT 1"
       );
-      restoId = recentRows[0]?.id || 1;
+      restoId = recentRows[0]?.id;
     }
 
-    // 4. Fetch target restaurant slug & update active mandate in DB
-    const restoRows = await query('SELECT slug FROM restaurants WHERE id = $1', [restoId]);
-    const restoSlug = restoRows[0]?.slug || 'demo';
+    if (restoId && isAuthorized) {
+      const restoRows = await query('SELECT slug FROM restaurants WHERE id = $1', [restoId]);
+      const restoSlug = restoRows[0]?.slug;
 
-    // Update mandate status to active in database
-    await query(
-      "UPDATE restaurants SET mandate_id = $1, mandate_status = 'active', auto_debit_enabled = 1 WHERE id = $2",
-      [subscriptionId || `sub_${restoId}`, restoId]
-    );
-    await query(
-      "UPDATE subscriptions SET status = 'trialing' WHERE restaurant_id = $1",
-      [restoId]
-    );
-    await logPaymentAudit(restoId, 'CASHFREE_RETURN_VERIFIED', {
-      subscription_id: subscriptionId,
-      status: subStatus,
-      via: req.method === 'POST' ? 'FORM_POST' : 'GET'
-    });
-    console.log('[Cashfree Return] ✅ Mandate authorized & activated for restaurant', restoId, 'slug:', restoSlug);
+      // Mandate Authorized! Update active status in DB
+      await query(
+        "UPDATE restaurants SET mandate_id = $1, mandate_status = 'active', auto_debit_enabled = 1 WHERE id = $2",
+        [subscriptionId || `sub_${restoId}`, restoId]
+      );
+      await query(
+        "UPDATE subscriptions SET status = 'trialing' WHERE restaurant_id = $1",
+        [restoId]
+      );
+      await logPaymentAudit(restoId, 'CASHFREE_RETURN_VERIFIED', {
+        subscription_id: subscriptionId,
+        status: subStatus,
+        via: req.method === 'POST' ? 'FORM_POST' : 'GET'
+      });
+      console.log('[Cashfree Return] ✅ Mandate authorized & activated for restaurant', restoId, 'slug:', restoSlug);
 
-    // 5. DIRECT REDIRECT: Send browser STRAIGHT into Admin Dashboard!
-    if (restoSlug) {
-      return res.redirect(`${appBase}/${restoSlug}/admin`);
+      if (restoSlug) {
+        return res.redirect(`${appBase}/${restoSlug}/admin`);
+      }
+      return res.redirect(`${baseRedirectUrl}?verified=true&status=ACTIVE`);
     }
 
-    return res.redirect(`${baseRedirectUrl}?verified=true&status=ACTIVE`);
+    // Mandate Authorization Failed, Pending, or Cancelled!
+    console.warn('[Cashfree Return] Mandate NOT authorized. Status:', subStatus, 'restoId:', restoId);
+    if (restoId) {
+      await query(
+        "UPDATE restaurants SET mandate_status = 'pending', auto_debit_enabled = 0 WHERE id = $1 AND (mandate_status IS NULL OR mandate_status != 'active')",
+        [restoId]
+      );
+    }
+    return res.redirect(`${baseRedirectUrl}?verified=false&status=${encodeURIComponent(subStatus)}`);
   } catch (err) {
     console.error('[Cashfree Return] Error during return processing:', err.message);
-    // Even if error occurs in status fetch, fallback redirect to Admin Dashboard using recent restaurant slug!
-    try {
-      const recentResto = await query("SELECT slug FROM restaurants ORDER BY id DESC LIMIT 1");
-      const lastSlug = recentResto[0]?.slug;
-      if (lastSlug) {
-        return res.redirect(`${appBase}/${lastSlug}/admin`);
-      }
-    } catch (e) {}
-    return res.redirect(`${baseRedirectUrl}?verified=true&status=ACTIVE`);
+    return res.redirect(`${baseRedirectUrl}?verified=false&status=SERVER_ERROR`);
   }
 };
 
