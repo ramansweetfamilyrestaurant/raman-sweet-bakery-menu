@@ -5115,7 +5115,7 @@ export default function AdminDashboard({ token, username, onLogout, onReturnToMe
           planPrice={restaurantInfo?.plan_tier === 'enterprise' ? 1999 : restaurantInfo?.plan_tier === 'basic' ? 499 : 999}
           onClose={() => setShowPaymentModal(false)}
           onSuccess={() => {
-            setToastMessage('🎉 Payment Received! Subscription Active for 30 Days');
+            setToastMessage('🎉 Cashfree Subscription Authorized! Mandate registered for automatic billing after trial.');
             setTimeout(() => setToastMessage(''), 4000);
             fetchRestaurantInfo().then(data => {
               if (data) setRestaurantInfo(data);
