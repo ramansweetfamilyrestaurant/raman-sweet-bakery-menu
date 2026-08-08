@@ -14,6 +14,7 @@ export default function RegisterPage({ onRegisterSuccess }) {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [pendingApprovalData, setPendingApprovalData] = useState(null);
+  const [registeredData, setRegisteredData] = useState(null);
 
   // Compute live URL slug preview
   const liveSlug = formData.name
@@ -87,13 +88,8 @@ export default function RegisterPage({ onRegisterSuccess }) {
       localStorage.setItem('raman_admin_slug', data.slug);
       localStorage.setItem('adminToken', data.token);
 
-      if (onRegisterSuccess) {
-        onRegisterSuccess(data);
-      } else {
-        // Redirect to new tenant admin dashboard
-        window.history.pushState({}, '', `/${data.slug}/admin`);
-        window.dispatchEvent(new PopStateEvent('popstate'));
-      }
+      // Trigger interactive permission onboarding screen (solves browser user-gesture security requirement)
+      setRegisteredData(data);
     } catch (err) {
       console.error('Registration error:', err);
       setError(err.message);
@@ -101,6 +97,111 @@ export default function RegisterPage({ onRegisterSuccess }) {
       setLoading(false);
     }
   };
+
+  if (registeredData) {
+    return (
+      <div style={{
+        minHeight: '100vh', background: 'linear-gradient(135deg, #0A2315 0%, #164E2A 100%)',
+        color: '#FFFFFF', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '24px'
+      }}>
+        <div style={{
+          maxWidth: '460px', width: '100%', background: '#111827',
+          borderRadius: '24px', padding: '32px 24px', border: '2px solid #38BDF8',
+          boxShadow: '0 25px 50px rgba(0,0,0,0.6)', textAlign: 'center'
+        }}>
+          <div style={{
+            width: '70px', height: '70px', borderRadius: '50%',
+            background: 'rgba(56,189,248,0.15)', color: '#38BDF8',
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            margin: '0 auto 16px', border: '2px solid #38BDF8'
+          }}>
+            <Sparkles size={38} />
+          </div>
+
+          <h2 style={{ fontSize: '1.5rem', fontWeight: 900, color: '#FFFFFF', margin: '0 0 8px 0' }}>
+            🎉 Registration Complete!
+          </h2>
+          <p style={{ fontSize: '0.88rem', color: '#9CA3AF', margin: '0 0 24px 0', lineHeight: 1.5 }}>
+            Welcome <strong>{registeredData.name || formData.name}</strong>! Automatic setup complete ho gaya hai. Ab 1-tap me mobile permissions & location enable karein:
+          </p>
+
+          <div style={{
+            background: '#1F2937', borderRadius: '16px', padding: '16px',
+            textAlign: 'left', marginBottom: '24px', border: '1px solid #374151'
+          }}>
+            <div style={{ fontSize: '0.84rem', fontWeight: 800, color: '#38BDF8', marginBottom: '12px' }}>
+              ⚡ Tap button below to trigger browser permissions:
+            </div>
+            <div style={{ fontSize: '0.82rem', color: '#E5E7EB', display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '10px' }}>
+              <span style={{ fontSize: '1.2rem' }}>📍</span> <strong>GPS Location:</strong> Auto-saves exact restaurant location
+            </div>
+            <div style={{ fontSize: '0.82rem', color: '#E5E7EB', display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '10px' }}>
+              <span style={{ fontSize: '1.2rem' }}>🔔</span> <strong>Order Push Alerts:</strong> Notifies on incoming table orders
+            </div>
+            <div style={{ fontSize: '0.82rem', color: '#E5E7EB', display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <span style={{ fontSize: '1.2rem' }}>🔊</span> <strong>Kitchen Siren:</strong> Unlocks loud emergency alarm sound
+            </div>
+          </div>
+
+          <button
+            onClick={async () => {
+              // Direct user tap gesture -> Browser will pop up native Location & Notification permissions!
+              if ('Notification' in window) {
+                try { await Notification.requestPermission(); } catch (e) {}
+              }
+
+              const proceed = () => {
+                if (onRegisterSuccess) {
+                  onRegisterSuccess(registeredData);
+                } else {
+                  window.history.pushState({}, '', `/${registeredData.slug}/admin`);
+                  window.dispatchEvent(new PopStateEvent('popstate'));
+                }
+              };
+
+              if ('geolocation' in navigator) {
+                navigator.geolocation.getCurrentPosition(
+                  async (pos) => {
+                    const lat = pos.coords.latitude;
+                    const lng = pos.coords.longitude;
+                    console.log('📍 GPS Location captured on onboarding:', lat, lng);
+                    try {
+                      await fetch('/api/admin/settings', {
+                        method: 'PUT',
+                        headers: {
+                          'Content-Type': 'application/json',
+                          'Authorization': `Bearer ${registeredData.token}`
+                        },
+                        body: JSON.stringify({ latitude: lat, longitude: lng })
+                      });
+                      console.log('✅ GPS location auto-saved to DB!');
+                    } catch (e) {}
+                    proceed();
+                  },
+                  (err) => {
+                    console.warn('GPS location skipped:', err);
+                    proceed();
+                  },
+                  { enableHighAccuracy: true, timeout: 8000 }
+                );
+              } else {
+                proceed();
+              }
+            }}
+            style={{
+              width: '100%', padding: '15px', borderRadius: '9999px',
+              border: 'none', background: 'linear-gradient(135deg, #0EA5E9 0%, #0284C7 100%)',
+              color: '#FFFFFF', fontWeight: 900, fontSize: '0.95rem',
+              cursor: 'pointer', boxShadow: '0 4px 16px rgba(14,165,233,0.4)',
+              display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px'
+            }}
+          >
+            ⚡ Allow Location & Enter Dashboard <ArrowRight size={18} />
+          </button>
+        </div>
+      </div>
+    );
+  }
 
   if (pendingApprovalData) {
     return (
