@@ -263,13 +263,30 @@ router.put('/restaurants/:id', authenticateToken, requireSuperAdmin, async (req,
   }
 });
 
-// DELETE Restaurant Tenant
+// DELETE Restaurant Tenant (Full Automatic Cleanup & URL Purge)
 router.delete('/restaurants/:id', authenticateToken, requireSuperAdmin, async (req, res) => {
   try {
     const { id } = req.params;
+    if (String(id) === '1') {
+      return res.status(400).json({ error: 'Primary default restaurant cannot be deleted!' });
+    }
+
+    const targetResto = await query('SELECT slug, name FROM restaurants WHERE id = $1', [id]);
+    const deletedSlug = targetResto[0]?.slug || '';
+    const deletedName = targetResto[0]?.name || '';
+
+    // Cascade delete all restaurant child data
+    await query('DELETE FROM dishes WHERE restaurant_id = $1', [id]);
+    await query('DELETE FROM categories WHERE restaurant_id = $1', [id]);
+    await query('DELETE FROM combos WHERE restaurant_id = $1', [id]);
+    await query('DELETE FROM orders WHERE restaurant_id = $1', [id]);
+    await query('DELETE FROM service_requests WHERE restaurant_id = $1', [id]);
+
+    // Permanently delete restaurant tenant & purge its URL slug
     await query('DELETE FROM restaurants WHERE id = $1', [id]);
-    await logAudit(id, 'superadmin', 'Delete Tenant', `Deleted tenant ID ${id}`);
-    res.json({ success: true });
+
+    await logAudit(id, 'superadmin', 'Delete Tenant', `Deleted tenant "${deletedName}" (slug: ${deletedSlug})`);
+    res.json({ success: true, message: `Tenant "${deletedName}" (${deletedSlug}) deleted completely.` });
   } catch (err) {
     console.error('Delete restaurant error:', err);
     res.status(500).json({ error: 'Failed to delete restaurant' });
