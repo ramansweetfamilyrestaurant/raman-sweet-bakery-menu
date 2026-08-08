@@ -61,7 +61,7 @@ export async function checkExpiredSubscriptions() {
     const expiredRestos = await query(`
       SELECT r.id, r.name, r.slug, r.plan_expires_at, r.trial_ends_at
       FROM restaurants r
-      WHERE (r.active = 1 OR r.active = true)
+      WHERE (r.active IS TRUE OR r.active = TRUE)
         AND (
           (r.plan_expires_at IS NOT NULL AND r.plan_expires_at < $1)
           OR (r.trial_ends_at IS NOT NULL AND r.trial_ends_at < $1)
