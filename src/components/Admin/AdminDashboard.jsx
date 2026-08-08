@@ -2041,30 +2041,10 @@ export default function AdminDashboard({ token, username, onLogout, onReturnToMe
                   <Sparkles size={20} color="#D4AF37" /> Live Dine-In Kitchen Orders (KOT)
                 </h2>
                 <span style={{ fontSize: '0.78rem', color: 'var(--text-muted)' }}>
-                  Auto-refreshes every 5 seconds • Real-time table orders from customers
+                  ⚡ Auto-refreshes live every 5 seconds • Real-time table orders from customers
                 </span>
               </div>
-              <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
-                <button
-                  onClick={loadOrders}
-                  style={{
-                    background: 'var(--gold-primary)',
-                    color: '#0A2315',
-                    border: 'none',
-                    padding: '8px 14px',
-                    borderRadius: 'var(--radius-pill)',
-                    fontWeight: 900,
-                    fontSize: '0.78rem',
-                    cursor: 'pointer',
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: '4px'
-                  }}
-                >
-                  <RefreshCw size={12} /> Refresh Now
-                </button>
-              </div>
-              </div>
+            </div>
 
               {/* KOT Status Filter Pills */}
               <div style={{ display: 'flex', gap: '6px', overflowX: 'auto', paddingBottom: '4px', scrollbarWidth: 'none' }}>
