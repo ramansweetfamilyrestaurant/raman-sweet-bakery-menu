@@ -152,12 +152,14 @@ export async function createCashfreeSubscriptionSession({
 
   const subUrl = `${config.baseUrl}/subscriptions`;
 
-  // CRITICAL: return_url must be at ROOT LEVEL, not inside subscription_meta
-  // Verified by live Sandbox audit — subscription_meta.return_url is ignored by Cashfree
+  // CRITICAL: return_url passed at root level, subscription_meta, and authorization_details for universal SDK compatibility
   const subPayload = {
     subscription_id: subscriptionId,
     subscription_first_charge_time: firstChargeTime,
     return_url: returnUrl || null,
+    subscription_meta: {
+      return_url: returnUrl || null
+    },
     customer_details: {
       customer_id: customerId,
       customer_name: cleanName,
@@ -177,6 +179,7 @@ export async function createCashfreeSubscriptionSession({
     authorization_details: {
       authorization_amount: 1,
       authorization_amount_refund: true,
+      return_url: returnUrl || null,
       payment_methods: ['upi', 'enach', 'card']
     }
   };

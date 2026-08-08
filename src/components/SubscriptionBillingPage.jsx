@@ -80,6 +80,40 @@ export default function SubscriptionBillingPage({ restoInfo, token, onProceedToD
     }
   }, [currentResto, restoInfo, planKey]);
 
+  // 3. Active 3-second Subscription Status Polling: Detects live Cashfree payment/mandate authorization automatically
+  useEffect(() => {
+    if (mandateActive) {
+      const timer = setTimeout(() => {
+        if (onProceedToDashboard) onProceedToDashboard();
+      }, 1000);
+      return () => clearTimeout(timer);
+    }
+
+    const authToken = token || localStorage.getItem('raman_admin_token') || localStorage.getItem('adminToken');
+    if (!authToken) return;
+
+    const pollInterval = setInterval(async () => {
+      try {
+        const res = await fetch('/api/admin/subscription-status', {
+          headers: { Authorization: `Bearer ${authToken}` }
+        });
+        if (res.ok) {
+          const data = await res.json();
+          if (data && data.mandate_status === 'active') {
+            setMandateActive(true);
+            setStatusMsg('✅ Cashfree Mandate Authorized Successfully! Redirecting to Admin Dashboard...');
+            clearInterval(pollInterval);
+            if (onProceedToDashboard) onProceedToDashboard();
+          }
+        }
+      } catch (e) {
+        console.warn('Subscription status poll notice:', e);
+      }
+    }, 3000);
+
+    return () => clearInterval(pollInterval);
+  }, [mandateActive, token, onProceedToDashboard]);
+
   const validateCoupon = async (codeToValidate, tierToValidate) => {
     if (!codeToValidate || !codeToValidate.trim()) return;
     setCouponLoading(true);
