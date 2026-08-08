@@ -499,13 +499,13 @@ export default function App() {
         }
       } else if (isBilling) {
         if (adminToken) {
+          // Set view to 'billing' synchronously FIRST to prevent dashboard flicker during async check
+          setView('billing');
           const currentSlug = localStorage.getItem('raman_admin_slug');
           const mandateActive = await checkMandateGating(adminToken, currentSlug);
           if (mandateActive) {
             window.history.replaceState({}, '', currentSlug ? `/${currentSlug}/admin` : '/admin');
             setView('admin-dashboard');
-          } else {
-            setView('billing');
           }
         } else {
           window.history.replaceState({}, '', '/register');
@@ -517,14 +517,14 @@ export default function App() {
         const currentSlug = getSlugFromUrl() || (info && info.slug);
         const storedSlug = localStorage.getItem('raman_admin_slug');
         if (adminToken && storedSlug && currentSlug && storedSlug === currentSlug) {
-          // Gate Admin Dashboard access: Verify mandate status server-side
+          // Set view to 'billing' synchronously FIRST to prevent flashing admin dashboard before mandate check
+          setView('billing');
           const mandateActive = await checkMandateGating(adminToken, currentSlug);
           if (mandateActive) {
             setView('admin-dashboard');
           } else {
             // Mandate pending or incomplete → Force Billing page
             window.history.replaceState({}, '', '/billing');
-            setView('billing');
           }
         } else {
           if (storedSlug && currentSlug && storedSlug !== currentSlug) {
