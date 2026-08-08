@@ -67,9 +67,9 @@ export default function SubscriptionBillingPage({ restoInfo, token, onProceedToD
       setPlanDetails({ name: 'Pro Luxury Plan', price: 999, badge: '👑 PRO' });
     }
 
-    // Check saved coupon code from registration or previous attempt
-    const savedCoupon = localStorage.getItem('applied_coupon_code');
-    if (savedCoupon && !appliedCoupon) {
+    // Auto-validate default launch promo LAUNCH50 or saved coupon code
+    const savedCoupon = localStorage.getItem('applied_coupon_code') || 'LAUNCH50';
+    if (!appliedCoupon) {
       setCouponInput(savedCoupon);
       validateCoupon(savedCoupon, tier);
     }

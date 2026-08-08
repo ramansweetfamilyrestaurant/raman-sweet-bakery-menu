@@ -142,6 +142,7 @@ export default function RegisterPage({ onRegisterSuccess }) {
       localStorage.setItem('adminToken', data.token);
       localStorage.setItem('selected_plan_tier', formData.plan_tier || data.plan_tier || 'pro');
       sessionStorage.setItem('selected_plan_tier', formData.plan_tier || data.plan_tier || 'pro');
+      localStorage.setItem('applied_coupon_code', formData.coupon_code || 'LAUNCH50');
 
       if (onRegisterSuccess) {
         onRegisterSuccess(data);
