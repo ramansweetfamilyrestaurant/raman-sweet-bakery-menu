@@ -41,23 +41,26 @@ export default class ErrorBoundary extends React.Component {
           )}
           <button
             onClick={() => {
-              localStorage.removeItem('raman_admin_token');
-              localStorage.removeItem('raman_admin_user');
-              window.location.href = '/';
+              if ('caches' in window) {
+                caches.keys().then((names) => {
+                  names.forEach((name) => caches.delete(name));
+                });
+              }
+              window.location.reload(true);
             }}
             style={{
               background: 'linear-gradient(135deg, #DFBA67 0%, #C5A059 100%)',
               color: '#0A2315',
-              padding: '12px 28px',
+              padding: '12px 24px',
               borderRadius: '9999px',
-              fontWeight: 800,
+              border: 'none',
+              fontWeight: 900,
               fontSize: '0.9rem',
-              border: '1.5px solid #FFFFFF',
-              boxShadow: '0 4px 15px rgba(212, 175, 55, 0.4)',
-              cursor: 'pointer'
+              cursor: 'pointer',
+              boxShadow: '0 4px 14px rgba(223,186,103,0.4)'
             }}
           >
-            🔄 Refresh Digital Menu
+            🔄 Refresh & Load Updated Version
           </button>
         </div>
       );
