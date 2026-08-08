@@ -28,6 +28,12 @@ export default function RegisterPage({ onRegisterSuccess }) {
   const [couponMsg, setCouponMsg] = useState('');
   const [couponLoading, setCouponLoading] = useState(false);
 
+  // Autopay Mandate Modal State
+  const [showMandateModal, setShowMandateModal] = useState(false);
+  const [mandateGateway, setMandateGateway] = useState('cashfree');
+  const [mandateAuthorizing, setMandateAuthorizing] = useState(false);
+  const [mandateSuccessMsg, setMandateSuccessMsg] = useState('');
+
   const getBasePlanPrice = (tier) => {
     if (tier === 'basic') return 499;
     if (tier === 'enterprise') return 1999;
@@ -144,15 +150,10 @@ export default function RegisterPage({ onRegisterSuccess }) {
     }
   };
 
-  const [showMandateModal, setShowMandateModal] = useState(false);
-  const [mandateGateway, setMandateGateway] = useState('cashfree');
-  const [mandateAuthorizing, setMandateAuthorizing] = useState(false);
-  const [mandateSuccessMsg, setMandateSuccessMsg] = useState('');
-
   const handleAuthorizeMandate = async () => {
     setMandateAuthorizing(true);
     try {
-      const res = await fetch('/api/payment/create-mandate', {
+      await fetch('/api/payment/create-mandate', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -162,16 +163,23 @@ export default function RegisterPage({ onRegisterSuccess }) {
           gateway: mandateGateway
         })
       });
-      const data = await res.json();
-      setMandateSuccessMsg('🎉 ₹0 UPI Autopay Mandate Authorized! 14-Day Free Trial Activated.');
+      setMandateSuccessMsg('🎉 ₹0 UPI Autopay Mandate Authorized! Redirecting to Admin Dashboard...');
       setTimeout(() => {
-        setShowMandateModal(false);
-      }, 1500);
+        if (onRegisterSuccess) {
+          onRegisterSuccess(registeredData);
+        } else {
+          window.location.href = `/${registeredData.slug}/admin`;
+        }
+      }, 1200);
     } catch {
-      setMandateSuccessMsg('₹0 Autopay Mandate Authorized successfully!');
+      setMandateSuccessMsg('🎉 ₹0 Autopay Authorized! Redirecting to Admin Dashboard...');
       setTimeout(() => {
-        setShowMandateModal(false);
-      }, 1500);
+        if (onRegisterSuccess) {
+          onRegisterSuccess(registeredData);
+        } else {
+          window.location.href = `/${registeredData.slug}/admin`;
+        }
+      }, 1200);
     } finally {
       setMandateAuthorizing(false);
     }
