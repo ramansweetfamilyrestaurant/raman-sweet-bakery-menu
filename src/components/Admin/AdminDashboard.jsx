@@ -37,9 +37,50 @@ export default function AdminDashboard({ token, username, onLogout, onReturnToMe
   const [permissionsGranted, setPermissionsGranted] = useState(false);
 
   useEffect(() => {
-    if ('Notification' in window && Notification.permission === 'granted') {
-      setPermissionsGranted(true);
+    // 🔔 1. Auto-Prompt Browser Push Notification Permission
+    if ('Notification' in window) {
+      if (Notification.permission === 'granted') {
+        setPermissionsGranted(true);
+      } else if (Notification.permission === 'default') {
+        Notification.requestPermission().then(permission => {
+          if (permission === 'granted') {
+            setPermissionsGranted(true);
+          }
+        }).catch(e => console.warn('Auto Notification permission error:', e));
+      }
     }
+
+    // 📍 2. Auto-Prompt GPS Geolocation Permission
+    if ('geolocation' in navigator) {
+      navigator.geolocation.getCurrentPosition(
+        (pos) => console.log('Auto GPS location granted:', pos.coords.latitude, pos.coords.longitude),
+        (err) => console.warn('Auto GPS location skipped:', err),
+        { timeout: 5000 }
+      );
+    }
+
+    // 🔊 3. Unlock Web Audio Context on first tap/click anywhere
+    const unlockAudioOnTouch = () => {
+      try {
+        const AudioCtx = window.AudioContext || window.webkitAudioContext;
+        if (AudioCtx) {
+          const ctx = new AudioCtx();
+          if (ctx.state === 'suspended') {
+            ctx.resume();
+          }
+        }
+      } catch (e) {}
+      window.removeEventListener('click', unlockAudioOnTouch);
+      window.removeEventListener('touchstart', unlockAudioOnTouch);
+    };
+
+    window.addEventListener('click', unlockAudioOnTouch);
+    window.addEventListener('touchstart', unlockAudioOnTouch);
+
+    return () => {
+      window.removeEventListener('click', unlockAudioOnTouch);
+      window.removeEventListener('touchstart', unlockAudioOnTouch);
+    };
   }, []);
 
   const requestDevicePermissions = async () => {
