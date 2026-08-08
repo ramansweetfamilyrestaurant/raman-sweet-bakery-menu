@@ -631,14 +631,12 @@ router.get('/settings', authenticateToken, requireSuperAdmin, async (req, res) =
 // POST Update System Settings for Super Admin
 router.post('/settings', authenticateToken, requireSuperAdmin, async (req, res) => {
   try {
-    const { support_whatsapp, cashfree_app_id, cashfree_secret_key, razorpay_key_id, razorpay_key_secret } = req.body;
+    const { support_whatsapp, cashfree_app_id, cashfree_secret_key } = req.body;
     
     const settingsToSave = {
       support_whatsapp: support_whatsapp ? support_whatsapp.replace(/[^0-9]/g, '') : undefined,
       cashfree_app_id: cashfree_app_id !== undefined ? String(cashfree_app_id).trim() : undefined,
-      cashfree_secret_key: cashfree_secret_key !== undefined ? String(cashfree_secret_key).trim() : undefined,
-      razorpay_key_id: razorpay_key_id !== undefined ? String(razorpay_key_id).trim() : undefined,
-      razorpay_key_secret: razorpay_key_secret !== undefined ? String(razorpay_key_secret).trim() : undefined
+      cashfree_secret_key: cashfree_secret_key !== undefined ? String(cashfree_secret_key).trim() : undefined
     };
 
     for (const [k, v] of Object.entries(settingsToSave)) {

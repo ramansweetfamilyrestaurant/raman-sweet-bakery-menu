@@ -219,22 +219,10 @@ export default function RegisterPage({ onRegisterSuccess }) {
                   background: mandateGateway === 'cashfree' ? '#ECFDF5' : '#F8FAFC', cursor: 'pointer'
                 }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                    <input type="radio" name="mg" checked={mandateGateway === 'cashfree'} onChange={() => setMandateGateway('cashfree')} accentColor="#059669" />
-                    <span style={{ fontSize: '0.84rem', fontWeight: 800, color: '#0F172A' }}>🚀 Cashfree UPI Autopay (GPay, PhonePe)</span>
+                    <input type="radio" name="mg" checked={true} readOnly accentColor="#059669" />
+                    <span style={{ fontSize: '0.84rem', fontWeight: 800, color: '#0F172A' }}>🚀 Cashfree UPI Autopay (GPay, PhonePe, Paytm)</span>
                   </div>
-                  <span style={{ fontSize: '0.7rem', fontWeight: 800, color: '#059669' }}>PRIMARY</span>
-                </label>
-
-                <label style={{
-                  display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-                  padding: '10px 14px', borderRadius: '12px', border: mandateGateway === 'razorpay' ? '2px solid #059669' : '1px solid #CBD5E1',
-                  background: mandateGateway === 'razorpay' ? '#ECFDF5' : '#F8FAFC', cursor: 'pointer'
-                }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                    <input type="radio" name="mg" checked={mandateGateway === 'razorpay'} onChange={() => setMandateGateway('razorpay')} accentColor="#059669" />
-                    <span style={{ fontSize: '0.84rem', fontWeight: 800, color: '#0F172A' }}>💳 Razorpay Mandate (UPI, Cards)</span>
-                  </div>
-                  <span style={{ fontSize: '0.7rem', fontWeight: 800, color: '#B45309' }}>BACKUP</span>
+                  <span style={{ fontSize: '0.7rem', fontWeight: 800, color: '#059669' }}>OFFICIAL GATEWAY</span>
                 </label>
               </div>
             </div>

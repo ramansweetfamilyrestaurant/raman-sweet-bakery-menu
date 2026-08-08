@@ -68,8 +68,6 @@ export default function SuperAdminDashboard({ token, username, onLogout, onRetur
   const [paymentKeys, setPaymentKeys] = useState({
     cashfree_app_id: '',
     cashfree_secret_key: '',
-    razorpay_key_id: '',
-    razorpay_key_secret: '',
     support_whatsapp: '919876543210'
   });
   const [keysSaving, setKeysSaving] = useState(false);
@@ -86,8 +84,6 @@ export default function SuperAdminDashboard({ token, username, onLogout, onRetur
           ...prev,
           cashfree_app_id: data.cashfree_app_id || '',
           cashfree_secret_key: data.cashfree_secret_key || '',
-          razorpay_key_id: data.razorpay_key_id || '',
-          razorpay_key_secret: data.razorpay_key_secret || '',
           support_whatsapp: data.support_whatsapp || '919876543210'
         }));
       }
@@ -2756,25 +2752,6 @@ export default function SuperAdminDashboard({ token, username, onLogout, onRetur
                     placeholder="Cashfree Secret Key"
                     value={paymentKeys.cashfree_secret_key}
                     onChange={(e) => setPaymentKeys({ ...paymentKeys, cashfree_secret_key: e.target.value })}
-                    style={{ width: '100%', padding: '6px 8px', borderRadius: '6px', border: '1px solid #E2E8F0', fontSize: '0.78rem' }}
-                  />
-                </div>
-
-                {/* Razorpay */}
-                <div style={{ background: '#FFFFFF', padding: '10px', borderRadius: '8px', border: '1px solid #CBD5E1' }}>
-                  <span style={{ fontWeight: 800, color: '#B45309', display: 'block', marginBottom: '4px' }}>💳 RAZORPAY GATEWAY (BACKUP):</span>
-                  <input
-                    type="text"
-                    placeholder="Razorpay Key ID (e.g. rzp_live_xxxxxxxx)"
-                    value={paymentKeys.razorpay_key_id}
-                    onChange={(e) => setPaymentKeys({ ...paymentKeys, razorpay_key_id: e.target.value })}
-                    style={{ width: '100%', padding: '6px 8px', borderRadius: '6px', border: '1px solid #E2E8F0', marginBottom: '6px', fontSize: '0.78rem' }}
-                  />
-                  <input
-                    type="password"
-                    placeholder="Razorpay Key Secret"
-                    value={paymentKeys.razorpay_key_secret}
-                    onChange={(e) => setPaymentKeys({ ...paymentKeys, razorpay_key_secret: e.target.value })}
                     style={{ width: '100%', padding: '6px 8px', borderRadius: '6px', border: '1px solid #E2E8F0', fontSize: '0.78rem' }}
                   />
                 </div>
