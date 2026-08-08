@@ -1081,8 +1081,9 @@ export default function SuperAdminDashboard({ token, username, onLogout, onRetur
                           boxShadow: '0 4px 14px rgba(34,197,94,0.4)',
                           marginBottom: '6px'
                         }}
+                        title="Click to instantly Reactivate / Unsuspend this restaurant"
                       >
-                        <CheckCircle size={16} /> ✅ Approve & Activate 14-Day Trial
+                        <CheckCircle size={16} /> 🟢 Unsuspend & Activate Restaurant
                       </button>
                     ) : null}
 
