@@ -135,6 +135,7 @@ export default function RegisterPage({ onRegisterSuccess }) {
       }
 
       // Store Auth Tokens & Selected Plan in localStorage for instant billing onboarding
+      localStorage.removeItem('pending_subscription_id');
       localStorage.setItem('raman_admin_token', data.token);
       localStorage.setItem('raman_admin_user', data.username || formData.owner_username);
       localStorage.setItem('raman_admin_slug', data.slug);

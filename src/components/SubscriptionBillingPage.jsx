@@ -134,17 +134,17 @@ export default function SubscriptionBillingPage({ restoInfo, token, onProceedToD
     }
   }, []);
 
-  // 2. Check return URL parameters (from backend subscription-return redirect) or pending subscription on load
+  // 2. Check return URL parameters (from backend subscription-return redirect) on load
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
     const verifiedParam = params.get('verified');
     const statusParam = params.get('status');
-    const subIdParam = params.get('subscription_id') || params.get('sub_id') || localStorage.getItem('pending_subscription_id');
+    const subIdParam = params.get('subscription_id') || params.get('sub_id');
 
     if (verifiedParam === 'true') {
       setMandateActive(true);
       setStatusMsg('✅ Cashfree Mandate Authorized Successfully! 14-Day Free Trial is Active.');
-      if (subIdParam) localStorage.removeItem('pending_subscription_id');
+      localStorage.removeItem('pending_subscription_id');
     } else if (verifiedParam === 'false') {
       setErrorMsg(`⚠️ Mandate authorization pending or not completed. Status: ${statusParam || 'PENDING'}`);
     } else if (subIdParam) {
@@ -228,11 +228,16 @@ export default function SubscriptionBillingPage({ restoInfo, token, onProceedToD
       const authToken = token || localStorage.getItem('raman_admin_token') || localStorage.getItem('adminToken');
       const res = await verifyCashfreeSubscription(subId, authToken);
 
-      if (res.authorized || res.subscription_status === 'ACTIVE' || res.subscription_status === 'INITIALIZED') {
+      if (res.authorized === true || res.subscription_status === 'ACTIVE') {
         setMandateActive(true);
         setStatusMsg('✅ Cashfree Mandate Authorized Successfully! 14-Day Free Trial is Active.');
       } else {
-        setStatusMsg(`⏳ Subscription Status: ${res.subscription_status || 'PENDING'}`);
+        setMandateActive(false);
+        if (res.subscription_status === 'INITIALIZED') {
+          setStatusMsg('⏳ Subscription mandate created. Please complete UPI AutoPay authorization to activate.');
+        } else {
+          setStatusMsg(`⏳ Subscription Status: ${res.subscription_status || 'PENDING'}`);
+        }
       }
     } catch (err) {
       console.warn('Verification error:', err);
@@ -363,7 +368,7 @@ export default function SubscriptionBillingPage({ restoInfo, token, onProceedToD
               <span style={{ color: '#E2E8F0', fontWeight: 700 }}>₹{originalPrice}/month</span>
             </div>
 
-            {appliedCoupon && (
+            {appliedCoupon && Number(appliedCoupon.discount_amount) > 0 && (
               <>
                 <div style={{ display: 'flex', justifyContent: 'space-between', color: '#34D399', fontWeight: 800 }}>
                   <span>Applied Coupon Code:</span>
