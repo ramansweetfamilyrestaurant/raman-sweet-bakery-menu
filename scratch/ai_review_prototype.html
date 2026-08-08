@@ -1,0 +1,438 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>KhanaMaster AI Google Review Flow - Interactive Prototype</title>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;600;700;800;900&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --emerald-dark: #0A2315;
+      --emerald-medium: #143A24;
+      --gold-primary: #DFBA67;
+      --gold-bright: #FFD700;
+      --bg-light: #F8FAFC;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      font-family: 'Plus Jakarta Sans', -apple-system, sans-serif;
+    }
+
+    body {
+      background: #0B131F;
+      color: #1E293B;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      min-height: 100vh;
+      padding: 16px;
+    }
+
+    /* Mobile Container Mockup */
+    .mobile-frame {
+      width: 100%;
+      max-width: 420px;
+      background: var(--bg-light);
+      border-radius: 28px;
+      overflow: hidden;
+      box-shadow: 0 25px 60px rgba(0, 0, 0, 0.6);
+      border: 3px solid #1E293B;
+      position: relative;
+    }
+
+    /* Top Restaurant Header */
+    .header {
+      background: linear-gradient(135deg, var(--emerald-dark) 0%, var(--emerald-medium) 100%);
+      color: #FFFFFF;
+      padding: 24px 20px 20px;
+      text-align: center;
+      border-bottom: 3px solid var(--gold-primary);
+      position: relative;
+    }
+
+    .header-logo {
+      width: 56px;
+      height: 56px;
+      border-radius: 50%;
+      border: 2px solid var(--gold-primary);
+      background: #FFFFFF;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 1.8rem;
+      margin: 0 auto 10px;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+    }
+
+    .restaurant-name {
+      font-size: 1.25rem;
+      font-weight: 900;
+      color: var(--gold-primary);
+    }
+
+    .sub-title {
+      font-size: 0.8rem;
+      color: #CBD5E1;
+      margin-top: 2px;
+    }
+
+    /* Content Area */
+    .content {
+      padding: 20px;
+    }
+
+    .rating-card {
+      background: #FFFFFF;
+      border-radius: 20px;
+      padding: 20px;
+      text-align: center;
+      box-shadow: 0 4px 20px rgba(0, 0, 0, 0.05);
+      border: 1px solid #E2E8F0;
+      margin-bottom: 16px;
+    }
+
+    .question-title {
+      font-size: 0.98rem;
+      font-weight: 800;
+      color: #0F172A;
+      margin-bottom: 12px;
+    }
+
+    /* Star Rating Selector */
+    .stars-container {
+      display: flex;
+      justify-content: center;
+      gap: 10px;
+      margin-bottom: 10px;
+    }
+
+    .star-btn {
+      background: none;
+      border: none;
+      font-size: 2.2rem;
+      cursor: pointer;
+      filter: grayscale(100%);
+      opacity: 0.3;
+      transition: all 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+    }
+
+    .star-btn.active {
+      filter: grayscale(0%);
+      opacity: 1;
+      transform: scale(1.2);
+    }
+
+    .rating-label {
+      font-size: 0.84rem;
+      font-weight: 800;
+      color: #059669;
+      height: 20px;
+    }
+
+    /* Quick Feature Chips */
+    .chips-label {
+      font-size: 0.76rem;
+      font-weight: 700;
+      color: #64748B;
+      margin-bottom: 8px;
+      display: block;
+      text-align: left;
+    }
+
+    .chips-wrapper {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+      margin-bottom: 16px;
+    }
+
+    .chip {
+      background: #F1F5F9;
+      border: 1px solid #CBD5E1;
+      color: #334155;
+      padding: 5px 12px;
+      border-radius: 20px;
+      font-size: 0.74rem;
+      font-weight: 700;
+      cursor: pointer;
+      transition: all 0.15s ease;
+    }
+
+    .chip.selected {
+      background: #ECFDF5;
+      border-color: #10B981;
+      color: #047857;
+    }
+
+    /* AI Generated Review Box */
+    .ai-review-box {
+      background: linear-gradient(135deg, #FEFCE8 0%, #FFFBEB 100%);
+      border: 2px solid var(--gold-primary);
+      border-radius: 16px;
+      padding: 16px;
+      margin-bottom: 16px;
+      position: relative;
+    }
+
+    .ai-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      background: linear-gradient(135deg, #DFBA67, #B45309);
+      color: #FFFFFF;
+      font-size: 0.68rem;
+      font-weight: 900;
+      padding: 3px 8px;
+      border-radius: 12px;
+      margin-bottom: 8px;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+
+    .review-textarea {
+      width: 100%;
+      min-height: 85px;
+      border: none;
+      background: transparent;
+      resize: vertical;
+      font-size: 0.88rem;
+      line-height: 1.45;
+      color: #1E293B;
+      font-weight: 600;
+      outline: none;
+    }
+
+    /* Optional Custom Comment Input */
+    .custom-input-group {
+      margin-bottom: 16px;
+    }
+
+    .custom-input {
+      width: 100%;
+      padding: 10px 14px;
+      border-radius: 12px;
+      border: 1px solid #CBD5E1;
+      font-size: 0.82rem;
+      outline: none;
+      transition: border-color 0.2s ease;
+    }
+
+    .custom-input:focus {
+      border-color: #10B981;
+    }
+
+    /* Primary Copy & Post Button */
+    .post-btn {
+      width: 100%;
+      background: linear-gradient(135deg, #10B981 0%, #059669 100%);
+      color: #FFFFFF;
+      border: none;
+      padding: 14px 20px;
+      border-radius: 16px;
+      font-size: 0.95rem;
+      font-weight: 900;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      box-shadow: 0 10px 25px rgba(16, 185, 129, 0.4);
+      transition: transform 0.15s ease;
+    }
+
+    .post-btn:active {
+      transform: scale(0.98);
+    }
+
+    /* Toast Notification */
+    .toast {
+      position: absolute;
+      top: 16px;
+      left: 50%;
+      transform: translateX(-50%) translateY(-100px);
+      background: #0F172A;
+      color: #FFD700;
+      padding: 10px 18px;
+      border-radius: 30px;
+      font-size: 0.8rem;
+      font-weight: 800;
+      border: 1px solid #FFD700;
+      box-shadow: 0 10px 25px rgba(0,0,0,0.3);
+      transition: transform 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+      z-index: 10;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .toast.show {
+      transform: translateX(-50%) translateY(0);
+    }
+  </style>
+</head>
+<body>
+
+  <div class="mobile-frame">
+    <!-- Toast Popup -->
+    <div id="toast" class="toast">
+      <span>📋</span> Review Copied! Opening Google Reviews...
+    </div>
+
+    <!-- Header -->
+    <div class="header">
+      <div class="header-logo">🧁</div>
+      <div class="restaurant-name">Raman Sweet & Bakery</div>
+      <div class="sub-title">KhanaMaster Smart Customer Review</div>
+    </div>
+
+    <!-- Content -->
+    <div class="content">
+
+      <!-- Step 1: Star Rating Card -->
+      <div class="rating-card">
+        <div class="question-title">How was your food & experience?</div>
+        
+        <div class="stars-container" id="starsContainer">
+          <button class="star-btn active" data-rating="1">⭐</button>
+          <button class="star-btn active" data-rating="2">⭐</button>
+          <button class="star-btn active" data-rating="3">⭐</button>
+          <button class="star-btn active" data-rating="4">⭐</button>
+          <button class="star-btn active" data-rating="5">⭐</button>
+        </div>
+
+        <div class="rating-label" id="ratingLabel">⭐⭐⭐⭐⭐ Excellent Experience!</div>
+      </div>
+
+      <!-- Step 2: Quick Highlight Chips -->
+      <span class="chips-label">✨ Tap what you loved (Optional):</span>
+      <div class="chips-wrapper" id="chipsWrapper">
+        <button class="chip selected" data-chip="Delicious Food">🥘 Delicious Food</button>
+        <button class="chip selected" data-chip="Fast Delivery">⚡ Fast Delivery</button>
+        <button class="chip" data-chip="Hygienic">🧹 Clean & Hygienic</button>
+        <button class="chip" data-chip="Great Ambiance">👑 Great Ambiance</button>
+        <button class="chip" data-chip="Polite Staff">😊 Polite Staff</button>
+      </div>
+
+      <!-- Step 3: Optional Experience Text Input -->
+      <div class="custom-input-group">
+        <input 
+          type="text" 
+          id="customInput" 
+          class="custom-input" 
+          placeholder="Mention dishes (e.g., Kaju Katli was awesome...)" 
+        />
+      </div>
+
+      <!-- Step 4: Instant AI Review Generated Box -->
+      <div class="ai-review-box">
+        <div class="ai-badge">✨ AI Smart Review Generated</div>
+        <textarea id="reviewTextarea" class="review-textarea" rows="3"></textarea>
+      </div>
+
+      <!-- Step 5: Primary Copy & Post Button -->
+      <button class="post-btn" id="postBtn">
+        <span>📋</span> Copy Review & Post on Google
+      </button>
+
+    </div>
+  </div>
+
+  <script>
+    let currentRating = 5;
+    let selectedChips = ['Delicious Food', 'Fast Delivery'];
+    let customText = '';
+
+    const reviewTemplates = {
+      5: [
+        "Absolutely amazing dining experience at Raman Sweet & Bakery! The food was extremely delicious and fresh. Top-notch service and great ambiance!",
+        "Highly recommended! Outstanding taste, quick service, and super hygienic quality. Will definitely visit again with family!",
+        "Hands down the best food spot! The items were full of authentic flavor and delivered fast."
+      ],
+      4: [
+        "Really good experience at Raman Sweet & Bakery. Food quality was great and service was prompt. Would recommend to friends!",
+        "Tasty food and good overall service. Nice ambiance for family dining."
+      ],
+      3: [
+        "Decent food experience. Taste was alright and service was average."
+      ]
+    };
+
+    function updateAIReview() {
+      const templates = reviewTemplates[currentRating] || reviewTemplates[5];
+      let baseReview = templates[0];
+
+      // Add selected chips context
+      if (selectedChips.length > 0) {
+        baseReview += " Special mention for " + selectedChips.join(" and ").toLowerCase() + ".";
+      }
+
+      // Add custom user input context
+      const customVal = document.getElementById('customInput').value.trim();
+      if (customVal) {
+        baseReview += " " + customVal + ".";
+      }
+
+      document.getElementById('reviewTextarea').value = baseReview;
+    }
+
+    // Star Selection Listener
+    document.querySelectorAll('.star-btn').forEach(btn => {
+      btn.addEventListener('click', () => {
+        currentRating = parseInt(btn.getAttribute('data-rating'));
+        document.querySelectorAll('.star-btn').forEach((s, idx) => {
+          if (idx < currentRating) s.classList.add('active');
+          else s.classList.remove('active');
+        });
+
+        const labels = {
+          5: '⭐⭐⭐⭐⭐ Excellent Experience!',
+          4: '⭐⭐⭐⭐ Great Experience!',
+          3: '⭐⭐⭐ Good Experience',
+          2: '⭐⭐ Average Experience',
+          1: '⭐ Needs Improvement'
+        };
+        document.getElementById('ratingLabel').innerText = labels[currentRating];
+        updateAIReview();
+      });
+    });
+
+    // Chip Selection Listener
+    document.querySelectorAll('.chip').forEach(chip => {
+      chip.addEventListener('click', () => {
+        const val = chip.getAttribute('data-chip');
+        if (chip.classList.contains('selected')) {
+          chip.classList.remove('selected');
+          selectedChips = selectedChips.filter(c => c !== val);
+        } else {
+          chip.classList.add('selected');
+          selectedChips.push(val);
+        }
+        updateAIReview();
+      });
+    });
+
+    // Custom Input Listener
+    document.getElementById('customInput').addEventListener('input', updateAIReview);
+
+    // Copy & Post Listener
+    document.getElementById('postBtn').addEventListener('click', () => {
+      const finalReview = document.getElementById('reviewTextarea').value;
+      navigator.clipboard.writeText(finalReview);
+      
+      const toast = document.getElementById('toast');
+      toast.classList.add('show');
+      setTimeout(() => {
+        toast.classList.remove('show');
+        // Open Google Review URL (Placeholder target)
+        window.open('https://search.google.com/local/writereview?placeid=ChIJ31...#review', '_blank');
+      }, 1500);
+    });
+
+    // Initial Trigger
+    updateAIReview();
+  </script>
+</body>
+</html>

@@ -335,14 +335,14 @@ router.delete('/dishes/:id', authenticateToken, async (req, res) => {
 const handleUpdateSettings = async (req, res) => {
   try {
     const restoId = req.user.restaurant_id || 1;
-    const { name, tagline, logo, phone, address, openingHours, google_review_url, filters_visibility, currency_symbol, fssai_lic_no, resto_type, whatsapp_number, whatsapp_enabled, theme_color, latitude, longitude, max_distance_meters, gst_enabled, gstin_number, total_tables, order_retention_days } = req.body;
+    const { name, tagline, logo, phone, address, openingHours, google_review_url, google_reviews_enabled, filters_visibility, currency_symbol, fssai_lic_no, resto_type, whatsapp_number, whatsapp_enabled, theme_color, latitude, longitude, max_distance_meters, gst_enabled, gstin_number, total_tables, order_retention_days } = req.body;
 
     const visJson = typeof filters_visibility === 'object' ? JSON.stringify(filters_visibility) : filters_visibility;
 
     await query(`
       UPDATE restaurants 
-      SET name = $1, tagline = $2, logo = $3, phone = $4, address = $5, opening_hours = $6, google_review_url = $7, filters_visibility = $8, currency_symbol = $9, fssai_lic_no = $10, resto_type = $11, whatsapp_number = $12, whatsapp_enabled = $13, theme_color = $14, latitude = $15, longitude = $16, max_distance_meters = $17, gst_enabled = $18, gstin_number = $19, total_tables = $20, order_retention_days = $21
-      WHERE id = $22
+      SET name = $1, tagline = $2, logo = $3, phone = $4, address = $5, opening_hours = $6, google_review_url = $7, filters_visibility = $8, currency_symbol = $9, fssai_lic_no = $10, resto_type = $11, whatsapp_number = $12, whatsapp_enabled = $13, theme_color = $14, latitude = $15, longitude = $16, max_distance_meters = $17, gst_enabled = $18, gstin_number = $19, total_tables = $20, order_retention_days = $21, google_reviews_enabled = $22
+      WHERE id = $23
     `, [
       name, tagline,
       logo !== undefined ? logo : '',
@@ -360,6 +360,7 @@ const handleUpdateSettings = async (req, res) => {
       gstin_number || '',
       total_tables !== undefined && total_tables !== null ? Number(total_tables) : 0,
       order_retention_days || 90,
+      google_reviews_enabled !== false && google_reviews_enabled !== 0 ? 1 : 0,
       restoId
     ]);
 

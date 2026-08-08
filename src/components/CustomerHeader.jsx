@@ -1,15 +1,7 @@
 import React from 'react';
 import { ShieldCheck, Globe, Star, Info, Clock, Phone, MapPin } from 'lucide-react';
 
-export default function CustomerHeader({ info, lang, tableNum, onToggleLang, onOpenInfoModal, onOpenAdmin, onCallStaff }) {
-  const handleReviewClick = () => {
-    if (info?.google_review_url && info.google_review_url.trim() !== '') {
-      window.open(info.google_review_url, '_blank', 'noopener,noreferrer');
-    } else {
-      alert(`Google Review link is not configured for ${info?.name || 'this restaurant'} yet.`);
-    }
-  };
-
+export default function CustomerHeader({ info, lang, tableNum, onToggleLang, onOpenInfoModal, onOpenAdmin, onCallStaff, onOpenReviewModal }) {
   return (
     <header style={{
       background: 'var(--header-gradient, linear-gradient(180deg, rgba(10, 35, 21, 0.94) 0%, rgba(18, 55, 34, 0.94) 100%))',
@@ -52,8 +44,31 @@ export default function CustomerHeader({ info, lang, tableNum, onToggleLang, onO
           {lang === 'hi' ? 'हिंदी' : 'EN / हिंदी'}
         </button>
 
-        {/* Right Action Group: Table Indicator + Call Staff + ⭐ Google Review Button */}
+        {/* Right Action Group: Rate Us + Table Indicator + Call Staff */}
         <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+          {onOpenReviewModal && (info?.google_reviews_enabled !== false && info?.google_reviews_enabled !== 0) && (
+            <button
+              onClick={onOpenReviewModal}
+              style={{
+                fontSize: '0.68rem',
+                fontWeight: 800,
+                color: '#0A2315',
+                background: 'linear-gradient(135deg, #FFD700 0%, #DFBA67 100%)',
+                border: '1px solid #FFF',
+                padding: '3px 8px',
+                borderRadius: 'var(--radius-pill)',
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '3px',
+                boxShadow: '0 2px 6px rgba(223, 186, 103, 0.4)',
+                cursor: 'pointer'
+              }}
+              title="Rate & Review on Google"
+            >
+              <Star size={11} fill="#0A2315" color="#0A2315" /> Rate Us
+            </button>
+          )}
+
           {/* Table Indicator / View-Only Badge */}
           {tableNum ? (
             <>

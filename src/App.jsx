@@ -15,6 +15,7 @@ import { fetchRestaurantInfo, fetchCategories, fetchDishes, toggleDishAvailabili
 import { LayoutList, Grid, BookOpen, X, Sparkles, ShieldAlert, Phone, Plus, Edit3, Trash2, LogOut, Settings, Crown, CheckCircle, MessageSquare, XCircle } from 'lucide-react';
 import { verifyCustomerLocation } from './utils/geo';
 import ServiceRequestModal from './components/ServiceRequestModal';
+import CustomerReviewModal from './components/CustomerReviewModal';
 
 // Code Splitting (Lazy Loading): Super Admin & Admin JS chunks are loaded ONLY when requested!
 const AdminLogin = lazy(() => import('./components/Admin/AdminLogin'));
@@ -104,9 +105,17 @@ export default function App() {
   const [showInfoModal, setShowInfoModal] = useState(false);
   const [showCategoryDrawer, setShowCategoryDrawer] = useState(false);
   const [showServiceModal, setShowServiceModal] = useState(false);
+  const [showReviewModal, setShowReviewModal] = useState(false);
   const [serviceToastMsg, setServiceToastMsg] = useState('');
   const [loading, setLoading] = useState(true);
   const [restaurantStatus, setRestaurantStatus] = useState('active'); // 'active' | 'not_found' | 'suspended'
+
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    if (params.get('review') === 'true' || params.get('review') === '1') {
+      setShowReviewModal(true);
+    }
+  }, []);
 
   // In-Context Owner Modals State
   const [ownerDishModalData, setOwnerDishModalData] = useState(null); // null, 'new', or dish object
@@ -1357,6 +1366,7 @@ export default function App() {
         onToggleLang={() => setLang(lang === 'en' ? 'hi' : 'en')}
         onOpenInfoModal={() => setShowInfoModal(true)}
         onCallStaff={() => setShowServiceModal(true)}
+        onOpenReviewModal={() => setShowReviewModal(true)}
         onOpenAdmin={() => {
           if (adminToken) {
             setView('admin-dashboard');
@@ -1914,6 +1924,14 @@ export default function App() {
             setServiceToastMsg(msg);
             setTimeout(() => setServiceToastMsg(''), 6000);
           }}
+        />
+      )}
+
+      {/* 🌟 Smart AI Google Review Booster Modal */}
+      {showReviewModal && (
+        <CustomerReviewModal
+          info={info}
+          onClose={() => setShowReviewModal(false)}
         />
       )}
 

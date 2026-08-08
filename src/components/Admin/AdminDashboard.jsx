@@ -4000,7 +4000,7 @@ export default function AdminDashboard({ token, username, onLogout, onReturnToMe
                   type="url"
                   value={settingsForm.google_review_url}
                   onChange={(e) => setSettingsForm({ ...settingsForm, google_review_url: e.target.value })}
-                  placeholder="https://share.google/2M5mFMPlmS6pAXRf7"
+                  placeholder="https://g.page/r/YOUR_BUSINESS_ID/review"
                   style={{
                     width: '100%',
                     padding: '10px 14px',
@@ -4010,6 +4010,44 @@ export default function AdminDashboard({ token, username, onLogout, onReturnToMe
                     outline: 'none'
                   }}
                 />
+              </div>
+
+              <div>
+                <label style={{ display: 'block', fontSize: '0.82rem', fontWeight: 700, color: 'var(--primary-emerald)', marginBottom: '6px' }}>
+                  🍽️ Restaurant Cuisine Type (AI Review Generator Context):
+                </label>
+                <select
+                  value={settingsForm.resto_type || 'pure_veg'}
+                  onChange={(e) => setSettingsForm({ ...settingsForm, resto_type: e.target.value })}
+                  style={{
+                    width: '100%',
+                    padding: '10px 14px',
+                    borderRadius: 'var(--radius-sm)',
+                    border: '1.5px solid var(--border-light)',
+                    fontSize: '0.88rem',
+                    outline: 'none',
+                    fontWeight: 700,
+                    background: '#FFFFFF'
+                  }}
+                >
+                  <option value="sweet_bakery">🧁 Sweet & Bakery (Mithai, Namkeen, Snacks)</option>
+                  <option value="multi_cuisine">🍲 Multi-Cuisine Restaurant (Family Dining, Naan, Gravies)</option>
+                  <option value="fast_food">🍔 Fast Food & Cafe (Burger, Pizza, Shakes, Quick Bites)</option>
+                  <option value="pure_veg">🌿 Pure Veg & South Indian (Dosa, Idli, Pure Veg Thali)</option>
+                  <option value="biryani">🍗 Biryani & Non-Veg Special (Biryani, Mughlai, Flavor)</option>
+                </select>
+              </div>
+
+              <div style={{ gridColumn: '1 / -1' }}>
+                <label style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer', fontSize: '0.86rem', fontWeight: 800, color: 'var(--primary-emerald)', marginTop: '4px' }}>
+                  <input
+                    type="checkbox"
+                    checked={settingsForm.google_reviews_enabled !== false && settingsForm.google_reviews_enabled !== 0}
+                    onChange={(e) => setSettingsForm({ ...settingsForm, google_reviews_enabled: e.target.checked })}
+                    style={{ width: '18px', height: '18px', accentColor: '#DFBA67', cursor: 'pointer' }}
+                  />
+                  <span>Enable Smart AI Google Review Booster Button</span>
+                </label>
               </div>
 
             {/* 🧾 GST & Tax Invoice Settings Card */}
