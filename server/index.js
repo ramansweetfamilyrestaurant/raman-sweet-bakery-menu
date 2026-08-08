@@ -67,16 +67,16 @@ app.use('/api/*', (req, res) => {
   res.status(404).json({ error: `API route ${req.originalUrl} not found` });
 });
 
-// Serve static built React frontend in production or if dist exists
+// Serve static built React frontend in production or if dist exists (Supports GET & POST return_urls from payment gateways like Cashfree)
 const distDir = path.resolve('dist');
 if (fs.existsSync(distDir)) {
   app.use(express.static(distDir));
-  app.get('*', (req, res) => {
+  app.all('*', (req, res) => {
     res.sendFile(path.join(distDir, 'index.html'));
   });
 } else {
   // Fallback for SPA routing when dist directory is building or missing
-  app.get('*', (req, res) => {
+  app.all('*', (req, res) => {
     const devHtml = path.resolve('index.html');
     if (fs.existsSync(devHtml)) {
       res.sendFile(devHtml);
