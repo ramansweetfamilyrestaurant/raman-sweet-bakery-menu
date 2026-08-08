@@ -91,7 +91,7 @@ router.post('/cashfree', async (req, res) => {
         const expiryStr = expiryDate.toISOString().split('T')[0];
 
         await query(
-          "UPDATE restaurants SET plan_status = 'active', plan_expires_at = $1 WHERE id = $2",
+          "UPDATE restaurants SET status = 'active', active = 1, plan_expires_at = $1 WHERE id = $2",
           [expiryStr, restoId]
         );
 
@@ -134,7 +134,7 @@ router.post('/razorpay', async (req, res) => {
         const expiryStr = expiryDate.toISOString().split('T')[0];
 
         await query(
-          "UPDATE restaurants SET plan_status = 'active', plan_expires_at = $1 WHERE id = $2",
+          "UPDATE restaurants SET status = 'active', active = 1, plan_expires_at = $1 WHERE id = $2",
           [expiryStr, restoId]
         );
 

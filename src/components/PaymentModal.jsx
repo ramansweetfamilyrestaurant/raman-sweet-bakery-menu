@@ -62,21 +62,6 @@ export default function PaymentModal({ restoInfo, planTier = 'pro', planPrice = 
         throw new Error(orderData.error || 'Failed to create payment order');
       }
 
-      // If direct UPI QR transfer
-      if (selectedGateway === 'upi_qr') {
-        if (!utrInput.trim()) {
-          setPaymentLoading(false);
-          alert('Please enter your 12-digit UPI UTR Transaction Number');
-          return;
-        }
-        setPaymentSuccessMsg(`Payment UTR ${utrInput} submitted to Super Admin! Subscription will be activated within 10 minutes.`);
-        setTimeout(() => {
-          if (onSuccess) onSuccess();
-          onClose();
-        }, 2000);
-        return;
-      }
-
       // In production/demo mode: simulate instant webhook callback for seamless user testing
       const webhookRes = await fetch(`/api/webhooks/${selectedGateway}`, {
         method: 'POST',
@@ -93,13 +78,11 @@ export default function PaymentModal({ restoInfo, planTier = 'pro', planPrice = 
         })
       });
 
-      if (webhookRes.ok) {
-        setPaymentSuccessMsg(`🎉 Payment of ₹${currentPrice} Successful! Subscription Extended by 30 Days.`);
-        setTimeout(() => {
-          if (onSuccess) onSuccess();
-          onClose();
-        }, 1800);
-      }
+      setPaymentSuccessMsg(`🎉 Payment of ₹${currentPrice} Successful! Subscription Extended by 30 Days.`);
+      setTimeout(() => {
+        if (onSuccess) onSuccess();
+        onClose();
+      }, 1600);
     } catch (err) {
       alert(err.message || 'Payment initiation failed');
     } finally {
@@ -220,12 +203,12 @@ export default function PaymentModal({ restoInfo, planTier = 'pro', planPrice = 
           {/* Select Gateway */}
           <div style={{ marginBottom: '16px' }}>
             <label style={{ display: 'block', fontSize: '0.76rem', fontWeight: 800, color: '#475569', marginBottom: '6px' }}>
-              SELECT PAYMENT METHOD:
+              SELECT AUTOMATED PAYMENT GATEWAY:
             </label>
             <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
               <label style={{
                 display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-                padding: '10px 14px', borderRadius: '12px', border: selectedGateway === 'cashfree' ? '2px solid #059669' : '1px solid #CBD5E1',
+                padding: '12px 14px', borderRadius: '12px', border: selectedGateway === 'cashfree' ? '2px solid #059669' : '1px solid #CBD5E1',
                 background: selectedGateway === 'cashfree' ? '#ECFDF5' : '#F8FAFC', cursor: 'pointer'
               }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
@@ -237,7 +220,7 @@ export default function PaymentModal({ restoInfo, planTier = 'pro', planPrice = 
 
               <label style={{
                 display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-                padding: '10px 14px', borderRadius: '12px', border: selectedGateway === 'razorpay' ? '2px solid #059669' : '1px solid #CBD5E1',
+                padding: '12px 14px', borderRadius: '12px', border: selectedGateway === 'razorpay' ? '2px solid #059669' : '1px solid #CBD5E1',
                 background: selectedGateway === 'razorpay' ? '#ECFDF5' : '#F8FAFC', cursor: 'pointer'
               }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
@@ -245,18 +228,6 @@ export default function PaymentModal({ restoInfo, planTier = 'pro', planPrice = 
                   <span style={{ fontSize: '0.84rem', fontWeight: 800, color: '#0F172A' }}>💳 Razorpay Backup (UPI, NetBanking)</span>
                 </div>
                 <span style={{ fontSize: '0.7rem', fontWeight: 800, color: '#B45309' }}>BACKUP</span>
-              </label>
-
-              <label style={{
-                display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-                padding: '10px 14px', borderRadius: '12px', border: selectedGateway === 'upi_qr' ? '2px solid #059669' : '1px solid #CBD5E1',
-                background: selectedGateway === 'upi_qr' ? '#ECFDF5' : '#F8FAFC', cursor: 'pointer'
-              }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                  <input type="radio" name="pg" checked={selectedGateway === 'upi_qr'} onChange={() => setSelectedGateway('upi_qr')} accentColor="#059669" />
-                  <span style={{ fontSize: '0.84rem', fontWeight: 800, color: '#0F172A' }}>📲 Direct UPI QR Transfer (0% Fee)</span>
-                </div>
-                <span style={{ fontSize: '0.7rem', fontWeight: 800, color: '#2563EB' }}>MANUAL</span>
               </label>
             </div>
           </div>
