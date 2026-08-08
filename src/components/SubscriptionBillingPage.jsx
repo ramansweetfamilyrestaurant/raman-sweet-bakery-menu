@@ -17,7 +17,16 @@ export default function SubscriptionBillingPage({ restoInfo, token, onProceedToD
   const [statusMsg, setStatusMsg] = useState('');
   const [errorMsg, setErrorMsg] = useState('');
   const [mandateActive, setMandateActive] = useState(false);
+  const [trialSettingDays, setTrialSettingDays] = useState(14);
 
+  useEffect(() => {
+    fetch('/api/settings')
+      .then(res => res.json())
+      .then(data => {
+        if (data && data.default_trial_days) setTrialSettingDays(Math.max(1, parseInt(data.default_trial_days, 10) || 14));
+      })
+      .catch(() => {});
+  }, []);
 
   // 1. Fetch current restaurant details & subscription status server-side if restoInfo is empty
   useEffect(() => {
@@ -127,13 +136,13 @@ export default function SubscriptionBillingPage({ restoInfo, token, onProceedToD
   // Calculate Trial Dates & Duration
   const activeResto = currentResto || restoInfo;
   const now = new Date();
-  const trialStart = activeResto?.trial_started_at ? new Date(activeResto.trial_started_at) : now;
-  const trialEnd = activeResto?.trial_ends_at ? new Date(activeResto.trial_ends_at) : new Date(now.getTime() + 14 * 86400 * 1000);
-  
   const calcDays = (activeResto?.trial_started_at && activeResto?.trial_ends_at) 
     ? Math.max(1, Math.round((new Date(activeResto.trial_ends_at) - new Date(activeResto.trial_started_at)) / (86400 * 1000)))
-    : 14;
+    : trialSettingDays;
 
+  const trialStart = activeResto?.trial_started_at ? new Date(activeResto.trial_started_at) : now;
+  const trialEnd = activeResto?.trial_ends_at ? new Date(activeResto.trial_ends_at) : new Date(now.getTime() + calcDays * 86400 * 1000);
+  
   const formatDate = (d) => {
     try {
       return d.toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' });
@@ -163,7 +172,8 @@ export default function SubscriptionBillingPage({ restoInfo, token, onProceedToD
 
     if (verifiedParam === 'true') {
       setMandateActive(true);
-      setStatusMsg('✅ Cashfree Mandate Authorized Successfully! 14-Day Free Trial Active. Redirecting...');
+      setStatusMsg(`✅ Cashfree Mandate Authorized Successfully! ${calcDays}-Day Free Trial Active. Redirecting...`);
+      localStorage.removeItem('pending_subscription_id');
       localStorage.removeItem('pending_subscription_id');
       const timer = setTimeout(() => {
         if (onProceedToDashboard) onProceedToDashboard();
@@ -261,7 +271,7 @@ export default function SubscriptionBillingPage({ restoInfo, token, onProceedToD
 
       if (res.authorized === true || res.subscription_status === 'ACTIVE') {
         setMandateActive(true);
-        setStatusMsg('✅ Cashfree Mandate Authorized Successfully! 14-Day Free Trial is Active.');
+        setStatusMsg(`✅ Cashfree Mandate Authorized Successfully! ${calcDays}-Day Free Trial is Active.`);
       } else {
         setMandateActive(false);
         if (res.subscription_status === 'INITIALIZED') {
@@ -320,7 +330,7 @@ export default function SubscriptionBillingPage({ restoInfo, token, onProceedToD
         </div>
 
         <h1 style={{ fontSize: '1.45rem', fontWeight: 900, color: '#FFFFFF', margin: '0 0 4px 0', letterSpacing: '-0.3px' }}>
-          Activate 14-Day Free Trial 🚀
+          Activate {calcDays}-Day Free Trial 🚀
         </h1>
         <p style={{ fontSize: '0.84rem', color: '#A7F3D0', margin: '0 0 18px 0', lineHeight: 1.4 }}>
           Account <strong>{activeResto?.name || localStorage.getItem('raman_admin_user') || 'Restaurant'}</strong> ready! Authorize UPI AutoPay to start.
@@ -464,7 +474,7 @@ export default function SubscriptionBillingPage({ restoInfo, token, onProceedToD
               fontSize: '0.86rem',
               marginBottom: '16px'
             }}>
-              ✅ Mandate Authorized • 14-Day Trial Active
+              ✅ Mandate Authorized • {calcDays}-Day Trial Active
             </div>
 
             <button
@@ -512,7 +522,7 @@ export default function SubscriptionBillingPage({ restoInfo, token, onProceedToD
             }}
           >
             <ShieldCheck size={20} />
-            <span>{authorizing ? 'Opening Cashfree...' : '🚀 Authorize UPI AutoPay & Activate 14-Day Trial'}</span>
+            <span>{authorizing ? 'Opening Cashfree...' : `🚀 Authorize UPI AutoPay & Activate ${calcDays}-Day Trial`}</span>
           </button>
         )}
       </div>
