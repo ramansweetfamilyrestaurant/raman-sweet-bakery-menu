@@ -143,8 +143,12 @@ export default function SubscriptionBillingPage({ restoInfo, token, onProceedToD
 
     if (verifiedParam === 'true') {
       setMandateActive(true);
-      setStatusMsg('✅ Cashfree Mandate Authorized Successfully! 14-Day Free Trial is Active.');
+      setStatusMsg('✅ Cashfree Mandate Authorized Successfully! 14-Day Free Trial is Active. Redirecting to Admin Dashboard...');
       localStorage.removeItem('pending_subscription_id');
+      const timer = setTimeout(() => {
+        if (onProceedToDashboard) onProceedToDashboard();
+      }, 1500);
+      return () => clearTimeout(timer);
     } else if (verifiedParam === 'false') {
       setErrorMsg(`⚠️ Mandate authorization pending or not completed. Status: ${statusParam || 'PENDING'}`);
     } else if (subIdParam) {
