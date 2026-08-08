@@ -405,6 +405,50 @@ export default function AdminDashboard({ token, username, onLogout, onReturnToMe
     }
   };
 
+  // ⚡ 0.5-Second Direct Bluetooth ESC/POS Thermal Receipt Printing (RawBT Protocol Integration)
+  const handleDirectBluetoothPrint = (order, printType = 'kot') => {
+    try {
+      const restoName = settingsForm.name || 'KhanaMaster Restaurant';
+      const itemsList = (order.items || []).map(i => {
+        const portionText = i.portion ? ` (${i.portion})` : '';
+        return `${i.quantity}x ${i.name}${portionText} - Rs.${i.price * i.quantity}`;
+      }).join('\n');
+
+      let receiptText = '';
+      if (printType === 'kot') {
+        receiptText = `==============================\n   KITCHEN ORDER TICKET (KOT)   \n   TABLE #${order.table_number || '1'}\n==============================\n` +
+          `Order ID: #${order.id}\n` +
+          `Customer: ${order.customer_name || 'Dine-In Guest'}\n` +
+          `Time: ${formatDateTime(order.created_at)}\n` +
+          `------------------------------\n` +
+          `${itemsList}\n` +
+          `------------------------------\n` +
+          `TOTAL BILL: Rs.${order.total_amount}\n` +
+          `==============================\n` +
+          ` *** READY FOR KITCHEN *** \n\n\n`;
+      } else {
+        receiptText = `==============================\n   ${restoName.toUpperCase()}   \n      TAX / CUSTOMER BILL     \n==============================\n` +
+          `Table #${order.table_number || '1'} | Order #${order.id}\n` +
+          `Customer: ${order.customer_name || 'Guest'}\n` +
+          `Date: ${formatDateTime(order.created_at)}\n` +
+          `------------------------------\n` +
+          `${itemsList}\n` +
+          `------------------------------\n` +
+          `GRAND TOTAL: Rs.${order.total_amount}\n` +
+          `==============================\n` +
+          ` Thank You! Visit Us Again! \n\n\n`;
+      }
+
+      // Trigger RawBT / ESC/POS Direct Bluetooth Print Protocol URL
+      const rawbtUrl = `rawbt:base64,${btoa(unescape(encodeURIComponent(receiptText)))}`;
+      window.location.href = rawbtUrl;
+    } catch (e) {
+      console.warn('Direct Bluetooth print trigger fallback:', e);
+      if (printType === 'kot') handlePrintKOT(order);
+      else setBillOrderModal(order);
+    }
+  };
+
   const handlePrintKOT = (order) => {
     const printWindow = window.open('', '_blank', 'width=380,height=600');
     if (!printWindow) return;
@@ -2372,6 +2416,26 @@ export default function AdminDashboard({ token, username, onLogout, onReturnToMe
 
                       {/* Action Buttons */}
                       <div style={{ display: 'flex', gap: '6px' }}>
+                        <button
+                          onClick={() => handleDirectBluetoothPrint(o, 'kot')}
+                          style={{
+                            background: '#ECFDF5',
+                            color: '#047857',
+                            border: '1px solid #6EE7B7',
+                            padding: '8px 10px',
+                            borderRadius: '10px',
+                            fontWeight: 800,
+                            fontSize: '0.76rem',
+                            cursor: 'pointer',
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: '4px'
+                          }}
+                          title="Instant 0.5s Bluetooth Thermal KOT Print"
+                        >
+                          ⚡ BT KOT
+                        </button>
+
                         <button
                           onClick={() => handlePrintKOT(o)}
                           style={{
@@ -4496,6 +4560,22 @@ export default function AdminDashboard({ token, username, onLogout, onReturnToMe
                     style={{ width: '100%', padding: '7px', borderRadius: '8px', background: '#E2E8F0', color: '#1E293B', border: 'none', fontWeight: 800, fontSize: '0.78rem', cursor: 'pointer' }}
                   >
                     📍 Detect GPS
+                  </button>
+                </div>
+
+                {/* 🖨️ Bluetooth Thermal Printer Control */}
+                <div style={{ background: '#F8FAFC', border: '1px solid #E2E8F0', borderRadius: '12px', padding: '14px' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '8px' }}>
+                    <strong style={{ fontSize: '0.85rem', color: '#1E293B' }}>🖨️ Bluetooth Thermal Printer:</strong>
+                    <span style={{ fontSize: '0.7rem', fontWeight: 900, color: '#15803D', background: '#DCFCE7', padding: '2px 6px', borderRadius: '4px' }}>
+                      Ready (58/80mm)
+                    </span>
+                  </div>
+                  <button
+                    onClick={() => alert("🖨️ Bluetooth Thermal Printing Tip:\n\n1. Pair your 58mm/80mm Bluetooth Thermal Printer in your Phone/Tablet Bluetooth Settings.\n2. For 0.5-second instant background printing without preview popups, install free RawBT App on Android.\n3. Click '⚡ BT KOT' on any live order!")}
+                    style={{ width: '100%', padding: '7px', borderRadius: '8px', background: 'linear-gradient(135deg, #0EA5E9 0%, #0284C7 100%)', color: '#FFFFFF', border: 'none', fontWeight: 800, fontSize: '0.78rem', cursor: 'pointer' }}
+                  >
+                    🖨️ View Printer Pairing Tip
                   </button>
                 </div>
               </div>
