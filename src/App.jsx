@@ -39,8 +39,20 @@ export default function App() {
   // Language State ('en' or 'hi')
   const [lang, setLang] = useState('en');
 
+  const getInitialView = () => {
+    const path = (window.location.pathname || '/').toLowerCase().replace(/\/$/, '') || '/';
+    if (path === '/billing') return 'billing';
+    if (path === '/register') return 'register';
+    if (path === '/super-admin' || path === '/superadmin') {
+      const t = localStorage.getItem('saas_super_token');
+      return (t && t !== 'undefined' && t !== 'null') ? 'super-admin-dashboard' : 'super-admin-login';
+    }
+    if (path === '' || path === '/') return 'landing';
+    return 'menu';
+  };
+
   // Navigation State
-  const [view, setView] = useState('menu'); // 'menu', 'admin-login', 'admin-dashboard', 'super-admin-login', 'super-admin-dashboard'
+  const [view, setView] = useState(getInitialView); // 'menu', 'admin-login', 'admin-dashboard', 'super-admin-login', 'super-admin-dashboard', 'billing', 'register'
   const [layoutMode, setLayoutMode] = useState('list'); // 'list' or 'grid'
 
   const getInitialToken = () => {
@@ -511,13 +523,12 @@ export default function App() {
         }
       } else if (isBilling) {
         if (adminToken) {
+          setView('billing');
           const currentSlug = localStorage.getItem('raman_admin_slug');
           const mandateActive = await checkMandateGating(adminToken, currentSlug);
           if (mandateActive) {
             window.history.replaceState({}, '', currentSlug ? `/${currentSlug}/admin` : '/admin');
             setView('admin-dashboard');
-          } else {
-            setView('billing');
           }
         } else {
           window.history.replaceState({}, '', '/register');
