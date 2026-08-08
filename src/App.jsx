@@ -936,132 +936,146 @@ export default function App() {
         {/* Hero Section */}
         <div style={{
           display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
-          textAlign: 'center', padding: '50px 16px 40px', position: 'relative', zIndex: 5
+          textAlign: 'center', padding: '60px 16px 40px', position: 'relative', zIndex: 5
         }}>
           <div style={{
-            display: 'inline-block', padding: '6px 14px', borderRadius: '50px',
-            background: 'linear-gradient(135deg, rgba(223,186,103,0.15), rgba(223,186,103,0.05))',
-            border: '1px solid rgba(223,186,103,0.3)', fontSize: '12px', color: '#DFBA67',
-            fontWeight: 700, marginBottom: '20px', letterSpacing: '0.5px'
-          }}>🚀 INDIA's #1 DIGITAL MENU PLATFORM</div>
+            display: 'inline-flex', alignItems: 'center', gap: '6px', padding: '6px 16px', borderRadius: '50px',
+            background: 'linear-gradient(135deg, rgba(223,186,103,0.18), rgba(223,186,103,0.05))',
+            border: '1px solid rgba(223,186,103,0.4)', fontSize: '13px', color: '#DFBA67',
+            fontWeight: 800, marginBottom: '22px', letterSpacing: '0.5px', boxShadow: '0 4px 15px rgba(223,186,103,0.15)'
+          }}>🔥 INDIA'S #1 SMART AI DIGITAL QR MENU SAAS PLATFORM</div>
 
           <h1 style={{
-            fontSize: 'clamp(28px, 7vw, 60px)', fontWeight: 900, lineHeight: 1.2,
-            marginBottom: '18px', maxWidth: '800px', width: '100%'
+            fontSize: 'clamp(30px, 7.5vw, 64px)', fontWeight: 900, lineHeight: 1.15,
+            marginBottom: '20px', maxWidth: '900px', width: '100%', letterSpacing: '-0.5px'
           }}>
             <span style={{ color: '#FFFFFF' }}>Apne Restaurant Ka </span>
             <span style={{
-              background: 'linear-gradient(135deg, #DFBA67, #F4D490, #DFBA67)',
+              background: 'linear-gradient(135deg, #DFBA67 0%, #F4D490 50%, #DFBA67 100%)',
               WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent'
-            }}>Digital Menu</span>
+            }}>Smart AI Digital Menu</span>
             <span style={{ color: '#FFFFFF' }}> Banayein</span>
           </h1>
 
           <p style={{
-            fontSize: 'clamp(14px, 3.5vw, 18px)', color: 'rgba(255,255,255,0.7)',
-            maxWidth: '560px', lineHeight: 1.6, marginBottom: '32px', padding: '0 8px'
+            fontSize: 'clamp(15px, 3.8vw, 19px)', color: 'rgba(255,255,255,0.78)',
+            maxWidth: '680px', lineHeight: 1.6, marginBottom: '34px', padding: '0 8px'
           }}>
-            QR Code se Digital Menu, WhatsApp Ordering, Google Reviews — sab kuch ek jagah. 
-            <strong style={{ color: '#DFBA67' }}> 14 din free trial</strong>, koi credit card nahi chahiye!
+            QR Code se Instant Digital Menu, WhatsApp Ordering, <strong style={{ color: '#FFD700' }}>⭐ Smart AI Google Reviews Booster</strong>, Live Kitchen KOT Siren & Thermal Printing — sab kuch ek jagah. 
+            <strong style={{ color: '#DFBA67', display: 'block', marginTop: '6px' }}>🎉 14 Din Free Trial — Koi Credit Card Nahi Chahiye!</strong>
           </p>
 
-          <div style={{ display: 'flex', gap: '12px', flexWrap: 'wrap', justifyContent: 'center', width: '100%', maxWidth: '480px' }}>
+          <div style={{ display: 'flex', gap: '14px', flexWrap: 'wrap', justifyContent: 'center', width: '100%', maxWidth: '520px' }}>
             <button onClick={() => { window.history.pushState({}, '', '/register'); window.dispatchEvent(new PopStateEvent('popstate')); }}
               style={{
-                flex: '1 1 200px', padding: '14px 24px', borderRadius: '14px', border: 'none',
-                background: 'linear-gradient(135deg, #DFBA67, #C9A44A)', color: '#0A0A0A',
-                fontWeight: 900, fontSize: '16px', cursor: 'pointer',
-                boxShadow: '0 8px 24px rgba(223,186,103,0.3)',
+                flex: '1 1 220px', padding: '16px 28px', borderRadius: '16px', border: 'none',
+                background: 'linear-gradient(135deg, #DFBA67 0%, #C9A44A 100%)', color: '#0A0A0A',
+                fontWeight: 900, fontSize: '1.05rem', cursor: 'pointer',
+                boxShadow: '0 10px 30px rgba(223,186,103,0.4)',
                 transition: 'all 0.3s ease', textAlign: 'center'
               }}
             >🚀 Free Trial Shuru Karein</button>
             <button onClick={() => window.open('https://khana-master.onrender.com/raman-sweet-bakery', '_blank')}
               style={{
-                flex: '1 1 160px', padding: '14px 20px', borderRadius: '14px',
-                border: '2px solid rgba(223,186,103,0.4)', background: 'rgba(223,186,103,0.05)',
-                color: '#DFBA67', fontWeight: 800, fontSize: '15px', cursor: 'pointer',
+                flex: '1 1 180px', padding: '16px 24px', borderRadius: '16px',
+                border: '2px solid rgba(223,186,103,0.5)', background: 'rgba(223,186,103,0.08)',
+                color: '#DFBA67', fontWeight: 800, fontSize: '1rem', cursor: 'pointer',
                 transition: 'all 0.3s', textAlign: 'center'
               }}
             >👁️ Live Demo Dekhein</button>
           </div>
         </div>
 
-        {/* Features Grid */}
+        {/* Core Features Grid */}
         <div style={{
-          display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))',
-          gap: '16px', padding: '40px 16px', maxWidth: '1100px', margin: '0 auto',
+          padding: '50px 16px 30px', maxWidth: '1140px', margin: '0 auto',
           position: 'relative', zIndex: 5
         }}>
-          {[
-            { icon: '📱', title: 'Digital QR Menu', desc: 'Customer QR scan kare aur luxury menu dekhe — no app download required' },
-            { icon: '💬', title: 'WhatsApp Ordering', desc: 'Customer seedha WhatsApp pe order bhej sake — zero commission' },
-            { icon: '⭐', title: 'Google Reviews', desc: 'One-click Google review collection — 5-star ratings badhayein' },
-            { icon: '🎨', title: 'Premium Themes', desc: 'Gold, Rose, Emerald — 10+ luxury themes apne brand ke hisaab se' },
-            { icon: '📊', title: 'Admin Dashboard', desc: 'Menu manage karein, orders dekhein, analytics — sab ek jagah' },
-            { icon: '🚀', title: 'Instant Setup', desc: '5 minute me ready — registration karein aur turant shuru karein' }
-          ].map((f, i) => (
-            <div key={i} style={{
-              background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.08)',
-              borderRadius: '18px', padding: '24px 20px', transition: 'all 0.3s',
-              cursor: 'default'
-            }}>
-              <div style={{ fontSize: '32px', marginBottom: '12px' }}>{f.icon}</div>
-              <h3 style={{ fontSize: '18px', fontWeight: 800, marginBottom: '6px', color: '#DFBA67' }}>{f.title}</h3>
-              <p style={{ fontSize: '13px', color: 'rgba(255,255,255,0.6)', lineHeight: 1.5, margin: 0 }}>{f.desc}</p>
-            </div>
-          ))}
+          <div style={{ textAlign: 'center', marginBottom: '36px' }}>
+            <h2 style={{ fontSize: 'clamp(24px, 5vw, 36px)', fontWeight: 900, color: '#FFFFFF', marginBottom: '8px' }}>
+              Why 10,000+ Restaurants Choose <span style={{ color: '#DFBA67' }}>KhanaMaster</span>
+            </h2>
+            <p style={{ color: 'rgba(255,255,255,0.6)', fontSize: '0.92rem' }}>Everything your restaurant needs to boost orders, reviews, and kitchen speed</p>
+          </div>
+
+          <div style={{
+            display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))',
+            gap: '18px'
+          }}>
+            {[
+              { icon: '📱', title: 'Digital QR Menu & Themes', desc: 'Customer QR scan kare aur luxury gold/emerald menu dekhe — 0.3s fast loading without app download.' },
+              { icon: '⭐', title: 'Smart AI Google Reviews', desc: 'Zero-cost client-side AI review booster — 5-star Google ratings and customer feedback fast-track karein.' },
+              { icon: '💬', title: 'WhatsApp Direct Ordering', desc: 'Customer seedha WhatsApp par order bhej sake — 0% commission direct order collection.' },
+              { icon: '⚡', title: 'Live Table KOT & Kitchen Siren', desc: 'Table QR code scanning se direct Kitchen KOT receipt aur loud sound siren ringtone.' },
+              { icon: '🖨️', title: '0.5s Thermal Printing', desc: 'PC & Mobile se instant Bluetooth/USB thermal KOT receipts and customer GST tax invoices.' },
+              { icon: '🍱', title: 'Thali & Combos Deals Builder', desc: 'Slim, mobile-friendly combo deals aur thali packages set karke billing revenue badhayein.' },
+              { icon: '🗺️', title: 'Hall Floor Map & Grid', desc: 'Real-time dining hall table status (Occupied, Free, KOT Pending) live track karein.' },
+              { icon: '🛎️', title: 'Waiter Call & Staff Bell', desc: 'Customer phone se 1-tap waiter summons with instant admin notification siren.' }
+            ].map((f, i) => (
+              <div key={i} style={{
+                background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.08)',
+                borderRadius: '20px', padding: '24px 20px', transition: 'all 0.3s ease',
+                boxShadow: '0 4px 20px rgba(0,0,0,0.2)'
+              }}>
+                <div style={{ fontSize: '34px', marginBottom: '12px' }}>{f.icon}</div>
+                <h3 style={{ fontSize: '1.1rem', fontWeight: 800, marginBottom: '8px', color: '#DFBA67' }}>{f.title}</h3>
+                <p style={{ fontSize: '0.84rem', color: 'rgba(255,255,255,0.65)', lineHeight: 1.5, margin: 0 }}>{f.desc}</p>
+              </div>
+            ))}
+          </div>
         </div>
 
         {/* Pricing Section */}
         <div style={{
-          padding: '50px 16px', textAlign: 'center', position: 'relative', zIndex: 5
+          padding: '60px 16px', textAlign: 'center', position: 'relative', zIndex: 5
         }}>
-          <h2 style={{ fontSize: 'clamp(26px, 5vw, 36px)', fontWeight: 900, marginBottom: '8px' }}>
-            <span style={{ background: 'linear-gradient(135deg, #DFBA67, #F4D490)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>Simple Pricing</span>
+          <h2 style={{ fontSize: 'clamp(26px, 5vw, 38px)', fontWeight: 900, marginBottom: '8px' }}>
+            <span style={{ background: 'linear-gradient(135deg, #DFBA67, #F4D490)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>Transparent & Scalable Pricing</span>
           </h2>
-          <p style={{ color: 'rgba(255,255,255,0.6)', fontSize: '14px', marginBottom: '32px' }}>Har plan me 14-din ka free trial included hai</p>
+          <p style={{ color: 'rgba(255,255,255,0.65)', fontSize: '0.95rem', marginBottom: '36px' }}>Har plan me 14-din ka free trial included hai. Upgrade or cancel anytime!</p>
           
           <div style={{
-            display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))',
-            gap: '20px', maxWidth: '900px', margin: '0 auto'
+            display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))',
+            gap: '22px', maxWidth: '980px', margin: '0 auto'
           }}>
             {[
-              { name: 'Basic', price: '₹499', period: '/month', badge: '⚡', features: ['Digital QR Menu', 'Premium Themes', 'Admin Dashboard', 'Unlimited Items'], popular: false },
-              { name: 'Pro', price: '₹999', period: '/month', badge: '👑', features: ['Everything in Basic', 'WhatsApp Ordering', 'Google Reviews', 'Priority Support'], popular: true },
-              { name: 'Enterprise', price: '₹1,999', period: '/month', badge: '🚀', features: ['Everything in Pro', 'Direct Table Ordering', 'KOT Kitchen System', 'Custom Branding'], popular: false }
+              { name: 'Basic Starter', price: '₹499', period: '/month', badge: '⚡ BASIC', features: ['Digital QR Menu', 'Luxury Themes', 'Admin Dashboard', 'Unlimited Dishes & Categories', 'Up to 3 Combo Deals'], popular: false },
+              { name: 'Pro Luxury', price: '₹999', period: '/month', badge: '👑 PRO', features: ['Everything in Basic', 'WhatsApp Direct Ordering', '⭐ Smart AI Google Reviews', 'Up to 10 Combo Deals', 'Priority 24/7 Phone Support'], popular: true },
+              { name: 'Enterprise VIP', price: '₹1,999', period: '/month', badge: '🚀 ENTERPRISE', features: ['Everything in Pro', '⚡ Direct Table QR Ordering', '📋 Live KOT Kitchen System & Siren', '🖨️ Thermal Printer KOT & Bills', '🗺️ Hall Floor Map & Table Grid', 'Unlimited Combo Deals'], popular: false }
             ].map((plan, i) => (
               <div key={i} style={{
-                background: plan.popular ? 'linear-gradient(135deg, rgba(223,186,103,0.12), rgba(223,186,103,0.04))' : 'rgba(255,255,255,0.03)',
-                border: plan.popular ? '2px solid rgba(223,186,103,0.6)' : '1px solid rgba(255,255,255,0.08)',
-                borderRadius: '20px', padding: '28px 20px', position: 'relative',
-                transition: 'all 0.3s'
+                background: plan.popular ? 'linear-gradient(135deg, rgba(223,186,103,0.15), rgba(223,186,103,0.04))' : 'rgba(255,255,255,0.03)',
+                border: plan.popular ? '2.5px solid #DFBA67' : '1px solid rgba(255,255,255,0.1)',
+                borderRadius: '24px', padding: '30px 22px', position: 'relative',
+                boxShadow: plan.popular ? '0 12px 40px rgba(223,186,103,0.25)' : 'none'
               }}>
                 {plan.popular && <div style={{
-                  position: 'absolute', top: '-12px', left: '50%', transform: 'translateX(-50%)',
+                  position: 'absolute', top: '-14px', left: '50%', transform: 'translateX(-50%)',
                   background: 'linear-gradient(135deg, #DFBA67, #C9A44A)', color: '#0A0A0A',
-                  padding: '3px 16px', borderRadius: '50px', fontSize: '11px', fontWeight: 900
-                }}>MOST POPULAR</div>}
-                <div style={{ fontSize: '26px', marginBottom: '6px' }}>{plan.badge}</div>
-                <h3 style={{ fontSize: '20px', fontWeight: 800, color: '#fff', marginBottom: '6px' }}>{plan.name}</h3>
-                <div style={{ marginBottom: '20px' }}>
-                  <span style={{ fontSize: '36px', fontWeight: 900, color: '#DFBA67' }}>{plan.price}</span>
-                  <span style={{ color: 'rgba(255,255,255,0.5)', fontSize: '13px' }}>{plan.period}</span>
+                  padding: '4px 18px', borderRadius: '50px', fontSize: '11px', fontWeight: 900,
+                  boxShadow: '0 4px 12px rgba(223,186,103,0.4)'
+                }}>RECOMMENDED CHOICE</div>}
+                <div style={{ fontSize: '24px', fontWeight: 900, color: '#DFBA67', marginBottom: '4px' }}>{plan.badge}</div>
+                <h3 style={{ fontSize: '1.25rem', fontWeight: 900, color: '#fff', marginBottom: '8px' }}>{plan.name}</h3>
+                <div style={{ marginBottom: '22px' }}>
+                  <span style={{ fontSize: '2.5rem', fontWeight: 900, color: '#DFBA67' }}>{plan.price}</span>
+                  <span style={{ color: 'rgba(255,255,255,0.5)', fontSize: '0.85rem' }}>{plan.period}</span>
                 </div>
-                <ul style={{ listStyle: 'none', padding: 0, marginBottom: '24px', textAlign: 'left' }}>
+                <ul style={{ listStyle: 'none', padding: 0, marginBottom: '28px', textAlign: 'left' }}>
                   {plan.features.map((f, j) => (
-                    <li key={j} style={{ padding: '7px 0', fontSize: '13px', color: 'rgba(255,255,255,0.75)', borderBottom: '1px solid rgba(255,255,255,0.05)' }}>
+                    <li key={j} style={{ padding: '8px 0', fontSize: '0.85rem', color: 'rgba(255,255,255,0.85)', borderBottom: '1px solid rgba(255,255,255,0.06)' }}>
                       ✅ {f}
                     </li>
                   ))}
                 </ul>
                 <button onClick={() => { window.history.pushState({}, '', '/register'); window.dispatchEvent(new PopStateEvent('popstate')); }}
                   style={{
-                    width: '100%', padding: '12px', borderRadius: '12px', border: 'none',
+                    width: '100%', padding: '14px', borderRadius: '14px', border: 'none',
                     background: plan.popular ? 'linear-gradient(135deg, #DFBA67, #C9A44A)' : 'rgba(255,255,255,0.1)',
-                    color: plan.popular ? '#0A0A0A' : '#DFBA67', fontWeight: 800, fontSize: '14px',
-                    cursor: 'pointer', transition: 'all 0.3s'
+                    color: plan.popular ? '#0A0A0A' : '#DFBA67', fontWeight: 900, fontSize: '0.92rem',
+                    cursor: 'pointer', transition: 'all 0.3s', boxShadow: plan.popular ? '0 6px 20px rgba(223,186,103,0.3)' : 'none'
                   }}
-                >Start Free Trial</button>
+                >Start 14-Day Free Trial</button>
               </div>
             ))}
           </div>
@@ -1069,11 +1083,14 @@ export default function App() {
 
         {/* Footer */}
         <footer style={{
-          textAlign: 'center', padding: '40px 20px', borderTop: '1px solid rgba(255,255,255,0.06)',
-          position: 'relative', zIndex: 5
+          textAlign: 'center', padding: '40px 20px', borderTop: '1px solid rgba(255,255,255,0.08)',
+          position: 'relative', zIndex: 5, background: 'rgba(0,0,0,0.4)'
         }}>
-          <p style={{ color: 'rgba(255,255,255,0.3)', fontSize: '13px' }}>
-            © 2025 Khana Master — India's Premium Digital Menu SaaS Platform
+          <div style={{ fontSize: '1.2rem', fontWeight: 900, color: '#DFBA67', marginBottom: '8px' }}>
+            🍽️ KhanaMaster Digital QR Menu SaaS
+          </div>
+          <p style={{ color: 'rgba(255,255,255,0.4)', fontSize: '0.82rem', margin: 0 }}>
+            © 2026 Khana Master — India's Premier Smart AI Digital Menu & Restaurant Management Platform
           </p>
         </footer>
       </div>
