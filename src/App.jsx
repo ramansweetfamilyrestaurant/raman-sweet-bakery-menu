@@ -451,7 +451,7 @@ export default function App() {
       });
       if (res.ok) {
         const data = await res.json();
-        const isAuthorized = data.mandate_status === 'active' || data.auto_debit_enabled;
+        const isAuthorized = data.mandate_status === 'active';
         return isAuthorized;
       }
     } catch (e) {

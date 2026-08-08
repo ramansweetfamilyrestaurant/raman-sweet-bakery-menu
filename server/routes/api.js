@@ -586,11 +586,11 @@ router.post('/register', async (req, res) => {
 
       const isActive = !requireApproval;
 
-      // 1. Create Restaurant Record
+      // 1. Create Restaurant Record (mandate_status='pending', auto_debit_enabled=0)
       const restoRes = await txQuery(`
         INSERT INTO restaurants (
-          name, slug, tagline, logo, phone, address, opening_hours, plan_tier, plan_price, plan_expires_at, trial_started_at, trial_ends_at, whatsapp_number, theme_color, active, total_tables
-        ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16) RETURNING id
+          name, slug, tagline, logo, phone, address, opening_hours, plan_tier, plan_price, plan_expires_at, trial_started_at, trial_ends_at, whatsapp_number, theme_color, active, total_tables, mandate_status, auto_debit_enabled
+        ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18) RETURNING id
       `, [
         name.trim(),
         cleanSlug,
@@ -607,6 +607,8 @@ router.post('/register', async (req, res) => {
         cleanPhone,
         'gold',
         isActive ? 1 : 0,
+        0,
+        'pending',
         0
       ]);
 
@@ -642,41 +644,6 @@ router.post('/register', async (req, res) => {
 
       const adminId = adminRes[0]?.id || adminRes.lastInsertRowid;
 
-      // 4. Seed Starter Categories & Starter Dishes
-      try {
-        const cat1 = await txQuery('INSERT INTO categories (restaurant_id, name, image, sort_order) VALUES ($1, $2, $3, $4) RETURNING id', [
-          newRestoId, '⭐ Special Starters', 'https://images.unsplash.com/photo-1601050690597-df0568f70950?w=500&auto=format&fit=crop&q=80', 1
-        ]);
-        const cat2 = await txQuery('INSERT INTO categories (restaurant_id, name, image, sort_order) VALUES ($1, $2, $3, $4) RETURNING id', [
-          newRestoId, '🍛 Main Course & Thalis', 'https://images.unsplash.com/photo-1546833999-b9f581a1996d?w=500&auto=format&fit=crop&q=80', 2
-        ]);
-        const cat3 = await txQuery('INSERT INTO categories (restaurant_id, name, image, sort_order) VALUES ($1, $2, $3, $4) RETURNING id', [
-          newRestoId, '🥤 Beverages & Shakes', 'https://images.unsplash.com/photo-1544145945-f90425340c7e?w=500&auto=format&fit=crop&q=80', 3
-        ]);
-
-        const cat1Id = cat1[0]?.id || cat1.lastInsertRowid;
-        const cat2Id = cat2[0]?.id || cat2.lastInsertRowid;
-        const cat3Id = cat3[0]?.id || cat3.lastInsertRowid;
-
-        if (cat1Id) {
-          await txQuery('INSERT INTO dishes (restaurant_id, category_id, name, price, description, image, available) VALUES ($1, $2, $3, $4, $5, $6, $7)', [
-            newRestoId, cat1Id, 'Crispy Paneer Tikka', 240, 'Juicy cottage cheese cubes marinated in spices and grilled in tandoor', 'https://images.unsplash.com/photo-1567188040759-fb8a883dc6d8?w=500&auto=format&fit=crop&q=80', 1
-          ]);
-        }
-        if (cat2Id) {
-          await txQuery('INSERT INTO dishes (restaurant_id, category_id, name, price, description, image, available) VALUES ($1, $2, $3, $4, $5, $6, $7)', [
-            newRestoId, cat2Id, 'Royal Butter Paneer & Naan Thali', 290, 'Rich butter paneer gravy served with 2 butter naans, dal makhani, and rice', 'https://images.unsplash.com/photo-1585937421612-70a008356fbe?w=500&auto=format&fit=crop&q=80', 1
-          ]);
-        }
-        if (cat3Id) {
-          await txQuery('INSERT INTO dishes (restaurant_id, category_id, name, price, description, image, available) VALUES ($1, $2, $3, $4, $5, $6, $7)', [
-            newRestoId, cat3Id, 'Cold Coffee with Ice Cream', 120, 'Creamy chilled coffee topped with dark chocolate and vanilla ice cream', 'https://images.unsplash.com/photo-1572490122747-3968b75cc699?w=500&auto=format&fit=crop&q=80', 1
-          ]);
-        }
-      } catch (seedErr) {
-        console.warn('Starter menu seed notice:', seedErr.message);
-      }
-
       return {
         newRestoId,
         adminId,
@@ -684,6 +651,41 @@ router.post('/register', async (req, res) => {
         isActive
       };
     });
+
+    // 4. Seed Starter Categories & Starter Dishes (outside transaction so errors don't cause transaction abort)
+    try {
+      const cat1 = await query('INSERT INTO categories (restaurant_id, name, image, sort_order) VALUES ($1, $2, $3, $4) RETURNING id', [
+        result.newRestoId, '⭐ Special Starters', 'https://images.unsplash.com/photo-1601050690597-df0568f70950?w=500&auto=format&fit=crop&q=80', 1
+      ]);
+      const cat2 = await query('INSERT INTO categories (restaurant_id, name, image, sort_order) VALUES ($1, $2, $3, $4) RETURNING id', [
+        result.newRestoId, '🍛 Main Course & Thalis', 'https://images.unsplash.com/photo-1546833999-b9f581a1996d?w=500&auto=format&fit=crop&q=80', 2
+      ]);
+      const cat3 = await query('INSERT INTO categories (restaurant_id, name, image, sort_order) VALUES ($1, $2, $3, $4) RETURNING id', [
+        result.newRestoId, '🥤 Beverages & Shakes', 'https://images.unsplash.com/photo-1544145945-f90425340c7e?w=500&auto=format&fit=crop&q=80', 3
+      ]);
+
+      const cat1Id = cat1[0]?.id || cat1.lastInsertRowid;
+      const cat2Id = cat2[0]?.id || cat2.lastInsertRowid;
+      const cat3Id = cat3[0]?.id || cat3.lastInsertRowid;
+
+      if (cat1Id) {
+        await query('INSERT INTO dishes (restaurant_id, category_id, name, price, description, image, available) VALUES ($1, $2, $3, $4, $5, $6, $7)', [
+          result.newRestoId, cat1Id, 'Crispy Paneer Tikka', 240, 'Juicy cottage cheese cubes marinated in spices and grilled in tandoor', 'https://images.unsplash.com/photo-1567188040759-fb8a883dc6d8?w=500&auto=format&fit=crop&q=80', 1
+        ]);
+      }
+      if (cat2Id) {
+        await query('INSERT INTO dishes (restaurant_id, category_id, name, price, description, image, available) VALUES ($1, $2, $3, $4, $5, $6, $7)', [
+          result.newRestoId, cat2Id, 'Royal Butter Paneer & Naan Thali', 290, 'Rich butter paneer gravy served with 2 butter naans, dal makhani, and rice', 'https://images.unsplash.com/photo-1585937421612-70a008356fbe?w=500&auto=format&fit=crop&q=80', 1
+        ]);
+      }
+      if (cat3Id) {
+        await query('INSERT INTO dishes (restaurant_id, category_id, name, price, description, image, available) VALUES ($1, $2, $3, $4, $5, $6, $7)', [
+          result.newRestoId, cat3Id, 'Cold Coffee with Ice Cream', 120, 'Creamy chilled coffee topped with dark chocolate and vanilla ice cream', 'https://images.unsplash.com/photo-1572490122747-3968b75cc699?w=500&auto=format&fit=crop&q=80', 1
+        ]);
+      }
+    } catch (seedErr) {
+      console.warn('Starter menu seed notice:', seedErr.message);
+    }
 
     // 5. Generate JWT Auth Token for automatic login
     const token = jwt.sign(

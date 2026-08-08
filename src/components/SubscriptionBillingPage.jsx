@@ -41,7 +41,7 @@ export default function SubscriptionBillingPage({ restoInfo, token, onProceedToD
               trial_started_at: data.trial_started_at,
               trial_ends_at: data.trial_ends_at || data.plan_expires_at
             });
-            if (data.mandate_status === 'active' || data.auto_debit_enabled) {
+            if (data.mandate_status === 'active') {
               setMandateActive(true);
             }
           }
@@ -75,7 +75,7 @@ export default function SubscriptionBillingPage({ restoInfo, token, onProceedToD
     }
 
     // Check if mandate is already active in database
-    if (activeResto?.mandate_status === 'active' || activeResto?.auto_debit_enabled) {
+    if (activeResto?.mandate_status === 'active') {
       setMandateActive(true);
     }
   }, [currentResto, restoInfo, planKey]);

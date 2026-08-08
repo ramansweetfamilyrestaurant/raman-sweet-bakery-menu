@@ -310,7 +310,7 @@ async function createTables() {
       `ALTER TABLE restaurants ADD COLUMN IF NOT EXISTS mandate_id VARCHAR(255);`,
       `ALTER TABLE restaurants ADD COLUMN IF NOT EXISTS mandate_status VARCHAR(50) DEFAULT 'pending';`,
       `ALTER TABLE restaurants ADD COLUMN IF NOT EXISTS trial_ends_at VARCHAR(100);`,
-      `ALTER TABLE restaurants ADD COLUMN IF NOT EXISTS auto_debit_enabled INT DEFAULT 1;`,
+      `ALTER TABLE restaurants ADD COLUMN IF NOT EXISTS auto_debit_enabled INT DEFAULT 0;`,
       `ALTER TABLE restaurants ADD COLUMN IF NOT EXISTS trial_started_at VARCHAR(100);`,
       `ALTER TABLE payments ADD COLUMN IF NOT EXISTS restaurant_id INT;`,
       `ALTER TABLE payments ADD COLUMN IF NOT EXISTS subscription_id INT;`,
@@ -342,6 +342,9 @@ async function createTables() {
     }
 
     try {
+      await pgPool.query(`
+        UPDATE restaurants SET auto_debit_enabled = 0 WHERE mandate_status IS NULL OR mandate_status != 'active';
+      `);
       await pgPool.query(`
         INSERT INTO coupons (code, discount_type, discount_value, applicable_plans, max_total_uses, max_uses_per_restaurant, first_payment_only, is_active)
         VALUES ('LAUNCH50', 'PERCENTAGE', 50, 'all', 100, 1, TRUE, TRUE)
@@ -636,7 +639,7 @@ async function createTables() {
       if (!restoCols.some(c => c.name === 'mandate_id')) sqliteDb.exec("ALTER TABLE restaurants ADD COLUMN mandate_id TEXT");
       if (!restoCols.some(c => c.name === 'mandate_status')) sqliteDb.exec("ALTER TABLE restaurants ADD COLUMN mandate_status TEXT DEFAULT 'pending'");
       if (!restoCols.some(c => c.name === 'trial_ends_at')) sqliteDb.exec("ALTER TABLE restaurants ADD COLUMN trial_ends_at TEXT");
-      if (!restoCols.some(c => c.name === 'auto_debit_enabled')) sqliteDb.exec("ALTER TABLE restaurants ADD COLUMN auto_debit_enabled INTEGER DEFAULT 1");
+      if (!restoCols.some(c => c.name === 'auto_debit_enabled')) sqliteDb.exec("ALTER TABLE restaurants ADD COLUMN auto_debit_enabled INTEGER DEFAULT 0");
       if (!restoCols.some(c => c.name === 'trial_started_at')) sqliteDb.exec("ALTER TABLE restaurants ADD COLUMN trial_started_at TEXT");
 
       sqliteDb.exec("CREATE INDEX IF NOT EXISTS idx_restaurants_active_expires ON restaurants(active, plan_expires_at)");
