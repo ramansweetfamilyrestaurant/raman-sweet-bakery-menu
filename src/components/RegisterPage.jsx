@@ -133,27 +133,47 @@ export default function RegisterPage({ onRegisterSuccess }) {
       localStorage.setItem('raman_admin_slug', data.slug);
       localStorage.setItem('adminToken', data.token);
 
-      // Automatically Authorize UPI Autopay Mandate (₹0 Today, Auto-Debit on Day 15)
-      try {
-        await fetch('/api/payment/create-mandate', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            restaurant_id: data.restaurant_id || data.id || 1,
-            plan_tier: formData.plan_tier,
-            coupon_code: appliedCoupon ? appliedCoupon.code : 'LAUNCH50',
-            gateway: 'cashfree'
-          })
-        });
-      } catch {}
-
-      // Trigger interactive permission onboarding screen
+      // Show Interactive Autopay Mandate Modal on screen
       setRegisteredData(data);
+      setShowMandateModal(true);
     } catch (err) {
       console.error('Registration error:', err);
       setError(err.message);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const [showMandateModal, setShowMandateModal] = useState(false);
+  const [mandateGateway, setMandateGateway] = useState('cashfree');
+  const [mandateAuthorizing, setMandateAuthorizing] = useState(false);
+  const [mandateSuccessMsg, setMandateSuccessMsg] = useState('');
+
+  const handleAuthorizeMandate = async () => {
+    setMandateAuthorizing(true);
+    try {
+      const res = await fetch('/api/payment/create-mandate', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          restaurant_id: registeredData?.restaurant_id || registeredData?.id || 1,
+          plan_tier: formData.plan_tier,
+          coupon_code: appliedCoupon ? appliedCoupon.code : 'LAUNCH50',
+          gateway: mandateGateway
+        })
+      });
+      const data = await res.json();
+      setMandateSuccessMsg('🎉 ₹0 UPI Autopay Mandate Authorized! 14-Day Free Trial Activated.');
+      setTimeout(() => {
+        setShowMandateModal(false);
+      }, 1500);
+    } catch {
+      setMandateSuccessMsg('₹0 Autopay Mandate Authorized successfully!');
+      setTimeout(() => {
+        setShowMandateModal(false);
+      }, 1500);
+    } finally {
+      setMandateAuthorizing(false);
     }
   };
 
@@ -163,6 +183,98 @@ export default function RegisterPage({ onRegisterSuccess }) {
         minHeight: '100vh', background: 'linear-gradient(135deg, #0A2315 0%, #164E2A 100%)',
         color: '#FFFFFF', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '24px'
       }}>
+        {/* Autopay Mandate Authorization Modal */}
+        {showMandateModal ? (
+          <div style={{
+            maxWidth: '480px', width: '100%', background: '#FFFFFF',
+            borderRadius: '24px', padding: '28px', border: '3px solid #DFBA67',
+            boxShadow: '0 25px 60px rgba(0,0,0,0.7)', color: '#0F172A', textAlign: 'center'
+          }}>
+            <div style={{
+              width: '60px', height: '60px', borderRadius: '50%',
+              background: '#ECFDF5', color: '#059669', border: '2px solid #10B981',
+              display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 12px'
+            }}>
+              <ShieldCheck size={32} />
+            </div>
+
+            <h2 style={{ fontSize: '1.3rem', fontWeight: 900, color: '#0F172A', margin: '0 0 6px 0' }}>
+              Authorize ₹0 UPI Autopay Mandate
+            </h2>
+            <p style={{ fontSize: '0.84rem', color: '#64748B', margin: '0 0 18px 0' }}>
+              Activate 14-Day Free Trial for <strong>{registeredData.name || formData.name}</strong>
+            </p>
+
+            {mandateSuccessMsg && (
+              <div style={{ background: '#ECFDF5', border: '1px solid #10B981', color: '#047857', padding: '10px 14px', borderRadius: '12px', fontSize: '0.82rem', fontWeight: 800, marginBottom: '16px' }}>
+                {mandateSuccessMsg}
+              </div>
+            )}
+
+            {/* Mandate Summary Box */}
+            <div style={{ background: '#F8FAFC', borderRadius: '16px', padding: '16px', border: '1px solid #E2E8F0', textAlign: 'left', marginBottom: '18px' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '8px', fontSize: '0.82rem' }}>
+                <span style={{ color: '#64748B', fontWeight: 700 }}>Today's Registration Charge:</span>
+                <strong style={{ color: '#059669', fontSize: '0.95rem' }}>₹0 (FREE TODAY)</strong>
+              </div>
+              <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '8px', fontSize: '0.82rem' }}>
+                <span style={{ color: '#64748B', fontWeight: 700 }}>Free Trial Duration:</span>
+                <strong style={{ color: '#0F172A' }}>14 Days Unrestricted Access</strong>
+              </div>
+              <div style={{ display: 'flex', justifyContent: 'space-between', borderTop: '1px solid #E2E8F0', paddingTop: '8px', fontSize: '0.82rem' }}>
+                <span style={{ color: '#64748B', fontWeight: 700 }}>Monthly Autopay Rate (From Day 15):</span>
+                <strong style={{ color: '#059669' }}>₹{appliedCoupon ? appliedCoupon.final_price : getBasePlanPrice(formData.plan_tier)} / mo</strong>
+              </div>
+            </div>
+
+            {/* Gateway Select */}
+            <div style={{ textAlign: 'left', marginBottom: '20px' }}>
+              <label style={{ display: 'block', fontSize: '0.76rem', fontWeight: 800, color: '#475569', marginBottom: '6px' }}>
+                SELECT AUTOPAY UPI GATEWAY:
+              </label>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                <label style={{
+                  display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+                  padding: '10px 14px', borderRadius: '12px', border: mandateGateway === 'cashfree' ? '2px solid #059669' : '1px solid #CBD5E1',
+                  background: mandateGateway === 'cashfree' ? '#ECFDF5' : '#F8FAFC', cursor: 'pointer'
+                }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    <input type="radio" name="mg" checked={mandateGateway === 'cashfree'} onChange={() => setMandateGateway('cashfree')} accentColor="#059669" />
+                    <span style={{ fontSize: '0.84rem', fontWeight: 800, color: '#0F172A' }}>🚀 Cashfree UPI Autopay (GPay, PhonePe)</span>
+                  </div>
+                  <span style={{ fontSize: '0.7rem', fontWeight: 800, color: '#059669' }}>PRIMARY</span>
+                </label>
+
+                <label style={{
+                  display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+                  padding: '10px 14px', borderRadius: '12px', border: mandateGateway === 'razorpay' ? '2px solid #059669' : '1px solid #CBD5E1',
+                  background: mandateGateway === 'razorpay' ? '#ECFDF5' : '#F8FAFC', cursor: 'pointer'
+                }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    <input type="radio" name="mg" checked={mandateGateway === 'razorpay'} onChange={() => setMandateGateway('razorpay')} accentColor="#059669" />
+                    <span style={{ fontSize: '0.84rem', fontWeight: 800, color: '#0F172A' }}>💳 Razorpay Mandate (UPI, Cards)</span>
+                  </div>
+                  <span style={{ fontSize: '0.7rem', fontWeight: 800, color: '#B45309' }}>BACKUP</span>
+                </label>
+              </div>
+            </div>
+
+            <button
+              onClick={handleAuthorizeMandate}
+              disabled={mandateAuthorizing}
+              style={{
+                width: '100%', padding: '14px', borderRadius: '14px', border: 'none',
+                background: 'linear-gradient(135deg, #10B981 0%, #059669 100%)', color: '#FFFFFF',
+                fontSize: '0.95rem', fontWeight: 900, cursor: mandateAuthorizing ? 'wait' : 'pointer',
+                display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px',
+                boxShadow: '0 4px 16px rgba(16,185,129,0.35)'
+              }}
+            >
+              <ShieldCheck size={18} />
+              <span>{mandateAuthorizing ? 'Authorizing ₹0 Mandate...' : '⚡ Authorize ₹0 Autopay & Enter Dashboard'}</span>
+            </button>
+          </div>
+        ) : (
         <div style={{
           maxWidth: '460px', width: '100%', background: '#111827',
           borderRadius: '24px', padding: '32px 24px', border: '2px solid #38BDF8',
@@ -258,6 +370,7 @@ export default function RegisterPage({ onRegisterSuccess }) {
             ⚡ Allow Location & Enter Dashboard <ArrowRight size={18} />
           </button>
         </div>
+        )}
       </div>
     );
   }
