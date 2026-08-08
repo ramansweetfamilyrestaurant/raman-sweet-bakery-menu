@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Store, User, Lock, Phone, ArrowRight, CheckCircle2, ShieldCheck, Sparkles, AlertCircle } from 'lucide-react';
 
 export default function RegisterPage({ onRegisterSuccess }) {
@@ -11,6 +11,14 @@ export default function RegisterPage({ onRegisterSuccess }) {
     plan_tier: 'pro'
   });
 
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const p = params.get('plan');
+    if (p && ['basic', 'pro', 'enterprise'].includes(p.toLowerCase())) {
+      setFormData(prev => ({ ...prev, plan_tier: p.toLowerCase() }));
+    }
+  }, []);
+
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [pendingApprovalData, setPendingApprovalData] = useState(null);
@@ -20,15 +28,22 @@ export default function RegisterPage({ onRegisterSuccess }) {
   const [couponMsg, setCouponMsg] = useState('');
   const [couponLoading, setCouponLoading] = useState(false);
 
+  const getBasePlanPrice = (tier) => {
+    if (tier === 'basic') return 499;
+    if (tier === 'enterprise') return 1999;
+    return 999;
+  };
+
   const handleApplyCoupon = async () => {
     if (!couponInput.trim()) return;
     setCouponLoading(true);
     setCouponMsg('');
     try {
+      const basePrice = getBasePlanPrice(formData.plan_tier);
       const res = await fetch('/api/coupons/validate', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ code: couponInput.trim(), planPrice: 999 })
+        body: JSON.stringify({ code: couponInput.trim(), planPrice: basePrice })
       });
       const data = await res.json();
       if (res.ok && data.valid) {
@@ -526,6 +541,40 @@ export default function RegisterPage({ onRegisterSuccess }) {
               </div>
             </div>
 
+            {/* Select SaaS Subscription Plan */}
+            <div style={{ marginTop: '4px' }}>
+              <label style={{ display: 'block', fontSize: '0.76rem', fontWeight: 800, color: '#DFBA67', marginBottom: '6px' }}>
+                SELECT SAAS SUBSCRIPTION PLAN *
+              </label>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '8px' }}>
+                {[
+                  { key: 'basic', name: '⚡ Basic', price: '₹499/mo', desc: 'Digital QR Menu' },
+                  { key: 'pro', name: '👑 Pro', price: '₹999/mo', desc: 'WhatsApp + Reviews', popular: true },
+                  { key: 'enterprise', name: '🚀 Enterprise', price: '₹1,999/mo', desc: 'KOT + Printers' }
+                ].map((p) => (
+                  <div
+                    key={p.key}
+                    onClick={() => {
+                      setFormData({ ...formData, plan_tier: p.key });
+                      setAppliedCoupon(null);
+                      setCouponMsg('');
+                    }}
+                    style={{
+                      border: formData.plan_tier === p.key ? '2px solid #FFD700' : '1px solid rgba(255,255,255,0.15)',
+                      background: formData.plan_tier === p.key ? 'rgba(255,215,0,0.12)' : 'rgba(255,255,255,0.03)',
+                      borderRadius: '12px', padding: '10px 8px', cursor: 'pointer', textAlign: 'center',
+                      position: 'relative'
+                    }}
+                  >
+                    {p.popular && <span style={{ position: 'absolute', top: '-8px', right: '4px', background: '#DFBA67', color: '#000', fontSize: '0.55rem', fontWeight: 900, padding: '1px 5px', borderRadius: '4px' }}>BEST</span>}
+                    <div style={{ fontSize: '0.82rem', fontWeight: 900, color: formData.plan_tier === p.key ? '#FFD700' : '#FFF' }}>{p.name}</div>
+                    <div style={{ fontSize: '0.72rem', fontWeight: 800, color: '#34D399', margin: '2px 0' }}>{p.price}</div>
+                    <div style={{ fontSize: '0.62rem', color: '#9CA3AF' }}>{p.desc}</div>
+                  </div>
+                ))}
+              </div>
+            </div>
+
             {/* Plan Badge Indicator & Coupon Calculation */}
             <div style={{
               background: 'rgba(5,150,105,0.15)', border: '1px solid rgba(5,150,105,0.3)',
@@ -535,7 +584,7 @@ export default function RegisterPage({ onRegisterSuccess }) {
               <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                 <ShieldCheck size={18} color="#34D399" />
                 <span style={{ fontSize: '0.8rem', color: '#D1D5DB', fontWeight: 700 }}>
-                  Includes 👑 <strong style={{ color: '#FFD700' }}>Pro Plan 14-Day Free Trial</strong>
+                  Includes <strong style={{ color: '#FFD700' }}>{formData.plan_tier.toUpperCase()} Plan 14-Day Free Trial</strong>
                 </span>
               </div>
               <span style={{ fontSize: '0.75rem', fontWeight: 900, color: '#34D399' }}>

@@ -1120,7 +1120,11 @@ export default function App() {
                     </li>
                   ))}
                 </ul>
-                <button onClick={() => { window.history.pushState({}, '', '/register'); window.dispatchEvent(new PopStateEvent('popstate')); }}
+                <button onClick={() => { 
+                  const targetKey = plan.key || (plan.name.toLowerCase().includes('basic') ? 'basic' : plan.name.toLowerCase().includes('enterprise') ? 'enterprise' : 'pro');
+                  window.history.pushState({}, '', `/register?plan=${targetKey}`); 
+                  window.dispatchEvent(new PopStateEvent('popstate')); 
+                }}
                   style={{
                     width: '100%', padding: '14px', borderRadius: '14px', border: 'none',
                     background: plan.popular ? 'linear-gradient(135deg, #DFBA67, #C9A44A)' : 'rgba(255,255,255,0.1)',

@@ -4480,7 +4480,90 @@ export default function AdminDashboard({ token, username, onLogout, onReturnToMe
             </div>
           )}
 
-          {/* Accordion 3: Change Admin Credentials */}
+          {/* Accordion 3: SaaS Billing & Subscription Management */}
+          <div 
+            onClick={() => toggleSettingsSection('billing')}
+            style={{
+              background: 'linear-gradient(135deg, #0A2315 0%, #164E2A 100%)',
+              color: '#FFFFFF',
+              borderRadius: openSettingsSections.billing ? '16px 16px 0 0' : '16px',
+              padding: '14px 18px',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+              cursor: 'pointer',
+              marginBottom: openSettingsSections.billing ? 0 : '14px',
+              boxShadow: '0 4px 14px rgba(10,35,21,0.25)',
+              border: '1.5px solid #DFBA67'
+            }}
+          >
+            <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+              <div style={{ background: 'rgba(255,255,255,0.15)', padding: '8px', borderRadius: '10px' }}>
+                <CreditCard size={20} color="#DFBA67" />
+              </div>
+              <div>
+                <h3 style={{ fontSize: '1rem', fontWeight: 900, margin: 0, color: '#DFBA67' }}>
+                  SECTION 3: 💳 BILLING & SUBSCRIPTION PLAN
+                </h3>
+                <span style={{ fontSize: '0.74rem', color: '#E2E8F0' }}>
+                  Manage active plan tier, view expiration date, and renew or upgrade plan
+                </span>
+              </div>
+            </div>
+            <span style={{ fontSize: '0.78rem', fontWeight: 800, background: 'rgba(0,0,0,0.3)', padding: '4px 10px', borderRadius: '50px' }}>
+              {openSettingsSections.billing ? '▲ Collapse' : '▼ Tap to Expand'}
+            </span>
+          </div>
+
+          {openSettingsSections.billing && (
+            <div style={{
+              background: '#FFFFFF', border: '1.5px solid #DFBA67', borderTop: 'none',
+              borderRadius: '0 0 16px 16px', padding: '20px', marginBottom: '14px'
+            }}>
+              <div style={{ background: '#F8FAFC', borderRadius: '16px', padding: '18px', border: '1px solid #E2E8F0', marginBottom: '16px' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
+                  <div>
+                    <span style={{ fontSize: '0.75rem', fontWeight: 800, color: '#64748B', display: 'block' }}>CURRENT ACTIVE PLAN:</span>
+                    <strong style={{ fontSize: '1.2rem', fontWeight: 900, color: '#0F172A' }}>
+                      {(restaurantInfo?.plan_tier || 'pro').toUpperCase()} PLAN
+                    </strong>
+                  </div>
+                  <span style={{ background: '#DCFCE7', color: '#15803D', border: '1px solid #86EFAC', padding: '4px 12px', borderRadius: '50px', fontSize: '0.76rem', fontWeight: 900 }}>
+                    🟢 ACTIVE
+                  </span>
+                </div>
+
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', fontSize: '0.82rem', borderTop: '1px solid #E2E8F0', paddingTop: '12px' }}>
+                  <div>
+                    <span style={{ color: '#64748B', display: 'block', fontSize: '0.72rem', fontWeight: 700 }}>PLAN EXPIRY DATE:</span>
+                    <strong style={{ color: '#0F172A' }}>{restaurantInfo?.plan_expires_at || '14-Day Free Trial'}</strong>
+                  </div>
+                  <div>
+                    <span style={{ color: '#64748B', display: 'block', fontSize: '0.72rem', fontWeight: 700 }}>MONTHLY RATE:</span>
+                    <strong style={{ color: '#059669' }}>
+                      ₹{restaurantInfo?.plan_tier === 'enterprise' ? 1999 : restaurantInfo?.plan_tier === 'basic' ? 499 : 999} / month
+                    </strong>
+                  </div>
+                </div>
+              </div>
+
+              <button
+                onClick={() => setShowPaymentModal(true)}
+                style={{
+                  width: '100%', padding: '14px', borderRadius: '14px', border: 'none',
+                  background: 'linear-gradient(135deg, #10B981 0%, #059669 100%)', color: '#FFFFFF',
+                  fontWeight: 900, fontSize: '0.95rem', cursor: 'pointer',
+                  display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px',
+                  boxShadow: '0 4px 16px rgba(16,185,129,0.35)'
+                }}
+              >
+                <CreditCard size={18} />
+                <span>💳 Upgrade or Renew Subscription Now</span>
+              </button>
+            </div>
+          )}
+
+          {/* Accordion 4: Change Admin Credentials */}
           <div 
             onClick={() => toggleSettingsSection('security')}
             style={{
