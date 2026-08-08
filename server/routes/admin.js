@@ -183,6 +183,9 @@ router.get('/subscription-status', authenticateToken, async (req, res) => {
 
     const billingRequired = !isAllowed || isExpired || isCancelled;
 
+    const sysRows = await query("SELECT value FROM system_settings WHERE key = 'default_trial_days'");
+    const defaultTrialDays = parseInt(sysRows[0]?.value || '14', 10);
+
     res.json({
       status: subStatus,
       active: subInfo.active,
@@ -196,6 +199,7 @@ router.get('/subscription-status', authenticateToken, async (req, res) => {
       direct_ordering_enabled: directOrderingEnabled,
       google_reviews_enabled: googleReviewsEnabled,
       max_combos: maxCombos,
+      default_trial_days: defaultTrialDays,
       trial_started_at: r.trial_started_at,
       trial_ends_at: r.trial_ends_at || r.plan_expires_at,
       plan_expires_at: r.plan_expires_at,
