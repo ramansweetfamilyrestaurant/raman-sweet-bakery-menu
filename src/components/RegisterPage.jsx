@@ -15,6 +15,36 @@ export default function RegisterPage({ onRegisterSuccess }) {
   const [error, setError] = useState('');
   const [pendingApprovalData, setPendingApprovalData] = useState(null);
   const [registeredData, setRegisteredData] = useState(null);
+  const [couponInput, setCouponInput] = useState('LAUNCH50');
+  const [appliedCoupon, setAppliedCoupon] = useState(null);
+  const [couponMsg, setCouponMsg] = useState('');
+  const [couponLoading, setCouponLoading] = useState(false);
+
+  const handleApplyCoupon = async () => {
+    if (!couponInput.trim()) return;
+    setCouponLoading(true);
+    setCouponMsg('');
+    try {
+      const res = await fetch('/api/coupons/validate', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ code: couponInput.trim(), planPrice: 999 })
+      });
+      const data = await res.json();
+      if (res.ok && data.valid) {
+        setAppliedCoupon(data);
+        setCouponMsg(data.message || `Coupon '${data.code}' applied successfully! Saved ₹${data.discount}`);
+      } else {
+        setAppliedCoupon(null);
+        setCouponMsg(data.error || 'Invalid or expired coupon code');
+      }
+    } catch (e) {
+      setAppliedCoupon(null);
+      setCouponMsg('Failed to validate coupon code');
+    } finally {
+      setCouponLoading(false);
+    }
+  };
 
   // Compute live URL slug preview
   const liveSlug = formData.name
@@ -496,7 +526,7 @@ export default function RegisterPage({ onRegisterSuccess }) {
               </div>
             </div>
 
-            {/* Plan Badge Indicator */}
+            {/* Plan Badge Indicator & Coupon Calculation */}
             <div style={{
               background: 'rgba(5,150,105,0.15)', border: '1px solid rgba(5,150,105,0.3)',
               borderRadius: '12px', padding: '10px 14px', marginTop: '4px',
@@ -508,7 +538,70 @@ export default function RegisterPage({ onRegisterSuccess }) {
                   Includes 👑 <strong style={{ color: '#FFD700' }}>Pro Plan 14-Day Free Trial</strong>
                 </span>
               </div>
-              <span style={{ fontSize: '0.75rem', fontWeight: 900, color: '#34D399' }}>₹0 Today</span>
+              <span style={{ fontSize: '0.75rem', fontWeight: 900, color: '#34D399' }}>
+                {appliedCoupon ? `Saved ₹${appliedCoupon.discount}!` : '₹0 Today'}
+              </span>
+            </div>
+
+            {/* 🎟️ Promo / Coupon Code Input Field */}
+            <div style={{ marginTop: '2px' }}>
+              <label style={{ display: 'block', fontSize: '0.76rem', fontWeight: 800, color: '#DFBA67', marginBottom: '4px' }}>
+                🎟️ PROMO / COUPON CODE (OPTIONAL):
+              </label>
+              <div style={{ display: 'flex', gap: '8px' }}>
+                <input
+                  type="text"
+                  placeholder="e.g. LAUNCH50 or FIRST100"
+                  value={couponInput}
+                  onChange={(e) => {
+                    setCouponInput(e.target.value.toUpperCase());
+                    setAppliedCoupon(null);
+                    setCouponMsg('');
+                  }}
+                  style={{
+                    flex: 1,
+                    padding: '10px 12px',
+                    borderRadius: '10px',
+                    border: '1px solid rgba(255,255,255,0.2)',
+                    background: '#1F2937',
+                    color: '#FFD700',
+                    fontSize: '0.86rem',
+                    fontWeight: 800,
+                    textTransform: 'uppercase',
+                    letterSpacing: '0.5px'
+                  }}
+                />
+                <button
+                  type="button"
+                  onClick={handleApplyCoupon}
+                  disabled={couponLoading || !couponInput.trim()}
+                  style={{
+                    background: 'linear-gradient(135deg, #10B981 0%, #059669 100%)',
+                    color: '#FFFFFF',
+                    border: 'none',
+                    padding: '10px 16px',
+                    borderRadius: '10px',
+                    fontWeight: 800,
+                    fontSize: '0.8rem',
+                    cursor: couponLoading || !couponInput.trim() ? 'not-allowed' : 'pointer'
+                  }}
+                >
+                  {couponLoading ? 'Validating...' : 'Apply'}
+                </button>
+              </div>
+              {couponMsg && (
+                <div style={{
+                  fontSize: '0.74rem',
+                  fontWeight: 800,
+                  color: appliedCoupon ? '#34D399' : '#EF4444',
+                  marginTop: '4px',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '4px'
+                }}>
+                  {appliedCoupon ? '✅ ' : '❌ '}{couponMsg}
+                </div>
+              )}
             </div>
 
             {/* Automated Permission & Terms Agreement */}

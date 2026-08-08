@@ -446,6 +446,51 @@ router.delete('/plans/:key', authenticateToken, requireSuperAdmin, async (req, r
   }
 });
 
+// ========== PROMO COUPON CODES CRUD ==========
+
+// GET all coupons
+router.get('/coupons', authenticateToken, requireSuperAdmin, async (req, res) => {
+  try {
+    const coupons = await query('SELECT * FROM coupons ORDER BY id DESC');
+    res.json(coupons || []);
+  } catch (err) {
+    console.error('Fetch coupons error:', err);
+    res.status(500).json({ error: 'Failed to fetch coupons' });
+  }
+});
+
+// POST create coupon
+router.post('/coupons', authenticateToken, requireSuperAdmin, async (req, res) => {
+  try {
+    const { code, discount_percent, discount_amount, max_uses } = req.body;
+    if (!code || typeof code !== 'string' || !code.trim()) {
+      return res.status(400).json({ error: 'Coupon code is required' });
+    }
+    const cleanCode = code.trim().toUpperCase();
+    await query(
+      'INSERT INTO coupons (code, discount_percent, discount_amount, max_uses, active) VALUES ($1, $2, $3, $4, 1)',
+      [cleanCode, Number(discount_percent) || 0, Number(discount_amount) || 0, Number(max_uses) || 100]
+    );
+    await logAudit(null, 'superadmin', 'Create Coupon', `Created promo coupon '${cleanCode}'`);
+    res.json({ success: true, message: `Coupon '${cleanCode}' created successfully` });
+  } catch (err) {
+    console.error('Create coupon error:', err);
+    res.status(500).json({ error: 'Failed to create coupon (code may already exist)' });
+  }
+});
+
+// DELETE coupon
+router.delete('/coupons/:id', authenticateToken, requireSuperAdmin, async (req, res) => {
+  try {
+    await query('DELETE FROM coupons WHERE id = $1', [req.params.id]);
+    await logAudit(null, 'superadmin', 'Delete Coupon', `Deleted coupon ID ${req.params.id}`);
+    res.json({ success: true, message: 'Coupon deleted successfully' });
+  } catch (err) {
+    console.error('Delete coupon error:', err);
+    res.status(500).json({ error: 'Failed to delete coupon' });
+  }
+});
+
 // GET Platform Audit Logs
 router.get('/audit-logs', authenticateToken, requireSuperAdmin, async (req, res) => {
   try {

@@ -943,6 +943,27 @@ export default function App() {
           </div>
         )}
 
+        {/* 🔥 Festive & Launch Promo Ticker Banner */}
+        <div style={{
+          background: 'linear-gradient(90deg, #92400E 0%, #D97706 50%, #92400E 100%)',
+          color: '#FFFFFF',
+          padding: '8px 16px',
+          textAlign: 'center',
+          fontSize: '0.82rem',
+          fontWeight: 800,
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          gap: '8px',
+          letterSpacing: '0.3px',
+          boxShadow: '0 2px 10px rgba(217, 119, 6, 0.3)',
+          flexWrap: 'wrap'
+        }}>
+          <span>🔥 LIMITED TIME LAUNCH OFFER: Use Coupon Code</span>
+          <span style={{ background: '#FFFFFF', color: '#B45309', padding: '2px 8px', borderRadius: '6px', fontWeight: 900, fontFamily: 'monospace' }}>LAUNCH50</span>
+          <span>for FLAT 50% OFF on All Plans!</span>
+        </div>
+
         {/* Hero Section */}
         <div style={{
           display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
@@ -1051,6 +1072,7 @@ export default function App() {
             {(publicPlans.length > 0 ? publicPlans.map(p => ({
               name: p.name,
               price: `₹${p.price}`,
+              originalPrice: p.original_price ? `₹${p.original_price}` : `₹${p.price * 2 - 1}`,
               period: '/month',
               badge: p.badge || '👑 PLAN',
               features: [
@@ -1062,9 +1084,9 @@ export default function App() {
               ],
               popular: p.key === 'pro'
             })) : [
-              { name: 'Basic Starter', price: '₹499', period: '/month', badge: '⚡ BASIC', features: ['Digital QR Menu', 'Luxury Themes', 'Admin Dashboard', 'Unlimited Dishes & Categories', 'Up to 3 Combo Deals'], popular: false },
-              { name: 'Pro Luxury', price: '₹999', period: '/month', badge: '👑 PRO', features: ['Everything in Basic', 'WhatsApp Direct Ordering', '⭐ Smart AI Google Reviews', 'Up to 10 Combo Deals', 'Priority 24/7 Phone Support'], popular: true },
-              { name: 'Enterprise VIP', price: '₹1,999', period: '/month', badge: '🚀 ENTERPRISE', features: ['Everything in Pro', '⚡ Direct Table QR Ordering', '📋 Live KOT Kitchen System & Siren', '🖨️ Thermal Printer KOT & Bills', '🗺️ Hall Floor Map & Table Grid', 'Unlimited Combo Deals'], popular: false }
+              { name: 'Basic Starter', price: '₹499', originalPrice: '₹999', period: '/month', badge: '⚡ BASIC', features: ['Digital QR Menu', 'Luxury Themes', 'Admin Dashboard', 'Unlimited Dishes & Categories', 'Up to 3 Combo Deals'], popular: false },
+              { name: 'Pro Luxury', price: '₹999', originalPrice: '₹1,999', period: '/month', badge: '👑 PRO', features: ['Everything in Basic', 'WhatsApp Direct Ordering', '⭐ Smart AI Google Reviews', 'Up to 10 Combo Deals', 'Priority 24/7 Phone Support'], popular: true },
+              { name: 'Enterprise VIP', price: '₹1,999', originalPrice: '₹3,999', period: '/month', badge: '🚀 ENTERPRISE', features: ['Everything in Pro', '⚡ Direct Table QR Ordering', '📋 Live KOT Kitchen System & Siren', '🖨️ Thermal Printer KOT & Bills', '🗺️ Hall Floor Map & Table Grid', 'Unlimited Combo Deals'], popular: false }
             ]).map((plan, i) => (
               <div key={i} style={{
                 background: plan.popular ? 'linear-gradient(135deg, rgba(223,186,103,0.15), rgba(223,186,103,0.04))' : 'rgba(255,255,255,0.03)',
@@ -1080,7 +1102,14 @@ export default function App() {
                 }}>RECOMMENDED CHOICE</div>}
                 <div style={{ fontSize: '24px', fontWeight: 900, color: '#DFBA67', marginBottom: '4px' }}>{plan.badge}</div>
                 <h3 style={{ fontSize: '1.25rem', fontWeight: 900, color: '#fff', marginBottom: '8px' }}>{plan.name}</h3>
+                
                 <div style={{ marginBottom: '22px' }}>
+                  {plan.originalPrice && (
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px', marginBottom: '2px' }}>
+                      <span style={{ fontSize: '1.05rem', color: '#9CA3AF', textDecoration: 'line-through', fontWeight: 600 }}>{plan.originalPrice}</span>
+                      <span style={{ background: '#DC2626', color: '#FFFFFF', fontSize: '0.66rem', fontWeight: 900, padding: '2px 6px', borderRadius: '6px' }}>50% OFF</span>
+                    </div>
+                  )}
                   <span style={{ fontSize: '2.5rem', fontWeight: 900, color: '#DFBA67' }}>{plan.price}</span>
                   <span style={{ color: 'rgba(255,255,255,0.5)', fontSize: '0.85rem' }}>{plan.period}</span>
                 </div>

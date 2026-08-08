@@ -507,7 +507,7 @@ async function seedData() {
 
   // Seed default SaaS Plans if empty
   try {
-    // Migration: Add max_combos column if not existing
+    // Migration: Add max_combos and original_price columns if not existing
     try {
       await query('ALTER TABLE saas_plans ADD COLUMN max_combos INT DEFAULT 10');
       await query("UPDATE saas_plans SET max_combos = 3 WHERE key = 'basic'");
@@ -517,15 +517,67 @@ async function seedData() {
       // Column already exists
     }
 
+    try {
+      await query('ALTER TABLE saas_plans ADD COLUMN original_price NUMERIC DEFAULT 999');
+      await query("UPDATE saas_plans SET original_price = 999 WHERE key = 'basic'");
+      await query("UPDATE saas_plans SET original_price = 1999 WHERE key = 'pro'");
+      await query("UPDATE saas_plans SET original_price = 3999 WHERE key = 'enterprise'");
+    } catch {
+      // Column already exists
+    }
+
+    // Coupons Table (PostgreSQL & SQLite)
+    try {
+      await query(`
+        CREATE TABLE IF NOT EXISTS coupons (
+          id SERIAL PRIMARY KEY,
+          code VARCHAR(50) UNIQUE NOT NULL,
+          discount_percent INT DEFAULT 0,
+          discount_amount NUMERIC DEFAULT 0,
+          max_uses INT DEFAULT 100,
+          used_count INT DEFAULT 0,
+          active INT DEFAULT 1,
+          created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        )
+      `);
+
+      const couponCheck = await query('SELECT COUNT(*) as count FROM coupons');
+      if (parseInt(couponCheck[0]?.count || 0, 10) === 0) {
+        await query(`
+          INSERT INTO coupons (code, discount_percent, discount_amount, max_uses, active)
+          VALUES 
+          ('LAUNCH50', 50, 0, 1000, 1),
+          ('FIRST100', 30, 0, 100, 1),
+          ('FLAT200', 0, 200, 500, 1)
+        `);
+        console.log('🎟️ Seeded default promo coupons into coupons table');
+      }
+    } catch (e) {
+      try {
+        await query(`
+          CREATE TABLE IF NOT EXISTS coupons (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            code TEXT UNIQUE NOT NULL,
+            discount_percent INTEGER DEFAULT 0,
+            discount_amount REAL DEFAULT 0,
+            max_uses INTEGER DEFAULT 100,
+            used_count INTEGER DEFAULT 0,
+            active INTEGER DEFAULT 1,
+            created_at TEXT DEFAULT CURRENT_TIMESTAMP
+          )
+        `);
+      } catch {}
+    }
+
     const planCheck = await query('SELECT COUNT(*) as count FROM saas_plans');
     const pCount = parseInt(planCheck[0]?.count || 0, 10);
     if (pCount === 0) {
       await query(`
-        INSERT INTO saas_plans (key, name, price, badge, description, whatsapp_enabled, direct_ordering_enabled, google_reviews_enabled, max_combos)
+        INSERT INTO saas_plans (key, name, price, original_price, badge, description, whatsapp_enabled, direct_ordering_enabled, google_reviews_enabled, max_combos)
         VALUES 
-        ('basic', 'Basic Starter Plan', 499, '⚡ BASIC', 'Digital Menu Viewing & Custom Themes', 0, 0, 0, 3),
-        ('pro', 'Pro Luxury Plan', 999, '👑 PRO', 'Menu + WhatsApp Ordering + Google Reviews', 1, 0, 1, 10),
-        ('enterprise', 'Enterprise VIP Plan', 1999, '🚀 ENTERPRISE', 'All Features + Direct Table QR KOT Ordering & Kitchen System', 1, 1, 1, 9999)
+        ('basic', 'Basic Starter Plan', 499, 999, '⚡ BASIC', 'Digital Menu Viewing & Custom Themes', 0, 0, 0, 3),
+        ('pro', 'Pro Luxury Plan', 999, 1999, '👑 PRO', 'Menu + WhatsApp Ordering + Google Reviews', 1, 0, 1, 10),
+        ('enterprise', 'Enterprise VIP Plan', 1999, 3999, '🚀 ENTERPRISE', 'All Features + Direct Table QR KOT Ordering & Kitchen System', 1, 1, 1, 9999)
       `);
       console.log('💳 Seeded default SaaS Plans into saas_plans table');
     }

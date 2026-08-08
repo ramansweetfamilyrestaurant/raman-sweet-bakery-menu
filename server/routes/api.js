@@ -31,6 +31,7 @@ router.get('/plans', async (req, res) => {
       key: p.key,
       name: p.name,
       price: Number(p.price) || 0,
+      original_price: Number(p.original_price) || (Number(p.price) ? Math.round(Number(p.price) * 2 - 1) : 999),
       badge: p.badge || '👑 PLAN',
       description: p.description || '',
       whatsapp_enabled: Boolean(p.whatsapp_enabled),
@@ -42,6 +43,45 @@ router.get('/plans', async (req, res) => {
   } catch (err) {
     console.error('Fetch public plans error:', err);
     res.json([]);
+  }
+});
+
+// POST validate coupon code
+router.post('/coupons/validate', async (req, res) => {
+  try {
+    const { code, planPrice } = req.body;
+    if (!code || typeof code !== 'string') {
+      return res.status(400).json({ error: 'Coupon code is required' });
+    }
+    const rows = await query('SELECT * FROM coupons WHERE UPPER(code) = $1 AND active = 1', [code.trim().toUpperCase()]);
+    if (!rows || rows.length === 0) {
+      return res.status(404).json({ error: 'Invalid or expired promo coupon code' });
+    }
+    const coupon = rows[0];
+    if (coupon.max_uses > 0 && coupon.used_count >= coupon.max_uses) {
+      return res.status(400).json({ error: 'Promo code usage limit reached' });
+    }
+    const original = Number(planPrice) || 999;
+    let discount = 0;
+    if (coupon.discount_percent > 0) {
+      discount = Math.round((original * coupon.discount_percent) / 100);
+    } else if (coupon.discount_amount > 0) {
+      discount = Math.min(original, Number(coupon.discount_amount));
+    }
+    const finalPrice = Math.max(0, original - discount);
+    res.json({
+      valid: true,
+      code: coupon.code,
+      discount,
+      discount_percent: coupon.discount_percent,
+      discount_amount: coupon.discount_amount,
+      original_price: original,
+      final_price: finalPrice,
+      message: `Coupon '${coupon.code}' applied! Saved ₹${discount}`
+    });
+  } catch (err) {
+    console.error('Validate coupon error:', err);
+    res.status(500).json({ error: 'Failed to validate coupon' });
   }
 });
 
