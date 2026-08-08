@@ -1190,6 +1190,22 @@ export default function App() {
 
   // Restaurant Admin View Render
   if (view === 'admin-login') {
+    if (loading) {
+      return (
+        <div style={{
+          minHeight: '100vh', display: 'flex', flexDirection: 'column',
+          alignItems: 'center', justifyContent: 'center', background: '#0A2315',
+          color: '#DFBA67', fontWeight: 800
+        }}>
+          <div style={{
+            width: '44px', height: '44px', border: '3.5px solid rgba(223,186,103,0.2)',
+            borderTopColor: '#DFBA67', borderRadius: '50%', marginBottom: '16px',
+            animation: 'spin 0.8s linear infinite'
+          }} />
+          <span style={{ fontSize: '0.92rem' }}>🔑 Verifying Restaurant Security...</span>
+        </div>
+      );
+    }
     return (
       <Suspense fallback={<div style={{ padding: '60px', textAlign: 'center', background: '#0A2315', color: '#FFFFFF', minHeight: '100vh', fontWeight: 800 }}>🔑 Loading Admin Login...</div>}>
         <AdminLogin
