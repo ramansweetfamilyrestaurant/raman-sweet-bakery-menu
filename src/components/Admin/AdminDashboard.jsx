@@ -6,7 +6,10 @@ import CategoryFormModal from './CategoryFormModal';
 import ComboFormModal from './ComboFormModal';
 import { Plus, Edit, Trash2, Eye, EyeOff, LogOut, ArrowLeft, Layers, Utensils, QrCode, Printer, Settings, Star, CheckCircle, Lock, ExternalLink, Megaphone, MessageSquare, Palette, Sparkles, Clock, CheckCircle2, XCircle, Upload, X, BarChart2, TrendingUp, Download, Award, MapPin, RefreshCw } from 'lucide-react';
 
+import PaymentModal from '../PaymentModal';
+
 export default function AdminDashboard({ token, username, onLogout, onReturnToMenu }) {
+  const [showPaymentModal, setShowPaymentModal] = useState(false);
   const [activeTab, setActiveTab] = useState('dishes'); // 'dishes', 'categories', 'qr-generator', 'settings'
   const [categories, setCategories] = useState([]);
   const [dishes, setDishes] = useState([]);
@@ -1581,17 +1584,28 @@ export default function AdminDashboard({ token, username, onLogout, onReturnToMe
               Your 14-Day Free Pro Trial expires in <strong style={{ color: '#B45309', fontSize: '0.88rem' }}>{daysLeft} day{daysLeft > 1 ? 's' : ''}</strong>! Renew now to prevent menu interruption.
             </span>
           </div>
-          <a
-            href={`https://wa.me/${(masterSupportPhone || '919876543210').replace(/[^0-9]/g, '')}?text=${encodeURIComponent(`Hello Super Admin, I want to renew/upgrade my restaurant subscription plan for '${restaurantInfo?.name || 'my restaurant'}'.`)}`}
-            target="_blank"
-            rel="noopener noreferrer"
-            style={{
-              background: '#B45309', color: '#FFFFFF', padding: '6px 14px', borderRadius: '10px',
-              textDecoration: 'none', fontWeight: 900, fontSize: '0.78rem', boxShadow: '0 2px 8px rgba(180,83,9,0.3)', whiteSpace: 'nowrap'
-            }}
-          >
-            💬 Renew Subscription on WhatsApp
-          </a>
+          <div style={{ display: 'flex', gap: '8px' }}>
+            <button
+              onClick={() => setShowPaymentModal(true)}
+              style={{
+                background: 'linear-gradient(135deg, #10B981 0%, #059669 100%)', color: '#FFFFFF', padding: '6px 14px', borderRadius: '10px',
+                border: 'none', fontWeight: 900, fontSize: '0.78rem', cursor: 'pointer', boxShadow: '0 2px 8px rgba(16,185,129,0.4)', whiteSpace: 'nowrap'
+              }}
+            >
+              💳 Pay & Renew Instant
+            </button>
+            <a
+              href={`https://wa.me/${(masterSupportPhone || '919876543210').replace(/[^0-9]/g, '')}?text=${encodeURIComponent(`Hello Super Admin, I want to renew/upgrade my restaurant subscription plan for '${restaurantInfo?.name || 'my restaurant'}'.`)}`}
+              target="_blank"
+              rel="noopener noreferrer"
+              style={{
+                background: '#B45309', color: '#FFFFFF', padding: '6px 14px', borderRadius: '10px',
+                textDecoration: 'none', fontWeight: 900, fontSize: '0.78rem', boxShadow: '0 2px 8px rgba(180,83,9,0.3)', whiteSpace: 'nowrap'
+              }}
+            >
+              💬 WhatsApp Support
+            </a>
+          </div>
         </div>
       )}
 
@@ -1641,19 +1655,31 @@ export default function AdminDashboard({ token, username, onLogout, onReturnToMe
             </div>
 
             <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+              <button
+                onClick={() => setShowPaymentModal(true)}
+                style={{
+                  width: '100%', padding: '14px', borderRadius: '14px', border: 'none',
+                  background: 'linear-gradient(135deg, #10B981 0%, #059669 100%)', color: '#FFFFFF',
+                  fontWeight: 900, fontSize: '0.95rem', cursor: 'pointer',
+                  display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px',
+                  boxShadow: '0 4px 16px rgba(16,185,129,0.4)'
+                }}
+              >
+                💳 Pay & Reactivate Instant (UPI / Gateway)
+              </button>
+
               <a
                 href={`https://wa.me/${(masterSupportPhone || '919876543210').replace(/[^0-9]/g, '')}?text=${encodeURIComponent(`Hello Super Admin, my restaurant subscription for '${restaurantInfo?.name || username}' has expired. Please renew my plan.`)}`}
                 target="_blank"
                 rel="noopener noreferrer"
                 style={{
-                  width: '100%', padding: '14px', borderRadius: '14px', border: 'none',
+                  width: '100%', padding: '12px', borderRadius: '14px', border: 'none',
                   background: 'linear-gradient(135deg, #15803D, #22C55E)', color: '#FFFFFF',
-                  fontWeight: 900, fontSize: '0.92rem', textDecoration: 'none',
-                  display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: '8px',
-                  boxShadow: '0 4px 16px rgba(34,197,94,0.4)'
+                  fontWeight: 800, fontSize: '0.86rem', textDecoration: 'none',
+                  display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: '8px'
                 }}
               >
-                💬 1-Click WhatsApp Renewal & Super Admin Support
+                💬 Contact Super Admin on WhatsApp
               </a>
 
               <button
@@ -4967,6 +4993,23 @@ export default function AdminDashboard({ token, username, onLogout, onReturnToMe
             </div>
           </div>
         </div>
+      )}
+
+      {/* 💳 Payment Checkout Modal */}
+      {showPaymentModal && (
+        <PaymentModal
+          restoInfo={restaurantInfo}
+          planTier={restaurantInfo?.plan_tier || 'pro'}
+          planPrice={restaurantInfo?.plan_tier === 'enterprise' ? 1999 : restaurantInfo?.plan_tier === 'basic' ? 499 : 999}
+          onClose={() => setShowPaymentModal(false)}
+          onSuccess={() => {
+            setToastMessage('🎉 Payment Received! Subscription Active for 30 Days');
+            setTimeout(() => setToastMessage(''), 4000);
+            fetchRestaurantInfo().then(data => {
+              if (data) setRestaurantInfo(data);
+            });
+          }}
+        />
       )}
 
       {/* 🔔 Floating Toast Notification Banner */}
