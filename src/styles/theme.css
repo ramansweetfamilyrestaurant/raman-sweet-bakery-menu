@@ -300,10 +300,55 @@ img {
   }
 }
 
+
 /* Desktops (1024px+) */
 @media (min-width: 1024px) {
   .admin-dish-grid {
     grid-template-columns: repeat(3, 1fr) !important;
   }
 }
+
+/* Modern Landing Page Keyframes & Utilities */
+@keyframes pulseGlow {
+  0%, 100% { transform: scale(1); opacity: 0.9; box-shadow: 0 0 15px rgba(223, 186, 103, 0.4); }
+  50% { transform: scale(1.03); opacity: 1; box-shadow: 0 0 25px rgba(223, 186, 103, 0.8); }
+}
+
+@keyframes floatAnim {
+  0%, 100% { transform: translateY(0px); }
+  50% { transform: translateY(-8px); }
+}
+
+.glow-pulse {
+  animation: pulseGlow 3s infinite ease-in-out;
+}
+
+.float-slow {
+  animation: floatAnim 4s infinite ease-in-out;
+}
+
+/* Landing Page Mobile Utility Rules */
+@media (max-width: 640px) {
+  .landing-hero-title {
+    font-size: 2.1rem !important;
+    line-height: 1.2 !important;
+  }
+  .landing-cta-container {
+    flex-direction: column !important;
+    width: 100% !important;
+  }
+  .landing-cta-button {
+    width: 100% !important;
+    padding: 14px 20px !important;
+  }
+  .landing-feature-grid {
+    grid-template-columns: 1fr !important;
+    gap: 12px !important;
+  }
+  .landing-pricing-grid {
+    grid-template-columns: 1fr !important;
+    gap: 16px !important;
+  }
+}
+
 

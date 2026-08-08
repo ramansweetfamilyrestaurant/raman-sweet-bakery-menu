@@ -82,6 +82,7 @@ export default function App() {
   const [landingLoginLoading, setLandingLoginLoading] = useState(false);
   const [masterSupportPhone, setMasterSupportPhone] = useState('919876543210');
   const [trialDays, setTrialDays] = useState(14);
+  const [openFaqIndex, setOpenFaqIndex] = useState(null);
 
   useEffect(() => {
     fetch('/api/settings')
@@ -756,52 +757,106 @@ export default function App() {
 
   // Landing Page View — Public SaaS Home
   if (view === 'landing') {
+    const faqItems = [
+      {
+        q: 'What is included in the 14-Day Free Trial?',
+        a: 'You get full access to all SaaS features for 14 days, including Digital QR Menu Creation, WhatsApp Direct Ordering, ⭐ Smart AI Google Reviews Booster, KOT Kitchen Siren, and Thermal Printing. No credit card is required to sign up!'
+      },
+      {
+        q: 'Do customers need to download an App to scan the QR Menu?',
+        a: 'No app download is required! Customers simply open their smartphone camera, scan your Table QR code, and your instant digital menu loads in less than 0.3 seconds.'
+      },
+      {
+        q: 'How does WhatsApp Direct Ordering work?',
+        a: 'When a customer places an order on your digital menu, the complete itemized order details (with table number, total price, and customer notes) are sent directly to your restaurant WhatsApp number with 0% commission.'
+      },
+      {
+        q: 'Can I connect a Thermal Printer for KOT & Customer Invoices?',
+        a: 'Yes! KhanaMaster supports 0.5s instant 2-inch and 3-inch Bluetooth and USB thermal printers from both mobile phones and desktop PCs.'
+      },
+      {
+        q: 'How does the Smart AI Google Reviews booster work?',
+        a: 'Happy customers rating 4 or 5 stars are automatically prompted to post their review directly on your Google Maps business profile, boosting your local search ranking!'
+      }
+    ];
+
     return (
       <div style={{
         minHeight: '100vh',
-        background: 'linear-gradient(135deg, #0A0A0A 0%, #1A0A2E 30%, #0D1B2A 70%, #0A0A0A 100%)',
+        background: 'linear-gradient(135deg, #05140B 0%, #0A2315 35%, #081B10 70%, #020904 100%)',
         color: '#FFFFFF',
-        fontFamily: "'Inter', 'Segoe UI', sans-serif",
-        overflow: 'hidden'
+        fontFamily: "'Plus Jakarta Sans', 'Inter', system-ui, sans-serif",
+        overflowX: 'hidden',
+        paddingBottom: '70px' // Space for mobile bottom bar
       }}>
-        {/* Animated background particles */}
+        {/* Ambient Glow Particles */}
         <div style={{
           position: 'fixed', top: 0, left: 0, width: '100%', height: '100%', zIndex: 0, pointerEvents: 'none',
-          background: 'radial-gradient(ellipse at 20% 50%, rgba(120, 80, 255, 0.08) 0%, transparent 50%), radial-gradient(ellipse at 80% 20%, rgba(255, 180, 50, 0.06) 0%, transparent 50%), radial-gradient(ellipse at 50% 80%, rgba(0, 200, 150, 0.05) 0%, transparent 50%)'
+          background: 'radial-gradient(ellipse at 20% 20%, rgba(223, 186, 103, 0.08) 0%, transparent 60%), radial-gradient(ellipse at 80% 80%, rgba(34, 197, 94, 0.06) 0%, transparent 60%)'
         }} />
 
-        {/* Navigation */}
+        {/* 🔥 Top Launch Promo Ticker Banner */}
+        <div style={{
+          background: 'linear-gradient(90deg, #92400E 0%, #D97706 50%, #92400E 100%)',
+          color: '#FFFFFF',
+          padding: '8px 16px',
+          textAlign: 'center',
+          fontSize: '0.82rem',
+          fontWeight: 800,
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          gap: '8px',
+          letterSpacing: '0.3px',
+          boxShadow: '0 2px 10px rgba(217, 119, 6, 0.3)',
+          position: 'relative',
+          zIndex: 20
+        }}>
+          <span>🔥 LAUNCH OFFER: Get <strong>{trialDays} DAYS FREE TRIAL</strong> on All SaaS Plans! Instant Setup & Zero Risk!</span>
+        </div>
+
+        {/* Top Navigation */}
         <nav style={{
           display: 'flex', justifyContent: 'space-between', alignItems: 'center',
-          padding: '16px 20px', position: 'relative', zIndex: 10, flexWrap: 'wrap', gap: '12px',
-          borderBottom: '1px solid rgba(255,255,255,0.06)'
+          padding: '14px 20px', position: 'sticky', top: 0, zIndex: 100,
+          background: 'rgba(10, 35, 21, 0.92)', backdropFilter: 'blur(20px)',
+          borderBottom: '1px solid rgba(223, 186, 103, 0.2)'
         }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-            <span style={{ fontSize: '28px' }}>🍽️</span>
-            <span style={{
-              fontSize: '20px', fontWeight: 800,
-              background: 'linear-gradient(135deg, #DFBA67, #F4D490)',
-              WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent'
-            }}>Khana Master</span>
+            <span style={{ fontSize: '26px' }}>🍱</span>
+            <div>
+              <span style={{
+                fontSize: '1.25rem', fontWeight: 900,
+                background: 'linear-gradient(135deg, #DFBA67, #F4D490)',
+                WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent',
+                letterSpacing: '-0.3px'
+              }}>KhanaMaster</span>
+              <span style={{ fontSize: '0.65rem', background: '#DFBA67', color: '#0A2315', fontWeight: 900, padding: '1px 6px', borderRadius: '4px', marginLeft: '6px' }}>SaaS</span>
+            </div>
           </div>
-          <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
-            <button onClick={() => { window.history.pushState({}, '', '/register'); window.dispatchEvent(new PopStateEvent('popstate')); }}
+
+          <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+            <button
+              onClick={() => setShowLandingLoginModal(true)}
               style={{
-                padding: '8px 16px', borderRadius: '10px', border: 'none',
-                background: 'linear-gradient(135deg, #DFBA67, #F4D490)', color: '#0A0A0A', cursor: 'pointer', fontWeight: 800, fontSize: '13px',
-                boxShadow: '0 4px 14px rgba(223,186,103,0.3)', transition: 'all 0.3s', whiteSpace: 'nowrap'
+                padding: '8px 16px', borderRadius: '10px',
+                border: '1px solid rgba(223,186,103,0.4)',
+                background: 'rgba(223,186,103,0.1)', color: '#DFBA67',
+                cursor: 'pointer', fontWeight: 800, fontSize: '0.84rem',
+                transition: 'all 0.2s ease', whiteSpace: 'nowrap'
+              }}
+            >🔑 Owner Login</button>
+
+            <button
+              onClick={() => { window.history.pushState({}, '', '/register'); window.dispatchEvent(new PopStateEvent('popstate')); }}
+              style={{
+                padding: '8px 18px', borderRadius: '10px', border: 'none',
+                background: 'linear-gradient(135deg, #DFBA67, #C5A059)', color: '#0A2315',
+                cursor: 'pointer', fontWeight: 900, fontSize: '0.84rem',
+                boxShadow: '0 4px 14px rgba(223,186,103,0.35)', transition: 'all 0.2s ease',
+                whiteSpace: 'nowrap'
               }}
             >🚀 Start Free Trial</button>
-            
-            <button onClick={() => setShowLandingLoginModal(true)}
-              style={{
-                padding: '8px 14px', borderRadius: '10px', border: '1px solid rgba(255,255,255,0.15)',
-                background: 'rgba(255,255,255,0.05)', color: '#ccc', cursor: 'pointer', fontWeight: 600, fontSize: '13px',
-                transition: 'all 0.3s', whiteSpace: 'nowrap'
-              }}
-              onMouseEnter={e => { e.target.style.background = 'rgba(255,255,255,0.1)'; e.target.style.color = '#fff'; }}
-              onMouseLeave={e => { e.target.style.background = 'rgba(255,255,255,0.05)'; e.target.style.color = '#ccc'; }}
-            >🔑 Login</button>
           </div>
         </nav>
 
@@ -809,13 +864,13 @@ export default function App() {
         {showLandingLoginModal && (
           <div style={{
             position: 'fixed', inset: 0, zIndex: 10050,
-            background: 'rgba(10, 35, 21, 0.85)', backdropFilter: 'blur(8px)',
+            background: 'rgba(10, 35, 21, 0.88)', backdropFilter: 'blur(12px)',
             display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '12px'
           }} onClick={() => { setShowLandingLoginModal(false); setLandingLoginMode('login'); }}>
             <div onClick={e => e.stopPropagation()} style={{
-              background: '#111827', border: '2px solid #DFBA67', borderRadius: '24px',
-              padding: '24px 18px', maxWidth: '400px', width: '95%', maxHeight: '90vh', overflowY: 'auto',
-              color: '#FFFFFF', boxShadow: '0 20px 50px rgba(0,0,0,0.6)', position: 'relative'
+              background: '#0D2617', border: '2px solid #DFBA67', borderRadius: '24px',
+              padding: '24px 20px', maxWidth: '400px', width: '95%', maxHeight: '90vh', overflowY: 'auto',
+              color: '#FFFFFF', boxShadow: '0 25px 60px rgba(0,0,0,0.85)', position: 'relative'
             }}>
               <button onClick={() => { setShowLandingLoginModal(false); setLandingLoginMode('login'); }} style={{
                 position: 'absolute', top: '14px', right: '14px', background: 'rgba(255,255,255,0.1)',
@@ -829,7 +884,7 @@ export default function App() {
               <h2 style={{ fontSize: '1.25rem', fontWeight: 900, color: '#DFBA67', margin: '0 0 6px 0', textAlign: 'center' }}>
                 {landingLoginMode === 'forgot' ? 'Reset Admin Password' : 'Restaurant Admin Login'}
               </h2>
-              <p style={{ color: '#9CA3AF', fontSize: '0.82rem', lineHeight: 1.4, margin: '0 0 16px 0', textAlign: 'center' }}>
+              <p style={{ color: '#A7F3D0', fontSize: '0.82rem', lineHeight: 1.4, margin: '0 0 16px 0', textAlign: 'center' }}>
                 {landingLoginMode === 'forgot'
                   ? 'Enter your registered Username or Phone Number to set a new password'
                   : 'Enter your Admin Username & Password to access your Dashboard'}
@@ -942,7 +997,7 @@ export default function App() {
                     onChange={e => setLoginSlugInput(e.target.value)}
                     style={{
                       width: '100%', padding: '12px 14px', borderRadius: '12px',
-                      border: '1px solid rgba(255,255,255,0.2)', background: '#1F2937',
+                      border: '1px solid rgba(223,186,103,0.3)', background: '#07180E',
                       color: '#FFFFFF', fontSize: '0.9rem', outline: 'none'
                     }}
                   />
@@ -970,7 +1025,7 @@ export default function App() {
                       onChange={e => setLoginPassInput(e.target.value)}
                       style={{
                         width: '100%', padding: '12px 14px', borderRadius: '12px',
-                        border: '1px solid rgba(255,255,255,0.2)', background: '#1F2937',
+                        border: '1px solid rgba(223,186,103,0.3)', background: '#07180E',
                         color: '#FFFFFF', fontSize: '0.9rem', outline: 'none'
                       }}
                     />
@@ -988,7 +1043,7 @@ export default function App() {
                       onChange={e => setLandingNewPassInput(e.target.value)}
                       style={{
                         width: '100%', padding: '12px 14px', borderRadius: '12px',
-                        border: '1px solid rgba(255,255,255,0.2)', background: '#1F2937',
+                        border: '1px solid rgba(223,186,103,0.3)', background: '#07180E',
                         color: '#FFFFFF', fontSize: '0.9rem', outline: 'none'
                       }}
                     />
@@ -1021,7 +1076,7 @@ export default function App() {
                       marginTop: '14px', paddingTop: '12px', borderTop: '1px solid rgba(255,255,255,0.1)',
                       textAlign: 'center', fontSize: '0.76rem', color: '#9CA3AF'
                     }}>
-                      <span>Dono Username & Phone bhool gaye? </span>
+                      <span>Forgot both details? </span>
                       <a
                         href={`https://wa.me/${(masterSupportPhone || '919876543210').replace(/[^0-9]/g, '')}?text=${encodeURIComponent('Hello Super Admin, I forgot my restaurant login details. Please help me recover my account.')}`}
                         target="_blank"
@@ -1038,40 +1093,25 @@ export default function App() {
           </div>
         )}
 
-        {/* 🔥 Festive & Launch Promo Ticker Banner */}
-        <div style={{
-          background: 'linear-gradient(90deg, #92400E 0%, #D97706 50%, #92400E 100%)',
-          color: '#FFFFFF',
-          padding: '8px 16px',
-          textAlign: 'center',
-          fontSize: '0.82rem',
-          fontWeight: 800,
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          gap: '8px',
-          letterSpacing: '0.3px',
-          boxShadow: '0 2px 10px rgba(217, 119, 6, 0.3)',
-          flexWrap: 'wrap'
-        }}>
-          <span>🔥 SPECIAL LAUNCH OFFER: Get {trialDays} DAYS FREE TRIAL on All SaaS Plans! Instant Setup & Zero Risk!</span>
-        </div>
-
         {/* Hero Section */}
         <div style={{
           display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
-          textAlign: 'center', padding: '60px 16px 40px', position: 'relative', zIndex: 5
+          textAlign: 'center', padding: '50px 16px 36px', position: 'relative', zIndex: 5
         }}>
-          <div style={{
-            display: 'inline-flex', alignItems: 'center', gap: '6px', padding: '6px 16px', borderRadius: '50px',
-            background: 'linear-gradient(135deg, rgba(223,186,103,0.18), rgba(223,186,103,0.05))',
-            border: '1px solid rgba(223,186,103,0.4)', fontSize: '13px', color: '#DFBA67',
-            fontWeight: 800, marginBottom: '22px', letterSpacing: '0.5px', boxShadow: '0 4px 15px rgba(223,186,103,0.15)'
-          }}>🔥 INDIA'S #1 SMART AI DIGITAL QR MENU SAAS PLATFORM</div>
+          {/* Pulsing Badge */}
+          <div className="glow-pulse" style={{
+            display: 'inline-flex', alignItems: 'center', gap: '8px', padding: '8px 20px', borderRadius: '50px',
+            background: 'linear-gradient(135deg, rgba(223,186,103,0.22), rgba(223,186,103,0.06))',
+            border: '1.5px solid #DFBA67', fontSize: '0.82rem', color: '#DFBA67',
+            fontWeight: 900, marginBottom: '22px', letterSpacing: '0.5px'
+          }}>
+            <span>🔥</span>
+            <span>INDIA'S #1 SMART AI DIGITAL QR MENU SAAS PLATFORM</span>
+          </div>
 
-          <h1 style={{
-            fontSize: 'clamp(30px, 7.5vw, 64px)', fontWeight: 900, lineHeight: 1.15,
-            marginBottom: '20px', maxWidth: '900px', width: '100%', letterSpacing: '-0.5px'
+          <h1 className="landing-hero-title" style={{
+            fontSize: 'clamp(32px, 6.5vw, 60px)', fontWeight: 900, lineHeight: 1.15,
+            marginBottom: '18px', maxWidth: '920px', width: '100%', letterSpacing: '-0.5px'
           }}>
             <span style={{ color: '#FFFFFF' }}>Apne Restaurant Ka </span>
             <span style={{
@@ -1082,52 +1122,152 @@ export default function App() {
           </h1>
 
           <p style={{
-            fontSize: 'clamp(15px, 3.8vw, 19px)', color: 'rgba(255,255,255,0.78)',
-            maxWidth: '680px', lineHeight: 1.6, marginBottom: '34px', padding: '0 8px'
+            fontSize: 'clamp(15px, 3.5vw, 19px)', color: '#CBD5E1',
+            maxWidth: '720px', lineHeight: 1.6, marginBottom: '32px', padding: '0 8px'
           }}>
-            QR Code se Instant Digital Menu, WhatsApp Ordering, <strong style={{ color: '#FFD700' }}>⭐ Smart AI Google Reviews Booster</strong>, Live Kitchen KOT Siren & Thermal Printing — sab kuch ek jagah. 
-            <strong style={{ color: '#DFBA67', display: 'block', marginTop: '6px' }}>🎉 {trialDays} Din Free Trial — Koi Credit Card Nahi Chahiye!</strong>
+            QR Scan Digital Menu, WhatsApp Direct Ordering, <strong style={{ color: '#FFD700' }}>⭐ Smart AI Google Reviews Booster</strong>, Live Kitchen KOT Siren & Thermal Printing — sab kuch ek jagah.
+            <strong style={{ color: '#86EFAC', display: 'block', marginTop: '6px' }}>🎉 {trialDays} Din Free Trial — Instant Setup, Credit Card Ki Zaroorat Nahi!</strong>
           </p>
 
-          <div style={{ display: 'flex', gap: '14px', flexWrap: 'wrap', justifyContent: 'center', width: '100%', maxWidth: '520px' }}>
-            <button onClick={() => { window.history.pushState({}, '', '/register'); window.dispatchEvent(new PopStateEvent('popstate')); }}
+          {/* Action CTAs */}
+          <div className="landing-cta-container" style={{
+            display: 'flex', gap: '12px', flexWrap: 'wrap', justifyContent: 'center',
+            width: '100%', maxWidth: '580px', marginBottom: '40px'
+          }}>
+            <button
+              className="landing-cta-button"
+              onClick={() => { window.history.pushState({}, '', '/register'); window.dispatchEvent(new PopStateEvent('popstate')); }}
               style={{
                 flex: '1 1 220px', padding: '16px 28px', borderRadius: '16px', border: 'none',
-                background: 'linear-gradient(135deg, #DFBA67 0%, #C9A44A 100%)', color: '#0A0A0A',
+                background: 'linear-gradient(135deg, #DFBA67 0%, #C5A059 100%)', color: '#0A2315',
                 fontWeight: 900, fontSize: '1.05rem', cursor: 'pointer',
-                boxShadow: '0 10px 30px rgba(223,186,103,0.4)',
-                transition: 'all 0.3s ease', textAlign: 'center'
+                boxShadow: '0 10px 30px rgba(223,186,103,0.4)', textAlign: 'center'
               }}
-            >🚀 Free Trial Shuru Karein</button>
-            <button onClick={() => window.open('https://khana-master.onrender.com/raman-sweet-bakery', '_blank')}
+            >🚀 Start {trialDays}-Day Free Trial</button>
+
+            <button
+              className="landing-cta-button"
+              onClick={() => window.open('/raman-sweet-bakery', '_blank')}
               style={{
-                flex: '1 1 180px', padding: '16px 24px', borderRadius: '16px',
-                border: '2px solid rgba(223,186,103,0.5)', background: 'rgba(223,186,103,0.08)',
-                color: '#DFBA67', fontWeight: 800, fontSize: '1rem', cursor: 'pointer',
-                transition: 'all 0.3s', textAlign: 'center'
+                flex: '1 1 170px', padding: '16px 22px', borderRadius: '16px',
+                border: '2px solid rgba(223,186,103,0.5)', background: 'rgba(223,186,103,0.1)',
+                color: '#DFBA67', fontWeight: 800, fontSize: '0.96rem', cursor: 'pointer',
+                textAlign: 'center'
               }}
-            >👁️ Live Demo Dekhein</button>
+            >👁️ View Live Menu Demo</button>
+
+            <a
+              href={`https://wa.me/${(masterSupportPhone || '919876543210').replace(/[^0-9]/g, '')}?text=${encodeURIComponent('Hello KhanaMaster SaaS team! I want to know more about setting up a digital QR menu for my restaurant.')}`}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="landing-cta-button"
+              style={{
+                flex: '1 1 160px', padding: '16px 20px', borderRadius: '16px',
+                border: '2px solid #22C55E', background: 'rgba(34, 197, 94, 0.12)',
+                color: '#4ADE80', fontWeight: 800, fontSize: '0.94rem', textDecoration: 'none',
+                display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: '6px'
+              }}
+            >
+              💬 WhatsApp Chat
+            </a>
+          </div>
+
+          {/* Social Proof Trust Bar */}
+          <div style={{
+            display: 'grid',
+            gridTemplateColumns: 'repeat(auto-fit, minmax(130px, 1fr))',
+            gap: '12px',
+            maxWidth: '820px',
+            width: '100%',
+            background: 'rgba(13, 35, 23, 0.7)',
+            border: '1px solid rgba(223, 186, 103, 0.25)',
+            backdropFilter: 'blur(16px)',
+            borderRadius: '20px',
+            padding: '16px 14px'
+          }}>
+            <div>
+              <div style={{ fontSize: '1.25rem', fontWeight: 900, color: '#DFBA67' }}>10,000+</div>
+              <div style={{ fontSize: '0.72rem', color: '#94A3B8', fontWeight: 700 }}>ACTIVE OUTLETS</div>
+            </div>
+            <div>
+              <div style={{ fontSize: '1.25rem', fontWeight: 900, color: '#4ADE80' }}>⭐ 4.9 / 5</div>
+              <div style={{ fontSize: '0.72rem', color: '#94A3B8', fontWeight: 700 }}>CUSTOMER RATING</div>
+            </div>
+            <div>
+              <div style={{ fontSize: '1.25rem', fontWeight: 900, color: '#38BDF8' }}>0.3 SEC</div>
+              <div style={{ fontSize: '0.72rem', color: '#94A3B8', fontWeight: 700 }}>INSTANT QR SCAN</div>
+            </div>
+            <div>
+              <div style={{ fontSize: '1.25rem', fontWeight: 900, color: '#F472B6' }}>0% COMM.</div>
+              <div style={{ fontSize: '0.72rem', color: '#94A3B8', fontWeight: 700 }}>DIRECT ORDERS</div>
+            </div>
+          </div>
+        </div>
+
+        {/* Feature Showcase Banner */}
+        <div style={{
+          padding: '20px 16px 40px', maxWidth: '1100px', margin: '0 auto', position: 'relative', zIndex: 5
+        }}>
+          <div style={{
+            background: 'linear-gradient(135deg, rgba(13,35,23,0.9), rgba(5,20,11,0.95))',
+            border: '2px solid #DFBA67', borderRadius: '24px', padding: '24px 20px',
+            boxShadow: '0 20px 50px rgba(0,0,0,0.7)', textAlign: 'center'
+          }}>
+            <div style={{ fontSize: '0.78rem', fontWeight: 800, color: '#86EFAC', textTransform: 'uppercase', letterSpacing: '1px', marginBottom: '6px' }}>
+              POWERFUL RESTAURANT OPERATIONAL PLATFORM
+            </div>
+            <h2 style={{ fontSize: 'clamp(22px, 4.5vw, 32px)', fontWeight: 900, color: '#FFFFFF', margin: '0 0 16px 0' }}>
+              Everything Your Restaurant Needs To Scale Orders & Profit
+            </h2>
+            <div style={{
+              display: 'flex', flexWrap: 'wrap', gap: '8px', justifyContent: 'center'
+            }}>
+              {[
+                '📱 Digital QR Menu',
+                '💬 WhatsApp Ordering',
+                '⭐ Smart AI Google Reviews',
+                '⚡ Live KOT Kitchen Siren',
+                '🖨️ Thermal Printer Billing',
+                '🗺️ Table Floor Map Grid',
+                '🍱 Thali & Combo Deals',
+                '🛎️ Waiter Call Summons'
+              ].map((pill, idx) => (
+                <span key={idx} style={{
+                  background: 'rgba(223, 186, 103, 0.15)',
+                  border: '1px solid rgba(223, 186, 103, 0.35)',
+                  color: '#DFBA67',
+                  padding: '6px 14px',
+                  borderRadius: '50px',
+                  fontSize: '0.82rem',
+                  fontWeight: 800
+                }}>
+                  {pill}
+                </span>
+              ))}
+            </div>
           </div>
         </div>
 
         {/* Core Features Grid */}
         <div style={{
-          padding: '50px 16px 30px', maxWidth: '1140px', margin: '0 auto',
+          padding: '40px 16px', maxWidth: '1140px', margin: '0 auto',
           position: 'relative', zIndex: 5
         }}>
-          <div style={{ textAlign: 'center', marginBottom: '36px' }}>
+          <div style={{ textAlign: 'center', marginBottom: '32px' }}>
             <h2 style={{ fontSize: 'clamp(24px, 5vw, 36px)', fontWeight: 900, color: '#FFFFFF', marginBottom: '8px' }}>
-              Why 10,000+ Restaurants Choose <span style={{ color: '#DFBA67' }}>KhanaMaster</span>
+              Why Restaurants Choose <span style={{ color: '#DFBA67' }}>KhanaMaster</span>
             </h2>
-            <p style={{ color: 'rgba(255,255,255,0.6)', fontSize: '0.92rem' }}>Everything your restaurant needs to boost orders, reviews, and kitchen speed</p>
+            <p style={{ color: '#94A3B8', fontSize: '0.92rem', margin: 0 }}>
+              Designed specifically for Indian Restaurants, Sweets Shops, Cafes, Bakeries & Dhabas
+            </p>
           </div>
 
-          <div style={{
+          <div className="landing-feature-grid" style={{
             display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))',
             gap: '18px'
           }}>
             {[
-              { icon: '📱', title: 'Digital QR Menu & Themes', desc: 'Customer QR scan kare aur luxury gold/emerald menu dekhe — 0.3s fast loading without app download.' },
+              { icon: '📱', title: 'Digital QR Menu & Themes', desc: 'Customer QR scan kare aur luxury gold/emerald menu dekhe — 0.3s ultra-fast loading without app download.' },
               { icon: '⭐', title: 'Smart AI Google Reviews', desc: 'Zero-cost client-side AI review booster — 5-star Google ratings and customer feedback fast-track karein.' },
               { icon: '💬', title: 'WhatsApp Direct Ordering', desc: 'Customer seedha WhatsApp par order bhej sake — 0% commission direct order collection.' },
               { icon: '⚡', title: 'Live Table KOT & Kitchen Siren', desc: 'Table QR code scanning se direct Kitchen KOT receipt aur loud sound siren ringtone.' },
@@ -1137,13 +1277,13 @@ export default function App() {
               { icon: '🛎️', title: 'Waiter Call & Staff Bell', desc: 'Customer phone se 1-tap waiter summons with instant admin notification siren.' }
             ].map((f, i) => (
               <div key={i} style={{
-                background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.08)',
-                borderRadius: '20px', padding: '24px 20px', transition: 'all 0.3s ease',
-                boxShadow: '0 4px 20px rgba(0,0,0,0.2)'
+                background: 'rgba(13, 35, 23, 0.65)', border: '1px solid rgba(223,186,103,0.2)',
+                borderRadius: '20px', padding: '22px 18px', boxShadow: '0 8px 24px rgba(0,0,0,0.3)',
+                textAlign: 'left'
               }}>
-                <div style={{ fontSize: '34px', marginBottom: '12px' }}>{f.icon}</div>
-                <h3 style={{ fontSize: '1.1rem', fontWeight: 800, marginBottom: '8px', color: '#DFBA67' }}>{f.title}</h3>
-                <p style={{ fontSize: '0.84rem', color: 'rgba(255,255,255,0.65)', lineHeight: 1.5, margin: 0 }}>{f.desc}</p>
+                <div style={{ fontSize: '32px', marginBottom: '10px' }}>{f.icon}</div>
+                <h3 style={{ fontSize: '1.08rem', fontWeight: 800, marginBottom: '6px', color: '#DFBA67' }}>{f.title}</h3>
+                <p style={{ fontSize: '0.84rem', color: '#CBD5E1', lineHeight: 1.5, margin: 0 }}>{f.desc}</p>
               </div>
             ))}
           </div>
@@ -1151,16 +1291,20 @@ export default function App() {
 
         {/* Pricing Section */}
         <div style={{
-          padding: '60px 16px', textAlign: 'center', position: 'relative', zIndex: 5
+          padding: '50px 16px', textAlign: 'center', position: 'relative', zIndex: 5
         }}>
           <h2 style={{ fontSize: 'clamp(26px, 5vw, 38px)', fontWeight: 900, marginBottom: '8px' }}>
-            <span style={{ background: 'linear-gradient(135deg, #DFBA67, #F4D490)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>Transparent & Scalable Pricing</span>
+            <span style={{ background: 'linear-gradient(135deg, #DFBA67, #F4D490)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>
+              Transparent & Affordable Pricing
+            </span>
           </h2>
-          <p style={{ color: 'rgba(255,255,255,0.65)', fontSize: '0.95rem', marginBottom: '36px' }}>Har plan me {trialDays}-din ka free trial included hai. Upgrade or cancel anytime!</p>
-          
-          <div style={{
-            display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))',
-            gap: '22px', maxWidth: '980px', margin: '0 auto'
+          <p style={{ color: '#94A3B8', fontSize: '0.95rem', marginBottom: '32px' }}>
+            Har plan me <strong>{trialDays}-din ka free trial</strong> included hai. Upgrade or cancel anytime!
+          </p>
+
+          <div className="landing-pricing-grid" style={{
+            display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(270px, 1fr))',
+            gap: '20px', maxWidth: '1020px', margin: '0 auto'
           }}>
             {(publicPlans.length > 0 ? publicPlans.map(p => {
               const priceNum = Number(p.price) || 0;
@@ -1175,7 +1319,7 @@ export default function App() {
                 period: '/month',
                 badge: p.badge || '👑 PLAN',
                 features: [
-                  'Digital QR Menu & Themes',
+                  'Digital QR Menu & Custom Themes',
                   ...(p.whatsapp_enabled ? ['WhatsApp Direct Ordering'] : []),
                   ...(p.google_reviews_enabled ? ['⭐ Smart AI Google Reviews'] : []),
                   ...(p.direct_ordering_enabled ? ['⚡ Direct Table QR KOT Ordering', '📋 Live Kitchen Siren System', '🖨️ Thermal Printer KOT & Bills', '🗺️ Hall Floor Map & Grid'] : []),
@@ -1189,66 +1333,177 @@ export default function App() {
               { key: 'enterprise', name: 'Enterprise VIP Plan', price: '₹1,999', originalPrice: '₹3,999', discountTag: '50% OFF', period: '/month', badge: '🚀 ENTERPRISE', features: ['Everything in Pro', '⚡ Direct Table QR Ordering', '📋 Live KOT Kitchen System & Siren', '🖨️ Thermal Printer KOT & Bills', '🗺️ Hall Floor Map & Table Grid', 'Unlimited Combo Deals'], popular: false }
             ]).map((plan, i) => (
               <div key={i} style={{
-                background: plan.popular ? 'linear-gradient(135deg, rgba(223,186,103,0.15), rgba(223,186,103,0.04))' : 'rgba(255,255,255,0.03)',
-                border: plan.popular ? '2.5px solid #DFBA67' : '1px solid rgba(255,255,255,0.1)',
-                borderRadius: '24px', padding: '30px 22px', position: 'relative',
-                boxShadow: plan.popular ? '0 12px 40px rgba(223,186,103,0.25)' : 'none'
+                background: plan.popular ? 'linear-gradient(135deg, rgba(223,186,103,0.2), rgba(13,35,23,0.95))' : 'rgba(13,35,23,0.7)',
+                border: plan.popular ? '2.5px solid #DFBA67' : '1px solid rgba(223,186,103,0.25)',
+                borderRadius: '24px', padding: '28px 20px', position: 'relative',
+                boxShadow: plan.popular ? '0 15px 45px rgba(223,186,103,0.25)' : '0 8px 24px rgba(0,0,0,0.3)',
+                display: 'flex', flexDirection: 'column', justifyContent: 'space-between'
               }}>
-                {plan.popular && <div style={{
-                  position: 'absolute', top: '-14px', left: '50%', transform: 'translateX(-50%)',
-                  background: 'linear-gradient(135deg, #DFBA67, #C9A44A)', color: '#0A0A0A',
-                  padding: '4px 18px', borderRadius: '50px', fontSize: '11px', fontWeight: 900,
-                  boxShadow: '0 4px 12px rgba(223,186,103,0.4)'
-                }}>RECOMMENDED CHOICE</div>}
-                <div style={{ fontSize: '24px', fontWeight: 900, color: '#DFBA67', marginBottom: '4px' }}>{plan.badge}</div>
-                <h3 style={{ fontSize: '1.25rem', fontWeight: 900, color: '#fff', marginBottom: '8px' }}>{plan.name}</h3>
-                
-                <div style={{ marginBottom: '22px' }}>
-                  {plan.originalPrice && (
-                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px', marginBottom: '2px' }}>
-                      <span style={{ fontSize: '1.05rem', color: '#9CA3AF', textDecoration: 'line-through', fontWeight: 600 }}>{plan.originalPrice}</span>
-                      {plan.discountTag && <span style={{ background: '#DC2626', color: '#FFFFFF', fontSize: '0.66rem', fontWeight: 900, padding: '2px 6px', borderRadius: '6px' }}>{plan.discountTag}</span>}
-                    </div>
-                  )}
-                  <span style={{ fontSize: '2.5rem', fontWeight: 900, color: '#DFBA67' }}>{plan.price}</span>
-                  <span style={{ color: 'rgba(255,255,255,0.5)', fontSize: '0.85rem' }}>{plan.period}</span>
+                {plan.popular && (
+                  <div style={{
+                    position: 'absolute', top: '-14px', left: '50%', transform: 'translateX(-50%)',
+                    background: 'linear-gradient(135deg, #DFBA67, #C5A059)', color: '#0A2315',
+                    padding: '4px 16px', borderRadius: '50px', fontSize: '11px', fontWeight: 900,
+                    boxShadow: '0 4px 12px rgba(223,186,103,0.4)', whiteSpace: 'nowrap'
+                  }}>
+                    RECOMMENDED CHOICE
+                  </div>
+                )}
+
+                <div>
+                  <div style={{ fontSize: '1rem', fontWeight: 900, color: '#DFBA67', marginBottom: '4px' }}>{plan.badge}</div>
+                  <h3 style={{ fontSize: '1.2rem', fontWeight: 900, color: '#FFFFFF', marginBottom: '10px' }}>{plan.name}</h3>
+
+                  <div style={{ marginBottom: '20px' }}>
+                    {plan.originalPrice && (
+                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px', marginBottom: '2px' }}>
+                        <span style={{ fontSize: '1rem', color: '#94A3B8', textDecoration: 'line-through', fontWeight: 600 }}>{plan.originalPrice}</span>
+                        {plan.discountTag && <span style={{ background: '#DC2626', color: '#FFFFFF', fontSize: '0.66rem', fontWeight: 900, padding: '2px 6px', borderRadius: '6px' }}>{plan.discountTag}</span>}
+                      </div>
+                    )}
+                    <span style={{ fontSize: '2.4rem', fontWeight: 900, color: '#FFFFFF' }}>{plan.price}</span>
+                    <span style={{ color: '#94A3B8', fontSize: '0.84rem' }}>{plan.period}</span>
+                  </div>
+
+                  <ul style={{ listStyle: 'none', padding: 0, marginBottom: '24px', textAlign: 'left' }}>
+                    {plan.features.map((f, j) => (
+                      <li key={j} style={{ padding: '7px 0', fontSize: '0.84rem', color: '#E2E8F0', borderBottom: '1px solid rgba(255,255,255,0.08)', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                        <span style={{ color: '#4ADE80', fontWeight: 900 }}>✓</span>
+                        <span>{f}</span>
+                      </li>
+                    ))}
+                  </ul>
                 </div>
-                <ul style={{ listStyle: 'none', padding: 0, marginBottom: '28px', textAlign: 'left' }}>
-                  {plan.features.map((f, j) => (
-                    <li key={j} style={{ padding: '8px 0', fontSize: '0.85rem', color: 'rgba(255,255,255,0.85)', borderBottom: '1px solid rgba(255,255,255,0.06)' }}>
-                      ✅ {f}
-                    </li>
-                  ))}
-                </ul>
-                <button onClick={() => { 
-                  const targetKey = plan.key || (plan.name.toLowerCase().includes('basic') ? 'basic' : plan.name.toLowerCase().includes('enterprise') ? 'enterprise' : 'pro');
-                  window.history.pushState({}, '', `/register?plan=${targetKey}`); 
-                  window.dispatchEvent(new PopStateEvent('popstate')); 
-                }}
+
+                <button
+                  onClick={() => {
+                    const targetKey = plan.key || (plan.name.toLowerCase().includes('basic') ? 'basic' : plan.name.toLowerCase().includes('enterprise') ? 'enterprise' : 'pro');
+                    window.history.pushState({}, '', `/register?plan=${targetKey}`);
+                    window.dispatchEvent(new PopStateEvent('popstate'));
+                  }}
                   style={{
                     width: '100%', padding: '14px', borderRadius: '14px', border: 'none',
-                    background: plan.popular ? 'linear-gradient(135deg, #DFBA67, #C9A44A)' : 'rgba(255,255,255,0.1)',
-                    color: plan.popular ? '#0A0A0A' : '#DFBA67', fontWeight: 900, fontSize: '0.92rem',
-                    cursor: 'pointer', transition: 'all 0.3s', boxShadow: plan.popular ? '0 6px 20px rgba(223,186,103,0.3)' : 'none'
+                    background: plan.popular ? 'linear-gradient(135deg, #DFBA67, #C5A059)' : 'rgba(255,255,255,0.1)',
+                    color: plan.popular ? '#0A2315' : '#DFBA67', fontWeight: 900, fontSize: '0.92rem',
+                    cursor: 'pointer', transition: 'all 0.2s', boxShadow: plan.popular ? '0 6px 20px rgba(223,186,103,0.3)' : 'none'
                   }}
-                >Start {trialDays}-Day Free Trial</button>
+                >
+                  Start {trialDays}-Day Free Trial
+                </button>
               </div>
             ))}
           </div>
         </div>
 
+        {/* FAQ Accordion Section */}
+        <div style={{
+          padding: '40px 16px', maxWidth: '800px', margin: '0 auto', position: 'relative', zIndex: 5
+        }}>
+          <div style={{ textAlign: 'center', marginBottom: '28px' }}>
+            <h2 style={{ fontSize: 'clamp(22px, 4.5vw, 32px)', fontWeight: 900, color: '#FFFFFF', marginBottom: '6px' }}>
+              Frequently Asked Questions (FAQ)
+            </h2>
+            <p style={{ color: '#94A3B8', fontSize: '0.88rem', margin: 0 }}>
+              Got questions? We have answers.
+            </p>
+          </div>
+
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+            {faqItems.map((faq, index) => {
+              const isOpen = openFaqIndex === index;
+              return (
+                <div
+                  key={index}
+                  onClick={() => setOpenFaqIndex(isOpen ? null : index)}
+                  style={{
+                    background: 'rgba(13, 35, 23, 0.8)',
+                    border: `1.5px solid ${isOpen ? '#DFBA67' : 'rgba(223,186,103,0.2)'}`,
+                    borderRadius: '16px',
+                    padding: '16px 18px',
+                    cursor: 'pointer',
+                    transition: 'all 0.2s ease',
+                    textAlign: 'left'
+                  }}
+                >
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '12px' }}>
+                    <span style={{ fontSize: '0.95rem', fontWeight: 800, color: isOpen ? '#DFBA67' : '#FFFFFF' }}>
+                      {faq.q}
+                    </span>
+                    <span style={{ fontSize: '1.2rem', color: '#DFBA67', fontWeight: 900 }}>
+                      {isOpen ? '−' : '+'}
+                    </span>
+                  </div>
+                  {isOpen && (
+                    <div style={{ marginTop: '10px', paddingTop: '10px', borderTop: '1px solid rgba(255,255,255,0.08)', fontSize: '0.85rem', color: '#CBD5E1', lineHeight: 1.5 }}>
+                      {faq.a}
+                    </div>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+        </div>
+
         {/* Footer */}
         <footer style={{
-          textAlign: 'center', padding: '40px 20px', borderTop: '1px solid rgba(255,255,255,0.08)',
-          position: 'relative', zIndex: 5, background: 'rgba(0,0,0,0.4)'
+          textAlign: 'center', padding: '36px 20px', borderTop: '1px solid rgba(223,186,103,0.15)',
+          position: 'relative', zIndex: 5, background: 'rgba(5, 20, 11, 0.95)'
         }}>
-          <div style={{ fontSize: '1.2rem', fontWeight: 900, color: '#DFBA67', marginBottom: '8px' }}>
+          <div style={{ fontSize: '1.2rem', fontWeight: 900, color: '#DFBA67', marginBottom: '6px' }}>
             🍽️ KhanaMaster Digital QR Menu SaaS
           </div>
-          <p style={{ color: 'rgba(255,255,255,0.4)', fontSize: '0.82rem', margin: 0 }}>
+          <p style={{ color: '#94A3B8', fontSize: '0.82rem', margin: '0 0 12px 0' }}>
             © 2026 Khana Master — India's Premier Smart AI Digital Menu & Restaurant Management Platform
           </p>
+          <div style={{ display: 'flex', gap: '16px', justifyContent: 'center', fontSize: '0.8rem', color: '#DFBA67' }}>
+            <span onClick={() => setShowLandingLoginModal(true)} style={{ cursor: 'pointer', textDecoration: 'underline' }}>Owner Login</span>
+            <span>•</span>
+            <span onClick={() => { window.history.pushState({}, '', '/register'); window.dispatchEvent(new PopStateEvent('popstate')); }} style={{ cursor: 'pointer', textDecoration: 'underline' }}>Register {trialDays}-Day Free Trial</span>
+            <span>•</span>
+            <a href={`https://wa.me/${(masterSupportPhone || '919876543210').replace(/[^0-9]/g, '')}`} target="_blank" rel="noopener noreferrer" style={{ color: '#DFBA67', textDecoration: 'underline' }}>WhatsApp Help</a>
+          </div>
         </footer>
+
+        {/* Mobile Sticky Floating Bottom Action Dock */}
+        <div style={{
+          position: 'fixed',
+          bottom: 0,
+          left: 0,
+          right: 0,
+          zIndex: 1000,
+          background: 'rgba(10, 35, 21, 0.96)',
+          backdropFilter: 'blur(16px)',
+          borderTop: '1.5px solid #DFBA67',
+          padding: '10px 14px',
+          display: 'flex',
+          gap: '8px',
+          alignItems: 'center',
+          justifyContent: 'center',
+          boxShadow: '0 -10px 25px rgba(0,0,0,0.8)'
+        }}>
+          <button
+            onClick={() => { window.history.pushState({}, '', '/register'); window.dispatchEvent(new PopStateEvent('popstate')); }}
+            style={{
+              flex: 2, padding: '12px', borderRadius: '12px', border: 'none',
+              background: 'linear-gradient(135deg, #DFBA67, #C5A059)', color: '#0A2315',
+              fontWeight: 900, fontSize: '0.88rem', cursor: 'pointer',
+              boxShadow: '0 4px 12px rgba(223,186,103,0.3)', whiteSpace: 'nowrap'
+            }}
+          >
+            🚀 Start {trialDays}-Day Free Trial
+          </button>
+          <button
+            onClick={() => setShowLandingLoginModal(true)}
+            style={{
+              flex: 1, padding: '12px', borderRadius: '12px',
+              border: '1px solid rgba(223,186,103,0.4)', background: 'rgba(223,186,103,0.12)',
+              color: '#DFBA67', fontWeight: 800, fontSize: '0.82rem', cursor: 'pointer',
+              whiteSpace: 'nowrap'
+            }}
+          >
+            🔑 Login
+          </button>
+        </div>
       </div>
     );
   }
