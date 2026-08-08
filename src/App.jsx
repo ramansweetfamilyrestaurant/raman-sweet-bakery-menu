@@ -246,7 +246,7 @@ export default function App() {
   // Multi-Device Table-Level Live Sync Effect
   useEffect(() => {
     const activeTargetTable = effectiveTableNum || orderTableInput || '1';
-    const currentSlug = getSlugFromUrl() || (info && info.slug) || 'raman-sweet-bakery';
+    const currentSlug = getSlugFromUrl() || (info && info.slug) || '';
 
     const checkTableStatus = async () => {
       try {
@@ -295,7 +295,7 @@ export default function App() {
         }
       }
 
-      const currentSlug = getSlugFromUrl() || (info && info.slug) || 'raman-sweet-bakery';
+      const currentSlug = getSlugFromUrl() || (info && info.slug) || '';
       const itemsPayload = cartItems.map(item => ({
         dish_id: item.isCombo ? item.dish.id : item.dish.id,
         name: item.dish.name,
@@ -489,7 +489,7 @@ export default function App() {
   }, [adminToken, superToken, info]);
 
   const handleAdminLoginSuccess = (token, username, slug) => {
-    const currentSlug = slug || getSlugFromUrl() || (info && info.slug) || 'raman-sweet-bakery';
+    const currentSlug = slug || getSlugFromUrl() || (info && info.slug) || '';
     localStorage.setItem('raman_admin_token', token);
     localStorage.setItem('raman_admin_user', username);
     localStorage.setItem('raman_admin_slug', currentSlug);
@@ -497,11 +497,11 @@ export default function App() {
     setAdminUsername(username);
     setAdminSlug(currentSlug);
     setView('admin-dashboard');
-    window.history.pushState({}, '', `/${currentSlug}/admin`);
+    window.history.pushState({}, '', currentSlug ? `/${currentSlug}/admin` : '/admin');
   };
 
   const handleAdminLogout = () => {
-    const currentSlug = getSlugFromUrl() || (info && info.slug) || 'raman-sweet-bakery';
+    const currentSlug = getSlugFromUrl() || (info && info.slug) || '';
     localStorage.removeItem('raman_admin_token');
     localStorage.removeItem('raman_admin_user');
     localStorage.removeItem('raman_admin_slug');
@@ -509,7 +509,7 @@ export default function App() {
     setAdminUsername('');
     setAdminSlug('');
     setView('menu');
-    window.history.pushState({}, '', `/${currentSlug}`);
+    window.history.pushState({}, '', currentSlug ? `/${currentSlug}` : '/');
     loadMenuData(currentSlug);
   };
 
