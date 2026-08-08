@@ -20,11 +20,22 @@ export default function RegisterPage({ onRegisterSuccess }) {
   }, []);
 
   const [trialDays, setTrialDays] = useState(14);
+  const [plans, setPlans] = useState([]);
+
   useEffect(() => {
     fetch('/api/settings')
       .then(res => res.json())
       .then(data => {
         if (data && data.default_trial_days) setTrialDays(Math.max(1, parseInt(data.default_trial_days, 10) || 14));
+      })
+      .catch(() => {});
+
+    fetch('/api/plans')
+      .then(res => res.json())
+      .then(data => {
+        if (Array.isArray(data) && data.length > 0) {
+          setPlans(data);
+        }
       })
       .catch(() => {});
   }, []);
@@ -34,6 +45,8 @@ export default function RegisterPage({ onRegisterSuccess }) {
   const [pendingApprovalData, setPendingApprovalData] = useState(null);
 
   const getBasePlanPrice = (tier) => {
+    const found = plans.find(p => p.key === tier);
+    if (found && found.price) return Number(found.price);
     if (tier === 'basic') return 499;
     if (tier === 'enterprise') return 1999;
     return 999;
@@ -408,11 +421,16 @@ export default function RegisterPage({ onRegisterSuccess }) {
                 SELECT PLAN TIER *
               </label>
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '6px' }}>
-                {[
+                {(plans.length > 0 ? plans.map(p => ({
+                  key: p.key,
+                  name: p.key === 'basic' ? 'Basic' : p.key === 'enterprise' ? 'Enterprise' : 'Pro',
+                  price: `₹${p.price}/mo`,
+                  popular: p.key === 'pro'
+                })) : [
                   { key: 'basic', name: 'Basic', price: '₹499/mo' },
                   { key: 'pro', name: 'Pro', price: '₹999/mo', popular: true },
                   { key: 'enterprise', name: 'Enterprise', price: '₹1,999/mo' }
-                ].map((p) => (
+                ]).map((p) => (
                   <div
                     key={p.key}
                     onClick={() => {
