@@ -1647,30 +1647,32 @@ export default function App() {
           </div>
         ) : (
           <>
-          {/* 🛒 COMBO DEALS SECTION */}
+          {/* 🛒 COMBO DEALS SECTION - ULTRA SLIM & MOBILE-NATIVE */}
           {combos.length > 0 && !searchQuery && (
-            <section id="combos-section" style={{ marginBottom: '16px', scrollMarginTop: '110px' }}>
+            <section id="combos-section" style={{ marginBottom: '12px', scrollMarginTop: '110px' }}>
               <div style={{
                 display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-                marginBottom: '8px', paddingBottom: '4px', borderBottom: '2px solid var(--gold-border)'
+                marginBottom: '6px', paddingBottom: '2px'
               }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                  <span style={{ fontSize: '1.1rem' }}>🍱</span>
-                  <h2 style={{ margin: 0, fontSize: '0.95rem', fontWeight: 800, color: 'var(--text-dark)' }}>
+                  <span style={{ fontSize: '1rem' }}>🍱</span>
+                  <h2 style={{ margin: 0, fontSize: '0.88rem', fontWeight: 800, color: 'var(--text-dark)' }}>
                     {lang === 'hi' ? 'कॉम्बो डील्स & थाली' : 'Combo Deals & Thalis'}
                   </h2>
                   <span style={{
-                    fontSize: '0.68rem', fontWeight: 800, color: '#B45309',
+                    fontSize: '0.62rem', fontWeight: 800, color: '#B45309',
                     background: '#FEF3C7', padding: '1px 6px', borderRadius: '10px',
                     border: '1px solid #FCD34D'
                   }}>{combos.length}</span>
                 </div>
-                <span style={{
-                  fontSize: '0.68rem', fontWeight: 800, color: '#059669'
-                }}>👉 Swipe ({combos.length})</span>
+                <span style={{ fontSize: '0.66rem', fontWeight: 700, color: '#059669' }}>
+                  Swipe 👉
+                </span>
               </div>
+
+              {/* Slim Horizontal Scroll List */}
               <div style={{
-                display: 'flex', gap: '10px', overflowX: 'auto', paddingBottom: '6px',
+                display: 'flex', gap: '8px', overflowX: 'auto', paddingBottom: '4px',
                 scrollSnapType: 'x mandatory', WebkitOverflowScrolling: 'touch',
                 scrollbarWidth: 'none', msOverflowStyle: 'none'
               }}>
@@ -1679,124 +1681,72 @@ export default function App() {
                   try { comboItems = typeof combo.items === 'string' ? JSON.parse(combo.items) : (combo.items || []); } catch { comboItems = []; }
                   const originalTotal = comboItems.reduce((s, i) => s + ((i.original_price || 0) * (i.qty || 1)), 0);
                   const savings = originalTotal - combo.price;
-                  const canOrder = effectiveTableNum && (info?.direct_ordering_enabled === true || info?.direct_ordering_enabled === 1);
+                  const itemsSummaryText = comboItems.map(i => `${i.qty > 1 ? i.qty + 'x ' : ''}${i.dish_name}`).join(' + ');
+
                   return (
                     <div 
                       key={combo.id}
                       onClick={() => setSelectedComboModal(combo)}
                       style={{
-                        minWidth: '250px', maxWidth: '275px', flexShrink: 0, scrollSnapAlign: 'start',
-                        background: '#FFFFFF', borderRadius: '14px', padding: '10px 12px',
-                        border: '1.5px solid var(--gold-border)', boxShadow: '0 2px 8px rgba(0,0,0,0.04)',
-                        position: 'relative', overflow: 'hidden', cursor: 'pointer',
-                        transition: 'all 0.2s ease'
+                        minWidth: '220px', maxWidth: '240px', flexShrink: 0, scrollSnapAlign: 'start',
+                        background: '#FFFFFF', borderRadius: '12px', padding: '8px 10px',
+                        border: '1px solid var(--gold-border)', boxShadow: '0 2px 6px rgba(0,0,0,0.03)',
+                        display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer'
                       }}
                     >
-                      <div style={{ display: 'flex', gap: '10px', alignItems: 'flex-start' }}>
-                        {/* Food Image Container */}
-                        <div style={{
-                          width: '74px', height: '66px', borderRadius: '10px', overflow: 'hidden',
-                          background: '#F9FAFB', border: '1px solid var(--gold-border)', flexShrink: 0,
-                          position: 'relative', boxShadow: '0 2px 6px rgba(0,0,0,0.06)'
-                        }}>
-                          {combo.image && combo.image !== '/uploads/logo.jpg' ? (
-                            <img 
-                              src={combo.image} 
-                              alt={combo.name} 
-                              style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }} 
-                              onError={(e) => {
-                                e.target.style.display = 'none';
-                                if (e.target.nextSibling) e.target.nextSibling.style.display = 'flex';
-                              }} 
-                            />
-                          ) : null}
-                          <div style={{
-                            width: '100%', height: '100%',
-                            display: (combo.image && combo.image !== '/uploads/logo.jpg') ? 'none' : 'flex',
-                            alignItems: 'center', justifyContent: 'center', fontSize: '2.2rem',
-                            background: 'linear-gradient(135deg, rgba(223,186,103,0.15), rgba(10,35,21,0.5))'
-                          }}>
-                            🍱
-                          </div>
-                        </div>
+                      {/* Compact Image */}
+                      <div style={{
+                        width: '52px', height: '52px', borderRadius: '8px', overflow: 'hidden',
+                        background: '#F9FAFB', border: '1px solid var(--gold-border)', flexShrink: 0,
+                        position: 'relative', display: 'flex', alignItems: 'center', justifyContent: 'center'
+                      }}>
+                        {combo.image && combo.image !== '/uploads/logo.jpg' ? (
+                          <img 
+                            src={combo.image} 
+                            alt={combo.name} 
+                            style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }} 
+                            onError={(e) => { e.target.style.display = 'none'; }} 
+                          />
+                        ) : (
+                          <span style={{ fontSize: '1.4rem' }}>🍱</span>
+                        )}
+                      </div>
 
-                        {/* Combo Details */}
-                        <div style={{ flex: 1, minWidth: 0 }}>
-                          {/* Badges Row */}
-                          {(combo.badge || savings > 0) && (
-                            <div style={{ display: 'flex', alignItems: 'center', gap: '5px', marginBottom: '4px', flexWrap: 'wrap' }}>
-                              {combo.badge && (
-                                <span style={{
-                                  padding: '2px 8px', borderRadius: '6px', fontSize: '0.64rem', fontWeight: 800,
-                                  background: 'linear-gradient(135deg, #FFD700, #F59E0B)', color: '#0A0A0A',
-                                  whiteSpace: 'nowrap'
-                                }}>{combo.badge}</span>
-                              )}
-                              {savings > 0 && (
-                                <span style={{
-                                  padding: '2px 8px', borderRadius: '6px', fontSize: '0.64rem', fontWeight: 900,
-                                  background: 'linear-gradient(135deg, #059669, #10B981)', color: '#FFFFFF',
-                                  whiteSpace: 'nowrap'
-                                }}>SAVE ₹{Math.round(savings)}</span>
-                              )}
-                            </div>
-                          )}
-
-                          {/* Full-width Title */}
+                      {/* Details Content */}
+                      <div style={{ flex: 1, minWidth: 0 }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '4px', marginBottom: '2px' }}>
                           <h3 style={{
-                            fontWeight: 800, fontSize: '0.98rem', color: 'var(--text-dark)',
-                            margin: '0 0 5px 0', lineHeight: 1.3
+                            fontWeight: 800, fontSize: '0.82rem', color: 'var(--text-dark)',
+                            margin: 0, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis'
                           }}>
                             {combo.name}
                           </h3>
+                        </div>
 
-                          {combo.description && (
-                            <p style={{ color: 'var(--text-muted)', fontSize: '0.76rem', margin: '0 0 6px 0', lineHeight: 1.3 }}>{combo.description}</p>
-                          )}
+                        <p style={{
+                          color: '#6B7280', fontSize: '0.68rem', margin: '0 0 3px 0',
+                          whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis'
+                        }}>
+                          {itemsSummaryText || combo.description || 'Special Meal Deal'}
+                        </p>
 
-                          {/* Included Dishes Pills */}
-                          <div style={{ display: 'flex', flexWrap: 'wrap', gap: '4px', marginBottom: '8px' }}>
-                            {comboItems.map((item, idx) => (
-                              <span key={idx} style={{
-                                padding: '2px 7px', borderRadius: '6px', fontSize: '0.66rem',
-                                background: '#F3F4F6', color: '#374151', fontWeight: 700,
-                                border: '1px solid #E5E7EB'
-                              }}>
-                                {item.qty > 1 ? `${item.qty}x ` : ''}{item.dish_name}{item.portion === 'half' ? ' (H)' : ''}
+                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                            <strong style={{ fontWeight: 900, fontSize: '0.88rem', color: 'var(--primary-emerald)' }}>
+                              {info?.currency_symbol || '₹'}{Math.round(Number(combo.price))}
+                            </strong>
+                            {savings > 0 && (
+                              <span style={{ fontSize: '0.6rem', color: '#059669', fontWeight: 800, background: '#D1FAE5', padding: '1px 4px', borderRadius: '4px' }}>
+                                -₹{Math.round(savings)}
                               </span>
-                            ))}
-                          </div>
-
-                          {/* Price & Add Button */}
-                          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: '4px' }}>
-                            <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                              <span style={{ fontWeight: 900, fontSize: '1.15rem', color: 'var(--primary-emerald)' }}>
-                                {info?.currency_symbol || '₹'}{Math.round(Number(combo.price))}
-                              </span>
-                              {originalTotal > 0 && originalTotal > combo.price && (
-                                <span style={{ textDecoration: 'line-through', color: '#9CA3AF', fontSize: '0.8rem', fontWeight: 600 }}>
-                                  ₹{Math.round(originalTotal)}
-                                </span>
-                              )}
-                            </div>
-                            {canOrder && (
-                              <button
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  handleAddComboToCart(combo);
-                                }}
-                                style={{
-                                  padding: '7px 16px', borderRadius: '10px', border: 'none',
-                                  background: 'linear-gradient(135deg, var(--primary-emerald), #059669)',
-                                  color: '#fff', fontWeight: 800, fontSize: '0.78rem', cursor: 'pointer',
-                                  boxShadow: '0 3px 10px rgba(16,185,129,0.3)',
-                                  display: 'flex', alignItems: 'center', gap: '4px'
-                                }}
-                              >
-                                <Plus size={14} /> Add
-                              </button>
                             )}
                           </div>
+                          <span style={{
+                            fontSize: '0.64rem', fontWeight: 800, color: '#0A2315',
+                            background: 'var(--gold-primary)', padding: '2px 7px', borderRadius: '6px'
+                          }}>
+                            + Add
+                          </span>
                         </div>
                       </div>
                     </div>
