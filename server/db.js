@@ -273,14 +273,6 @@ async function createTables() {
       try { await pgPool.query(q); } catch (e) { console.warn('Postgres table query notice:', e.message); }
     }
 
-    try {
-      await pgPool.query(`
-        INSERT INTO coupons (code, discount_type, discount_value, applicable_plans, max_total_uses, max_uses_per_restaurant, first_payment_only, is_active)
-        VALUES ('LAUNCH50', 'PERCENTAGE', 50, 'all', 100, 1, TRUE, TRUE)
-        ON CONFLICT (code) DO NOTHING;
-      `);
-    } catch (e) {}
-
     const pgAlters = [
       `ALTER TABLE categories ADD COLUMN IF NOT EXISTS restaurant_id INT REFERENCES restaurants(id) ON DELETE CASCADE;`,
       `ALTER TABLE categories ADD COLUMN IF NOT EXISTS active BOOLEAN DEFAULT TRUE;`,
@@ -327,6 +319,17 @@ async function createTables() {
       `ALTER TABLE payments ADD COLUMN IF NOT EXISTS payment_type VARCHAR(50);`,
       `ALTER TABLE payments ADD COLUMN IF NOT EXISTS paid_at TIMESTAMP;`,
       `ALTER TABLE payments ALTER COLUMN order_id DROP NOT NULL;`,
+      `ALTER TABLE coupons ADD COLUMN IF NOT EXISTS discount_type VARCHAR(50) DEFAULT 'PERCENTAGE';`,
+      `ALTER TABLE coupons ADD COLUMN IF NOT EXISTS discount_value DECIMAL(10, 2) DEFAULT 0;`,
+      `ALTER TABLE coupons ADD COLUMN IF NOT EXISTS applicable_plans VARCHAR(255) DEFAULT 'all';`,
+      `ALTER TABLE coupons ADD COLUMN IF NOT EXISTS valid_from TIMESTAMP DEFAULT CURRENT_TIMESTAMP;`,
+      `ALTER TABLE coupons ADD COLUMN IF NOT EXISTS valid_until TIMESTAMP;`,
+      `ALTER TABLE coupons ADD COLUMN IF NOT EXISTS max_total_uses INT DEFAULT 100;`,
+      `ALTER TABLE coupons ADD COLUMN IF NOT EXISTS max_uses_per_restaurant INT DEFAULT 1;`,
+      `ALTER TABLE coupons ADD COLUMN IF NOT EXISTS first_payment_only BOOLEAN DEFAULT TRUE;`,
+      `ALTER TABLE coupons ADD COLUMN IF NOT EXISTS minimum_plan_amount DECIMAL(10, 2) DEFAULT 0;`,
+      `ALTER TABLE coupons ADD COLUMN IF NOT EXISTS is_active BOOLEAN DEFAULT TRUE;`,
+      `ALTER TABLE coupons ADD COLUMN IF NOT EXISTS used_count INT DEFAULT 0;`,
       `CREATE INDEX IF NOT EXISTS idx_restaurants_active_expires ON restaurants(active, plan_expires_at);`,
       `CREATE INDEX IF NOT EXISTS idx_subscriptions_restaurant ON subscriptions(restaurant_id);`,
       `CREATE INDEX IF NOT EXISTS idx_subscriptions_status ON subscriptions(status);`,
@@ -337,6 +340,14 @@ async function createTables() {
     for (const alt of pgAlters) {
       try { await pgPool.query(alt); } catch (e) { console.warn('Postgres alter query notice:', e.message); }
     }
+
+    try {
+      await pgPool.query(`
+        INSERT INTO coupons (code, discount_type, discount_value, applicable_plans, max_total_uses, max_uses_per_restaurant, first_payment_only, is_active)
+        VALUES ('LAUNCH50', 'PERCENTAGE', 50, 'all', 100, 1, TRUE, TRUE)
+        ON CONFLICT (code) DO NOTHING;
+      `);
+    } catch (e) { console.warn('Postgres seed coupon notice:', e.message); }
   } else {
     sqliteDb.exec(`
       CREATE TABLE IF NOT EXISTS restaurants (
