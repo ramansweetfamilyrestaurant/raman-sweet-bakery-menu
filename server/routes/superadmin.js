@@ -584,15 +584,33 @@ router.get('/settings', authenticateToken, requireSuperAdmin, async (req, res) =
 // POST Update System Settings for Super Admin
 router.post('/settings', authenticateToken, requireSuperAdmin, async (req, res) => {
   try {
-    const { support_whatsapp } = req.body;
-    if (support_whatsapp !== undefined) {
-      const cleanNum = support_whatsapp.replace(/[^0-9]/g, '');
-      await query(
-        'INSERT INTO system_settings (key, value) VALUES ($1, $2) ON CONFLICT (key) DO UPDATE SET value = EXCLUDED.value',
-        ['support_whatsapp', cleanNum]
-      );
+    const { support_whatsapp, cashfree_app_id, cashfree_secret_key, razorpay_key_id, razorpay_key_secret } = req.body;
+    
+    const settingsToSave = {
+      support_whatsapp: support_whatsapp ? support_whatsapp.replace(/[^0-9]/g, '') : undefined,
+      cashfree_app_id: cashfree_app_id !== undefined ? String(cashfree_app_id).trim() : undefined,
+      cashfree_secret_key: cashfree_secret_key !== undefined ? String(cashfree_secret_key).trim() : undefined,
+      razorpay_key_id: razorpay_key_id !== undefined ? String(razorpay_key_id).trim() : undefined,
+      razorpay_key_secret: razorpay_key_secret !== undefined ? String(razorpay_key_secret).trim() : undefined
+    };
+
+    for (const [k, v] of Object.entries(settingsToSave)) {
+      if (v !== undefined) {
+        try {
+          await query(
+            'INSERT INTO system_settings (key, value) VALUES ($1, $2) ON CONFLICT (key) DO UPDATE SET value = EXCLUDED.value',
+            [k, v]
+          );
+        } catch {
+          try {
+            await query('INSERT OR REPLACE INTO system_settings (key, value) VALUES ($1, $2)', [k, v]);
+          } catch {}
+        }
+      }
     }
-    res.json({ message: 'Master System Settings updated successfully' });
+
+    await logAudit(null, 'superadmin', 'Update Payment API Keys', 'Updated Payment Gateway & System Settings');
+    res.json({ message: 'Master Payment Gateway API Keys updated successfully!' });
   } catch (err) {
     console.error('Update system settings error:', err);
     res.status(500).json({ error: 'Failed to update settings' });

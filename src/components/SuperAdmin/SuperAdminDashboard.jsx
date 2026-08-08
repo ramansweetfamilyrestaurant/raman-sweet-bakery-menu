@@ -55,6 +55,36 @@ export default function SuperAdminDashboard({ token, username, onLogout, onRetur
   const [couponsList, setCouponsList] = useState([]);
   const [newCouponForm, setNewCouponForm] = useState({ code: '', discount_percent: 50, discount_amount: 0, max_uses: 1000 });
 
+  // Payment Gateway API Keys State
+  const [paymentKeys, setPaymentKeys] = useState({
+    cashfree_app_id: '',
+    cashfree_secret_key: '',
+    razorpay_key_id: '',
+    razorpay_key_secret: '',
+    support_whatsapp: '919876543210'
+  });
+  const [keysSaving, setKeysSaving] = useState(false);
+  const [keysMsg, setKeysMsg] = useState('');
+
+  const loadSystemSettings = async () => {
+    try {
+      const res = await fetch('/api/superadmin/settings', {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      const data = await res.json();
+      if (data && typeof data === 'object') {
+        setPaymentKeys(prev => ({
+          ...prev,
+          cashfree_app_id: data.cashfree_app_id || '',
+          cashfree_secret_key: data.cashfree_secret_key || '',
+          razorpay_key_id: data.razorpay_key_id || '',
+          razorpay_key_secret: data.razorpay_key_secret || '',
+          support_whatsapp: data.support_whatsapp || '919876543210'
+        }));
+      }
+    } catch {}
+  };
+
   const loadCoupons = async () => {
     try {
       const res = await fetch('/api/superadmin/coupons', { headers: { Authorization: `Bearer ${token}` } });
@@ -524,17 +554,19 @@ export default function SuperAdminDashboard({ token, username, onLogout, onRetur
               <Sparkles size={14} color="#DFBA67" /> Promo Coupons
             </button>
 
-            {/* 🔑 Security & Credentials Button */}
+            {/* 🔑 Security & Payment API Keys Button */}
             <button
               onClick={() => {
                 setSecurityError('');
                 setSecuritySuccess('');
+                setKeysMsg('');
                 setSecurityForm({
                   currentPassword: '',
                   newUsername: username || 'superadmin',
                   newPassword: '',
                   confirmPassword: ''
                 });
+                loadSystemSettings();
                 setShowSecurityModal(true);
               }}
               style={{
@@ -2646,6 +2678,85 @@ export default function SuperAdminDashboard({ token, username, onLogout, onRetur
                 {securitySuccess}
               </div>
             )}
+
+            {/* 💳 Payment Gateway API Keys Setup Box */}
+            <div style={{ background: '#F8FAFC', border: '1.5px dashed #0EA5E9', borderRadius: '16px', padding: '16px', marginBottom: '16px' }}>
+              <strong style={{ fontSize: '0.84rem', color: '#0369A1', display: 'block', marginBottom: '10px' }}>
+                💳 Payment Gateway Merchant API Keys Setup:
+              </strong>
+
+              {keysMsg && (
+                <div style={{ fontSize: '0.76rem', fontWeight: 800, color: '#059669', marginBottom: '8px' }}>
+                  ✅ {keysMsg}
+                </div>
+              )}
+
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', fontSize: '0.78rem' }}>
+                {/* Cashfree */}
+                <div style={{ background: '#FFFFFF', padding: '10px', borderRadius: '8px', border: '1px solid #CBD5E1' }}>
+                  <span style={{ fontWeight: 800, color: '#059669', display: 'block', marginBottom: '4px' }}>🚀 CASHFREE GATEWAY (PRIMARY):</span>
+                  <input
+                    type="text"
+                    placeholder="Cashfree App ID (e.g. 1029384756)"
+                    value={paymentKeys.cashfree_app_id}
+                    onChange={(e) => setPaymentKeys({ ...paymentKeys, cashfree_app_id: e.target.value })}
+                    style={{ width: '100%', padding: '6px 8px', borderRadius: '6px', border: '1px solid #E2E8F0', marginBottom: '6px', fontSize: '0.78rem' }}
+                  />
+                  <input
+                    type="password"
+                    placeholder="Cashfree Secret Key"
+                    value={paymentKeys.cashfree_secret_key}
+                    onChange={(e) => setPaymentKeys({ ...paymentKeys, cashfree_secret_key: e.target.value })}
+                    style={{ width: '100%', padding: '6px 8px', borderRadius: '6px', border: '1px solid #E2E8F0', fontSize: '0.78rem' }}
+                  />
+                </div>
+
+                {/* Razorpay */}
+                <div style={{ background: '#FFFFFF', padding: '10px', borderRadius: '8px', border: '1px solid #CBD5E1' }}>
+                  <span style={{ fontWeight: 800, color: '#B45309', display: 'block', marginBottom: '4px' }}>💳 RAZORPAY GATEWAY (BACKUP):</span>
+                  <input
+                    type="text"
+                    placeholder="Razorpay Key ID (e.g. rzp_live_xxxxxxxx)"
+                    value={paymentKeys.razorpay_key_id}
+                    onChange={(e) => setPaymentKeys({ ...paymentKeys, razorpay_key_id: e.target.value })}
+                    style={{ width: '100%', padding: '6px 8px', borderRadius: '6px', border: '1px solid #E2E8F0', marginBottom: '6px', fontSize: '0.78rem' }}
+                  />
+                  <input
+                    type="password"
+                    placeholder="Razorpay Key Secret"
+                    value={paymentKeys.razorpay_key_secret}
+                    onChange={(e) => setPaymentKeys({ ...paymentKeys, razorpay_key_secret: e.target.value })}
+                    style={{ width: '100%', padding: '6px 8px', borderRadius: '6px', border: '1px solid #E2E8F0', fontSize: '0.78rem' }}
+                  />
+                </div>
+
+                <button
+                  type="button"
+                  onClick={async () => {
+                    setKeysSaving(true);
+                    setKeysMsg('');
+                    try {
+                      const res = await fetch('/api/superadmin/settings', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+                        body: JSON.stringify(paymentKeys)
+                      });
+                      const data = await res.json();
+                      if (res.ok) {
+                        setKeysMsg(data.message || 'Payment API Keys saved successfully!');
+                      }
+                    } catch {
+                      setKeysMsg('Failed to save API keys');
+                    } finally {
+                      setKeysSaving(false);
+                    }
+                  }}
+                  style={{ background: '#0284C7', color: '#FFF', border: 'none', padding: '8px 14px', borderRadius: '8px', fontWeight: 900, cursor: 'pointer' }}
+                >
+                  {keysSaving ? 'Saving...' : '✓ Save Payment API Keys'}
+                </button>
+              </div>
+            </div>
 
             <form onSubmit={handleSecuritySubmit} style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
               <div>
