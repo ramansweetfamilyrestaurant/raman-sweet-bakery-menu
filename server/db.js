@@ -43,8 +43,8 @@ async function initDb() {
 
 async function createTables() {
   if (dbType === 'postgres') {
-    await pgPool.query(`
-      CREATE TABLE IF NOT EXISTS restaurants (
+    const pgTables = [
+      `CREATE TABLE IF NOT EXISTS restaurants (
         id SERIAL PRIMARY KEY,
         name VARCHAR(255) NOT NULL,
         slug VARCHAR(255) UNIQUE NOT NULL,
@@ -61,9 +61,9 @@ async function createTables() {
         resto_type VARCHAR(50) DEFAULT 'pure_veg',
         active BOOLEAN DEFAULT TRUE,
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-      );
+      );`,
 
-      CREATE TABLE IF NOT EXISTS categories (
+      `CREATE TABLE IF NOT EXISTS categories (
         id SERIAL PRIMARY KEY,
         restaurant_id INT REFERENCES restaurants(id) ON DELETE CASCADE,
         name VARCHAR(255) NOT NULL,
@@ -71,12 +71,9 @@ async function createTables() {
         image VARCHAR(1000),
         sort_order INT DEFAULT 0,
         active BOOLEAN DEFAULT TRUE
-      );
+      );`,
 
-      ALTER TABLE categories ADD COLUMN IF NOT EXISTS restaurant_id INT REFERENCES restaurants(id) ON DELETE CASCADE;
-      ALTER TABLE categories ADD COLUMN IF NOT EXISTS active BOOLEAN DEFAULT TRUE;
-
-      CREATE TABLE IF NOT EXISTS dishes (
+      `CREATE TABLE IF NOT EXISTS dishes (
         id SERIAL PRIMARY KEY,
         restaurant_id INT REFERENCES restaurants(id) ON DELETE CASCADE,
         category_id INT REFERENCES categories(id) ON DELETE CASCADE,
@@ -97,20 +94,18 @@ async function createTables() {
         available BOOLEAN DEFAULT TRUE,
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
         updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-      );
+      );`,
 
-      ALTER TABLE dishes ADD COLUMN IF NOT EXISTS restaurant_id INT REFERENCES restaurants(id) ON DELETE CASCADE;
-
-      CREATE TABLE IF NOT EXISTS admins (
+      `CREATE TABLE IF NOT EXISTS admins (
         id SERIAL PRIMARY KEY,
         restaurant_id INT REFERENCES restaurants(id) ON DELETE CASCADE,
         username VARCHAR(255) UNIQUE NOT NULL,
         password_hash VARCHAR(255) NOT NULL,
         role VARCHAR(50) DEFAULT 'restaurant_admin',
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-      );
+      );`,
 
-      CREATE TABLE IF NOT EXISTS orders (
+      `CREATE TABLE IF NOT EXISTS orders (
         id SERIAL PRIMARY KEY,
         restaurant_id INT REFERENCES restaurants(id) ON DELETE CASCADE,
         table_number VARCHAR(50) DEFAULT '1',
@@ -120,72 +115,17 @@ async function createTables() {
         total_amount DECIMAL(10, 2) NOT NULL,
         status VARCHAR(50) DEFAULT 'pending',
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-      );
+      );`,
 
-      ALTER TABLE admins ADD COLUMN IF NOT EXISTS restaurant_id INT REFERENCES restaurants(id) ON DELETE CASCADE;
-      ALTER TABLE admins ADD COLUMN IF NOT EXISTS role VARCHAR(50) DEFAULT 'restaurant_admin';
-      DO $$ BEGIN ALTER TABLE restaurants ALTER COLUMN code DROP NOT NULL; EXCEPTION WHEN OTHERS THEN NULL; END $$;
-      ALTER TABLE restaurants ADD COLUMN IF NOT EXISTS tagline TEXT;
-      ALTER TABLE restaurants ADD COLUMN IF NOT EXISTS logo TEXT;
-      ALTER TABLE restaurants ADD COLUMN IF NOT EXISTS phone TEXT;
-      ALTER TABLE restaurants ADD COLUMN IF NOT EXISTS address TEXT;
-      ALTER TABLE restaurants ADD COLUMN IF NOT EXISTS opening_hours TEXT;
-      ALTER TABLE restaurants ADD COLUMN IF NOT EXISTS google_review_url TEXT;
-      ALTER TABLE restaurants ADD COLUMN IF NOT EXISTS google_maps_url TEXT;
-      ALTER TABLE restaurants ADD COLUMN IF NOT EXISTS active INT DEFAULT 1;
-      ALTER TABLE restaurants ADD COLUMN IF NOT EXISTS filters_visibility TEXT;
-      ALTER TABLE restaurants ADD COLUMN IF NOT EXISTS direct_ordering_enabled INT DEFAULT 1;
-      ALTER TABLE restaurants ADD COLUMN IF NOT EXISTS google_reviews_enabled INT DEFAULT 1;
-      ALTER TABLE restaurants ADD COLUMN IF NOT EXISTS currency_symbol VARCHAR(10) DEFAULT '₹';
-      ALTER TABLE restaurants ADD COLUMN IF NOT EXISTS fssai_lic_no VARCHAR(100) DEFAULT '';
-      ALTER TABLE restaurants ADD COLUMN IF NOT EXISTS resto_type VARCHAR(50) DEFAULT 'pure_veg';
-      ALTER TABLE restaurants ADD COLUMN IF NOT EXISTS plan_tier VARCHAR(50) DEFAULT 'pro';
-      ALTER TABLE restaurants ADD COLUMN IF NOT EXISTS plan_price NUMERIC DEFAULT 999;
-      ALTER TABLE restaurants ADD COLUMN IF NOT EXISTS plan_expires_at VARCHAR(100);
-      ALTER TABLE restaurants ADD COLUMN IF NOT EXISTS whatsapp_number VARCHAR(50);
-      ALTER TABLE restaurants ADD COLUMN IF NOT EXISTS whatsapp_enabled INT DEFAULT 1;
-      ALTER TABLE restaurants ADD COLUMN IF NOT EXISTS theme_color VARCHAR(50) DEFAULT 'gold';
-      ALTER TABLE restaurants ADD COLUMN IF NOT EXISTS scan_count INT DEFAULT 0;
-      ALTER TABLE restaurants ADD COLUMN IF NOT EXISTS latitude NUMERIC DEFAULT 26.6500;
-      ALTER TABLE restaurants ADD COLUMN IF NOT EXISTS longitude NUMERIC DEFAULT 84.9167;
-      ALTER TABLE restaurants ADD COLUMN IF NOT EXISTS max_distance_meters INT DEFAULT 100;
-      ALTER TABLE restaurants ADD COLUMN IF NOT EXISTS gst_enabled INT DEFAULT 0;
-      ALTER TABLE restaurants ADD COLUMN IF NOT EXISTS gstin_number VARCHAR(50);
-      ALTER TABLE restaurants ADD COLUMN IF NOT EXISTS total_tables INT DEFAULT 0;
-      ALTER TABLE restaurants ADD COLUMN IF NOT EXISTS order_retention_days INT DEFAULT 90;
-      ALTER TABLE restaurants ADD COLUMN IF NOT EXISTS mandate_id VARCHAR(255);
-      ALTER TABLE restaurants ADD COLUMN IF NOT EXISTS mandate_status VARCHAR(50) DEFAULT 'pending';
-      ALTER TABLE restaurants ADD COLUMN IF NOT EXISTS trial_ends_at VARCHAR(100);
-      ALTER TABLE restaurants ADD COLUMN IF NOT EXISTS auto_debit_enabled INT DEFAULT 1;
-      ALTER TABLE dishes ADD COLUMN IF NOT EXISTS type VARCHAR(20) DEFAULT 'veg';
-      ALTER TABLE dishes ADD COLUMN IF NOT EXISTS name_hi TEXT;
-      ALTER TABLE dishes ADD COLUMN IF NOT EXISTS description_hi TEXT;
-      ALTER TABLE dishes ADD COLUMN IF NOT EXISTS image TEXT;
-      ALTER TABLE dishes ADD COLUMN IF NOT EXISTS portion TEXT;
-      ALTER TABLE dishes ADD COLUMN IF NOT EXISTS portion_half_label TEXT;
-      ALTER TABLE dishes ADD COLUMN IF NOT EXISTS portion_full_label TEXT;
-      ALTER TABLE dishes ADD COLUMN IF NOT EXISTS price_half NUMERIC DEFAULT 0;
-      ALTER TABLE dishes ADD COLUMN IF NOT EXISTS available INT DEFAULT 1;
-      ALTER TABLE dishes ADD COLUMN IF NOT EXISTS is_spicy INT DEFAULT 0;
-      ALTER TABLE dishes ADD COLUMN IF NOT EXISTS is_bestseller INT DEFAULT 0;
-      ALTER TABLE dishes ADD COLUMN IF NOT EXISTS badge TEXT;
-      ALTER TABLE dishes ADD COLUMN IF NOT EXISTS sort_order INT DEFAULT 0;
-      ALTER TABLE dishes ADD COLUMN IF NOT EXISTS ingredients TEXT;
-      ALTER TABLE dishes ADD COLUMN IF NOT EXISTS preparation_time TEXT;
-      ALTER TABLE dishes ADD COLUMN IF NOT EXISTS taste_profile TEXT;
-      ALTER TABLE categories ADD COLUMN IF NOT EXISTS name_hi TEXT;
-      ALTER TABLE categories ADD COLUMN IF NOT EXISTS image TEXT;
-      ALTER TABLE categories ADD COLUMN IF NOT EXISTS sort_order INT DEFAULT 0;
-
-      CREATE TABLE IF NOT EXISTS announcements (
+      `CREATE TABLE IF NOT EXISTS announcements (
         id SERIAL PRIMARY KEY,
         message TEXT NOT NULL,
         type VARCHAR(20) DEFAULT 'info',
         active INT DEFAULT 1,
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-      );
+      );`,
 
-      CREATE TABLE IF NOT EXISTS service_requests (
+      `CREATE TABLE IF NOT EXISTS service_requests (
         id SERIAL PRIMARY KEY,
         restaurant_id INT DEFAULT 1,
         table_number VARCHAR(50) DEFAULT '1',
@@ -193,9 +133,9 @@ async function createTables() {
         note TEXT,
         status VARCHAR(20) DEFAULT 'pending',
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-      );
+      );`,
 
-      CREATE TABLE IF NOT EXISTS saas_plans (
+      `CREATE TABLE IF NOT EXISTS saas_plans (
         id SERIAL PRIMARY KEY,
         key VARCHAR(50) UNIQUE NOT NULL,
         name VARCHAR(100) NOT NULL,
@@ -206,24 +146,23 @@ async function createTables() {
         direct_ordering_enabled INT DEFAULT 0,
         google_reviews_enabled INT DEFAULT 1,
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-      );
+      );`,
 
-      CREATE TABLE IF NOT EXISTS audit_logs (
+      `CREATE TABLE IF NOT EXISTS audit_logs (
         id SERIAL PRIMARY KEY,
         restaurant_id INT,
         actor_role VARCHAR(50),
         action VARCHAR(100),
         details TEXT,
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-      );
+      );`,
 
-      CREATE TABLE IF NOT EXISTS system_settings (
+      `CREATE TABLE IF NOT EXISTS system_settings (
         key VARCHAR(255) PRIMARY KEY,
         value TEXT NOT NULL
-      );
-      INSERT INTO system_settings (key, value) VALUES ('support_whatsapp', '919876543210') ON CONFLICT (key) DO NOTHING;
+      );`,
 
-      CREATE TABLE IF NOT EXISTS combos (
+      `CREATE TABLE IF NOT EXISTS combos (
         id SERIAL PRIMARY KEY,
         restaurant_id INT REFERENCES restaurants(id) ON DELETE CASCADE,
         name VARCHAR(255) NOT NULL,
@@ -235,9 +174,9 @@ async function createTables() {
         badge VARCHAR(100),
         sort_order INT DEFAULT 0,
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-      );
+      );`,
 
-      CREATE TABLE IF NOT EXISTS daily_sales_summaries (
+      `CREATE TABLE IF NOT EXISTS daily_sales_summaries (
         id SERIAL PRIMARY KEY,
         restaurant_id INT REFERENCES restaurants(id) ON DELETE CASCADE,
         summary_date VARCHAR(50) NOT NULL,
@@ -246,9 +185,9 @@ async function createTables() {
         top_dishes_summary TEXT,
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
         UNIQUE (restaurant_id, summary_date)
-      );
+      );`,
 
-      CREATE TABLE IF NOT EXISTS subscriptions (
+      `CREATE TABLE IF NOT EXISTS subscriptions (
         id SERIAL PRIMARY KEY,
         restaurant_id INT REFERENCES restaurants(id) ON DELETE CASCADE,
         plan_id INT REFERENCES saas_plans(id),
@@ -267,9 +206,9 @@ async function createTables() {
         cancelled_at TIMESTAMP,
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
         updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-      );
+      );`,
 
-      CREATE TABLE IF NOT EXISTS payments (
+      `CREATE TABLE IF NOT EXISTS payments (
         id SERIAL PRIMARY KEY,
         restaurant_id INT REFERENCES restaurants(id) ON DELETE CASCADE,
         subscription_id INT REFERENCES subscriptions(id) ON DELETE SET NULL,
@@ -282,9 +221,9 @@ async function createTables() {
         paid_at TIMESTAMP,
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
         updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-      );
+      );`,
 
-      CREATE TABLE IF NOT EXISTS webhook_events (
+      `CREATE TABLE IF NOT EXISTS webhook_events (
         id SERIAL PRIMARY KEY,
         gateway VARCHAR(50) NOT NULL,
         event_id VARCHAR(255) NOT NULL,
@@ -294,21 +233,62 @@ async function createTables() {
         processed_at TIMESTAMP,
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
         UNIQUE (gateway, event_id)
-      );
+      );`
+    ];
 
-      ALTER TABLE restaurants ADD COLUMN IF NOT EXISTS trial_started_at VARCHAR(100);
+    for (const q of pgTables) {
+      try { await pgPool.query(q); } catch (e) { console.warn('Postgres table query notice:', e.message); }
+    }
 
-      CREATE INDEX IF NOT EXISTS idx_restaurants_active_expires ON restaurants(active, plan_expires_at);
-      CREATE INDEX IF NOT EXISTS idx_subscriptions_restaurant ON subscriptions(restaurant_id);
-      CREATE INDEX IF NOT EXISTS idx_subscriptions_status ON subscriptions(status);
-      CREATE INDEX IF NOT EXISTS idx_subscriptions_next_billing ON subscriptions(next_billing_at);
+    const pgAlters = [
+      `ALTER TABLE categories ADD COLUMN IF NOT EXISTS restaurant_id INT REFERENCES restaurants(id) ON DELETE CASCADE;`,
+      `ALTER TABLE categories ADD COLUMN IF NOT EXISTS active BOOLEAN DEFAULT TRUE;`,
+      `ALTER TABLE dishes ADD COLUMN IF NOT EXISTS restaurant_id INT REFERENCES restaurants(id) ON DELETE CASCADE;`,
+      `ALTER TABLE admins ADD COLUMN IF NOT EXISTS restaurant_id INT REFERENCES restaurants(id) ON DELETE CASCADE;`,
+      `ALTER TABLE admins ADD COLUMN IF NOT EXISTS role VARCHAR(50) DEFAULT 'restaurant_admin';`,
+      `ALTER TABLE restaurants ADD COLUMN IF NOT EXISTS tagline TEXT;`,
+      `ALTER TABLE restaurants ADD COLUMN IF NOT EXISTS logo TEXT;`,
+      `ALTER TABLE restaurants ADD COLUMN IF NOT EXISTS phone TEXT;`,
+      `ALTER TABLE restaurants ADD COLUMN IF NOT EXISTS address TEXT;`,
+      `ALTER TABLE restaurants ADD COLUMN IF NOT EXISTS opening_hours TEXT;`,
+      `ALTER TABLE restaurants ADD COLUMN IF NOT EXISTS google_review_url TEXT;`,
+      `ALTER TABLE restaurants ADD COLUMN IF NOT EXISTS google_maps_url TEXT;`,
+      `ALTER TABLE restaurants ADD COLUMN IF NOT EXISTS active INT DEFAULT 1;`,
+      `ALTER TABLE restaurants ADD COLUMN IF NOT EXISTS filters_visibility TEXT;`,
+      `ALTER TABLE restaurants ADD COLUMN IF NOT EXISTS direct_ordering_enabled INT DEFAULT 1;`,
+      `ALTER TABLE restaurants ADD COLUMN IF NOT EXISTS google_reviews_enabled INT DEFAULT 1;`,
+      `ALTER TABLE restaurants ADD COLUMN IF NOT EXISTS currency_symbol VARCHAR(10) DEFAULT '₹';`,
+      `ALTER TABLE restaurants ADD COLUMN IF NOT EXISTS fssai_lic_no VARCHAR(100) DEFAULT '';`,
+      `ALTER TABLE restaurants ADD COLUMN IF NOT EXISTS resto_type VARCHAR(50) DEFAULT 'pure_veg';`,
+      `ALTER TABLE restaurants ADD COLUMN IF NOT EXISTS plan_tier VARCHAR(50) DEFAULT 'pro';`,
+      `ALTER TABLE restaurants ADD COLUMN IF NOT EXISTS plan_price NUMERIC DEFAULT 999;`,
+      `ALTER TABLE restaurants ADD COLUMN IF NOT EXISTS plan_expires_at VARCHAR(100);`,
+      `ALTER TABLE restaurants ADD COLUMN IF NOT EXISTS whatsapp_number VARCHAR(50);`,
+      `ALTER TABLE restaurants ADD COLUMN IF NOT EXISTS whatsapp_enabled INT DEFAULT 1;`,
+      `ALTER TABLE restaurants ADD COLUMN IF NOT EXISTS theme_color VARCHAR(50) DEFAULT 'gold';`,
+      `ALTER TABLE restaurants ADD COLUMN IF NOT EXISTS scan_count INT DEFAULT 0;`,
+      `ALTER TABLE restaurants ADD COLUMN IF NOT EXISTS latitude NUMERIC DEFAULT 26.6500;`,
+      `ALTER TABLE restaurants ADD COLUMN IF NOT EXISTS longitude NUMERIC DEFAULT 84.9167;`,
+      `ALTER TABLE restaurants ADD COLUMN IF NOT EXISTS max_distance_meters INT DEFAULT 100;`,
+      `ALTER TABLE restaurants ADD COLUMN IF NOT EXISTS gst_enabled INT DEFAULT 0;`,
+      `ALTER TABLE restaurants ADD COLUMN IF NOT EXISTS gstin_number VARCHAR(50);`,
+      `ALTER TABLE restaurants ADD COLUMN IF NOT EXISTS total_tables INT DEFAULT 0;`,
+      `ALTER TABLE restaurants ADD COLUMN IF NOT EXISTS order_retention_days INT DEFAULT 90;`,
+      `ALTER TABLE restaurants ADD COLUMN IF NOT EXISTS mandate_id VARCHAR(255);`,
+      `ALTER TABLE restaurants ADD COLUMN IF NOT EXISTS mandate_status VARCHAR(50) DEFAULT 'pending';`,
+      `ALTER TABLE restaurants ADD COLUMN IF NOT EXISTS trial_ends_at VARCHAR(100);`,
+      `ALTER TABLE restaurants ADD COLUMN IF NOT EXISTS auto_debit_enabled INT DEFAULT 1;`,
+      `ALTER TABLE restaurants ADD COLUMN IF NOT EXISTS trial_started_at VARCHAR(100);`,
+      `CREATE INDEX IF NOT EXISTS idx_restaurants_active_expires ON restaurants(active, plan_expires_at);`,
+      `CREATE INDEX IF NOT EXISTS idx_subscriptions_restaurant ON subscriptions(restaurant_id);`,
+      `CREATE INDEX IF NOT EXISTS idx_subscriptions_status ON subscriptions(status);`,
+      `CREATE INDEX IF NOT EXISTS idx_subscriptions_next_billing ON subscriptions(next_billing_at);`
+    ];
 
-      DO $$ BEGIN
-        IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'restaurants_phone_key') THEN
-          ALTER TABLE restaurants ADD CONSTRAINT restaurants_phone_key UNIQUE (phone);
-        END IF;
-      EXCEPTION WHEN OTHERS THEN NULL;
-      END $$;
+    for (const alt of pgAlters) {
+      try { await pgPool.query(alt); } catch (e) { console.warn('Postgres alter query notice:', e.message); }
+    }
+  }
     `);
   } else {
     sqliteDb.exec(`
