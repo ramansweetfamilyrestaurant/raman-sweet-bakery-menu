@@ -354,7 +354,7 @@ export default function App() {
   // Extract restaurant slug from URL (/slug, /r/:slug, or default)
   const getSlugFromUrl = () => {
     const path = window.location.pathname;
-    if (!path || path === '/' || path === '/admin' || path === '/super-admin' || path === '/superadmin' || path === '/register') {
+    if (!path || path === '/' || path === '/admin' || path === '/super-admin' || path === '/superadmin' || path === '/register' || path === '/billing') {
       return '';
     }
     
@@ -370,7 +370,7 @@ export default function App() {
     const candidate = parts[0];
     
     // Filter out system routes
-    if (['admin', 'superadmin', 'super-admin', 'api', 'uploads', 'assets', 'register'].includes(candidate.toLowerCase())) {
+    if (['admin', 'superadmin', 'super-admin', 'api', 'uploads', 'assets', 'register', 'billing'].includes(candidate.toLowerCase())) {
       return '';
     }
     
@@ -382,6 +382,11 @@ export default function App() {
     setLoading(true);
     setRestaurantStatus('active');
     const slug = forcedSlug || getSlugFromUrl();
+    const isSystemRoute = ['/', '/register', '/billing', '/super-admin', '/superadmin'].includes(window.location.pathname.toLowerCase());
+    if (!slug && isSystemRoute) {
+      setLoading(false);
+      return;
+    }
     const isAdminMode = Boolean(adminToken);
     try {
       const infoData = await fetchRestaurantInfo(slug);
