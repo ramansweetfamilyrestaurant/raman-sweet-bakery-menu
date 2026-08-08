@@ -70,7 +70,7 @@ const handleCreateSubscription = async (req, res) => {
 
     if (existingSubRows && existingSubRows.length > 0) {
       const existingSub = existingSubRows[0];
-      const config = getCashfreeConfig();
+      const config = await getCashfreeConfigAsync();
       console.log(`♻️ Found existing Cashfree subscription (${existingSub.gateway_subscription_id}) for restaurant ${targetRestoId}. Reusing.`);
 
       return res.json({
