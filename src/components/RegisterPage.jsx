@@ -132,7 +132,7 @@ export default function RegisterPage({ onRegisterSuccess }) {
       if (onRegisterSuccess) {
         onRegisterSuccess(data);
       } else {
-        window.location.href = '/billing';
+        window.location.href = `/${data.slug || ''}/admin`;
       }
     } catch (err) {
       console.error('Registration error:', err);

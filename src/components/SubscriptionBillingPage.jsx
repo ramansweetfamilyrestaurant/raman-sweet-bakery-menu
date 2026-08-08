@@ -501,29 +501,54 @@ export default function SubscriptionBillingPage({ restoInfo, token, onProceedToD
             </button>
           </div>
         ) : (
-          <button
-            onClick={handleStartFreeTrialMandate}
-            disabled={authorizing}
-            style={{
-              width: '100%',
-              padding: '15px',
-              borderRadius: '50px',
-              border: 'none',
-              background: 'linear-gradient(135deg, #DFBA67 0%, #C59B3F 100%)',
-              color: '#0A2315',
-              fontSize: '0.95rem',
-              fontWeight: 900,
-              cursor: authorizing ? 'wait' : 'pointer',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              gap: '8px',
-              boxShadow: '0 6px 20px rgba(223,186,103,0.4)'
-            }}
-          >
-            <ShieldCheck size={20} />
-            <span>{authorizing ? 'Opening Cashfree...' : `🚀 Authorize UPI AutoPay & Activate ${calcDays}-Day Trial`}</span>
-          </button>
+          <div>
+            <button
+              onClick={handleStartFreeTrialMandate}
+              disabled={authorizing}
+              style={{
+                width: '100%',
+                padding: '15px',
+                borderRadius: '50px',
+                border: 'none',
+                background: 'linear-gradient(135deg, #DFBA67 0%, #C59B3F 100%)',
+                color: '#0A2315',
+                fontSize: '0.95rem',
+                fontWeight: 900,
+                cursor: authorizing ? 'wait' : 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                gap: '8px',
+                boxShadow: '0 6px 20px rgba(223,186,103,0.4)',
+                marginBottom: '10px'
+              }}
+            >
+              <ShieldCheck size={20} />
+              <span>{authorizing ? 'Opening Cashfree...' : `🚀 Authorize UPI AutoPay & Activate ${calcDays}-Day Trial`}</span>
+            </button>
+
+            <button
+              onClick={onProceedToDashboard}
+              style={{
+                width: '100%',
+                padding: '12px',
+                borderRadius: '50px',
+                border: '1px solid rgba(255,255,255,0.2)',
+                background: 'rgba(255,255,255,0.05)',
+                color: '#A7F3D0',
+                fontSize: '0.85rem',
+                fontWeight: 800,
+                cursor: 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                gap: '6px'
+              }}
+            >
+              <span>Skip for Now & Go to Admin Dashboard</span>
+              <ArrowRight size={16} />
+            </button>
+          </div>
         )}
       </div>
     </div>

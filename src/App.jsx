@@ -1250,8 +1250,8 @@ export default function App() {
           setAdminUsername(res.username || 'Admin');
           setAdminSlug(res.slug);
           setNewlyRegisteredResto(res);
-          window.history.pushState({}, '', '/billing');
-          setView('billing');
+          window.history.pushState({}, '', `/${res.slug}/admin`);
+          setView('admin-dashboard');
         }} />
       </Suspense>
     );
