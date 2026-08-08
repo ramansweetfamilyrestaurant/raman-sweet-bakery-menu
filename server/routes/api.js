@@ -309,14 +309,13 @@ router.get('/combos', async (req, res) => {
     const slug = req.query.slug;
     const resto = await resolveRestaurant(req, slug);
     if (!resto) return res.json([]);
-    const combos = await query('SELECT * FROM combos WHERE restaurant_id = $1 AND available = $2 ORDER BY sort_order ASC, id DESC', [resto.id, 1]);
+    const combos = await query('SELECT * FROM combos WHERE restaurant_id = $1 AND (available = $2 OR available IS NULL) ORDER BY sort_order ASC, id DESC', [resto.id, 1]);
     res.json(combos);
   } catch (err) {
     console.error('Fetch public combos error:', err);
     res.status(500).json({ error: 'Failed to fetch combos' });
   }
 });
-
 
 // POST Create Direct Table Order (KOT Order)
 router.post('/orders', async (req, res) => {
@@ -333,7 +332,6 @@ router.post('/orders', async (req, res) => {
     }
 
     const itemsJson = typeof items === 'object' ? JSON.stringify(items) : items;
-
     const createdAt = new Date().toISOString();
 
     const result = await query(`
@@ -385,13 +383,11 @@ router.get('/orders/track/:id', async (req, res) => {
   }
 });
 
-// GET Active Table Order Sync (Multi-Device Sync for same table)
+// GET Active Table Order Sync
 router.get('/orders/active-table', async (req, res) => {
   try {
     const { slug, table_number } = req.query;
-    if (!table_number) {
-      return res.json(null);
-    }
+    if (!table_number) return res.json(null);
     const resto = await resolveRestaurant(req, slug);
     const targetId = resto?.id || 1;
 
@@ -402,9 +398,7 @@ router.get('/orders/active-table', async (req, res) => {
       ORDER BY id DESC LIMIT 1
     `, [targetId, String(table_number)]);
 
-    if (orders.length === 0) {
-      return res.json(null);
-    }
+    if (orders.length === 0) return res.json(null);
 
     const order = orders[0];
     res.json({
@@ -449,6 +443,7 @@ router.post('/service-requests', async (req, res) => {
 });
 
 // POST /api/register - Public Self-Service 14-Day Free Trial Signup for Restaurants
+// Hardened with Atomic Database Transaction & Backend Authoritative Plan Resolution
 router.post('/register', async (req, res) => {
   try {
     const { name, phone, owner_username, owner_password, plan_tier } = req.body;
@@ -466,7 +461,7 @@ router.post('/register', async (req, res) => {
       return res.status(400).json({ error: 'Password must be at least 4 characters long!' });
     }
 
-    // 1. Generate clean slug from restaurant name
+    // Generate clean slug from restaurant name
     let baseSlug = name
       .toLowerCase()
       .trim()
@@ -488,103 +483,150 @@ router.post('/register', async (req, res) => {
       counter++;
     }
 
-    // Check if owner username is taken
+    // Check if phone or owner username is already taken
+    const phoneCheck = await query('SELECT id FROM restaurants WHERE phone = $1', [cleanPhone]);
+    if (phoneCheck.length > 0) {
+      return res.status(400).json({ error: `Mobile number '${phone}' is already registered with another restaurant!` });
+    }
+
     const adminCheck = await query('SELECT id FROM admins WHERE username = $1', [owner_username.trim()]);
     if (adminCheck.length > 0) {
       return res.status(400).json({ error: `Username '${owner_username}' is already taken! Please choose a different username.` });
     }
 
-    // 2. Set 14-Day Free Trial expiry date
-    const expiryDate = new Date(Date.now() + 14 * 24 * 60 * 60 * 1000).toISOString();
-    const selectedPlan = plan_tier || 'pro';
-    const planPrice = selectedPlan === 'basic' ? 499 : selectedPlan === 'enterprise' ? 1999 : 999;
+    const selectedPlanKey = (plan_tier || 'pro').toLowerCase();
 
-    // Check if Super Admin approval is required for new signups (Default: false = 100% Fully Automated Instant Trial!)
-    const approvalSetting = await query("SELECT value FROM system_settings WHERE key = 'require_registration_approval'");
-    const requireApproval = (approvalSetting && approvalSetting.length > 0)
-      ? (approvalSetting[0].value === '1' || approvalSetting[0].value === 'true')
-      : false; // Default: 100% Fully Automated Instant Activation!
+    // Run atomic multi-table registration inside database transaction
+    const result = await withTransaction(async (txQuery) => {
+      // Resolve authoritative plan details from backend saas_plans DB
+      const planRows = await txQuery('SELECT * FROM saas_plans WHERE key = $1', [selectedPlanKey]);
+      const dbPlan = planRows[0] || {
+        id: 2,
+        key: 'pro',
+        name: 'Pro Luxury Plan',
+        price: 999
+      };
 
-    const isActive = !requireApproval;
+      const now = new Date();
+      const trialEnd = new Date(now.getTime() + 14 * 24 * 60 * 60 * 1000);
+      const nowISO = now.toISOString();
+      const expiryDateISO = trialEnd.toISOString();
 
-    // 3. Create Restaurant Record
-    const restoRes = await query(`
-      INSERT INTO restaurants (
-        name, slug, tagline, logo, phone, address, opening_hours, plan_tier, plan_price, plan_expires_at, whatsapp_number, theme_color, active, total_tables
-      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14) RETURNING id
-    `, [
-      name.trim(),
-      cleanSlug,
-      '100% Fresh & Authentic Food',
-      'https://images.unsplash.com/photo-1555396273-367ea4eb4db5?w=500&auto=format&fit=crop&q=80',
-      phone || '',
-      'Main Market Street, City Center',
-      '8:00 AM - 10:30 PM',
-      selectedPlan,
-      planPrice,
-      expiryDate,
-      phone || '',
-      'gold',
-      isActive ? 1 : 0,
-      0
-    ]);
+      // Check if Super Admin approval is required for new signups
+      const approvalSetting = await txQuery("SELECT value FROM system_settings WHERE key = 'require_registration_approval'");
+      const requireApproval = (approvalSetting && approvalSetting.length > 0)
+        ? (approvalSetting[0].value === '1' || approvalSetting[0].value === 'true')
+        : false;
 
-    const newRestoId = restoRes[0]?.id || restoRes.lastInsertRowid;
+      const isActive = !requireApproval;
 
-    // 4. Create Owner Admin Account
-    const salt = await bcrypt.genSalt(10);
-    const hash = await bcrypt.hash(owner_password, salt);
-
-    const adminRes = await query(`
-      INSERT INTO admins (restaurant_id, username, password_hash, role)
-      VALUES ($1, $2, $3, $4) RETURNING id
-    `, [newRestoId, owner_username.trim(), hash, 'restaurant_admin']);
-
-    const adminId = adminRes[0]?.id || adminRes.lastInsertRowid;
-
-    // 5. Seed Starter Categories & Starter Dishes for instant ready-to-use menu
-    try {
-      const cat1 = await query('INSERT INTO categories (restaurant_id, name, image, sort_order) VALUES ($1, $2, $3, $4) RETURNING id', [
-        newRestoId, '⭐ Special Starters', 'https://images.unsplash.com/photo-1601050690597-df0568f70950?w=500&auto=format&fit=crop&q=80', 1
-      ]);
-      const cat2 = await query('INSERT INTO categories (restaurant_id, name, image, sort_order) VALUES ($1, $2, $3, $4) RETURNING id', [
-        newRestoId, '🍛 Main Course & Thalis', 'https://images.unsplash.com/photo-1546833999-b9f581a1996d?w=500&auto=format&fit=crop&q=80', 2
-      ]);
-      const cat3 = await query('INSERT INTO categories (restaurant_id, name, image, sort_order) VALUES ($1, $2, $3, $4) RETURNING id', [
-        newRestoId, '🥤 Beverages & Shakes', 'https://images.unsplash.com/photo-1544145945-f90425340c7e?w=500&auto=format&fit=crop&q=80', 3
+      // 1. Create Restaurant Record
+      const restoRes = await txQuery(`
+        INSERT INTO restaurants (
+          name, slug, tagline, logo, phone, address, opening_hours, plan_tier, plan_price, plan_expires_at, trial_started_at, trial_ends_at, whatsapp_number, theme_color, active, total_tables
+        ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16) RETURNING id
+      `, [
+        name.trim(),
+        cleanSlug,
+        '100% Fresh & Authentic Food',
+        'https://images.unsplash.com/photo-1555396273-367ea4eb4db5?w=500&auto=format&fit=crop&q=80',
+        cleanPhone,
+        'Main Market Street, City Center',
+        '8:00 AM - 10:30 PM',
+        dbPlan.key,
+        dbPlan.price,
+        expiryDateISO,
+        nowISO,
+        expiryDateISO,
+        cleanPhone,
+        'gold',
+        isActive ? 1 : 0,
+        0
       ]);
 
-      const cat1Id = cat1[0]?.id || cat1.lastInsertRowid;
-      const cat2Id = cat2[0]?.id || cat2.lastInsertRowid;
-      const cat3Id = cat3[0]?.id || cat3.lastInsertRowid;
+      const newRestoId = restoRes[0]?.id || restoRes.lastInsertRowid;
 
-      if (cat1Id) {
-        await query('INSERT INTO dishes (restaurant_id, category_id, name, price, description, image, is_veg, must_try) VALUES ($1, $2, $3, $4, $5, $6, $7, $8)', [
-          newRestoId, cat1Id, 'Crispy Paneer Tikka', 240, 'Juicy cottage cheese cubes marinated in spices and grilled in tandoor', 'https://images.unsplash.com/photo-1567188040759-fb8a883dc6d8?w=500&auto=format&fit=crop&q=80', true, true
-        ]);
-      }
-      if (cat2Id) {
-        await query('INSERT INTO dishes (restaurant_id, category_id, name, price, description, image, is_veg, must_try) VALUES ($1, $2, $3, $4, $5, $6, $7, $8)', [
-          newRestoId, cat2Id, 'Royal Butter Paneer & Naan Thali', 290, 'Rich butter paneer gravy served with 2 butter naans, dal makhani, and rice', 'https://images.unsplash.com/photo-1585937421612-70a008356fbe?w=500&auto=format&fit=crop&q=80', true, true
-        ]);
-      }
-      if (cat3Id) {
-        await query('INSERT INTO dishes (restaurant_id, category_id, name, price, description, image, is_veg) VALUES ($1, $2, $3, $4, $5, $6, $7)', [
-          newRestoId, cat3Id, 'Cold Coffee with Ice Cream', 120, 'Creamy chilled coffee topped with dark chocolate and vanilla ice cream', 'https://images.unsplash.com/photo-1572490122747-3968b75cc699?w=500&auto=format&fit=crop&q=80', true
-        ]);
-      }
-    } catch (seedErr) {
-      console.error('Starter menu seed error:', seedErr);
-    }
+      // 2. Create Subscriptions Record (Resolving saas_plans.id, gateway='none', status='trialing')
+      await txQuery(`
+        INSERT INTO subscriptions (
+          restaurant_id, plan_id, gateway, status, amount, currency, billing_cycle, trial_start, trial_end, current_period_start, current_period_end
+        ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
+      `, [
+        newRestoId,
+        dbPlan.id,
+        'none',
+        'trialing',
+        dbPlan.price,
+        'INR',
+        'monthly',
+        nowISO,
+        expiryDateISO,
+        nowISO,
+        expiryDateISO
+      ]);
 
-    // 6. Generate JWT Auth Token for automatic login
+      // 3. Create Owner Admin Account
+      const salt = await bcrypt.genSalt(10);
+      const hash = await bcrypt.hash(owner_password, salt);
+
+      const adminRes = await txQuery(`
+        INSERT INTO admins (restaurant_id, username, password_hash, role)
+        VALUES ($1, $2, $3, $4) RETURNING id
+      `, [newRestoId, owner_username.trim(), hash, 'restaurant_admin']);
+
+      const adminId = adminRes[0]?.id || adminRes.lastInsertRowid;
+
+      // 4. Seed Starter Categories & Starter Dishes
+      try {
+        const cat1 = await txQuery('INSERT INTO categories (restaurant_id, name, image, sort_order) VALUES ($1, $2, $3, $4) RETURNING id', [
+          newRestoId, '⭐ Special Starters', 'https://images.unsplash.com/photo-1601050690597-df0568f70950?w=500&auto=format&fit=crop&q=80', 1
+        ]);
+        const cat2 = await txQuery('INSERT INTO categories (restaurant_id, name, image, sort_order) VALUES ($1, $2, $3, $4) RETURNING id', [
+          newRestoId, '🍛 Main Course & Thalis', 'https://images.unsplash.com/photo-1546833999-b9f581a1996d?w=500&auto=format&fit=crop&q=80', 2
+        ]);
+        const cat3 = await txQuery('INSERT INTO categories (restaurant_id, name, image, sort_order) VALUES ($1, $2, $3, $4) RETURNING id', [
+          newRestoId, '🥤 Beverages & Shakes', 'https://images.unsplash.com/photo-1544145945-f90425340c7e?w=500&auto=format&fit=crop&q=80', 3
+        ]);
+
+        const cat1Id = cat1[0]?.id || cat1.lastInsertRowid;
+        const cat2Id = cat2[0]?.id || cat2.lastInsertRowid;
+        const cat3Id = cat3[0]?.id || cat3.lastInsertRowid;
+
+        if (cat1Id) {
+          await txQuery('INSERT INTO dishes (restaurant_id, category_id, name, price, description, image, available) VALUES ($1, $2, $3, $4, $5, $6, $7)', [
+            newRestoId, cat1Id, 'Crispy Paneer Tikka', 240, 'Juicy cottage cheese cubes marinated in spices and grilled in tandoor', 'https://images.unsplash.com/photo-1567188040759-fb8a883dc6d8?w=500&auto=format&fit=crop&q=80', 1
+          ]);
+        }
+        if (cat2Id) {
+          await txQuery('INSERT INTO dishes (restaurant_id, category_id, name, price, description, image, available) VALUES ($1, $2, $3, $4, $5, $6, $7)', [
+            newRestoId, cat2Id, 'Royal Butter Paneer & Naan Thali', 290, 'Rich butter paneer gravy served with 2 butter naans, dal makhani, and rice', 'https://images.unsplash.com/photo-1585937421612-70a008356fbe?w=500&auto=format&fit=crop&q=80', 1
+          ]);
+        }
+        if (cat3Id) {
+          await txQuery('INSERT INTO dishes (restaurant_id, category_id, name, price, description, image, available) VALUES ($1, $2, $3, $4, $5, $6, $7)', [
+            newRestoId, cat3Id, 'Cold Coffee with Ice Cream', 120, 'Creamy chilled coffee topped with dark chocolate and vanilla ice cream', 'https://images.unsplash.com/photo-1572490122747-3968b75cc699?w=500&auto=format&fit=crop&q=80', 1
+          ]);
+        }
+      } catch (seedErr) {
+        console.warn('Starter menu seed notice:', seedErr.message);
+      }
+
+      return {
+        newRestoId,
+        adminId,
+        cleanSlug,
+        isActive
+      };
+    });
+
+    // 5. Generate JWT Auth Token for automatic login
     const token = jwt.sign(
       {
-        id: adminId,
+        id: result.adminId,
         username: owner_username.trim(),
         role: 'restaurant_admin',
-        restaurant_id: newRestoId,
-        slug: cleanSlug
+        restaurant_id: result.newRestoId,
+        slug: result.cleanSlug
       },
       JWT_SECRET,
       { expiresIn: '7d' }
@@ -592,18 +634,12 @@ router.post('/register', async (req, res) => {
 
     res.json({
       success: true,
-      pending_approval: !isActive,
+      pending_approval: !result.isActive,
       token,
-      slug: cleanSlug,
+      slug: result.cleanSlug,
       restaurant: {
-        id: newRestoId,
+        id: result.newRestoId,
         name: name.trim(),
-        slug: cleanSlug,
-        plan_tier: selectedPlan,
-        plan_expires_at: expiryDate,
-        active: isActive
-      },
-      message: !isActive
         ? `⏳ Registration Submitted! Your restaurant '${name.trim()}' is pending Super Admin verification and approval.`
         : '🎉 Congratulations! Your 14-Day Free Trial has been activated successfully.'
     });

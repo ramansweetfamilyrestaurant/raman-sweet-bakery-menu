@@ -9,7 +9,12 @@ async function handleResponse(res, fallbackErrorMsg = 'API request failed') {
     throw new Error(`Server returned HTTP ${res.status}: ${text.substring(0, 120)}`);
   }
   if (!res.ok) {
-    throw new Error(data.error || fallbackErrorMsg);
+    const err = new Error(data.error || data.message || fallbackErrorMsg);
+    if (res.status === 403 && (data.error === 'SUBSCRIPTION_EXPIRED' || (data.message && data.message.includes('expired')))) {
+      err.isSubscriptionExpired = true;
+      err.code = 'SUBSCRIPTION_EXPIRED';
+    }
+    throw err;
   }
   return data;
 }

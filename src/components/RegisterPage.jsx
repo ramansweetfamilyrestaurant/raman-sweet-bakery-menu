@@ -135,53 +135,21 @@ export default function RegisterPage({ onRegisterSuccess }) {
 
       // Store Auth Tokens in localStorage for instant automatic login
       localStorage.setItem('raman_admin_token', data.token);
-      localStorage.setItem('raman_admin_user', data.username);
+      localStorage.setItem('raman_admin_user', data.username || formData.owner_username);
       localStorage.setItem('raman_admin_slug', data.slug);
       localStorage.setItem('adminToken', data.token);
 
-      // Show Interactive Autopay Mandate Modal on screen
       setRegisteredData(data);
-      setShowMandateModal(true);
+      if (onRegisterSuccess) {
+        onRegisterSuccess(data);
+      } else {
+        window.location.href = `/${data.slug}/admin`;
+      }
     } catch (err) {
       console.error('Registration error:', err);
       setError(err.message);
     } finally {
       setLoading(false);
-    }
-  };
-
-  const handleAuthorizeMandate = async () => {
-    setMandateAuthorizing(true);
-    try {
-      await fetch('/api/payment/create-mandate', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          restaurant_id: registeredData?.restaurant_id || registeredData?.id || 1,
-          plan_tier: formData.plan_tier,
-          coupon_code: appliedCoupon ? appliedCoupon.code : 'LAUNCH50',
-          gateway: mandateGateway
-        })
-      });
-      setMandateSuccessMsg('🎉 ₹0 UPI Autopay Mandate Authorized! Redirecting to Admin Dashboard...');
-      setTimeout(() => {
-        if (onRegisterSuccess) {
-          onRegisterSuccess(registeredData);
-        } else {
-          window.location.href = `/${registeredData.slug}/admin`;
-        }
-      }, 1200);
-    } catch {
-      setMandateSuccessMsg('🎉 ₹0 Autopay Authorized! Redirecting to Admin Dashboard...');
-      setTimeout(() => {
-        if (onRegisterSuccess) {
-          onRegisterSuccess(registeredData);
-        } else {
-          window.location.href = `/${registeredData.slug}/admin`;
-        }
-      }, 1200);
-    } finally {
-      setMandateAuthorizing(false);
     }
   };
 

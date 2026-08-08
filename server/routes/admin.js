@@ -5,7 +5,7 @@ import multer from 'multer';
 import path from 'path';
 import fs from 'fs';
 import { query, runAutoDataSummarization } from '../db.js';
-import { authenticateToken } from '../middleware/auth.js';
+import { authenticateToken, requireActiveSubscription, checkSubscriptionStatus } from '../middleware/auth.js';
 
 const router = express.Router();
 const JWT_SECRET = process.env.JWT_SECRET || 'raman_bakery_secret_jwt_key_2026_super_secure';
@@ -70,26 +70,79 @@ router.post('/login', async (req, res) => {
       return res.status(401).json({ error: 'Invalid password. Please check your credentials.' });
     }
 
-    const restoRes = await query('SELECT slug, active, name FROM restaurants WHERE id = $1', [admin.restaurant_id || 1]);
+    const restoRes = await query('SELECT slug, active, name FROM restaurants WHERE id = $1', [admin.restaurant_id]);
     const resto = restoRes[0];
     const slug = resto?.slug || 'raman-sweet-bakery';
-    const isActive = (resto?.active === 1 || resto?.active === true || resto?.active === '1');
-
-    if (!isActive && admin.role !== 'superadmin') {
-      return res.status(403).json({
-        error: `🚫 Account Suspended: '${resto?.name || 'Restaurant'}' subscription is currently suspended. Please contact SaaS Master to renew subscription.`
-      });
-    }
 
     const token = jwt.sign(
-      { id: admin.id, username: admin.username, restaurant_id: admin.restaurant_id || 1, role: admin.role || 'restaurant_admin' },
+      { id: admin.id, username: admin.username, restaurant_id: admin.restaurant_id, role: admin.role || 'restaurant_admin' },
       JWT_SECRET,
       { expiresIn: '30d' }
     );
-    res.json({ token, username: admin.username, restaurant_id: admin.restaurant_id || 1, slug, role: admin.role || 'restaurant_admin' });
+    res.json({ token, username: admin.username, restaurant_id: admin.restaurant_id, slug, role: admin.role || 'restaurant_admin' });
   } catch (err) {
     console.error('Login error:', err);
     res.status(500).json({ error: 'Internal server error during login' });
+  }
+});
+
+// GET /api/admin/me - Verify session and fetch current tenant details (BILLING ALLOWED)
+router.get('/me', authenticateToken, async (req, res) => {
+  try {
+    const restoId = req.user?.restaurant_id;
+    if (!restoId && req.user?.role !== 'superadmin') {
+      return res.status(401).json({ error: 'Unauthorized: Restaurant session required' });
+    }
+    const targetId = restoId || 1;
+
+    const admins = await query('SELECT id, username, role, restaurant_id FROM admins WHERE id = $1', [req.user.id]);
+    const restos = await query('SELECT * FROM restaurants WHERE id = $1', [targetId]);
+
+    const subInfo = await checkSubscriptionStatus(targetId);
+
+    res.json({
+      user: admins[0] || req.user,
+      restaurant: restos[0] || null,
+      subscription_status: subInfo.status,
+      active: subInfo.active
+    });
+  } catch (err) {
+    console.error('Fetch me error:', err);
+    res.status(500).json({ error: 'Failed to fetch user session' });
+  }
+});
+
+// GET /api/admin/subscription-status - Fetch current tenant subscription details (BILLING ALLOWED)
+router.get('/subscription-status', authenticateToken, async (req, res) => {
+  try {
+    const restoId = req.user?.restaurant_id;
+    if (!restoId && req.user?.role !== 'superadmin') {
+      return res.status(401).json({ error: 'Unauthorized: Restaurant session required' });
+    }
+    const targetId = restoId || 1;
+
+    const subInfo = await checkSubscriptionStatus(targetId);
+    const restos = await query('SELECT plan_tier, plan_price, plan_expires_at, trial_started_at, trial_ends_at, mandate_id, mandate_status, auto_debit_enabled FROM restaurants WHERE id = $1', [targetId]);
+    const r = restos[0] || {};
+
+    const subRows = await query('SELECT * FROM subscriptions WHERE restaurant_id = $1 ORDER BY id DESC LIMIT 1', [targetId]);
+
+    res.json({
+      status: subInfo.status,
+      active: subInfo.active,
+      plan_tier: r.plan_tier || 'pro',
+      plan_price: Number(r.plan_price || 999),
+      trial_started_at: r.trial_started_at,
+      trial_ends_at: r.trial_ends_at || r.plan_expires_at,
+      plan_expires_at: r.plan_expires_at,
+      mandate_id: r.mandate_id || null,
+      mandate_status: r.mandate_status || 'pending',
+      auto_debit_enabled: Boolean(r.auto_debit_enabled),
+      subscription: subRows[0] || null
+    });
+  } catch (err) {
+    console.error('Fetch subscription status error:', err);
+    res.status(500).json({ error: 'Failed to fetch subscription status' });
   }
 });
 
@@ -108,10 +161,8 @@ router.post('/forgot-password', async (req, res) => {
 
     const trimmedInput = phone_or_username.trim();
 
-    // 1. Try finding admin by exact username
     let admins = await query('SELECT * FROM admins WHERE username = $1', [trimmedInput]);
 
-    // 2. Fallback: Try finding restaurant by phone number
     if (!admins || admins.length === 0) {
       const restos = await query('SELECT id FROM restaurants WHERE phone = $1 OR whatsapp_number = $1', [trimmedInput]);
       if (restos && restos.length > 0) {
@@ -126,7 +177,6 @@ router.post('/forgot-password', async (req, res) => {
 
     const targetAdmin = admins[0];
 
-    // Hash new password & update
     const salt = await bcrypt.genSalt(10);
     const newHash = await bcrypt.hash(new_password, salt);
 
@@ -142,13 +192,18 @@ router.post('/forgot-password', async (req, res) => {
   }
 });
 
-// Admin Dashboard Summary Statistics
-router.get('/stats', authenticateToken, async (req, res) => {
+// Admin Dashboard Summary Statistics (OPERATIONAL ROUTE)
+router.get('/stats', authenticateToken, requireActiveSubscription, async (req, res) => {
   try {
-    const restoId = req.user.restaurant_id || 1;
-    const catRes = await query('SELECT COUNT(*) as count FROM categories WHERE restaurant_id = $1', [restoId]);
-    const dishRes = await query('SELECT COUNT(*) as count FROM dishes WHERE restaurant_id = $1', [restoId]);
-    const activeRes = await query('SELECT COUNT(*) as count FROM dishes WHERE restaurant_id = $1 AND available = 1', [restoId]);
+    const restoId = req.user?.restaurant_id;
+    if (!restoId && req.user?.role !== 'superadmin') {
+      return res.status(401).json({ error: 'Unauthorized: Restaurant session required' });
+    }
+    const targetId = restoId || 1;
+
+    const catRes = await query('SELECT COUNT(*) as count FROM categories WHERE restaurant_id = $1', [targetId]);
+    const dishRes = await query('SELECT COUNT(*) as count FROM dishes WHERE restaurant_id = $1', [targetId]);
+    const activeRes = await query('SELECT COUNT(*) as count FROM dishes WHERE restaurant_id = $1 AND available = 1', [targetId]);
 
     res.json({
       totalCategories: parseInt(catRes[0]?.count || 0, 10),
@@ -161,8 +216,8 @@ router.get('/stats', authenticateToken, async (req, res) => {
   }
 });
 
-// File Upload Endpoint
-router.post('/upload', authenticateToken, upload.single('image'), (req, res) => {
+// File Upload Endpoint (OPERATIONAL ROUTE)
+router.post('/upload', authenticateToken, requireActiveSubscription, upload.single('image'), (req, res) => {
   if (!req.file) {
     return res.status(400).json({ error: 'No image file uploaded' });
   }
@@ -170,10 +225,29 @@ router.post('/upload', authenticateToken, upload.single('image'), (req, res) => 
   res.json({ url: imageUrl });
 });
 
-// Category Management (Tenant Scoped)
-router.post('/categories', authenticateToken, async (req, res) => {
+// Category Management (Tenant Scoped - OPERATIONAL ROUTES)
+router.get('/categories', authenticateToken, async (req, res) => {
   try {
-    const restoId = req.user.restaurant_id || 1;
+    const restoId = req.user?.restaurant_id;
+    if (!restoId && req.user?.role !== 'superadmin') {
+      return res.status(401).json({ error: 'Unauthorized: Restaurant session required' });
+    }
+    const targetId = restoId || 1;
+    const categories = await query('SELECT * FROM categories WHERE restaurant_id = $1 ORDER BY sort_order ASC, id ASC', [targetId]);
+    res.json(categories);
+  } catch (err) {
+    console.error('Fetch categories error:', err);
+    res.status(500).json({ error: 'Failed to fetch categories' });
+  }
+});
+
+router.post('/categories', authenticateToken, requireActiveSubscription, async (req, res) => {
+  try {
+    const restoId = req.user?.restaurant_id;
+    if (!restoId && req.user?.role !== 'superadmin') {
+      return res.status(401).json({ error: 'Unauthorized: Restaurant session required' });
+    }
+    const targetId = restoId || 1;
     const { name, image, sort_order } = req.body;
     if (!name) {
       return res.status(400).json({ error: 'Category name is required' });
@@ -181,7 +255,7 @@ router.post('/categories', authenticateToken, async (req, res) => {
     const order = sort_order || 0;
     const result = await query(
       'INSERT INTO categories (restaurant_id, name, image, sort_order) VALUES ($1, $2, $3, $4) RETURNING id',
-      [restoId, name, image || '/uploads/logo.jpg', order]
+      [targetId, name, image || '/uploads/logo.jpg', order]
     );
     res.json({ success: true, id: result[0]?.id || result.lastInsertRowid });
   } catch (err) {
@@ -190,14 +264,18 @@ router.post('/categories', authenticateToken, async (req, res) => {
   }
 });
 
-router.put('/categories/:id', authenticateToken, async (req, res) => {
+router.put('/categories/:id', authenticateToken, requireActiveSubscription, async (req, res) => {
   try {
-    const restoId = req.user.restaurant_id || 1;
+    const restoId = req.user?.restaurant_id;
+    if (!restoId && req.user?.role !== 'superadmin') {
+      return res.status(401).json({ error: 'Unauthorized: Restaurant session required' });
+    }
+    const targetId = restoId || 1;
     const { id } = req.params;
     const { name, image, sort_order } = req.body;
     await query(
       'UPDATE categories SET name = $1, image = $2, sort_order = $3 WHERE id = $4 AND restaurant_id = $5',
-      [name, image, sort_order || 0, id, restoId]
+      [name, image, sort_order || 0, id, targetId]
     );
     res.json({ success: true });
   } catch (err) {
@@ -206,11 +284,15 @@ router.put('/categories/:id', authenticateToken, async (req, res) => {
   }
 });
 
-router.delete('/categories/:id', authenticateToken, async (req, res) => {
+router.delete('/categories/:id', authenticateToken, requireActiveSubscription, async (req, res) => {
   try {
-    const restoId = req.user.restaurant_id || 1;
+    const restoId = req.user?.restaurant_id;
+    if (!restoId && req.user?.role !== 'superadmin') {
+      return res.status(401).json({ error: 'Unauthorized: Restaurant session required' });
+    }
+    const targetId = restoId || 1;
     const { id } = req.params;
-    await query('DELETE FROM categories WHERE id = $1 AND restaurant_id = $2', [id, restoId]);
+    await query('DELETE FROM categories WHERE id = $1 AND restaurant_id = $2', [id, targetId]);
     res.json({ success: true });
   } catch (err) {
     console.error('Delete category error:', err);
@@ -218,13 +300,17 @@ router.delete('/categories/:id', authenticateToken, async (req, res) => {
   }
 });
 
-router.patch('/categories/:id/toggle', authenticateToken, async (req, res) => {
+router.patch('/categories/:id/toggle', authenticateToken, requireActiveSubscription, async (req, res) => {
   try {
-    const restoId = req.user.restaurant_id || 1;
+    const restoId = req.user?.restaurant_id;
+    if (!restoId && req.user?.role !== 'superadmin') {
+      return res.status(401).json({ error: 'Unauthorized: Restaurant session required' });
+    }
+    const targetId = restoId || 1;
     const { id } = req.params;
     const { active } = req.body;
     const activeBool = active === true || active === 1 || active === 'true';
-    await query('UPDATE categories SET active = $1 WHERE id = $2 AND restaurant_id = $3', [activeBool, id, restoId]);
+    await query('UPDATE categories SET active = $1 WHERE id = $2 AND restaurant_id = $3', [activeBool, id, targetId]);
     res.json({ success: true });
   } catch (err) {
     console.error('Toggle category error:', err);
@@ -232,10 +318,29 @@ router.patch('/categories/:id/toggle', authenticateToken, async (req, res) => {
   }
 });
 
-// Dish Management (Tenant Scoped)
-router.post('/dishes', authenticateToken, async (req, res) => {
+// Dish Management (Tenant Scoped - OPERATIONAL ROUTES)
+router.get('/dishes', authenticateToken, async (req, res) => {
   try {
-    const restoId = req.user.restaurant_id || 1;
+    const restoId = req.user?.restaurant_id;
+    if (!restoId && req.user?.role !== 'superadmin') {
+      return res.status(401).json({ error: 'Unauthorized: Restaurant session required' });
+    }
+    const targetId = restoId || 1;
+    const dishes = await query('SELECT * FROM dishes WHERE restaurant_id = $1 ORDER BY id DESC', [targetId]);
+    res.json(dishes);
+  } catch (err) {
+    console.error('Fetch dishes error:', err);
+    res.status(500).json({ error: 'Failed to fetch dishes' });
+  }
+});
+
+router.post('/dishes', authenticateToken, requireActiveSubscription, async (req, res) => {
+  try {
+    const restoId = req.user?.restaurant_id;
+    if (!restoId && req.user?.role !== 'superadmin') {
+      return res.status(401).json({ error: 'Unauthorized: Restaurant session required' });
+    }
+    const targetId = restoId || 1;
     const { 
       category_id, name, description, image, price, price_half, 
       portion, portion_half_label, portion_full_label, badge, ingredients, taste_profile, type, available 
@@ -252,7 +357,7 @@ router.post('/dishes', authenticateToken, async (req, res) => {
         portion, portion_half_label, portion_full_label, badge, ingredients, taste_profile, type, available
       ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15) RETURNING id`,
       [
-        restoId, category_id, name, description || '', image || '', price, price_half || null,
+        targetId, category_id, name, description || '', image || '', price, price_half || null,
         portion || '', portion_half_label || '', portion_full_label || '', badge || '', ingredients || '', taste_profile || '', type || 'veg', availVal
       ]
     );
@@ -263,9 +368,13 @@ router.post('/dishes', authenticateToken, async (req, res) => {
   }
 });
 
-router.put('/dishes/:id', authenticateToken, async (req, res) => {
+router.put('/dishes/:id', authenticateToken, requireActiveSubscription, async (req, res) => {
   try {
-    const restoId = req.user.restaurant_id || 1;
+    const restoId = req.user?.restaurant_id;
+    if (!restoId && req.user?.role !== 'superadmin') {
+      return res.status(401).json({ error: 'Unauthorized: Restaurant session required' });
+    }
+    const targetId = restoId || 1;
     const { id } = req.params;
     const { 
       category_id, name, description, image, price, price_half, 
@@ -282,7 +391,7 @@ router.put('/dishes/:id', authenticateToken, async (req, res) => {
       [
         category_id, name, description || '', image, price, price_half || null,
         portion || '', portion_half_label || '', portion_full_label || '', badge || '',
-        ingredients || '', taste_profile || '', type || 'veg', availVal, id, restoId
+        ingredients || '', taste_profile || '', type || 'veg', availVal, id, targetId
       ]
     );
     res.json({ success: true });
@@ -292,13 +401,17 @@ router.put('/dishes/:id', authenticateToken, async (req, res) => {
   }
 });
 
-router.patch('/dishes/:id/toggle', authenticateToken, async (req, res) => {
+router.patch('/dishes/:id/toggle', authenticateToken, requireActiveSubscription, async (req, res) => {
   try {
-    const restoId = req.user.restaurant_id || 1;
+    const restoId = req.user?.restaurant_id;
+    if (!restoId && req.user?.role !== 'superadmin') {
+      return res.status(401).json({ error: 'Unauthorized: Restaurant session required' });
+    }
+    const targetId = restoId || 1;
     const { id } = req.params;
     const { available } = req.body;
     const availVal = available ? 1 : 0;
-    await query('UPDATE dishes SET available = $1 WHERE id = $2 AND restaurant_id = $3', [availVal, id, restoId]);
+    await query('UPDATE dishes SET available = $1 WHERE id = $2 AND restaurant_id = $3', [availVal, id, targetId]);
     res.json({ success: true });
   } catch (err) {
     console.error('Toggle dish error:', err);
@@ -306,12 +419,16 @@ router.patch('/dishes/:id/toggle', authenticateToken, async (req, res) => {
   }
 });
 
-router.patch('/dishes/:id/price', authenticateToken, async (req, res) => {
+router.patch('/dishes/:id/price', authenticateToken, requireActiveSubscription, async (req, res) => {
   try {
-    const restoId = req.user.restaurant_id || 1;
+    const restoId = req.user?.restaurant_id;
+    if (!restoId && req.user?.role !== 'superadmin') {
+      return res.status(401).json({ error: 'Unauthorized: Restaurant session required' });
+    }
+    const targetId = restoId || 1;
     const { id } = req.params;
     const { price } = req.body;
-    await query('UPDATE dishes SET price = $1 WHERE id = $2 AND restaurant_id = $3', [price, id, restoId]);
+    await query('UPDATE dishes SET price = $1 WHERE id = $2 AND restaurant_id = $3', [price, id, targetId]);
     res.json({ success: true });
   } catch (err) {
     console.error('Update price error:', err);
@@ -319,11 +436,15 @@ router.patch('/dishes/:id/price', authenticateToken, async (req, res) => {
   }
 });
 
-router.delete('/dishes/:id', authenticateToken, async (req, res) => {
+router.delete('/dishes/:id', authenticateToken, requireActiveSubscription, async (req, res) => {
   try {
-    const restoId = req.user.restaurant_id || 1;
+    const restoId = req.user?.restaurant_id;
+    if (!restoId && req.user?.role !== 'superadmin') {
+      return res.status(401).json({ error: 'Unauthorized: Restaurant session required' });
+    }
+    const targetId = restoId || 1;
     const { id } = req.params;
-    await query('DELETE FROM dishes WHERE id = $1 AND restaurant_id = $2', [id, restoId]);
+    await query('DELETE FROM dishes WHERE id = $1 AND restaurant_id = $2', [id, targetId]);
     res.json({ success: true });
   } catch (err) {
     console.error('Delete dish error:', err);
@@ -331,10 +452,15 @@ router.delete('/dishes/:id', authenticateToken, async (req, res) => {
   }
 });
 
-// Update Tenant Restaurant Settings (Supports /settings and /info with PUT or POST)
+// Update Tenant Restaurant Settings
 const handleUpdateSettings = async (req, res) => {
   try {
-    const restoId = req.user.restaurant_id || 1;
+    const restoId = req.user?.restaurant_id;
+    if (!restoId && req.user?.role !== 'superadmin') {
+      return res.status(401).json({ error: 'Unauthorized: Restaurant session required' });
+    }
+    const targetId = restoId || 1;
+
     const { name, tagline, logo, phone, address, openingHours, google_review_url, google_reviews_enabled, filters_visibility, currency_symbol, fssai_lic_no, resto_type, whatsapp_number, whatsapp_enabled, theme_color, latitude, longitude, max_distance_meters, gst_enabled, gstin_number, total_tables, order_retention_days } = req.body;
 
     const visJson = typeof filters_visibility === 'object' ? JSON.stringify(filters_visibility) : filters_visibility;
@@ -361,18 +487,8 @@ const handleUpdateSettings = async (req, res) => {
       total_tables !== undefined && total_tables !== null ? Number(total_tables) : 0,
       order_retention_days || 90,
       google_reviews_enabled !== false && google_reviews_enabled !== 0 ? 1 : 0,
-      restoId
+      targetId
     ]);
-
-    // Also update settings.json as fallback for primary restaurant
-    if (restoId === 1) {
-      const settingsPath = path.resolve('server/settings.json');
-      const updated = {
-        name, tagline, phone, address, openingHours, google_review_url, currency_symbol,
-        filters_visibility: typeof filters_visibility === 'object' ? filters_visibility : { must_try: true, combo: true, special: true, under100: true }
-      };
-      fs.writeFileSync(settingsPath, JSON.stringify(updated, null, 2), 'utf-8');
-    }
 
     res.json({ success: true, message: 'Restaurant settings updated successfully!' });
   } catch (err) {
@@ -381,9 +497,9 @@ const handleUpdateSettings = async (req, res) => {
   }
 };
 
-router.put('/settings', authenticateToken, handleUpdateSettings);
-router.post('/settings', authenticateToken, handleUpdateSettings);
-router.post('/info', authenticateToken, handleUpdateSettings);
+router.put('/settings', authenticateToken, requireActiveSubscription, handleUpdateSettings);
+router.post('/settings', authenticateToken, requireActiveSubscription, handleUpdateSettings);
+router.post('/info', authenticateToken, requireActiveSubscription, handleUpdateSettings);
 
 // Change Admin Password
 router.post('/change-password', authenticateToken, async (req, res) => {
@@ -425,13 +541,18 @@ router.post('/change-password', authenticateToken, async (req, res) => {
   }
 });
 
-// GET Live Orders for Tenant Restaurant
-router.get('/orders', authenticateToken, async (req, res) => {
+// GET Live Orders for Tenant Restaurant (OPERATIONAL ROUTE)
+router.get('/orders', authenticateToken, requireActiveSubscription, async (req, res) => {
   try {
-    const restoId = req.user.restaurant_id || 1;
+    const restoId = req.user?.restaurant_id;
+    if (!restoId && req.user?.role !== 'superadmin') {
+      return res.status(401).json({ error: 'Unauthorized: Restaurant session required' });
+    }
+    const targetId = restoId || 1;
+
     const orders = await query(
       'SELECT * FROM orders WHERE restaurant_id = $1 ORDER BY id DESC LIMIT 100',
-      [restoId]
+      [targetId]
     );
 
     const formatted = orders.map(o => ({
@@ -446,16 +567,20 @@ router.get('/orders', authenticateToken, async (req, res) => {
   }
 });
 
-// PATCH Update Order Status
-router.patch('/orders/:id/status', authenticateToken, async (req, res) => {
+// PATCH Update Order Status (OPERATIONAL ROUTE)
+router.patch('/orders/:id/status', authenticateToken, requireActiveSubscription, async (req, res) => {
   try {
-    const restoId = req.user.restaurant_id || 1;
+    const restoId = req.user?.restaurant_id;
+    if (!restoId && req.user?.role !== 'superadmin') {
+      return res.status(401).json({ error: 'Unauthorized: Restaurant session required' });
+    }
+    const targetId = restoId || 1;
     const { id } = req.params;
     const { status } = req.body;
 
     await query(
       'UPDATE orders SET status = $1 WHERE id = $2 AND restaurant_id = $3',
-      [status, id, restoId]
+      [status, id, targetId]
     );
 
     res.json({ success: true, id, status });
@@ -465,13 +590,18 @@ router.patch('/orders/:id/status', authenticateToken, async (req, res) => {
   }
 });
 
-// GET Live Table Service Requests / Waiter Calls
-router.get('/service-requests', authenticateToken, async (req, res) => {
+// GET Live Table Service Requests / Waiter Calls (OPERATIONAL ROUTE)
+router.get('/service-requests', authenticateToken, requireActiveSubscription, async (req, res) => {
   try {
-    const restoId = req.user.restaurant_id || 1;
+    const restoId = req.user?.restaurant_id;
+    if (!restoId && req.user?.role !== 'superadmin') {
+      return res.status(401).json({ error: 'Unauthorized: Restaurant session required' });
+    }
+    const targetId = restoId || 1;
+
     const requests = await query(
       "SELECT * FROM service_requests WHERE restaurant_id = $1 AND status = 'pending' ORDER BY id DESC LIMIT 50",
-      [restoId]
+      [targetId]
     );
     res.json(requests);
   } catch (err) {
@@ -480,14 +610,18 @@ router.get('/service-requests', authenticateToken, async (req, res) => {
   }
 });
 
-// PATCH Resolve Service Request
-router.patch('/service-requests/:id/resolve', authenticateToken, async (req, res) => {
+// PATCH Resolve Service Request (OPERATIONAL ROUTE)
+router.patch('/service-requests/:id/resolve', authenticateToken, requireActiveSubscription, async (req, res) => {
   try {
-    const restoId = req.user.restaurant_id || 1;
+    const restoId = req.user?.restaurant_id;
+    if (!restoId && req.user?.role !== 'superadmin') {
+      return res.status(401).json({ error: 'Unauthorized: Restaurant session required' });
+    }
+    const targetId = restoId || 1;
     const { id } = req.params;
     await query(
       "UPDATE service_requests SET status = 'resolved' WHERE id = $1 AND restaurant_id = $2",
-      [id, restoId]
+      [id, targetId]
     );
     res.json({ success: true, id, status: 'resolved' });
   } catch (err) {
@@ -496,15 +630,18 @@ router.patch('/service-requests/:id/resolve', authenticateToken, async (req, res
   }
 });
 
-// GET Sales & Product Analytics
-router.get('/analytics', authenticateToken, async (req, res) => {
+// GET Sales & Product Analytics (OPERATIONAL ROUTE)
+router.get('/analytics', authenticateToken, requireActiveSubscription, async (req, res) => {
   try {
-    const restoId = req.user.restaurant_id || 1;
+    const restoId = req.user?.restaurant_id;
+    if (!restoId && req.user?.role !== 'superadmin') {
+      return res.status(401).json({ error: 'Unauthorized: Restaurant session required' });
+    }
+    const targetId = restoId || 1;
 
-    // Fetch all non-cancelled orders
     const orders = await query(
       "SELECT id, total_amount, status, items, created_at FROM orders WHERE restaurant_id = $1 AND status != 'cancelled' ORDER BY id DESC",
-      [restoId]
+      [targetId]
     );
 
     const now = new Date();
@@ -525,7 +662,6 @@ router.get('/analytics', authenticateToken, async (req, res) => {
     const dishSalesMap = {};
     const dailySalesMap = {};
 
-    // Pre-fill last 7 days in dailySalesMap
     for (let i = 6; i >= 0; i--) {
       const d = new Date();
       d.setDate(now.getDate() - i);
@@ -557,7 +693,6 @@ router.get('/analytics', authenticateToken, async (req, res) => {
         dailySalesMap[dateStr] += amt;
       }
 
-      // Aggregate item counts
       let itemsList = [];
       try {
         itemsList = typeof o.items === 'string' ? JSON.parse(o.items) : (Array.isArray(o.items) ? o.items : []);
@@ -577,15 +712,13 @@ router.get('/analytics', authenticateToken, async (req, res) => {
       });
     });
 
-    // Query aggregated historical summaries
     const summaries = await query(
       'SELECT summary_date, total_sales, total_orders, top_dishes_summary FROM daily_sales_summaries WHERE restaurant_id = $1',
-      [restoId]
+      [targetId]
     );
 
     summaries.forEach(s => {
       const amt = Number(s.total_sales) || 0;
-      const count = Number(s.total_orders) || 0;
       totalSales += amt;
 
       const dDate = new Date(s.summary_date);
@@ -625,12 +758,16 @@ router.get('/analytics', authenticateToken, async (req, res) => {
   }
 });
 
-// POST 1-Click Database Optimization & 90-Day Archival
-router.post('/optimize-db', authenticateToken, async (req, res) => {
+// POST 1-Click Database Optimization & 90-Day Archival (OPERATIONAL ROUTE)
+router.post('/optimize-db', authenticateToken, requireActiveSubscription, async (req, res) => {
   try {
-    const restoId = req.user.restaurant_id || 1;
+    const restoId = req.user?.restaurant_id;
+    if (!restoId && req.user?.role !== 'superadmin') {
+      return res.status(401).json({ error: 'Unauthorized: Restaurant session required' });
+    }
+    const targetId = restoId || 1;
     const daysOld = req.body.daysOld || 90;
-    const result = await runAutoDataSummarization(daysOld, restoId);
+    const result = await runAutoDataSummarization(daysOld, targetId);
     res.json(result);
   } catch (err) {
     console.error('Database optimization error:', err);
@@ -638,12 +775,17 @@ router.post('/optimize-db', authenticateToken, async (req, res) => {
   }
 });
 
-// ========== COMBO / THALI DEALS CRUD ==========
+// ========== COMBO / THALI DEALS CRUD (OPERATIONAL ROUTES) ==========
 
 // GET all combos for admin
 router.get('/combos', authenticateToken, async (req, res) => {
   try {
-    const combos = await query('SELECT * FROM combos WHERE restaurant_id = $1 ORDER BY sort_order ASC, id DESC', [req.user.restaurant_id]);
+    const restoId = req.user?.restaurant_id;
+    if (!restoId && req.user?.role !== 'superadmin') {
+      return res.status(401).json({ error: 'Unauthorized: Restaurant session required' });
+    }
+    const targetId = restoId || 1;
+    const combos = await query('SELECT * FROM combos WHERE restaurant_id = $1 ORDER BY sort_order ASC, id DESC', [targetId]);
     res.json(combos);
   } catch (err) {
     console.error('Fetch combos error:', err);
@@ -652,18 +794,21 @@ router.get('/combos', authenticateToken, async (req, res) => {
 });
 
 // POST create new combo
-router.post('/combos', authenticateToken, async (req, res) => {
+router.post('/combos', authenticateToken, requireActiveSubscription, async (req, res) => {
   try {
+    const restoId = req.user?.restaurant_id;
+    if (!restoId && req.user?.role !== 'superadmin') {
+      return res.status(401).json({ error: 'Unauthorized: Restaurant session required' });
+    }
+    const targetId = restoId || 1;
     const { name, description, price, image, items, badge, sort_order } = req.body;
     if (!name || !price || !items) {
       return res.status(400).json({ error: 'Name, price, and items are required' });
     }
 
-    // Dynamic Plan Combo Limit Check
-    const restoRows = await query('SELECT plan_tier FROM restaurants WHERE id = $1', [req.user.restaurant_id]);
+    const restoRows = await query('SELECT plan_tier FROM restaurants WHERE id = $1', [targetId]);
     const planTier = (restoRows[0]?.plan_tier || 'pro').toLowerCase();
 
-    // Fetch plan details from saas_plans if available
     const planRows = await query('SELECT max_combos FROM saas_plans WHERE LOWER(key) = $1', [planTier]);
     let maxCombos = planRows[0]?.max_combos;
     if (!maxCombos) {
@@ -672,7 +817,7 @@ router.post('/combos', authenticateToken, async (req, res) => {
       else maxCombos = 10;
     }
 
-    const countRows = await query('SELECT COUNT(*) as count FROM combos WHERE restaurant_id = $1', [req.user.restaurant_id]);
+    const countRows = await query('SELECT COUNT(*) as count FROM combos WHERE restaurant_id = $1', [targetId]);
     const currentCount = parseInt(countRows[0]?.count || 0, 10);
 
     if (currentCount >= maxCombos) {
@@ -686,9 +831,9 @@ router.post('/combos', authenticateToken, async (req, res) => {
     const itemsStr = typeof items === 'string' ? items : JSON.stringify(items);
     const result = await query(
       'INSERT INTO combos (restaurant_id, name, description, price, image, items, badge, sort_order) VALUES ($1, $2, $3, $4, $5, $6, $7, $8) RETURNING id',
-      [req.user.restaurant_id, name, description || '', price, image || '', itemsStr, badge || '', sort_order || 0]
+      [targetId, name, description || '', price, image || '', itemsStr, badge || '', sort_order || 0]
     );
-    res.json({ id: result[0]?.id, message: 'Combo created successfully' });
+    res.json({ id: result[0]?.id || result.lastInsertRowid, message: 'Combo created successfully' });
   } catch (err) {
     console.error('Create combo error:', err);
     res.status(500).json({ error: 'Failed to create combo' });
@@ -696,13 +841,18 @@ router.post('/combos', authenticateToken, async (req, res) => {
 });
 
 // PUT update combo
-router.put('/combos/:id', authenticateToken, async (req, res) => {
+router.put('/combos/:id', authenticateToken, requireActiveSubscription, async (req, res) => {
   try {
+    const restoId = req.user?.restaurant_id;
+    if (!restoId && req.user?.role !== 'superadmin') {
+      return res.status(401).json({ error: 'Unauthorized: Restaurant session required' });
+    }
+    const targetId = restoId || 1;
     const { name, description, price, image, items, badge, sort_order, available } = req.body;
     const itemsStr = typeof items === 'string' ? items : JSON.stringify(items);
     await query(
       'UPDATE combos SET name = $1, description = $2, price = $3, image = $4, items = $5, badge = $6, sort_order = $7, available = $8 WHERE id = $9 AND restaurant_id = $10',
-      [name, description || '', price, image || '', itemsStr, badge || '', sort_order || 0, available !== undefined ? available : 1, req.params.id, req.user.restaurant_id]
+      [name, description || '', price, image || '', itemsStr, badge || '', sort_order || 0, available !== undefined ? available : 1, req.params.id, targetId]
     );
     res.json({ message: 'Combo updated successfully' });
   } catch (err) {
@@ -712,10 +862,15 @@ router.put('/combos/:id', authenticateToken, async (req, res) => {
 });
 
 // PATCH toggle combo availability
-router.patch('/combos/:id/toggle', authenticateToken, async (req, res) => {
+router.patch('/combos/:id/toggle', authenticateToken, requireActiveSubscription, async (req, res) => {
   try {
+    const restoId = req.user?.restaurant_id;
+    if (!restoId && req.user?.role !== 'superadmin') {
+      return res.status(401).json({ error: 'Unauthorized: Restaurant session required' });
+    }
+    const targetId = restoId || 1;
     const { available } = req.body;
-    await query('UPDATE combos SET available = $1 WHERE id = $2 AND restaurant_id = $3', [available ? 1 : 0, req.params.id, req.user.restaurant_id]);
+    await query('UPDATE combos SET available = $1 WHERE id = $2 AND restaurant_id = $3', [available ? 1 : 0, req.params.id, targetId]);
     res.json({ message: 'Combo availability updated' });
   } catch (err) {
     console.error('Toggle combo error:', err);
@@ -724,9 +879,14 @@ router.patch('/combos/:id/toggle', authenticateToken, async (req, res) => {
 });
 
 // DELETE combo
-router.delete('/combos/:id', authenticateToken, async (req, res) => {
+router.delete('/combos/:id', authenticateToken, requireActiveSubscription, async (req, res) => {
   try {
-    await query('DELETE FROM combos WHERE id = $1 AND restaurant_id = $2', [req.params.id, req.user.restaurant_id]);
+    const restoId = req.user?.restaurant_id;
+    if (!restoId && req.user?.role !== 'superadmin') {
+      return res.status(401).json({ error: 'Unauthorized: Restaurant session required' });
+    }
+    const targetId = restoId || 1;
+    await query('DELETE FROM combos WHERE id = $1 AND restaurant_id = $2', [req.params.id, targetId]);
     res.json({ message: 'Combo deleted successfully' });
   } catch (err) {
     console.error('Delete combo error:', err);

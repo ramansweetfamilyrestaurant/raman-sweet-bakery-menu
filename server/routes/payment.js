@@ -1,5 +1,4 @@
 import express from 'express';
-import crypto from 'crypto';
 import { query } from '../db.js';
 
 const router = express.Router();
@@ -17,151 +16,34 @@ async function logPaymentAudit(restaurantId, action, details) {
 }
 
 // ==========================================
-// 1. CREATE PAYMENT ORDER (Cashfree / Razorpay)
+// 1. CREATE PAYMENT ORDER (Reserved for Phase 2)
 // ==========================================
 router.post('/create-order', async (req, res) => {
   try {
-    const { restaurant_id, plan_tier, coupon_code, gateway = 'cashfree' } = req.body;
-
+    const { restaurant_id } = req.body;
     if (!restaurant_id) {
-      return res.status(400).json({ error: 'Restaurant ID is required for payment' });
-    }
-
-    // Fetch plan details from saas_plans DB
-    const targetPlanKey = (plan_tier || 'pro').toLowerCase();
-    const planRows = await query('SELECT * FROM saas_plans WHERE LOWER(key) = $1', [targetPlanKey]);
-    const plan = planRows && planRows.length > 0 ? planRows[0] : { price: 999, name: 'Pro Luxury Plan' };
-
-    let finalPrice = Number(plan.price) || 999;
-    let appliedDiscount = 0;
-
-    // Apply Coupon Code if provided
-    if (coupon_code && typeof coupon_code === 'string') {
-      const cRows = await query('SELECT * FROM coupons WHERE UPPER(code) = $1 AND active = 1', [coupon_code.trim().toUpperCase()]);
-      if (cRows && cRows.length > 0) {
-        const coupon = cRows[0];
-        if (coupon.discount_percent > 0) {
-          appliedDiscount = Math.round((finalPrice * coupon.discount_percent) / 100);
-        } else if (coupon.discount_amount > 0) {
-          appliedDiscount = Math.min(finalPrice, Number(coupon.discount_amount));
-        }
-        finalPrice = Math.max(0, finalPrice - appliedDiscount);
-      }
-    }
-
-    const orderId = `KM_SUB_${restaurant_id}_${Date.now()}`;
-
-    // Fetch Super Admin Cashfree API Keys from DB
-    let cashfreeAppId = process.env.CASHFREE_APP_ID;
-    let cashfreeSecret = process.env.CASHFREE_SECRET_KEY;
-
-    try {
-      const sysRows = await query("SELECT key, value FROM system_settings WHERE key IN ('cashfree_app_id', 'cashfree_secret_key')");
-      (sysRows || []).forEach(r => {
-        if (r.key === 'cashfree_app_id' && r.value) cashfreeAppId = r.value.trim();
-        if (r.key === 'cashfree_secret_key' && r.value) cashfreeSecret = r.value.trim();
-      });
-    } catch {}
-
-    let paymentSessionId = null;
-    let isSandbox = !cashfreeAppId || cashfreeAppId.startsWith('TEST');
-
-    if (cashfreeAppId && cashfreeSecret && gateway === 'cashfree') {
-      try {
-        const cashfreeUrl = isSandbox 
-          ? 'https://sandbox.cashfree.com/pg/orders' 
-          : 'https://api.cashfree.com/pg/orders';
-
-        const cfResponse = await fetch(cashfreeUrl, {
-          method: 'POST',
-          headers: {
-            'x-api-version': '2023-08-01',
-            'x-client-id': cashfreeAppId,
-            'x-client-secret': cashfreeSecret,
-            'Content-Type': 'application/json'
-          },
-          body: JSON.stringify({
-            order_id: orderId,
-            order_amount: finalPrice,
-            order_currency: 'INR',
-            customer_details: {
-              customer_id: `CUST_${restaurant_id}`,
-              customer_phone: '9876543210',
-              customer_name: `Restaurant_${restaurant_id}`
-            }
-          })
-        });
-
-        const cfData = await cfResponse.json();
-        if (cfData && cfData.payment_session_id) {
-          paymentSessionId = cfData.payment_session_id;
-          console.log('⚡ Cashfree Order Created Successfully! Session ID:', paymentSessionId);
-        } else {
-          console.warn('Cashfree API Notice:', cfData?.message || JSON.stringify(cfData));
-        }
-      } catch (cfErr) {
-        console.error('Cashfree API call error:', cfErr.message);
-      }
+      return res.status(400).json({ error: 'Restaurant ID is required' });
     }
 
     res.json({
-      success: true,
-      order_id: orderId,
-      payment_session_id: paymentSessionId,
-      is_sandbox: isSandbox,
-      gateway,
-      amount: finalPrice,
-      currency: 'INR',
-      plan_tier: targetPlanKey,
-      plan_name: plan.name,
-      discount_applied: appliedDiscount,
-      message: `Payment order ${orderId} created for ₹${finalPrice}`
+      success: false,
+      phase2_notice: true,
+      message: 'Payment gateway integration is reserved for Phase 2. No live or fake payment order created.'
     });
   } catch (err) {
     console.error('Create payment order error:', err);
-    res.status(500).json({ error: 'Failed to create payment order' });
+    res.status(500).json({ error: 'Failed to process payment request' });
   }
 });
 
 // ==========================================
-// 2. CASHFREE WEBHOOK HANDLER
+// 2. CASHFREE WEBHOOK HANDLER (Reserved for Phase 2)
 // ==========================================
 router.post('/cashfree', async (req, res) => {
   try {
     const payload = req.body;
     console.log('💳 Received Cashfree Webhook:', JSON.stringify(payload));
-
-    const orderId = payload?.data?.order?.order_id || payload?.orderId;
-    const paymentStatus = payload?.data?.payment?.payment_status || payload?.txStatus;
-
-    if (paymentStatus === 'SUCCESS' && orderId) {
-      // Extract restaurant_id from order_id format: KM_SUB_<restaurant_id>_<timestamp>
-      const parts = orderId.split('_');
-      const restoId = parseInt(parts[2], 10);
-
-      if (restoId) {
-        // Calculate new expiry date (Current date + 30 days)
-        const expiryDate = new Date();
-        expiryDate.setDate(expiryDate.getDate() + 30);
-        const expiryStr = expiryDate.toISOString().split('T')[0];
-
-        try {
-          await query(
-            "UPDATE restaurants SET status = 'active', plan_expires_at = $1 WHERE id = $2",
-            [expiryStr, restoId]
-          );
-        } catch (dbErr) {
-          try {
-            await query("UPDATE restaurants SET plan_expires_at = $1 WHERE id = $2", [expiryStr, restoId]);
-          } catch {}
-        }
-
-        await logPaymentAudit(restoId, 'Cashfree Webhook Success', { orderId, amount: payload?.data?.order?.order_amount, expiryStr });
-        console.log(`✅ Restaurant ID ${restoId} subscription extended to ${expiryStr} via Cashfree`);
-      }
-    }
-
-    res.status(200).json({ status: 'OK' });
+    res.status(200).json({ status: 'OK', note: 'Cashfree webhook processing reserved for Phase 2' });
   } catch (err) {
     console.error('Cashfree Webhook Error:', err);
     res.status(200).json({ status: 'OK', note: 'Handled safely' });
@@ -169,53 +51,13 @@ router.post('/cashfree', async (req, res) => {
 });
 
 // ==========================================
-// 3. RAZORPAY WEBHOOK HANDLER (BACKUP GATEWAY)
+// 3. RAZORPAY WEBHOOK HANDLER (Reserved for Phase 2)
 // ==========================================
 router.post('/razorpay', async (req, res) => {
   try {
     const payload = req.body;
     console.log('💳 Received Razorpay Webhook:', JSON.stringify(payload));
-
-    const event = payload?.event;
-    const paymentEntity = payload?.payload?.payment?.entity;
-    const orderId = paymentEntity?.order_id || paymentEntity?.notes?.order_id;
-
-    if ((event === 'payment.captured' || event === 'order.paid') && paymentEntity) {
-      const notesRestoId = paymentEntity?.notes?.restaurant_id;
-      let restoId = notesRestoId ? parseInt(notesRestoId, 10) : null;
-
-      if (!restoId && orderId && orderId.startsWith('KM_SUB_')) {
-        const parts = orderId.split('_');
-        restoId = parseInt(parts[2], 10);
-      }
-
-      if (restoId) {
-        const expiryDate = new Date();
-        expiryDate.setDate(expiryDate.getDate() + 30);
-        const expiryStr = expiryDate.toISOString().split('T')[0];
-
-        try {
-          await query(
-            "UPDATE restaurants SET status = 'active', plan_expires_at = $1 WHERE id = $2",
-            [expiryStr, restoId]
-          );
-        } catch {
-          try {
-            await query("UPDATE restaurants SET plan_expires_at = $1 WHERE id = $2", [expiryStr, restoId]);
-          } catch {}
-        }
-
-        await logPaymentAudit(restoId, 'Razorpay Webhook Success', { event, orderId, amount: paymentEntity?.amount ? paymentEntity.amount / 100 : 0, expiryStr });
-        console.log(`✅ Restaurant ID ${restoId} subscription extended to ${expiryStr} via Razorpay Backup`);
-      }
-    } else if (event === 'payment.failed' && paymentEntity) {
-      const notesRestoId = paymentEntity?.notes?.restaurant_id;
-      if (notesRestoId) {
-        await logPaymentAudit(notesRestoId, 'Razorpay Payment Failed', { reason: paymentEntity?.error_description });
-      }
-    }
-
-    res.status(200).json({ status: 'OK' });
+    res.status(200).json({ status: 'OK', note: 'Razorpay webhook processing reserved for Phase 2' });
   } catch (err) {
     console.error('Razorpay Webhook Error:', err);
     res.status(200).json({ status: 'OK', note: 'Handled safely' });
@@ -223,63 +65,28 @@ router.post('/razorpay', async (req, res) => {
 });
 
 // ==========================================
-// 4. CREATE UPI AUTOPAY MANDATE ORDER (₹0 Today, Auto-Debit on Day 15)
+// 4. CREATE UPI AUTOPAY MANDATE (Reserved for Phase 2)
 // ==========================================
 router.post('/create-mandate', async (req, res) => {
   try {
-    const { restaurant_id, plan_tier, coupon_code, gateway = 'cashfree' } = req.body;
-
+    const { restaurant_id } = req.body;
     if (!restaurant_id) {
       return res.status(400).json({ error: 'Restaurant ID is required' });
     }
 
-    const targetPlanKey = (plan_tier || 'pro').toLowerCase();
-    const planRows = await query('SELECT * FROM saas_plans WHERE LOWER(key) = $1', [targetPlanKey]);
-    const plan = planRows && planRows.length > 0 ? planRows[0] : { price: 999, name: 'Pro Luxury Plan' };
-
-    let finalPrice = Number(plan.price) || 999;
-    if (coupon_code && typeof coupon_code === 'string') {
-      const cRows = await query('SELECT * FROM coupons WHERE UPPER(code) = $1 AND active = 1', [coupon_code.trim().toUpperCase()]);
-      if (cRows && cRows.length > 0) {
-        const coupon = cRows[0];
-        if (coupon.discount_percent > 0) {
-          finalPrice = Math.round(finalPrice * (1 - coupon.discount_percent / 100));
-        } else if (coupon.discount_amount > 0) {
-          finalPrice = Math.max(0, finalPrice - coupon.discount_amount);
-        }
-      }
-    }
-
-    const mandateId = `KM_MANDATE_${restaurant_id}_${Date.now()}`;
-    const trialEndsDate = new Date();
-    trialEndsDate.setDate(trialEndsDate.getDate() + 14);
-    const trialEndsStr = trialEndsDate.toISOString().split('T')[0];
-
-    // Save mandate details in restaurant DB
-    await query(
-      "UPDATE restaurants SET mandate_id = $1, mandate_status = 'active', trial_ends_at = $2, auto_debit_enabled = 1, plan_price = $3 WHERE id = $4",
-      [mandateId, trialEndsStr, finalPrice, restaurant_id]
-    );
-
-    await logPaymentAudit(restaurant_id, 'UPI Autopay Mandate Created', { mandateId, gateway, monthlyAmount: finalPrice, trialEndsStr });
-
     res.json({
-      success: true,
-      mandate_id: mandateId,
-      first_charge_amount: 0,
-      monthly_recurring_amount: finalPrice,
-      trial_ends_at: trialEndsStr,
-      gateway,
-      message: '₹0 UPI Autopay Mandate authorized successfully! 14-Day Free Trial activated.'
+      success: false,
+      phase2_notice: true,
+      message: 'Recurring UPI Autopay mandate gateway integration is reserved for Phase 2.'
     });
   } catch (err) {
-    console.error('Create Mandate Error:', err);
-    res.status(500).json({ error: 'Failed to authorize UPI Autopay mandate' });
+    console.error('Create mandate error:', err);
+    res.status(500).json({ error: 'Failed to process mandate request' });
   }
 });
 
 // ==========================================
-// 5. CANCEL AUTOPAY MANDATE
+// 5. CANCEL MANDATE
 // ==========================================
 router.post('/cancel-mandate', async (req, res) => {
   try {
@@ -289,16 +96,24 @@ router.post('/cancel-mandate', async (req, res) => {
     }
 
     await query(
-      "UPDATE restaurants SET mandate_status = 'cancelled', auto_debit_enabled = 0 WHERE id = $1",
+      "UPDATE restaurants SET auto_debit_enabled = 0, mandate_status = 'cancelled' WHERE id = $1",
       [restaurant_id]
     );
 
-    await logPaymentAudit(restaurant_id, 'Autopay Mandate Cancelled by User', { date: new Date().toISOString() });
+    await query(
+      "UPDATE subscriptions SET status = 'cancelled', cancelled_at = CURRENT_TIMESTAMP WHERE restaurant_id = $1 AND status IN ('trialing', 'active')",
+      [restaurant_id]
+    );
 
-    res.json({ success: true, message: 'UPI Autopay Mandate cancelled successfully.' });
+    await logPaymentAudit(restaurant_id, 'Mandate Cancelled', { message: 'Autopay mandate cancelled by owner' });
+
+    res.json({
+      success: true,
+      message: 'Autopay mandate cancelled successfully.'
+    });
   } catch (err) {
-    console.error('Cancel Mandate Error:', err);
-    res.status(500).json({ error: 'Failed to cancel Autopay mandate' });
+    console.error('Cancel mandate error:', err);
+    res.status(500).json({ error: 'Failed to cancel mandate' });
   }
 });
 

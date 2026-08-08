@@ -247,6 +247,68 @@ async function createTables() {
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
         UNIQUE (restaurant_id, summary_date)
       );
+
+      CREATE TABLE IF NOT EXISTS subscriptions (
+        id SERIAL PRIMARY KEY,
+        restaurant_id INT REFERENCES restaurants(id) ON DELETE CASCADE,
+        plan_id INT REFERENCES saas_plans(id),
+        gateway VARCHAR(50) DEFAULT 'none',
+        gateway_subscription_id VARCHAR(255),
+        gateway_customer_id VARCHAR(255),
+        status VARCHAR(50) DEFAULT 'trialing',
+        amount DECIMAL(10, 2) DEFAULT 0,
+        currency VARCHAR(10) DEFAULT 'INR',
+        billing_cycle VARCHAR(50) DEFAULT 'monthly',
+        trial_start TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        trial_end TIMESTAMP,
+        current_period_start TIMESTAMP,
+        current_period_end TIMESTAMP,
+        next_billing_at TIMESTAMP,
+        cancelled_at TIMESTAMP,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+      );
+
+      CREATE TABLE IF NOT EXISTS payments (
+        id SERIAL PRIMARY KEY,
+        restaurant_id INT REFERENCES restaurants(id) ON DELETE CASCADE,
+        subscription_id INT REFERENCES subscriptions(id) ON DELETE SET NULL,
+        gateway VARCHAR(50),
+        gateway_payment_id VARCHAR(255),
+        amount DECIMAL(10, 2) NOT NULL,
+        currency VARCHAR(10) DEFAULT 'INR',
+        status VARCHAR(50),
+        payment_type VARCHAR(50),
+        paid_at TIMESTAMP,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+      );
+
+      CREATE TABLE IF NOT EXISTS webhook_events (
+        id SERIAL PRIMARY KEY,
+        gateway VARCHAR(50) NOT NULL,
+        event_id VARCHAR(255) NOT NULL,
+        event_type VARCHAR(100),
+        payload JSONB,
+        processed BOOLEAN DEFAULT FALSE,
+        processed_at TIMESTAMP,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        UNIQUE (gateway, event_id)
+      );
+
+      ALTER TABLE restaurants ADD COLUMN IF NOT EXISTS trial_started_at VARCHAR(100);
+
+      CREATE INDEX IF NOT EXISTS idx_restaurants_active_expires ON restaurants(active, plan_expires_at);
+      CREATE INDEX IF NOT EXISTS idx_subscriptions_restaurant ON subscriptions(restaurant_id);
+      CREATE INDEX IF NOT EXISTS idx_subscriptions_status ON subscriptions(status);
+      CREATE INDEX IF NOT EXISTS idx_subscriptions_next_billing ON subscriptions(next_billing_at);
+
+      DO $$ BEGIN
+        IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'restaurants_phone_key') THEN
+          ALTER TABLE restaurants ADD CONSTRAINT restaurants_phone_key UNIQUE (phone);
+        END IF;
+      EXCEPTION WHEN OTHERS THEN NULL;
+      END $$;
     `);
   } else {
     sqliteDb.exec(`
@@ -406,6 +468,58 @@ async function createTables() {
         UNIQUE (restaurant_id, summary_date),
         FOREIGN KEY (restaurant_id) REFERENCES restaurants (id) ON DELETE CASCADE
       );
+
+      CREATE TABLE IF NOT EXISTS subscriptions (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        restaurant_id INTEGER NOT NULL,
+        plan_id INTEGER,
+        gateway TEXT DEFAULT 'none',
+        gateway_subscription_id TEXT,
+        gateway_customer_id TEXT,
+        status TEXT DEFAULT 'trialing',
+        amount REAL DEFAULT 0,
+        currency TEXT DEFAULT 'INR',
+        billing_cycle TEXT DEFAULT 'monthly',
+        trial_start TEXT DEFAULT CURRENT_TIMESTAMP,
+        trial_end TEXT,
+        current_period_start TEXT,
+        current_period_end TEXT,
+        next_billing_at TEXT,
+        cancelled_at TEXT,
+        created_at TEXT DEFAULT CURRENT_TIMESTAMP,
+        updated_at TEXT DEFAULT CURRENT_TIMESTAMP,
+        FOREIGN KEY (restaurant_id) REFERENCES restaurants (id) ON DELETE CASCADE,
+        FOREIGN KEY (plan_id) REFERENCES saas_plans (id)
+      );
+
+      CREATE TABLE IF NOT EXISTS payments (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        restaurant_id INTEGER NOT NULL,
+        subscription_id INTEGER,
+        gateway TEXT,
+        gateway_payment_id TEXT,
+        amount REAL NOT NULL,
+        currency TEXT DEFAULT 'INR',
+        status TEXT,
+        payment_type TEXT,
+        paid_at TEXT,
+        created_at TEXT DEFAULT CURRENT_TIMESTAMP,
+        updated_at TEXT DEFAULT CURRENT_TIMESTAMP,
+        FOREIGN KEY (restaurant_id) REFERENCES restaurants (id) ON DELETE CASCADE,
+        FOREIGN KEY (subscription_id) REFERENCES subscriptions (id) ON DELETE SET NULL
+      );
+
+      CREATE TABLE IF NOT EXISTS webhook_events (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        gateway TEXT NOT NULL,
+        event_id TEXT NOT NULL,
+        event_type TEXT,
+        payload TEXT,
+        processed INTEGER DEFAULT 0,
+        processed_at TEXT,
+        created_at TEXT DEFAULT CURRENT_TIMESTAMP,
+        UNIQUE (gateway, event_id)
+      );
     `);
 
     // Auto Migrations for SQLite
@@ -446,6 +560,13 @@ async function createTables() {
       if (!restoCols.some(c => c.name === 'mandate_status')) sqliteDb.exec("ALTER TABLE restaurants ADD COLUMN mandate_status TEXT DEFAULT 'pending'");
       if (!restoCols.some(c => c.name === 'trial_ends_at')) sqliteDb.exec("ALTER TABLE restaurants ADD COLUMN trial_ends_at TEXT");
       if (!restoCols.some(c => c.name === 'auto_debit_enabled')) sqliteDb.exec("ALTER TABLE restaurants ADD COLUMN auto_debit_enabled INTEGER DEFAULT 1");
+      if (!restoCols.some(c => c.name === 'trial_started_at')) sqliteDb.exec("ALTER TABLE restaurants ADD COLUMN trial_started_at TEXT");
+
+      sqliteDb.exec("CREATE INDEX IF NOT EXISTS idx_restaurants_active_expires ON restaurants(active, plan_expires_at)");
+      sqliteDb.exec("CREATE INDEX IF NOT EXISTS idx_subscriptions_restaurant ON subscriptions(restaurant_id)");
+      sqliteDb.exec("CREATE INDEX IF NOT EXISTS idx_subscriptions_status ON subscriptions(status)");
+      sqliteDb.exec("CREATE INDEX IF NOT EXISTS idx_subscriptions_next_billing ON subscriptions(next_billing_at)");
+      sqliteDb.exec("CREATE UNIQUE INDEX IF NOT EXISTS idx_restaurants_phone_unique ON restaurants(phone) WHERE phone IS NOT NULL AND phone != ''");
     } catch (err) {
       console.warn('SQLite migration info:', err.message);
     }
@@ -879,4 +1000,36 @@ async function runAutoDataSummarization(daysOld = 90, targetRestaurantId = null)
   }
 }
 
-export { initDb, query, logAudit, runAutoDataSummarization };
+async function withTransaction(callback) {
+  if (dbType === 'postgres') {
+    const client = await pgPool.connect();
+    try {
+      await client.query('BEGIN');
+      const txQuery = async (text, params = []) => {
+        const res = await client.query(text, params);
+        return res.rows;
+      };
+      const result = await callback(txQuery);
+      await client.query('COMMIT');
+      return result;
+    } catch (err) {
+      await client.query('ROLLBACK');
+      throw err;
+    } finally {
+      client.release();
+    }
+  } else {
+    try {
+      sqliteDb.exec('BEGIN TRANSACTION');
+      const result = await callback(query);
+      sqliteDb.exec('COMMIT');
+      return result;
+    } catch (err) {
+      sqliteDb.exec('ROLLBACK');
+      throw err;
+    }
+  }
+}
+
+export { initDb, query, logAudit, runAutoDataSummarization, withTransaction };
+
