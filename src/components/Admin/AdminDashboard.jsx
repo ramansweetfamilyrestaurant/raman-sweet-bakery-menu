@@ -31,11 +31,25 @@ export default function AdminDashboard({ token, username, onLogout, onReturnToMe
   const [prevPendingCount, setPrevPendingCount] = useState(0);
   const [restaurantInfo, setRestaurantInfo] = useState(null);
 
-  // Combos State
   const [combos, setCombos] = useState([]);
   const [comboModalData, setComboModalData] = useState(null);
   const [permissionsGranted, setPermissionsGranted] = useState(false);
   const [masterSupportPhone, setMasterSupportPhone] = useState('919876543210');
+
+  // Settings Accordion Folders State
+  const [openSettingsSections, setOpenSettingsSections] = useState({
+    profile: true,
+    permissions: false,
+    billing: false,
+    security: false
+  });
+
+  const toggleSettingsSection = (sectionKey) => {
+    setOpenSettingsSections(prev => ({
+      ...prev,
+      [sectionKey]: !prev[sectionKey]
+    }));
+  };
 
   useEffect(() => {
     fetch('/api/settings')
@@ -3373,23 +3387,70 @@ export default function AdminDashboard({ token, username, onLogout, onReturnToMe
             </div>
           </div>
 
+          {/* Quick Accordion Expand/Collapse Controls */}
           <div style={{
-            background: '#FFFFFF',
-            borderRadius: 'var(--radius-md)',
-            padding: '24px',
-            border: '1px solid var(--border-light)',
-            boxShadow: 'var(--shadow-sm)'
+            display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+            marginBottom: '14px', flexWrap: 'wrap', gap: '8px'
           }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '12px' }}>
-              <Settings size={22} color="var(--primary-emerald)" />
-              <h3 style={{ fontSize: '1.2rem', fontWeight: 800, color: 'var(--primary-emerald)' }}>
-                Restaurant Details & Settings
+            <span style={{ fontSize: '0.82rem', fontWeight: 800, color: 'var(--primary-emerald)' }}>
+              ⚙️ RESTAURANT CONFIGURATION PANELS
+            </span>
+            <div style={{ display: 'flex', gap: '6px' }}>
+              <button
+                onClick={() => setOpenSettingsSections({ profile: true, permissions: true, security: true })}
+                style={{ background: 'rgba(10,35,21,0.08)', color: 'var(--primary-emerald)', border: 'none', padding: '4px 10px', borderRadius: 'var(--radius-pill)', fontSize: '0.72rem', fontWeight: 800, cursor: 'pointer' }}
+              >
+                Expand All
+              </button>
+              <button
+                onClick={() => setOpenSettingsSections({ profile: false, permissions: false, security: false })}
+                style={{ background: 'rgba(220,38,38,0.08)', color: '#DC2626', border: 'none', padding: '4px 10px', borderRadius: 'var(--radius-pill)', fontSize: '0.72rem', fontWeight: 800, cursor: 'pointer' }}
+              >
+                Collapse All
+              </button>
+            </div>
+          </div>
+
+          {/* Accordion 1: Restaurant Profile & Settings Header */}
+          <div 
+            onClick={() => toggleSettingsSection('profile')}
+            style={{
+              background: 'linear-gradient(135deg, #0A2315 0%, #164E2A 100%)',
+              color: '#FFFFFF',
+              borderRadius: openSettingsSections.profile ? '16px 16px 0 0' : '16px',
+              padding: '14px 18px',
+              display: 'flex',
+              alignItems: 'center',
+              justify: 'space-between',
+              cursor: 'pointer',
+              marginBottom: openSettingsSections.profile ? 0 : '14px',
+              boxShadow: '0 4px 14px rgba(10,35,21,0.2)',
+              border: '1.5px solid #D4AF37'
+            }}
+          >
+            <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+              <span style={{ fontSize: '20px' }}>🏢</span>
+              <h3 style={{ fontSize: '0.98rem', fontWeight: 900, color: '#FFD700', margin: 0 }}>
+                1. Restaurant Profile, Details & Menu Filters
               </h3>
             </div>
-            
-            <p style={{ fontSize: '0.86rem', color: 'var(--text-muted)', marginBottom: '20px', lineHeight: 1.5 }}>
-              Update your restaurant contact number, address, opening hours, logo, and Google review link below. These details will automatically update across your digital menu header, info modal, and footer.
-            </p>
+            <span style={{ fontSize: '0.8rem', color: '#FFD700', fontWeight: 900 }}>
+              {openSettingsSections.profile ? '▲ Collapse' : '▼ Tap to Expand'}
+            </span>
+          </div>
+
+          {openSettingsSections.profile && (
+            <div style={{
+              background: '#FFFFFF',
+              borderRadius: '0 0 16px 16px',
+              padding: '24px',
+              border: '1.5px solid var(--border-light)',
+              borderTop: 'none',
+              marginBottom: '16px'
+            }}>
+              <p style={{ fontSize: '0.86rem', color: 'var(--text-muted)', marginBottom: '20px', lineHeight: 1.5 }}>
+                Update your restaurant contact number, address, opening hours, logo, and Google review link below. These details will automatically update across your digital menu header, info modal, and footer.
+              </p>
 
             {/* Restaurant Brand Logo Uploader */}
             <div style={{
@@ -3945,106 +4006,150 @@ export default function AdminDashboard({ token, username, onLogout, onReturnToMe
                 ✓ Restaurant Settings Saved Successfully!
               </span>
             )}
-          </div>
+            </div>
+          )}
 
-          {/* 🔔 Order Alarm Siren & Mobile Device Permissions Card */}
-          <div style={{
-            background: '#FFFFFF',
-            borderRadius: 'var(--radius-md)',
-            padding: '24px',
-            border: '1px solid var(--border-light)',
-            boxShadow: 'var(--shadow-sm)',
-            marginTop: '20px'
-          }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '12px' }}>
-              <span style={{ fontSize: '22px' }}>🔔</span>
-              <h3 style={{ fontSize: '1.2rem', fontWeight: 800, color: 'var(--primary-emerald)', margin: 0 }}>
-                Order Alarm Ringtone & Mobile Device Permissions
+          {/* Accordion 2: Order Siren Sound & Mobile Device Permissions */}
+          <div 
+            onClick={() => toggleSettingsSection('permissions')}
+            style={{
+              background: 'linear-gradient(135deg, #0A2315 0%, #164E2A 100%)',
+              color: '#FFFFFF',
+              borderRadius: openSettingsSections.permissions ? '16px 16px 0 0' : '16px',
+              padding: '14px 18px',
+              display: 'flex',
+              alignItems: 'center',
+              justify: 'space-between',
+              cursor: 'pointer',
+              marginBottom: openSettingsSections.permissions ? 0 : '14px',
+              boxShadow: '0 4px 14px rgba(10,35,21,0.2)',
+              border: '1.5px solid #D4AF37'
+            }}
+          >
+            <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+              <span style={{ fontSize: '20px' }}>🔔</span>
+              <h3 style={{ fontSize: '0.98rem', fontWeight: 900, color: '#FFD700', margin: 0 }}>
+                2. Order Alarm Siren & Mobile Device Permissions
               </h3>
             </div>
+            <span style={{ fontSize: '0.8rem', color: '#FFD700', fontWeight: 900 }}>
+              {openSettingsSections.permissions ? '▲ Collapse' : '▼ Tap to Expand'}
+            </span>
+          </div>
 
-            <p style={{ fontSize: '0.86rem', color: 'var(--text-muted)', marginBottom: '16px', lineHeight: 1.5 }}>
-              Configure your phone or laptop sound siren, desktop push notifications, and GPS location permissions.
-            </p>
+          {openSettingsSections.permissions && (
+            <div style={{
+              background: '#FFFFFF',
+              borderRadius: '0 0 16px 16px',
+              padding: '24px',
+              border: '1.5px solid var(--border-light)',
+              borderTop: 'none',
+              marginBottom: '16px'
+            }}>
+              <p style={{ fontSize: '0.86rem', color: 'var(--text-muted)', marginBottom: '16px', lineHeight: 1.5 }}>
+                Configure your phone or laptop sound siren, desktop push notifications, and GPS location permissions.
+              </p>
 
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '12px' }}>
-              {/* Sound Ringtone Control */}
-              <div style={{ background: '#F8FAFC', border: '1px solid #E2E8F0', borderRadius: '12px', padding: '14px' }}>
-                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '8px' }}>
-                  <strong style={{ fontSize: '0.85rem', color: '#1E293B' }}>🔊 Order Siren Sound:</strong>
-                  <span style={{ fontSize: '0.7rem', fontWeight: 900, color: permissionsGranted ? '#15803D' : '#B45309', background: permissionsGranted ? '#DCFCE7' : '#FEF3C7', padding: '2px 6px', borderRadius: '4px' }}>
-                    {permissionsGranted ? 'Active' : 'Needs Unlock'}
-                  </span>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '12px' }}>
+                {/* Sound Ringtone Control */}
+                <div style={{ background: '#F8FAFC', border: '1px solid #E2E8F0', borderRadius: '12px', padding: '14px' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '8px' }}>
+                    <strong style={{ fontSize: '0.85rem', color: '#1E293B' }}>🔊 Order Siren Sound:</strong>
+                    <span style={{ fontSize: '0.7rem', fontWeight: 900, color: permissionsGranted ? '#15803D' : '#B45309', background: permissionsGranted ? '#DCFCE7' : '#FEF3C7', padding: '2px 6px', borderRadius: '4px' }}>
+                      {permissionsGranted ? 'Active' : 'Needs Unlock'}
+                    </span>
+                  </div>
+                  <div style={{ display: 'flex', gap: '6px' }}>
+                    <button
+                      onClick={() => playKitchenChime()}
+                      style={{ flex: 1, padding: '7px', borderRadius: '8px', background: '#DFBA67', color: '#0A0A0A', border: 'none', fontWeight: 800, fontSize: '0.78rem', cursor: 'pointer' }}
+                    >
+                      🔊 Test Alarm
+                    </button>
+                    <button
+                      onClick={requestDevicePermissions}
+                      style={{ flex: 1, padding: '7px', borderRadius: '8px', background: '#0A2315', color: '#FFD700', border: 'none', fontWeight: 800, fontSize: '0.78rem', cursor: 'pointer' }}
+                    >
+                      ⚡ Enable
+                    </button>
+                  </div>
                 </div>
-                <div style={{ display: 'flex', gap: '6px' }}>
-                  <button
-                    onClick={() => playKitchenChime()}
-                    style={{ flex: 1, padding: '7px', borderRadius: '8px', background: '#DFBA67', color: '#0A0A0A', border: 'none', fontWeight: 800, fontSize: '0.78rem', cursor: 'pointer' }}
-                  >
-                    🔊 Test Alarm
-                  </button>
+
+                {/* Push Notifications Control */}
+                <div style={{ background: '#F8FAFC', border: '1px solid #E2E8F0', borderRadius: '12px', padding: '14px' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '8px' }}>
+                    <strong style={{ fontSize: '0.85rem', color: '#1E293B' }}>🔔 Push Notifications:</strong>
+                    <span style={{ fontSize: '0.7rem', fontWeight: 900, color: ('Notification' in window && Notification.permission === 'granted') ? '#15803D' : '#DC2626', background: ('Notification' in window && Notification.permission === 'granted') ? '#DCFCE7' : '#FEE2E2', padding: '2px 6px', borderRadius: '4px' }}>
+                      {('Notification' in window && Notification.permission === 'granted') ? 'Allowed' : 'Blocked'}
+                    </span>
+                  </div>
                   <button
                     onClick={requestDevicePermissions}
-                    style={{ flex: 1, padding: '7px', borderRadius: '8px', background: '#0A2315', color: '#FFD700', border: 'none', fontWeight: 800, fontSize: '0.78rem', cursor: 'pointer' }}
+                    style={{ width: '100%', padding: '7px', borderRadius: '8px', background: '#312E81', color: '#FFFFFF', border: 'none', fontWeight: 800, fontSize: '0.78rem', cursor: 'pointer' }}
                   >
-                    ⚡ Enable
+                    🔔 Request Access
+                  </button>
+                </div>
+
+                {/* GPS Location Control */}
+                <div style={{ background: '#F8FAFC', border: '1px solid #E2E8F0', borderRadius: '12px', padding: '14px' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '8px' }}>
+                    <strong style={{ fontSize: '0.85rem', color: '#1E293B' }}>📍 GPS Location:</strong>
+                    <span style={{ fontSize: '0.7rem', fontWeight: 900, color: '#15803D', background: '#DCFCE7', padding: '2px 6px', borderRadius: '4px' }}>
+                      Enabled
+                    </span>
+                  </div>
+                  <button
+                    onClick={requestDevicePermissions}
+                    style={{ width: '100%', padding: '7px', borderRadius: '8px', background: '#E2E8F0', color: '#1E293B', border: 'none', fontWeight: 800, fontSize: '0.78rem', cursor: 'pointer' }}
+                  >
+                    📍 Detect GPS
                   </button>
                 </div>
               </div>
-
-              {/* Push Notifications Control */}
-              <div style={{ background: '#F8FAFC', border: '1px solid #E2E8F0', borderRadius: '12px', padding: '14px' }}>
-                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '8px' }}>
-                  <strong style={{ fontSize: '0.85rem', color: '#1E293B' }}>🔔 Push Notifications:</strong>
-                  <span style={{ fontSize: '0.7rem', fontWeight: 900, color: ('Notification' in window && Notification.permission === 'granted') ? '#15803D' : '#DC2626', background: ('Notification' in window && Notification.permission === 'granted') ? '#DCFCE7' : '#FEE2E2', padding: '2px 6px', borderRadius: '4px' }}>
-                    {('Notification' in window && Notification.permission === 'granted') ? 'Allowed' : 'Blocked'}
-                  </span>
-                </div>
-                <button
-                  onClick={requestDevicePermissions}
-                  style={{ width: '100%', padding: '7px', borderRadius: '8px', background: '#312E81', color: '#FFFFFF', border: 'none', fontWeight: 800, fontSize: '0.78rem', cursor: 'pointer' }}
-                >
-                  🔔 Request Access
-                </button>
-              </div>
-
-              {/* GPS Location Control */}
-              <div style={{ background: '#F8FAFC', border: '1px solid #E2E8F0', borderRadius: '12px', padding: '14px' }}>
-                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '8px' }}>
-                  <strong style={{ fontSize: '0.85rem', color: '#1E293B' }}>📍 GPS Location:</strong>
-                  <span style={{ fontSize: '0.7rem', fontWeight: 900, color: '#15803D', background: '#DCFCE7', padding: '2px 6px', borderRadius: '4px' }}>
-                    Enabled
-                  </span>
-                </div>
-                <button
-                  onClick={requestDevicePermissions}
-                  style={{ width: '100%', padding: '7px', borderRadius: '8px', background: '#E2E8F0', color: '#1E293B', border: 'none', fontWeight: 800, fontSize: '0.78rem', cursor: 'pointer' }}
-                >
-                  📍 Detect GPS
-                </button>
-              </div>
             </div>
-          </div>
+          )}
 
-          {/* Change Login Credentials Section */}
-          <div style={{
-            background: '#FFFFFF',
-            borderRadius: 'var(--radius-md)',
-            padding: '24px',
-            border: '1px solid var(--border-light)',
-            boxShadow: 'var(--shadow-sm)',
-            marginTop: '20px'
-          }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '12px' }}>
-              <Lock size={22} color="#D97706" />
-              <h3 style={{ fontSize: '1.2rem', fontWeight: 800, color: '#D97706' }}>
-                🔐 Change Login Credentials
+          {/* Accordion 3: Change Admin Credentials */}
+          <div 
+            onClick={() => toggleSettingsSection('security')}
+            style={{
+              background: 'linear-gradient(135deg, #92400E 0%, #D97706 100%)',
+              color: '#FFFFFF',
+              borderRadius: openSettingsSections.security ? '16px 16px 0 0' : '16px',
+              padding: '14px 18px',
+              display: 'flex',
+              alignItems: 'center',
+              justify: 'space-between',
+              cursor: 'pointer',
+              marginBottom: openSettingsSections.security ? 0 : '14px',
+              boxShadow: '0 4px 14px rgba(217,119,6,0.25)',
+              border: '1.5px solid #FDE68A'
+            }}
+          >
+            <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+              <span style={{ fontSize: '20px' }}>🔐</span>
+              <h3 style={{ fontSize: '0.98rem', fontWeight: 900, color: '#FFFFFF', margin: 0 }}>
+                3. Change Admin Username & Password
               </h3>
             </div>
+            <span style={{ fontSize: '0.8rem', color: '#FFFFFF', fontWeight: 900 }}>
+              {openSettingsSections.security ? '▲ Collapse' : '▼ Tap to Expand'}
+            </span>
+          </div>
 
-            <p style={{ fontSize: '0.86rem', color: 'var(--text-muted)', marginBottom: '20px', lineHeight: 1.5 }}>
-              Change your admin username and/or password. You must enter your current password to verify.
-            </p>
+          {openSettingsSections.security && (
+            <div style={{
+              background: '#FFFFFF',
+              borderRadius: '0 0 16px 16px',
+              padding: '24px',
+              border: '1.5px solid var(--border-light)',
+              borderTop: 'none',
+              marginBottom: '16px'
+            }}>
+              <p style={{ fontSize: '0.86rem', color: 'var(--text-muted)', marginBottom: '20px', lineHeight: 1.5 }}>
+                Change your admin username and/or password. You must enter your current password to verify.
+              </p>
 
             <div style={{ marginBottom: '16px' }}>
               <label style={{ display: 'block', fontSize: '0.82rem', fontWeight: 700, color: '#D97706', marginBottom: '6px' }}>
@@ -4159,6 +4264,7 @@ export default function AdminDashboard({ token, username, onLogout, onReturnToMe
               </span>
             )}
           </div>
+          )}
           </>
         )}
 
