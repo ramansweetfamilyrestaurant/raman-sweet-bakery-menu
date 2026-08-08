@@ -95,12 +95,13 @@ const handleCreateSubscription = async (req, res) => {
     `, [targetRestoId]);
     const trialEndISO = subTrailRows[0]?.trial_end || new Date(Date.now() + 14 * 86400 * 1000).toISOString();
 
-    // 2. Call Cashfree Sandbox Client Service (v2026-01-01) with discounted first payment price
+    // 2. Call Cashfree Sandbox Client Service — planPrice = ORIGINAL FULL PRICE for recurring billing
+    // Coupon discount is tracked in our database and applies ONLY to the first paid cycle
     const cfResult = await createCashfreeSubscriptionSession({
       restaurantId: targetRestoId,
       planKey: dbPlan.key,
       planName: dbPlan.name,
-      planPrice: finalFirstPrice,
+      planPrice: originalPrice,
       trialEndISO,
       customerName: resto.name,
       customerPhone: resto.phone,
