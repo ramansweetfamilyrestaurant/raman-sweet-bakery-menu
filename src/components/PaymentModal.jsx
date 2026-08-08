@@ -33,8 +33,8 @@ export default function PaymentModal({ restoInfo, planTier = 'pro', planPrice = 
         return;
       }
 
-      // Handle Cashfree SDK Checkout launch
-      if (data.payment_session_id) {
+      // 1. Primary Authorization Method: Launch Cashfree Web JS SDK or Redirect to auth_link
+      if (data.subscription_session_id) {
         if (!window.Cashfree) {
           await new Promise((resolve, reject) => {
             const script = document.createElement('script');
@@ -47,29 +47,32 @@ export default function PaymentModal({ restoInfo, planTier = 'pro', planPrice = 
 
         if (window.Cashfree) {
           const cashfree = window.Cashfree({ mode: data.is_sandbox ? 'sandbox' : 'production' });
+          // Launch Cashfree SDK subscription checkout
           cashfree.checkout({
-            paymentSessionId: data.payment_session_id,
+            paymentSessionId: data.subscription_session_id,
             redirectTarget: '_modal'
           });
-          setStatusMsg('🚀 Cashfree Sandbox Checkout opened! Please complete subscription authorization.');
+          setStatusMsg('🚀 Cashfree Sandbox Mandate Checkout launched! Please complete subscription authorization.');
           setLoading(false);
           return;
         }
       }
 
       if (data.auth_link) {
-        window.open(data.auth_link, '_blank');
-        setStatusMsg('🚀 Cashfree Authorization Link opened in new window!');
+        setStatusMsg('🔗 Cashfree Sandbox Subscription Session Created! Redirecting to Mandate Authorization page...');
+        setTimeout(() => {
+          window.location.href = data.auth_link;
+        }, 1200);
+        return;
+      }
+
+      if (data.subscription_id) {
+        setStatusMsg(`📌 Cashfree Subscription Session Created (ID: ${data.subscription_id}). Mandate Authorization required.`);
         setLoading(false);
         return;
       }
 
-      setStatusMsg('🎉 Cashfree Sandbox Subscription Authorized! Mandate registered for automatic billing after trial.');
-      setTimeout(() => {
-        if (onSuccess) onSuccess();
-        onClose();
-      }, 2000);
-
+      setStatusMsg('⏳ Subscription session initialized. Authorization pending on Cashfree gateway.');
     } catch (err) {
       console.error('Subscription setup error:', err);
       setErrorMsg(err.message || 'Failed to initiate Cashfree subscription.');

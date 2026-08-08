@@ -547,3 +547,11 @@ export async function createCashfreeSubscription(planTier, token, returnUrl) {
   });
   return handleResponse(res, 'Failed to create subscription session');
 }
+
+export async function verifyCashfreeSubscription(subscriptionId, token) {
+  const res = await fetch(`${API_BASE}/payment/verify-subscription?subscription_id=${encodeURIComponent(subscriptionId)}`, {
+    headers: token ? { Authorization: `Bearer ${token}` } : {}
+  });
+  return handleResponse(res, 'Failed to verify subscription status');
+}
+

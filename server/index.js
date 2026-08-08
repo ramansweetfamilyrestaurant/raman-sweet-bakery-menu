@@ -16,8 +16,26 @@ const app = express();
 const PORT = process.env.PORT || 5000;
 
 // Middleware
-app.use(cors());
-app.use(express.json());
+const allowedOriginsStr = (process.env.ALLOWED_ORIGINS || '').trim();
+const allowedOrigins = allowedOriginsStr ? allowedOriginsStr.split(',').map(s => s.trim()) : null;
+
+app.use(cors({
+  origin: (origin, callback) => {
+    // Server-to-server (e.g. webhooks) & same-origin requests send no origin header
+    if (!origin || !allowedOrigins || allowedOrigins.includes('*')) {
+      return callback(null, true);
+    }
+    if (allowedOrigins.includes(origin)) {
+      return callback(null, true);
+    }
+    return callback(new Error('CORS request blocked by production origin policy'));
+  }
+}));
+app.use(express.json({
+  verify: (req, res, buf) => {
+    req.rawBody = buf ? buf.toString('utf8') : '';
+  }
+}));
 app.use(express.urlencoded({ extended: true }));
 
 // Serve static uploads
@@ -26,6 +44,16 @@ if (!fs.existsSync(uploadsDir)) {
   fs.mkdirSync(uploadsDir, { recursive: true });
 }
 app.use('/uploads', express.static(uploadsDir));
+
+// Production Health Check Endpoint (Safe: No secret exposure)
+app.get('/health', (req, res) => {
+  res.json({
+    status: 'OK',
+    timestamp: new Date().toISOString(),
+    service: 'QR Menu & SaaS Billing API',
+    environment: (process.env.NODE_ENV || 'development').toLowerCase()
+  });
+});
 
 // API Routes
 app.use('/api/superadmin', superadminRoutes);

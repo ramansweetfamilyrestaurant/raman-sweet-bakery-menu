@@ -282,7 +282,8 @@ async function createTables() {
       `CREATE INDEX IF NOT EXISTS idx_restaurants_active_expires ON restaurants(active, plan_expires_at);`,
       `CREATE INDEX IF NOT EXISTS idx_subscriptions_restaurant ON subscriptions(restaurant_id);`,
       `CREATE INDEX IF NOT EXISTS idx_subscriptions_status ON subscriptions(status);`,
-      `CREATE INDEX IF NOT EXISTS idx_subscriptions_next_billing ON subscriptions(next_billing_at);`
+      `CREATE INDEX IF NOT EXISTS idx_subscriptions_next_billing ON subscriptions(next_billing_at);`,
+      `CREATE UNIQUE INDEX IF NOT EXISTS idx_payments_gateway_payid ON payments(gateway, gateway_payment_id);`
     ];
 
     for (const alt of pgAlters) {
@@ -545,6 +546,7 @@ async function createTables() {
       sqliteDb.exec("CREATE INDEX IF NOT EXISTS idx_subscriptions_status ON subscriptions(status)");
       sqliteDb.exec("CREATE INDEX IF NOT EXISTS idx_subscriptions_next_billing ON subscriptions(next_billing_at)");
       sqliteDb.exec("CREATE UNIQUE INDEX IF NOT EXISTS idx_restaurants_phone_unique ON restaurants(phone) WHERE phone IS NOT NULL AND phone != ''");
+      sqliteDb.exec("CREATE UNIQUE INDEX IF NOT EXISTS idx_payments_gateway_payid ON payments(gateway, gateway_payment_id)");
     } catch (err) {
       console.warn('SQLite migration info:', err.message);
     }
