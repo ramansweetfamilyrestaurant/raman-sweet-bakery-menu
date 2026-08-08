@@ -1,15 +1,61 @@
 import React, { useState, useEffect } from 'react';
-import { ShieldCheck, Sparkles, ArrowRight, CheckCircle2, AlertCircle } from 'lucide-react';
+import { ShieldCheck, Sparkles, ArrowRight, CheckCircle2, AlertCircle, LogOut, Check, Zap, Crown, Rocket } from 'lucide-react';
 import { createCashfreeSubscription, verifyCashfreeSubscription } from '../api/client';
+
+const SAAS_PLANS = {
+  basic: {
+    key: 'basic',
+    name: 'Basic Starter Plan',
+    price: 499,
+    badge: '⚡ BASIC',
+    color: '#38BDF8',
+    description: 'Essential digital menu & QR ordering for small outlets',
+    features: [
+      'Digital QR Code Menu',
+      'Basic Order & Service Requests',
+      'Up to 3 Thalis & Combo Deals',
+      'Mobile-Optimized Interface',
+      'Standard Email & Chat Support'
+    ]
+  },
+  pro: {
+    key: 'pro',
+    name: 'Pro Luxury Plan',
+    price: 999,
+    badge: '👑 PRO (MOST POPULAR)',
+    color: '#DFBA67',
+    popular: true,
+    description: 'Complete digital menu, WhatsApp ordering & sales growth tools',
+    features: [
+      'Everything in Basic Plan',
+      'WhatsApp Direct Customer Ordering',
+      'Google Review Auto-Collector',
+      'Up to 10 Thalis & Combo Deals',
+      'Live Sales Analytics & Insights',
+      'Priority Support & Onboarding'
+    ]
+  },
+  enterprise: {
+    key: 'enterprise',
+    name: 'Enterprise VIP Plan',
+    price: 1999,
+    badge: '🚀 ENTERPRISE VIP',
+    color: '#A855F7',
+    description: 'Full-suite restaurant management, KOT & unlimited capabilities',
+    features: [
+      'Everything in Pro Luxury Plan',
+      'Direct Table Ordering & Kitchen (KOT)',
+      'Unlimited Combos, Thalis & Deals',
+      'Multi-Staff Access Accounts',
+      'Dedicated SaaS Account Manager',
+      '24/7 VIP Technical Support'
+    ]
+  }
+};
 
 export default function SubscriptionBillingPage({ restoInfo, token, onProceedToDashboard }) {
   const [currentResto, setCurrentResto] = useState(restoInfo || null);
   const [planKey, setPlanKey] = useState('pro');
-  const [planDetails, setPlanDetails] = useState({
-    name: 'Pro Luxury Plan',
-    price: 999,
-    badge: '👑 PRO'
-  });
 
   const [loading, setLoading] = useState(false);
   const [authorizing, setAuthorizing] = useState(false);
@@ -17,16 +63,6 @@ export default function SubscriptionBillingPage({ restoInfo, token, onProceedToD
   const [statusMsg, setStatusMsg] = useState('');
   const [errorMsg, setErrorMsg] = useState('');
   const [mandateActive, setMandateActive] = useState(false);
-  const [trialSettingDays, setTrialSettingDays] = useState(14);
-
-  useEffect(() => {
-    fetch('/api/settings')
-      .then(res => res.json())
-      .then(data => {
-        if (data && data.default_trial_days) setTrialSettingDays(Math.max(1, parseInt(data.default_trial_days, 10) || 14));
-      })
-      .catch(() => {});
-  }, []);
 
   // 1. Fetch current restaurant details & subscription status server-side if restoInfo is empty
   useEffect(() => {
@@ -81,16 +117,9 @@ export default function SubscriptionBillingPage({ restoInfo, token, onProceedToD
     
     // Authoritative Tier Resolution: URL ?plan -> DB activeResto.plan_tier -> localStorage -> fallback 'pro'
     const targetTier = (urlPlan || activeResto?.plan_tier || savedPlan || 'pro').toLowerCase().trim();
-    setPlanKey(targetTier);
-
-    if (targetTier === 'basic') {
-      setPlanDetails({ name: 'Basic Starter Plan', price: 499, badge: '⚡ BASIC' });
-    } else if (targetTier === 'enterprise') {
-      setPlanDetails({ name: 'Enterprise VIP Plan', price: 1999, badge: '🚀 ENTERPRISE' });
-    } else {
-      setPlanDetails({ name: 'Pro Luxury Plan', price: 999, badge: '👑 PRO' });
+    if (SAAS_PLANS[targetTier]) {
+      setPlanKey(targetTier);
     }
-
 
     // Check if mandate is already active in database
     if (activeResto?.mandate_status === 'active') {
@@ -132,16 +161,16 @@ export default function SubscriptionBillingPage({ restoInfo, token, onProceedToD
     return () => clearInterval(pollInterval);
   }, [mandateActive, token, onProceedToDashboard]);
 
-
-  // Calculate Trial Dates & Duration
+  // Calculate Trial Duration - Standard 14-Day Free Trial
   const activeResto = currentResto || restoInfo;
+  const trialDays = 14;
   const now = new Date();
-  const calcDays = (activeResto?.trial_started_at && activeResto?.trial_ends_at) 
-    ? Math.max(1, Math.round((new Date(activeResto.trial_ends_at) - new Date(activeResto.trial_started_at)) / (86400 * 1000)))
-    : trialSettingDays;
-
+  
+  // Calculate trial end date: 14 days from trial_started_at or 14 days from now
   const trialStart = activeResto?.trial_started_at ? new Date(activeResto.trial_started_at) : now;
-  const trialEnd = activeResto?.trial_ends_at ? new Date(activeResto.trial_ends_at) : new Date(now.getTime() + calcDays * 86400 * 1000);
+  const trialEnd = activeResto?.trial_ends_at 
+    ? new Date(activeResto.trial_ends_at) 
+    : new Date(trialStart.getTime() + trialDays * 86400 * 1000);
   
   const formatDate = (d) => {
     try {
@@ -172,8 +201,7 @@ export default function SubscriptionBillingPage({ restoInfo, token, onProceedToD
 
     if (verifiedParam === 'true') {
       setMandateActive(true);
-      setStatusMsg(`✅ Cashfree Mandate Authorized Successfully! ${calcDays}-Day Free Trial Active. Redirecting...`);
-      localStorage.removeItem('pending_subscription_id');
+      setStatusMsg(`✅ Cashfree Mandate Authorized Successfully! 14-Day Free Trial Active. Redirecting...`);
       localStorage.removeItem('pending_subscription_id');
       const timer = setTimeout(() => {
         if (onProceedToDashboard) onProceedToDashboard();
@@ -271,7 +299,7 @@ export default function SubscriptionBillingPage({ restoInfo, token, onProceedToD
 
       if (res.authorized === true || res.subscription_status === 'ACTIVE') {
         setMandateActive(true);
-        setStatusMsg(`✅ Cashfree Mandate Authorized Successfully! ${calcDays}-Day Free Trial is Active.`);
+        setStatusMsg(`✅ Cashfree Mandate Authorized Successfully! 14-Day Free Trial is Active.`);
       } else {
         setMandateActive(false);
         if (res.subscription_status === 'INITIALIZED') {
@@ -287,7 +315,16 @@ export default function SubscriptionBillingPage({ restoInfo, token, onProceedToD
     }
   };
 
-  const monthlyPrice = planDetails.price;
+  const handleLogout = () => {
+    localStorage.removeItem('raman_admin_token');
+    localStorage.removeItem('adminToken');
+    localStorage.removeItem('raman_admin_user');
+    localStorage.removeItem('raman_admin_slug');
+    window.location.href = '/register';
+  };
+
+  const currentPlan = SAAS_PLANS[planKey] || SAAS_PLANS.pro;
+  const monthlyPrice = currentPlan.price;
 
   return (
     <div style={{
@@ -295,86 +332,200 @@ export default function SubscriptionBillingPage({ restoInfo, token, onProceedToD
       background: 'radial-gradient(circle at top right, #0A2315 0%, #05140B 60%, #020904 100%)',
       color: '#FFFFFF',
       display: 'flex',
+      flexDirection: 'column',
       alignItems: 'center',
       justifyContent: 'center',
-      padding: '24px 16px',
+      padding: '20px 16px',
       fontFamily: "'Plus Jakarta Sans', 'Inter', system-ui, sans-serif"
     }}>
+      {/* Top Header Bar */}
       <div style={{
-        maxWidth: '500px',
         width: '100%',
-        background: 'rgba(13, 31, 21, 0.9)',
-        backdropFilter: 'blur(20px)',
+        maxWidth: '520px',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'space-between',
+        marginBottom: '16px',
+        padding: '0 4px'
+      }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+          <span style={{ fontSize: '1.4rem' }}>🍱</span>
+          <span style={{ fontSize: '1rem', fontWeight: 900, color: '#DFBA67', letterSpacing: '-0.2px' }}>
+            KhanaMaster SaaS
+          </span>
+        </div>
+        <button
+          onClick={handleLogout}
+          style={{
+            background: 'rgba(255,255,255,0.08)',
+            border: '1px solid rgba(255,255,255,0.15)',
+            color: '#94A3B8',
+            padding: '6px 12px',
+            borderRadius: '20px',
+            fontSize: '0.78rem',
+            fontWeight: 700,
+            cursor: 'pointer',
+            display: 'flex',
+            alignItems: 'center',
+            gap: '5px'
+          }}
+        >
+          <LogOut size={13} />
+          <span>Exit / Logout</span>
+        </button>
+      </div>
+
+      <div style={{
+        maxWidth: '520px',
+        width: '100%',
+        background: 'rgba(13, 31, 21, 0.92)',
+        backdropFilter: 'blur(24px)',
         borderRadius: '24px',
         border: '1.5px solid #DFBA67',
         boxShadow: '0 25px 70px rgba(0,0,0,0.85)',
-        padding: '28px 20px',
+        padding: '26px 20px',
         textAlign: 'center',
         position: 'relative'
       }}>
         {/* Header Icon */}
         <div style={{
-          width: '60px',
-          height: '60px',
+          width: '56px',
+          height: '56px',
           borderRadius: '50%',
           background: 'rgba(223,186,103,0.15)',
           color: '#DFBA67',
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'center',
-          margin: '0 auto 14px',
+          margin: '0 auto 12px',
           border: '2px solid #DFBA67',
           boxShadow: '0 0 24px rgba(223,186,103,0.3)'
         }}>
-          <Sparkles size={30} />
+          <Sparkles size={28} />
         </div>
 
         <h1 style={{ fontSize: '1.45rem', fontWeight: 900, color: '#FFFFFF', margin: '0 0 4px 0', letterSpacing: '-0.3px' }}>
-          Activate {calcDays}-Day Free Trial 🚀
+          Activate 14-Day Free Trial 🚀
         </h1>
-        <p style={{ fontSize: '0.84rem', color: '#A7F3D0', margin: '0 0 18px 0', lineHeight: 1.4 }}>
+        <p style={{ fontSize: '0.84rem', color: '#A7F3D0', margin: '0 0 16px 0', lineHeight: 1.4 }}>
           Account <strong>{activeResto?.name || localStorage.getItem('raman_admin_user') || 'Restaurant'}</strong> ready! Authorize UPI AutoPay to start.
         </p>
 
-        {/* Selected Plan Consolidated Card */}
+        {/* Interactive SaaS Plan Selector Tabs */}
+        <div style={{
+          marginBottom: '16px',
+          textAlign: 'left'
+        }}>
+          <label style={{ fontSize: '0.72rem', fontWeight: 800, color: '#94A3B8', textTransform: 'uppercase', letterSpacing: '0.5px', display: 'block', marginBottom: '8px' }}>
+            CHOOSE SAAS SUBSCRIPTION PLAN:
+          </label>
+          <div style={{
+            display: 'grid',
+            gridTemplateColumns: 'repeat(3, 1fr)',
+            gap: '8px',
+            background: 'rgba(0,0,0,0.4)',
+            padding: '4px',
+            borderRadius: '14px',
+            border: '1px solid rgba(255,255,255,0.1)'
+          }}>
+            {Object.values(SAAS_PLANS).map((p) => {
+              const isSelected = planKey === p.key;
+              return (
+                <button
+                  key={p.key}
+                  onClick={() => {
+                    setPlanKey(p.key);
+                    localStorage.setItem('selected_plan_tier', p.key);
+                  }}
+                  style={{
+                    padding: '8px 4px',
+                    borderRadius: '10px',
+                    border: isSelected ? `1.5px solid ${p.color}` : '1px solid transparent',
+                    background: isSelected ? 'rgba(223,186,103,0.18)' : 'transparent',
+                    color: isSelected ? '#FFFFFF' : '#94A3B8',
+                    cursor: 'pointer',
+                    display: 'flex',
+                    flexDirection: 'column',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    gap: '2px',
+                    transition: 'all 0.2s ease'
+                  }}
+                >
+                  <span style={{ fontSize: '0.75rem', fontWeight: 900, color: isSelected ? p.color : '#CBD5E1' }}>
+                    {p.key.toUpperCase()}
+                  </span>
+                  <span style={{ fontSize: '0.88rem', fontWeight: 900 }}>
+                    ₹{p.price}/mo
+                  </span>
+                </button>
+              );
+            })}
+          </div>
+        </div>
+
+        {/* Selected Plan Details Box */}
         <div style={{
           background: 'linear-gradient(135deg, #164E2A 0%, #0A2315 100%)',
           borderRadius: '18px',
-          padding: '18px 16px',
-          border: '1.5px solid #22C55E',
-          marginBottom: '20px',
+          padding: '16px 14px',
+          border: `1.5px solid ${currentPlan.color}`,
+          marginBottom: '16px',
           textAlign: 'left',
           boxShadow: '0 8px 20px rgba(0,0,0,0.4)'
         }}>
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '12px' }}>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '8px' }}>
             <div>
-              <span style={{ fontSize: '0.7rem', fontWeight: 800, color: '#86EFAC', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
-                SELECTED SAAS PLAN
+              <span style={{ fontSize: '0.68rem', fontWeight: 800, color: '#86EFAC', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+                SELECTED PLAN
               </span>
-              <h2 style={{ fontSize: '1.15rem', fontWeight: 900, color: '#FFFFFF', margin: '2px 0 0 0' }}>
-                {planDetails.name}
+              <h2 style={{ fontSize: '1.1rem', fontWeight: 900, color: '#FFFFFF', margin: '2px 0 0 0' }}>
+                {currentPlan.name}
               </h2>
             </div>
             <span style={{
-              background: '#DFBA67',
+              background: currentPlan.color,
               color: '#0A2315',
               fontWeight: 900,
-              fontSize: '0.78rem',
-              padding: '5px 12px',
+              fontSize: '0.74rem',
+              padding: '4px 10px',
               borderRadius: '50px',
-              boxShadow: '0 4px 10px rgba(223,186,103,0.3)'
+              boxShadow: '0 4px 10px rgba(0,0,0,0.3)'
             }}>
-              {planDetails.badge}
+              {currentPlan.badge}
             </span>
           </div>
 
-          {/* Consolidated Billing Table (Zero Duplication) */}
+          <p style={{ fontSize: '0.78rem', color: '#A7F3D0', margin: '0 0 12px 0', lineHeight: 1.35 }}>
+            {currentPlan.description}
+          </p>
+
+          {/* Included Features Checklist */}
           <div style={{
-            background: 'rgba(0,0,0,0.4)',
+            display: 'grid',
+            gridTemplateColumns: 'repeat(1, 1fr)',
+            gap: '6px',
+            marginBottom: '14px',
+            background: 'rgba(0,0,0,0.3)',
+            padding: '10px 12px',
+            borderRadius: '12px',
+            border: '1px solid rgba(255,255,255,0.08)'
+          }}>
+            {currentPlan.features.map((feat, idx) => (
+              <div key={idx} style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '0.78rem', color: '#E2E8F0' }}>
+                <CheckCircle2 size={14} color="#22C55E" style={{ flexShrink: 0 }} />
+                <span>{feat}</span>
+              </div>
+            ))}
+          </div>
+
+          {/* Consolidated Billing Breakdown Table */}
+          <div style={{
+            background: 'rgba(0,0,0,0.5)',
             borderRadius: '12px',
             padding: '12px 14px',
             border: '1px solid rgba(255,255,255,0.1)',
-            marginBottom: '14px',
+            marginBottom: '12px',
             display: 'flex',
             flexDirection: 'column',
             gap: '8px',
@@ -391,13 +542,13 @@ export default function SubscriptionBillingPage({ restoInfo, token, onProceedToD
             </div>
 
             <div style={{ display: 'flex', justifyContent: 'space-between', color: '#94A3B8' }}>
-              <span>Free Trial:</span>
-              <span style={{ color: '#86EFAC', fontWeight: 700 }}>{calcDays} Days (Until {formatDate(trialEnd)})</span>
+              <span>Free Trial Period:</span>
+              <span style={{ color: '#86EFAC', fontWeight: 800 }}>14 Days (Until {formatDate(trialEnd)})</span>
             </div>
 
             <div style={{ borderTop: '1px solid rgba(255,255,255,0.12)', paddingTop: '8px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
               <span style={{ color: '#F1F5F9', fontWeight: 800 }}>Monthly Charge After Trial:</span>
-              <span style={{ fontSize: '1.15rem', fontWeight: 900, color: '#FFD700' }}>
+              <span style={{ fontSize: '1.12rem', fontWeight: 900, color: '#FFD700' }}>
                 ₹{monthlyPrice}/month
               </span>
             </div>
@@ -405,17 +556,16 @@ export default function SubscriptionBillingPage({ restoInfo, token, onProceedToD
 
           {/* Clear Visual Payment Timeline */}
           <div style={{
-            background: 'rgba(0,0,0,0.3)',
+            background: 'rgba(0,0,0,0.35)',
             borderRadius: '10px',
             padding: '10px 12px',
             border: '1px solid rgba(255,255,255,0.08)',
-            marginBottom: '14px',
             fontSize: '0.74rem',
             color: '#94A3B8',
             lineHeight: 1.6
           }}>
             <div style={{ fontWeight: 800, color: '#DFBA67', marginBottom: '4px', fontSize: '0.72rem' }}>📋 PAYMENT TIMELINE:</div>
-            <div>🎁 <strong style={{ color: '#86EFAC' }}>Today → {formatDate(trialEnd)}</strong> — {calcDays}-Day Free Trial (₹0)</div>
+            <div>🎁 <strong style={{ color: '#86EFAC' }}>Today → {formatDate(trialEnd)}</strong> — 14-Day Free Trial (₹0)</div>
             <div>💳 <strong style={{ color: '#E2E8F0' }}>{formatDate(trialEnd)} onwards</strong> — ₹{monthlyPrice}/month via UPI AutoPay</div>
           </div>
         </div>
@@ -430,7 +580,7 @@ export default function SubscriptionBillingPage({ restoInfo, token, onProceedToD
             borderRadius: '12px',
             fontSize: '0.8rem',
             fontWeight: 700,
-            marginBottom: '16px',
+            marginBottom: '14px',
             textAlign: 'left',
             display: 'flex',
             alignItems: 'center',
@@ -450,7 +600,7 @@ export default function SubscriptionBillingPage({ restoInfo, token, onProceedToD
             borderRadius: '12px',
             fontSize: '0.8rem',
             fontWeight: 800,
-            marginBottom: '16px',
+            marginBottom: '14px',
             textAlign: 'left',
             display: 'flex',
             alignItems: 'center',
@@ -461,7 +611,7 @@ export default function SubscriptionBillingPage({ restoInfo, token, onProceedToD
           </div>
         )}
 
-        {/* Action Button */}
+        {/* Action Buttons */}
         {mandateActive ? (
           <div>
             <div style={{
@@ -472,9 +622,9 @@ export default function SubscriptionBillingPage({ restoInfo, token, onProceedToD
               borderRadius: '14px',
               fontWeight: 800,
               fontSize: '0.86rem',
-              marginBottom: '16px'
+              marginBottom: '14px'
             }}>
-              ✅ Mandate Authorized • {calcDays}-Day Trial Active
+              ✅ Mandate Authorized • 14-Day Free Trial Active
             </div>
 
             <button
@@ -524,7 +674,7 @@ export default function SubscriptionBillingPage({ restoInfo, token, onProceedToD
               }}
             >
               <ShieldCheck size={20} />
-              <span>{authorizing ? 'Opening Cashfree...' : `🚀 Authorize UPI AutoPay & Activate ${calcDays}-Day Trial`}</span>
+              <span>{authorizing ? 'Opening Cashfree...' : `🚀 Authorize UPI AutoPay & Activate 14-Day Trial`}</span>
             </button>
 
             <button
@@ -550,6 +700,26 @@ export default function SubscriptionBillingPage({ restoInfo, token, onProceedToD
             </button>
           </div>
         )}
+
+        {/* Security & Trust Badges */}
+        <div style={{
+          marginTop: '18px',
+          paddingTop: '14px',
+          borderTop: '1px solid rgba(255,255,255,0.1)',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          gap: '12px',
+          fontSize: '0.7rem',
+          color: '#94A3B8',
+          flexWrap: 'wrap'
+        }}>
+          <span>🔒 256-Bit SSL Encrypted</span>
+          <span>•</span>
+          <span>⚡ Cashfree UPI AutoPay</span>
+          <span>•</span>
+          <span>🛡️ Cancel Anytime</span>
+        </div>
       </div>
     </div>
   );
