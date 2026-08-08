@@ -93,15 +93,15 @@ async function startServer(portToTry = PORT) {
     startSubscriptionCron();
     
     // ⚡ 100% Hands-Free Automated Background Compaction Engine
-    // Runs automatically on server startup and every 24 hours in background (Purges raw order records > 30 days into daily summaries)
-    runAutoDataSummarization(30).then(res => {
+    // Runs automatically on server startup and every 24 hours in background (Purges raw order records > 24 hours into daily summaries)
+    runAutoDataSummarization(1).then(res => {
       if (res && res.purged_orders > 0) {
         console.log(`⚡ [AUTO COMPACTION] Automatically summarized ${res.summarized_days} days and purged ${res.purged_orders} old order records.`);
       }
     }).catch(err => console.warn('Auto summarization notice:', err.message));
 
     setInterval(() => {
-      runAutoDataSummarization(30).then(res => {
+      runAutoDataSummarization(1).then(res => {
         if (res && res.purged_orders > 0) {
           console.log(`⚡ [AUTO COMPACTION NIGHTLY] Automatically summarized ${res.summarized_days} days and purged ${res.purged_orders} old order records.`);
         }
