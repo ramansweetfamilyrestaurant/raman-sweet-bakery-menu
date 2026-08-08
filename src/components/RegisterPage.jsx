@@ -22,17 +22,10 @@ export default function RegisterPage({ onRegisterSuccess }) {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [pendingApprovalData, setPendingApprovalData] = useState(null);
-  const [registeredData, setRegisteredData] = useState(null);
   const [couponInput, setCouponInput] = useState('');
   const [appliedCoupon, setAppliedCoupon] = useState(null);
   const [couponMsg, setCouponMsg] = useState('');
   const [couponLoading, setCouponLoading] = useState(false);
-
-  // Autopay Mandate Modal State
-  const [showMandateModal, setShowMandateModal] = useState(false);
-  const [mandateGateway, setMandateGateway] = useState('cashfree');
-  const [mandateAuthorizing, setMandateAuthorizing] = useState(false);
-  const [mandateSuccessMsg, setMandateSuccessMsg] = useState('');
 
   const getBasePlanPrice = (tier) => {
     if (tier === 'basic') return 499;
@@ -54,7 +47,7 @@ export default function RegisterPage({ onRegisterSuccess }) {
       if (res.ok && data.valid) {
         setAppliedCoupon(data);
         localStorage.setItem('applied_coupon_code', data.code);
-        setCouponMsg(data.message || `✓ Coupon '${data.code}' applied! Saved ₹${data.discount_amount} on your first paid month.`);
+        setCouponMsg(data.message || `✓ Coupon '${data.code}' applied! Saved ₹${data.discount_amount} on first paid cycle.`);
       } else {
         setAppliedCoupon(null);
         localStorage.removeItem('applied_coupon_code');
@@ -142,7 +135,7 @@ export default function RegisterPage({ onRegisterSuccess }) {
       localStorage.setItem('adminToken', data.token);
       localStorage.setItem('selected_plan_tier', formData.plan_tier || data.plan_tier || 'pro');
       sessionStorage.setItem('selected_plan_tier', formData.plan_tier || data.plan_tier || 'pro');
-      localStorage.setItem('applied_coupon_code', formData.coupon_code || 'LAUNCH50');
+      localStorage.setItem('applied_coupon_code', couponInput.trim() || 'LAUNCH50');
 
       if (onRegisterSuccess) {
         onRegisterSuccess(data);
@@ -157,192 +150,6 @@ export default function RegisterPage({ onRegisterSuccess }) {
     }
   };
 
-  if (registeredData) {
-    return (
-      <div style={{
-        minHeight: '100vh', background: 'linear-gradient(135deg, #0A2315 0%, #164E2A 100%)',
-        color: '#FFFFFF', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '24px'
-      }}>
-        {/* Autopay Mandate Authorization Modal */}
-        {showMandateModal ? (
-          <div style={{
-            maxWidth: '480px', width: '100%', background: '#FFFFFF',
-            borderRadius: '24px', padding: '28px', border: '3px solid #DFBA67',
-            boxShadow: '0 25px 60px rgba(0,0,0,0.7)', color: '#0F172A', textAlign: 'center'
-          }}>
-            <div style={{
-              width: '60px', height: '60px', borderRadius: '50%',
-              background: '#ECFDF5', color: '#059669', border: '2px solid #10B981',
-              display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 12px'
-            }}>
-              <ShieldCheck size={32} />
-            </div>
-
-            <h2 style={{ fontSize: '1.3rem', fontWeight: 900, color: '#0F172A', margin: '0 0 6px 0' }}>
-              Authorize ₹0 UPI Autopay Mandate
-            </h2>
-            <p style={{ fontSize: '0.84rem', color: '#64748B', margin: '0 0 18px 0' }}>
-              Activate 14-Day Free Trial for <strong>{registeredData.name || formData.name}</strong>
-            </p>
-
-            {mandateSuccessMsg && (
-              <div style={{ background: '#ECFDF5', border: '1px solid #10B981', color: '#047857', padding: '10px 14px', borderRadius: '12px', fontSize: '0.82rem', fontWeight: 800, marginBottom: '16px' }}>
-                {mandateSuccessMsg}
-              </div>
-            )}
-
-            {/* Mandate Summary Box */}
-            <div style={{ background: '#F8FAFC', borderRadius: '16px', padding: '16px', border: '1px solid #E2E8F0', textAlign: 'left', marginBottom: '18px' }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '8px', fontSize: '0.82rem' }}>
-                <span style={{ color: '#64748B', fontWeight: 700 }}>Today's Registration Charge:</span>
-                <strong style={{ color: '#059669', fontSize: '0.95rem' }}>₹0 (FREE TODAY)</strong>
-              </div>
-              <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '8px', fontSize: '0.82rem' }}>
-                <span style={{ color: '#64748B', fontWeight: 700 }}>Free Trial Duration:</span>
-                <strong style={{ color: '#0F172A' }}>14 Days Unrestricted Access</strong>
-              </div>
-              <div style={{ display: 'flex', justifyContent: 'space-between', borderTop: '1px solid #E2E8F0', paddingTop: '8px', fontSize: '0.82rem' }}>
-                <span style={{ color: '#64748B', fontWeight: 700 }}>Monthly Autopay Rate (From Day 15):</span>
-                <strong style={{ color: '#059669' }}>₹{appliedCoupon ? appliedCoupon.final_price : getBasePlanPrice(formData.plan_tier)} / mo</strong>
-              </div>
-            </div>
-
-            {/* Gateway Select */}
-            <div style={{ textAlign: 'left', marginBottom: '20px' }}>
-              <label style={{ display: 'block', fontSize: '0.76rem', fontWeight: 800, color: '#475569', marginBottom: '6px' }}>
-                SELECT AUTOPAY UPI GATEWAY:
-              </label>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                <label style={{
-                  display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-                  padding: '10px 14px', borderRadius: '12px', border: mandateGateway === 'cashfree' ? '2px solid #059669' : '1px solid #CBD5E1',
-                  background: mandateGateway === 'cashfree' ? '#ECFDF5' : '#F8FAFC', cursor: 'pointer'
-                }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                    <input type="radio" name="mg" checked={true} readOnly accentColor="#059669" />
-                    <span style={{ fontSize: '0.84rem', fontWeight: 800, color: '#0F172A' }}>🚀 Cashfree UPI Autopay (GPay, PhonePe, Paytm)</span>
-                  </div>
-                  <span style={{ fontSize: '0.7rem', fontWeight: 800, color: '#059669' }}>OFFICIAL GATEWAY</span>
-                </label>
-              </div>
-            </div>
-
-            <button
-              onClick={handleAuthorizeMandate}
-              disabled={mandateAuthorizing}
-              style={{
-                width: '100%', padding: '14px', borderRadius: '14px', border: 'none',
-                background: 'linear-gradient(135deg, #10B981 0%, #059669 100%)', color: '#FFFFFF',
-                fontSize: '0.95rem', fontWeight: 900, cursor: mandateAuthorizing ? 'wait' : 'pointer',
-                display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px',
-                boxShadow: '0 4px 16px rgba(16,185,129,0.35)'
-              }}
-            >
-              <ShieldCheck size={18} />
-              <span>{mandateAuthorizing ? 'Authorizing ₹0 Mandate...' : '⚡ Authorize ₹0 Autopay & Enter Dashboard'}</span>
-            </button>
-          </div>
-        ) : (
-        <div style={{
-          maxWidth: '460px', width: '100%', background: '#111827',
-          borderRadius: '24px', padding: '32px 24px', border: '2px solid #38BDF8',
-          boxShadow: '0 25px 50px rgba(0,0,0,0.6)', textAlign: 'center'
-        }}>
-          <div style={{
-            width: '70px', height: '70px', borderRadius: '50%',
-            background: 'rgba(56,189,248,0.15)', color: '#38BDF8',
-            display: 'flex', alignItems: 'center', justifyContent: 'center',
-            margin: '0 auto 16px', border: '2px solid #38BDF8'
-          }}>
-            <Sparkles size={38} />
-          </div>
-
-          <h2 style={{ fontSize: '1.5rem', fontWeight: 900, color: '#FFFFFF', margin: '0 0 8px 0' }}>
-            🎉 Registration Complete!
-          </h2>
-          <p style={{ fontSize: '0.88rem', color: '#9CA3AF', margin: '0 0 24px 0', lineHeight: 1.5 }}>
-            Welcome <strong>{registeredData.name || formData.name}</strong>! Automatic setup complete ho gaya hai. Ab 1-tap me mobile permissions & location enable karein:
-          </p>
-
-          <div style={{
-            background: '#1F2937', borderRadius: '16px', padding: '16px',
-            textAlign: 'left', marginBottom: '24px', border: '1px solid #374151'
-          }}>
-            <div style={{ fontSize: '0.84rem', fontWeight: 800, color: '#38BDF8', marginBottom: '12px' }}>
-              ⚡ Tap button below to trigger browser permissions:
-            </div>
-            <div style={{ fontSize: '0.82rem', color: '#E5E7EB', display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '10px' }}>
-              <span style={{ fontSize: '1.2rem' }}>📍</span> <strong>GPS Location:</strong> Auto-saves exact restaurant location
-            </div>
-            <div style={{ fontSize: '0.82rem', color: '#E5E7EB', display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '10px' }}>
-              <span style={{ fontSize: '1.2rem' }}>🔔</span> <strong>Order Push Alerts:</strong> Notifies on incoming table orders
-            </div>
-            <div style={{ fontSize: '0.82rem', color: '#E5E7EB', display: 'flex', alignItems: 'center', gap: '8px' }}>
-              <span style={{ fontSize: '1.2rem' }}>🔊</span> <strong>Kitchen Siren:</strong> Unlocks loud emergency alarm sound
-            </div>
-          </div>
-
-          <button
-            onClick={async () => {
-              // Direct user tap gesture -> Browser will pop up native Location & Notification permissions!
-              if ('Notification' in window) {
-                try { await Notification.requestPermission(); } catch (e) {}
-              }
-
-              const proceed = () => {
-                if (onRegisterSuccess) {
-                  onRegisterSuccess(registeredData);
-                } else {
-                  window.history.pushState({}, '', `/${registeredData.slug}/admin`);
-                  window.dispatchEvent(new PopStateEvent('popstate'));
-                }
-              };
-
-              if ('geolocation' in navigator) {
-                navigator.geolocation.getCurrentPosition(
-                  async (pos) => {
-                    const lat = pos.coords.latitude;
-                    const lng = pos.coords.longitude;
-                    console.log('📍 GPS Location captured on onboarding:', lat, lng);
-                    try {
-                      await fetch('/api/admin/settings', {
-                        method: 'PUT',
-                        headers: {
-                          'Content-Type': 'application/json',
-                          'Authorization': `Bearer ${registeredData.token}`
-                        },
-                        body: JSON.stringify({ latitude: lat, longitude: lng })
-                      });
-                      console.log('✅ GPS location auto-saved to DB!');
-                    } catch (e) {}
-                    proceed();
-                  },
-                  (err) => {
-                    console.warn('GPS location skipped:', err);
-                    proceed();
-                  },
-                  { enableHighAccuracy: true, timeout: 8000 }
-                );
-              } else {
-                proceed();
-              }
-            }}
-            style={{
-              width: '100%', padding: '15px', borderRadius: '9999px',
-              border: 'none', background: 'linear-gradient(135deg, #0EA5E9 0%, #0284C7 100%)',
-              color: '#FFFFFF', fontWeight: 900, fontSize: '0.95rem',
-              cursor: 'pointer', boxShadow: '0 4px 16px rgba(14,165,233,0.4)',
-              display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px'
-            }}
-          >
-            ⚡ Allow Location & Enter Dashboard <ArrowRight size={18} />
-          </button>
-        </div>
-        )}
-      </div>
-    );
-  }
-
   if (pendingApprovalData) {
     return (
       <div style={{
@@ -352,37 +159,37 @@ export default function RegisterPage({ onRegisterSuccess }) {
       }}>
         <div style={{
           background: '#111827', border: '2px solid #DFBA67', borderRadius: '24px',
-          padding: '40px 24px', maxWidth: '480px', width: '100%', textAlign: 'center', color: '#FFFFFF',
+          padding: '36px 20px', maxWidth: '440px', width: '100%', textAlign: 'center', color: '#FFFFFF',
           boxShadow: '0 20px 50px rgba(0,0,0,0.6)'
         }}>
-          <div style={{ fontSize: '3.5rem', marginBottom: '16px' }}>⏳</div>
-          <h2 style={{ fontSize: '1.4rem', fontWeight: 900, color: '#DFBA67', marginBottom: '10px' }}>
+          <div style={{ fontSize: '3rem', marginBottom: '12px' }}>⏳</div>
+          <h2 style={{ fontSize: '1.3rem', fontWeight: 900, color: '#DFBA67', marginBottom: '8px' }}>
             Registration Submitted!
           </h2>
-          <p style={{ color: '#E2E8F0', fontSize: '0.92rem', lineHeight: 1.6, marginBottom: '24px' }}>
-            Your restaurant <strong>'{pendingApprovalData.restaurant?.name}'</strong> has been submitted for Super Admin verification and approval.
+          <p style={{ color: '#E2E8F0', fontSize: '0.88rem', lineHeight: 1.5, marginBottom: '20px' }}>
+            Your restaurant <strong>'{pendingApprovalData.restaurant?.name}'</strong> has been submitted for Super Admin verification.
           </p>
 
           <div style={{
             background: 'rgba(223,186,103,0.1)', border: '1px solid rgba(223,186,103,0.3)',
-            borderRadius: '16px', padding: '16px', marginBottom: '28px', textAlign: 'left', fontSize: '0.84rem'
+            borderRadius: '16px', padding: '14px', marginBottom: '24px', textAlign: 'left', fontSize: '0.82rem'
           }}>
-            <div style={{ color: '#DFBA67', fontWeight: 800, marginBottom: '6px' }}>📋 Registration Summary:</div>
+            <div style={{ color: '#DFBA67', fontWeight: 800, marginBottom: '6px' }}>📋 Registration Details:</div>
             <div style={{ marginBottom: '4px' }}>• <strong>Admin Username:</strong> {pendingApprovalData.username}</div>
             <div style={{ marginBottom: '4px' }}>• <strong>Mobile Number:</strong> {formData.phone}</div>
-            <div>• <strong>Status:</strong> <span style={{ color: '#F59E0B', fontWeight: 800 }}>Pending Super Admin Approval</span></div>
+            <div>• <strong>Status:</strong> <span style={{ color: '#F59E0B', fontWeight: 800 }}>Pending Approval</span></div>
           </div>
 
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
             <button
               onClick={() => {
                 const msg = `Hello Super Admin, I registered my restaurant '${pendingApprovalData.restaurant?.name}' (Username: ${pendingApprovalData.username}). Please approve my account.`;
                 window.open(`https://wa.me/?text=${encodeURIComponent(msg)}`, '_blank');
               }}
               style={{
-                width: '100%', padding: '14px', borderRadius: '14px', border: 'none',
+                width: '100%', padding: '14px', borderRadius: '12px', border: 'none',
                 background: 'linear-gradient(135deg, #15803D, #22C55E)', color: '#FFFFFF',
-                fontWeight: 900, fontSize: '0.9rem', cursor: 'pointer', boxShadow: '0 4px 14px rgba(34,197,94,0.4)'
+                fontWeight: 900, fontSize: '0.88rem', cursor: 'pointer', boxShadow: '0 4px 14px rgba(34,197,94,0.4)'
               }}
             >
               💬 Request Quick WhatsApp Approval
@@ -394,8 +201,8 @@ export default function RegisterPage({ onRegisterSuccess }) {
                 window.dispatchEvent(new PopStateEvent('popstate'));
               }}
               style={{
-                width: '100%', padding: '12px', borderRadius: '14px', border: '1px solid rgba(255,255,255,0.2)',
-                background: 'rgba(255,255,255,0.05)', color: '#9CA3AF', fontWeight: 700, fontSize: '0.85rem', cursor: 'pointer'
+                width: '100%', padding: '12px', borderRadius: '12px', border: '1px solid rgba(255,255,255,0.2)',
+                background: 'rgba(255,255,255,0.05)', color: '#9CA3AF', fontWeight: 700, fontSize: '0.82rem', cursor: 'pointer'
               }}
             >
               ← Return to Home
@@ -409,123 +216,105 @@ export default function RegisterPage({ onRegisterSuccess }) {
   return (
     <div style={{
       minHeight: '100vh',
-      background: 'linear-gradient(135deg, #06170D 0%, #0A2315 50%, #041009 100%)',
+      background: 'radial-gradient(circle at top right, #0A2315 0%, #05140B 60%, #020904 100%)',
       color: '#FFFFFF',
-      fontFamily: "'Plus Jakarta Sans', 'Inter', sans-serif",
+      fontFamily: "'Plus Jakarta Sans', 'Inter', system-ui, sans-serif",
       display: 'flex',
       alignItems: 'center',
       justifyContent: 'center',
-      padding: '40px 20px',
+      padding: '24px 16px',
       position: 'relative',
       overflow: 'hidden'
     }}>
-      {/* Background Ambient Glow */}
+      {/* Background Ambient Glows */}
       <div style={{
         position: 'absolute', top: '-10%', right: '-10%',
-        width: '500px', height: '500px', borderRadius: '50%',
-        background: 'radial-gradient(circle, rgba(212,175,55,0.15) 0%, rgba(0,0,0,0) 70%)',
-        filter: 'blur(60px)', pointerEvents: 'none'
-      }} />
-      <div style={{
-        position: 'absolute', bottom: '-10%', left: '-10%',
-        width: '500px', height: '500px', borderRadius: '50%',
-        background: 'radial-gradient(circle, rgba(5,150,105,0.2) 0%, rgba(0,0,0,0) 70%)',
-        filter: 'blur(60px)', pointerEvents: 'none'
+        width: '400px', height: '400px', borderRadius: '50%',
+        background: 'radial-gradient(circle, rgba(212,175,55,0.12) 0%, rgba(0,0,0,0) 70%)',
+        filter: 'blur(50px)', pointerEvents: 'none'
       }} />
 
       <div style={{
-        maxWidth: '1000px',
+        maxWidth: '960px',
         width: '100%',
         display: 'grid',
-        gridTemplateColumns: 'repeat(auto-fit, minmax(340px, 1fr))',
-        gap: '32px',
+        gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))',
+        gap: '24px',
         alignItems: 'center',
         zIndex: 2
       }}>
         {/* Left Side: SaaS Value Offer */}
-        <div>
+        <div style={{ padding: '8px' }}>
           <div style={{
             display: 'inline-flex', alignItems: 'center', gap: '8px',
-            background: 'rgba(212,175,55,0.15)', border: '1px solid rgba(212,175,55,0.3)',
-            borderRadius: '50px', padding: '6px 16px', fontSize: '0.8rem', fontWeight: 800,
-            color: '#DFBA67', marginBottom: '20px'
+            background: 'rgba(212,175,55,0.12)', border: '1px solid rgba(212,175,55,0.3)',
+            borderRadius: '50px', padding: '6px 14px', fontSize: '0.76rem', fontWeight: 800,
+            color: '#DFBA67', marginBottom: '16px'
           }}>
-            <Sparkles size={16} /> 14-DAY FREE TRIAL • NO CREDIT CARD REQUIRED
+            <Sparkles size={14} /> 14-DAY FREE TRIAL • ₹0 TODAY
           </div>
 
-          <h1 style={{ fontSize: '2.5rem', fontWeight: 900, lineHeight: 1.25, marginBottom: '16px' }}>
-            Launch Your Digital QR Restaurant Menu in <span style={{
+          <h1 style={{ fontSize: '2.1rem', fontWeight: 900, lineHeight: 1.2, marginBottom: '14px', letterSpacing: '-0.5px' }}>
+            Launch Your Digital QR Menu in <span style={{
               background: 'linear-gradient(135deg, #FFD700 0%, #D4AF37 100%)',
               WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent'
             }}>60 Seconds</span>
           </h1>
 
-          <p style={{ color: '#9CA3AF', fontSize: '0.95rem', lineHeight: 1.6, marginBottom: '28px' }}>
-            Join hundreds of modern restaurants, sweets shops, and cafes using Khana-Master to automate digital QR table orders & WhatsApp ordering.
+          <p style={{ color: '#9CA3AF', fontSize: '0.88rem', lineHeight: 1.5, marginBottom: '22px' }}>
+            Join hundreds of modern restaurants & cafes automating digital QR table ordering, live KOT alerts, and WhatsApp orders with KhanaMaster.
           </p>
 
           {/* Feature Highlights */}
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-              <CheckCircle2 color="#34D399" size={20} />
-              <span style={{ fontSize: '0.9rem', color: '#E5E7EB', fontWeight: 600 }}>
-                Instant Digital QR Menu & Table Standees
-              </span>
-            </div>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-              <CheckCircle2 color="#34D399" size={20} />
-              <span style={{ fontSize: '0.9rem', color: '#E5E7EB', fontWeight: 600 }}>
-                Live Kitchen Order Display (KOT) & Sound Chimes
-              </span>
-            </div>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-              <CheckCircle2 color="#34D399" size={20} />
-              <span style={{ fontSize: '0.9rem', color: '#E5E7EB', fontWeight: 600 }}>
-                Dynamic Thali & Combo Deals Builder
-              </span>
-            </div>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-              <CheckCircle2 color="#34D399" size={20} />
-              <span style={{ fontSize: '0.9rem', color: '#E5E7EB', fontWeight: 600 }}>
-                Direct WhatsApp Orders & Customer Reviews
-              </span>
-            </div>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+            {[
+              'Instant Digital QR Menu & Table Standees',
+              'Live Kitchen Order Display (KOT) & Siren Alarms',
+              'Dynamic Thali & Combo Deals Builder',
+              'Direct WhatsApp Orders & Customer Feedback'
+            ].map((feature, i) => (
+              <div key={i} style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                <CheckCircle2 color="#34D399" size={18} style={{ flexShrink: 0 }} />
+                <span style={{ fontSize: '0.85rem', color: '#E5E7EB', fontWeight: 600 }}>{feature}</span>
+              </div>
+            ))}
           </div>
         </div>
 
-        {/* Right Side: Registration Form Card */}
+        {/* Right Side: Sleek Registration Card */}
         <div style={{
-          background: '#111827',
-          border: '1px solid rgba(255,255,255,0.12)',
-          borderRadius: '28px',
-          padding: '36px 28px',
-          boxShadow: '0 25px 60px rgba(0,0,0,0.6)'
+          background: 'rgba(17, 24, 39, 0.85)',
+          backdropFilter: 'blur(16px)',
+          border: '1.5px solid rgba(255,255,255,0.12)',
+          borderRadius: '24px',
+          padding: '24px 20px',
+          boxShadow: '0 20px 50px rgba(0,0,0,0.6)'
         }}>
-          <h2 style={{ fontSize: '1.4rem', fontWeight: 900, color: '#FFFFFF', margin: '0 0 6px 0', textAlign: 'center' }}>
-            Create Your Restaurant Account 🚀
+          <h2 style={{ fontSize: '1.25rem', fontWeight: 900, color: '#FFFFFF', margin: '0 0 4px 0', textAlign: 'center' }}>
+            Create Restaurant Account 🚀
           </h2>
-          <p style={{ fontSize: '0.84rem', color: '#9CA3AF', textAlign: 'center', margin: '0 0 24px 0' }}>
-            Get instant access to your Admin Dashboard & Digital Menu
+          <p style={{ fontSize: '0.8rem', color: '#9CA3AF', textAlign: 'center', margin: '0 0 20px 0' }}>
+            Instant setup • 14-day unrestricted trial access
           </p>
 
           {error && (
             <div style={{
               background: 'rgba(239, 68, 68, 0.15)', border: '1px solid rgba(239, 68, 68, 0.4)',
-              color: '#FCA5A5', padding: '12px 14px', borderRadius: '12px',
-              fontSize: '0.82rem', marginBottom: '20px', display: 'flex', alignItems: 'center', gap: '8px'
+              color: '#FCA5A5', padding: '10px 12px', borderRadius: '12px',
+              fontSize: '0.8rem', marginBottom: '16px', display: 'flex', alignItems: 'center', gap: '8px'
             }}>
-              <AlertCircle size={16} /> {error}
+              <AlertCircle size={16} style={{ flexShrink: 0 }} /> {error}
             </div>
           )}
 
-          <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+          <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
             {/* Restaurant Name */}
             <div>
-              <label style={{ display: 'block', fontSize: '0.78rem', fontWeight: 800, color: '#DFBA67', marginBottom: '6px' }}>
+              <label style={{ display: 'block', fontSize: '0.74rem', fontWeight: 800, color: '#DFBA67', marginBottom: '4px' }}>
                 RESTAURANT / BAKERY NAME *
               </label>
               <div style={{ position: 'relative' }}>
-                <Store size={18} color="#9CA3AF" style={{ position: 'absolute', left: '14px', top: '50%', transform: 'translateY(-50%)' }} />
+                <Store size={16} color="#9CA3AF" style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)' }} />
                 <input
                   type="text"
                   required
@@ -533,26 +322,24 @@ export default function RegisterPage({ onRegisterSuccess }) {
                   value={formData.name}
                   onChange={e => setFormData({ ...formData, name: e.target.value })}
                   style={{
-                    width: '100%', padding: '12px 14px 12px 42px', borderRadius: '12px',
+                    width: '100%', padding: '11px 12px 11px 38px', borderRadius: '12px',
                     border: '1px solid rgba(255,255,255,0.15)', background: '#1F2937',
-                    color: '#FFFFFF', fontSize: '0.9rem', outline: 'none'
+                    color: '#FFFFFF', fontSize: '0.85rem', outline: 'none'
                   }}
                 />
               </div>
-
-              {/* URL Preview */}
-              <div style={{ fontSize: '0.72rem', color: '#9CA3AF', marginTop: '6px', paddingLeft: '4px' }}>
-                Your Menu URL: <span style={{ color: '#34D399', fontWeight: 700 }}>khana-master.onrender.com/{liveSlug}</span>
+              <div style={{ fontSize: '0.7rem', color: '#9CA3AF', marginTop: '4px' }}>
+                Menu URL: <span style={{ color: '#34D399', fontWeight: 700 }}>khana-master.onrender.com/{liveSlug}</span>
               </div>
             </div>
 
             {/* Phone Number */}
             <div>
-              <label style={{ display: 'block', fontSize: '0.78rem', fontWeight: 800, color: '#DFBA67', marginBottom: '6px' }}>
-                CONTACT / WHATSAPP MOBILE NUMBER *
+              <label style={{ display: 'block', fontSize: '0.74rem', fontWeight: 800, color: '#DFBA67', marginBottom: '4px' }}>
+                MOBILE / WHATSAPP NUMBER *
               </label>
               <div style={{ position: 'relative' }}>
-                <Phone size={18} color="#9CA3AF" style={{ position: 'absolute', left: '14px', top: '50%', transform: 'translateY(-50%)' }} />
+                <Phone size={16} color="#9CA3AF" style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)' }} />
                 <input
                   type="tel"
                   required
@@ -561,9 +348,9 @@ export default function RegisterPage({ onRegisterSuccess }) {
                   value={formData.phone}
                   onChange={e => setFormData({ ...formData, phone: e.target.value.replace(/[^0-9]/g, '') })}
                   style={{
-                    width: '100%', padding: '12px 14px 12px 42px', borderRadius: '12px',
+                    width: '100%', padding: '11px 12px 11px 38px', borderRadius: '12px',
                     border: '1px solid rgba(255,255,255,0.15)', background: '#1F2937',
-                    color: '#FFFFFF', fontSize: '0.9rem', outline: 'none'
+                    color: '#FFFFFF', fontSize: '0.85rem', outline: 'none'
                   }}
                 />
               </div>
@@ -571,34 +358,34 @@ export default function RegisterPage({ onRegisterSuccess }) {
 
             {/* Owner Username */}
             <div>
-              <label style={{ display: 'block', fontSize: '0.78rem', fontWeight: 800, color: '#DFBA67', marginBottom: '6px' }}>
+              <label style={{ display: 'block', fontSize: '0.74rem', fontWeight: 800, color: '#DFBA67', marginBottom: '4px' }}>
                 ADMIN LOGIN USERNAME *
               </label>
               <div style={{ position: 'relative' }}>
-                <User size={18} color="#9CA3AF" style={{ position: 'absolute', left: '14px', top: '50%', transform: 'translateY(-50%)' }} />
+                <User size={16} color="#9CA3AF" style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)' }} />
                 <input
                   type="text"
                   required
-                  placeholder="Choose admin username (e.g. royalsweets_admin)"
+                  placeholder="Choose admin username (e.g. royalsweets)"
                   value={formData.owner_username}
                   onChange={e => setFormData({ ...formData, owner_username: e.target.value })}
                   style={{
-                    width: '100%', padding: '12px 14px 12px 42px', borderRadius: '12px',
+                    width: '100%', padding: '11px 12px 11px 38px', borderRadius: '12px',
                     border: '1px solid rgba(255,255,255,0.15)', background: '#1F2937',
-                    color: '#FFFFFF', fontSize: '0.9rem', outline: 'none'
+                    color: '#FFFFFF', fontSize: '0.85rem', outline: 'none'
                   }}
                 />
               </div>
             </div>
 
             {/* Password & Confirm Password Grid */}
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
               <div>
-                <label style={{ display: 'block', fontSize: '0.74rem', fontWeight: 800, color: '#DFBA67', marginBottom: '6px' }}>
+                <label style={{ display: 'block', fontSize: '0.72rem', fontWeight: 800, color: '#DFBA67', marginBottom: '4px' }}>
                   PASSWORD *
                 </label>
                 <div style={{ position: 'relative' }}>
-                  <Lock size={16} color="#9CA3AF" style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)' }} />
+                  <Lock size={15} color="#9CA3AF" style={{ position: 'absolute', left: '10px', top: '50%', transform: 'translateY(-50%)' }} />
                   <input
                     type="password"
                     required
@@ -606,20 +393,20 @@ export default function RegisterPage({ onRegisterSuccess }) {
                     value={formData.owner_password}
                     onChange={e => setFormData({ ...formData, owner_password: e.target.value })}
                     style={{
-                      width: '100%', padding: '11px 12px 11px 36px', borderRadius: '12px',
+                      width: '100%', padding: '10px 10px 10px 32px', borderRadius: '12px',
                       border: '1px solid rgba(255,255,255,0.15)', background: '#1F2937',
-                      color: '#FFFFFF', fontSize: '0.85rem', outline: 'none'
+                      color: '#FFFFFF', fontSize: '0.82rem', outline: 'none'
                     }}
                   />
                 </div>
               </div>
 
               <div>
-                <label style={{ display: 'block', fontSize: '0.74rem', fontWeight: 800, color: '#DFBA67', marginBottom: '6px' }}>
-                  CONFIRM PASSWORD *
+                <label style={{ display: 'block', fontSize: '0.72rem', fontWeight: 800, color: '#DFBA67', marginBottom: '4px' }}>
+                  CONFIRM *
                 </label>
                 <div style={{ position: 'relative' }}>
-                  <Lock size={16} color="#9CA3AF" style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)' }} />
+                  <Lock size={15} color="#9CA3AF" style={{ position: 'absolute', left: '10px', top: '50%', transform: 'translateY(-50%)' }} />
                   <input
                     type="password"
                     required
@@ -627,9 +414,9 @@ export default function RegisterPage({ onRegisterSuccess }) {
                     value={formData.confirm_password}
                     onChange={e => setFormData({ ...formData, confirm_password: e.target.value })}
                     style={{
-                      width: '100%', padding: '11px 12px 11px 36px', borderRadius: '12px',
+                      width: '100%', padding: '10px 10px 10px 32px', borderRadius: '12px',
                       border: '1px solid rgba(255,255,255,0.15)', background: '#1F2937',
-                      color: '#FFFFFF', fontSize: '0.85rem', outline: 'none'
+                      color: '#FFFFFF', fontSize: '0.82rem', outline: 'none'
                     }}
                   />
                 </div>
@@ -637,15 +424,15 @@ export default function RegisterPage({ onRegisterSuccess }) {
             </div>
 
             {/* Select SaaS Subscription Plan */}
-            <div style={{ marginTop: '4px' }}>
-              <label style={{ display: 'block', fontSize: '0.76rem', fontWeight: 800, color: '#DFBA67', marginBottom: '6px' }}>
-                SELECT SAAS SUBSCRIPTION PLAN *
+            <div>
+              <label style={{ display: 'block', fontSize: '0.74rem', fontWeight: 800, color: '#DFBA67', marginBottom: '6px' }}>
+                SELECT PLAN TIER *
               </label>
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '8px' }}>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '6px' }}>
                 {[
-                  { key: 'basic', name: '⚡ Basic', price: '₹499/mo', desc: 'Digital QR Menu' },
-                  { key: 'pro', name: '👑 Pro', price: '₹999/mo', desc: 'WhatsApp + Reviews', popular: true },
-                  { key: 'enterprise', name: '🚀 Enterprise', price: '₹1,999/mo', desc: 'KOT + Printers' }
+                  { key: 'basic', name: 'Basic', price: '₹499/mo' },
+                  { key: 'pro', name: 'Pro', price: '₹999/mo', popular: true },
+                  { key: 'enterprise', name: 'Enterprise', price: '₹1,999/mo' }
                 ].map((p) => (
                   <div
                     key={p.key}
@@ -656,46 +443,28 @@ export default function RegisterPage({ onRegisterSuccess }) {
                     }}
                     style={{
                       border: formData.plan_tier === p.key ? '2px solid #FFD700' : '1px solid rgba(255,255,255,0.15)',
-                      background: formData.plan_tier === p.key ? 'rgba(255,215,0,0.12)' : 'rgba(255,255,255,0.03)',
-                      borderRadius: '12px', padding: '10px 8px', cursor: 'pointer', textAlign: 'center',
+                      background: formData.plan_tier === p.key ? 'rgba(255,215,0,0.15)' : 'rgba(255,255,255,0.03)',
+                      borderRadius: '10px', padding: '8px 4px', cursor: 'pointer', textAlign: 'center',
                       position: 'relative'
                     }}
                   >
-                    {p.popular && <span style={{ position: 'absolute', top: '-8px', right: '4px', background: '#DFBA67', color: '#000', fontSize: '0.55rem', fontWeight: 900, padding: '1px 5px', borderRadius: '4px' }}>BEST</span>}
-                    <div style={{ fontSize: '0.82rem', fontWeight: 900, color: formData.plan_tier === p.key ? '#FFD700' : '#FFF' }}>{p.name}</div>
-                    <div style={{ fontSize: '0.72rem', fontWeight: 800, color: '#34D399', margin: '2px 0' }}>{p.price}</div>
-                    <div style={{ fontSize: '0.62rem', color: '#9CA3AF' }}>{p.desc}</div>
+                    {p.popular && <span style={{ position: 'absolute', top: '-7px', right: '3px', background: '#DFBA67', color: '#000', fontSize: '0.5rem', fontWeight: 900, padding: '1px 4px', borderRadius: '4px' }}>POPULAR</span>}
+                    <div style={{ fontSize: '0.78rem', fontWeight: 900, color: formData.plan_tier === p.key ? '#FFD700' : '#FFF' }}>{p.name}</div>
+                    <div style={{ fontSize: '0.7rem', fontWeight: 800, color: '#34D399' }}>{p.price}</div>
                   </div>
                 ))}
               </div>
             </div>
 
-            {/* Plan Badge Indicator & Coupon Calculation */}
-            <div style={{
-              background: 'rgba(5,150,105,0.15)', border: '1px solid rgba(5,150,105,0.3)',
-              borderRadius: '12px', padding: '10px 14px', marginTop: '4px',
-              display: 'flex', alignItems: 'center', justifyContent: 'space-between'
-            }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                <ShieldCheck size={18} color="#34D399" />
-                <span style={{ fontSize: '0.8rem', color: '#D1D5DB', fontWeight: 700 }}>
-                  Includes <strong style={{ color: '#FFD700' }}>{formData.plan_tier.toUpperCase()} Plan 14-Day Free Trial</strong>
-                </span>
-              </div>
-              <span style={{ fontSize: '0.75rem', fontWeight: 900, color: '#34D399' }}>
-                {appliedCoupon ? `Saved ₹${appliedCoupon.discount}!` : '₹0 Today'}
-              </span>
-            </div>
-
-            {/* 🎟️ Promo / Coupon Code Input Field */}
-            <div style={{ marginTop: '2px' }}>
-              <label style={{ display: 'block', fontSize: '0.76rem', fontWeight: 800, color: '#DFBA67', marginBottom: '4px' }}>
+            {/* 🎟️ Promo Code Input Field */}
+            <div>
+              <label style={{ display: 'block', fontSize: '0.72rem', fontWeight: 800, color: '#DFBA67', marginBottom: '4px' }}>
                 🎟️ PROMO / COUPON CODE (OPTIONAL):
               </label>
-              <div style={{ display: 'flex', gap: '8px' }}>
+              <div style={{ display: 'flex', gap: '6px' }}>
                 <input
                   type="text"
-                  placeholder="e.g. LAUNCH50 or FIRST100"
+                  placeholder="e.g. LAUNCH50"
                   value={couponInput}
                   onChange={(e) => {
                     setCouponInput(e.target.value.toUpperCase());
@@ -703,16 +472,9 @@ export default function RegisterPage({ onRegisterSuccess }) {
                     setCouponMsg('');
                   }}
                   style={{
-                    flex: 1,
-                    padding: '10px 12px',
-                    borderRadius: '10px',
-                    border: '1px solid rgba(255,255,255,0.2)',
-                    background: '#1F2937',
-                    color: '#FFD700',
-                    fontSize: '0.86rem',
-                    fontWeight: 800,
-                    textTransform: 'uppercase',
-                    letterSpacing: '0.5px'
+                    flex: 1, padding: '8px 10px', borderRadius: '10px',
+                    border: '1px solid rgba(255,255,255,0.2)', background: '#1F2937',
+                    color: '#FFD700', fontSize: '0.82rem', fontWeight: 800, textTransform: 'uppercase'
                   }}
                 />
                 <button
@@ -721,43 +483,18 @@ export default function RegisterPage({ onRegisterSuccess }) {
                   disabled={couponLoading || !couponInput.trim()}
                   style={{
                     background: 'linear-gradient(135deg, #10B981 0%, #059669 100%)',
-                    color: '#FFFFFF',
-                    border: 'none',
-                    padding: '10px 16px',
-                    borderRadius: '10px',
-                    fontWeight: 800,
-                    fontSize: '0.8rem',
-                    cursor: couponLoading || !couponInput.trim() ? 'not-allowed' : 'pointer'
+                    color: '#FFFFFF', border: 'none', padding: '8px 12px', borderRadius: '10px',
+                    fontWeight: 800, fontSize: '0.76rem', cursor: couponLoading || !couponInput.trim() ? 'not-allowed' : 'pointer'
                   }}
                 >
-                  {couponLoading ? 'Validating...' : 'Apply'}
+                  {couponLoading ? '...' : 'Apply'}
                 </button>
               </div>
               {couponMsg && (
-                <div style={{
-                  fontSize: '0.74rem',
-                  fontWeight: 800,
-                  color: appliedCoupon ? '#34D399' : '#EF4444',
-                  marginTop: '4px',
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '4px'
-                }}>
-                  {appliedCoupon ? '✅ ' : '❌ '}{couponMsg}
+                <div style={{ fontSize: '0.72rem', fontWeight: 800, color: appliedCoupon ? '#34D399' : '#EF4444', marginTop: '4px' }}>
+                  {couponMsg}
                 </div>
               )}
-            </div>
-
-            {/* Automated Permission & Terms Agreement */}
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', marginTop: '6px', fontSize: '0.74rem', color: '#9CA3AF' }}>
-              <label style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer' }}>
-                <input type="checkbox" defaultChecked required style={{ accentColor: '#DFBA67', width: '15px', height: '15px' }} />
-                <span>Allow 1-Click WhatsApp & Order Notification Permissions</span>
-              </label>
-              <label style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer' }}>
-                <input type="checkbox" defaultChecked required style={{ accentColor: '#DFBA67', width: '15px', height: '15px' }} />
-                <span>I agree to KhanaMaster SaaS Terms & 14-Day Free Trial</span>
-              </label>
             </div>
 
             {/* Submit Button */}
@@ -765,28 +502,28 @@ export default function RegisterPage({ onRegisterSuccess }) {
               type="submit"
               disabled={loading}
               style={{
-                marginTop: '10px',
+                marginTop: '6px',
                 padding: '14px',
-                borderRadius: '14px',
+                borderRadius: '12px',
                 border: 'none',
                 background: 'linear-gradient(135deg, #FFD700 0%, #F59E0B 100%)',
                 color: '#0A0A0A',
-                fontSize: '0.95rem',
+                fontSize: '0.92rem',
                 fontWeight: 900,
                 cursor: loading ? 'not-allowed' : 'pointer',
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
                 gap: '8px',
-                boxShadow: '0 4px 20px rgba(245,158,11,0.4)',
+                boxShadow: '0 4px 18px rgba(245,158,11,0.4)',
                 transition: 'all 0.2s'
               }}
             >
               {loading ? (
-                <span>Provisioning Your Account... ⏳</span>
+                <span>Creating Account... ⏳</span>
               ) : (
                 <>
-                  <span>🚀 Start 14-Day Free Trial Now</span>
+                  <span>🚀 Register & Continue to Free Trial</span>
                   <ArrowRight size={18} />
                 </>
               )}

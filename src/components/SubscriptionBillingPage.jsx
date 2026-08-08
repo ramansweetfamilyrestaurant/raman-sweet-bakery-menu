@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { ShieldCheck, Sparkles, CreditCard, ArrowRight, CheckCircle2, AlertCircle, RefreshCw, ExternalLink } from 'lucide-react';
+import { ShieldCheck, Sparkles, ArrowRight, CheckCircle2, AlertCircle } from 'lucide-react';
 import { createCashfreeSubscription, verifyCashfreeSubscription } from '../api/client';
 
 export default function SubscriptionBillingPage({ restoInfo, token, onProceedToDashboard }) {
@@ -152,7 +152,7 @@ export default function SubscriptionBillingPage({ restoInfo, token, onProceedToD
 
   const formatDate = (d) => {
     try {
-      return d.toLocaleDateString('en-IN', { day: 'numeric', month: 'long', year: 'numeric' });
+      return d.toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' });
     } catch (e) {
       return d.toISOString().substring(0, 10);
     }
@@ -179,14 +179,14 @@ export default function SubscriptionBillingPage({ restoInfo, token, onProceedToD
 
     if (verifiedParam === 'true') {
       setMandateActive(true);
-      setStatusMsg('✅ Cashfree Mandate Authorized Successfully! 14-Day Free Trial is Active. Redirecting to Admin Dashboard...');
+      setStatusMsg('✅ Cashfree Mandate Authorized Successfully! 14-Day Free Trial Active. Redirecting...');
       localStorage.removeItem('pending_subscription_id');
       const timer = setTimeout(() => {
         if (onProceedToDashboard) onProceedToDashboard();
       }, 1500);
       return () => clearTimeout(timer);
     } else if (verifiedParam === 'false') {
-      setErrorMsg(`⚠️ Mandate authorization pending or not completed. Status: ${statusParam || 'PENDING'}`);
+      setErrorMsg(`⚠️ Subscription authorization pending or failed. Status: ${statusParam || 'PENDING'}`);
     } else if (subIdParam) {
       handleVerifySubscription(subIdParam);
     }
@@ -202,65 +202,62 @@ export default function SubscriptionBillingPage({ restoInfo, token, onProceedToD
     try {
       const authToken = token || localStorage.getItem('raman_admin_token') || localStorage.getItem('adminToken');
       if (!authToken) {
-        throw new Error('Authentication session token missing. Please log in again.');
+        throw new Error('Admin session token missing. Please register or log in again.');
       }
 
-      // Backend subscription-return endpoint handles the Cashfree form POST and redirects back
-      const returnUrl = `${window.location.origin}/api/payment/subscription-return`;
-      const couponCodeToPass = appliedCoupon?.code || localStorage.getItem('applied_coupon_code') || null;
-      const res = await createCashfreeSubscription(planKey, authToken, returnUrl, couponCodeToPass);
+      const activeCouponCode = appliedCoupon ? appliedCoupon.code : localStorage.getItem('applied_coupon_code');
 
-      if (!res.configured) {
-        setErrorMsg('⚠️ Cashfree Sandbox credentials are not configured in backend environment.');
-        setAuthorizing(false);
+      console.log('[Cashfree Checkout] Initiating subscription for plan_tier:', planKey, 'coupon:', activeCouponCode);
+      const subRes = await createCashfreeSubscription(planKey, activeCouponCode, authToken);
+
+      if (!subRes || (!subRes.subscription_id && !subRes.payment_session_id)) {
+        throw new Error(subRes?.error || subRes?.message || 'Failed to generate Cashfree subscription session');
+      }
+
+      const subscriptionId = subRes.subscription_id;
+
+      if (subscriptionId) {
+        localStorage.setItem('pending_subscription_id', subscriptionId);
+      }
+
+      setStatusMsg('🚀 Session generated! Opening Cashfree UPI AutoPay Checkout...');
+
+      // Mode A: Handle direct auth_url / payment_link returned by Cashfree
+      if (subRes.auth_url || subRes.payment_link) {
+        const checkoutUrl = subRes.auth_url || subRes.payment_link;
+        console.log('[Cashfree Checkout] Redirecting to auth_url:', checkoutUrl);
+        window.location.href = checkoutUrl;
         return;
       }
 
-      if (!res.success || !res.subscription_session_id) {
-        setErrorMsg(res.message || 'Failed to initialize Cashfree subscription session.');
-        setAuthorizing(false);
-        return;
-      }
-
-      // 1. Preserve subscription_id in localStorage for post-return verification fallback
-      if (res.subscription_id) {
-        localStorage.setItem('pending_subscription_id', res.subscription_id);
-      }
-
-      // 2. Ensure Cashfree SDK is ready (loaded eagerly, but fallback script append if needed)
-      if (!window.Cashfree) {
-        await new Promise((resolve, reject) => {
-          const script = document.createElement('script');
-          script.src = 'https://sdk.cashfree.com/js/v3/cashfree.js';
-          script.onload = resolve;
-          script.onerror = () => reject(new Error('Failed to load Cashfree JS SDK'));
-          document.body.appendChild(script);
-        });
-      }
-
-      // 3. Primary Checkout: Official Cashfree Subscriptions SDK Checkout using exact subscription_session_id
-      if (window.Cashfree && res.subscription_session_id) {
-        setStatusMsg('🚀 Opening Cashfree Subscription Mandate Checkout...');
-        const cashfree = window.Cashfree({ mode: res.is_sandbox ? 'sandbox' : 'production' });
+      // Mode B: Launch SDK Checkout Modal using Cashfree JS SDK v3
+      if (window.Cashfree && subRes.payment_session_id) {
+        const cashfree = window.Cashfree({ mode: subRes.environment || 'sandbox' });
+        console.log('[Cashfree SDK] Launching checkout for session:', subRes.payment_session_id);
         
-        // DO NOT set authorizing=false here to prevent UI button state blinking before redirect!
-        cashfree.subscriptionsCheckout({
-          subsSessionId: res.subscription_session_id,
-          redirectTarget: '_self'
+        cashfree.checkout({
+          paymentSessionId: subRes.payment_session_id,
+          returnUrl: subRes.return_url || `${window.location.origin}/api/payment/subscription-return?subscription_id=${subscriptionId}`
+        }).then(result => {
+          if (result.error) {
+            console.error('[Cashfree SDK Error]', result.error);
+            setErrorMsg(`Checkout error: ${result.error.message || 'Payment interrupted'}`);
+            setAuthorizing(false);
+          }
+          if (result.redirect) {
+            console.log('[Cashfree SDK Redirecting...]');
+          }
         });
-        return;
+      } else {
+        throw new Error('Cashfree Payment Gateway unavailable. Please refresh and try again.');
       }
-
-      setErrorMsg('Payment checkout could not be loaded. Please try again.');
-      setAuthorizing(false);
     } catch (err) {
-      console.error('Cashfree setup error:', err);
-      setErrorMsg(err.message || 'Failed to initiate Cashfree subscription.');
+      console.error('[Cashfree Subscription Error]', err);
+      setErrorMsg(err.message || 'Failed to start Cashfree checkout. Please try again.');
       setAuthorizing(false);
     }
   };
 
-  // Server-side Subscription Status Verification
   const handleVerifySubscription = async (subId) => {
     if (!subId) return;
     setVerifying(true);
@@ -286,15 +283,10 @@ export default function SubscriptionBillingPage({ restoInfo, token, onProceedToD
     }
   };
 
-  // Calculated Pricing Breakdown
   const originalPrice = planDetails.price;
-  const discountAmount = appliedCoupon ? Number(appliedCoupon.discount_amount || 0) : 0;
-  const firstPaymentPrice = appliedCoupon && appliedCoupon.final_first_payment_amount !== undefined
-    ? Number(appliedCoupon.final_first_payment_amount)
-    : Math.max(0, originalPrice - discountAmount);
-  const discountPercent = appliedCoupon?.discount_type === 'PERCENTAGE'
-    ? `${appliedCoupon.discount_value}% OFF`
-    : (appliedCoupon ? `₹${discountAmount} OFF` : null);
+  const discountAmount = appliedCoupon ? Number(appliedCoupon.discount_amount) : 0;
+  const discountPercent = appliedCoupon ? (appliedCoupon.discount_type === 'PERCENTAGE' ? `${appliedCoupon.discount_value}%` : `₹${appliedCoupon.discount_value}`) : '';
+  const firstPaymentPrice = Math.max(0, originalPrice - discountAmount);
 
   return (
     <div style={{
@@ -305,76 +297,60 @@ export default function SubscriptionBillingPage({ restoInfo, token, onProceedToD
       alignItems: 'center',
       justifyContent: 'center',
       padding: '24px 16px',
-      fontFamily: 'Inter, system-ui, sans-serif'
+      fontFamily: "'Plus Jakarta Sans', 'Inter', system-ui, sans-serif"
     }}>
       <div style={{
-        maxWidth: '580px',
+        maxWidth: '500px',
         width: '100%',
-        background: '#0D1F15',
-        borderRadius: '28px',
-        border: '2px solid #DFBA67',
-        boxShadow: '0 30px 80px rgba(0,0,0,0.85)',
-        padding: '36px 28px',
+        background: 'rgba(13, 31, 21, 0.9)',
+        backdropFilter: 'blur(20px)',
+        borderRadius: '24px',
+        border: '1.5px solid #DFBA67',
+        boxShadow: '0 25px 70px rgba(0,0,0,0.85)',
+        padding: '28px 20px',
         textAlign: 'center',
         position: 'relative'
       }}>
         {/* Header Icon */}
         <div style={{
-          width: '72px',
-          height: '72px',
+          width: '60px',
+          height: '60px',
           borderRadius: '50%',
           background: 'rgba(223,186,103,0.15)',
           color: '#DFBA67',
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'center',
-          margin: '0 auto 18px',
+          margin: '0 auto 14px',
           border: '2px solid #DFBA67',
-          boxShadow: '0 0 30px rgba(223,186,103,0.3)'
+          boxShadow: '0 0 24px rgba(223,186,103,0.3)'
         }}>
-          <Sparkles size={38} />
+          <Sparkles size={30} />
         </div>
 
-        <h1 style={{ fontSize: '1.6rem', fontWeight: 900, color: '#FFFFFF', margin: '0 0 6px 0', letterSpacing: '-0.5px' }}>
-          Complete Your Subscription Setup 🚀
+        <h1 style={{ fontSize: '1.45rem', fontWeight: 900, color: '#FFFFFF', margin: '0 0 4px 0', letterSpacing: '-0.3px' }}>
+          Activate 14-Day Free Trial 🚀
         </h1>
-        <p style={{ fontSize: '0.88rem', color: '#A7F3D0', margin: '0 0 20px 0', lineHeight: 1.5 }}>
-          Your restaurant account <strong>{activeResto?.name || localStorage.getItem('raman_admin_user') || 'Restaurant'}</strong> has been created. Activate your 14-day free trial by authorizing your subscription.
+        <p style={{ fontSize: '0.84rem', color: '#A7F3D0', margin: '0 0 18px 0', lineHeight: 1.4 }}>
+          Account <strong>{activeResto?.name || localStorage.getItem('raman_admin_user') || 'Restaurant'}</strong> ready! Authorize UPI AutoPay to start.
         </p>
 
-        {/* Transparent Notice Tag */}
-        <div style={{
-          display: 'inline-flex',
-          alignItems: 'center',
-          gap: '6px',
-          background: 'rgba(223,186,103,0.12)',
-          border: '1px solid rgba(223,186,103,0.3)',
-          borderRadius: '50px',
-          padding: '6px 14px',
-          fontSize: '0.76rem',
-          fontWeight: 800,
-          color: '#DFBA67',
-          marginBottom: '22px'
-        }}>
-          🛡️ 14-Day Free Trial • ₹0 Today • UPI AutoPay Authorization Required
-        </div>
-
-        {/* Selected Plan Summary Box */}
+        {/* Selected Plan Consolidated Card */}
         <div style={{
           background: 'linear-gradient(135deg, #164E2A 0%, #0A2315 100%)',
-          borderRadius: '20px',
-          padding: '20px',
+          borderRadius: '18px',
+          padding: '18px 16px',
           border: '1.5px solid #22C55E',
-          marginBottom: '24px',
+          marginBottom: '20px',
           textAlign: 'left',
-          boxShadow: '0 10px 25px rgba(0,0,0,0.4)'
+          boxShadow: '0 8px 20px rgba(0,0,0,0.4)'
         }}>
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '14px' }}>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '12px' }}>
             <div>
-              <span style={{ fontSize: '0.74rem', fontWeight: 800, color: '#86EFAC', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+              <span style={{ fontSize: '0.7rem', fontWeight: 800, color: '#86EFAC', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
                 SELECTED SAAS PLAN
               </span>
-              <h2 style={{ fontSize: '1.3rem', fontWeight: 900, color: '#FFFFFF', margin: '2px 0 0 0' }}>
+              <h2 style={{ fontSize: '1.15rem', fontWeight: 900, color: '#FFFFFF', margin: '2px 0 0 0' }}>
                 {planDetails.name}
               </h2>
             </div>
@@ -382,43 +358,37 @@ export default function SubscriptionBillingPage({ restoInfo, token, onProceedToD
               background: '#DFBA67',
               color: '#0A2315',
               fontWeight: 900,
-              fontSize: '0.82rem',
-              padding: '6px 14px',
+              fontSize: '0.78rem',
+              padding: '5px 12px',
               borderRadius: '50px',
-              boxShadow: '0 4px 12px rgba(223,186,103,0.4)'
+              boxShadow: '0 4px 10px rgba(223,186,103,0.3)'
             }}>
               {planDetails.badge}
             </span>
           </div>
 
-          {/* Detailed Subscription Billing Breakdown */}
+          {/* Consolidated Billing Table (Zero Duplication) */}
           <div style={{
             background: 'rgba(0,0,0,0.4)',
-            borderRadius: '14px',
-            padding: '14px 16px',
+            borderRadius: '12px',
+            padding: '12px 14px',
             border: '1px solid rgba(255,255,255,0.1)',
-            marginBottom: '16px',
+            marginBottom: '14px',
             display: 'flex',
             flexDirection: 'column',
             gap: '8px',
-            fontSize: '0.84rem'
+            fontSize: '0.82rem'
           }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', color: '#94A3B8' }}>
-              <span>Normal Plan Price:</span>
+              <span>Monthly Subscription Rate:</span>
               <span style={{ color: '#E2E8F0', fontWeight: 700 }}>₹{originalPrice}/month</span>
             </div>
 
             {appliedCoupon && Number(appliedCoupon.discount_amount) > 0 && (
-              <>
-                <div style={{ display: 'flex', justifyContent: 'space-between', color: '#34D399', fontWeight: 800 }}>
-                  <span>Applied Coupon Code:</span>
-                  <span>{appliedCoupon.code}</span>
-                </div>
-                <div style={{ display: 'flex', justifyContent: 'space-between', color: '#34D399', fontWeight: 800 }}>
-                  <span>Discount:</span>
-                  <span>-{discountPercent} (-₹{discountAmount})</span>
-                </div>
-              </>
+              <div style={{ display: 'flex', justifyContent: 'space-between', color: '#34D399', fontWeight: 800 }}>
+                <span>Coupon ({appliedCoupon.code}):</span>
+                <span>-{discountPercent} (-₹{discountAmount})</span>
+              </div>
             )}
 
             <div style={{ display: 'flex', justifyContent: 'space-between', color: '#86EFAC', fontWeight: 800 }}>
@@ -428,33 +398,23 @@ export default function SubscriptionBillingPage({ restoInfo, token, onProceedToD
 
             <div style={{ display: 'flex', justifyContent: 'space-between', color: '#94A3B8' }}>
               <span>Free Trial Duration:</span>
-              <span>14 Days</span>
+              <span style={{ color: '#86EFAC', fontWeight: 700 }}>14 Days (Until {formatDate(trialEnd)})</span>
             </div>
 
             <div style={{ borderTop: '1px solid rgba(255,255,255,0.12)', paddingTop: '8px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-              <span style={{ color: '#F1F5F9', fontWeight: 800 }}>First Paid Cycle Charge:</span>
-              <span style={{ fontSize: '1.25rem', fontWeight: 900, color: '#FFD700' }}>
+              <span style={{ color: '#F1F5F9', fontWeight: 800 }}>First Charge (Day 15):</span>
+              <span style={{ fontSize: '1.15rem', fontWeight: 900, color: '#FFD700' }}>
                 ₹{firstPaymentPrice}
               </span>
             </div>
-
-            <div style={{ display: 'flex', justifyContent: 'space-between', color: '#94A3B8', fontSize: '0.78rem' }}>
-              <span>First Charge Date:</span>
-              <span style={{ color: '#86EFAC', fontWeight: 700 }}>{formatDate(trialEnd)}</span>
-            </div>
-
-            <div style={{ display: 'flex', justifyContent: 'space-between', color: '#94A3B8', fontSize: '0.78rem' }}>
-              <span>Future Monthly Charges:</span>
-              <span style={{ color: '#E2E8F0', fontWeight: 700 }}>₹{originalPrice}/month</span>
-            </div>
           </div>
 
-          {/* 🎟️ Promo Code Input inside Billing Page */}
-          <div style={{ marginBottom: '16px' }}>
-            <label style={{ display: 'block', fontSize: '0.74rem', fontWeight: 800, color: '#DFBA67', marginBottom: '4px' }}>
-              🎟️ HAVE A PROMO / COUPON CODE?
+          {/* Promo / Coupon Input */}
+          <div>
+            <label style={{ display: 'block', fontSize: '0.72rem', fontWeight: 800, color: '#DFBA67', marginBottom: '4px' }}>
+              🎟️ HAVE A PROMO CODE?
             </label>
-            <div style={{ display: 'flex', gap: '8px' }}>
+            <div style={{ display: 'flex', gap: '6px' }}>
               <input
                 type="text"
                 placeholder="Enter code (e.g. LAUNCH50)"
@@ -462,12 +422,12 @@ export default function SubscriptionBillingPage({ restoInfo, token, onProceedToD
                 onChange={(e) => setCouponInput(e.target.value.toUpperCase())}
                 style={{
                   flex: 1,
-                  padding: '8px 12px',
+                  padding: '8px 10px',
                   borderRadius: '10px',
                   border: '1px solid rgba(255,255,255,0.2)',
                   background: 'rgba(0,0,0,0.4)',
                   color: '#FFD700',
-                  fontSize: '0.84rem',
+                  fontSize: '0.82rem',
                   fontWeight: 800,
                   textTransform: 'uppercase'
                 }}
@@ -480,52 +440,22 @@ export default function SubscriptionBillingPage({ restoInfo, token, onProceedToD
                   background: 'linear-gradient(135deg, #10B981 0%, #059669 100%)',
                   color: '#FFFFFF',
                   border: 'none',
-                  padding: '8px 14px',
+                  padding: '8px 12px',
                   borderRadius: '10px',
                   fontWeight: 800,
-                  fontSize: '0.78rem',
+                  fontSize: '0.76rem',
                   cursor: couponLoading || !couponInput.trim() ? 'not-allowed' : 'pointer'
                 }}
               >
-                {couponLoading ? 'Applying...' : 'Apply'}
+                {couponLoading ? '...' : 'Apply'}
               </button>
             </div>
             {couponMsg && (
-              <div style={{ fontSize: '0.74rem', fontWeight: 800, color: appliedCoupon ? '#34D399' : '#EF4444', marginTop: '4px' }}>
+              <div style={{ fontSize: '0.72rem', fontWeight: 800, color: appliedCoupon ? '#34D399' : '#EF4444', marginTop: '4px' }}>
                 {couponMsg}
               </div>
             )}
           </div>
-
-          {/* Trial Dates Grid */}
-          <div style={{
-            background: 'rgba(0,0,0,0.3)',
-            borderRadius: '14px',
-            padding: '14px',
-            border: '1px solid rgba(255,255,255,0.1)',
-            display: 'grid',
-            gridTemplateColumns: '1fr 1fr',
-            gap: '12px',
-            fontSize: '0.82rem'
-          }}>
-            <div>
-              <span style={{ color: '#94A3B8', display: 'block', fontSize: '0.74rem', fontWeight: 700 }}>
-                🎁 14-DAY FREE TRIAL START:
-              </span>
-              <strong style={{ color: '#FFFFFF', fontWeight: 800 }}>{formatDate(trialStart)}</strong>
-            </div>
-
-            <div>
-              <span style={{ color: '#86EFAC', display: 'block', fontSize: '0.74rem', fontWeight: 800 }}>
-                ⏰ TRIAL ENDS & FIRST CHARGE:
-              </span>
-              <strong style={{ color: '#86EFAC', fontWeight: 900 }}>{formatDate(trialEnd)}</strong>
-            </div>
-          </div>
-
-          <p style={{ fontSize: '0.76rem', color: '#94A3B8', margin: '12px 0 0 0', lineHeight: 1.4 }}>
-            🔒 <strong>₹0 will be charged today</strong>. Your first paid charge of ₹{firstPaymentPrice} will occur after the 14-day free trial on {formatDate(trialEnd)}. The coupon applies to the first paid cycle only.
-          </p>
         </div>
 
         {/* Messages */}
@@ -534,17 +464,17 @@ export default function SubscriptionBillingPage({ restoInfo, token, onProceedToD
             background: 'rgba(239, 68, 68, 0.15)',
             border: '1px solid #EF4444',
             color: '#FCA5A5',
-            padding: '12px 16px',
-            borderRadius: '14px',
-            fontSize: '0.84rem',
+            padding: '10px 14px',
+            borderRadius: '12px',
+            fontSize: '0.8rem',
             fontWeight: 700,
-            marginBottom: '20px',
+            marginBottom: '16px',
             textAlign: 'left',
             display: 'flex',
             alignItems: 'center',
-            gap: '10px'
+            gap: '8px'
           }}>
-            <AlertCircle size={20} color="#EF4444" style={{ flexShrink: 0 }} />
+            <AlertCircle size={18} color="#EF4444" style={{ flexShrink: 0 }} />
             <span>{errorMsg}</span>
           </div>
         )}
@@ -554,104 +484,84 @@ export default function SubscriptionBillingPage({ restoInfo, token, onProceedToD
             background: 'rgba(34, 197, 94, 0.15)',
             border: '1px solid #22C55E',
             color: '#86EFAC',
-            padding: '12px 16px',
-            borderRadius: '14px',
-            fontSize: '0.84rem',
+            padding: '10px 14px',
+            borderRadius: '12px',
+            fontSize: '0.8rem',
             fontWeight: 800,
-            marginBottom: '20px',
+            marginBottom: '16px',
             textAlign: 'left',
             display: 'flex',
             alignItems: 'center',
-            gap: '10px'
+            gap: '8px'
           }}>
-            <CheckCircle2 size={20} color="#22C55E" style={{ flexShrink: 0 }} />
+            <CheckCircle2 size={18} color="#22C55E" style={{ flexShrink: 0 }} />
             <span>{statusMsg}</span>
           </div>
         )}
 
-        {/* Mandate Status & Action Buttons */}
+        {/* Action Button */}
         {mandateActive ? (
-          <div style={{ textAlign: 'center' }}>
+          <div>
             <div style={{
               background: 'rgba(34,197,94,0.2)',
-              border: '2px solid #22C55E',
+              border: '1.5px solid #22C55E',
               color: '#86EFAC',
-              padding: '14px',
-              borderRadius: '16px',
+              padding: '12px',
+              borderRadius: '14px',
               fontWeight: 800,
-              fontSize: '0.92rem',
-              marginBottom: '20px'
+              fontSize: '0.86rem',
+              marginBottom: '16px'
             }}>
-              ✅ Cashfree Mandate Authorized • UPI AutoPay Active • 14-Day Free Trial Activated
+              ✅ Mandate Authorized • 14-Day Trial Active
             </div>
 
             <button
               onClick={onProceedToDashboard}
               style={{
                 width: '100%',
-                padding: '16px',
-                borderRadius: '9999px',
+                padding: '14px',
+                borderRadius: '50px',
                 border: 'none',
                 background: 'linear-gradient(135deg, #22C55E 0%, #16A34A 100%)',
                 color: '#FFFFFF',
-                fontSize: '1rem',
+                fontSize: '0.95rem',
                 fontWeight: 900,
                 cursor: 'pointer',
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
-                gap: '10px',
-                boxShadow: '0 6px 20px rgba(34,197,94,0.4)'
+                gap: '8px',
+                boxShadow: '0 4px 16px rgba(34,197,94,0.4)'
               }}
             >
               <span>Go to Admin Dashboard</span>
-              <ArrowRight size={20} />
+              <ArrowRight size={18} />
             </button>
           </div>
         ) : (
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
-            <button
-              onClick={handleStartFreeTrialMandate}
-              disabled={authorizing}
-              style={{
-                width: '100%',
-                padding: '16px',
-                borderRadius: '9999px',
-                border: 'none',
-                background: 'linear-gradient(135deg, #DFBA67 0%, #C59B3F 100%)',
-                color: '#0A2315',
-                fontSize: '1rem',
-                fontWeight: 900,
-                cursor: authorizing ? 'wait' : 'pointer',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                gap: '10px',
-                boxShadow: '0 6px 22px rgba(223,186,103,0.4)'
-              }}
-            >
-              <ShieldCheck size={22} />
-              <span>{authorizing ? 'Opening Cashfree Mandate...' : '🚀 Start 14-Day Free Trial & Authorize UPI AutoPay'}</span>
-            </button>
-
-            <button
-              onClick={() => {
-                alert('⚠️ Subscription authorization is incomplete. Please click "Start 14-Day Free Trial & Authorize UPI AutoPay" to activate your subscription and access the Admin Dashboard.');
-              }}
-              style={{
-                background: 'transparent',
-                border: '1px solid rgba(255,255,255,0.15)',
-                color: '#94A3B8',
-                padding: '12px',
-                borderRadius: '9999px',
-                fontSize: '0.82rem',
-                fontWeight: 700,
-                cursor: 'pointer'
-              }}
-            >
-              🔒 Admin Dashboard Locked (Subscription Authorization Pending)
-            </button>
-          </div>
+          <button
+            onClick={handleStartFreeTrialMandate}
+            disabled={authorizing}
+            style={{
+              width: '100%',
+              padding: '15px',
+              borderRadius: '50px',
+              border: 'none',
+              background: 'linear-gradient(135deg, #DFBA67 0%, #C59B3F 100%)',
+              color: '#0A2315',
+              fontSize: '0.95rem',
+              fontWeight: 900,
+              cursor: authorizing ? 'wait' : 'pointer',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              gap: '8px',
+              boxShadow: '0 6px 20px rgba(223,186,103,0.4)'
+            }}
+          >
+            <ShieldCheck size={20} />
+            <span>{authorizing ? 'Opening Cashfree...' : '🚀 Authorize UPI AutoPay & Activate 14-Day Trial'}</span>
+          </button>
         )}
       </div>
     </div>
