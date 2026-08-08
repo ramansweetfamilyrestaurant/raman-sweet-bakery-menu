@@ -43,6 +43,9 @@ export default function AdminDashboard({ token, username, onLogout, onReturnToMe
   const [showPrinterModal, setShowPrinterModal] = useState(false);
   const [toastMessage, setToastMessage] = useState('');
 
+  const [billingModal, setBillingModal] = useState(null);
+  const [subscriptionStatus, setSubscriptionStatus] = useState(null);
+
   // Settings Accordion Folders State
   const [openSettingsSections, setOpenSettingsSections] = useState({
     profile: true,
@@ -771,16 +774,18 @@ export default function AdminDashboard({ token, username, onLogout, onReturnToMe
   const loadData = async () => {
     setLoading(true);
     try {
-      const [catData, dishData, infoData, comboData] = await Promise.all([
+      const [catData, dishData, infoData, comboData, subStatusData] = await Promise.all([
         fetchCategories({ adminView: true, token }),
         fetchDishes({ adminView: true, token }),
         fetchRestaurantInfo(token),
-        fetchAdminCombos(token).catch(() => [])
+        fetchAdminCombos(token).catch(() => []),
+        fetch('/api/admin/subscription-status', { headers: { Authorization: `Bearer ${token}` } }).then(r => r.ok ? r.json() : null).catch(() => null)
       ]);
       setCategories(Array.isArray(catData) ? catData : []);
       setDishes(Array.isArray(dishData) ? dishData : []);
       setRestaurantInfo(infoData);
       setCombos(Array.isArray(comboData) ? comboData : []);
+      if (subStatusData) setSubscriptionStatus(subStatusData);
       if (infoData) {
         const defaultVis = { must_try: true, combo: true, special: true, under100: true };
         setSettingsForm({
@@ -4506,10 +4511,10 @@ export default function AdminDashboard({ token, username, onLogout, onReturnToMe
               </div>
               <div>
                 <h3 style={{ fontSize: '1rem', fontWeight: 900, margin: 0, color: '#DFBA67' }}>
-                  SECTION 3: 💳 BILLING & SUBSCRIPTION PLAN
+                  SECTION 3: 💳 BILLING & SUBSCRIPTION
                 </h3>
                 <span style={{ fontSize: '0.74rem', color: '#E2E8F0' }}>
-                  Manage active plan tier, view expiration date, and renew or upgrade plan
+                  Manage plan, view billing cycle, change plan or cancel
                 </span>
               </div>
             </div>
@@ -4523,75 +4528,333 @@ export default function AdminDashboard({ token, username, onLogout, onReturnToMe
               background: '#FFFFFF', border: '1.5px solid #DFBA67', borderTop: 'none',
               borderRadius: '0 0 16px 16px', padding: '20px', marginBottom: '14px'
             }}>
+              {/* Current Plan Status Card */}
               <div style={{ background: '#F8FAFC', borderRadius: '16px', padding: '18px', border: '1px solid #E2E8F0', marginBottom: '16px' }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
                   <div>
-                    <span style={{ fontSize: '0.75rem', fontWeight: 800, color: '#64748B', display: 'block' }}>CURRENT ACTIVE PLAN:</span>
+                    <span style={{ fontSize: '0.75rem', fontWeight: 800, color: '#64748B', display: 'block' }}>CURRENT PLAN:</span>
                     <strong style={{ fontSize: '1.2rem', fontWeight: 900, color: '#0F172A' }}>
-                      {(restaurantInfo?.plan_tier || 'pro').toUpperCase()} PLAN
+                      {(subscriptionStatus?.plan_tier || restaurantInfo?.plan_tier || 'pro').toUpperCase()} PLAN
                     </strong>
                   </div>
-                  <span style={{ background: '#DCFCE7', color: '#15803D', border: '1px solid #86EFAC', padding: '4px 12px', borderRadius: '50px', fontSize: '0.76rem', fontWeight: 900 }}>
-                    🟢 ACTIVE
+                  <span style={{
+                    background: subscriptionStatus?.cancel_requested_at ? '#FEF3C7' : (subscriptionStatus?.status === 'expired' || subscriptionStatus?.status === 'cancelled') ? '#FEE2E2' : '#DCFCE7',
+                    color: subscriptionStatus?.cancel_requested_at ? '#92400E' : (subscriptionStatus?.status === 'expired' || subscriptionStatus?.status === 'cancelled') ? '#B91C1C' : '#15803D',
+                    border: `1px solid ${subscriptionStatus?.cancel_requested_at ? '#FDE68A' : (subscriptionStatus?.status === 'expired' || subscriptionStatus?.status === 'cancelled') ? '#FCA5A5' : '#86EFAC'}`,
+                    padding: '4px 12px', borderRadius: '50px', fontSize: '0.76rem', fontWeight: 900
+                  }}>
+                    {subscriptionStatus?.cancel_requested_at ? '⏸️ CANCELLATION SCHEDULED' :
+                     subscriptionStatus?.status === 'trialing' ? '🟡 TRIAL' :
+                     subscriptionStatus?.status === 'active' ? '🟢 ACTIVE' :
+                     subscriptionStatus?.status === 'payment_failed' ? '🟠 PAYMENT FAILED' :
+                     subscriptionStatus?.status === 'expired' ? '🔴 EXPIRED' :
+                     subscriptionStatus?.status === 'cancelled' ? '🔴 CANCELLED' : '🟢 ACTIVE'}
                   </span>
                 </div>
 
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', fontSize: '0.82rem', borderTop: '1px solid #E2E8F0', paddingTop: '12px' }}>
                   <div>
-                    <span style={{ color: '#64748B', display: 'block', fontSize: '0.72rem', fontWeight: 700 }}>PLAN EXPIRY / TRIAL ENDS:</span>
-                    <strong style={{ color: '#0F172A' }}>{restaurantInfo?.trial_ends_at || restaurantInfo?.plan_expires_at || '14-Day Free Trial'}</strong>
+                    <span style={{ color: '#64748B', display: 'block', fontSize: '0.72rem', fontWeight: 700 }}>MONTHLY PRICE:</span>
+                    <strong style={{ color: '#059669' }}>
+                      ₹{subscriptionStatus?.plan_price || restaurantInfo?.plan_price || 999} / month
+                    </strong>
                   </div>
                   <div>
-                    <span style={{ color: '#64748B', display: 'block', fontSize: '0.72rem', fontWeight: 700 }}>MONTHLY AUTOPAY RATE:</span>
-                    <strong style={{ color: '#059669' }}>
-                      ₹{restaurantInfo?.plan_price || (restaurantInfo?.plan_tier === 'enterprise' ? 1999 : restaurantInfo?.plan_tier === 'basic' ? 499 : 999)} / month
+                    <span style={{ color: '#64748B', display: 'block', fontSize: '0.72rem', fontWeight: 700 }}>AUTO-RENEW:</span>
+                    <strong style={{ color: (subscriptionStatus?.auto_renew === 0 || subscriptionStatus?.auto_renew === false) ? '#DC2626' : '#059669' }}>
+                      {(subscriptionStatus?.auto_renew === 0 || subscriptionStatus?.auto_renew === false) ? '❌ OFF' : '✅ ON'}
+                    </strong>
+                  </div>
+                  <div>
+                    <span style={{ color: '#64748B', display: 'block', fontSize: '0.72rem', fontWeight: 700 }}>ACCESS UNTIL:</span>
+                    <strong style={{ color: '#0F172A' }}>
+                      {subscriptionStatus?.access_until ? new Date(subscriptionStatus.access_until).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' }) : 'N/A'}
+                    </strong>
+                  </div>
+                  <div>
+                    <span style={{ color: '#64748B', display: 'block', fontSize: '0.72rem', fontWeight: 700 }}>MANDATE STATUS:</span>
+                    <strong style={{ color: subscriptionStatus?.mandate_status === 'active' ? '#059669' : '#DC2626' }}>
+                      {subscriptionStatus?.mandate_status === 'active' ? '🟢 ACTIVE' : subscriptionStatus?.mandate_status === 'cancelled' ? '🔴 CANCELLED' : '🟡 PENDING'}
                     </strong>
                   </div>
                 </div>
 
-                <div style={{ marginTop: '12px', background: '#FFFBEB', border: '1px solid #FDE68A', padding: '10px 14px', borderRadius: '10px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                  <div style={{ fontSize: '0.76rem', color: '#B45309', fontWeight: 800 }}>
-                    ⚡ RECURRING AUTOPAY: <span style={{ color: restaurantInfo?.mandate_status === 'cancelled' ? '#DC2626' : '#059669' }}>{restaurantInfo?.mandate_status === 'cancelled' ? '🔴 CANCELLED' : '🟢 ACTIVE (UPI Autopay Authorized)'}</span>
+                {/* Cancellation Scheduled Notice */}
+                {subscriptionStatus?.cancel_requested_at && (
+                  <div style={{ marginTop: '12px', background: '#FEF3C7', border: '1px solid #FDE68A', padding: '12px 14px', borderRadius: '10px' }}>
+                    <div style={{ fontSize: '0.82rem', color: '#92400E', fontWeight: 800 }}>
+                      ⏸️ Cancellation Scheduled
+                    </div>
+                    <div style={{ fontSize: '0.78rem', color: '#78350F', marginTop: '4px' }}>
+                      Your subscription will not renew automatically. You continue to have full access until{' '}
+                      <strong>{subscriptionStatus?.access_until ? new Date(subscriptionStatus.access_until).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' }) : 'the end of your current period'}</strong>.
+                      Your restaurant data will remain safe.
+                    </div>
                   </div>
-                  {restaurantInfo?.mandate_status !== 'cancelled' && (
-                    <button
-                      onClick={async () => {
-                        if (window.confirm('Are you sure you want to cancel your automatic UPI Autopay recurring subscription?')) {
+                )}
+
+                {/* Scheduled Plan Change Notice */}
+                {subscriptionStatus?.scheduled_plan_key && (
+                  <div style={{ marginTop: '12px', background: '#EFF6FF', border: '1px solid #BFDBFE', padding: '12px 14px', borderRadius: '10px' }}>
+                    <div style={{ fontSize: '0.82rem', color: '#1E40AF', fontWeight: 800 }}>
+                      📋 Plan Change Scheduled
+                    </div>
+                    <div style={{ fontSize: '0.78rem', color: '#1E3A5F', marginTop: '4px' }}>
+                      Switching to <strong>{subscriptionStatus.scheduled_plan_key.toUpperCase()}</strong> plan on{' '}
+                      <strong>{subscriptionStatus?.plan_change_effective_at ? new Date(subscriptionStatus.plan_change_effective_at).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' }) : 'next billing cycle'}</strong>.
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              {/* Change Plan Section */}
+              {!subscriptionStatus?.cancel_requested_at && (
+                <div style={{ marginBottom: '16px' }}>
+                  <div style={{ fontSize: '0.82rem', fontWeight: 900, color: '#0F172A', marginBottom: '10px' }}>📦 CHANGE PLAN</div>
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '8px' }}>
+                    {[
+                      { key: 'basic', name: 'Basic', price: 499, features: ['Digital Menu', 'QR Code', 'Order Mgmt'] },
+                      { key: 'pro', name: 'Pro', price: 999, features: ['Everything in Basic', 'WhatsApp', 'Google Reviews', 'Analytics'] },
+                      { key: 'enterprise', name: 'Enterprise', price: 1999, features: ['Everything in Pro', 'Direct Ordering', 'Priority Support', 'Unlimited Combos'] }
+                    ].map(p => {
+                      const currentPlan = (subscriptionStatus?.plan_tier || restaurantInfo?.plan_tier || 'pro').toLowerCase();
+                      const isCurrent = currentPlan === p.key;
+                      const isScheduled = subscriptionStatus?.scheduled_plan_key === p.key;
+                      return (
+                        <div
+                          key={p.key}
+                          onClick={() => {
+                            if (isCurrent || isScheduled) return;
+                            setBillingModal({ type: 'change-plan', plan: p, currentPlan });
+                          }}
+                          style={{
+                            background: isCurrent ? '#F0FDF4' : isScheduled ? '#EFF6FF' : '#FFFFFF',
+                            border: `2px solid ${isCurrent ? '#22C55E' : isScheduled ? '#3B82F6' : '#E2E8F0'}`,
+                            borderRadius: '12px', padding: '12px', cursor: isCurrent || isScheduled ? 'default' : 'pointer',
+                            textAlign: 'center', transition: 'all 0.2s',
+                            opacity: isCurrent ? 0.8 : 1
+                          }}
+                        >
+                          <div style={{ fontSize: '0.72rem', fontWeight: 900, color: isCurrent ? '#15803D' : '#0F172A', marginBottom: '4px' }}>
+                            {p.name.toUpperCase()}
+                          </div>
+                          <div style={{ fontSize: '1rem', fontWeight: 900, color: '#0F172A' }}>₹{p.price}</div>
+                          <div style={{ fontSize: '0.68rem', color: '#64748B' }}>/month</div>
+                          {isCurrent && <div style={{ fontSize: '0.68rem', color: '#15803D', fontWeight: 800, marginTop: '6px' }}>✓ Current</div>}
+                          {isScheduled && <div style={{ fontSize: '0.68rem', color: '#2563EB', fontWeight: 800, marginTop: '6px' }}>📋 Scheduled</div>}
+                          {!isCurrent && !isScheduled && (
+                            <div style={{ fontSize: '0.68rem', color: '#3B82F6', fontWeight: 800, marginTop: '6px', cursor: 'pointer' }}>Select →</div>
+                          )}
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
+
+              {/* Cancel Subscription Section */}
+              {!subscriptionStatus?.cancel_requested_at && subscriptionStatus?.mandate_status !== 'cancelled' && (subscriptionStatus?.status === 'active' || subscriptionStatus?.status === 'trialing') && (
+                <button
+                  onClick={() => setBillingModal({ type: 'cancel' })}
+                  style={{
+                    width: '100%', padding: '12px', borderRadius: '10px',
+                    background: '#FEF2F2', color: '#B91C1C', border: '1px solid #FCA5A5',
+                    fontWeight: 800, fontSize: '0.82rem', cursor: 'pointer',
+                    display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px'
+                  }}
+                >
+                  🛑 Cancel Subscription
+                </button>
+              )}
+
+              {/* ==================== BILLING MODALS ==================== */}
+              {billingModal && billingModal.type === 'cancel' && (
+                <div style={{
+                  position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
+                  background: 'rgba(0,0,0,0.6)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 10000, padding: '20px'
+                }}>
+                  <div style={{ background: '#FFFFFF', borderRadius: '20px', padding: '28px', maxWidth: '420px', width: '100%', boxShadow: '0 20px 60px rgba(0,0,0,0.3)' }}>
+                    <div style={{ textAlign: 'center', marginBottom: '20px' }}>
+                      <div style={{ fontSize: '2.5rem', marginBottom: '8px' }}>⚠️</div>
+                      <h3 style={{ fontSize: '1.1rem', fontWeight: 900, color: '#0F172A', margin: '0 0 8px 0' }}>Cancel Subscription?</h3>
+                      <p style={{ fontSize: '0.84rem', color: '#64748B', margin: 0, lineHeight: 1.5 }}>
+                        Your subscription will not renew automatically.
+                      </p>
+                    </div>
+                    <div style={{ background: '#F0FDF4', border: '1px solid #86EFAC', borderRadius: '12px', padding: '14px', marginBottom: '16px' }}>
+                      <div style={{ fontSize: '0.82rem', color: '#15803D', fontWeight: 700 }}>
+                        ✅ You will continue to have full access until{' '}
+                        <strong>{subscriptionStatus?.access_until ? new Date(subscriptionStatus.access_until).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' }) : 'the end of your current period'}</strong>.
+                      </div>
+                      <div style={{ fontSize: '0.78rem', color: '#166534', marginTop: '6px' }}>
+                        ✅ Your restaurant data, menu, orders, and settings will remain safe.
+                      </div>
+                    </div>
+                    <div style={{ display: 'flex', gap: '10px' }}>
+                      <button
+                        onClick={() => setBillingModal(null)}
+                        style={{
+                          flex: 1, padding: '12px', borderRadius: '10px', border: '2px solid #22C55E',
+                          background: '#F0FDF4', color: '#15803D', fontWeight: 900, fontSize: '0.88rem', cursor: 'pointer'
+                        }}
+                      >
+                        Keep Subscription
+                      </button>
+                      <button
+                        onClick={async () => {
                           try {
                             const res = await fetch('/api/payment/cancel-mandate', {
                               method: 'POST',
                               headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
-                              body: JSON.stringify({ restaurant_id: restaurantInfo?.id || 1 })
+                              body: JSON.stringify({})
                             });
                             const data = await res.json();
-                            alert(data.message || 'Autopay Cancelled');
+                            setBillingModal({ type: 'cancel-success', data });
                             loadData();
                           } catch {
-                            alert('Failed to cancel Autopay mandate');
+                            alert('Failed to cancel. Please try again.');
                           }
-                        }
-                      }}
-                      style={{ background: '#FEE2E2', color: '#B91C1C', border: '1px solid #FCA5A5', padding: '4px 10px', borderRadius: '6px', fontSize: '0.7rem', fontWeight: 900, cursor: 'pointer' }}
-                    >
-                      🛑 Cancel Autopay
-                    </button>
-                  )}
+                        }}
+                        style={{
+                          flex: 1, padding: '12px', borderRadius: '10px', border: 'none',
+                          background: '#DC2626', color: '#FFFFFF', fontWeight: 900, fontSize: '0.88rem', cursor: 'pointer'
+                        }}
+                      >
+                        Cancel Auto-Renewal
+                      </button>
+                    </div>
+                  </div>
                 </div>
-              </div>
+              )}
 
-              <button
-                onClick={() => setShowPaymentModal(true)}
-                style={{
-                  width: '100%', padding: '14px', borderRadius: '14px', border: 'none',
-                  background: 'linear-gradient(135deg, #10B981 0%, #059669 100%)', color: '#FFFFFF',
-                  fontWeight: 900, fontSize: '0.95rem', cursor: 'pointer',
-                  display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px',
-                  boxShadow: '0 4px 16px rgba(16,185,129,0.35)'
-                }}
-              >
-                <CreditCard size={18} />
-                <span>💳 Upgrade or Renew Subscription Now</span>
-              </button>
+              {billingModal && billingModal.type === 'cancel-success' && (
+                <div style={{
+                  position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
+                  background: 'rgba(0,0,0,0.6)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 10000, padding: '20px'
+                }}>
+                  <div style={{ background: '#FFFFFF', borderRadius: '20px', padding: '28px', maxWidth: '420px', width: '100%', textAlign: 'center' }}>
+                    <div style={{ fontSize: '2.5rem', marginBottom: '8px' }}>✅</div>
+                    <h3 style={{ fontSize: '1.1rem', fontWeight: 900, color: '#0F172A', margin: '0 0 12px 0' }}>Cancellation Scheduled</h3>
+                    <p style={{ fontSize: '0.84rem', color: '#64748B', lineHeight: 1.5 }}>
+                      Auto-renewal is <strong>OFF</strong>. Access continues until{' '}
+                      <strong>{billingModal.data?.access_until ? new Date(billingModal.data.access_until).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' }) : 'the end of your current period'}</strong>.
+                    </p>
+                    <button
+                      onClick={() => { setBillingModal(null); loadData(); }}
+                      style={{
+                        marginTop: '16px', padding: '12px 32px', borderRadius: '10px', border: 'none',
+                        background: 'linear-gradient(135deg, #10B981, #059669)', color: '#FFFFFF',
+                        fontWeight: 900, fontSize: '0.9rem', cursor: 'pointer'
+                      }}
+                    >
+                      OK, Got It
+                    </button>
+                  </div>
+                </div>
+              )}
+
+              {billingModal && billingModal.type === 'change-plan' && (
+                <div style={{
+                  position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
+                  background: 'rgba(0,0,0,0.6)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 10000, padding: '20px'
+                }}>
+                  <div style={{ background: '#FFFFFF', borderRadius: '20px', padding: '28px', maxWidth: '420px', width: '100%' }}>
+                    <div style={{ textAlign: 'center', marginBottom: '16px' }}>
+                      <div style={{ fontSize: '2rem', marginBottom: '8px' }}>📦</div>
+                      <h3 style={{ fontSize: '1.1rem', fontWeight: 900, color: '#0F172A', margin: 0 }}>
+                        Change to {billingModal.plan?.name} Plan?
+                      </h3>
+                    </div>
+                    <div style={{ background: '#F8FAFC', border: '1px solid #E2E8F0', borderRadius: '12px', padding: '14px', marginBottom: '16px' }}>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '8px' }}>
+                        <span style={{ fontSize: '0.82rem', color: '#64748B' }}>Current:</span>
+                        <strong style={{ fontSize: '0.82rem', color: '#0F172A' }}>{billingModal.currentPlan?.toUpperCase()}</strong>
+                      </div>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '8px' }}>
+                        <span style={{ fontSize: '0.82rem', color: '#64748B' }}>New Plan:</span>
+                        <strong style={{ fontSize: '0.82rem', color: '#2563EB' }}>{billingModal.plan?.name?.toUpperCase()}</strong>
+                      </div>
+                      <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                        <span style={{ fontSize: '0.82rem', color: '#64748B' }}>New Price:</span>
+                        <strong style={{ fontSize: '0.82rem', color: '#059669' }}>₹{billingModal.plan?.price}/month</strong>
+                      </div>
+                    </div>
+                    <div style={{ background: '#EFF6FF', border: '1px solid #BFDBFE', borderRadius: '10px', padding: '12px', marginBottom: '16px' }}>
+                      <div style={{ fontSize: '0.78rem', color: '#1E40AF', lineHeight: 1.5 }}>
+                        {subscriptionStatus?.status === 'trialing' || subscriptionStatus?.status === 'pending'
+                          ? <>ℹ️ Your trial continues unchanged. First paid charge after trial will be <strong>₹{billingModal.plan?.price}/month</strong>.</>
+                          : <>ℹ️ Your current plan continues until <strong>{subscriptionStatus?.access_until ? new Date(subscriptionStatus.access_until).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' }) : 'end of period'}</strong>. New plan activates from your next billing cycle. No immediate charge.</>
+                        }
+                      </div>
+                    </div>
+                    <div style={{ display: 'flex', gap: '10px' }}>
+                      <button
+                        onClick={() => setBillingModal(null)}
+                        style={{
+                          flex: 1, padding: '12px', borderRadius: '10px', border: '1px solid #E2E8F0',
+                          background: '#FFFFFF', color: '#64748B', fontWeight: 800, fontSize: '0.88rem', cursor: 'pointer'
+                        }}
+                      >
+                        Cancel
+                      </button>
+                      <button
+                        onClick={async () => {
+                          try {
+                            const res = await fetch('/api/payment/change-plan', {
+                              method: 'POST',
+                              headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+                              body: JSON.stringify({ plan: billingModal.plan?.key })
+                            });
+                            const data = await res.json();
+                            if (data.success) {
+                              setBillingModal({ type: 'change-plan-success', data });
+                              loadData();
+                            } else {
+                              alert(data.message || data.error || 'Failed to change plan');
+                            }
+                          } catch {
+                            alert('Failed to change plan. Please try again.');
+                          }
+                        }}
+                        style={{
+                          flex: 1, padding: '12px', borderRadius: '10px', border: 'none',
+                          background: 'linear-gradient(135deg, #2563EB, #1D4ED8)', color: '#FFFFFF',
+                          fontWeight: 900, fontSize: '0.88rem', cursor: 'pointer'
+                        }}
+                      >
+                        Confirm Plan Change
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {billingModal && billingModal.type === 'change-plan-success' && (
+                <div style={{
+                  position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
+                  background: 'rgba(0,0,0,0.6)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 10000, padding: '20px'
+                }}>
+                  <div style={{ background: '#FFFFFF', borderRadius: '20px', padding: '28px', maxWidth: '420px', width: '100%', textAlign: 'center' }}>
+                    <div style={{ fontSize: '2.5rem', marginBottom: '8px' }}>✅</div>
+                    <h3 style={{ fontSize: '1.1rem', fontWeight: 900, color: '#0F172A', margin: '0 0 12px 0' }}>
+                      {billingModal.data?.effective === 'immediate' ? 'Plan Changed!' : 'Plan Change Scheduled!'}
+                    </h3>
+                    <p style={{ fontSize: '0.84rem', color: '#64748B', lineHeight: 1.5 }}>
+                      {billingModal.data?.message || 'Your plan has been updated.'}
+                    </p>
+                    <button
+                      onClick={() => { setBillingModal(null); loadData(); }}
+                      style={{
+                        marginTop: '16px', padding: '12px 32px', borderRadius: '10px', border: 'none',
+                        background: 'linear-gradient(135deg, #10B981, #059669)', color: '#FFFFFF',
+                        fontWeight: 900, fontSize: '0.9rem', cursor: 'pointer'
+                      }}
+                    >
+                      OK, Got It
+                    </button>
+                  </div>
+                </div>
+              )}
             </div>
           )}
 

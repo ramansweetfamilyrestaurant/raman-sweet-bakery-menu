@@ -6,16 +6,74 @@ export async function checkExpiredSubscriptions() {
     // 7-day grace period threshold (7 * 86400 * 1000 ms)
     const graceThresholdISO = new Date(Date.now() - 7 * 86400 * 1000).toISOString();
     
-    // Select restaurants where trial AND plan expiry have both passed grace threshold
+    // === 1. Handle cancel-requested subscriptions whose period has ended ===
+    try {
+      const cancelledSubs = await query(`
+        SELECT s.id, s.restaurant_id, s.current_period_end, s.trial_end, s.status,
+               r.trial_ends_at, r.plan_expires_at, r.name
+        FROM subscriptions s
+        JOIN restaurants r ON r.id = s.restaurant_id
+        WHERE s.cancel_requested_at IS NOT NULL
+          AND s.auto_renew = 0
+          AND s.status NOT IN ('cancelled', 'expired')
+      `);
+
+      for (const sub of (cancelledSubs || [])) {
+        const periodEnd = sub.current_period_end || sub.trial_end || sub.trial_ends_at || sub.plan_expires_at;
+        if (periodEnd && new Date(periodEnd) < new Date()) {
+          await query("UPDATE subscriptions SET status = 'cancelled', cancelled_at = COALESCE(cancelled_at, CURRENT_TIMESTAMP) WHERE id = $1", [sub.id]);
+          await query('UPDATE restaurants SET active = 0 WHERE id = $1', [sub.restaurant_id]);
+          console.log(`🔒 Cancel-requested subscription expired for: ${sub.name} (ID: ${sub.restaurant_id})`);
+        }
+      }
+    } catch (e) { console.warn('Cron cancel-requested check error:', e.message); }
+
+    // === 2. Handle scheduled plan changes whose effective date has passed ===
+    try {
+      const scheduledChanges = await query(`
+        SELECT s.id, s.restaurant_id, s.scheduled_plan_key, s.plan_change_effective_at, r.name
+        FROM subscriptions s
+        JOIN restaurants r ON r.id = s.restaurant_id
+        WHERE s.scheduled_plan_key IS NOT NULL
+          AND s.plan_change_effective_at IS NOT NULL
+          AND s.plan_change_effective_at <= $1
+          AND s.status IN ('active', 'trialing')
+      `, [nowISO]);
+
+      for (const sub of (scheduledChanges || [])) {
+        const planRows = await query('SELECT * FROM saas_plans WHERE LOWER(key) = $1', [sub.scheduled_plan_key.toLowerCase()]);
+        const newPlan = planRows[0];
+        if (newPlan) {
+          await query(
+            `UPDATE subscriptions SET plan_id = $1, amount = $2, scheduled_plan_key = NULL, plan_change_effective_at = NULL, updated_at = $3 WHERE id = $4`,
+            [newPlan.id, Number(newPlan.price), nowISO, sub.id]
+          );
+          await query(
+            `UPDATE restaurants SET plan_tier = $1, plan_price = $2 WHERE id = $3`,
+            [newPlan.key, Number(newPlan.price), sub.restaurant_id]
+          );
+          console.log(`📋 Scheduled plan change activated: ${sub.name} (ID: ${sub.restaurant_id}) → ${newPlan.key} (₹${newPlan.price})`);
+        }
+      }
+    } catch (e) { console.warn('Cron scheduled plan change error:', e.message); }
+
+    // === 3. Original: Expire subscriptions beyond grace period ===
     const expiredRestos = await query(`
-      SELECT id, name, slug, plan_expires_at, trial_ends_at
-      FROM restaurants
-      WHERE (active = 1 OR active = true)
+      SELECT r.id, r.name, r.slug, r.plan_expires_at, r.trial_ends_at
+      FROM restaurants r
+      WHERE (r.active = 1 OR r.active = true)
         AND (
-          (plan_expires_at IS NOT NULL AND plan_expires_at < $1)
-          OR (trial_ends_at IS NOT NULL AND trial_ends_at < $1)
+          (r.plan_expires_at IS NOT NULL AND r.plan_expires_at < $1)
+          OR (r.trial_ends_at IS NOT NULL AND r.trial_ends_at < $1)
         )
-    `, [graceThresholdISO]);
+        AND NOT EXISTS (
+          SELECT 1 FROM subscriptions s
+          WHERE s.restaurant_id = r.id
+            AND s.cancel_requested_at IS NOT NULL
+            AND s.status NOT IN ('cancelled', 'expired')
+            AND (s.current_period_end IS NOT NULL AND s.current_period_end >= $2)
+        )
+    `, [graceThresholdISO, nowISO]);
 
     if (expiredRestos && expiredRestos.length > 0) {
       console.log(`⏰ Found ${expiredRestos.length} expired restaurant subscription(s) beyond grace period. Updating status to expired...`);

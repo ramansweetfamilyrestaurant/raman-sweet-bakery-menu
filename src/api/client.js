@@ -555,3 +555,28 @@ export async function verifyCashfreeSubscription(subscriptionId, token) {
   return handleResponse(res, 'Failed to verify subscription status');
 }
 
+export async function cancelSubscription(token, reason) {
+  const res = await fetch(`${API_BASE}/payment/cancel-mandate`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      Authorization: `Bearer ${token}`,
+    },
+    body: JSON.stringify({ reason: reason || null }),
+  });
+  return handleResponse(res, 'Failed to cancel subscription');
+}
+
+export async function changePlan(planKey, token) {
+  const res = await fetch(`${API_BASE}/payment/change-plan`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      Authorization: `Bearer ${token}`,
+    },
+    body: JSON.stringify({ plan: planKey }),
+  });
+  return handleResponse(res, 'Failed to change plan');
+}
+
+

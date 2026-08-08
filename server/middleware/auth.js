@@ -20,7 +20,7 @@ export async function checkSubscriptionStatus(restaurantId) {
     let isTrialing = false;
     const expStr = resto.trial_ends_at || resto.plan_expires_at;
     if (expStr) {
-      const trialExp = new Date(expStr.includes('T') ? expStr : `${expStr}T23:59:59Z`);
+      const trialExp = new Date(String(expStr).includes('T') ? expStr : `${expStr}T23:59:59Z`);
       if (!isNaN(trialExp.getTime()) && trialExp >= now) {
         isTrialing = true;
       }
@@ -30,8 +30,31 @@ export async function checkSubscriptionStatus(restaurantId) {
     const subRows = await query('SELECT * FROM subscriptions WHERE restaurant_id = $1 ORDER BY id DESC LIMIT 1', [restaurantId]);
     const sub = subRows[0];
 
+    // Active paid subscription
     if (sub && sub.status === 'active') {
-      return { status: 'active', active: true, resto, sub };
+      // Even if cancel_requested, if current_period_end is in the future, still active
+      if (sub.cancel_requested_at && sub.current_period_end) {
+        const periodEnd = new Date(sub.current_period_end);
+        if (periodEnd >= now) {
+          return { status: 'active', active: true, resto, sub };
+        }
+      } else {
+        return { status: 'active', active: true, resto, sub };
+      }
+    }
+
+    // Trialing subscription with cancel requested but trial not ended yet
+    if (sub && sub.cancel_requested_at && (sub.status === 'trialing' || sub.status === 'active')) {
+      if (isTrialing) {
+        return { status: 'trialing', active: true, resto, sub };
+      }
+      // Check current_period_end
+      if (sub.current_period_end) {
+        const periodEnd = new Date(sub.current_period_end);
+        if (periodEnd >= now) {
+          return { status: 'active', active: true, resto, sub };
+        }
+      }
     }
 
     if (isTrialing) {

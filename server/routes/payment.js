@@ -460,7 +460,9 @@ const handleCashfreeWebhook = async (req, res) => {
 
       else if (eventType === 'SUBSCRIPTION_CANCELLED') {
         if (restoId) {
-          await txQuery("UPDATE subscriptions SET status = 'cancelled', cancelled_at = CURRENT_TIMESTAMP WHERE gateway_subscription_id = $1", [subscriptionId]);
+          // Set cancel_requested_at and auto_renew=0, but DO NOT immediately expire
+          // Let cron determine when access actually ends based on current_period_end/trial_ends_at
+          await txQuery(`UPDATE subscriptions SET cancel_requested_at = COALESCE(cancel_requested_at, CURRENT_TIMESTAMP), auto_renew = 0, cancelled_at = CURRENT_TIMESTAMP WHERE gateway_subscription_id = $1`, [subscriptionId]);
           await txQuery("UPDATE restaurants SET mandate_status = 'cancelled', auto_debit_enabled = 0 WHERE id = $1", [restoId]);
         }
       }
@@ -546,7 +548,7 @@ router.get('/history', authenticateToken, async (req, res) => {
 });
 
 // ==========================================
-// 5. CANCEL MANDATE
+// 5. CANCEL MANDATE / SUBSCRIPTION
 // ==========================================
 router.post('/cancel-mandate', authenticateToken, async (req, res) => {
   try {
@@ -556,25 +558,217 @@ router.post('/cancel-mandate', authenticateToken, async (req, res) => {
     }
     const targetRestoId = restoId || 1;
 
+    // Find the current active/trialing subscription
+    const subRows = await query(
+      `SELECT s.*, r.trial_ends_at, r.plan_expires_at, r.mandate_status
+       FROM subscriptions s
+       JOIN restaurants r ON r.id = s.restaurant_id
+       WHERE s.restaurant_id = $1 AND s.status IN ('trialing', 'pending', 'active')
+       ORDER BY s.id DESC LIMIT 1`,
+      [targetRestoId]
+    );
+    const sub = subRows[0];
+
+    if (!sub) {
+      return res.json({ success: false, error: 'No active subscription found' });
+    }
+
+    // Idempotency: if already cancel-requested, return existing state
+    if (sub.cancel_requested_at) {
+      const accessUntil = sub.current_period_end || sub.trial_ends_at || sub.plan_expires_at;
+      return res.json({
+        success: true,
+        already_cancelled: true,
+        cancel_requested_at: sub.cancel_requested_at,
+        auto_renew: 0,
+        access_until: accessUntil,
+        message: 'Cancellation was already requested. Access continues until the current period ends.'
+      });
+    }
+
+    // Call Cashfree to cancel future AutoPay (if gateway subscription exists)
+    if (sub.gateway_subscription_id && sub.mandate_status === 'active') {
+      try {
+        const cfConfig = await getCashfreeConfigAsync();
+        if (cfConfig.isConfigured) {
+          const cancelUrl = `${cfConfig.baseUrl}/subscriptions/${encodeURIComponent(sub.gateway_subscription_id)}/cancel`;
+          const cfRes = await fetch(cancelUrl, {
+            method: 'POST',
+            headers: {
+              'x-api-version': cfConfig.apiVersion,
+              'x-client-id': cfConfig.clientId,
+              'x-client-secret': cfConfig.clientSecret,
+              'Content-Type': 'application/json'
+            }
+          });
+          const cfData = await cfRes.json();
+          console.log('[Cancel] Cashfree cancel response:', { status: cfRes.status, sub_status: cfData.subscription_status });
+        }
+      } catch (cfErr) {
+        console.warn('[Cancel] Cashfree cancel API error (continuing with local cancel):', cfErr.message);
+      }
+    }
+
+    const nowISO = new Date().toISOString();
+    const reason = req.body?.reason || null;
+
+    // Update subscription: mark cancel requested, turn off auto-renew
+    // DO NOT change status to cancelled yet - current period continues
+    await query(
+      `UPDATE subscriptions SET cancel_requested_at = $1, auto_renew = 0, cancellation_reason = $2, updated_at = $3
+       WHERE id = $4`,
+      [nowISO, reason, nowISO, sub.id]
+    );
+
+    // Update restaurant: stop future auto-debit, but do NOT set active = 0
     await query(
       "UPDATE restaurants SET auto_debit_enabled = 0, mandate_status = 'cancelled' WHERE id = $1",
       [targetRestoId]
     );
 
-    await query(
-      "UPDATE subscriptions SET status = 'cancelled', cancelled_at = CURRENT_TIMESTAMP WHERE restaurant_id = $1 AND status IN ('trialing', 'pending', 'active')",
-      [targetRestoId]
-    );
+    // Compute access_until
+    const accessUntil = sub.current_period_end || sub.trial_ends_at || sub.plan_expires_at;
 
-    await logPaymentAudit(targetRestoId, 'Mandate Cancelled', { message: 'Autopay mandate cancelled by owner' });
+    await logPaymentAudit(targetRestoId, 'SUBSCRIPTION_CANCEL_REQUESTED', {
+      subscription_id: sub.gateway_subscription_id,
+      cancel_requested_at: nowISO,
+      access_until: accessUntil,
+      reason: reason
+    });
 
     res.json({
       success: true,
-      message: 'Autopay mandate cancelled successfully.'
+      cancel_requested_at: nowISO,
+      auto_renew: 0,
+      access_until: accessUntil,
+      message: `Subscription cancellation scheduled. Your access continues until ${accessUntil ? new Date(accessUntil).toLocaleDateString('en-IN') : 'the end of your current period'}.`
     });
   } catch (err) {
     console.error('Cancel mandate error:', err);
-    res.status(500).json({ error: 'Failed to cancel mandate' });
+    res.status(500).json({ error: 'Failed to cancel subscription' });
+  }
+});
+
+// ==========================================
+// 6. CHANGE PLAN
+// ==========================================
+router.post('/change-plan', authenticateToken, async (req, res) => {
+  try {
+    const restoId = req.user?.restaurant_id;
+    if (!restoId && req.user?.role !== 'superadmin') {
+      return res.status(401).json({ error: 'Unauthorized' });
+    }
+    const targetRestoId = restoId || 1;
+
+    // Only accept plan key - NEVER accept price/amount from frontend
+    const { plan } = req.body;
+    const targetPlanKey = (plan || '').toLowerCase().trim();
+
+    if (!targetPlanKey) {
+      return res.status(400).json({ error: 'Plan key is required', message: 'Please specify a valid plan (basic, pro, enterprise).' });
+    }
+
+    // Resolve authoritative price from saas_plans table
+    const planRows = await query('SELECT * FROM saas_plans WHERE LOWER(key) = $1', [targetPlanKey]);
+    const targetPlan = planRows[0];
+
+    if (!targetPlan) {
+      return res.status(400).json({ error: 'Invalid plan', message: `Plan '${targetPlanKey}' does not exist.` });
+    }
+
+    // Get current subscription
+    const subRows = await query(
+      `SELECT s.*, r.plan_tier, r.trial_ends_at, r.plan_expires_at
+       FROM subscriptions s
+       JOIN restaurants r ON r.id = s.restaurant_id
+       WHERE s.restaurant_id = $1 AND s.status IN ('trialing', 'active', 'pending')
+       ORDER BY s.id DESC LIMIT 1`,
+      [targetRestoId]
+    );
+    const sub = subRows[0];
+
+    if (!sub) {
+      return res.status(400).json({ error: 'No active subscription', message: 'No active subscription found to change plan.' });
+    }
+
+    // Reject same plan
+    const currentPlanKey = (sub.plan_tier || 'pro').toLowerCase();
+    if (currentPlanKey === targetPlanKey) {
+      return res.status(400).json({ error: 'Same plan', message: `You are already on the ${targetPlanKey} plan.` });
+    }
+
+    // Reject if cancellation already requested
+    if (sub.cancel_requested_at) {
+      return res.status(400).json({ error: 'Cancellation pending', message: 'Cannot change plan while cancellation is pending. Please reactivate first.' });
+    }
+
+    const nowISO = new Date().toISOString();
+    const targetPrice = Number(targetPlan.price);
+
+    // TRIAL: Immediate plan change (trial dates unchanged)
+    if (sub.status === 'trialing' || sub.status === 'pending') {
+      await query(
+        `UPDATE subscriptions SET plan_id = $1, amount = $2, scheduled_plan_key = NULL, plan_change_effective_at = NULL, updated_at = $3
+         WHERE id = $4`,
+        [targetPlan.id, targetPrice, nowISO, sub.id]
+      );
+
+      await query(
+        `UPDATE restaurants SET plan_tier = $1, plan_price = $2 WHERE id = $3`,
+        [targetPlan.key, targetPrice, targetRestoId]
+      );
+
+      await logPaymentAudit(targetRestoId, 'PLAN_CHANGED_TRIAL', {
+        from_plan: currentPlanKey,
+        to_plan: targetPlanKey,
+        new_price: targetPrice,
+        effective: 'immediate',
+        trial_end: sub.trial_ends_at || sub.plan_expires_at
+      });
+
+      return res.json({
+        success: true,
+        effective: 'immediate',
+        from_plan: currentPlanKey,
+        to_plan: targetPlanKey,
+        new_price: targetPrice,
+        trial_ends_at: sub.trial_ends_at || sub.plan_expires_at,
+        message: `Plan changed to ${targetPlan.name}. Your trial continues unchanged. First charge after trial will be ₹${targetPrice}/month.`
+      });
+    }
+
+    // ACTIVE SUBSCRIPTION: Schedule plan change at next billing boundary
+    const effectiveAt = sub.current_period_end || sub.plan_expires_at;
+
+    if (!effectiveAt) {
+      return res.status(400).json({ error: 'No billing period end date found', message: 'Cannot determine when to switch plans.' });
+    }
+
+    await query(
+      `UPDATE subscriptions SET scheduled_plan_key = $1, plan_change_effective_at = $2, updated_at = $3
+       WHERE id = $4`,
+      [targetPlanKey, effectiveAt, nowISO, sub.id]
+    );
+
+    await logPaymentAudit(targetRestoId, 'PLAN_CHANGE_SCHEDULED', {
+      from_plan: currentPlanKey,
+      to_plan: targetPlanKey,
+      new_price: targetPrice,
+      effective_at: effectiveAt
+    });
+
+    res.json({
+      success: true,
+      effective: 'next_billing_cycle',
+      from_plan: currentPlanKey,
+      to_plan: targetPlanKey,
+      new_price: targetPrice,
+      effective_at: effectiveAt,
+      message: `Plan change scheduled. Your current ${currentPlanKey} plan continues until ${new Date(effectiveAt).toLocaleDateString('en-IN')}. ${targetPlan.name} (₹${targetPrice}/month) will activate from your next billing cycle.`
+    });
+  } catch (err) {
+    console.error('Change plan error:', err);
+    res.status(500).json({ error: 'Failed to change plan' });
   }
 });
 

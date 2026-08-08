@@ -179,7 +179,9 @@ router.get('/subscription-status', authenticateToken, async (req, res) => {
     // - subscription.status === "expired" (trial and grace period ended)
     // - subscription.status === "cancelled" and trial ended
     const isExpired = subStatus === 'expired' && !isTrialActive && !isGracePeriodActive;
-    const isCancelled = subStatus === 'cancelled' && !isTrialActive;
+    // cancel_requested but period still active → NOT billing required
+    const hasCancelRequestedButActive = sub?.cancel_requested_at && (isTrialActive || (sub?.current_period_end && new Date(sub.current_period_end) >= now));
+    const isCancelled = subStatus === 'cancelled' && !isTrialActive && !hasCancelRequestedButActive;
 
     const billingRequired = !isAllowed || isExpired || isCancelled;
 
@@ -207,7 +209,14 @@ router.get('/subscription-status', authenticateToken, async (req, res) => {
       mandate_id: r.mandate_id || null,
       mandate_status: mandateStatus,
       auto_debit_enabled: Boolean(r.auto_debit_enabled),
-      subscription: sub
+      subscription: sub,
+      // Phase 4: Lifecycle fields
+      cancel_requested_at: sub?.cancel_requested_at || null,
+      auto_renew: sub?.auto_renew !== undefined ? Number(sub.auto_renew) : 1,
+      scheduled_plan_key: sub?.scheduled_plan_key || null,
+      plan_change_effective_at: sub?.plan_change_effective_at || null,
+      access_until: sub?.current_period_end || r.trial_ends_at || r.plan_expires_at || null,
+      current_period_end: sub?.current_period_end || null
     });
   } catch (err) {
     console.error('Fetch subscription status error:', err);

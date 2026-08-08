@@ -334,7 +334,15 @@ async function createTables() {
       `CREATE INDEX IF NOT EXISTS idx_subscriptions_restaurant ON subscriptions(restaurant_id);`,
       `CREATE INDEX IF NOT EXISTS idx_subscriptions_status ON subscriptions(status);`,
       `CREATE INDEX IF NOT EXISTS idx_subscriptions_next_billing ON subscriptions(next_billing_at);`,
-      `CREATE UNIQUE INDEX IF NOT EXISTS idx_payments_gateway_payid ON payments(gateway, gateway_payment_id);`
+      `CREATE UNIQUE INDEX IF NOT EXISTS idx_payments_gateway_payid ON payments(gateway, gateway_payment_id);`,
+      // Phase 4: Subscription Lifecycle Management columns
+      `ALTER TABLE subscriptions ADD COLUMN IF NOT EXISTS cancel_requested_at TIMESTAMP;`,
+      `ALTER TABLE subscriptions ADD COLUMN IF NOT EXISTS auto_renew INT DEFAULT 1;`,
+      `ALTER TABLE subscriptions ADD COLUMN IF NOT EXISTS scheduled_plan_key VARCHAR(50);`,
+      `ALTER TABLE subscriptions ADD COLUMN IF NOT EXISTS plan_change_effective_at TIMESTAMP;`,
+      `ALTER TABLE subscriptions ADD COLUMN IF NOT EXISTS cancellation_reason TEXT;`,
+      `CREATE INDEX IF NOT EXISTS idx_subscriptions_cancel ON subscriptions(cancel_requested_at);`,
+      `CREATE INDEX IF NOT EXISTS idx_subscriptions_plan_change ON subscriptions(scheduled_plan_key);`
     ];
 
     for (const alt of pgAlters) {
@@ -592,6 +600,18 @@ async function createTables() {
         FOREIGN KEY (subscription_id) REFERENCES subscriptions (id) ON DELETE SET NULL
       );
     `);
+
+    // Phase 4: Subscription Lifecycle columns for SQLite
+    const sqliteAlters = [
+      'ALTER TABLE subscriptions ADD COLUMN cancel_requested_at TEXT',
+      'ALTER TABLE subscriptions ADD COLUMN auto_renew INTEGER DEFAULT 1',
+      'ALTER TABLE subscriptions ADD COLUMN scheduled_plan_key TEXT',
+      'ALTER TABLE subscriptions ADD COLUMN plan_change_effective_at TEXT',
+      'ALTER TABLE subscriptions ADD COLUMN cancellation_reason TEXT'
+    ];
+    for (const alt of sqliteAlters) {
+      try { sqliteDb.exec(alt); } catch (e) { /* column may already exist */ }
+    }
 
     // Auto Migrations for SQLite
     try {
