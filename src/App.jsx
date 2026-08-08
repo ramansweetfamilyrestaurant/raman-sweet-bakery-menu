@@ -1682,6 +1682,7 @@ export default function App() {
                   const originalTotal = comboItems.reduce((s, i) => s + ((i.original_price || 0) * (i.qty || 1)), 0);
                   const savings = originalTotal - combo.price;
                   const itemsSummaryText = comboItems.map(i => `${i.qty > 1 ? i.qty + 'x ' : ''}${i.dish_name}`).join(' + ');
+                  const canOrder = Boolean(effectiveTableNum && (info?.direct_ordering_enabled === true || info?.direct_ordering_enabled === 1));
 
                   return (
                     <div 
@@ -1741,12 +1742,31 @@ export default function App() {
                               </span>
                             )}
                           </div>
-                          <span style={{
-                            fontSize: '0.64rem', fontWeight: 800, color: '#0A2315',
-                            background: 'var(--gold-primary)', padding: '2px 7px', borderRadius: '6px'
-                          }}>
-                            + Add
-                          </span>
+
+                          {canOrder && (
+                            <button
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleAddComboToCart(combo);
+                              }}
+                              style={{
+                                background: 'linear-gradient(135deg, #10B981 0%, #059669 100%)',
+                                color: '#FFFFFF',
+                                border: 'none',
+                                padding: '3px 9px',
+                                borderRadius: 'var(--radius-pill)',
+                                fontWeight: 800,
+                                fontSize: '0.66rem',
+                                cursor: 'pointer',
+                                display: 'inline-flex',
+                                alignItems: 'center',
+                                gap: '2px',
+                                boxShadow: '0 2px 6px rgba(16, 185, 129, 0.3)'
+                              }}
+                            >
+                              <Plus size={11} /> Add
+                            </button>
+                          )}
                         </div>
                       </div>
                     </div>
