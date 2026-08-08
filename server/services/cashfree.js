@@ -1,4 +1,5 @@
 import crypto from 'crypto';
+import { query } from '../db.js';
 
 // Uses native Node.js global fetch
 
@@ -21,6 +22,48 @@ export function getCashfreeConfig() {
     apiVersion: '2026-01-01',
     isConfigured: Boolean(clientId && clientSecret)
   };
+}
+
+/**
+ * Async Cashfree Config Loader: Reads from process.env first, and falls back to system_settings DB table (configured via Super Admin)
+ */
+export async function getCashfreeConfigAsync() {
+  let syncConfig = getCashfreeConfig();
+  if (syncConfig.isConfigured) {
+    return syncConfig;
+  }
+
+  try {
+    const rows = await query(`
+      SELECT key, value FROM system_settings 
+      WHERE key IN ('cashfree_app_id', 'cashfree_client_id', 'cashfree_secret_key', 'cashfree_client_secret', 'cashfree_environment', 'cashfree_env')
+    `);
+
+    const map = {};
+    (rows || []).forEach(r => { map[r.key] = (r.value || '').trim(); });
+
+    const clientId = map.cashfree_app_id || map.cashfree_client_id || '';
+    const clientSecret = map.cashfree_secret_key || map.cashfree_client_secret || '';
+    const environment = (map.cashfree_environment || map.cashfree_env || 'sandbox').toLowerCase();
+    const isSandbox = environment !== 'production';
+
+    const baseUrl = isSandbox 
+      ? 'https://sandbox.cashfree.com/pg' 
+      : 'https://api.cashfree.com/pg';
+
+    return {
+      clientId,
+      clientSecret,
+      environment,
+      isSandbox,
+      baseUrl,
+      apiVersion: '2026-01-01',
+      isConfigured: Boolean(clientId && clientSecret)
+    };
+  } catch (err) {
+    console.warn('Error reading Cashfree credentials from DB system_settings:', err.message);
+    return syncConfig;
+  }
 }
 
 /**
@@ -80,7 +123,7 @@ export async function createCashfreeSubscriptionSession({
   customerEmail,
   returnUrl
 }) {
-  const config = getCashfreeConfig();
+  const config = await getCashfreeConfigAsync();
 
   if (!config.isConfigured) {
     return {
@@ -190,7 +233,7 @@ export async function createCashfreeSubscriptionSession({
  * Fetches current subscription status from Cashfree API
  */
 export async function fetchCashfreeSubscriptionStatus(subscriptionId) {
-  const config = getCashfreeConfig();
+  const config = await getCashfreeConfigAsync();
 
   if (!config.isConfigured) {
     return {

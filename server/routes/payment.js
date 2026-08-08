@@ -1,7 +1,7 @@
 import express from 'express';
 import { query, withTransaction } from '../db.js';
 import { authenticateToken } from '../middleware/auth.js';
-import { createCashfreeSubscriptionSession, fetchCashfreeSubscriptionStatus, getCashfreeConfig, verifyCashfreeWebhookSignature } from '../services/cashfree.js';
+import { createCashfreeSubscriptionSession, fetchCashfreeSubscriptionStatus, getCashfreeConfig, getCashfreeConfigAsync, verifyCashfreeWebhookSignature } from '../services/cashfree.js';
 
 const router = express.Router();
 
@@ -18,8 +18,8 @@ async function logPaymentAudit(restaurantId, action, details) {
 }
 
 // GET /api/payment/config-status (Backend status check for Cashfree Sandbox)
-router.get('/config-status', (req, res) => {
-  const config = getCashfreeConfig();
+router.get('/config-status', async (req, res) => {
+  const config = await getCashfreeConfigAsync();
   res.json({
     configured: config.isConfigured,
     environment: config.environment,
@@ -273,7 +273,7 @@ const handleCashfreeWebhook = async (req, res) => {
       await txQuery(`
         INSERT INTO webhook_events (gateway, event_id, event_type, payload, processed, created_at)
         VALUES ('cashfree', $1, $2, $3, $4, CURRENT_TIMESTAMP)
-      `, [eventId, eventType, JSON.stringify(payload), 0]);
+      `, [eventId, eventType, JSON.stringify(payload), false]);
 
       // Resolve tenant restaurant EXCLUSIVELY by subscription_id mapping in database
       let restoId = null;
@@ -385,7 +385,7 @@ const handleCashfreeWebhook = async (req, res) => {
       }
 
       // Mark webhook event processed
-      await txQuery('UPDATE webhook_events SET processed = 1, processed_at = CURRENT_TIMESTAMP WHERE gateway = $1 AND event_id = $2', ['cashfree', eventId]);
+      await txQuery('UPDATE webhook_events SET processed = $1, processed_at = CURRENT_TIMESTAMP WHERE gateway = $2 AND event_id = $3', [true, 'cashfree', eventId]);
 
       if (restoId) {
         await logPaymentAudit(restoId, `WEBHOOK_${eventType}`, { subscription_id: subscriptionId, payment_id: paymentId, event_id: eventId });
