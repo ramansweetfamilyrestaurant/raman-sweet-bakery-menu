@@ -1,9 +1,12 @@
 import express from 'express';
+import jwt from 'jsonwebtoken';
+import bcrypt from 'bcryptjs';
 import { query, withTransaction } from '../db.js';
 import { authenticateToken } from '../middleware/auth.js';
 import { createCashfreeSubscriptionSession, fetchCashfreeSubscriptionStatus, getCashfreeConfig, getCashfreeConfigAsync, verifyCashfreeWebhookSignature } from '../services/cashfree.js';
 
 const router = express.Router();
+const JWT_SECRET = process.env.JWT_SECRET || 'raman_bakery_secret_jwt_key_2026_super_secure';
 
 // Helper to log payment audit trail
 async function logPaymentAudit(restaurantId, action, details) {
@@ -26,6 +29,234 @@ router.get('/config-status', async (req, res) => {
     is_sandbox: config.isSandbox,
     client_id_present: Boolean(config.clientId)
   });
+});
+
+// POST /api/payment/checkout-pre-register
+// Validates registration form inputs and initiates Cashfree Subscription Checkout BEFORE creating any database record!
+router.post('/checkout-pre-register', async (req, res) => {
+  try {
+    const { name, phone, owner_username, owner_password, plan_tier } = req.body;
+
+    if (!name || !name.trim()) {
+      return res.status(400).json({ error: 'Restaurant Name is required!' });
+    }
+
+    const cleanPhone = (phone || '').replace(/[^0-9]/g, '');
+    if (!cleanPhone || cleanPhone.length !== 10 || !/^[6-9]\d{9}$/.test(cleanPhone)) {
+      return res.status(400).json({ error: 'Please enter a valid 10-digit Mobile Number!' });
+    }
+
+    if (!owner_username || !owner_username.trim()) {
+      return res.status(400).json({ error: 'Owner Username is required!' });
+    }
+
+    if (!owner_password || owner_password.length < 4) {
+      return res.status(400).json({ error: 'Password must be at least 4 characters long!' });
+    }
+
+    // 1. Check if phone or owner username is ALREADY in the database
+    const phoneCheck = await query('SELECT id FROM restaurants WHERE phone = $1', [cleanPhone]);
+    if (phoneCheck.length > 0) {
+      return res.status(400).json({ error: `Mobile number '${phone}' is already registered with another restaurant!` });
+    }
+
+    const adminCheck = await query('SELECT id FROM admins WHERE username = $1', [owner_username.trim()]);
+    if (adminCheck.length > 0) {
+      return res.status(400).json({ error: `Username '${owner_username}' is already taken! Please choose a different username.` });
+    }
+
+    const selectedPlanKey = (plan_tier || 'pro').toLowerCase().trim();
+
+    // 2. Resolve Plan Details
+    const planRows = await query('SELECT * FROM saas_plans WHERE LOWER(key) = $1', [selectedPlanKey]);
+    const dbPlan = planRows[0] || {
+      id: 2,
+      key: 'pro',
+      name: 'Pro Luxury Plan',
+      price: 999
+    };
+
+    const sysRows = await query("SELECT value FROM system_settings WHERE key = 'default_trial_days'");
+    const trialDays = Math.max(1, parseInt(sysRows[0]?.value || '14', 10));
+    const trialEndISO = new Date(Date.now() + trialDays * 86400 * 1000).toISOString();
+
+    // Encrypt registration payload into temporary registration token (valid 1 hour)
+    const regPayload = {
+      name: name.trim(),
+      phone: cleanPhone,
+      owner_username: owner_username.trim(),
+      owner_password,
+      plan_tier: dbPlan.key,
+      plan_price: dbPlan.price,
+      trial_days: trialDays
+    };
+
+    const regToken = jwt.sign(regPayload, JWT_SECRET, { expiresIn: '1h' });
+    const baseUrl = process.env.APP_BASE_URL || 'https://khana-master.onrender.com';
+    const returnUrl = `${baseUrl}/api/payment/register-return?reg_token=${encodeURIComponent(regToken)}`;
+
+    // 3. Create Cashfree Subscription Session WITHOUT touching restaurants or admins tables!
+    const tempRestoId = Math.floor(100000 + Math.random() * 900000);
+    const cfResult = await createCashfreeSubscriptionSession({
+      restaurantId: tempRestoId,
+      planKey: dbPlan.key,
+      planName: dbPlan.name,
+      planPrice: Number(dbPlan.price) || 999,
+      trialEndISO,
+      customerName: name.trim(),
+      customerPhone: cleanPhone,
+      returnUrl
+    });
+
+    if (!cfResult.configured || !cfResult.success) {
+      return res.status(400).json({
+        error: cfResult.message || 'Payment Gateway is currently unavailable. Please contact support.'
+      });
+    }
+
+    res.json({
+      success: true,
+      subscription_id: cfResult.subscription_id,
+      subscription_session_id: cfResult.subscription_session_id || cfResult.payment_session_id,
+      auth_url: cfResult.auth_url || cfResult.auth_link || cfResult.payment_link,
+      environment: cfResult.environment || 'sandbox'
+    });
+
+  } catch (err) {
+    console.error('Checkout pre-register error:', err);
+    res.status(500).json({ error: err.message || 'Failed to initialize subscription checkout' });
+  }
+});
+
+// GET /api/payment/register-return - Cashfree subscription return callback for pre-registration
+router.get('/register-return', async (req, res) => {
+  const { reg_token, subscription_id, sub_id } = req.query;
+  const targetSubId = subscription_id || sub_id;
+  const baseUrl = process.env.APP_BASE_URL || 'https://khana-master.onrender.com';
+
+  if (!reg_token) {
+    return res.redirect(`${baseUrl}/register?error=Invalid registration token`);
+  }
+
+  try {
+    const regData = jwt.verify(reg_token, JWT_SECRET);
+    if (!regData || !regData.name || !regData.owner_username) {
+      return res.redirect(`${baseUrl}/register?error=Invalid registration payload`);
+    }
+
+    // Verify Cashfree Subscription Status if subscription_id is provided
+    let isPaymentSuccess = true;
+    if (targetSubId) {
+      const cfStatus = await fetchCashfreeSubscriptionStatus(targetSubId);
+      console.log('🌐 Cashfree return subscription status:', cfStatus);
+      const statusStr = (cfStatus.subscription_status || cfStatus.status || '').toUpperCase();
+      if (statusStr && !['ACTIVE', 'INITIALIZED', 'BANK_APPROVAL_PENDING', 'PAUSED'].includes(statusStr)) {
+        isPaymentSuccess = false;
+      }
+    }
+
+    if (!isPaymentSuccess) {
+      return res.redirect(`${baseUrl}/register?error=Subscription payment failed or cancelled by user`);
+    }
+
+    // ONLY NOW: Execute multi-table transaction to create restaurant, subscription, and admin account!
+    const result = await withTransaction(async (txQuery) => {
+      // Re-verify uniqueness inside transaction
+      const phoneCheck = await txQuery('SELECT id FROM restaurants WHERE phone = $1', [regData.phone]);
+      if (phoneCheck.length > 0) throw new Error('Mobile number already registered');
+
+      const adminCheck = await txQuery('SELECT id FROM admins WHERE username = $1', [regData.owner_username]);
+      if (adminCheck.length > 0) throw new Error('Username already taken');
+
+      // Generate slug
+      let baseSlug = regData.name.toLowerCase().trim().replace(/[^a-z0-9\s-]/g, '').replace(/[\s_]+/g, '-').replace(/-+/g, '-');
+      if (!baseSlug || baseSlug.length < 2) baseSlug = 'resto-' + Math.floor(1000 + Math.random() * 9000);
+      let cleanSlug = baseSlug;
+      let counter = 1;
+      while (true) {
+        const existing = await txQuery('SELECT id FROM restaurants WHERE slug = $1', [cleanSlug]);
+        if (existing.length === 0) break;
+        cleanSlug = `${baseSlug}-${counter}`;
+        counter++;
+      }
+
+      const planRows = await txQuery('SELECT * FROM saas_plans WHERE key = $1', [regData.plan_tier || 'pro']);
+      const dbPlan = planRows[0] || { id: 2, key: 'pro', name: 'Pro Luxury Plan', price: 999 };
+
+      const now = new Date();
+      const trialDays = regData.trial_days || 14;
+      const trialEnd = new Date(now.getTime() + trialDays * 86400 * 1000);
+      const nowISO = now.toISOString();
+      const expiryDateISO = trialEnd.toISOString();
+
+      // Create Restaurant Record (mandate_status='active', mandate_id=targetSubId)
+      const restoRes = await txQuery(`
+        INSERT INTO restaurants (
+          name, slug, tagline, logo, phone, address, opening_hours, plan_tier, plan_price, plan_expires_at, trial_started_at, trial_ends_at, whatsapp_number, theme_color, active, total_tables, mandate_status, mandate_id, auto_debit_enabled
+        ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19) RETURNING id
+      `, [
+        regData.name, cleanSlug, '100% Fresh & Authentic Food',
+        'https://images.unsplash.com/photo-1555396273-367ea4eb4db5?w=500&auto=format&fit=crop&q=80',
+        regData.phone, 'Main Market Street, City Center', '8:00 AM - 10:30 PM',
+        dbPlan.key, dbPlan.price, expiryDateISO, nowISO, expiryDateISO, regData.phone, 'gold',
+        1, 0, 'active', targetSubId || null, 1
+      ]);
+
+      const newRestoId = restoRes[0]?.id || restoRes.lastInsertRowid;
+
+      // Create Subscriptions Record
+      await txQuery(`
+        INSERT INTO subscriptions (
+          restaurant_id, plan_id, gateway, gateway_subscription_id, status, amount, currency, billing_cycle, trial_start, trial_end, current_period_start, current_period_end
+        ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)
+      `, [
+        newRestoId, dbPlan.id, 'cashfree', targetSubId || null, 'active', dbPlan.price, 'INR', 'monthly', nowISO, expiryDateISO, nowISO, expiryDateISO
+      ]);
+
+      // Create Owner Admin Account
+      const salt = await bcrypt.genSalt(10);
+      const hash = await bcrypt.hash(regData.owner_password, salt);
+
+      const adminRes = await txQuery(`
+        INSERT INTO admins (restaurant_id, username, password_hash, role)
+        VALUES ($1, $2, $3, $4) RETURNING id
+      `, [newRestoId, regData.owner_username, hash, 'restaurant_admin']);
+
+      const adminId = adminRes[0]?.id || adminRes.lastInsertRowid;
+
+      // Generate JWT Token for instant login
+      const jwtToken = jwt.sign(
+        { id: adminId, username: regData.owner_username, role: 'restaurant_admin', restaurant_id: newRestoId, slug: cleanSlug },
+        JWT_SECRET,
+        { expiresIn: '30d' }
+      );
+
+      return { newRestoId, cleanSlug, jwtToken, username: regData.owner_username };
+    });
+
+    // Seed starter categories & dishes
+    try {
+      const cat1 = await query('INSERT INTO categories (restaurant_id, name, image, sort_order) VALUES ($1, $2, $3, $4) RETURNING id', [result.newRestoId, '⭐ Special Starters', 'https://images.unsplash.com/photo-1601050690597-df0568f70950?w=500&auto=format&fit=crop&q=80', 1]);
+      const cat2 = await query('INSERT INTO categories (restaurant_id, name, image, sort_order) VALUES ($1, $2, $3, $4) RETURNING id', [result.newRestoId, '🍛 Main Course & Thalis', 'https://images.unsplash.com/photo-1546833999-b9f581a1996d?w=500&auto=format&fit=crop&q=80', 2]);
+      const cat3 = await query('INSERT INTO categories (restaurant_id, name, image, sort_order) VALUES ($1, $2, $3, $4) RETURNING id', [result.newRestoId, '🥤 Beverages & Shakes', 'https://images.unsplash.com/photo-1544145945-f90425340c7e?w=500&auto=format&fit=crop&q=80', 3]);
+      const c1Id = cat1[0]?.id || cat1.lastInsertRowid;
+      const c2Id = cat2[0]?.id || cat2.lastInsertRowid;
+      const c3Id = cat3[0]?.id || cat3.lastInsertRowid;
+
+      await query(`INSERT INTO dishes (restaurant_id, category_id, name, description, image, price, available, type) VALUES ($1, $2, $3, $4, $5, $6, 1, 'veg')`, [result.newRestoId, c1Id, 'Paneer Tikka Platter', 'Sizzling tandoori paneer cubes with mint chutney', 'https://images.unsplash.com/photo-1567188040759-fb8a883dc6d8?w=500&auto=format&fit=crop&q=80', 240]);
+      await query(`INSERT INTO dishes (restaurant_id, category_id, name, description, image, price, available, type) VALUES ($1, $2, $3, $4, $5, $6, 1, 'veg')`, [result.newRestoId, c2Id, 'Royal Maharaja Thali', 'Full thali with 2 sabzi, dal makhani, naan, rice & gulab jamun', 'https://images.unsplash.com/photo-1585937421612-70a008356fbe?w=500&auto=format&fit=crop&q=80', 320]);
+      await query(`INSERT INTO dishes (restaurant_id, category_id, name, description, image, price, available, type) VALUES ($1, $2, $3, $4, $5, $6, 1, 'veg')`, [result.newRestoId, c3Id, 'Mango Lassi Special', 'Thick kulhad mango lassi with dry fruits topping', 'https://images.unsplash.com/photo-1571006682860-39826ec9d4a9?w=500&auto=format&fit=crop&q=80', 90]);
+    } catch (seedErr) {
+      console.warn('Notice seeding initial categories/dishes:', seedErr.message);
+    }
+
+    // Redirect user into their new Admin Dashboard with JWT token set!
+    res.redirect(`${baseUrl}/${result.cleanSlug}/admin?token=${encodeURIComponent(result.jwtToken)}&username=${encodeURIComponent(result.username)}&slug=${encodeURIComponent(result.cleanSlug)}`);
+
+  } catch (err) {
+    console.error('Register return callback error:', err);
+    res.redirect(`${baseUrl}/register?error=${encodeURIComponent(err.message)}`);
+  }
 });
 
 // ==========================================

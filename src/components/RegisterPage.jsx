@@ -97,25 +97,8 @@ export default function RegisterPage({ onRegisterSuccess }) {
     setLoading(true);
 
     try {
-      // Step 1: Pre-validate credentials & availability before submitting registration
-      const valRes = await fetch('/api/register/pre-validate', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          name: formData.name,
-          phone: formData.phone,
-          owner_username: formData.owner_username,
-          owner_password: formData.owner_password
-        })
-      });
-
-      const valData = await valRes.json();
-      if (!valRes.ok) {
-        throw new Error(valData.error || 'Registration validation failed.');
-      }
-
-      // Step 2: Proceed with account registration
-      const res = await fetch('/api/register', {
+      // Step 1: Call checkout-pre-register endpoint (validates inputs & generates Cashfree payment session WITHOUT touching database)
+      const res = await fetch('/api/payment/checkout-pre-register', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -130,28 +113,35 @@ export default function RegisterPage({ onRegisterSuccess }) {
       const data = await res.json();
 
       if (!res.ok) {
-        throw new Error(data.error || 'Registration failed. Please try again.');
+        throw new Error(data.error || 'Pre-registration payment setup failed. Please check details and try again.');
       }
 
-      if (data.pending_approval) {
-        setPendingApprovalData(data);
+      // Step 2: Open Cashfree Subscription Payment Checkout directly
+      if (data.auth_url) {
+        window.location.href = data.auth_url;
         return;
       }
 
-      // Store Auth Tokens & Selected Plan in localStorage for instant billing onboarding
-      localStorage.removeItem('pending_subscription_id');
-      localStorage.setItem('raman_admin_token', data.token);
-      localStorage.setItem('raman_admin_user', data.username || formData.owner_username);
-      localStorage.setItem('raman_admin_slug', data.slug);
-      localStorage.setItem('adminToken', data.token);
-      localStorage.setItem('selected_plan_tier', formData.plan_tier || data.plan_tier || 'pro');
-      sessionStorage.setItem('selected_plan_tier', formData.plan_tier || data.plan_tier || 'pro');
-
-      if (onRegisterSuccess) {
-        onRegisterSuccess(data);
-      } else {
-        window.location.href = `/${data.slug || ''}/admin`;
+      const sessionId = data.subscription_session_id;
+      if (sessionId && typeof window.Cashfree === 'function') {
+        const cashfree = window.Cashfree({ mode: data.environment || 'sandbox' });
+        if (typeof cashfree.subscriptionsCheckout === 'function') {
+          cashfree.subscriptionsCheckout({
+            subsSessionId: sessionId,
+            subscriptionSessionId: sessionId,
+            redirectTarget: '_self'
+          });
+          return;
+        }
       }
+
+      if (sessionId) {
+        const directSubUrl = `https://sandbox.cashfree.com/subscriptions/auth?sub_session_id=${encodeURIComponent(sessionId)}`;
+        window.location.href = directSubUrl;
+        return;
+      }
+
+      throw new Error('Could not open Cashfree payment checkout window. Please try again.');
     } catch (err) {
       console.error('Registration error:', err);
       setError(err.message);

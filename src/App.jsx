@@ -92,6 +92,23 @@ export default function App() {
         if (data && data.default_trial_days) setTrialDays(Math.max(1, parseInt(data.default_trial_days, 10) || 14));
       })
       .catch(console.error);
+
+    // Read registration callback tokens from URL query params (when redirected back from Cashfree)
+    const params = new URLSearchParams(window.location.search);
+    const tokenParam = params.get('token');
+    const userParam = params.get('username');
+    const slugParam = params.get('slug');
+
+    if (tokenParam && slugParam) {
+      localStorage.setItem('raman_admin_token', tokenParam);
+      localStorage.setItem('raman_admin_user', userParam || 'admin');
+      localStorage.setItem('raman_admin_slug', slugParam);
+      setAdminToken(tokenParam);
+      setAdminUsername(userParam || 'admin');
+      setAdminSlug(slugParam);
+      setView('admin-dashboard');
+      window.history.replaceState({}, '', `/${slugParam}/admin`);
+    }
   }, []);
 
   // Master Super Admin Tokens

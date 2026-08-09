@@ -695,28 +695,6 @@ export default function SubscriptionBillingPage({ restoInfo, token, onProceedToD
               <ShieldCheck size={20} />
               <span>{authorizing ? 'Opening Cashfree...' : `🚀 Authorize UPI AutoPay & Activate ${calcDays}-Day Trial`}</span>
             </button>
-
-            <button
-              onClick={onProceedToDashboard}
-              style={{
-                width: '100%',
-                padding: '12px',
-                borderRadius: '50px',
-                border: '1px solid rgba(255,255,255,0.2)',
-                background: 'rgba(255,255,255,0.05)',
-                color: '#A7F3D0',
-                fontSize: '0.85rem',
-                fontWeight: 800,
-                cursor: 'pointer',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                gap: '6px'
-              }}
-            >
-              <span>Skip for Now & Go to Admin Dashboard</span>
-              <ArrowRight size={16} />
-            </button>
           </div>
         )}
 
