@@ -80,23 +80,7 @@ router.post('/checkout-pre-register', async (req, res) => {
     const trialDays = Math.max(1, parseInt(sysRows[0]?.value || '14', 10));
     const trialEndISO = new Date(Date.now() + trialDays * 86400 * 1000).toISOString();
 
-    const regPayload = {
-      name: name.trim(),
-      phone: cleanPhone,
-      owner_username: owner_username.trim(),
-      owner_password,
-      plan_tier: dbPlan.key,
-      plan_price: dbPlan.price,
-      trial_days: trialDays
-    };
-
-    // Store registration payload in database pending_registrations table to keep returnUrl under Cashfree 250 char limit
     const regId = `reg_${Date.now()}_${Math.floor(1000 + Math.random() * 9000)}`;
-    await query(
-      'INSERT INTO pending_registrations (id, payload) VALUES ($1, $2)',
-      [regId, JSON.stringify(regPayload)]
-    );
-
     const baseUrl = process.env.APP_BASE_URL || 'https://khana-master.onrender.com';
     const returnUrl = `${baseUrl}/api/payment/register-return?reg_id=${regId}`;
 
@@ -119,6 +103,23 @@ router.post('/checkout-pre-register', async (req, res) => {
       });
     }
 
+    const regPayload = {
+      name: name.trim(),
+      phone: cleanPhone,
+      owner_username: owner_username.trim(),
+      owner_password,
+      plan_tier: dbPlan.key,
+      plan_price: dbPlan.price,
+      trial_days: trialDays,
+      subscription_id: cfResult.subscription_id
+    };
+
+    // Store registration payload in database pending_registrations table with actual subscription_id
+    await query(
+      'INSERT INTO pending_registrations (id, payload) VALUES ($1, $2)',
+      [regId, JSON.stringify(regPayload)]
+    );
+
     res.json({
       success: true,
       subscription_id: cfResult.subscription_id,
@@ -136,10 +137,9 @@ router.post('/checkout-pre-register', async (req, res) => {
 // ALL /api/payment/register-return - Cashfree subscription return callback for pre-registration (supports GET & POST)
 router.all('/register-return', async (req, res) => {
   const reg_id = req.query.reg_id || req.body?.reg_id || req.query.reg_token || req.body?.reg_token;
-  const targetSubId = req.query.subscription_id || req.query.sub_id || req.body?.subscription_id || req.body?.sub_id;
   const baseUrl = process.env.APP_BASE_URL || 'https://khana-master.onrender.com';
 
-  console.log('[Register Return] Received callback. Method:', req.method, 'reg_id:', reg_id, 'targetSubId:', targetSubId);
+  console.log('[Register Return] Received callback. Method:', req.method, 'reg_id:', reg_id);
 
   if (!reg_id) {
     return res.redirect(`${baseUrl}/register?error=Invalid registration session`);
@@ -154,19 +154,23 @@ router.all('/register-return', async (req, res) => {
     const regData = JSON.parse(regRows[0].payload);
     await query('DELETE FROM pending_registrations WHERE id = $1', [reg_id]);
 
-    // Verify Cashfree Subscription Status if subscription_id is provided
-    let isPaymentSuccess = true;
-    if (targetSubId) {
-      const cfStatus = await fetchCashfreeSubscriptionStatus(targetSubId);
-      console.log('🌐 Cashfree return subscription status:', cfStatus);
-      const statusStr = (cfStatus.subscription_status || cfStatus.status || '').toUpperCase();
-      if (statusStr && !['ACTIVE', 'INITIALIZED', 'BANK_APPROVAL_PENDING', 'PAUSED'].includes(statusStr)) {
-        isPaymentSuccess = false;
-      }
+    const targetSubId = req.query.subscription_id || req.query.sub_id || req.body?.subscription_id || req.body?.sub_id || regData.subscription_id;
+
+    if (!targetSubId) {
+      console.warn('⚠️ No subscription_id found for registration validation!');
+      return res.redirect(`${baseUrl}/register?error=Payment session verification failed. Account was NOT created.`);
     }
 
-    if (!isPaymentSuccess) {
-      return res.redirect(`${baseUrl}/register?error=Subscription payment failed or cancelled by user`);
+    // Verify Cashfree Subscription Status via Cashfree API
+    const cfStatus = await fetchCashfreeSubscriptionStatus(targetSubId);
+    console.log('🌐 Cashfree return subscription status:', cfStatus);
+
+    const statusStr = (cfStatus.subscription_status || cfStatus.status || '').toUpperCase();
+    const isAuthorized = cfStatus.success && ['ACTIVE', 'BANK_APPROVAL_PENDING', 'COMPLETED'].includes(statusStr);
+
+    if (!isAuthorized) {
+      console.warn(`🛑 Subscription status '${statusStr}' is NOT authorized! Account creation BLOCKED.`);
+      return res.redirect(`${baseUrl}/register?error=Subscription payment was not completed or failed (Status: ${statusStr || 'FAILED'}). Account was NOT created.`);
     }
 
     // ONLY NOW: Execute multi-table transaction to create restaurant, subscription, and admin account!
