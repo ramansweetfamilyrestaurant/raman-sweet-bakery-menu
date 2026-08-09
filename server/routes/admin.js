@@ -4,6 +4,7 @@ import jwt from 'jsonwebtoken';
 import multer from 'multer';
 import path from 'path';
 import fs from 'fs';
+import sharp from 'sharp';
 import { query, runAutoDataSummarization, saveImageToDb, saveR2ImageToDb, getImageRecordFromDb, deleteImageRecordFromDb } from '../db.js';
 import { isR2Active, uploadImageToR2, deleteImageFromR2, getR2Diagnostics, purgeOrphanedR2Objects } from '../services/r2ImageService.js';
 import { authenticateToken, requireActiveSubscription, checkSubscriptionStatus } from '../middleware/auth.js';
@@ -470,6 +471,132 @@ router.post('/r2/purge-orphans', authenticateToken, requireActiveSubscription, a
 
     const result = await purgeOrphanedR2Objects(activeR2Keys);
     res.json(result);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// Safe Legacy Base64 -> Cloudflare R2 Migration Endpoint
+router.post('/r2/migrate-images', authenticateToken, requireActiveSubscription, async (req, res) => {
+  try {
+    const isDryRun = req.query.dryRun === 'true' || req.body?.dryRun === true;
+    const limit = req.query.limit ? parseInt(req.query.limit, 10) : (req.body?.limit ? parseInt(req.body.limit, 10) : null);
+    const batchSize = req.query.batch ? parseInt(req.query.batch, 10) : 25;
+
+    const allRows = await query("SELECT filename, mime_type, storage_provider, image_key, image_url, restaurant_id, data FROM stored_images ORDER BY filename ASC");
+    
+    const stats = {
+      totalRecords: allRows.length,
+      alreadyR2: 0,
+      migrationCandidates: 0,
+      successful: 0,
+      failed: 0,
+      skipped: 0,
+      invalidBase64: 0,
+      invalidImage: 0,
+      missingRestaurantId: 0,
+      failedRecords: []
+    };
+
+    const candidates = [];
+    allRows.forEach(r => {
+      if (r.storage_provider === 'r2' && r.image_key) {
+        stats.alreadyR2++;
+        stats.skipped++;
+      } else {
+        candidates.push(r);
+      }
+    });
+
+    stats.migrationCandidates = candidates.length;
+    let itemsToProcess = candidates;
+    if (limit && limit > 0) {
+      itemsToProcess = candidates.slice(0, limit);
+    }
+
+    for (let i = 0; i < itemsToProcess.length; i += batchSize) {
+      const currentBatch = itemsToProcess.slice(i, i + batchSize);
+      for (const row of currentBatch) {
+        const restoId = row.restaurant_id || 1;
+        if (!row.restaurant_id) stats.missingRestaurantId++;
+
+        if (!row.data || typeof row.data !== 'string' || row.data.trim().length === 0) {
+          stats.invalidBase64++;
+          stats.failed++;
+          stats.failedRecords.push({ filename: row.filename, restaurant_id: restoId, reason: 'Empty Base64 data' });
+          continue;
+        }
+
+        let base64Clean = row.data.trim();
+        if (base64Clean.includes('base64,')) base64Clean = base64Clean.split('base64,')[1];
+
+        let rawBuffer;
+        try {
+          rawBuffer = Buffer.from(base64Clean, 'base64');
+          if (!rawBuffer || rawBuffer.length === 0) throw new Error('Empty decoded buffer');
+        } catch (b64Err) {
+          stats.invalidBase64++;
+          stats.failed++;
+          stats.failedRecords.push({ filename: row.filename, restaurant_id: restoId, reason: b64Err.message });
+          continue;
+        }
+
+        let webpBuffer;
+        try {
+          const imagePipeline = sharp(rawBuffer);
+          const meta = await imagePipeline.metadata();
+          if (!meta || !meta.format) throw new Error('Invalid image bytes');
+
+          let transformer = sharp(rawBuffer);
+          if (meta.width && meta.width > 1200) {
+            transformer = transformer.resize(1200, null, { withoutEnlargement: true });
+          }
+
+          webpBuffer = await transformer.webp({ quality: 85 }).toBuffer();
+        } catch (imgErr) {
+          stats.invalidImage++;
+          stats.failed++;
+          stats.failedRecords.push({ filename: row.filename, restaurant_id: restoId, reason: imgErr.message });
+          continue;
+        }
+
+        let entityType = 'dishes';
+        if (row.filename.includes('category') || row.filename.includes('cat')) entityType = 'categories';
+        else if (row.filename.includes('logo') || row.filename.includes('resto')) entityType = 'logos';
+
+        if (isDryRun) {
+          stats.successful++;
+          continue;
+        }
+
+        try {
+          const r2Result = await uploadImageToR2({
+            buffer: webpBuffer,
+            mimeType: 'image/webp',
+            restaurantId: restoId,
+            entityType
+          });
+
+          if (!r2Result || !r2Result.objectKey) throw new Error('Empty R2 key returned');
+
+          const proxyUrl = `/api/r2-proxy/${r2Result.objectKey}`;
+          const finalUrl = r2Result.publicUrl || proxyUrl;
+
+          // SAFE DB UPDATE: UPDATE storage_provider, image_key, image_url ONLY. LEAVE DATA COLUMN INTACT!
+          await query(
+            "UPDATE stored_images SET storage_provider = 'r2', image_key = $1, image_url = $2 WHERE filename = $3",
+            [r2Result.objectKey, finalUrl, row.filename]
+          );
+
+          stats.successful++;
+        } catch (uploadErr) {
+          stats.failed++;
+          stats.failedRecords.push({ filename: row.filename, restaurant_id: restoId, reason: uploadErr.message });
+        }
+      }
+    }
+
+    res.json({ success: true, isDryRun, limit, stats });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
