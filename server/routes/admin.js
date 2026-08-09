@@ -5,7 +5,7 @@ import multer from 'multer';
 import path from 'path';
 import fs from 'fs';
 import { query, runAutoDataSummarization, saveImageToDb, saveR2ImageToDb, getImageRecordFromDb, deleteImageRecordFromDb } from '../db.js';
-import { isR2Active, uploadImageToR2, deleteImageFromR2 } from '../services/r2ImageService.js';
+import { isR2Active, uploadImageToR2, deleteImageFromR2, getR2Diagnostics } from '../services/r2ImageService.js';
 import { authenticateToken, requireActiveSubscription, checkSubscriptionStatus } from '../middleware/auth.js';
 
 const router = express.Router();
@@ -295,68 +295,69 @@ router.get('/stats', authenticateToken, requireActiveSubscription, async (req, r
   }
 });
 
+// Safe Diagnostics Endpoint for Storage Status
+router.get('/storage-status', authenticateToken, (req, res) => {
+  res.json(getR2Diagnostics());
+});
+
 // File Upload Endpoint (OPERATIONAL ROUTE)
 router.post('/upload', authenticateToken, requireActiveSubscription, upload.single('image'), async (req, res) => {
   if (!req.file) {
-    return res.status(400).json({ error: 'No image file uploaded' });
+    return res.status(400).json({ success: false, error: 'No image file uploaded' });
   }
 
   // Validate File Size (max 10MB)
   if (req.file.size > 10 * 1024 * 1024) {
     if (req.file.path && fs.existsSync(req.file.path)) fs.unlinkSync(req.file.path);
-    return res.status(400).json({ error: 'Image file size exceeds maximum limit of 10MB' });
+    return res.status(400).json({ success: false, error: 'Image file size exceeds maximum limit of 10MB' });
   }
 
   // Validate MIME type
   const allowedMimeTypes = ['image/jpeg', 'image/png', 'image/webp', 'image/gif', 'image/avif'];
   if (!allowedMimeTypes.includes(req.file.mimetype.toLowerCase())) {
     if (req.file.path && fs.existsSync(req.file.path)) fs.unlinkSync(req.file.path);
-    return res.status(400).json({ error: 'Invalid file type. Only JPEG, PNG, WebP, GIF, and AVIF images are allowed' });
+    return res.status(400).json({ success: false, error: 'Invalid file type. Only JPEG, PNG, WebP, GIF, and AVIF images are allowed' });
   }
 
   const fileBuffer = fs.readFileSync(req.file.path);
   const restaurantId = req.user?.restaurant_id || 1;
   const entityType = req.body?.entityType || 'dishes';
 
-  // 1. Primary: Upload to Cloudflare R2 Cloud Storage (with Sharp optimization & WebP conversion)
-  if (isR2Active()) {
-    try {
-      const r2Result = await uploadImageToR2({
-        buffer: fileBuffer,
-        mimeType: req.file.mimetype,
-        restaurantId,
-        entityType
-      });
-
-      // Save metadata in database with NULL data column
-      await saveR2ImageToDb(
-        req.file.filename,
-        r2Result.mimeType,
-        r2Result.objectKey,
-        r2Result.publicUrl,
-        restaurantId
-      );
-
-      console.log('⚡ Uploaded image to Cloudflare R2:', r2Result.publicUrl);
-      
-      // Cleanup local temp file
-      if (req.file.path && fs.existsSync(req.file.path)) fs.unlinkSync(req.file.path);
-
-      return res.json({ url: r2Result.publicUrl, key: r2Result.objectKey });
-    } catch (r2Err) {
-      console.error('❌ Cloudflare R2 upload failed, falling back:', r2Err.message);
-    }
+  // Strictly require R2 for NEW uploads in production (No Base64 insertion allowed)
+  if (!isR2Active()) {
+    if (req.file.path && fs.existsSync(req.file.path)) fs.unlinkSync(req.file.path);
+    console.error('❌ Upload rejected: Cloudflare R2 credentials missing/unconfigured in process.env');
+    return res.status(500).json({ success: false, error: 'Image storage temporarily unavailable' });
   }
 
-  // 2. Resilient Fallback: Store in persistent database storage
   try {
-    await saveImageToDb(req.file.filename, req.file.mimetype, fileBuffer);
-  } catch (err) {
-    console.error('Error saving image to DB backup:', err.message);
-  }
+    const r2Result = await uploadImageToR2({
+      buffer: fileBuffer,
+      mimeType: req.file.mimetype,
+      restaurantId,
+      entityType
+    });
 
-  const imageUrl = `/uploads/${req.file.filename}`;
-  res.json({ url: imageUrl });
+    // Save R2 metadata ONLY in database with NULL data column
+    await saveR2ImageToDb(
+      req.file.filename,
+      r2Result.mimeType,
+      r2Result.objectKey,
+      r2Result.publicUrl,
+      restaurantId
+    );
+
+    console.log('⚡ Uploaded image to Cloudflare R2:', r2Result.publicUrl);
+    
+    // Cleanup local temp file
+    if (req.file.path && fs.existsSync(req.file.path)) fs.unlinkSync(req.file.path);
+
+    return res.json({ success: true, url: r2Result.publicUrl, key: r2Result.objectKey });
+  } catch (r2Err) {
+    if (req.file.path && fs.existsSync(req.file.path)) fs.unlinkSync(req.file.path);
+    console.error('❌ Cloudflare R2 upload failed:', r2Err.name, r2Err.message);
+    return res.status(500).json({ success: false, error: 'Image storage temporarily unavailable' });
+  }
 });
 
 // Category Management (Tenant Scoped - OPERATIONAL ROUTES)

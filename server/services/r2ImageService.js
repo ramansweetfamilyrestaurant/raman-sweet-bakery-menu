@@ -4,32 +4,45 @@ import path from 'path';
 import dotenv from 'dotenv';
 dotenv.config();
 
-const R2_ACCOUNT_ID = (process.env.R2_ACCOUNT_ID || '').trim();
-const R2_ACCESS_KEY_ID = (process.env.R2_ACCESS_KEY_ID || '').trim();
-const R2_SECRET_ACCESS_KEY = (process.env.R2_SECRET_ACCESS_KEY || '').trim();
-const R2_BUCKET_NAME = (process.env.R2_BUCKET_NAME || 'khana-master-media').trim();
-const R2_PUBLIC_DOMAIN = (process.env.R2_PUBLIC_DOMAIN || '').trim();
-const R2_ENDPOINT = (process.env.R2_ENDPOINT || '').trim();
+function getR2Config() {
+  const accountId = (process.env.R2_ACCOUNT_ID || '').trim();
+  const accessKeyId = (process.env.R2_ACCESS_KEY_ID || '').trim();
+  const secretAccessKey = (process.env.R2_SECRET_ACCESS_KEY || '').trim();
+  const bucketName = (process.env.R2_BUCKET_NAME || 'khana-master-media').trim();
+  const publicDomain = (process.env.R2_PUBLIC_DOMAIN || '').trim();
+  const endpoint = (process.env.R2_ENDPOINT || '').trim();
+
+  return {
+    accountId,
+    accessKeyId,
+    secretAccessKey,
+    bucketName,
+    publicDomain,
+    endpoint
+  };
+}
 
 function getR2Client() {
-  let accountId = R2_ACCOUNT_ID;
-  if (!accountId && R2_ENDPOINT) {
-    const match = R2_ENDPOINT.match(/https:\/\/([^.\/]+)\.r2\.cloudflarestorage\.com/i);
+  const config = getR2Config();
+  let accountId = config.accountId;
+
+  if (!accountId && config.endpoint) {
+    const match = config.endpoint.match(/https:\/\/([^.\/]+)\.r2\.cloudflarestorage\.com/i);
     if (match && match[1]) {
       accountId = match[1].trim();
     }
   }
 
-  const isInvalid = !R2_ACCESS_KEY_ID || !R2_SECRET_ACCESS_KEY ||
-                    R2_ACCESS_KEY_ID.includes('your_r2_access_key_id') ||
-                    (!accountId && !R2_ENDPOINT);
+  const isInvalid = !config.accessKeyId || !config.secretAccessKey ||
+                    config.accessKeyId.toLowerCase().includes('your_r2_access_key_id') ||
+                    (!accountId && !config.endpoint);
 
   if (isInvalid) {
     return null;
   }
 
-  const endpointUrl = R2_ENDPOINT
-    ? (R2_ENDPOINT.startsWith('http') ? R2_ENDPOINT : `https://${R2_ENDPOINT}`)
+  const endpointUrl = config.endpoint
+    ? (config.endpoint.startsWith('http') ? config.endpoint : `https://${config.endpoint}`)
     : `https://${accountId}.r2.cloudflarestorage.com`;
 
   try {
@@ -37,8 +50,8 @@ function getR2Client() {
       region: 'auto',
       endpoint: endpointUrl,
       credentials: {
-        accessKeyId: R2_ACCESS_KEY_ID,
-        secretAccessKey: R2_SECRET_ACCESS_KEY,
+        accessKeyId: config.accessKeyId,
+        secretAccessKey: config.secretAccessKey,
       },
       requestChecksumCalculation: 'WHEN_REQUIRED',
       responseChecksumValidation: 'WHEN_REQUIRED'
@@ -53,6 +66,26 @@ export function isR2Active() {
   return getR2Client() !== null;
 }
 
+export function getR2Diagnostics() {
+  const config = getR2Config();
+  const active = isR2Active();
+
+  return {
+    provider: 'r2',
+    configured: active,
+    bucket: config.bucketName,
+    endpointConfigured: Boolean(config.endpoint || config.accountId),
+    diagnostics: {
+      hasAccountId: Boolean(config.accountId && !config.accountId.includes('your_')),
+      hasAccessKeyId: Boolean(config.accessKeyId && !config.accessKeyId.includes('your_')),
+      hasSecretAccessKey: Boolean(config.secretAccessKey && !config.secretAccessKey.includes('your_')),
+      hasBucketName: Boolean(config.bucketName),
+      hasEndpoint: Boolean(config.endpoint),
+      hasPublicDomain: Boolean(config.publicDomain && !config.publicDomain.includes('pub-xxxx'))
+    }
+  };
+}
+
 /**
  * Optimizes an image buffer using Sharp.
  * Resizes max 1200px, converts to WebP with ~82% quality, strips metadata.
@@ -63,15 +96,13 @@ export async function optimizeImage(buffer, originalMime = 'image/jpeg') {
   }
 
   try {
-    // Validate image format via Sharp
     const metadata = await sharp(buffer).metadata();
     if (!metadata || !metadata.format) {
       throw new Error('Unsupported or corrupted image file format');
     }
 
-    // Convert to WebP, resize if max dimension > 1200px
     const optimizedBuffer = await sharp(buffer)
-      .rotate() // Auto-rotate based on EXIF orientation
+      .rotate()
       .resize({
         width: 1200,
         height: 1200,
@@ -105,8 +136,6 @@ export async function optimizeImage(buffer, originalMime = 'image/jpeg') {
  */
 export function generateObjectKey(restaurantId, entityType = 'dishes', filename = '') {
   const safeRestoId = parseInt(restaurantId, 10) || 1;
-  
-  // Whitelist entity types to prevent path traversal
   const validTypes = ['dishes', 'categories', 'banners', 'avatars', 'logos', 'migrated', 'misc'];
   const safeType = validTypes.includes(entityType) ? entityType : 'dishes';
   
@@ -126,6 +155,8 @@ export async function uploadImageToR2({ buffer, mimeType, restaurantId = 1, enti
     throw new Error('Cloudflare R2 is not configured in environment variables');
   }
 
+  const config = getR2Config();
+
   // 1. Optimize image using Sharp
   const optimized = await optimizeImage(buffer, mimeType);
 
@@ -134,7 +165,7 @@ export async function uploadImageToR2({ buffer, mimeType, restaurantId = 1, enti
 
   // 3. Upload to R2 Bucket
   const command = new PutObjectCommand({
-    Bucket: R2_BUCKET_NAME,
+    Bucket: config.bucketName,
     Key: objectKey,
     Body: optimized.buffer,
     ContentType: optimized.mimeType,
@@ -144,17 +175,17 @@ export async function uploadImageToR2({ buffer, mimeType, restaurantId = 1, enti
 
   // 4. Construct Public R2 URL
   let publicUrl = '';
-  if (R2_PUBLIC_DOMAIN && !R2_PUBLIC_DOMAIN.toLowerCase().includes('pub-xxxx')) {
-    const cleanDomain = R2_PUBLIC_DOMAIN.replace(/\/+$/, '');
+  if (config.publicDomain && !config.publicDomain.toLowerCase().includes('pub-xxxx')) {
+    const cleanDomain = config.publicDomain.replace(/\/+$/, '');
     const prefix = cleanDomain.startsWith('http') ? cleanDomain : `https://${cleanDomain}`;
     publicUrl = `${prefix}/${objectKey}`;
   } else {
-    let accountId = R2_ACCOUNT_ID;
-    if (!accountId && R2_ENDPOINT) {
-      const match = R2_ENDPOINT.match(/https:\/\/([^.\/]+)\.r2\.cloudflarestorage\.com/i);
+    let accountId = config.accountId;
+    if (!accountId && config.endpoint) {
+      const match = config.endpoint.match(/https:\/\/([^.\/]+)\.r2\.cloudflarestorage\.com/i);
       if (match) accountId = match[1].trim();
     }
-    publicUrl = `https://${R2_BUCKET_NAME}.${accountId || 'pub'}.r2.dev/${objectKey}`;
+    publicUrl = `https://${config.bucketName}.${accountId || 'pub'}.r2.dev/${objectKey}`;
   }
 
   return {
@@ -173,9 +204,11 @@ export async function deleteImageFromR2(objectKey) {
   const client = getR2Client();
   if (!client) return false;
 
+  const config = getR2Config();
+
   try {
     const command = new DeleteObjectCommand({
-      Bucket: R2_BUCKET_NAME,
+      Bucket: config.bucketName,
       Key: objectKey
     });
     await client.send(command);
