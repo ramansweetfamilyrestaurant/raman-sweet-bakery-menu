@@ -602,6 +602,72 @@ router.post('/r2/migrate-images', authenticateToken, requireActiveSubscription, 
   }
 });
 
+// Auto-Mirror External Web Images -> Cloudflare R2
+router.post('/r2/mirror-external', authenticateToken, requireActiveSubscription, async (req, res) => {
+  try {
+    const dishes = await query("SELECT id, name, restaurant_id, image FROM dishes WHERE image LIKE 'http%' AND image NOT LIKE '%r2.dev%' AND image NOT LIKE '%/api/r2-proxy/%' ORDER BY id ASC");
+    
+    let totalDishes = dishes.length;
+    let successCount = 0;
+    let failCount = 0;
+
+    for (let i = 0; i < dishes.length; i++) {
+      const dish = dishes[i];
+      const restoId = dish.restaurant_id || 1;
+      try {
+        const fetchRes = await fetch(dish.image, {
+          headers: {
+            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'
+          },
+          signal: AbortSignal.timeout(15000)
+        });
+
+        if (!fetchRes.ok) continue;
+
+        const arrayBuf = await fetchRes.arrayBuffer();
+        const inputBuffer = Buffer.from(arrayBuf);
+        if (!inputBuffer || inputBuffer.length === 0) continue;
+
+        let webpBuffer;
+        const imagePipeline = sharp(inputBuffer);
+        const meta = await imagePipeline.metadata();
+
+        let transformer = sharp(inputBuffer);
+        if (meta.width && meta.width > 1200) {
+          transformer = transformer.resize(1200, null, { withoutEnlargement: true });
+        }
+
+        webpBuffer = await transformer.webp({ quality: 85 }).toBuffer();
+
+        const r2Result = await uploadImageToR2({
+          buffer: webpBuffer,
+          mimeType: 'image/webp',
+          restaurantId: restoId,
+          entityType: 'dishes'
+        });
+
+        if (!r2Result || !r2Result.objectKey) continue;
+
+        const proxyUrl = `/api/r2-proxy/${r2Result.objectKey}`;
+        const finalUrl = r2Result.publicUrl || proxyUrl;
+
+        await query("UPDATE dishes SET image = $1 WHERE id = $2", [proxyUrl, dish.id]);
+
+        const filename = `dish-mirrored-${dish.id}-${Date.now()}.webp`;
+        await saveR2ImageToDb(filename, 'image/webp', r2Result.objectKey, finalUrl, restoId);
+
+        successCount++;
+      } catch (err) {
+        failCount++;
+      }
+    }
+
+    res.json({ success: true, totalDishes, successCount, failCount });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
 // Category Management (Tenant Scoped - OPERATIONAL ROUTES)
 router.get('/categories', authenticateToken, async (req, res) => {
   try {
