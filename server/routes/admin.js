@@ -37,6 +37,70 @@ async function cleanupImage(imageUrl) {
   }
 }
 
+async function processExternalImageUrl(imageUrl, restaurantId = 1, entityType = 'dishes') {
+  if (!imageUrl || typeof imageUrl !== 'string') return imageUrl;
+  
+  if (imageUrl.startsWith('/api/r2-proxy/') || imageUrl === '/uploads/logo.jpg') {
+    return imageUrl;
+  }
+
+  if (imageUrl.startsWith('http://') || imageUrl.startsWith('https://')) {
+    if (imageUrl.includes('.r2.dev/restaurants/')) {
+      const idx = imageUrl.indexOf('restaurants/');
+      return `/api/r2-proxy/${imageUrl.substring(idx)}`;
+    }
+
+    try {
+      console.log(`🌐 [AUTO R2 PIPELINE] Intercepted external URL: ${imageUrl}`);
+      const fetchRes = await fetch(imageUrl, {
+        headers: {
+          'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'
+        },
+        signal: AbortSignal.timeout(15000)
+      });
+
+      if (!fetchRes.ok) return imageUrl;
+
+      const arrayBuf = await fetchRes.arrayBuffer();
+      const inputBuffer = Buffer.from(arrayBuf);
+      if (!inputBuffer || inputBuffer.length === 0) return imageUrl;
+
+      const imagePipeline = sharp(inputBuffer);
+      const meta = await imagePipeline.metadata();
+      if (!meta || !meta.format) return imageUrl;
+
+      let transformer = sharp(inputBuffer);
+      if (meta.width && meta.width > 1200) {
+        transformer = transformer.resize(1200, null, { withoutEnlargement: true });
+      }
+
+      const webpBuffer = await transformer.webp({ quality: 85 }).toBuffer();
+      const r2Result = await uploadImageToR2({
+        buffer: webpBuffer,
+        mimeType: 'image/webp',
+        restaurantId,
+        entityType
+      });
+
+      if (!r2Result || !r2Result.objectKey) return imageUrl;
+
+      const proxyUrl = `/api/r2-proxy/${r2Result.objectKey}`;
+      const finalUrl = r2Result.publicUrl || proxyUrl;
+
+      const filename = `external-${entityType}-${Date.now()}.webp`;
+      await saveR2ImageToDb(filename, 'image/webp', r2Result.objectKey, finalUrl, restaurantId);
+
+      console.log(`✅ [AUTO R2 PIPELINE COMPLETE] Returning R2 Proxy URL: ${proxyUrl}`);
+      return proxyUrl;
+    } catch (err) {
+      console.warn(`⚠️ External image auto-R2 pipeline notice:`, err.message);
+      return imageUrl;
+    }
+  }
+
+  return imageUrl;
+}
+
 const storage = multer.diskStorage({
   destination: (req, file, cb) => {
     const uploadDir = path.resolve('public/uploads');
@@ -725,10 +789,11 @@ router.post('/categories', authenticateToken, requireActiveSubscription, async (
     if (!name) {
       return res.status(400).json({ error: 'Category name is required' });
     }
+    const processedImage = await processExternalImageUrl(image, targetId, 'categories');
     const order = sort_order || 0;
     const result = await query(
       'INSERT INTO categories (restaurant_id, name, image, sort_order) VALUES ($1, $2, $3, $4) RETURNING id',
-      [targetId, name, image || '/uploads/logo.jpg', order]
+      [targetId, name, processedImage || '/uploads/logo.jpg', order]
     );
     res.json({ success: true, id: result[0]?.id || result.lastInsertRowid });
   } catch (err) {
@@ -747,12 +812,14 @@ router.put('/categories/:id', authenticateToken, requireActiveSubscription, asyn
     const { id } = req.params;
     const { name, image, sort_order } = req.body;
 
+    const processedImage = await processExternalImageUrl(image, targetId, 'categories');
+
     // Fetch old category image to clean up if replaced
-    if (image) {
+    if (processedImage) {
       try {
         const oldCatRows = await query('SELECT image FROM categories WHERE id = $1 AND restaurant_id = $2', [id, targetId]);
         const oldImage = oldCatRows && oldCatRows.length > 0 ? oldCatRows[0].image : null;
-        if (oldImage && oldImage !== image) {
+        if (oldImage && oldImage !== processedImage) {
           await cleanupImage(oldImage);
         }
       } catch (cleanErr) {
@@ -762,7 +829,7 @@ router.put('/categories/:id', authenticateToken, requireActiveSubscription, asyn
 
     await query(
       'UPDATE categories SET name = $1, image = $2, sort_order = $3 WHERE id = $4 AND restaurant_id = $5',
-      [name, image, sort_order || 0, id, targetId]
+      [name, processedImage, sort_order || 0, id, targetId]
     );
     res.json({ success: true });
   } catch (err) {
@@ -844,6 +911,8 @@ router.post('/dishes', authenticateToken, requireActiveSubscription, async (req,
       return res.status(400).json({ error: 'Category, name, and price are required' });
     }
 
+    const processedImage = await processExternalImageUrl(image, targetId, 'dishes');
+
     const availVal = available === false ? 0 : 1;
     const result = await query(
       `INSERT INTO dishes (
@@ -851,7 +920,7 @@ router.post('/dishes', authenticateToken, requireActiveSubscription, async (req,
         portion, portion_half_label, portion_full_label, badge, ingredients, taste_profile, type, available
       ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15) RETURNING id`,
       [
-        targetId, category_id, name, description || '', image || '', price, price_half || null,
+        targetId, category_id, name, description || '', processedImage || '', price, price_half || null,
         portion || '', portion_half_label || '', portion_full_label || '', badge || '', ingredients || '', taste_profile || '', type || 'veg', availVal
       ]
     );
@@ -875,12 +944,14 @@ router.put('/dishes/:id', authenticateToken, requireActiveSubscription, async (r
       portion, portion_half_label, portion_full_label, badge, ingredients, taste_profile, type, available 
     } = req.body;
 
+    const processedImage = await processExternalImageUrl(image, targetId, 'dishes');
+
     // Fetch old dish image to clean up if replaced
-    if (image) {
+    if (processedImage) {
       try {
         const oldDishRows = await query('SELECT image FROM dishes WHERE id = $1 AND restaurant_id = $2', [id, targetId]);
         const oldImage = oldDishRows && oldDishRows.length > 0 ? oldDishRows[0].image : null;
-        if (oldImage && oldImage !== image) {
+        if (oldImage && oldImage !== processedImage) {
           await cleanupImage(oldImage);
         }
       } catch (cleanErr) {
@@ -896,7 +967,7 @@ router.put('/dishes/:id', authenticateToken, requireActiveSubscription, async (r
            ingredients = $11, taste_profile = $12, type = $13, available = $14, updated_at = CURRENT_TIMESTAMP 
        WHERE id = $15 AND restaurant_id = $16`,
       [
-        category_id, name, description || '', image, price, price_half || null,
+        category_id, name, description || '', processedImage, price, price_half || null,
         portion || '', portion_half_label || '', portion_full_label || '', badge || '',
         ingredients || '', taste_profile || '', type || 'veg', availVal, id, targetId
       ]
