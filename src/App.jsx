@@ -503,8 +503,8 @@ export default function App() {
 
       // If someone types bare /admin without restaurant slug
       if (path === '/admin' || path === '/admin/') {
-        const storedSlug = localStorage.getItem('raman_admin_slug');
-        if (storedSlug) {
+        let storedSlug = localStorage.getItem('raman_admin_slug');
+        if (storedSlug && storedSlug !== 'undefined' && storedSlug !== 'null') {
           window.history.replaceState({}, '', `/${storedSlug}/admin`);
         }
       }
@@ -535,10 +535,12 @@ export default function App() {
       } else if (isBilling) {
         if (adminToken) {
           setSubscriptionLoading(true);
-          const currentSlug = localStorage.getItem('raman_admin_slug');
+          let currentSlug = localStorage.getItem('raman_admin_slug');
+          if (currentSlug === 'undefined' || currentSlug === 'null') currentSlug = '';
           const mandateActive = await checkMandateGating(adminToken, currentSlug);
           if (mandateActive) {
-            window.history.replaceState({}, '', currentSlug ? `/${currentSlug}/admin` : '/admin');
+            const cleanUrl = (currentSlug && currentSlug !== 'undefined' && currentSlug !== 'null') ? `/${currentSlug}/admin` : '/admin';
+            window.history.replaceState({}, '', cleanUrl);
             setView('admin-dashboard');
           } else {
             setView('billing');
@@ -552,20 +554,34 @@ export default function App() {
         setView('register');
       } else if (isRouteAdmin) {
         setSubscriptionLoading(true);
-        const storedSlug = localStorage.getItem('raman_admin_slug');
+        let storedSlug = localStorage.getItem('raman_admin_slug');
+        if (storedSlug === 'undefined' || storedSlug === 'null') storedSlug = '';
+
         let currentSlug = getSlugFromUrl() || (info && info.slug);
-        if (!currentSlug || currentSlug === 'admin') {
+        if (!currentSlug || currentSlug === 'admin' || currentSlug === 'undefined' || currentSlug === 'null') {
           currentSlug = storedSlug;
         }
 
-        const effectiveSlug = currentSlug || storedSlug;
+        let effectiveSlug = currentSlug || storedSlug;
+        if (effectiveSlug === 'undefined' || effectiveSlug === 'null') effectiveSlug = '';
 
-        if (adminToken && effectiveSlug) {
+        if (adminToken) {
+          if (!effectiveSlug) {
+            try {
+              const rInfo = await fetchRestaurantInfo(adminToken);
+              if (rInfo && rInfo.slug) {
+                effectiveSlug = rInfo.slug;
+                localStorage.setItem('raman_admin_slug', effectiveSlug);
+              }
+            } catch (e) {
+              console.warn('Notice fetching restaurant info for route:', e.message);
+            }
+          }
+
           const mandateActive = await checkMandateGating(adminToken, effectiveSlug);
           if (mandateActive) {
-            if (path === '/admin' || path === '/admin/') {
-              window.history.replaceState({}, '', `/${effectiveSlug}/admin`);
-            }
+            const cleanUrl = (effectiveSlug && effectiveSlug !== 'undefined' && effectiveSlug !== 'null') ? `/${effectiveSlug}/admin` : '/admin';
+            window.history.replaceState({}, '', cleanUrl);
             setView('admin-dashboard');
           } else {
             // Subscription action required → Redirect to billing page
@@ -597,10 +613,21 @@ export default function App() {
   }, [adminToken, superToken, info]);
 
   const handleAdminLoginSuccess = async (token, username, slug) => {
-    const currentSlug = slug || getSlugFromUrl() || (info && info.slug) || '';
+    let currentSlug = slug || getSlugFromUrl() || (info && info.slug) || localStorage.getItem('raman_admin_slug') || '';
+    if (!currentSlug || currentSlug === 'undefined' || currentSlug === 'null') {
+      try {
+        const rInfo = await fetchRestaurantInfo(token);
+        if (rInfo && rInfo.slug) currentSlug = rInfo.slug;
+      } catch (err) {
+        console.warn('Notice fetching restaurant info on login:', err.message);
+      }
+    }
+
+    if (currentSlug && currentSlug !== 'undefined' && currentSlug !== 'null') {
+      localStorage.setItem('raman_admin_slug', currentSlug);
+    }
     localStorage.setItem('raman_admin_token', token);
     localStorage.setItem('raman_admin_user', username);
-    localStorage.setItem('raman_admin_slug', currentSlug);
     setAdminToken(token);
     setAdminUsername(username);
     setAdminSlug(currentSlug);
@@ -608,7 +635,8 @@ export default function App() {
     const mandateActive = await checkMandateGating(token, currentSlug);
     if (mandateActive) {
       setView('admin-dashboard');
-      window.history.pushState({}, '', currentSlug ? `/${currentSlug}/admin` : '/admin');
+      const cleanUrl = (currentSlug && currentSlug !== 'undefined' && currentSlug !== 'null') ? `/${currentSlug}/admin` : '/admin';
+      window.history.pushState({}, '', cleanUrl);
     } else {
       setView('billing');
       window.history.pushState({}, '', '/billing');
