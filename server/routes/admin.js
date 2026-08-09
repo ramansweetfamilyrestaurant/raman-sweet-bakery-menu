@@ -5,6 +5,7 @@ import multer from 'multer';
 import path from 'path';
 import fs from 'fs';
 import { query, runAutoDataSummarization, saveImageToDb } from '../db.js';
+import { isR2Configured, uploadToR2 } from '../r2Service.js';
 import { authenticateToken, requireActiveSubscription, checkSubscriptionStatus } from '../middleware/auth.js';
 
 const router = express.Router();
@@ -300,8 +301,21 @@ router.post('/upload', authenticateToken, requireActiveSubscription, upload.sing
     return res.status(400).json({ error: 'No image file uploaded' });
   }
 
+  const fileBuffer = fs.readFileSync(req.file.path);
+
+  // 1. Primary: Try Cloudflare R2 Cloud Storage Upload if credentials exist in .env
+  if (isR2Configured()) {
+    try {
+      const r2Url = await uploadToR2(req.file.filename, fileBuffer, req.file.mimetype);
+      console.log('⚡ Uploaded image to Cloudflare R2 Cloud Storage:', r2Url);
+      return res.json({ url: r2Url });
+    } catch (r2Err) {
+      console.warn('⚠️ Cloudflare R2 upload failed, using persistent DB fallback:', r2Err.message);
+    }
+  }
+
+  // 2. Resilient Fallback: Store in persistent database storage
   try {
-    const fileBuffer = fs.readFileSync(req.file.path);
     await saveImageToDb(req.file.filename, req.file.mimetype, fileBuffer);
   } catch (err) {
     console.error('Error saving image to DB backup:', err.message);
