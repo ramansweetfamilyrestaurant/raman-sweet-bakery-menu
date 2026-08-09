@@ -133,11 +133,13 @@ router.post('/checkout-pre-register', async (req, res) => {
   }
 });
 
-// GET /api/payment/register-return - Cashfree subscription return callback for pre-registration
-router.get('/register-return', async (req, res) => {
-  const { reg_id, subscription_id, sub_id } = req.query;
-  const targetSubId = subscription_id || sub_id;
+// ALL /api/payment/register-return - Cashfree subscription return callback for pre-registration (supports GET & POST)
+router.all('/register-return', async (req, res) => {
+  const reg_id = req.query.reg_id || req.body?.reg_id || req.query.reg_token || req.body?.reg_token;
+  const targetSubId = req.query.subscription_id || req.query.sub_id || req.body?.subscription_id || req.body?.sub_id;
   const baseUrl = process.env.APP_BASE_URL || 'https://khana-master.onrender.com';
+
+  console.log('[Register Return] Received callback. Method:', req.method, 'reg_id:', reg_id, 'targetSubId:', targetSubId);
 
   if (!reg_id) {
     return res.redirect(`${baseUrl}/register?error=Invalid registration session`);
