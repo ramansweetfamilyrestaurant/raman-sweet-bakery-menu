@@ -8,24 +8,26 @@ function getR2Client() {
   const accessKeyId = (process.env.R2_ACCESS_KEY_ID || '').trim();
   const secretAccessKey = (process.env.R2_SECRET_ACCESS_KEY || '').trim();
 
-  // If R2_ENDPOINT is provided (e.g. https://<accountId>.r2.cloudflarestorage.com), extract accountId if missing
+  // Extract accountId from R2_ENDPOINT if accountId is not explicitly set
   if (!accountId && endpointEnv) {
-    const match = endpointEnv.match(/https:\/\/([a-f0-9]+)\.r2\.cloudflarestorage\.com/i);
+    const match = endpointEnv.match(/https:\/\/([^.\/]+)\.r2\.cloudflarestorage\.com/i);
     if (match && match[1]) {
-      accountId = match[1];
+      accountId = match[1].trim();
     }
   }
 
-  // Validate presence of credentials (ignore pure placeholder strings)
+  // Validate credentials exist and are not placeholder strings
   const isInvalid = !accessKeyId || !secretAccessKey ||
-                    accessKeyId.includes('your_r2_access_key_id') ||
+                    accessKeyId.toLowerCase().includes('your_r2_access_key_id') ||
                     (!accountId && !endpointEnv);
 
   if (isInvalid) {
     return null;
   }
 
-  const endpointUrl = endpointEnv || `https://${accountId}.r2.cloudflarestorage.com`;
+  const endpointUrl = endpointEnv
+    ? (endpointEnv.startsWith('http') ? endpointEnv : `https://${endpointEnv}`)
+    : `https://${accountId}.r2.cloudflarestorage.com`;
 
   try {
     return new S3Client({
@@ -66,17 +68,18 @@ export async function uploadToR2(filename, buffer, mimeType) {
   await client.send(command);
 
   // If explicit R2_PUBLIC_DOMAIN is configured (e.g. https://pub-xxxx.r2.dev or custom domain)
-  if (publicDomain && !publicDomain.includes('pub-xxxx.r2.dev')) {
+  if (publicDomain && !publicDomain.toLowerCase().includes('pub-xxxx')) {
     const cleanDomain = publicDomain.replace(/\/+$/, '');
-    return `${cleanDomain}/${filename}`;
+    const prefix = cleanDomain.startsWith('http') ? cleanDomain : `https://${cleanDomain}`;
+    return `${prefix}/${filename}`;
   }
 
-  // Fallback public URL formats
+  // Fallback R2 public domain format
   let accountId = (process.env.R2_ACCOUNT_ID || '').trim();
   if (!accountId && endpointEnv) {
-    const match = endpointEnv.match(/https:\/\/([a-f0-9]+)\.r2\.cloudflarestorage\.com/i);
-    if (match) accountId = match[1];
+    const match = endpointEnv.match(/https:\/\/([^.\/]+)\.r2\.cloudflarestorage\.com/i);
+    if (match) accountId = match[1].trim();
   }
 
-  return `https://${bucketName}.${accountId}.r2.dev/${filename}`;
+  return `https://${bucketName}.${accountId || 'pub'}.r2.dev/${filename}`;
 }
