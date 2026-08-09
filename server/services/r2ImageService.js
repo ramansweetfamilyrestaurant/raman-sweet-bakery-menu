@@ -1,8 +1,20 @@
 import { S3Client, PutObjectCommand, DeleteObjectCommand, HeadObjectCommand, GetObjectCommand } from '@aws-sdk/client-s3';
 import sharp from 'sharp';
 import path from 'path';
+import fs from 'fs';
 import dotenv from 'dotenv';
 dotenv.config();
+
+const r2CacheDir = path.resolve('public/uploads/r2-cache');
+if (!fs.existsSync(r2CacheDir)) {
+  fs.mkdirSync(r2CacheDir, { recursive: true });
+}
+
+function getCacheFilePath(objectKey) {
+  if (!objectKey) return null;
+  const safeFilename = path.basename(objectKey);
+  return path.join(r2CacheDir, safeFilename);
+}
 
 function getR2Config() {
   const accountId = (process.env.R2_ACCOUNT_ID || '').trim();
@@ -204,6 +216,14 @@ export async function uploadImageToR2({ buffer, mimeType, restaurantId = 1, enti
     }
   }
 
+  // Cache optimized WebP locally for instant zero-latency serving
+  try {
+    const cachePath = getCacheFilePath(objectKey);
+    if (cachePath) fs.writeFileSync(cachePath, optimized.buffer);
+  } catch (cErr) {
+    console.warn('Local R2 cache write notice:', cErr.message);
+  }
+
   // 4. Construct Public R2 URL
   let publicUrl = '';
   if (config.publicDomain && !config.publicDomain.toLowerCase().includes('pub-xxxx')) {
@@ -232,6 +252,15 @@ export async function uploadImageToR2({ buffer, mimeType, restaurantId = 1, enti
  */
 export async function deleteImageFromR2(objectKey) {
   if (!objectKey) return false;
+  
+  // Remove from local disk cache if present
+  try {
+    const cachePath = getCacheFilePath(objectKey);
+    if (cachePath && fs.existsSync(cachePath)) fs.unlinkSync(cachePath);
+  } catch (cErr) {
+    console.warn('Local cache delete notice:', cErr.message);
+  }
+
   const client = getR2Client();
   if (!client) return false;
 
@@ -252,10 +281,28 @@ export async function deleteImageFromR2(objectKey) {
 }
 
 /**
- * Fetches an image buffer directly from Cloudflare R2 bucket.
+ * Fetches an image buffer directly from Cloudflare R2 bucket (with local disk caching).
  */
 export async function getR2ObjectBuffer(objectKey) {
   if (!objectKey) return null;
+
+  // 1. Check local disk cache first (Instant response ~0.5ms)
+  const cachePath = getCacheFilePath(objectKey);
+  if (cachePath && fs.existsSync(cachePath)) {
+    try {
+      const cachedBuffer = fs.readFileSync(cachePath);
+      if (cachedBuffer && cachedBuffer.length > 0) {
+        return {
+          buffer: cachedBuffer,
+          contentType: 'image/webp'
+        };
+      }
+    } catch (cErr) {
+      console.warn('Read local R2 cache notice:', cErr.message);
+    }
+  }
+
+  // 2. Fetch from Cloudflare R2
   const client = getR2Client();
   if (!client) return null;
 
@@ -268,8 +315,19 @@ export async function getR2ObjectBuffer(objectKey) {
     });
     const response = await client.send(command);
     const byteArray = await response.Body.transformToByteArray();
+    const buffer = Buffer.from(byteArray);
+
+    // Save to local cache so subsequent requests are instant
+    if (cachePath && buffer && buffer.length > 0) {
+      try {
+        fs.writeFileSync(cachePath, buffer);
+      } catch (wErr) {
+        console.warn('Cache write notice:', wErr.message);
+      }
+    }
+
     return {
-      buffer: Buffer.from(byteArray),
+      buffer,
       contentType: response.ContentType || 'image/webp'
     };
   } catch (err) {
@@ -281,8 +339,18 @@ export async function getR2ObjectBuffer(objectKey) {
       });
       const response = await client.send(fallbackCommand);
       const byteArray = await response.Body.transformToByteArray();
+      const buffer = Buffer.from(byteArray);
+
+      if (cachePath && buffer && buffer.length > 0) {
+        try {
+          fs.writeFileSync(cachePath, buffer);
+        } catch (wErr) {
+          console.warn('Cache write notice:', wErr.message);
+        }
+      }
+
       return {
-        buffer: Buffer.from(byteArray),
+        buffer,
         contentType: response.ContentType || 'image/webp'
       };
     } catch (fbErr) {

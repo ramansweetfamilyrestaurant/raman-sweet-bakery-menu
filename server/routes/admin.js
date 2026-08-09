@@ -353,7 +353,7 @@ router.post('/upload', authenticateToken, requireActiveSubscription, upload.sing
     // Cleanup local temp file
     if (req.file.path && fs.existsSync(req.file.path)) fs.unlinkSync(req.file.path);
 
-    const imageUrl = `/api/r2-proxy/${encodeURIComponent(r2Result.objectKey)}`;
+    const imageUrl = `/api/r2-proxy/${r2Result.objectKey}`;
     return res.json({ success: true, url: imageUrl, key: r2Result.objectKey, r2Url: r2Result.publicUrl });
   } catch (r2Err) {
     if (req.file.path && fs.existsSync(req.file.path)) fs.unlinkSync(req.file.path);
