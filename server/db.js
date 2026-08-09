@@ -271,7 +271,11 @@ async function createTables() {
       `CREATE TABLE IF NOT EXISTS stored_images (
         filename VARCHAR(255) PRIMARY KEY,
         mime_type VARCHAR(100) NOT NULL,
-        data TEXT NOT NULL,
+        data TEXT,
+        storage_provider VARCHAR(50) DEFAULT 'local',
+        image_key VARCHAR(500),
+        image_url VARCHAR(1000),
+        restaurant_id INT DEFAULT 1,
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
       );`
     ];
@@ -281,6 +285,11 @@ async function createTables() {
     }
 
     const pgAlters = [
+      `ALTER TABLE stored_images ADD COLUMN IF NOT EXISTS storage_provider VARCHAR(50) DEFAULT 'local';`,
+      `ALTER TABLE stored_images ADD COLUMN IF NOT EXISTS image_key VARCHAR(500);`,
+      `ALTER TABLE stored_images ADD COLUMN IF NOT EXISTS image_url VARCHAR(1000);`,
+      `ALTER TABLE stored_images ADD COLUMN IF NOT EXISTS restaurant_id INT DEFAULT 1;`,
+      `ALTER TABLE stored_images ALTER COLUMN data DROP NOT NULL;`,
       `ALTER TABLE categories ADD COLUMN IF NOT EXISTS restaurant_id INT REFERENCES restaurants(id) ON DELETE CASCADE;`,
       `ALTER TABLE categories ADD COLUMN IF NOT EXISTS active BOOLEAN DEFAULT TRUE;`,
       `ALTER TABLE dishes ADD COLUMN IF NOT EXISTS restaurant_id INT REFERENCES restaurants(id) ON DELETE CASCADE;`,
@@ -512,9 +521,17 @@ async function createTables() {
       CREATE TABLE IF NOT EXISTS stored_images (
         filename TEXT PRIMARY KEY,
         mime_type TEXT NOT NULL,
-        data TEXT NOT NULL,
+        data TEXT,
+        storage_provider TEXT DEFAULT 'local',
+        image_key TEXT,
+        image_url TEXT,
+        restaurant_id INTEGER DEFAULT 1,
         created_at TEXT DEFAULT CURRENT_TIMESTAMP
       );
+      try { sqliteDb.exec("ALTER TABLE stored_images ADD COLUMN storage_provider TEXT DEFAULT 'local'"); } catch (e) {}
+      try { sqliteDb.exec("ALTER TABLE stored_images ADD COLUMN image_key TEXT"); } catch (e) {}
+      try { sqliteDb.exec("ALTER TABLE stored_images ADD COLUMN image_url TEXT"); } catch (e) {}
+      try { sqliteDb.exec("ALTER TABLE stored_images ADD COLUMN restaurant_id INTEGER DEFAULT 1"); } catch (e) {}
 
       CREATE TABLE IF NOT EXISTS daily_sales_summaries (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -1162,16 +1179,16 @@ export async function saveImageToDb(filename, mimeType, bufferData) {
     const base64Str = bufferData.toString('base64');
     if (dbType === 'postgres' || pgPool) {
       await query(
-        `INSERT INTO stored_images (filename, mime_type, data)
-         VALUES ($1, $2, $3)
-         ON CONFLICT (filename) DO UPDATE SET data = EXCLUDED.data, mime_type = EXCLUDED.mime_type`,
+        `INSERT INTO stored_images (filename, mime_type, storage_provider, data)
+         VALUES ($1, $2, 'local', $3)
+         ON CONFLICT (filename) DO UPDATE SET data = EXCLUDED.data, mime_type = EXCLUDED.mime_type, storage_provider = 'local'`,
         [filename, mimeType, base64Str]
       );
     } else {
       await query(
-        `INSERT INTO stored_images (filename, mime_type, data)
-         VALUES ($1, $2, $3)
-         ON CONFLICT(filename) DO UPDATE SET data = excluded.data, mime_type = excluded.mime_type`,
+        `INSERT INTO stored_images (filename, mime_type, storage_provider, data)
+         VALUES ($1, $2, 'local', $3)
+         ON CONFLICT(filename) DO UPDATE SET data = excluded.data, mime_type = excluded.mime_type, storage_provider = 'local'`,
         [filename, mimeType, base64Str]
       );
     }
@@ -1180,14 +1197,70 @@ export async function saveImageToDb(filename, mimeType, bufferData) {
   }
 }
 
+export async function saveR2ImageToDb(filename, mimeType, imageKey, imageUrl, restaurantId = 1) {
+  try {
+    if (dbType === 'postgres' || pgPool) {
+      await query(
+        `INSERT INTO stored_images (filename, mime_type, storage_provider, image_key, image_url, restaurant_id, data)
+         VALUES ($1, $2, 'r2', $3, $4, $5, NULL)
+         ON CONFLICT (filename) DO UPDATE SET
+           storage_provider = 'r2',
+           image_key = EXCLUDED.image_key,
+           image_url = EXCLUDED.image_url,
+           restaurant_id = EXCLUDED.restaurant_id,
+           mime_type = EXCLUDED.mime_type,
+           data = NULL`,
+        [filename, mimeType, imageKey, imageUrl, restaurantId]
+      );
+    } else {
+      await query(
+        `INSERT INTO stored_images (filename, mime_type, storage_provider, image_key, image_url, restaurant_id, data)
+         VALUES ($1, $2, 'r2', $3, $4, $5, NULL)
+         ON CONFLICT(filename) DO UPDATE SET
+           storage_provider = 'r2',
+           image_key = excluded.image_key,
+           image_url = excluded.image_url,
+           restaurant_id = excluded.restaurant_id,
+           mime_type = excluded.mime_type,
+           data = NULL`,
+        [filename, mimeType, imageKey, imageUrl, restaurantId]
+      );
+    }
+  } catch (err) {
+    console.error('Failed to save R2 image metadata to DB:', err.message);
+  }
+}
+
+export async function getImageRecordFromDb(filename) {
+  try {
+    const rows = await query('SELECT filename, mime_type, data, storage_provider, image_key, image_url, restaurant_id FROM stored_images WHERE filename = $1', [filename]);
+    if (rows && rows.length > 0) {
+      return rows[0];
+    }
+  } catch (err) {
+    console.error('Failed to get image record from DB:', err.message);
+  }
+  return null;
+}
+
+export async function deleteImageRecordFromDb(filename) {
+  try {
+    await query('DELETE FROM stored_images WHERE filename = $1', [filename]);
+  } catch (err) {
+    console.error('Failed to delete image record from DB:', err.message);
+  }
+}
+
 export async function getImageFromDb(filename) {
   try {
-    const rows = await query('SELECT mime_type, data FROM stored_images WHERE filename = $1', [filename]);
+    const rows = await query('SELECT mime_type, data, storage_provider, image_url FROM stored_images WHERE filename = $1', [filename]);
     if (rows && rows.length > 0) {
-      return {
-        mimeType: rows[0].mime_type || 'image/jpeg',
-        buffer: Buffer.from(rows[0].data, 'base64')
-      };
+      if (rows[0].data) {
+        return {
+          mimeType: rows[0].mime_type || 'image/jpeg',
+          buffer: Buffer.from(rows[0].data, 'base64')
+        };
+      }
     }
   } catch (err) {
     console.error('Failed to get image from DB:', err.message);

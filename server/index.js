@@ -48,15 +48,25 @@ app.get('/uploads/:filename', async (req, res) => {
   const filename = req.params.filename;
   const filePath = path.join(uploadsDir, filename);
 
-  // 1. If physical file exists on local disk, serve directly
+  // 1. Check if DB record specifies Cloudflare R2 URL
+  try {
+    const record = await getImageRecordFromDb(filename);
+    if (record && record.storage_provider === 'r2' && record.image_url) {
+      return res.redirect(302, record.image_url);
+    }
+  } catch (dbErr) {
+    console.warn('Image record lookup notice:', dbErr.message);
+  }
+
+  // 2. If physical file exists on local disk, serve directly
   if (fs.existsSync(filePath)) {
     return res.sendFile(filePath);
   }
 
-  // 2. If missing on disk (e.g. after Render restart/redeploy), fetch from DB persistent backup!
+  // 3. If missing on disk (e.g. after Render restart/redeploy), fetch from DB persistent backup!
   try {
     const dbImg = await getImageFromDb(filename);
-    if (dbImg) {
+    if (dbImg && dbImg.buffer) {
       // Re-cache file to local disk so subsequent reads are instant
       try {
         fs.writeFileSync(filePath, dbImg.buffer);
@@ -71,13 +81,13 @@ app.get('/uploads/:filename', async (req, res) => {
     console.error('Error serving image from DB fallback:', err.message);
   }
 
-  // 3. Fallback to default placeholder logo if image is missing everywhere
+  // 4. Fallback to default placeholder logo if image is missing everywhere
   const defaultLogo = path.join(uploadsDir, 'logo.jpg');
   if (fs.existsSync(defaultLogo)) {
     return res.sendFile(defaultLogo);
   }
 
-  // 4. Return clear 404 text instead of index.html fallback
+  // 5. Return clear 404 text instead of index.html fallback
   res.status(404).send('Image not found');
 });
 
