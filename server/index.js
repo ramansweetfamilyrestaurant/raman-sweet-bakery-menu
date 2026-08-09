@@ -45,6 +45,29 @@ if (!fs.existsSync(uploadsDir)) {
   fs.mkdirSync(uploadsDir, { recursive: true });
 }
 
+// Universal R2 Proxy Stream Endpoint for any R2 object key
+app.get(['/api/r2-proxy/*', '/r2-proxy/*'], async (req, res) => {
+  const rawPath = req.params[0] || '';
+  const key = decodeURIComponent(rawPath).replace(/^\/+/, '');
+  if (!key) return res.status(404).send('Image key missing');
+
+  try {
+    const r2Object = await getImageStreamFromR2(key);
+    if (r2Object && r2Object.stream) {
+      res.setHeader('Content-Type', r2Object.contentType || 'image/webp');
+      res.setHeader('Cache-Control', 'public, max-age=31536000, immutable');
+      if (r2Object.contentLength) res.setHeader('Content-Length', r2Object.contentLength);
+      return r2Object.stream.pipe(res);
+    }
+  } catch (err) {
+    console.warn('R2 proxy stream notice:', err.message);
+  }
+
+  const defaultLogo = path.join(uploadsDir, 'logo.jpg');
+  if (fs.existsSync(defaultLogo)) return res.sendFile(defaultLogo);
+  res.status(404).send('Image not found');
+});
+
 app.get('/uploads/:filename', async (req, res) => {
   const filename = req.params.filename;
   const filePath = path.join(uploadsDir, filename);
