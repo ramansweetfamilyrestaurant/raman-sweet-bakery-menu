@@ -11,6 +11,31 @@ import { authenticateToken, requireActiveSubscription, checkSubscriptionStatus }
 const router = express.Router();
 const JWT_SECRET = process.env.JWT_SECRET || 'raman_bakery_secret_jwt_key_2026_super_secure';
 
+async function cleanupImage(imageUrl) {
+  if (!imageUrl || typeof imageUrl !== 'string') return;
+  try {
+    const r2Match = imageUrl.match(/restaurants\/[^\s'"]+/);
+    if (r2Match && r2Match[0]) {
+      const r2Key = r2Match[0];
+      console.log('🗑️ Deleting R2 object key directly:', r2Key);
+      await deleteImageFromR2(r2Key);
+    }
+
+    const filename = path.basename(imageUrl);
+    if (filename) {
+      const imgRecord = await getImageRecordFromDb(filename);
+      if (imgRecord) {
+        if (imgRecord.image_key && (!r2Match || imgRecord.image_key !== r2Match[0])) {
+          await deleteImageFromR2(imgRecord.image_key);
+        }
+        await deleteImageRecordFromDb(filename);
+      }
+    }
+  } catch (err) {
+    console.warn('⚠️ Cleanup image notice:', err.message);
+  }
+}
+
 const storage = multer.diskStorage({
   destination: (req, file, cb) => {
     const uploadDir = path.resolve('public/uploads');
@@ -382,6 +407,19 @@ router.post('/upload', authenticateToken, requireActiveSubscription, upload.sing
   return res.json({ success: true, url: localUrl });
 });
 
+// Delete Image Endpoint (For cleaning up temporary/deleted images)
+router.post('/upload/delete', authenticateToken, requireActiveSubscription, async (req, res) => {
+  try {
+    const { imageUrl } = req.body;
+    if (imageUrl) {
+      await cleanupImage(imageUrl);
+    }
+    return res.json({ success: true });
+  } catch (err) {
+    return res.status(500).json({ error: 'Failed to delete image' });
+  }
+});
+
 // Category Management (Tenant Scoped - OPERATIONAL ROUTES)
 router.get('/categories', authenticateToken, async (req, res) => {
   try {
@@ -436,16 +474,8 @@ router.put('/categories/:id', authenticateToken, requireActiveSubscription, asyn
       try {
         const oldCatRows = await query('SELECT image FROM categories WHERE id = $1 AND restaurant_id = $2', [id, targetId]);
         const oldImage = oldCatRows && oldCatRows.length > 0 ? oldCatRows[0].image : null;
-
         if (oldImage && oldImage !== image) {
-          const oldFilename = path.basename(oldImage);
-          const imgRecord = await getImageRecordFromDb(oldFilename);
-          if (imgRecord) {
-            if (imgRecord.image_key) {
-              await deleteImageFromR2(imgRecord.image_key);
-            }
-            await deleteImageRecordFromDb(oldFilename);
-          }
+          await cleanupImage(oldImage);
         }
       } catch (cleanErr) {
         console.warn('Notice cleaning up replaced category image:', cleanErr.message);
@@ -475,15 +505,7 @@ router.delete('/categories/:id', authenticateToken, requireActiveSubscription, a
     // Fetch category image before deleting
     const catRows = await query('SELECT image FROM categories WHERE id = $1 AND restaurant_id = $2', [id, targetId]);
     if (catRows && catRows.length > 0 && catRows[0].image) {
-      const imgUrl = catRows[0].image;
-      const filename = path.basename(imgUrl);
-      const imgRecord = await getImageRecordFromDb(filename);
-      if (imgRecord) {
-        if (imgRecord.image_key) {
-          await deleteImageFromR2(imgRecord.image_key);
-        }
-        await deleteImageRecordFromDb(filename);
-      }
+      await cleanupImage(catRows[0].image);
     }
 
     await query('DELETE FROM categories WHERE id = $1 AND restaurant_id = $2', [id, targetId]);
@@ -580,16 +602,8 @@ router.put('/dishes/:id', authenticateToken, requireActiveSubscription, async (r
       try {
         const oldDishRows = await query('SELECT image FROM dishes WHERE id = $1 AND restaurant_id = $2', [id, targetId]);
         const oldImage = oldDishRows && oldDishRows.length > 0 ? oldDishRows[0].image : null;
-
         if (oldImage && oldImage !== image) {
-          const oldFilename = path.basename(oldImage);
-          const imgRecord = await getImageRecordFromDb(oldFilename);
-          if (imgRecord) {
-            if (imgRecord.image_key) {
-              await deleteImageFromR2(imgRecord.image_key);
-            }
-            await deleteImageRecordFromDb(oldFilename);
-          }
+          await cleanupImage(oldImage);
         }
       } catch (cleanErr) {
         console.warn('Notice cleaning up replaced dish image:', cleanErr.message);
@@ -663,15 +677,7 @@ router.delete('/dishes/:id', authenticateToken, requireActiveSubscription, async
     // Fetch dish image before deleting
     const dishRows = await query('SELECT image FROM dishes WHERE id = $1 AND restaurant_id = $2', [id, targetId]);
     if (dishRows && dishRows.length > 0 && dishRows[0].image) {
-      const imgUrl = dishRows[0].image;
-      const filename = path.basename(imgUrl);
-      const imgRecord = await getImageRecordFromDb(filename);
-      if (imgRecord) {
-        if (imgRecord.image_key) {
-          await deleteImageFromR2(imgRecord.image_key);
-        }
-        await deleteImageRecordFromDb(filename);
-      }
+      await cleanupImage(dishRows[0].image);
     }
 
     await query('DELETE FROM dishes WHERE id = $1 AND restaurant_id = $2', [id, targetId]);

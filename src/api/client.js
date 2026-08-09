@@ -226,6 +226,23 @@ export async function uploadImage(file, token) {
   return data.url;
 }
 
+export async function deleteImageApi(imageUrl, token) {
+  if (!imageUrl) return;
+  try {
+    const res = await fetch(`${API_BASE}/admin/upload/delete`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${token}`,
+      },
+      body: JSON.stringify({ imageUrl }),
+    });
+    return await handleResponse(res, 'Delete image failed');
+  } catch (err) {
+    console.warn('Notice deleting temporary image:', err.message);
+  }
+}
+
 export async function createCategory(categoryData, token) {
   const res = await fetch(`${API_BASE}/admin/categories`, {
     method: 'POST',

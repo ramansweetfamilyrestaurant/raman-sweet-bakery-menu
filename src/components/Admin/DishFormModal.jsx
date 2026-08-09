@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { X, Upload, Image as ImageIcon } from 'lucide-react';
-import { uploadImage } from '../../api/client';
+import { uploadImage, deleteImageApi } from '../../api/client';
 
 export default function DishFormModal({ dish, categories, token, onSave, onClose }) {
   const [categoryId, setCategoryId] = useState(dish?.category_id || categories[0]?.id || '');
@@ -28,8 +28,13 @@ export default function DishFormModal({ dish, categories, token, onSave, onClose
     setUploading(true);
     setError('');
     try {
+      const oldTempImage = image;
       const res = await uploadImage(file, token);
       setImage(res);
+      // Delete old temp image if replaced before saving
+      if (oldTempImage && oldTempImage !== dish?.image) {
+        deleteImageApi(oldTempImage, token).catch(() => {});
+      }
     } catch (err) {
       setError(err.message || 'Image upload failed');
     } finally {
