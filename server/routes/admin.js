@@ -353,7 +353,8 @@ router.post('/upload', authenticateToken, requireActiveSubscription, upload.sing
     // Cleanup local temp file
     if (req.file.path && fs.existsSync(req.file.path)) fs.unlinkSync(req.file.path);
 
-    return res.json({ success: true, url: r2Result.publicUrl, key: r2Result.objectKey });
+    const imageUrl = `/uploads/${req.file.filename}`;
+    return res.json({ success: true, url: imageUrl, key: r2Result.objectKey, r2Url: r2Result.publicUrl });
   } catch (r2Err) {
     if (req.file.path && fs.existsSync(req.file.path)) fs.unlinkSync(req.file.path);
     console.error('❌ Cloudflare R2 upload failed:', r2Err.name, r2Err.message);

@@ -159,7 +159,7 @@ export default function CategoryFormModal({ category, token, onSave, onClose }) 
                     objectFit: 'cover',
                     border: '1px solid var(--accent-gold)'
                   }}
-                  onError={(e) => { e.target.style.display = 'none'; }}
+                  onError={(e) => { e.target.src = '/uploads/logo.jpg'; }}
                 />
               ) : (
                 <div style={{
