@@ -10,14 +10,16 @@ const R2_PUBLIC_DOMAIN = process.env.R2_PUBLIC_DOMAIN || '';
 
 let r2Client = null;
 
-if (R2_ACCOUNT_ID && R2_ACCESS_KEY_ID && R2_SECRET_ACCESS_KEY) {
+const isRealValue = (val) => Boolean(val && val.trim() && !val.toLowerCase().includes('your_') && !val.toLowerCase().includes('xxxx'));
+
+if (isRealValue(R2_ACCOUNT_ID) && isRealValue(R2_ACCESS_KEY_ID) && isRealValue(R2_SECRET_ACCESS_KEY)) {
   try {
     r2Client = new S3Client({
       region: 'auto',
-      endpoint: `https://${R2_ACCOUNT_ID}.r2.cloudflarestorage.com`,
+      endpoint: `https://${R2_ACCOUNT_ID.trim()}.r2.cloudflarestorage.com`,
       credentials: {
-        accessKeyId: R2_ACCESS_KEY_ID,
-        secretAccessKey: R2_SECRET_ACCESS_KEY,
+        accessKeyId: R2_ACCESS_KEY_ID.trim(),
+        secretAccessKey: R2_SECRET_ACCESS_KEY.trim(),
       },
     });
     console.log('⚡ Cloudflare R2 Storage Client Initialized Successfully!');
@@ -27,7 +29,7 @@ if (R2_ACCOUNT_ID && R2_ACCESS_KEY_ID && R2_SECRET_ACCESS_KEY) {
 }
 
 export function isR2Configured() {
-  return r2Client !== null && Boolean(R2_BUCKET_NAME);
+  return r2Client !== null && isRealValue(R2_BUCKET_NAME);
 }
 
 export async function uploadToR2(filename, buffer, mimeType) {
