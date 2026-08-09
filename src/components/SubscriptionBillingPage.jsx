@@ -56,7 +56,11 @@ const SAAS_PLANS = {
 export default function SubscriptionBillingPage({ restoInfo, token, onProceedToDashboard }) {
   const [currentResto, setCurrentResto] = useState(restoInfo || null);
   const [planKey, setPlanKey] = useState('pro');
-  const [trialSettingDays, setTrialSettingDays] = useState(14);
+  const getInitialTrialDays = () => {
+    const cached = localStorage.getItem('default_trial_days');
+    return cached ? (parseInt(cached, 10) || 17) : 17;
+  };
+  const [trialSettingDays, setTrialSettingDays] = useState(getInitialTrialDays);
 
   const [loading, setLoading] = useState(false);
   const [authorizing, setAuthorizing] = useState(false);
@@ -71,7 +75,9 @@ export default function SubscriptionBillingPage({ restoInfo, token, onProceedToD
       .then(res => res.json())
       .then(data => {
         if (data && data.default_trial_days) {
-          setTrialSettingDays(Math.max(1, parseInt(data.default_trial_days, 10) || 14));
+          const days = Math.max(1, parseInt(data.default_trial_days, 10) || 17);
+          setTrialSettingDays(days);
+          localStorage.setItem('default_trial_days', String(days));
         }
       })
       .catch(() => {});

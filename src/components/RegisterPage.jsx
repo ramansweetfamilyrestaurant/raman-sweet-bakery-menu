@@ -11,7 +11,12 @@ export default function RegisterPage({ onRegisterSuccess }) {
     plan_tier: 'pro'
   });
 
-  const [trialDays, setTrialDays] = useState(14);
+  const getInitialTrialDays = () => {
+    const cached = localStorage.getItem('default_trial_days');
+    return cached ? (parseInt(cached, 10) || 17) : 17;
+  };
+
+  const [trialDays, setTrialDays] = useState(getInitialTrialDays);
   const [plans, setPlans] = useState([]);
 
   useEffect(() => {
@@ -37,7 +42,11 @@ export default function RegisterPage({ onRegisterSuccess }) {
     fetch('/api/settings')
       .then(res => res.json())
       .then(data => {
-        if (data && data.default_trial_days) setTrialDays(Math.max(1, parseInt(data.default_trial_days, 10) || 14));
+        if (data && data.default_trial_days) {
+          const days = Math.max(1, parseInt(data.default_trial_days, 10) || 17);
+          setTrialDays(days);
+          localStorage.setItem('default_trial_days', String(days));
+        }
       })
       .catch(() => {});
 
