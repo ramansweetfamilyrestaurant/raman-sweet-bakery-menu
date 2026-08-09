@@ -1,4 +1,4 @@
-import { S3Client, PutObjectCommand, DeleteObjectCommand, HeadObjectCommand } from '@aws-sdk/client-s3';
+import { S3Client, PutObjectCommand, DeleteObjectCommand, HeadObjectCommand, GetObjectCommand } from '@aws-sdk/client-s3';
 import sharp from 'sharp';
 import path from 'path';
 import dotenv from 'dotenv';
@@ -248,5 +248,47 @@ export async function deleteImageFromR2(objectKey) {
   } catch (err) {
     console.warn(`⚠️ Failed to delete R2 object (${objectKey}):`, err.message);
     return false;
+  }
+}
+
+/**
+ * Fetches an image stream directly from Cloudflare R2 bucket.
+ */
+export async function getImageStreamFromR2(objectKey) {
+  if (!objectKey) return null;
+  const client = getR2Client();
+  if (!client) return null;
+
+  const config = getR2Config();
+
+  try {
+    const command = new GetObjectCommand({
+      Bucket: config.bucketName,
+      Key: objectKey
+    });
+    const response = await client.send(command);
+    return {
+      stream: response.Body,
+      contentType: response.ContentType || 'image/webp',
+      contentLength: response.ContentLength
+    };
+  } catch (err) {
+    // Try fallback bucket if primary failed
+    const fallbackBucket = config.bucketName === 'khana-master-media' ? 'khanamaster-menu-images' : 'khana-master-media';
+    try {
+      const fallbackCommand = new GetObjectCommand({
+        Bucket: fallbackBucket,
+        Key: objectKey
+      });
+      const response = await client.send(fallbackCommand);
+      return {
+        stream: response.Body,
+        contentType: response.ContentType || 'image/webp',
+        contentLength: response.ContentLength
+      };
+    } catch (fbErr) {
+      console.warn(`⚠️ Failed to stream R2 object (${objectKey}):`, err.message);
+      return null;
+    }
   }
 }

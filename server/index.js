@@ -49,14 +49,25 @@ app.get('/uploads/:filename', async (req, res) => {
   const filename = req.params.filename;
   const filePath = path.join(uploadsDir, filename);
 
-  // 1. Check if DB record specifies Cloudflare R2 URL
+  // 1. Stream directly from Cloudflare R2 if object key exists in DB record
   try {
     const record = await getImageRecordFromDb(filename);
-    if (record && record.storage_provider === 'r2' && record.image_url) {
-      return res.redirect(302, record.image_url);
+    if (record && record.storage_provider === 'r2') {
+      if (record.image_key) {
+        const r2Object = await getImageStreamFromR2(record.image_key);
+        if (r2Object && r2Object.stream) {
+          res.setHeader('Content-Type', r2Object.contentType || 'image/webp');
+          res.setHeader('Cache-Control', 'public, max-age=31536000, immutable');
+          if (r2Object.contentLength) res.setHeader('Content-Length', r2Object.contentLength);
+          return r2Object.stream.pipe(res);
+        }
+      }
+      if (record.image_url) {
+        return res.redirect(302, record.image_url);
+      }
     }
   } catch (dbErr) {
-    console.warn('Image record lookup notice:', dbErr.message);
+    console.warn('Image R2 stream lookup notice:', dbErr.message);
   }
 
   // 2. If physical file exists on local disk, serve directly
