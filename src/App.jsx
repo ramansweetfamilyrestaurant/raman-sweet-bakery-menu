@@ -557,7 +557,8 @@ export default function App() {
         let storedSlug = localStorage.getItem('raman_admin_slug');
         if (storedSlug === 'undefined' || storedSlug === 'null') storedSlug = '';
 
-        let currentSlug = getSlugFromUrl() || (info && info.slug);
+        const urlSlug = getSlugFromUrl();
+        let currentSlug = urlSlug || (info && info.slug);
         if (!currentSlug || currentSlug === 'admin' || currentSlug === 'undefined' || currentSlug === 'null') {
           currentSlug = storedSlug;
         }
@@ -566,6 +567,15 @@ export default function App() {
         if (effectiveSlug === 'undefined' || effectiveSlug === 'null') effectiveSlug = '';
 
         if (adminToken) {
+          // CRITICAL BUG FIX: If URL specifies a slug (e.g. 'rama') and storedSlug is for another restaurant (e.g. 'raman-sweet-bakery'),
+          // do NOT automatically log into the stored token's admin dashboard!
+          if (urlSlug && storedSlug && urlSlug.toLowerCase() !== storedSlug.toLowerCase()) {
+            console.warn(`URL slug '${urlSlug}' does not match stored admin token slug '${storedSlug}'. Prompting login for '${urlSlug}'.`);
+            setView('admin-login');
+            setSubscriptionLoading(false);
+            return;
+          }
+
           if (!effectiveSlug) {
             try {
               const rInfo = await fetchRestaurantInfo(adminToken);
@@ -1651,6 +1661,7 @@ export default function App() {
       <Suspense fallback={<div style={{ padding: '60px', textAlign: 'center', background: '#0A2315', color: '#FFFFFF', minHeight: '100vh', fontWeight: 800 }}>🔑 Loading Admin Login...</div>}>
         <AdminLogin
           restaurantName={info?.name}
+          targetSlug={getSlugFromUrl() || (info && info.slug) || ''}
           onLoginSuccess={handleAdminLoginSuccess}
           onCancel={() => {
             const targetSlug = getSlugFromUrl() || (info && info.slug) || '';

@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { Lock, User, KeyRound, ArrowLeft, AlertCircle } from 'lucide-react';
 import { adminLogin } from '../../api/client';
 
-export default function AdminLogin({ onLoginSuccess, onCancel, restaurantName }) {
+export default function AdminLogin({ onLoginSuccess, onCancel, restaurantName, targetSlug }) {
   const [mode, setMode] = useState('login'); // 'login' | 'forgot'
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
@@ -67,7 +67,8 @@ export default function AdminLogin({ onLoginSuccess, onCancel, restaurantName })
 
     setLoading(true);
     try {
-      const data = await adminLogin(username, password);
+      const slugToPass = targetSlug || (typeof window !== 'undefined' ? window.location.pathname.split('/')[1] : '');
+      const data = await adminLogin(username, password, slugToPass);
       onLoginSuccess(data.token, data.username, data.slug);
     } catch (err) {
       setError(err.message || 'Invalid admin credentials');

@@ -132,11 +132,11 @@ export async function deleteTenantRestaurant(id, token) {
 }
 
 // Restaurant Admin API calls
-export async function adminLogin(username, password) {
+export async function adminLogin(username, password, slug = '') {
   const res = await fetch(`${API_BASE}/admin/login`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ username, password }),
+    body: JSON.stringify({ username, password, slug }),
   });
   return handleResponse(res, 'Login failed');
 }

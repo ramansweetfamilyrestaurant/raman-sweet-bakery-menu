@@ -41,15 +41,31 @@ const upload = multer({
 // Admin Login (Supports login by Username, Restaurant Slug, or Phone number)
 router.post('/login', async (req, res) => {
   try {
-    const { username, password } = req.body;
+    const { username, password, slug: targetSlug } = req.body;
     if (!username || !password) {
       return res.status(400).json({ error: 'Username and password are required' });
     }
 
     const trimmedIdentifier = username.trim();
+    let admins = [];
 
-    // 1. Try finding admin by exact username
-    let admins = await query('SELECT * FROM admins WHERE username = $1', [trimmedIdentifier]);
+    // 0. If explicit restaurant slug is provided (e.g. from /rama/admin), prioritize matching that restaurant!
+    if (targetSlug && typeof targetSlug === 'string' && targetSlug.trim() !== '') {
+      const cleanSlug = targetSlug.trim().toLowerCase().replace(/[^a-z0-9-]/g, '-');
+      const restos = await query('SELECT id, slug, active, name FROM restaurants WHERE slug = $1 OR slug = $2', [targetSlug.trim(), cleanSlug]);
+      if (restos && restos.length > 0) {
+        const targetRestoId = restos[0].id;
+        admins = await query('SELECT * FROM admins WHERE restaurant_id = $1 AND username = $2', [targetRestoId, trimmedIdentifier]);
+        if (!admins || admins.length === 0) {
+          admins = await query('SELECT * FROM admins WHERE restaurant_id = $1 ORDER BY id ASC LIMIT 1', [targetRestoId]);
+        }
+      }
+    }
+
+    // 1. Try finding admin by exact username if not matched via slug
+    if (!admins || admins.length === 0) {
+      admins = await query('SELECT * FROM admins WHERE username = $1', [trimmedIdentifier]);
+    }
 
     // 2. Fallback: Try finding restaurant by slug or phone, then fetch its primary admin
     if (!admins || admins.length === 0) {
