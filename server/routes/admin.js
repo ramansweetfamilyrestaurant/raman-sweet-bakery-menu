@@ -430,6 +430,28 @@ router.put('/categories/:id', authenticateToken, requireActiveSubscription, asyn
     const targetId = restoId || 1;
     const { id } = req.params;
     const { name, image, sort_order } = req.body;
+
+    // Fetch old category image to clean up if replaced
+    if (image) {
+      try {
+        const oldCatRows = await query('SELECT image FROM categories WHERE id = $1 AND restaurant_id = $2', [id, targetId]);
+        const oldImage = oldCatRows && oldCatRows.length > 0 ? oldCatRows[0].image : null;
+
+        if (oldImage && oldImage !== image) {
+          const oldFilename = path.basename(oldImage);
+          const imgRecord = await getImageRecordFromDb(oldFilename);
+          if (imgRecord) {
+            if (imgRecord.image_key) {
+              await deleteImageFromR2(imgRecord.image_key);
+            }
+            await deleteImageRecordFromDb(oldFilename);
+          }
+        }
+      } catch (cleanErr) {
+        console.warn('Notice cleaning up replaced category image:', cleanErr.message);
+      }
+    }
+
     await query(
       'UPDATE categories SET name = $1, image = $2, sort_order = $3 WHERE id = $4 AND restaurant_id = $5',
       [name, image, sort_order || 0, id, targetId]
@@ -552,6 +574,27 @@ router.put('/dishes/:id', authenticateToken, requireActiveSubscription, async (r
       category_id, name, description, image, price, price_half, 
       portion, portion_half_label, portion_full_label, badge, ingredients, taste_profile, type, available 
     } = req.body;
+
+    // Fetch old dish image to clean up if replaced
+    if (image) {
+      try {
+        const oldDishRows = await query('SELECT image FROM dishes WHERE id = $1 AND restaurant_id = $2', [id, targetId]);
+        const oldImage = oldDishRows && oldDishRows.length > 0 ? oldDishRows[0].image : null;
+
+        if (oldImage && oldImage !== image) {
+          const oldFilename = path.basename(oldImage);
+          const imgRecord = await getImageRecordFromDb(oldFilename);
+          if (imgRecord) {
+            if (imgRecord.image_key) {
+              await deleteImageFromR2(imgRecord.image_key);
+            }
+            await deleteImageRecordFromDb(oldFilename);
+          }
+        }
+      } catch (cleanErr) {
+        console.warn('Notice cleaning up replaced dish image:', cleanErr.message);
+      }
+    }
 
     const availVal = available ? 1 : 0;
     await query(
