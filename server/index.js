@@ -52,15 +52,14 @@ app.get(['/api/r2-proxy/*', '/r2-proxy/*'], async (req, res) => {
   if (!key) return res.status(404).send('Image key missing');
 
   try {
-    const r2Object = await getImageStreamFromR2(key);
-    if (r2Object && r2Object.stream) {
-      res.setHeader('Content-Type', r2Object.contentType || 'image/webp');
+    const r2Obj = await getR2ObjectBuffer(key);
+    if (r2Obj && r2Obj.buffer) {
+      res.setHeader('Content-Type', r2Obj.contentType || 'image/webp');
       res.setHeader('Cache-Control', 'public, max-age=31536000, immutable');
-      if (r2Object.contentLength) res.setHeader('Content-Length', r2Object.contentLength);
-      return r2Object.stream.pipe(res);
+      return res.send(r2Obj.buffer);
     }
   } catch (err) {
-    console.warn('R2 proxy stream notice:', err.message);
+    console.warn('R2 proxy buffer notice:', err.message);
   }
 
   const defaultLogo = path.join(uploadsDir, 'logo.jpg');
@@ -72,17 +71,16 @@ app.get('/uploads/:filename', async (req, res) => {
   const filename = req.params.filename;
   const filePath = path.join(uploadsDir, filename);
 
-  // 1. Stream directly from Cloudflare R2 if object key exists in DB record
+  // 1. Fetch directly from Cloudflare R2 if object key exists in DB record
   try {
     const record = await getImageRecordFromDb(filename);
     if (record && record.storage_provider === 'r2') {
       if (record.image_key) {
-        const r2Object = await getImageStreamFromR2(record.image_key);
-        if (r2Object && r2Object.stream) {
-          res.setHeader('Content-Type', r2Object.contentType || 'image/webp');
+        const r2Obj = await getR2ObjectBuffer(record.image_key);
+        if (r2Obj && r2Obj.buffer) {
+          res.setHeader('Content-Type', r2Obj.contentType || 'image/webp');
           res.setHeader('Cache-Control', 'public, max-age=31536000, immutable');
-          if (r2Object.contentLength) res.setHeader('Content-Length', r2Object.contentLength);
-          return r2Object.stream.pipe(res);
+          return res.send(r2Obj.buffer);
         }
       }
       if (record.image_url) {

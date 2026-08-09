@@ -252,9 +252,9 @@ export async function deleteImageFromR2(objectKey) {
 }
 
 /**
- * Fetches an image stream directly from Cloudflare R2 bucket.
+ * Fetches an image buffer directly from Cloudflare R2 bucket.
  */
-export async function getImageStreamFromR2(objectKey) {
+export async function getR2ObjectBuffer(objectKey) {
   if (!objectKey) return null;
   const client = getR2Client();
   if (!client) return null;
@@ -267,13 +267,12 @@ export async function getImageStreamFromR2(objectKey) {
       Key: objectKey
     });
     const response = await client.send(command);
+    const byteArray = await response.Body.transformToByteArray();
     return {
-      stream: response.Body,
-      contentType: response.ContentType || 'image/webp',
-      contentLength: response.ContentLength
+      buffer: Buffer.from(byteArray),
+      contentType: response.ContentType || 'image/webp'
     };
   } catch (err) {
-    // Try fallback bucket if primary failed
     const fallbackBucket = config.bucketName === 'khana-master-media' ? 'khanamaster-menu-images' : 'khana-master-media';
     try {
       const fallbackCommand = new GetObjectCommand({
@@ -281,13 +280,13 @@ export async function getImageStreamFromR2(objectKey) {
         Key: objectKey
       });
       const response = await client.send(fallbackCommand);
+      const byteArray = await response.Body.transformToByteArray();
       return {
-        stream: response.Body,
-        contentType: response.ContentType || 'image/webp',
-        contentLength: response.ContentLength
+        buffer: Buffer.from(byteArray),
+        contentType: response.ContentType || 'image/webp'
       };
     } catch (fbErr) {
-      console.warn(`⚠️ Failed to stream R2 object (${objectKey}):`, err.message);
+      console.warn(`⚠️ Failed to fetch R2 object (${objectKey}):`, err.message);
       return null;
     }
   }
