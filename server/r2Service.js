@@ -2,54 +2,62 @@ import { S3Client, PutObjectCommand } from '@aws-sdk/client-s3';
 import dotenv from 'dotenv';
 dotenv.config();
 
-const R2_ACCOUNT_ID = process.env.R2_ACCOUNT_ID;
-const R2_ACCESS_KEY_ID = process.env.R2_ACCESS_KEY_ID;
-const R2_SECRET_ACCESS_KEY = process.env.R2_SECRET_ACCESS_KEY;
-const R2_BUCKET_NAME = process.env.R2_BUCKET_NAME || 'khanamaster-images';
-const R2_PUBLIC_DOMAIN = process.env.R2_PUBLIC_DOMAIN || '';
+function getR2Client() {
+  const accountId = (process.env.R2_ACCOUNT_ID || '').trim();
+  const accessKeyId = (process.env.R2_ACCESS_KEY_ID || '').trim();
+  const secretAccessKey = (process.env.R2_SECRET_ACCESS_KEY || '').trim();
 
-let r2Client = null;
+  // Validate presence of credentials (ignore pure placeholder strings)
+  const isInvalid = !accountId || !accessKeyId || !secretAccessKey ||
+                    accountId.includes('your_cloudflare_account_id') ||
+                    accessKeyId.includes('your_r2_access_key_id');
 
-const isRealValue = (val) => Boolean(val && val.trim() && !val.toLowerCase().includes('your_') && !val.toLowerCase().includes('xxxx'));
+  if (isInvalid) {
+    return null;
+  }
 
-if (isRealValue(R2_ACCOUNT_ID) && isRealValue(R2_ACCESS_KEY_ID) && isRealValue(R2_SECRET_ACCESS_KEY)) {
   try {
-    r2Client = new S3Client({
+    return new S3Client({
       region: 'auto',
-      endpoint: `https://${R2_ACCOUNT_ID.trim()}.r2.cloudflarestorage.com`,
+      endpoint: `https://${accountId}.r2.cloudflarestorage.com`,
       credentials: {
-        accessKeyId: R2_ACCESS_KEY_ID.trim(),
-        secretAccessKey: R2_SECRET_ACCESS_KEY.trim(),
+        accessKeyId: accessKeyId,
+        secretAccessKey: secretAccessKey,
       },
     });
-    console.log('⚡ Cloudflare R2 Storage Client Initialized Successfully!');
   } catch (err) {
-    console.warn('⚠️ Cloudflare R2 Client init notice:', err.message);
+    console.warn('⚠️ Cloudflare R2 S3Client init error:', err.message);
+    return null;
   }
 }
 
 export function isR2Configured() {
-  return r2Client !== null && isRealValue(R2_BUCKET_NAME);
+  return getR2Client() !== null;
 }
 
 export async function uploadToR2(filename, buffer, mimeType) {
-  if (!r2Client) {
-    throw new Error('Cloudflare R2 credentials not configured in .env');
+  const client = getR2Client();
+  if (!client) {
+    throw new Error('Cloudflare R2 credentials are missing or invalid in environment variables');
   }
 
+  const bucketName = (process.env.R2_BUCKET_NAME || 'khanamaster-menu-images').trim();
+  const publicDomain = (process.env.R2_PUBLIC_DOMAIN || '').trim();
+
   const command = new PutObjectCommand({
-    Bucket: R2_BUCKET_NAME,
+    Bucket: bucketName,
     Key: filename,
     Body: buffer,
     ContentType: mimeType || 'image/jpeg',
   });
 
-  await r2Client.send(command);
+  await client.send(command);
 
-  if (R2_PUBLIC_DOMAIN) {
-    const cleanDomain = R2_PUBLIC_DOMAIN.replace(/\/+$/, '');
+  if (publicDomain && !publicDomain.includes('pub-xxxx.r2.dev')) {
+    const cleanDomain = publicDomain.replace(/\/+$/, '');
     return `${cleanDomain}/${filename}`;
   }
 
-  return `https://${R2_BUCKET_NAME}.${R2_ACCOUNT_ID}.r2.dev/${filename}`;
+  const accountId = (process.env.R2_ACCOUNT_ID || '').trim();
+  return `https://${bucketName}.${accountId}.r2.dev/${filename}`;
 }
