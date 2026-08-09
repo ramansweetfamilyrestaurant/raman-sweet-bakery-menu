@@ -310,7 +310,7 @@ router.post('/upload', authenticateToken, requireActiveSubscription, upload.sing
       console.log('⚡ Uploaded image to Cloudflare R2 Cloud Storage:', r2Url);
       return res.json({ url: r2Url });
     } catch (r2Err) {
-      console.warn('⚠️ Cloudflare R2 upload failed, using persistent DB fallback:', r2Err.message);
+      console.error('❌ Cloudflare R2 upload failed:', r2Err.name, r2Err.message);
     }
   }
 

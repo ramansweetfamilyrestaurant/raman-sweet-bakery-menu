@@ -37,6 +37,8 @@ function getR2Client() {
         accessKeyId: accessKeyId,
         secretAccessKey: secretAccessKey,
       },
+      requestChecksumCalculation: 'WHEN_REQUIRED',
+      responseChecksumValidation: 'WHEN_REQUIRED'
     });
   } catch (err) {
     console.warn('⚠️ Cloudflare R2 S3Client init error:', err.message);
