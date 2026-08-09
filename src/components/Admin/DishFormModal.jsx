@@ -2,6 +2,15 @@ import React, { useState } from 'react';
 import { X, Upload, Image as ImageIcon } from 'lucide-react';
 import { uploadImage, deleteImageApi } from '../../api/client';
 
+const resolveImageUrl = (url) => {
+  if (!url || url === '/uploads/logo.jpg') return '';
+  if (typeof url === 'string' && url.includes('.r2.dev/restaurants/')) {
+    const idx = url.indexOf('restaurants/');
+    return `/api/r2-proxy/${url.substring(idx)}`;
+  }
+  return url;
+};
+
 export default function DishFormModal({ dish, categories, token, onSave, onClose }) {
   const [categoryId, setCategoryId] = useState(dish?.category_id || categories[0]?.id || '');
   const [name, setName] = useState(dish?.name || '');
@@ -14,7 +23,7 @@ export default function DishFormModal({ dish, categories, token, onSave, onClose
   const [ingredients, setIngredients] = useState(dish?.ingredients || '');
   const [tasteProfile, setTasteProfile] = useState(dish?.taste_profile || '');
   const [type, setType] = useState(dish?.type || 'veg'); // 'veg', 'nonveg', 'egg'
-  const [image, setImage] = useState(dish?.image && dish.image !== '/uploads/logo.jpg' ? dish.image : '');
+  const [image, setImage] = useState(dish?.image ? resolveImageUrl(dish.image) : '');
   const [available, setAvailable] = useState(dish?.available !== false);
   
   const [uploading, setUploading] = useState(false);
@@ -30,7 +39,8 @@ export default function DishFormModal({ dish, categories, token, onSave, onClose
     try {
       const oldTempImage = image;
       const res = await uploadImage(file, token);
-      setImage(res);
+      const resolvedRes = resolveImageUrl(res);
+      setImage(resolvedRes);
       // Delete old temp image if replaced before saving
       if (oldTempImage && oldTempImage !== dish?.image) {
         deleteImageApi(oldTempImage, token).catch(() => {});
@@ -468,7 +478,7 @@ export default function DishFormModal({ dish, categories, token, onSave, onClose
             <div style={{ display: 'flex', gap: '10px', alignItems: 'center', marginBottom: '8px' }}>
               {image ? (
                 <img
-                  src={image}
+                  src={resolveImageUrl(image)}
                   alt="Preview"
                   style={{
                     width: '54px',
@@ -477,7 +487,16 @@ export default function DishFormModal({ dish, categories, token, onSave, onClose
                     objectFit: 'cover',
                     border: '1px solid var(--accent-gold)'
                   }}
-                  onError={(e) => { e.target.src = '/uploads/logo.jpg'; }}
+                  onError={(e) => {
+                    if (image.includes('.r2.dev/')) {
+                      const idx = image.indexOf('restaurants/');
+                      if (idx !== -1) {
+                        e.target.src = `/api/r2-proxy/${image.substring(idx)}`;
+                        return;
+                      }
+                    }
+                    e.target.style.opacity = '0.4';
+                  }}
                 />
               ) : (
                 <div style={{
