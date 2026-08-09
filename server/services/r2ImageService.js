@@ -111,12 +111,12 @@ export async function optimizeImage(buffer, originalMime = 'image/jpeg') {
     const optimizedBuffer = await sharp(buffer)
       .rotate()
       .resize({
-        width: 1200,
-        height: 1200,
+        width: 1000,
+        height: 1000,
         fit: 'inside',
         withoutEnlargement: true
       })
-      .webp({ quality: 82, effort: 4 })
+      .webp({ quality: 80, effort: 1 })
       .toBuffer();
 
     return {
