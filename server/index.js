@@ -74,17 +74,12 @@ app.get('/uploads/:filename', async (req, res) => {
   // 1. Fetch directly from Cloudflare R2 if object key exists in DB record
   try {
     const record = await getImageRecordFromDb(filename);
-    if (record && record.storage_provider === 'r2') {
-      if (record.image_key) {
-        const r2Obj = await getR2ObjectBuffer(record.image_key);
-        if (r2Obj && r2Obj.buffer) {
-          res.setHeader('Content-Type', r2Obj.contentType || 'image/webp');
-          res.setHeader('Cache-Control', 'public, max-age=31536000, immutable');
-          return res.send(r2Obj.buffer);
-        }
-      }
-      if (record.image_url) {
-        return res.redirect(302, record.image_url);
+    if (record && record.storage_provider === 'r2' && record.image_key) {
+      const r2Obj = await getR2ObjectBuffer(record.image_key);
+      if (r2Obj && r2Obj.buffer) {
+        res.setHeader('Content-Type', r2Obj.contentType || 'image/webp');
+        res.setHeader('Cache-Control', 'public, max-age=31536000, immutable');
+        return res.send(r2Obj.buffer);
       }
     }
   } catch (dbErr) {
