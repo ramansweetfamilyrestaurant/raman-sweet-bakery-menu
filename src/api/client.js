@@ -157,38 +157,45 @@ async function compressImageFile(file) {
     reader.onload = (e) => {
       const img = new Image();
       img.onload = () => {
-        const canvas = document.createElement('canvas');
-        let width = img.width;
-        let height = img.height;
-        const maxDim = 800;
+        try {
+          const canvas = document.createElement('canvas');
+          let width = img.width;
+          let height = img.height;
+          const maxDim = 800;
 
-        if (width > maxDim || height > maxDim) {
-          if (width > height) {
-            height = Math.round((height * maxDim) / width);
-            width = maxDim;
-          } else {
-            width = Math.round((width * maxDim) / height);
-            height = maxDim;
+          if (width > maxDim || height > maxDim) {
+            if (width > height) {
+              height = Math.round((height * maxDim) / width);
+              width = maxDim;
+            } else {
+              width = Math.round((width * maxDim) / height);
+              height = maxDim;
+            }
           }
+
+          canvas.width = width;
+          canvas.height = height;
+          const ctx = canvas.getContext('2d');
+          ctx.drawImage(img, 0, 0, width, height);
+
+          canvas.toBlob((blob) => {
+            if (!blob) {
+              resolve(file);
+              return;
+            }
+            try {
+              const compressedFile = new File([blob], (file.name || 'image').replace(/\.[^/.]+$/, "") + ".jpg", {
+                type: 'image/jpeg',
+                lastModified: Date.now()
+              });
+              resolve(compressedFile);
+            } catch (fileErr) {
+              resolve(blob);
+            }
+          }, 'image/jpeg', 0.82);
+        } catch (err) {
+          resolve(file);
         }
-
-        canvas.width = width;
-        canvas.height = height;
-        const ctx = canvas.getContext('2d');
-        ctx.drawImage(img, 0, 0, width, height);
-
-        canvas.toBlob((blob) => {
-          if (!blob) {
-            resolve(file);
-            return;
-          }
-          const compressedFile = new File([blob], file.name.replace(/\.[^/.]+$/, "") + ".jpg", {
-            type: 'image/jpeg',
-            lastModified: Date.now()
-          });
-          console.log(`⚡ Compressed image from ${(file.size / 1024).toFixed(1)}KB to ${(compressedFile.size / 1024).toFixed(1)}KB`);
-          resolve(compressedFile);
-        }, 'image/jpeg', 0.82);
       };
       img.onerror = () => resolve(file);
       img.src = e.target.result;
@@ -199,7 +206,6 @@ async function compressImageFile(file) {
 }
 
 export async function uploadImage(file, token) {
-  // 1. Compress image on client-side (5MB -> ~60KB) for instant upload & low storage
   let processedFile = file;
   try {
     processedFile = await compressImageFile(file);
@@ -207,10 +213,9 @@ export async function uploadImage(file, token) {
     console.warn('Image compression notice, using original file:', err.message);
   }
 
-  // 2. Upload compressed image directly to our server endpoint (/api/admin/upload)
-  // Which uploads directly to Cloudflare R2 Cloud Storage (or DB fallback)
   const formData = new FormData();
-  formData.append('image', processedFile);
+  const filename = file.name || 'image.jpg';
+  formData.append('image', processedFile, filename);
 
   const res = await fetch(`${API_BASE}/admin/upload`, {
     method: 'POST',
