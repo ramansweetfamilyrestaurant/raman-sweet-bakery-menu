@@ -199,7 +199,7 @@ async function compressImageFile(file) {
 }
 
 export async function uploadImage(file, token) {
-  // 1. Compress image on client-side (5MB -> ~80KB) for instant upload & low storage
+  // 1. Compress image on client-side (5MB -> ~60KB) for instant upload & low storage
   let processedFile = file;
   try {
     processedFile = await compressImageFile(file);
@@ -207,25 +207,8 @@ export async function uploadImage(file, token) {
     console.warn('Image compression notice, using original file:', err.message);
   }
 
-  // 2. Primary: Upload compressed image to ImgBB Free Cloud CDN (0 MB Server Storage used!)
-  try {
-    const imgbbFormData = new FormData();
-    imgbbFormData.append('image', processedFile);
-
-    const imgbbRes = await fetch('https://api.imgbb.com/1/upload?key=6d207e02198a847aa98d0a2a901485a5', {
-      method: 'POST',
-      body: imgbbFormData,
-    });
-    const imgbbData = await imgbbRes.json();
-    if (imgbbData && imgbbData.data && imgbbData.data.url) {
-      console.log('⚡ Uploaded compressed image to ImgBB Free Cloud CDN:', imgbbData.data.url);
-      return imgbbData.data.url;
-    }
-  } catch (err) {
-    console.warn('ImgBB Cloud upload notice, using persistent server fallback:', err.message);
-  }
-
-  // 3. Fallback: If ImgBB drops, upload compressed file to our persistent server database endpoint
+  // 2. Upload compressed image directly to our server endpoint (/api/admin/upload)
+  // Which uploads directly to Cloudflare R2 Cloud Storage (or DB fallback)
   const formData = new FormData();
   formData.append('image', processedFile);
 
