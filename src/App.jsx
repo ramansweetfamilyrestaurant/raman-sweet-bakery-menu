@@ -803,8 +803,8 @@ export default function App() {
   if (view === 'landing') {
     const faqItems = [
       {
-        q: 'What is included in the 14-Day Free Trial?',
-        a: 'You get full access to all SaaS features for 14 days, including Digital QR Menu Creation, Direct Ordering, ⭐ Smart AI Google Reviews Booster, KOT Kitchen Siren, and Thermal Printing. No credit card is required to sign up!'
+        q: `What is included in the ${trialDays}-Day Free Trial?`,
+        a: `You get full access to all SaaS features for ${trialDays} days, including Digital QR Menu Creation, Direct Ordering, ⭐ Smart AI Google Reviews Booster, KOT Kitchen Siren, and Thermal Printing. No credit card is required to sign up!`
       },
       {
         q: 'Do customers need to download an App to scan the QR Menu?',
