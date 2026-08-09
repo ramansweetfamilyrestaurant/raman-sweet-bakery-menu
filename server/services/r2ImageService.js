@@ -20,7 +20,10 @@ function getR2Config() {
   const accountId = (process.env.R2_ACCOUNT_ID || '').trim();
   const accessKeyId = (process.env.R2_ACCESS_KEY_ID || '').trim();
   const secretAccessKey = (process.env.R2_SECRET_ACCESS_KEY || '').trim();
-  const bucketName = (process.env.R2_BUCKET_NAME || 'khana-master-media').trim();
+  let bucketName = (process.env.R2_BUCKET_NAME || 'khana-master-media').trim();
+  if (bucketName === 'khana-master_media') {
+    bucketName = 'khana-master-media';
+  }
   const publicDomain = (process.env.R2_PUBLIC_DOMAIN || '').trim();
   const endpoint = (process.env.R2_ENDPOINT || '').trim();
 
