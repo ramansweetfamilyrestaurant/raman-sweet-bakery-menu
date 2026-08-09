@@ -602,67 +602,97 @@ router.post('/r2/migrate-images', authenticateToken, requireActiveSubscription, 
   }
 });
 
-// Auto-Mirror External Web Images -> Cloudflare R2
+// Auto-Mirror External & Local Images -> Cloudflare R2 for All Restaurants
 router.post('/r2/mirror-external', authenticateToken, requireActiveSubscription, async (req, res) => {
   try {
-    const dishes = await query("SELECT id, name, restaurant_id, image FROM dishes WHERE image LIKE 'http%' AND image NOT LIKE '%r2.dev%' AND image NOT LIKE '%/api/r2-proxy/%' ORDER BY id ASC");
-    
-    let totalDishes = dishes.length;
-    let successCount = 0;
+    let mirroredCount = 0;
     let failCount = 0;
 
-    for (let i = 0; i < dishes.length; i++) {
-      const dish = dishes[i];
-      const restoId = dish.restaurant_id || 1;
+    // 1. Mirror Restaurant Logos
+    const restos = await query("SELECT id, name, logo FROM restaurants WHERE logo NOT LIKE '%/api/r2-proxy/%' AND logo IS NOT NULL AND logo != '' AND logo != '/uploads/logo.jpg'");
+    for (const r of restos) {
       try {
-        const fetchRes = await fetch(dish.image, {
-          headers: {
-            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'
-          },
-          signal: AbortSignal.timeout(15000)
-        });
-
-        if (!fetchRes.ok) continue;
-
-        const arrayBuf = await fetchRes.arrayBuffer();
-        const inputBuffer = Buffer.from(arrayBuf);
-        if (!inputBuffer || inputBuffer.length === 0) continue;
-
-        let webpBuffer;
-        const imagePipeline = sharp(inputBuffer);
-        const meta = await imagePipeline.metadata();
-
-        let transformer = sharp(inputBuffer);
-        if (meta.width && meta.width > 1200) {
-          transformer = transformer.resize(1200, null, { withoutEnlargement: true });
+        let inputBuffer = null;
+        if (r.logo.startsWith('/uploads/')) {
+          const localPath = path.resolve('public', r.logo.replace(/^\//, ''));
+          if (fs.existsSync(localPath)) inputBuffer = fs.readFileSync(localPath);
+        } else if (r.logo.startsWith('http')) {
+          const fetchRes = await fetch(r.logo, { headers: { 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64)' }, signal: AbortSignal.timeout(15000) });
+          if (fetchRes.ok) inputBuffer = Buffer.from(await fetchRes.arrayBuffer());
         }
 
-        webpBuffer = await transformer.webp({ quality: 85 }).toBuffer();
-
-        const r2Result = await uploadImageToR2({
-          buffer: webpBuffer,
-          mimeType: 'image/webp',
-          restaurantId: restoId,
-          entityType: 'dishes'
-        });
-
-        if (!r2Result || !r2Result.objectKey) continue;
-
-        const proxyUrl = `/api/r2-proxy/${r2Result.objectKey}`;
-        const finalUrl = r2Result.publicUrl || proxyUrl;
-
-        await query("UPDATE dishes SET image = $1 WHERE id = $2", [proxyUrl, dish.id]);
-
-        const filename = `dish-mirrored-${dish.id}-${Date.now()}.webp`;
-        await saveR2ImageToDb(filename, 'image/webp', r2Result.objectKey, finalUrl, restoId);
-
-        successCount++;
+        if (inputBuffer && inputBuffer.length > 0) {
+          const webpBuffer = await sharp(inputBuffer).resize(800, null, { withoutEnlargement: true }).webp({ quality: 85 }).toBuffer();
+          const r2Result = await uploadImageToR2({ buffer: webpBuffer, mimeType: 'image/webp', restaurantId: r.id, entityType: 'logos' });
+          if (r2Result && r2Result.objectKey) {
+            const proxyUrl = `/api/r2-proxy/${r2Result.objectKey}`;
+            await query("UPDATE restaurants SET logo = $1 WHERE id = $2", [proxyUrl, r.id]);
+            await saveR2ImageToDb(`logo-mirrored-${r.id}-${Date.now()}.webp`, 'image/webp', r2Result.objectKey, r2Result.publicUrl || proxyUrl, r.id);
+            mirroredCount++;
+          }
+        }
       } catch (err) {
         failCount++;
       }
     }
 
-    res.json({ success: true, totalDishes, successCount, failCount });
+    // 2. Mirror Categories
+    const categories = await query("SELECT id, name, restaurant_id, image FROM categories WHERE image NOT LIKE '%/api/r2-proxy/%' AND image IS NOT NULL AND image != '' AND image != '/uploads/logo.jpg'");
+    for (const cat of categories) {
+      try {
+        let inputBuffer = null;
+        if (cat.image.startsWith('/uploads/')) {
+          const localPath = path.resolve('public', cat.image.replace(/^\//, ''));
+          if (fs.existsSync(localPath)) inputBuffer = fs.readFileSync(localPath);
+        } else if (cat.image.startsWith('http')) {
+          const fetchRes = await fetch(cat.image, { headers: { 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64)' }, signal: AbortSignal.timeout(15000) });
+          if (fetchRes.ok) inputBuffer = Buffer.from(await fetchRes.arrayBuffer());
+        }
+
+        if (inputBuffer && inputBuffer.length > 0) {
+          const webpBuffer = await sharp(inputBuffer).resize(1000, null, { withoutEnlargement: true }).webp({ quality: 85 }).toBuffer();
+          const r2Result = await uploadImageToR2({ buffer: webpBuffer, mimeType: 'image/webp', restaurantId: cat.restaurant_id || 1, entityType: 'categories' });
+          if (r2Result && r2Result.objectKey) {
+            const proxyUrl = `/api/r2-proxy/${r2Result.objectKey}`;
+            await query("UPDATE categories SET image = $1 WHERE id = $2", [proxyUrl, cat.id]);
+            await saveR2ImageToDb(`cat-mirrored-${cat.id}-${Date.now()}.webp`, 'image/webp', r2Result.objectKey, r2Result.publicUrl || proxyUrl, cat.restaurant_id || 1);
+            mirroredCount++;
+          }
+        }
+      } catch (err) {
+        failCount++;
+      }
+    }
+
+    // 3. Mirror Dishes
+    const dishes = await query("SELECT id, name, restaurant_id, image FROM dishes WHERE image NOT LIKE '%/api/r2-proxy/%' AND image IS NOT NULL AND image != '' AND image != '/uploads/logo.jpg'");
+    for (const dish of dishes) {
+      try {
+        let inputBuffer = null;
+        if (dish.image.startsWith('/uploads/')) {
+          const localPath = path.resolve('public', dish.image.replace(/^\//, ''));
+          if (fs.existsSync(localPath)) inputBuffer = fs.readFileSync(localPath);
+        } else if (dish.image.startsWith('http')) {
+          const fetchRes = await fetch(dish.image, { headers: { 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64)' }, signal: AbortSignal.timeout(15000) });
+          if (fetchRes.ok) inputBuffer = Buffer.from(await fetchRes.arrayBuffer());
+        }
+
+        if (inputBuffer && inputBuffer.length > 0) {
+          const webpBuffer = await sharp(inputBuffer).resize(1200, null, { withoutEnlargement: true }).webp({ quality: 85 }).toBuffer();
+          const r2Result = await uploadImageToR2({ buffer: webpBuffer, mimeType: 'image/webp', restaurantId: dish.restaurant_id || 1, entityType: 'dishes' });
+          if (r2Result && r2Result.objectKey) {
+            const proxyUrl = `/api/r2-proxy/${r2Result.objectKey}`;
+            await query("UPDATE dishes SET image = $1 WHERE id = $2", [proxyUrl, dish.id]);
+            await saveR2ImageToDb(`dish-mirrored-${dish.id}-${Date.now()}.webp`, 'image/webp', r2Result.objectKey, r2Result.publicUrl || proxyUrl, dish.restaurant_id || 1);
+            mirroredCount++;
+          }
+        }
+      } catch (err) {
+        failCount++;
+      }
+    }
+
+    res.json({ success: true, mirroredCount, failCount });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
