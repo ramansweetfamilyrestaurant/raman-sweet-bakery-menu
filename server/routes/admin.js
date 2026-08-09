@@ -326,8 +326,9 @@ router.post('/upload', authenticateToken, requireActiveSubscription, upload.sing
   // Strictly require R2 for NEW uploads in production (No Base64 insertion allowed)
   if (!isR2Active()) {
     if (req.file.path && fs.existsSync(req.file.path)) fs.unlinkSync(req.file.path);
-    console.error('❌ Upload rejected: Cloudflare R2 credentials missing/unconfigured in process.env');
-    return res.status(500).json({ success: false, error: 'Image storage temporarily unavailable' });
+    const diag = getR2Diagnostics();
+    console.error('❌ Upload rejected: R2 credentials missing/unconfigured:', JSON.stringify(diag));
+    return res.status(500).json({ success: false, error: 'Image storage unavailable: R2 environment variables missing on server' });
   }
 
   try {
@@ -356,7 +357,7 @@ router.post('/upload', authenticateToken, requireActiveSubscription, upload.sing
   } catch (r2Err) {
     if (req.file.path && fs.existsSync(req.file.path)) fs.unlinkSync(req.file.path);
     console.error('❌ Cloudflare R2 upload failed:', r2Err.name, r2Err.message);
-    return res.status(500).json({ success: false, error: 'Image storage temporarily unavailable' });
+    return res.status(500).json({ success: false, error: `Image storage unavailable: ${r2Err.message || r2Err.name}` });
   }
 });
 

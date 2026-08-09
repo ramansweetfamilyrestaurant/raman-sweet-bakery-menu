@@ -41,9 +41,15 @@ function getR2Client() {
     return null;
   }
 
-  const endpointUrl = config.endpoint
+  let endpointUrl = config.endpoint
     ? (config.endpoint.startsWith('http') ? config.endpoint : `https://${config.endpoint}`)
     : `https://${accountId}.r2.cloudflarestorage.com`;
+
+  // Strip trailing slashes and bucket names if present in R2_ENDPOINT
+  endpointUrl = endpointUrl.replace(/\/+$/, '');
+  if (config.bucketName && endpointUrl.toLowerCase().endsWith(`/${config.bucketName.toLowerCase()}`)) {
+    endpointUrl = endpointUrl.slice(0, -(config.bucketName.length + 1));
+  }
 
   try {
     return new S3Client({
@@ -53,6 +59,7 @@ function getR2Client() {
         accessKeyId: config.accessKeyId,
         secretAccessKey: config.secretAccessKey,
       },
+      forcePathStyle: true,
       requestChecksumCalculation: 'WHEN_REQUIRED',
       responseChecksumValidation: 'WHEN_REQUIRED'
     });
