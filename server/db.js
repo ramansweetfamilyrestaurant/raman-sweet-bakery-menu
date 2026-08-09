@@ -1160,7 +1160,7 @@ async function withTransaction(callback) {
 export async function saveImageToDb(filename, mimeType, bufferData) {
   try {
     const base64Str = bufferData.toString('base64');
-    if (isPostgres) {
+    if (dbType === 'postgres' || pgPool) {
       await query(
         `INSERT INTO stored_images (filename, mime_type, data)
          VALUES ($1, $2, $3)
