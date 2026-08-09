@@ -170,15 +170,39 @@ export async function uploadImageToR2({ buffer, mimeType, restaurantId = 1, enti
   // 2. Generate structured key
   const objectKey = generateObjectKey(restaurantId, entityType);
 
-  // 3. Upload to R2 Bucket
-  const command = new PutObjectCommand({
-    Bucket: config.bucketName,
-    Key: objectKey,
-    Body: optimized.buffer,
-    ContentType: optimized.mimeType,
-  });
+  let targetBucket = config.bucketName;
 
-  await client.send(command);
+  // 3. Upload to R2 Bucket (with automatic fallback bucket attempt if primary fails)
+  try {
+    const command = new PutObjectCommand({
+      Bucket: targetBucket,
+      Key: objectKey,
+      Body: optimized.buffer,
+      ContentType: optimized.mimeType,
+    });
+    await client.send(command);
+  } catch (primaryErr) {
+    console.warn(`⚠️ R2 upload to bucket "${targetBucket}" failed (${primaryErr.name}: ${primaryErr.message}). Trying fallback bucket...`);
+
+    const fallbackBucket = targetBucket === 'khana-master-media' ? 'khanamaster-menu-images' : 'khana-master-media';
+    try {
+      const fallbackCommand = new PutObjectCommand({
+        Bucket: fallbackBucket,
+        Key: objectKey,
+        Body: optimized.buffer,
+        ContentType: optimized.mimeType,
+      });
+      await client.send(fallbackCommand);
+      targetBucket = fallbackBucket;
+      console.log(`⚡ Successfully uploaded to fallback R2 bucket "${fallbackBucket}"!`);
+    } catch (fallbackErr) {
+      const isAccessDenied = primaryErr.name === 'AccessDenied' || primaryErr.message?.includes('Access Denied');
+      if (isAccessDenied) {
+        throw new Error(`Access Denied to R2 bucket "${config.bucketName}". Please check Cloudflare R2 API Token permissions (must be set to "Admin Read & Write" or "Object Read & Write", not "Read-Only").`);
+      }
+      throw primaryErr;
+    }
+  }
 
   // 4. Construct Public R2 URL
   let publicUrl = '';
@@ -192,7 +216,7 @@ export async function uploadImageToR2({ buffer, mimeType, restaurantId = 1, enti
       const match = config.endpoint.match(/https:\/\/([^.\/]+)\.r2\.cloudflarestorage\.com/i);
       if (match) accountId = match[1].trim();
     }
-    publicUrl = `https://${config.bucketName}.${accountId || 'pub'}.r2.dev/${objectKey}`;
+    publicUrl = `https://${targetBucket}.${accountId || 'pub'}.r2.dev/${objectKey}`;
   }
 
   return {
