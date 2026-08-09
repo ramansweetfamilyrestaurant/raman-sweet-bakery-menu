@@ -81,13 +81,12 @@ export default function App() {
   const [landingSuccessMessage, setLandingSuccessMessage] = useState('');
   const [landingLoginLoading, setLandingLoginLoading] = useState(false);
   const [masterSupportPhone, setMasterSupportPhone] = useState('919876543210');
-  const getInitialTrialDays = () => {
-    const cached = localStorage.getItem('default_trial_days');
-    return cached ? (parseInt(cached, 10) || 17) : 17;
-  };
-
-  const [trialDays, setTrialDays] = useState(getInitialTrialDays);
+  const [trialDays, setTrialDays] = useState(null);
   const [openFaqIndex, setOpenFaqIndex] = useState(null);
+
+  const trialText = trialDays ? `${trialDays}` : '';
+  const trialLabel = trialDays ? `${trialDays}-Day` : 'Free';
+  const trialDaysLabel = trialDays ? `${trialDays} DAYS` : 'FREE';
 
   useEffect(() => {
     fetch('/api/settings')
@@ -95,9 +94,10 @@ export default function App() {
       .then(data => {
         if (data && data.support_whatsapp) setMasterSupportPhone(data.support_whatsapp);
         if (data && data.default_trial_days) {
-          const days = Math.max(1, parseInt(data.default_trial_days, 10) || 17);
-          setTrialDays(days);
-          localStorage.setItem('default_trial_days', String(days));
+          const days = parseInt(data.default_trial_days, 10);
+          if (!isNaN(days) && days > 0) {
+            setTrialDays(days);
+          }
         }
       })
       .catch(console.error);

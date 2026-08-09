@@ -11,12 +11,7 @@ export default function RegisterPage({ onRegisterSuccess }) {
     plan_tier: 'pro'
   });
 
-  const getInitialTrialDays = () => {
-    const cached = localStorage.getItem('default_trial_days');
-    return cached ? (parseInt(cached, 10) || 17) : 17;
-  };
-
-  const [trialDays, setTrialDays] = useState(getInitialTrialDays);
+  const [trialDays, setTrialDays] = useState(null);
   const [plans, setPlans] = useState([]);
 
   useEffect(() => {
@@ -43,9 +38,8 @@ export default function RegisterPage({ onRegisterSuccess }) {
       .then(res => res.json())
       .then(data => {
         if (data && data.default_trial_days) {
-          const days = Math.max(1, parseInt(data.default_trial_days, 10) || 17);
-          setTrialDays(days);
-          localStorage.setItem('default_trial_days', String(days));
+          const days = parseInt(data.default_trial_days, 10);
+          if (!isNaN(days) && days > 0) setTrialDays(days);
         }
       })
       .catch(() => {});
@@ -287,7 +281,7 @@ export default function RegisterPage({ onRegisterSuccess }) {
             borderRadius: '50px', padding: '6px 14px', fontSize: '0.76rem', fontWeight: 800,
             color: '#DFBA67', marginBottom: '16px'
           }}>
-            <Sparkles size={14} /> {trialDays}-DAY FREE TRIAL • ₹0 TODAY
+            <Sparkles size={14} /> {trialDays ? `${trialDays}-DAY ` : ''}FREE TRIAL • ₹0 TODAY
           </div>
 
           <h1 style={{ fontSize: '2.1rem', fontWeight: 900, lineHeight: 1.2, marginBottom: '14px', letterSpacing: '-0.5px' }}>
@@ -330,7 +324,7 @@ export default function RegisterPage({ onRegisterSuccess }) {
             Create Restaurant Account 🚀
           </h2>
           <p style={{ fontSize: '0.8rem', color: '#9CA3AF', textAlign: 'center', margin: '0 0 20px 0' }}>
-            Instant setup • {trialDays}-day unrestricted trial access
+            Instant setup • {trialDays ? `${trialDays}-day ` : ''}unrestricted trial access
           </p>
 
           {error && (
