@@ -11,6 +11,9 @@ export default function RegisterPage({ onRegisterSuccess }) {
     plan_tier: 'pro'
   });
 
+  const [trialDays, setTrialDays] = useState(14);
+  const [plans, setPlans] = useState([]);
+
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
     const p = params.get('plan') || localStorage.getItem('selected_plan_tier') || sessionStorage.getItem('selected_plan_tier');
