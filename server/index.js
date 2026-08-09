@@ -51,6 +51,33 @@ app.get(['/api/r2-proxy/*', '/r2-proxy/*'], async (req, res) => {
   const key = decodeURIComponent(rawPath).replace(/^\/+/, '');
   if (!key) return res.status(404).send('Image key missing');
 
+  const filename = path.basename(key);
+  const localCachePath = path.resolve('public/uploads/r2-cache', filename);
+  const localUploadPath = path.resolve('public/uploads', filename);
+
+  const getContentType = (fName) => {
+    const ext = path.extname(fName).toLowerCase();
+    if (ext === '.png') return 'image/png';
+    if (ext === '.jpg' || ext === '.jpeg') return 'image/jpeg';
+    if (ext === '.gif') return 'image/gif';
+    return 'image/webp';
+  };
+
+  // 1. Check local r2-cache disk
+  if (fs.existsSync(localCachePath)) {
+    res.setHeader('Content-Type', getContentType(filename));
+    res.setHeader('Cache-Control', 'public, max-age=31536000, immutable');
+    return res.sendFile(localCachePath);
+  }
+
+  // 2. Check local uploads directory
+  if (fs.existsSync(localUploadPath)) {
+    res.setHeader('Content-Type', getContentType(filename));
+    res.setHeader('Cache-Control', 'public, max-age=31536000, immutable');
+    return res.sendFile(localUploadPath);
+  }
+
+  // 3. Fetch from Cloudflare R2 bucket
   try {
     const r2Obj = await getR2ObjectBuffer(key);
     if (r2Obj && r2Obj.buffer) {

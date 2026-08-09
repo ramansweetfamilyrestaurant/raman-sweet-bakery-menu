@@ -338,44 +338,48 @@ router.post('/upload', authenticateToken, requireActiveSubscription, upload.sing
   const fileBuffer = fs.readFileSync(req.file.path);
   const restaurantId = req.user?.restaurant_id || 1;
   const entityType = req.body?.entityType || 'dishes';
+  const localUrl = `/uploads/${req.file.filename}`;
 
-  // Strictly require R2 for NEW uploads in production (No Base64 insertion allowed)
-  if (!isR2Active()) {
-    if (req.file.path && fs.existsSync(req.file.path)) fs.unlinkSync(req.file.path);
-    const diag = getR2Diagnostics();
-    console.error('❌ Upload rejected: R2 credentials missing/unconfigured:', JSON.stringify(diag));
-    return res.status(500).json({ success: false, error: 'Image storage unavailable: R2 environment variables missing on server' });
-  }
-
+  // Mirror upload to local r2-cache folder so it can be served instantly
   try {
-    const r2Result = await uploadImageToR2({
-      buffer: fileBuffer,
-      mimeType: req.file.mimetype,
-      restaurantId,
-      entityType
-    });
+    const r2CacheDir = path.resolve('public/uploads/r2-cache');
+    if (!fs.existsSync(r2CacheDir)) fs.mkdirSync(r2CacheDir, { recursive: true });
+    fs.copyFileSync(req.file.path, path.join(r2CacheDir, req.file.filename));
+  } catch (e) {}
 
-    // Save R2 metadata ONLY in database with NULL data column
-    await saveR2ImageToDb(
-      req.file.filename,
-      r2Result.mimeType,
-      r2Result.objectKey,
-      r2Result.publicUrl,
-      restaurantId
-    );
+  if (isR2Active()) {
+    try {
+      const r2Result = await uploadImageToR2({
+        buffer: fileBuffer,
+        mimeType: req.file.mimetype,
+        restaurantId,
+        entityType
+      });
 
-    console.log('⚡ Uploaded image to Cloudflare R2:', r2Result.publicUrl);
-    
-    // Cleanup local temp file
-    if (req.file.path && fs.existsSync(req.file.path)) fs.unlinkSync(req.file.path);
+      await saveR2ImageToDb(
+        req.file.filename,
+        r2Result.mimeType,
+        r2Result.objectKey,
+        r2Result.publicUrl,
+        restaurantId
+      );
 
-    const imageUrl = `/api/r2-proxy/${r2Result.objectKey}`;
-    return res.json({ success: true, url: imageUrl, key: r2Result.objectKey, r2Url: r2Result.publicUrl });
-  } catch (r2Err) {
-    if (req.file.path && fs.existsSync(req.file.path)) fs.unlinkSync(req.file.path);
-    console.error('❌ Cloudflare R2 upload failed:', r2Err.name, r2Err.message);
-    return res.status(500).json({ success: false, error: `Image storage unavailable: ${r2Err.message || r2Err.name}` });
+      console.log('⚡ Uploaded image to Cloudflare R2:', r2Result.publicUrl);
+      return res.json({
+        success: true,
+        url: localUrl,
+        r2ProxyUrl: `/api/r2-proxy/${r2Result.objectKey}`,
+        key: r2Result.objectKey,
+        r2Url: r2Result.publicUrl
+      });
+    } catch (r2Err) {
+      console.warn('⚠️ Cloudflare R2 upload notice (using local file fallback):', r2Err.message);
+      return res.json({ success: true, url: localUrl });
+    }
   }
+
+  // Fallback when R2 is not active
+  return res.json({ success: true, url: localUrl });
 });
 
 // Category Management (Tenant Scoped - OPERATIONAL ROUTES)
