@@ -146,13 +146,20 @@ router.all('/register-return', async (req, res) => {
   }
 
   try {
-    const regRows = await query('SELECT payload FROM pending_registrations WHERE id = $1', [reg_id]);
+    const regRows = await query('SELECT payload, created_slug, created_jwt, created_user FROM pending_registrations WHERE id = $1', [reg_id]);
     if (!regRows || regRows.length === 0) {
-      return res.redirect(`${baseUrl}/register?error=Registration session expired or invalid`);
+      // Check if user was already registered by phone/username
+      return res.redirect(`${baseUrl}/register?error=Registration session expired or invalid.`);
     }
 
-    const regData = JSON.parse(regRows[0].payload);
-    await query('DELETE FROM pending_registrations WHERE id = $1', [reg_id]);
+    const regRecord = regRows[0];
+    const regData = JSON.parse(regRecord.payload);
+
+    // Idempotent Check: If account was ALREADY created for this session in an earlier callback:
+    if (regRecord.created_jwt && regRecord.created_slug) {
+      console.log('⚡ Idempotent return: Account already created for session', reg_id);
+      return res.redirect(`${baseUrl}/${regRecord.created_slug}/admin?token=${encodeURIComponent(regRecord.created_jwt)}&username=${encodeURIComponent(regRecord.created_user || regData.owner_username)}&slug=${encodeURIComponent(regRecord.created_slug)}`);
+    }
 
     const targetSubId = req.query.subscription_id || req.query.sub_id || req.body?.subscription_id || req.body?.sub_id || regData.subscription_id;
 
@@ -171,6 +178,25 @@ router.all('/register-return', async (req, res) => {
     if (!isAuthorized) {
       console.warn(`🛑 Subscription status '${statusStr}' is NOT authorized! Account creation BLOCKED.`);
       return res.redirect(`${baseUrl}/register?error=Subscription payment was not completed or failed (Status: ${statusStr || 'FAILED'}). Account was NOT created.`);
+    }
+
+    // Check if restaurant with this phone or username was ALREADY created
+    const existingResto = await query('SELECT id, slug, phone FROM restaurants WHERE phone = $1', [regData.phone]);
+    const existingAdmin = await query('SELECT id, username, restaurant_id FROM admins WHERE username = $1', [regData.owner_username]);
+
+    if (existingResto.length > 0 && existingAdmin.length > 0) {
+      const cleanSlug = existingResto[0].slug;
+      const adminUsername = regData.owner_username;
+      const adminId = existingAdmin[0].id;
+      const jwtToken = jwt.sign(
+        { id: adminId, username: adminUsername, role: 'restaurant_admin', restaurant_id: existingAdmin[0].restaurant_id, slug: cleanSlug },
+        JWT_SECRET,
+        { expiresIn: '30d' }
+      );
+
+      await query('UPDATE pending_registrations SET created_slug = $1, created_jwt = $2, created_user = $3 WHERE id = $4', [cleanSlug, jwtToken, adminUsername, reg_id]);
+
+      return res.redirect(`${baseUrl}/${cleanSlug}/admin?token=${encodeURIComponent(jwtToken)}&username=${encodeURIComponent(adminUsername)}&slug=${encodeURIComponent(cleanSlug)}`);
     }
 
     // ONLY NOW: Execute multi-table transaction to create restaurant, subscription, and admin account!
@@ -263,6 +289,9 @@ router.all('/register-return', async (req, res) => {
     } catch (seedErr) {
       console.warn('Notice seeding initial categories/dishes:', seedErr.message);
     }
+
+    // Persist result on pending_registrations for future duplicate redirects
+    await query('UPDATE pending_registrations SET created_slug = $1, created_jwt = $2, created_user = $3 WHERE id = $4', [result.cleanSlug, result.jwtToken, result.username, reg_id]);
 
     // Redirect user into their new Admin Dashboard with JWT token set!
     res.redirect(`${baseUrl}/${result.cleanSlug}/admin?token=${encodeURIComponent(result.jwtToken)}&username=${encodeURIComponent(result.username)}&slug=${encodeURIComponent(result.cleanSlug)}`);

@@ -281,6 +281,9 @@ async function createTables() {
       `CREATE TABLE IF NOT EXISTS pending_registrations (
         id VARCHAR(100) PRIMARY KEY,
         payload TEXT NOT NULL,
+        created_slug VARCHAR(255),
+        created_jwt TEXT,
+        created_user VARCHAR(255),
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
       );`
     ];
@@ -290,6 +293,9 @@ async function createTables() {
     }
 
     const pgAlters = [
+      `ALTER TABLE pending_registrations ADD COLUMN IF NOT EXISTS created_slug VARCHAR(255);`,
+      `ALTER TABLE pending_registrations ADD COLUMN IF NOT EXISTS created_jwt TEXT;`,
+      `ALTER TABLE pending_registrations ADD COLUMN IF NOT EXISTS created_user VARCHAR(255);`,
       `ALTER TABLE stored_images ADD COLUMN IF NOT EXISTS storage_provider VARCHAR(50) DEFAULT 'local';`,
       `ALTER TABLE stored_images ADD COLUMN IF NOT EXISTS image_key VARCHAR(500);`,
       `ALTER TABLE stored_images ADD COLUMN IF NOT EXISTS image_url VARCHAR(1000);`,
