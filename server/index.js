@@ -3,7 +3,7 @@ import cors from 'cors';
 import path from 'path';
 import fs from 'fs';
 import dotenv from 'dotenv';
-import { initDb, runAutoDataSummarization } from './db.js';
+import { initDb, runAutoDataSummarization, getImageFromDb, saveImageToDb } from './db.js';
 import { startSubscriptionCron } from './subscriptionCron.js';
 import apiRoutes from './routes/api.js';
 import adminRoutes from './routes/admin.js';
@@ -38,11 +38,50 @@ app.use(express.json({
 }));
 app.use(express.urlencoded({ extended: true }));
 
-// Serve static uploads
+// Smart Persistent Uploads Handler (DB-backed fallback so Render restarts never corrupt images)
 const uploadsDir = path.resolve('public/uploads');
 if (!fs.existsSync(uploadsDir)) {
   fs.mkdirSync(uploadsDir, { recursive: true });
 }
+
+app.get('/uploads/:filename', async (req, res) => {
+  const filename = req.params.filename;
+  const filePath = path.join(uploadsDir, filename);
+
+  // 1. If physical file exists on local disk, serve directly
+  if (fs.existsSync(filePath)) {
+    return res.sendFile(filePath);
+  }
+
+  // 2. If missing on disk (e.g. after Render restart/redeploy), fetch from DB persistent backup!
+  try {
+    const dbImg = await getImageFromDb(filename);
+    if (dbImg) {
+      // Re-cache file to local disk so subsequent reads are instant
+      try {
+        fs.writeFileSync(filePath, dbImg.buffer);
+      } catch (cacheErr) {
+        console.warn('Failed to re-cache image to local disk:', cacheErr.message);
+      }
+      res.setHeader('Content-Type', dbImg.mimeType || 'image/jpeg');
+      res.setHeader('Cache-Control', 'public, max-age=31536000');
+      return res.send(dbImg.buffer);
+    }
+  } catch (err) {
+    console.error('Error serving image from DB fallback:', err.message);
+  }
+
+  // 3. Fallback to default placeholder logo if image is missing everywhere
+  const defaultLogo = path.join(uploadsDir, 'logo.jpg');
+  if (fs.existsSync(defaultLogo)) {
+    return res.sendFile(defaultLogo);
+  }
+
+  // 4. Return clear 404 text instead of index.html fallback
+  res.status(404).send('Image not found');
+});
+
+// Secondary static folder middleware
 app.use('/uploads', express.static(uploadsDir));
 
 // Production Health Check Endpoint (Safe: No secret exposure)

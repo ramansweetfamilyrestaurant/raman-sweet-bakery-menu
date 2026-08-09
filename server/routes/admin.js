@@ -4,7 +4,7 @@ import jwt from 'jsonwebtoken';
 import multer from 'multer';
 import path from 'path';
 import fs from 'fs';
-import { query, runAutoDataSummarization } from '../db.js';
+import { query, runAutoDataSummarization, saveImageToDb } from '../db.js';
 import { authenticateToken, requireActiveSubscription, checkSubscriptionStatus } from '../middleware/auth.js';
 
 const router = express.Router();
@@ -295,10 +295,18 @@ router.get('/stats', authenticateToken, requireActiveSubscription, async (req, r
 });
 
 // File Upload Endpoint (OPERATIONAL ROUTE)
-router.post('/upload', authenticateToken, requireActiveSubscription, upload.single('image'), (req, res) => {
+router.post('/upload', authenticateToken, requireActiveSubscription, upload.single('image'), async (req, res) => {
   if (!req.file) {
     return res.status(400).json({ error: 'No image file uploaded' });
   }
+
+  try {
+    const fileBuffer = fs.readFileSync(req.file.path);
+    await saveImageToDb(req.file.filename, req.file.mimetype, fileBuffer);
+  } catch (err) {
+    console.error('Error saving image to DB backup:', err.message);
+  }
+
   const imageUrl = `/uploads/${req.file.filename}`;
   res.json({ url: imageUrl });
 });

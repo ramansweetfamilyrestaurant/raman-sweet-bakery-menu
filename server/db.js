@@ -266,6 +266,13 @@ async function createTables() {
         redeemed_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
         UNIQUE (coupon_id, restaurant_id, subscription_id)
+      );`,
+
+      `CREATE TABLE IF NOT EXISTS stored_images (
+        filename VARCHAR(255) PRIMARY KEY,
+        mime_type VARCHAR(100) NOT NULL,
+        data TEXT NOT NULL,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
       );`
     ];
 
@@ -501,6 +508,13 @@ async function createTables() {
       );
       INSERT OR IGNORE INTO system_settings (key, value) VALUES ('support_whatsapp', '919876543210');
       INSERT OR IGNORE INTO system_settings (key, value) VALUES ('default_trial_days', '14');
+
+      CREATE TABLE IF NOT EXISTS stored_images (
+        filename TEXT PRIMARY KEY,
+        mime_type TEXT NOT NULL,
+        data TEXT NOT NULL,
+        created_at TEXT DEFAULT CURRENT_TIMESTAMP
+      );
 
       CREATE TABLE IF NOT EXISTS daily_sales_summaries (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -1141,6 +1155,44 @@ async function withTransaction(callback) {
       throw err;
     }
   }
+}
+
+export async function saveImageToDb(filename, mimeType, bufferData) {
+  try {
+    const base64Str = bufferData.toString('base64');
+    if (isPostgres) {
+      await query(
+        `INSERT INTO stored_images (filename, mime_type, data)
+         VALUES ($1, $2, $3)
+         ON CONFLICT (filename) DO UPDATE SET data = EXCLUDED.data, mime_type = EXCLUDED.mime_type`,
+        [filename, mimeType, base64Str]
+      );
+    } else {
+      await query(
+        `INSERT INTO stored_images (filename, mime_type, data)
+         VALUES ($1, $2, $3)
+         ON CONFLICT(filename) DO UPDATE SET data = excluded.data, mime_type = excluded.mime_type`,
+        [filename, mimeType, base64Str]
+      );
+    }
+  } catch (err) {
+    console.error('Failed to save image to DB:', err.message);
+  }
+}
+
+export async function getImageFromDb(filename) {
+  try {
+    const rows = await query('SELECT mime_type, data FROM stored_images WHERE filename = $1', [filename]);
+    if (rows && rows.length > 0) {
+      return {
+        mimeType: rows[0].mime_type || 'image/jpeg',
+        buffer: Buffer.from(rows[0].data, 'base64')
+      };
+    }
+  } catch (err) {
+    console.error('Failed to get image from DB:', err.message);
+  }
+  return null;
 }
 
 export { initDb, query, logAudit, runAutoDataSummarization, withTransaction };
