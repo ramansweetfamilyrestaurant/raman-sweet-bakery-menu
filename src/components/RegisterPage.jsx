@@ -97,6 +97,24 @@ export default function RegisterPage({ onRegisterSuccess }) {
     setLoading(true);
 
     try {
+      // Step 1: Pre-validate credentials & availability before submitting registration
+      const valRes = await fetch('/api/register/pre-validate', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          name: formData.name,
+          phone: formData.phone,
+          owner_username: formData.owner_username,
+          owner_password: formData.owner_password
+        })
+      });
+
+      const valData = await valRes.json();
+      if (!valRes.ok) {
+        throw new Error(valData.error || 'Registration validation failed.');
+      }
+
+      // Step 2: Proceed with account registration
       const res = await fetch('/api/register', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },

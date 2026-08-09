@@ -416,6 +416,46 @@ router.post('/service-requests', async (req, res) => {
   }
 });
 
+// POST /api/register/pre-validate - Validate form inputs & username/phone availability BEFORE payment
+router.post('/register/pre-validate', async (req, res) => {
+  try {
+    const { name, phone, owner_username, owner_password } = req.body;
+
+    if (!name || !name.trim()) {
+      return res.status(400).json({ error: 'Restaurant Name is required!' });
+    }
+
+    const cleanPhone = (phone || '').replace(/[^0-9]/g, '');
+    if (!cleanPhone || cleanPhone.length !== 10 || !/^[6-9]\d{9}$/.test(cleanPhone)) {
+      return res.status(400).json({ error: 'Please enter a valid 10-digit Mobile Number (e.g. 9876543210)!' });
+    }
+
+    if (!owner_username || !owner_username.trim()) {
+      return res.status(400).json({ error: 'Owner Username is required!' });
+    }
+
+    if (!owner_password || owner_password.length < 4) {
+      return res.status(400).json({ error: 'Password must be at least 4 characters long!' });
+    }
+
+    // Check if phone or owner username is already taken
+    const phoneCheck = await query('SELECT id FROM restaurants WHERE phone = $1', [cleanPhone]);
+    if (phoneCheck.length > 0) {
+      return res.status(400).json({ error: `Mobile number '${phone}' is already registered with another restaurant!` });
+    }
+
+    const adminCheck = await query('SELECT id FROM admins WHERE username = $1', [owner_username.trim()]);
+    if (adminCheck.length > 0) {
+      return res.status(400).json({ error: `Username '${owner_username}' is already taken! Please choose a different username.` });
+    }
+
+    res.json({ valid: true, cleanPhone, owner_username: owner_username.trim() });
+  } catch (err) {
+    console.error('Registration pre-validation error:', err);
+    res.status(500).json({ error: 'Registration validation failed' });
+  }
+});
+
 // POST /api/register - Public Self-Service 14-Day Free Trial Signup for Restaurants
 // Hardened with Atomic Database Transaction & Backend Authoritative Plan Resolution
 router.post('/register', async (req, res) => {
