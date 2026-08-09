@@ -19,8 +19,16 @@ export default function RegisterPage({ onRegisterSuccess }) {
     }
   }, []);
 
-  const [trialDays, setTrialDays] = useState(14);
-  const [plans, setPlans] = useState([]);
+  useEffect(() => {
+    if (!window.Cashfree) {
+      const script = document.createElement('script');
+      script.src = 'https://sdk.cashfree.com/js/v3/cashfree.js';
+      script.async = true;
+      script.onload = () => console.log('⚡ Cashfree JS SDK loaded eagerly on RegisterPage');
+      script.onerror = () => console.warn('⚠️ Cashfree JS SDK load error on RegisterPage');
+      document.body.appendChild(script);
+    }
+  }, []);
 
   useEffect(() => {
     fetch('/api/settings')
@@ -51,8 +59,6 @@ export default function RegisterPage({ onRegisterSuccess }) {
     if (tier === 'enterprise') return 1999;
     return 999;
   };
-
-
 
   // Compute live URL slug preview
   const liveSlug = formData.name
@@ -116,17 +122,41 @@ export default function RegisterPage({ onRegisterSuccess }) {
         throw new Error(data.error || 'Pre-registration payment setup failed. Please check details and try again.');
       }
 
-      // Step 2: Open Cashfree Subscription Payment Checkout directly
+      // Mode A: Direct redirect if auth_url is returned
       if (data.auth_url) {
         window.location.href = data.auth_url;
         return;
       }
 
       const sessionId = data.subscription_session_id;
-      if (sessionId && typeof window.Cashfree === 'function') {
-        const cashfree = window.Cashfree({ mode: data.environment || 'sandbox' });
+
+      // Ensure Cashfree SDK is loaded
+      let cfInstance = window.Cashfree;
+      if (!cfInstance) {
+        await new Promise((resolve) => {
+          const script = document.createElement('script');
+          script.src = 'https://sdk.cashfree.com/js/v3/cashfree.js';
+          script.onload = () => resolve(true);
+          script.onerror = () => resolve(false);
+          document.body.appendChild(script);
+        });
+        cfInstance = window.Cashfree;
+      }
+
+      // Mode B: Official Cashfree JS SDK v3 Subscriptions Checkout
+      if (sessionId && typeof cfInstance === 'function') {
+        const cashfree = cfInstance({ mode: data.environment || 'sandbox' });
+        console.log('[Cashfree SDK] Opening subscription checkout for session:', sessionId);
+
         if (typeof cashfree.subscriptionsCheckout === 'function') {
           cashfree.subscriptionsCheckout({
+            subsSessionId: sessionId,
+            subscriptionSessionId: sessionId,
+            redirectTarget: '_self'
+          });
+          return;
+        } else if (typeof cashfree.checkout === 'function') {
+          cashfree.checkout({
             subsSessionId: sessionId,
             subscriptionSessionId: sessionId,
             redirectTarget: '_self'
@@ -135,13 +165,7 @@ export default function RegisterPage({ onRegisterSuccess }) {
         }
       }
 
-      if (sessionId) {
-        const directSubUrl = `https://sandbox.cashfree.com/subscriptions/auth?sub_session_id=${encodeURIComponent(sessionId)}`;
-        window.location.href = directSubUrl;
-        return;
-      }
-
-      throw new Error('Could not open Cashfree payment checkout window. Please try again.');
+      throw new Error('Cashfree payment SDK unavailable. Please refresh the page and try again.');
     } catch (err) {
       console.error('Registration error:', err);
       setError(err.message);
