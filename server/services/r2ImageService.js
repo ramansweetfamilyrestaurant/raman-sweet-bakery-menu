@@ -1,4 +1,4 @@
-import { S3Client, PutObjectCommand, DeleteObjectCommand, HeadObjectCommand, GetObjectCommand } from '@aws-sdk/client-s3';
+import { S3Client, PutObjectCommand, DeleteObjectCommand, HeadObjectCommand, GetObjectCommand, ListObjectsV2Command } from '@aws-sdk/client-s3';
 import sharp from 'sharp';
 import path from 'path';
 import fs from 'fs';
@@ -357,5 +357,48 @@ export async function getR2ObjectBuffer(objectKey) {
       console.warn(`⚠️ Failed to fetch R2 object (${objectKey}):`, err.message);
       return null;
     }
+  }
+}
+
+/**
+ * Scans Cloudflare R2 bucket and deletes all objects that are not in the activeR2Keys list.
+ */
+export async function purgeOrphanedR2Objects(activeR2Keys = []) {
+  const client = getR2Client();
+  if (!client) {
+    return { success: false, error: 'Cloudflare R2 client is not configured' };
+  }
+
+  const config = getR2Config();
+  const activeSet = new Set(activeR2Keys.filter(Boolean));
+  let totalObjects = 0;
+  let deletedCount = 0;
+
+  try {
+    const command = new ListObjectsV2Command({
+      Bucket: config.bucketName,
+    });
+    const response = await client.send(command);
+    const contents = response.Contents || [];
+    totalObjects = contents.length;
+
+    for (const item of contents) {
+      if (item.Key && !activeSet.has(item.Key)) {
+        console.log(`🧹 Purging orphaned R2 object: ${item.Key}`);
+        await deleteImageFromR2(item.Key);
+        deletedCount++;
+      }
+    }
+
+    return {
+      success: true,
+      bucket: config.bucketName,
+      totalObjects,
+      activeObjects: activeSet.size,
+      deletedOrphans: deletedCount
+    };
+  } catch (err) {
+    console.error('Error purging orphaned R2 objects:', err);
+    return { success: false, error: err.message };
   }
 }

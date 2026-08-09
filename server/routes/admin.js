@@ -5,7 +5,7 @@ import multer from 'multer';
 import path from 'path';
 import fs from 'fs';
 import { query, runAutoDataSummarization, saveImageToDb, saveR2ImageToDb, getImageRecordFromDb, deleteImageRecordFromDb } from '../db.js';
-import { isR2Active, uploadImageToR2, deleteImageFromR2, getR2Diagnostics } from '../services/r2ImageService.js';
+import { isR2Active, uploadImageToR2, deleteImageFromR2, getR2Diagnostics, purgeOrphanedR2Objects } from '../services/r2ImageService.js';
 import { authenticateToken, requireActiveSubscription, checkSubscriptionStatus } from '../middleware/auth.js';
 
 const router = express.Router();
@@ -417,6 +417,33 @@ router.post('/upload/delete', authenticateToken, requireActiveSubscription, asyn
     return res.json({ success: true });
   } catch (err) {
     return res.status(500).json({ error: 'Failed to delete image' });
+  }
+});
+
+// Purge Orphaned R2 Bucket Objects Endpoint
+router.post('/r2/purge-orphans', authenticateToken, requireActiveSubscription, async (req, res) => {
+  try {
+    const dishes = await query("SELECT image FROM dishes WHERE image IS NOT NULL AND image != ''");
+    const cats = await query("SELECT image FROM categories WHERE image IS NOT NULL AND image != ''");
+    const restos = await query("SELECT logo FROM restaurants WHERE logo IS NOT NULL AND logo != ''");
+    const stored = await query("SELECT image_key FROM stored_images WHERE image_key IS NOT NULL AND image_key != ''");
+
+    const allUrls = [...dishes, ...cats, ...restos].map(r => r.image || r.logo).filter(Boolean);
+    const activeR2Keys = [];
+
+    allUrls.forEach(url => {
+      const match = url.match(/restaurants\/[^\s'"]+/);
+      if (match && match[0]) activeR2Keys.push(match[0]);
+    });
+
+    stored.forEach(s => {
+      if (s.image_key) activeR2Keys.push(s.image_key);
+    });
+
+    const result = await purgeOrphanedR2Objects(activeR2Keys);
+    res.json(result);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
   }
 });
 
