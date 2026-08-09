@@ -5024,7 +5024,7 @@ export default function AdminDashboard({ token, username, onLogout, onReturnToMe
           dish={dishModalData === 'new' ? null : dishModalData}
           categories={categories}
           token={token}
-          onSave={loadData}
+          onSave={handleSaveDish}
           onClose={() => setDishModalData(null)}
         />
       )}
