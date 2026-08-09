@@ -534,18 +534,7 @@ export default function App() {
         }
       } else if (isBilling) {
         if (adminToken) {
-          setSubscriptionLoading(true);
-          let currentSlug = localStorage.getItem('raman_admin_slug');
-          if (currentSlug === 'undefined' || currentSlug === 'null') currentSlug = '';
-          const mandateActive = await checkMandateGating(adminToken, currentSlug);
-          if (mandateActive) {
-            const cleanUrl = (currentSlug && currentSlug !== 'undefined' && currentSlug !== 'null') ? `/${currentSlug}/admin` : '/admin';
-            window.history.replaceState({}, '', cleanUrl);
-            setView('admin-dashboard');
-          } else {
-            setView('billing');
-          }
-          setSubscriptionLoading(false);
+          setView('billing');
         } else {
           window.history.replaceState({}, '', '/register');
           setView('register');
@@ -1484,8 +1473,8 @@ export default function App() {
           setAdminUsername(res.username || 'Admin');
           setAdminSlug(res.slug);
           setNewlyRegisteredResto(res);
-          window.history.pushState({}, '', `/${res.slug}/admin`);
-          setView('admin-dashboard');
+          window.history.pushState({}, '', '/billing');
+          setView('billing');
         }} />
       </Suspense>
     );
