@@ -277,6 +277,11 @@ async function createTables() {
         image_url VARCHAR(1000),
         restaurant_id INT DEFAULT 1,
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+      );`,
+      `CREATE TABLE IF NOT EXISTS pending_registrations (
+        id VARCHAR(100) PRIMARY KEY,
+        payload TEXT NOT NULL,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
       );`
     ];
 

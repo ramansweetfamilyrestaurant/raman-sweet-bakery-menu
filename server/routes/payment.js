@@ -80,7 +80,6 @@ router.post('/checkout-pre-register', async (req, res) => {
     const trialDays = Math.max(1, parseInt(sysRows[0]?.value || '14', 10));
     const trialEndISO = new Date(Date.now() + trialDays * 86400 * 1000).toISOString();
 
-    // Encrypt registration payload into temporary registration token (valid 1 hour)
     const regPayload = {
       name: name.trim(),
       phone: cleanPhone,
@@ -91,9 +90,15 @@ router.post('/checkout-pre-register', async (req, res) => {
       trial_days: trialDays
     };
 
-    const regToken = jwt.sign(regPayload, JWT_SECRET, { expiresIn: '1h' });
+    // Store registration payload in database pending_registrations table to keep returnUrl under Cashfree 250 char limit
+    const regId = `reg_${Date.now()}_${Math.floor(1000 + Math.random() * 9000)}`;
+    await query(
+      'INSERT INTO pending_registrations (id, payload) VALUES ($1, $2)',
+      [regId, JSON.stringify(regPayload)]
+    );
+
     const baseUrl = process.env.APP_BASE_URL || 'https://khana-master.onrender.com';
-    const returnUrl = `${baseUrl}/api/payment/register-return?reg_token=${encodeURIComponent(regToken)}`;
+    const returnUrl = `${baseUrl}/api/payment/register-return?reg_id=${regId}`;
 
     // 3. Create Cashfree Subscription Session WITHOUT touching restaurants or admins tables!
     const tempRestoId = Math.floor(100000 + Math.random() * 900000);
@@ -130,19 +135,22 @@ router.post('/checkout-pre-register', async (req, res) => {
 
 // GET /api/payment/register-return - Cashfree subscription return callback for pre-registration
 router.get('/register-return', async (req, res) => {
-  const { reg_token, subscription_id, sub_id } = req.query;
+  const { reg_id, subscription_id, sub_id } = req.query;
   const targetSubId = subscription_id || sub_id;
   const baseUrl = process.env.APP_BASE_URL || 'https://khana-master.onrender.com';
 
-  if (!reg_token) {
-    return res.redirect(`${baseUrl}/register?error=Invalid registration token`);
+  if (!reg_id) {
+    return res.redirect(`${baseUrl}/register?error=Invalid registration session`);
   }
 
   try {
-    const regData = jwt.verify(reg_token, JWT_SECRET);
-    if (!regData || !regData.name || !regData.owner_username) {
-      return res.redirect(`${baseUrl}/register?error=Invalid registration payload`);
+    const regRows = await query('SELECT payload FROM pending_registrations WHERE id = $1', [reg_id]);
+    if (!regRows || regRows.length === 0) {
+      return res.redirect(`${baseUrl}/register?error=Registration session expired or invalid`);
     }
+
+    const regData = JSON.parse(regRows[0].payload);
+    await query('DELETE FROM pending_registrations WHERE id = $1', [reg_id]);
 
     // Verify Cashfree Subscription Status if subscription_id is provided
     let isPaymentSuccess = true;
