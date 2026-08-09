@@ -148,28 +148,68 @@ export async function fetchAdminStats(token) {
   return handleResponse(res, 'Failed to fetch admin stats');
 }
 
-export async function uploadImage(file, token) {
-  // 1. Primary: Upload to ImgBB Free Cloud Storage CDN
-  try {
-    const imgbbFormData = new FormData();
-    imgbbFormData.append('image', file);
+// Helper: Compress image file on client-side before uploading (max 800px, 82% JPEG quality)
+async function compressImageFile(file) {
+  if (!file || !file.type || !file.type.startsWith('image/')) return file;
+  
+  return new Promise((resolve) => {
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      const img = new Image();
+      img.onload = () => {
+        const canvas = document.createElement('canvas');
+        let width = img.width;
+        let height = img.height;
+        const maxDim = 800;
 
-    const imgbbRes = await fetch('https://api.imgbb.com/1/upload?key=6d207e02198a847aa98d0a2a901485a5', {
-      method: 'POST',
-      body: imgbbFormData,
-    });
-    const imgbbData = await imgbbRes.json();
-    if (imgbbData && imgbbData.data && imgbbData.data.url) {
-      console.log('⚡ Uploaded image to ImgBB Free Cloud CDN:', imgbbData.data.url);
-      return imgbbData.data.url;
-    }
+        if (width > maxDim || height > maxDim) {
+          if (width > height) {
+            height = Math.round((height * maxDim) / width);
+            width = maxDim;
+          } else {
+            width = Math.round((width * maxDim) / height);
+            height = maxDim;
+          }
+        }
+
+        canvas.width = width;
+        canvas.height = height;
+        const ctx = canvas.getContext('2d');
+        ctx.drawImage(img, 0, 0, width, height);
+
+        canvas.toBlob((blob) => {
+          if (!blob) {
+            resolve(file);
+            return;
+          }
+          const compressedFile = new File([blob], file.name.replace(/\.[^/.]+$/, "") + ".jpg", {
+            type: 'image/jpeg',
+            lastModified: Date.now()
+          });
+          console.log(`⚡ Compressed image from ${(file.size / 1024).toFixed(1)}KB to ${(compressedFile.size / 1024).toFixed(1)}KB`);
+          resolve(compressedFile);
+        }, 'image/jpeg', 0.82);
+      };
+      img.onerror = () => resolve(file);
+      img.src = e.target.result;
+    };
+    reader.onerror = () => resolve(file);
+    reader.readAsDataURL(file);
+  });
+}
+
+export async function uploadImage(file, token) {
+  // 1. Compress image on client-side (5MB -> ~80KB) for instant upload & low storage
+  let processedFile = file;
+  try {
+    processedFile = await compressImageFile(file);
   } catch (err) {
-    console.warn('ImgBB Cloud upload notice, using server fallback:', err.message);
+    console.warn('Image compression notice, using original file:', err.message);
   }
 
-  // 2. Fallback: Upload to backend server endpoint
+  // 2. Upload compressed image directly to our persistent server database endpoint
   const formData = new FormData();
-  formData.append('image', file);
+  formData.append('image', processedFile);
 
   const res = await fetch(`${API_BASE}/admin/upload`, {
     method: 'POST',
