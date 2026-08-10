@@ -1343,5 +1343,19 @@ export async function getImageFromDb(filename) {
   return null;
 }
 
+export async function purgeCancelledOrdersOlderThan3Mins() {
+  try {
+    const threeMinsAgo = new Date(Date.now() - 3 * 60 * 1000).toISOString();
+    const result = await query(
+      `DELETE FROM orders WHERE status IN ('cancelled', 'rejected') AND created_at <= $1`,
+      [threeMinsAgo]
+    );
+    return result;
+  } catch (err) {
+    console.warn('Notice purging cancelled orders:', err.message);
+    return null;
+  }
+}
+
 export { initDb, query, logAudit, runAutoDataSummarization, withTransaction };
 

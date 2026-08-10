@@ -3,7 +3,7 @@ import cors from 'cors';
 import path from 'path';
 import fs from 'fs';
 import dotenv from 'dotenv';
-import { initDb, runAutoDataSummarization, getImageFromDb, saveImageToDb } from './db.js';
+import { initDb, runAutoDataSummarization, getImageFromDb, saveImageToDb, purgeCancelledOrdersOlderThan3Mins } from './db.js';
 import { getR2Diagnostics } from './services/r2ImageService.js';
 import { startSubscriptionCron } from './subscriptionCron.js';
 import apiRoutes from './routes/api.js';
@@ -209,6 +209,11 @@ async function startServer(portToTry = PORT) {
         }
       }).catch(err => console.warn('Nightly auto summarization notice:', err.message));
     }, 24 * 60 * 60 * 1000);
+
+    // 🧹 Auto-Purge Cancelled/Rejected Orders Older Than 3 Minutes (180s)
+    setInterval(() => {
+      purgeCancelledOrdersOlderThan3Mins().catch(err => console.warn('Purge cancelled orders notice:', err.message));
+    }, 30 * 1000);
 
     const diag = getR2Diagnostics();
     console.log('⚡ [R2 STORAGE DIAGNOSTICS] Status:', JSON.stringify(diag));

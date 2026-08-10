@@ -1838,11 +1838,6 @@ export default function App() {
                   'Order Received 🟢'
                 }
               </span>
-              {(activeOrderTrack.status === 'completed' || activeOrderTrack.status === 'cancelled' || activeOrderTrack.status === 'rejected') && (
-                <div style={{ fontSize: '0.72rem', color: '#FCD34D', fontWeight: 700, marginTop: '3px' }}>
-                  ⏳ Session expire hone me: <strong>{autoKillSeconds !== null ? `${Math.floor(autoKillSeconds/60)}m ${String(autoKillSeconds%60).padStart(2,'0')}s` : '3m 00s'}</strong> (Naya order karne ke liye QR dobara scan karein)
-                </div>
-              )}
             </div>
           </div>
 
