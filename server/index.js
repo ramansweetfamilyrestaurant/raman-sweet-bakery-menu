@@ -65,17 +65,20 @@ app.get(['/api/r2-proxy/*', '/r2-proxy/*'], async (req, res) => {
     return 'image/webp';
   };
 
+  // Set strict no-cache headers so browser cache is always updated when logo/image changes
+  res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
+  res.setHeader('Pragma', 'no-cache');
+  res.setHeader('Expires', '0');
+
   // 1. Check local r2-cache disk
   if (fs.existsSync(localCachePath)) {
     res.setHeader('Content-Type', getContentType(filename));
-    res.setHeader('Cache-Control', 'public, max-age=31536000, immutable');
     return res.sendFile(localCachePath);
   }
 
   // 2. Check local uploads directory
   if (fs.existsSync(localUploadPath)) {
     res.setHeader('Content-Type', getContentType(filename));
-    res.setHeader('Cache-Control', 'public, max-age=31536000, immutable');
     return res.sendFile(localUploadPath);
   }
 
@@ -85,7 +88,6 @@ app.get(['/api/r2-proxy/*', '/r2-proxy/*'], async (req, res) => {
       const r2Obj = await getR2ObjectBuffer(key);
       if (r2Obj && r2Obj.buffer) {
         res.setHeader('Content-Type', r2Obj.contentType || getContentType(filename));
-        res.setHeader('Cache-Control', 'public, max-age=31536000, immutable');
         return res.send(r2Obj.buffer);
       }
     }
@@ -102,7 +104,6 @@ app.get(['/api/r2-proxy/*', '/r2-proxy/*'], async (req, res) => {
       if (buf && buf.length > 0) {
         const mime = dbImg.mimeType || dbImg.mime_type || getContentType(filename);
         res.setHeader('Content-Type', mime);
-        res.setHeader('Cache-Control', 'public, max-age=31536000, immutable');
         try {
           fs.mkdirSync(path.dirname(localCachePath), { recursive: true });
           fs.writeFileSync(localCachePath, buf);
@@ -130,6 +131,10 @@ app.get('/uploads/:filename', async (req, res) => {
   const filename = req.params.filename;
   const filePath = path.join(uploadsDir, filename);
 
+  res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
+  res.setHeader('Pragma', 'no-cache');
+  res.setHeader('Expires', '0');
+
   // 1. Fetch directly from Cloudflare R2 if object key exists in DB record
   try {
     const record = await getImageRecordFromDb(filename);
@@ -137,7 +142,6 @@ app.get('/uploads/:filename', async (req, res) => {
       const r2Obj = await getR2ObjectBuffer(record.image_key);
       if (r2Obj && r2Obj.buffer) {
         res.setHeader('Content-Type', r2Obj.contentType || 'image/webp');
-        res.setHeader('Cache-Control', 'public, max-age=31536000, immutable');
         return res.send(r2Obj.buffer);
       }
     }
@@ -161,7 +165,6 @@ app.get('/uploads/:filename', async (req, res) => {
         console.warn('Failed to re-cache image to local disk:', cacheErr.message);
       }
       res.setHeader('Content-Type', dbImg.mimeType || 'image/jpeg');
-      res.setHeader('Cache-Control', 'public, max-age=31536000');
       return res.send(dbImg.buffer);
     }
   } catch (err) {
