@@ -81,14 +81,35 @@ app.get(['/api/r2-proxy/*', '/r2-proxy/*'], async (req, res) => {
 
   // 3. Fetch from Cloudflare R2 bucket
   try {
-    const r2Obj = await getR2ObjectBuffer(key);
-    if (r2Obj && r2Obj.buffer) {
-      res.setHeader('Content-Type', r2Obj.contentType || 'image/webp');
-      res.setHeader('Cache-Control', 'public, max-age=31536000, immutable');
-      return res.send(r2Obj.buffer);
+    if (isR2Active()) {
+      const r2Obj = await getR2ObjectBuffer(key);
+      if (r2Obj && r2Obj.buffer) {
+        res.setHeader('Content-Type', r2Obj.contentType || getContentType(filename));
+        res.setHeader('Cache-Control', 'public, max-age=31536000, immutable');
+        return res.send(r2Obj.buffer);
+      }
     }
   } catch (err) {
     console.warn('R2 proxy buffer notice:', err.message);
+  }
+
+  // 4. Fallback: Fetch from stored_images table in database
+  try {
+    const dbImg = await getImageRecordFromDb(filename) || await getImageFromDb(filename);
+    if (dbImg && dbImg.buffer) {
+      res.setHeader('Content-Type', dbImg.mimeType || getContentType(filename));
+      res.setHeader('Cache-Control', 'public, max-age=3600');
+      return res.send(dbImg.buffer);
+    }
+  } catch (dbErr) {
+    console.warn('R2 proxy DB fallback notice:', dbErr.message);
+  }
+
+  // 5. Fallback to default logo.jpg on disk if present
+  const defaultLogoPath = path.resolve('public/uploads/logo.jpg');
+  if (fs.existsSync(defaultLogoPath)) {
+    res.setHeader('Content-Type', 'image/jpeg');
+    return res.sendFile(defaultLogoPath);
   }
 
   return res.status(404).send('Image not found');
