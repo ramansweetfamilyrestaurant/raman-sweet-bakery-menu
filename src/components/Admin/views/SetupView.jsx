@@ -505,7 +505,8 @@ export default function SetupView({
             <label style={{ fontSize: '0.76rem', fontWeight: 800, color: 'var(--adm-muted)', display: 'block', marginBottom: '4px' }}>CURRENCY SYMBOL:</label>
             <input
               type="text"
-              value={settingsForm.currency_symbol || '₹'}
+              placeholder="₹"
+              value={settingsForm.currency_symbol != null ? settingsForm.currency_symbol : '₹'}
               onChange={(e) => setSettingsForm({ ...settingsForm, currency_symbol: e.target.value })}
               style={{ width: '100%', padding: '10px 12px', borderRadius: 'var(--adm-radius-md)', border: '1px solid var(--adm-border)', fontSize: '0.9rem' }}
             />
