@@ -158,9 +158,8 @@ export async function optimizeImage(buffer, originalMime = 'image/jpeg') {
  */
 export function generateObjectKey(restaurantId, entityType = 'dishes', filename = '') {
   if (entityType === 'superadmin' || entityType === 'branding') {
-    const timestamp = Date.now();
-    const randomSuffix = Math.round(Math.random() * 1e9);
-    return `superadmin/branding/logo-${timestamp}-${randomSuffix}.webp`;
+    // Fixed key ensures Cloudflare R2 automatically overwrites the logo without creating duplicate files
+    return `superadmin/branding/logo.webp`;
   }
 
   const safeRestoId = parseInt(restaurantId, 10) || 1;
