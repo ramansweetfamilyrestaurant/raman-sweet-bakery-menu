@@ -10,6 +10,10 @@ import Drawer from './components/Drawer';
 // Views
 import OverviewView from './views/OverviewView';
 import TenantsView from './views/TenantsView';
+import SubscriptionsView from './views/SubscriptionsView';
+import PlansView from './views/PlansView';
+import CommunicationView from './views/CommunicationView';
+import AuditLogsView from './views/AuditLogsView';
 import TenantDetailsView from './views/TenantDetailsView';
 import SettingsView from './views/SettingsView';
 import ProfileView from './views/ProfileView';
@@ -314,6 +318,46 @@ export default function SuperAdminDashboard({ token, username, onLogout, onImper
               }}
               onRefresh={loadDashboardData}
               loading={loading}
+            />
+          )}
+
+          {activeView === 'subscriptions' && (
+            <SubscriptionsView
+              restaurants={restaurants}
+              onSelectTenant={setSelectedRestoDrawer}
+              onRefresh={loadDashboardData}
+              loading={loading}
+            />
+          )}
+
+          {activeView === 'plans' && (
+            <PlansView
+              plansList={plansList}
+              restaurants={restaurants}
+              onCreatePlan={handleCreatePlan}
+              onUpdatePlan={handleUpdatePlan}
+              onDeletePlan={handleDeletePlan}
+              loading={loading}
+              onRefresh={loadDashboardData}
+            />
+          )}
+
+          {activeView === 'communication' && (
+            <CommunicationView
+              announcementsList={announcementsList}
+              onSendAnnouncement={handleSendAnnouncement}
+              onDeleteAnnouncement={handleDeleteAnnouncement}
+              onClearAll={handleClearAllAnnouncements}
+              loading={loading}
+              onRefresh={loadDashboardData}
+            />
+          )}
+
+          {activeView === 'audit-logs' && (
+            <AuditLogsView
+              auditLogs={auditLogs}
+              loading={loading}
+              onRefresh={loadDashboardData}
             />
           )}
 

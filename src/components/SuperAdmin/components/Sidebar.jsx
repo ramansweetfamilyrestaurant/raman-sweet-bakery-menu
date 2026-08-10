@@ -1,5 +1,5 @@
 import React from 'react';
-import { LayoutDashboard, Store, Settings, UserCircle, ChevronLeft, ChevronRight } from 'lucide-react';
+import { LayoutDashboard, Store, CreditCard, Package, Send, ShieldCheck, Settings, UserCircle, ChevronLeft, ChevronRight } from 'lucide-react';
 
 export default function Sidebar({ activeView, setActiveView, collapsed, setCollapsed, logoUrl }) {
   const [logoErr, setLogoErr] = React.useState(false);
@@ -11,6 +11,10 @@ export default function Sidebar({ activeView, setActiveView, collapsed, setColla
   const navItems = [
     { id: 'overview', label: 'Home', icon: LayoutDashboard },
     { id: 'tenants', label: 'Restaurants', icon: Store },
+    { id: 'subscriptions', label: 'Subscriptions', icon: CreditCard },
+    { id: 'plans', label: 'SaaS Plans', icon: Package },
+    { id: 'communication', label: 'Broadcasts', icon: Send },
+    { id: 'audit-logs', label: 'Audit Logs', icon: ShieldCheck },
     { id: 'settings', label: 'Settings', icon: Settings },
     { id: 'profile', label: 'Profile', icon: UserCircle },
   ];
