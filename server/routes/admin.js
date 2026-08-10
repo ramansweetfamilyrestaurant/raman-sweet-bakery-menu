@@ -472,14 +472,6 @@ router.post('/upload', authenticateToken, requireActiveSubscription, upload.sing
       restaurantId
     );
 
-    // Save a copy in local r2-cache folder so server can also serve cached stream if needed
-    try {
-      const r2CacheDir = path.resolve('public/uploads/r2-cache');
-      if (!fs.existsSync(r2CacheDir)) fs.mkdirSync(r2CacheDir, { recursive: true });
-      fs.copyFileSync(req.file.path, path.join(r2CacheDir, req.file.filename));
-      fs.copyFileSync(req.file.path, path.join(r2CacheDir, path.basename(r2Result.objectKey)));
-    } catch (e) {}
-
     // Cleanup temp upload file
     if (req.file.path && fs.existsSync(req.file.path)) fs.unlinkSync(req.file.path);
 

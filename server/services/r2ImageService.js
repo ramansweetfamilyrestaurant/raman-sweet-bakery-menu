@@ -289,6 +289,13 @@ export async function deleteImageFromR2(objectKey) {
 export async function getR2ObjectBuffer(objectKey) {
   if (!objectKey) return null;
 
+  const ext = path.extname(objectKey).toLowerCase();
+  let contentType = 'image/webp';
+  if (ext === '.png') contentType = 'image/png';
+  else if (ext === '.jpg' || ext === '.jpeg') contentType = 'image/jpeg';
+  else if (ext === '.gif') contentType = 'image/gif';
+  else if (ext === '.svg') contentType = 'image/svg+xml';
+
   // 1. Check local disk cache first (Instant response ~0.5ms)
   const cachePath = getCacheFilePath(objectKey);
   if (cachePath && fs.existsSync(cachePath)) {
@@ -297,7 +304,7 @@ export async function getR2ObjectBuffer(objectKey) {
       if (cachedBuffer && cachedBuffer.length > 0) {
         return {
           buffer: cachedBuffer,
-          contentType: 'image/webp'
+          contentType
         };
       }
     } catch (cErr) {
