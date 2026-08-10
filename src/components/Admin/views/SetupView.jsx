@@ -58,12 +58,33 @@ export default function SetupView({
     }
   };
 
-  const handleDetectGps = () => {
+  const handleDetectGps = async () => {
+    // Step 1: Check if geolocation API exists
     if (!navigator.geolocation) {
-      alert('Geolocation is not supported by your browser.');
+      alert('❌ GPS Not Supported\n\nYour browser does not support geolocation.\nPlease use Chrome, Safari, or Edge browser.');
       return;
     }
 
+    // Step 2: Check secure context (HTTPS required for geolocation)
+    if (window.isSecureContext === false) {
+      alert('🔒 HTTPS Required\n\nGPS location only works on HTTPS websites.\nPlease open your admin panel using https:// URL.');
+      return;
+    }
+
+    // Step 3: Check permission status if Permissions API available
+    if (navigator.permissions) {
+      try {
+        const permStatus = await navigator.permissions.query({ name: 'geolocation' });
+        if (permStatus.state === 'denied') {
+          alert('🚫 Location Permission Blocked!\n\nYour browser has blocked location access.\n\nTo fix:\n1. Tap the 🔒 lock icon in address bar\n2. Find "Location" setting\n3. Change to "Allow"\n4. Refresh the page and try again');
+          return;
+        }
+      } catch (e) {
+        // Permissions API not fully supported, continue anyway
+      }
+    }
+
+    // Step 4: Request location
     setGpsLoading(true);
     navigator.geolocation.getCurrentPosition(
       (pos) => {
@@ -75,13 +96,24 @@ export default function SetupView({
           }));
         }
         setGpsLoading(false);
-        alert(`📍 GPS Location Detected!\nLatitude: ${pos.coords.latitude}\nLongitude: ${pos.coords.longitude}`);
+        alert(`📍 GPS Location Detected!\n\nLatitude: ${pos.coords.latitude}\nLongitude: ${pos.coords.longitude}\n\nAccuracy: ${Math.round(pos.coords.accuracy)} meters\n\nClick "Save Location & Geofence" to save.`);
       },
       (err) => {
         setGpsLoading(false);
-        alert('Could not detect location: ' + err.message);
+        if (err.code === 1) {
+          // PERMISSION_DENIED
+          alert('🚫 Location Permission Denied!\n\nPlease allow location access:\n\n📱 Mobile: Tap the 🔒 icon in address bar → Location → Allow\n💻 Desktop: Click 🔒 icon → Site Settings → Location → Allow\n\nThen refresh and try again.');
+        } else if (err.code === 2) {
+          // POSITION_UNAVAILABLE
+          alert('📍 Location Unavailable\n\nYour device could not determine your position.\n\nPlease check:\n1. GPS/Location is turned ON in device settings\n2. You are not in airplane mode\n3. Try moving near a window for better signal');
+        } else if (err.code === 3) {
+          // TIMEOUT
+          alert('⏱️ Location Timeout\n\nGPS detection took too long.\n\nPlease check:\n1. GPS/Location is turned ON\n2. You have a clear view of the sky\n3. Try again in a moment');
+        } else {
+          alert('❌ Location Error: ' + err.message);
+        }
       },
-      { enableHighAccuracy: true, timeout: 10000 }
+      { enableHighAccuracy: true, timeout: 15000, maximumAge: 0 }
     );
   };
 
