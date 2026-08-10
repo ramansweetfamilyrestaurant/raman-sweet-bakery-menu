@@ -89,9 +89,7 @@ app.get(['/api/r2-proxy/*', '/r2-proxy/*'], async (req, res) => {
     console.warn('R2 proxy buffer notice:', err.message);
   }
 
-  const defaultLogo = path.join(uploadsDir, 'logo.jpg');
-  if (fs.existsSync(defaultLogo)) return res.sendFile(defaultLogo);
-  res.status(404).send('Image not found');
+  return res.status(404).send('Image not found');
 });
 
 app.get('/uploads/:filename', async (req, res) => {

@@ -793,7 +793,7 @@ router.post('/categories', authenticateToken, requireActiveSubscription, async (
     const order = sort_order || 0;
     const result = await query(
       'INSERT INTO categories (restaurant_id, name, image, sort_order) VALUES ($1, $2, $3, $4) RETURNING id',
-      [targetId, name, processedImage || '/uploads/logo.jpg', order]
+      [targetId, name, processedImage || null, order]
     );
     res.json({ success: true, id: result[0]?.id || result.lastInsertRowid });
   } catch (err) {

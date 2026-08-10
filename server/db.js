@@ -963,7 +963,7 @@ async function seedData() {
       for (const cat of data.categories) {
         const res = await query(
           'INSERT INTO categories (restaurant_id, name, name_hi, image, sort_order) VALUES ($1, $2, $3, $4, $5) RETURNING id',
-          [primaryRestoId, cat.name, cat.name_hi || '', cat.image || '/uploads/logo.jpg', cat.sort_order || 0]
+          [primaryRestoId, cat.name, cat.name_hi || '', cat.image || null, cat.sort_order || 0]
         );
         const newId = res[0]?.id || res.lastInsertRowid;
         catIdMap[cat.id] = newId;
@@ -978,7 +978,7 @@ async function seedData() {
               portion, portion_half_label, portion_full_label, badge, ingredients, taste_profile, available
             ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16)`,
             [
-              primaryRestoId, newCatId, d.name, d.name_hi || '', d.description || '', d.description_hi || '', d.image || '/uploads/logo.jpg', d.price, d.price_half || null,
+              primaryRestoId, newCatId, d.name, d.name_hi || '', d.description || '', d.description_hi || '', d.image || null, d.price, d.price_half || null,
               d.portion || '', d.portion_half_label || '', d.portion_full_label || '', d.badge || '', d.ingredients || '', d.taste_profile || '', d.available !== false ? 1 : 0
             ]
           );
@@ -1055,11 +1055,10 @@ async function seedData() {
       console.log('🛒 Seeded default sample Combo Deals into combos table');
     }
 
-    // Auto-fix any combo without valid cloud image
-    await query(`
-      UPDATE combos SET image = 'https://images.unsplash.com/photo-1626777552726-4a6b54c97e46?w=800&auto=format&fit=crop&q=80'
-      WHERE image IS NULL OR image = '' OR image = '/uploads/logo.jpg' OR image LIKE '/uploads/%'
-    `);
+    // Clean up default logo image references so dishes & categories without custom photos stay clean (NULL)
+    await query("UPDATE categories SET image = NULL WHERE image = '/uploads/logo.jpg'");
+    await query("UPDATE dishes SET image = NULL WHERE image = '/uploads/logo.jpg'");
+    await query("UPDATE combos SET image = NULL WHERE image = '/uploads/logo.jpg'");
   } catch (err) {
     console.warn('Combo seeding notice:', err.message);
   }
