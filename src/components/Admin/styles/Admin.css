@@ -94,13 +94,13 @@
 
 /* Header Bar */
 .adm-header {
-  height: 56px;
+  height: 64px;
   background: var(--adm-primary);
   color: #FFFFFF;
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 0 16px;
+  padding: 0 12px;
   position: sticky;
   top: 0;
   z-index: 90;
@@ -110,7 +110,7 @@
 .adm-header-left {
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: 8px;
   min-width: 0;
 }
 
@@ -121,14 +121,14 @@
 }
 
 .adm-header-title {
-  font-size: 1rem;
-  font-weight: 800;
+  font-size: 0.92rem;
+  font-weight: 700;
   color: #FFFFFF;
   margin: 0;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
-  max-width: 220px;
+  max-width: 175px;
 }
 
 .adm-header-subtitle {
