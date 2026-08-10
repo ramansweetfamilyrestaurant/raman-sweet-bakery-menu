@@ -2170,14 +2170,29 @@ export default function App() {
                           {itemsSummaryText || combo.description || 'Special Meal Deal'}
                         </p>
 
-                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                          <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
-                            <strong style={{ fontWeight: 900, fontSize: '0.88rem', color: 'var(--primary-emerald)' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: '4px' }}>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                            {/* Price Pill matching regular dish cards */}
+                            <div style={{
+                              fontSize: '0.86rem',
+                              fontWeight: 900,
+                              padding: '3px 12px',
+                              borderRadius: 'var(--radius-pill)',
+                              background: '#FFFFFF',
+                              color: 'var(--text-dark)',
+                              border: '1.5px solid var(--border-light)',
+                              whiteSpace: 'nowrap',
+                              lineHeight: 1.2,
+                              boxShadow: '0 1px 4px rgba(0,0,0,0.06)',
+                              display: 'inline-flex',
+                              alignItems: 'center'
+                            }}>
                               {(info?.currency_symbol !== undefined && info?.currency_symbol !== null) ? info.currency_symbol : '₹'}{Math.round(Number(combo.price))}
-                            </strong>
+                            </div>
+
                             {savings > 0 && (
-                              <span style={{ fontSize: '0.6rem', color: '#059669', fontWeight: 800, background: '#D1FAE5', padding: '1px 4px', borderRadius: '4px' }}>
-                                -{(info?.currency_symbol !== undefined && info?.currency_symbol !== null) ? info.currency_symbol : '₹'}{Math.round(savings)}
+                              <span style={{ fontSize: '0.62rem', color: '#059669', fontWeight: 800, background: '#D1FAE5', padding: '2px 6px', borderRadius: 'var(--radius-pill)', border: '1px solid #A7F3D0' }}>
+                                -{(info?.currency_symbol !== undefined && info?.currency_symbol !== null) ? info.currency_symbol : '₹'}{Math.round(savings)} OFF
                               </span>
                             )}
                           </div>
