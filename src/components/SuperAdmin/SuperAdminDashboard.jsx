@@ -389,6 +389,66 @@ export default function SuperAdminDashboard({ token, username, onLogout, onRetur
 
   return (
     <div style={{ minHeight: '100vh', background: 'var(--bg-app)', color: 'var(--text-dark)', fontFamily: 'system-ui, -apple-system, sans-serif' }}>
+      <style>{`
+        @media (max-width: 768px) {
+          .sa-main-container {
+            padding: 12px 8px !important;
+          }
+          .sa-header-content {
+            flex-direction: column !important;
+            align-items: stretch !important;
+            gap: 12px !important;
+          }
+          .sa-header-actions {
+            justify-content: flex-start !important;
+            width: 100% !important;
+            overflow-x: auto !important;
+            padding-bottom: 4px !important;
+            -webkit-overflow-scrolling: touch;
+          }
+          .sa-header-actions button {
+            padding: 7px 10px !important;
+            font-size: 0.74rem !important;
+          }
+          .sa-directory-controls {
+            flex-direction: column !important;
+            align-items: stretch !important;
+            padding: 14px 12px !important;
+          }
+          .sa-controls-right {
+            width: 100% !important;
+            flex-direction: column !important;
+            align-items: stretch !important;
+          }
+          .sa-search-box {
+            width: 100% !important;
+          }
+          .sa-status-pills {
+            width: 100% !important;
+            overflow-x: auto !important;
+            justify-content: flex-start !important;
+          }
+          .sa-grid-container {
+            grid-template-columns: 1fr !important;
+            gap: 14px !important;
+          }
+          .sa-modal-box {
+            max-width: 100% !important;
+            margin: 8px !important;
+            padding: 18px 14px !important;
+            border-radius: 18px !important;
+            max-height: 92vh !important;
+          }
+          .sa-kpi-grid {
+            grid-template-columns: repeat(2, 1fr) !important;
+            gap: 8px !important;
+          }
+          .sa-kpi-grid > div:last-child {
+            grid-column: span 2 !important;
+          }
+        }
+      `}</style>
+
       {/* Header Bar */}
       <header style={{
         background: 'linear-gradient(135deg, #0A2315 0%, #164E2A 100%)',
@@ -399,7 +459,7 @@ export default function SuperAdminDashboard({ token, username, onLogout, onRetur
         top: 0,
         zIndex: 100
       }}>
-        <div style={{
+        <div className="sa-header-content" style={{
           maxWidth: '1280px',
           margin: '0 auto',
           display: 'flex',
@@ -474,7 +534,7 @@ export default function SuperAdminDashboard({ token, username, onLogout, onRetur
           </div>
 
           {/* Master Header Actions Nav Pills */}
-          <div style={{ display: 'flex', gap: '8px', alignItems: 'center', flexWrap: 'wrap' }}>
+          <div className="sa-header-actions" style={{ display: 'flex', gap: '8px', alignItems: 'center', flexWrap: 'wrap' }}>
             <button
               onClick={handleOpenBroadcastModal}
               style={{
@@ -623,10 +683,10 @@ export default function SuperAdminDashboard({ token, username, onLogout, onRetur
       </header>
 
       {/* Main Dashboard Container */}
-      <main style={{ maxWidth: '1200px', margin: '0 auto', padding: '16px 12px' }}>
+      <main className="sa-main-container" style={{ maxWidth: '1200px', margin: '0 auto', padding: '16px 12px' }}>
         
         {/* KPI Analytics Summary Cards Grid */}
-        <div style={{
+        <div className="sa-kpi-grid" style={{
           display: 'grid',
           gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))',
           gap: '10px',
@@ -779,7 +839,7 @@ export default function SuperAdminDashboard({ token, username, onLogout, onRetur
         )}
 
         {/* Directory Controls Bar */}
-        <div style={{
+        <div className="sa-directory-controls" style={{
           background: '#FFFFFF',
           borderRadius: '20px',
           padding: '16px 20px',
@@ -801,9 +861,9 @@ export default function SuperAdminDashboard({ token, username, onLogout, onRetur
             </p>
           </div>
 
-          <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap' }}>
+          <div className="sa-controls-right" style={{ display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap' }}>
             {/* Status Filter Pills */}
-            <div style={{ display: 'flex', gap: '4px', background: 'var(--bg-secondary)', padding: '3px', borderRadius: 'var(--radius-pill)', border: '1px solid var(--border-light)' }}>
+            <div className="sa-status-pills" style={{ display: 'flex', gap: '4px', background: 'var(--bg-secondary)', padding: '3px', borderRadius: 'var(--radius-pill)', border: '1px solid var(--border-light)' }}>
               <button
                 onClick={() => setStatusFilter('all')}
                 style={{
@@ -849,7 +909,7 @@ export default function SuperAdminDashboard({ token, username, onLogout, onRetur
             </div>
 
             {/* Search Input */}
-            <div style={{ position: 'relative', width: '220px' }}>
+            <div className="sa-search-box" style={{ position: 'relative', width: '220px' }}>
               <Search size={15} style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-muted)' }} />
               <input
                 type="text"
@@ -920,7 +980,7 @@ export default function SuperAdminDashboard({ token, username, onLogout, onRetur
             <p style={{ fontSize: '0.85rem', color: 'var(--text-muted)', margin: 0 }}>Try clearing your search query or onboard a new client.</p>
           </div>
         ) : (
-          <div style={{
+          <div className="sa-grid-container" style={{
             display: 'grid',
             gridTemplateColumns: 'repeat(auto-fill, minmax(340px, 1fr))',
             gap: '20px'
@@ -1347,7 +1407,7 @@ export default function SuperAdminDashboard({ token, username, onLogout, onRetur
           justifyContent: 'center',
           padding: '16px'
         }}>
-          <div style={{
+          <div className="sa-modal-box" style={{
             background: '#FFFFFF',
             borderRadius: '24px',
             maxWidth: '540px',
@@ -1854,7 +1914,7 @@ export default function SuperAdminDashboard({ token, username, onLogout, onRetur
           justifyContent: 'center',
           padding: '16px'
         }}>
-          <div style={{
+          <div className="sa-modal-box" style={{
             background: '#FFFFFF',
             borderRadius: '24px',
             maxWidth: '560px',
@@ -2125,7 +2185,7 @@ export default function SuperAdminDashboard({ token, username, onLogout, onRetur
           justifyContent: 'center',
           padding: '16px'
         }}>
-          <div style={{
+          <div className="sa-modal-box" style={{
             background: '#FFFFFF',
             borderRadius: '24px',
             maxWidth: '740px',
@@ -2367,7 +2427,7 @@ export default function SuperAdminDashboard({ token, username, onLogout, onRetur
           justifyContent: 'center',
           padding: '16px'
         }}>
-          <div style={{
+          <div className="sa-modal-box" style={{
             background: '#FFFFFF',
             borderRadius: '24px',
             maxWidth: '900px',
