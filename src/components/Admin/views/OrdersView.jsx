@@ -14,6 +14,9 @@ export default function OrdersView({
   restaurantInfo,
   onPrintQR,
   onDirectPrint,
+  onPreviewPrint,
+  printingOrderId,
+  printingType,
   currencySymbol = '₹'
 }) {
   const safeOrders = Array.isArray(orders) ? orders : [];
@@ -136,9 +139,31 @@ export default function OrdersView({
                       </span>
                     </div>
 
-                    <span className={`adm-badge adm-badge-${order.status === 'pending' ? 'warning' : (order.status === 'kitchen' || order.status === 'accepted') ? 'info' : 'success'}`}>
-                      {(order.status || 'PENDING').toUpperCase()}
-                    </span>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                      <span className={`adm-badge adm-badge-${order.status === 'pending' ? 'warning' : (order.status === 'kitchen' || order.status === 'accepted') ? 'info' : 'success'}`}>
+                        {(order.status || 'PENDING').toUpperCase()}
+                      </span>
+                      {onPreviewPrint && (
+                        <button
+                          onClick={() => onPreviewPrint(order, 'kot')}
+                          title="Open Print Preview Window"
+                          style={{
+                            background: 'none',
+                            border: 'none',
+                            color: 'var(--adm-muted)',
+                            cursor: 'pointer',
+                            fontSize: '0.74rem',
+                            fontWeight: 700,
+                            padding: '4px 6px',
+                            display: 'inline-flex',
+                            alignItems: 'center',
+                            gap: '2px'
+                          }}
+                        >
+                          👁️ Preview
+                        </button>
+                      )}
+                    </div>
                   </div>
 
                   {/* Order Items */}
@@ -152,36 +177,63 @@ export default function OrdersView({
                   </div>
 
                   {/* Action Buttons Toolbar */}
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', paddingTop: '4px' }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', paddingTop: '4px', flexWrap: 'wrap', gap: '8px' }}>
                     <strong style={{ fontSize: '1rem', color: 'var(--adm-primary)' }}>{currencySymbol}{order.total_amount}</strong>
-                    <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap' }}>
+                    <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap', alignItems: 'center' }}>
                       {order.status === 'pending' && (
                         <>
-                          <button onClick={() => onUpdateStatus(order.id, 'kitchen')} className="adm-btn adm-btn-primary adm-btn-sm" style={{ fontWeight: 800 }}>
+                          <button onClick={() => onUpdateStatus(order.id, 'kitchen')} className="adm-btn adm-btn-primary adm-btn-sm" style={{ fontWeight: 800, minHeight: '44px', padding: '0 12px' }}>
                             Accept to Kitchen
                           </button>
-                          <button onClick={() => onUpdateStatus(order.id, 'rejected')} className="adm-btn adm-btn-danger adm-btn-sm" style={{ fontWeight: 700 }}>
+                          <button onClick={() => onUpdateStatus(order.id, 'rejected')} className="adm-btn adm-btn-danger adm-btn-sm" style={{ fontWeight: 700, minHeight: '44px', padding: '0 10px' }}>
                             <XCircle size={14} /> Reject
                           </button>
                         </>
                       )}
                       {(order.status === 'kitchen' || order.status === 'accepted') && (
-                        <button onClick={() => onUpdateStatus(order.id, 'served')} className="adm-btn adm-btn-accent adm-btn-sm" style={{ fontWeight: 800 }}>
+                        <button onClick={() => onUpdateStatus(order.id, 'served')} className="adm-btn adm-btn-accent adm-btn-sm" style={{ fontWeight: 800, minHeight: '44px', padding: '0 12px' }}>
                           Mark Served
                         </button>
                       )}
                       {order.status === 'served' && (
-                        <button onClick={() => onUpdateStatus(order.id, 'completed')} className="adm-btn adm-btn-primary adm-btn-sm" style={{ fontWeight: 800 }}>
+                        <button onClick={() => onUpdateStatus(order.id, 'completed')} className="adm-btn adm-btn-primary adm-btn-sm" style={{ fontWeight: 800, minHeight: '44px', padding: '0 12px' }}>
                           Complete Order
                         </button>
                       )}
                       {onDirectPrint && (
-                        <button onClick={() => onDirectPrint(order, 'kot')} className="adm-btn adm-btn-secondary adm-btn-sm" style={{ fontWeight: 700 }}>
-                          🖨️ KOT
+                        <button
+                          onClick={() => onDirectPrint(order, 'kot')}
+                          disabled={printingOrderId === order.id}
+                          className="adm-btn adm-btn-secondary adm-btn-sm"
+                          style={{
+                            fontWeight: 800,
+                            minHeight: '44px',
+                            padding: '0 12px',
+                            display: 'inline-flex',
+                            alignItems: 'center',
+                            gap: '4px',
+                            opacity: printingOrderId === order.id ? 0.7 : 1
+                          }}
+                        >
+                          {printingOrderId === order.id && printingType === 'kot' ? '⏳ Printing...' : '🖨️ KOT'}
                         </button>
                       )}
-                      <button onClick={() => onOpenBillModal(order)} className="adm-btn adm-btn-secondary adm-btn-sm" style={{ fontWeight: 800 }}>
-                        <Printer size={14} /> Bill
+                      <button
+                        onClick={() => onOpenBillModal(order)}
+                        disabled={printingOrderId === order.id}
+                        className="adm-btn adm-btn-secondary adm-btn-sm"
+                        style={{
+                          fontWeight: 800,
+                          minHeight: '44px',
+                          padding: '0 12px',
+                          display: 'inline-flex',
+                          alignItems: 'center',
+                          gap: '4px',
+                          opacity: printingOrderId === order.id ? 0.7 : 1
+                        }}
+                      >
+                        <Printer size={14} />
+                        <span>{printingOrderId === order.id && printingType === 'bill' ? '⏳ Printing...' : 'Bill'}</span>
                       </button>
                     </div>
                   </div>

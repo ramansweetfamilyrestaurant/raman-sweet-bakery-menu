@@ -441,18 +441,60 @@ export default function AdminDashboard({ token, username, onLogout, onReturnToMe
     }
   };
 
-  // ⚡ 0.5-Second Direct Bluetooth ESC/POS Thermal Receipt Printing (RawBT Protocol Integration)
-  const handleDirectBluetoothPrint = (order, printType = 'kot') => {
-    if (printType === 'kot') {
-      handlePrintKOT(order);
-    } else {
-      setBillOrderModal(order);
+  // 🖨️ Silent Thermal Printer Engine (Zero-Popup Hidden Iframe Printer)
+  const silentIframePrint = (htmlContent) => {
+    return new Promise((resolve, reject) => {
+      try {
+        let iframe = document.getElementById('khana-silent-printer-frame');
+        if (!iframe) {
+          iframe = document.createElement('iframe');
+          iframe.id = 'khana-silent-printer-frame';
+          iframe.style.position = 'fixed';
+          iframe.style.right = '0';
+          iframe.style.bottom = '0';
+          iframe.style.width = '0px';
+          iframe.style.height = '0px';
+          iframe.style.border = '0';
+          iframe.style.visibility = 'hidden';
+          document.body.appendChild(iframe);
+        }
+
+        const iframeDoc = iframe.contentWindow || iframe.contentDocument;
+        const targetDoc = iframeDoc.document || iframeDoc;
+
+        targetDoc.open();
+        targetDoc.write(htmlContent);
+        targetDoc.close();
+
+        setTimeout(() => {
+          try {
+            iframe.contentWindow.focus();
+            iframe.contentWindow.print();
+            resolve(true);
+          } catch (err) {
+            reject(err);
+          }
+        }, 250);
+      } catch (err) {
+        reject(err);
+      }
+    });
+  };
+
+  const [printingOrderId, setPrintingOrderId] = useState(null);
+  const [printingType, setPrintingType] = useState(null);
+  const [printToast, setPrintToast] = useState(null);
+
+  const showPrintToast = (type, message, order = null, printType = null, paymentMode = 'CASH') => {
+    setPrintToast({ type, message, order, printType, paymentMode });
+    if (type === 'success') {
+      setTimeout(() => {
+        setPrintToast(prev => (prev?.message === message ? null : prev));
+      }, 3500);
     }
   };
 
-  const handlePrintKOT = (order) => {
-    const printWindow = window.open('', '_blank', 'width=380,height=600');
-    if (!printWindow) return;
+  const getKOTHTML = (order) => {
     let itemsHtml = '';
     (order.items || []).forEach(i => {
       const portionText = i.portion ? ` (${i.portion})` : '';
@@ -463,11 +505,11 @@ export default function AdminDashboard({ token, username, onLogout, onReturnToMe
         </tr>
       `;
     });
-    printWindow.document.write(`
+    return `
       <!DOCTYPE html>
       <html>
         <head>
-          <title>KOT Ticket - Table ${order.table_number}</title>
+          <title>KOT Ticket - Table ${order.table_number || '1'}</title>
           <style>
             @media print {
               body { margin: 0; padding: 0; width: 100%; }
@@ -510,22 +552,12 @@ export default function AdminDashboard({ token, username, onLogout, onReturnToMe
           <div class="footer">
             *** READY FOR KITCHEN PREPARATION ***
           </div>
-          <script>
-            window.onload = function() {
-              window.print();
-              setTimeout(function() { window.close(); }, 500);
-            };
-          </script>
         </body>
       </html>
-    `);
-    printWindow.document.close();
+    `;
   };
 
-  const handlePrintCustomerBill = (order, paymentMode = 'CASH') => {
-    const printWindow = window.open('', '_blank', 'width=400,height=700');
-    if (!printWindow) return;
-
+  const getBillHTML = (order, paymentMode = 'CASH') => {
     const isGst = restaurantInfo?.gst_enabled;
     const gstin = restaurantInfo?.gstin_number || '';
     const fssai = restaurantInfo?.fssai_lic_no || '';
@@ -555,7 +587,7 @@ export default function AdminDashboard({ token, username, onLogout, onReturnToMe
       grandTotal = Math.round((subtotal + cgst + sgst) * 100) / 100;
     }
 
-    printWindow.document.write(`
+    return `
       <!DOCTYPE html>
       <html>
         <head>
@@ -610,11 +642,11 @@ export default function AdminDashboard({ token, username, onLogout, onReturnToMe
               <span>${currency}${subtotal}</span>
             </div>
             ${isGst ? `
-              <div style="display:flex;justify:space-between;font-size:11px;color:#333;">
+              <div style="display:flex;justify-content:space-between;font-size:11px;color:#333;">
                 <span>CGST @ 2.5%:</span>
                 <span>${currency}${cgst}</span>
               </div>
-              <div style="display:flex;justify:space-between;font-size:11px;color:#333;">
+              <div style="display:flex;justify-content:space-between;font-size:11px;color:#333;">
                 <span>SGST @ 2.5%:</span>
                 <span>${currency}${sgst}</span>
               </div>
@@ -629,14 +661,71 @@ export default function AdminDashboard({ token, username, onLogout, onReturnToMe
             <p style="margin:0;font-weight:bold;">Thank you for dining with us!</p>
             <p style="margin:2px 0 0 0;">Please Visit Again 🙏</p>
           </div>
-          <script>
-            window.onload = function() {
-              window.print();
-              setTimeout(function() { window.close(); }, 500);
-            };
-          </script>
         </body>
       </html>
+    `;
+  };
+
+  const handleDirectBluetoothPrint = (order, printType = 'kot') => {
+    if (printType === 'kot') {
+      handlePrintKOT(order);
+    } else {
+      setBillOrderModal(order);
+    }
+  };
+
+  const handlePrintKOT = async (order) => {
+    if (!order || (printingOrderId === order.id && printingType === 'kot')) return;
+    setPrintingOrderId(order.id);
+    setPrintingType('kot');
+
+    try {
+      const htmlContent = getKOTHTML(order);
+      await silentIframePrint(htmlContent);
+      setPrintingOrderId(null);
+      setPrintingType(null);
+      showPrintToast('success', '✓ KOT printed', order, 'kot');
+    } catch (err) {
+      console.error('KOT printing error:', err);
+      setPrintingOrderId(null);
+      setPrintingType(null);
+      showPrintToast('error', '⚠ Printer unavailable', order, 'kot');
+    }
+  };
+
+  const handlePrintCustomerBill = async (order, paymentMode = 'CASH') => {
+    if (!order || (printingOrderId === order.id && printingType === 'bill')) return;
+    setPrintingOrderId(order.id);
+    setPrintingType('bill');
+
+    try {
+      const htmlContent = getBillHTML(order, paymentMode);
+      await silentIframePrint(htmlContent);
+      setPrintingOrderId(null);
+      setPrintingType(null);
+      showPrintToast('success', '✓ Bill printed', order, 'bill', paymentMode);
+    } catch (err) {
+      console.error('Bill printing error:', err);
+      setPrintingOrderId(null);
+      setPrintingType(null);
+      showPrintToast('error', '⚠ Printer unavailable', order, 'bill', paymentMode);
+    }
+  };
+
+  const handlePreviewPrint = (order, type = 'kot', paymentMode = 'CASH') => {
+    const printWindow = window.open('', '_blank', 'width=400,height=700');
+    if (!printWindow) {
+      alert('Please allow popups to open the print preview.');
+      return;
+    }
+    const htmlContent = type === 'kot' ? getKOTHTML(order) : getBillHTML(order, paymentMode);
+    printWindow.document.write(`
+      ${htmlContent}
+      <script>
+        window.onload = function() {
+          window.print();
+        };
+      </script>
     `);
     printWindow.document.close();
   };
@@ -1592,6 +1681,9 @@ export default function AdminDashboard({ token, username, onLogout, onReturnToMe
                 restaurantInfo={restaurantInfo}
                 onPrintQR={handlePrintQR}
                 onDirectPrint={handleDirectBluetoothPrint}
+                onPreviewPrint={handlePreviewPrint}
+                printingOrderId={printingOrderId}
+                printingType={printingType}
                 currencySymbol={settingsForm.currency_symbol || '₹'}
               />
             )}
@@ -2078,6 +2170,55 @@ export default function AdminDashboard({ token, username, onLogout, onReturnToMe
           boxShadow: '0 10px 30px rgba(0,0,0,0.6)', display: 'flex', alignItems: 'center', gap: '8px'
         }}>
           {toastMessage}
+        </div>
+      )}
+
+      {/* 🖨️ Thermal Printer Toast Notification */}
+      {printToast && (
+        <div style={{
+          position: 'fixed',
+          bottom: '80px',
+          left: '50%',
+          transform: 'translateX(-50%)',
+          zIndex: 12000,
+          background: printToast.type === 'success' ? '#0A2315' : '#7F1D1D',
+          color: '#FFFFFF',
+          padding: '10px 18px',
+          borderRadius: '9999px',
+          boxShadow: '0 8px 24px rgba(0,0,0,0.3)',
+          display: 'flex',
+          alignItems: 'center',
+          gap: '10px',
+          fontSize: '0.85rem',
+          fontWeight: 800,
+          border: `1.5px solid ${printToast.type === 'success' ? '#22C55E' : '#EF4444'}`,
+          maxWidth: '90vw'
+        }}>
+          <span>{printToast.message}</span>
+          {printToast.type === 'error' && printToast.order && (
+            <button
+              onClick={() => {
+                setPrintToast(null);
+                if (printToast.printType === 'kot') {
+                  handlePrintKOT(printToast.order);
+                } else {
+                  handlePrintCustomerBill(printToast.order, printToast.paymentMode);
+                }
+              }}
+              style={{
+                background: '#EF4444',
+                color: '#FFF',
+                border: 'none',
+                padding: '4px 10px',
+                borderRadius: '12px',
+                fontSize: '0.75rem',
+                fontWeight: 900,
+                cursor: 'pointer'
+              }}
+            >
+              🔄 Retry
+            </button>
+          )}
         </div>
       )}
     </div>
