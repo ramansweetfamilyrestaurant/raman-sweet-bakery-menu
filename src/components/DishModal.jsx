@@ -27,7 +27,7 @@ export default function DishModal({ dish, onClose, currencySymbol = '₹' }) {
       display: 'flex',
       alignItems: 'center',
       justifyContent: 'center',
-      padding: '20px'
+      padding: '12px'
     }} onClick={onClose}>
       <div 
         onClick={(e) => e.stopPropagation()}
@@ -36,8 +36,8 @@ export default function DishModal({ dish, onClose, currencySymbol = '₹' }) {
           borderRadius: 'var(--radius-lg)',
           overflow: 'hidden',
           width: '100%',
-          maxWidth: '540px',
-          maxHeight: '90vh',
+          maxWidth: '520px',
+          maxHeight: '88vh',
           boxShadow: 'var(--shadow-lg)',
           border: '2px solid var(--gold-bright)',
           display: 'flex',
@@ -48,18 +48,20 @@ export default function DishModal({ dish, onClose, currencySymbol = '₹' }) {
       >
         {/* Close Button */}
         <button
+          className="price-pill-btn"
           onClick={onClose}
           style={{
             position: 'absolute',
-            top: '14px',
-            right: '14px',
+            top: '12px',
+            right: '12px',
             zIndex: 10,
-            background: 'rgba(0, 0, 0, 0.55)',
+            background: 'rgba(0, 0, 0, 0.6)',
             color: '#FFFFFF',
-            border: '1px solid rgba(255,255,255,0.3)',
+            border: '1px solid rgba(255,255,255,0.4)',
             borderRadius: '50%',
-            width: '36px',
-            height: '36px',
+            width: '34px',
+            height: '34px',
+            minHeight: 'unset',
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
@@ -73,9 +75,10 @@ export default function DishModal({ dish, onClose, currencySymbol = '₹' }) {
         {/* Dish High-Res Photo Header */}
         <div style={{
           width: '100%',
-          height: '270px',
+          height: 'min(210px, 30vh)',
           background: 'var(--gold-soft)',
-          position: 'relative'
+          position: 'relative',
+          flexShrink: 0
         }}>
           {imageSrc ? (
             <img
@@ -97,7 +100,7 @@ export default function DishModal({ dish, onClose, currencySymbol = '₹' }) {
               justifyContent: 'center',
               background: 'var(--header-gradient)',
               color: 'var(--gold-bright)',
-              fontSize: '3.5rem'
+              fontSize: '3rem'
             }}>
               🍲
             </div>
@@ -106,132 +109,92 @@ export default function DishModal({ dish, onClose, currencySymbol = '₹' }) {
           {/* FSSAI 100% Pure Veg Badge Overlay */}
           <div style={{
             position: 'absolute',
-            bottom: '14px',
-            left: '14px',
+            bottom: '10px',
+            left: '10px',
             background: 'rgba(255, 255, 255, 0.95)',
             backdropFilter: 'blur(6px)',
             border: '1.5px solid var(--veg-green-border)',
             borderRadius: 'var(--radius-pill)',
-            padding: '5px 12px',
+            padding: '4px 10px',
             display: 'flex',
             alignItems: 'center',
-            gap: '6px',
+            gap: '5px',
             boxShadow: '0 4px 12px rgba(0,0,0,0.18)'
           }}>
             <span style={{
-              width: '12px',
-              height: '12px',
-              border: '1.5px solid var(--veg-green)',
+              width: '10px',
+              height: '10px',
+              border: dish.type === 'nonveg' ? '1.5px solid #DC2626' : dish.type === 'egg' ? '1.5px solid #D97706' : '1.5px solid var(--veg-green)',
               display: 'inline-flex',
               alignItems: 'center',
               justifyContent: 'center',
               borderRadius: '2px'
             }}>
               <span style={{
-                width: '6px',
-                height: '6px',
+                width: '4px',
+                height: '4px',
                 borderRadius: '50%',
-                backgroundColor: 'var(--veg-green)'
+                backgroundColor: dish.type === 'nonveg' ? '#DC2626' : dish.type === 'egg' ? '#D97706' : 'var(--veg-green)'
               }} />
             </span>
-            <span style={{
-              fontSize: '0.74rem',
-              fontWeight: 800,
-              color: 'var(--primary-emerald)',
-              letterSpacing: '0.5px'
-            }}>
-              100% PURE VEGETARIAN
+            <span style={{ fontSize: '0.72rem', fontWeight: 800, color: 'var(--text-dark)' }}>
+              {dish.type === 'nonveg' ? 'Non-Veg' : dish.type === 'egg' ? 'Contains Egg' : '100% Pure Veg'}
             </span>
           </div>
-
-          {/* Badge Tag Overlay */}
-          {dish.badge && (
-            <div style={{
-              position: 'absolute',
-              top: '14px',
-              left: '14px',
-              background: 'linear-gradient(135deg, #0A2315 0%, #143A24 100%)',
-              color: 'var(--gold-bright)',
-              border: '1px solid var(--gold-bright)',
-              borderRadius: 'var(--radius-pill)',
-              padding: '4px 12px',
-              fontSize: '0.75rem',
-              fontWeight: 800,
-              boxShadow: 'var(--shadow-gold)'
-            }}>
-              {dish.badge}
-            </div>
-          )}
         </div>
 
         {/* Scrollable Content Body */}
         <div style={{
-          padding: '24px',
+          padding: '16px 18px',
           overflowY: 'auto'
         }}>
           <div style={{
             display: 'flex',
             justifyContent: 'space-between',
             alignItems: 'flex-start',
-            gap: '14px',
+            gap: '10px',
             marginBottom: '10px'
           }}>
             <div>
               <span style={{
-                fontSize: '0.74rem',
+                fontSize: '0.7rem',
                 fontWeight: 800,
                 color: 'var(--text-gold)',
                 textTransform: 'uppercase',
                 letterSpacing: '1px',
                 display: 'block',
-                marginBottom: '4px'
+                marginBottom: '2px'
               }}>
                 {dish.category_name || 'Chef Specialty'}
               </span>
 
               <h2 style={{
                 fontFamily: 'var(--font-heading)',
-                fontSize: '1.5rem',
+                fontSize: '1.25rem',
                 fontWeight: 700,
                 color: 'var(--primary-emerald)',
-                lineHeight: 1.2,
+                lineHeight: 1.25,
                 display: 'flex',
                 alignItems: 'center',
-                gap: '8px'
+                gap: '6px'
               }}>
-                <span style={{
-                  width: '14px',
-                  height: '14px',
-                  border: dish.type === 'nonveg' ? '1.5px solid #DC2626' : dish.type === 'egg' ? '1.5px solid #D97706' : '1.5px solid var(--veg-green)',
-                  display: 'inline-flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  borderRadius: '2px',
-                  flexShrink: 0
-                }}>
-                  <span style={{
-                    width: '5px',
-                    height: '5px',
-                    borderRadius: '50%',
-                    backgroundColor: dish.type === 'nonveg' ? '#DC2626' : dish.type === 'egg' ? '#D97706' : 'var(--veg-green)'
-                  }} />
-                </span>
                 {dish.name}
               </h2>
             </div>
 
             {/* Dynamic Active Price Tag Pill matching Chaat section */}
             <div style={{
-              fontSize: '1.1rem',
+              fontSize: '1rem',
               fontWeight: 900,
-              padding: '4px 14px',
+              padding: '3px 12px',
               borderRadius: 'var(--radius-pill)',
               background: '#FFFFFF',
               color: 'var(--text-dark)',
               border: '1.5px solid var(--border-light)',
               boxShadow: '0 1px 4px rgba(0,0,0,0.06)',
               whiteSpace: 'nowrap',
-              lineHeight: 1.2
+              lineHeight: 1.2,
+              flexShrink: 0
             }}>
               {symbol}{Number(activePrice).toLocaleString('en-IN')}
             </div>
@@ -243,21 +206,23 @@ export default function DishModal({ dish, onClose, currencySymbol = '₹' }) {
               background: 'var(--bg-champagne)',
               border: '1.5px solid var(--gold-border)',
               borderRadius: 'var(--radius-md)',
-              padding: '10px 14px',
-              marginBottom: '16px'
+              padding: '8px 12px',
+              marginBottom: '14px'
             }}>
-              <span style={{ fontSize: '0.78rem', fontWeight: 800, color: 'var(--primary-emerald)', textTransform: 'uppercase', display: 'block', marginBottom: '8px' }}>
+              <span style={{ fontSize: '0.74rem', fontWeight: 800, color: 'var(--primary-emerald)', textTransform: 'uppercase', display: 'block', marginBottom: '6px' }}>
                 Select Portion Size:
               </span>
-              <div style={{ display: 'flex', gap: '10px' }}>
+              <div style={{ display: 'flex', gap: '8px' }}>
                 <button
+                  className="price-pill-btn"
                   onClick={() => setSelectedPortion('half')}
                   style={{
                     flex: 1,
-                    padding: '8px 12px',
+                    padding: '6px 10px',
+                    minHeight: 'unset',
                     borderRadius: 'var(--radius-pill)',
-                    fontSize: '0.85rem',
-                    fontWeight: 700,
+                    fontSize: '0.8rem',
+                    fontWeight: 800,
                     border: selectedPortion === 'half' ? '1.5px solid var(--gold-bright)' : '1px solid var(--gold-border)',
                     background: selectedPortion === 'half' ? 'var(--primary-emerald)' : '#FFFFFF',
                     color: selectedPortion === 'half' ? '#FFFFFF' : 'var(--text-primary)',
@@ -268,13 +233,15 @@ export default function DishModal({ dish, onClose, currencySymbol = '₹' }) {
                 </button>
 
                 <button
+                  className="price-pill-btn"
                   onClick={() => setSelectedPortion('full')}
                   style={{
                     flex: 1,
-                    padding: '8px 12px',
+                    padding: '6px 10px',
+                    minHeight: 'unset',
                     borderRadius: 'var(--radius-pill)',
-                    fontSize: '0.85rem',
-                    fontWeight: 700,
+                    fontSize: '0.8rem',
+                    fontWeight: 800,
                     border: selectedPortion === 'full' ? '1.5px solid var(--gold-bright)' : '1px solid var(--gold-border)',
                     background: selectedPortion === 'full' ? 'var(--primary-emerald)' : '#FFFFFF',
                     color: selectedPortion === 'full' ? '#FFFFFF' : 'var(--text-primary)',
