@@ -1,0 +1,392 @@
+/* KhanaMaster SaaS Legal & Security Pages CSS */
+:root {
+  --km-green: #0A2315;
+  --km-green-light: #0F321E;
+  --km-gold: #D4AF37;
+  --km-gold-light: #FDF8E6;
+  --km-text: #0F172A;
+  --km-muted: #475569;
+  --km-bg: #F8FAFC;
+  --km-white: #FFFFFF;
+  --km-border: #E2E8F0;
+  --km-radius: 12px;
+}
+
+.km-legal-wrapper {
+  min-height: 100vh;
+  background-color: var(--km-bg);
+  color: var(--km-text);
+  font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+  display: flex;
+  flex-direction: column;
+}
+
+/* Header */
+.km-legal-header {
+  position: sticky;
+  top: 0;
+  z-index: 100;
+  background: rgba(255, 255, 255, 0.94);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border-bottom: 1px solid var(--km-border);
+  height: 60px;
+  display: flex;
+  align-items: center;
+}
+
+.km-legal-header-container {
+  max-width: 1000px;
+  width: 100%;
+  margin: 0 auto;
+  padding: 0 20px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.km-legal-brand {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  cursor: pointer;
+  text-decoration: none;
+}
+
+.km-legal-logo-icon {
+  font-size: 1.2rem;
+}
+
+.km-legal-logo-text {
+  font-size: 1.1rem;
+  font-weight: 900;
+  color: var(--km-green);
+  letter-spacing: -0.02em;
+}
+
+.km-legal-logo-badge {
+  font-size: 0.65rem;
+  font-weight: 800;
+  background: var(--km-green);
+  color: var(--km-gold);
+  padding: 2px 6px;
+  border-radius: 4px;
+  text-transform: uppercase;
+}
+
+.km-legal-nav-links {
+  display: flex;
+  align-items: center;
+  gap: 20px;
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.km-legal-nav-link {
+  font-size: 0.88rem;
+  font-weight: 700;
+  color: var(--km-muted);
+  cursor: pointer;
+  transition: color 0.2s ease;
+  text-decoration: none;
+}
+
+.km-legal-nav-link:hover {
+  color: var(--km-green);
+}
+
+.km-legal-back-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: rgba(10, 35, 21, 0.06);
+  color: var(--km-green);
+  border: 1px solid rgba(10, 35, 21, 0.12);
+  padding: 6px 14px;
+  border-radius: 8px;
+  font-size: 0.82rem;
+  font-weight: 800;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.km-legal-back-btn:hover {
+  background: var(--km-green);
+  color: var(--km-white);
+}
+
+/* Main Container */
+.km-legal-container {
+  max-width: 920px;
+  width: 100%;
+  margin: 0 auto;
+  padding: 32px 20px 64px 20px;
+  flex: 1;
+}
+
+/* Page Header Card */
+.km-legal-title-card {
+  background: var(--km-white);
+  border: 1px solid var(--km-border);
+  border-radius: var(--km-radius);
+  padding: 28px 24px;
+  margin-bottom: 24px;
+  box-shadow: 0 4px 14px rgba(15, 23, 42, 0.03);
+}
+
+.km-legal-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.72rem;
+  font-weight: 900;
+  color: #856404;
+  background: var(--km-gold-light);
+  padding: 4px 10px;
+  border-radius: 6px;
+  border: 1px solid rgba(212, 175, 55, 0.3);
+  margin-bottom: 12px;
+  text-transform: uppercase;
+}
+
+.km-legal-h1 {
+  font-size: 2.1rem;
+  font-weight: 900;
+  color: var(--km-green);
+  line-height: 1.2;
+  margin: 0 0 8px 0;
+  letter-spacing: -0.02em;
+}
+
+.km-legal-meta {
+  font-size: 0.84rem;
+  color: var(--km-muted);
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+/* Table of Contents */
+.km-legal-toc {
+  background: var(--km-white);
+  border: 1px solid var(--km-border);
+  border-radius: var(--km-radius);
+  padding: 18px 20px;
+  margin-bottom: 24px;
+  box-shadow: 0 2px 8px rgba(15, 23, 42, 0.02);
+}
+
+.km-toc-toggle {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  width: 100%;
+  background: none;
+  border: none;
+  padding: 0;
+  font-size: 0.9rem;
+  font-weight: 800;
+  color: var(--km-green);
+  cursor: pointer;
+}
+
+.km-toc-list {
+  margin: 12px 0 0 0;
+  padding: 0;
+  list-style: none;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+  gap: 8px 16px;
+}
+
+.km-toc-item a {
+  font-size: 0.84rem;
+  color: var(--km-muted);
+  text-decoration: none;
+  transition: color 0.15s ease;
+  display: inline-block;
+  padding: 2px 0;
+}
+
+.km-toc-item a:hover {
+  color: var(--km-green);
+  text-decoration: underline;
+}
+
+/* Content Body */
+.km-legal-content {
+  background: var(--km-white);
+  border: 1px solid var(--km-border);
+  border-radius: var(--km-radius);
+  padding: 36px 32px;
+  box-shadow: 0 4px 14px rgba(15, 23, 42, 0.03);
+  line-height: 1.7;
+}
+
+.km-legal-section {
+  margin-bottom: 32px;
+  scroll-margin-top: 80px;
+}
+
+.km-legal-section:last-child {
+  margin-bottom: 0;
+}
+
+.km-legal-h2 {
+  font-size: 1.25rem;
+  font-weight: 800;
+  color: var(--km-green);
+  margin: 0 0 12px 0;
+  padding-bottom: 8px;
+  border-bottom: 1.5px solid var(--km-gold-light);
+}
+
+.km-legal-h3 {
+  font-size: 1.02rem;
+  font-weight: 700;
+  color: var(--km-text);
+  margin: 16px 0 8px 0;
+}
+
+.km-legal-p {
+  font-size: 0.92rem;
+  color: var(--km-muted);
+  margin: 0 0 12px 0;
+}
+
+.km-legal-list {
+  margin: 0 0 16px 0;
+  padding-left: 20px;
+  font-size: 0.9rem;
+  color: var(--km-muted);
+}
+
+.km-legal-list li {
+  margin-bottom: 6px;
+}
+
+.km-legal-callout {
+  background: var(--km-gold-light);
+  border-left: 4px solid var(--km-gold);
+  padding: 14px 16px;
+  border-radius: 6px;
+  margin: 16px 0;
+  font-size: 0.88rem;
+  color: #714B00;
+}
+
+/* Footer */
+.km-legal-footer {
+  background: var(--km-green);
+  color: #94A3B8;
+  padding: 40px 0 24px;
+  margin-top: auto;
+  border-top: 2px solid var(--km-gold);
+}
+
+.km-legal-footer-container {
+  max-width: 1000px;
+  margin: 0 auto;
+  padding: 0 20px;
+}
+
+.km-legal-footer-grid {
+  display: grid;
+  grid-template-columns: 2fr repeat(3, 1fr);
+  gap: 32px;
+  margin-bottom: 32px;
+}
+
+.km-legal-footer-title {
+  color: #FFF;
+  font-size: 0.9rem;
+  font-weight: 800;
+  margin: 0 0 14px 0;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.km-legal-footer-links {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.km-legal-footer-links a {
+  color: #CBD5E1;
+  font-size: 0.84rem;
+  text-decoration: none;
+  cursor: pointer;
+  transition: color 0.15s ease;
+}
+
+.km-legal-footer-links a:hover {
+  color: var(--km-gold);
+}
+
+.km-legal-footer-bottom {
+  border-top: 1px solid rgba(255, 255, 255, 0.1);
+  padding-top: 20px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 0.8rem;
+}
+
+/* Mobile Media Queries (360px - 768px) */
+@media (max-width: 768px) {
+  .km-legal-header-container {
+    padding: 0 14px;
+  }
+
+  .km-legal-nav-links {
+    display: none;
+  }
+
+  .km-legal-container {
+    padding: 16px 14px 40px 14px;
+  }
+
+  .km-legal-title-card {
+    padding: 20px 16px;
+    margin-bottom: 16px;
+  }
+
+  .km-legal-h1 {
+    font-size: 1.65rem;
+  }
+
+  .km-legal-content {
+    padding: 20px 16px;
+    font-size: 0.88rem;
+  }
+
+  .km-legal-h2 {
+    font-size: 1.1rem;
+  }
+
+  .km-legal-toc {
+    padding: 14px 16px;
+    margin-bottom: 16px;
+  }
+
+  .km-toc-list {
+    grid-template-columns: 1fr;
+    gap: 6px;
+  }
+
+  .km-legal-footer-grid {
+    grid-template-columns: 1fr;
+    gap: 24px;
+  }
+
+  .km-legal-footer-bottom {
+    flex-direction: column;
+    text-align: center;
+    gap: 12px;
+  }
+}

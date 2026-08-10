@@ -8,6 +8,12 @@ export default function Footer({ onOpenLogin, onStartTrial }) {
     }
   };
 
+  const navigateRoute = (path) => {
+    window.history.pushState({}, '', path);
+    window.dispatchEvent(new PopStateEvent('popstate'));
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
+
   return (
     <footer className="km-footer">
       <div className="km-container">
@@ -47,14 +53,15 @@ export default function Footer({ onOpenLogin, onStartTrial }) {
             </ul>
           </div>
 
-          {/* Legal */}
+          {/* Legal & Security */}
           <div>
             <h4 className="km-footer-title">Legal & Security</h4>
             <ul className="km-footer-links">
-              <li><a onClick={() => scrollToSection('faq')}>Privacy Policy</a></li>
-              <li><a onClick={() => scrollToSection('faq')}>Terms of Service</a></li>
-              <li><a onClick={() => scrollToSection('faq')}>Refund Policy</a></li>
-              <li><a onClick={() => scrollToSection('faq')}>Data Security</a></li>
+              <li><a onClick={() => navigateRoute('/privacy-policy')}>Privacy Policy</a></li>
+              <li><a onClick={() => navigateRoute('/terms')}>Terms of Service</a></li>
+              <li><a onClick={() => navigateRoute('/refund-policy')}>Refund & Cancellation</a></li>
+              <li><a onClick={() => navigateRoute('/security')}>Security & Data Protection</a></li>
+              <li><a onClick={() => navigateRoute('/contact')}>Contact & Support</a></li>
             </ul>
           </div>
         </div>

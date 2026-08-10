@@ -20,12 +20,17 @@ import CustomerReviewModal from './components/CustomerReviewModal';
 import AdminDashboard from './components/Admin/AdminDashboard';
 import LandingPage from './components/Landing/LandingPage';
 
-// Code Splitting (Lazy Loading) for secondary admin views
+// Code Splitting (Lazy Loading) for secondary admin & legal views
 const AdminLogin = lazy(() => import('./components/Admin/AdminLogin'));
 const SuperAdminLogin = lazy(() => import('./components/SuperAdmin/SuperAdminLogin'));
 const SuperAdminDashboard = lazy(() => import('./components/SuperAdmin/SuperAdminDashboard'));
 const RegisterPage = lazy(() => import('./components/RegisterPage'));
 const SubscriptionBillingPage = lazy(() => import('./components/SubscriptionBillingPage'));
+const PrivacyPolicy = lazy(() => import('./components/Legal/PrivacyPolicy'));
+const TermsOfService = lazy(() => import('./components/Legal/TermsOfService'));
+const RefundPolicy = lazy(() => import('./components/Legal/RefundPolicy'));
+const SecurityPolicy = lazy(() => import('./components/Legal/SecurityPolicy'));
+const ContactSupport = lazy(() => import('./components/Legal/ContactSupport'));
 
 export default function App() {
   // Parse Table Number from URL query parameter ?table=5
@@ -44,6 +49,11 @@ export default function App() {
   const getInitialView = () => {
     const path = (window.location.pathname || '/').toLowerCase().replace(/\/$/, '') || '/';
     const hash = (window.location.hash || '').toLowerCase();
+    if (path === '/privacy-policy' || path === '/privacy') return 'privacy-policy';
+    if (path === '/terms' || path === '/terms-of-service') return 'terms';
+    if (path === '/refund-policy' || path === '/refunds') return 'refund-policy';
+    if (path === '/security') return 'security';
+    if (path === '/contact' || path === '/support') return 'contact';
     if (path === '/billing') return 'billing';
     if (path === '/register') return 'register';
     if (path === '/super-admin' || path === '/superadmin' || hash === '#super-admin') {
@@ -566,7 +576,29 @@ export default function App() {
       // Route: /billing → Subscription Billing Page
       const isBilling = path === '/billing' || path === '/billing/';
 
-      if (isSuperAdmin) {
+      // Legal & Support Routes
+      const isPrivacy = path === '/privacy-policy' || path === '/privacy-policy/' || path === '/privacy';
+      const isTerms = path === '/terms' || path === '/terms/' || path === '/terms-of-service';
+      const isRefund = path === '/refund-policy' || path === '/refund-policy/' || path === '/refunds';
+      const isSecurity = path === '/security' || path === '/security/';
+      const isContact = path === '/contact' || path === '/contact/' || path === '/support';
+
+      if (isPrivacy) {
+        setView('privacy-policy');
+        document.title = 'KhanaMaster - Privacy Policy';
+      } else if (isTerms) {
+        setView('terms');
+        document.title = 'KhanaMaster - Terms of Service';
+      } else if (isRefund) {
+        setView('refund-policy');
+        document.title = 'KhanaMaster - Refund & Cancellation Policy';
+      } else if (isSecurity) {
+        setView('security');
+        document.title = 'KhanaMaster - Security & Data Protection';
+      } else if (isContact) {
+        setView('contact');
+        document.title = 'KhanaMaster - Contact & Support';
+      } else if (isSuperAdmin) {
         if (superToken) {
           setView('super-admin-dashboard');
         } else {
@@ -914,6 +946,47 @@ export default function App() {
         onSubmitLogin={handleLandingAdminLoginSubmit}
         onSubmitResetPassword={handleLandingPasswordResetSubmit}
       />
+    );
+  }
+
+  // Legal & Support Views
+  if (view === 'privacy-policy') {
+    return (
+      <Suspense fallback={<div style={{ minHeight: '100vh', background: '#F8FAFC', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#0A2315', fontWeight: 800 }}>Loading Privacy Policy...</div>}>
+        <PrivacyPolicy onOpenLogin={() => setShowLandingLoginModal(true)} onStartTrial={() => { window.history.pushState({}, '', '/register'); window.dispatchEvent(new PopStateEvent('popstate')); }} />
+      </Suspense>
+    );
+  }
+
+  if (view === 'terms') {
+    return (
+      <Suspense fallback={<div style={{ minHeight: '100vh', background: '#F8FAFC', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#0A2315', fontWeight: 800 }}>Loading Terms of Service...</div>}>
+        <TermsOfService onOpenLogin={() => setShowLandingLoginModal(true)} onStartTrial={() => { window.history.pushState({}, '', '/register'); window.dispatchEvent(new PopStateEvent('popstate')); }} />
+      </Suspense>
+    );
+  }
+
+  if (view === 'refund-policy') {
+    return (
+      <Suspense fallback={<div style={{ minHeight: '100vh', background: '#F8FAFC', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#0A2315', fontWeight: 800 }}>Loading Refund Policy...</div>}>
+        <RefundPolicy onOpenLogin={() => setShowLandingLoginModal(true)} onStartTrial={() => { window.history.pushState({}, '', '/register'); window.dispatchEvent(new PopStateEvent('popstate')); }} />
+      </Suspense>
+    );
+  }
+
+  if (view === 'security') {
+    return (
+      <Suspense fallback={<div style={{ minHeight: '100vh', background: '#F8FAFC', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#0A2315', fontWeight: 800 }}>Loading Security Policy...</div>}>
+        <SecurityPolicy onOpenLogin={() => setShowLandingLoginModal(true)} onStartTrial={() => { window.history.pushState({}, '', '/register'); window.dispatchEvent(new PopStateEvent('popstate')); }} />
+      </Suspense>
+    );
+  }
+
+  if (view === 'contact') {
+    return (
+      <Suspense fallback={<div style={{ minHeight: '100vh', background: '#F8FAFC', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#0A2315', fontWeight: 800 }}>Loading Contact Support...</div>}>
+        <ContactSupport onOpenLogin={() => setShowLandingLoginModal(true)} onStartTrial={() => { window.history.pushState({}, '', '/register'); window.dispatchEvent(new PopStateEvent('popstate')); }} />
+      </Suspense>
     );
   }
 
