@@ -563,7 +563,7 @@
 
   .sa-content-body {
     padding: 16px;
-    padding-bottom: 80px; /* Space for bottom nav */
+    padding-bottom: 100px; /* Generous space so fixed mobile bottom nav never overlaps content */
   }
 
   .sa-stats-grid {

@@ -95,14 +95,16 @@ export default function SettingsView({
           {/* File Selection Button */}
           <div>
             <label style={labelStyle}>SELECT LOGO IMAGE FILE FROM COMPUTER / PHONE:</label>
-            <div style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
+            <div style={{ display: 'flex', gap: '10px', alignItems: 'center', flexWrap: 'wrap' }}>
               <label
                 style={{
                   display: 'inline-flex', alignItems: 'center', gap: '8px',
-                  padding: '10px 18px', background: 'var(--sa-primary)', color: '#0A2315',
-                  borderRadius: 'var(--sa-radius-md)', fontWeight: 900, fontSize: '0.84rem',
+                  padding: '10px 18px',
+                  background: 'linear-gradient(135deg, #D4AF37 0%, #B48F27 100%)',
+                  color: '#0A2315',
+                  borderRadius: 'var(--sa-radius-md)', fontWeight: 900, fontSize: '0.85rem',
                   cursor: uploadingLogo ? 'wait' : 'pointer', border: 'none',
-                  boxShadow: '0 2px 8px rgba(0,0,0,0.1)'
+                  boxShadow: '0 4px 12px rgba(212, 175, 55, 0.3)'
                 }}
               >
                 📁 {uploadingLogo ? 'Uploading Image...' : 'Choose Logo File'}
@@ -145,7 +147,7 @@ export default function SettingsView({
           )}
 
           {keysMsg && <div style={{ color: 'var(--sa-success)', fontWeight: 700, fontSize: '0.85rem' }}>{keysMsg}</div>}
-          <button type="submit" className="sa-btn sa-btn-primary" disabled={savingKeys || uploadingLogo} style={{ alignSelf: 'flex-start' }}>
+          <button type="submit" className="sa-btn sa-btn-accent" disabled={savingKeys || uploadingLogo} style={{ alignSelf: 'flex-start' }}>
             {savingKeys ? 'Saving...' : '💾 Save Logo Settings'}
           </button>
         </form>
