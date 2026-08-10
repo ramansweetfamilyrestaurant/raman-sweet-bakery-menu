@@ -514,19 +514,19 @@ export default function SuperAdminDashboard({ token, username, onLogout, onRetur
                 </div>
               )}
               <div>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flexWrap: 'wrap' }}>
-                  <h1 style={{ fontSize: '1.15rem', fontWeight: 900, color: '#DFBA67', margin: 0, letterSpacing: '-0.02em' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flexWrap: 'wrap', minWidth: 0 }}>
+                  <h1 style={{ fontSize: '1.15rem', fontWeight: 900, color: '#DFBA67', margin: 0, letterSpacing: '-0.02em', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
                     SaaS Master Control
                   </h1>
-                  <span style={{ background: '#DFBA67', color: '#0A2315', fontSize: '0.62rem', fontWeight: 900, padding: '2px 6px', borderRadius: '8px' }}>
+                  <span style={{ background: '#DFBA67', color: '#0A2315', fontSize: '0.62rem', fontWeight: 900, padding: '2px 6px', borderRadius: '8px', flexShrink: 0 }}>
                     SUPER ADMIN
                   </span>
                 </div>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.72rem', color: 'rgba(255,255,255,0.85)', fontWeight: 600, marginTop: '2px', flexWrap: 'wrap' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.72rem', color: 'rgba(255,255,255,0.85)', fontWeight: 600, marginTop: '2px', flexWrap: 'wrap', minWidth: 0 }}>
                   <span>Master: <strong style={{ color: '#FFFFFF' }}>{username}</strong></span>
                   <span style={{ color: 'rgba(255,255,255,0.4)' }}>•</span>
-                  <span style={{ display: 'flex', alignItems: 'center', gap: '4px', color: '#86EFAC' }}>
-                    <span style={{ width: '6px', height: '6px', borderRadius: '50%', background: '#22C55E', boxShadow: '0 0 6px #22C55E' }}></span> DB Active
+                  <span style={{ display: 'flex', alignItems: 'center', gap: '4px', color: '#86EFAC', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                    <span style={{ width: '6px', height: '6px', borderRadius: '50%', background: '#22C55E', boxShadow: '0 0 6px #22C55E', flexShrink: 0 }}></span> DB Active
                   </span>
                 </div>
               </div>
@@ -1991,11 +1991,11 @@ export default function SuperAdminDashboard({ token, username, onLogout, onRetur
               }}>
                 <Megaphone size={20} />
               </div>
-              <div>
-                <h3 style={{ margin: 0, fontSize: '1.1rem', fontWeight: 900, color: '#0F172A', lineHeight: 1.2 }}>
+              <div style={{ minWidth: 0, flex: 1 }}>
+                <h3 style={{ margin: 0, fontSize: '1.1rem', fontWeight: 900, color: '#0F172A', lineHeight: 1.2, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
                   Global Broadcast Notice
                 </h3>
-                <span style={{ fontSize: '0.74rem', color: '#64748B', fontWeight: 600, display: 'block', marginTop: '1px' }}>
+                <span style={{ fontSize: '0.74rem', color: '#64748B', fontWeight: 600, display: 'block', marginTop: '1px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
                   Send live banners to all tenant panels
                 </span>
               </div>
@@ -2241,11 +2241,11 @@ export default function SuperAdminDashboard({ token, username, onLogout, onRetur
                 }}>
                   <FileText size={20} />
                 </div>
-                <div>
-                  <h3 style={{ fontSize: '1.1rem', fontWeight: 900, color: 'var(--primary-emerald)', margin: 0, lineHeight: 1.2 }}>
+                <div style={{ minWidth: 0, flex: 1 }}>
+                  <h3 style={{ fontSize: '1.1rem', fontWeight: 900, color: 'var(--primary-emerald)', margin: 0, lineHeight: 1.2, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
                     Platform Audit Stream
                   </h3>
-                  <span style={{ fontSize: '0.74rem', color: 'var(--text-muted)', fontWeight: 600, display: 'block', marginTop: '1px' }}>
+                  <span style={{ fontSize: '0.74rem', color: 'var(--text-muted)', fontWeight: 600, display: 'block', marginTop: '1px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
                     Real-time security & system activity logs
                   </span>
                 </div>
@@ -2497,11 +2497,11 @@ export default function SuperAdminDashboard({ token, username, onLogout, onRetur
                 <div style={{ width: '42px', height: '42px', borderRadius: '14px', background: 'linear-gradient(135deg, #0A2315 0%, #164E2A 100%)', color: '#DFBA67', display: 'flex', alignItems: 'center', justifyContent: 'center', border: '1px solid #D4AF37', flexShrink: 0 }}>
                   <CreditCard size={22} />
                 </div>
-                <div>
-                  <h3 style={{ fontSize: '1.2rem', fontWeight: 900, color: 'var(--primary-emerald)', margin: 0, lineHeight: 1.2 }}>
+                <div style={{ minWidth: 0, flex: 1 }}>
+                  <h3 style={{ fontSize: '1.2rem', fontWeight: 900, color: 'var(--primary-emerald)', margin: 0, lineHeight: 1.2, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
                     Enterprise SaaS Plans Matrix
                   </h3>
-                  <span style={{ fontSize: '0.76rem', color: 'var(--text-muted)', fontWeight: 600, display: 'block', marginTop: '2px' }}>
+                  <span style={{ fontSize: '0.76rem', color: 'var(--text-muted)', fontWeight: 600, display: 'block', marginTop: '2px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
                     Manage pricing tiers & feature access matrices
                   </span>
                 </div>
@@ -2962,11 +2962,11 @@ export default function SuperAdminDashboard({ token, username, onLogout, onRetur
               }}>
                 <ShieldCheck size={20} />
               </div>
-              <div>
-                <h3 style={{ margin: 0, fontSize: '1.1rem', fontWeight: 900, color: 'var(--text-dark)', lineHeight: 1.2 }}>
+              <div style={{ minWidth: 0, flex: 1 }}>
+                <h3 style={{ margin: 0, fontSize: '1.1rem', fontWeight: 900, color: 'var(--text-dark)', lineHeight: 1.2, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
                   Security & System Credentials
                 </h3>
-                <span style={{ fontSize: '0.74rem', color: 'var(--text-muted)', fontWeight: 600, display: 'block', marginTop: '1px' }}>
+                <span style={{ fontSize: '0.74rem', color: 'var(--text-muted)', fontWeight: 600, display: 'block', marginTop: '1px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
                   Update admin login & API credentials
                 </span>
               </div>
@@ -3549,11 +3549,11 @@ export default function SuperAdminDashboard({ token, username, onLogout, onRetur
               }}>
                 <MessageSquare size={20} />
               </div>
-              <div>
-                <h3 style={{ margin: 0, fontSize: '1.1rem', fontWeight: 900, color: '#0F172A', lineHeight: 1.2 }}>
+              <div style={{ minWidth: 0, flex: 1 }}>
+                <h3 style={{ margin: 0, fontSize: '1.1rem', fontWeight: 900, color: '#0F172A', lineHeight: 1.2, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
                   WhatsApp Support Portal
                 </h3>
-                <span style={{ fontSize: '0.74rem', color: '#64748B', fontWeight: 600, display: 'block', marginTop: '1px' }}>
+                <span style={{ fontSize: '0.74rem', color: '#64748B', fontWeight: 600, display: 'block', marginTop: '1px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
                   Set support contact for tenant help desk
                 </span>
               </div>
