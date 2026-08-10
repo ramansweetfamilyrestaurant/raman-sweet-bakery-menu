@@ -35,9 +35,16 @@ export default function GrantFreeAccessModal({ resto, plansList, isOpen, onClose
   };
 
   return (
-    <div className="sa-modal-overlay" onClick={onClose}>
-      <div className="sa-modal" onClick={(e) => e.stopPropagation()} style={{ maxWidth: '520px' }}>
-        <button onClick={onClose} style={{ position: 'absolute', top: '16px', right: '16px', background: 'none', border: 'none', cursor: 'pointer', color: 'var(--sa-text-muted)' }}>
+    <div style={{
+      position: 'fixed', inset: 0, zIndex: 10000,
+      background: 'rgba(10, 35, 21, 0.85)', backdropFilter: 'blur(8px)',
+      display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '16px'
+    }} onClick={onClose}>
+      <div onClick={(e) => e.stopPropagation()} style={{
+        background: '#FFFFFF', borderRadius: '24px', maxWidth: '520px', width: '100%',
+        padding: '28px 24px', boxShadow: '0 20px 60px rgba(0,0,0,0.4)', border: '2px solid #7C3AED', position: 'relative'
+      }}>
+        <button onClick={onClose} style={{ position: 'absolute', top: '18px', right: '18px', background: 'none', border: 'none', cursor: 'pointer', color: '#6B7280' }}>
           <X size={20} />
         </button>
 
