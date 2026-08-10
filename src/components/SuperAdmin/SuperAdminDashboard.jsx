@@ -1,7 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import { Crown, Plus, LogOut, ExternalLink, Trash2, CheckCircle, Store, Utensils, DollarSign, Phone, MapPin, Copy, Check, Search, Edit3, Shield, ShieldCheck, RefreshCw, QrCode, Megaphone, FileText, Calendar, Palette, MessageSquare, Upload, X, XCircle, CreditCard, Lock, Sparkles } from 'lucide-react';
-import { fetchSuperAdminRestaurants, createTenantRestaurant, toggleTenantRestaurantActive, deleteTenantRestaurant, impersonateTenantRestaurant, updateTenantRestaurant, createAnnouncement, fetchSuperAnnouncements, deleteAnnouncement, clearAllAnnouncements, fetchAuditLogs, uploadImage, fetchSaaSPlans, createSaaSPlan, updateSaaSPlan, deleteSaaSPlan, superAdminOptimizeDatabase, updateSuperAdminCredentials } from '../../api/client';
+import { fetchSuperAdminRestaurants, createTenantRestaurant, toggleTenantRestaurantActive, deleteTenantRestaurant, impersonateTenantRestaurant, updateTenantRestaurant, createAnnouncement, fetchSuperAnnouncements, deleteAnnouncement, clearAllAnnouncements, fetchAuditLogs, uploadImage, fetchSaaSPlans, createSaaSPlan, updateSaaSPlan, deleteSaaSPlan, superAdminOptimizeDatabase, updateSuperAdminCredentials, grantFreeAccess, revokeFreeAccess } from '../../api/client';
 import { SAAS_PLANS, getPlanDetails } from '../../config/plans';
+import GrantFreeAccessModal from './modals/GrantFreeAccessModal';
+import RevokeFreeAccessModal from './modals/RevokeFreeAccessModal';
 
 export default function SuperAdminDashboard({ token, username, onLogout, onReturnToMenu, onImpersonate }) {
   const [restaurants, setRestaurants] = useState([]);
@@ -10,6 +12,8 @@ export default function SuperAdminDashboard({ token, username, onLogout, onRetur
   const [showAddModal, setShowAddModal] = useState(false);
   const [editModalData, setEditModalData] = useState(null);
   const [copiedId, setCopiedId] = useState(null);
+  const [grantModalResto, setGrantModalResto] = useState(null);
+  const [revokeModalResto, setRevokeModalResto] = useState(null);
 
   // Security Credentials Modal State
   const [showSecurityModal, setShowSecurityModal] = useState(false);
@@ -1166,6 +1170,49 @@ export default function SuperAdminDashboard({ token, username, onLogout, onRetur
                     >
                       <Crown size={14} color="#FFD700" /> Manage Menu
                     </button>
+
+                    {r.mandate_status === 'admin_granted' || r.subscription_type === 'ADMIN_GRANTED' ? (
+                      <button
+                        onClick={() => setRevokeModalResto(r)}
+                        style={{
+                          background: 'rgba(239,68,68,0.12)',
+                          color: '#EF4444',
+                          padding: '8px 12px',
+                          borderRadius: 'var(--radius-pill)',
+                          fontSize: '0.78rem',
+                          fontWeight: 800,
+                          border: '1px solid rgba(239,68,68,0.3)',
+                          cursor: 'pointer',
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: '4px'
+                        }}
+                        title="Revoke Complimentary VIP Access"
+                      >
+                        <Sparkles size={14} /> Revoke VIP Access
+                      </button>
+                    ) : (
+                      <button
+                        onClick={() => setGrantModalResto(r)}
+                        style={{
+                          background: 'linear-gradient(135deg, #7C3AED 0%, #6D28D9 100%)',
+                          color: '#FFFFFF',
+                          padding: '8px 12px',
+                          borderRadius: 'var(--radius-pill)',
+                          fontSize: '0.78rem',
+                          fontWeight: 900,
+                          border: 'none',
+                          cursor: 'pointer',
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: '4px',
+                          boxShadow: '0 2px 8px rgba(124,58,237,0.3)'
+                        }}
+                        title="Grant 100% Complimentary VIP Free Access to this restaurant"
+                      >
+                        <Sparkles size={14} /> 🎁 Grant VIP Access
+                      </button>
+                    )}
 
                     <button
                       onClick={() => setEditModalData(r)}
@@ -2872,6 +2919,31 @@ export default function SuperAdminDashboard({ token, username, onLogout, onRetur
           </div>
         </div>
       )}
+
+      {/* 🎁 Grant Complimentary VIP Access Modal */}
+      <GrantFreeAccessModal
+        resto={grantModalResto}
+        plansList={plansList}
+        isOpen={!!grantModalResto}
+        onClose={() => setGrantModalResto(null)}
+        onConfirmGrant={async (restoId, grantData) => {
+          const res = await grantFreeAccess(restoId, grantData, token);
+          await loadData();
+          return res;
+        }}
+      />
+
+      {/* ⚠️ Revoke Complimentary Access Modal */}
+      <RevokeFreeAccessModal
+        resto={revokeModalResto}
+        isOpen={!!revokeModalResto}
+        onClose={() => setRevokeModalResto(null)}
+        onConfirmRevoke={async (restoId) => {
+          const res = await revokeFreeAccess(restoId, token);
+          await loadData();
+          return res;
+        }}
+      />
     </div>
   );
 }
