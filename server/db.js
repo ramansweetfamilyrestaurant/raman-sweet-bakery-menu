@@ -1271,11 +1271,18 @@ export async function saveImageToDb(filename, mimeType, bufferData) {
 
 export async function saveR2ImageToDb(filename, mimeType, imageKey, imageUrl, restaurantId = 1) {
   try {
-    // Delete any old record for this exact imageKey, imageUrl, or filename first to prevent duplicate entries in stored_images
-    await query(
-      `DELETE FROM stored_images WHERE image_key = $1 OR image_url = $2 OR filename = $3`,
-      [imageKey, imageUrl, filename]
-    );
+    // If saving a superadmin platform asset, purge all old superadmin logo rows first to prevent duplication
+    if (restaurantId === null || (imageKey && imageKey.startsWith('superadmin/'))) {
+      await query(
+        `DELETE FROM stored_images WHERE restaurant_id IS NULL OR image_key LIKE 'superadmin/%' OR filename LIKE 'logo-external-%'`
+      );
+    } else {
+      // Delete any old record for this exact imageKey, imageUrl, or filename first
+      await query(
+        `DELETE FROM stored_images WHERE image_key = $1 OR image_url = $2 OR filename = $3`,
+        [imageKey, imageUrl, filename]
+      );
+    }
 
     await query(
       `INSERT INTO stored_images (filename, mime_type, storage_provider, image_key, image_url, restaurant_id, data)
