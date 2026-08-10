@@ -206,26 +206,26 @@ export default function MenuCardItem({ dish, lang, onClick, onAddToCart, currenc
 
         {/* Price Area */}
         {hasHalfPrice ? (
-          /* Half/Full Price Pills — Both prices visible, selected one highlighted */
+          /* Half/Full Price Pills — Stacked/Responsive Pill Container for mobile perfection */
           <div 
-            style={{ display: 'flex', gap: '4px' }}
+            style={{ display: 'flex', flexDirection: 'column', gap: '3px', alignItems: 'flex-end', flexShrink: 0 }}
             onClick={(e) => e.stopPropagation()}
           >
             <button
               onClick={() => setPortionMode('half')}
               style={{
-                fontSize: '0.74rem',
+                fontSize: '0.7rem',
                 fontWeight: 900,
-                padding: '3px 9px',
+                padding: '2px 8px',
                 borderRadius: 'var(--radius-pill)',
                 background: portionMode === 'half' ? 'var(--primary-emerald)' : '#FFFFFF',
                 color: portionMode === 'half' ? '#FFFFFF' : 'var(--text-dark)',
                 border: portionMode === 'half' ? '1.5px solid var(--primary-emerald)' : '1.5px solid var(--border-light)',
-                boxShadow: '0 1px 4px rgba(0,0,0,0.06)',
+                boxShadow: '0 1px 3px rgba(0,0,0,0.05)',
                 cursor: 'pointer',
                 transition: 'all 0.2s ease',
                 whiteSpace: 'nowrap',
-                lineHeight: 1.2
+                lineHeight: 1.25
               }}
             >
               Half {symbol}{halfPriceNum}
@@ -233,18 +233,18 @@ export default function MenuCardItem({ dish, lang, onClick, onAddToCart, currenc
             <button
               onClick={() => setPortionMode('full')}
               style={{
-                fontSize: '0.74rem',
+                fontSize: '0.7rem',
                 fontWeight: 900,
-                padding: '3px 9px',
+                padding: '2px 8px',
                 borderRadius: 'var(--radius-pill)',
                 background: portionMode === 'full' ? 'var(--primary-emerald)' : '#FFFFFF',
                 color: portionMode === 'full' ? '#FFFFFF' : 'var(--text-dark)',
                 border: portionMode === 'full' ? '1.5px solid var(--primary-emerald)' : '1.5px solid var(--border-light)',
-                boxShadow: '0 1px 4px rgba(0,0,0,0.06)',
+                boxShadow: '0 1px 3px rgba(0,0,0,0.05)',
                 cursor: 'pointer',
                 transition: 'all 0.2s ease',
                 whiteSpace: 'nowrap',
-                lineHeight: 1.2
+                lineHeight: 1.25
               }}
             >
               Full {symbol}{fullPriceNum}
@@ -254,17 +254,18 @@ export default function MenuCardItem({ dish, lang, onClick, onAddToCart, currenc
           /* Single Price Pill — Clean White Oval Pill matching reference screenshot */
           <div 
             style={{
-              fontSize: '0.86rem',
+              fontSize: '0.82rem',
               fontWeight: 900,
-              padding: '3px 12px',
+              padding: '3px 10px',
               borderRadius: 'var(--radius-pill)',
               background: '#FFFFFF',
               color: 'var(--text-dark)',
               border: '1.5px solid var(--border-light)',
               whiteSpace: 'nowrap',
               lineHeight: 1.2,
-              boxShadow: '0 1px 4px rgba(0,0,0,0.06)',
-              cursor: 'pointer'
+              boxShadow: '0 1px 3px rgba(0,0,0,0.05)',
+              cursor: 'pointer',
+              flexShrink: 0
             }}
             onClick={() => onClick(dish)}
           >
