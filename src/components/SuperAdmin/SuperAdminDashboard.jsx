@@ -1121,17 +1121,18 @@ export default function SuperAdminDashboard({ token, username, onLogout, onRetur
                       {/* Expiry Badge */}
                       {daysLeft !== null && (
                         <span style={{
-                          background: isExpired ? '#FEE2E2' : daysLeft <= 7 ? '#FEF3C7' : '#DCFCE7',
-                          color: isExpired ? '#DC2626' : daysLeft <= 7 ? '#B45309' : '#15803D',
+                          background: isExpired ? '#FEE2E2' : (daysLeft > 1000 || r.subscription_type === 'ADMIN_GRANTED') ? '#EFF6FF' : daysLeft <= 7 ? '#FEF3C7' : '#DCFCE7',
+                          color: isExpired ? '#DC2626' : (daysLeft > 1000 || r.subscription_type === 'ADMIN_GRANTED') ? '#1D4ED8' : daysLeft <= 7 ? '#B45309' : '#15803D',
                           padding: '3px 8px',
                           borderRadius: '6px',
                           fontSize: '0.68rem',
                           fontWeight: 800,
                           display: 'inline-flex',
                           alignItems: 'center',
-                          gap: '3px'
+                          gap: '3px',
+                          border: (daysLeft > 1000 || r.subscription_type === 'ADMIN_GRANTED') ? '1px solid #BFDBFE' : 'none'
                         }}>
-                          <Calendar size={10} /> {isExpired ? 'Expired' : `${daysLeft} days left`}
+                          <Calendar size={10} /> {isExpired ? 'Expired' : (daysLeft > 1000 || r.subscription_type === 'ADMIN_GRANTED') ? '♾️ Lifetime Access' : `${daysLeft} days left`}
                         </span>
                       )}
 
@@ -3006,7 +3007,7 @@ export default function SuperAdminDashboard({ token, username, onLogout, onRetur
                         {(r.auto_renew === 0 || r.auto_renew === false) ? '❌ OFF' : '✅ ON'}
                       </td>
                       <td style={{ padding: '12px 14px', color: '#334155', fontWeight: 700 }}>
-                        {r.access_until ? new Date(r.access_until).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' }) : 'N/A'}
+                        {r.access_until ? (new Date(r.access_until).getFullYear() > 2030 || r.subscription_type === 'ADMIN_GRANTED' ? '♾️ Lifetime' : new Date(r.access_until).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })) : 'N/A'}
                       </td>
                     </tr>
                   ))}

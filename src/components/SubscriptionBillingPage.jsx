@@ -651,7 +651,7 @@ export default function SubscriptionBillingPage({ restoInfo, token, onProceedToD
               </div>
               <div>Plan: <strong>{(activeResto?.plan_tier || 'pro').toUpperCase()}</strong></div>
               <div>Current Charge: <strong>₹0 / month (Free Access)</strong></div>
-              <div>Valid Until: <strong>{activeResto?.plan_expires_at ? new Date(activeResto.plan_expires_at).toLocaleDateString('en-IN') : 'Lifetime'}</strong></div>
+              <div>Valid Until: <strong>{activeResto?.plan_expires_at ? (new Date(activeResto.plan_expires_at).getFullYear() > 2030 ? '♾️ Lifetime Access' : new Date(activeResto.plan_expires_at).toLocaleDateString('en-IN')) : '♾️ Lifetime Access'}</strong></div>
               <div style={{ fontSize: '0.75rem', marginTop: '6px', color: '#CBD5E1' }}>
                 🛡️ Your account has been provided free of charge by KhanaMaster Super Admin. No Cashfree payment required.
               </div>
