@@ -1830,10 +1830,12 @@ export default function App() {
               </strong>
               <span style={{ fontSize: '0.76rem', color: '#E5E7EB', fontWeight: 700 }}>
                 Status: {
-                  activeOrderTrack.status === 'pending' ? 'Pending Kitchen Acceptance 🟡' :
-                  activeOrderTrack.status === 'preparing' ? 'Chef is Preparing 👨‍🍳' :
+                  (activeOrderTrack.status === 'accepted' || activeOrderTrack.status === 'kitchen' || activeOrderTrack.status === 'preparing') ? 'Order Accepted - Chef Preparing 👨‍🍳' :
                   activeOrderTrack.status === 'served' ? 'Served to Table 🟢' :
-                  activeOrderTrack.status === 'completed' ? `Order Completed & Paid 🏁` : 'Cancelled 🔴'
+                  activeOrderTrack.status === 'completed' ? 'Order Completed & Paid 🏁' :
+                  activeOrderTrack.status === 'pending' ? 'Pending Kitchen Acceptance 🟡' :
+                  activeOrderTrack.status === 'cancelled' || activeOrderTrack.status === 'rejected' ? 'Order Cancelled 🔴' :
+                  'Order Received 🟢'
                 }
               </span>
               {(activeOrderTrack.status === 'completed' || activeOrderTrack.status === 'cancelled') && (
