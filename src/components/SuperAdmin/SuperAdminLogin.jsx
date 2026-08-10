@@ -1,10 +1,11 @@
 import React, { useState } from 'react';
-import { Crown, Lock, User, ArrowLeft, ShieldAlert } from 'lucide-react';
+import { Crown, Lock, User, ArrowLeft, ShieldAlert, Eye, EyeOff, ShieldCheck } from 'lucide-react';
 import { superAdminLogin } from '../../api/client';
 
 export default function SuperAdminLogin({ onLoginSuccess, onCancel }) {
-  const [username, setUsername] = useState('superadmin');
-  const [password, setPassword] = useState('superadmin123');
+  const [username, setUsername] = useState('');
+  const [password, setPassword] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
 
@@ -14,7 +15,7 @@ export default function SuperAdminLogin({ onLoginSuccess, onCancel }) {
     setLoading(true);
 
     try {
-      const data = await superAdminLogin(username, password);
+      const data = await superAdminLogin(username.trim(), password);
       onLoginSuccess(data.token, data.username);
     } catch (err) {
       setError(err.message || 'Invalid Super Admin credentials');
@@ -36,8 +37,8 @@ export default function SuperAdminLogin({ onLoginSuccess, onCancel }) {
     }}>
       {/* Background Radial Glow */}
       <div style={{
-        position: 'absolute', width: '360px', height: '360px',
-        borderRadius: '50%', background: 'radial-gradient(circle, rgba(223,186,103,0.2) 0%, rgba(0,0,0,0) 70%)',
+        position: 'absolute', width: '380px', height: '380px',
+        borderRadius: '50%', background: 'radial-gradient(circle, rgba(223,186,103,0.18) 0%, rgba(0,0,0,0) 70%)',
         top: '15%', left: '30%', pointerEvents: 'none'
       }} />
 
@@ -57,6 +58,7 @@ export default function SuperAdminLogin({ onLoginSuccess, onCancel }) {
       }}>
         {/* Back Button */}
         <button
+          type="button"
           onClick={onCancel}
           style={{
             position: 'absolute',
@@ -67,10 +69,15 @@ export default function SuperAdminLogin({ onLoginSuccess, onCancel }) {
             alignItems: 'center',
             gap: '4px',
             fontSize: '0.8rem',
-            fontWeight: 700
+            fontWeight: 800,
+            background: '#F1F5F9',
+            border: 'none',
+            padding: '6px 12px',
+            borderRadius: 'var(--radius-pill)',
+            cursor: 'pointer'
           }}
         >
-          <ArrowLeft size={16} /> Back
+          <ArrowLeft size={15} /> Back
         </button>
 
         {/* Crown Badge */}
@@ -78,23 +85,42 @@ export default function SuperAdminLogin({ onLoginSuccess, onCancel }) {
           width: '64px',
           height: '64px',
           borderRadius: '50%',
-          background: 'linear-gradient(135deg, #DFBA67 0%, #C5A059 100%)',
-          color: '#0A2315',
+          background: 'linear-gradient(135deg, #0A2315 0%, #164E2A 100%)',
+          color: '#DFBA67',
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'center',
-          margin: '0 auto 16px',
-          boxShadow: '0 8px 24px rgba(212, 175, 55, 0.4)'
+          margin: '12px auto 16px',
+          boxShadow: '0 8px 24px rgba(10, 35, 21, 0.3)',
+          border: '2px solid #D4AF37'
         }}>
-          <Crown size={32} color="#0A2315" />
+          <Crown size={30} color="#DFBA67" />
         </div>
 
-        <h2 style={{ fontSize: '1.4rem', fontWeight: 900, color: 'var(--primary-emerald)', marginBottom: '4px' }}>
-          SaaS Master Portal
+        <h2 style={{ fontSize: '1.35rem', fontWeight: 900, color: 'var(--primary-emerald)', marginBottom: '4px', letterSpacing: '-0.02em' }}>
+          SaaS Master Control
         </h2>
-        <p style={{ fontSize: '0.82rem', color: 'var(--text-muted)', marginBottom: '24px' }}>
-          Super Admin Access for Managing Client Restaurants & Subscriptions
+        <p style={{ fontSize: '0.78rem', color: 'var(--text-muted)', marginBottom: '18px', fontWeight: 600 }}>
+          Super Admin Authorization Gateway
         </p>
+
+        {/* Security Trust Banner */}
+        <div style={{
+          background: '#F0FDF4',
+          border: '1px solid #BBF7D0',
+          borderRadius: '12px',
+          padding: '8px 12px',
+          fontSize: '0.74rem',
+          color: '#166534',
+          fontWeight: 700,
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          gap: '6px',
+          marginBottom: '20px'
+        }}>
+          <ShieldCheck size={16} color="#15803D" /> 256-Bit SSL Encrypted Admin Portal
+        </div>
 
         {error && (
           <div style={{
@@ -107,16 +133,17 @@ export default function SuperAdminLogin({ onLoginSuccess, onCancel }) {
             marginBottom: '18px',
             display: 'flex',
             alignItems: 'center',
-            gap: '8px'
+            gap: '8px',
+            textAlign: 'left'
           }}>
-            <ShieldAlert size={18} />
+            <ShieldAlert size={18} style={{ flexShrink: 0 }} />
             <span>{error}</span>
           </div>
         )}
 
         <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
           <div style={{ textAlign: 'left' }}>
-            <label style={{ fontSize: '0.78rem', fontWeight: 800, color: 'var(--text-dark)', marginBottom: '6px', display: 'block' }}>
+            <label style={{ fontSize: '0.76rem', fontWeight: 900, color: 'var(--text-dark)', marginBottom: '6px', display: 'block', letterSpacing: '0.03em' }}>
               SUPER ADMIN USERNAME
             </label>
             <div style={{ position: 'relative' }}>
@@ -125,41 +152,67 @@ export default function SuperAdminLogin({ onLoginSuccess, onCancel }) {
                 type="text"
                 value={username}
                 onChange={(e) => setUsername(e.target.value)}
+                placeholder="Enter admin username"
+                autoComplete="off"
                 required
                 style={{
                   width: '100%',
                   padding: '12px 12px 12px 38px',
                   borderRadius: '12px',
                   border: '1.5px solid var(--border-light)',
-                  fontSize: '0.9rem',
+                  fontSize: '0.88rem',
                   fontWeight: 600,
-                  outline: 'none'
+                  outline: 'none',
+                  boxSizing: 'border-box'
                 }}
               />
             </div>
           </div>
 
           <div style={{ textAlign: 'left' }}>
-            <label style={{ fontSize: '0.78rem', fontWeight: 800, color: 'var(--text-dark)', marginBottom: '6px', display: 'block' }}>
+            <label style={{ fontSize: '0.76rem', fontWeight: 900, color: 'var(--text-dark)', marginBottom: '6px', display: 'block', letterSpacing: '0.03em' }}>
               MASTER PASSWORD
             </label>
             <div style={{ position: 'relative' }}>
               <Lock size={18} color="#C5A059" style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)' }} />
               <input
-                type="password"
+                type={showPassword ? 'text' : 'password'}
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
+                placeholder="••••••••••••"
+                autoComplete="current-password"
                 required
                 style={{
                   width: '100%',
-                  padding: '12px 12px 12px 38px',
+                  padding: '12px 40px 12px 38px',
                   borderRadius: '12px',
                   border: '1.5px solid var(--border-light)',
-                  fontSize: '0.9rem',
+                  fontSize: '0.88rem',
                   fontWeight: 600,
-                  outline: 'none'
+                  outline: 'none',
+                  boxSizing: 'border-box'
                 }}
               />
+              <button
+                type="button"
+                onClick={() => setShowPassword(!showPassword)}
+                style={{
+                  position: 'absolute',
+                  right: '12px',
+                  top: '50%',
+                  transform: 'translateY(-50%)',
+                  background: 'none',
+                  border: 'none',
+                  cursor: 'pointer',
+                  color: '#64748B',
+                  display: 'flex',
+                  alignItems: 'center',
+                  padding: 0
+                }}
+                title={showPassword ? 'Hide password' : 'Show password'}
+              >
+                {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+              </button>
             </div>
           </div>
 
@@ -172,9 +225,9 @@ export default function SuperAdminLogin({ onLoginSuccess, onCancel }) {
               color: '#DFBA67',
               padding: '14px',
               borderRadius: 'var(--radius-pill)',
-              fontSize: '0.95rem',
+              fontSize: '0.92rem',
               fontWeight: 900,
-              border: '1.5px solid #C5A059',
+              border: '1.5px solid #D4AF37',
               boxShadow: '0 6px 20px rgba(10, 35, 21, 0.4)',
               cursor: loading ? 'not-allowed' : 'pointer'
             }}
