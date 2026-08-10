@@ -158,10 +158,10 @@ export default function MenuView({
       {activeSubTab === 'dishes' && (
         <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
           
-          {/* SEARCH BAR (Height 44-48px, Full Width) */}
+          {/* SEARCH BAR & CATEGORY SELECTOR */}
           <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
-            <div style={{ position: 'relative', flex: 1, minWidth: '220px' }}>
-              <Search size={18} style={{ position: 'absolute', left: '14px', top: '50%', transform: 'translateY(-50%)', color: '#94A3B8' }} />
+            <div style={{ position: 'relative', flex: '1 1 200px', width: '100%', minWidth: 0 }}>
+              <Search size={17} style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', color: '#94A3B8' }} />
               <input
                 type="text"
                 placeholder="Search dishes by name..."
@@ -169,11 +169,11 @@ export default function MenuView({
                 onChange={(e) => setSearch(e.target.value)}
                 style={{
                   width: '100%',
-                  height: '46px',
-                  padding: '0 40px 0 42px',
+                  height: '44px',
+                  padding: '0 36px 0 38px',
                   borderRadius: '12px',
                   border: '1px solid #E2E8F0',
-                  fontSize: '0.9rem',
+                  fontSize: '0.88rem',
                   fontWeight: 600,
                   background: '#FFFFFF',
                   color: '#0F172A',
@@ -184,9 +184,9 @@ export default function MenuView({
               {search && (
                 <button
                   onClick={() => setSearch('')}
-                  style={{ position: 'absolute', right: '12px', top: '50%', transform: 'translateY(-50%)', background: 'none', border: 'none', color: '#94A3B8', cursor: 'pointer', padding: '4px' }}
+                  style={{ position: 'absolute', right: '10px', top: '50%', transform: 'translateY(-50%)', background: 'none', border: 'none', color: '#94A3B8', cursor: 'pointer', padding: '4px' }}
                 >
-                  <X size={16} />
+                  <X size={15} />
                 </button>
               )}
             </div>
@@ -196,15 +196,17 @@ export default function MenuView({
               value={selectedCatFilter}
               onChange={(e) => setSelectedCatFilter(e.target.value)}
               style={{
-                height: '46px',
-                padding: '0 14px',
+                height: '44px',
+                padding: '0 12px',
                 borderRadius: '12px',
                 border: '1px solid #E2E8F0',
-                fontSize: '0.84rem',
+                fontSize: '0.82rem',
                 fontWeight: 700,
                 background: '#FFFFFF',
                 color: 'var(--adm-primary)',
-                cursor: 'pointer'
+                cursor: 'pointer',
+                flex: '1 1 auto',
+                maxWidth: '100%'
               }}
             >
               <option value="all">All Categories ({safeCategories.length})</option>
@@ -230,8 +232,8 @@ export default function MenuView({
                   onClick={() => setBadgeFilter(f.id)}
                   style={{
                     flexShrink: 0,
-                    padding: '6px 14px',
-                    fontSize: '0.78rem',
+                    padding: '6px 12px',
+                    fontSize: '0.76rem',
                     fontWeight: 700,
                     borderRadius: '20px',
                     border: 'none',
@@ -264,7 +266,7 @@ export default function MenuView({
               )}
             </div>
           ) : (
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(360px, 1fr))', gap: '8px' }}>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(320px, 1fr))', gap: '8px' }}>
               {filteredDishes.map(dish => {
                 const catName = dish.category_name || safeCategories.find(c => String(c.id) === String(dish.category_id))?.name || 'General';
                 const imageSrc = dish.image || dish.image_url;
@@ -276,19 +278,21 @@ export default function MenuView({
                       background: '#FFFFFF',
                       border: '1px solid #E5E7EB',
                       borderRadius: '12px',
-                      padding: '10px 12px',
+                      padding: '8px 10px',
                       display: 'flex',
                       alignItems: 'center',
-                      gap: '12px',
+                      gap: '10px',
                       opacity: dish.available !== false ? 1 : 0.6,
-                      minHeight: '76px',
-                      boxSizing: 'border-box'
+                      minHeight: '72px',
+                      boxSizing: 'border-box',
+                      width: '100%',
+                      minWidth: 0
                     }}
                   >
-                    {/* LEFT: Dish Image (56-64px) */}
+                    {/* LEFT: Dish Image (54px) */}
                     <div style={{
-                      width: '60px',
-                      height: '60px',
+                      width: '54px',
+                      height: '54px',
                       borderRadius: '10px',
                       overflow: 'hidden',
                       flexShrink: 0,
@@ -306,16 +310,16 @@ export default function MenuView({
                           onError={(e) => { e.target.style.display = 'none'; }}
                         />
                       ) : (
-                        <span style={{ fontSize: '1.4rem' }}>🍲</span>
+                        <span style={{ fontSize: '1.3rem' }}>🍲</span>
                       )}
                     </div>
 
                     {/* CENTER: Dish Name, Category & Price */}
                     <div style={{ flex: 1, minWidth: 0 }}>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '2px' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '5px', marginBottom: '1px' }}>
                         <span style={{
-                          width: '9px',
-                          height: '9px',
+                          width: '8px',
+                          height: '8px',
                           border: dish.type === 'nonveg' ? '1.5px solid #DC2626' : dish.type === 'egg' ? '1.5px solid #D97706' : '1.5px solid #16A34A',
                           display: 'inline-flex',
                           alignItems: 'center',
@@ -324,15 +328,15 @@ export default function MenuView({
                           flexShrink: 0
                         }}>
                           <span style={{
-                            width: '4px',
-                            height: '4px',
+                            width: '3.5px',
+                            height: '3.5px',
                             borderRadius: '50%',
                             backgroundColor: dish.type === 'nonveg' ? '#DC2626' : dish.type === 'egg' ? '#D97706' : '#16A34A'
                           }} />
                         </span>
 
                         <strong style={{
-                          fontSize: '0.92rem',
+                          fontSize: '0.88rem',
                           fontWeight: 700,
                           color: '#111827',
                           whiteSpace: 'nowrap',
@@ -342,34 +346,34 @@ export default function MenuView({
                           {dish.name}
                         </strong>
 
-                        {dish.must_try && <span style={{ fontSize: '0.72rem' }} title="Must Try">⭐</span>}
-                        {dish.is_special && <span style={{ fontSize: '0.72rem' }} title="Special">✨</span>}
+                        {dish.must_try && <span style={{ fontSize: '0.68rem', flexShrink: 0 }} title="Must Try">⭐</span>}
+                        {dish.is_special && <span style={{ fontSize: '0.68rem', flexShrink: 0 }} title="Special">✨</span>}
                       </div>
 
-                      <div style={{ fontSize: '0.75rem', color: '#64748B', marginBottom: '3px' }}>
+                      <div style={{ fontSize: '0.72rem', color: '#64748B', marginBottom: '2px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
                         {catName}
                       </div>
 
-                      <div style={{ fontSize: '0.92rem', fontWeight: 800, color: 'var(--adm-primary)' }}>
+                      <div style={{ fontSize: '0.88rem', fontWeight: 800, color: 'var(--adm-primary)' }}>
                         {currencySymbol}{Math.round(dish.price)} {dish.price_half ? `/ ${currencySymbol}${Math.round(dish.price_half)}` : ''}
                       </div>
                     </div>
 
                     {/* RIGHT: Compact Availability Toggle & ⋮ More Options Button */}
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flexShrink: 0 }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '4px', flexShrink: 0 }}>
                       <button
                         onClick={() => onToggleAvailability(dish.id, dish.available)}
                         style={{
-                          minHeight: '44px',
-                          padding: '0 10px',
+                          padding: '4px 8px',
                           borderRadius: '20px',
-                          fontSize: '0.72rem',
+                          fontSize: '0.68rem',
                           fontWeight: 800,
                           background: dish.available !== false ? '#DCFCE7' : '#FEE2E2',
                           color: dish.available !== false ? '#15803D' : '#991B1B',
                           border: dish.available !== false ? '1px solid #86EFAC' : '1px solid #FCA5A5',
                           cursor: 'pointer',
                           whiteSpace: 'nowrap',
+                          minHeight: '36px',
                           display: 'inline-flex',
                           alignItems: 'center',
                           justifyContent: 'center'
@@ -381,8 +385,8 @@ export default function MenuView({
                       <button
                         onClick={() => setSelectedDishForMore(dish)}
                         style={{
-                          minWidth: '44px',
-                          minHeight: '44px',
+                          width: '36px',
+                          height: '36px',
                           background: 'none',
                           border: 'none',
                           cursor: 'pointer',
@@ -390,7 +394,8 @@ export default function MenuView({
                           display: 'flex',
                           alignItems: 'center',
                           justifyContent: 'center',
-                          borderRadius: '50%'
+                          borderRadius: '50%',
+                          flexShrink: 0
                         }}
                         aria-label="More Options Menu"
                       >
