@@ -1026,9 +1026,9 @@ export default function SuperAdminDashboard({ token, username, onLogout, onRetur
                   <div>
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '12px' }}>
                       <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                        {r.logo && r.logo !== '/uploads/logo.jpg' ? (
+                        {(r.logo && r.logo !== '/uploads/logo.jpg') || paymentKeys.platform_logo_url ? (
                           <img
-                            src={r.logo}
+                            src={resolveImageUrl(r.logo && r.logo !== '/uploads/logo.jpg' ? r.logo : paymentKeys.platform_logo_url)}
                             alt={r.name}
                             style={{
                               width: '46px',
@@ -1037,7 +1037,6 @@ export default function SuperAdminDashboard({ token, username, onLogout, onRetur
                               objectFit: 'cover',
                               border: '2px solid #D4AF37'
                             }}
-                            onError={(e) => { e.target.style.display = 'none'; }}
                           />
                         ) : (
                           <div style={{ width: '46px', height: '46px', borderRadius: '50%', background: 'linear-gradient(135deg, #0A2315 0%, #164E2A 100%)', color: '#FFD700', border: '2px solid #D4AF37', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 900, fontSize: '1.2rem', flexShrink: 0 }}>
@@ -1670,8 +1669,8 @@ export default function SuperAdminDashboard({ token, username, onLogout, onRetur
             <form onSubmit={handleUpdateRestaurant} style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
               {/* Logo Uploader in Super Admin Edit Modal */}
               <div style={{ display: 'flex', alignItems: 'center', gap: '14px', background: '#F8FAFC', padding: '12px 16px', borderRadius: '14px', border: '1.5px solid #CBD5E1' }}>
-                {editModalData.logo && editModalData.logo !== '/uploads/logo.jpg' ? (
-                  <img src={editModalData.logo} alt="Logo" style={{ width: '48px', height: '48px', borderRadius: '50%', objectFit: 'cover', border: '2px solid #D4AF37' }} onError={(e) => { e.target.style.display = 'none'; }} />
+                {(editModalData.logo && editModalData.logo !== '/uploads/logo.jpg') || paymentKeys.platform_logo_url ? (
+                  <img src={resolveImageUrl(editModalData.logo && editModalData.logo !== '/uploads/logo.jpg' ? editModalData.logo : paymentKeys.platform_logo_url)} alt="Logo" style={{ width: '48px', height: '48px', borderRadius: '50%', objectFit: 'cover', border: '2px solid #D4AF37' }} />
                 ) : (
                   <div style={{ width: '48px', height: '48px', borderRadius: '50%', background: '#0A2315', color: '#DFBA67', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 900, fontSize: '1.2rem', flexShrink: 0 }}>
                     {(editModalData.name || 'R').charAt(0).toUpperCase()}

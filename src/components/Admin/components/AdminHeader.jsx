@@ -27,6 +27,7 @@ export default function AdminHeader({
   const restoName = restaurantInfo?.name || 'Raman Sweet Bakery & Family Restaurant';
   const truncatedName = restoName.length > 22 ? `${restoName.substring(0, 20)}...` : restoName;
   const logoUrl = restaurantInfo?.logo;
+  const resolvedLogo = resolveImageUrl(logoUrl);
 
   const isOrdersActive = ['orders', 'floor-map', 'service-requests'].includes(activeTab);
   const isMenuActive = ['dishes', 'categories', 'combos'].includes(activeTab);
@@ -50,9 +51,9 @@ export default function AdminHeader({
           justifyContent: 'center',
           overflow: 'hidden'
         }}>
-          {logoUrl && logoUrl !== '/uploads/logo.jpg' ? (
+          {resolvedLogo ? (
             <img
-              src={logoUrl}
+              src={resolvedLogo}
               alt={restoName}
               style={{ width: '100%', height: '100%', objectFit: 'cover', borderRadius: '50%' }}
               onError={(e) => { e.target.style.display = 'none'; }}
