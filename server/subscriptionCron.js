@@ -84,6 +84,17 @@ export async function checkExpiredSubscriptions() {
         console.log(`🔒 Subscription expired & status updated to expired for restaurant: ${resto.name} (ID: ${resto.id})`);
       }
     }
+
+    // === 4. Status-based cleanup for abandoned pending registrations > 24 hours old ===
+    try {
+      const dayAgoISO = new Date(Date.now() - 24 * 3600 * 1000).toISOString();
+      await query(`
+        UPDATE pending_registrations
+        SET status = 'expired', updated_at = CURRENT_TIMESTAMP
+        WHERE status IN ('pending', 'checkout_started', 'authorization_pending')
+          AND created_at < $1
+      `, [dayAgoISO]);
+    } catch (e) { console.warn('Cron pending registrations cleanup notice:', e.message); }
   } catch (err) {
     console.error('Subscription cron error:', err.message);
   }

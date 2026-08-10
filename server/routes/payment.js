@@ -103,21 +103,44 @@ router.post('/checkout-pre-register', async (req, res) => {
       });
     }
 
+    // Securely hash password before storing in pending registration
+    const salt = await bcrypt.genSalt(10);
+    const passwordHash = await bcrypt.hash(owner_password, salt);
+
     const regPayload = {
       name: name.trim(),
       phone: cleanPhone,
       owner_username: owner_username.trim(),
       owner_password,
+      password_hash: passwordHash,
       plan_tier: dbPlan.key,
       plan_price: dbPlan.price,
       trial_days: trialDays,
       subscription_id: cfResult.subscription_id
     };
 
-    // Store registration payload in database pending_registrations table with actual subscription_id
+    // Store registration payload in pending_registrations table with explicit columns & secure hash
+    const expiresAt = new Date(Date.now() + 24 * 3600 * 1000).toISOString();
     await query(
-      'INSERT INTO pending_registrations (id, payload) VALUES ($1, $2)',
-      [regId, JSON.stringify(regPayload)]
+      `INSERT INTO pending_registrations (
+        id, payload, name, phone, owner_username, password_hash, plan_key, plan_price, trial_days, cashfree_subscription_id, cashfree_subscription_session_id, mandate_status, status, expires_at
+      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14)`,
+      [
+        regId,
+        JSON.stringify(regPayload),
+        name.trim(),
+        cleanPhone,
+        owner_username.trim(),
+        passwordHash,
+        dbPlan.key,
+        dbPlan.price,
+        trialDays,
+        cfResult.subscription_id,
+        cfResult.subscription_session_id || cfResult.payment_session_id || null,
+        'pending',
+        'checkout_started',
+        expiresAt
+      ]
     );
 
     res.json({
@@ -134,170 +157,180 @@ router.post('/checkout-pre-register', async (req, res) => {
   }
 });
 
+/**
+ * Dedicated server-side finalization function for pending registrations.
+ * Uses a single database transaction to guarantee atomic creation of restaurant, subscription, & admin.
+ * Fully idempotent — safe against duplicate webhooks & user page refreshes.
+ */
+export async function finalizePendingRegistration(reg_id, inputSubId = null) {
+  const regRows = await query('SELECT payload, created_slug, created_jwt, created_user, status FROM pending_registrations WHERE id = $1', [reg_id]);
+  if (!regRows || regRows.length === 0) {
+    throw new Error('Registration session expired or invalid');
+  }
+
+  const regRecord = regRows[0];
+  const regData = JSON.parse(regRecord.payload);
+
+  // Idempotent Check: Return existing result if already finalized
+  if (regRecord.created_jwt && regRecord.created_slug) {
+    console.log('[REGISTRATION] Already finalized for session:', reg_id);
+    return {
+      already_completed: true,
+      cleanSlug: regRecord.created_slug,
+      jwtToken: regRecord.created_jwt,
+      username: regRecord.created_user || regData.owner_username
+    };
+  }
+
+  const targetSubId = inputSubId || regData.subscription_id;
+
+  if (!targetSubId) {
+    console.warn('[REGISTRATION] verification failed — missing subscription_id');
+    throw new Error('Payment session verification failed. Missing subscription ID.');
+  }
+
+  // Server-side Cashfree API Verification
+  console.log('[REGISTRATION] verification started for subId:', targetSubId);
+  const cfStatus = await fetchCashfreeSubscriptionStatus(targetSubId);
+  console.log('[REGISTRATION] Cashfree API response status:', cfStatus);
+
+  const statusStr = (cfStatus.subscription_status || cfStatus.status || '').toUpperCase();
+  const isAuthorized = cfStatus.success && ['ACTIVE', 'BANK_APPROVAL_PENDING', 'COMPLETED'].includes(statusStr);
+
+  if (!isAuthorized) {
+    console.warn(`[REGISTRATION] verification failed — status '${statusStr}' not authorized`);
+    await query("UPDATE pending_registrations SET status = 'failed', updated_at = CURRENT_TIMESTAMP WHERE id = $1", [reg_id]);
+    throw new Error(`Subscription payment was not authorized (Status: ${statusStr || 'FAILED'})`);
+  }
+
+  console.log('[REGISTRATION] verification successful for subId:', targetSubId);
+
+  // Re-verify existing restaurant / admin idempotency
+  const existingResto = await query('SELECT id, slug, phone FROM restaurants WHERE phone = $1', [regData.phone]);
+  const existingAdmin = await query('SELECT id, username, restaurant_id FROM admins WHERE username = $1', [regData.owner_username]);
+
+  if (existingResto.length > 0 && existingAdmin.length > 0) {
+    const cleanSlug = existingResto[0].slug;
+    const adminUsername = regData.owner_username;
+    const adminId = existingAdmin[0].id;
+    const jwtToken = jwt.sign(
+      { id: adminId, username: adminUsername, role: 'restaurant_admin', restaurant_id: existingAdmin[0].restaurant_id, slug: cleanSlug },
+      JWT_SECRET,
+      { expiresIn: '30d' }
+    );
+
+    await query("UPDATE pending_registrations SET status = 'completed', completed_at = CURRENT_TIMESTAMP, restaurant_id = $1, created_slug = $2, created_jwt = $3, created_user = $4 WHERE id = $5", [existingResto[0].id, cleanSlug, jwtToken, adminUsername, reg_id]);
+
+    return { newRestoId: existingResto[0].id, cleanSlug, jwtToken, username: adminUsername };
+  }
+
+  // Database Transaction for Atomic Creation
+  const result = await withTransaction(async (txQuery) => {
+    const phoneCheck = await txQuery('SELECT id FROM restaurants WHERE phone = $1', [regData.phone]);
+    if (phoneCheck.length > 0) throw new Error('Mobile number already registered');
+
+    const adminCheck = await txQuery('SELECT id FROM admins WHERE username = $1', [regData.owner_username]);
+    if (adminCheck.length > 0) throw new Error('Username already taken');
+
+    let baseSlug = regData.name.toLowerCase().trim().replace(/[^a-z0-9\s-]/g, '').replace(/[\s_]+/g, '-').replace(/-+/g, '-');
+    if (!baseSlug || baseSlug.length < 2) baseSlug = 'resto-' + Math.floor(1000 + Math.random() * 9000);
+    let cleanSlug = baseSlug;
+    let counter = 1;
+    while (true) {
+      const existing = await txQuery('SELECT id FROM restaurants WHERE slug = $1', [cleanSlug]);
+      if (existing.length === 0) break;
+      cleanSlug = `${baseSlug}-${counter}`;
+      counter++;
+    }
+
+    const planRows = await txQuery('SELECT * FROM saas_plans WHERE key = $1', [regData.plan_tier || 'pro']);
+    const dbPlan = planRows[0] || { id: 2, key: 'pro', name: 'Pro Luxury Plan', price: 999 };
+
+    const now = new Date();
+    const trialDays = regData.trial_days || 14;
+    const trialEnd = new Date(now.getTime() + trialDays * 86400 * 1000);
+    const nowISO = now.toISOString();
+    const expiryDateISO = trialEnd.toISOString();
+
+    const restoRes = await txQuery(`
+      INSERT INTO restaurants (
+        name, slug, tagline, logo, phone, address, opening_hours, plan_tier, plan_price, plan_expires_at, trial_started_at, trial_ends_at, whatsapp_number, theme_color, active, total_tables, mandate_status, mandate_id, auto_debit_enabled
+      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19) RETURNING id
+    `, [
+      regData.name, cleanSlug, '100% Fresh & Authentic Food',
+      'https://images.unsplash.com/photo-1555396273-367ea4eb4db5?w=500&auto=format&fit=crop&q=80',
+      regData.phone, 'Main Market Street, City Center', '8:00 AM - 10:30 PM',
+      dbPlan.key, dbPlan.price, expiryDateISO, nowISO, expiryDateISO, regData.phone, 'gold',
+      1, 0, 'active', targetSubId || null, 1
+    ]);
+
+    const newRestoId = restoRes[0]?.id || restoRes.lastInsertRowid;
+
+    await txQuery(`
+      INSERT INTO subscriptions (
+        restaurant_id, plan_id, gateway, gateway_subscription_id, status, amount, currency, billing_cycle, trial_start, trial_end, current_period_start, current_period_end
+      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)
+    `, [
+      newRestoId, dbPlan.id, 'cashfree', targetSubId || null, 'active', dbPlan.price, 'INR', 'monthly', nowISO, expiryDateISO, nowISO, expiryDateISO
+    ]);
+
+    const hash = regData.password_hash || (await bcrypt.hash(regData.owner_password || 'default123', await bcrypt.genSalt(10)));
+
+    const adminRes = await txQuery(`
+      INSERT INTO admins (restaurant_id, username, password_hash, role)
+      VALUES ($1, $2, $3, $4) RETURNING id
+    `, [newRestoId, regData.owner_username, hash, 'restaurant_admin']);
+
+    const adminId = adminRes[0]?.id || adminRes.lastInsertRowid;
+
+    const jwtToken = jwt.sign(
+      { id: adminId, username: regData.owner_username, role: 'restaurant_admin', restaurant_id: newRestoId, slug: cleanSlug },
+      JWT_SECRET,
+      { expiresIn: '30d' }
+    );
+
+    return { newRestoId, cleanSlug, jwtToken, username: regData.owner_username };
+  });
+
+  // Seed starter categories & dishes
+  try {
+    const cat1 = await query('INSERT INTO categories (restaurant_id, name, image, sort_order) VALUES ($1, $2, $3, $4) RETURNING id', [result.newRestoId, '⭐ Special Starters', 'https://images.unsplash.com/photo-1601050690597-df0568f70950?w=500&auto=format&fit=crop&q=80', 1]);
+    const cat2 = await query('INSERT INTO categories (restaurant_id, name, image, sort_order) VALUES ($1, $2, $3, $4) RETURNING id', [result.newRestoId, '🍛 Main Course & Thalis', 'https://images.unsplash.com/photo-1546833999-b9f581a1996d?w=500&auto=format&fit=crop&q=80', 2]);
+    const cat3 = await query('INSERT INTO categories (restaurant_id, name, image, sort_order) VALUES ($1, $2, $3, $4) RETURNING id', [result.newRestoId, '🥤 Beverages & Shakes', 'https://images.unsplash.com/photo-1544145945-f90425340c7e?w=500&auto=format&fit=crop&q=80', 3]);
+    const c1Id = cat1[0]?.id || cat1.lastInsertRowid;
+    const c2Id = cat2[0]?.id || cat2.lastInsertRowid;
+    const c3Id = cat3[0]?.id || cat3.lastInsertRowid;
+
+    await query(`INSERT INTO dishes (restaurant_id, category_id, name, description, image, price, available, type) VALUES ($1, $2, $3, $4, $5, $6, 1, 'veg')`, [result.newRestoId, c1Id, 'Paneer Tikka Platter', 'Sizzling tandoori paneer cubes with mint chutney', 'https://images.unsplash.com/photo-1567188040759-fb8a883dc6d8?w=500&auto=format&fit=crop&q=80', 240]);
+    await query(`INSERT INTO dishes (restaurant_id, category_id, name, description, image, price, available, type) VALUES ($1, $2, $3, $4, $5, $6, 1, 'veg')`, [result.newRestoId, c2Id, 'Royal Maharaja Thali', 'Full thali with 2 sabzi, dal makhani, naan, rice & gulab jamun', 'https://images.unsplash.com/photo-1585937421612-70a008356fbe?w=500&auto=format&fit=crop&q=80', 320]);
+    await query(`INSERT INTO dishes (restaurant_id, category_id, name, description, image, price, available, type) VALUES ($1, $2, $3, $4, $5, $6, 1, 'veg')`, [result.newRestoId, c3Id, 'Mango Lassi Special', 'Thick kulhad mango lassi with dry fruits topping', 'https://images.unsplash.com/photo-1571006682860-39826ec9d4a9?w=500&auto=format&fit=crop&q=80', 90]);
+  } catch (seedErr) {
+    console.warn('Notice seeding initial categories/dishes:', seedErr.message);
+  }
+
+  await query("UPDATE pending_registrations SET status = 'completed', completed_at = CURRENT_TIMESTAMP, restaurant_id = $1, created_slug = $2, created_jwt = $3, created_user = $4 WHERE id = $5", [result.newRestoId, result.cleanSlug, result.jwtToken, result.username, reg_id]);
+
+  console.log('[REGISTRATION] restaurant finalized successfully for:', result.cleanSlug);
+  return result;
+}
+
 // ALL /api/payment/register-return - Cashfree subscription return callback for pre-registration (supports GET & POST)
 router.all('/register-return', async (req, res) => {
   const reg_id = req.query.reg_id || req.body?.reg_id || req.query.reg_token || req.body?.reg_token;
+  const inputSubId = req.query.subscription_id || req.query.sub_id || req.body?.subscription_id || req.body?.sub_id;
   const baseUrl = process.env.APP_BASE_URL || 'https://khana-master.onrender.com';
 
-  console.log('[Register Return] Received callback. Method:', req.method, 'reg_id:', reg_id);
+  console.log('[REGISTRATION] Received callback. Method:', req.method, 'reg_id:', reg_id);
 
   if (!reg_id) {
     return res.redirect(`${baseUrl}/register?error=Invalid registration session`);
   }
 
   try {
-    const regRows = await query('SELECT payload, created_slug, created_jwt, created_user FROM pending_registrations WHERE id = $1', [reg_id]);
-    if (!regRows || regRows.length === 0) {
-      // Check if user was already registered by phone/username
-      return res.redirect(`${baseUrl}/register?error=Registration session expired or invalid.`);
-    }
-
-    const regRecord = regRows[0];
-    const regData = JSON.parse(regRecord.payload);
-
-    // Idempotent Check: If account was ALREADY created for this session in an earlier callback:
-    if (regRecord.created_jwt && regRecord.created_slug) {
-      console.log('⚡ Idempotent return: Account already created for session', reg_id);
-      return res.redirect(`${baseUrl}/${regRecord.created_slug}/admin?token=${encodeURIComponent(regRecord.created_jwt)}&username=${encodeURIComponent(regRecord.created_user || regData.owner_username)}&slug=${encodeURIComponent(regRecord.created_slug)}`);
-    }
-
-    const targetSubId = req.query.subscription_id || req.query.sub_id || req.body?.subscription_id || req.body?.sub_id || regData.subscription_id;
-
-    if (!targetSubId) {
-      console.warn('⚠️ No subscription_id found for registration validation!');
-      return res.redirect(`${baseUrl}/register?error=Payment session verification failed. Account was NOT created.`);
-    }
-
-    // Verify Cashfree Subscription Status via Cashfree API
-    const cfStatus = await fetchCashfreeSubscriptionStatus(targetSubId);
-    console.log('🌐 Cashfree return subscription status:', cfStatus);
-
-    const statusStr = (cfStatus.subscription_status || cfStatus.status || '').toUpperCase();
-    const isAuthorized = cfStatus.success && ['ACTIVE', 'BANK_APPROVAL_PENDING', 'COMPLETED'].includes(statusStr);
-
-    if (!isAuthorized) {
-      console.warn(`🛑 Subscription status '${statusStr}' is NOT authorized! Account creation BLOCKED.`);
-      return res.redirect(`${baseUrl}/register?error=Subscription payment was not completed or failed (Status: ${statusStr || 'FAILED'}). Account was NOT created.`);
-    }
-
-    // Check if restaurant with this phone or username was ALREADY created
-    const existingResto = await query('SELECT id, slug, phone FROM restaurants WHERE phone = $1', [regData.phone]);
-    const existingAdmin = await query('SELECT id, username, restaurant_id FROM admins WHERE username = $1', [regData.owner_username]);
-
-    if (existingResto.length > 0 && existingAdmin.length > 0) {
-      const cleanSlug = existingResto[0].slug;
-      const adminUsername = regData.owner_username;
-      const adminId = existingAdmin[0].id;
-      const jwtToken = jwt.sign(
-        { id: adminId, username: adminUsername, role: 'restaurant_admin', restaurant_id: existingAdmin[0].restaurant_id, slug: cleanSlug },
-        JWT_SECRET,
-        { expiresIn: '30d' }
-      );
-
-      await query('UPDATE pending_registrations SET created_slug = $1, created_jwt = $2, created_user = $3 WHERE id = $4', [cleanSlug, jwtToken, adminUsername, reg_id]);
-
-      return res.redirect(`${baseUrl}/${cleanSlug}/admin?token=${encodeURIComponent(jwtToken)}&username=${encodeURIComponent(adminUsername)}&slug=${encodeURIComponent(cleanSlug)}`);
-    }
-
-    // ONLY NOW: Execute multi-table transaction to create restaurant, subscription, and admin account!
-    const result = await withTransaction(async (txQuery) => {
-      // Re-verify uniqueness inside transaction
-      const phoneCheck = await txQuery('SELECT id FROM restaurants WHERE phone = $1', [regData.phone]);
-      if (phoneCheck.length > 0) throw new Error('Mobile number already registered');
-
-      const adminCheck = await txQuery('SELECT id FROM admins WHERE username = $1', [regData.owner_username]);
-      if (adminCheck.length > 0) throw new Error('Username already taken');
-
-      // Generate slug
-      let baseSlug = regData.name.toLowerCase().trim().replace(/[^a-z0-9\s-]/g, '').replace(/[\s_]+/g, '-').replace(/-+/g, '-');
-      if (!baseSlug || baseSlug.length < 2) baseSlug = 'resto-' + Math.floor(1000 + Math.random() * 9000);
-      let cleanSlug = baseSlug;
-      let counter = 1;
-      while (true) {
-        const existing = await txQuery('SELECT id FROM restaurants WHERE slug = $1', [cleanSlug]);
-        if (existing.length === 0) break;
-        cleanSlug = `${baseSlug}-${counter}`;
-        counter++;
-      }
-
-      const planRows = await txQuery('SELECT * FROM saas_plans WHERE key = $1', [regData.plan_tier || 'pro']);
-      const dbPlan = planRows[0] || { id: 2, key: 'pro', name: 'Pro Luxury Plan', price: 999 };
-
-      const now = new Date();
-      const trialDays = regData.trial_days || 14;
-      const trialEnd = new Date(now.getTime() + trialDays * 86400 * 1000);
-      const nowISO = now.toISOString();
-      const expiryDateISO = trialEnd.toISOString();
-
-      // Create Restaurant Record (mandate_status='active', mandate_id=targetSubId)
-      const restoRes = await txQuery(`
-        INSERT INTO restaurants (
-          name, slug, tagline, logo, phone, address, opening_hours, plan_tier, plan_price, plan_expires_at, trial_started_at, trial_ends_at, whatsapp_number, theme_color, active, total_tables, mandate_status, mandate_id, auto_debit_enabled
-        ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19) RETURNING id
-      `, [
-        regData.name, cleanSlug, '100% Fresh & Authentic Food',
-        'https://images.unsplash.com/photo-1555396273-367ea4eb4db5?w=500&auto=format&fit=crop&q=80',
-        regData.phone, 'Main Market Street, City Center', '8:00 AM - 10:30 PM',
-        dbPlan.key, dbPlan.price, expiryDateISO, nowISO, expiryDateISO, regData.phone, 'gold',
-        1, 0, 'active', targetSubId || null, 1
-      ]);
-
-      const newRestoId = restoRes[0]?.id || restoRes.lastInsertRowid;
-
-      // Create Subscriptions Record
-      await txQuery(`
-        INSERT INTO subscriptions (
-          restaurant_id, plan_id, gateway, gateway_subscription_id, status, amount, currency, billing_cycle, trial_start, trial_end, current_period_start, current_period_end
-        ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)
-      `, [
-        newRestoId, dbPlan.id, 'cashfree', targetSubId || null, 'active', dbPlan.price, 'INR', 'monthly', nowISO, expiryDateISO, nowISO, expiryDateISO
-      ]);
-
-      // Create Owner Admin Account
-      const salt = await bcrypt.genSalt(10);
-      const hash = await bcrypt.hash(regData.owner_password, salt);
-
-      const adminRes = await txQuery(`
-        INSERT INTO admins (restaurant_id, username, password_hash, role)
-        VALUES ($1, $2, $3, $4) RETURNING id
-      `, [newRestoId, regData.owner_username, hash, 'restaurant_admin']);
-
-      const adminId = adminRes[0]?.id || adminRes.lastInsertRowid;
-
-      // Generate JWT Token for instant login
-      const jwtToken = jwt.sign(
-        { id: adminId, username: regData.owner_username, role: 'restaurant_admin', restaurant_id: newRestoId, slug: cleanSlug },
-        JWT_SECRET,
-        { expiresIn: '30d' }
-      );
-
-      return { newRestoId, cleanSlug, jwtToken, username: regData.owner_username };
-    });
-
-    // Seed starter categories & dishes
-    try {
-      const cat1 = await query('INSERT INTO categories (restaurant_id, name, image, sort_order) VALUES ($1, $2, $3, $4) RETURNING id', [result.newRestoId, '⭐ Special Starters', 'https://images.unsplash.com/photo-1601050690597-df0568f70950?w=500&auto=format&fit=crop&q=80', 1]);
-      const cat2 = await query('INSERT INTO categories (restaurant_id, name, image, sort_order) VALUES ($1, $2, $3, $4) RETURNING id', [result.newRestoId, '🍛 Main Course & Thalis', 'https://images.unsplash.com/photo-1546833999-b9f581a1996d?w=500&auto=format&fit=crop&q=80', 2]);
-      const cat3 = await query('INSERT INTO categories (restaurant_id, name, image, sort_order) VALUES ($1, $2, $3, $4) RETURNING id', [result.newRestoId, '🥤 Beverages & Shakes', 'https://images.unsplash.com/photo-1544145945-f90425340c7e?w=500&auto=format&fit=crop&q=80', 3]);
-      const c1Id = cat1[0]?.id || cat1.lastInsertRowid;
-      const c2Id = cat2[0]?.id || cat2.lastInsertRowid;
-      const c3Id = cat3[0]?.id || cat3.lastInsertRowid;
-
-      await query(`INSERT INTO dishes (restaurant_id, category_id, name, description, image, price, available, type) VALUES ($1, $2, $3, $4, $5, $6, 1, 'veg')`, [result.newRestoId, c1Id, 'Paneer Tikka Platter', 'Sizzling tandoori paneer cubes with mint chutney', 'https://images.unsplash.com/photo-1567188040759-fb8a883dc6d8?w=500&auto=format&fit=crop&q=80', 240]);
-      await query(`INSERT INTO dishes (restaurant_id, category_id, name, description, image, price, available, type) VALUES ($1, $2, $3, $4, $5, $6, 1, 'veg')`, [result.newRestoId, c2Id, 'Royal Maharaja Thali', 'Full thali with 2 sabzi, dal makhani, naan, rice & gulab jamun', 'https://images.unsplash.com/photo-1585937421612-70a008356fbe?w=500&auto=format&fit=crop&q=80', 320]);
-      await query(`INSERT INTO dishes (restaurant_id, category_id, name, description, image, price, available, type) VALUES ($1, $2, $3, $4, $5, $6, 1, 'veg')`, [result.newRestoId, c3Id, 'Mango Lassi Special', 'Thick kulhad mango lassi with dry fruits topping', 'https://images.unsplash.com/photo-1571006682860-39826ec9d4a9?w=500&auto=format&fit=crop&q=80', 90]);
-    } catch (seedErr) {
-      console.warn('Notice seeding initial categories/dishes:', seedErr.message);
-    }
-
-    // Persist result on pending_registrations for future duplicate redirects
-    await query('UPDATE pending_registrations SET created_slug = $1, created_jwt = $2, created_user = $3 WHERE id = $4', [result.cleanSlug, result.jwtToken, result.username, reg_id]);
-
-    // Redirect user into their new Admin Dashboard with JWT token set!
+    const result = await finalizePendingRegistration(reg_id, inputSubId);
     res.redirect(`${baseUrl}/${result.cleanSlug}/admin?token=${encodeURIComponent(result.jwtToken)}&username=${encodeURIComponent(result.username)}&slug=${encodeURIComponent(result.cleanSlug)}`);
-
   } catch (err) {
-    console.error('Register return callback error:', err);
+    console.error('[REGISTRATION] verification failed:', err.message);
     res.redirect(`${baseUrl}/register?error=${encodeURIComponent(err.message)}`);
   }
 });
@@ -664,7 +697,19 @@ const handleCashfreeWebhook = async (req, res) => {
       }
 
       if (!restoId && subscriptionId) {
-        console.warn(`⚠️ Webhook received for unmapped subscription_id: ${subscriptionId}`);
+        console.warn(`⚠️ Webhook received for unmapped subscription_id: ${subscriptionId}. Checking pending_registrations...`);
+        const pendingRows = await txQuery(
+          "SELECT id FROM pending_registrations WHERE cashfree_subscription_id = $1 OR payload LIKE $2 LIMIT 1",
+          [subscriptionId, `%${subscriptionId}%`]
+        );
+        if (pendingRows && pendingRows.length > 0) {
+          try {
+            const finalized = await finalizePendingRegistration(pendingRows[0].id, subscriptionId);
+            restoId = finalized.newRestoId;
+          } catch (finErr) {
+            console.warn('[WEBHOOK] Pending registration finalization notice:', finErr.message);
+          }
+        }
       }
 
       // Handle Specific Event Types

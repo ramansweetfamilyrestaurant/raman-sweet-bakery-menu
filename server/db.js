@@ -281,10 +281,25 @@ async function createTables() {
       `CREATE TABLE IF NOT EXISTS pending_registrations (
         id VARCHAR(100) PRIMARY KEY,
         payload TEXT NOT NULL,
+        name VARCHAR(255),
+        phone VARCHAR(50),
+        owner_username VARCHAR(100),
+        password_hash TEXT,
+        plan_key VARCHAR(50),
+        plan_price NUMERIC(10,2),
+        trial_days INT,
+        cashfree_subscription_id VARCHAR(255),
+        cashfree_subscription_session_id VARCHAR(255),
+        mandate_status VARCHAR(50) DEFAULT 'pending',
+        status VARCHAR(50) DEFAULT 'pending',
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        expires_at TIMESTAMP,
+        completed_at TIMESTAMP,
+        restaurant_id INT,
         created_slug VARCHAR(255),
         created_jwt TEXT,
-        created_user VARCHAR(255),
-        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        created_user VARCHAR(255)
       );`
     ];
 
@@ -293,6 +308,21 @@ async function createTables() {
     }
 
     const pgAlters = [
+      `ALTER TABLE pending_registrations ADD COLUMN IF NOT EXISTS name VARCHAR(255);`,
+      `ALTER TABLE pending_registrations ADD COLUMN IF NOT EXISTS phone VARCHAR(50);`,
+      `ALTER TABLE pending_registrations ADD COLUMN IF NOT EXISTS owner_username VARCHAR(100);`,
+      `ALTER TABLE pending_registrations ADD COLUMN IF NOT EXISTS password_hash TEXT;`,
+      `ALTER TABLE pending_registrations ADD COLUMN IF NOT EXISTS plan_key VARCHAR(50);`,
+      `ALTER TABLE pending_registrations ADD COLUMN IF NOT EXISTS plan_price NUMERIC(10,2);`,
+      `ALTER TABLE pending_registrations ADD COLUMN IF NOT EXISTS trial_days INT;`,
+      `ALTER TABLE pending_registrations ADD COLUMN IF NOT EXISTS cashfree_subscription_id VARCHAR(255);`,
+      `ALTER TABLE pending_registrations ADD COLUMN IF NOT EXISTS cashfree_subscription_session_id VARCHAR(255);`,
+      `ALTER TABLE pending_registrations ADD COLUMN IF NOT EXISTS mandate_status VARCHAR(50) DEFAULT 'pending';`,
+      `ALTER TABLE pending_registrations ADD COLUMN IF NOT EXISTS status VARCHAR(50) DEFAULT 'pending';`,
+      `ALTER TABLE pending_registrations ADD COLUMN IF NOT EXISTS expires_at TIMESTAMP;`,
+      `ALTER TABLE pending_registrations ADD COLUMN IF NOT EXISTS completed_at TIMESTAMP;`,
+      `ALTER TABLE pending_registrations ADD COLUMN IF NOT EXISTS restaurant_id INT;`,
+      `ALTER TABLE pending_registrations ADD COLUMN IF NOT EXISTS updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP;`,
       `ALTER TABLE pending_registrations ADD COLUMN IF NOT EXISTS created_slug VARCHAR(255);`,
       `ALTER TABLE pending_registrations ADD COLUMN IF NOT EXISTS created_jwt TEXT;`,
       `ALTER TABLE pending_registrations ADD COLUMN IF NOT EXISTS created_user VARCHAR(255);`,
@@ -634,12 +664,33 @@ async function createTables() {
         original_amount REAL NOT NULL,
         discount_amount REAL NOT NULL,
         final_amount REAL NOT NULL,
-        billing_cycle INTEGER DEFAULT 1,
-        status TEXT DEFAULT 'applied',
-        redeemed_at TEXT DEFAULT CURRENT_TIMESTAMP,
         created_at TEXT DEFAULT CURRENT_TIMESTAMP,
         FOREIGN KEY (restaurant_id) REFERENCES restaurants (id) ON DELETE CASCADE,
         FOREIGN KEY (subscription_id) REFERENCES subscriptions (id) ON DELETE SET NULL
+      );
+
+      CREATE TABLE IF NOT EXISTS pending_registrations (
+        id TEXT PRIMARY KEY,
+        payload TEXT NOT NULL,
+        name TEXT,
+        phone TEXT,
+        owner_username TEXT,
+        password_hash TEXT,
+        plan_key TEXT,
+        plan_price REAL,
+        trial_days INTEGER,
+        cashfree_subscription_id TEXT,
+        cashfree_subscription_session_id TEXT,
+        mandate_status TEXT DEFAULT 'pending',
+        status TEXT DEFAULT 'pending',
+        created_at TEXT DEFAULT CURRENT_TIMESTAMP,
+        updated_at TEXT DEFAULT CURRENT_TIMESTAMP,
+        expires_at TEXT,
+        completed_at TEXT,
+        restaurant_id INTEGER,
+        created_slug TEXT,
+        created_jwt TEXT,
+        created_user TEXT
       );
     `);
 

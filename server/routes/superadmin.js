@@ -98,6 +98,17 @@ router.get('/restaurants', authenticateToken, requireSuperAdmin, async (req, res
   }
 });
 
+// GET /api/superadmin/pending-registrations - Audit pending pre-registrations (Super Admin only)
+router.get('/pending-registrations', authenticateToken, requireSuperAdmin, async (req, res) => {
+  try {
+    const rows = await query('SELECT id, name, phone, owner_username, plan_key, plan_price, cashfree_subscription_id, mandate_status, status, created_at, expires_at, completed_at FROM pending_registrations ORDER BY created_at DESC LIMIT 100');
+    res.json(rows || []);
+  } catch (err) {
+    console.error('Fetch pending registrations error:', err);
+    res.status(500).json({ error: 'Failed to fetch pending registrations' });
+  }
+});
+
 // POST Create New Tenant Restaurant
 router.post('/restaurants', authenticateToken, requireSuperAdmin, async (req, res) => {
   try {
