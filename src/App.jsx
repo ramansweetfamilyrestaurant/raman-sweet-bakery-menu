@@ -426,7 +426,11 @@ export default function App() {
   };
 
   // Load Menu Data
-  const loadMenuData = async (forcedSlug) => {
+  const loadMenuData = async (forcedSlug = '') => {
+    if (view === 'admin-dashboard' || view === 'super-admin-dashboard' || window.location.pathname.toLowerCase().includes('/admin')) {
+      setLoading(false);
+      return;
+    }
     setLoading(true);
     setRestaurantStatus('active');
     const slug = forcedSlug || getSlugFromUrl();
@@ -478,8 +482,10 @@ export default function App() {
   };
 
   useEffect(() => {
-    loadMenuData();
-  }, [searchQuery, adminToken]);
+    if (view !== 'admin-dashboard' && view !== 'super-admin-dashboard' && !window.location.pathname.toLowerCase().includes('/admin')) {
+      loadMenuData();
+    }
+  }, [searchQuery, adminToken, view]);
 
   // Dynamic Theme Color Engine Applicator
   useEffect(() => {
