@@ -1016,6 +1016,23 @@ export default function SuperAdminDashboard({ token, username, onLogout, onRetur
                         </span>
                       )}
 
+                      {r.mandate_status === 'admin_granted' || r.subscription_type === 'ADMIN_GRANTED' ? (
+                        <span style={{
+                          background: 'linear-gradient(135deg, #7C3AED 0%, #6D28D9 100%)',
+                          color: '#FFFFFF',
+                          padding: '3px 10px',
+                          borderRadius: '6px',
+                          fontSize: '0.68rem',
+                          fontWeight: 900,
+                          boxShadow: '0 2px 6px rgba(124,58,237,0.3)',
+                          display: 'inline-flex',
+                          alignItems: 'center',
+                          gap: '3px'
+                        }}>
+                          🎁 VIP COMPLIMENTARY (LIFETIME)
+                        </span>
+                      ) : null}
+
                       {/* Scans Badge */}
                       <span style={{
                         background: '#F3E8FF',
