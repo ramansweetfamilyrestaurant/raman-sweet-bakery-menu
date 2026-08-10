@@ -58,6 +58,9 @@ export default function SubscriptionBillingPage({ restoInfo, token, onProceedToD
   const [planKey, setPlanKey] = useState('pro');
   const [trialSettingDays, setTrialSettingDays] = useState(null);
 
+  const [logoUrl, setLogoUrl] = useState('');
+  const [logoErr, setLogoErr] = useState(false);
+
   const [loading, setLoading] = useState(false);
   const [authorizing, setAuthorizing] = useState(false);
   const [verifying, setVerifying] = useState(false);
@@ -65,14 +68,19 @@ export default function SubscriptionBillingPage({ restoInfo, token, onProceedToD
   const [errorMsg, setErrorMsg] = useState('');
   const [mandateActive, setMandateActive] = useState(false);
 
-  // Fetch dynamic system_settings default_trial_days on mount
+  // Fetch dynamic system_settings default_trial_days & platform_logo_url on mount
   useEffect(() => {
     fetch('/api/settings')
       .then(res => res.json())
       .then(data => {
-        if (data && data.default_trial_days) {
-          const days = parseInt(data.default_trial_days, 10);
-          if (!isNaN(days) && days > 0) setTrialSettingDays(days);
+        if (data) {
+          if (data.default_trial_days) {
+            const days = parseInt(data.default_trial_days, 10);
+            if (!isNaN(days) && days > 0) setTrialSettingDays(days);
+          }
+          if (data.platform_logo_url) {
+            setLogoUrl(data.platform_logo_url);
+          }
         }
       })
       .catch(() => {});
@@ -369,7 +377,17 @@ export default function SubscriptionBillingPage({ restoInfo, token, onProceedToD
         padding: '0 4px'
       }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-          <span style={{ fontSize: '1.4rem' }}>🍱</span>
+          {logoUrl && !logoErr ? (
+            <img
+              src={logoUrl}
+              alt="TouchQR Logo"
+              referrerPolicy="no-referrer"
+              onError={() => setLogoErr(true)}
+              style={{ width: '28px', height: '28px', borderRadius: '6px', objectFit: 'contain', background: '#FFF', padding: '2px', flexShrink: 0 }}
+            />
+          ) : (
+            <span style={{ fontSize: '1.4rem' }}>🍱</span>
+          )}
           <span style={{ fontSize: '1rem', fontWeight: 900, color: '#DFBA67', letterSpacing: '-0.2px' }}>
             TouchQR SaaS
           </span>

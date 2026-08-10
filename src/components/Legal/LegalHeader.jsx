@@ -2,6 +2,18 @@ import React from 'react';
 import { ArrowLeft, UserCheck, ShieldCheck } from 'lucide-react';
 
 export default function LegalHeader({ onOpenLogin }) {
+  const [logoUrl, setLogoUrl] = React.useState('');
+  const [logoErr, setLogoErr] = React.useState(false);
+
+  React.useEffect(() => {
+    fetch('/api/settings')
+      .then(res => res.json())
+      .then(data => {
+        if (data && data.platform_logo_url) setLogoUrl(data.platform_logo_url);
+      })
+      .catch(() => {});
+  }, []);
+
   const navigateRoute = (path) => {
     window.history.pushState({}, '', path);
     window.dispatchEvent(new PopStateEvent('popstate'));
@@ -16,7 +28,17 @@ export default function LegalHeader({ onOpenLogin }) {
     <header className="km-legal-header">
       <div className="km-legal-header-container">
         <div className="km-legal-brand" onClick={handleBackToLanding}>
-          <span className="km-legal-logo-icon">🍱</span>
+          {logoUrl && !logoErr ? (
+            <img
+              src={logoUrl}
+              alt="TouchQR Logo"
+              referrerPolicy="no-referrer"
+              onError={() => setLogoErr(true)}
+              style={{ width: '28px', height: '28px', borderRadius: '6px', objectFit: 'contain', background: '#FFF', padding: '2px', flexShrink: 0 }}
+            />
+          ) : (
+            <span className="km-legal-logo-icon">🍱</span>
+          )}
           <span className="km-legal-logo-text">TouchQR</span>
           <span className="km-legal-logo-badge">SaaS</span>
         </div>
