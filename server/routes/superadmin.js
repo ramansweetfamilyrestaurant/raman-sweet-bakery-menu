@@ -701,7 +701,7 @@ router.post('/settings', authenticateToken, requireSuperAdmin, async (req, res) 
       cashfree_secret_key: cashfree_secret_key !== undefined ? String(cashfree_secret_key).trim() : undefined,
       default_trial_days: default_trial_days !== undefined ? String(Math.max(1, parseInt(default_trial_days, 10) || 14)) : undefined,
       grace_period_days: grace_period_days !== undefined ? String(Math.max(0, parseInt(grace_period_days, 10) || 7)) : undefined,
-      platform_logo_url: platform_logo_url !== undefined ? String(platform_logo_url).trim() : undefined
+      platform_logo_url: platform_logo_url !== undefined ? String(platform_logo_url).trim().replace(/^['"]+|['"]+$/g, '') : undefined
     };
 
     for (const [k, v] of Object.entries(settingsToSave)) {

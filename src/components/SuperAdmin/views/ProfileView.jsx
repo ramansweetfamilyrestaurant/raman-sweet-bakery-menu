@@ -2,6 +2,12 @@ import React from 'react';
 import { UserCircle, Lock, LogOut, ShieldCheck } from 'lucide-react';
 
 export default function ProfileView({ username, securityForm, setSecurityForm, onSaveSecurity, savingSecurity, securityMsg, securityError, onLogout, logoUrl }) {
+  const [logoErr, setLogoErr] = React.useState(false);
+
+  React.useEffect(() => {
+    setLogoErr(false);
+  }, [logoUrl]);
+
   const inputStyle = { width: '100%', padding: '10px 12px', borderRadius: 'var(--sa-radius-md)', border: '1.5px solid var(--sa-border)', fontSize: '0.88rem', boxSizing: 'border-box' };
   const labelStyle = { fontSize: '0.75rem', fontWeight: 800, color: 'var(--sa-text-muted)', display: 'block', marginBottom: '6px' };
 
@@ -16,10 +22,11 @@ export default function ProfileView({ username, securityForm, setSecurityForm, o
         textAlign: 'center',
         border: '1px solid rgba(212, 175, 55, 0.3)'
       }}>
-        {logoUrl ? (
+        {logoUrl && !logoErr ? (
           <img
             src={logoUrl}
             alt="Super Admin Logo"
+            onError={() => setLogoErr(true)}
             style={{
               width: '60px', height: '60px', borderRadius: '50%',
               objectFit: 'contain', background: '#FFF', padding: '4px',

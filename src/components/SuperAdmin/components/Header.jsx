@@ -2,6 +2,12 @@ import React from 'react';
 import { Search, ShieldCheck } from 'lucide-react';
 
 export default function Header({ username, activeView, searchQuery, setSearchQuery, logoUrl }) {
+  const [logoErr, setLogoErr] = React.useState(false);
+
+  React.useEffect(() => {
+    setLogoErr(false);
+  }, [logoUrl]);
+
   const shortTitles = {
     overview: 'Overview',
     tenants: 'Tenants',
@@ -63,8 +69,8 @@ export default function Header({ username, activeView, searchQuery, setSearchQue
         {/* Profile Avatar */}
         <div className="sa-header-profile">
           <div className="sa-profile-avatar" style={{ overflow: 'hidden' }}>
-            {logoUrl ? (
-              <img src={logoUrl} alt="Super Admin Logo" style={{ width: '100%', height: '100%', objectFit: 'contain', background: '#FFF' }} />
+            {logoUrl && !logoErr ? (
+              <img src={logoUrl} alt="Super Admin Logo" onError={() => setLogoErr(true)} style={{ width: '100%', height: '100%', objectFit: 'contain', background: '#FFF' }} />
             ) : (
               username ? username.charAt(0).toUpperCase() : 'S'
             )}

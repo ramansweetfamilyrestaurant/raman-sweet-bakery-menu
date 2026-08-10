@@ -60,6 +60,8 @@ app.get(['/api/r2-proxy/*', '/r2-proxy/*'], async (req, res) => {
     if (ext === '.png') return 'image/png';
     if (ext === '.jpg' || ext === '.jpeg') return 'image/jpeg';
     if (ext === '.gif') return 'image/gif';
+    if (ext === '.svg') return 'image/svg+xml';
+    if (ext === '.avif') return 'image/avif';
     return 'image/webp';
   };
 

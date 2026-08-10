@@ -2,6 +2,12 @@ import React from 'react';
 import { LayoutDashboard, Store, Settings, UserCircle, ChevronLeft, ChevronRight } from 'lucide-react';
 
 export default function Sidebar({ activeView, setActiveView, collapsed, setCollapsed, logoUrl }) {
+  const [logoErr, setLogoErr] = React.useState(false);
+
+  React.useEffect(() => {
+    setLogoErr(false);
+  }, [logoUrl]);
+
   const navItems = [
     { id: 'overview', label: 'Home', icon: LayoutDashboard },
     { id: 'tenants', label: 'Restaurants', icon: Store },
@@ -14,10 +20,11 @@ export default function Sidebar({ activeView, setActiveView, collapsed, setColla
       <div>
         <div className="sa-sidebar-header">
           <div className="sa-brand">
-            {logoUrl ? (
+            {logoUrl && !logoErr ? (
               <img
                 src={logoUrl}
                 alt="Super Admin Logo"
+                onError={() => setLogoErr(true)}
                 style={{
                   width: '32px', height: '32px', borderRadius: '8px',
                   objectFit: 'contain', background: '#FFF', flexShrink: 0, padding: '2px'
