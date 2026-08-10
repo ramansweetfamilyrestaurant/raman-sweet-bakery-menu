@@ -908,12 +908,44 @@
   gap: 16px;
 }
 
+/* Mobile Swipe Hint for Table */
+.km-table-swipe-hint {
+  display: none;
+  text-align: center;
+  font-size: 0.78rem;
+  font-weight: 800;
+  color: var(--km-gold);
+  margin-bottom: 12px;
+  background: var(--km-gold-light);
+  padding: 6px 12px;
+  border-radius: 9999px;
+  width: max-content;
+  margin: 0 auto 12px auto;
+  border: 1px solid rgba(212, 175, 55, 0.4);
+}
+
+/* Mobile Sticky Bottom CTA Bar */
+.km-mobile-sticky-bar {
+  display: none;
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  z-index: 99;
+  background: #0A2315;
+  padding: 10px 16px;
+  border-top: 1px solid rgba(212, 175, 55, 0.4);
+  box-shadow: 0 -4px 20px rgba(0, 0, 0, 0.4);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+}
+
 /* Responsive Media Queries */
 @media (max-width: 1024px) {
   .km-hero-grid,
   .km-showcase-grid {
     grid-template-columns: 1fr;
-    gap: 40px;
+    gap: 36px;
   }
   
   .km-showcase-grid.reverse {
@@ -932,44 +964,159 @@
 }
 
 @media (max-width: 768px) {
+  .km-landing-wrapper {
+    padding-bottom: 68px;
+  }
+
+  .km-container {
+    padding: 0 16px;
+  }
+
+  .km-navbar-container {
+    height: 60px;
+  }
+
   .km-nav-links,
   .km-nav-actions .km-btn-secondary {
     display: none;
   }
   
   .km-mobile-toggle {
-    display: block;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 44px;
+    height: 44px;
+  }
+
+  .km-mobile-menu .km-nav-link {
+    min-height: 44px;
+    display: flex;
+    align-items: center;
   }
   
-  .km-trust-grid {
-    grid-template-columns: repeat(2, 1fr);
-    gap: 16px;
+  .km-hero-section {
+    padding: 36px 0 28px;
   }
-  
-  .km-features-grid,
-  .km-workflow-grid {
-    grid-template-columns: 1fr;
+
+  .km-title-lg {
+    font-size: clamp(1.75rem, 6.5vw, 2.25rem);
+    line-height: 1.2;
   }
-  
-  .km-pricing-grid {
-    grid-template-columns: 1fr;
+
+  .km-subtitle {
+    font-size: 0.95rem;
+    margin-bottom: 24px;
   }
-  
+
   .km-hero-ctas {
     flex-direction: column;
     width: 100%;
+    gap: 10px;
   }
   
   .km-hero-ctas button,
   .km-hero-ctas a {
     width: 100%;
+    min-height: 48px;
   }
-  
+
+  .km-hero-preview {
+    width: 100%;
+    max-width: 400px;
+    margin: 0 auto;
+  }
+
   .km-mockup-body {
     grid-template-columns: 1fr;
+    padding: 12px;
+    gap: 12px;
+  }
+
+  .km-trust-section {
+    padding: 24px 0;
+  }
+  
+  .km-trust-grid {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 12px;
+  }
+
+  .km-trust-val {
+    font-size: 1.6rem;
+  }
+
+  .km-features-section,
+  .km-workflow-section,
+  .km-showcase-section,
+  .km-pricing-section,
+  .km-faq-section {
+    padding: 44px 0;
+  }
+  
+  .km-features-grid,
+  .km-workflow-grid,
+  .km-pricing-grid {
+    grid-template-columns: 1fr;
+    gap: 16px;
+  }
+
+  .km-feature-card {
+    padding: 20px 18px;
+  }
+
+  .km-table-swipe-hint {
+    display: inline-block;
+  }
+
+  .km-table {
+    min-width: 580px;
   }
   
   .km-footer-grid {
     grid-template-columns: 1fr;
+    gap: 28px;
+  }
+
+  .km-footer-bottom {
+    flex-direction: column;
+    text-align: center;
+    gap: 12px;
+  }
+
+  .km-mobile-sticky-bar {
+    display: block;
+  }
+}
+
+/* Mobile Small Devices Priority (360px - 430px) */
+@media (max-width: 430px) {
+  .km-container {
+    padding: 0 14px;
+  }
+
+  .km-title-lg {
+    font-size: 1.7rem;
+  }
+
+  .km-badge {
+    font-size: 0.72rem;
+    padding: 5px 12px;
+  }
+
+  .km-btn-primary,
+  .km-btn-secondary {
+    font-size: 0.9rem;
+    padding: 12px 20px;
+    min-height: 46px;
+  }
+
+  .km-price-card {
+    padding: 24px 18px;
+  }
+
+  .km-trial-cta-section {
+    padding: 40px 18px;
+    margin: 36px 14px;
   }
 }

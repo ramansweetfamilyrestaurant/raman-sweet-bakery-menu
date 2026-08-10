@@ -23,6 +23,10 @@ export default function Comparison() {
           </p>
         </div>
 
+        <div className="km-table-swipe-hint">
+          <span>👈 Swipe table to compare plans 👉</span>
+        </div>
+
         <div className="km-table-wrapper">
           <table className="km-table">
             <thead>
