@@ -239,8 +239,9 @@ export async function uploadImage(file, token, entityType = 'dishes') {
 
   const formData = new FormData();
   const filename = file.name || 'image.jpg';
-  formData.append('image', processedFile, filename);
+  // MUST append text fields BEFORE file fields so Multer parses req.body.entityType before file stream
   formData.append('entityType', entityType);
+  formData.append('image', processedFile, filename);
 
   const res = await fetch(`${API_BASE}/admin/upload`, {
     method: 'POST',

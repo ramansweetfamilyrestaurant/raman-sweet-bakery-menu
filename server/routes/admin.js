@@ -448,7 +448,7 @@ router.post('/upload', authenticateToken, requireActiveSubscription, upload.sing
 
   const fileBuffer = fs.readFileSync(req.file.path);
   const restaurantId = req.user?.restaurant_id || 1;
-  const entityType = req.body?.entityType || 'dishes';
+  const entityType = req.query?.entityType || req.body?.entityType || 'dishes';
 
   try {
     console.log('[R2 UPLOAD TRACE] calling R2 upload');
