@@ -24,7 +24,7 @@ export async function checkExpiredSubscriptions() {
         const periodEnd = sub.current_period_end || sub.trial_end || sub.trial_ends_at || sub.plan_expires_at;
         if (periodEnd && new Date(periodEnd) < new Date()) {
           await query("UPDATE subscriptions SET status = 'cancelled', cancelled_at = COALESCE(cancelled_at, CURRENT_TIMESTAMP) WHERE id = $1", [sub.id]);
-          await query('UPDATE restaurants SET active = 0 WHERE id = $1', [sub.restaurant_id]);
+          await query('UPDATE restaurants SET active = false WHERE id = $1', [sub.restaurant_id]);
           console.log(`🔒 Cancel-requested subscription expired for: ${sub.name} (ID: ${sub.restaurant_id})`);
         }
       }
@@ -81,7 +81,7 @@ export async function checkExpiredSubscriptions() {
       console.log(`⏰ Found ${expiredRestos.length} expired restaurant subscription(s) beyond grace period. Updating status to expired...`);
 
       for (const resto of expiredRestos) {
-        await query('UPDATE restaurants SET active = 0 WHERE id = $1', [resto.id]);
+        await query('UPDATE restaurants SET active = false WHERE id = $1', [resto.id]);
         await query("UPDATE subscriptions SET status = 'expired' WHERE restaurant_id = $1 AND status IN ('trialing', 'active', 'payment_failed')", [resto.id]);
         console.log(`🔒 Subscription expired & status updated to expired for restaurant: ${resto.name} (ID: ${resto.id})`);
       }

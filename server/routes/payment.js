@@ -765,7 +765,7 @@ const handleCashfreeWebhook = async (req, res) => {
             `, [periodStart, periodEnd, periodEnd, periodStart, subscriptionId]);
 
             await txQuery(`
-              UPDATE restaurants SET active = 1, plan_expires_at = $1, mandate_status = 'active' WHERE id = $2
+              UPDATE restaurants SET active = true, plan_expires_at = $1, mandate_status = 'active' WHERE id = $2
             `, [periodEnd, restoId]);
           }
         }

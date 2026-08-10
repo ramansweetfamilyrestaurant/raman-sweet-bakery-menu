@@ -402,7 +402,7 @@ router.post('/restaurants/:id/revoke-free-access', authenticateToken, requireSup
     const { id } = req.params;
     const nowISO = new Date().toISOString();
 
-    await query("UPDATE restaurants SET active = 0, mandate_status = 'cancelled', subscription_type = 'PAID' WHERE id = $1", [id]);
+    await query("UPDATE restaurants SET active = false, mandate_status = 'cancelled', subscription_type = 'PAID' WHERE id = $1", [id]);
     await query("UPDATE subscriptions SET status = 'cancelled', updated_at = $1 WHERE restaurant_id = $2 AND status = 'active'", [nowISO, id]);
 
     await logAudit(id, 'superadmin', 'Revoke Free Access', `Revoked free access for restaurant #${id}`);
