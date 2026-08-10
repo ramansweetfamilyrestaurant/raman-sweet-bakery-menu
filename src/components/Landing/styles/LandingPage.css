@@ -924,22 +924,6 @@
   border: 1px solid rgba(212, 175, 55, 0.4);
 }
 
-/* Mobile Sticky Bottom CTA Bar */
-.km-mobile-sticky-bar {
-  display: none;
-  position: fixed;
-  bottom: 0;
-  left: 0;
-  right: 0;
-  z-index: 99;
-  background: #0A2315;
-  padding: 10px 16px;
-  border-top: 1px solid rgba(212, 175, 55, 0.4);
-  box-shadow: 0 -4px 20px rgba(0, 0, 0, 0.4);
-  backdrop-filter: blur(12px);
-  -webkit-backdrop-filter: blur(12px);
-}
-
 /* Responsive Media Queries */
 @media (max-width: 1024px) {
   .km-hero-grid,
@@ -964,20 +948,35 @@
 }
 
 @media (max-width: 768px) {
-  .km-landing-wrapper {
-    padding-bottom: 68px;
-  }
-
   .km-container {
     padding: 0 16px;
   }
 
+  /* Compact Top Announcement Banner on Mobile (Max 2 lines, ~48px height) */
+  .km-announcement-bar {
+    padding: 6px 12px;
+    font-size: 0.76rem;
+    line-height: 1.35;
+    max-height: 52px;
+  }
+
+  .km-announcement-content {
+    gap: 4px 8px;
+    justify-content: center;
+  }
+
+  .km-announcement-link {
+    font-size: 0.76rem;
+  }
+
+  /* Compact Mobile Header (58px height) */
   .km-navbar-container {
-    height: 60px;
+    height: 58px;
   }
 
   .km-nav-links,
-  .km-nav-actions .km-btn-secondary {
+  .km-nav-actions .km-btn-secondary,
+  .km-nav-actions .km-btn-primary {
     display: none;
   }
   
@@ -987,38 +986,65 @@
     justify-content: center;
     width: 44px;
     height: 44px;
+    padding: 0;
+    margin-left: auto;
   }
 
   .km-mobile-menu .km-nav-link {
     min-height: 44px;
     display: flex;
     align-items: center;
+    font-size: 0.95rem;
   }
-  
+
+  .km-mobile-menu .km-btn-primary,
+  .km-mobile-menu .km-btn-secondary {
+    display: flex;
+    width: 100%;
+    min-height: 48px;
+    justify-content: center;
+  }
+
+  /* Higher Starting Hero Section */
   .km-hero-section {
-    padding: 36px 0 28px;
+    padding: 24px 0 20px;
   }
 
   .km-title-lg {
-    font-size: clamp(1.75rem, 6.5vw, 2.25rem);
-    line-height: 1.2;
+    font-size: clamp(1.85rem, 7vw, 2.15rem);
+    line-height: 1.12;
+    margin-bottom: 12px;
   }
 
   .km-subtitle {
-    font-size: 0.95rem;
-    margin-bottom: 24px;
+    font-size: 0.92rem;
+    line-height: 1.5;
+    max-width: 340px;
+    margin: 0 auto 20px auto;
   }
 
   .km-hero-ctas {
     flex-direction: column;
     width: 100%;
     gap: 10px;
+    margin-bottom: 18px;
   }
   
   .km-hero-ctas button,
   .km-hero-ctas a {
     width: 100%;
     min-height: 48px;
+    height: 50px;
+    font-size: 0.95rem;
+  }
+
+  .km-hero-proof-list {
+    display: flex;
+    justify-content: center;
+    gap: 12px 18px;
+    flex-wrap: wrap;
+    font-size: 0.78rem;
+    margin-bottom: 24px;
   }
 
   .km-hero-preview {
@@ -1083,10 +1109,6 @@
     text-align: center;
     gap: 12px;
   }
-
-  .km-mobile-sticky-bar {
-    display: block;
-  }
 }
 
 /* Mobile Small Devices Priority (360px - 430px) */
@@ -1096,19 +1118,20 @@
   }
 
   .km-title-lg {
-    font-size: 1.7rem;
+    font-size: 1.8rem;
   }
 
   .km-badge {
     font-size: 0.72rem;
     padding: 5px 12px;
+    margin-bottom: 14px;
   }
 
   .km-btn-primary,
   .km-btn-secondary {
     font-size: 0.9rem;
-    padding: 12px 20px;
-    min-height: 46px;
+    padding: 12px 18px;
+    min-height: 48px;
   }
 
   .km-price-card {

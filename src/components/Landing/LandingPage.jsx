@@ -106,17 +106,6 @@ export default function LandingPage({
         onStartTrial={() => handleStartTrial('')} 
       />
 
-      {/* Mobile-Only Sticky Floating Bottom CTA Bar */}
-      <div className="km-mobile-sticky-bar">
-        <button 
-          className="km-btn-primary km-btn-gold" 
-          onClick={() => handleStartTrial('')}
-          style={{ width: '100%', height: '48px', fontSize: '0.9rem', fontWeight: 900 }}
-        >
-          🚀 Start {trialDays}-Day Free Trial →
-        </button>
-      </div>
-
       {/* Owner Login & Password Reset Dialog Modal */}
       <OwnerLoginModal
         show={showLoginModal}

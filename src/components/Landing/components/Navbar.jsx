@@ -59,6 +59,7 @@ export default function Navbar({ onOpenLogin, onStartTrial }) {
 
       {/* Mobile Drawer */}
       <div className={`km-mobile-menu ${mobileMenuOpen ? 'open' : ''}`}>
+        <span className="km-nav-link" onClick={() => { setMobileMenuOpen(false); window.scrollTo({ top: 0, behavior: 'smooth' }); }}>Home</span>
         <span className="km-nav-link" onClick={() => scrollToSection('features')}>Features</span>
         <span className="km-nav-link" onClick={() => scrollToSection('how-it-works')}>How It Works</span>
         <span className="km-nav-link" onClick={() => scrollToSection('pricing')}>Pricing</span>
