@@ -163,28 +163,18 @@ export default function AdminHeader({
               position: 'absolute',
               top: '50px',
               right: 0,
-              width: '210px',
+              width: '200px',
+              maxWidth: 'calc(100vw - 24px)',
               background: '#FFFFFF',
               border: '1px solid var(--adm-border)',
               borderRadius: '14px',
-              boxShadow: 'var(--adm-shadow-modal)',
-              zIndex: 1000,
+              boxShadow: '0 10px 30px rgba(0,0,0,0.2)',
+              zIndex: 2000,
               padding: '6px',
               color: 'var(--adm-text)'
             }}
             onClick={() => setShowMoreMenu(false)}
           >
-            {restaurantInfo?.slug && (
-              <a
-                href={`/r/${restaurantInfo.slug}`}
-                target="_blank"
-                rel="noopener noreferrer"
-                style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '10px 12px', fontSize: '0.84rem', fontWeight: 700, color: 'var(--adm-text)', textDecoration: 'none', borderRadius: '8px' }}
-              >
-                <ExternalLink size={16} color="var(--adm-primary)" /> Open Live QR Menu
-              </a>
-            )}
-
             <button
               onClick={onOpenHelp}
               style={{ width: '100%', display: 'flex', alignItems: 'center', gap: '8px', padding: '10px 12px', fontSize: '0.84rem', fontWeight: 700, color: 'var(--adm-text)', background: 'none', border: 'none', cursor: 'pointer', textAlign: 'left', borderRadius: '8px' }}
