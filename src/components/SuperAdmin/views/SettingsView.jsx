@@ -129,10 +129,10 @@ export default function SettingsView({
           </div>
 
           <div>
-            <label style={labelStyle}>PLATFORM LOGO IMAGE URL:</label>
+            <label style={labelStyle}>PLATFORM LOGO IMAGE URL / PATH:</label>
             <input
-              type="url"
-              placeholder="e.g. https://your-domain.com/logo.png"
+              type="text"
+              placeholder="e.g. https://your-domain.com/logo.png or uploaded path"
               value={keysForm.platform_logo_url || ''}
               onChange={(e) => setKeysForm({ ...keysForm, platform_logo_url: e.target.value })}
               style={inputStyle}
