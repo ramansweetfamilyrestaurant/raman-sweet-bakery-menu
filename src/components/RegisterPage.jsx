@@ -250,12 +250,41 @@ export default function RegisterPage({ onRegisterSuccess }) {
       color: '#FFFFFF',
       fontFamily: "'Plus Jakarta Sans', 'Inter', system-ui, sans-serif",
       display: 'flex',
+      flexDirection: 'column',
       alignItems: 'center',
-      justifyContent: 'center',
-      padding: '24px 16px',
+      padding: '16px 16px 32px 16px',
       position: 'relative',
-      overflow: 'hidden'
+      overflowX: 'hidden'
     }}>
+      {/* Top Header Bar */}
+      <header style={{
+        width: '100%', maxWidth: '960px', display: 'flex', justifyContent: 'space-between',
+        alignItems: 'center', marginBottom: '24px', zIndex: 10
+      }}>
+        <div 
+          onClick={() => { window.location.href = '/'; }}
+          style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer' }}
+        >
+          <span style={{ fontSize: '1.4rem' }}>🍱</span>
+          <span style={{ fontSize: '1.2rem', fontWeight: 900, color: '#FFF', letterSpacing: '-0.3px' }}>
+            TouchQR <span style={{ color: '#D4AF37', fontSize: '0.75rem', fontWeight: 800 }}>SaaS</span>
+          </span>
+        </div>
+
+        <div style={{ display: 'flex', gap: '10px' }}>
+          <button
+            onClick={() => { window.location.href = '/'; }}
+            style={{
+              background: 'rgba(255,255,255,0.08)', border: '1px solid rgba(255,255,255,0.15)',
+              borderRadius: '10px', padding: '8px 14px', color: '#FFF', fontSize: '0.8rem',
+              fontWeight: 800, cursor: 'pointer'
+            }}
+          >
+            🏠 Home
+          </button>
+        </div>
+      </header>
+
       {/* Background Ambient Glows */}
       <div style={{
         position: 'absolute', top: '-10%', right: '-10%',
@@ -359,7 +388,7 @@ export default function RegisterPage({ onRegisterSuccess }) {
                 />
               </div>
               <div style={{ fontSize: '0.7rem', color: '#9CA3AF', marginTop: '4px' }}>
-                Menu URL: <span style={{ color: '#34D399', fontWeight: 700 }}>khana-master.onrender.com/{liveSlug}</span>
+                Live Menu URL: <span style={{ color: '#34D399', fontWeight: 700 }}>touchqr.com/{liveSlug}</span>
               </div>
             </div>
 
