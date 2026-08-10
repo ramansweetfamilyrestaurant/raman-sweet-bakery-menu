@@ -1,5 +1,6 @@
 import React from 'react';
-import { Sparkles, Flame, ChevronRight } from 'lucide-react';
+import { Sparkles } from 'lucide-react';
+import { resolveImageUrl } from '../utils/imageHelper';
 
 export default function BestsellersCarousel({ dishes, onSelectDish }) {
   const bestsellers = dishes.filter(d => d.badge && (d.badge.includes('Bestseller') || d.badge.includes('Must Try') || d.badge.includes('Royal'))).slice(0, 5);
@@ -21,21 +22,25 @@ export default function BestsellersCarousel({ dishes, onSelectDish }) {
       }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
           <div style={{
-            background: 'linear-gradient(135deg, #FF6B00 0%, #FF9E00 100%)',
-            padding: '6px',
+            width: '28px',
+            height: '28px',
             borderRadius: '50%',
-            color: '#FFFFFF',
-            boxShadow: '0 4px 12px rgba(255, 107, 0, 0.3)'
+            background: 'linear-gradient(135deg, var(--gold-bright) 0%, #D4AF37 100%)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            boxShadow: '0 2px 8px rgba(212, 175, 55, 0.4)'
           }}>
-            <Flame size={16} />
+            <Sparkles size={16} color="#0A2315" />
           </div>
           <h2 style={{
             fontFamily: 'var(--font-heading)',
-            fontSize: '1.25rem',
+            fontSize: '1.15rem',
             fontWeight: 800,
-            color: 'var(--primary-emerald)'
+            color: 'var(--primary-emerald)',
+            margin: 0
           }}>
-            Chef's Recommended Bestsellers
+            Bestsellers
           </h2>
         </div>
 
@@ -53,123 +58,115 @@ export default function BestsellersCarousel({ dishes, onSelectDish }) {
         scrollbarWidth: 'none',
         msOverflowStyle: 'none'
       }}>
-        {bestsellers.map((dish) => (
-          <div
-            key={dish.id}
-            onClick={() => onSelectDish(dish)}
-            style={{
-              flexShrink: 0,
-              width: '240px',
-              background: '#FFFFFF',
-              borderRadius: 'var(--radius-md)',
-              overflow: 'hidden',
-              border: '1.5px solid var(--gold-border)',
-              boxShadow: 'var(--shadow-md)',
-              cursor: 'pointer',
-              transition: 'all 0.25s ease',
-              position: 'relative'
-            }}
-            onMouseOver={(e) => {
-              e.currentTarget.style.transform = 'translateY(-4px)';
-              e.currentTarget.style.borderColor = 'var(--gold-bright)';
-              e.currentTarget.style.boxShadow = 'var(--shadow-lg)';
-            }}
-            onMouseOut={(e) => {
-              e.currentTarget.style.transform = 'translateY(0)';
-              e.currentTarget.style.borderColor = 'var(--gold-border)';
-              e.currentTarget.style.boxShadow = 'var(--shadow-md)';
-            }}
-          >
-            {/* Image */}
-            <div style={{
-              width: '100%',
-              height: '140px',
-              position: 'relative',
-              background: 'var(--gold-soft)',
-              overflow: 'hidden'
-            }}>
-              {dish.image && dish.image !== '/uploads/logo.jpg' ? (
-                <img
-                  src={dish.image}
-                  alt={dish.name}
-                  style={{ width: '100%', height: '100%', objectFit: 'cover' }}
-                  onError={(e) => { e.target.style.display = 'none'; }}
-                />
-              ) : (
-                <div style={{
-                  width: '100%',
-                  height: '100%',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  background: 'var(--header-gradient)',
-                  color: 'var(--gold-bright)',
-                  fontSize: '2rem'
-                }}>
-                  🌟
-                </div>
-              )}
-
-              <div style={{
-                position: 'absolute',
-                top: '10px',
-                left: '10px',
-                background: 'linear-gradient(135deg, #0A2315 0%, #143A24 100%)',
-                color: 'var(--gold-bright)',
-                border: '1px solid var(--gold-bright)',
-                padding: '3px 10px',
-                borderRadius: 'var(--radius-pill)',
-                fontSize: '0.68rem',
-                fontWeight: 800
-              }}>
-                {dish.badge || '🔥 Bestseller'}
-              </div>
-            </div>
-
-            {/* Content */}
-            <div style={{ padding: '14px' }}>
-              <h3 style={{
-                fontFamily: 'var(--font-heading)',
-                fontSize: '1rem',
-                fontWeight: 700,
-                color: 'var(--primary-emerald)',
-                marginBottom: '4px',
-                whiteSpace: 'nowrap',
+        {bestsellers.map((dish) => {
+          const imageSrc = resolveImageUrl(dish.image);
+          return (
+            <div
+              key={dish.id}
+              onClick={() => onSelectDish(dish)}
+              style={{
+                flexShrink: 0,
+                width: '240px',
+                background: '#FFFFFF',
+                borderRadius: 'var(--radius-md)',
                 overflow: 'hidden',
-                textOverflow: 'ellipsis'
-              }}>
-                {dish.name}
-              </h3>
-
+                border: '1.5px solid var(--gold-border)',
+                boxShadow: 'var(--shadow-md)',
+                cursor: 'pointer',
+                transition: 'all 0.25s ease',
+                position: 'relative'
+              }}
+              onMouseOver={(e) => {
+                e.currentTarget.style.transform = 'translateY(-4px)';
+                e.currentTarget.style.borderColor = 'var(--gold-bright)';
+                e.currentTarget.style.boxShadow = 'var(--shadow-lg)';
+              }}
+              onMouseOut={(e) => {
+                e.currentTarget.style.transform = 'translateY(0)';
+                e.currentTarget.style.borderColor = 'var(--gold-border)';
+                e.currentTarget.style.boxShadow = 'var(--shadow-md)';
+              }}
+            >
+              {/* Image */}
               <div style={{
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'space-between',
-                marginTop: '8px'
+                width: '100%',
+                height: '140px',
+                position: 'relative',
+                background: 'var(--gold-soft)',
+                overflow: 'hidden'
               }}>
-                <span style={{
-                  fontFamily: 'var(--font-heading)',
-                  fontSize: '1.1rem',
-                  fontWeight: 800,
-                  color: 'var(--primary-emerald)'
-                }}>
-                  {Number(dish.price_half || dish.price).toLocaleString('en-IN')}
-                </span>
+                {imageSrc ? (
+                  <img
+                    src={imageSrc}
+                    alt={dish.name}
+                    style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                    onError={(e) => { e.target.style.display = 'none'; }}
+                  />
+                ) : (
+                  <div style={{
+                    width: '100%',
+                    height: '100%',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    background: 'var(--header-gradient)',
+                    color: 'var(--gold-bright)',
+                    fontSize: '2rem'
+                  }}>
+                    🌟
+                  </div>
+                )}
 
-                <span style={{
-                  fontSize: '0.72rem',
-                  fontWeight: 700,
+                <div style={{
+                  position: 'absolute',
+                  top: '10px',
+                  left: '10px',
+                  background: 'linear-gradient(135deg, #0A2315 0%, #143A24 100%)',
                   color: 'var(--gold-bright)',
+                  border: '1px solid var(--gold-bright)',
+                  padding: '3px 10px',
+                  borderRadius: 'var(--radius-pill)',
+                  fontSize: '0.68rem',
+                  fontWeight: 800
+                }}>
+                  {dish.badge || '🔥 Bestseller'}
+                </div>
+              </div>
+
+              {/* Content */}
+              <div style={{ padding: '14px' }}>
+                <h3 style={{
+                  fontFamily: 'var(--font-heading)',
+                  fontSize: '1rem',
+                  fontWeight: 700,
+                  color: 'var(--primary-emerald)',
+                  marginBottom: '4px',
+                  whiteSpace: 'nowrap',
+                  overflow: 'hidden',
+                  textOverflow: 'ellipsis'
+                }}>
+                  {dish.name}
+                </h3>
+
+                <div style={{
                   display: 'flex',
                   alignItems: 'center',
-                  gap: '2px'
+                  justifyContent: 'space-between',
+                  marginTop: '8px'
                 }}>
-                  View <ChevronRight size={12} />
-                </span>
+                  <span style={{
+                    fontFamily: 'var(--font-heading)',
+                    fontSize: '1.1rem',
+                    fontWeight: 800,
+                    color: 'var(--primary-emerald)'
+                  }}>
+                    ₹{Math.round(dish.price)}
+                  </span>
+                </div>
               </div>
             </div>
-          </div>
-        ))}
+          );
+        })}
       </div>
     </div>
   );

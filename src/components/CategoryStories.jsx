@@ -1,4 +1,5 @@
 import React from 'react';
+import { resolveImageUrl } from '../utils/imageHelper';
 
 export default function CategoryStories({ categories, selectedCategory, onSelectCategory, lang }) {
   return (
@@ -72,6 +73,8 @@ export default function CategoryStories({ categories, selectedCategory, onSelect
           const isSelected = String(selectedCategory) === String(cat.id);
           const displayName = (lang === 'hi' && cat.name_hi) ? cat.name_hi : cat.name;
 
+          const catImage = resolveImageUrl(cat.image);
+
           return (
             <div 
               key={cat.id}
@@ -103,9 +106,9 @@ export default function CategoryStories({ categories, selectedCategory, onSelect
                   overflow: 'hidden',
                   background: 'var(--bg-secondary)'
                 }}>
-                  {cat.image && cat.image !== '/uploads/logo.jpg' ? (
+                  {catImage ? (
                     <img 
-                      src={cat.image} 
+                      src={catImage} 
                       alt={displayName}
                       style={{ width: '100%', height: '100%', objectFit: 'cover' }}
                       onError={(e) => { e.target.style.display = 'none'; }}

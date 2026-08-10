@@ -1,9 +1,11 @@
 import React from 'react';
 import { ChevronRight } from 'lucide-react';
+import { resolveImageUrl } from '../utils/imageHelper';
 
 export default function DishCard({ dish, onClick, onAddToCart, currencySymbol = '₹' }) {
   const isAvailable = dish.available !== false;
   const hasHalfPrice = dish.price_half !== null && dish.price_half !== undefined && Number(dish.price_half) > 0;
+  const imageSrc = resolveImageUrl(dish.image);
 
   return (
     <article 
@@ -41,9 +43,9 @@ export default function DishCard({ dish, onClick, onAddToCart, currencySymbol = 
         backgroundColor: 'var(--bg-secondary)',
         overflow: 'hidden'
       }}>
-        {dish.image && dish.image !== '/uploads/logo.jpg' ? (
+        {imageSrc ? (
           <img 
-            src={dish.image} 
+            src={imageSrc} 
             alt={dish.name}
             loading="lazy"
             style={{

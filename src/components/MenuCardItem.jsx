@@ -1,9 +1,11 @@
 import React, { useState } from 'react';
+import { resolveImageUrl } from '../utils/imageHelper';
 
 export default function MenuCardItem({ dish, lang, onClick, onAddToCart, currencySymbol }) {
   const symbol = currencySymbol !== undefined ? currencySymbol : '₹';
   const isAvailable = dish.available !== false;
   const hasHalfPrice = dish.price_half !== null && dish.price_half !== undefined && Number(dish.price_half) > 0;
+  const imageSrc = resolveImageUrl(dish.image);
 
   const [portionMode, setPortionMode] = useState(hasHalfPrice ? 'half' : 'full');
 
@@ -270,7 +272,7 @@ export default function MenuCardItem({ dish, lang, onClick, onAddToCart, currenc
 
         {/* Dish Thumbnail & + Add WhatsApp Button */}
         <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '4px' }}>
-          {dish.image && dish.image !== '/uploads/logo.jpg' && (
+          {imageSrc && (
             <div 
               onClick={() => onClick(dish)}
               style={{
@@ -288,7 +290,7 @@ export default function MenuCardItem({ dish, lang, onClick, onAddToCart, currenc
               }}
             >
               <img
-                src={dish.image}
+                src={imageSrc}
                 alt={displayName}
                 style={{ width: '100%', height: '100%', objectFit: 'cover' }}
                 onError={(e) => { e.target.style.display = 'none'; }}

@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { Plus, Search, MoreVertical, Edit, Trash2, Star, Sparkles, DollarSign, Filter, X } from 'lucide-react';
 import AdminDrawer from '../components/AdminDrawer';
+import { resolveImageUrl } from '../../../utils/imageHelper';
 
 export default function MenuView({
   dishes = [],
@@ -270,7 +271,7 @@ export default function MenuView({
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(320px, 1fr))', gap: '8px' }}>
               {filteredDishes.map(dish => {
                 const catName = dish.category_name || safeCategories.find(c => String(c.id) === String(dish.category_id))?.name || 'General';
-                const imageSrc = dish.image || dish.image_url;
+                const imageSrc = resolveImageUrl(dish.image || dish.image_url);
 
                 return (
                   <div
@@ -302,7 +303,7 @@ export default function MenuView({
                       justifyContent: 'center',
                       border: '1px solid #E2E8F0'
                     }}>
-                      {imageSrc && imageSrc !== '/uploads/logo.jpg' ? (
+                      {imageSrc ? (
                         <img
                           src={imageSrc}
                           alt={dish.name}
@@ -448,7 +449,7 @@ export default function MenuView({
       {activeSubTab === 'categories' && (
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(290px, 1fr))', gap: '10px' }}>
           {safeCategories.map(cat => {
-            const catImage = cat.image || cat.image_url;
+            const catImage = resolveImageUrl(cat.image || cat.image_url);
             const dishCount = safeDishes.filter(d => String(d.category_id) === String(cat.id)).length;
             return (
               <div key={cat.id} style={{ background: '#FFFFFF', border: '1px solid #E5E7EB', borderRadius: '14px', padding: '12px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '12px' }}>
@@ -466,7 +467,7 @@ export default function MenuView({
                     justifyContent: 'center',
                     border: '1px solid #E2E8F0'
                   }}>
-                    {catImage && catImage !== '/uploads/logo.jpg' ? (
+                    {catImage ? (
                       <img
                         src={catImage}
                         alt={cat.name}
@@ -520,7 +521,7 @@ export default function MenuView({
       {activeSubTab === 'combos' && (
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))', gap: '10px' }}>
           {safeCombos.map(combo => {
-            const comboImage = combo.image || combo.image_url;
+            const comboImage = resolveImageUrl(combo.image || combo.image_url);
             return (
               <div key={combo.id} style={{ background: '#FFFFFF', border: '1px solid #E5E7EB', borderRadius: '14px', padding: '12px', display: 'flex', flexDirection: 'column', gap: '10px' }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
@@ -537,7 +538,7 @@ export default function MenuView({
                     justifyContent: 'center',
                     border: '1px solid #E2E8F0'
                   }}>
-                    {comboImage && comboImage !== '/uploads/logo.jpg' ? (
+                    {comboImage ? (
                       <img
                         src={comboImage}
                         alt={combo.title || combo.name}
