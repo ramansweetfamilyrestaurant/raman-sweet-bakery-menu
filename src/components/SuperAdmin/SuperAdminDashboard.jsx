@@ -23,7 +23,8 @@ import {
   fetchSuperAdminRestaurants, createTenantRestaurant, updateTenantRestaurant, toggleTenantRestaurantActive,
   deleteTenantRestaurant, impersonateTenantRestaurant, grantFreeAccess, revokeFreeAccess, fetchPendingRegistrations,
   fetchSaaSPlans, createSaaSPlan, updateSaaSPlan, deleteSaaSPlan, fetchAuditLogs,
-  createAnnouncement, fetchSuperAnnouncements, deleteAnnouncement, clearAllAnnouncements
+  createAnnouncement, fetchSuperAnnouncements, deleteAnnouncement, clearAllAnnouncements,
+  superAdminOptimizeDatabase
 } from '../../api/client';
 
 export default function SuperAdminDashboard({ token, username, onLogout, onImpersonate }) {
@@ -249,6 +250,15 @@ export default function SuperAdminDashboard({ token, username, onLogout, onImper
     }
   };
 
+  const handleOptimizeDatabase = async (daysOld = 90) => {
+    try {
+      const res = await superAdminOptimizeDatabase(daysOld, token);
+      alert(res.message || '✓ Global Database Vacuum & Optimization Complete!');
+    } catch (err) {
+      alert(err.message || 'Failed to optimize database');
+    }
+  };
+
   return (
     <div className="sa-dashboard-container">
       {/* Desktop Sidebar — 4 Clean Tabs */}
@@ -321,6 +331,7 @@ export default function SuperAdminDashboard({ token, username, onLogout, onImper
               auditLogs={auditLogs}
               loading={loading}
               onRefresh={loadDashboardData}
+              onOptimizeDatabase={handleOptimizeDatabase}
             />
           )}
 

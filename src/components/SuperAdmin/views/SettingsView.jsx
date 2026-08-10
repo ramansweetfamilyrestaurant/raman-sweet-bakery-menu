@@ -243,6 +243,23 @@ export default function SettingsView({
           </div>
         )}
       </AccordionBody>
+
+      {/* 6. Database Maintenance */}
+      <AccordionHeader sectionKey="database" emoji="🧹" title="Database Maintenance & Vacuum" />
+      <AccordionBody sectionKey="database">
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', maxWidth: '500px' }}>
+          <p style={{ fontSize: '0.82rem', color: 'var(--sa-text-muted)', margin: 0, lineHeight: 1.5 }}>
+            Clean up old expired logs, vacuum database indexes, and optimize query speeds across all tenant restaurants.
+          </p>
+          <button
+            onClick={() => onOptimizeDatabase && onOptimizeDatabase(90)}
+            className="sa-btn sa-btn-accent sa-btn-sm"
+            style={{ alignSelf: 'flex-start' }}
+          >
+            🧹 Run Global DB Vacuum & Optimization Now
+          </button>
+        </div>
+      </AccordionBody>
     </div>
   );
 }
