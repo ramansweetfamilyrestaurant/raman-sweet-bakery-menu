@@ -1,272 +1,248 @@
 import React, { useState } from 'react';
-import { Settings, CreditCard, Clock, Phone, Lock, CheckCircle2, ShieldCheck } from 'lucide-react';
+import { Settings, CreditCard, Clock, Send, Trash2, RefreshCw, Plus, Edit3, Lock } from 'lucide-react';
 
-export default function SettingsView({ paymentKeys, onSavePaymentKeys, securityForm, setSecurityForm, onSaveSecurity, savingKeys, savingSecurity, keysMsg, securityMsg, securityError }) {
-  const [activeTab, setActiveTab] = useState('payments');
+export default function SettingsView({
+  paymentKeys, onSavePaymentKeys, securityForm, setSecurityForm, onSaveSecurity, savingKeys, savingSecurity, keysMsg, securityMsg, securityError,
+  plansList = [], restaurants = [], onCreatePlan, onUpdatePlan, onDeletePlan,
+  announcementsList = [], onSendAnnouncement, onDeleteAnnouncement, onClearAll,
+  auditLogs = [], loading, onRefresh
+}) {
+  const [openSection, setOpenSection] = useState(null);
   const [keysForm, setKeysForm] = useState(paymentKeys);
 
-  const handleSaveKeysSubmit = (e) => {
-    e.preventDefault();
-    onSavePaymentKeys(keysForm);
+  // Plans editing state
+  const [editingPlan, setEditingPlan] = useState(null);
+  const [planForm, setPlanForm] = useState({ key: '', name: '', price: 999 });
+  const [showPlanForm, setShowPlanForm] = useState(false);
+
+  // Announcement state
+  const [annMessage, setAnnMessage] = useState('');
+  const [annType, setAnnType] = useState('info');
+
+  const toggleSection = (key) => setOpenSection(openSection === key ? null : key);
+
+  const AccordionHeader = ({ sectionKey, emoji, title, count }) => (
+    <div
+      onClick={() => toggleSection(sectionKey)}
+      style={{
+        display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+        padding: '16px 20px', cursor: 'pointer',
+        background: openSection === sectionKey ? 'var(--sa-surface-subtle)' : 'var(--sa-surface)',
+        border: '1px solid var(--sa-border)', borderRadius: 'var(--sa-radius-md)',
+        marginBottom: openSection === sectionKey ? '0' : '8px',
+        borderBottomLeftRadius: openSection === sectionKey ? 0 : 'var(--sa-radius-md)',
+        borderBottomRightRadius: openSection === sectionKey ? 0 : 'var(--sa-radius-md)',
+      }}
+    >
+      <span style={{ fontSize: '1rem', fontWeight: 900, color: 'var(--sa-text-main)' }}>
+        {emoji} {title} {count !== undefined && <span style={{ fontWeight: 600, color: 'var(--sa-text-muted)', fontSize: '0.85rem' }}>({count})</span>}
+      </span>
+      <span style={{ color: 'var(--sa-text-muted)', fontSize: '1.1rem' }}>{openSection === sectionKey ? '▲' : '▼'}</span>
+    </div>
+  );
+
+  const AccordionBody = ({ sectionKey, children }) => {
+    if (openSection !== sectionKey) return null;
+    return (
+      <div style={{
+        padding: '20px', border: '1px solid var(--sa-border)', borderTop: 'none',
+        borderBottomLeftRadius: 'var(--sa-radius-md)', borderBottomRightRadius: 'var(--sa-radius-md)',
+        marginBottom: '8px', background: 'var(--sa-surface)'
+      }}>
+        {children}
+      </div>
+    );
   };
 
+  const inputStyle = { width: '100%', padding: '10px 12px', borderRadius: 'var(--sa-radius-md)', border: '1.5px solid var(--sa-border)', fontSize: '0.88rem', boxSizing: 'border-box' };
+  const labelStyle = { fontSize: '0.75rem', fontWeight: 800, color: 'var(--sa-text-muted)', display: 'block', marginBottom: '6px' };
+
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
-      <div className="sa-section-header">
-        <div>
-          <h2 className="sa-section-title">
-            <Settings size={22} color="var(--sa-primary)" /> System Configuration & Security Controls
-          </h2>
-          <span style={{ fontSize: '0.78rem', color: 'var(--sa-text-muted)', fontWeight: 600 }}>
-            Configure Cashfree payment API credentials, default trial terms, support channels, and master security.
-          </span>
-        </div>
+    <div style={{ display: 'flex', flexDirection: 'column', gap: '0' }}>
+      <div style={{ marginBottom: '20px' }}>
+        <h2 style={{ fontSize: '1.2rem', fontWeight: 900, margin: '0 0 4px 0', color: 'var(--sa-text-main)', display: 'flex', alignItems: 'center', gap: '8px' }}>
+          <Settings size={22} color="var(--sa-primary)" /> Settings
+        </h2>
+        <span style={{ fontSize: '0.82rem', color: 'var(--sa-text-muted)' }}>
+          Manage your platform configuration in one place.
+        </span>
       </div>
 
-      {/* Tab Selector Bar */}
-      <div style={{ display: 'flex', borderBottom: '1px solid var(--sa-border)', gap: '4px' }}>
-        <button
-          onClick={() => setActiveTab('payments')}
-          style={{
-            padding: '10px 18px', fontWeight: 800, fontSize: '0.86rem', border: 'none', background: 'transparent',
-            borderBottom: activeTab === 'payments' ? '2.5px solid var(--sa-primary)' : '2.5px solid transparent',
-            color: activeTab === 'payments' ? 'var(--sa-primary)' : 'var(--sa-text-muted)', cursor: 'pointer',
-            display: 'flex', alignItems: 'center', gap: '6px'
-          }}
-        >
-          <CreditCard size={16} /> Payment Gateway
-        </button>
-        <button
-          onClick={() => setActiveTab('trial')}
-          style={{
-            padding: '10px 18px', fontWeight: 800, fontSize: '0.86rem', border: 'none', background: 'transparent',
-            borderBottom: activeTab === 'trial' ? '2.5px solid var(--sa-primary)' : '2.5px solid transparent',
-            color: activeTab === 'trial' ? 'var(--sa-primary)' : 'var(--sa-text-muted)', cursor: 'pointer',
-            display: 'flex', alignItems: 'center', gap: '6px'
-          }}
-        >
-          <Clock size={16} /> Subscription & Trial Terms
-        </button>
-        <button
-          onClick={() => setActiveTab('support')}
-          style={{
-            padding: '10px 18px', fontWeight: 800, fontSize: '0.86rem', border: 'none', background: 'transparent',
-            borderBottom: activeTab === 'support' ? '2.5px solid var(--sa-primary)' : '2.5px solid transparent',
-            color: activeTab === 'support' ? 'var(--sa-primary)' : 'var(--sa-text-muted)', cursor: 'pointer',
-            display: 'flex', alignItems: 'center', gap: '6px'
-          }}
-        >
-          <Phone size={16} /> Support Channels
-        </button>
-        <button
-          onClick={() => setActiveTab('security')}
-          style={{
-            padding: '10px 18px', fontWeight: 800, fontSize: '0.86rem', border: 'none', background: 'transparent',
-            borderBottom: activeTab === 'security' ? '2.5px solid var(--sa-primary)' : '2.5px solid transparent',
-            color: activeTab === 'security' ? 'var(--sa-primary)' : 'var(--sa-text-muted)', cursor: 'pointer',
-            display: 'flex', alignItems: 'center', gap: '6px'
-          }}
-        >
-          <Lock size={16} /> Master Credentials
-        </button>
-      </div>
+      {/* 1. Payment Gateway */}
+      <AccordionHeader sectionKey="payments" emoji="💳" title="Payment Gateway" />
+      <AccordionBody sectionKey="payments">
+        <form onSubmit={(e) => { e.preventDefault(); onSavePaymentKeys(keysForm); }} style={{ display: 'flex', flexDirection: 'column', gap: '14px', maxWidth: '500px' }}>
+          <div>
+            <label style={labelStyle}>CASHFREE APP ID:</label>
+            <input type="text" required placeholder="e.g. 1047648f574d..." value={keysForm.cashfree_app_id} onChange={(e) => setKeysForm({ ...keysForm, cashfree_app_id: e.target.value })} style={inputStyle} />
+          </div>
+          <div>
+            <label style={labelStyle}>CASHFREE SECRET KEY:</label>
+            <input type="password" required placeholder="••••••••" value={keysForm.cashfree_secret_key} onChange={(e) => setKeysForm({ ...keysForm, cashfree_secret_key: e.target.value })} style={inputStyle} />
+          </div>
+          {keysMsg && <div style={{ color: 'var(--sa-success)', fontWeight: 700, fontSize: '0.85rem' }}>{keysMsg}</div>}
+          <button type="submit" className="sa-btn sa-btn-primary" disabled={savingKeys} style={{ alignSelf: 'flex-start' }}>
+            {savingKeys ? 'Saving...' : '💾 Save Gateway Keys'}
+          </button>
+        </form>
+      </AccordionBody>
 
-      {/* Tab 1: Payment Gateway */}
-      {activeTab === 'payments' && (
-        <div className="sa-table-container" style={{ padding: '24px', maxWidth: '640px' }}>
-          <h3 style={{ fontSize: '1.05rem', fontWeight: 900, color: 'var(--sa-text-main)', margin: '0 0 16px 0' }}>
-            💳 Cashfree Payment Gateway Credentials
-          </h3>
+      {/* 2. Trial & Support */}
+      <AccordionHeader sectionKey="trial" emoji="⏰" title="Trial & Support" />
+      <AccordionBody sectionKey="trial">
+        <form onSubmit={(e) => { e.preventDefault(); onSavePaymentKeys(keysForm); }} style={{ display: 'flex', flexDirection: 'column', gap: '14px', maxWidth: '500px' }}>
+          <div>
+            <label style={labelStyle}>DEFAULT FREE TRIAL DAYS:</label>
+            <input type="number" min="1" max="90" value={keysForm.default_trial_days} onChange={(e) => setKeysForm({ ...keysForm, default_trial_days: e.target.value })} style={inputStyle} />
+          </div>
+          <div>
+            <label style={labelStyle}>SUPPORT WHATSAPP NUMBER (WITH COUNTRY CODE):</label>
+            <input type="text" placeholder="919876543210" value={keysForm.support_whatsapp} onChange={(e) => setKeysForm({ ...keysForm, support_whatsapp: e.target.value })} style={inputStyle} />
+          </div>
+          <button type="submit" className="sa-btn sa-btn-primary" disabled={savingKeys} style={{ alignSelf: 'flex-start' }}>
+            {savingKeys ? 'Saving...' : '💾 Save Settings'}
+          </button>
+        </form>
+      </AccordionBody>
 
-          <form onSubmit={handleSaveKeysSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-            <div>
-              <label style={{ fontSize: '0.75rem', fontWeight: 800, color: 'var(--sa-text-muted)', display: 'block', marginBottom: '6px' }}>
-                CASHFREE APP ID (CLIENT ID):
-              </label>
-              <input
-                type="text"
-                required
-                placeholder="e.g. 1047648f574d75432..."
-                value={keysForm.cashfree_app_id}
-                onChange={(e) => setKeysForm({ ...keysForm, cashfree_app_id: e.target.value })}
-                style={{ width: '100%', padding: '10px', borderRadius: 'var(--sa-radius-md)', border: '1.5px solid var(--sa-border)', fontSize: '0.85rem' }}
-              />
-            </div>
-
-            <div>
-              <label style={{ fontSize: '0.75rem', fontWeight: 800, color: 'var(--sa-text-muted)', display: 'block', marginBottom: '6px' }}>
-                CASHFREE SECRET KEY:
-              </label>
-              <input
-                type="password"
-                required
-                placeholder="••••••••••••••••••••••••"
-                value={keysForm.cashfree_secret_key}
-                onChange={(e) => setKeysForm({ ...keysForm, cashfree_secret_key: e.target.value })}
-                style={{ width: '100%', padding: '10px', borderRadius: 'var(--sa-radius-md)', border: '1.5px solid var(--sa-border)', fontSize: '0.85rem' }}
-              />
-              <span style={{ fontSize: '0.72rem', color: 'var(--sa-success)', fontWeight: 800, marginTop: '4px', display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
-                <ShieldCheck size={13} /> Configured ✓ API Secrets are masked for security.
-              </span>
-            </div>
-
-            {keysMsg && (
-              <div style={{ padding: '10px', background: 'var(--sa-success-bg)', color: 'var(--sa-success)', borderRadius: 'var(--sa-radius-md)', fontSize: '0.8rem', fontWeight: 800 }}>
-                {keysMsg}
-              </div>
-            )}
-
-            <button type="submit" className="sa-btn sa-btn-accent" disabled={savingKeys}>
-              {savingKeys ? 'Saving...' : 'Save Gateway Credentials'}
-            </button>
-          </form>
+      {/* 3. SaaS Plans */}
+      <AccordionHeader sectionKey="plans" emoji="📋" title="SaaS Plans" count={plansList.length} />
+      <AccordionBody sectionKey="plans">
+        <div style={{ overflowX: 'auto' }}>
+          <table className="sa-table" style={{ fontSize: '0.88rem' }}>
+            <thead>
+              <tr>
+                <th>PLAN</th>
+                <th>PRICE</th>
+                <th>CLIENTS</th>
+                <th style={{ textAlign: 'right' }}>ACTION</th>
+              </tr>
+            </thead>
+            <tbody>
+              {plansList.map(p => {
+                const clientCount = restaurants.filter(r => (r.plan_tier || 'pro').toLowerCase() === p.key.toLowerCase()).length;
+                return (
+                  <tr key={p.key}>
+                    <td><strong>{p.name}</strong> <span style={{ color: 'var(--sa-text-muted)', fontSize: '0.75rem' }}>({p.key})</span></td>
+                    <td style={{ fontWeight: 800, color: 'var(--sa-primary)' }}>₹{p.price}/mo</td>
+                    <td>{clientCount} active</td>
+                    <td style={{ textAlign: 'right' }}>
+                      <button onClick={() => { setEditingPlan(p); setPlanForm({ key: p.key, name: p.name, price: p.price }); setShowPlanForm(true); }} className="sa-btn sa-btn-secondary sa-btn-sm">
+                        <Edit3 size={13} /> Edit
+                      </button>
+                    </td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
         </div>
-      )}
 
-      {/* Tab 2: Subscription & Trial */}
-      {activeTab === 'trial' && (
-        <div className="sa-table-container" style={{ padding: '24px', maxWidth: '640px' }}>
-          <h3 style={{ fontSize: '1.05rem', fontWeight: 900, color: 'var(--sa-text-main)', margin: '0 0 16px 0' }}>
-            ⏳ Dynamic Free Trial & Grace Period Terms
-          </h3>
-
-          <form onSubmit={handleSaveKeysSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-            <div>
-              <label style={{ fontSize: '0.75rem', fontWeight: 800, color: 'var(--sa-text-muted)', display: 'block', marginBottom: '6px' }}>
-                DEFAULT FREE TRIAL DURATION (DAYS):
-              </label>
-              <input
-                type="number"
-                required
-                min="1"
-                max="90"
-                value={keysForm.default_trial_days}
-                onChange={(e) => setKeysForm({ ...keysForm, default_trial_days: e.target.value })}
-                style={{ width: '100%', padding: '10px', borderRadius: 'var(--sa-radius-md)', border: '1.5px solid var(--sa-border)', fontSize: '0.88rem', fontWeight: 800 }}
-              />
-              <span style={{ fontSize: '0.72rem', color: 'var(--sa-text-muted)', marginTop: '4px', display: 'block' }}>
-                * Database-driven. New restaurant registrations automatically receive this trial duration.
-              </span>
-            </div>
-
-            {keysMsg && (
-              <div style={{ padding: '10px', background: 'var(--sa-success-bg)', color: 'var(--sa-success)', borderRadius: 'var(--sa-radius-md)', fontSize: '0.8rem', fontWeight: 800 }}>
-                {keysMsg}
+        {showPlanForm && (
+          <div style={{ marginTop: '16px', padding: '16px', background: 'var(--sa-surface-subtle)', borderRadius: 'var(--sa-radius-md)', border: '1px solid var(--sa-border)' }}>
+            <h4 style={{ margin: '0 0 12px 0', fontSize: '0.95rem', fontWeight: 900 }}>{editingPlan ? `Edit: ${editingPlan.name}` : 'Create New Plan'}</h4>
+            <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap', alignItems: 'flex-end' }}>
+              {!editingPlan && (
+                <div>
+                  <label style={labelStyle}>KEY:</label>
+                  <input type="text" placeholder="e.g. premium" value={planForm.key} onChange={e => setPlanForm({ ...planForm, key: e.target.value.toLowerCase().replace(/[^a-z0-9_]/g, '') })} style={{ ...inputStyle, width: '140px' }} />
+                </div>
+              )}
+              <div>
+                <label style={labelStyle}>NAME:</label>
+                <input type="text" placeholder="Plan Name" value={planForm.name} onChange={e => setPlanForm({ ...planForm, name: e.target.value })} style={{ ...inputStyle, width: '180px' }} />
               </div>
-            )}
+              <div>
+                <label style={labelStyle}>PRICE (₹):</label>
+                <input type="number" min="0" value={planForm.price} onChange={e => setPlanForm({ ...planForm, price: parseFloat(e.target.value) || 0 })} style={{ ...inputStyle, width: '120px' }} />
+              </div>
+              <button onClick={() => { editingPlan ? onUpdatePlan(editingPlan.key, planForm) : onCreatePlan(planForm); setShowPlanForm(false); setEditingPlan(null); }} className="sa-btn sa-btn-primary sa-btn-sm">
+                {editingPlan ? 'Save' : 'Create'}
+              </button>
+              <button onClick={() => { setShowPlanForm(false); setEditingPlan(null); }} className="sa-btn sa-btn-secondary sa-btn-sm">Cancel</button>
+            </div>
+          </div>
+        )}
 
-            <button type="submit" className="sa-btn sa-btn-accent" disabled={savingKeys}>
-              {savingKeys ? 'Saving...' : 'Save Trial Terms'}
+        {!showPlanForm && (
+          <button onClick={() => { setEditingPlan(null); setPlanForm({ key: '', name: '', price: 999 }); setShowPlanForm(true); }} className="sa-btn sa-btn-accent sa-btn-sm" style={{ marginTop: '12px' }}>
+            <Plus size={14} /> Add New Plan
+          </button>
+        )}
+      </AccordionBody>
+
+      {/* 4. Announcements */}
+      <AccordionHeader sectionKey="announcements" emoji="📢" title="Announcements" count={announcementsList.length} />
+      <AccordionBody sectionKey="announcements">
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', maxWidth: '600px' }}>
+          <textarea
+            rows={2}
+            placeholder="Type announcement message..."
+            value={annMessage}
+            onChange={e => setAnnMessage(e.target.value)}
+            style={{ ...inputStyle, resize: 'vertical' }}
+          />
+          <div style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
+            <select value={annType} onChange={e => setAnnType(e.target.value)} style={{ ...inputStyle, width: '180px' }}>
+              <option value="info">ℹ️ Info</option>
+              <option value="warning">⚠️ Warning</option>
+              <option value="success">✅ Success</option>
+              <option value="error">🚨 Critical</option>
+            </select>
+            <button onClick={async () => { if (annMessage.trim()) { await onSendAnnouncement({ message: annMessage, type: annType, audience: 'all' }); setAnnMessage(''); } }} className="sa-btn sa-btn-primary sa-btn-sm">
+              <Send size={14} /> Send
             </button>
-          </form>
+          </div>
         </div>
-      )}
 
-      {/* Tab 3: Support Channels */}
-      {activeTab === 'support' && (
-        <div className="sa-table-container" style={{ padding: '24px', maxWidth: '640px' }}>
-          <h3 style={{ fontSize: '1.05rem', fontWeight: 900, color: 'var(--sa-text-main)', margin: '0 0 16px 0' }}>
-            💬 Super Admin Support Channels
-          </h3>
-
-          <form onSubmit={handleSaveKeysSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-            <div>
-              <label style={{ fontSize: '0.75rem', fontWeight: 800, color: 'var(--sa-text-muted)', display: 'block', marginBottom: '6px' }}>
-                SUPER ADMIN WHATSAPP NUMBER (WITH COUNTRY CODE):
-              </label>
-              <input
-                type="text"
-                required
-                placeholder="e.g. 919876543210"
-                value={keysForm.support_whatsapp}
-                onChange={(e) => setKeysForm({ ...keysForm, support_whatsapp: e.target.value })}
-                style={{ width: '100%', padding: '10px', borderRadius: 'var(--sa-radius-md)', border: '1.5px solid var(--sa-border)', fontSize: '0.85rem' }}
-              />
+        {announcementsList.length > 0 && (
+          <div style={{ marginTop: '16px', display: 'flex', flexDirection: 'column', gap: '8px' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <span style={{ fontWeight: 800, fontSize: '0.85rem' }}>Active ({announcementsList.length})</span>
+              <button onClick={onClearAll} className="sa-btn sa-btn-danger sa-btn-sm">Clear All</button>
             </div>
-
-            <div style={{ background: 'var(--sa-surface-subtle)', padding: '12px', borderRadius: 'var(--sa-radius-md)', fontSize: '0.8rem' }}>
-              <span style={{ fontSize: '0.72rem', color: 'var(--sa-text-muted)', fontWeight: 800, display: 'block' }}>LIVE WHATSAPP ACTION PREVIEW:</span>
-              <a
-                href={`https://wa.me/${(keysForm.support_whatsapp || '').replace(/[^0-9]/g, '')}`}
-                target="_blank"
-                rel="noopener noreferrer"
-                style={{ color: 'var(--sa-success)', fontWeight: 800, textDecoration: 'none' }}
-              >
-                https://wa.me/{(keysForm.support_whatsapp || '').replace(/[^0-9]/g, '')}
-              </a>
-            </div>
-
-            {keysMsg && (
-              <div style={{ padding: '10px', background: 'var(--sa-success-bg)', color: 'var(--sa-success)', borderRadius: 'var(--sa-radius-md)', fontSize: '0.8rem', fontWeight: 800 }}>
-                {keysMsg}
+            {announcementsList.map(a => (
+              <div key={a.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '10px 14px', background: 'var(--sa-surface-subtle)', borderRadius: 'var(--sa-radius-md)', border: '1px solid var(--sa-border)' }}>
+                <div>
+                  <span className={`sa-badge sa-badge-${a.type === 'error' ? 'danger' : a.type === 'warning' ? 'warning' : 'info'}`} style={{ marginRight: '8px' }}>{(a.type || 'info').toUpperCase()}</span>
+                  <span style={{ fontWeight: 700, fontSize: '0.85rem' }}>{a.message}</span>
+                </div>
+                <button onClick={() => onDeleteAnnouncement(a.id)} className="sa-btn sa-btn-danger sa-btn-sm" style={{ padding: '4px 8px' }}>
+                  <Trash2 size={13} />
+                </button>
               </div>
-            )}
+            ))}
+          </div>
+        )}
+      </AccordionBody>
 
-            <button type="submit" className="sa-btn sa-btn-accent" disabled={savingKeys}>
-              {savingKeys ? 'Saving...' : 'Save Support Channel'}
-            </button>
-          </form>
+      {/* 5. Activity Log */}
+      <AccordionHeader sectionKey="audit" emoji="📜" title="Activity Log" count={auditLogs.length} />
+      <AccordionBody sectionKey="audit">
+        <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: '12px' }}>
+          <button onClick={onRefresh} className="sa-btn sa-btn-secondary sa-btn-sm">
+            <RefreshCw size={13} className={loading ? 'spin' : ''} /> Refresh
+          </button>
         </div>
-      )}
 
-      {/* Tab 4: Master Security */}
-      {activeTab === 'security' && (
-        <div className="sa-table-container" style={{ padding: '24px', maxWidth: '640px' }}>
-          <h3 style={{ fontSize: '1.05rem', fontWeight: 900, color: 'var(--sa-text-main)', margin: '0 0 16px 0' }}>
-            🔒 Master Credentials & Security Controls
-          </h3>
-
-          <form onSubmit={onSaveSecurity} style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-            <div>
-              <label style={{ fontSize: '0.75rem', fontWeight: 800, color: 'var(--sa-text-muted)', display: 'block', marginBottom: '6px' }}>SUPER ADMIN USERNAME:</label>
-              <input
-                type="text"
-                required
-                value={securityForm.newUsername}
-                onChange={(e) => setSecurityForm({ ...securityForm, newUsername: e.target.value })}
-                style={{ width: '100%', padding: '10px', borderRadius: 'var(--sa-radius-md)', border: '1.5px solid var(--sa-border)', fontSize: '0.85rem' }}
-              />
-            </div>
-
-            <div>
-              <label style={{ fontSize: '0.75rem', fontWeight: 800, color: 'var(--sa-text-muted)', display: 'block', marginBottom: '6px' }}>CURRENT PASSWORD (REQUIRED):</label>
-              <input
-                type="password"
-                required
-                value={securityForm.currentPassword}
-                onChange={(e) => setSecurityForm({ ...securityForm, currentPassword: e.target.value })}
-                style={{ width: '100%', padding: '10px', borderRadius: 'var(--sa-radius-md)', border: '1.5px solid var(--sa-border)', fontSize: '0.85rem' }}
-              />
-            </div>
-
-            <div>
-              <label style={{ fontSize: '0.75rem', fontWeight: 800, color: 'var(--sa-text-muted)', display: 'block', marginBottom: '6px' }}>NEW PASSWORD (OPTIONAL):</label>
-              <input
-                type="password"
-                value={securityForm.newPassword}
-                onChange={(e) => setSecurityForm({ ...securityForm, newPassword: e.target.value })}
-                style={{ width: '100%', padding: '10px', borderRadius: 'var(--sa-radius-md)', border: '1.5px solid var(--sa-border)', fontSize: '0.85rem' }}
-              />
-            </div>
-
-            {securityError && (
-              <div style={{ padding: '10px', background: 'var(--sa-danger-bg)', color: 'var(--sa-danger)', borderRadius: 'var(--sa-radius-md)', fontSize: '0.8rem', fontWeight: 800 }}>
-                {securityError}
+        {auditLogs.length === 0 ? (
+          <div style={{ padding: '20px', textAlign: 'center', color: 'var(--sa-text-muted)' }}>No activity logged yet.</div>
+        ) : (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+            {auditLogs.slice(0, 20).map(log => (
+              <div key={log.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '10px 14px', background: 'var(--sa-surface-subtle)', borderRadius: 'var(--sa-radius-md)', border: '1px solid var(--sa-border)', gap: '12px' }}>
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <span className="sa-badge sa-badge-purple" style={{ marginRight: '8px' }}>{log.action || 'EVENT'}</span>
+                  <span style={{ fontWeight: 600, fontSize: '0.84rem', color: 'var(--sa-text-main)' }}>{log.details || 'System event'}</span>
+                </div>
+                <span style={{ fontSize: '0.72rem', color: 'var(--sa-text-muted)', whiteSpace: 'nowrap' }}>
+                  {new Date(log.created_at || Date.now()).toLocaleString('en-IN')}
+                </span>
               </div>
-            )}
-
-            {securityMsg && (
-              <div style={{ padding: '10px', background: 'var(--sa-success-bg)', color: 'var(--sa-success)', borderRadius: 'var(--sa-radius-md)', fontSize: '0.8rem', fontWeight: 800 }}>
-                {securityMsg}
-              </div>
-            )}
-
-            <button type="submit" className="sa-btn sa-btn-danger" disabled={savingSecurity}>
-              {savingSecurity ? 'Saving...' : 'Update Master Credentials'}
-            </button>
-          </form>
-        </div>
-      )}
+            ))}
+          </div>
+        )}
+      </AccordionBody>
     </div>
   );
 }

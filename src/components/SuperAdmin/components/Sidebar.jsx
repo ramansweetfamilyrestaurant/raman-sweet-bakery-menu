@@ -1,21 +1,17 @@
 import React from 'react';
-import { LayoutDashboard, Store, CreditCard, Layers, History, Megaphone, Settings, LogOut, ChevronLeft, ChevronRight, Sparkles } from 'lucide-react';
+import { LayoutDashboard, Store, Settings, UserCircle, ChevronLeft, ChevronRight } from 'lucide-react';
 
 export default function Sidebar({ activeView, setActiveView, collapsed, setCollapsed, onLogout }) {
   const navItems = [
-    { id: 'overview', label: 'Overview', icon: LayoutDashboard },
-    { id: 'tenants', label: 'Tenants', icon: Store },
-    { id: 'subscriptions', label: 'Subscriptions', icon: CreditCard },
-    { id: 'plans', label: 'SaaS Plans', icon: Layers },
-    { id: 'audit', label: 'Audit Logs', icon: History },
-    { id: 'communication', label: 'Communication', icon: Megaphone },
+    { id: 'overview', label: 'Home', icon: LayoutDashboard },
+    { id: 'tenants', label: 'Restaurants', icon: Store },
     { id: 'settings', label: 'Settings', icon: Settings },
+    { id: 'profile', label: 'Profile', icon: UserCircle },
   ];
 
   return (
     <aside className={`sa-sidebar ${collapsed ? 'collapsed' : ''}`}>
       <div>
-        {/* Brand Bar */}
         <div className="sa-sidebar-header">
           <div className="sa-brand">
             <div style={{
@@ -47,7 +43,6 @@ export default function Sidebar({ activeView, setActiveView, collapsed, setColla
           </button>
         </div>
 
-        {/* Navigation List */}
         <nav className="sa-sidebar-nav">
           {navItems.map(item => {
             const Icon = item.icon;
@@ -65,19 +60,6 @@ export default function Sidebar({ activeView, setActiveView, collapsed, setColla
             );
           })}
         </nav>
-      </div>
-
-      {/* Footer Logout */}
-      <div className="sa-sidebar-footer">
-        <button
-          onClick={onLogout}
-          className="sa-nav-item"
-          style={{ color: '#F87171' }}
-          title={collapsed ? 'Logout' : undefined}
-        >
-          <LogOut size={18} className="sa-nav-icon" />
-          {!collapsed && <span>Logout</span>}
-        </button>
       </div>
     </aside>
   );
