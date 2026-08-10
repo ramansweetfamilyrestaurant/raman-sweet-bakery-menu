@@ -1845,148 +1845,257 @@ export default function SuperAdminDashboard({ token, username, onLogout, onRetur
           <div style={{
             background: '#FFFFFF',
             borderRadius: '24px',
-            maxWidth: '500px',
+            maxWidth: '560px',
             width: '100%',
-            padding: '24px',
+            padding: '28px 24px',
             boxShadow: '0 20px 60px rgba(0,0,0,0.4)',
-            border: '2px solid #DFBA67'
+            border: '2px solid #D4AF37',
+            position: 'relative',
+            maxHeight: '90vh',
+            display: 'flex',
+            flexDirection: 'column'
           }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                <div style={{ width: '38px', height: '38px', borderRadius: '12px', background: '#FEF3C7', color: '#B45309', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                  <Megaphone size={20} />
-                </div>
-                <h3 style={{ fontSize: '1.2rem', fontWeight: 900, color: 'var(--primary-emerald)', margin: 0 }}>
-                  Broadcast Announcement Notice
-                </h3>
+            <button
+              type="button"
+              onClick={() => setShowAnnounceModal(false)}
+              style={{
+                position: 'absolute',
+                top: '18px',
+                right: '18px',
+                background: '#F3F4F6',
+                border: 'none',
+                width: '32px',
+                height: '32px',
+                borderRadius: '50%',
+                cursor: 'pointer',
+                fontWeight: 900,
+                color: '#4B5563',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center'
+              }}
+            >
+              ✕
+            </button>
+
+            <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '18px' }}>
+              <div style={{
+                width: '46px',
+                height: '46px',
+                borderRadius: '14px',
+                background: 'linear-gradient(135deg, #0A2315 0%, #164E2A 100%)',
+                color: '#DFBA67',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                border: '1.5px solid #D4AF37',
+                boxShadow: '0 4px 14px rgba(10,35,21,0.2)'
+              }}>
+                <Megaphone size={24} />
               </div>
-              <button onClick={() => setShowAnnounceModal(false)} style={{ background: 'none', border: 'none', fontSize: '1.4rem', fontWeight: 700, cursor: 'pointer', color: 'var(--text-muted)' }}>✕</button>
+              <div>
+                <h3 style={{ margin: 0, fontSize: '1.25rem', fontWeight: 900, color: '#0F172A' }}>
+                  Platform Broadcast & Notice Dispatch
+                </h3>
+                <span style={{ fontSize: '0.78rem', color: '#64748B', fontWeight: 600 }}>
+                  Real-time banner announcements sent to all restaurant admin panels
+                </span>
+              </div>
             </div>
 
-            <form onSubmit={handleCreateAnnouncementSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
-              <div>
-                <label style={{ fontSize: '0.78rem', fontWeight: 800, color: 'var(--text-dark)', marginBottom: '4px', display: 'block' }}>
-                  ANNOUNCEMENT MESSAGE FOR ALL TENANTS *
-                </label>
-                <textarea
-                  rows={4}
-                  placeholder="e.g. ⚡ New Feature Added: WhatsApp Direct Ordering is now live! Update your WhatsApp number in Settings."
-                  value={announceMsg}
-                  onChange={(e) => setAnnounceMsg(e.target.value)}
-                  required
-                  style={{ width: '100%', padding: '12px', borderRadius: '14px', border: '1.5px solid var(--border-light)', fontSize: '0.88rem', outline: 'none', resize: 'vertical' }}
-                />
-              </div>
+            <div style={{ flex: 1, overflowY: 'auto', paddingRight: '4px' }}>
+              <form onSubmit={handleCreateAnnouncementSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
+                <div>
+                  <label style={{ fontSize: '0.78rem', fontWeight: 800, color: '#374151', marginBottom: '6px', display: 'block' }}>
+                    ANNOUNCEMENT MESSAGE FOR ALL TENANTS *
+                  </label>
+                  <textarea
+                    rows={3}
+                    placeholder="e.g. ⚡ New Feature Released: WhatsApp Direct Ordering is now live! Update your phone number in Setup Settings."
+                    value={announceMsg}
+                    onChange={(e) => setAnnounceMsg(e.target.value)}
+                    required
+                    style={{
+                      width: '100%',
+                      padding: '12px 14px',
+                      borderRadius: '14px',
+                      border: '1.5px solid #CBD5E1',
+                      fontSize: '0.88rem',
+                      outline: 'none',
+                      resize: 'vertical',
+                      fontWeight: 600,
+                      color: '#0F172A',
+                      boxSizing: 'border-box'
+                    }}
+                  />
+                </div>
 
-              <div>
-                <label style={{ fontSize: '0.78rem', fontWeight: 800, color: 'var(--text-dark)', marginBottom: '4px', display: 'block' }}>
-                  NOTICE TYPE
-                </label>
-                <select
-                  value={announceType}
-                  onChange={(e) => setAnnounceType(e.target.value)}
-                  style={{ width: '100%', padding: '11px', borderRadius: '12px', border: '1.5px solid var(--border-light)', fontSize: '0.86rem', outline: 'none', fontWeight: 700 }}
-                >
-                  <option value="info">ℹ️ Info Announcement (Blue)</option>
-                  <option value="success">🎉 Success & Feature Release (Green)</option>
-                  <option value="warning">⚠️ Maintenance / Warning (Gold)</option>
-                </select>
-              </div>
+                {/* Notice Type Visual Swatch Picker */}
+                <div>
+                  <label style={{ fontSize: '0.78rem', fontWeight: 800, color: '#374151', marginBottom: '6px', display: 'block' }}>
+                    SELECT ANNOUNCEMENT TYPE
+                  </label>
+                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '8px' }}>
+                    {[
+                      { id: 'info', label: 'ℹ️ Information', bg: '#EFF6FF', border: '#3B82F6', color: '#1E40AF' },
+                      { id: 'success', label: '🎉 Feature Release', bg: '#F0FDF4', border: '#22C55E', color: '#15803D' },
+                      { id: 'warning', label: '⚠️ Maintenance', bg: '#FEF3C7', border: '#F59E0B', color: '#B45309' },
+                    ].map(type => {
+                      const isSel = announceType === type.id;
+                      return (
+                        <button
+                          key={type.id}
+                          type="button"
+                          onClick={() => setAnnounceType(type.id)}
+                          style={{
+                            background: isSel ? type.bg : '#F8FAFC',
+                            border: isSel ? `2px solid ${type.border}` : '1px solid #E2E8F0',
+                            color: isSel ? type.color : '#64748B',
+                            padding: '8px',
+                            borderRadius: '10px',
+                            fontSize: '0.74rem',
+                            fontWeight: 900,
+                            cursor: 'pointer',
+                            transition: 'all 0.2s ease'
+                          }}
+                        >
+                          {type.label}
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
 
-              <div style={{ display: 'flex', gap: '12px', marginTop: '10px' }}>
-                <button
-                  type="button"
-                  onClick={() => setShowAnnounceModal(false)}
-                  style={{ flex: 1, padding: '12px', borderRadius: 'var(--radius-pill)', border: '1px solid var(--border-light)', fontWeight: 700, cursor: 'pointer', background: 'var(--bg-secondary)' }}
-                >
-                  Cancel
-                </button>
-                <button
-                  type="submit"
-                  disabled={announceSubmitting}
-                  style={{
-                    flex: 1,
-                    background: 'linear-gradient(135deg, #0A2315 0%, #164E2A 100%)',
-                    color: '#DFBA67',
-                    padding: '12px',
-                    borderRadius: 'var(--radius-pill)',
-                    fontWeight: 900,
-                    border: '1.5px solid #D4AF37',
-                    cursor: 'pointer'
-                  }}
-                >
-                  {announceSubmitting ? 'Broadcasting...' : '📢 Broadcast Notice'}
-                </button>
-              </div>
-            </form>
+                {/* Live Banner Preview Card */}
+                {announceMsg && (
+                  <div style={{
+                    background: announceType === 'success' ? '#F0FDF4' : announceType === 'warning' ? '#FEF3C7' : '#EFF6FF',
+                    border: `1.5px solid ${announceType === 'success' ? '#22C55E' : announceType === 'warning' ? '#F59E0B' : '#3B82F6'}`,
+                    color: announceType === 'success' ? '#15803D' : announceType === 'warning' ? '#B45309' : '#1E40AF',
+                    padding: '10px 14px',
+                    borderRadius: '12px',
+                    fontSize: '0.8rem',
+                    fontWeight: 700,
+                    lineHeight: 1.4
+                  }}>
+                    <strong style={{ display: 'block', fontSize: '0.68rem', textTransform: 'uppercase', marginBottom: '2px', opacity: 0.8 }}>
+                      📢 LIVE DASHBOARD BANNER PREVIEW:
+                    </strong>
+                    {announceMsg}
+                  </div>
+                )}
 
-            {/* Active Notices Management Section */}
-            {announcementsList && announcementsList.length > 0 && (
-              <div style={{ marginTop: '20px', paddingTop: '16px', borderTop: '2px dashed var(--border-light)' }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px' }}>
-                  <h4 style={{ fontSize: '0.85rem', fontWeight: 800, color: 'var(--primary-emerald)', margin: 0 }}>
-                    ACTIVE BROADCAST NOTICES ({announcementsList.length})
-                  </h4>
+                <div style={{ display: 'flex', gap: '10px', marginTop: '6px' }}>
                   <button
                     type="button"
-                    onClick={handleClearAllAnnouncements}
+                    onClick={() => setShowAnnounceModal(false)}
                     style={{
-                      background: '#FEE2E2',
-                      color: '#DC2626',
-                      border: '1px solid #FCA5A5',
-                      padding: '3px 8px',
-                      borderRadius: 'var(--radius-pill)',
-                      fontSize: '0.7rem',
+                      flex: 1,
+                      padding: '12px',
+                      borderRadius: '12px',
+                      border: '1px solid #CBD5E1',
                       fontWeight: 800,
-                      cursor: 'pointer'
+                      cursor: 'pointer',
+                      background: '#F1F5F9',
+                      color: '#475569',
+                      fontSize: '0.86rem'
                     }}
                   >
-                    🗑️ Clear All
+                    Cancel
+                  </button>
+                  <button
+                    type="submit"
+                    disabled={announceSubmitting}
+                    style={{
+                      flex: 2,
+                      background: 'linear-gradient(135deg, #0A2315 0%, #164E2A 100%)',
+                      color: '#FFD700',
+                      padding: '12px',
+                      borderRadius: '12px',
+                      fontWeight: 900,
+                      border: '1.5px solid #D4AF37',
+                      cursor: 'pointer',
+                      fontSize: '0.88rem',
+                      boxShadow: '0 4px 14px rgba(10,35,21,0.3)',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      gap: '6px'
+                    }}
+                  >
+                    <Megaphone size={16} color="#FFD700" /> {announceSubmitting ? 'Broadcasting...' : '📢 Broadcast Notice'}
                   </button>
                 </div>
+              </form>
 
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', maxHeight: '180px', overflowY: 'auto' }}>
-                  {announcementsList.map(a => (
-                    <div 
-                      key={a.id}
+              {/* Active Notices Management Section */}
+              {announcementsList && announcementsList.length > 0 && (
+                <div style={{ marginTop: '20px', paddingTop: '16px', borderTop: '2px dashed #E2E8F0' }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
+                    <h4 style={{ fontSize: '0.82rem', fontWeight: 900, color: '#0F172A', margin: 0, display: 'flex', alignItems: 'center', gap: '5px' }}>
+                      📢 ACTIVE BROADCAST NOTICES ({announcementsList.length})
+                    </h4>
+                    <button
+                      type="button"
+                      onClick={handleClearAllAnnouncements}
                       style={{
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'space-between',
-                        padding: '8px 12px',
-                        background: 'var(--bg-secondary)',
-                        borderRadius: '10px',
-                        fontSize: '0.78rem',
-                        gap: '8px',
-                        border: '1px solid var(--border-light)'
+                        background: '#FEE2E2',
+                        color: '#DC2626',
+                        border: '1px solid #FCA5A5',
+                        padding: '4px 10px',
+                        borderRadius: 'var(--radius-pill)',
+                        fontSize: '0.72rem',
+                        fontWeight: 900,
+                        cursor: 'pointer'
                       }}
                     >
-                      <span style={{ flexGrow: 1, wordBreak: 'break-word', fontWeight: 600, color: 'var(--text-dark)' }}>
-                        {a.message}
-                      </span>
-                      <button
-                        type="button"
-                        onClick={() => handleDeleteAnnouncement(a.id)}
+                      🗑️ Clear All
+                    </button>
+                  </div>
+
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', maxHeight: '200px', overflowY: 'auto' }}>
+                    {announcementsList.map(a => (
+                      <div 
+                        key={a.id}
                         style={{
-                          background: '#DC2626',
-                          color: '#FFFFFF',
-                          border: 'none',
-                          padding: '3px 7px',
-                          borderRadius: '6px',
-                          fontSize: '0.7rem',
-                          fontWeight: 700,
-                          cursor: 'pointer',
-                          flexShrink: 0
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'space-between',
+                          padding: '10px 12px',
+                          background: a.type === 'success' ? '#F0FDF4' : a.type === 'warning' ? '#FEF3C7' : '#F8FAFC',
+                          borderRadius: '12px',
+                          fontSize: '0.8rem',
+                          gap: '10px',
+                          border: `1px solid ${a.type === 'success' ? '#BBF7D0' : a.type === 'warning' ? '#FDE68A' : '#E2E8F0'}`
                         }}
-                        title="Delete this notice"
                       >
-                        Delete
-                      </button>
-                    </div>
-                  ))}
+                        <span style={{ flexGrow: 1, wordBreak: 'break-word', fontWeight: 700, color: '#0F172A' }}>
+                          {a.message}
+                        </span>
+                        <button
+                          type="button"
+                          onClick={() => handleDeleteAnnouncement(a.id)}
+                          style={{
+                            background: '#EF4444',
+                            color: '#FFFFFF',
+                            border: 'none',
+                            padding: '4px 8px',
+                            borderRadius: '6px',
+                            fontSize: '0.72rem',
+                            fontWeight: 900,
+                            cursor: 'pointer',
+                            flexShrink: 0
+                          }}
+                          title="Delete this notice"
+                        >
+                          Delete
+                        </button>
+                      </div>
+                    ))}
+                  </div>
                 </div>
-              </div>
-            )}
+              )}
+            </div>
           </div>
         </div>
       )}
