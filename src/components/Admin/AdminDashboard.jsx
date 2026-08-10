@@ -1773,15 +1773,15 @@ export default function AdminDashboard({ token, username, onLogout, onReturnToMe
                 selectedCatFilter={selectedCatFilter}
                 setSelectedCatFilter={setSelectedCatFilter}
                 onToggleAvailability={handleToggleDish}
-                onOpenAddDish={() => { setEditingDish(null); setShowDishModal(true); }}
-                onOpenEditDish={(dish) => { setEditingDish(dish); setShowDishModal(true); }}
+                onOpenAddDish={() => setDishModalData('new')}
+                onOpenEditDish={(dish) => setDishModalData(dish)}
                 onDeleteDish={handleDeleteDish}
                 onUpdateQuickPrice={handleQuickPriceSave}
                 onToggleCategoryActive={handleToggleCategory}
                 onDeleteCategory={handleDeleteCategory}
-                onOpenAddCategory={() => setCategoryModalData({})}
-                onOpenEditCategory={(cat) => setCategoryModalData(cat)}
-                onOpenAddCombo={handleOpenCreateCombo}
+                onOpenAddCategory={() => setCatModalData('new')}
+                onOpenEditCategory={(cat) => setCatModalData(cat)}
+                onOpenAddCombo={() => setComboModalData('new')}
                 onOpenEditCombo={(combo) => setComboModalData(combo)}
                 onDeleteCombo={deleteCombo}
                 onToggleComboAvailability={toggleComboAvailability}
