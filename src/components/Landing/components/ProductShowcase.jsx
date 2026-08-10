@@ -191,7 +191,7 @@ export default function ProductShowcase() {
                 </div>
 
                 <p style={{ fontSize: '0.84rem', color: '#475569', marginBottom: '16px' }}>
-                  "How was your dining experience at Raman Sweet & Restaurant today?"
+                  "How was your dining experience at Royal Spice Family Restaurant today?"
                 </p>
 
                 <div style={{ display: 'flex', justifyContent: 'center', gap: '8px', marginBottom: '16px' }}>

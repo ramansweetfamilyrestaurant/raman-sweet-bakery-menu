@@ -98,7 +98,7 @@ export default function Hero({ trialDays = 17, onStartTrial, onLiveDemo }) {
                   </div>
 
                   <div style={{ textAlign: 'center', padding: '8px 0' }}>
-                    <div style={{ fontSize: '0.85rem', fontWeight: 900, color: '#FFF' }}>Raman Sweet & Restaurant</div>
+                    <div style={{ fontSize: '0.85rem', fontWeight: 900, color: '#FFF' }}>Royal Spice Family Restaurant</div>
                     <div style={{ fontSize: '0.7rem', color: '#94A3B8', margin: '2px 0 8px 0' }}>⚡ Scan to Order • Table #4</div>
                     
                     <div style={{ background: '#1E293B', borderRadius: '8px', padding: '8px', textAlign: 'left', marginBottom: '8px' }}>
