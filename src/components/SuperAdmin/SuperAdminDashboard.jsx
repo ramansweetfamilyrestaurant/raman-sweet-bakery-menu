@@ -1002,17 +1002,18 @@ export default function SuperAdminDashboard({ token, username, onLogout, onRetur
                       {/* Expiry Badge */}
                       {daysLeft !== null && (
                         <span style={{
-                          background: isExpired ? '#FEE2E2' : daysLeft <= 7 ? '#FEF3C7' : '#DCFCE7',
-                          color: isExpired ? '#DC2626' : daysLeft <= 7 ? '#B45309' : '#15803D',
+                          background: (r.mandate_status === 'admin_granted' || r.subscription_type === 'ADMIN_GRANTED' || daysLeft > 3650) ? '#F3E8FF' : isExpired ? '#FEE2E2' : daysLeft <= 7 ? '#FEF3C7' : '#DCFCE7',
+                          color: (r.mandate_status === 'admin_granted' || r.subscription_type === 'ADMIN_GRANTED' || daysLeft > 3650) ? '#7E22CE' : isExpired ? '#DC2626' : daysLeft <= 7 ? '#B45309' : '#15803D',
                           padding: '3px 8px',
                           borderRadius: '6px',
                           fontSize: '0.68rem',
-                          fontWeight: 800,
+                          fontWeight: 900,
                           display: 'inline-flex',
                           alignItems: 'center',
-                          gap: '3px'
+                          gap: '3px',
+                          border: (r.mandate_status === 'admin_granted' || r.subscription_type === 'ADMIN_GRANTED' || daysLeft > 3650) ? '1px solid #E9D5FF' : 'none'
                         }}>
-                          <Calendar size={10} /> {isExpired ? 'Expired' : `${daysLeft} days left`}
+                          <Calendar size={10} /> {(r.mandate_status === 'admin_granted' || r.subscription_type === 'ADMIN_GRANTED' || daysLeft > 3650) ? '♾️ Lifetime Access' : isExpired ? 'Expired' : `${daysLeft} days left`}
                         </span>
                       )}
 
