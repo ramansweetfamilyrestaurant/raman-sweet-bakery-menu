@@ -1163,6 +1163,14 @@ router.patch('/orders/:id/status', authenticateToken, requireActiveSubscription,
     const { id } = req.params;
     const { status } = req.body;
 
+    if (status === 'rejected' || status === 'cancelled') {
+      await query(
+        'DELETE FROM orders WHERE id = $1 AND restaurant_id = $2',
+        [id, targetId]
+      );
+      return res.json({ success: true, id, status: 'deleted' });
+    }
+
     await query(
       'UPDATE orders SET status = $1 WHERE id = $2 AND restaurant_id = $3',
       [status, id, targetId]

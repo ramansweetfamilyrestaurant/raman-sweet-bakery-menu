@@ -435,7 +435,11 @@ export default function AdminDashboard({ token, username, onLogout, onReturnToMe
   const handleUpdateStatus = async (orderId, newStatus) => {
     try {
       await updateOrderStatus(orderId, newStatus, token);
-      setOrders(orders.map(o => o.id === orderId ? { ...o, status: newStatus } : o));
+      if (newStatus === 'rejected' || newStatus === 'cancelled') {
+        setOrders(prev => prev.filter(o => o.id !== orderId));
+      } else {
+        setOrders(prev => prev.map(o => o.id === orderId ? { ...o, status: newStatus } : o));
+      }
     } catch (err) {
       alert(err.message || 'Failed to update order status');
     }
