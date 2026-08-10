@@ -1326,13 +1326,21 @@ export async function deleteImageRecordFromDb(identifier) {
 }
 
 export async function getImageFromDb(filename) {
+  if (!filename) return null;
   try {
-    const rows = await query('SELECT mime_type, data, storage_provider, image_url FROM stored_images WHERE filename = $1', [filename]);
+    const rows = await query(
+      `SELECT mime_type, data, storage_provider, image_url, image_key, filename 
+       FROM stored_images 
+       WHERE filename = $1 OR image_key = $1 OR image_url = $1 OR image_key LIKE '%' || $1 OR image_url LIKE '%' || $1`,
+      [filename]
+    );
     if (rows && rows.length > 0) {
-      if (rows[0].data) {
+      const row = rows[0];
+      if (row.data) {
+        const buf = Buffer.isBuffer(row.data) ? row.data : Buffer.from(row.data, 'base64');
         return {
-          mimeType: rows[0].mime_type || 'image/jpeg',
-          buffer: Buffer.from(rows[0].data, 'base64')
+          mimeType: row.mime_type || 'image/jpeg',
+          buffer: buf
         };
       }
     }

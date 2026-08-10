@@ -95,11 +95,22 @@ app.get(['/api/r2-proxy/*', '/r2-proxy/*'], async (req, res) => {
 
   // 4. Fallback: Fetch from stored_images table in database
   try {
-    const dbImg = await getImageRecordFromDb(filename) || await getImageFromDb(filename);
-    if (dbImg && dbImg.buffer) {
-      res.setHeader('Content-Type', dbImg.mimeType || getContentType(filename));
-      res.setHeader('Cache-Control', 'public, max-age=3600');
-      return res.send(dbImg.buffer);
+    const dbRecord = await getImageRecordFromDb(key) || await getImageRecordFromDb(filename);
+    const dbImg = dbRecord || await getImageFromDb(filename) || await getImageFromDb(key);
+    if (dbImg) {
+      const buf = dbImg.buffer || (dbImg.data ? (Buffer.isBuffer(dbImg.data) ? dbImg.data : Buffer.from(dbImg.data, 'base64')) : null);
+      if (buf && buf.length > 0) {
+        const mime = dbImg.mimeType || dbImg.mime_type || getContentType(filename);
+        res.setHeader('Content-Type', mime);
+        res.setHeader('Cache-Control', 'public, max-age=31536000, immutable');
+        try {
+          fs.mkdirSync(path.dirname(localCachePath), { recursive: true });
+          fs.writeFileSync(localCachePath, buf);
+        } catch (cacheErr) {
+          console.warn('Notice re-caching R2 proxy logo to disk:', cacheErr.message);
+        }
+        return res.send(buf);
+      }
     }
   } catch (dbErr) {
     console.warn('R2 proxy DB fallback notice:', dbErr.message);
