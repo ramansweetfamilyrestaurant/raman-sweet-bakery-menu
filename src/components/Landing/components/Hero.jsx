@@ -28,7 +28,7 @@ export default function Hero({ trialDays = 17, onStartTrial, onLiveDemo }) {
             </p>
 
             <div className="km-hero-ctas">
-              <button className="km-btn-primary" onClick={onStartTrial}>
+              <button className="km-btn-primary km-btn-gold" onClick={onStartTrial}>
                 Start {trialDays}-Day Free Trial <ArrowRight size={18} />
               </button>
 

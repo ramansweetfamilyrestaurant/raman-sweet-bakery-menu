@@ -986,6 +986,18 @@
     height: 56px;
   }
 
+  .km-header {
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    background: rgba(255, 255, 255, 0.94);
+  }
+
+  .km-btn-primary:active,
+  .km-btn-secondary:active,
+  .km-mobile-tab-btn:active {
+    transform: scale(0.98);
+  }
+
   .km-nav-links,
   .km-nav-actions .km-btn-secondary,
   .km-nav-actions .km-nav-btn-trial {
