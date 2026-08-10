@@ -170,9 +170,31 @@ export default function SettingsView({
           )}
 
           {keysMsg && <div style={{ color: 'var(--sa-success)', fontWeight: 700, fontSize: '0.85rem' }}>{keysMsg}</div>}
-          <button type="submit" className="sa-btn sa-btn-accent" disabled={savingKeys || uploadingLogo} style={{ alignSelf: 'flex-start' }}>
-            {savingKeys ? 'Saving...' : '💾 Save Logo Settings'}
-          </button>
+          <div style={{ display: 'flex', gap: '10px', alignItems: 'center', marginTop: '4px' }}>
+            <button type="submit" className="sa-btn sa-btn-accent" disabled={savingKeys || uploadingLogo}>
+              {savingKeys ? 'Saving...' : '💾 Save Logo Settings'}
+            </button>
+
+            {keysForm.platform_logo_url && (
+              <button
+                type="button"
+                className="sa-btn sa-btn-danger sa-btn-sm"
+                disabled={savingKeys || uploadingLogo}
+                onClick={async () => {
+                  if (window.confirm('Are you sure you want to reset/delete the Super Admin logo?')) {
+                    const clearedForm = { ...keysForm, platform_logo_url: '' };
+                    setKeysForm(clearedForm);
+                    if (onSavePaymentKeys) {
+                      await onSavePaymentKeys(clearedForm);
+                    }
+                  }
+                }}
+                style={{ padding: '8px 14px' }}
+              >
+                <Trash2 size={14} /> Reset Logo
+              </button>
+            )}
+          </div>
         </form>
       </AccordionBody>
 

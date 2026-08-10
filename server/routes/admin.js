@@ -434,8 +434,9 @@ router.post('/upload', authenticateToken, requireActiveSubscription, upload.sing
   }
 
   const fileBuffer = fs.readFileSync(req.file.path);
-  const restaurantId = req.user?.restaurant_id || 1;
   const entityType = req.query?.entityType || req.body?.entityType || 'dishes';
+  const isSuperAdminUpload = req.user?.role === 'superadmin' || entityType === 'superadmin' || entityType === 'branding';
+  const restaurantId = isSuperAdminUpload ? null : (req.user?.restaurant_id || 1);
 
   const r2Configured = isR2Active();
 

@@ -1,8 +1,10 @@
 import express from 'express';
 import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
-import { query, runAutoDataSummarization, logAudit } from '../db.js';
+import sharp from 'sharp';
+import { query, runAutoDataSummarization, logAudit, saveR2ImageToDb, saveImageToDb } from '../db.js';
 import { authenticateToken } from '../middleware/auth.js';
+import { isR2Active, uploadImageToR2 } from '../services/r2ImageService.js';
 
 const router = express.Router();
 const JWT_SECRET = process.env.JWT_SECRET || 'raman_bakery_secret_jwt_key_2026_super_secure';
@@ -677,6 +679,58 @@ router.put('/change-credentials', authenticateToken, requireSuperAdmin, async (r
   }
 });
 
+async function mirrorExternalLogoToR2(externalUrl) {
+  if (!externalUrl || typeof externalUrl !== 'string') return externalUrl;
+  const url = externalUrl.trim();
+  if (!url.startsWith('http')) return url;
+  if (url.includes('/api/r2-proxy/')) return url;
+
+  try {
+    const fetchRes = await fetch(url, {
+      headers: { 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64)' },
+      signal: AbortSignal.timeout(10000)
+    });
+    if (!fetchRes.ok) return url;
+    
+    const arrayBuf = await fetchRes.arrayBuffer();
+    const inputBuffer = Buffer.from(arrayBuf);
+    if (!inputBuffer || inputBuffer.length === 0) return url;
+
+    const mimeType = fetchRes.headers.get('content-type') || 'image/jpeg';
+    const timestamp = Date.now();
+    const filename = `logo-external-${timestamp}.webp`;
+
+    if (isR2Active()) {
+      const webpBuffer = await sharp(inputBuffer)
+        .resize(1000, 1000, { fit: 'inside', withoutEnlargement: true })
+        .webp({ quality: 85 })
+        .toBuffer();
+
+      const r2Result = await uploadImageToR2({
+        buffer: webpBuffer,
+        mimeType: 'image/webp',
+        restaurantId: null,
+        entityType: 'superadmin'
+      });
+
+      if (r2Result && r2Result.objectKey) {
+        const proxyUrl = `/api/r2-proxy/${r2Result.objectKey}`;
+        await saveR2ImageToDb(filename, 'image/webp', r2Result.objectKey, r2Result.publicUrl || proxyUrl, null);
+        console.log('[MIRROR LOGO SUCCESS] Saved external logo URL to R2 and Neon DB:', proxyUrl);
+        return proxyUrl;
+      }
+    } else {
+      await saveImageToDb(filename, mimeType, inputBuffer);
+      const localUrl = `/uploads/${filename}`;
+      console.log('[MIRROR LOGO SUCCESS] Saved external logo URL to local uploads and Neon DB:', localUrl);
+      return localUrl;
+    }
+  } catch (err) {
+    console.warn('[MIRROR LOGO NOTICE] External logo mirror notice:', err.message);
+  }
+  return url;
+}
+
 // GET System Settings for Super Admin
 router.get('/settings', authenticateToken, requireSuperAdmin, async (req, res) => {
   try {
@@ -695,9 +749,15 @@ router.post('/settings', authenticateToken, requireSuperAdmin, async (req, res) 
   try {
     const payload = req.body || {};
     
-    for (const [k, v] of Object.entries(payload)) {
+    for (let [k, v] of Object.entries(payload)) {
       if (v !== undefined && v !== null) {
-        const strVal = String(v).trim().replace(/^['"]+|['"]+$/g, '');
+        let strVal = String(v).trim().replace(/^['"]+|['"]+$/g, '');
+        
+        // Auto-mirror external image URLs to R2 & Neon DB with restaurant_id = NULL
+        if (k === 'platform_logo_url' && strVal.startsWith('http')) {
+          strVal = await mirrorExternalLogoToR2(strVal);
+        }
+
         try {
           await query(
             'INSERT INTO system_settings (key, value) VALUES ($1, $2) ON CONFLICT (key) DO UPDATE SET value = EXCLUDED.value',
