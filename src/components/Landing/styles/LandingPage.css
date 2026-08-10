@@ -515,11 +515,17 @@
   margin: 0 0 8px 0;
 }
 
-.km-feature-desc {
+.km-features-toggle-wrap {
+  display: none;
+  text-align: center;
+  margin-top: 24px;
+}
+
+.km-features-toggle-btn {
   font-size: 0.88rem;
-  color: var(--km-muted);
-  line-height: 1.55;
-  margin: 0;
+  font-weight: 800;
+  padding: 10px 20px;
+  min-height: 44px;
 }
 
 /* Workflow Section (How It Works) */
@@ -1049,7 +1055,7 @@
 
   .km-hero-preview {
     width: 100%;
-    max-width: 400px;
+    max-width: 360px;
     margin: 0 auto;
   }
 
@@ -1077,18 +1083,43 @@
   .km-showcase-section,
   .km-pricing-section,
   .km-faq-section {
-    padding: 44px 0;
+    padding: 40px 0;
+  }
+
+  .km-features-toggle-wrap {
+    display: flex;
+    justify-content: center;
+  }
+
+  .collapsed-mobile .mobile-hidden-card {
+    display: none;
   }
   
   .km-features-grid,
   .km-workflow-grid,
   .km-pricing-grid {
     grid-template-columns: 1fr;
-    gap: 16px;
+    gap: 14px;
   }
 
   .km-feature-card {
-    padding: 20px 18px;
+    padding: 16px;
+  }
+
+  .km-feature-icon {
+    width: 40px;
+    height: 40px;
+    margin-bottom: 12px;
+  }
+
+  .km-feature-title {
+    font-size: 0.98rem;
+    margin-bottom: 4px;
+  }
+
+  .km-feature-desc {
+    font-size: 0.85rem;
+    line-height: 1.45;
   }
 
   .km-table-swipe-hint {

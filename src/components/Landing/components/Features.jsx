@@ -1,7 +1,9 @@
-import React from 'react';
-import { Smartphone, MessageSquare, Flame, Star, Printer, BarChart3, Grid, ShieldCheck } from 'lucide-react';
+import React, { useState } from 'react';
+import { Smartphone, MessageSquare, Flame, Star, Printer, BarChart3, ChevronDown, ChevronUp } from 'lucide-react';
 
 export default function Features() {
+  const [showAllMobile, setShowAllMobile] = useState(false);
+
   const featureList = [
     {
       icon: <Smartphone size={24} />,
@@ -48,9 +50,9 @@ export default function Features() {
           </p>
         </div>
 
-        <div className="km-features-grid">
+        <div className={`km-features-grid ${showAllMobile ? 'expanded-mobile' : 'collapsed-mobile'}`}>
           {featureList.map((item, index) => (
-            <div key={index} className="km-feature-card">
+            <div key={index} className={`km-feature-card ${index >= 4 ? 'mobile-hidden-card' : ''}`}>
               <div className="km-feature-icon">
                 {item.icon}
               </div>
@@ -58,6 +60,19 @@ export default function Features() {
               <p className="km-feature-desc">{item.desc}</p>
             </div>
           ))}
+        </div>
+
+        <div className="km-features-toggle-wrap">
+          <button 
+            className="km-btn-secondary km-features-toggle-btn"
+            onClick={() => setShowAllMobile(!showAllMobile)}
+          >
+            {showAllMobile ? (
+              <>Show Less Features <ChevronUp size={16} /></>
+            ) : (
+              <>View All Features ({featureList.length}) <ChevronDown size={16} /></>
+            )}
+          </button>
         </div>
       </div>
     </section>
