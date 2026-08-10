@@ -711,10 +711,13 @@ router.post('/settings', authenticateToken, requireSuperAdmin, async (req, res) 
             'INSERT INTO system_settings (key, value) VALUES ($1, $2) ON CONFLICT (key) DO UPDATE SET value = EXCLUDED.value',
             [k, v]
           );
-        } catch {
+        } catch (err1) {
           try {
             await query('INSERT OR REPLACE INTO system_settings (key, value) VALUES ($1, $2)', [k, v]);
-          } catch {}
+          } catch (err2) {
+            console.error(`[DB SAVE ERROR] Failed to save system_setting ${k}:`, err2.message);
+            throw err2;
+          }
         }
       }
     }

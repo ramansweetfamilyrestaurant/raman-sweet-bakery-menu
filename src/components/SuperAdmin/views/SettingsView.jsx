@@ -11,6 +11,13 @@ export default function SettingsView({
   const [keysForm, setKeysForm] = useState(paymentKeys);
   const [uploadingLogo, setUploadingLogo] = useState(false);
 
+  // Sync keysForm whenever paymentKeys prop changes (e.g. after loadSystemSettings finishes)
+  React.useEffect(() => {
+    if (paymentKeys && typeof paymentKeys === 'object') {
+      setKeysForm(paymentKeys);
+    }
+  }, [paymentKeys]);
+
   const handleLogoFileSelect = async (e) => {
     const file = e.target.files && e.target.files[0];
     if (!file) return;
@@ -19,7 +26,12 @@ export default function SettingsView({
       if (onUploadLogo) {
         const url = await onUploadLogo(file);
         if (url) {
-          setKeysForm(prev => ({ ...prev, platform_logo_url: url }));
+          const updatedForm = { ...keysForm, platform_logo_url: url };
+          setKeysForm(updatedForm);
+          // Auto-save to backend database immediately
+          if (onSavePaymentKeys) {
+            await onSavePaymentKeys(updatedForm);
+          }
         }
       }
     } catch (err) {
