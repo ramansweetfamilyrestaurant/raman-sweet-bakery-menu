@@ -1064,9 +1064,9 @@ router.post('/change-plan', authenticateToken, async (req, res) => {
     }
 
     await query(
-      `UPDATE subscriptions SET scheduled_plan_key = $1, plan_change_effective_at = $2, updated_at = $3
-       WHERE id = $4`,
-      [targetPlanKey, effectiveAt, nowISO, sub.id]
+      `UPDATE subscriptions SET scheduled_plan_id = $1, scheduled_plan_key = $2, plan_change_effective_at = $3, updated_at = $4
+       WHERE id = $5`,
+      [targetPlan.id, targetPlanKey, effectiveAt, nowISO, sub.id]
     );
 
     await logPaymentAudit(targetRestoId, 'PLAN_CHANGE_SCHEDULED', {

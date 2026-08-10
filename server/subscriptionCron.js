@@ -45,7 +45,7 @@ export async function checkExpiredSubscriptions() {
         const newPlan = planRows[0];
         if (newPlan) {
           await query(
-            `UPDATE subscriptions SET plan_id = $1, amount = $2, scheduled_plan_key = NULL, plan_change_effective_at = NULL, updated_at = $3 WHERE id = $4`,
+            `UPDATE subscriptions SET plan_id = $1, amount = $2, scheduled_plan_key = NULL, scheduled_plan_id = NULL, plan_change_effective_at = NULL, updated_at = $3 WHERE id = $4`,
             [newPlan.id, Number(newPlan.price), nowISO, sub.id]
           );
           await query(
