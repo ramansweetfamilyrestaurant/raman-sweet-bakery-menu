@@ -55,10 +55,10 @@ export default function MenuView({
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '12px' }}>
         <div>
           <h2 style={{ fontSize: '1.25rem', fontWeight: 900, color: 'var(--adm-primary)', margin: '0 0 2px 0' }}>
-            Menu
+            Menu Catalog
           </h2>
           <span style={{ fontSize: '0.8rem', color: 'var(--adm-muted)', fontWeight: 600 }}>
-            {safeDishes.length} dishes • {safeCategories.length} categories
+            {safeDishes.length} dishes • {safeCategories.length} categories • {safeCombos.length} combos
           </span>
         </div>
 
@@ -113,7 +113,7 @@ export default function MenuView({
               <Search size={16} style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', color: 'var(--adm-muted)' }} />
               <input
                 type="text"
-                placeholder="Search dishes..."
+                placeholder="Search dishes by name..."
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
                 style={{
@@ -148,7 +148,7 @@ export default function MenuView({
             </select>
           </div>
 
-          {/* POS DISH GRID: 3 columns >= 1200px | 2 columns 768-1199px | 1 column < 768px */}
+          {/* POS DISH GRID */}
           <div className="adm-dish-grid">
             {filteredDishes.length === 0 ? (
               <div style={{ gridColumn: '1 / -1', padding: '36px', textAlign: 'center', background: '#FFFFFF', borderRadius: 'var(--adm-radius-md)', border: '1px solid var(--adm-border)' }}>
@@ -165,7 +165,7 @@ export default function MenuView({
                     className="adm-dish-card"
                     style={{ opacity: dish.available !== false ? 1 : 0.65 }}
                   >
-                    {/* Dish Image (64px mobile / 72px desktop) */}
+                    {/* Dish Image */}
                     <div className="adm-dish-card-img">
                       {imageSrc && imageSrc !== '/uploads/logo.jpg' ? (
                         <img
@@ -221,7 +221,7 @@ export default function MenuView({
                       </div>
                     </div>
 
-                    {/* Controls: Availability Switch & ⋮ More options menu */}
+                    {/* Controls */}
                     <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: '8px', flexShrink: 0 }}>
                       <button
                         onClick={() => onToggleAvailability(dish.id, dish.available)}
@@ -243,7 +243,7 @@ export default function MenuView({
                       <button
                         onClick={() => setSelectedDishForMore(dish)}
                         style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--adm-muted)', padding: '4px' }}
-                        title="More Dish Options"
+                        title="More Options"
                       >
                         <MoreVertical size={18} />
                       </button>
@@ -268,7 +268,22 @@ export default function MenuView({
                 </span>
               </div>
 
-              <div style={{ display: 'flex', gap: '6px' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <button
+                  onClick={() => onToggleCategoryActive && onToggleCategoryActive(cat.id, cat.active !== false)}
+                  style={{
+                    padding: '4px 8px',
+                    borderRadius: 'var(--adm-radius-full)',
+                    fontSize: '0.7rem',
+                    fontWeight: 800,
+                    background: cat.active !== false ? 'var(--adm-success-bg)' : 'var(--adm-danger-bg)',
+                    color: cat.active !== false ? 'var(--adm-success)' : 'var(--adm-danger)',
+                    border: '1px solid var(--adm-border)',
+                    cursor: 'pointer'
+                  }}
+                >
+                  {cat.active !== false ? '🟢 Active' : '🔴 Hidden'}
+                </button>
                 <button onClick={() => onOpenEditCategory(cat)} className="adm-btn adm-btn-secondary adm-btn-sm">
                   <Edit size={14} />
                 </button>
@@ -285,19 +300,41 @@ export default function MenuView({
       {activeSubTab === 'combos' && (
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: '12px' }}>
           {safeCombos.map(combo => (
-            <div key={combo.id} className="adm-card" style={{ padding: '14px', display: 'flex', flexDirection: 'column', gap: '8px' }}>
+            <div key={combo.id} className="adm-card" style={{ padding: '14px', display: 'flex', flexDirection: 'column', gap: '10px' }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                 <strong style={{ fontSize: '0.95rem', color: 'var(--adm-primary)' }}>{combo.title || combo.name}</strong>
                 <strong style={{ fontSize: '0.95rem', color: 'var(--adm-accent)' }}>₹{combo.price}</strong>
               </div>
 
-              <div style={{ display: 'flex', gap: '6px', marginTop: '6px' }}>
-                <button onClick={() => onOpenEditCombo(combo)} className="adm-btn adm-btn-secondary adm-btn-sm" style={{ flex: 1 }}>
-                  <Edit size={14} /> Edit
+              {combo.description && (
+                <p style={{ fontSize: '0.78rem', color: 'var(--adm-muted)', margin: 0 }}>{combo.description}</p>
+              )}
+
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', paddingTop: '4px' }}>
+                <button
+                  onClick={() => onToggleComboAvailability && onToggleComboAvailability(combo.id, combo.available !== false)}
+                  style={{
+                    padding: '4px 10px',
+                    borderRadius: 'var(--adm-radius-full)',
+                    fontSize: '0.72rem',
+                    fontWeight: 800,
+                    background: combo.available !== false ? 'var(--adm-success-bg)' : 'var(--adm-danger-bg)',
+                    color: combo.available !== false ? 'var(--adm-success)' : 'var(--adm-danger)',
+                    border: '1px solid var(--adm-border)',
+                    cursor: 'pointer'
+                  }}
+                >
+                  {combo.available !== false ? '🟢 Available' : '🔴 Off'}
                 </button>
-                <button onClick={() => onDeleteCombo(combo.id)} className="adm-btn adm-btn-danger adm-btn-sm">
-                  <Trash2 size={14} />
-                </button>
+
+                <div style={{ display: 'flex', gap: '6px' }}>
+                  <button onClick={() => onOpenEditCombo(combo)} className="adm-btn adm-btn-secondary adm-btn-sm">
+                    <Edit size={14} /> Edit
+                  </button>
+                  <button onClick={() => onDeleteCombo(combo.id)} className="adm-btn adm-btn-danger adm-btn-sm">
+                    <Trash2 size={14} />
+                  </button>
+                </div>
               </div>
             </div>
           ))}

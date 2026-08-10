@@ -1747,6 +1747,8 @@ export default function AdminDashboard({ token, username, onLogout, onReturnToMe
                 serviceRequests={serviceRequests}
                 onResolveServiceRequest={handleResolveServiceRequest}
                 restaurantInfo={restaurantInfo}
+                onPrintQR={handlePrintQR}
+                onDirectPrint={handleDirectBluetoothPrint}
               />
             )}
 

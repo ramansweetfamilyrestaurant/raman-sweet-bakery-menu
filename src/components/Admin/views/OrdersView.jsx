@@ -1,5 +1,5 @@
 import React from 'react';
-import { Clock, Printer, MapPin, Bell, RefreshCw, CheckCircle2 } from 'lucide-react';
+import { Clock, Printer, MapPin, Bell, RefreshCw, CheckCircle2, QrCode } from 'lucide-react';
 
 export default function OrdersView({
   orders = [],
@@ -11,7 +11,9 @@ export default function OrdersView({
   onOpenBillModal,
   serviceRequests = [],
   onResolveServiceRequest,
-  restaurantInfo
+  restaurantInfo,
+  onPrintQR,
+  onDirectPrint
 }) {
   const safeOrders = Array.isArray(orders) ? orders : [];
   const safeServiceRequests = Array.isArray(serviceRequests) ? serviceRequests : [];
@@ -154,6 +156,11 @@ export default function OrdersView({
                           Complete Order
                         </button>
                       )}
+                      {onDirectPrint && (
+                        <button onClick={() => onDirectPrint(order, 'kot')} className="adm-btn adm-btn-secondary adm-btn-sm" style={{ fontWeight: 700 }}>
+                          🖨️ KOT
+                        </button>
+                      )}
                       <button onClick={() => onOpenBillModal(order)} className="adm-btn adm-btn-secondary adm-btn-sm" style={{ fontWeight: 800 }}>
                         <Printer size={14} /> Bill
                       </button>
@@ -222,7 +229,7 @@ export default function OrdersView({
                   )}
                 </div>
 
-                <div style={{ display: 'flex', gap: '6px' }}>
+                <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap' }}>
                   {isOccupied && t.activeOrder && (
                     <>
                       <button onClick={() => onOpenBillModal(t.activeOrder)} className="adm-btn adm-btn-secondary adm-btn-sm" style={{ flex: 1 }}>
@@ -237,6 +244,12 @@ export default function OrdersView({
                   {isService && t.serviceRequest && (
                     <button onClick={() => onResolveServiceRequest(t.serviceRequest.id)} className="adm-btn adm-btn-warning adm-btn-sm" style={{ width: '100%' }}>
                       ✓ Attend Call
+                    </button>
+                  )}
+
+                  {isFree && onPrintQR && (
+                    <button onClick={() => onPrintQR(t.tableNumber)} className="adm-btn adm-btn-secondary adm-btn-sm" style={{ width: '100%' }}>
+                      <QrCode size={12} /> Print Table Standee
                     </button>
                   )}
                 </div>
