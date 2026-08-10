@@ -151,6 +151,7 @@ export default function SuperAdminDashboard({ token, username, onLogout, onRetur
   useEffect(() => {
     loadData();
     loadSaaSPlans();
+    loadSystemSettings();
   }, [token]);
 
   const loadAuditData = async () => {
