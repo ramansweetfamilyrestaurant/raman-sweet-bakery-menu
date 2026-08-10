@@ -3111,24 +3111,59 @@ export default function SuperAdminDashboard({ token, username, onLogout, onRetur
           display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '16px'
         }} onClick={() => setShowWhatsappModal(false)}>
           <div onClick={e => e.stopPropagation()} style={{
-            background: '#FFFFFF', borderRadius: '24px', maxWidth: '440px', width: '100%',
-            padding: '28px 24px', boxShadow: '0 20px 60px rgba(0,0,0,0.4)', border: '2px solid #22C55E'
+            background: '#FFFFFF', borderRadius: '24px', maxWidth: '460px', width: '100%',
+            padding: '28px 24px', boxShadow: '0 20px 60px rgba(0,0,0,0.4)', border: '2px solid #22C55E', position: 'relative'
           }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                <div style={{ width: '38px', height: '38px', borderRadius: '12px', background: '#DCFCE7', color: '#15803D', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                  <MessageSquare size={20} />
-                </div>
-                <h3 style={{ fontSize: '1.15rem', fontWeight: 900, color: 'var(--primary-emerald)', margin: 0 }}>
-                  Super Admin WhatsApp Support
-                </h3>
+            <button
+              type="button"
+              onClick={() => setShowWhatsappModal(false)}
+              style={{
+                position: 'absolute',
+                top: '18px',
+                right: '18px',
+                background: '#F3F4F6',
+                border: 'none',
+                width: '32px',
+                height: '32px',
+                borderRadius: '50%',
+                cursor: 'pointer',
+                fontWeight: 900,
+                color: '#4B5563',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center'
+              }}
+            >
+              ✕
+            </button>
+
+            <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '16px' }}>
+              <div style={{
+                width: '46px',
+                height: '46px',
+                borderRadius: '14px',
+                background: '#DCFCE7',
+                color: '#15803D',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                border: '1.5px solid #86EFAC'
+              }}>
+                <MessageSquare size={24} />
               </div>
-              <button onClick={() => setShowWhatsappModal(false)} style={{ background: 'none', border: 'none', fontSize: '1.4rem', cursor: 'pointer', color: '#6B7280' }}>✕</button>
+              <div>
+                <h3 style={{ margin: 0, fontSize: '1.2rem', fontWeight: 900, color: '#0F172A' }}>
+                  Master WhatsApp Support Portal
+                </h3>
+                <span style={{ fontSize: '0.78rem', color: '#64748B', fontWeight: 600 }}>
+                  Central Help Desk Dispatch for Restaurant Owners
+                </span>
+              </div>
             </div>
 
-            <p style={{ fontSize: '0.84rem', color: '#4B5563', lineHeight: 1.5, marginBottom: '20px' }}>
-              Enter your Master WhatsApp Support Mobile Number. When restaurant owners click <strong>"Contact Super Admin Support"</strong> on Forgot Password or Support screens, they will be directed to this WhatsApp number!
-            </p>
+            <div style={{ background: '#F0FDF4', border: '1px solid #BBF7D0', padding: '12px 14px', borderRadius: '14px', fontSize: '0.8rem', color: '#166534', lineHeight: 1.5, marginBottom: '18px' }}>
+              💡 When restaurant owners click <strong>"Contact Support"</strong> on Login, Register, or Billing screens, they are immediately connected to this WhatsApp number.
+            </div>
 
             <form onSubmit={async (e) => {
               e.preventDefault();
@@ -3149,27 +3184,75 @@ export default function SuperAdminDashboard({ token, username, onLogout, onRetur
                 alert('⚠️ ' + err.message);
               }
             }}>
-              <label style={{ display: 'block', fontSize: '0.78rem', fontWeight: 800, color: '#374151', marginBottom: '6px' }}>
-                SUPER ADMIN WHATSAPP NUMBER *
-              </label>
-              <input
-                type="tel"
-                required
-                placeholder="e.g. 919876543210 (with country code)"
-                value={masterWhatsapp}
-                onChange={e => setMasterWhatsapp(e.target.value)}
-                style={{
-                  width: '100%', padding: '12px 14px', borderRadius: '12px',
-                  border: '1.5px solid #CBD5E1', fontSize: '0.95rem', outline: 'none', marginBottom: '20px'
-                }}
-              />
+              <div style={{ marginBottom: '16px' }}>
+                <label style={{ display: 'block', fontSize: '0.78rem', fontWeight: 800, color: '#374151', marginBottom: '6px' }}>
+                  SUPER ADMIN WHATSAPP NUMBER (WITH COUNTRY CODE) *
+                </label>
+                <input
+                  type="tel"
+                  required
+                  placeholder="e.g. 919876543210 (include country code 91)"
+                  value={masterWhatsapp}
+                  onChange={e => setMasterWhatsapp(e.target.value)}
+                  style={{
+                    width: '100%',
+                    padding: '12px 14px',
+                    borderRadius: '12px',
+                    border: '1.5px solid #CBD5E1',
+                    fontSize: '0.95rem',
+                    fontWeight: 800,
+                    color: '#0F172A',
+                    outline: 'none',
+                    boxSizing: 'border-box'
+                  }}
+                />
+              </div>
 
-              <button type="submit" style={{
-                width: '100%', padding: '14px', borderRadius: '14px', border: 'none',
-                background: 'linear-gradient(135deg, #15803D, #22C55E)', color: '#FFFFFF',
-                fontWeight: 900, fontSize: '0.9rem', cursor: 'pointer', boxShadow: '0 4px 14px rgba(34,197,94,0.4)'
-              }}>
-                💾 Save Master Support WhatsApp Number
+              {masterWhatsapp && (
+                <div style={{ marginBottom: '18px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: '#F8FAFC', padding: '10px 12px', borderRadius: '12px', border: '1px solid #E2E8F0' }}>
+                  <span style={{ fontSize: '0.76rem', color: '#64748B', fontWeight: 700 }}>LIVE WHATSAPP TEST LINK:</span>
+                  <a
+                    href={`https://wa.me/${masterWhatsapp.replace(/[^0-9]/g, '')}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    style={{
+                      background: '#22C55E',
+                      color: '#FFFFFF',
+                      padding: '4px 10px',
+                      borderRadius: '8px',
+                      fontSize: '0.74rem',
+                      fontWeight: 900,
+                      textDecoration: 'none',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '4px'
+                    }}
+                  >
+                    💬 Test Link ➔
+                  </a>
+                </div>
+              )}
+
+              <button
+                type="submit"
+                style={{
+                  width: '100%',
+                  padding: '14px',
+                  borderRadius: '14px',
+                  border: 'none',
+                  background: 'linear-gradient(135deg, #15803D 0%, #22C55E 100%)',
+                  color: '#FFFFFF',
+                  fontWeight: 900,
+                  fontSize: '0.92rem',
+                  cursor: 'pointer',
+                  boxShadow: '0 4px 14px rgba(34,197,94,0.4)',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  gap: '6px'
+                }}
+              >
+                <MessageSquare size={18} /> 💾 Save Support WhatsApp Number
               </button>
             </form>
           </div>
