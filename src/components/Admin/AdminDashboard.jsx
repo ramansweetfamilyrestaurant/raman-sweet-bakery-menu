@@ -20,13 +20,22 @@ import QrGeneratorView from './views/QrGeneratorView';
 import ReviewView from './views/ReviewView';
 
 export default function AdminDashboard({ token, username, onLogout, onReturnToMenu }) {
+  const getInitialAdminState = (key, fallback) => {
+    try {
+      const saved = localStorage.getItem(`admin_cache_${key}`);
+      return saved ? JSON.parse(saved) : fallback;
+    } catch {
+      return fallback;
+    }
+  };
+
   const [showPaymentModal, setShowPaymentModal] = useState(false);
   const [activeTab, setActiveTab] = useState('dishes'); // 'dishes', 'categories', 'qr-generator', 'settings'
-  const [categories, setCategories] = useState([]);
-  const [dishes, setDishes] = useState([]);
+  const [categories, setCategories] = useState(() => getInitialAdminState('categories', []));
+  const [dishes, setDishes] = useState(() => getInitialAdminState('dishes', []));
   const [announcements, setAnnouncements] = useState([]);
   const [dismissedNotice, setDismissedNotice] = useState(false);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(false);
   const [search, setSearch] = useState('');
   const [selectedCatFilter, setSelectedCatFilter] = useState('all');
   const [editingPriceId, setEditingPriceId] = useState(null);
@@ -37,15 +46,15 @@ export default function AdminDashboard({ token, username, onLogout, onReturnToMe
   const [qrGenerated, setQrGenerated] = useState(false);
 
   // Live Orders (KOT) & Analytics State
-  const [orders, setOrders] = useState([]);
+  const [orders, setOrders] = useState(() => getInitialAdminState('orders', []));
   const [serviceRequests, setServiceRequests] = useState([]);
   const [analyticsData, setAnalyticsData] = useState(null);
   const [billOrderModal, setBillOrderModal] = useState(null);
   const [kotFilter, setKotFilter] = useState('all');
   const [prevPendingCount, setPrevPendingCount] = useState(0);
-  const [restaurantInfo, setRestaurantInfo] = useState(null);
+  const [restaurantInfo, setRestaurantInfo] = useState(() => getInitialAdminState('info', null));
 
-  const [combos, setCombos] = useState([]);
+  const [combos, setCombos] = useState(() => getInitialAdminState('combos', []));
   const [comboModalData, setComboModalData] = useState(null);
   const [permissionsGranted, setPermissionsGranted] = useState(false);
   const [masterSupportPhone, setMasterSupportPhone] = useState('919876543210');
@@ -309,6 +318,9 @@ export default function AdminDashboard({ token, username, onLogout, onReturnToMe
       }
       setPrevPendingCount(pendingCount);
       setOrders(safeData);
+      try {
+        localStorage.setItem('admin_cache_orders', JSON.stringify(safeData));
+      } catch (e) {}
       setServiceRequests(safeReqs);
       if (analytics) setAnalyticsData(analytics);
     } catch (err) {
@@ -923,10 +935,22 @@ export default function AdminDashboard({ token, username, onLogout, onReturnToMe
         fetchAdminCombos(token).catch(() => []),
         fetch('/api/admin/subscription-status', { headers: { Authorization: `Bearer ${token}` } }).then(r => r.ok ? r.json() : null).catch(() => null)
       ]);
-      setCategories(Array.isArray(catData) ? catData : []);
-      setDishes(Array.isArray(dishData) ? dishData : []);
+      const safeCats = Array.isArray(catData) ? catData : [];
+      const safeDishes = Array.isArray(dishData) ? dishData : [];
+      const safeCombos = Array.isArray(comboData) ? comboData : [];
+
+      setCategories(safeCats);
+      setDishes(safeDishes);
       setRestaurantInfo(infoData);
-      setCombos(Array.isArray(comboData) ? comboData : []);
+      setCombos(safeCombos);
+
+      try {
+        localStorage.setItem('admin_cache_categories', JSON.stringify(safeCats));
+        localStorage.setItem('admin_cache_dishes', JSON.stringify(safeDishes));
+        if (infoData) localStorage.setItem('admin_cache_info', JSON.stringify(infoData));
+        localStorage.setItem('admin_cache_combos', JSON.stringify(safeCombos));
+      } catch (e) {}
+
       if (subStatusData) setSubscriptionStatus(subStatusData);
       if (infoData) {
         const defaultVis = { must_try: true, combo: true, special: true, under100: true };
