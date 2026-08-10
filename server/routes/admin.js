@@ -1174,14 +1174,6 @@ router.patch('/orders/:id/status', authenticateToken, requireActiveSubscription,
     const { id } = req.params;
     const { status } = req.body;
 
-    if (status === 'rejected' || status === 'cancelled') {
-      await query(
-        'DELETE FROM orders WHERE id = $1 AND restaurant_id = $2',
-        [id, targetId]
-      );
-      return res.json({ success: true, id, status: 'deleted' });
-    }
-
     await query(
       'UPDATE orders SET status = $1 WHERE id = $2 AND restaurant_id = $3',
       [status, id, targetId]
@@ -1191,6 +1183,24 @@ router.patch('/orders/:id/status', authenticateToken, requireActiveSubscription,
   } catch (err) {
     console.error('Update order status error:', err);
     res.status(500).json({ error: 'Failed to update order status' });
+  }
+});
+
+// DELETE Purge Order (Manual Hard Delete)
+router.delete('/orders/:id', authenticateToken, requireActiveSubscription, async (req, res) => {
+  try {
+    const restoId = req.user?.restaurant_id;
+    if (!restoId && req.user?.role !== 'superadmin') {
+      return res.status(401).json({ error: 'Unauthorized: Restaurant session required' });
+    }
+    const targetId = restoId || 1;
+    const { id } = req.params;
+
+    await query('DELETE FROM orders WHERE id = $1 AND restaurant_id = $2', [id, targetId]);
+    res.json({ success: true, id, message: 'Order purged successfully' });
+  } catch (err) {
+    console.error('Delete order error:', err);
+    res.status(500).json({ error: 'Failed to delete order' });
   }
 });
 
