@@ -569,7 +569,6 @@ export default function App() {
       } else if (isRegister) {
         setView('register');
       } else if (isRouteAdmin) {
-        setSubscriptionLoading(true);
         let storedSlug = localStorage.getItem('raman_admin_slug');
         if (storedSlug === 'undefined' || storedSlug === 'null') storedSlug = '';
 
@@ -583,41 +582,30 @@ export default function App() {
         if (effectiveSlug === 'undefined' || effectiveSlug === 'null') effectiveSlug = '';
 
         if (adminToken) {
-          // CRITICAL BUG FIX: If URL specifies a slug (e.g. 'rama') and storedSlug is for another restaurant (e.g. 'raman-sweet-bakery'),
-          // do NOT automatically log into the stored token's admin dashboard!
           if (urlSlug && storedSlug && urlSlug.toLowerCase() !== storedSlug.toLowerCase()) {
             console.warn(`URL slug '${urlSlug}' does not match stored admin token slug '${storedSlug}'. Prompting login for '${urlSlug}'.`);
             setView('admin-login');
-            setSubscriptionLoading(false);
             return;
           }
 
-          if (!effectiveSlug) {
-            try {
-              const rInfo = await fetchRestaurantInfo(adminToken);
-              if (rInfo && rInfo.slug) {
-                effectiveSlug = rInfo.slug;
-                localStorage.setItem('raman_admin_slug', effectiveSlug);
-              }
-            } catch (e) {
-              console.warn('Notice fetching restaurant info for route:', e.message);
-            }
-          }
+          // Instant View Switch to Admin Dashboard (0ms delay!)
+          setView('admin-dashboard');
 
-          const mandateActive = await checkMandateGating(adminToken, effectiveSlug);
-          if (mandateActive) {
-            const cleanUrl = (effectiveSlug && effectiveSlug !== 'undefined' && effectiveSlug !== 'null') ? `/${effectiveSlug}/admin` : '/admin';
-            window.history.replaceState({}, '', cleanUrl);
-            setView('admin-dashboard');
-          } else {
-            // Subscription action required → Redirect to billing page
-            window.history.replaceState({}, '', '/billing');
-            setView('billing');
-          }
+          // Silent Mandate Verification in Background
+          checkMandateGating(adminToken, effectiveSlug).then(mandateActive => {
+            if (!mandateActive) {
+              window.history.replaceState({}, '', '/billing');
+              setView('billing');
+            } else {
+              const cleanUrl = (effectiveSlug && effectiveSlug !== 'undefined' && effectiveSlug !== 'null') ? `/${effectiveSlug}/admin` : '/admin';
+              if (window.location.pathname !== cleanUrl) {
+                window.history.replaceState({}, '', cleanUrl);
+              }
+            }
+          }).catch(() => {});
         } else {
           setView('admin-login');
         }
-        setSubscriptionLoading(false);
       } else if (isRootPath) {
         setView('landing');
         document.title = 'KhanaMaster - Digital Menu & QR Ordering Platform';
