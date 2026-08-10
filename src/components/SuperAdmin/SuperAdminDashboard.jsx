@@ -24,7 +24,7 @@ import {
   deleteTenantRestaurant, impersonateTenantRestaurant, grantFreeAccess, revokeFreeAccess, fetchPendingRegistrations,
   fetchSaaSPlans, createSaaSPlan, updateSaaSPlan, deleteSaaSPlan, fetchAuditLogs,
   createAnnouncement, fetchSuperAnnouncements, deleteAnnouncement, clearAllAnnouncements,
-  superAdminOptimizeDatabase
+  superAdminOptimizeDatabase, uploadImage
 } from '../../api/client';
 
 export default function SuperAdminDashboard({ token, username, onLogout, onImpersonate }) {
@@ -261,6 +261,10 @@ export default function SuperAdminDashboard({ token, username, onLogout, onImper
     }
   };
 
+  const handleUploadLogo = async (file) => {
+    return await uploadImage(file, token, 'logo');
+  };
+
   return (
     <div className="sa-dashboard-container">
       {/* Desktop Sidebar — 4 Clean Tabs */}
@@ -334,6 +338,7 @@ export default function SuperAdminDashboard({ token, username, onLogout, onImper
               loading={loading}
               onRefresh={loadDashboardData}
               onOptimizeDatabase={handleOptimizeDatabase}
+              onUploadLogo={handleUploadLogo}
             />
           )}
 
