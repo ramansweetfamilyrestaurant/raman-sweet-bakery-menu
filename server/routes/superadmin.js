@@ -292,6 +292,76 @@ router.put('/restaurants/:id', authenticateToken, requireSuperAdmin, async (req,
   }
 });
 
+// POST Grant Free Sponsored Access (Super Admin Only - No Cashfree charge)
+router.post('/restaurants/:id/grant-free-access', authenticateToken, requireSuperAdmin, async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { plan_key, valid_until, notes } = req.body;
+
+    const targetPlanKey = (plan_key || 'pro').toLowerCase().trim();
+    const planRows = await query('SELECT * FROM saas_plans WHERE LOWER(key) = $1', [targetPlanKey]);
+    const targetPlan = planRows[0] || { id: 2, key: 'pro', name: 'Pro Plan', price: 999 };
+
+    const expiryDate = valid_until || new Date(Date.now() + 365 * 86400 * 1000).toISOString();
+    const nowISO = new Date().toISOString();
+
+    // Update restaurant tenant record
+    await query(`
+      UPDATE restaurants
+      SET plan_tier = $1, plan_price = 0, plan_expires_at = $2,
+          subscription_type = 'ADMIN_GRANTED', mandate_status = 'admin_granted',
+          auto_debit_enabled = 0, active = 1, admin_notes = $3
+      WHERE id = $4
+    `, [targetPlan.key, expiryDate, notes || 'Super Admin granted free sponsored access', id]);
+
+    // Upsert subscriptions record
+    const subRows = await query('SELECT id FROM subscriptions WHERE restaurant_id = $1 ORDER BY id DESC LIMIT 1', [id]);
+    if (subRows && subRows.length > 0) {
+      await query(`
+        UPDATE subscriptions
+        SET plan_id = $1, gateway = 'admin_granted', status = 'active', amount = 0,
+            subscription_type = 'ADMIN_GRANTED', current_period_end = $2, auto_renew = 0,
+            admin_notes = $3, updated_at = $4
+        WHERE id = $5
+      `, [targetPlan.id, expiryDate, notes || 'Super Admin granted free sponsored access', nowISO, subRows[0].id]);
+    } else {
+      await query(`
+        INSERT INTO subscriptions (
+          restaurant_id, plan_id, gateway, status, amount, currency, billing_cycle,
+          subscription_type, current_period_start, current_period_end, auto_renew, admin_notes
+        ) VALUES ($1, $2, 'admin_granted', 'active', 0, 'INR', 'monthly', 'ADMIN_GRANTED', $3, $4, 0, $5)
+      `, [id, targetPlan.id, nowISO, expiryDate, notes || 'Super Admin granted free sponsored access']);
+    }
+
+    await logAudit(id, 'superadmin', 'Grant Free Access', `Granted free ${targetPlan.name} access until ${new Date(expiryDate).toLocaleDateString('en-IN')}`);
+
+    res.json({
+      success: true,
+      message: `Granted free ${targetPlan.name} access to restaurant #${id} until ${new Date(expiryDate).toLocaleDateString('en-IN')}`
+    });
+  } catch (err) {
+    console.error('Grant free access error:', err);
+    res.status(500).json({ error: 'Failed to grant free access' });
+  }
+});
+
+// POST Revoke Free Access (Super Admin Only)
+router.post('/restaurants/:id/revoke-free-access', authenticateToken, requireSuperAdmin, async (req, res) => {
+  try {
+    const { id } = req.params;
+    const nowISO = new Date().toISOString();
+
+    await query("UPDATE restaurants SET active = 0, mandate_status = 'cancelled', subscription_type = 'PAID' WHERE id = $1", [id]);
+    await query("UPDATE subscriptions SET status = 'cancelled', updated_at = $1 WHERE restaurant_id = $2 AND status = 'active'", [nowISO, id]);
+
+    await logAudit(id, 'superadmin', 'Revoke Free Access', `Revoked free access for restaurant #${id}`);
+    res.json({ success: true, message: `Revoked free access for restaurant #${id}` });
+  } catch (err) {
+    console.error('Revoke free access error:', err);
+    res.status(500).json({ error: 'Failed to revoke free access' });
+  }
+});
+
 // DELETE Restaurant Tenant (Full Automatic Cleanup & URL Purge)
 router.delete('/restaurants/:id', authenticateToken, requireSuperAdmin, async (req, res) => {
   try {
@@ -572,13 +642,14 @@ router.get('/settings', authenticateToken, requireSuperAdmin, async (req, res) =
 // POST Update System Settings for Super Admin
 router.post('/settings', authenticateToken, requireSuperAdmin, async (req, res) => {
   try {
-    const { support_whatsapp, cashfree_app_id, cashfree_secret_key, default_trial_days } = req.body;
+    const { support_whatsapp, cashfree_app_id, cashfree_secret_key, default_trial_days, grace_period_days } = req.body;
     
     const settingsToSave = {
       support_whatsapp: support_whatsapp ? support_whatsapp.replace(/[^0-9]/g, '') : undefined,
       cashfree_app_id: cashfree_app_id !== undefined ? String(cashfree_app_id).trim() : undefined,
       cashfree_secret_key: cashfree_secret_key !== undefined ? String(cashfree_secret_key).trim() : undefined,
-      default_trial_days: default_trial_days !== undefined ? String(Math.max(1, parseInt(default_trial_days, 10) || 14)) : undefined
+      default_trial_days: default_trial_days !== undefined ? String(Math.max(1, parseInt(default_trial_days, 10) || 14)) : undefined,
+      grace_period_days: grace_period_days !== undefined ? String(Math.max(0, parseInt(grace_period_days, 10) || 7)) : undefined
     };
 
     for (const [k, v] of Object.entries(settingsToSave)) {

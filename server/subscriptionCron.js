@@ -3,8 +3,10 @@ import { query } from './db.js';
 export async function checkExpiredSubscriptions() {
   try {
     const nowISO = new Date().toISOString();
-    // 7-day grace period threshold (7 * 86400 * 1000 ms)
-    const graceThresholdISO = new Date(Date.now() - 7 * 86400 * 1000).toISOString();
+    // Resolve dynamic grace period days from system_settings DB (default: 7 days)
+    const graceSettingRows = await query("SELECT value FROM system_settings WHERE key = 'grace_period_days'");
+    const graceDays = Math.max(0, parseInt(graceSettingRows[0]?.value || '7', 10));
+    const graceThresholdISO = new Date(Date.now() - graceDays * 86400 * 1000).toISOString();
     
     // === 1. Handle cancel-requested subscriptions whose period has ended ===
     try {

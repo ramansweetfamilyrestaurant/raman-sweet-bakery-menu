@@ -131,6 +131,30 @@ export async function deleteTenantRestaurant(id, token) {
   return handleResponse(res, 'Failed to delete tenant restaurant');
 }
 
+export async function grantFreeAccess(id, payload, token) {
+  const res = await fetch(`${API_BASE}/superadmin/restaurants/${id}/grant-free-access`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+    body: JSON.stringify(payload),
+  });
+  return handleResponse(res, 'Failed to grant free access');
+}
+
+export async function revokeFreeAccess(id, token) {
+  const res = await fetch(`${API_BASE}/superadmin/restaurants/${id}/revoke-free-access`, {
+    method: 'POST',
+    headers: { Authorization: `Bearer ${token}` },
+  });
+  return handleResponse(res, 'Failed to revoke free access');
+}
+
+export async function fetchPendingRegistrations(token) {
+  const res = await fetch(`${API_BASE}/superadmin/pending-registrations`, {
+    headers: { Authorization: `Bearer ${token}` },
+  });
+  return handleResponse(res, 'Failed to fetch pending registrations');
+}
+
 // Restaurant Admin API calls
 export async function adminLogin(username, password, slug = '') {
   const res = await fetch(`${API_BASE}/admin/login`, {
