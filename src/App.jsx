@@ -273,11 +273,11 @@ export default function App() {
   const [activeOrderId, setActiveOrderId] = useState(localStorage.getItem(getOrderStorageKey()) || null);
   const [activeOrderTrack, setActiveOrderTrack] = useState(null);
 
-  // 2-Minute (120s) Auto-Kill Timer Effect after order completion
+  // 3-Minute (180s) Auto-Kill Timer Effect after order completion, cancellation, or rejection
   useEffect(() => {
-    if (activeOrderTrack && (activeOrderTrack.status === 'completed' || activeOrderTrack.status === 'cancelled')) {
+    if (activeOrderTrack && (activeOrderTrack.status === 'completed' || activeOrderTrack.status === 'cancelled' || activeOrderTrack.status === 'rejected')) {
       if (autoKillSeconds === null) {
-        setAutoKillSeconds(120); // 2 minutes countdown
+        setAutoKillSeconds(180); // 3 minutes countdown (180s)
       }
     } else {
       setAutoKillSeconds(null);
@@ -1838,9 +1838,9 @@ export default function App() {
                   'Order Received 🟢'
                 }
               </span>
-              {(activeOrderTrack.status === 'completed' || activeOrderTrack.status === 'cancelled') && (
+              {(activeOrderTrack.status === 'completed' || activeOrderTrack.status === 'cancelled' || activeOrderTrack.status === 'rejected') && (
                 <div style={{ fontSize: '0.72rem', color: '#FCD34D', fontWeight: 700, marginTop: '3px' }}>
-                  ⏳ Session expire hone me: <strong>{autoKillSeconds !== null ? `${Math.floor(autoKillSeconds/60)}m ${String(autoKillSeconds%60).padStart(2,'0')}s` : '2m 00s'}</strong> (Naya order karne ke liye QR dobara scan karein)
+                  ⏳ Session expire hone me: <strong>{autoKillSeconds !== null ? `${Math.floor(autoKillSeconds/60)}m ${String(autoKillSeconds%60).padStart(2,'0')}s` : '3m 00s'}</strong> (Naya order karne ke liye QR dobara scan karein)
                 </div>
               )}
             </div>
