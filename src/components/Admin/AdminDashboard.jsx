@@ -996,7 +996,6 @@ export default function AdminDashboard({ token, username, onLogout, onReturnToMe
   };
 
   const handleDeleteDish = async (id) => {
-    if (!window.confirm('Are you sure you want to delete this dish?')) return;
     try {
       await deleteDish(id, token);
       setDishes(dishes.filter(d => d.id !== id));
