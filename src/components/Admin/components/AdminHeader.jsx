@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Utensils, MoreVertical, HelpCircle, Phone, LogOut, ExternalLink } from 'lucide-react';
 
 export default function AdminHeader({
@@ -14,6 +14,15 @@ export default function AdminHeader({
 }) {
   const [showMoreMenu, setShowMoreMenu] = useState(false);
   const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
+
+  useEffect(() => {
+    if (!showMoreMenu) return;
+    const handleKeyDown = (e) => {
+      if (e.key === 'Escape') setShowMoreMenu(false);
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [showMoreMenu]);
 
   const restoName = restaurantInfo?.name || 'Raman Sweet Bakery & Family Restaurant';
   const truncatedName = restoName.length > 22 ? `${restoName.substring(0, 20)}...` : restoName;
@@ -158,48 +167,63 @@ export default function AdminHeader({
 
         {/* Dropdown Menu (Guide, WhatsApp Support, Exit / Logout) */}
         {showMoreMenu && (
-          <div
-            style={{
-              position: 'absolute',
-              top: '50px',
-              right: 0,
-              width: '200px',
-              maxWidth: 'calc(100vw - 24px)',
-              background: '#FFFFFF',
-              border: '1px solid var(--adm-border)',
-              borderRadius: '14px',
-              boxShadow: '0 10px 30px rgba(0,0,0,0.2)',
-              zIndex: 2000,
-              padding: '6px',
-              color: 'var(--adm-text)'
-            }}
-            onClick={() => setShowMoreMenu(false)}
-          >
-            <button
-              onClick={onOpenHelp}
-              style={{ width: '100%', display: 'flex', alignItems: 'center', gap: '8px', padding: '10px 12px', fontSize: '0.84rem', fontWeight: 700, color: 'var(--adm-text)', background: 'none', border: 'none', cursor: 'pointer', textAlign: 'left', borderRadius: '8px' }}
+          <>
+            {/* Fullscreen Transparent Overlay to catch clicks/taps anywhere outside */}
+            <div
+              onClick={() => setShowMoreMenu(false)}
+              style={{
+                position: 'fixed',
+                top: 0,
+                left: 0,
+                right: 0,
+                bottom: 0,
+                zIndex: 1999,
+                background: 'transparent'
+              }}
+            />
+            <div
+              style={{
+                position: 'absolute',
+                top: '50px',
+                right: 0,
+                width: '200px',
+                maxWidth: 'calc(100vw - 24px)',
+                background: '#FFFFFF',
+                border: '1px solid var(--adm-border)',
+                borderRadius: '14px',
+                boxShadow: '0 10px 30px rgba(0,0,0,0.25)',
+                zIndex: 2000,
+                padding: '6px',
+                color: 'var(--adm-text)'
+              }}
+              onClick={() => setShowMoreMenu(false)}
             >
-              <HelpCircle size={16} color="var(--adm-info)" /> Onboarding Guide
-            </button>
+              <button
+                onClick={onOpenHelp}
+                style={{ width: '100%', display: 'flex', alignItems: 'center', gap: '8px', padding: '10px 12px', fontSize: '0.84rem', fontWeight: 700, color: 'var(--adm-text)', background: 'none', border: 'none', cursor: 'pointer', textAlign: 'left', borderRadius: '8px' }}
+              >
+                <HelpCircle size={16} color="var(--adm-info)" /> Onboarding Guide
+              </button>
 
-            <a
-              href={`https://wa.me/${(supportPhone || '919876543210').replace(/[^0-9]/g, '')}`}
-              target="_blank"
-              rel="noopener noreferrer"
-              style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '10px 12px', fontSize: '0.84rem', fontWeight: 700, color: 'var(--adm-text)', textDecoration: 'none', borderRadius: '8px' }}
-            >
-              <Phone size={16} color="var(--adm-success)" /> WhatsApp Support
-            </a>
+              <a
+                href={`https://wa.me/${(supportPhone || '919876543210').replace(/[^0-9]/g, '')}`}
+                target="_blank"
+                rel="noopener noreferrer"
+                style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '10px 12px', fontSize: '0.84rem', fontWeight: 700, color: 'var(--adm-text)', textDecoration: 'none', borderRadius: '8px' }}
+              >
+                <Phone size={16} color="var(--adm-success)" /> WhatsApp Support
+              </a>
 
-            <div style={{ height: '1px', background: 'var(--adm-border)', margin: '4px 0' }} />
+              <div style={{ height: '1px', background: 'var(--adm-border)', margin: '4px 0' }} />
 
-            <button
-              onClick={() => setShowLogoutConfirm(true)}
-              style={{ width: '100%', display: 'flex', alignItems: 'center', gap: '8px', padding: '10px 12px', fontSize: '0.84rem', fontWeight: 800, color: 'var(--adm-danger)', background: 'none', border: 'none', cursor: 'pointer', textAlign: 'left', borderRadius: '8px' }}
-            >
-              <LogOut size={16} /> Exit / Logout Admin
-            </button>
-          </div>
+              <button
+                onClick={() => setShowLogoutConfirm(true)}
+                style={{ width: '100%', display: 'flex', alignItems: 'center', gap: '8px', padding: '10px 12px', fontSize: '0.84rem', fontWeight: 800, color: 'var(--adm-danger)', background: 'none', border: 'none', cursor: 'pointer', textAlign: 'left', borderRadius: '8px' }}
+              >
+                <LogOut size={16} /> Exit / Logout Admin
+              </button>
+            </div>
+          </>
         )}
       </div>
 
