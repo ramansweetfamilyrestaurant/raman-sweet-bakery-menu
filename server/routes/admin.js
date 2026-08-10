@@ -458,7 +458,8 @@ router.post('/upload', authenticateToken, requireActiveSubscription, upload.sing
         r2Result.mimeType,
         r2Result.objectKey,
         r2Result.publicUrl,
-        restaurantId
+        restaurantId,
+        fileBuffer
       );
 
       if (req.file.path && fs.existsSync(req.file.path)) fs.unlinkSync(req.file.path);

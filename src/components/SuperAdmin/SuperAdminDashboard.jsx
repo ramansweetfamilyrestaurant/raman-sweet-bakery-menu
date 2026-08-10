@@ -3332,8 +3332,9 @@ export default function SuperAdminDashboard({ token, username, onLogout, onRetur
                           if (!file) return;
                           setUploadingLogo(true);
                           try {
-                            const data = await uploadImage(file, token, 1, 'superadmin-logo');
-                            const newUrl = data.url || data.path;
+                            const uploadedData = await uploadImage(file, token, 'superadmin');
+                            const newUrl = typeof uploadedData === 'string' ? uploadedData : (uploadedData?.r2ProxyUrl || uploadedData?.url || uploadedData?.path);
+                            if (!newUrl) throw new Error('Invalid image URL returned from server');
                             const updated = { ...paymentKeys, platform_logo_url: newUrl };
                             setPaymentKeys(updated);
                             await fetch('/api/superadmin/settings', {
