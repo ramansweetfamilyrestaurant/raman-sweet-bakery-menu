@@ -28,6 +28,7 @@ export default function MenuView({
   onToggleBadge,
   currencySymbol = '₹'
 }) {
+  const [deleteConfirmDish, setDeleteConfirmDish] = useState(null);
   const [selectedDishForMore, setSelectedDishForMore] = useState(null);
   const [quickPriceDish, setQuickPriceDish] = useState(null);
   const [quickPriceVal, setQuickPriceVal] = useState({ price: '', price_half: '' });
@@ -288,10 +289,10 @@ export default function MenuView({
                       boxShadow: '0 2px 6px rgba(0,0,0,0.03)'
                     }}
                   >
-                    {/* LEFT: Dish Image (52px) */}
+                    {/* LEFT: Dish Image (56px Square) */}
                     <div style={{
-                      width: '52px',
-                      height: '52px',
+                      width: '56px',
+                      height: '56px',
                       borderRadius: '10px',
                       overflow: 'hidden',
                       flexShrink: 0,
@@ -313,7 +314,7 @@ export default function MenuView({
                       )}
                     </div>
 
-                    {/* MIDDLE: Dish Name, Category & Price (Full text, 2-line max, no harsh truncation) */}
+                    {/* MIDDLE: Dish Name, Category, Price & Description (1-2 lines max) */}
                     <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', gap: '2px' }}>
                       <div style={{ display: 'flex', alignItems: 'center', gap: '5px' }}>
                         <span style={{
@@ -335,7 +336,7 @@ export default function MenuView({
                         </span>
 
                         <strong style={{
-                          fontSize: '0.88rem',
+                          fontSize: '0.90rem',
                           fontWeight: 800,
                           color: '#0F172A',
                           lineHeight: 1.25,
@@ -351,35 +352,54 @@ export default function MenuView({
                         {dish.is_special && <span style={{ fontSize: '0.7rem', flexShrink: 0 }} title="Special">✨</span>}
                       </div>
 
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
-                        <span style={{ fontSize: '0.72rem', color: '#64748B', fontWeight: 600 }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flexWrap: 'wrap' }}>
+                        <span style={{ fontSize: '0.73rem', color: '#64748B', fontWeight: 600 }}>
                           {catName}
                         </span>
-                        <span style={{ fontSize: '0.85rem', fontWeight: 900, color: 'var(--adm-primary)' }}>
+                        <span style={{ fontSize: '0.86rem', fontWeight: 900, color: 'var(--adm-primary)' }}>
                           {currencySymbol}{Math.round(dish.price)} {dish.price_half ? `/ ${currencySymbol}${Math.round(dish.price_half)}` : ''}
                         </span>
                       </div>
+
+                      {dish.description && (
+                        <div style={{
+                          fontSize: '0.70rem',
+                          color: '#94A3B8',
+                          lineHeight: 1.25,
+                          display: '-webkit-box',
+                          WebkitLineClamp: 1,
+                          WebkitBoxOrient: 'vertical',
+                          overflow: 'hidden',
+                          textOverflow: 'ellipsis'
+                        }}>
+                          {dish.description}
+                        </div>
+                      )}
                     </div>
 
-                    {/* RIGHT: Compact Action Buttons (Stack Cluster) */}
+                    {/* RIGHT: Primary Action (Available Toggle) & Secondary Actions (Edit, Delete) */}
                     <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: '6px', flexShrink: 0 }}>
+                      {/* PRIMARY ACTION: Available Status Badge */}
                       <button
                         onClick={() => onToggleAvailability(dish.id, dish.available)}
                         style={{
-                          padding: '3px 9px',
+                          padding: '4px 10px',
                           borderRadius: '12px',
-                          fontSize: '0.68rem',
+                          fontSize: '0.70rem',
                           fontWeight: 800,
                           background: dish.available !== false ? '#DCFCE7' : '#FEE2E2',
                           color: dish.available !== false ? '#15803D' : '#991B1B',
-                          border: dish.available !== false ? '1px solid #86EFAC' : '1px solid #FCA5A5',
+                          border: dish.available !== false ? '1.5px solid #86EFAC' : '1.5px solid #FCA5A5',
                           cursor: 'pointer',
-                          whiteSpace: 'nowrap'
+                          whiteSpace: 'nowrap',
+                          boxShadow: dish.available !== false ? '0 1px 4px rgba(22, 163, 74, 0.15)' : 'none'
                         }}
+                        title="Toggle Dish Availability"
                       >
                         {dish.available !== false ? '● Available' : '● Off'}
                       </button>
 
+                      {/* SECONDARY ACTIONS: Edit & Delete */}
                       <div style={{ display: 'flex', gap: '4px' }}>
                         <button
                           onClick={() => onOpenEditDish(dish)}
@@ -399,7 +419,7 @@ export default function MenuView({
                         </button>
 
                         <button
-                          onClick={() => onDeleteDish(dish.id)}
+                          onClick={() => setDeleteConfirmDish(dish)}
                           className="adm-btn adm-btn-danger adm-btn-sm"
                           style={{
                             padding: '4px 8px',
@@ -623,6 +643,75 @@ export default function MenuView({
           )}
         </form>
       </AdminDrawer>
+
+      {/* 8. ACCIDENTAL DELETE CONFIRMATION DIALOG */}
+      {deleteConfirmDish && (
+        <div style={{
+          position: 'fixed',
+          top: 0, left: 0, right: 0, bottom: 0,
+          background: 'rgba(0, 0, 0, 0.7)',
+          backdropFilter: 'blur(4px)',
+          zIndex: 11000,
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          padding: '16px'
+        }}>
+          <div style={{
+            background: '#FFFFFF',
+            borderRadius: '20px',
+            padding: '24px',
+            maxWidth: '380px',
+            width: '100%',
+            boxShadow: '0 20px 40px rgba(0,0,0,0.3)',
+            textAlign: 'center'
+          }}>
+            <div style={{ fontSize: '2.2rem', marginBottom: '8px' }}>🗑️</div>
+            <h3 style={{ fontSize: '1.1rem', fontWeight: 900, color: '#111827', margin: '0 0 6px 0' }}>
+              Delete Dish?
+            </h3>
+            <p style={{ fontSize: '0.84rem', color: '#64748B', margin: '0 0 20px 0', lineHeight: 1.5 }}>
+              Are you sure you want to permanently delete <strong>"{deleteConfirmDish.name}"</strong>? This action cannot be undone.
+            </p>
+            <div style={{ display: 'flex', gap: '10px' }}>
+              <button
+                onClick={() => setDeleteConfirmDish(null)}
+                style={{
+                  flex: 1,
+                  padding: '12px',
+                  borderRadius: '12px',
+                  border: '1px solid #E2E8F0',
+                  background: '#F8FAFC',
+                  color: '#475569',
+                  fontWeight: 800,
+                  cursor: 'pointer'
+                }}
+              >
+                Cancel
+              </button>
+              <button
+                onClick={() => {
+                  onDeleteDish(deleteConfirmDish.id);
+                  setDeleteConfirmDish(null);
+                }}
+                style={{
+                  flex: 1,
+                  padding: '12px',
+                  borderRadius: '12px',
+                  border: 'none',
+                  background: '#EF4444',
+                  color: '#FFFFFF',
+                  fontWeight: 800,
+                  cursor: 'pointer',
+                  boxShadow: '0 4px 12px rgba(239, 68, 68, 0.3)'
+                }}
+              >
+                Yes, Delete
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
