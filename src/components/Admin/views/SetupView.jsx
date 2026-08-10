@@ -102,54 +102,69 @@ export default function SetupView({
       }
     }
 
-    // Step 4: Request real location via browser Geolocation API
+    // Step 4: Request real location via fast 2-tier strategy (Instant Network/Wi-Fi location first, then GPS fallback)
     setGpsLoading(true);
+
+    const onGpsSuccess = (pos) => {
+      if (setSettingsForm && pos?.coords?.latitude && pos?.coords?.longitude) {
+        setSettingsForm(prev => ({
+          ...prev,
+          latitude: pos.coords.latitude,
+          longitude: pos.coords.longitude
+        }));
+      }
+      setGpsLoading(false);
+      setGpsSuccess(true);
+      setTimeout(() => setGpsSuccess(false), 5000);
+    };
+
+    const onGpsError = (err) => {
+      // If fast mode timed out or failed, try high accuracy mode as 2nd attempt
+      if (err.code === 3) {
+        navigator.geolocation.getCurrentPosition(
+          onGpsSuccess,
+          (finalErr) => handleFinalGpsError(finalErr),
+          { enableHighAccuracy: true, timeout: 7000, maximumAge: 60000 }
+        );
+      } else {
+        handleFinalGpsError(err);
+      }
+    };
+
+    const handleFinalGpsError = (err) => {
+      setGpsLoading(false);
+      if (err.code === 1) {
+        setGpsErrorState({
+          title: '🔒 Location Permission Required',
+          msg: 'Location permission was denied. Please allow location access in your browser/device settings and try again.',
+          isDenied: true
+        });
+      } else if (err.code === 2) {
+        setGpsErrorState({
+          title: '📍 Location is turned off',
+          msg: 'Please turn on Location/GPS on your device and try again.',
+          isDenied: false
+        });
+      } else if (err.code === 3) {
+        setGpsErrorState({
+          title: '⏱️ Location Timeout',
+          msg: 'Location detection timed out. Please check your network/GPS connection and try again.',
+          isDenied: false
+        });
+      } else {
+        setGpsErrorState({
+          title: '❌ Location Error',
+          msg: 'Unable to detect your location. Please try again.',
+          isDenied: false
+        });
+      }
+    };
+
+    // Fast 0.2s Primary Attempt (Network/Wi-Fi/Cell tower location)
     navigator.geolocation.getCurrentPosition(
-      (pos) => {
-        // PRESERVE EXISTING COORDINATES ON FAIL, ONLY POPULATE ON REAL SUCCESS
-        if (setSettingsForm && pos?.coords?.latitude && pos?.coords?.longitude) {
-          setSettingsForm(prev => ({
-            ...prev,
-            latitude: pos.coords.latitude,
-            longitude: pos.coords.longitude
-          }));
-        }
-        setGpsLoading(false);
-        setGpsSuccess(true);
-        setTimeout(() => setGpsSuccess(false), 5000);
-      },
-      (err) => {
-        setGpsLoading(false);
-        if (err.code === 1) {
-          // PERMISSION_DENIED
-          setGpsErrorState({
-            title: '🔒 Location Permission Required',
-            msg: 'Location permission was denied. Please allow location access in your browser/device settings and try again.',
-            isDenied: true
-          });
-        } else if (err.code === 2) {
-          // POSITION_UNAVAILABLE
-          setGpsErrorState({
-            title: '📍 Location is turned off',
-            msg: 'Please turn on Location/GPS on your device and try again.',
-            isDenied: false
-          });
-        } else if (err.code === 3) {
-          // TIMEOUT
-          setGpsErrorState({
-            title: '⏱️ Location Timeout',
-            msg: 'Location detection timed out. Please move to an area with better GPS/network signal and try again.',
-            isDenied: false
-          });
-        } else {
-          setGpsErrorState({
-            title: '❌ Location Error',
-            msg: 'Unable to detect your location. Please try again.',
-            isDenied: false
-          });
-        }
-      },
-      { enableHighAccuracy: true, timeout: 15000, maximumAge: 0 }
+      onGpsSuccess,
+      onGpsError,
+      { enableHighAccuracy: false, timeout: 4000, maximumAge: 300000 }
     );
   };
 
