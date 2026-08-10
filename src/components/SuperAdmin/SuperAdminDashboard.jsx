@@ -1102,15 +1102,29 @@ export default function SuperAdminDashboard({ token, username, onLogout, onRetur
                           <Phone size={14} color="#D4AF37" /> Mobile / WhatsApp:
                         </span>
                         {r.phone || r.whatsapp_number ? (
-                          <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                            <strong style={{ color: '#0A2315', fontWeight: 900 }}>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flexWrap: 'nowrap' }}>
+                            <strong style={{ color: '#0A2315', fontWeight: 900, fontSize: '0.82rem', whiteSpace: 'nowrap' }}>
                               {r.phone || r.whatsapp_number}
                             </strong>
                             <a
                               href={`https://wa.me/${(r.phone || r.whatsapp_number || '').replace(/[^0-9]/g, '')}`}
                               target="_blank"
                               rel="noopener noreferrer"
-                              style={{ background: '#22C55E', color: '#FFF', padding: '2px 6px', borderRadius: '6px', fontSize: '0.68rem', fontWeight: 900, textDecoration: 'none', display: 'flex', alignItems: 'center', gap: '2px' }}
+                              style={{
+                                background: 'linear-gradient(135deg, #15803D 0%, #22C55E 100%)',
+                                color: '#FFFFFF',
+                                padding: '3px 8px',
+                                borderRadius: '6px',
+                                fontSize: '0.72rem',
+                                fontWeight: 900,
+                                textDecoration: 'none',
+                                display: 'inline-flex',
+                                alignItems: 'center',
+                                gap: '3px',
+                                whiteSpace: 'nowrap',
+                                flexShrink: 0,
+                                boxShadow: '0 2px 6px rgba(34,197,94,0.3)'
+                              }}
                               title="Chat on WhatsApp"
                             >
                               💬 Chat
