@@ -1025,82 +1025,88 @@
 
   /* Higher Starting Hero Section */
   .km-hero-section {
-    padding: 24px 0 20px;
+    padding: 20px 0 16px;
   }
 
   .km-title-lg {
-    font-size: clamp(1.85rem, 7vw, 2.15rem);
+    font-size: clamp(1.75rem, 6.5vw, 2.1rem);
     line-height: 1.12;
-    margin-bottom: 12px;
+    margin-bottom: 10px;
   }
 
   .km-subtitle {
-    font-size: 0.92rem;
-    line-height: 1.5;
+    font-size: 0.9rem;
+    line-height: 1.45;
     max-width: 340px;
-    margin: 0 auto 20px auto;
+    margin: 0 auto 16px auto;
   }
 
   .km-hero-ctas {
     flex-direction: column;
     width: 100%;
-    gap: 10px;
-    margin-bottom: 18px;
+    gap: 8px;
+    margin-bottom: 14px;
   }
   
   .km-hero-ctas button,
   .km-hero-ctas a {
     width: 100%;
-    min-height: 48px;
-    height: 50px;
-    font-size: 0.95rem;
+    min-height: 46px;
+    height: 48px;
+    font-size: 0.92rem;
   }
 
   .km-hero-proof-list {
     display: flex;
     justify-content: center;
-    gap: 12px 18px;
+    gap: 10px 16px;
     flex-wrap: wrap;
-    font-size: 0.78rem;
-    margin-bottom: 24px;
+    font-size: 0.76rem;
+    margin-bottom: 18px;
   }
 
   .km-hero-preview {
     width: 100%;
-    max-width: 360px;
+    max-width: 350px;
     margin: 0 auto;
   }
 
   .km-mockup-body {
     grid-template-columns: 1fr;
-    padding: 12px;
-    gap: 12px;
+    padding: 10px;
+    gap: 10px;
   }
 
   .km-trust-section {
-    padding: 24px 0;
+    padding: 18px 0;
   }
   
   .km-trust-grid {
     grid-template-columns: repeat(2, 1fr);
-    gap: 12px;
+    gap: 10px;
   }
 
   .km-trust-val {
-    font-size: 1.6rem;
+    font-size: 1.5rem;
+  }
+
+  .km-section-header {
+    margin-bottom: 28px;
   }
 
   .km-features-section,
   .km-workflow-section,
   .km-showcase-section,
   .km-pricing-section,
-  .km-faq-section {
-    padding: 40px 0;
+  .km-faq-section,
+  .km-comparison-section {
+    padding: 32px 0;
   }
 
   .km-features-toggle-wrap {
     display: flex;
     justify-content: center;
+    margin-top: 16px;
   }
 
   .collapsed-mobile .mobile-hidden-card {
@@ -1111,27 +1117,35 @@
   .km-workflow-grid,
   .km-pricing-grid {
     grid-template-columns: 1fr;
-    gap: 14px;
+    gap: 12px;
   }
 
   .km-feature-card {
-    padding: 16px;
+    padding: 14px;
   }
 
   .km-feature-icon {
-    width: 40px;
-    height: 40px;
-    margin-bottom: 12px;
+    width: 36px;
+    height: 36px;
+    margin-bottom: 8px;
   }
 
   .km-feature-title {
-    font-size: 0.98rem;
+    font-size: 0.95rem;
     margin-bottom: 4px;
   }
 
   .km-feature-desc {
-    font-size: 0.85rem;
-    line-height: 1.45;
+    font-size: 0.84rem;
+    line-height: 1.4;
+  }
+
+  .km-workflow-step {
+    padding: 16px 14px;
+  }
+
+  .km-price-card {
+    padding: 20px 16px;
   }
 
   .km-table-swipe-hint {
@@ -1144,13 +1158,13 @@
   
   .km-footer-grid {
     grid-template-columns: 1fr;
-    gap: 28px;
+    gap: 24px;
   }
 
   .km-footer-bottom {
     flex-direction: column;
     text-align: center;
-    gap: 12px;
+    gap: 10px;
   }
 }
 
@@ -1161,28 +1175,28 @@
   }
 
   .km-title-lg {
-    font-size: 1.8rem;
+    font-size: 1.7rem;
   }
 
   .km-badge {
     font-size: 0.72rem;
-    padding: 5px 12px;
-    margin-bottom: 14px;
+    padding: 4px 10px;
+    margin-bottom: 10px;
   }
 
   .km-btn-primary,
   .km-btn-secondary {
-    font-size: 0.9rem;
-    padding: 12px 18px;
-    min-height: 48px;
+    font-size: 0.88rem;
+    padding: 10px 16px;
+    min-height: 46px;
   }
 
   .km-price-card {
-    padding: 24px 18px;
+    padding: 18px 14px;
   }
 
   .km-trial-cta-section {
-    padding: 40px 18px;
-    margin: 36px 14px;
+    padding: 28px 16px;
+    margin: 28px 14px;
   }
 }
