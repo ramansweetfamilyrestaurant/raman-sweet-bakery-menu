@@ -540,6 +540,45 @@ export default function SetupView({
           </div>
 
           <div>
+            <label style={{ fontSize: '0.76rem', fontWeight: 800, color: 'var(--adm-muted)', display: 'block', marginBottom: '8px' }}>
+              CUSTOMER MENU LUXURY THEME:
+            </label>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '10px' }}>
+              {[
+                { key: 'gold', name: 'Gold & Forest Green', color: '#0A2315', accent: '#D4AF37', desc: 'Taj/Oberoi Luxury' },
+                { key: 'emerald', name: 'Emerald Mint', color: '#064E3B', accent: '#34D399', desc: 'Fresh & Eco Style' },
+                { key: 'crimson', name: 'Crimson Ruby', color: '#881337', accent: '#FB7185', desc: 'Royal Fine-Dine' },
+                { key: 'navy', name: 'Midnight Navy', color: '#0F172A', accent: '#60A5FA', desc: 'Sleek Modern Bistro' },
+              ].map(t => {
+                const isSelected = (settingsForm.theme_color || 'gold') === t.key;
+                return (
+                  <div
+                    key={t.key}
+                    onClick={() => setSettingsForm({ ...settingsForm, theme_color: t.key })}
+                    style={{
+                      padding: '10px 12px',
+                      borderRadius: '12px',
+                      border: isSelected ? '2px solid #D4AF37' : '1px solid var(--adm-border)',
+                      background: isSelected ? 'rgba(212, 175, 55, 0.1)' : 'var(--adm-surface-subtle)',
+                      cursor: 'pointer',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '10px',
+                      transition: 'all 0.2s ease'
+                    }}
+                  >
+                    <div style={{ width: '22px', height: '22px', borderRadius: '50%', background: t.color, border: `2px solid ${t.accent}`, flexShrink: 0 }} />
+                    <div>
+                      <div style={{ fontSize: '0.82rem', fontWeight: 800, color: isSelected ? '#D4AF37' : 'inherit' }}>{t.name}</div>
+                      <div style={{ fontSize: '0.7rem', color: 'var(--adm-muted)' }}>{t.desc}</div>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+
+          <div>
             <label style={{ fontSize: '0.76rem', fontWeight: 800, color: 'var(--adm-muted)', display: 'block', marginBottom: '4px' }}>CONTACT PHONE:</label>
             <input
               type="text"
