@@ -296,48 +296,99 @@ router.put('/restaurants/:id', authenticateToken, requireSuperAdmin, async (req,
 router.post('/restaurants/:id/grant-free-access', authenticateToken, requireSuperAdmin, async (req, res) => {
   try {
     const { id } = req.params;
-    const { plan_key, valid_until, notes } = req.body;
+    const { plan_key, plan_id, duration_days, valid_until, is_lifetime, notes, admin_notes } = req.body;
+    const noteText = notes || admin_notes || 'Super Admin granted free sponsored access';
 
-    const targetPlanKey = (plan_key || 'pro').toLowerCase().trim();
-    const planRows = await query('SELECT * FROM saas_plans WHERE LOWER(key) = $1', [targetPlanKey]);
-    const targetPlan = planRows[0] || { id: 2, key: 'pro', name: 'Pro Plan', price: 999 };
+    let targetPlan = null;
+    if (plan_id) {
+      const pRows = await query('SELECT * FROM saas_plans WHERE id = $1', [plan_id]);
+      targetPlan = pRows[0];
+    }
+    if (!targetPlan && plan_key) {
+      const pRows = await query('SELECT * FROM saas_plans WHERE LOWER(key) = $1', [plan_key.toLowerCase().trim()]);
+      targetPlan = pRows[0];
+    }
+    if (!targetPlan) {
+      targetPlan = { id: 2, key: 'pro', name: 'Pro Plan', price: 999 };
+    }
 
-    const expiryDate = valid_until || new Date(Date.now() + 365 * 86400 * 1000).toISOString();
+    let expiryDate = null;
+    if (is_lifetime || duration_days === 'lifetime' || duration_days === 99999) {
+      expiryDate = new Date(Date.now() + 10 * 365 * 86400 * 1000).toISOString();
+    } else if (valid_until) {
+      expiryDate = new Date(valid_until).toISOString();
+    } else if (duration_days) {
+      const dDays = Math.max(1, parseInt(duration_days, 10) || 30);
+      expiryDate = new Date(Date.now() + dDays * 86400 * 1000).toISOString();
+    } else {
+      expiryDate = new Date(Date.now() + 30 * 86400 * 1000).toISOString();
+    }
+
     const nowISO = new Date().toISOString();
+
+    // Safely stop active Cashfree mandate if restaurant was on paid subscription
+    const currentSubRows = await query('SELECT * FROM subscriptions WHERE restaurant_id = $1 ORDER BY id DESC LIMIT 1', [id]);
+    const currentSub = currentSubRows[0];
+    if (currentSub && currentSub.gateway_subscription_id && currentSub.status === 'active') {
+      try {
+        const cfConfig = await getCashfreeConfigAsync();
+        if (cfConfig.isConfigured) {
+          const cancelUrl = `${cfConfig.baseUrl}/subscriptions/${encodeURIComponent(currentSub.gateway_subscription_id)}/cancel`;
+          await fetch(cancelUrl, {
+            method: 'POST',
+            headers: {
+              'x-api-version': cfConfig.apiVersion,
+              'x-client-id': cfConfig.clientId,
+              'x-client-secret': cfConfig.clientSecret,
+              'Content-Type': 'application/json'
+            }
+          });
+          console.log('[GRANT_FREE] Stopped active Cashfree mandate for sub:', currentSub.gateway_subscription_id);
+        }
+      } catch (cfErr) {
+        console.warn('[GRANT_FREE] Cashfree mandate cancel notice:', cfErr.message);
+      }
+    }
 
     // Update restaurant tenant record
     await query(`
       UPDATE restaurants
       SET plan_tier = $1, plan_price = 0, plan_expires_at = $2,
           subscription_type = 'ADMIN_GRANTED', mandate_status = 'admin_granted',
-          auto_debit_enabled = 0, active = 1, admin_notes = $3
+          auto_debit_enabled = 0, active = true, admin_notes = $3
       WHERE id = $4
-    `, [targetPlan.key, expiryDate, notes || 'Super Admin granted free sponsored access', id]);
+    `, [targetPlan.key, expiryDate, noteText, id]);
 
     // Upsert subscriptions record
-    const subRows = await query('SELECT id FROM subscriptions WHERE restaurant_id = $1 ORDER BY id DESC LIMIT 1', [id]);
-    if (subRows && subRows.length > 0) {
+    if (currentSub) {
       await query(`
         UPDATE subscriptions
         SET plan_id = $1, gateway = 'admin_granted', status = 'active', amount = 0,
             subscription_type = 'ADMIN_GRANTED', current_period_end = $2, auto_renew = 0,
             admin_notes = $3, updated_at = $4
         WHERE id = $5
-      `, [targetPlan.id, expiryDate, notes || 'Super Admin granted free sponsored access', nowISO, subRows[0].id]);
+      `, [targetPlan.id, expiryDate, noteText, nowISO, currentSub.id]);
     } else {
       await query(`
         INSERT INTO subscriptions (
           restaurant_id, plan_id, gateway, status, amount, currency, billing_cycle,
           subscription_type, current_period_start, current_period_end, auto_renew, admin_notes
         ) VALUES ($1, $2, 'admin_granted', 'active', 0, 'INR', 'monthly', 'ADMIN_GRANTED', $3, $4, 0, $5)
-      `, [id, targetPlan.id, nowISO, expiryDate, notes || 'Super Admin granted free sponsored access']);
+      `, [id, targetPlan.id, nowISO, expiryDate, noteText]);
     }
 
-    await logAudit(id, 'superadmin', 'Grant Free Access', `Granted free ${targetPlan.name} access until ${new Date(expiryDate).toLocaleDateString('en-IN')}`);
+    await logAudit(id, 'superadmin', 'GRANT_ADMIN_ACCESS', `Granted free ${targetPlan.name} access until ${new Date(expiryDate).toLocaleDateString('en-IN')} (${noteText})`);
 
     res.json({
       success: true,
-      message: `Granted free ${targetPlan.name} access to restaurant #${id} until ${new Date(expiryDate).toLocaleDateString('en-IN')}`
+      subscription_type: 'ADMIN_GRANTED',
+      plan_name: targetPlan.name,
+      plan_key: targetPlan.key,
+      amount: 0,
+      auto_renew: 0,
+      mandate_status: 'admin_granted',
+      access_until: expiryDate,
+      message: `Granted complimentary ${targetPlan.name} access to restaurant #${id} until ${new Date(expiryDate).toLocaleDateString('en-IN')}`
     });
   } catch (err) {
     console.error('Grant free access error:', err);

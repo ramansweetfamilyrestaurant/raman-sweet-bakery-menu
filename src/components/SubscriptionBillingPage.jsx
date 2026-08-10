@@ -632,7 +632,55 @@ export default function SubscriptionBillingPage({ restoInfo, token, onProceedToD
         )}
 
         {/* Action Buttons */}
-        {mandateActive ? (
+        {activeResto?.subscription_type === 'ADMIN_GRANTED' || activeResto?.mandate_status === 'admin_granted' ? (
+          <div>
+            <div style={{
+              background: 'rgba(59, 130, 246, 0.2)',
+              border: '1.5px solid #3B82F6',
+              color: '#93C5FD',
+              padding: '14px',
+              borderRadius: '16px',
+              fontWeight: 800,
+              fontSize: '0.88rem',
+              marginBottom: '16px',
+              textAlign: 'left'
+            }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '6px', color: '#60A5FA', fontSize: '0.98rem', fontWeight: 900 }}>
+                <Sparkles size={20} />
+                <span>🎁 Complimentary Access Active</span>
+              </div>
+              <div>Plan: <strong>{(activeResto?.plan_tier || 'pro').toUpperCase()}</strong></div>
+              <div>Current Charge: <strong>₹0 / month (Free Access)</strong></div>
+              <div>Valid Until: <strong>{activeResto?.plan_expires_at ? new Date(activeResto.plan_expires_at).toLocaleDateString('en-IN') : 'Lifetime'}</strong></div>
+              <div style={{ fontSize: '0.75rem', marginTop: '6px', color: '#CBD5E1' }}>
+                🛡️ Your account has been provided free of charge by KhanaMaster Super Admin. No Cashfree payment required.
+              </div>
+            </div>
+
+            <button
+              onClick={onProceedToDashboard}
+              style={{
+                width: '100%',
+                padding: '14px',
+                borderRadius: '50px',
+                border: 'none',
+                background: 'linear-gradient(135deg, #3B82F6 0%, #2563EB 100%)',
+                color: '#FFFFFF',
+                fontSize: '0.95rem',
+                fontWeight: 900,
+                cursor: 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                gap: '8px',
+                boxShadow: '0 4px 16px rgba(59,130,246,0.4)'
+              }}
+            >
+              <span>Go to Admin Dashboard</span>
+              <ArrowRight size={18} />
+            </button>
+          </div>
+        ) : mandateActive ? (
           <div>
             <div style={{
               background: 'rgba(34,197,94,0.2)',

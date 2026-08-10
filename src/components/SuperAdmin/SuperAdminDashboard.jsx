@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Crown, Plus, LogOut, ExternalLink, Trash2, CheckCircle, Store, Utensils, DollarSign, Phone, MapPin, Copy, Check, Search, Edit3, Shield, ShieldCheck, RefreshCw, QrCode, Megaphone, FileText, Calendar, Palette, MessageSquare, Upload, X, XCircle, CreditCard, Lock, Sparkles } from 'lucide-react';
-import { fetchSuperAdminRestaurants, createTenantRestaurant, toggleTenantRestaurantActive, deleteTenantRestaurant, impersonateTenantRestaurant, updateTenantRestaurant, createAnnouncement, fetchSuperAnnouncements, deleteAnnouncement, clearAllAnnouncements, fetchAuditLogs, uploadImage, fetchSaaSPlans, createSaaSPlan, updateSaaSPlan, deleteSaaSPlan, superAdminOptimizeDatabase, updateSuperAdminCredentials } from '../../api/client';
+import { fetchSuperAdminRestaurants, createTenantRestaurant, toggleTenantRestaurantActive, deleteTenantRestaurant, impersonateTenantRestaurant, updateTenantRestaurant, createAnnouncement, fetchSuperAnnouncements, deleteAnnouncement, clearAllAnnouncements, fetchAuditLogs, uploadImage, fetchSaaSPlans, createSaaSPlan, updateSaaSPlan, deleteSaaSPlan, superAdminOptimizeDatabase, updateSuperAdminCredentials, grantFreeAccess, revokeFreeAccess } from '../../api/client';
 import { SAAS_PLANS, getPlanDetails } from '../../config/plans';
 
 export default function SuperAdminDashboard({ token, username, onLogout, onReturnToMenu, onImpersonate }) {
@@ -92,6 +92,97 @@ export default function SuperAdminDashboard({ token, username, onLogout, onRetur
 
   // Phase 4: Subscription Requests Overview Modal State
   const [showSubRequestsModal, setShowSubRequestsModal] = useState(false);
+
+  // Phase 6B: Complimentary Access Modal State
+  const [grantModalResto, setGrantModalResto] = useState(null);
+  const [revokeModalResto, setRevokeModalResto] = useState(null);
+  const [grantForm, setGrantForm] = useState({
+    plan_key: 'pro',
+    duration_days: '30',
+    valid_until: '',
+    notes: 'Partner restaurant'
+  });
+  const [grantStep, setGrantStep] = useState('form'); // 'form' | 'confirm' | 'success'
+  const [grantSubmitting, setGrantSubmitting] = useState(false);
+  const [grantResult, setGrantResult] = useState(null);
+
+  const handleOpenGrantModal = (resto) => {
+    setGrantModalResto(resto);
+    setGrantStep('form');
+    setGrantForm({
+      plan_key: resto.plan_tier || 'pro',
+      duration_days: '30',
+      valid_until: '',
+      notes: 'Partner restaurant'
+    });
+    setGrantResult(null);
+  };
+
+  const handleConfirmGrantFreeAccess = async () => {
+    if (!grantModalResto) return;
+    setGrantSubmitting(true);
+    try {
+      const res = await grantFreeAccess(
+        grantModalResto.id,
+        {
+          plan_key: grantForm.plan_key,
+          duration_days: grantForm.duration_days,
+          valid_until: grantForm.valid_until || undefined,
+          is_lifetime: grantForm.duration_days === 'lifetime',
+          notes: grantForm.notes
+        },
+        token
+      );
+      setGrantResult(res);
+      setGrantStep('success');
+
+      setRestaurants(prev => prev.map(r => {
+        if (r.id === grantModalResto.id) {
+          return {
+            ...r,
+            subscription_type: 'ADMIN_GRANTED',
+            mandate_status: 'admin_granted',
+            plan_tier: res.plan_key || grantForm.plan_key,
+            plan_price: 0,
+            access_until: res.access_until,
+            plan_expires_at: res.access_until,
+            admin_notes: grantForm.notes,
+            active: 1
+          };
+        }
+        return r;
+      }));
+    } catch (err) {
+      alert(err.message || 'Failed to grant complimentary access');
+    } finally {
+      setGrantSubmitting(false);
+    }
+  };
+
+  const handleConfirmRevokeFreeAccess = async () => {
+    if (!revokeModalResto) return;
+    setGrantSubmitting(true);
+    try {
+      await revokeFreeAccess(revokeModalResto.id, token);
+
+      setRestaurants(prev => prev.map(r => {
+        if (r.id === revokeModalResto.id) {
+          return {
+            ...r,
+            subscription_type: 'PAID',
+            mandate_status: 'cancelled',
+            active: 0
+          };
+        }
+        return r;
+      }));
+      setRevokeModalResto(null);
+    } catch (err) {
+      alert(err.message || 'Failed to revoke complimentary access');
+    } finally {
+      setGrantSubmitting(false);
+    }
+  };
 
   // New Restaurant Form State
   const [form, setForm] = useState({
@@ -1197,6 +1288,34 @@ export default function SuperAdminDashboard({ token, username, onLogout, onRetur
                       title="1-Click Log In as Restaurant Owner to manage dishes, categories, and settings"
                     >
                       <Crown size={14} color="#FFD700" /> Manage Menu
+                    </button>
+
+                    <button
+                      onClick={() => {
+                        if (r.subscription_type === 'ADMIN_GRANTED' || r.mandate_status === 'admin_granted') {
+                          setRevokeModalResto(r);
+                        } else {
+                          handleOpenGrantModal(r);
+                        }
+                      }}
+                      style={{
+                        background: (r.subscription_type === 'ADMIN_GRANTED' || r.mandate_status === 'admin_granted') ? '#EFF6FF' : '#FEF3C7',
+                        color: (r.subscription_type === 'ADMIN_GRANTED' || r.mandate_status === 'admin_granted') ? '#1D4ED8' : '#B45309',
+                        padding: '8px 12px',
+                        borderRadius: 'var(--radius-pill)',
+                        fontSize: '0.78rem',
+                        fontWeight: 900,
+                        border: `1.5px solid ${(r.subscription_type === 'ADMIN_GRANTED' || r.mandate_status === 'admin_granted') ? '#BFDBFE' : '#FDE68A'}`,
+                        cursor: 'pointer',
+                        display: 'inline-flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        gap: '5px'
+                      }}
+                      title="Manage Free Sponsored Access / Subscription Status"
+                    >
+                      <Sparkles size={14} />
+                      {(r.subscription_type === 'ADMIN_GRANTED' || r.mandate_status === 'admin_granted') ? 'Manage Free Access' : 'Grant Free Access'}
                     </button>
 
                     <button
@@ -2901,6 +3020,194 @@ export default function SuperAdminDashboard({ token, username, onLogout, onRetur
                 style={{ background: '#0F172A', color: '#FFFFFF', padding: '10px 24px', borderRadius: '10px', border: 'none', fontWeight: 800, cursor: 'pointer' }}
               >
                 Close Window
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Phase 6B: Grant Complimentary Access Modal */}
+      {grantModalResto && (
+        <div style={{
+          position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
+          background: 'rgba(0,0,0,0.65)', backdropFilter: 'blur(4px)',
+          display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 10000, padding: '20px'
+        }}>
+          <div style={{
+            background: '#FFFFFF', borderRadius: '24px', padding: '28px', maxWidth: '520px', width: '100%',
+            boxShadow: '0 25px 60px rgba(0,0,0,0.3)', border: '2px solid #3B82F6', position: 'relative'
+          }}>
+            <button
+              onClick={() => setGrantModalResto(null)}
+              style={{ position: 'absolute', top: '20px', right: '20px', background: 'none', border: 'none', cursor: 'pointer' }}
+            >
+              <X size={22} color="#64748B" />
+            </button>
+
+            {/* Header */}
+            <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '16px' }}>
+              <div style={{ width: '42px', height: '42px', borderRadius: '12px', background: 'rgba(59,130,246,0.15)', color: '#2563EB', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                <Sparkles size={24} />
+              </div>
+              <div>
+                <h3 style={{ fontSize: '1.2rem', fontWeight: 900, color: '#0F172A', margin: 0 }}>
+                  {grantStep === 'confirm' ? 'Confirm Free Access' : grantStep === 'success' ? 'Access Granted!' : 'Grant Complimentary Access'}
+                </h3>
+                <span style={{ fontSize: '0.78rem', color: '#64748B', fontWeight: 600 }}>
+                  Restaurant: <strong>{grantModalResto.name}</strong> (/{grantModalResto.slug})
+                </span>
+              </div>
+            </div>
+
+            {grantStep === 'form' && (
+              <div>
+                <div style={{ marginBottom: '14px' }}>
+                  <label style={{ fontSize: '0.75rem', fontWeight: 800, color: '#475569', display: 'block', marginBottom: '6px' }}>SELECT SAAS PLAN:</label>
+                  <select
+                    value={grantForm.plan_key}
+                    onChange={(e) => setGrantForm({ ...grantForm, plan_key: e.target.value })}
+                    style={{ width: '100%', padding: '10px', borderRadius: '12px', border: '1.5px solid #CBD5E1', fontSize: '0.88rem', fontWeight: 700 }}
+                  >
+                    {(plansList && plansList.length > 0 ? plansList : Object.values(SAAS_PLANS)).map(p => (
+                      <option key={p.key} value={p.key}>
+                        {p.name || p.key.toUpperCase()} (₹{p.price}/mo normally)
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                <div style={{ marginBottom: '14px' }}>
+                  <label style={{ fontSize: '0.75rem', fontWeight: 800, color: '#475569', display: 'block', marginBottom: '6px' }}>ACCESS DURATION:</label>
+                  <select
+                    value={grantForm.duration_days}
+                    onChange={(e) => setGrantForm({ ...grantForm, duration_days: e.target.value })}
+                    style={{ width: '100%', padding: '10px', borderRadius: '12px', border: '1.5px solid #CBD5E1', fontSize: '0.88rem', fontWeight: 700 }}
+                  >
+                    <option value="7">7 Days</option>
+                    <option value="14">14 Days</option>
+                    <option value="30">30 Days (1 Month)</option>
+                    <option value="90">90 Days (3 Months)</option>
+                    <option value="180">6 Months</option>
+                    <option value="365">1 Year (365 Days)</option>
+                    <option value="lifetime">Lifetime Access</option>
+                    <option value="custom">Custom Expiry Date</option>
+                  </select>
+                </div>
+
+                {grantForm.duration_days === 'custom' && (
+                  <div style={{ marginBottom: '14px' }}>
+                    <label style={{ fontSize: '0.75rem', fontWeight: 800, color: '#475569', display: 'block', marginBottom: '6px' }}>SELECT EXPIRY DATE:</label>
+                    <input
+                      type="date"
+                      value={grantForm.valid_until}
+                      onChange={(e) => setGrantForm({ ...grantForm, valid_until: e.target.value })}
+                      style={{ width: '100%', padding: '10px', borderRadius: '12px', border: '1.5px solid #CBD5E1', fontSize: '0.88rem' }}
+                    />
+                  </div>
+                )}
+
+                <div style={{ marginBottom: '18px' }}>
+                  <label style={{ fontSize: '0.75rem', fontWeight: 800, color: '#475569', display: 'block', marginBottom: '6px' }}>ADMIN NOTE (INTERNAL):</label>
+                  <input
+                    type="text"
+                    placeholder="e.g. Partner restaurant, Promotional sponsor..."
+                    value={grantForm.notes}
+                    onChange={(e) => setGrantForm({ ...grantForm, notes: e.target.value })}
+                    style={{ width: '100%', padding: '10px', borderRadius: '12px', border: '1.5px solid #CBD5E1', fontSize: '0.84rem' }}
+                  />
+                </div>
+
+                <div style={{ background: '#EFF6FF', border: '1px solid #BFDBFE', borderRadius: '12px', padding: '12px', fontSize: '0.76rem', color: '#1E40AF', marginBottom: '18px', fontWeight: 600 }}>
+                  🛡️ Zero Charge Guarantee: Cashfree payment is NOT required. Recurring amount will be set to ₹0 and auto-renew disabled.
+                </div>
+
+                <div style={{ display: 'flex', gap: '10px', justifyContent: 'flex-end' }}>
+                  <button onClick={() => setGrantModalResto(null)} style={{ padding: '10px 18px', borderRadius: '10px', border: '1px solid #CBD5E1', background: '#F8FAFC', fontWeight: 700, cursor: 'pointer' }}>Cancel</button>
+                  <button onClick={() => setGrantStep('confirm')} style={{ padding: '10px 20px', borderRadius: '10px', border: 'none', background: '#2563EB', color: '#FFFFFF', fontWeight: 900, cursor: 'pointer' }}>Next: Review Terms ➔</button>
+                </div>
+              </div>
+            )}
+
+            {grantStep === 'confirm' && (
+              <div>
+                <div style={{ background: '#F8FAFC', border: '1.5px solid #E2E8F0', borderRadius: '16px', padding: '16px', marginBottom: '18px', fontSize: '0.85rem' }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', padding: '6px 0', borderBottom: '1px solid #E2E8F0' }}>
+                    <span>Restaurant:</span><strong>{grantModalResto.name}</strong>
+                  </div>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', padding: '6px 0', borderBottom: '1px solid #E2E8F0' }}>
+                    <span>Selected Plan:</span><strong style={{ color: '#2563EB' }}>{grantForm.plan_key.toUpperCase()}</strong>
+                  </div>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', padding: '6px 0', borderBottom: '1px solid #E2E8F0' }}>
+                    <span>Customer Charge:</span><strong style={{ color: '#16A34A' }}>₹0 / month (Free Access)</strong>
+                  </div>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', padding: '6px 0', borderBottom: '1px solid #E2E8F0' }}>
+                    <span>Duration:</span><strong>{grantForm.duration_days === 'lifetime' ? 'Lifetime' : `${grantForm.duration_days} Days`}</strong>
+                  </div>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', padding: '6px 0', borderBottom: '1px solid #E2E8F0' }}>
+                    <span>Cashfree Mandate:</span><strong>NOT REQUIRED</strong>
+                  </div>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', padding: '6px 0' }}>
+                    <span>Admin Note:</span><span style={{ fontStyle: 'italic', color: '#64748B' }}>{grantForm.notes || 'None'}</span>
+                  </div>
+                </div>
+
+                <div style={{ display: 'flex', gap: '10px', justifyContent: 'flex-end' }}>
+                  <button onClick={() => setGrantStep('form')} style={{ padding: '10px 18px', borderRadius: '10px', border: '1px solid #CBD5E1', background: '#F8FAFC', fontWeight: 700, cursor: 'pointer' }}>⬅️ Go Back</button>
+                  <button onClick={handleConfirmGrantFreeAccess} disabled={grantSubmitting} style={{ padding: '10px 22px', borderRadius: '10px', border: 'none', background: 'linear-gradient(135deg, #2563EB 0%, #1D4ED8 100%)', color: '#FFFFFF', fontWeight: 900, cursor: grantSubmitting ? 'wait' : 'pointer', boxShadow: '0 4px 14px rgba(37,99,235,0.4)' }}>
+                    {grantSubmitting ? 'Processing...' : '🎁 Confirm & Grant Access'}
+                  </button>
+                </div>
+              </div>
+            )}
+
+            {grantStep === 'success' && grantResult && (
+              <div style={{ textAlign: 'center', padding: '10px 0' }}>
+                <div style={{ width: '60px', height: '60px', borderRadius: '50%', background: '#DCFCE7', color: '#16A34A', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 14px', border: '2px solid #86EFAC' }}>
+                  <CheckCircle size={32} />
+                </div>
+                <h4 style={{ fontSize: '1.1rem', fontWeight: 900, color: '#16A34A', margin: '0 0 6px 0' }}>✓ Complimentary Access Activated!</h4>
+                <p style={{ fontSize: '0.84rem', color: '#334155', margin: '0 0 16px 0' }}>
+                  {grantResult.message}
+                </p>
+
+                <button onClick={() => setGrantModalResto(null)} style={{ width: '100%', padding: '12px', borderRadius: '12px', border: 'none', background: '#0F172A', color: '#FFFFFF', fontWeight: 900, cursor: 'pointer' }}>Done / Close Window</button>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* Phase 6B: Revoke Complimentary Access Modal */}
+      {revokeModalResto && (
+        <div style={{
+          position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
+          background: 'rgba(0,0,0,0.65)', backdropFilter: 'blur(4px)',
+          display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 10000, padding: '20px'
+        }}>
+          <div style={{ background: '#FFFFFF', borderRadius: '24px', padding: '28px', maxWidth: '480px', width: '100%', boxShadow: '0 25px 60px rgba(0,0,0,0.3)', border: '2px solid #EF4444', position: 'relative' }}>
+            <button onClick={() => setRevokeModalResto(null)} style={{ position: 'absolute', top: '20px', right: '20px', background: 'none', border: 'none', cursor: 'pointer' }}><X size={22} color="#64748B" /></button>
+
+            <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '16px' }}>
+              <div style={{ width: '42px', height: '42px', borderRadius: '12px', background: '#FEE2E2', color: '#DC2626', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                <XCircle size={24} />
+              </div>
+              <div>
+                <h3 style={{ fontSize: '1.2rem', fontWeight: 900, color: '#0F172A', margin: 0 }}>Revoke Free Access?</h3>
+                <span style={{ fontSize: '0.78rem', color: '#64748B', fontWeight: 600 }}>Restaurant: <strong>{revokeModalResto.name}</strong></span>
+              </div>
+            </div>
+
+            <div style={{ background: '#FEF2F2', border: '1px solid #FCA5A5', borderRadius: '14px', padding: '14px', fontSize: '0.82rem', color: '#991B1B', marginBottom: '18px' }}>
+              ⚠️ Revoking free access will deactivate the tenant's complimentary status. The restaurant will be required to authorize a paid Cashfree subscription to continue using the admin panel.
+              <div style={{ fontSize: '0.75rem', color: '#B91C1C', marginTop: '8px', fontWeight: 700 }}>
+                🔒 Safe Operation: Menu items, categories, dishes, orders, and historical payment records will NOT be deleted.
+              </div>
+            </div>
+
+            <div style={{ display: 'flex', gap: '10px', justifyContent: 'flex-end' }}>
+              <button onClick={() => setRevokeModalResto(null)} style={{ padding: '10px 18px', borderRadius: '10px', border: '1px solid #CBD5E1', background: '#F8FAFC', fontWeight: 700, cursor: 'pointer' }}>Keep Free Access</button>
+              <button onClick={handleConfirmRevokeFreeAccess} disabled={grantSubmitting} style={{ padding: '10px 20px', borderRadius: '10px', border: 'none', background: '#DC2626', color: '#FFFFFF', fontWeight: 900, cursor: grantSubmitting ? 'wait' : 'pointer' }}>
+                {grantSubmitting ? 'Revoking...' : '🔴 Revoke Access'}
               </button>
             </div>
           </div>
