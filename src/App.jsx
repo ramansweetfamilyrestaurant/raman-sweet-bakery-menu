@@ -1570,8 +1570,8 @@ export default function App() {
     );
   }
 
-  // Global Initial Loading Screen Guard (Prevents ANY layout/header flashing on refresh)
-  if (loading && ['menu', 'admin-login', 'admin-dashboard'].includes(view)) {
+  // Global Initial Loading Screen Guard (Prevents ANY layout/header flashing on customer menu refresh)
+  if (loading && view === 'menu') {
     return (
       <div style={{
         minHeight: '100vh', display: 'flex', flexDirection: 'column',
