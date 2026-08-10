@@ -17,9 +17,10 @@ import { verifyCustomerLocation } from './utils/geo';
 import ServiceRequestModal from './components/ServiceRequestModal';
 import CustomerReviewModal from './components/CustomerReviewModal';
 
-// Code Splitting (Lazy Loading): Super Admin & Admin JS chunks are loaded ONLY when requested!
+import AdminDashboard from './components/Admin/AdminDashboard';
+
+// Code Splitting (Lazy Loading) for secondary admin views
 const AdminLogin = lazy(() => import('./components/Admin/AdminLogin'));
-const AdminDashboard = lazy(() => import('./components/Admin/AdminDashboard'));
 const SuperAdminLogin = lazy(() => import('./components/SuperAdmin/SuperAdminLogin'));
 const SuperAdminDashboard = lazy(() => import('./components/SuperAdmin/SuperAdminDashboard'));
 const RegisterPage = lazy(() => import('./components/RegisterPage'));
@@ -1680,19 +1681,17 @@ export default function App() {
 
   if (view === 'admin-dashboard') {
     return (
-      <Suspense fallback={<div style={{ padding: '60px', textAlign: 'center', background: '#0A2315', color: '#FFFFFF', minHeight: '100vh', fontWeight: 800 }}>⚙️ Loading Owner Dashboard...</div>}>
-        <AdminDashboard
-          token={adminToken}
-          username={adminUsername}
-          onLogout={handleAdminLogout}
-          onReturnToMenu={(tenantSlug) => {
-            const targetSlug = tenantSlug || (info && info.slug) || getSlugFromUrl() || '';
-            setView('menu');
-            window.history.pushState({}, '', targetSlug ? `/${targetSlug}` : '/');
-            loadMenuData(targetSlug);
-          }}
-        />
-      </Suspense>
+      <AdminDashboard
+        token={adminToken}
+        username={adminUsername}
+        onLogout={handleAdminLogout}
+        onReturnToMenu={(tenantSlug) => {
+          const targetSlug = tenantSlug || (info && info.slug) || getSlugFromUrl() || '';
+          setView('menu');
+          window.history.pushState({}, '', targetSlug ? `/${targetSlug}` : '/');
+          loadMenuData(targetSlug);
+        }}
+      />
     );
   }
 
