@@ -77,7 +77,7 @@ export default function ComboFormModal({ combo, dishes, token, onSave, onClose }
     if (!file) return;
     setUploading(true);
     try {
-      const url = await uploadImage(file, token);
+      const url = await uploadImage(file, token, 'combos');
       setImage(url);
     } catch (err) {
       alert('Image upload failed: ' + err.message);

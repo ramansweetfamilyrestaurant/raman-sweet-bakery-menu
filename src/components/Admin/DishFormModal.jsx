@@ -38,7 +38,7 @@ export default function DishFormModal({ dish, categories, token, onSave, onClose
     setError('');
     try {
       const oldTempImage = image;
-      const res = await uploadImage(file, token);
+      const res = await uploadImage(file, token, 'dishes');
       const resolvedRes = resolveImageUrl(res);
       setImage(resolvedRes);
       // Delete old temp image if replaced before saving

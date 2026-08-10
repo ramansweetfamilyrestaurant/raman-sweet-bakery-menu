@@ -229,7 +229,7 @@ async function compressImageFile(file) {
   });
 }
 
-export async function uploadImage(file, token) {
+export async function uploadImage(file, token, entityType = 'dishes') {
   let processedFile = file;
   try {
     processedFile = await compressImageFile(file);
@@ -240,6 +240,7 @@ export async function uploadImage(file, token) {
   const formData = new FormData();
   const filename = file.name || 'image.jpg';
   formData.append('image', processedFile, filename);
+  formData.append('entityType', entityType);
 
   const res = await fetch(`${API_BASE}/admin/upload`, {
     method: 'POST',

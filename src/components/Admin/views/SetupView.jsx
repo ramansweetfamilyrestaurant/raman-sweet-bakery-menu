@@ -47,7 +47,7 @@ export default function SetupView({
 
     setUploadingLogo(true);
     try {
-      const url = await uploadImage(file, token);
+      const url = await uploadImage(file, token, 'logos');
       if (url && setSettingsForm) {
         setSettingsForm(prev => ({ ...prev, logo: url }));
       }
