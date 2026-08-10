@@ -3,13 +3,13 @@ import LegalPageLayout from './LegalPageLayout';
 
 export default function TermsOfService({ onOpenLogin, onStartTrial }) {
   useEffect(() => {
-    document.title = 'KhanaMaster - Terms of Service';
+    document.title = 'TouchQR - Terms of Service';
     window.scrollTo(0, 0);
   }, []);
 
   const tocItems = [
     { id: 'acceptance', title: 'Acceptance of Terms' },
-    { id: 'about', title: 'About KhanaMaster SaaS' },
+    { id: 'about', title: 'About TouchQR SaaS' },
     { id: 'owner-accounts', title: 'Restaurant Owner Accounts' },
     { id: 'services', title: 'Digital Menu & QR Services' },
     { id: 'kot-features', title: 'Kitchen KOT & Thermal Printing' },
@@ -36,42 +36,42 @@ export default function TermsOfService({ onOpenLogin, onStartTrial }) {
       <section id="acceptance" className="km-legal-section">
         <h2 className="km-legal-h2">1. Acceptance of Terms</h2>
         <p className="km-legal-p">
-          By registering for, accessing, or using <strong>KhanaMaster SaaS</strong> ("Service"), you ("Restaurant Owner", "Subscriber", or "User") agree to be bound by these Terms of Service. If you do not agree to these terms, you may not access or use the Service.
+          By registering for, accessing, or using <strong>TouchQR SaaS</strong> ("Service"), you ("Restaurant Owner", "Subscriber", or "User") agree to be bound by these Terms of Service. If you do not agree to these terms, you may not access or use the Service.
         </p>
       </section>
 
       <section id="about" className="km-legal-section">
-        <h2 className="km-legal-h2">2. About KhanaMaster SaaS</h2>
+        <h2 className="km-legal-h2">2. About TouchQR SaaS</h2>
         <p className="km-legal-p">
-          KhanaMaster is a B2B Software-as-a-Service (SaaS) platform designed for restaurants, sweet shops, cafes, and food outlets. The Service provides digital QR menu management, direct table QR ordering tools, real-time kitchen order tickets (KOT), automated thermal billing, and customer review enhancement features.
+          TouchQR is a B2B Software-as-a-Service (SaaS) platform designed for restaurants, sweet shops, cafes, and food outlets. The Service provides digital QR menu management, direct table QR ordering tools, real-time kitchen order tickets (KOT), automated thermal billing, and customer review enhancement features.
         </p>
       </section>
 
       <section id="owner-accounts" className="km-legal-section">
         <h2 className="km-legal-h2">3. Restaurant Owner Accounts</h2>
         <p className="km-legal-p">
-          To use KhanaMaster, you must create a restaurant owner account. You agree to provide accurate, current, and complete information during registration and to keep your account credentials confidential. You are responsible for all activities occurring under your restaurant account.
+          To use TouchQR, you must create a restaurant owner account. You agree to provide accurate, current, and complete information during registration and to keep your account credentials confidential. You are responsible for all activities occurring under your restaurant account.
         </p>
       </section>
 
       <section id="services" className="km-legal-section">
         <h2 className="km-legal-h2">4. Digital Menu & QR Services</h2>
         <p className="km-legal-p">
-          KhanaMaster grants you a non-exclusive, non-transferable, revocable license to create and host digital menus, generate QR codes, and present your items to restaurant diners during the term of your active subscription.
+          TouchQR grants you a non-exclusive, non-transferable, revocable license to create and host digital menus, generate QR codes, and present your items to restaurant diners during the term of your active subscription.
         </p>
       </section>
 
       <section id="kot-features" className="km-legal-section">
         <h2 className="km-legal-h2">5. Kitchen KOT & Thermal Printing</h2>
         <p className="km-legal-p">
-          Hardware integration features (such as USB or Bluetooth 2-inch/3-inch thermal printers) require compatible device hardware. While KhanaMaster supports standard thermal printing protocols, local device drivers and browser permissions remain the responsibility of the restaurant operator.
+          Hardware integration features (such as USB or Bluetooth 2-inch/3-inch thermal printers) require compatible device hardware. While TouchQR supports standard thermal printing protocols, local device drivers and browser permissions remain the responsibility of the restaurant operator.
         </p>
       </section>
 
       <section id="subscriptions" className="km-legal-section">
         <h2 className="km-legal-h2">6. Subscription Plans & Pricing</h2>
         <p className="km-legal-p">
-          KhanaMaster offers tiered SaaS subscription plans (such as Basic, Pro, and Enterprise). Current plan details, features, and pricing are displayed on our public website pricing table and inside the owner billing panel. Pricing is subject to change upon advance notification.
+          TouchQR offers tiered SaaS subscription plans (such as Basic, Pro, and Enterprise). Current plan details, features, and pricing are displayed on our public website pricing table and inside the owner billing panel. Pricing is subject to change upon advance notification.
         </p>
       </section>
 
@@ -102,7 +102,7 @@ export default function TermsOfService({ onOpenLogin, onStartTrial }) {
       <section id="ip-rights" className="km-legal-section">
         <h2 className="km-legal-h2">10. Intellectual Property</h2>
         <p className="km-legal-p">
-          KhanaMaster retains all rights, title, and interest in the software platform, code, logos, and UI designs. Restaurant owners retain ownership of their proprietary menu text, dish images, and business trade names.
+          TouchQR retains all rights, title, and interest in the software platform, code, logos, and UI designs. Restaurant owners retain ownership of their proprietary menu text, dish images, and business trade names.
         </p>
       </section>
 
@@ -116,7 +116,7 @@ export default function TermsOfService({ onOpenLogin, onStartTrial }) {
       <section id="liability" className="km-legal-section">
         <h2 className="km-legal-h2">12. Limitation of Liability</h2>
         <p className="km-legal-p">
-          To the maximum extent permitted by applicable law, KhanaMaster SaaS shall not be liable for indirect, incidental, or consequential damages resulting from lost sales, kitchen delays, device incompatibilities, or service interruptions.
+          To the maximum extent permitted by applicable law, TouchQR SaaS shall not be liable for indirect, incidental, or consequential damages resulting from lost sales, kitchen delays, device incompatibilities, or service interruptions.
         </p>
       </section>
 

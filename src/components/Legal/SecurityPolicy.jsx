@@ -4,71 +4,65 @@ import { ShieldCheck, Lock, Server, Key, FileText, Smartphone } from 'lucide-rea
 
 export default function SecurityPolicy({ onOpenLogin, onStartTrial }) {
   useEffect(() => {
-    document.title = 'KhanaMaster - Security & Data Protection';
+    document.title = 'TouchQR - Security & Data Protection';
     window.scrollTo(0, 0);
   }, []);
 
   const tocItems = [
-    { id: 'overview', title: 'Security Overview' },
-    { id: 'tenant-isolation', title: 'Restaurant Tenant Isolation' },
-    { id: 'authentication', title: 'Authentication & Access Control' },
-    { id: 'transport', title: 'Encrypted Transport & Data In Transit' },
-    { id: 'payments', title: 'Payment Gateway Security' },
-    { id: 'infrastructure', title: 'Infrastructure & Cloud Storage' },
-    { id: 'backups', title: 'Data Backups & Reliability' },
-    { id: 'reporting', title: 'Responsible Security Disclosure' }
+    { id: 'overview', title: 'Security Architecture Overview' },
+    { id: 'tenant-isolation', title: 'Multi-Tenant Data Isolation' },
+    { id: 'data-encryption', title: 'Data Encryption (Transit & Rest)' },
+    { id: 'payment-security', title: 'PCI-DSS Payment Gateway Compliance' },
+    { id: 'access-control', title: 'Authentication & Access Controls' },
+    { id: 'backup-recovery', title: 'Data Backup & Disaster Recovery' },
+    { id: 'vulnerability', title: 'Vulnerability Management & Monitoring' },
+    { id: 'reporting', title: 'Reporting Security Concerns' }
   ];
 
   return (
     <LegalPageLayout
       title="Security & Data Protection"
-      categoryBadge="TECHNICAL GUARANTEES"
+      categoryBadge="TRUST & COMPLIANCE"
       lastUpdated="August 10, 2026"
       tocItems={tocItems}
       onOpenLogin={onOpenLogin}
       onStartTrial={onStartTrial}
     >
       <section id="overview" className="km-legal-section">
-        <h2 className="km-legal-h2">1. Security Overview</h2>
+        <h2 className="km-legal-h2">1. Security Architecture Overview</h2>
         <p className="km-legal-p">
-          At <strong>KhanaMaster SaaS</strong>, protecting restaurant menu records, kitchen orders, billing data, and customer information is integral to our architecture. We implement defense-in-depth engineering practices to protect client data across transmission, processing, and storage.
+          At <strong>TouchQR SaaS</strong>, protecting restaurant menu records, kitchen orders, billing data, and customer information is integral to our architecture. We implement defense-in-depth engineering practices to protect client data across transmission, processing, and storage.
         </p>
       </section>
 
       <section id="tenant-isolation" className="km-legal-section">
-        <h2 className="km-legal-h2">2. Restaurant Tenant Isolation</h2>
+        <h2 className="km-legal-h2">2. Multi-Tenant Data Isolation</h2>
         <p className="km-legal-p">
-          Each restaurant operates within its own strict tenant context. Database queries, menu assets, and order channels are scoped to unique restaurant identifiers, ensuring that data from one establishment cannot be viewed, accessed, or modified by another restaurant account.
+          TouchQR utilizes strict database-level and application-level tenant scoping (`restaurant_id` / `restaurant_slug`). Menu items, sales records, customer reviews, and kitchen order tickets belong strictly to the authenticated restaurant tenant and cannot be accessed across account boundaries.
         </p>
-        <div className="km-legal-callout">
-          <strong>Architecture Guarantee:</strong> Multi-tenant isolation is enforced at the database model and API routing layer.
-        </div>
       </section>
 
-      <section id="authentication" className="km-legal-section">
-        <h2 className="km-legal-h2">3. Authentication & Access Control</h2>
+      <section id="data-encryption" className="km-legal-section">
+        <h2 className="km-legal-h2">3. Data Encryption (In Transit & At Rest)</h2>
         <p className="km-legal-p">
-          Admin access requires authenticated session tokens. Key measures include:
+          All web traffic between client browsers (smartphones, POS tablets, desktop PCs) and TouchQR servers is encrypted in transit using industry-standard TLS (Transport Layer Security / HTTPS). HTTP traffic is automatically redirected to secure HTTPS connections.
         </p>
+      </section>
+
+      <section id="payment-security" className="km-legal-section">
+        <h2 className="km-legal-h2">4. PCI-DSS Payment Gateway Compliance</h2>
+        <p className="km-legal-p">
+          TouchQR integrates with PCI-DSS Level 1 compliant payment partners (e.g. Cashfree Payments). Sensitive financial credentials such as card numbers, CVVs, or banking passwords are handled directly by payment gateway infrastructure and are never stored on TouchQR database servers.
+        </p>
+      </section>
+
+      <section id="access-control" className="km-legal-section">
+        <h2 className="km-legal-h2">5. Authentication & Access Controls</h2>
         <ul className="km-legal-list">
-          <li>Cryptographic password hashing (Bcrypt / PBKDF2 standard algorithms).</li>
-          <li>Token-based authorization for administrative REST API routes.</li>
-          <li>Super Admin master governance channels isolated from individual restaurant scopes.</li>
+          <li><strong>Salted Password Hashing:</strong> Owner admin passwords are cryptographically hashed using standard bcrypt algorithms. Plaintext passwords are never logged or stored.</li>
+          <li><strong>JWT Session Management:</strong> Authenticated admin sessions utilize cryptographically signed JSON Web Tokens (JWT) with strict expiration limits.</li>
+          <li><strong>Super Admin Scoping:</strong> Super Admin administrative access requires master security credentials.</li>
         </ul>
-      </section>
-
-      <section id="transport" className="km-legal-section">
-        <h2 className="km-legal-h2">4. Encrypted Transport & Data In Transit</h2>
-        <p className="km-legal-p">
-          All web traffic between client browsers (smartphones, POS tablets, desktop PCs) and KhanaMaster servers is encrypted in transit using industry-standard TLS (Transport Layer Security / HTTPS). HTTP traffic is automatically redirected to secure HTTPS connections.
-        </p>
-      </section>
-
-      <section id="payments" className="km-legal-section">
-        <h2 className="km-legal-h2">5. Payment Gateway Security</h2>
-        <p className="km-legal-p">
-          KhanaMaster integrates with PCI-DSS Level 1 compliant payment partners (e.g. Cashfree Payments). Sensitive financial credentials such as card numbers, CVVs, or banking passwords are handled directly by payment gateway infrastructure and are never stored on KhanaMaster database servers.
-        </p>
       </section>
 
       <section id="infrastructure" className="km-legal-section">

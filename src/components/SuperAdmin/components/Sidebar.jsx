@@ -29,7 +29,7 @@ export default function Sidebar({ activeView, setActiveView, collapsed, setColla
             {!collapsed && (
               <div style={{ display: 'flex', flexDirection: 'column' }}>
                 <span style={{ fontSize: '0.95rem', fontWeight: 900, letterSpacing: '-0.3px', color: '#FFF' }}>
-                  KhanaMaster
+                  TouchQR
                 </span>
                 <span style={{ fontSize: '0.65rem', color: '#D4AF37', fontWeight: 800 }}>SUPER ADMIN</span>
               </div>

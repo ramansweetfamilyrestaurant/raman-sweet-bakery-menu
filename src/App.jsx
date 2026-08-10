@@ -477,7 +477,7 @@ export default function App() {
       if (infoData && infoData.name && window.location.pathname !== '/' && window.location.pathname !== '/register') {
         document.title = `${infoData.name} - Digital Menu & Ordering`;
       } else if (window.location.pathname === '/') {
-        document.title = 'KhanaMaster - Digital Menu & QR Ordering Platform';
+        document.title = 'TouchQR - Digital Menu & QR Ordering Platform';
       }
     } catch (err) {
       console.error('Error loading digital menu data:', err);
@@ -585,19 +585,19 @@ export default function App() {
 
       if (isPrivacy) {
         setView('privacy-policy');
-        document.title = 'KhanaMaster - Privacy Policy';
+        document.title = 'TouchQR - Privacy Policy';
       } else if (isTerms) {
         setView('terms');
-        document.title = 'KhanaMaster - Terms of Service';
+        document.title = 'TouchQR - Terms of Service';
       } else if (isRefund) {
         setView('refund-policy');
-        document.title = 'KhanaMaster - Refund & Cancellation Policy';
+        document.title = 'TouchQR - Refund & Cancellation Policy';
       } else if (isSecurity) {
         setView('security');
-        document.title = 'KhanaMaster - Security & Data Protection';
+        document.title = 'TouchQR - Security & Data Protection';
       } else if (isContact) {
         setView('contact');
-        document.title = 'KhanaMaster - Contact & Support';
+        document.title = 'TouchQR - Contact & Support';
       } else if (isSuperAdmin) {
         if (superToken) {
           setView('super-admin-dashboard');
@@ -653,7 +653,7 @@ export default function App() {
         }
       } else if (isRootPath) {
         setView('landing');
-        document.title = 'KhanaMaster - Digital Menu & QR Ordering Platform';
+        document.title = 'TouchQR - Digital Menu & QR Ordering Platform';
       } else {
         setView('menu');
         if (info && info.name) {
@@ -1115,7 +1115,7 @@ export default function App() {
           animation: 'spin 0.8s linear infinite'
         }} />
         <div style={{ fontSize: '1.25rem', fontWeight: 900, color: '#FFD700', letterSpacing: '0.5px' }}>
-          KhanaMaster Digital Menu
+          TouchQR Digital Menu
         </div>
         <p style={{ fontSize: '0.84rem', color: '#E2E8F0', marginTop: '6px', fontWeight: 600 }}>
           Verifying restaurant details & loading menu...
@@ -1156,7 +1156,7 @@ export default function App() {
             boxShadow: '0 4px 16px rgba(255,215,0,0.3)'
           }}
         >
-          🏠 Go to KhanaMaster Homepage
+          🏠 Go to TouchQR Homepage
         </button>
       </div>
     );

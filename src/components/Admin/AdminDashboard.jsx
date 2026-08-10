@@ -2078,7 +2078,7 @@ export default function AdminDashboard({ token, username, onLogout, onReturnToMe
               <span style={{ fontSize: '2rem' }}>📖</span>
               <div>
                 <h3 style={{ margin: 0, fontSize: '1.2rem', fontWeight: 900, color: '#DFBA67' }}>
-                  KhanaMaster Owner Guide & Help Center
+                  TouchQR Owner Guide & Help Center
                 </h3>
                 <span style={{ fontSize: '0.82rem', color: '#9CA3AF' }}>
                   Learn how to manage your digital menu, QR standees, & live orders

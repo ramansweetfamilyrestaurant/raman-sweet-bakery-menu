@@ -17,7 +17,7 @@ export default function LegalHeader({ onOpenLogin }) {
       <div className="km-legal-header-container">
         <div className="km-legal-brand" onClick={handleBackToLanding}>
           <span className="km-legal-logo-icon">🍱</span>
-          <span className="km-legal-logo-text">KhanaMaster</span>
+          <span className="km-legal-logo-text">TouchQR</span>
           <span className="km-legal-logo-badge">SaaS</span>
         </div>
 

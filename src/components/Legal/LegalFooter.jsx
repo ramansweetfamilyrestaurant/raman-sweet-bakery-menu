@@ -23,7 +23,7 @@ export default function LegalFooter({ onOpenLogin, onStartTrial }) {
           <div>
             <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '10px', cursor: 'pointer' }} onClick={() => navigateRoute('/')}>
               <span style={{ fontSize: '1.2rem' }}>🍱</span>
-              <strong style={{ color: '#FFF', fontSize: '1.1rem', fontWeight: 900 }}>KhanaMaster SaaS</strong>
+              <strong style={{ color: '#FFF', fontSize: '1.1rem', fontWeight: 900 }}>TouchQR SaaS</strong>
             </div>
             <p style={{ fontSize: '0.82rem', color: '#94A3B8', lineHeight: 1.5, margin: 0 }}>
               India’s Premier Smart Digital Menu, Live Kitchen KOT, and Restaurant Management SaaS Platform.
@@ -65,7 +65,7 @@ export default function LegalFooter({ onOpenLogin, onStartTrial }) {
 
         <div className="km-legal-footer-bottom">
           <div>
-            © {new Date().getFullYear()} KhanaMaster SaaS. All rights reserved. Built for Indian Restaurant Growth.
+            © {new Date().getFullYear()} TouchQR SaaS. All rights reserved. Built for Indian Restaurant Growth.
           </div>
           <div style={{ display: 'flex', gap: '14px' }}>
             <a onClick={() => navigateRoute('/privacy-policy')} style={{ color: '#94A3B8', textDecoration: 'none' }}>Privacy</a>

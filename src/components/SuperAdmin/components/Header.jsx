@@ -30,7 +30,7 @@ export default function Header({ username, activeView, searchQuery, setSearchQue
       {/* LEFT: Page Title & Context */}
       <div className="sa-header-left">
         <div className="sa-header-title-box">
-          <span className="sa-desktop-breadcrumb">KhanaMaster /</span>
+          <span className="sa-desktop-breadcrumb">TouchQR /</span>
           <h1 className="sa-header-title">{currentTitle}</h1>
         </div>
       </div>

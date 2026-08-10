@@ -27,7 +27,7 @@ export default function HowItWorks() {
           <div className="km-badge">
             <span>🚀 3-STEP SETUP</span>
           </div>
-          <h2 className="km-title-lg">How KhanaMaster Works</h2>
+          <h2 className="km-title-lg">How TouchQR Works</h2>
           <p className="km-subtitle">
             Get your restaurant digital and receiving table orders in under 3 minutes.
           </p>

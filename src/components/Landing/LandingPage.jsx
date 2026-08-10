@@ -72,7 +72,7 @@ export default function LandingPage({
       {/* Trust & Social Proof Strip */}
       <TrustStats trialDays={trialDays} />
 
-      {/* "Why KhanaMaster" Core Features */}
+      {/* "Why TouchQR" Core Features */}
       <Features />
 
       {/* How It Works (3-Step Workflow) */}

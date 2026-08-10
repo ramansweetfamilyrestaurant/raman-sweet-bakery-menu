@@ -292,7 +292,7 @@ export default function RegisterPage({ onRegisterSuccess }) {
           </h1>
 
           <p style={{ color: '#9CA3AF', fontSize: '0.88rem', lineHeight: 1.5, marginBottom: '22px' }}>
-            Join hundreds of modern restaurants & cafes automating digital QR table ordering, live KOT alerts, and WhatsApp orders with KhanaMaster.
+            Join hundreds of modern restaurants & cafes automating digital QR table ordering, live KOT alerts, and WhatsApp orders with TouchQR.
           </p>
 
           {/* Feature Highlights */}

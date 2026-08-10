@@ -1,5 +1,5 @@
 /* ==========================================================================
-   KhanaMaster SaaS Landing Page - Modern B2B SaaS Design Tokens & Styles
+   TouchQR SaaS Landing Page - Modern B2B SaaS Design Tokens & Styles
    ========================================================================== */
 
 :root {
@@ -461,7 +461,7 @@
   letter-spacing: 0.5px;
 }
 
-/* Features Grid Section ("Why KhanaMaster") */
+/* Features Grid Section ("Why TouchQR") */
 .km-features-section {
   padding: 80px 0;
   background: var(--km-bg);

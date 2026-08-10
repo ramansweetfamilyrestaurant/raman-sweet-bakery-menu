@@ -19,7 +19,7 @@ export default function FAQ({ trialDays = 17 }) {
     },
     {
       q: 'Can I connect Bluetooth or USB Thermal Receipt Printers?',
-      a: 'Yes! KhanaMaster supports 2-inch and 3-inch Bluetooth and USB thermal printers directly from mobile phones or desktop PCs for 0.5-second instant KOT & GST billing.'
+      a: 'Yes! TouchQR supports 2-inch and 3-inch Bluetooth and USB thermal printers directly from mobile phones or desktop PCs for 0.5-second instant KOT & GST billing.'
     },
     {
       q: 'How does the Smart AI Google Reviews Booster work?',

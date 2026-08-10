@@ -3,7 +3,7 @@ import LegalPageLayout from './LegalPageLayout';
 
 export default function PrivacyPolicy({ onOpenLogin, onStartTrial }) {
   useEffect(() => {
-    document.title = 'KhanaMaster - Privacy Policy';
+    document.title = 'TouchQR - Privacy Policy';
     window.scrollTo(0, 0);
   }, []);
 
@@ -37,10 +37,10 @@ export default function PrivacyPolicy({ onOpenLogin, onStartTrial }) {
       <section id="intro" className="km-legal-section">
         <h2 className="km-legal-h2">1. Introduction</h2>
         <p className="km-legal-p">
-          Welcome to <strong>KhanaMaster</strong> ("we", "us", "our", or "KhanaMaster SaaS"). KhanaMaster provides digital QR menus, direct table ordering systems, live Kitchen Order Ticket (KOT) management, and restaurant growth software tailored for Indian restaurant owners, cafes, food courts, and sweet shops.
+          Welcome to <strong>TouchQR</strong> ("we", "us", "our", or "TouchQR SaaS"). TouchQR provides digital QR menus, direct table ordering systems, live Kitchen Order Ticket (KOT) management, and restaurant growth software tailored for Indian restaurant owners, cafes, food courts, and sweet shops.
         </p>
         <p className="km-legal-p">
-          This Privacy Policy explains how we collect, use, store, process, and protect your information when you access or use the KhanaMaster platform, website, owner admin dashboard, or digital QR menu customer interface.
+          This Privacy Policy explains how we collect, use, store, process, and protect your information when you access or use the TouchQR platform, website, owner admin dashboard, or digital QR menu customer interface.
         </p>
       </section>
 
@@ -54,7 +54,7 @@ export default function PrivacyPolicy({ onOpenLogin, onStartTrial }) {
       <section id="owner-account" className="km-legal-section">
         <h2 className="km-legal-h2">3. Restaurant / Owner Account Information</h2>
         <p className="km-legal-p">
-          When a restaurant owner registers for a KhanaMaster account or starts a free trial, we collect:
+          When a restaurant owner registers for a TouchQR account or starts a free trial, we collect:
         </p>
         <ul className="km-legal-list">
           <li>Restaurant business name, owner username, and contact phone number.</li>
@@ -75,7 +75,7 @@ export default function PrivacyPolicy({ onOpenLogin, onStartTrial }) {
           <li>Customer star ratings submitted via the Smart Review Prompter tool.</li>
         </ul>
         <div className="km-legal-callout">
-          <strong>Notice for Customers:</strong> KhanaMaster acts as a data processor on behalf of the respective restaurant owner. Individual restaurants manage their own customer interactions.
+          <strong>Notice for Customers:</strong> TouchQR acts as a data processor on behalf of the respective restaurant owner. Individual restaurants manage their own customer interactions.
         </div>
       </section>
 
@@ -104,7 +104,7 @@ export default function PrivacyPolicy({ onOpenLogin, onStartTrial }) {
       <section id="payment-info" className="km-legal-section">
         <h2 className="km-legal-h2">7. Payment & Subscription Billing</h2>
         <p className="km-legal-p">
-          Subscription billing is processed via PCI-DSS compliant third-party payment gateways (such as Cashfree Payments). KhanaMaster does not store raw credit card numbers or banking PINs on its primary database servers.
+          Subscription billing is processed via PCI-DSS compliant third-party payment gateways (such as Cashfree Payments). TouchQR does not store raw credit card numbers or banking PINs on its primary database servers.
         </p>
       </section>
 
@@ -125,7 +125,7 @@ export default function PrivacyPolicy({ onOpenLogin, onStartTrial }) {
       <section id="security" className="km-legal-section">
         <h2 className="km-legal-h2">10. Data Security</h2>
         <p className="km-legal-p">
-          KhanaMaster implements technical and organizational safeguards including HTTPS encrypted transmission, database password hashing, and tenant-level access isolation to protect data against unauthorized access.
+          TouchQR implements technical and organizational safeguards including HTTPS encrypted transmission, database password hashing, and tenant-level access isolation to protect data against unauthorized access.
         </p>
       </section>
 
@@ -146,7 +146,7 @@ export default function PrivacyPolicy({ onOpenLogin, onStartTrial }) {
       <section id="children" className="km-legal-section">
         <h2 className="km-legal-h2">13. Children's Privacy</h2>
         <p className="km-legal-p">
-          KhanaMaster is a commercial B2B SaaS software platform intended for commercial use by business entities and adult individuals. We do not knowingly collect personal data from minors under the age of 18.
+          TouchQR is a commercial B2B SaaS software platform intended for commercial use by business entities and adult individuals. We do not knowingly collect personal data from minors under the age of 18.
         </p>
       </section>
 

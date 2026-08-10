@@ -371,7 +371,7 @@ export default function SubscriptionBillingPage({ restoInfo, token, onProceedToD
         <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
           <span style={{ fontSize: '1.4rem' }}>🍱</span>
           <span style={{ fontSize: '1rem', fontWeight: 900, color: '#DFBA67', letterSpacing: '-0.2px' }}>
-            KhanaMaster SaaS
+            TouchQR SaaS
           </span>
         </div>
         <button
@@ -653,7 +653,7 @@ export default function SubscriptionBillingPage({ restoInfo, token, onProceedToD
               <div>Current Charge: <strong>₹0 / month (Free Access)</strong></div>
               <div>Valid Until: <strong>{activeResto?.plan_expires_at ? (new Date(activeResto.plan_expires_at).getFullYear() > 2030 ? '♾️ Lifetime Access' : new Date(activeResto.plan_expires_at).toLocaleDateString('en-IN')) : '♾️ Lifetime Access'}</strong></div>
               <div style={{ fontSize: '0.75rem', marginTop: '6px', color: '#CBD5E1' }}>
-                🛡️ Your account has been provided free of charge by KhanaMaster Super Admin. No Cashfree payment required.
+                🛡️ Your account has been provided free of charge by TouchQR Super Admin. No Cashfree payment required.
               </div>
             </div>
 

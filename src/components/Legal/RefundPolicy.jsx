@@ -3,7 +3,7 @@ import LegalPageLayout from './LegalPageLayout';
 
 export default function RefundPolicy({ onOpenLogin, onStartTrial }) {
   useEffect(() => {
-    document.title = 'KhanaMaster - Refund & Cancellation Policy';
+    document.title = 'TouchQR - Refund & Cancellation Policy';
     window.scrollTo(0, 0);
   }, []);
 
@@ -31,14 +31,14 @@ export default function RefundPolicy({ onOpenLogin, onStartTrial }) {
       <section id="free-trial" className="km-legal-section">
         <h2 className="km-legal-h2">1. 17-Day Free Trial Policy</h2>
         <p className="km-legal-p">
-          KhanaMaster provides a <strong>17-Day Free Trial</strong> for all new restaurant accounts. No credit card, debit card, or payment details are required to begin the trial. This allows restaurant operators to thoroughly evaluate digital menu creation, live kitchen KOT, thermal printing, and smart review tools risk-free prior to financial commitment.
+          TouchQR provides a <strong>17-Day Free Trial</strong> for all new restaurant accounts. No credit card, debit card, or payment details are required to begin the trial. This allows restaurant operators to thoroughly evaluate digital menu creation, live kitchen KOT, thermal printing, and smart review tools risk-free prior to financial commitment.
         </p>
       </section>
 
       <section id="subscription-billing" className="km-legal-section">
         <h2 className="km-legal-h2">2. Subscription Billing Cycle</h2>
         <p className="km-legal-p">
-          KhanaMaster subscriptions (Basic, Pro, Enterprise) operate on a prepaid monthly or annual recurring cycle. Subscriptions are activated upon user confirmation and successful payment authorization via Cashfree Payments or UPI mandates.
+          TouchQR subscriptions (Basic, Pro, Enterprise) operate on a prepaid monthly or annual recurring cycle. Subscriptions are activated upon user confirmation and successful payment authorization via Cashfree Payments or UPI mandates.
         </p>
       </section>
 
@@ -52,7 +52,7 @@ export default function RefundPolicy({ onOpenLogin, onStartTrial }) {
       <section id="refund-eligibility" className="km-legal-section">
         <h2 className="km-legal-h2">4. Refund Eligibility</h2>
         <p className="km-legal-p">
-          Because KhanaMaster offers an unrestricted 17-day free trial, subscription payments are generally non-refundable once a billing cycle commences. However, refund requests are evaluated fairly on a case-by-case basis under the following eligible circumstances:
+          Because TouchQR offers an unrestricted 17-day free trial, subscription payments are generally non-refundable once a billing cycle commences. However, refund requests are evaluated fairly on a case-by-case basis under the following eligible circumstances:
         </p>
         <ul className="km-legal-list">
           <li>Duplicate billing or technical system overcharges resulting from payment gateway errors.</li>
@@ -98,7 +98,7 @@ export default function RefundPolicy({ onOpenLogin, onStartTrial }) {
       <section id="contact" className="km-legal-section">
         <h2 className="km-legal-h2">9. Support Contact</h2>
         <p className="km-legal-p">
-          For any billing or subscription assistance, please reach out to our dedicated team via the <a href="/contact" style={{ color: 'var(--km-green)', fontWeight: 700 }}>KhanaMaster Support Center</a>.
+          For any billing or subscription assistance, please reach out to our dedicated team via the <a href="/contact" style={{ color: 'var(--km-green)', fontWeight: 700 }}>TouchQR Support Center</a>.
         </p>
       </section>
     </LegalPageLayout>

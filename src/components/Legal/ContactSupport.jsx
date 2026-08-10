@@ -7,7 +7,7 @@ export default function ContactSupport({ onOpenLogin, onStartTrial }) {
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
-    document.title = 'KhanaMaster - Contact & Support';
+    document.title = 'TouchQR - Contact & Support';
     window.scrollTo(0, 0);
 
     fetch('/api/keys')
@@ -49,7 +49,7 @@ export default function ContactSupport({ onOpenLogin, onStartTrial }) {
 
     // 2. Build WhatsApp support inquiry URL
     const targetPhone = supportPhone.replace(/[^0-9]/g, '') || '919876543210';
-    const waText = `*New KhanaMaster Support Request*\n\n` +
+    const waText = `*New TouchQR Support Request*\n\n` +
       `👤 *Name:* ${formData.name}\n` +
       `📞 *Phone:* ${formData.phone}\n` +
       `🏪 *Restaurant:* ${formData.restaurantName || 'N/A'}\n` +
@@ -69,7 +69,7 @@ export default function ContactSupport({ onOpenLogin, onStartTrial }) {
 
   return (
     <LegalPageLayout
-      title="Contact KhanaMaster Support"
+      title="Contact TouchQR Support"
       categoryBadge="HELP CENTER"
       lastUpdated="August 10, 2026"
       onOpenLogin={onOpenLogin}
@@ -103,7 +103,7 @@ export default function ContactSupport({ onOpenLogin, onStartTrial }) {
 
         {/* Contact Form Container */}
         <div style={{ background: 'var(--km-white)', border: '1.5px solid var(--km-border)', borderRadius: '16px', padding: '24px', marginTop: '32px', boxShadow: '0 4px 14px rgba(15, 23, 42, 0.03)' }}>
-          <h3 style={{ fontSize: '1.1rem', fontWeight: 800, color: 'var(--km-green)', margin: '0 0 16px 0' }}>
+          <h3 style={{ fontSize: '1.1rem', fontWeight: 900, color: 'var(--km-green)', margin: '0 0 16px 0' }}>
             Send Us a Support Message
           </h3>
 
@@ -112,7 +112,7 @@ export default function ContactSupport({ onOpenLogin, onStartTrial }) {
               <CheckCircle size={32} style={{ margin: '0 auto 8px auto', display: 'block', color: '#10B981' }} />
               <strong style={{ fontSize: '1.05rem', display: 'block', marginBottom: '4px' }}>Support Request Received!</strong>
               <p style={{ fontSize: '0.88rem', margin: 0 }}>
-                Thank you for contacting KhanaMaster. A customer support representative will review your message and reach out to your registered phone number shortly.
+                Thank you for contacting TouchQR. A customer support representative will review your message and reach out to your registered phone number shortly.
               </p>
             </div>
           ) : (

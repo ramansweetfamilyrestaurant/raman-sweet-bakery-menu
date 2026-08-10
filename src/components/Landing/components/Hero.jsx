@@ -59,7 +59,7 @@ export default function Hero({ trialDays = 17, onStartTrial, onLiveDemo }) {
                   <div className="km-mockup-dot yellow" />
                   <div className="km-mockup-dot green" />
                 </div>
-                <span className="km-mockup-title">KhanaMaster Restaurant Operations Hub</span>
+                <span className="km-mockup-title">TouchQR Restaurant Operations Hub</span>
               </div>
 
               <div className="km-mockup-body">

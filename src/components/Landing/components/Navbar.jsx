@@ -17,7 +17,7 @@ export default function Navbar({ onOpenLogin, onStartTrial }) {
       <div className="km-container km-navbar-container">
         <div className="km-logo" onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}>
           <div className="km-logo-icon">🍱</div>
-          <span className="km-logo-text">KhanaMaster</span>
+          <span className="km-logo-text">TouchQR</span>
           <span className="km-logo-tag">SaaS</span>
         </div>
 

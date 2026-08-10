@@ -22,7 +22,7 @@ export default function Footer({ onOpenLogin, onStartTrial }) {
           <div className="km-footer-brand">
             <div className="km-logo" onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}>
               <div className="km-logo-icon">🍱</div>
-              <span className="km-logo-text" style={{ color: '#FFF' }}>KhanaMaster</span>
+              <span className="km-logo-text" style={{ color: '#FFF' }}>TouchQR</span>
               <span className="km-logo-tag">SaaS</span>
             </div>
             <p>
@@ -68,7 +68,7 @@ export default function Footer({ onOpenLogin, onStartTrial }) {
 
         <div className="km-footer-bottom">
           <div>
-            © {new Date().getFullYear()} KhanaMaster SaaS. All rights reserved. Built for Indian Restaurant Growth.
+            © {new Date().getFullYear()} TouchQR SaaS. All rights reserved. Built for Indian Restaurant Growth.
           </div>
 
           <div style={{ display: 'flex', gap: '16px' }}>
