@@ -212,11 +212,13 @@ export default function MenuCardItem({ dish, lang, onClick, onAddToCart, currenc
             onClick={(e) => e.stopPropagation()}
           >
             <button
+              className="price-pill-btn"
               onClick={() => setPortionMode('half')}
               style={{
                 fontSize: '0.74rem',
                 fontWeight: 800,
                 padding: '4px 8px',
+                minHeight: 'unset',
                 borderRadius: 'var(--radius-pill)',
                 background: portionMode === 'half' ? 'var(--primary-emerald)' : 'var(--bg-secondary)',
                 color: portionMode === 'half' ? '#FFFFFF' : 'var(--text-muted)',
@@ -230,11 +232,13 @@ export default function MenuCardItem({ dish, lang, onClick, onAddToCart, currenc
               Half {symbol}{halfPriceNum}
             </button>
             <button
+              className="price-pill-btn"
               onClick={() => setPortionMode('full')}
               style={{
                 fontSize: '0.74rem',
                 fontWeight: 800,
                 padding: '4px 8px',
+                minHeight: 'unset',
                 borderRadius: 'var(--radius-pill)',
                 background: portionMode === 'full' ? 'var(--primary-emerald)' : 'var(--bg-secondary)',
                 color: portionMode === 'full' ? '#FFFFFF' : 'var(--text-muted)',

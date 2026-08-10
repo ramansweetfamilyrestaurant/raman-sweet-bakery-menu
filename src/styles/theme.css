@@ -257,8 +257,8 @@ img {
     white-space: nowrap !important;
   }
 
-  /* Touch-friendly Inputs & Buttons */
-  button, input, select, textarea {
+  /* Touch-friendly Inputs & Forms (excluding price pills) */
+  button:not(.price-pill-btn), input, select, textarea {
     min-height: 44px;
     touch-action: manipulation;
   }
