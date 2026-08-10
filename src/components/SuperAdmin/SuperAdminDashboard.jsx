@@ -55,10 +55,15 @@ export default function SuperAdminDashboard({ token, username, onLogout, onRetur
     cashfree_app_id: '',
     cashfree_secret_key: '',
     support_whatsapp: '919876543210',
-    default_trial_days: '14'
+    default_trial_days: '14',
+    platform_logo_url: ''
   });
   const [keysSaving, setKeysSaving] = useState(false);
   const [keysMsg, setKeysMsg] = useState('');
+  const [uploadingLogo, setUploadingLogo] = useState(false);
+  const [logoErr, setLogoErr] = useState(false);
+  const [dbOptimizing, setDbOptimizing] = useState(false);
+  const [dbOptimizeMsg, setDbOptimizeMsg] = useState('');
 
   const loadSystemSettings = async () => {
     try {
@@ -72,7 +77,8 @@ export default function SuperAdminDashboard({ token, username, onLogout, onRetur
           cashfree_app_id: data.cashfree_app_id || '',
           cashfree_secret_key: data.cashfree_secret_key || '',
           support_whatsapp: data.support_whatsapp || '919876543210',
-          default_trial_days: data.default_trial_days || '14'
+          default_trial_days: data.default_trial_days || '14',
+          platform_logo_url: data.platform_logo_url || ''
         }));
       }
     } catch {}
@@ -391,19 +397,37 @@ export default function SuperAdminDashboard({ token, username, onLogout, onRetur
           gap: '12px'
         }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '14px' }}>
-            <div style={{
-              width: '44px',
-              height: '44px',
-              borderRadius: '50%',
-              background: 'linear-gradient(135deg, #DFBA67 0%, #C5A059 100%)',
-              color: '#0A2315',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              boxShadow: '0 4px 14px rgba(212, 175, 55, 0.4)'
-            }}>
-              <Crown size={24} color="#0A2315" />
-            </div>
+            {paymentKeys.platform_logo_url && !logoErr ? (
+              <img
+                src={paymentKeys.platform_logo_url}
+                alt="Super Admin Logo"
+                referrerPolicy="no-referrer"
+                onError={() => setLogoErr(true)}
+                style={{
+                  width: '44px',
+                  height: '44px',
+                  borderRadius: '12px',
+                  objectFit: 'contain',
+                  background: '#FFF',
+                  padding: '2px',
+                  boxShadow: '0 4px 14px rgba(212, 175, 55, 0.4)'
+                }}
+              />
+            ) : (
+              <div style={{
+                width: '44px',
+                height: '44px',
+                borderRadius: '50%',
+                background: 'linear-gradient(135deg, #DFBA67 0%, #C5A059 100%)',
+                color: '#0A2315',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                boxShadow: '0 4px 14px rgba(212, 175, 55, 0.4)'
+              }}>
+                <Crown size={24} color="#0A2315" />
+              </div>
+            )}
             <div>
               <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                 <h1 style={{ fontSize: '1.25rem', fontWeight: 900, color: '#DFBA67', margin: 0 }}>
@@ -2505,6 +2529,89 @@ export default function SuperAdminDashboard({ token, username, onLogout, onRetur
                   </div>
                 </div>
 
+                {/* Platform Logo & Branding */}
+                <div style={{ background: '#F8FAFC', padding: '10px', borderRadius: '8px', border: '1px solid #CBD5E1' }}>
+                  <span style={{ fontWeight: 800, color: '#1E293B', display: 'block', marginBottom: '6px' }}>🖼️ PLATFORM LOGO & BRANDING:</span>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '8px' }}>
+                    {paymentKeys.platform_logo_url && !logoErr ? (
+                      <img
+                        src={paymentKeys.platform_logo_url}
+                        alt="Logo"
+                        referrerPolicy="no-referrer"
+                        onError={() => setLogoErr(true)}
+                        style={{ width: '40px', height: '40px', borderRadius: '8px', objectFit: 'contain', background: '#FFF', padding: '2px', border: '1px solid #CBD5E1' }}
+                      />
+                    ) : (
+                      <div style={{ width: '40px', height: '40px', borderRadius: '8px', background: '#0A2315', color: '#DFBA67', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 900 }}>👑</div>
+                    )}
+                    <div style={{ flex: 1 }}>
+                      <input
+                        type="file"
+                        accept="image/*"
+                        onChange={async (e) => {
+                          const file = e.target.files?.[0];
+                          if (!file) return;
+                          setUploadingLogo(true);
+                          try {
+                            const data = await uploadImage(file, token, 1, 'superadmin-logo');
+                            const newUrl = data.url || data.path;
+                            const updated = { ...paymentKeys, platform_logo_url: newUrl };
+                            setPaymentKeys(updated);
+                            await fetch('/api/superadmin/settings', {
+                              method: 'POST',
+                              headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+                              body: JSON.stringify(updated)
+                            });
+                            setLogoErr(false);
+                            setKeysMsg('✅ Logo uploaded & saved successfully!');
+                          } catch (err) {
+                            alert('Logo upload failed: ' + err.message);
+                          } finally {
+                            setUploadingLogo(false);
+                          }
+                        }}
+                        disabled={uploadingLogo}
+                        style={{ fontSize: '0.74rem' }}
+                      />
+                      {uploadingLogo && <span style={{ fontSize: '0.7rem', color: '#0284C7', display: 'block' }}>Uploading to R2...</span>}
+                    </div>
+                  </div>
+
+                  <div style={{ display: 'flex', gap: '6px' }}>
+                    <input
+                      type="text"
+                      placeholder="Logo URL (e.g. /api/r2-proxy/superadmin/branding/logo.webp)"
+                      value={paymentKeys.platform_logo_url || ''}
+                      onChange={(e) => {
+                        setPaymentKeys({ ...paymentKeys, platform_logo_url: e.target.value });
+                        setLogoErr(false);
+                      }}
+                      style={{ flex: 1, padding: '6px 8px', borderRadius: '6px', border: '1px solid #E2E8F0', fontSize: '0.78rem' }}
+                    />
+                    {paymentKeys.platform_logo_url && (
+                      <button
+                        type="button"
+                        onClick={async () => {
+                          if (window.confirm('Reset platform logo to default?')) {
+                            const updated = { ...paymentKeys, platform_logo_url: '' };
+                            setPaymentKeys(updated);
+                            await fetch('/api/superadmin/settings', {
+                              method: 'POST',
+                              headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+                              body: JSON.stringify(updated)
+                            });
+                            setLogoErr(false);
+                            setKeysMsg('🗑️ Logo reset to default');
+                          }
+                        }}
+                        style={{ background: 'rgba(239,68,68,0.1)', color: '#EF4444', border: '1px solid rgba(239,68,68,0.3)', padding: '4px 8px', borderRadius: '6px', fontSize: '0.72rem', fontWeight: 800, cursor: 'pointer' }}
+                      >
+                        Reset
+                      </button>
+                    )}
+                  </div>
+                </div>
+
                 {/* Cashfree */}
                 <div style={{ background: '#FFFFFF', padding: '10px', borderRadius: '8px', border: '1px solid #CBD5E1' }}>
                   <span style={{ fontWeight: 800, color: '#059669', display: 'block', marginBottom: '4px' }}>🚀 CASHFREE GATEWAY (PRIMARY):</span>
@@ -2524,6 +2631,34 @@ export default function SuperAdminDashboard({ token, username, onLogout, onRetur
                   />
                 </div>
 
+                {/* Database Maintenance & Vacuum Tool */}
+                <div style={{ background: '#EFF6FF', padding: '10px', borderRadius: '8px', border: '1px solid #BFDBFE' }}>
+                  <span style={{ fontWeight: 800, color: '#1E40AF', display: 'block', marginBottom: '4px' }}>🧹 DATABASE MAINTENANCE & VACUUM:</span>
+                  <button
+                    type="button"
+                    disabled={dbOptimizing}
+                    onClick={async () => {
+                      setDbOptimizing(true);
+                      setDbOptimizeMsg('');
+                      try {
+                        const data = await superAdminOptimizeDatabase(token);
+                        setDbOptimizeMsg(`✅ ${data.message || 'Database vacuumed & optimized!'}`);
+                      } catch (err) {
+                        setDbOptimizeMsg(`⚠️ ${err.message || 'Optimization failed'}`);
+                      } finally {
+                        setDbOptimizing(false);
+                      }
+                    }}
+                    style={{
+                      width: '100%', background: '#2563EB', color: '#FFF', border: 'none',
+                      padding: '7px 12px', borderRadius: '6px', fontWeight: 800, fontSize: '0.78rem', cursor: 'pointer'
+                    }}
+                  >
+                    {dbOptimizing ? 'Optimizing Database...' : '⚡ Run Vacuum & Database Optimization'}
+                  </button>
+                  {dbOptimizeMsg && <span style={{ fontSize: '0.72rem', fontWeight: 800, color: '#1E40AF', display: 'block', marginTop: '4px' }}>{dbOptimizeMsg}</span>}
+                </div>
+
                 <button
                   type="button"
                   onClick={async () => {
@@ -2537,17 +2672,17 @@ export default function SuperAdminDashboard({ token, username, onLogout, onRetur
                       });
                       const data = await res.json();
                       if (res.ok) {
-                        setKeysMsg(data.message || 'Payment API Keys saved successfully!');
+                        setKeysMsg(data.message || 'Settings saved successfully!');
                       }
                     } catch {
-                      setKeysMsg('Failed to save API keys');
+                      setKeysMsg('Failed to save settings');
                     } finally {
                       setKeysSaving(false);
                     }
                   }}
                   style={{ background: '#0284C7', color: '#FFF', border: 'none', padding: '8px 14px', borderRadius: '8px', fontWeight: 900, cursor: 'pointer' }}
                 >
-                  {keysSaving ? 'Saving...' : '✓ Save Payment API Keys'}
+                  {keysSaving ? 'Saving...' : '✓ Save System Settings'}
                 </button>
               </div>
             </div>
