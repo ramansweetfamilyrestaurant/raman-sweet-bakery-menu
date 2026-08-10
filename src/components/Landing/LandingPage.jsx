@@ -3,8 +3,10 @@ import AnnouncementBar from './components/AnnouncementBar';
 import Navbar from './components/Navbar';
 import Hero from './components/Hero';
 import TrustStats from './components/TrustStats';
+import CategoryStrip from './components/CategoryStrip';
 import Features from './components/Features';
 import HowItWorks from './components/HowItWorks';
+import StandeePreview from './components/StandeePreview';
 import ProductShowcase from './components/ProductShowcase';
 import Pricing from './components/Pricing';
 import Comparison from './components/Comparison';
@@ -73,11 +75,17 @@ export default function LandingPage({
       {/* Trust & Social Proof Strip */}
       <TrustStats trialDays={trialDays} />
 
+      {/* Indian Food Business Category Badge Strip */}
+      <CategoryStrip />
+
       {/* "Why TouchQR" Core Features */}
       <Features />
 
       {/* How It Works (3-Step Workflow) */}
       <HowItWorks />
+
+      {/* Table QR Standee & Thermal KOT Hardware Preview */}
+      <StandeePreview />
 
       {/* Product Showcase Sections (Mobile Tab Switcher Enabled) */}
       <ProductShowcase />
