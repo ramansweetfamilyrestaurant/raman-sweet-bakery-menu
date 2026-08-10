@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Crown, Plus, LogOut, ExternalLink, Trash2, CheckCircle, Store, Utensils, DollarSign, Phone, MapPin, Copy, Check, Search, Edit3, Shield, ShieldCheck, RefreshCw, QrCode, Megaphone, FileText, Calendar, Palette, MessageSquare, Upload, X, XCircle, CreditCard, Lock, Sparkles } from 'lucide-react';
+import { Crown, Plus, LogOut, ExternalLink, Trash2, CheckCircle, Store, Utensils, DollarSign, Phone, MapPin, Copy, Check, Search, Edit3, Shield, ShieldCheck, RefreshCw, QrCode, Megaphone, FileText, Calendar, Palette, MessageSquare, Upload, X, XCircle, CreditCard, Lock, Sparkles, Eye, EyeOff, Key, Database, Sliders, Image } from 'lucide-react';
 import { fetchSuperAdminRestaurants, createTenantRestaurant, toggleTenantRestaurantActive, deleteTenantRestaurant, impersonateTenantRestaurant, updateTenantRestaurant, createAnnouncement, fetchSuperAnnouncements, deleteAnnouncement, clearAllAnnouncements, fetchAuditLogs, uploadImage, fetchSaaSPlans, createSaaSPlan, updateSaaSPlan, deleteSaaSPlan, superAdminOptimizeDatabase, updateSuperAdminCredentials, grantFreeAccess, revokeFreeAccess } from '../../api/client';
 import { SAAS_PLANS, getPlanDetails } from '../../config/plans';
 import GrantFreeAccessModal from './modals/GrantFreeAccessModal';
@@ -14,6 +14,13 @@ export default function SuperAdminDashboard({ token, username, onLogout, onRetur
   const [copiedId, setCopiedId] = useState(null);
   const [grantModalResto, setGrantModalResto] = useState(null);
   const [revokeModalResto, setRevokeModalResto] = useState(null);
+
+  // Security & Portal Tab State & Eye Toggles
+  const [secTab, setSecTab] = useState('security'); // 'security', 'gateway', 'branding', 'health'
+  const [showCurPass, setShowCurPass] = useState(false);
+  const [showNewPass, setShowNewPass] = useState(false);
+  const [showConfPass, setShowConfPass] = useState(false);
+  const [showSecretKey, setShowSecretKey] = useState(false);
 
   // Security Credentials Modal State
   const [showSecurityModal, setShowSecurityModal] = useState(false);
@@ -2543,85 +2550,347 @@ export default function SuperAdminDashboard({ token, username, onLogout, onRetur
               ✕
             </button>
 
-            <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '16px' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '18px' }}>
               <div style={{
-                width: '40px',
-                height: '40px',
-                borderRadius: '50%',
+                width: '46px',
+                height: '46px',
+                borderRadius: '14px',
                 background: 'linear-gradient(135deg, #0A2315 0%, #164E2A 100%)',
                 color: '#DFBA67',
                 display: 'flex',
                 alignItems: 'center',
-                justifyContent: 'center'
+                justifyContent: 'center',
+                border: '1.5px solid #D4AF37',
+                boxShadow: '0 4px 14px rgba(10,35,21,0.2)'
               }}>
-                <Lock size={20} />
+                <ShieldCheck size={24} />
               </div>
               <div>
-                <h3 style={{ margin: 0, fontSize: '1.15rem', fontWeight: 900, color: 'var(--text-dark)' }}>
-                  Change Master Credentials
+                <h3 style={{ margin: 0, fontSize: '1.25rem', fontWeight: 900, color: 'var(--text-dark)' }}>
+                  Super Admin Security & Portal Settings
                 </h3>
-                <span style={{ fontSize: '0.74rem', color: 'var(--text-muted)' }}>
-                  Super Admin Account Security Settings
+                <span style={{ fontSize: '0.78rem', color: 'var(--text-muted)', fontWeight: 600 }}>
+                  Master Account Credentials, Payment Gateways, Branding & DB Tools
                 </span>
               </div>
             </div>
 
+            {/* 4-Tab Navigation Selector */}
+            <div style={{
+              display: 'grid',
+              gridTemplateColumns: 'repeat(4, 1fr)',
+              gap: '6px',
+              background: '#F1F5F9',
+              padding: '5px',
+              borderRadius: '14px',
+              marginBottom: '20px',
+              border: '1px solid #E2E8F0'
+            }}>
+              {[
+                { id: 'security', label: '🛡️ Security', icon: Lock },
+                { id: 'gateway', label: '💳 Gateway', icon: Key },
+                { id: 'branding', label: '🖼️ Branding', icon: Image },
+                { id: 'health', label: '⚡ DB Health', icon: Database },
+              ].map((tab) => {
+                const isActive = secTab === tab.id;
+                return (
+                  <button
+                    key={tab.id}
+                    type="button"
+                    onClick={() => setSecTab(tab.id)}
+                    style={{
+                      background: isActive ? 'linear-gradient(135deg, #0A2315 0%, #164E2A 100%)' : 'transparent',
+                      color: isActive ? '#DFBA67' : '#64748B',
+                      border: isActive ? '1px solid #D4AF37' : 'none',
+                      padding: '8px 6px',
+                      borderRadius: '10px',
+                      fontSize: '0.76rem',
+                      fontWeight: 900,
+                      cursor: 'pointer',
+                      transition: 'all 0.2s ease',
+                      boxShadow: isActive ? '0 2px 8px rgba(10,35,21,0.2)' : 'none',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      gap: '4px'
+                    }}
+                  >
+                    {tab.label}
+                  </button>
+                );
+              })}
+            </div>
+
             {securityError && (
-              <div style={{ background: '#FEE2E2', border: '1px solid #EF4444', color: '#B91C1C', padding: '10px', borderRadius: '10px', fontSize: '0.8rem', fontWeight: 700, marginBottom: '14px' }}>
+              <div style={{ background: '#FEE2E2', border: '1px solid #EF4444', color: '#B91C1C', padding: '10px 14px', borderRadius: '12px', fontSize: '0.8rem', fontWeight: 800, marginBottom: '16px' }}>
                 ⚠️ {securityError}
               </div>
             )}
 
             {securitySuccess && (
-              <div style={{ background: '#ECFDF5', border: '1px solid #10B981', color: '#047857', padding: '10px', borderRadius: '10px', fontSize: '0.8rem', fontWeight: 700, marginBottom: '14px' }}>
+              <div style={{ background: '#ECFDF5', border: '1px solid #10B981', color: '#047857', padding: '10px 14px', borderRadius: '12px', fontSize: '0.8rem', fontWeight: 800, marginBottom: '16px' }}>
                 {securitySuccess}
               </div>
             )}
 
-            {/* 💳 Payment Gateway API Keys Setup Box */}
-            <div style={{ background: '#F8FAFC', border: '1.5px dashed #0EA5E9', borderRadius: '16px', padding: '16px', marginBottom: '16px' }}>
-              <strong style={{ fontSize: '0.84rem', color: '#0369A1', display: 'block', marginBottom: '10px' }}>
-                💳 Payment Gateway Merchant API Keys Setup:
-              </strong>
+            {keysMsg && (
+              <div style={{ background: '#F0FDF4', border: '1px solid #22C55E', color: '#15803D', padding: '10px 14px', borderRadius: '12px', fontSize: '0.8rem', fontWeight: 800, marginBottom: '16px' }}>
+                {keysMsg}
+              </div>
+            )}
 
-              {keysMsg && (
-                <div style={{ fontSize: '0.76rem', fontWeight: 800, color: '#059669', marginBottom: '8px' }}>
-                  ✅ {keysMsg}
-                </div>
-              )}
-
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', fontSize: '0.78rem' }}>
-                {/* Free Trial Days */}
-                <div style={{ background: '#FFFBEB', padding: '10px', borderRadius: '8px', border: '1px solid #FCD34D' }}>
-                  <span style={{ fontWeight: 800, color: '#B45309', display: 'block', marginBottom: '4px' }}>🎁 SAAS FREE TRIAL DURATION:</span>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+            {/* TAB 1: 🛡️ MASTER ACCOUNT SECURITY */}
+            {secTab === 'security' && (
+              <form onSubmit={handleSecuritySubmit} style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
+                <div>
+                  <label style={{ display: 'block', fontSize: '0.78rem', fontWeight: 800, color: 'var(--text-dark)', marginBottom: '6px' }}>
+                    🔑 Current Password (Required to apply changes) *
+                  </label>
+                  <div style={{ position: 'relative' }}>
                     <input
-                      type="number"
-                      min="1"
-                      max="365"
-                      placeholder="14"
-                      value={paymentKeys.default_trial_days}
-                      onChange={(e) => setPaymentKeys({ ...paymentKeys, default_trial_days: e.target.value })}
-                      style={{ width: '90px', padding: '6px 8px', borderRadius: '6px', border: '1px solid #CBD5E1', fontSize: '0.82rem', fontWeight: 900, color: '#0F172A' }}
+                      type={showCurPass ? 'text' : 'password'}
+                      required
+                      placeholder="Enter current master password"
+                      value={securityForm.currentPassword}
+                      onChange={(e) => setSecurityForm({ ...securityForm, currentPassword: e.target.value })}
+                      style={{
+                        width: '100%',
+                        padding: '11px 40px 11px 14px',
+                        borderRadius: '12px',
+                        border: '1.5px solid #CBD5E1',
+                        fontSize: '0.9rem',
+                        fontWeight: 600,
+                        outline: 'none',
+                        boxSizing: 'border-box'
+                      }}
                     />
-                    <span style={{ fontSize: '0.74rem', fontWeight: 700, color: '#92400E' }}>Days Free Trial for New Registrations</span>
+                    <button
+                      type="button"
+                      onClick={() => setShowCurPass(!showCurPass)}
+                      style={{ position: 'absolute', right: '12px', top: '50%', transform: 'translateY(-50%)', background: 'none', border: 'none', cursor: 'pointer', color: '#64748B' }}
+                    >
+                      {showCurPass ? <EyeOff size={18} /> : <Eye size={18} />}
+                    </button>
                   </div>
                 </div>
 
-                {/* Platform Logo & Branding */}
-                <div style={{ background: '#F8FAFC', padding: '10px', borderRadius: '8px', border: '1px solid #CBD5E1' }}>
-                  <span style={{ fontWeight: 800, color: '#1E293B', display: 'block', marginBottom: '6px' }}>🖼️ PLATFORM LOGO & BRANDING:</span>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '8px' }}>
+                <div>
+                  <label style={{ display: 'block', fontSize: '0.78rem', fontWeight: 800, color: 'var(--text-dark)', marginBottom: '6px' }}>
+                    👤 Master Login Username
+                  </label>
+                  <input
+                    type="text"
+                    required
+                    placeholder="e.g. superadmin"
+                    value={securityForm.newUsername}
+                    onChange={(e) => setSecurityForm({ ...securityForm, newUsername: e.target.value })}
+                    style={{
+                      width: '100%',
+                      padding: '11px 14px',
+                      borderRadius: '12px',
+                      border: '1.5px solid #CBD5E1',
+                      fontSize: '0.9rem',
+                      fontWeight: 600,
+                      outline: 'none',
+                      boxSizing: 'border-box'
+                    }}
+                  />
+                </div>
+
+                <div>
+                  <label style={{ display: 'block', fontSize: '0.78rem', fontWeight: 800, color: 'var(--text-dark)', marginBottom: '6px' }}>
+                    🔒 New Master Password (Optional)
+                  </label>
+                  <div style={{ position: 'relative' }}>
+                    <input
+                      type={showNewPass ? 'text' : 'password'}
+                      placeholder="Leave blank to keep unchanged"
+                      value={securityForm.newPassword}
+                      onChange={(e) => setSecurityForm({ ...securityForm, newPassword: e.target.value })}
+                      style={{
+                        width: '100%',
+                        padding: '11px 40px 11px 14px',
+                        borderRadius: '12px',
+                        border: '1.5px solid #CBD5E1',
+                        fontSize: '0.9rem',
+                        fontWeight: 600,
+                        outline: 'none',
+                        boxSizing: 'border-box'
+                      }}
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setShowNewPass(!showNewPass)}
+                      style={{ position: 'absolute', right: '12px', top: '50%', transform: 'translateY(-50%)', background: 'none', border: 'none', cursor: 'pointer', color: '#64748B' }}
+                    >
+                      {showNewPass ? <EyeOff size={18} /> : <Eye size={18} />}
+                    </button>
+                  </div>
+                </div>
+
+                {securityForm.newPassword && (
+                  <div>
+                    <label style={{ display: 'block', fontSize: '0.78rem', fontWeight: 800, color: 'var(--text-dark)', marginBottom: '6px' }}>
+                      🔒 Confirm New Master Password
+                    </label>
+                    <div style={{ position: 'relative' }}>
+                      <input
+                        type={showConfPass ? 'text' : 'password'}
+                        placeholder="Confirm new password"
+                        value={securityForm.confirmPassword}
+                        onChange={(e) => setSecurityForm({ ...securityForm, confirmPassword: e.target.value })}
+                        style={{
+                          width: '100%',
+                          padding: '11px 40px 11px 14px',
+                          borderRadius: '12px',
+                          border: '1.5px solid #CBD5E1',
+                          fontSize: '0.9rem',
+                          fontWeight: 600,
+                          outline: 'none',
+                          boxSizing: 'border-box'
+                        }}
+                      />
+                      <button
+                        type="button"
+                        onClick={() => setShowConfPass(!showConfPass)}
+                        style={{ position: 'absolute', right: '12px', top: '50%', transform: 'translateY(-50%)', background: 'none', border: 'none', cursor: 'pointer', color: '#64748B' }}
+                      >
+                        {showConfPass ? <EyeOff size={18} /> : <Eye size={18} />}
+                      </button>
+                    </div>
+                  </div>
+                )}
+
+                <button
+                  type="submit"
+                  disabled={securitySubmitting}
+                  style={{
+                    marginTop: '10px',
+                    width: '100%',
+                    padding: '14px',
+                    borderRadius: '14px',
+                    border: 'none',
+                    background: 'linear-gradient(135deg, #0A2315 0%, #164E2A 100%)',
+                    color: '#FFD700',
+                    fontWeight: 900,
+                    fontSize: '0.92rem',
+                    cursor: 'pointer',
+                    boxShadow: '0 4px 14px rgba(10,35,21,0.3)',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    gap: '8px'
+                  }}
+                >
+                  <Lock size={18} color="#FFD700" /> {securitySubmitting ? 'Updating Credentials...' : '💾 Save Master Credentials'}
+                </button>
+              </form>
+            )}
+
+            {/* TAB 2: 💳 CASHFREE GATEWAY */}
+            {secTab === 'gateway' && (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
+                <div style={{ background: '#ECFDF5', padding: '12px 14px', borderRadius: '12px', border: '1px solid #6EE7B7' }}>
+                  <strong style={{ fontSize: '0.84rem', color: '#047857', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                    <CreditCard size={16} /> Cashfree UPI AutoPay Subscription Keys
+                  </strong>
+                  <span style={{ fontSize: '0.74rem', color: '#065F46', display: 'block', marginTop: '2px' }}>
+                    Configure Cashfree Merchant credentials for auto-debit payments.
+                  </span>
+                </div>
+
+                <div>
+                  <label style={{ display: 'block', fontSize: '0.78rem', fontWeight: 800, color: '#374151', marginBottom: '6px' }}>
+                    CASHFREE APP ID (CLIENT ID) *
+                  </label>
+                  <input
+                    type="text"
+                    placeholder="e.g. 1029384756"
+                    value={paymentKeys.cashfree_app_id || ''}
+                    onChange={(e) => setPaymentKeys({ ...paymentKeys, cashfree_app_id: e.target.value })}
+                    style={{ width: '100%', padding: '11px 14px', borderRadius: '12px', border: '1.5px solid #CBD5E1', fontSize: '0.9rem', outline: 'none', boxSizing: 'border-box' }}
+                  />
+                </div>
+
+                <div>
+                  <label style={{ display: 'block', fontSize: '0.78rem', fontWeight: 800, color: '#374151', marginBottom: '6px' }}>
+                    CASHFREE SECRET KEY *
+                  </label>
+                  <div style={{ position: 'relative' }}>
+                    <input
+                      type={showSecretKey ? 'text' : 'password'}
+                      placeholder="Cashfree Secret Key"
+                      value={paymentKeys.cashfree_secret_key || ''}
+                      onChange={(e) => setPaymentKeys({ ...paymentKeys, cashfree_secret_key: e.target.value })}
+                      style={{ width: '100%', padding: '11px 40px 11px 14px', borderRadius: '12px', border: '1.5px solid #CBD5E1', fontSize: '0.9rem', outline: 'none', boxSizing: 'border-box' }}
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setShowSecretKey(!showSecretKey)}
+                      style={{ position: 'absolute', right: '12px', top: '50%', transform: 'translateY(-50%)', background: 'none', border: 'none', cursor: 'pointer', color: '#64748B' }}
+                    >
+                      {showSecretKey ? <EyeOff size={18} /> : <Eye size={18} />}
+                    </button>
+                  </div>
+                </div>
+
+                <button
+                  type="button"
+                  disabled={keysSaving}
+                  onClick={async () => {
+                    setKeysSaving(true);
+                    setKeysMsg('');
+                    try {
+                      const res = await fetch('/api/superadmin/settings', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+                        body: JSON.stringify(paymentKeys)
+                      });
+                      const data = await res.json();
+                      if (res.ok) setKeysMsg(data.message || '✅ Gateway keys saved successfully!');
+                    } catch {
+                      setKeysMsg('⚠️ Failed to save gateway keys');
+                    } finally {
+                      setKeysSaving(false);
+                    }
+                  }}
+                  style={{
+                    marginTop: '8px',
+                    width: '100%',
+                    padding: '14px',
+                    borderRadius: '14px',
+                    border: 'none',
+                    background: 'linear-gradient(135deg, #059669 0%, #10B981 100%)',
+                    color: '#FFFFFF',
+                    fontWeight: 900,
+                    fontSize: '0.92rem',
+                    cursor: 'pointer',
+                    boxShadow: '0 4px 14px rgba(16,185,129,0.3)'
+                  }}
+                >
+                  {keysSaving ? 'Saving Gateway Keys...' : '💾 Save Gateway Credentials'}
+                </button>
+              </div>
+            )}
+
+            {/* TAB 3: 🖼️ PLATFORM LOGO & BRANDING */}
+            {secTab === 'branding' && (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
+                <div style={{ background: '#F8FAFC', padding: '14px', borderRadius: '14px', border: '1px solid #E2E8F0' }}>
+                  <label style={{ display: 'block', fontSize: '0.78rem', fontWeight: 800, color: '#1E293B', marginBottom: '8px' }}>
+                    CURRENT PLATFORM LOGO PREVIEW:
+                  </label>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '14px', marginBottom: '12px' }}>
                     {paymentKeys.platform_logo_url && !logoErr ? (
                       <img
                         src={paymentKeys.platform_logo_url}
-                        alt="Logo"
+                        alt="Logo Preview"
                         referrerPolicy="no-referrer"
                         onError={() => setLogoErr(true)}
-                        style={{ width: '40px', height: '40px', borderRadius: '8px', objectFit: 'contain', background: '#FFF', padding: '2px', border: '1px solid #CBD5E1' }}
+                        style={{ width: '54px', height: '54px', borderRadius: '12px', objectFit: 'contain', background: '#FFF', padding: '4px', border: '1.5px solid #CBD5E1', boxShadow: '0 2px 8px rgba(0,0,0,0.08)' }}
                       />
                     ) : (
-                      <div style={{ width: '40px', height: '40px', borderRadius: '8px', background: '#0A2315', color: '#DFBA67', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 900 }}>👑</div>
+                      <div style={{ width: '54px', height: '54px', borderRadius: '12px', background: '#0A2315', color: '#DFBA67', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 900, fontSize: '1.4rem' }}>👑</div>
                     )}
                     <div style={{ flex: 1 }}>
                       <input
@@ -2642,7 +2911,7 @@ export default function SuperAdminDashboard({ token, username, onLogout, onRetur
                               body: JSON.stringify(updated)
                             });
                             setLogoErr(false);
-                            setKeysMsg('✅ Logo uploaded & saved successfully!');
+                            setKeysMsg('✅ Platform Logo uploaded & mirrored successfully!');
                           } catch (err) {
                             alert('Logo upload failed: ' + err.message);
                           } finally {
@@ -2650,28 +2919,31 @@ export default function SuperAdminDashboard({ token, username, onLogout, onRetur
                           }
                         }}
                         disabled={uploadingLogo}
-                        style={{ fontSize: '0.74rem' }}
+                        style={{ fontSize: '0.8rem' }}
                       />
-                      {uploadingLogo && <span style={{ fontSize: '0.7rem', color: '#0284C7', display: 'block' }}>Uploading to R2...</span>}
+                      {uploadingLogo && <span style={{ fontSize: '0.74rem', color: '#0284C7', fontWeight: 700, display: 'block', marginTop: '4px' }}>Uploading to Cloudflare R2...</span>}
                     </div>
                   </div>
 
-                  <div style={{ display: 'flex', gap: '6px' }}>
+                  <label style={{ display: 'block', fontSize: '0.78rem', fontWeight: 800, color: '#475569', marginBottom: '6px' }}>
+                    LOGO PROXY / CDN URL:
+                  </label>
+                  <div style={{ display: 'flex', gap: '8px' }}>
                     <input
                       type="text"
-                      placeholder="Logo URL (e.g. /api/r2-proxy/superadmin/branding/logo.webp)"
+                      placeholder="e.g. /api/r2-proxy/superadmin/branding/logo.webp"
                       value={paymentKeys.platform_logo_url || ''}
                       onChange={(e) => {
                         setPaymentKeys({ ...paymentKeys, platform_logo_url: e.target.value });
                         setLogoErr(false);
                       }}
-                      style={{ flex: 1, padding: '6px 8px', borderRadius: '6px', border: '1px solid #E2E8F0', fontSize: '0.78rem' }}
+                      style={{ flex: 1, padding: '10px 12px', borderRadius: '10px', border: '1.5px solid #CBD5E1', fontSize: '0.84rem' }}
                     />
                     {paymentKeys.platform_logo_url && (
                       <button
                         type="button"
                         onClick={async () => {
-                          if (window.confirm('Reset platform logo to default?')) {
+                          if (window.confirm('Reset platform logo to default crown icon?')) {
                             const updated = { ...paymentKeys, platform_logo_url: '' };
                             setPaymentKeys(updated);
                             await fetch('/api/superadmin/settings', {
@@ -2683,63 +2955,17 @@ export default function SuperAdminDashboard({ token, username, onLogout, onRetur
                             setKeysMsg('🗑️ Logo reset to default');
                           }
                         }}
-                        style={{ background: 'rgba(239,68,68,0.1)', color: '#EF4444', border: '1px solid rgba(239,68,68,0.3)', padding: '4px 8px', borderRadius: '6px', fontSize: '0.72rem', fontWeight: 800, cursor: 'pointer' }}
+                        style={{ background: 'rgba(239,68,68,0.1)', color: '#EF4444', border: '1.5px solid rgba(239,68,68,0.3)', padding: '8px 12px', borderRadius: '10px', fontSize: '0.78rem', fontWeight: 900, cursor: 'pointer' }}
                       >
-                        Reset
+                        Reset Logo
                       </button>
                     )}
                   </div>
                 </div>
 
-                {/* Cashfree */}
-                <div style={{ background: '#FFFFFF', padding: '10px', borderRadius: '8px', border: '1px solid #CBD5E1' }}>
-                  <span style={{ fontWeight: 800, color: '#059669', display: 'block', marginBottom: '4px' }}>🚀 CASHFREE GATEWAY (PRIMARY):</span>
-                  <input
-                    type="text"
-                    placeholder="Cashfree App ID (e.g. 1029384756)"
-                    value={paymentKeys.cashfree_app_id}
-                    onChange={(e) => setPaymentKeys({ ...paymentKeys, cashfree_app_id: e.target.value })}
-                    style={{ width: '100%', padding: '6px 8px', borderRadius: '6px', border: '1px solid #E2E8F0', marginBottom: '6px', fontSize: '0.78rem' }}
-                  />
-                  <input
-                    type="password"
-                    placeholder="Cashfree Secret Key"
-                    value={paymentKeys.cashfree_secret_key}
-                    onChange={(e) => setPaymentKeys({ ...paymentKeys, cashfree_secret_key: e.target.value })}
-                    style={{ width: '100%', padding: '6px 8px', borderRadius: '6px', border: '1px solid #E2E8F0', fontSize: '0.78rem' }}
-                  />
-                </div>
-
-                {/* Database Maintenance & Vacuum Tool */}
-                <div style={{ background: '#EFF6FF', padding: '10px', borderRadius: '8px', border: '1px solid #BFDBFE' }}>
-                  <span style={{ fontWeight: 800, color: '#1E40AF', display: 'block', marginBottom: '4px' }}>🧹 DATABASE MAINTENANCE & VACUUM:</span>
-                  <button
-                    type="button"
-                    disabled={dbOptimizing}
-                    onClick={async () => {
-                      setDbOptimizing(true);
-                      setDbOptimizeMsg('');
-                      try {
-                        const data = await superAdminOptimizeDatabase(token);
-                        setDbOptimizeMsg(`✅ ${data.message || 'Database vacuumed & optimized!'}`);
-                      } catch (err) {
-                        setDbOptimizeMsg(`⚠️ ${err.message || 'Optimization failed'}`);
-                      } finally {
-                        setDbOptimizing(false);
-                      }
-                    }}
-                    style={{
-                      width: '100%', background: '#2563EB', color: '#FFF', border: 'none',
-                      padding: '7px 12px', borderRadius: '6px', fontWeight: 800, fontSize: '0.78rem', cursor: 'pointer'
-                    }}
-                  >
-                    {dbOptimizing ? 'Optimizing Database...' : '⚡ Run Vacuum & Database Optimization'}
-                  </button>
-                  {dbOptimizeMsg && <span style={{ fontSize: '0.72rem', fontWeight: 800, color: '#1E40AF', display: 'block', marginTop: '4px' }}>{dbOptimizeMsg}</span>}
-                </div>
-
                 <button
                   type="button"
+                  disabled={keysSaving}
                   onClick={async () => {
                     setKeysSaving(true);
                     setKeysMsg('');
@@ -2750,131 +2976,129 @@ export default function SuperAdminDashboard({ token, username, onLogout, onRetur
                         body: JSON.stringify(paymentKeys)
                       });
                       const data = await res.json();
-                      if (res.ok) {
-                        setKeysMsg(data.message || 'Settings saved successfully!');
-                      }
+                      if (res.ok) setKeysMsg(data.message || '✅ Branding logo settings saved!');
                     } catch {
-                      setKeysMsg('Failed to save settings');
+                      setKeysMsg('⚠️ Failed to save branding settings');
                     } finally {
                       setKeysSaving(false);
                     }
                   }}
-                  style={{ background: '#0284C7', color: '#FFF', border: 'none', padding: '8px 14px', borderRadius: '8px', fontWeight: 900, cursor: 'pointer' }}
+                  style={{
+                    width: '100%',
+                    padding: '14px',
+                    borderRadius: '14px',
+                    border: 'none',
+                    background: 'linear-gradient(135deg, #0284C7 0%, #0369A1 100%)',
+                    color: '#FFFFFF',
+                    fontWeight: 900,
+                    fontSize: '0.92rem',
+                    cursor: 'pointer',
+                    boxShadow: '0 4px 14px rgba(2,132,199,0.3)'
+                  }}
                 >
-                  {keysSaving ? 'Saving...' : '✓ Save System Settings'}
+                  {keysSaving ? 'Saving Branding...' : '💾 Save Logo Branding Settings'}
                 </button>
               </div>
-            </div>
+            )}
 
-            <form onSubmit={handleSecuritySubmit} style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-              <div>
-                <label style={{ display: 'block', fontSize: '0.78rem', fontWeight: 800, color: 'var(--text-dark)', marginBottom: '4px' }}>
-                  🔑 Current Password (Required) *
-                </label>
-                <input
-                  type="password"
-                  required
-                  placeholder="Enter current password (e.g. superadmin123)"
-                  value={securityForm.currentPassword}
-                  onChange={(e) => setSecurityForm({ ...securityForm, currentPassword: e.target.value })}
-                  style={{
-                    width: '100%',
-                    padding: '10px 12px',
-                    borderRadius: '10px',
-                    border: '1.5px solid var(--border-light)',
-                    fontSize: '0.86rem',
-                    boxSizing: 'border-box'
-                  }}
-                />
-              </div>
-
-              <div>
-                <label style={{ display: 'block', fontSize: '0.78rem', fontWeight: 800, color: 'var(--text-dark)', marginBottom: '4px' }}>
-                  👤 Master Username
-                </label>
-                <input
-                  type="text"
-                  required
-                  placeholder="e.g. superadmin"
-                  value={securityForm.newUsername}
-                  onChange={(e) => setSecurityForm({ ...securityForm, newUsername: e.target.value })}
-                  style={{
-                    width: '100%',
-                    padding: '10px 12px',
-                    borderRadius: '10px',
-                    border: '1.5px solid var(--border-light)',
-                    fontSize: '0.86rem',
-                    boxSizing: 'border-box'
-                  }}
-                />
-              </div>
-
-              <div>
-                <label style={{ display: 'block', fontSize: '0.78rem', fontWeight: 800, color: 'var(--text-dark)', marginBottom: '4px' }}>
-                  🔒 New Master Password (Leave blank to keep unchanged)
-                </label>
-                <input
-                  type="password"
-                  placeholder="Enter new password"
-                  value={securityForm.newPassword}
-                  onChange={(e) => setSecurityForm({ ...securityForm, newPassword: e.target.value })}
-                  style={{
-                    width: '100%',
-                    padding: '10px 12px',
-                    borderRadius: '10px',
-                    border: '1.5px solid var(--border-light)',
-                    fontSize: '0.86rem',
-                    boxSizing: 'border-box'
-                  }}
-                />
-              </div>
-
-              {securityForm.newPassword && (
-                <div>
-                  <label style={{ display: 'block', fontSize: '0.78rem', fontWeight: 800, color: 'var(--text-dark)', marginBottom: '4px' }}>
-                    🔒 Confirm New Master Password
+            {/* TAB 4: ⚡ SYSTEM & DATABASE HEALTH */}
+            {secTab === 'health' && (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
+                <div style={{ background: '#FFFBEB', padding: '14px', borderRadius: '14px', border: '1px solid #FCD34D' }}>
+                  <label style={{ display: 'block', fontSize: '0.78rem', fontWeight: 800, color: '#B45309', marginBottom: '6px' }}>
+                    🎁 DEFAULT SAAS FREE TRIAL DURATION:
                   </label>
-                  <input
-                    type="password"
-                    placeholder="Confirm new password"
-                    value={securityForm.confirmPassword}
-                    onChange={(e) => setSecurityForm({ ...securityForm, confirmPassword: e.target.value })}
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                    <input
+                      type="number"
+                      min="1"
+                      max="365"
+                      placeholder="14"
+                      value={paymentKeys.default_trial_days || ''}
+                      onChange={(e) => setPaymentKeys({ ...paymentKeys, default_trial_days: e.target.value })}
+                      style={{ width: '100px', padding: '10px 12px', borderRadius: '10px', border: '1.5px solid #CBD5E1', fontSize: '0.95rem', fontWeight: 900, color: '#0F172A' }}
+                    />
+                    <span style={{ fontSize: '0.82rem', fontWeight: 700, color: '#92400E' }}>Days Free Trial for New Registrations</span>
+                  </div>
+                </div>
+
+                <div style={{ background: '#EFF6FF', padding: '14px', borderRadius: '14px', border: '1px solid #BFDBFE' }}>
+                  <strong style={{ fontSize: '0.84rem', color: '#1E40AF', display: 'block', marginBottom: '4px' }}>
+                    🧹 POSTGRESQL DATABASE MAINTENANCE & VACUUM:
+                  </strong>
+                  <span style={{ fontSize: '0.74rem', color: '#3B82F6', display: 'block', marginBottom: '10px' }}>
+                    Cleans dead tuples, optimizes index pointers, and reclaims disk space on Neon DB.
+                  </span>
+                  <button
+                    type="button"
+                    disabled={dbOptimizing}
+                    onClick={async () => {
+                      setDbOptimizing(true);
+                      setDbOptimizeMsg('');
+                      try {
+                        const data = await superAdminOptimizeDatabase(token);
+                        setDbOptimizeMsg(`✅ ${data.message || 'Database vacuumed & optimized successfully!'}`);
+                      } catch (err) {
+                        setDbOptimizeMsg(`⚠️ ${err.message || 'Optimization failed'}`);
+                      } finally {
+                        setDbOptimizing(false);
+                      }
+                    }}
                     style={{
                       width: '100%',
-                      padding: '10px 12px',
-                      borderRadius: '10px',
-                      border: '1.5px solid var(--border-light)',
+                      background: 'linear-gradient(135deg, #2563EB 0%, #1D4ED8 100%)',
+                      color: '#FFF',
+                      border: 'none',
+                      padding: '12px 14px',
+                      borderRadius: '12px',
+                      fontWeight: 900,
                       fontSize: '0.86rem',
-                      boxSizing: 'border-box'
+                      cursor: 'pointer',
+                      boxShadow: '0 4px 14px rgba(37,99,235,0.3)'
                     }}
-                  />
+                  >
+                    {dbOptimizing ? 'Optimizing Database Index...' : '⚡ Run Vacuum & Database Optimization'}
+                  </button>
+                  {dbOptimizeMsg && <span style={{ fontSize: '0.78rem', fontWeight: 800, color: '#1E40AF', display: 'block', marginTop: '8px' }}>{dbOptimizeMsg}</span>}
                 </div>
-              )}
 
-              <button
-                type="submit"
-                disabled={securitySubmitting}
-                style={{
-                  marginTop: '8px',
-                  width: '100%',
-                  padding: '12px',
-                  borderRadius: 'var(--radius-pill)',
-                  border: 'none',
-                  background: 'linear-gradient(135deg, #0A2315 0%, #164E2A 100%)',
-                  color: '#DFBA67',
-                  fontWeight: 900,
-                  fontSize: '0.9rem',
-                  cursor: 'pointer',
-                  boxShadow: '0 4px 14px rgba(10,35,21,0.3)',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  gap: '6px'
-                }}
-              >
-                <Lock size={16} /> {securitySubmitting ? 'Updating...' : 'Save Master Credentials'}
-              </button>
-            </form>
+                <button
+                  type="button"
+                  disabled={keysSaving}
+                  onClick={async () => {
+                    setKeysSaving(true);
+                    setKeysMsg('');
+                    try {
+                      const res = await fetch('/api/superadmin/settings', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+                        body: JSON.stringify(paymentKeys)
+                      });
+                      const data = await res.json();
+                      if (res.ok) setKeysMsg(data.message || '✅ System settings saved!');
+                    } catch {
+                      setKeysMsg('⚠️ Failed to save system settings');
+                    } finally {
+                      setKeysSaving(false);
+                    }
+                  }}
+                  style={{
+                    width: '100%',
+                    padding: '14px',
+                    borderRadius: '14px',
+                    border: 'none',
+                    background: 'linear-gradient(135deg, #475569 0%, #334155 100%)',
+                    color: '#FFFFFF',
+                    fontWeight: 900,
+                    fontSize: '0.92rem',
+                    cursor: 'pointer',
+                    boxShadow: '0 4px 14px rgba(51,65,85,0.3)'
+                  }}
+                >
+                  {keysSaving ? 'Saving System Settings...' : '💾 Save System & Trial Settings'}
+                </button>
+              </div>
+            )}
           </div>
         </div>
       )}
