@@ -91,9 +91,18 @@ export default function SuperAdminDashboard({ token, username, onLogout, onRetur
           default_trial_days: data.default_trial_days || '14',
           platform_logo_url: data.platform_logo_url || ''
         }));
+        if (data.platform_logo_url) {
+          setLogoErr(false);
+        }
       }
     } catch {}
   };
+
+  useEffect(() => {
+    if (paymentKeys.platform_logo_url) {
+      setLogoErr(false);
+    }
+  }, [paymentKeys.platform_logo_url]);
 
   // Announcement Modal State
   const [showAnnounceModal, setShowAnnounceModal] = useState(false);
