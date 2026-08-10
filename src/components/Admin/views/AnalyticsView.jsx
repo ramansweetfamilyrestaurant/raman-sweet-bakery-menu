@@ -1,7 +1,7 @@
 import React from 'react';
 import { BarChart2, Download, TrendingUp, DollarSign, Award } from 'lucide-react';
 
-export default function AnalyticsView({ analyticsData, onDownloadCSV }) {
+export default function AnalyticsView({ analyticsData, onDownloadCSV, currencySymbol = '₹' }) {
   const todayRevenue = analyticsData?.today_revenue || 0;
   const days7Revenue = analyticsData?.days_7_revenue || 0;
   const days30Revenue = analyticsData?.days_30_revenue || 0;
@@ -30,22 +30,22 @@ export default function AnalyticsView({ analyticsData, onDownloadCSV }) {
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '10px' }}>
         <div className="adm-card" style={{ padding: '14px' }}>
           <span style={{ fontSize: '0.7rem', fontWeight: 800, color: 'var(--adm-muted)', textTransform: 'uppercase' }}>TODAY REVENUE</span>
-          <div style={{ fontSize: '1.4rem', fontWeight: 900, color: 'var(--adm-success)', margin: '2px 0' }}>₹{todayRevenue.toLocaleString()}</div>
+          <div style={{ fontSize: '1.4rem', fontWeight: 900, color: 'var(--adm-success)', margin: '2px 0' }}>{currencySymbol}{todayRevenue.toLocaleString()}</div>
         </div>
 
         <div className="adm-card" style={{ padding: '14px' }}>
           <span style={{ fontSize: '0.7rem', fontWeight: 800, color: 'var(--adm-muted)', textTransform: 'uppercase' }}>7 DAYS REVENUE</span>
-          <div style={{ fontSize: '1.4rem', fontWeight: 900, color: 'var(--adm-primary)', margin: '2px 0' }}>₹{days7Revenue.toLocaleString()}</div>
+          <div style={{ fontSize: '1.4rem', fontWeight: 900, color: 'var(--adm-primary)', margin: '2px 0' }}>{currencySymbol}{days7Revenue.toLocaleString()}</div>
         </div>
 
         <div className="adm-card" style={{ padding: '14px' }}>
           <span style={{ fontSize: '0.7rem', fontWeight: 800, color: 'var(--adm-muted)', textTransform: 'uppercase' }}>30 DAYS REVENUE</span>
-          <div style={{ fontSize: '1.4rem', fontWeight: 900, color: 'var(--adm-primary)', margin: '2px 0' }}>₹{days30Revenue.toLocaleString()}</div>
+          <div style={{ fontSize: '1.4rem', fontWeight: 900, color: 'var(--adm-primary)', margin: '2px 0' }}>{currencySymbol}{days30Revenue.toLocaleString()}</div>
         </div>
 
         <div className="adm-card" style={{ padding: '14px' }}>
           <span style={{ fontSize: '0.7rem', fontWeight: 800, color: 'var(--adm-muted)', textTransform: 'uppercase' }}>ALL-TIME SALES</span>
-          <div style={{ fontSize: '1.4rem', fontWeight: 900, color: 'var(--adm-accent)', margin: '2px 0' }}>₹{allTimeRevenue.toLocaleString()}</div>
+          <div style={{ fontSize: '1.4rem', fontWeight: 900, color: 'var(--adm-accent)', margin: '2px 0' }}>{currencySymbol}{allTimeRevenue.toLocaleString()}</div>
         </div>
       </div>
 
@@ -65,7 +65,7 @@ export default function AnalyticsView({ analyticsData, onDownloadCSV }) {
                   <strong>{idx === 0 ? '🥇' : idx === 1 ? '🥈' : idx === 2 ? '🥉' : '🏅'} {dish.name}</strong>
                   <span style={{ fontSize: '0.72rem', color: 'var(--adm-muted)', marginLeft: '8px' }}>({dish.sales_count || 0} orders)</span>
                 </div>
-                <strong style={{ color: 'var(--adm-success)' }}>₹{dish.revenue || 0}</strong>
+                <strong style={{ color: 'var(--adm-success)' }}>{currencySymbol}{dish.revenue || 0}</strong>
               </div>
             ))}
           </div>

@@ -1714,6 +1714,7 @@ export default function AdminDashboard({ token, username, onLogout, onReturnToMe
                 restaurantInfo={restaurantInfo}
                 onPrintQR={handlePrintQR}
                 onDirectPrint={handleDirectBluetoothPrint}
+                currencySymbol={settingsForm.currency_symbol || '₹'}
               />
             )}
 
@@ -1722,6 +1723,7 @@ export default function AdminDashboard({ token, username, onLogout, onReturnToMe
               <AnalyticsView
                 analyticsData={analyticsData}
                 onDownloadCSV={handleDownloadSalesReport}
+                currencySymbol={settingsForm.currency_symbol || '₹'}
               />
             )}
 
@@ -1751,6 +1753,7 @@ export default function AdminDashboard({ token, username, onLogout, onReturnToMe
                 onDeleteCombo={deleteCombo}
                 onToggleComboAvailability={toggleComboAvailability}
                 onToggleBadge={handleToggleBadge}
+                currencySymbol={settingsForm.currency_symbol || '₹'}
               />
             )}
 

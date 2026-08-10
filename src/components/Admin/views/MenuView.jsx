@@ -25,7 +25,8 @@ export default function MenuView({
   onOpenEditCombo,
   onDeleteCombo,
   onToggleComboAvailability,
-  onToggleBadge
+  onToggleBadge,
+  currencySymbol = '₹'
 }) {
   const [selectedDishForMore, setSelectedDishForMore] = useState(null);
   const [quickPriceDish, setQuickPriceDish] = useState(null);
@@ -247,7 +248,7 @@ export default function MenuView({
                       </div>
 
                       <div style={{ fontSize: '0.95rem', fontWeight: 800, color: 'var(--adm-primary)' }}>
-                        ₹{Math.round(dish.price)} {dish.price_half ? `/ ₹${Math.round(dish.price_half)}` : ''}
+                        {currencySymbol}{Math.round(dish.price)} {dish.price_half ? `/ ${currencySymbol}${Math.round(dish.price_half)}` : ''}
                       </div>
                     </div>
 
@@ -333,7 +334,7 @@ export default function MenuView({
             <div key={combo.id} className="adm-card" style={{ padding: '14px', display: 'flex', flexDirection: 'column', gap: '10px' }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                 <strong style={{ fontSize: '0.95rem', color: 'var(--adm-primary)' }}>{combo.title || combo.name}</strong>
-                <strong style={{ fontSize: '0.95rem', color: 'var(--adm-accent)' }}>₹{combo.price}</strong>
+                <strong style={{ fontSize: '0.95rem', color: 'var(--adm-accent)' }}>{currencySymbol}{combo.price}</strong>
               </div>
 
               {combo.description && (
@@ -390,7 +391,7 @@ export default function MenuView({
               className="adm-btn adm-btn-secondary"
               style={{ width: '100%', justifyContent: 'flex-start', padding: '12px 16px', fontSize: '0.88rem' }}
             >
-              <DollarSign size={16} color="var(--adm-accent)" /> Quick Price Edit (₹{Math.round(selectedDishForMore.price)})
+              <DollarSign size={16} color="var(--adm-accent)" /> Quick Price Edit ({currencySymbol}{Math.round(selectedDishForMore.price)})
             </button>
 
             <button
@@ -462,7 +463,7 @@ export default function MenuView({
       >
         <form onSubmit={handleQuickPriceSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
           <div>
-            <label style={{ fontSize: '0.78rem', fontWeight: 800, color: 'var(--adm-muted)', display: 'block', marginBottom: '6px' }}>FULL PORTION PRICE (₹):</label>
+            <label style={{ fontSize: '0.78rem', fontWeight: 800, color: 'var(--adm-muted)', display: 'block', marginBottom: '6px' }}>FULL PORTION PRICE ({currencySymbol}):</label>
             <input
               type="number"
               required
@@ -474,7 +475,7 @@ export default function MenuView({
 
           {quickPriceDish?.price_half !== undefined && quickPriceDish?.price_half !== null && (
             <div>
-              <label style={{ fontSize: '0.78rem', fontWeight: 800, color: 'var(--adm-muted)', display: 'block', marginBottom: '6px' }}>HALF PORTION PRICE (₹):</label>
+              <label style={{ fontSize: '0.78rem', fontWeight: 800, color: 'var(--adm-muted)', display: 'block', marginBottom: '6px' }}>HALF PORTION PRICE ({currencySymbol}):</label>
               <input
                 type="number"
                 value={quickPriceVal.price_half}

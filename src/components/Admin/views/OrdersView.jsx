@@ -13,7 +13,8 @@ export default function OrdersView({
   onResolveServiceRequest,
   restaurantInfo,
   onPrintQR,
-  onDirectPrint
+  onDirectPrint,
+  currencySymbol = '₹'
 }) {
   const safeOrders = Array.isArray(orders) ? orders : [];
   const safeServiceRequests = Array.isArray(serviceRequests) ? serviceRequests : [];
@@ -58,7 +59,7 @@ export default function OrdersView({
 
         <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
           <span style={{ background: 'var(--adm-surface-subtle)', padding: '6px 12px', borderRadius: 'var(--adm-radius-md)', border: '1px solid var(--adm-border)', fontSize: '0.78rem', fontWeight: 800 }}>
-            💰 Today Sales: <strong style={{ color: 'var(--adm-success)' }}>₹{todayTotalSales.toLocaleString()}</strong>
+            💰 Today Sales: <strong style={{ color: 'var(--adm-success)' }}>{currencySymbol}{todayTotalSales.toLocaleString()}</strong>
           </span>
           <span style={{ background: 'var(--adm-warning-bg)', color: 'var(--adm-warning)', padding: '6px 12px', borderRadius: 'var(--adm-radius-md)', border: '1px solid var(--adm-warning-border)', fontSize: '0.78rem', fontWeight: 800 }}>
             🟡 Pending: {pendingCount}
@@ -145,14 +146,14 @@ export default function OrdersView({
                     {Array.isArray(order.items) ? order.items.map((item, idx) => (
                       <div key={idx} style={{ display: 'flex', justifyContent: 'space-between' }}>
                         <span>{item.name} ×{item.quantity}</span>
-                        <strong>₹{item.price * item.quantity}</strong>
+                        <strong>{currencySymbol}{item.price * item.quantity}</strong>
                       </div>
                     )) : <span>Order Items</span>}
                   </div>
 
                   {/* Action Buttons Toolbar */}
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', paddingTop: '4px' }}>
-                    <strong style={{ fontSize: '1rem', color: 'var(--adm-primary)' }}>₹{order.total_amount}</strong>
+                    <strong style={{ fontSize: '1rem', color: 'var(--adm-primary)' }}>{currencySymbol}{order.total_amount}</strong>
                     <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap' }}>
                       {order.status === 'pending' && (
                         <>
@@ -225,7 +226,7 @@ export default function OrdersView({
                     <div style={{ fontSize: '0.78rem', background: '#FFF', padding: '8px', borderRadius: '8px', border: '1px solid var(--adm-border)' }}>
                       <div style={{ display: 'flex', justifyContent: 'space-between', fontWeight: 800 }}>
                         <span>Order #{t.activeOrder.id}</span>
-                        <span style={{ color: 'var(--adm-danger)' }}>₹{t.activeOrder.total_amount}</span>
+                        <span style={{ color: 'var(--adm-danger)' }}>{currencySymbol}{t.activeOrder.total_amount}</span>
                       </div>
                       <div style={{ color: 'var(--adm-muted)', marginTop: '2px' }}>
                         {t.activeOrder.customer_name || 'Guest'} • {Array.isArray(t.activeOrder.items) ? t.activeOrder.items.length : 1} items
