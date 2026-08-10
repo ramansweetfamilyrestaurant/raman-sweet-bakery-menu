@@ -452,7 +452,7 @@ export default function SuperAdminDashboard({ token, username, onLogout, onRetur
       {/* Header Bar */}
       <header style={{
         background: 'linear-gradient(135deg, #0A2315 0%, #164E2A 100%)',
-        padding: '16px 24px',
+        padding: '14px 20px',
         borderBottom: '2px solid #D4AF37',
         boxShadow: '0 8px 32px rgba(0,0,0,0.3)',
         position: 'sticky',
@@ -463,94 +463,117 @@ export default function SuperAdminDashboard({ token, username, onLogout, onRetur
           maxWidth: '1280px',
           margin: '0 auto',
           display: 'flex',
-          justifyContent: 'space-between',
-          alignItems: 'center',
-          flexWrap: 'wrap',
-          gap: '14px'
+          flexDirection: 'column',
+          gap: '12px'
         }}>
-          {/* Brand Identity & Engine Status */}
-          <div style={{ display: 'flex', alignItems: 'center', gap: '14px' }}>
-            {paymentKeys.platform_logo_url && !logoErr ? (
-              <div style={{
-                width: '46px',
-                height: '46px',
-                borderRadius: '14px',
-                background: '#FFFFFF',
-                padding: '3px',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                boxShadow: '0 0 16px rgba(212, 175, 55, 0.5)',
-                border: '1.5px solid #D4AF37'
-              }}>
-                <img
-                  src={paymentKeys.platform_logo_url}
-                  alt="Super Admin Logo"
-                  referrerPolicy="no-referrer"
-                  onError={() => setLogoErr(true)}
-                  style={{
-                    width: '100%',
-                    height: '100%',
-                    borderRadius: '10px',
-                    objectFit: 'contain'
-                  }}
-                />
-              </div>
-            ) : (
-              <div style={{
-                width: '46px',
-                height: '46px',
-                borderRadius: '14px',
-                background: 'linear-gradient(135deg, #DFBA67 0%, #C5A059 100%)',
-                color: '#0A2315',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                boxShadow: '0 0 16px rgba(212, 175, 55, 0.5)',
-                border: '1.5px solid #FFFFFF'
-              }}>
-                <Crown size={26} color="#0A2315" />
-              </div>
-            )}
-            <div>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                <h1 style={{ fontSize: '1.3rem', fontWeight: 900, color: '#DFBA67', margin: 0, letterSpacing: '-0.02em', textShadow: '0 2px 4px rgba(0,0,0,0.3)' }}>
-                  SaaS Master Control Portal
-                </h1>
-                <span style={{ background: '#DFBA67', color: '#0A2315', fontSize: '0.68rem', fontWeight: 900, padding: '2px 8px', borderRadius: '12px', boxShadow: '0 2px 6px rgba(223,186,103,0.3)' }}>
-                  SUPER ADMIN
-                </span>
-              </div>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '0.76rem', color: 'rgba(255,255,255,0.85)', fontWeight: 600, marginTop: '2px' }}>
-                <span>Master: <strong style={{ color: '#FFFFFF' }}>{username}</strong></span>
-                <span style={{ color: 'rgba(255,255,255,0.4)' }}>•</span>
-                <span style={{ display: 'flex', alignItems: 'center', gap: '4px', color: '#86EFAC' }}>
-                  <span style={{ width: '6px', height: '6px', borderRadius: '50%', background: '#22C55E', boxShadow: '0 0 8px #22C55E' }}></span> DB Connected
-                </span>
-                <span style={{ color: 'rgba(255,255,255,0.4)' }}>•</span>
-                <span style={{ color: '#DFBA67' }}>Enterprise Engine v2.5</span>
+          {/* Row 1: Brand Identity & Prominent Logout */}
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', width: '100%', flexWrap: 'wrap', gap: '10px' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+              {paymentKeys.platform_logo_url && !logoErr ? (
+                <div style={{
+                  width: '42px',
+                  height: '42px',
+                  borderRadius: '12px',
+                  background: '#FFFFFF',
+                  padding: '2px',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  boxShadow: '0 0 14px rgba(212, 175, 55, 0.5)',
+                  border: '1.5px solid #D4AF37',
+                  flexShrink: 0
+                }}>
+                  <img
+                    src={paymentKeys.platform_logo_url}
+                    alt="Super Admin Logo"
+                    referrerPolicy="no-referrer"
+                    onError={() => setLogoErr(true)}
+                    style={{
+                      width: '100%',
+                      height: '100%',
+                      borderRadius: '8px',
+                      objectFit: 'contain'
+                    }}
+                  />
+                </div>
+              ) : (
+                <div style={{
+                  width: '42px',
+                  height: '42px',
+                  borderRadius: '12px',
+                  background: 'linear-gradient(135deg, #DFBA67 0%, #C5A059 100%)',
+                  color: '#0A2315',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  boxShadow: '0 0 14px rgba(212, 175, 55, 0.5)',
+                  border: '1.5px solid #FFFFFF',
+                  flexShrink: 0
+                }}>
+                  <Crown size={24} color="#0A2315" />
+                </div>
+              )}
+              <div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flexWrap: 'wrap' }}>
+                  <h1 style={{ fontSize: '1.2rem', fontWeight: 900, color: '#DFBA67', margin: 0, letterSpacing: '-0.02em' }}>
+                    SaaS Master Control Portal
+                  </h1>
+                  <span style={{ background: '#DFBA67', color: '#0A2315', fontSize: '0.64rem', fontWeight: 900, padding: '2px 7px', borderRadius: '10px' }}>
+                    SUPER ADMIN
+                  </span>
+                </div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.74rem', color: 'rgba(255,255,255,0.85)', fontWeight: 600, marginTop: '2px', flexWrap: 'wrap' }}>
+                  <span>Master: <strong style={{ color: '#FFFFFF' }}>{username}</strong></span>
+                  <span style={{ color: 'rgba(255,255,255,0.4)' }}>•</span>
+                  <span style={{ display: 'flex', alignItems: 'center', gap: '4px', color: '#86EFAC' }}>
+                    <span style={{ width: '6px', height: '6px', borderRadius: '50%', background: '#22C55E', boxShadow: '0 0 6px #22C55E' }}></span> DB Connected
+                  </span>
+                </div>
               </div>
             </div>
+
+            {/* Logout Button Always Visible in Top Right */}
+            <button
+              onClick={onLogout}
+              style={{
+                background: 'linear-gradient(135deg, #DC2626 0%, #991B1B 100%)',
+                color: '#FFFFFF',
+                padding: '8px 14px',
+                borderRadius: 'var(--radius-pill)',
+                fontSize: '0.78rem',
+                fontWeight: 900,
+                border: 'none',
+                cursor: 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '5px',
+                whiteSpace: 'nowrap',
+                boxShadow: '0 4px 14px rgba(220,38,38,0.4)',
+                marginLeft: 'auto'
+              }}
+              title="Sign out of Super Admin Portal"
+            >
+              <LogOut size={15} /> Logout
+            </button>
           </div>
 
-          {/* Master Header Actions Nav Pills */}
-          <div className="sa-header-actions" style={{ display: 'flex', gap: '8px', alignItems: 'center', flexWrap: 'wrap' }}>
+          {/* Row 2: Master Header Actions Nav Pills */}
+          <div className="sa-header-actions" style={{ display: 'flex', gap: '8px', alignItems: 'center', flexWrap: 'wrap', overflowX: 'auto', paddingBottom: '2px' }}>
             <button
               onClick={handleOpenBroadcastModal}
               style={{
                 background: 'rgba(212, 175, 55, 0.18)',
                 color: '#DFBA67',
-                padding: '8px 14px',
+                padding: '7px 12px',
                 borderRadius: 'var(--radius-pill)',
-                fontSize: '0.78rem',
+                fontSize: '0.76rem',
                 fontWeight: 900,
                 border: '1px solid rgba(212, 175, 55, 0.45)',
                 cursor: 'pointer',
                 display: 'flex',
                 alignItems: 'center',
-                gap: '6px',
-                whiteSpace: 'nowrap',
-                transition: 'all 0.2s ease'
+                gap: '5px',
+                whiteSpace: 'nowrap'
               }}
               title="Broadcast global announcement banner to all tenant dashboards"
             >
@@ -565,17 +588,16 @@ export default function SuperAdminDashboard({ token, username, onLogout, onRetur
               style={{
                 background: 'rgba(255, 255, 255, 0.12)',
                 color: '#FFFFFF',
-                padding: '8px 14px',
+                padding: '7px 12px',
                 borderRadius: 'var(--radius-pill)',
-                fontSize: '0.78rem',
+                fontSize: '0.76rem',
                 fontWeight: 800,
                 border: '1px solid rgba(255, 255, 255, 0.25)',
                 cursor: 'pointer',
                 display: 'flex',
                 alignItems: 'center',
-                gap: '6px',
-                whiteSpace: 'nowrap',
-                transition: 'all 0.2s ease'
+                gap: '5px',
+                whiteSpace: 'nowrap'
               }}
               title="View real-time platform activity & security audit logs"
             >
@@ -587,15 +609,15 @@ export default function SuperAdminDashboard({ token, username, onLogout, onRetur
               style={{
                 background: 'rgba(34, 197, 94, 0.2)',
                 color: '#4ADE80',
-                padding: '8px 14px',
+                padding: '7px 12px',
                 borderRadius: 'var(--radius-pill)',
-                fontSize: '0.78rem',
+                fontSize: '0.76rem',
                 fontWeight: 900,
                 border: '1px solid rgba(34, 197, 94, 0.5)',
                 cursor: 'pointer',
                 display: 'flex',
                 alignItems: 'center',
-                gap: '6px',
+                gap: '5px',
                 whiteSpace: 'nowrap'
               }}
               title="Set Master Super Admin WhatsApp Support Number"
@@ -612,17 +634,17 @@ export default function SuperAdminDashboard({ token, username, onLogout, onRetur
               style={{
                 background: 'linear-gradient(135deg, #164E2A 0%, #0A2315 100%)',
                 color: '#FFFFFF',
-                padding: '8px 15px',
+                padding: '7px 13px',
                 borderRadius: 'var(--radius-pill)',
-                fontSize: '0.78rem',
+                fontSize: '0.76rem',
                 fontWeight: 900,
                 border: '1.5px solid #D4AF37',
                 cursor: 'pointer',
                 display: 'flex',
                 alignItems: 'center',
-                gap: '6px',
+                gap: '5px',
                 whiteSpace: 'nowrap',
-                boxShadow: '0 4px 14px rgba(0,0,0,0.3)'
+                boxShadow: '0 4px 12px rgba(0,0,0,0.3)'
               }}
               title="Manage SaaS Plan Tiers, Pricing & Feature Matrix"
             >
@@ -647,36 +669,20 @@ export default function SuperAdminDashboard({ token, username, onLogout, onRetur
               style={{
                 background: 'rgba(255,255,255,0.12)',
                 color: '#FFFFFF',
-                padding: '8px 14px',
+                padding: '7px 12px',
                 borderRadius: 'var(--radius-pill)',
-                fontSize: '0.78rem',
+                fontSize: '0.76rem',
                 fontWeight: 800,
                 border: '1px solid rgba(255,255,255,0.25)',
                 cursor: 'pointer',
                 display: 'flex',
                 alignItems: 'center',
-                gap: '6px',
+                gap: '5px',
                 whiteSpace: 'nowrap'
               }}
               title="Security, Credentials, Gateway & System Settings"
             >
               <Lock size={14} color="#DFBA67" /> Security & Portal
-            </button>
-
-            <button
-              onClick={onLogout}
-              style={{
-                fontWeight: 800,
-                border: 'none',
-                cursor: 'pointer',
-                display: 'flex',
-                alignItems: 'center',
-                gap: '5px',
-                whiteSpace: 'nowrap',
-                boxShadow: '0 2px 10px rgba(220, 38, 38, 0.3)'
-              }}
-            >
-              <LogOut size={14} /> Logout
             </button>
           </div>
         </div>
