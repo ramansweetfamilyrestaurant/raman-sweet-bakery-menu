@@ -446,86 +446,158 @@ export default function MenuView({
 
       {/* 4. CATEGORIES TAB VIEW */}
       {activeSubTab === 'categories' && (
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: '10px' }}>
-          {safeCategories.map(cat => (
-            <div key={cat.id} style={{ background: '#FFFFFF', border: '1px solid #E5E7EB', borderRadius: '12px', padding: '14px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-              <div>
-                <strong style={{ fontSize: '0.92rem', color: '#111827', display: 'block', fontWeight: 700 }}>{cat.name}</strong>
-                <span style={{ fontSize: '0.76rem', color: '#64748B' }}>
-                  {safeDishes.filter(d => String(d.category_id) === String(cat.id)).length} dishes
-                </span>
-              </div>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(290px, 1fr))', gap: '10px' }}>
+          {safeCategories.map(cat => {
+            const catImage = cat.image || cat.image_url;
+            const dishCount = safeDishes.filter(d => String(d.category_id) === String(cat.id)).length;
+            return (
+              <div key={cat.id} style={{ background: '#FFFFFF', border: '1px solid #E5E7EB', borderRadius: '14px', padding: '12px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '12px' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '12px', minWidth: 0 }}>
+                  {/* Category Image (52px Square) */}
+                  <div style={{
+                    width: '52px',
+                    height: '52px',
+                    borderRadius: '10px',
+                    overflow: 'hidden',
+                    flexShrink: 0,
+                    background: '#F8FAFC',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    border: '1px solid #E2E8F0'
+                  }}>
+                    {catImage && catImage !== '/uploads/logo.jpg' ? (
+                      <img
+                        src={catImage}
+                        alt={cat.name}
+                        style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                        onError={(e) => { e.target.style.display = 'none'; }}
+                      />
+                    ) : (
+                      <span style={{ fontSize: '1.3rem' }}>📁</span>
+                    )}
+                  </div>
 
-              <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                <button
-                  onClick={() => onToggleCategoryActive && onToggleCategoryActive(cat.id, cat.active !== false)}
-                  style={{
-                    padding: '5px 10px',
-                    borderRadius: '20px',
-                    fontSize: '0.7rem',
-                    fontWeight: 800,
-                    background: cat.active !== false ? '#DCFCE7' : '#FEE2E2',
-                    color: cat.active !== false ? '#15803D' : '#991B1B',
-                    border: '1px solid #E2E8F0',
-                    cursor: 'pointer'
-                  }}
-                >
-                  {cat.active !== false ? '● Active' : '● Hidden'}
-                </button>
-                <button onClick={() => onOpenEditCategory(cat)} className="adm-btn adm-btn-secondary adm-btn-sm" style={{ padding: '6px 8px' }}>
-                  <Edit size={14} />
-                </button>
-                <button onClick={() => onDeleteCategory(cat.id)} className="adm-btn adm-btn-danger adm-btn-sm" style={{ padding: '6px 8px' }}>
-                  <Trash2 size={14} />
-                </button>
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <strong style={{ fontSize: '0.92rem', color: '#111827', display: 'block', fontWeight: 800 }}>{cat.name}</strong>
+                    <span style={{ fontSize: '0.76rem', color: '#64748B', fontWeight: 600 }}>
+                      {dishCount} {dishCount === 1 ? 'dish' : 'dishes'}
+                    </span>
+                  </div>
+                </div>
+
+                <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flexShrink: 0 }}>
+                  <button
+                    onClick={() => onToggleCategoryActive && onToggleCategoryActive(cat.id, cat.active !== false)}
+                    style={{
+                      padding: '5px 10px',
+                      borderRadius: '20px',
+                      fontSize: '0.70rem',
+                      fontWeight: 800,
+                      background: cat.active !== false ? '#DCFCE7' : '#FEE2E2',
+                      color: cat.active !== false ? '#15803D' : '#991B1B',
+                      border: '1px solid #E2E8F0',
+                      cursor: 'pointer',
+                      whiteSpace: 'nowrap'
+                    }}
+                  >
+                    {cat.active !== false ? '● Active' : '● Hidden'}
+                  </button>
+                  <button onClick={() => onOpenEditCategory(cat)} className="adm-btn adm-btn-secondary adm-btn-sm" style={{ padding: '6px 8px' }} title="Edit Category">
+                    <Edit size={14} />
+                  </button>
+                  <button onClick={() => onDeleteCategory(cat.id)} className="adm-btn adm-btn-danger adm-btn-sm" style={{ padding: '6px 8px' }} title="Delete Category">
+                    <Trash2 size={14} />
+                  </button>
+                </div>
               </div>
-            </div>
-          ))}
+            );
+          })}
         </div>
       )}
 
       {/* 5. COMBOS TAB VIEW */}
       {activeSubTab === 'combos' && (
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))', gap: '10px' }}>
-          {safeCombos.map(combo => (
-            <div key={combo.id} style={{ background: '#FFFFFF', border: '1px solid #E5E7EB', borderRadius: '12px', padding: '14px', display: 'flex', flexDirection: 'column', gap: '10px' }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                <strong style={{ fontSize: '0.92rem', color: '#111827', fontWeight: 700 }}>{combo.title || combo.name}</strong>
-                <strong style={{ fontSize: '0.92rem', color: 'var(--adm-primary)', fontWeight: 800 }}>{currencySymbol}{combo.price}</strong>
-              </div>
+          {safeCombos.map(combo => {
+            const comboImage = combo.image || combo.image_url;
+            return (
+              <div key={combo.id} style={{ background: '#FFFFFF', border: '1px solid #E5E7EB', borderRadius: '14px', padding: '12px', display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                  {/* Combo Image (56px Square) */}
+                  <div style={{
+                    width: '56px',
+                    height: '56px',
+                    borderRadius: '10px',
+                    overflow: 'hidden',
+                    flexShrink: 0,
+                    background: '#F8FAFC',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    border: '1px solid #E2E8F0'
+                  }}>
+                    {comboImage && comboImage !== '/uploads/logo.jpg' ? (
+                      <img
+                        src={comboImage}
+                        alt={combo.title || combo.name}
+                        style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                        onError={(e) => { e.target.style.display = 'none'; }}
+                      />
+                    ) : (
+                      <span style={{ fontSize: '1.4rem' }}>🍱</span>
+                    )}
+                  </div>
 
-              {combo.description && (
-                <p style={{ fontSize: '0.78rem', color: '#64748B', margin: 0 }}>{combo.description}</p>
-              )}
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '8px' }}>
+                      <strong style={{ fontSize: '0.92rem', color: '#111827', fontWeight: 800 }}>{combo.title || combo.name}</strong>
+                      <strong style={{ fontSize: '0.92rem', color: 'var(--adm-primary)', fontWeight: 900 }}>{currencySymbol}{combo.price}</strong>
+                    </div>
 
-              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', paddingTop: '4px' }}>
-                <button
-                  onClick={() => onToggleComboAvailability && onToggleComboAvailability(combo.id, combo.available !== false)}
-                  style={{
-                    padding: '5px 10px',
-                    borderRadius: '20px',
-                    fontSize: '0.72rem',
-                    fontWeight: 800,
-                    background: combo.available !== false ? '#DCFCE7' : '#FEE2E2',
-                    color: combo.available !== false ? '#15803D' : '#991B1B',
-                    border: '1px solid #E2E8F0',
-                    cursor: 'pointer'
-                  }}
-                >
-                  {combo.available !== false ? '● Available' : '● Off'}
-                </button>
+                    {combo.description && (
+                      <p style={{
+                        fontSize: '0.76rem',
+                        color: '#64748B',
+                        margin: '2px 0 0 0',
+                        display: '-webkit-box',
+                        WebkitLineClamp: 2,
+                        WebkitBoxOrient: 'vertical',
+                        overflow: 'hidden'
+                      }}>{combo.description}</p>
+                    )}
+                  </div>
+                </div>
 
-                <div style={{ display: 'flex', gap: '6px' }}>
-                  <button onClick={() => onOpenEditCombo(combo)} className="adm-btn adm-btn-secondary adm-btn-sm">
-                    <Edit size={14} /> Edit
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', paddingTop: '6px', borderTop: '1px solid #F1F5F9' }}>
+                  <button
+                    onClick={() => onToggleComboAvailability && onToggleComboAvailability(combo.id, combo.available !== false)}
+                    style={{
+                      padding: '5px 10px',
+                      borderRadius: '20px',
+                      fontSize: '0.72rem',
+                      fontWeight: 800,
+                      background: combo.available !== false ? '#DCFCE7' : '#FEE2E2',
+                      color: combo.available !== false ? '#15803D' : '#991B1B',
+                      border: '1px solid #E2E8F0',
+                      cursor: 'pointer'
+                    }}
+                  >
+                    {combo.available !== false ? '● Available' : '● Off'}
                   </button>
-                  <button onClick={() => onDeleteCombo(combo.id)} className="adm-btn adm-btn-danger adm-btn-sm">
-                    <Trash2 size={14} />
-                  </button>
+
+                  <div style={{ display: 'flex', gap: '6px' }}>
+                    <button onClick={() => onOpenEditCombo(combo)} className="adm-btn adm-btn-secondary adm-btn-sm" style={{ padding: '6px 10px', fontWeight: 800 }}>
+                      <Edit size={14} /> Edit
+                    </button>
+                    <button onClick={() => onDeleteCombo(combo.id)} className="adm-btn adm-btn-danger adm-btn-sm" style={{ padding: '6px 10px' }}>
+                      <Trash2 size={14} />
+                    </button>
+                  </div>
                 </div>
               </div>
-            </div>
-          ))}
+            );
+          })}
         </div>
       )}
 
