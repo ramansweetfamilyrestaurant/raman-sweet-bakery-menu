@@ -2411,66 +2411,65 @@ export default function SuperAdminDashboard({ token, username, onLogout, onRetur
                     {/* Inline Quick Edit Form */}
                     {editingPlan?.key === plan.key && (
                       <div style={{
-                        marginTop: '12px',
-                        padding: '12px',
+                        marginTop: '14px',
+                        padding: '14px',
                         background: '#FFFBEB',
-                        borderRadius: '12px',
-                        border: '1.5px solid #FCD34D'
+                        borderRadius: '14px',
+                        border: '1.5px solid #FCD34D',
+                        boxShadow: '0 4px 12px rgba(180,83,9,0.08)'
                       }}>
-                        <div style={{ fontSize: '0.76rem', fontWeight: 800, color: '#B45309', marginBottom: '8px' }}>
+                        <div style={{ fontSize: '0.78rem', fontWeight: 900, color: '#B45309', marginBottom: '10px', display: 'flex', alignItems: 'center', gap: '4px' }}>
                           ⚡ EDIT BASE RATE & FEATURES MATRIX:
                         </div>
 
-                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '8px', marginBottom: '8px' }}>
+                        {/* Row 1: Prices */}
+                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px', marginBottom: '10px' }}>
                           <div>
-                            <label style={{ fontSize: '0.7rem', fontWeight: 700 }}>Actual Price (₹)</label>
+                            <label style={{ fontSize: '0.7rem', fontWeight: 800, color: '#475569', display: 'block', marginBottom: '3px' }}>Offer Price (₹)</label>
                             <input
                               type="number"
                               value={editingPlan.price}
                               onChange={(e) => setEditingPlan({ ...editingPlan, price: e.target.value })}
-                              style={{ width: '100%', padding: '6px 8px', borderRadius: '6px', border: '1px solid #CBD5E1', fontSize: '0.8rem', fontWeight: 800 }}
+                              style={{ width: '100%', padding: '7px 9px', borderRadius: '8px', border: '1px solid #CBD5E1', fontSize: '0.84rem', fontWeight: 900, color: '#0F172A', boxSizing: 'border-box' }}
                             />
                           </div>
                           <div>
-                            <label style={{ fontSize: '0.7rem', fontWeight: 700 }}>Cut MRP Price (₹)</label>
+                            <label style={{ fontSize: '0.7rem', fontWeight: 800, color: '#475569', display: 'block', marginBottom: '3px' }}>Cut MRP Price (₹)</label>
                             <input
                               type="number"
                               placeholder="e.g. 1999"
                               value={editingPlan.original_price || ''}
                               onChange={(e) => setEditingPlan({ ...editingPlan, original_price: e.target.value })}
-                              style={{ width: '100%', padding: '6px 8px', borderRadius: '6px', border: '1px solid #CBD5E1', fontSize: '0.8rem', fontWeight: 800, color: '#DC2626' }}
-                            />
-                          </div>
-                          <div>
-                            <label style={{ fontSize: '0.7rem', fontWeight: 700 }}>Badge</label>
-                            <input
-                              type="text"
-                              value={editingPlan.badge}
-                              onChange={(e) => setEditingPlan({ ...editingPlan, badge: e.target.value })}
-                              style={{ width: '100%', padding: '6px 8px', borderRadius: '6px', border: '1px solid #CBD5E1', fontSize: '0.8rem', fontWeight: 800 }}
+                              style={{ width: '100%', padding: '7px 9px', borderRadius: '8px', border: '1px solid #CBD5E1', fontSize: '0.84rem', fontWeight: 900, color: '#DC2626', boxSizing: 'border-box' }}
                             />
                           </div>
                         </div>
 
+                        {/* Row 2: Badge */}
+                        <div style={{ marginBottom: '10px' }}>
+                          <label style={{ fontSize: '0.7rem', fontWeight: 800, color: '#475569', display: 'block', marginBottom: '3px' }}>Plan Badge Text</label>
+                          <input
+                            type="text"
+                            placeholder="e.g. ⚡ BASIC"
+                            value={editingPlan.badge || ''}
+                            onChange={(e) => setEditingPlan({ ...editingPlan, badge: e.target.value })}
+                            style={{ width: '100%', padding: '7px 9px', borderRadius: '8px', border: '1px solid #CBD5E1', fontSize: '0.84rem', fontWeight: 800, color: '#B45309', boxSizing: 'border-box' }}
+                          />
+                        </div>
+
                         {/* Toggles */}
-                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '6px', marginBottom: '10px', fontSize: '0.72rem', fontWeight: 700 }}>
-                          <label style={{ display: 'flex', alignItems: 'center', gap: '4px', cursor: 'pointer' }}>
+                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px', marginBottom: '12px', fontSize: '0.74rem', fontWeight: 800, color: '#334155' }}>
+                          <label style={{ display: 'flex', alignItems: 'center', gap: '6px', cursor: 'pointer' }}>
                             <input type="checkbox" checked={editingPlan.whatsapp_enabled} onChange={(e) => setEditingPlan({ ...editingPlan, whatsapp_enabled: e.target.checked })} style={{ accentColor: '#16a34a' }} /> 💬 WhatsApp
                           </label>
-                          <label style={{ display: 'flex', alignItems: 'center', gap: '4px', cursor: 'pointer' }}>
+                          <label style={{ display: 'flex', alignItems: 'center', gap: '6px', cursor: 'pointer' }}>
                             <input type="checkbox" checked={editingPlan.direct_ordering_enabled} onChange={(e) => setEditingPlan({ ...editingPlan, direct_ordering_enabled: e.target.checked })} style={{ accentColor: '#0A2315' }} /> ⚡ Table KOT
                           </label>
-                          <label style={{ display: 'flex', alignItems: 'center', gap: '4px', cursor: 'pointer' }}>
+                          <label style={{ display: 'flex', alignItems: 'center', gap: '6px', cursor: 'pointer' }}>
                             <input type="checkbox" checked={editingPlan.google_reviews_enabled} onChange={(e) => setEditingPlan({ ...editingPlan, google_reviews_enabled: e.target.checked })} style={{ accentColor: '#d97706' }} /> ⭐ AI Reviews
                           </label>
-                          <label style={{ display: 'flex', alignItems: 'center', gap: '4px', cursor: 'pointer' }}>
+                          <label style={{ display: 'flex', alignItems: 'center', gap: '6px', cursor: 'pointer' }}>
                             <input type="checkbox" checked={editingPlan.direct_ordering_enabled} onChange={(e) => setEditingPlan({ ...editingPlan, direct_ordering_enabled: e.target.checked })} style={{ accentColor: '#2563eb' }} /> 🍱 Combos
-                          </label>
-                          <label style={{ display: 'flex', alignItems: 'center', gap: '4px', cursor: 'pointer' }}>
-                            <input type="checkbox" checked={editingPlan.direct_ordering_enabled} onChange={(e) => setEditingPlan({ ...editingPlan, direct_ordering_enabled: e.target.checked })} style={{ accentColor: '#059669' }} /> 🖨️ Printer KOT
-                          </label>
-                          <label style={{ display: 'flex', alignItems: 'center', gap: '4px', cursor: 'pointer' }}>
-                            <input type="checkbox" checked={editingPlan.direct_ordering_enabled} onChange={(e) => setEditingPlan({ ...editingPlan, direct_ordering_enabled: e.target.checked })} style={{ accentColor: '#7c3aed' }} /> 🗺️ Floor Map
                           </label>
                         </div>
 
@@ -2486,14 +2485,15 @@ export default function SuperAdminDashboard({ token, username, onLogout, onRetur
                           }}
                           style={{
                             width: '100%',
-                            background: '#0A2315',
-                            color: '#FFFFFF',
+                            background: 'linear-gradient(135deg, #0A2315 0%, #164E2A 100%)',
+                            color: '#FFD700',
                             border: 'none',
-                            padding: '6px',
-                            borderRadius: '6px',
-                            fontSize: '0.74rem',
-                            fontWeight: 800,
-                            cursor: 'pointer'
+                            padding: '9px 12px',
+                            borderRadius: '10px',
+                            fontSize: '0.8rem',
+                            fontWeight: 900,
+                            cursor: 'pointer',
+                            boxShadow: '0 2px 8px rgba(10,35,21,0.2)'
                           }}
                         >
                           ✓ Update Base Plan
