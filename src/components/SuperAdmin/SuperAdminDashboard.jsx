@@ -217,6 +217,9 @@ export default function SuperAdminDashboard({ token, username, onLogout, onImper
       if (res.ok) {
         setKeysMsg('✓ Settings updated successfully!');
         setPaymentKeys(keysForm);
+        if (keysForm.platform_logo_url !== undefined) {
+          setLogoUrl(keysForm.platform_logo_url || '');
+        }
       } else {
         alert(data.error || 'Failed to save settings');
       }

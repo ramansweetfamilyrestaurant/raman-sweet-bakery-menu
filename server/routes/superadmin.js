@@ -4,7 +4,7 @@ import jwt from 'jsonwebtoken';
 import sharp from 'sharp';
 import { query, runAutoDataSummarization, logAudit, saveR2ImageToDb, saveImageToDb } from '../db.js';
 import { authenticateToken } from '../middleware/auth.js';
-import { isR2Active, uploadImageToR2 } from '../services/r2ImageService.js';
+import { isR2Active, uploadImageToR2, deleteImageFromR2 } from '../services/r2ImageService.js';
 
 const router = express.Router();
 const JWT_SECRET = process.env.JWT_SECRET || 'raman_bakery_secret_jwt_key_2026_super_secure';
@@ -756,6 +756,23 @@ router.post('/settings', authenticateToken, requireSuperAdmin, async (req, res) 
         // Auto-mirror external image URLs to R2 & Neon DB with restaurant_id = NULL
         if (k === 'platform_logo_url' && strVal.startsWith('http')) {
           strVal = await mirrorExternalLogoToR2(strVal);
+        }
+
+        // Deep R2 & Neon DB deletion when logo is reset to empty string
+        if (k === 'platform_logo_url' && strVal === '') {
+          try {
+            if (isR2Active()) {
+              await deleteImageFromR2('superadmin/branding/logo.webp');
+            }
+          } catch (r2DelErr) {
+            console.warn('Notice deleting superadmin logo from R2:', r2DelErr.message);
+          }
+
+          try {
+            await query("DELETE FROM stored_images WHERE restaurant_id IS NULL OR image_key LIKE 'superadmin/%' OR filename LIKE 'logo-external-%'");
+          } catch (dbDelErr) {
+            console.warn('Notice purging superadmin logo from stored_images DB:', dbDelErr.message);
+          }
         }
 
         try {
