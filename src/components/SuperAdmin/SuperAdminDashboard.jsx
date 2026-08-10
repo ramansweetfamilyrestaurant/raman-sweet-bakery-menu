@@ -1422,18 +1422,37 @@ export default function SuperAdminDashboard({ token, username, onLogout, onRetur
             boxShadow: '0 20px 60px rgba(0,0,0,0.4)',
             border: '2px solid #D4AF37',
             maxHeight: '90vh',
-            overflowY: 'auto'
+            overflowY: 'auto',
+            position: 'relative'
           }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '18px' }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                <div style={{ width: '36px', height: '36px', borderRadius: '10px', background: '#DCFCE7', color: '#15803D', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                  <Store size={20} />
-                </div>
-                <h3 style={{ fontSize: '1.25rem', fontWeight: 900, color: 'var(--primary-emerald)', margin: 0 }}>
-                  Onboard New Tenant Restaurant
-                </h3>
+            <button
+              type="button"
+              onClick={() => setShowAddModal(false)}
+              style={{
+                position: 'absolute',
+                top: '18px',
+                right: '18px',
+                background: '#F3F4F6',
+                border: 'none',
+                width: '32px',
+                height: '32px',
+                borderRadius: '50%',
+                cursor: 'pointer',
+                fontWeight: 900,
+                color: '#4B5563',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                zIndex: 10
+              }}
+            >
+              ✕
+            </button>
+
+            <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '18px', paddingRight: '40px' }}>
+              <div style={{ width: '36px', height: '36px', borderRadius: '10px', background: '#DCFCE7', color: '#15803D', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                <Store size={20} />
               </div>
-              <button onClick={() => setShowAddModal(false)} style={{ background: 'none', border: 'none', fontSize: '1.4rem', fontWeight: 700, cursor: 'pointer', color: 'var(--text-muted)' }}>✕</button>
             </div>
 
             {formError && (
@@ -2443,11 +2462,37 @@ export default function SuperAdminDashboard({ token, username, onLogout, onRetur
             border: '2px solid #D4AF37',
             maxHeight: '90vh',
             display: 'flex',
-            flexDirection: 'column'
+            flexDirection: 'column',
+            position: 'relative'
           }}>
+            <button
+              type="button"
+              onClick={() => setShowPlansModal(false)}
+              style={{
+                position: 'absolute',
+                top: '18px',
+                right: '18px',
+                background: '#F1F5F9',
+                border: 'none',
+                width: '34px',
+                height: '34px',
+                borderRadius: '50%',
+                fontSize: '1.1rem',
+                fontWeight: 900,
+                cursor: 'pointer',
+                color: '#64748B',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                zIndex: 10
+              }}
+            >
+              ✕
+            </button>
+
             {/* Header Section */}
-            <div className="sa-plans-modal-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '18px', flexWrap: 'wrap', gap: '12px' }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '12px', flex: 1, minWidth: '220px' }}>
+            <div className="sa-plans-modal-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '18px', flexWrap: 'wrap', gap: '12px', paddingRight: '40px' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '12px', flex: 1, minWidth: '200px' }}>
                 <div style={{ width: '42px', height: '42px', borderRadius: '14px', background: 'linear-gradient(135deg, #0A2315 0%, #164E2A 100%)', color: '#DFBA67', display: 'flex', alignItems: 'center', justifyContent: 'center', border: '1px solid #D4AF37', flexShrink: 0 }}>
                   <CreditCard size={22} />
                 </div>
@@ -2482,7 +2527,6 @@ export default function SuperAdminDashboard({ token, username, onLogout, onRetur
                 >
                   <Plus size={16} /> {showCreatePlanForm ? 'Hide Form' : 'Create Custom Plan'}
                 </button>
-                <button onClick={() => setShowPlansModal(false)} style={{ background: '#F1F5F9', border: 'none', width: '32px', height: '32px', borderRadius: '50%', fontSize: '1.1rem', fontWeight: 900, cursor: 'pointer', color: '#64748B', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>✕</button>
               </div>
             </div>
 
