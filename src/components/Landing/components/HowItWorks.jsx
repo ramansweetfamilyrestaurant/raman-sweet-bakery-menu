@@ -37,8 +37,10 @@ export default function HowItWorks() {
           {steps.map((step, idx) => (
             <div key={idx} className="km-workflow-step">
               <div className="km-step-num">{step.num}</div>
-              <h3 className="km-step-title">{step.title}</h3>
-              <p className="km-step-desc">{step.desc}</p>
+              <div style={{ flex: 1 }}>
+                <h3 className="km-step-title">{step.title}</h3>
+                <p className="km-step-desc">{step.desc}</p>
+              </div>
             </div>
           ))}
         </div>

@@ -1111,39 +1111,80 @@
     display: none;
   }
   
+  /* Ultra-lightweight card borders & soft shadows for mobile */
+  .km-feature-card,
+  .km-workflow-step,
+  .km-price-card,
+  .km-showcase-box {
+    border-radius: 14px;
+    border: 1px solid rgba(226, 232, 240, 0.8);
+    box-shadow: 0 4px 14px rgba(15, 23, 42, 0.03);
+  }
+
   .km-features-grid,
   .km-workflow-grid,
   .km-pricing-grid {
     grid-template-columns: 1fr;
-    gap: 12px;
+    gap: 10px;
   }
 
+  /* Sleek Horizontal Feature Cards on Mobile */
   .km-feature-card {
-    padding: 14px;
+    display: flex;
+    align-items: flex-start;
+    gap: 12px;
+    padding: 14px 16px;
   }
 
   .km-feature-icon {
-    width: 36px;
-    height: 36px;
-    margin-bottom: 8px;
+    width: 38px;
+    height: 38px;
+    min-width: 38px;
+    border-radius: 10px;
+    margin-bottom: 0;
+    font-size: 1.1rem;
   }
 
   .km-feature-title {
     font-size: 0.95rem;
-    margin-bottom: 4px;
+    font-weight: 800;
+    margin-bottom: 2px;
   }
 
   .km-feature-desc {
-    font-size: 0.84rem;
+    font-size: 0.82rem;
     line-height: 1.4;
   }
 
+  /* Sleek Horizontal Workflow Step Cards on Mobile */
   .km-workflow-step {
-    padding: 16px 14px;
+    display: flex;
+    align-items: flex-start;
+    gap: 14px;
+    padding: 14px 16px;
+    text-align: left;
+  }
+
+  .km-step-num {
+    width: 38px;
+    height: 38px;
+    min-width: 38px;
+    font-size: 0.92rem;
+    margin-bottom: 0;
+  }
+
+  .km-step-title {
+    font-size: 0.95rem;
+    margin-bottom: 2px;
+  }
+
+  .km-step-desc {
+    font-size: 0.82rem;
+    line-height: 1.4;
   }
 
   .km-price-card {
-    padding: 20px 16px;
+    padding: 18px 14px;
   }
 
   .km-desktop-table-wrapper {

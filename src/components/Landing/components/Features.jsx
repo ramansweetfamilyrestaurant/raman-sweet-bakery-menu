@@ -56,8 +56,10 @@ export default function Features() {
               <div className="km-feature-icon">
                 {item.icon}
               </div>
-              <h3 className="km-feature-title">{item.title}</h3>
-              <p className="km-feature-desc">{item.desc}</p>
+              <div style={{ flex: 1 }}>
+                <h3 className="km-feature-title">{item.title}</h3>
+                <p className="km-feature-desc">{item.desc}</p>
+              </div>
             </div>
           ))}
         </div>
