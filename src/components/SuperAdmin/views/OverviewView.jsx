@@ -1,10 +1,14 @@
-import React from 'react';
-import { Store, CheckCircle, DollarSign, ArrowRight } from 'lucide-react';
+import React, { useState } from 'react';
+import { Store, CheckCircle, Clock, AlertTriangle, DollarSign, ArrowRight, ShieldAlert, Sparkles } from 'lucide-react';
 import StatCard from '../components/StatCard';
 
 export default function OverviewView({ restaurants, pendingRegistrations = [], onSelectTenant, onNavigate }) {
+  const [showAllRegistrations, setShowAllRegistrations] = useState(false);
+
   const totalTenants = restaurants.length;
   const activeCount = restaurants.filter(r => r.active !== false && r.active !== 0 && r.active !== '0').length;
+  const trialCount = restaurants.filter(r => r.subscription_status === 'trialing' || (r.trial_ends_at && new Date(r.trial_ends_at) > new Date())).length;
+  const pastDueCount = restaurants.filter(r => r.subscription_status === 'payment_failed' || r.subscription_status === 'past_due').length;
 
   const estimatedRevenue = restaurants.reduce((sum, r) => {
     if (r.active !== false && r.subscription_type !== 'ADMIN_GRANTED' && r.mandate_status !== 'admin_granted') {
@@ -13,83 +17,134 @@ export default function OverviewView({ restaurants, pendingRegistrations = [], o
     return sum;
   }, 0);
 
+  // Grouped Attention Items
+  const pendingCancellations = restaurants.filter(r => r.cancel_requested_at);
+  const scheduledChanges = restaurants.filter(r => r.scheduled_plan_key);
   const paymentFailures = restaurants.filter(r => r.subscription_status === 'payment_failed');
+
+  const visibleRegistrations = showAllRegistrations ? pendingRegistrations : pendingRegistrations.slice(0, 3);
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
-      {/* Simple Greeting Banner */}
+      {/* Refined Compact Hero Banner */}
       <div style={{
         background: 'linear-gradient(135deg, #0A2315 0%, #164E2A 100%)',
         borderRadius: 'var(--sa-radius-lg)',
-        padding: '20px 24px',
+        padding: '18px 20px',
         color: '#FFFFFF',
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'space-between',
         flexWrap: 'wrap',
         gap: '12px',
-        border: '1px solid rgba(212, 175, 55, 0.3)'
+        border: '1px solid rgba(212, 175, 55, 0.3)',
+        boxShadow: 'var(--sa-shadow-sm)'
       }}>
         <div>
-          <h1 style={{ fontSize: '1.3rem', fontWeight: 900, margin: '0 0 4px 0' }}>
-            Welcome back, Super Admin 👑
+          <h1 style={{ fontSize: '1.25rem', fontWeight: 900, margin: '0 0 2px 0', letterSpacing: '-0.3px' }}>
+            Good morning, Super Admin 👑
           </h1>
-          <p style={{ fontSize: '0.85rem', color: '#A7F3D0', margin: 0 }}>
-            Your TouchQR SaaS platform overview.
+          <p style={{ fontSize: '0.8rem', color: '#A7F3D0', margin: 0, fontWeight: 500 }}>
+            Monitor your SaaS platform and tenant activity.
           </p>
         </div>
-        <button onClick={() => onNavigate('tenants')} className="sa-btn sa-btn-accent sa-btn-sm">
-          Manage Restaurants →
+        <button
+          onClick={() => onNavigate('tenants')}
+          className="sa-btn sa-btn-accent sa-btn-sm"
+        >
+          <Store size={14} /> Manage Tenants ➔
         </button>
       </div>
 
-      {/* 3 Clean Stat Cards */}
+      {/* 2-Column Compact Equal KPI Grid */}
       <div className="sa-stats-grid">
-        <StatCard label="TOTAL RESTAURANTS" value={totalTenants} subtitle="All clients" icon={Store} color="var(--sa-primary)" />
+        <StatCard label="TOTAL TENANTS" value={totalTenants} subtitle="All clients" icon={Store} color="var(--sa-primary)" />
         <StatCard label="ACTIVE" value={activeCount} subtitle="Paying & active" icon={CheckCircle} color="var(--sa-success)" />
-        <StatCard label="MONTHLY REVENUE" value={`₹${estimatedRevenue.toLocaleString()}`} subtitle="Recurring (MRR)" icon={DollarSign} color="var(--sa-accent)" />
+        <StatCard label="TRIAL" value={trialCount} subtitle="In trial phase" icon={Clock} color="var(--sa-warning)" />
+        <StatCard label="PAST DUE" value={pastDueCount} subtitle="Requires review" icon={AlertTriangle} color="var(--sa-danger)" />
+        <StatCard label="REVENUE" value={`₹${estimatedRevenue.toLocaleString()}`} subtitle="Monthly recurring (MRR)" icon={DollarSign} color="var(--sa-accent)" />
       </div>
 
-      {/* Simple Attention Section */}
-      <div className="sa-table-container" style={{ padding: '20px' }}>
-        <h3 style={{ fontSize: '1.05rem', fontWeight: 900, margin: '0 0 14px 0', color: 'var(--sa-text-main)' }}>
-          Needs Attention
-        </h3>
-
-        {pendingRegistrations.length === 0 && paymentFailures.length === 0 ? (
-          <div style={{ padding: '16px 0', color: 'var(--sa-success)', fontWeight: 700, fontSize: '0.9rem' }}>
-            ✅ All good! No issues right now.
+      {/* Compact Operational Hub: Attention Required */}
+      <div className="sa-table-container" style={{ padding: '18px' }}>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '14px' }}>
+          <div>
+            <h3 className="sa-section-title" style={{ fontSize: '1.05rem' }}>
+              <AlertTriangle size={18} color="var(--sa-warning)" /> Attention Required
+            </h3>
+            <span style={{ fontSize: '0.75rem', color: 'var(--sa-text-muted)', fontWeight: 600 }}>
+              Operational summary of pending registration approvals and subscription events.
+            </span>
           </div>
-        ) : (
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
-            {pendingRegistrations.length > 0 && (
-              <div style={{
-                display: 'flex', justifyContent: 'space-between', alignItems: 'center',
-                padding: '12px 16px', background: '#FFFBEB', border: '1px solid #FDE68A',
-                borderRadius: 'var(--sa-radius-md)'
-              }}>
-                <span style={{ fontWeight: 700, fontSize: '0.88rem' }}>
-                  🔔 {pendingRegistrations.length} pending registration(s)
-                </span>
-                <button onClick={() => onNavigate('tenants')} className="sa-btn sa-btn-secondary sa-btn-sm">
-                  View →
-                </button>
-              </div>
-            )}
+        </div>
 
-            {paymentFailures.length > 0 && (
-              <div style={{
-                display: 'flex', justifyContent: 'space-between', alignItems: 'center',
-                padding: '12px 16px', background: '#FEF2F2', border: '1px solid #FECACA',
-                borderRadius: 'var(--sa-radius-md)'
-              }}>
-                <span style={{ fontWeight: 700, fontSize: '0.88rem' }}>
-                  ⚠️ {paymentFailures.length} payment failure(s)
-                </span>
-                <button onClick={() => onNavigate('tenants')} className="sa-btn sa-btn-secondary sa-btn-sm">
-                  View →
-                </button>
+        {/* Compact Summary Box */}
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', marginBottom: '16px' }}>
+          {/* Pending Registrations Summary Row */}
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '10px 14px', background: 'var(--sa-surface-subtle)', borderRadius: 'var(--sa-radius-md)', border: '1px solid var(--sa-border)' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <span className="sa-badge sa-badge-warning">MEDIUM</span>
+              <span style={{ fontSize: '0.84rem', fontWeight: 800 }}>Pending Registrations ({pendingRegistrations.length})</span>
+            </div>
+            <button onClick={() => onNavigate('tenants')} className="sa-btn sa-btn-secondary sa-btn-sm">
+              View All ➔
+            </button>
+          </div>
+
+          {/* Cancellations Summary Row */}
+          {pendingCancellations.length > 0 && (
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '10px 14px', background: 'var(--sa-warning-bg)', borderRadius: 'var(--sa-radius-md)', border: '1px solid var(--sa-warning-border)' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <span className="sa-badge sa-badge-warning">MEDIUM</span>
+                <span style={{ fontSize: '0.84rem', fontWeight: 800, color: '#78350F' }}>Cancellations Requested ({pendingCancellations.length})</span>
               </div>
+              <button onClick={() => onNavigate('subscriptions')} className="sa-btn sa-btn-secondary sa-btn-sm">
+                View ➔
+              </button>
+            </div>
+          )}
+
+          {/* Scheduled Changes Summary Row */}
+          {scheduledChanges.length > 0 && (
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '10px 14px', background: 'var(--sa-info-bg)', borderRadius: 'var(--sa-radius-md)', border: '1px solid var(--sa-info-border)' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <span className="sa-badge sa-badge-info">INFO</span>
+                <span style={{ fontSize: '0.84rem', fontWeight: 800, color: '#1E40AF' }}>Scheduled Plan Changes ({scheduledChanges.length})</span>
+              </div>
+              <button onClick={() => onNavigate('subscriptions')} className="sa-btn sa-btn-secondary sa-btn-sm">
+                View ➔
+              </button>
+            </div>
+          )}
+        </div>
+
+        {/* Top 2-3 Recent Pending Registrations */}
+        {pendingRegistrations.length > 0 && (
+          <div>
+            <span style={{ fontSize: '0.72rem', fontWeight: 800, color: 'var(--sa-text-muted)', textTransform: 'uppercase', letterSpacing: '0.5px', display: 'block', marginBottom: '8px' }}>
+              RECENT PENDING REGISTRATIONS:
+            </span>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+              {visibleRegistrations.map(reg => (
+                <div key={reg.id} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '8px 12px', background: '#FFFFFF', border: '1px solid var(--sa-border)', borderRadius: 'var(--sa-radius-sm)', fontSize: '0.82rem' }}>
+                  <div>
+                    <strong style={{ color: 'var(--sa-text-main)' }}>{reg.name}</strong>
+                    <span style={{ fontSize: '0.72rem', color: 'var(--sa-text-muted)', marginLeft: '8px' }}>Plan: {(reg.plan_key || 'pro').toUpperCase()}</span>
+                  </div>
+                  <button onClick={() => onNavigate('tenants')} className="sa-btn sa-btn-secondary sa-btn-sm">
+                    Review ➔
+                  </button>
+                </div>
+              ))}
+            </div>
+
+            {pendingRegistrations.length > 3 && !showAllRegistrations && (
+              <button
+                onClick={() => setShowAllRegistrations(true)}
+                style={{ background: 'none', border: 'none', color: 'var(--sa-primary)', fontSize: '0.78rem', fontWeight: 800, cursor: 'pointer', marginTop: '8px', padding: 0 }}
+              >
+                View all {pendingRegistrations.length} registrations ➔
+              </button>
             )}
           </div>
         )}
