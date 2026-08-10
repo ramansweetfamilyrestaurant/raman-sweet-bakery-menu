@@ -2,6 +2,12 @@ import React from 'react';
 import { Check, ArrowRight, Sparkles } from 'lucide-react';
 
 export default function Pricing({ publicPlans = [], trialDays = 17, onSelectPlan }) {
+  const [showMoreMap, setShowMoreMap] = React.useState({});
+
+  const toggleShowMore = (key) => {
+    setShowMoreMap(prev => ({ ...prev, [key]: !prev[key] }));
+  };
+
   // Default fallback plans if publicPlans API array is empty
   const defaultPlans = [
     {
@@ -98,56 +104,75 @@ export default function Pricing({ publicPlans = [], trialDays = 17, onSelectPlan
         </div>
 
         <div className="km-pricing-grid">
-          {plansToRender.map((plan, index) => (
-            <div 
-              key={index} 
-              className={`km-price-card ${plan.popular ? 'featured' : ''}`}
-            >
-              {plan.popular && (
-                <div className="km-price-badge">MOST POPULAR CHOICE</div>
-              )}
+          {plansToRender.map((plan, index) => {
+            const isExpanded = !!showMoreMap[plan.key];
+            const visibleFeatures = isExpanded ? plan.features : plan.features.slice(0, 4);
+            const hasMore = plan.features.length > 4;
 
-              <div>
-                <h3 className="km-plan-name">{plan.name}</h3>
-                <p className="km-plan-desc">{plan.description}</p>
+            return (
+              <div 
+                key={index} 
+                className={`km-price-card ${plan.popular ? 'featured' : ''}`}
+              >
+                {plan.popular && (
+                  <div className="km-price-badge">MOST POPULAR CHOICE</div>
+                )}
 
-                <div className="km-plan-price-wrap">
-                  {plan.original_price && (
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '4px' }}>
-                      <span style={{ fontSize: '0.9rem', color: 'var(--km-muted)', textDecoration: 'line-through' }}>
-                        ₹{plan.original_price}
-                      </span>
-                      {plan.discountTag && (
-                        <span style={{ background: '#EF4444', color: '#FFF', fontSize: '0.68rem', fontWeight: 900, padding: '2px 6px', borderRadius: '4px' }}>
-                          {plan.discountTag}
+                <div>
+                  <h3 className="km-plan-name">{plan.name}</h3>
+                  <p className="km-plan-desc">{plan.description}</p>
+
+                  <div className="km-plan-price-wrap">
+                    {plan.original_price && (
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '4px' }}>
+                        <span style={{ fontSize: '0.9rem', color: 'var(--km-muted)', textDecoration: 'line-through' }}>
+                          ₹{plan.original_price}
                         </span>
-                      )}
-                    </div>
-                  )}
+                        {plan.discountTag && (
+                          <span style={{ background: '#EF4444', color: '#FFF', fontSize: '0.68rem', fontWeight: 900, padding: '2px 6px', borderRadius: '4px' }}>
+                            {plan.discountTag}
+                          </span>
+                        )}
+                      </div>
+                    )}
 
-                  <span className="km-plan-price">₹{plan.price}</span>
-                  <span className="km-plan-period">/month</span>
+                    <span className="km-plan-price">₹{plan.price}</span>
+                    <span className="km-plan-period">/month</span>
+                  </div>
+
+                  <ul className="km-plan-list">
+                    {visibleFeatures.map((feat, fIdx) => (
+                      <li key={fIdx} className="km-plan-item">
+                        <Check size={16} />
+                        <span>{feat}</span>
+                      </li>
+                    ))}
+                  </ul>
+                  
+                  {hasMore && (
+                    <button
+                      type="button"
+                      onClick={() => toggleShowMore(plan.key)}
+                      style={{
+                        background: 'none', border: 'none', color: '#38BDF8', fontSize: '0.78rem',
+                        fontWeight: 800, cursor: 'pointer', padding: '4px 0 16px 0', display: 'block'
+                      }}
+                    >
+                      {isExpanded ? 'Hide Extra Features ↑' : `+ ${plan.features.length - 4} More Features ↓`}
+                    </button>
+                  )}
                 </div>
 
-                <ul className="km-plan-list">
-                  {plan.features.map((feat, fIdx) => (
-                    <li key={fIdx} className="km-plan-item">
-                      <Check size={16} />
-                      <span>{feat}</span>
-                    </li>
-                  ))}
-                </ul>
+                <button 
+                  className={plan.popular ? 'km-btn-primary km-btn-gold' : 'km-btn-primary'}
+                  onClick={() => onSelectPlan(plan.key)}
+                  style={{ width: '100%' }}
+                >
+                  Start {trialDays}-Day Free Trial <ArrowRight size={16} />
+                </button>
               </div>
-
-              <button 
-                className={plan.popular ? 'km-btn-primary km-btn-gold' : 'km-btn-primary'}
-                onClick={() => onSelectPlan(plan.key)}
-                style={{ width: '100%' }}
-              >
-                Start {trialDays}-Day Free Trial <ArrowRight size={16} />
-              </button>
-            </div>
-          ))}
+            );
+          })}
         </div>
       </div>
     </section>

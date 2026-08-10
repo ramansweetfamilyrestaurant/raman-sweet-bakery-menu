@@ -1091,7 +1091,7 @@
   }
 
   .km-section-header {
-    margin-bottom: 28px;
+    margin-bottom: 20px;
   }
 
   .km-features-section,
@@ -1100,7 +1100,7 @@
   .km-pricing-section,
   .km-faq-section,
   .km-comparison-section {
-    padding: 32px 0;
+    padding: 24px 0;
   }
 
   .km-features-toggle-wrap {
