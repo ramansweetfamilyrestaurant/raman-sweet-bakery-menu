@@ -2046,7 +2046,7 @@ export default function SuperAdminDashboard({ token, username, onLogout, onRetur
               <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                 <button
                   type="button"
-                  onClick={loadAuditLogs}
+                  onClick={loadAuditData}
                   style={{
                     background: '#F1F5F9',
                     color: '#0F172A',
