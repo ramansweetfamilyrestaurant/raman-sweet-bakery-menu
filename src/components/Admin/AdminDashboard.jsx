@@ -807,7 +807,7 @@ export default function AdminDashboard({ token, username, onLogout, onReturnToMe
 
   useEffect(() => {
     loadOrders();
-    const interval = setInterval(loadOrders, 5000);
+    const interval = setInterval(loadOrders, 2000);
     return () => clearInterval(interval);
   }, [token]);
 
@@ -911,8 +911,10 @@ export default function AdminDashboard({ token, username, onLogout, onReturnToMe
     }
   };
 
-  const loadData = async () => {
-    setLoading(true);
+  const loadData = async (silent = false) => {
+    if (!silent && dishes.length === 0) {
+      setLoading(true);
+    }
     try {
       const [catData, dishData, infoData, comboData, subStatusData] = await Promise.all([
         fetchCategories({ adminView: true, token }),
