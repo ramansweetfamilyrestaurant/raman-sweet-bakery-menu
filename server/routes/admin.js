@@ -1046,13 +1046,28 @@ const handleUpdateSettings = async (req, res) => {
 
     const visJson = typeof filters_visibility === 'object' ? JSON.stringify(filters_visibility) : filters_visibility;
 
+    const processedLogo = logo !== undefined ? await processExternalImageUrl(logo, targetId, 'logos') : null;
+
+    // Fetch old restaurant logo to clean up if replaced or removed
+    if (logo !== undefined) {
+      try {
+        const oldRestoRows = await query('SELECT logo FROM restaurants WHERE id = $1', [targetId]);
+        const oldLogo = oldRestoRows && oldRestoRows.length > 0 ? oldRestoRows[0].logo : null;
+        if (oldLogo && oldLogo !== processedLogo && oldLogo !== '/uploads/logo.jpg') {
+          await cleanupImage(oldLogo);
+        }
+      } catch (cleanErr) {
+        console.warn('Notice cleaning up replaced restaurant logo:', cleanErr.message);
+      }
+    }
+
     await query(`
       UPDATE restaurants 
       SET name = $1, tagline = $2, logo = $3, phone = $4, address = $5, opening_hours = $6, google_review_url = $7, filters_visibility = $8, currency_symbol = $9, fssai_lic_no = $10, resto_type = $11, whatsapp_number = $12, whatsapp_enabled = $13, theme_color = $14, latitude = $15, longitude = $16, max_distance_meters = $17, gst_enabled = $18, gstin_number = $19, total_tables = $20, order_retention_days = $21, google_reviews_enabled = $22
       WHERE id = $23
     `, [
       name, tagline,
-      logo !== undefined ? logo : '',
+      processedLogo !== null ? processedLogo : (logo !== undefined ? '' : null),
       phone, address, openingHours, google_review_url, visJson,
       currency_symbol !== undefined ? currency_symbol : '₹',
       fssai_lic_no || '',
