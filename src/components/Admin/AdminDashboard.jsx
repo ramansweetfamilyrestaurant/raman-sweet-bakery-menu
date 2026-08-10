@@ -1680,7 +1680,7 @@ export default function AdminDashboard({ token, username, onLogout, onReturnToMe
         </div>
       )}
 
-      {/* Modern POS Header & Nav Shell */}
+      {/* Modern Single POS Header Shell */}
       <div className="adm-dashboard-container">
         <AdminHeader
           restaurantInfo={restaurantInfo}
@@ -1689,9 +1689,6 @@ export default function AdminDashboard({ token, username, onLogout, onReturnToMe
           onReturnToMenu={onReturnToMenu}
           onOpenHelp={() => setShowHelpModal(true)}
           supportPhone={masterSupportPhone}
-        />
-
-        <AdminDesktopNavigation
           activeTab={activeTab}
           setActiveTab={setActiveTab}
           pendingOrdersCount={orders.filter(o => o.status === 'pending').length}

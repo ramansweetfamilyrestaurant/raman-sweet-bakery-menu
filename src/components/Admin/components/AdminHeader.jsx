@@ -1,12 +1,27 @@
 import React, { useState } from 'react';
 import { Utensils, MoreVertical, HelpCircle, Phone, LogOut, ArrowLeft, ExternalLink } from 'lucide-react';
 
-export default function AdminHeader({ restaurantInfo, username, onLogout, onReturnToMenu, onOpenHelp, supportPhone }) {
+export default function AdminHeader({
+  restaurantInfo,
+  username,
+  onLogout,
+  onReturnToMenu,
+  onOpenHelp,
+  supportPhone,
+  activeTab,
+  setActiveTab,
+  pendingOrdersCount = 0
+}) {
   const [showMoreMenu, setShowMoreMenu] = useState(false);
   const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
 
   const restoName = restaurantInfo?.name || 'Restaurant Admin';
   const truncatedName = restoName.length > 20 ? `${restoName.substring(0, 18)}...` : restoName;
+
+  const isOrdersActive = ['orders', 'floor-map', 'service-requests'].includes(activeTab);
+  const isMenuActive = ['dishes', 'categories', 'combos'].includes(activeTab);
+  const isSetupActive = ['settings', 'qr-generator', 'review'].includes(activeTab);
+  const isAnalyticsActive = activeTab === 'analytics';
 
   return (
     <header className="adm-header">
@@ -33,6 +48,36 @@ export default function AdminHeader({ restaurantInfo, username, onLogout, onRetu
           </div>
         </div>
       </div>
+
+      {/* CENTER: Desktop Integrated Nav Tabs (hidden on mobile) */}
+      {setActiveTab && (
+        <div className="adm-header-desktop-tabs">
+          <button
+            onClick={() => setActiveTab('orders')}
+            className={`adm-header-tab ${isOrdersActive ? 'active' : ''}`}
+          >
+            Orders {pendingOrdersCount > 0 ? `(${pendingOrdersCount})` : ''}
+          </button>
+          <button
+            onClick={() => setActiveTab('analytics')}
+            className={`adm-header-tab ${isAnalyticsActive ? 'active' : ''}`}
+          >
+            Analytics
+          </button>
+          <button
+            onClick={() => setActiveTab('dishes')}
+            className={`adm-header-tab ${isMenuActive ? 'active' : ''}`}
+          >
+            Menu
+          </button>
+          <button
+            onClick={() => setActiveTab('settings')}
+            className={`adm-header-tab ${isSetupActive ? 'active' : ''}`}
+          >
+            Setup
+          </button>
+        </div>
+      )}
 
       {/* RIGHT: Action Menu ⋮ */}
       <div className="adm-header-right" style={{ position: 'relative' }}>

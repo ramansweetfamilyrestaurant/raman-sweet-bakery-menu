@@ -145,15 +145,36 @@
   flex-shrink: 0;
 }
 
-/* Navigation Bars */
-.adm-desktop-nav {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 6px;
-  background: var(--adm-primary-soft);
-  padding: 6px 12px;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+.adm-header-desktop-tabs {
+  display: none;
+}
+
+@media (min-width: 768px) {
+  .adm-header-desktop-tabs {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+  .adm-header-tab {
+    padding: 6px 14px;
+    border-radius: var(--adm-radius-md);
+    color: #94A3B8;
+    font-size: 0.84rem;
+    font-weight: 800;
+    background: transparent;
+    border: none;
+    cursor: pointer;
+    transition: var(--adm-transition);
+  }
+  .adm-header-tab:hover {
+    color: #FFFFFF;
+    background: rgba(255, 255, 255, 0.08);
+  }
+  .adm-header-tab.active {
+    background: var(--adm-accent);
+    color: var(--adm-primary);
+    font-weight: 900;
+  }
 }
 
 .adm-desktop-nav-item {
