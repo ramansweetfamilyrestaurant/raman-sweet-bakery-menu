@@ -142,27 +142,27 @@ export default function AdminHeader({
           <span>Menu</span>
         </button>
 
-        {/* MORE OPTIONS BUTTON [⋮] (44x44px touch target) */}
+        {/* MORE OPTIONS BUTTON [⋮] (Sleek Glass Pill) */}
         <button
           onClick={() => setShowMoreMenu(!showMoreMenu)}
           style={{
-            width: '44px',
-            height: '44px',
-            minWidth: '44px',
-            minHeight: '44px',
+            width: '42px',
+            height: '42px',
             borderRadius: '50%',
-            background: 'rgba(255, 255, 255, 0.12)',
-            border: '1px solid rgba(255, 255, 255, 0.2)',
+            background: showMoreMenu ? 'rgba(212, 175, 55, 0.25)' : 'rgba(255, 255, 255, 0.12)',
+            border: showMoreMenu ? '1.5px solid #D4AF37' : '1px solid rgba(255, 255, 255, 0.25)',
             color: '#FFFFFF',
             display: 'inline-flex',
             alignItems: 'center',
             justifyContent: 'center',
             cursor: 'pointer',
-            padding: 0
+            padding: 0,
+            transition: 'all 0.2s ease',
+            boxShadow: showMoreMenu ? '0 0 12px rgba(212, 175, 55, 0.4)' : 'none'
           }}
           aria-label="More Options Menu"
         >
-          <MoreVertical size={20} />
+          <MoreVertical size={20} color={showMoreMenu ? '#FFD700' : '#FFFFFF'} />
         </button>
 
         {/* Dropdown Menu (Guide, WhatsApp Support, Exit / Logout) */}

@@ -383,23 +383,57 @@ export default function MenuView({
                       </button>
 
                       <button
+                        onClick={() => onOpenEditDish(dish)}
+                        className="adm-btn adm-btn-secondary adm-btn-sm"
+                        style={{
+                          padding: '6px 10px',
+                          borderRadius: '8px',
+                          display: 'inline-flex',
+                          alignItems: 'center',
+                          gap: '4px',
+                          fontWeight: 700,
+                          fontSize: '0.78rem'
+                        }}
+                        title="Edit Dish"
+                      >
+                        <Edit size={14} /> Edit
+                      </button>
+
+                      <button
+                        onClick={() => onDeleteDish(dish.id)}
+                        className="adm-btn adm-btn-danger adm-btn-sm"
+                        style={{
+                          padding: '6px 10px',
+                          borderRadius: '8px',
+                          display: 'inline-flex',
+                          alignItems: 'center',
+                          gap: '4px',
+                          fontWeight: 700,
+                          fontSize: '0.78rem'
+                        }}
+                        title="Delete Dish"
+                      >
+                        <Trash2 size={14} />
+                      </button>
+
+                      <button
                         onClick={() => setSelectedDishForMore(dish)}
                         style={{
-                          width: '36px',
-                          height: '36px',
-                          background: 'none',
-                          border: 'none',
+                          width: '32px',
+                          height: '32px',
+                          background: 'var(--adm-surface-subtle)',
+                          border: '1px solid var(--adm-border)',
                           cursor: 'pointer',
-                          color: '#64748B',
+                          color: 'var(--adm-muted)',
                           display: 'flex',
                           alignItems: 'center',
                           justifyContent: 'center',
-                          borderRadius: '50%',
+                          borderRadius: '8px',
                           flexShrink: 0
                         }}
-                        aria-label="More Options Menu"
+                        title="More Badges & Options"
                       >
-                        <MoreVertical size={18} />
+                        <Sparkles size={14} color="#D97706" />
                       </button>
                     </div>
                   </div>
