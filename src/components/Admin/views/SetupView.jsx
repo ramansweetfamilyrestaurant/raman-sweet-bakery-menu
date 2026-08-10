@@ -504,10 +504,11 @@ export default function SetupView({
           <div>
             <label style={{ fontSize: '0.76rem', fontWeight: 800, color: 'var(--adm-muted)', display: 'block', marginBottom: '4px' }}>CURRENCY SYMBOL:</label>
             <select
-              value={settingsForm.currency_symbol || '₹'}
+              value={settingsForm.currency_symbol != null ? settingsForm.currency_symbol : '₹'}
               onChange={(e) => setSettingsForm({ ...settingsForm, currency_symbol: e.target.value })}
               style={{ width: '100%', padding: '10px 12px', borderRadius: 'var(--adm-radius-md)', border: '1px solid var(--adm-border)', fontSize: '0.9rem', fontWeight: 700 }}
             >
+              <option value="">❌ No Currency Symbol</option>
               <option value="₹">₹ — Indian Rupee (INR)</option>
               <option value="$">$ — US Dollar (USD)</option>
               <option value="€">€ — Euro (EUR)</option>
