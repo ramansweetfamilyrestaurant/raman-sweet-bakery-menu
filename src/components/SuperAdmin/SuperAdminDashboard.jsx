@@ -1975,27 +1975,28 @@ export default function SuperAdminDashboard({ token, username, onLogout, onRetur
               ✕
             </button>
 
-            <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '18px' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '14px', paddingRight: '40px' }}>
               <div style={{
-                width: '46px',
-                height: '46px',
-                borderRadius: '14px',
+                width: '38px',
+                height: '38px',
+                borderRadius: '12px',
                 background: 'linear-gradient(135deg, #0A2315 0%, #164E2A 100%)',
                 color: '#DFBA67',
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
-                border: '1.5px solid #D4AF37',
-                boxShadow: '0 4px 14px rgba(10,35,21,0.2)'
+                border: '1px solid #D4AF37',
+                boxShadow: '0 4px 14px rgba(10,35,21,0.2)',
+                flexShrink: 0
               }}>
-                <Megaphone size={24} />
+                <Megaphone size={20} />
               </div>
               <div>
-                <h3 style={{ margin: 0, fontSize: '1.25rem', fontWeight: 900, color: '#0F172A' }}>
-                  Platform Broadcast & Notice Dispatch
+                <h3 style={{ margin: 0, fontSize: '1.1rem', fontWeight: 900, color: '#0F172A', lineHeight: 1.2 }}>
+                  Global Broadcast Notice
                 </h3>
-                <span style={{ fontSize: '0.78rem', color: '#64748B', fontWeight: 600 }}>
-                  Real-time banner announcements sent to all restaurant admin panels
+                <span style={{ fontSize: '0.74rem', color: '#64748B', fontWeight: 600, display: 'block', marginTop: '1px' }}>
+                  Send live banners to all tenant panels
                 </span>
               </div>
             </div>
@@ -2223,28 +2224,29 @@ export default function SuperAdminDashboard({ token, username, onLogout, onRetur
             flexDirection: 'column',
             position: 'relative'
           }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '14px', paddingRight: '40px' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
                 <div style={{
-                  width: '44px',
-                  height: '44px',
-                  borderRadius: '14px',
+                  width: '38px',
+                  height: '38px',
+                  borderRadius: '12px',
                   background: 'linear-gradient(135deg, #0A2315 0%, #164E2A 100%)',
                   color: '#DFBA67',
                   display: 'flex',
                   alignItems: 'center',
                   justifyContent: 'center',
-                  border: '1.5px solid #D4AF37',
-                  boxShadow: '0 4px 14px rgba(10,35,21,0.2)'
+                  border: '1px solid #D4AF37',
+                  boxShadow: '0 4px 14px rgba(10,35,21,0.2)',
+                  flexShrink: 0
                 }}>
-                  <FileText size={22} />
+                  <FileText size={20} />
                 </div>
                 <div>
-                  <h3 style={{ fontSize: '1.25rem', fontWeight: 900, color: 'var(--primary-emerald)', margin: 0 }}>
-                    Platform Activity & Security Audit Stream
+                  <h3 style={{ fontSize: '1.1rem', fontWeight: 900, color: 'var(--primary-emerald)', margin: 0, lineHeight: 1.2 }}>
+                    Platform Audit Stream
                   </h3>
-                  <span style={{ fontSize: '0.78rem', color: 'var(--text-muted)', fontWeight: 600 }}>
-                    Real-time immutable logging of admin actions, tenant access, and security events
+                  <span style={{ fontSize: '0.74rem', color: 'var(--text-muted)', fontWeight: 600, display: 'block', marginTop: '1px' }}>
+                    Real-time security & system activity logs
                   </span>
                 </div>
               </div>
@@ -2257,9 +2259,9 @@ export default function SuperAdminDashboard({ token, username, onLogout, onRetur
                     background: '#F1F5F9',
                     color: '#0F172A',
                     border: '1px solid #CBD5E1',
-                    padding: '6px 12px',
+                    padding: '5px 10px',
                     borderRadius: 'var(--radius-pill)',
-                    fontSize: '0.76rem',
+                    fontSize: '0.74rem',
                     fontWeight: 800,
                     cursor: 'pointer',
                     display: 'flex',
@@ -2268,9 +2270,8 @@ export default function SuperAdminDashboard({ token, username, onLogout, onRetur
                   }}
                   title="Refresh Audit Logs Stream"
                 >
-                  <RefreshCw size={13} /> Refresh
+                  <RefreshCw size={12} /> Refresh
                 </button>
-                <button onClick={() => setShowAuditModal(false)} style={{ background: 'none', border: 'none', fontSize: '1.5rem', fontWeight: 700, cursor: 'pointer', color: '#64748B' }}>✕</button>
               </div>
             </div>
 
@@ -2945,27 +2946,28 @@ export default function SuperAdminDashboard({ token, username, onLogout, onRetur
               ✕
             </button>
 
-            <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '18px' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '14px', paddingRight: '40px' }}>
               <div style={{
-                width: '46px',
-                height: '46px',
-                borderRadius: '14px',
+                width: '38px',
+                height: '38px',
+                borderRadius: '12px',
                 background: 'linear-gradient(135deg, #0A2315 0%, #164E2A 100%)',
                 color: '#DFBA67',
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
-                border: '1.5px solid #D4AF37',
-                boxShadow: '0 4px 14px rgba(10,35,21,0.2)'
+                border: '1px solid #D4AF37',
+                boxShadow: '0 4px 14px rgba(10,35,21,0.2)',
+                flexShrink: 0
               }}>
-                <ShieldCheck size={24} />
+                <ShieldCheck size={20} />
               </div>
               <div>
-                <h3 style={{ margin: 0, fontSize: '1.25rem', fontWeight: 900, color: 'var(--text-dark)' }}>
-                  Super Admin Security & Portal Settings
+                <h3 style={{ margin: 0, fontSize: '1.1rem', fontWeight: 900, color: 'var(--text-dark)', lineHeight: 1.2 }}>
+                  Security & System Credentials
                 </h3>
-                <span style={{ fontSize: '0.78rem', color: 'var(--text-muted)', fontWeight: 600 }}>
-                  Master Account Credentials, Payment Gateways, Branding & DB Tools
+                <span style={{ fontSize: '0.74rem', color: 'var(--text-muted)', fontWeight: 600, display: 'block', marginTop: '1px' }}>
+                  Update admin login & API credentials
                 </span>
               </div>
             </div>
@@ -3532,26 +3534,27 @@ export default function SuperAdminDashboard({ token, username, onLogout, onRetur
               ✕
             </button>
 
-            <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '16px' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '14px', paddingRight: '40px' }}>
               <div style={{
-                width: '46px',
-                height: '46px',
-                borderRadius: '14px',
+                width: '38px',
+                height: '38px',
+                borderRadius: '12px',
                 background: '#DCFCE7',
                 color: '#15803D',
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
-                border: '1.5px solid #86EFAC'
+                border: '1.5px solid #86EFAC',
+                flexShrink: 0
               }}>
-                <MessageSquare size={24} />
+                <MessageSquare size={20} />
               </div>
               <div>
-                <h3 style={{ margin: 0, fontSize: '1.2rem', fontWeight: 900, color: '#0F172A' }}>
-                  Master WhatsApp Support Portal
+                <h3 style={{ margin: 0, fontSize: '1.1rem', fontWeight: 900, color: '#0F172A', lineHeight: 1.2 }}>
+                  WhatsApp Support Portal
                 </h3>
-                <span style={{ fontSize: '0.78rem', color: '#64748B', fontWeight: 600 }}>
-                  Central Help Desk Dispatch for Restaurant Owners
+                <span style={{ fontSize: '0.74rem', color: '#64748B', fontWeight: 600, display: 'block', marginTop: '1px' }}>
+                  Set support contact for tenant help desk
                 </span>
               </div>
             </div>
