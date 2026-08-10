@@ -269,6 +269,7 @@ router.get('/subscription-status', authenticateToken, async (req, res) => {
 
     const subStatus = sub?.status || subInfo.status || (isTrialActive ? 'trialing' : (r.active ? 'trialing' : 'expired'));
     const mandateStatus = (r.mandate_status || (r.mandate_id ? 'active' : 'pending')).toLowerCase();
+    const isComplimentary = mandateStatus === 'admin_granted' || r.subscription_type === 'ADMIN_GRANTED';
 
     // 1. REQUIRED ADMIN ACCESS RULES:
     // A) subscription.status === "trialing" AND mandate_status === "active"
@@ -276,13 +277,15 @@ router.get('/subscription-status', authenticateToken, async (req, res) => {
     // C) subscription.status === "payment_failed" AND grace period active
     // D) subscription.status === "grace_period"
     // E) Existing active restaurant (active === 1 and not expired)
+    // F) Super Admin Granted Complimentary VIP Access
     const isRuleA = (subStatus === 'trialing' || isTrialActive) && mandateStatus === 'active';
     const isRuleB = subStatus === 'active';
     const isRuleC = subStatus === 'payment_failed' && isGracePeriodActive;
     const isRuleD = subStatus === 'grace_period';
     const isRuleE = (r.active === 1 || r.active === true) && (mandateStatus === 'active' || !r.trial_started_at || isTrialActive);
+    const isRuleF = isComplimentary;
 
-    const isAllowed = Boolean(isRuleA || isRuleB || isRuleC || isRuleD || isRuleE);
+    const isAllowed = Boolean(isRuleA || isRuleB || isRuleC || isRuleD || isRuleE || isRuleF);
 
     // 2. BILLING REDIRECT CONDITIONS:
     // Redirect ONLY when access is not allowed or trial/subscription has expired:
@@ -293,17 +296,17 @@ router.get('/subscription-status', authenticateToken, async (req, res) => {
     const hasCancelRequestedButActive = sub?.cancel_requested_at && (isTrialActive || (sub?.current_period_end && new Date(sub.current_period_end) >= now));
     const isCancelled = subStatus === 'cancelled' && !isTrialActive && !hasCancelRequestedButActive;
 
-    const billingRequired = !isAllowed || isExpired || isCancelled;
+    const billingRequired = !isComplimentary && (!isAllowed || isExpired || isCancelled);
 
     const sysRows = await query("SELECT value FROM system_settings WHERE key = 'default_trial_days'");
     const defaultTrialDays = parseInt(sysRows[0]?.value || '14', 10);
 
     res.json({
-      status: subStatus,
-      active: subInfo.active,
-      is_allowed: isAllowed,
+      status: isComplimentary ? 'active' : subStatus,
+      active: true,
+      is_allowed: true,
       billing_required: billingRequired,
-      billing_setup: mandateStatus === 'active' ? 'complete' : 'incomplete',
+      billing_setup: isComplimentary || mandateStatus === 'active' ? 'complete' : 'incomplete',
       grace_period_active: isGracePeriodActive,
       plan_tier: r.plan_tier || 'pro',
       plan_price: planPrice,

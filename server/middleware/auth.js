@@ -14,6 +14,11 @@ export async function checkSubscriptionStatus(restaurantId) {
     if (!rows || rows.length === 0) return { status: 'not_found', active: false };
     const resto = rows[0];
 
+    // Super Admin granted 100% complimentary VIP lifetime access
+    if (resto.mandate_status === 'admin_granted' || resto.subscription_type === 'ADMIN_GRANTED') {
+      return { status: 'active', active: true, resto, sub: null, isComplimentary: true };
+    }
+
     const now = new Date();
     
     // Check trial end date (trial_ends_at or plan_expires_at)
