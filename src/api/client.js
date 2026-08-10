@@ -582,7 +582,15 @@ export async function toggleComboAvailability(id, available, token) {
   return handleResponse(res, 'Failed to toggle combo availability');
 }
 
-export async function optimizeDatabase(daysOld = 90, token) {
+export async function optimizeDatabase(param1, param2) {
+  let token = param1;
+  let daysOld = 90;
+  if (typeof param1 === 'number') {
+    daysOld = param1;
+    token = param2;
+  } else if (typeof param2 === 'number') {
+    daysOld = param2;
+  }
   const res = await fetch(`${API_BASE}/admin/optimize-db`, {
     method: 'POST',
     headers: {

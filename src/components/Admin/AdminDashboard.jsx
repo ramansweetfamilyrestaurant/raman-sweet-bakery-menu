@@ -1678,10 +1678,10 @@ export default function AdminDashboard({ token, username, onLogout, onReturnToMe
                 supportPhone={masterSupportPhone}
                 onOptimizeDatabase={async () => {
                   try {
-                    await optimizeDatabase(token);
+                    await optimizeDatabase(token, 90);
                     alert('⚡ Database optimized successfully!');
                   } catch (e) {
-                    alert('Optimization failed: ' + e.message);
+                    alert('Optimization failed: ' + (e.message || 'Server error'));
                   }
                 }}
                 onNavigate={(tab) => setActiveTab(tab)}
