@@ -1571,21 +1571,21 @@
    CATEGORY STRIP STYLING
    ========================================================================== */
 .km-category-strip-section {
-  background: var(--km-green-light);
-  border-top: 1px solid rgba(212, 175, 55, 0.15);
-  border-bottom: 1px solid rgba(212, 175, 55, 0.15);
-  padding: 20px 0;
+  background: var(--km-green);
+  border-top: 1px solid rgba(212, 175, 55, 0.3);
+  border-bottom: 1px solid rgba(212, 175, 55, 0.3);
+  padding: 22px 0;
 }
 
 .km-category-header {
   text-align: center;
-  margin-bottom: 12px;
+  margin-bottom: 14px;
 }
 
 .km-category-header span {
-  font-size: 0.72rem;
+  font-size: 0.74rem;
   font-weight: 900;
-  letter-spacing: 1px;
+  letter-spacing: 1.2px;
   color: var(--km-gold);
   text-transform: uppercase;
 }
@@ -1594,7 +1594,7 @@
   display: flex;
   flex-wrap: wrap;
   justify-content: center;
-  gap: 8px;
+  gap: 10px;
 }
 
 @media (max-width: 768px) {
@@ -1602,7 +1602,7 @@
     display: grid;
     grid-template-columns: repeat(2, 1fr);
     gap: 8px;
-    padding: 0 4px;
+    padding: 0 8px;
   }
 }
 
@@ -1610,21 +1610,29 @@
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  gap: 6px;
-  background: rgba(255, 255, 255, 0.06);
-  border: 1px solid rgba(212, 175, 55, 0.22);
-  border-radius: 8px;
-  padding: 8px 12px;
-  color: #FFF;
-  font-size: 0.78rem;
+  gap: 8px;
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(212, 175, 55, 0.35);
+  border-radius: 9999px;
+  padding: 8px 16px;
+  color: #FFFFFF;
+  font-size: 0.82rem;
   font-weight: 800;
   white-space: nowrap;
   transition: all 0.2s ease;
   text-align: center;
 }
 
+@media (max-width: 768px) {
+  .km-category-chip {
+    padding: 8px 10px;
+    font-size: 0.76rem;
+    border-radius: 10px;
+  }
+}
+
 .km-category-chip:hover {
-  background: rgba(212, 175, 55, 0.15);
+  background: rgba(212, 175, 55, 0.2);
   border-color: var(--km-gold);
   transform: translateY(-2px);
 }
