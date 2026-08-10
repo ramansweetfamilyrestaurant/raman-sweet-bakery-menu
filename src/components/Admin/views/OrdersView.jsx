@@ -20,26 +20,21 @@ export default function OrdersView({
   printingType,
   currencySymbol = '₹'
 }) {
-  const safeAllOrders = Array.isArray(orders) ? orders : [];
-  const validOrders = safeAllOrders.filter(o => o.status !== 'rejected' && o.status !== 'cancelled');
-  const rejectedOrders = safeAllOrders.filter(o => o.status === 'rejected' || o.status === 'cancelled');
-
+  const validOrders = (Array.isArray(orders) ? orders : []).filter(o => o.status !== 'rejected' && o.status !== 'cancelled');
   const safeServiceRequests = Array.isArray(serviceRequests) ? serviceRequests : [];
 
   const pendingCount = validOrders.filter(o => o.status === 'pending').length;
   const kitchenCount = validOrders.filter(o => o.status === 'kitchen' || o.status === 'accepted').length;
   const servedCount = validOrders.filter(o => o.status === 'served').length;
   const completedCount = validOrders.filter(o => o.status === 'completed').length;
-  const rejectedCount = rejectedOrders.length;
   const todayTotalSales = validOrders.reduce((sum, o) => sum + (Number(o.total_amount) || 0), 0);
 
-  const filteredOrders = safeAllOrders.filter(o => {
+  const filteredOrders = validOrders.filter(o => {
     if (kotFilter === 'pending') return o.status === 'pending';
     if (kotFilter === 'kitchen') return o.status === 'kitchen' || o.status === 'accepted';
     if (kotFilter === 'served') return o.status === 'served';
     if (kotFilter === 'completed') return o.status === 'completed';
-    if (kotFilter === 'cancelled') return o.status === 'rejected' || o.status === 'cancelled';
-    return o.status !== 'rejected' && o.status !== 'cancelled';
+    return true;
   });
 
   const totalTables = Number(restaurantInfo?.total_tables) || 10;
@@ -113,8 +108,7 @@ export default function OrdersView({
               { id: 'pending', label: `🟡 Pending (${pendingCount})` },
               { id: 'kitchen', label: `👨‍🍳 Kitchen (${kitchenCount})` },
               { id: 'served', label: `🍽 Served (${servedCount})` },
-              { id: 'completed', label: `✅ Complete (${completedCount})` },
-              { id: 'cancelled', label: `🔴 Cancelled (${rejectedCount})` }
+              { id: 'completed', label: `✅ Complete (${completedCount})` }
             ].map(filter => (
               <button
                 key={filter.id}
