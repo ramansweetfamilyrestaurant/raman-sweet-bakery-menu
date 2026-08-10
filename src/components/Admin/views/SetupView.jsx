@@ -298,10 +298,10 @@ export default function SetupView({
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
         <div>
           <h2 style={{ fontSize: '1.25rem', fontWeight: 900, color: 'var(--adm-primary)', margin: '0 0 2px 0' }}>
-            Setup Control Center
+            Setup
           </h2>
           <span style={{ fontSize: '0.8rem', color: 'var(--adm-muted)', fontWeight: 600 }}>
-            Configure profile, device alarms, GST tax, menu filters, GPS geofence, and security.
+            Restaurant configuration & settings
           </span>
         </div>
 
@@ -312,168 +312,182 @@ export default function SetupView({
         )}
       </div>
 
-      {/* 9 Control Cards Grid */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '14px' }}>
-        {/* Card 1: Profile */}
-        <div
-          onClick={() => setOpenDrawer('profile')}
-          className="adm-card"
-          style={{ cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '16px' }}
-        >
-          <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-            <div style={{ width: '42px', height: '42px', borderRadius: '12px', background: 'var(--adm-primary)', color: 'var(--adm-accent)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-              <Store size={20} />
+      {/* Grouped Section Control Center */}
+      <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+        {/* OPERATIONS GROUP */}
+        <div>
+          <div style={{ fontSize: '0.68rem', fontWeight: 800, color: 'var(--adm-muted)', letterSpacing: '0.06em', textTransform: 'uppercase', marginBottom: '6px', paddingLeft: '4px' }}>
+            OPERATIONS
+          </div>
+          <div className="adm-card" style={{ padding: 0, overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
+            <div
+              onClick={() => setOpenDrawer('devices')}
+              style={{ cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '14px 16px', minHeight: '68px', borderBottom: '1px solid var(--adm-border)' }}
+            >
+              <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                <div style={{ width: '38px', height: '38px', borderRadius: '10px', background: 'var(--adm-info-bg)', color: 'var(--adm-info)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                  <Bell size={18} />
+                </div>
+                <div>
+                  <strong style={{ fontSize: '0.9rem', color: 'var(--adm-text)', display: 'block' }}>Orders & Devices</strong>
+                  <span style={{ fontSize: '0.74rem', color: 'var(--adm-muted)' }}>Siren audio alert, push alerts, thermal printer</span>
+                </div>
+              </div>
+              <ChevronRight size={16} color="var(--adm-muted)" />
             </div>
-            <div>
-              <strong style={{ fontSize: '0.95rem', color: 'var(--adm-text)', display: 'block' }}>🏪 Restaurant Profile</strong>
-              <span style={{ fontSize: '0.75rem', color: 'var(--adm-muted)' }}>Name, logo, phone, address, FSSAI, Maps</span>
+
+            <div
+              onClick={() => setOpenDrawer('menu')}
+              style={{ cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '14px 16px', minHeight: '68px', borderBottom: '1px solid var(--adm-border)' }}
+            >
+              <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                <div style={{ width: '38px', height: '38px', borderRadius: '10px', background: 'var(--adm-warning-bg)', color: 'var(--adm-warning)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                  <Utensils size={18} />
+                </div>
+                <div>
+                  <strong style={{ fontSize: '0.9rem', color: 'var(--adm-text)', display: 'block' }}>Menu & GST</strong>
+                  <span style={{ fontSize: '0.74rem', color: 'var(--adm-muted)' }}>5% GST tax billing, currency symbol, badge visibility</span>
+                </div>
+              </div>
+              <ChevronRight size={16} color="var(--adm-muted)" />
+            </div>
+
+            <div
+              onClick={() => setOpenDrawer('location')}
+              style={{ cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '14px 16px', minHeight: '68px' }}
+            >
+              <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                <div style={{ width: '38px', height: '38px', borderRadius: '10px', background: 'var(--adm-success-bg)', color: 'var(--adm-success)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                  <MapPin size={18} />
+                </div>
+                <div>
+                  <strong style={{ fontSize: '0.9rem', color: 'var(--adm-text)', display: 'block' }}>Location & Delivery</strong>
+                  <span style={{ fontSize: '0.74rem', color: 'var(--adm-muted)' }}>GPS coordinates, geofence radius</span>
+                </div>
+              </div>
+              <ChevronRight size={16} color="var(--adm-muted)" />
             </div>
           </div>
-          <ChevronRight size={18} color="var(--adm-muted)" />
         </div>
 
-        {/* Card 2: Devices & Alarm */}
-        <div
-          onClick={() => setOpenDrawer('devices')}
-          className="adm-card"
-          style={{ cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '16px' }}
-        >
-          <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-            <div style={{ width: '42px', height: '42px', borderRadius: '12px', background: 'var(--adm-info-bg)', color: 'var(--adm-info)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-              <Bell size={20} />
+        {/* BUSINESS GROUP */}
+        <div>
+          <div style={{ fontSize: '0.68rem', fontWeight: 800, color: 'var(--adm-muted)', letterSpacing: '0.06em', textTransform: 'uppercase', marginBottom: '6px', paddingLeft: '4px' }}>
+            BUSINESS
+          </div>
+          <div className="adm-card" style={{ padding: 0, overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
+            <div
+              onClick={() => setOpenDrawer('profile')}
+              style={{ cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '14px 16px', minHeight: '68px', borderBottom: '1px solid var(--adm-border)' }}
+            >
+              <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                <div style={{ width: '38px', height: '38px', borderRadius: '10px', background: 'var(--adm-primary)', color: 'var(--adm-accent)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                  <Store size={18} />
+                </div>
+                <div>
+                  <strong style={{ fontSize: '0.9rem', color: 'var(--adm-text)', display: 'block' }}>Restaurant Profile</strong>
+                  <span style={{ fontSize: '0.74rem', color: 'var(--adm-muted)' }}>Name, logo, phone, address, FSSAI, Maps</span>
+                </div>
+              </div>
+              <ChevronRight size={16} color="var(--adm-muted)" />
             </div>
-            <div>
-              <strong style={{ fontSize: '0.95rem', color: 'var(--adm-text)', display: 'block' }}>🔔 Orders & Devices</strong>
-              <span style={{ fontSize: '0.75rem', color: 'var(--adm-muted)' }}>Siren audio alert, push alerts, printer</span>
+
+            <div
+              onClick={() => setOpenDrawer('subscription')}
+              style={{ cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '14px 16px', minHeight: '68px' }}
+            >
+              <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                <div style={{ width: '38px', height: '38px', borderRadius: '10px', background: 'var(--adm-purple-bg)', color: 'var(--adm-purple)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                  <CreditCard size={18} />
+                </div>
+                <div>
+                  <strong style={{ fontSize: '0.9rem', color: 'var(--adm-text)', display: 'block' }}>Subscription & Billing</strong>
+                  <span style={{ fontSize: '0.74rem', color: 'var(--adm-muted)' }}>Current plan, auto-renew status</span>
+                </div>
+              </div>
+              <ChevronRight size={16} color="var(--adm-muted)" />
             </div>
           </div>
-          <ChevronRight size={18} color="var(--adm-muted)" />
         </div>
 
-        {/* Card 3: Menu Settings */}
-        <div
-          onClick={() => setOpenDrawer('menu')}
-          className="adm-card"
-          style={{ cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '16px' }}
-        >
-          <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-            <div style={{ width: '42px', height: '42px', borderRadius: '12px', background: 'var(--adm-warning-bg)', color: 'var(--adm-warning)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-              <Utensils size={20} />
-            </div>
-            <div>
-              <strong style={{ fontSize: '0.95rem', color: 'var(--adm-text)', display: 'block' }}>🍽 Menu & GST Settings</strong>
-              <span style={{ fontSize: '0.75rem', color: 'var(--adm-muted)' }}>GST tax rate, currency, dish badges</span>
+        {/* SECURITY GROUP */}
+        <div>
+          <div style={{ fontSize: '0.68rem', fontWeight: 800, color: 'var(--adm-muted)', letterSpacing: '0.06em', textTransform: 'uppercase', marginBottom: '6px', paddingLeft: '4px' }}>
+            SECURITY
+          </div>
+          <div className="adm-card" style={{ padding: 0, overflow: 'hidden' }}>
+            <div
+              onClick={() => setOpenDrawer('security')}
+              style={{ cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '14px 16px', minHeight: '68px' }}
+            >
+              <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                <div style={{ width: '38px', height: '38px', borderRadius: '10px', background: 'var(--adm-danger-bg)', color: 'var(--adm-danger)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                  <Lock size={18} />
+                </div>
+                <div>
+                  <strong style={{ fontSize: '0.9rem', color: 'var(--adm-text)', display: 'block' }}>Admin Security</strong>
+                  <span style={{ fontSize: '0.74rem', color: 'var(--adm-muted)' }}>Owner username and master login password</span>
+                </div>
+              </div>
+              <ChevronRight size={16} color="var(--adm-muted)" />
             </div>
           </div>
-          <ChevronRight size={18} color="var(--adm-muted)" />
         </div>
 
-        {/* Card 4: Location & Delivery */}
-        <div
-          onClick={() => setOpenDrawer('location')}
-          className="adm-card"
-          style={{ cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '16px' }}
-        >
-          <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-            <div style={{ width: '42px', height: '42px', borderRadius: '12px', background: 'var(--adm-success-bg)', color: 'var(--adm-success)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-              <MapPin size={20} />
-            </div>
-            <div>
-              <strong style={{ fontSize: '0.95rem', color: 'var(--adm-text)', display: 'block' }}>📍 Location & Geofence</strong>
-              <span style={{ fontSize: '0.75rem', color: 'var(--adm-muted)' }}>GPS coordinates, ordering radius</span>
-            </div>
+        {/* ADVANCED GROUP */}
+        <div>
+          <div style={{ fontSize: '0.68rem', fontWeight: 800, color: 'var(--adm-muted)', letterSpacing: '0.06em', textTransform: 'uppercase', marginBottom: '6px', paddingLeft: '4px' }}>
+            ADVANCED
           </div>
-          <ChevronRight size={18} color="var(--adm-muted)" />
-        </div>
+          <div className="adm-card" style={{ padding: 0, overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
+            <div
+              onClick={() => onNavigate && onNavigate('qr-generator')}
+              style={{ cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '14px 16px', minHeight: '68px', borderBottom: '1px solid var(--adm-border)' }}
+            >
+              <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                <div style={{ width: '38px', height: '38px', borderRadius: '10px', background: 'var(--adm-warning-bg)', color: 'var(--adm-warning)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                  <Printer size={18} />
+                </div>
+                <div>
+                  <strong style={{ fontSize: '0.9rem', color: 'var(--adm-text)', display: 'block' }}>QR Standees & Printer</strong>
+                  <span style={{ fontSize: '0.74rem', color: 'var(--adm-muted)' }}>Print table QR standees & stickers</span>
+                </div>
+              </div>
+              <ChevronRight size={16} color="var(--adm-muted)" />
+            </div>
 
-        {/* Card 5: Subscription & Billing */}
-        <div
-          onClick={() => setOpenDrawer('subscription')}
-          className="adm-card"
-          style={{ cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '16px' }}
-        >
-          <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-            <div style={{ width: '42px', height: '42px', borderRadius: '12px', background: 'var(--adm-purple-bg)', color: 'var(--adm-purple)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-              <CreditCard size={20} />
+            <div
+              onClick={() => onNavigate && onNavigate('review')}
+              style={{ cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '14px 16px', minHeight: '68px', borderBottom: '1px solid var(--adm-border)' }}
+            >
+              <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                <div style={{ width: '38px', height: '38px', borderRadius: '10px', background: 'var(--adm-purple-bg)', color: 'var(--adm-purple)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                  <ShieldCheck size={18} />
+                </div>
+                <div>
+                  <strong style={{ fontSize: '0.9rem', color: 'var(--adm-text)', display: 'block' }}>Reviews & Feedback</strong>
+                  <span style={{ fontSize: '0.74rem', color: 'var(--adm-muted)' }}>Google Review page link & customer feedback</span>
+                </div>
+              </div>
+              <ChevronRight size={16} color="var(--adm-muted)" />
             </div>
-            <div>
-              <strong style={{ fontSize: '0.95rem', color: 'var(--adm-text)', display: 'block' }}>💳 Subscription & Billing</strong>
-              <span style={{ fontSize: '0.75rem', color: 'var(--adm-muted)' }}>Current plan, expiry, auto-debit status</span>
-            </div>
-          </div>
-          <ChevronRight size={18} color="var(--adm-muted)" />
-        </div>
 
-        {/* Card 6: Admin Security */}
-        <div
-          onClick={() => setOpenDrawer('security')}
-          className="adm-card"
-          style={{ cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '16px' }}
-        >
-          <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-            <div style={{ width: '42px', height: '42px', borderRadius: '12px', background: 'var(--adm-danger-bg)', color: 'var(--adm-danger)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-              <Lock size={20} />
-            </div>
-            <div>
-              <strong style={{ fontSize: '0.95rem', color: 'var(--adm-text)', display: 'block' }}>🔐 Admin Security</strong>
-              <span style={{ fontSize: '0.75rem', color: 'var(--adm-muted)' }}>Owner username and password login</span>
-            </div>
-          </div>
-          <ChevronRight size={18} color="var(--adm-muted)" />
-        </div>
-
-        {/* Card 7: Table QR Standees */}
-        <div
-          onClick={() => onNavigate && onNavigate('qr-generator')}
-          className="adm-card"
-          style={{ cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '16px' }}
-        >
-          <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-            <div style={{ width: '42px', height: '42px', borderRadius: '12px', background: 'var(--adm-warning-bg)', color: 'var(--adm-warning)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-              <Printer size={20} />
-            </div>
-            <div>
-              <strong style={{ fontSize: '0.95rem', color: 'var(--adm-text)', display: 'block' }}>📱 QR Standees & Printer</strong>
-              <span style={{ fontSize: '0.75rem', color: 'var(--adm-muted)' }}>Print table QR stickers, uniform standees</span>
+            <div
+              onClick={() => onOptimizeDatabase && onOptimizeDatabase()}
+              style={{ cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '14px 16px', minHeight: '68px' }}
+            >
+              <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                <div style={{ width: '38px', height: '38px', borderRadius: '10px', background: 'var(--adm-success-bg)', color: 'var(--adm-success)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                  <Upload size={18} />
+                </div>
+                <div>
+                  <strong style={{ fontSize: '0.9rem', color: 'var(--adm-text)', display: 'block' }}>Database Tools</strong>
+                  <span style={{ fontSize: '0.74rem', color: 'var(--adm-muted)' }}>Purge temporary logs & optimize database engine</span>
+                </div>
+              </div>
+              <ChevronRight size={16} color="var(--adm-muted)" />
             </div>
           </div>
-          <ChevronRight size={18} color="var(--adm-muted)" />
-        </div>
-
-        {/* Card 8: Customer Reviews */}
-        <div
-          onClick={() => onNavigate && onNavigate('review')}
-          className="adm-card"
-          style={{ cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '16px' }}
-        >
-          <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-            <div style={{ width: '42px', height: '42px', borderRadius: '12px', background: 'var(--adm-purple-bg)', color: 'var(--adm-purple)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-              <ShieldCheck size={20} />
-            </div>
-            <div>
-              <strong style={{ fontSize: '0.95rem', color: 'var(--adm-text)', display: 'block' }}>⭐ Reviews & Feedback</strong>
-              <span style={{ fontSize: '0.75rem', color: 'var(--adm-muted)' }}>Google Review link, customer rating</span>
-            </div>
-          </div>
-          <ChevronRight size={18} color="var(--adm-muted)" />
-        </div>
-
-        {/* Card 9: Database Engine Optimization */}
-        <div
-          onClick={() => onOptimizeDatabase && onOptimizeDatabase()}
-          className="adm-card"
-          style={{ cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '16px' }}
-        >
-          <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-            <div style={{ width: '42px', height: '42px', borderRadius: '12px', background: 'var(--adm-success-bg)', color: 'var(--adm-success)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-              <Upload size={20} />
-            </div>
-            <div>
-              <strong style={{ fontSize: '0.95rem', color: 'var(--adm-text)', display: 'block' }}>⚡ Optimize Database Engine</strong>
-              <span style={{ fontSize: '0.75rem', color: 'var(--adm-muted)' }}>Purge temporary logs, speed up queries</span>
-            </div>
-          </div>
-          <ChevronRight size={18} color="var(--adm-muted)" />
         </div>
       </div>
 

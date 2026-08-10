@@ -13,16 +13,16 @@ export default function AnalyticsView({ analyticsData, onDownloadCSV, currencySy
       {/* Header */}
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '10px' }}>
         <div>
-          <h2 style={{ fontSize: '1.15rem', fontWeight: 900, color: 'var(--adm-text)', margin: '0 0 2px 0' }}>
-            📊 Business Performance & Sales Analytics
+          <h2 style={{ fontSize: '1.25rem', fontWeight: 900, color: 'var(--adm-primary)', margin: '0 0 2px 0' }}>
+            Analytics
           </h2>
-          <span style={{ fontSize: '0.76rem', color: 'var(--adm-muted)', fontWeight: 600 }}>
-            Real-time revenue metrics, trend reports, and best-selling dishes.
+          <span style={{ fontSize: '0.8rem', color: 'var(--adm-muted)', fontWeight: 600 }}>
+            Sales & performance
           </span>
         </div>
 
-        <button onClick={onDownloadCSV} className="adm-btn adm-btn-accent adm-btn-sm">
-          <Download size={15} /> Download CSV Report
+        <button onClick={onDownloadCSV} className="adm-btn adm-btn-secondary adm-btn-sm" style={{ fontWeight: 800 }}>
+          <Download size={14} /> Download CSV
         </button>
       </div>
 

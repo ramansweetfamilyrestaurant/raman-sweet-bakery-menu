@@ -63,10 +63,10 @@ export default function MenuView({
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '12px' }}>
         <div>
           <h2 style={{ fontSize: '1.25rem', fontWeight: 900, color: 'var(--adm-primary)', margin: '0 0 2px 0' }}>
-            Menu Catalog
+            Menu
           </h2>
           <span style={{ fontSize: '0.8rem', color: 'var(--adm-muted)', fontWeight: 600 }}>
-            {safeDishes.length} dishes • {safeCategories.length} categories • {safeCombos.length} combos
+            Manage dishes & categories ({safeDishes.length} dishes)
           </span>
         </div>
 

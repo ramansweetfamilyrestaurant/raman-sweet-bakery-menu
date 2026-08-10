@@ -50,19 +50,19 @@ export default function OrdersView({
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '10px' }}>
         <div>
           <h2 style={{ fontSize: '1.25rem', fontWeight: 900, color: 'var(--adm-primary)', margin: '0 0 2px 0' }}>
-            Real-Time Orders & Kitchen KOT
+            Orders
           </h2>
           <span style={{ fontSize: '0.8rem', color: 'var(--adm-muted)', fontWeight: 600 }}>
-            Live table orders, dining hall floor map, and waiter service calls.
+            Live orders & kitchen activity
           </span>
         </div>
 
         <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
           <span style={{ background: 'var(--adm-surface-subtle)', padding: '6px 12px', borderRadius: 'var(--adm-radius-md)', border: '1px solid var(--adm-border)', fontSize: '0.78rem', fontWeight: 800 }}>
-            💰 Today Sales: <strong style={{ color: 'var(--adm-success)' }}>{currencySymbol}{todayTotalSales.toLocaleString()}</strong>
+            <strong style={{ color: 'var(--adm-success)' }}>{currencySymbol}{todayTotalSales.toLocaleString()}</strong> Today
           </span>
           <span style={{ background: 'var(--adm-warning-bg)', color: 'var(--adm-warning)', padding: '6px 12px', borderRadius: 'var(--adm-radius-md)', border: '1px solid var(--adm-warning-border)', fontSize: '0.78rem', fontWeight: 800 }}>
-            🟡 Pending: {pendingCount}
+            {pendingCount} Pending
           </span>
         </div>
       </div>
