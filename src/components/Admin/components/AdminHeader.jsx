@@ -27,17 +27,6 @@ export default function AdminHeader({
     <header className="adm-header">
       {/* LEFT: Restaurant Brand & Identity */}
       <div className="adm-header-left">
-        {onReturnToMenu && (
-          <button
-            onClick={onReturnToMenu}
-            className="adm-btn adm-btn-secondary adm-btn-sm"
-            style={{ padding: '6px 10px', color: '#FFF', background: 'rgba(255,255,255,0.1)', border: 'none' }}
-            title="Return to Menu"
-          >
-            <ArrowLeft size={16} />
-          </button>
-        )}
-
         <div className="adm-header-title-box">
           <h1 className="adm-header-title" title={restoName}>
             {truncatedName}
