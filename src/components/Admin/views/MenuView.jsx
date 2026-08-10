@@ -415,26 +415,6 @@ export default function MenuView({
                       >
                         <Trash2 size={14} />
                       </button>
-
-                      <button
-                        onClick={() => setSelectedDishForMore(dish)}
-                        style={{
-                          width: '32px',
-                          height: '32px',
-                          background: 'var(--adm-surface-subtle)',
-                          border: '1px solid var(--adm-border)',
-                          cursor: 'pointer',
-                          color: 'var(--adm-muted)',
-                          display: 'flex',
-                          alignItems: 'center',
-                          justifyContent: 'center',
-                          borderRadius: '8px',
-                          flexShrink: 0
-                        }}
-                        title="More Badges & Options"
-                      >
-                        <Sparkles size={14} color="#D97706" />
-                      </button>
                     </div>
                   </div>
                 );
