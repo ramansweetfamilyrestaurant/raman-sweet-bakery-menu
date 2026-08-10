@@ -13,6 +13,8 @@ export default function RegisterPage({ onRegisterSuccess }) {
 
   const [trialDays, setTrialDays] = useState(null);
   const [plans, setPlans] = useState([]);
+  const [logoUrl, setLogoUrl] = useState('');
+  const [logoErr, setLogoErr] = useState(false);
 
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
@@ -21,6 +23,10 @@ export default function RegisterPage({ onRegisterSuccess }) {
       setFormData(prev => ({ ...prev, plan_tier: p.toLowerCase() }));
     }
   }, []);
+
+  useEffect(() => {
+    setLogoErr(false);
+  }, [logoUrl]);
 
   useEffect(() => {
     if (!window.Cashfree) {
@@ -37,9 +43,14 @@ export default function RegisterPage({ onRegisterSuccess }) {
     fetch('/api/settings')
       .then(res => res.json())
       .then(data => {
-        if (data && data.default_trial_days) {
-          const days = parseInt(data.default_trial_days, 10);
-          if (!isNaN(days) && days > 0) setTrialDays(days);
+        if (data) {
+          if (data.default_trial_days) {
+            const days = parseInt(data.default_trial_days, 10);
+            if (!isNaN(days) && days > 0) setTrialDays(days);
+          }
+          if (data.platform_logo_url) {
+            setLogoUrl(data.platform_logo_url);
+          }
         }
       })
       .catch(() => {});
@@ -265,7 +276,17 @@ export default function RegisterPage({ onRegisterSuccess }) {
           onClick={() => { window.location.href = '/'; }}
           style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer' }}
         >
-          <span style={{ fontSize: '1.4rem' }}>🍱</span>
+          {logoUrl && !logoErr ? (
+            <img
+              src={logoUrl}
+              alt="TouchQR Logo"
+              referrerPolicy="no-referrer"
+              onError={() => setLogoErr(true)}
+              style={{ width: '32px', height: '32px', borderRadius: '8px', objectFit: 'contain', background: '#FFF', padding: '2px', flexShrink: 0 }}
+            />
+          ) : (
+            <span style={{ fontSize: '1.4rem' }}>🍱</span>
+          )}
           <span style={{ fontSize: '1.2rem', fontWeight: 900, color: '#FFF', letterSpacing: '-0.3px' }}>
             TouchQR <span style={{ color: '#D4AF37', fontSize: '0.75rem', fontWeight: 800 }}>SaaS</span>
           </span>
