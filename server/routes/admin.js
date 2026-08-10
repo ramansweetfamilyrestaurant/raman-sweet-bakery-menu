@@ -1237,8 +1237,18 @@ router.get('/analytics', authenticateToken, requireActiveSubscription, async (re
       [targetId]
     );
 
+    const getFormattedLocalDate = (dateObj) => {
+      if (!dateObj) return '';
+      const d = new Date(dateObj);
+      if (isNaN(d.getTime())) return '';
+      const year = d.getFullYear();
+      const month = String(d.getMonth() + 1).padStart(2, '0');
+      const day = String(d.getDate()).padStart(2, '0');
+      return `${year}-${month}-${day}`;
+    };
+
     const now = new Date();
-    const todayStr = now.toISOString().split('T')[0];
+    const todayStr = getFormattedLocalDate(now);
 
     const sevenDaysAgo = new Date();
     sevenDaysAgo.setDate(now.getDate() - 7);
@@ -1258,7 +1268,7 @@ router.get('/analytics', authenticateToken, requireActiveSubscription, async (re
     for (let i = 6; i >= 0; i--) {
       const d = new Date();
       d.setDate(now.getDate() - i);
-      const ds = d.toISOString().split('T')[0];
+      const ds = getFormattedLocalDate(d);
       dailySalesMap[ds] = 0;
     }
 
@@ -1267,7 +1277,7 @@ router.get('/analytics', authenticateToken, requireActiveSubscription, async (re
       totalSales += amt;
 
       const createdAtDate = o.created_at ? new Date(o.created_at) : new Date();
-      const dateStr = !isNaN(createdAtDate.getTime()) ? createdAtDate.toISOString().split('T')[0] : '';
+      const dateStr = getFormattedLocalDate(createdAtDate);
 
       if (dateStr === todayStr) {
         todaySales += amt;
@@ -1336,10 +1346,14 @@ router.get('/analytics', authenticateToken, requireActiveSubscription, async (re
 
     res.json({
       today_sales: todaySales,
+      today_revenue: todaySales,
       today_orders: todayOrders,
       weekly_sales: weeklySales,
+      days_7_revenue: weeklySales,
       monthly_sales: monthlySales,
+      days_30_revenue: monthlySales,
       total_sales: totalSales,
+      total_revenue: totalSales,
       total_orders: totalOrdersCount,
       top_dishes: topDishes,
       daily_chart: dailyChartData,

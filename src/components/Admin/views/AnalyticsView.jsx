@@ -2,10 +2,10 @@ import React from 'react';
 import { BarChart2, Download, TrendingUp, DollarSign, Award } from 'lucide-react';
 
 export default function AnalyticsView({ analyticsData, onDownloadCSV, currencySymbol = '₹' }) {
-  const todayRevenue = analyticsData?.today_revenue || 0;
-  const days7Revenue = analyticsData?.days_7_revenue || 0;
-  const days30Revenue = analyticsData?.days_30_revenue || 0;
-  const allTimeRevenue = analyticsData?.total_revenue || 0;
+  const todayRevenue = analyticsData?.today_sales ?? analyticsData?.today_revenue ?? 0;
+  const days7Revenue = analyticsData?.weekly_sales ?? analyticsData?.days_7_revenue ?? 0;
+  const days30Revenue = analyticsData?.monthly_sales ?? analyticsData?.days_30_revenue ?? 0;
+  const allTimeRevenue = analyticsData?.total_sales ?? analyticsData?.total_revenue ?? 0;
   const topDishes = analyticsData?.top_dishes || [];
 
   return (
