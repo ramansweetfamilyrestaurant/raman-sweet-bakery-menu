@@ -963,12 +963,13 @@
     padding: 0 16px;
   }
 
-  /* Compact Top Announcement Banner on Mobile (Max 2 lines, ~48px height) */
+  /* Compact Top Announcement Banner on Mobile (Clean 1-line text) */
   .km-announcement-bar {
     padding: 6px 12px;
     font-size: 0.76rem;
     line-height: 1.35;
-    max-height: 52px;
+    max-height: 40px;
+    text-align: center;
   }
 
   .km-announcement-content {
@@ -977,30 +978,22 @@
   }
 
   .km-announcement-link {
-    font-size: 0.76rem;
+    display: none;
   }
 
-  /* Compact Mobile Header (58px height) */
+  /* Clean Mobile Header (56px height) */
   .km-navbar-container {
-    height: 58px;
+    height: 56px;
   }
 
   .km-nav-links,
-  .km-nav-actions .km-btn-secondary {
+  .km-nav-actions .km-btn-secondary,
+  .km-nav-actions .km-nav-btn-trial {
     display: none;
   }
 
   .km-nav-actions {
-    gap: 8px;
-  }
-
-  .km-nav-btn-trial {
-    display: inline-flex;
-    padding: 6px 12px;
-    font-size: 0.78rem;
-    min-height: 38px;
-    border-radius: 10px;
-    white-space: nowrap;
+    gap: 0;
   }
   
   .km-mobile-toggle {
