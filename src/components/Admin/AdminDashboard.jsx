@@ -1744,6 +1744,7 @@ export default function AdminDashboard({ token, username, onLogout, onReturnToMe
                 onOpenBillModal={setBillOrderModal}
                 serviceRequests={serviceRequests}
                 onResolveServiceRequest={handleResolveServiceRequest}
+                restaurantInfo={restaurantInfo}
               />
             )}
 
@@ -1788,11 +1789,17 @@ export default function AdminDashboard({ token, username, onLogout, onReturnToMe
             {['settings', 'qr-generator', 'review'].includes(activeTab) && (
               <SetupView
                 restaurantInfo={restaurantInfo}
-                onSaveProfile={handleSaveSettings}
-                onSaveMenuSettings={handleSaveSettings}
-                onSaveDevices={handleSaveSettings}
-                onSaveLocation={handleSaveSettings}
-                onSaveSecurity={handleChangeCredentials}
+                settingsForm={settingsForm}
+                setSettingsForm={setSettingsForm}
+                handleSaveSettings={handleSaveSettings}
+                credForm={credForm}
+                setCredForm={setCredForm}
+                handleChangeCredentials={handleChangeCredentials}
+                credMsg={credMsg}
+                token={token}
+                uploadImage={uploadImage}
+                setShowPrinterModal={setShowPrinterModal}
+                setShowHelpModal={setShowHelpModal}
                 onOpenBillingModal={() => setShowPaymentModal(true)}
                 supportPhone={masterSupportPhone}
               />

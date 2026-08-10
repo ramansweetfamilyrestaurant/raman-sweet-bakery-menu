@@ -1,64 +1,129 @@
-import React, { useState } from 'react';
-import { Store, Bell, Utensils, MapPin, CreditCard, Lock, ChevronRight, ShieldCheck, CheckCircle2, ArrowRight } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { Store, Bell, Utensils, MapPin, CreditCard, Lock, ChevronRight, Upload, Volume2, ShieldCheck, Printer } from 'lucide-react';
 import AdminDrawer from '../components/AdminDrawer';
 
 export default function SetupView({
-  restaurantInfo,
-  onSaveProfile,
-  onSaveMenuSettings,
-  onSaveDevices,
-  onSaveLocation,
-  onSaveSecurity,
+  settingsForm = {},
+  setSettingsForm,
+  handleSaveSettings,
+  credForm = {},
+  setCredForm,
+  handleChangeCredentials,
+  credMsg = {},
+  token,
+  uploadImage,
+  setShowPrinterModal,
+  setShowHelpModal,
   onOpenBillingModal,
-  supportPhone
+  supportPhone,
+  restaurantInfo
 }) {
   const [openDrawer, setOpenDrawer] = useState(null); // 'profile', 'devices', 'menu', 'location', 'subscription', 'security'
+  const [uploadingLogo, setUploadingLogo] = useState(false);
+  const [gpsLoading, setGpsLoading] = useState(false);
+  const [saveSuccessMsg, setSaveSuccessMsg] = useState('');
 
-  // Forms state initialized from restaurantInfo
-  const [profileForm, setProfileForm] = useState({
-    name: restaurantInfo?.name || '',
-    phone: restaurantInfo?.phone || '',
-    fssai: restaurantInfo?.fssai || '',
-    category: restaurantInfo?.category || '',
-    tagline: restaurantInfo?.tagline || '',
-    opening_hours: restaurantInfo?.opening_hours || '',
-    address: restaurantInfo?.address || '',
-    google_maps_url: restaurantInfo?.google_maps_url || '',
-    google_review_url: restaurantInfo?.google_review_url || ''
-  });
-
-  const [securityForm, setSecurityForm] = useState({
-    currentPassword: '',
-    newUsername: restaurantInfo?.owner_username || 'admin',
-    newPassword: ''
-  });
-
-  const handleProfileSubmit = (e) => {
-    e.preventDefault();
-    onSaveProfile(profileForm);
+  const handleFormSave = async (e) => {
+    if (e) e.preventDefault();
+    await handleSaveSettings();
+    setSaveSuccessMsg('✅ Settings saved successfully!');
+    setTimeout(() => setSaveSuccessMsg(''), 3000);
     setOpenDrawer(null);
   };
 
-  const handleSecuritySubmit = (e) => {
-    e.preventDefault();
-    onSaveSecurity(securityForm);
-    setOpenDrawer(null);
+  const handleSecuritySave = async (e) => {
+    if (e) e.preventDefault();
+    await handleChangeCredentials();
+    if (credMsg?.type === 'success') {
+      setTimeout(() => setOpenDrawer(null), 1500);
+    }
+  };
+
+  const handleLogoUpload = async (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    setUploadingLogo(true);
+    try {
+      const url = await uploadImage(file, token);
+      if (url && setSettingsForm) {
+        setSettingsForm(prev => ({ ...prev, logo: url }));
+      }
+    } catch (err) {
+      alert('Logo upload failed: ' + err.message);
+    } finally {
+      setUploadingLogo(false);
+    }
+  };
+
+  const handleDetectGps = () => {
+    if (!navigator.geolocation) {
+      alert('Geolocation is not supported by your browser.');
+      return;
+    }
+
+    setGpsLoading(true);
+    navigator.geolocation.getCurrentPosition(
+      (pos) => {
+        if (setSettingsForm) {
+          setSettingsForm(prev => ({
+            ...prev,
+            latitude: pos.coords.latitude,
+            longitude: pos.coords.longitude
+          }));
+        }
+        setGpsLoading(false);
+        alert(`📍 GPS Location Detected!\nLatitude: ${pos.coords.latitude}\nLongitude: ${pos.coords.longitude}`);
+      },
+      (err) => {
+        setGpsLoading(false);
+        alert('Could not detect location: ' + err.message);
+      },
+      { enableHighAccuracy: true, timeout: 10000 }
+    );
+  };
+
+  const testAlarmSound = () => {
+    try {
+      const audio = new Audio('/assets/emergency_alarm.mp3');
+      audio.play().catch(() => {
+        // Fallback Web Audio API Beep
+        const ctx = new (window.AudioContext || window.webkitAudioContext)();
+        const osc = ctx.createOscillator();
+        osc.type = 'sine';
+        osc.frequency.setValueAtTime(880, ctx.currentTime);
+        osc.connect(ctx.destination);
+        osc.start();
+        osc.stop(ctx.currentTime + 0.5);
+      });
+      alert('🔊 Playing Test Siren Ringtone!');
+    } catch (e) {
+      alert('Audio alert triggered');
+    }
   };
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '18px' }}>
       {/* Header Title */}
-      <div>
-        <h2 style={{ fontSize: '1.15rem', fontWeight: 900, color: 'var(--adm-text)', margin: '0 0 2px 0' }}>
-          ⚙️ Setup Control Center
-        </h2>
-        <span style={{ fontSize: '0.76rem', color: 'var(--adm-muted)', fontWeight: 600 }}>
-          Manage restaurant profile, device notifications, menu filters, and security.
-        </span>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+        <div>
+          <h2 style={{ fontSize: '1.25rem', fontWeight: 900, color: 'var(--adm-primary)', margin: '0 0 2px 0' }}>
+            Setup Control Center
+          </h2>
+          <span style={{ fontSize: '0.8rem', color: 'var(--adm-muted)', fontWeight: 600 }}>
+            Configure profile, device alarms, menu filters, GPS geofence, and security.
+          </span>
+        </div>
+
+        {saveSuccessMsg && (
+          <span style={{ background: 'var(--adm-success-bg)', color: 'var(--adm-success)', padding: '6px 12px', borderRadius: 'var(--adm-radius-full)', fontSize: '0.78rem', fontWeight: 800 }}>
+            {saveSuccessMsg}
+          </span>
+        )}
       </div>
 
-      {/* 6 Compact Control Cards Grid */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '12px' }}>
+      {/* 6 Control Cards Grid */}
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '14px' }}>
         {/* Card 1: Profile */}
         <div
           onClick={() => setOpenDrawer('profile')}
@@ -66,12 +131,12 @@ export default function SetupView({
           style={{ cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '16px' }}
         >
           <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-            <div style={{ width: '40px', height: '40px', borderRadius: '10px', background: 'var(--adm-primary)', color: 'var(--adm-accent)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+            <div style={{ width: '42px', height: '42px', borderRadius: '12px', background: 'var(--adm-primary)', color: 'var(--adm-accent)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
               <Store size={20} />
             </div>
             <div>
-              <strong style={{ fontSize: '0.92rem', color: 'var(--adm-text)', display: 'block' }}>🏪 Restaurant Profile</strong>
-              <span style={{ fontSize: '0.72rem', color: 'var(--adm-muted)' }}>Name, logo, address, opening hours, FSSAI</span>
+              <strong style={{ fontSize: '0.95rem', color: 'var(--adm-text)', display: 'block' }}>🏪 Restaurant Profile</strong>
+              <span style={{ fontSize: '0.75rem', color: 'var(--adm-muted)' }}>Name, logo, phone, address, FSSAI</span>
             </div>
           </div>
           <ChevronRight size={18} color="var(--adm-muted)" />
@@ -84,12 +149,12 @@ export default function SetupView({
           style={{ cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '16px' }}
         >
           <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-            <div style={{ width: '40px', height: '40px', borderRadius: '10px', background: 'var(--adm-info-bg)', color: 'var(--adm-info)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+            <div style={{ width: '42px', height: '42px', borderRadius: '12px', background: 'var(--adm-info-bg)', color: 'var(--adm-info)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
               <Bell size={20} />
             </div>
             <div>
-              <strong style={{ fontSize: '0.92rem', color: 'var(--adm-text)', display: 'block' }}>🔔 Orders & Devices</strong>
-              <span style={{ fontSize: '0.72rem', color: 'var(--adm-muted)' }}>Order audio alarm, push alerts, printer</span>
+              <strong style={{ fontSize: '0.95rem', color: 'var(--adm-text)', display: 'block' }}>🔔 Orders & Devices</strong>
+              <span style={{ fontSize: '0.75rem', color: 'var(--adm-muted)' }}>Siren audio alert, push notifications, printer</span>
             </div>
           </div>
           <ChevronRight size={18} color="var(--adm-muted)" />
@@ -102,12 +167,12 @@ export default function SetupView({
           style={{ cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '16px' }}
         >
           <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-            <div style={{ width: '40px', height: '40px', borderRadius: '10px', background: 'var(--adm-warning-bg)', color: 'var(--adm-warning)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+            <div style={{ width: '42px', height: '42px', borderRadius: '12px', background: 'var(--adm-warning-bg)', color: 'var(--adm-warning)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
               <Utensils size={20} />
             </div>
             <div>
-              <strong style={{ fontSize: '0.92rem', color: 'var(--adm-text)', display: 'block' }}>🍽 Menu Settings</strong>
-              <span style={{ fontSize: '0.72rem', color: 'var(--adm-muted)' }}>Veg/Non-Veg filters, dish badge visibility</span>
+              <strong style={{ fontSize: '0.95rem', color: 'var(--adm-text)', display: 'block' }}>🍽 Menu Settings</strong>
+              <span style={{ fontSize: '0.75rem', color: 'var(--adm-muted)' }}>Veg/Non-Veg filters, dish badge visibility</span>
             </div>
           </div>
           <ChevronRight size={18} color="var(--adm-muted)" />
@@ -120,12 +185,12 @@ export default function SetupView({
           style={{ cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '16px' }}
         >
           <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-            <div style={{ width: '40px', height: '40px', borderRadius: '10px', background: 'var(--adm-success-bg)', color: 'var(--adm-success)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+            <div style={{ width: '42px', height: '42px', borderRadius: '12px', background: 'var(--adm-success-bg)', color: 'var(--adm-success)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
               <MapPin size={20} />
             </div>
             <div>
-              <strong style={{ fontSize: '0.92rem', color: 'var(--adm-text)', display: 'block' }}>📍 Location & Delivery</strong>
-              <span style={{ fontSize: '0.72rem', color: 'var(--adm-muted)' }}>GPS coordinates, Google Maps, radius</span>
+              <strong style={{ fontSize: '0.95rem', color: 'var(--adm-text)', display: 'block' }}>📍 Location & Geofence</strong>
+              <span style={{ fontSize: '0.75rem', color: 'var(--adm-muted)' }}>GPS coordinates, ordering radius</span>
             </div>
           </div>
           <ChevronRight size={18} color="var(--adm-muted)" />
@@ -138,12 +203,12 @@ export default function SetupView({
           style={{ cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '16px' }}
         >
           <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-            <div style={{ width: '40px', height: '40px', borderRadius: '10px', background: 'var(--adm-purple-bg)', color: 'var(--adm-purple)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+            <div style={{ width: '42px', height: '42px', borderRadius: '12px', background: 'var(--adm-purple-bg)', color: 'var(--adm-purple)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
               <CreditCard size={20} />
             </div>
             <div>
-              <strong style={{ fontSize: '0.92rem', color: 'var(--adm-text)', display: 'block' }}>💳 Subscription & Billing</strong>
-              <span style={{ fontSize: '0.72rem', color: 'var(--adm-muted)' }}>Current plan, billing status, renewals</span>
+              <strong style={{ fontSize: '0.95rem', color: 'var(--adm-text)', display: 'block' }}>💳 Subscription & Billing</strong>
+              <span style={{ fontSize: '0.75rem', color: 'var(--adm-muted)' }}>Current plan, expiry, auto-debit status</span>
             </div>
           </div>
           <ChevronRight size={18} color="var(--adm-muted)" />
@@ -156,12 +221,12 @@ export default function SetupView({
           style={{ cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '16px' }}
         >
           <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-            <div style={{ width: '40px', height: '40px', borderRadius: '10px', background: 'var(--adm-danger-bg)', color: 'var(--adm-danger)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+            <div style={{ width: '42px', height: '42px', borderRadius: '12px', background: 'var(--adm-danger-bg)', color: 'var(--adm-danger)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
               <Lock size={20} />
             </div>
             <div>
-              <strong style={{ fontSize: '0.92rem', color: 'var(--adm-text)', display: 'block' }}>🔐 Admin Security</strong>
-              <span style={{ fontSize: '0.72rem', color: 'var(--adm-muted)' }}>Username and password credentials</span>
+              <strong style={{ fontSize: '0.95rem', color: 'var(--adm-text)', display: 'block' }}>🔐 Admin Security</strong>
+              <span style={{ fontSize: '0.75rem', color: 'var(--adm-muted)' }}>Owner username and password login</span>
             </div>
           </div>
           <ChevronRight size={18} color="var(--adm-muted)" />
@@ -175,65 +240,226 @@ export default function SetupView({
         title="🏪 Restaurant Profile"
         subtitle="Public business identity and contact details"
         footer={(
-          <button onClick={handleProfileSubmit} className="adm-btn adm-btn-primary" style={{ width: '100%' }}>
+          <button onClick={handleFormSave} className="adm-btn adm-btn-primary" style={{ width: '100%', padding: '12px', fontWeight: 900 }}>
             Save Profile Changes
           </button>
         )}
       >
-        <form onSubmit={handleProfileSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '12px', fontSize: '0.84rem' }}>
+        <form onSubmit={handleFormSave} style={{ display: 'flex', flexDirection: 'column', gap: '14px', fontSize: '0.86rem' }}>
+          {/* Logo Upload Box */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: '14px', padding: '12px', background: 'var(--adm-surface-subtle)', borderRadius: 'var(--adm-radius-md)', border: '1px solid var(--adm-border)' }}>
+            {settingsForm.logo ? (
+              <img src={settingsForm.logo} alt="Logo" style={{ width: '60px', height: '60px', borderRadius: '10px', objectFit: 'cover' }} />
+            ) : (
+              <div style={{ width: '60px', height: '60px', borderRadius: '10px', background: 'var(--adm-primary)', color: '#FFF', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 900 }}>LOGO</div>
+            )}
+            <div style={{ flex: 1 }}>
+              <label style={{ fontSize: '0.78rem', fontWeight: 800, color: 'var(--adm-primary)', display: 'block', marginBottom: '4px' }}>RESTAURANT LOGO:</label>
+              <input type="file" accept="image/*" onChange={handleLogoUpload} disabled={uploadingLogo} style={{ fontSize: '0.78rem' }} />
+              {uploadingLogo && <span style={{ fontSize: '0.72rem', color: 'var(--adm-accent)', display: 'block', marginTop: '2px' }}>Uploading image to R2 cloud...</span>}
+            </div>
+          </div>
+
           <div>
-            <label style={{ fontSize: '0.72rem', fontWeight: 800, color: 'var(--adm-muted)', display: 'block', marginBottom: '4px' }}>RESTAURANT NAME:</label>
+            <label style={{ fontSize: '0.76rem', fontWeight: 800, color: 'var(--adm-muted)', display: 'block', marginBottom: '4px' }}>RESTAURANT NAME:</label>
             <input
               type="text"
               required
-              value={profileForm.name}
-              onChange={(e) => setProfileForm({ ...profileForm, name: e.target.value })}
-              style={{ width: '100%', padding: '10px', borderRadius: 'var(--adm-radius-md)', border: '1px solid var(--adm-border)' }}
+              value={settingsForm.name || ''}
+              onChange={(e) => setSettingsForm({ ...settingsForm, name: e.target.value })}
+              style={{ width: '100%', padding: '10px 12px', borderRadius: 'var(--adm-radius-md)', border: '1px solid var(--adm-border)', fontSize: '0.9rem' }}
             />
           </div>
 
           <div>
-            <label style={{ fontSize: '0.72rem', fontWeight: 800, color: 'var(--adm-muted)', display: 'block', marginBottom: '4px' }}>CONTACT PHONE:</label>
+            <label style={{ fontSize: '0.76rem', fontWeight: 800, color: 'var(--adm-muted)', display: 'block', marginBottom: '4px' }}>TAGLINE / SLOGAN:</label>
             <input
               type="text"
-              value={profileForm.phone}
-              onChange={(e) => setProfileForm({ ...profileForm, phone: e.target.value })}
-              style={{ width: '100%', padding: '10px', borderRadius: 'var(--adm-radius-md)', border: '1px solid var(--adm-border)' }}
+              placeholder="e.g. Pure Veg Family Restaurant & Bakery"
+              value={settingsForm.tagline || ''}
+              onChange={(e) => setSettingsForm({ ...settingsForm, tagline: e.target.value })}
+              style={{ width: '100%', padding: '10px 12px', borderRadius: 'var(--adm-radius-md)', border: '1px solid var(--adm-border)', fontSize: '0.9rem' }}
             />
           </div>
 
           <div>
-            <label style={{ fontSize: '0.72rem', fontWeight: 800, color: 'var(--adm-muted)', display: 'block', marginBottom: '4px' }}>FSSAI LICENSE NUMBER:</label>
+            <label style={{ fontSize: '0.76rem', fontWeight: 800, color: 'var(--adm-muted)', display: 'block', marginBottom: '4px' }}>CONTACT PHONE:</label>
+            <input
+              type="text"
+              value={settingsForm.phone || ''}
+              onChange={(e) => setSettingsForm({ ...settingsForm, phone: e.target.value })}
+              style={{ width: '100%', padding: '10px 12px', borderRadius: 'var(--adm-radius-md)', border: '1px solid var(--adm-border)', fontSize: '0.9rem' }}
+            />
+          </div>
+
+          <div>
+            <label style={{ fontSize: '0.76rem', fontWeight: 800, color: 'var(--adm-muted)', display: 'block', marginBottom: '4px' }}>FSSAI LICENSE NUMBER:</label>
             <input
               type="text"
               placeholder="e.g. 12345678901234"
-              value={profileForm.fssai}
-              onChange={(e) => setProfileForm({ ...profileForm, fssai: e.target.value })}
-              style={{ width: '100%', padding: '10px', borderRadius: 'var(--adm-radius-md)', border: '1px solid var(--adm-border)' }}
+              value={settingsForm.fssai_lic_no || ''}
+              onChange={(e) => setSettingsForm({ ...settingsForm, fssai_lic_no: e.target.value })}
+              style={{ width: '100%', padding: '10px 12px', borderRadius: 'var(--adm-radius-md)', border: '1px solid var(--adm-border)', fontSize: '0.9rem' }}
             />
           </div>
 
           <div>
-            <label style={{ fontSize: '0.72rem', fontWeight: 800, color: 'var(--adm-muted)', display: 'block', marginBottom: '4px' }}>RESTAURANT CATEGORY / CUISINE:</label>
+            <label style={{ fontSize: '0.76rem', fontWeight: 800, color: 'var(--adm-muted)', display: 'block', marginBottom: '4px' }}>OPENING HOURS:</label>
             <input
               type="text"
-              placeholder="e.g. Sweets, Bakery, North Indian"
-              value={profileForm.category}
-              onChange={(e) => setProfileForm({ ...profileForm, category: e.target.value })}
-              style={{ width: '100%', padding: '10px', borderRadius: 'var(--adm-radius-md)', border: '1px solid var(--adm-border)' }}
+              placeholder="e.g. 10:00 AM - 11:00 PM Daily"
+              value={settingsForm.openingHours || ''}
+              onChange={(e) => setSettingsForm({ ...settingsForm, openingHours: e.target.value })}
+              style={{ width: '100%', padding: '10px 12px', borderRadius: 'var(--adm-radius-md)', border: '1px solid var(--adm-border)', fontSize: '0.9rem' }}
             />
           </div>
 
           <div>
-            <label style={{ fontSize: '0.72rem', fontWeight: 800, color: 'var(--adm-muted)', display: 'block', marginBottom: '4px' }}>RESTAURANT ADDRESS:</label>
+            <label style={{ fontSize: '0.76rem', fontWeight: 800, color: 'var(--adm-muted)', display: 'block', marginBottom: '4px' }}>ADDRESS:</label>
             <textarea
               rows={2}
-              value={profileForm.address}
-              onChange={(e) => setProfileForm({ ...profileForm, address: e.target.value })}
-              style={{ width: '100%', padding: '10px', borderRadius: 'var(--adm-radius-md)', border: '1px solid var(--adm-border)' }}
+              value={settingsForm.address || ''}
+              onChange={(e) => setSettingsForm({ ...settingsForm, address: e.target.value })}
+              style={{ width: '100%', padding: '10px 12px', borderRadius: 'var(--adm-radius-md)', border: '1px solid var(--adm-border)', fontSize: '0.9rem' }}
             />
           </div>
         </form>
+      </AdminDrawer>
+
+      {/* Drawer 2: Orders & Devices */}
+      <AdminDrawer
+        isOpen={openDrawer === 'devices'}
+        onClose={() => setOpenDrawer(null)}
+        title="🔔 Orders & Devices"
+        subtitle="Manage live order siren ringtones and thermal printer settings"
+        footer={(
+          <button onClick={handleFormSave} className="adm-btn adm-btn-primary" style={{ width: '100%', padding: '12px', fontWeight: 900 }}>
+            Save Device Settings
+          </button>
+        )}
+      >
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+          {/* Siren Audio Alert Box */}
+          <div style={{ padding: '14px', background: 'var(--adm-surface-subtle)', borderRadius: 'var(--adm-radius-md)', border: '1px solid var(--adm-border)' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
+              <strong style={{ fontSize: '0.9rem', color: 'var(--adm-primary)' }}>🔊 Live Order Siren Ringtone</strong>
+              <input
+                type="checkbox"
+                checked={settingsForm.order_alarm_enabled !== false}
+                onChange={(e) => setSettingsForm({ ...settingsForm, order_alarm_enabled: e.target.checked })}
+                style={{ width: '18px', height: '18px', cursor: 'pointer' }}
+              />
+            </div>
+            <p style={{ fontSize: '0.76rem', color: 'var(--adm-muted)', margin: '0 0 10px 0' }}>
+              Plays a loud Swiggy/Zomato style siren ringtone whenever a new table order arrives.
+            </p>
+            <button onClick={testAlarmSound} className="adm-btn adm-btn-secondary adm-btn-sm" style={{ width: '100%' }}>
+              <Volume2 size={15} /> Test Emergency Siren Sound
+            </button>
+          </div>
+
+          {/* Printer Setup Box */}
+          <div style={{ padding: '14px', background: 'var(--adm-surface-subtle)', borderRadius: 'var(--adm-radius-md)', border: '1px solid var(--adm-border)' }}>
+            <strong style={{ fontSize: '0.9rem', color: 'var(--adm-primary)', display: 'block', marginBottom: '4px' }}>🖨️ Thermal Receipt Printer</strong>
+            <p style={{ fontSize: '0.76rem', color: 'var(--adm-muted)', margin: '0 0 10px 0' }}>
+              Supports 58mm & 80mm ESC/POS Bluetooth and USB thermal printers.
+            </p>
+            <button onClick={() => { setOpenDrawer(null); setShowPrinterModal(true); }} className="adm-btn adm-btn-secondary adm-btn-sm" style={{ width: '100%' }}>
+              <Printer size={15} /> Open Printer Pairing Guide
+            </button>
+          </div>
+        </div>
+      </AdminDrawer>
+
+      {/* Drawer 3: Menu Settings */}
+      <AdminDrawer
+        isOpen={openDrawer === 'menu'}
+        onClose={() => setOpenDrawer(null)}
+        title="🍽 Menu & Filter Settings"
+        subtitle="Configure cuisine categories and dish badge visibility"
+        footer={(
+          <button onClick={handleFormSave} className="adm-btn adm-btn-primary" style={{ width: '100%', padding: '12px', fontWeight: 900 }}>
+            Save Menu Settings
+          </button>
+        )}
+      >
+        <form onSubmit={handleFormSave} style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
+          <div>
+            <label style={{ fontSize: '0.76rem', fontWeight: 800, color: 'var(--adm-muted)', display: 'block', marginBottom: '4px' }}>RESTAURANT TYPE:</label>
+            <select
+              value={settingsForm.resto_type || 'pure_veg'}
+              onChange={(e) => setSettingsForm({ ...settingsForm, resto_type: e.target.value })}
+              style={{ width: '100%', padding: '10px 12px', borderRadius: 'var(--adm-radius-md)', border: '1px solid var(--adm-border)', fontSize: '0.9rem', fontWeight: 700 }}
+            >
+              <option value="pure_veg">🟢 Pure Veg Restaurant</option>
+              <option value="veg_nonveg">🔴 Veg & Non-Veg Restaurant</option>
+              <option value="bakery">🍰 Bakery & Confectionery</option>
+            </select>
+          </div>
+
+          <div>
+            <label style={{ fontSize: '0.76rem', fontWeight: 800, color: 'var(--adm-muted)', display: 'block', marginBottom: '4px' }}>CURRENCY SYMBOL:</label>
+            <input
+              type="text"
+              value={settingsForm.currency_symbol || '₹'}
+              onChange={(e) => setSettingsForm({ ...settingsForm, currency_symbol: e.target.value })}
+              style={{ width: '100%', padding: '10px 12px', borderRadius: 'var(--adm-radius-md)', border: '1px solid var(--adm-border)', fontSize: '0.9rem' }}
+            />
+          </div>
+        </form>
+      </AdminDrawer>
+
+      {/* Drawer 4: Location & Delivery */}
+      <AdminDrawer
+        isOpen={openDrawer === 'location'}
+        onClose={() => setOpenDrawer(null)}
+        title="📍 Location & GPS Geofence"
+        subtitle="Set coordinates to prevent fake orders from outside your restaurant"
+        footer={(
+          <button onClick={handleFormSave} className="adm-btn adm-btn-primary" style={{ width: '100%', padding: '12px', fontWeight: 900 }}>
+            Save Location & Geofence
+          </button>
+        )}
+      >
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
+          <button onClick={handleDetectGps} disabled={gpsLoading} className="adm-btn adm-btn-accent" style={{ width: '100%', padding: '12px', fontWeight: 800 }}>
+            <MapPin size={16} /> {gpsLoading ? 'Detecting Location...' : '📍 Auto-Detect Current GPS Coordinates'}
+          </button>
+
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
+            <div>
+              <label style={{ fontSize: '0.74rem', fontWeight: 800, color: 'var(--adm-muted)', display: 'block', marginBottom: '4px' }}>LATITUDE:</label>
+              <input
+                type="number"
+                step="any"
+                value={settingsForm.latitude || ''}
+                onChange={(e) => setSettingsForm({ ...settingsForm, latitude: parseFloat(e.target.value) })}
+                style={{ width: '100%', padding: '10px', borderRadius: 'var(--adm-radius-md)', border: '1px solid var(--adm-border)' }}
+              />
+            </div>
+            <div>
+              <label style={{ fontSize: '0.74rem', fontWeight: 800, color: 'var(--adm-muted)', display: 'block', marginBottom: '4px' }}>LONGITUDE:</label>
+              <input
+                type="number"
+                step="any"
+                value={settingsForm.longitude || ''}
+                onChange={(e) => setSettingsForm({ ...settingsForm, longitude: parseFloat(e.target.value) })}
+                style={{ width: '100%', padding: '10px', borderRadius: 'var(--adm-radius-md)', border: '1px solid var(--adm-border)' }}
+              />
+            </div>
+          </div>
+
+          <div>
+            <label style={{ fontSize: '0.76rem', fontWeight: 800, color: 'var(--adm-muted)', display: 'block', marginBottom: '4px' }}>MAX ORDERING DISTANCE RADIUS (METERS):</label>
+            <input
+              type="number"
+              value={settingsForm.max_distance_meters || 100}
+              onChange={(e) => setSettingsForm({ ...settingsForm, max_distance_meters: parseInt(e.target.value) || 100 })}
+              style={{ width: '100%', padding: '10px 12px', borderRadius: 'var(--adm-radius-md)', border: '1px solid var(--adm-border)', fontSize: '0.9rem' }}
+            />
+            <span style={{ fontSize: '0.72rem', color: 'var(--adm-muted)', marginTop: '2px', display: 'block' }}>Default: 100 meters (dining hall boundary)</span>
+          </div>
+        </div>
       </AdminDrawer>
 
       {/* Drawer 5: Subscription & Billing */}
@@ -266,7 +492,7 @@ export default function SetupView({
             </div>
           </div>
 
-          <button onClick={() => { setOpenDrawer(null); onOpenBillingModal(); }} className="adm-btn adm-btn-accent" style={{ width: '100%' }}>
+          <button onClick={() => { setOpenDrawer(null); onOpenBillingModal(); }} className="adm-btn adm-btn-accent" style={{ width: '100%', padding: '12px', fontWeight: 900 }}>
             Manage Billing & Plan Options ➔
           </button>
         </div>
@@ -279,30 +505,63 @@ export default function SetupView({
         title="🔐 Admin Master Credentials"
         subtitle="Update owner username and login password"
         footer={(
-          <button onClick={handleSecuritySubmit} className="adm-btn adm-btn-danger" style={{ width: '100%' }}>
+          <button onClick={handleSecuritySave} className="adm-btn adm-btn-danger" style={{ width: '100%', padding: '12px', fontWeight: 900 }}>
             Update Security Credentials
           </button>
         )}
       >
-        <form onSubmit={handleSecuritySubmit} style={{ display: 'flex', flexDirection: 'column', gap: '12px', fontSize: '0.84rem' }}>
+        <form onSubmit={handleSecuritySave} style={{ display: 'flex', flexDirection: 'column', gap: '14px', fontSize: '0.84rem' }}>
+          {credMsg?.text && (
+            <div style={{
+              padding: '10px 14px', borderRadius: 'var(--adm-radius-md)', fontSize: '0.82rem', fontWeight: 800,
+              background: credMsg.type === 'error' ? 'var(--adm-danger-bg)' : 'var(--adm-success-bg)',
+              color: credMsg.type === 'error' ? 'var(--adm-danger)' : 'var(--adm-success)',
+              border: `1px solid ${credMsg.type === 'error' ? 'var(--adm-danger-border)' : 'var(--adm-success-border)'}`
+            }}>
+              {credMsg.text}
+            </div>
+          )}
+
           <div>
-            <label style={{ fontSize: '0.72rem', fontWeight: 800, color: 'var(--adm-muted)', display: 'block', marginBottom: '4px' }}>OWNER USERNAME:</label>
+            <label style={{ fontSize: '0.74rem', fontWeight: 800, color: 'var(--adm-muted)', display: 'block', marginBottom: '4px' }}>CURRENT PASSWORD (REQUIRED):</label>
             <input
-              type="text"
+              type="password"
               required
-              value={securityForm.newUsername}
-              onChange={(e) => setSecurityForm({ ...securityForm, newUsername: e.target.value })}
+              value={credForm.currentPassword || ''}
+              onChange={(e) => setCredForm({ ...credForm, currentPassword: e.target.value })}
               style={{ width: '100%', padding: '10px', borderRadius: 'var(--adm-radius-md)', border: '1px solid var(--adm-border)' }}
             />
           </div>
 
           <div>
-            <label style={{ fontSize: '0.72rem', fontWeight: 800, color: 'var(--adm-muted)', display: 'block', marginBottom: '4px' }}>NEW PASSWORD (OPTIONAL):</label>
+            <label style={{ fontSize: '0.74rem', fontWeight: 800, color: 'var(--adm-muted)', display: 'block', marginBottom: '4px' }}>NEW OWNER USERNAME:</label>
+            <input
+              type="text"
+              placeholder="Leave blank to keep unchanged"
+              value={credForm.newUsername || ''}
+              onChange={(e) => setCredForm({ ...credForm, newUsername: e.target.value })}
+              style={{ width: '100%', padding: '10px', borderRadius: 'var(--adm-radius-md)', border: '1px solid var(--adm-border)' }}
+            />
+          </div>
+
+          <div>
+            <label style={{ fontSize: '0.74rem', fontWeight: 800, color: 'var(--adm-muted)', display: 'block', marginBottom: '4px' }}>NEW PASSWORD:</label>
             <input
               type="password"
               placeholder="Leave blank to keep unchanged"
-              value={securityForm.newPassword}
-              onChange={(e) => setSecurityForm({ ...securityForm, newPassword: e.target.value })}
+              value={credForm.newPassword || ''}
+              onChange={(e) => setCredForm({ ...credForm, newPassword: e.target.value })}
+              style={{ width: '100%', padding: '10px', borderRadius: 'var(--adm-radius-md)', border: '1px solid var(--adm-border)' }}
+            />
+          </div>
+
+          <div>
+            <label style={{ fontSize: '0.74rem', fontWeight: 800, color: 'var(--adm-muted)', display: 'block', marginBottom: '4px' }}>CONFIRM NEW PASSWORD:</label>
+            <input
+              type="password"
+              placeholder="Re-enter new password"
+              value={credForm.confirmPassword || ''}
+              onChange={(e) => setCredForm({ ...credForm, confirmPassword: e.target.value })}
               style={{ width: '100%', padding: '10px', borderRadius: 'var(--adm-radius-md)', border: '1px solid var(--adm-border)' }}
             />
           </div>
