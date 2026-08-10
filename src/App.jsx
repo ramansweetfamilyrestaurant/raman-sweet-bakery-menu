@@ -42,11 +42,16 @@ export default function App() {
 
   const getInitialView = () => {
     const path = (window.location.pathname || '/').toLowerCase().replace(/\/$/, '') || '/';
+    const hash = (window.location.hash || '').toLowerCase();
     if (path === '/billing') return 'billing';
     if (path === '/register') return 'register';
-    if (path === '/super-admin' || path === '/superadmin') {
+    if (path === '/super-admin' || path === '/superadmin' || hash === '#super-admin') {
       const t = localStorage.getItem('saas_super_token');
       return (t && t !== 'undefined' && t !== 'null') ? 'super-admin-dashboard' : 'super-admin-login';
+    }
+    if (path.includes('/admin') || hash === '#admin') {
+      const t = localStorage.getItem('raman_admin_token');
+      return (t && t !== 'undefined' && t !== 'null') ? 'admin-dashboard' : 'admin-login';
     }
     if (path === '' || path === '/') return 'landing';
     return 'menu';
@@ -625,7 +630,7 @@ export default function App() {
       window.removeEventListener('hashchange', handleRouteCheck);
       window.removeEventListener('popstate', handleRouteCheck);
     };
-  }, [adminToken, superToken, info]);
+  }, [adminToken, superToken]);
 
   const handleAdminLoginSuccess = async (token, username, slug) => {
     let currentSlug = slug || getSlugFromUrl() || (info && info.slug) || localStorage.getItem('raman_admin_slug') || '';
