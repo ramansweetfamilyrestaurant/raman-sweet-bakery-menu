@@ -525,29 +525,110 @@ export default function SuperAdminDashboard({ token, username, onLogout, onImper
         </form>
       </Drawer>
 
-      {/* Mobile "More" Drawer */}
+      {/* Mobile "More" Drawer — Control Center */}
       <Drawer
         isOpen={showMoreMobileDrawer}
         onClose={() => setShowMoreMobileDrawer(false)}
-        title="Super Admin Navigation"
-        subtitle="Manage SaaS plans, logs, communication, and security"
+        title="Super Admin Control Center"
+        subtitle="SaaS management, broadcast tools, and platform settings"
       >
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
-          {[
-            { id: 'plans', label: '💎 SaaS Subscription Plans' },
-            { id: 'audit', label: '🧾 Security & Audit Logs' },
-            { id: 'communication', label: '📢 Broadcast Communication' },
-            { id: 'settings', label: '⚙️ System Settings' },
-          ].map(item => (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+          {/* MANAGEMENT SECTION */}
+          <div>
+            <span style={{ fontSize: '0.7rem', fontWeight: 800, color: 'var(--sa-text-muted)', textTransform: 'uppercase', letterSpacing: '0.5px', display: 'block', marginBottom: '8px' }}>
+              MANAGEMENT
+            </span>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+              <button
+                onClick={() => { setActiveView('plans'); setShowMoreMobileDrawer(false); }}
+                style={{
+                  display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '12px 14px',
+                  background: activeView === 'plans' ? 'var(--sa-surface-subtle)' : '#FFFFFF',
+                  border: '1px solid var(--sa-border)', borderRadius: 'var(--sa-radius-md)', textAlign: 'left', cursor: 'pointer'
+                }}
+              >
+                <div>
+                  <strong style={{ fontSize: '0.88rem', color: 'var(--sa-text-main)', display: 'block' }}>💎 SaaS Subscription Plans</strong>
+                  <span style={{ fontSize: '0.72rem', color: 'var(--sa-text-muted)' }}>Manage pricing tiers and feature entitlements</span>
+                </div>
+                <span style={{ color: 'var(--sa-text-muted)', fontWeight: 800 }}>➔</span>
+              </button>
+
+              <button
+                onClick={() => { setActiveView('subscriptions'); setShowMoreMobileDrawer(false); }}
+                style={{
+                  display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '12px 14px',
+                  background: activeView === 'subscriptions' ? 'var(--sa-surface-subtle)' : '#FFFFFF',
+                  border: '1px solid var(--sa-border)', borderRadius: 'var(--sa-radius-md)', textAlign: 'left', cursor: 'pointer'
+                }}
+              >
+                <div>
+                  <strong style={{ fontSize: '0.88rem', color: 'var(--sa-text-main)', display: 'block' }}>💳 Subscription Lifecycle</strong>
+                  <span style={{ fontSize: '0.72rem', color: 'var(--sa-text-muted)' }}>Audit Cashfree renewals and cancellations</span>
+                </div>
+                <span style={{ color: 'var(--sa-text-muted)', fontWeight: 800 }}>➔</span>
+              </button>
+            </div>
+          </div>
+
+          {/* COMMUNICATION SECTION */}
+          <div>
+            <span style={{ fontSize: '0.7rem', fontWeight: 800, color: 'var(--sa-text-muted)', textTransform: 'uppercase', letterSpacing: '0.5px', display: 'block', marginBottom: '8px' }}>
+              COMMUNICATION
+            </span>
             <button
-              key={item.id}
-              onClick={() => { setActiveView(item.id); setShowMoreMobileDrawer(false); }}
-              className={`sa-btn ${activeView === item.id ? 'sa-btn-primary' : 'sa-btn-secondary'}`}
-              style={{ width: '100%', justifyContent: 'flex-start', padding: '12px 16px', fontSize: '0.9rem' }}
+              onClick={() => { setActiveView('communication'); setShowMoreMobileDrawer(false); }}
+              style={{
+                width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '12px 14px',
+                background: activeView === 'communication' ? 'var(--sa-surface-subtle)' : '#FFFFFF',
+                border: '1px solid var(--sa-border)', borderRadius: 'var(--sa-radius-md)', textAlign: 'left', cursor: 'pointer'
+              }}
             >
-              {item.label}
+              <div>
+                <strong style={{ fontSize: '0.88rem', color: 'var(--sa-text-main)', display: 'block' }}>📣 Broadcast Announcements</strong>
+                <span style={{ fontSize: '0.72rem', color: 'var(--sa-text-muted)' }}>Send platform-wide notices to client dashboards</span>
+              </div>
+              <span style={{ color: 'var(--sa-text-muted)', fontWeight: 800 }}>➔</span>
             </button>
-          ))}
+          </div>
+
+          {/* SECURITY & SETTINGS SECTION */}
+          <div>
+            <span style={{ fontSize: '0.7rem', fontWeight: 800, color: 'var(--sa-text-muted)', textTransform: 'uppercase', letterSpacing: '0.5px', display: 'block', marginBottom: '8px' }}>
+              SECURITY & SETTINGS
+            </span>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+              <button
+                onClick={() => { setActiveView('audit'); setShowMoreMobileDrawer(false); }}
+                style={{
+                  display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '12px 14px',
+                  background: activeView === 'audit' ? 'var(--sa-surface-subtle)' : '#FFFFFF',
+                  border: '1px solid var(--sa-border)', borderRadius: 'var(--sa-radius-md)', textAlign: 'left', cursor: 'pointer'
+                }}
+              >
+                <div>
+                  <strong style={{ fontSize: '0.88rem', color: 'var(--sa-text-main)', display: 'block' }}>🛡️ Audit Activity Logs</strong>
+                  <span style={{ fontSize: '0.72rem', color: 'var(--sa-text-muted)' }}>Platform operations and security events</span>
+                </div>
+                <span style={{ color: 'var(--sa-text-muted)', fontWeight: 800 }}>➔</span>
+              </button>
+
+              <button
+                onClick={() => { setActiveView('settings'); setShowMoreMobileDrawer(false); }}
+                style={{
+                  display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '12px 14px',
+                  background: activeView === 'settings' ? 'var(--sa-surface-subtle)' : '#FFFFFF',
+                  border: '1px solid var(--sa-border)', borderRadius: 'var(--sa-radius-md)', textAlign: 'left', cursor: 'pointer'
+                }}
+              >
+                <div>
+                  <strong style={{ fontSize: '0.88rem', color: 'var(--sa-text-main)', display: 'block' }}>⚙️ System Settings</strong>
+                  <span style={{ fontSize: '0.72rem', color: 'var(--sa-text-muted)' }}>Gateway credentials, trial duration & security</span>
+                </div>
+                <span style={{ color: 'var(--sa-text-muted)', fontWeight: 800 }}>➔</span>
+              </button>
+            </div>
+          </div>
         </div>
       </Drawer>
     </div>

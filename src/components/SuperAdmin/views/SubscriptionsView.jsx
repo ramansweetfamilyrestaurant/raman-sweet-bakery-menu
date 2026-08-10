@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { CreditCard, Filter, Calendar, Sparkles, RefreshCw, AlertTriangle } from 'lucide-react';
+import { CreditCard, ArrowDown } from 'lucide-react';
 import StatusBadge from '../components/StatusBadge';
 
 export default function SubscriptionsView({ restaurants, onSelectTenant }) {
@@ -16,20 +16,20 @@ export default function SubscriptionsView({ restaurants, onSelectTenant }) {
   });
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
+    <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
       <div className="sa-section-header">
         <div>
           <h2 className="sa-section-title">
-            <CreditCard size={22} color="var(--sa-primary)" /> Subscription Management & Billing Lifecycle
+            <CreditCard size={20} color="var(--sa-primary)" /> Subscription Management & Billing Lifecycle
           </h2>
-          <span style={{ fontSize: '0.78rem', color: 'var(--sa-text-muted)', fontWeight: 600 }}>
-            Real-time audit of tenant Cashfree AutoPay mandates, renewals, and complimentary access.
+          <span style={{ fontSize: '0.75rem', color: 'var(--sa-text-muted)', fontWeight: 600 }}>
+            Audit tenant Cashfree AutoPay mandates, renewals, and complimentary access.
           </span>
         </div>
       </div>
 
-      {/* Filter Tabs */}
-      <div style={{ display: 'flex', gap: '8px', overflowX: 'auto', paddingBottom: '4px' }}>
+      {/* Horizontally Scrollable Filter Strip */}
+      <div style={{ display: 'flex', gap: '6px', overflowX: 'auto', paddingBottom: '4px', whiteSpace: 'nowrap', msOverflowStyle: 'none', scrollbarWidth: 'none' }}>
         {[
           { id: 'all', label: 'All Subscriptions' },
           { id: 'active', label: '🟢 Active Paid' },
@@ -66,7 +66,7 @@ export default function SubscriptionsView({ restaurants, onSelectTenant }) {
           <tbody>
             {filteredSubs.length === 0 ? (
               <tr>
-                <td colSpan={6} style={{ textAlign: 'center', padding: '40px', color: 'var(--sa-text-muted)' }}>
+                <td colSpan={6} style={{ textAlign: 'center', padding: '32px', color: 'var(--sa-text-muted)' }}>
                   No subscriptions matching selected filter.
                 </td>
               </tr>
@@ -77,12 +77,14 @@ export default function SubscriptionsView({ restaurants, onSelectTenant }) {
                 return (
                   <tr key={r.id}>
                     <td>
-                      <strong style={{ fontSize: '0.9rem', color: 'var(--sa-text-main)', display: 'block' }}>{r.name}</strong>
-                      <span style={{ fontSize: '0.72rem', color: 'var(--sa-text-muted)' }}>/{r.slug}</span>
+                      <strong style={{ fontSize: '0.88rem', color: 'var(--sa-text-main)', display: 'block' }}>{r.name}</strong>
+                      <span style={{ fontSize: '0.7rem', color: 'var(--sa-text-muted)' }}>/{r.slug}</span>
                     </td>
                     <td>
                       <span style={{ fontWeight: 800, color: 'var(--sa-success)' }}>{(r.plan_tier || 'pro').toUpperCase()}</span>
-                      <span style={{ fontSize: '0.72rem', color: 'var(--sa-text-muted)', display: 'block' }}>₹{r.plan_price || 999}/mo</span>
+                      <span style={{ fontSize: '0.7rem', color: 'var(--sa-text-muted)', display: 'block' }}>
+                        {r.subscription_type === 'ADMIN_GRANTED' ? '₹0/mo (Free)' : `₹${r.plan_price || 999}/mo`}
+                      </span>
                     </td>
                     <td>
                       <StatusBadge status={r.subscription_status || (r.active !== false ? 'active' : 'expired')} type={r.subscription_type} />
@@ -112,17 +114,30 @@ export default function SubscriptionsView({ restaurants, onSelectTenant }) {
           const isLifetime = r.subscription_type === 'ADMIN_GRANTED' || (r.access_until && new Date(r.access_until).getFullYear() > 2030);
 
           return (
-            <div key={r.id} className="sa-mobile-card" onClick={() => onSelectTenant(r)} style={{ cursor: 'pointer' }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '8px' }}>
+            <div key={r.id} className="sa-mobile-card" onClick={() => onSelectTenant(r)} style={{ cursor: 'pointer', padding: '14px' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '6px' }}>
                 <strong style={{ fontSize: '0.95rem' }}>{r.name}</strong>
                 <StatusBadge status={r.subscription_status || (r.active !== false ? 'active' : 'expired')} type={r.subscription_type} />
               </div>
               <div style={{ fontSize: '0.8rem', color: 'var(--sa-text-muted)', marginBottom: '8px' }}>
-                Plan: <strong style={{ color: 'var(--sa-text-main)' }}>{(r.plan_tier || 'pro').toUpperCase()} (₹{r.plan_price || 999}/mo)</strong>
+                Plan: <strong style={{ color: 'var(--sa-text-main)' }}>{(r.plan_tier || 'pro').toUpperCase()} ({r.subscription_type === 'ADMIN_GRANTED' ? '₹0/mo' : `₹${r.plan_price || 999}/mo`})</strong>
               </div>
-              <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.78rem', paddingTop: '8px', borderTop: '1px solid var(--sa-border)' }}>
+
+              {/* Scheduled Plan Change Block */}
+              {r.scheduled_plan_key && (
+                <div style={{ background: 'var(--sa-info-bg)', border: '1px solid var(--sa-info-border)', borderRadius: 'var(--sa-radius-sm)', padding: '8px', fontSize: '0.75rem', margin: '8px 0' }}>
+                  <div style={{ color: '#1E40AF', fontWeight: 800 }}>CURRENT: {(r.plan_tier || 'pro').toUpperCase()} (₹{r.plan_price || 999}/mo)</div>
+                  <div style={{ textAlign: 'center', color: '#2563EB', margin: '2px 0' }}><ArrowDown size={12} /></div>
+                  <div style={{ color: '#1E40AF', fontWeight: 800 }}>SCHEDULED: {r.scheduled_plan_key.toUpperCase()}</div>
+                  <div style={{ fontSize: '0.7rem', color: '#3B82F6', marginTop: '2px' }}>
+                    Effective: {r.plan_change_effective_at ? new Date(r.plan_change_effective_at).toLocaleDateString('en-IN') : 'Next Billing Boundary'}
+                  </div>
+                </div>
+              )}
+
+              <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.75rem', paddingTop: '8px', borderTop: '1px solid var(--sa-border)' }}>
                 <span>Auto-renew: <strong>{(r.auto_renew === 0 || r.auto_renew === false) ? 'OFF' : 'ON'}</strong></span>
-                <span>Until: <strong>{isLifetime ? 'Lifetime' : r.access_until ? new Date(r.access_until).toLocaleDateString('en-IN') : 'N/A'}</strong></span>
+                <span>Until: <strong>{isLifetime ? '♾️ Lifetime' : r.access_until ? new Date(r.access_until).toLocaleDateString('en-IN') : 'N/A'}</strong></span>
               </div>
             </div>
           );
