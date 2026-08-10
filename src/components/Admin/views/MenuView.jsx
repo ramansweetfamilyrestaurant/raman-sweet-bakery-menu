@@ -277,103 +277,110 @@ export default function MenuView({
                     style={{
                       background: '#FFFFFF',
                       border: '1px solid #E5E7EB',
-                      borderRadius: '12px',
-                      padding: '8px 10px',
+                      borderRadius: '14px',
+                      padding: '12px',
                       display: 'flex',
-                      alignItems: 'center',
+                      flexDirection: 'column',
                       gap: '10px',
-                      opacity: dish.available !== false ? 1 : 0.6,
-                      minHeight: '72px',
+                      opacity: dish.available !== false ? 1 : 0.65,
                       boxSizing: 'border-box',
                       width: '100%',
-                      minWidth: 0
+                      boxShadow: '0 1px 3px rgba(0,0,0,0.04)'
                     }}
                   >
-                    {/* LEFT: Dish Image (54px) */}
+                    {/* TOP ROW: Image + Full Dish Name & Details */}
+                    <div style={{ display: 'flex', alignItems: 'flex-start', gap: '12px' }}>
+                      {/* Dish Image */}
+                      <div style={{
+                        width: '52px',
+                        height: '52px',
+                        borderRadius: '10px',
+                        overflow: 'hidden',
+                        flexShrink: 0,
+                        background: '#F1F5F9',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        border: '1px solid #E2E8F0'
+                      }}>
+                        {imageSrc && imageSrc !== '/uploads/logo.jpg' ? (
+                          <img
+                            src={imageSrc}
+                            alt={dish.name}
+                            style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                            onError={(e) => { e.target.style.display = 'none'; }}
+                          />
+                        ) : (
+                          <span style={{ fontSize: '1.3rem' }}>🍲</span>
+                        )}
+                      </div>
+
+                      {/* Dish Info */}
+                      <div style={{ flex: 1, minWidth: 0 }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flexWrap: 'wrap', marginBottom: '2px' }}>
+                          <span style={{
+                            width: '8px',
+                            height: '8px',
+                            border: dish.type === 'nonveg' ? '1.5px solid #DC2626' : dish.type === 'egg' ? '1.5px solid #D97706' : '1.5px solid #16A34A',
+                            display: 'inline-flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            borderRadius: '2px',
+                            flexShrink: 0
+                          }}>
+                            <span style={{
+                              width: '3.5px',
+                              height: '3.5px',
+                              borderRadius: '50%',
+                              backgroundColor: dish.type === 'nonveg' ? '#DC2626' : dish.type === 'egg' ? '#D97706' : '#16A34A'
+                            }} />
+                          </span>
+
+                          <strong style={{
+                            fontSize: '0.92rem',
+                            fontWeight: 800,
+                            color: '#111827',
+                            lineHeight: 1.25
+                          }}>
+                            {dish.name}
+                          </strong>
+
+                          {dish.must_try && <span style={{ fontSize: '0.7rem', flexShrink: 0 }} title="Must Try">⭐</span>}
+                          {dish.is_special && <span style={{ fontSize: '0.7rem', flexShrink: 0 }} title="Special">✨</span>}
+                        </div>
+
+                        <div style={{ fontSize: '0.74rem', color: '#64748B', marginBottom: '4px' }}>
+                          {catName}
+                        </div>
+
+                        <div style={{ fontSize: '0.92rem', fontWeight: 900, color: 'var(--adm-primary)' }}>
+                          {currencySymbol}{Math.round(dish.price)} {dish.price_half ? `/ ${currencySymbol}${Math.round(dish.price_half)}` : ''}
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* BOTTOM ROW: Action Buttons (Available Toggle, Edit, Delete) */}
                     <div style={{
-                      width: '54px',
-                      height: '54px',
-                      borderRadius: '10px',
-                      overflow: 'hidden',
-                      flexShrink: 0,
-                      background: '#F1F5F9',
                       display: 'flex',
                       alignItems: 'center',
-                      justifyContent: 'center',
-                      border: '1px solid #F1F5F9'
+                      gap: '8px',
+                      paddingTop: '8px',
+                      borderTop: '1px solid #F1F5F9'
                     }}>
-                      {imageSrc && imageSrc !== '/uploads/logo.jpg' ? (
-                        <img
-                          src={imageSrc}
-                          alt={dish.name}
-                          style={{ width: '100%', height: '100%', objectFit: 'cover' }}
-                          onError={(e) => { e.target.style.display = 'none'; }}
-                        />
-                      ) : (
-                        <span style={{ fontSize: '1.3rem' }}>🍲</span>
-                      )}
-                    </div>
-
-                    {/* CENTER: Dish Name, Category & Price */}
-                    <div style={{ flex: 1, minWidth: 0 }}>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '5px', marginBottom: '1px' }}>
-                        <span style={{
-                          width: '8px',
-                          height: '8px',
-                          border: dish.type === 'nonveg' ? '1.5px solid #DC2626' : dish.type === 'egg' ? '1.5px solid #D97706' : '1.5px solid #16A34A',
-                          display: 'inline-flex',
-                          alignItems: 'center',
-                          justifyContent: 'center',
-                          borderRadius: '2px',
-                          flexShrink: 0
-                        }}>
-                          <span style={{
-                            width: '3.5px',
-                            height: '3.5px',
-                            borderRadius: '50%',
-                            backgroundColor: dish.type === 'nonveg' ? '#DC2626' : dish.type === 'egg' ? '#D97706' : '#16A34A'
-                          }} />
-                        </span>
-
-                        <strong style={{
-                          fontSize: '0.88rem',
-                          fontWeight: 700,
-                          color: '#111827',
-                          whiteSpace: 'nowrap',
-                          overflow: 'hidden',
-                          textOverflow: 'ellipsis'
-                        }}>
-                          {dish.name}
-                        </strong>
-
-                        {dish.must_try && <span style={{ fontSize: '0.68rem', flexShrink: 0 }} title="Must Try">⭐</span>}
-                        {dish.is_special && <span style={{ fontSize: '0.68rem', flexShrink: 0 }} title="Special">✨</span>}
-                      </div>
-
-                      <div style={{ fontSize: '0.72rem', color: '#64748B', marginBottom: '2px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                        {catName}
-                      </div>
-
-                      <div style={{ fontSize: '0.88rem', fontWeight: 800, color: 'var(--adm-primary)' }}>
-                        {currencySymbol}{Math.round(dish.price)} {dish.price_half ? `/ ${currencySymbol}${Math.round(dish.price_half)}` : ''}
-                      </div>
-                    </div>
-
-                    {/* RIGHT: Compact Availability Toggle & ⋮ More Options Button */}
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '4px', flexShrink: 0 }}>
                       <button
                         onClick={() => onToggleAvailability(dish.id, dish.available)}
                         style={{
-                          padding: '4px 8px',
+                          flex: 1,
+                          padding: '6px 12px',
                           borderRadius: '20px',
-                          fontSize: '0.68rem',
+                          fontSize: '0.75rem',
                           fontWeight: 800,
                           background: dish.available !== false ? '#DCFCE7' : '#FEE2E2',
                           color: dish.available !== false ? '#15803D' : '#991B1B',
                           border: dish.available !== false ? '1px solid #86EFAC' : '1px solid #FCA5A5',
                           cursor: 'pointer',
                           whiteSpace: 'nowrap',
-                          minHeight: '36px',
+                          minHeight: '38px',
                           display: 'inline-flex',
                           alignItems: 'center',
                           justifyContent: 'center'
@@ -386,13 +393,14 @@ export default function MenuView({
                         onClick={() => onOpenEditDish(dish)}
                         className="adm-btn adm-btn-secondary adm-btn-sm"
                         style={{
-                          padding: '6px 10px',
-                          borderRadius: '8px',
+                          padding: '6px 14px',
+                          borderRadius: '10px',
                           display: 'inline-flex',
                           alignItems: 'center',
-                          gap: '4px',
-                          fontWeight: 700,
-                          fontSize: '0.78rem'
+                          gap: '5px',
+                          fontWeight: 800,
+                          fontSize: '0.78rem',
+                          minHeight: '38px'
                         }}
                         title="Edit Dish"
                       >
@@ -403,13 +411,14 @@ export default function MenuView({
                         onClick={() => onDeleteDish(dish.id)}
                         className="adm-btn adm-btn-danger adm-btn-sm"
                         style={{
-                          padding: '6px 10px',
-                          borderRadius: '8px',
+                          padding: '6px 12px',
+                          borderRadius: '10px',
                           display: 'inline-flex',
                           alignItems: 'center',
                           gap: '4px',
-                          fontWeight: 700,
-                          fontSize: '0.78rem'
+                          fontWeight: 800,
+                          fontSize: '0.78rem',
+                          minHeight: '38px'
                         }}
                         title="Delete Dish"
                       >
