@@ -503,13 +503,37 @@ export default function SetupView({
 
           <div>
             <label style={{ fontSize: '0.76rem', fontWeight: 800, color: 'var(--adm-muted)', display: 'block', marginBottom: '4px' }}>CURRENCY SYMBOL:</label>
-            <input
-              type="text"
-              placeholder="₹"
-              value={settingsForm.currency_symbol != null ? settingsForm.currency_symbol : '₹'}
+            <select
+              value={settingsForm.currency_symbol || '₹'}
               onChange={(e) => setSettingsForm({ ...settingsForm, currency_symbol: e.target.value })}
-              style={{ width: '100%', padding: '10px 12px', borderRadius: 'var(--adm-radius-md)', border: '1px solid var(--adm-border)', fontSize: '0.9rem' }}
-            />
+              style={{ width: '100%', padding: '10px 12px', borderRadius: 'var(--adm-radius-md)', border: '1px solid var(--adm-border)', fontSize: '0.9rem', fontWeight: 700 }}
+            >
+              <option value="₹">₹ — Indian Rupee (INR)</option>
+              <option value="$">$ — US Dollar (USD)</option>
+              <option value="€">€ — Euro (EUR)</option>
+              <option value="£">£ — British Pound (GBP)</option>
+              <option value="¥">¥ — Japanese Yen / Chinese Yuan (JPY/CNY)</option>
+              <option value="₣">₣ — Swiss Franc (CHF)</option>
+              <option value="A$">A$ — Australian Dollar (AUD)</option>
+              <option value="C$">C$ — Canadian Dollar (CAD)</option>
+              <option value="د.إ">د.إ — UAE Dirham (AED)</option>
+              <option value="﷼">﷼ — Saudi Riyal (SAR)</option>
+              <option value="₨">₨ — Pakistani / Sri Lankan Rupee (PKR/LKR)</option>
+              <option value="৳">৳ — Bangladeshi Taka (BDT)</option>
+              <option value="රු">රු — Sri Lankan Rupee (LKR)</option>
+              <option value="RM">RM — Malaysian Ringgit (MYR)</option>
+              <option value="S$">S$ — Singapore Dollar (SGD)</option>
+              <option value="฿">฿ — Thai Baht (THB)</option>
+              <option value="₫">₫ — Vietnamese Dong (VND)</option>
+              <option value="₱">₱ — Philippine Peso (PHP)</option>
+              <option value="R">R — South African Rand (ZAR)</option>
+              <option value="₦">₦ — Nigerian Naira (NGN)</option>
+              <option value="KSh">KSh — Kenyan Shilling (KES)</option>
+              <option value="₩">₩ — South Korean Won (KRW)</option>
+              <option value="₺">₺ — Turkish Lira (TRY)</option>
+              <option value="R$">R$ — Brazilian Real (BRL)</option>
+              <option value="Mex$">Mex$ — Mexican Peso (MXN)</option>
+            </select>
           </div>
 
           {/* GST Configuration */}
