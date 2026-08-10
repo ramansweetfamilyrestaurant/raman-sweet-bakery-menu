@@ -157,8 +157,14 @@ export async function optimizeImage(buffer, originalMime = 'image/jpeg') {
  * Format: restaurants/{restaurantId}/{entityType}/{unique-id}.webp
  */
 export function generateObjectKey(restaurantId, entityType = 'dishes', filename = '') {
+  if (entityType === 'superadmin' || entityType === 'branding') {
+    const timestamp = Date.now();
+    const randomSuffix = Math.round(Math.random() * 1e9);
+    return `superadmin/branding/logo-${timestamp}-${randomSuffix}.webp`;
+  }
+
   const safeRestoId = parseInt(restaurantId, 10) || 1;
-  const validTypes = ['dishes', 'categories', 'banners', 'avatars', 'logos', 'migrated', 'misc'];
+  const validTypes = ['dishes', 'categories', 'banners', 'avatars', 'logos', 'migrated', 'misc', 'superadmin', 'branding'];
   const safeType = validTypes.includes(entityType) ? entityType : 'dishes';
   
   const timestamp = Date.now();

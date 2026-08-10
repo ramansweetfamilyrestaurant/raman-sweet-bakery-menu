@@ -262,7 +262,7 @@ export default function SuperAdminDashboard({ token, username, onLogout, onImper
   };
 
   const handleUploadLogo = async (file) => {
-    return await uploadImage(file, token, 'logo');
+    return await uploadImage(file, token, 'superadmin');
   };
 
   return (
