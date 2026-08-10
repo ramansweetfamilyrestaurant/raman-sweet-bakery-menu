@@ -693,37 +693,28 @@ router.get('/settings', authenticateToken, requireSuperAdmin, async (req, res) =
 // POST Update System Settings for Super Admin
 router.post('/settings', authenticateToken, requireSuperAdmin, async (req, res) => {
   try {
-    const { support_whatsapp, cashfree_app_id, cashfree_secret_key, default_trial_days, grace_period_days, platform_logo_url } = req.body;
+    const payload = req.body || {};
     
-    const settingsToSave = {
-      support_whatsapp: support_whatsapp ? support_whatsapp.replace(/[^0-9]/g, '') : undefined,
-      cashfree_app_id: cashfree_app_id !== undefined ? String(cashfree_app_id).trim() : undefined,
-      cashfree_secret_key: cashfree_secret_key !== undefined ? String(cashfree_secret_key).trim() : undefined,
-      default_trial_days: default_trial_days !== undefined ? String(Math.max(1, parseInt(default_trial_days, 10) || 14)) : undefined,
-      grace_period_days: grace_period_days !== undefined ? String(Math.max(0, parseInt(grace_period_days, 10) || 7)) : undefined,
-      platform_logo_url: platform_logo_url !== undefined ? String(platform_logo_url).trim().replace(/^['"]+|['"]+$/g, '') : undefined
-    };
-
-    for (const [k, v] of Object.entries(settingsToSave)) {
-      if (v !== undefined) {
+    for (const [k, v] of Object.entries(payload)) {
+      if (v !== undefined && v !== null) {
+        const strVal = String(v).trim().replace(/^['"]+|['"]+$/g, '');
         try {
           await query(
             'INSERT INTO system_settings (key, value) VALUES ($1, $2) ON CONFLICT (key) DO UPDATE SET value = EXCLUDED.value',
-            [k, v]
+            [k, strVal]
           );
         } catch (err1) {
           try {
-            await query('INSERT OR REPLACE INTO system_settings (key, value) VALUES ($1, $2)', [k, v]);
+            await query('INSERT OR REPLACE INTO system_settings (key, value) VALUES ($1, $2)', [k, strVal]);
           } catch (err2) {
             console.error(`[DB SAVE ERROR] Failed to save system_setting ${k}:`, err2.message);
-            throw err2;
           }
         }
       }
     }
 
-    await logAudit(null, 'superadmin', 'Update System Settings', 'Updated Payment Gateway & SaaS Trial Settings');
-    res.json({ message: 'System Settings & API Keys updated successfully!' });
+    await logAudit(null, 'superadmin', 'Update System Settings', 'Updated System Settings');
+    res.json({ success: true, message: 'System Settings & API Keys updated successfully!' });
   } catch (err) {
     console.error('Update system settings error:', err);
     res.status(500).json({ error: 'Failed to update settings' });
