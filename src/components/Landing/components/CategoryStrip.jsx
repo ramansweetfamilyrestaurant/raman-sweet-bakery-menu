@@ -6,16 +6,15 @@ export default function CategoryStrip() {
     { icon: '🌶️', title: 'Family Fine Dining' },
     { icon: '🍕', title: 'Cafes & Restro-Bars' },
     { icon: '🍔', title: 'QSR & Fast Food' },
-    { icon: '🍛', title: 'Dhabas & Thali Restaurants' },
-    { icon: '🏨', title: 'Hotel Room Service' },
-    { icon: '🍧', title: 'Ice Cream Parlors' }
+    { icon: '🍛', title: 'Dhabas & Thalis' },
+    { icon: '🏨', title: 'Hotel Room Service' }
   ];
 
   return (
-    <div className="km-category-strip-wrapper">
+    <section className="km-category-strip-section">
       <div className="km-container">
         <div className="km-category-header">
-          <span>TRUSTED ACROSS ALL FOOD BUSINESS TYPES IN INDIA</span>
+          <span>BUILT FOR ALL INDIAN RESTAURANT TYPES</span>
         </div>
         <div className="km-category-grid">
           {categories.map((cat, idx) => (
@@ -26,6 +25,6 @@ export default function CategoryStrip() {
           ))}
         </div>
       </div>
-    </div>
+    </section>
   );
 }

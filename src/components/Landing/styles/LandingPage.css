@@ -1570,20 +1570,20 @@
 /* ==========================================================================
    CATEGORY STRIP STYLING
    ========================================================================== */
-.km-category-strip-wrapper {
+.km-category-strip-section {
   background: var(--km-green-light);
   border-top: 1px solid rgba(212, 175, 55, 0.15);
   border-bottom: 1px solid rgba(212, 175, 55, 0.15);
-  padding: 24px 0;
+  padding: 20px 0;
 }
 
 .km-category-header {
   text-align: center;
-  margin-bottom: 14px;
+  margin-bottom: 12px;
 }
 
 .km-category-header span {
-  font-size: 0.74rem;
+  font-size: 0.72rem;
   font-weight: 900;
   letter-spacing: 1px;
   color: var(--km-gold);
@@ -1594,21 +1594,33 @@
   display: flex;
   flex-wrap: wrap;
   justify-content: center;
-  gap: 10px;
+  gap: 8px;
+}
+
+@media (max-width: 768px) {
+  .km-category-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 8px;
+    padding: 0 4px;
+  }
 }
 
 .km-category-chip {
   display: inline-flex;
   align-items: center;
-  gap: 8px;
-  background: rgba(255, 255, 255, 0.05);
-  border: 1px solid rgba(255, 255, 255, 0.12);
-  border-radius: 50px;
-  padding: 8px 16px;
+  justify-content: center;
+  gap: 6px;
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(212, 175, 55, 0.22);
+  border-radius: 8px;
+  padding: 8px 12px;
   color: #FFF;
-  font-size: 0.85rem;
-  font-weight: 700;
+  font-size: 0.78rem;
+  font-weight: 800;
+  white-space: nowrap;
   transition: all 0.2s ease;
+  text-align: center;
 }
 
 .km-category-chip:hover {
@@ -1618,14 +1630,14 @@
 }
 
 .km-category-icon {
-  font-size: 1.1rem;
+  font-size: 0.95rem;
 }
 
 /* ==========================================================================
    STANDEE & RECEIPT HARDWARE PREVIEW STYLING
    ========================================================================== */
 .km-standee-section {
-  padding: 70px 0;
+  padding: 48px 0;
   background: var(--km-white);
   border-top: 1px solid var(--km-border);
   border-bottom: 1px solid var(--km-border);
@@ -1634,47 +1646,47 @@
 .km-standee-grid {
   display: grid;
   grid-template-columns: 1fr 1fr;
-  gap: 40px;
+  gap: 32px;
   align-items: center;
 }
 
 @media (max-width: 992px) {
   .km-standee-grid {
     grid-template-columns: 1fr;
-    gap: 32px;
+    gap: 24px;
   }
 }
 
 .km-standee-features {
   display: flex;
   flex-direction: column;
-  gap: 16px;
-  margin-top: 24px;
+  gap: 12px;
+  margin-top: 18px;
 }
 
 .km-standee-feat-item {
   display: flex;
-  gap: 12px;
+  gap: 10px;
   align-items: flex-start;
 }
 
 .km-standee-feat-item strong {
   display: block;
-  font-size: 0.95rem;
+  font-size: 0.9rem;
   color: var(--km-text);
   margin-bottom: 2px;
 }
 
 .km-standee-feat-item span {
-  font-size: 0.86rem;
+  font-size: 0.82rem;
   color: var(--km-muted);
-  line-height: 1.5;
+  line-height: 1.4;
 }
 
 .km-standee-visual-box {
   display: grid;
   grid-template-columns: 1fr 1fr;
-  gap: 16px;
+  gap: 14px;
 }
 
 @media (max-width: 580px) {
@@ -1685,24 +1697,24 @@
 
 .km-standee-card {
   background: linear-gradient(135deg, #0A2315 0%, #164E2A 100%);
-  border-radius: 16px;
-  padding: 20px;
+  border-radius: 14px;
+  padding: 16px;
   color: #FFF;
-  box-shadow: 0 10px 25px rgba(10, 35, 21, 0.25);
+  box-shadow: 0 8px 20px rgba(10, 35, 21, 0.25);
   border: 1px solid rgba(212, 175, 55, 0.3);
 }
 
 .km-standee-header {
   display: flex;
   align-items: center;
-  gap: 8px;
-  font-size: 0.75rem;
+  gap: 6px;
+  font-size: 0.72rem;
   font-weight: 900;
   color: var(--km-gold);
   letter-spacing: 0.5px;
   border-bottom: 1px solid rgba(255, 255, 255, 0.1);
-  padding-bottom: 10px;
-  margin-bottom: 16px;
+  padding-bottom: 8px;
+  margin-bottom: 12px;
 }
 
 .km-standee-qr-box {
@@ -1710,64 +1722,66 @@
 }
 
 .km-standee-qr-frame {
-  width: 110px;
-  height: 110px;
+  width: 90px;
+  height: 90px;
   margin: 0 auto;
   background: #FFF;
-  border-radius: 12px;
+  border-radius: 10px;
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.2);
+  padding: 6px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
 }
 
 .km-standee-qr-badge {
   background: var(--km-green);
   color: var(--km-gold);
-  font-size: 0.62rem;
+  font-size: 0.58rem;
   font-weight: 900;
   padding: 2px 6px;
   border-radius: 4px;
-  margin-top: 4px;
+  margin-top: 3px;
+  letter-spacing: 0.3px;
 }
 
 .km-receipt-card {
   background: #F8FAFC;
   border: 1.5px solid #E2E8F0;
-  border-radius: 16px;
-  padding: 18px;
-  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.05);
+  border-radius: 14px;
+  padding: 16px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
 }
 
 .km-receipt-header {
   display: flex;
   align-items: center;
-  gap: 8px;
-  font-size: 0.75rem;
+  gap: 6px;
+  font-size: 0.72rem;
   font-weight: 900;
   color: #10B981;
   letter-spacing: 0.5px;
   border-bottom: 1px dashed #CBD5E1;
-  padding-bottom: 10px;
-  margin-bottom: 12px;
+  padding-bottom: 8px;
+  margin-bottom: 10px;
 }
 
 .km-receipt-body {
-  font-family: monospace;
-  font-size: 0.8rem;
+  font-family: 'Courier New', Courier, monospace;
+  font-size: 0.78rem;
   color: #1E293B;
 }
 
 .km-receipt-line {
   display: flex;
   justify-content: space-between;
-  margin-bottom: 6px;
+  margin-bottom: 4px;
 }
 
 .km-receipt-divider {
   border-bottom: 1px dashed #CBD5E1;
-  margin: 8px 0;
+  margin: 6px 0;
 }
 
 .km-receipt-item {
@@ -1777,19 +1791,19 @@
 }
 
 .km-receipt-note {
-  font-size: 0.72rem;
+  font-size: 0.7rem;
   color: #64748B;
-  margin-top: 8px;
+  margin-top: 6px;
   font-style: italic;
 }
 
 .km-receipt-footer {
   text-align: center;
-  font-size: 0.72rem;
+  font-size: 0.7rem;
   font-weight: 800;
   color: #10B981;
-  margin-top: 12px;
-  padding-top: 8px;
+  margin-top: 10px;
+  padding-top: 6px;
   border-top: 1px dashed #CBD5E1;
 }
 
