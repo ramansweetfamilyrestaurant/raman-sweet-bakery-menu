@@ -9,6 +9,7 @@ import { Plus, Edit, Trash2, Eye, EyeOff, LogOut, ArrowLeft, Layers, Utensils, Q
 import PaymentModal from '../PaymentModal';
 
 import './styles/Admin.css';
+import CustomerHeader from '../CustomerHeader';
 import AdminHeader from './components/AdminHeader';
 import AdminBottomNavigation from './components/AdminBottomNavigation';
 import AdminDesktopNavigation from './components/AdminDesktopNavigation';
@@ -1680,18 +1681,13 @@ export default function AdminDashboard({ token, username, onLogout, onReturnToMe
         </div>
       )}
 
-      {/* Modern Single POS Header Shell */}
+      {/* Customer Header as Single Admin Shell Header */}
       <div className="adm-dashboard-container">
-        <AdminHeader
-          restaurantInfo={restaurantInfo}
-          username={username}
+        <CustomerHeader
+          info={restaurantInfo}
           onLogout={onLogout}
-          onReturnToMenu={onReturnToMenu}
           onOpenHelp={() => setShowHelpModal(true)}
           supportPhone={masterSupportPhone}
-          activeTab={activeTab}
-          setActiveTab={setActiveTab}
-          pendingOrdersCount={orders.filter(o => o.status === 'pending').length}
         />
 
         <main className="adm-main-canvas">

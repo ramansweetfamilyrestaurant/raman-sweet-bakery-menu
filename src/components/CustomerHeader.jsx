@@ -1,7 +1,22 @@
-import React from 'react';
-import { ShieldCheck, Globe, Star, Info, Clock, Phone, MapPin } from 'lucide-react';
+import React, { useState } from 'react';
+import { ShieldCheck, Globe, Star, Info, Clock, Phone, MapPin, MoreVertical, HelpCircle, LogOut } from 'lucide-react';
 
-export default function CustomerHeader({ info, lang, tableNum, onToggleLang, onOpenInfoModal, onOpenAdmin, onCallStaff, onOpenReviewModal }) {
+export default function CustomerHeader({
+  info,
+  lang,
+  tableNum,
+  onToggleLang,
+  onOpenInfoModal,
+  onOpenAdmin,
+  onCallStaff,
+  onOpenReviewModal,
+  onLogout,
+  onOpenHelp,
+  supportPhone
+}) {
+  const [showMoreMenu, setShowMoreMenu] = useState(false);
+  const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
+
   return (
     <header style={{
       background: 'var(--header-gradient, linear-gradient(180deg, rgba(10, 35, 21, 0.94) 0%, rgba(18, 55, 34, 0.94) 100%))',
@@ -15,7 +30,7 @@ export default function CustomerHeader({ info, lang, tableNum, onToggleLang, onO
       zIndex: 1000,
       boxShadow: '0 8px 24px rgba(0,0,0,0.18)'
     }}>
-      {/* Top Mobile Bar: Language Pill + Table Indicator + Call Staff + Google Review Button */}
+      {/* Top Mobile Bar: Language Pill + Table Indicator + Call Staff + Rate Us + Three Dots ⋮ */}
       <div style={{
         display: 'flex',
         justifyContent: 'space-between',
@@ -37,15 +52,16 @@ export default function CustomerHeader({ info, lang, tableNum, onToggleLang, onO
             borderRadius: 'var(--radius-pill)',
             display: 'inline-flex',
             alignItems: 'center',
-            gap: '4px'
+            gap: '4px',
+            cursor: 'pointer'
           }}
         >
           <Globe size={12} color="#D4AF37" />
           {lang === 'hi' ? 'हिंदी' : 'EN / हिंदी'}
         </button>
 
-        {/* Right Action Group: Rate Us + Table Indicator + Call Staff */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+        {/* Right Action Group: Rate Us + Table Indicator + Call Staff + Three Dots ⋮ */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: '6px', position: 'relative' }}>
           {onOpenReviewModal && (info?.google_reviews_enabled !== false && info?.google_reviews_enabled !== 0) && (
             <button
               onClick={onOpenReviewModal}
@@ -102,7 +118,8 @@ export default function CustomerHeader({ info, lang, tableNum, onToggleLang, onO
                     display: 'inline-flex',
                     alignItems: 'center',
                     gap: '3px',
-                    boxShadow: '0 2px 8px rgba(124, 58, 237, 0.3)'
+                    boxShadow: '0 2px 8px rgba(124, 58, 237, 0.3)',
+                    cursor: 'pointer'
                   }}
                 >
                   🛎️ Call Staff
@@ -124,6 +141,68 @@ export default function CustomerHeader({ info, lang, tableNum, onToggleLang, onO
             }}>
               📖 View Only Menu
             </span>
+          )}
+
+          {/* Three-Dot ⋮ Options Menu Button */}
+          <button
+            onClick={() => setShowMoreMenu(!showMoreMenu)}
+            style={{
+              padding: '4px 6px',
+              color: '#FFF',
+              background: 'rgba(255, 255, 255, 0.16)',
+              border: '1px solid rgba(255, 255, 255, 0.25)',
+              borderRadius: '50%',
+              cursor: 'pointer',
+              display: 'inline-flex',
+              alignItems: 'center',
+              justifyContent: 'center'
+            }}
+            aria-label="More Options Menu"
+          >
+            <MoreVertical size={16} />
+          </button>
+
+          {/* Dropdown Menu (Onboarding Guide, WhatsApp Support, Logout Admin) */}
+          {showMoreMenu && (
+            <div
+              style={{
+                position: 'absolute', top: '34px', right: 0, width: '210px',
+                background: '#FFFFFF', border: '1px solid #E2E8F0',
+                borderRadius: '12px', boxShadow: '0 10px 30px rgba(0,0,0,0.25)',
+                zIndex: 1000, padding: '6px', color: '#0F172A'
+              }}
+              onClick={() => setShowMoreMenu(false)}
+            >
+              {onOpenHelp && (
+                <button
+                  onClick={onOpenHelp}
+                  style={{ width: '100%', display: 'flex', alignItems: 'center', gap: '8px', padding: '10px 12px', fontSize: '0.84rem', fontWeight: 700, color: '#0F172A', background: 'none', border: 'none', cursor: 'pointer', textAlign: 'left', borderRadius: '6px' }}
+                >
+                  <HelpCircle size={16} color="#2563EB" /> Onboarding Guide
+                </button>
+              )}
+
+              <a
+                href={`https://wa.me/${(supportPhone || info?.phone || '919876543210').replace(/[^0-9]/g, '')}`}
+                target="_blank"
+                rel="noopener noreferrer"
+                style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '10px 12px', fontSize: '0.84rem', fontWeight: 700, color: '#0F172A', textDecoration: 'none', borderRadius: '6px' }}
+              >
+                <Phone size={16} color="#16A34A" /> WhatsApp Support
+              </a>
+
+              {onLogout && (
+                <>
+                  <div style={{ height: '1px', background: '#E2E8F0', margin: '4px 0' }} />
+                  <button
+                    onClick={() => setShowLogoutConfirm(true)}
+                    style={{ width: '100%', display: 'flex', alignItems: 'center', gap: '8px', padding: '10px 12px', fontSize: '0.84rem', fontWeight: 800, color: '#DC2626', background: 'none', border: 'none', cursor: 'pointer', textAlign: 'left', borderRadius: '6px' }}
+                  >
+                    <LogOut size={16} /> Logout Admin
+                  </button>
+                </>
+              )}
+            </div>
           )}
         </div>
       </div>
@@ -188,22 +267,64 @@ export default function CustomerHeader({ info, lang, tableNum, onToggleLang, onO
               {info?.badge || (lang === 'hi' ? 'डिजिटल मेन्यू' : 'Digital Menu')}
             </span>
 
-            <span style={{ color: 'rgba(255,255,255,0.3)', fontSize: '0.7rem' }}>•</span>
-
-            <button
-              onClick={onOpenInfoModal}
-              style={{
-                fontSize: '0.72rem',
-                fontWeight: 600,
-                color: '#FEFCE8',
-                textDecoration: 'underline'
-              }}
-            >
-              {lang === 'hi' ? 'जानकारी' : 'Info & Timings'}
-            </button>
+            {onOpenInfoModal && (
+              <>
+                <span style={{ color: 'rgba(255,255,255,0.3)', fontSize: '0.7rem' }}>•</span>
+                <button
+                  onClick={onOpenInfoModal}
+                  style={{
+                    fontSize: '0.72rem',
+                    fontWeight: 600,
+                    color: '#FEFCE8',
+                    textDecoration: 'underline',
+                    background: 'none',
+                    border: 'none',
+                    cursor: 'pointer',
+                    padding: 0
+                  }}
+                >
+                  {lang === 'hi' ? 'जानकारी' : 'Info & Timings'}
+                </button>
+              </>
+            )}
           </div>
         </div>
       </div>
+
+      {/* Logout Confirmation Dialog */}
+      {showLogoutConfirm && (
+        <div style={{
+          position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
+          background: 'rgba(0,0,0,0.6)', backdropFilter: 'blur(4px)',
+          zIndex: 2000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '16px'
+        }}>
+          <div style={{ maxWidth: '360px', width: '100%', background: '#FFFFFF', borderRadius: '16px', padding: '20px', color: '#0F172A' }}>
+            <h3 style={{ fontSize: '1.05rem', fontWeight: 900, margin: '0 0 8px 0' }}>
+              Confirm Admin Logout
+            </h3>
+            <p style={{ fontSize: '0.82rem', color: '#64748B', margin: '0 0 16px 0' }}>
+              Are you sure you want to end your active restaurant management session?
+            </p>
+            <div style={{ display: 'flex', gap: '10px', justifyContent: 'flex-end' }}>
+              <button
+                onClick={() => setShowLogoutConfirm(false)}
+                style={{ padding: '8px 16px', borderRadius: '8px', border: '1px solid #CBD5E1', background: '#F8FAFC', fontWeight: 700, cursor: 'pointer' }}
+              >
+                Cancel
+              </button>
+              <button
+                onClick={() => {
+                  setShowLogoutConfirm(false);
+                  if (onLogout) onLogout();
+                }}
+                style={{ padding: '8px 16px', borderRadius: '8px', border: 'none', background: '#DC2626', color: '#FFFFFF', fontWeight: 800, cursor: 'pointer' }}
+              >
+                Logout Now
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </header>
   );
 }
