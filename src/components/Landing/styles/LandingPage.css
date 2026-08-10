@@ -45,7 +45,7 @@
 }
 
 .km-container {
-  max-width: 1240px;
+  max-width: 1280px;
   margin: 0 auto;
   padding: 0 24px;
   width: 100%;
@@ -56,14 +56,14 @@
   display: inline-flex;
   align-items: center;
   gap: 8px;
-  padding: 6px 14px;
+  padding: 6px 16px;
   border-radius: 9999px;
   background: var(--km-gold-light);
   border: 1px solid rgba(212, 175, 55, 0.4);
   color: #856404;
   font-weight: 800;
   font-size: 0.8rem;
-  letter-spacing: 0.3px;
+  letter-spacing: 0.4px;
   margin-bottom: 20px;
 }
 
@@ -74,16 +74,16 @@
 }
 
 .km-title-lg {
-  font-size: clamp(2rem, 4vw, 3.25rem);
+  font-size: clamp(1.85rem, 3.5vw, 2.75rem);
   font-weight: 900;
-  line-height: 1.15;
+  line-height: 1.18;
   letter-spacing: -0.02em;
   color: var(--km-text);
   margin: 0 0 16px 0;
 }
 
 .km-subtitle {
-  font-size: clamp(1rem, 2vw, 1.18rem);
+  font-size: clamp(0.95rem, 1.5vw, 1.125rem);
   color: var(--km-muted);
   line-height: 1.6;
   margin: 0 0 32px 0;
