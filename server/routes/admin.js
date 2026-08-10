@@ -481,7 +481,7 @@ router.post('/upload', authenticateToken, requireActiveSubscription, upload.sing
     if (req.file.path && fs.existsSync(req.file.path)) fs.unlinkSync(req.file.path);
 
     const proxyUrl = `/api/r2-proxy/${r2Result.objectKey}`;
-    const returnUrl = r2Result.publicUrl || proxyUrl;
+    const returnUrl = proxyUrl;
 
     return res.json({
       success: true,

@@ -247,7 +247,7 @@ export async function uploadImage(file, token) {
     body: formData,
   });
   const data = await handleResponse(res, 'Upload failed');
-  return data.url;
+  return data.r2ProxyUrl || data.url;
 }
 
 export async function deleteImageApi(imageUrl, token) {
