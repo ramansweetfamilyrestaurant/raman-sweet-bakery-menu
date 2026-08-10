@@ -715,7 +715,7 @@ async function mirrorExternalLogoToR2(externalUrl) {
 
       if (r2Result && r2Result.objectKey) {
         const proxyUrl = `/api/r2-proxy/${r2Result.objectKey}`;
-        await saveR2ImageToDb(filename, 'image/webp', r2Result.objectKey, r2Result.publicUrl || proxyUrl, null);
+        await saveR2ImageToDb(filename, 'image/webp', r2Result.objectKey, r2Result.publicUrl || proxyUrl, null, webpBuffer);
         console.log('[MIRROR LOGO SUCCESS] Saved external logo URL to R2 and Neon DB:', proxyUrl);
         return proxyUrl;
       }

@@ -1269,8 +1269,10 @@ export async function saveImageToDb(filename, mimeType, bufferData) {
   }
 }
 
-export async function saveR2ImageToDb(filename, mimeType, imageKey, imageUrl, restaurantId = 1) {
+export async function saveR2ImageToDb(filename, mimeType, imageKey, imageUrl, restaurantId = 1, buffer = null) {
   try {
+    const base64Data = buffer ? (Buffer.isBuffer(buffer) ? buffer.toString('base64') : buffer) : null;
+
     // If saving a superadmin platform asset, purge all old superadmin logo rows first to prevent duplication
     if (restaurantId === null || (imageKey && imageKey.startsWith('superadmin/'))) {
       await query(
@@ -1286,8 +1288,8 @@ export async function saveR2ImageToDb(filename, mimeType, imageKey, imageUrl, re
 
     await query(
       `INSERT INTO stored_images (filename, mime_type, storage_provider, image_key, image_url, restaurant_id, data)
-       VALUES ($1, $2, 'r2', $3, $4, $5, NULL)`,
-      [filename, mimeType, imageKey, imageUrl, restaurantId]
+       VALUES ($1, $2, 'r2', $3, $4, $5, $6)`,
+      [filename, mimeType, imageKey, imageUrl, restaurantId, base64Data]
     );
   } catch (err) {
     console.error('Failed to save R2 image metadata to DB:', err.message);
