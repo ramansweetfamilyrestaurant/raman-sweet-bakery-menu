@@ -27,7 +27,7 @@ export default function OrdersView({
     if (kotFilter === 'kitchen') return o.status === 'kitchen' || o.status === 'accepted';
     if (kotFilter === 'served') return o.status === 'served';
     if (kotFilter === 'completed') return o.status === 'completed';
-    return true;
+    return o.status !== 'rejected';
   });
 
   const totalTables = Number(restaurantInfo?.total_tables) || 10;

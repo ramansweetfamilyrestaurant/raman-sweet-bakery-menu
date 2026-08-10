@@ -368,7 +368,7 @@ router.get('/orders/active-table', async (req, res) => {
     const orders = await query(`
       SELECT id, table_number, status, total_amount, items, created_at
       FROM orders
-      WHERE restaurant_id = $1 AND table_number = $2 AND status IN ('pending', 'preparing', 'served')
+      WHERE restaurant_id = $1 AND table_number = $2 AND status IN ('pending', 'preparing', 'kitchen', 'accepted', 'served')
       ORDER BY id DESC LIMIT 1
     `, [targetId, String(table_number)]);
 

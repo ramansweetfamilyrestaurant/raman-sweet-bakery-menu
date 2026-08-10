@@ -443,45 +443,10 @@ export default function AdminDashboard({ token, username, onLogout, onReturnToMe
 
   // ⚡ 0.5-Second Direct Bluetooth ESC/POS Thermal Receipt Printing (RawBT Protocol Integration)
   const handleDirectBluetoothPrint = (order, printType = 'kot') => {
-    try {
-      const restoName = settingsForm.name || 'KhanaMaster Restaurant';
-      const itemsList = (order.items || []).map(i => {
-        const portionText = i.portion ? ` (${i.portion})` : '';
-        return `${i.quantity}x ${i.name}${portionText} - Rs.${i.price * i.quantity}`;
-      }).join('\n');
-
-      let receiptText = '';
-      if (printType === 'kot') {
-        receiptText = `==============================\n   KITCHEN ORDER TICKET (KOT)   \n   TABLE #${order.table_number || '1'}\n==============================\n` +
-          `Order ID: #${order.id}\n` +
-          `Customer: ${order.customer_name || 'Dine-In Guest'}\n` +
-          `Time: ${formatDateTime(order.created_at)}\n` +
-          `------------------------------\n` +
-          `${itemsList}\n` +
-          `------------------------------\n` +
-          `TOTAL BILL: Rs.${order.total_amount}\n` +
-          `==============================\n` +
-          ` *** READY FOR KITCHEN *** \n\n\n`;
-      } else {
-        receiptText = `==============================\n   ${restoName.toUpperCase()}   \n      TAX / CUSTOMER BILL     \n==============================\n` +
-          `Table #${order.table_number || '1'} | Order #${order.id}\n` +
-          `Customer: ${order.customer_name || 'Guest'}\n` +
-          `Date: ${formatDateTime(order.created_at)}\n` +
-          `------------------------------\n` +
-          `${itemsList}\n` +
-          `------------------------------\n` +
-          `GRAND TOTAL: Rs.${order.total_amount}\n` +
-          `==============================\n` +
-          ` Thank You! Visit Us Again! \n\n\n`;
-      }
-
-      // Trigger RawBT / ESC/POS Direct Bluetooth Print Protocol URL
-      const rawbtUrl = `rawbt:base64,${btoa(unescape(encodeURIComponent(receiptText)))}`;
-      window.location.href = rawbtUrl;
-    } catch (e) {
-      console.warn('Direct Bluetooth print trigger fallback:', e);
-      if (printType === 'kot') handlePrintKOT(order);
-      else setBillOrderModal(order);
+    if (printType === 'kot') {
+      handlePrintKOT(order);
+    } else {
+      setBillOrderModal(order);
     }
   };
 
