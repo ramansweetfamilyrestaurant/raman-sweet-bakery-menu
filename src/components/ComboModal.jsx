@@ -1,8 +1,11 @@
 import React from 'react';
 import { X, Plus, Sparkles, CheckCircle2, Utensils, Tag, ShieldCheck } from 'lucide-react';
+import { resolveImageUrl } from '../utils/imageHelper';
 
 export default function ComboModal({ combo, onClose, onAddToCart, canOrder = false, currencySymbol = '₹' }) {
   if (!combo) return null;
+
+  const symbol = (currencySymbol !== undefined && currencySymbol !== null) ? currencySymbol : '₹';
 
   let comboItems = [];
   try {
@@ -13,6 +16,7 @@ export default function ComboModal({ combo, onClose, onAddToCart, canOrder = fal
 
   const originalTotal = comboItems.reduce((s, i) => s + ((i.original_price || 0) * (i.qty || 1)), 0);
   const savings = originalTotal - combo.price;
+  const imageSrc = resolveImageUrl(combo.image);
 
   return (
     <div style={{
@@ -80,9 +84,9 @@ export default function ComboModal({ combo, onClose, onAddToCart, canOrder = fal
           justifyContent: 'center'
         }}>
           <span style={{ fontSize: '5rem', color: '#DFBA67', position: 'absolute', pointerEvents: 'none' }}>🍱</span>
-          {combo.image && combo.image !== '/uploads/logo.jpg' && (
+          {imageSrc && (
             <img
-              src={combo.image}
+              src={imageSrc}
               alt={combo.name}
               style={{
                 width: '100%',
@@ -112,7 +116,7 @@ export default function ComboModal({ combo, onClose, onAddToCart, canOrder = fal
               alignItems: 'center',
               gap: '4px'
             }}>
-              <Tag size={12} /> SAVE {currencySymbol}{savings} OFF
+              <Tag size={12} /> SAVE {symbol}{savings} OFF
             </div>
           )}
 
@@ -161,12 +165,23 @@ export default function ComboModal({ combo, onClose, onAddToCart, canOrder = fal
             </div>
 
             <div style={{ textAlign: 'right', flexShrink: 0 }}>
-              <div style={{ fontSize: '1.35rem', fontWeight: 900, color: 'var(--primary-emerald)', lineHeight: 1 }}>
-                {currencySymbol}{combo.price}
+              <div style={{
+                fontSize: '1.25rem',
+                fontWeight: 900,
+                padding: '4px 14px',
+                borderRadius: 'var(--radius-pill)',
+                background: '#FFFFFF',
+                color: 'var(--primary-emerald)',
+                border: '1.5px solid var(--border-light)',
+                boxShadow: '0 1px 6px rgba(0,0,0,0.08)',
+                whiteSpace: 'nowrap',
+                lineHeight: 1.2
+              }}>
+                {symbol}{combo.price}
               </div>
               {originalTotal > combo.price && (
-                <div style={{ fontSize: '0.8rem', color: '#9CA3AF', textDecoration: 'line-through', marginTop: '2px' }}>
-                  {currencySymbol}{originalTotal}
+                <div style={{ fontSize: '0.8rem', color: '#9CA3AF', textDecoration: 'line-through', marginTop: '4px', textAlign: 'center' }}>
+                  {symbol}{originalTotal}
                 </div>
               )}
             </div>

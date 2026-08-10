@@ -1,9 +1,11 @@
 import React, { useState } from 'react';
 import { X, ShieldCheck, Sparkles, Clock, Utensils, CheckCircle } from 'lucide-react';
+import { resolveImageUrl } from '../utils/imageHelper';
 
 export default function DishModal({ dish, onClose, currencySymbol = '₹' }) {
   if (!dish) return null;
 
+  const symbol = (currencySymbol !== undefined && currencySymbol !== null) ? currencySymbol : '₹';
   const hasHalfPrice = dish.price_half !== null && dish.price_half !== undefined && Number(dish.price_half) > 0;
   const [selectedPortion, setSelectedPortion] = useState(hasHalfPrice ? 'half' : 'full');
 
@@ -13,6 +15,7 @@ export default function DishModal({ dish, onClose, currencySymbol = '₹' }) {
     : (dish.portion_full_label || dish.portion || 'Full Portion');
 
   const ingredientsList = dish.ingredients ? dish.ingredients.split(',').map(i => i.trim()) : [];
+  const imageSrc = resolveImageUrl(dish.image);
 
   return (
     <div style={{
@@ -74,9 +77,9 @@ export default function DishModal({ dish, onClose, currencySymbol = '₹' }) {
           background: 'var(--gold-soft)',
           position: 'relative'
         }}>
-          {dish.image && dish.image !== '/uploads/logo.jpg' ? (
+          {imageSrc ? (
             <img
-              src={dish.image}
+              src={imageSrc}
               alt={dish.name}
               style={{
                 width: '100%',
@@ -217,20 +220,21 @@ export default function DishModal({ dish, onClose, currencySymbol = '₹' }) {
               </h2>
             </div>
 
-            {/* Dynamic Active Price Tag */}
-            <span style={{
-              fontFamily: 'var(--font-heading)',
-              fontSize: '1.4rem',
-              fontWeight: 700,
-              color: 'var(--primary-emerald)',
-              background: 'var(--gold-soft)',
-              border: '1.5px solid var(--gold-primary)',
+            {/* Dynamic Active Price Tag Pill */}
+            <div style={{
+              fontSize: '1.25rem',
+              fontWeight: 900,
               padding: '4px 14px',
-              borderRadius: 'var(--radius-sm)',
-              boxShadow: 'var(--shadow-sm)'
+              borderRadius: 'var(--radius-pill)',
+              background: '#FFFFFF',
+              color: 'var(--primary-emerald)',
+              border: '1.5px solid var(--border-light)',
+              boxShadow: '0 1px 6px rgba(0,0,0,0.08)',
+              whiteSpace: 'nowrap',
+              lineHeight: 1.2
             }}>
-              {currencySymbol}{Number(activePrice).toLocaleString('en-IN')}
-            </span>
+              {symbol}{Number(activePrice).toLocaleString('en-IN')}
+            </div>
           </div>
 
           {/* Interactive Half / Full Portion Selector */}
@@ -260,7 +264,7 @@ export default function DishModal({ dish, onClose, currencySymbol = '₹' }) {
                     transition: 'var(--transition-fast)'
                   }}
                 >
-                  {dish.portion_half_label || 'Half'} • {dish.price_half}
+                  {dish.portion_half_label || 'Half'} • {symbol}{dish.price_half}
                 </button>
 
                 <button
@@ -277,7 +281,7 @@ export default function DishModal({ dish, onClose, currencySymbol = '₹' }) {
                     transition: 'var(--transition-fast)'
                   }}
                 >
-                  {dish.portion_full_label || 'Full'} • {dish.price}
+                  {dish.portion_full_label || 'Full'} • {symbol}{dish.price}
                 </button>
               </div>
             </div>
