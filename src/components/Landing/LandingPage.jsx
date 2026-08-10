@@ -118,7 +118,7 @@ export default function LandingPage({
 
       {/* SaaS Footer */}
       <Footer 
-        logoUrl={logoUrl}
+        logoUrl={platformLogoUrl}
         onOpenLogin={() => setShowLoginModal(true)} 
         onStartTrial={() => handleStartTrial('')} 
       />
