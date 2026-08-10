@@ -822,10 +822,10 @@ export default function App() {
         setLoginMode={setLandingLoginMode}
         loginSlugInput={loginSlugInput}
         setLoginSlugInput={setLoginSlugInput}
-        adminUsernameInput={adminUsernameInput}
-        setAdminUsernameInput={setAdminUsernameInput}
-        adminPasswordInput={adminPasswordInput}
-        setAdminPasswordInput={setAdminPasswordInput}
+        adminUsernameInput={loginSlugInput}
+        setAdminUsernameInput={setLoginSlugInput}
+        adminPasswordInput={loginPassInput}
+        setAdminPasswordInput={setLoginPassInput}
         newPasswordInput={landingNewPassInput}
         setNewPasswordInput={setLandingNewPassInput}
         loginErrMessage={loginErrMessage}
