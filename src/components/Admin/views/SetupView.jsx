@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { Store, Bell, Utensils, MapPin, CreditCard, Lock, ChevronRight, Upload, Volume2, ShieldCheck, Printer } from 'lucide-react';
 import AdminDrawer from '../components/AdminDrawer';
 
@@ -89,7 +89,6 @@ export default function SetupView({
     try {
       const audio = new Audio('/assets/emergency_alarm.mp3');
       audio.play().catch(() => {
-        // Fallback Web Audio API Beep
         const ctx = new (window.AudioContext || window.webkitAudioContext)();
         const osc = ctx.createOscillator();
         osc.type = 'sine';
@@ -104,6 +103,16 @@ export default function SetupView({
     }
   };
 
+  const requestPushPermission = () => {
+    if ('Notification' in window) {
+      Notification.requestPermission().then(perm => {
+        alert(`Push Notifications Permission: ${perm.toUpperCase()}`);
+      });
+    } else {
+      alert('Push notifications not supported on this browser.');
+    }
+  };
+
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '18px' }}>
       {/* Header Title */}
@@ -113,7 +122,7 @@ export default function SetupView({
             Setup Control Center
           </h2>
           <span style={{ fontSize: '0.8rem', color: 'var(--adm-muted)', fontWeight: 600 }}>
-            Configure profile, device alarms, menu filters, GPS geofence, and security.
+            Configure profile, device alarms, GST tax, menu filters, GPS geofence, and security.
           </span>
         </div>
 
@@ -124,7 +133,7 @@ export default function SetupView({
         )}
       </div>
 
-      {/* 6 Control Cards Grid */}
+      {/* 9 Control Cards Grid */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '14px' }}>
         {/* Card 1: Profile */}
         <div
@@ -138,7 +147,7 @@ export default function SetupView({
             </div>
             <div>
               <strong style={{ fontSize: '0.95rem', color: 'var(--adm-text)', display: 'block' }}>🏪 Restaurant Profile</strong>
-              <span style={{ fontSize: '0.75rem', color: 'var(--adm-muted)' }}>Name, logo, phone, address, FSSAI</span>
+              <span style={{ fontSize: '0.75rem', color: 'var(--adm-muted)' }}>Name, logo, phone, address, FSSAI, Maps</span>
             </div>
           </div>
           <ChevronRight size={18} color="var(--adm-muted)" />
@@ -156,7 +165,7 @@ export default function SetupView({
             </div>
             <div>
               <strong style={{ fontSize: '0.95rem', color: 'var(--adm-text)', display: 'block' }}>🔔 Orders & Devices</strong>
-              <span style={{ fontSize: '0.75rem', color: 'var(--adm-muted)' }}>Siren audio alert, push notifications, printer</span>
+              <span style={{ fontSize: '0.75rem', color: 'var(--adm-muted)' }}>Siren audio alert, push alerts, printer</span>
             </div>
           </div>
           <ChevronRight size={18} color="var(--adm-muted)" />
@@ -173,8 +182,8 @@ export default function SetupView({
               <Utensils size={20} />
             </div>
             <div>
-              <strong style={{ fontSize: '0.95rem', color: 'var(--adm-text)', display: 'block' }}>🍽 Menu Settings</strong>
-              <span style={{ fontSize: '0.75rem', color: 'var(--adm-muted)' }}>Veg/Non-Veg filters, dish badge visibility</span>
+              <strong style={{ fontSize: '0.95rem', color: 'var(--adm-text)', display: 'block' }}>🍽 Menu & GST Settings</strong>
+              <span style={{ fontSize: '0.75rem', color: 'var(--adm-muted)' }}>GST tax rate, currency, dish badges</span>
             </div>
           </div>
           <ChevronRight size={18} color="var(--adm-muted)" />
@@ -371,6 +380,28 @@ export default function SetupView({
           </div>
 
           <div>
+            <label style={{ fontSize: '0.76rem', fontWeight: 800, color: 'var(--adm-muted)', display: 'block', marginBottom: '4px' }}>GOOGLE MAPS LOCATION LINK:</label>
+            <input
+              type="url"
+              placeholder="https://maps.google.com/..."
+              value={settingsForm.google_maps_url || ''}
+              onChange={(e) => setSettingsForm({ ...settingsForm, google_maps_url: e.target.value })}
+              style={{ width: '100%', padding: '10px 12px', borderRadius: 'var(--adm-radius-md)', border: '1px solid var(--adm-border)', fontSize: '0.9rem' }}
+            />
+          </div>
+
+          <div>
+            <label style={{ fontSize: '0.76rem', fontWeight: 800, color: 'var(--adm-muted)', display: 'block', marginBottom: '4px' }}>GOOGLE REVIEW PAGE LINK:</label>
+            <input
+              type="url"
+              placeholder="https://g.page/r/..."
+              value={settingsForm.google_review_url || ''}
+              onChange={(e) => setSettingsForm({ ...settingsForm, google_review_url: e.target.value })}
+              style={{ width: '100%', padding: '10px 12px', borderRadius: 'var(--adm-radius-md)', border: '1px solid var(--adm-border)', fontSize: '0.9rem' }}
+            />
+          </div>
+
+          <div>
             <label style={{ fontSize: '0.76rem', fontWeight: 800, color: 'var(--adm-muted)', display: 'block', marginBottom: '4px' }}>ADDRESS:</label>
             <textarea
               rows={2}
@@ -409,9 +440,26 @@ export default function SetupView({
             <p style={{ fontSize: '0.76rem', color: 'var(--adm-muted)', margin: '0 0 10px 0' }}>
               Plays a loud Swiggy/Zomato style siren ringtone whenever a new table order arrives.
             </p>
-            <button onClick={testAlarmSound} className="adm-btn adm-btn-secondary adm-btn-sm" style={{ width: '100%' }}>
-              <Volume2 size={15} /> Test Emergency Siren Sound
-            </button>
+            <div style={{ display: 'flex', gap: '8px' }}>
+              <button onClick={testAlarmSound} className="adm-btn adm-btn-secondary adm-btn-sm" style={{ flex: 1 }}>
+                <Volume2 size={15} /> Test Siren Sound
+              </button>
+              <button onClick={requestPushPermission} className="adm-btn adm-btn-secondary adm-btn-sm" style={{ flex: 1 }}>
+                🔔 Push Notifications
+              </button>
+            </div>
+          </div>
+
+          {/* Order Retention Period */}
+          <div style={{ padding: '14px', background: 'var(--adm-surface-subtle)', borderRadius: 'var(--adm-radius-md)', border: '1px solid var(--adm-border)' }}>
+            <label style={{ fontSize: '0.76rem', fontWeight: 800, color: 'var(--adm-primary)', display: 'block', marginBottom: '4px' }}>ORDER HISTORY RETENTION (DAYS):</label>
+            <input
+              type="number"
+              value={settingsForm.order_retention_days || 7}
+              onChange={(e) => setSettingsForm({ ...settingsForm, order_retention_days: parseInt(e.target.value) || 7 })}
+              style={{ width: '100%', padding: '8px 10px', borderRadius: 'var(--adm-radius-md)', border: '1px solid var(--adm-border)', fontSize: '0.88rem' }}
+            />
+            <span style={{ fontSize: '0.72rem', color: 'var(--adm-muted)', marginTop: '4px', display: 'block' }}>Orders older than this period will be automatically archived.</span>
           </div>
 
           {/* Printer Setup Box */}
@@ -431,11 +479,11 @@ export default function SetupView({
       <AdminDrawer
         isOpen={openDrawer === 'menu'}
         onClose={() => setOpenDrawer(null)}
-        title="🍽 Menu & Filter Settings"
-        subtitle="Configure cuisine categories and dish badge visibility"
+        title="🍽 Menu & GST Settings"
+        subtitle="Configure cuisine type, tax rate, and dish badge visibility"
         footer={(
           <button onClick={handleFormSave} className="adm-btn adm-btn-primary" style={{ width: '100%', padding: '12px', fontWeight: 900 }}>
-            Save Menu Settings
+            Save Menu & Tax Settings
           </button>
         )}
       >
@@ -461,6 +509,75 @@ export default function SetupView({
               onChange={(e) => setSettingsForm({ ...settingsForm, currency_symbol: e.target.value })}
               style={{ width: '100%', padding: '10px 12px', borderRadius: 'var(--adm-radius-md)', border: '1px solid var(--adm-border)', fontSize: '0.9rem' }}
             />
+          </div>
+
+          {/* GST Configuration */}
+          <div style={{ padding: '12px', background: 'var(--adm-surface-subtle)', borderRadius: 'var(--adm-radius-md)', border: '1px solid var(--adm-border)' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
+              <strong style={{ fontSize: '0.88rem', color: 'var(--adm-primary)' }}>🏷️ Enable 5% GST Tax Billing</strong>
+              <input
+                type="checkbox"
+                checked={Boolean(settingsForm.gst_enabled)}
+                onChange={(e) => setSettingsForm({ ...settingsForm, gst_enabled: e.target.checked })}
+                style={{ width: '18px', height: '18px', cursor: 'pointer' }}
+              />
+            </div>
+
+            {settingsForm.gst_enabled && (
+              <div style={{ marginTop: '8px' }}>
+                <label style={{ fontSize: '0.74rem', fontWeight: 800, color: 'var(--adm-muted)', display: 'block', marginBottom: '4px' }}>GSTIN NUMBER:</label>
+                <input
+                  type="text"
+                  placeholder="e.g. 10AAAAA0000A1Z5"
+                  value={settingsForm.gstin_number || ''}
+                  onChange={(e) => setSettingsForm({ ...settingsForm, gstin_number: e.target.value })}
+                  style={{ width: '100%', padding: '8px 10px', borderRadius: 'var(--adm-radius-md)', border: '1px solid var(--adm-border)', fontSize: '0.86rem' }}
+                />
+              </div>
+            )}
+          </div>
+
+          {/* Dish Filter Visibility Toggles */}
+          <div style={{ padding: '12px', background: 'var(--adm-surface-subtle)', borderRadius: 'var(--adm-radius-md)', border: '1px solid var(--adm-border)' }}>
+            <strong style={{ fontSize: '0.88rem', color: 'var(--adm-primary)', display: 'block', marginBottom: '10px' }}>👁️ Customer Menu Badge Visibility</strong>
+
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', fontSize: '0.82rem' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <span>⭐ Show "Must Try" Badge Filter</span>
+                <input
+                  type="checkbox"
+                  checked={settingsForm.filters_visibility?.must_try !== false}
+                  onChange={(e) => setSettingsForm({
+                    ...settingsForm,
+                    filters_visibility: { ...settingsForm.filters_visibility, must_try: e.target.checked }
+                  })}
+                />
+              </div>
+
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <span>✨ Show "Today Special" Badge Filter</span>
+                <input
+                  type="checkbox"
+                  checked={settingsForm.filters_visibility?.special !== false}
+                  onChange={(e) => setSettingsForm({
+                    ...settingsForm,
+                    filters_visibility: { ...settingsForm.filters_visibility, special: e.target.checked }
+                  })}
+                />
+              </div>
+
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <span>🍱 Show "Combos" Navigation Tab</span>
+                <input
+                  type="checkbox"
+                  checked={settingsForm.filters_visibility?.combo !== false}
+                  onChange={(e) => setSettingsForm({
+                    ...settingsForm,
+                    filters_visibility: { ...settingsForm.filters_visibility, combo: e.target.checked }
+                  })}
+                />
+              </div>
+            </div>
           </div>
         </form>
       </AdminDrawer>
