@@ -344,3 +344,61 @@
     max-width: 100%;
   }
 }
+
+/* Responsive POS Dish Grid Rules */
+.adm-dish-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 16px;
+}
+
+@media (max-width: 1199px) {
+  .adm-dish-grid {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 14px;
+  }
+}
+
+@media (max-width: 767px) {
+  .adm-dish-grid {
+    grid-template-columns: 1fr;
+    gap: 10px;
+  }
+}
+
+/* POS Dish Card styling */
+.adm-dish-card {
+  background: var(--adm-surface);
+  border: 1px solid var(--adm-border);
+  border-radius: var(--adm-radius-md);
+  padding: 12px 14px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  box-shadow: var(--adm-shadow-sm);
+  transition: var(--adm-transition);
+}
+
+.adm-dish-card:hover {
+  border-color: var(--adm-border-strong);
+  box-shadow: var(--adm-shadow-md);
+}
+
+.adm-dish-card-img {
+  width: 72px;
+  height: 72px;
+  border-radius: var(--adm-radius-md);
+  object-fit: cover;
+  flex-shrink: 0;
+  background: var(--adm-surface-subtle);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+@media (max-width: 767px) {
+  .adm-dish-card-img {
+    width: 64px;
+    height: 64px;
+  }
+}
