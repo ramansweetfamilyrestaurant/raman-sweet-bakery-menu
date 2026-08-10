@@ -58,11 +58,11 @@ export default function SetupView({
     }
   };
 
-  const [gpsSuccess, setGpsSuccess] = useState(false);
+  const [gpsSuccessMsg, setGpsSuccessMsg] = useState('');
   const [gpsErrorState, setGpsErrorState] = useState(null); // { title, msg, isDenied }
 
   const handleDetectGps = async () => {
-    setGpsSuccess(false);
+    setGpsSuccessMsg('');
     setGpsErrorState(null);
 
     // Step 1: Check if geolocation API exists
@@ -91,8 +91,8 @@ export default function SetupView({
         const permStatus = await navigator.permissions.query({ name: 'geolocation' });
         if (permStatus.state === 'denied') {
           setGpsErrorState({
-            title: '🔒 Location Permission Required',
-            msg: 'Location access is blocked for this site. Please allow Location permission in your browser settings.',
+            title: '🔒 Location permission is blocked',
+            msg: 'Allow Location access for this site in your browser settings.',
             isDenied: true
           });
           return;
@@ -102,77 +102,165 @@ export default function SetupView({
       }
     }
 
-    // Step 4: Request real location via browser Geolocation API with instant cached maximumAge & IP fallback
+    // Step 4: High-Accuracy REAL GPS Location Request (maximumAge: 0, enableHighAccuracy: true)
     setGpsLoading(true);
 
-    const onGpsSuccess = (pos) => {
-      if (setSettingsForm && pos?.coords?.latitude && pos?.coords?.longitude) {
+    let bestReading = null;
+    let samplesCount = 0;
+    let watchId = null;
+
+    const finalizeLocation = (position) => {
+      if (watchId !== null) {
+        navigator.geolocation.clearWatch(watchId);
+        watchId = null;
+      }
+
+      setGpsLoading(false);
+
+      if (!position || !position.coords) {
+        setGpsErrorState({
+          title: '❌ Location Error',
+          msg: 'Unable to detect your location. Please try again.',
+          isDenied: false
+        });
+        return;
+      }
+
+      const lat = position.coords.latitude;
+      const lng = position.coords.longitude;
+      const accuracy = position.coords.accuracy || 999;
+
+      // Debug Log
+      console.log('[LOCATION DEBUG]', {
+        lat,
+        lng,
+        accuracy: `${Math.round(accuracy)}m`,
+        altitude: position.coords.altitude,
+        heading: position.coords.heading,
+        speed: position.coords.speed,
+        timestamp: new Date(position.timestamp).toISOString()
+      });
+
+      // Validate Coordinate Boundaries (-90 <= lat <= 90, -180 <= lng <= 180)
+      if (typeof lat !== 'number' || typeof lng !== 'number' || lat < -90 || lat > 90 || lng < -180 || lng > 180 || isNaN(lat) || isNaN(lng)) {
+        setGpsErrorState({
+          title: '❌ Invalid Coordinates',
+          msg: 'Detected coordinates are invalid. Please try again.',
+          isDenied: false
+        });
+        return;
+      }
+
+      // Accuracy Validation Policy:
+      // <= 50m: Excellent / High Quality
+      // 50m - 100m: Acceptable with warning
+      // > 100m: REJECT reading (do NOT overwrite saved coordinates)
+      if (accuracy > 100) {
+        setGpsErrorState({
+          title: '⚠ Location accuracy is low',
+          msg: `Location accuracy is currently low (±${Math.round(accuracy)} meters). Please move outdoors or near a window and try again.`,
+          isDenied: false
+        });
+        return;
+      }
+
+      // Preserve full float precision in state
+      if (setSettingsForm) {
         setSettingsForm(prev => ({
           ...prev,
-          latitude: pos.coords.latitude,
-          longitude: pos.coords.longitude
+          latitude: lat,
+          longitude: lng
         }));
       }
-      setGpsLoading(false);
-      setGpsSuccess(true);
-      setTimeout(() => setGpsSuccess(false), 5000);
+
+      if (accuracy <= 50) {
+        setGpsSuccessMsg(`✓ Location detected (Accuracy: ±${Math.round(accuracy)}m)`);
+      } else {
+        setGpsSuccessMsg(`✓ Location detected (Accuracy: ±${Math.round(accuracy)}m — Move outdoors for better precision)`);
+      }
+
+      setTimeout(() => setGpsSuccessMsg(''), 7000);
     };
 
-    const handleGpsFallback = async () => {
-      try {
-        const res = await fetch('https://ipapi.co/json/');
-        const data = await res.json();
-        if (data && data.latitude && data.longitude) {
-          if (setSettingsForm) {
-            setSettingsForm(prev => ({
-              ...prev,
-              latitude: data.latitude,
-              longitude: data.longitude
-            }));
-          }
-          setGpsLoading(false);
-          setGpsSuccess(true);
-          setTimeout(() => setGpsSuccess(false), 5000);
-          return;
-        }
-      } catch (e) {
-        // IP fallback failed
+    const handleGpsError = (err) => {
+      if (watchId !== null) {
+        navigator.geolocation.clearWatch(watchId);
+        watchId = null;
       }
 
       setGpsLoading(false);
-      setGpsErrorState({
-        title: '⏱️ Location Timeout',
-        msg: 'GPS signal weak indoors. Try moving near a window or turn on Wi-Fi for better location signal.',
-        isDenied: false
-      });
+
+      if (bestReading) {
+        // Use best reading collected so far if available
+        finalizeLocation(bestReading);
+        return;
+      }
+
+      if (err.code === 1) {
+        // PERMISSION_DENIED
+        setGpsErrorState({
+          title: '🔒 Location permission is blocked',
+          msg: 'Allow Location access for this site in your browser settings.',
+          isDenied: true
+        });
+      } else if (err.code === 2) {
+        // POSITION_UNAVAILABLE
+        setGpsErrorState({
+          title: '📍 Location is turned off',
+          msg: 'Please turn on Location/GPS on your device and try again.',
+          isDenied: false
+        });
+      } else if (err.code === 3) {
+        // TIMEOUT
+        setGpsErrorState({
+          title: '⏱️ Location Timeout',
+          msg: 'Unable to get an accurate location right now. Make sure Location is ON and move to an open area.',
+          isDenied: false
+        });
+      } else {
+        setGpsErrorState({
+          title: '❌ Location Error',
+          msg: 'Unable to detect your location. Please try again.',
+          isDenied: false
+        });
+      }
     };
 
-    // Primary attempt: Use cached/instant device position (maximumAge: Infinity, enableHighAccuracy: false)
+    // Primary High Accuracy Attempt
     navigator.geolocation.getCurrentPosition(
-      onGpsSuccess,
-      (err) => {
-        if (err.code === 1) {
-          // PERMISSION_DENIED
-          setGpsLoading(false);
-          setGpsErrorState({
-            title: '🔒 Location Permission Required',
-            msg: 'Location permission was denied. Please allow location access in your browser settings.',
-            isDenied: true
-          });
-        } else if (err.code === 2) {
-          // POSITION_UNAVAILABLE
-          setGpsLoading(false);
-          setGpsErrorState({
-            title: '📍 Location is turned off',
-            msg: 'Please turn on Location/GPS on your device and try again.',
-            isDenied: false
-          });
+      (pos) => {
+        bestReading = pos;
+        if (pos.coords.accuracy <= 50) {
+          finalizeLocation(pos);
         } else {
-          // Timeout or general error: Try IP-based location fallback
-          handleGpsFallback();
+          // If initial reading accuracy > 50m, sample for up to 4 seconds to pick the best reading
+          const startTime = Date.now();
+          watchId = navigator.geolocation.watchPosition(
+            (watchPos) => {
+              samplesCount++;
+              if (!bestReading || watchPos.coords.accuracy < bestReading.coords.accuracy) {
+                bestReading = watchPos;
+              }
+              if (watchPos.coords.accuracy <= 50 || (Date.now() - startTime) >= 4000) {
+                finalizeLocation(bestReading);
+              }
+            },
+            () => {
+              finalizeLocation(bestReading);
+            },
+            { enableHighAccuracy: true, timeout: 5000, maximumAge: 0 }
+          );
+
+          // Force finalize after 4 seconds max if watchPosition stays open
+          setTimeout(() => {
+            if (watchId !== null) {
+              finalizeLocation(bestReading);
+            }
+          }, 4500);
         }
       },
-      { enableHighAccuracy: false, timeout: 8000, maximumAge: Infinity }
+      handleGpsError,
+      { enableHighAccuracy: true, timeout: 30000, maximumAge: 0 }
     );
   };
 
@@ -720,16 +808,16 @@ export default function SetupView({
             style={{ width: '100%', padding: '12px 16px', minHeight: '44px', fontWeight: 800, fontSize: '0.9rem', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}
           >
             <MapPin size={18} />
-            {gpsLoading ? '📍 Detecting Location...' : gpsSuccess ? '✓ Location Detected' : gpsErrorState ? '⚠ Try Again' : '📍 Detect Current Location'}
+            {gpsLoading ? '📍 Detecting Location...' : gpsSuccessMsg ? '✓ Location Detected' : gpsErrorState ? '⚠ Try Again' : '📍 Detect Current Location'}
           </button>
 
           <span style={{ fontSize: '0.72rem', color: 'var(--adm-muted)', marginTop: '-8px', display: 'block', lineHeight: 1.4 }}>
             Location detection uses your device's GPS/location service. If detection fails, turn on Location and allow browser permission.
           </span>
 
-          {gpsSuccess && (
+          {gpsSuccessMsg && (
             <div style={{ background: 'var(--adm-success-bg)', color: 'var(--adm-success)', padding: '10px 14px', borderRadius: 'var(--adm-radius-md)', fontSize: '0.84rem', fontWeight: 800, border: '1px solid var(--adm-success-border)' }}>
-              ✓ Location detected successfully
+              {gpsSuccessMsg}
             </div>
           )}
 
