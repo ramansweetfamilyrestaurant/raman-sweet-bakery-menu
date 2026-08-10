@@ -3,6 +3,7 @@ import { ChevronRight } from 'lucide-react';
 import { resolveImageUrl } from '../utils/imageHelper';
 
 export default function DishCard({ dish, onClick, onAddToCart, currencySymbol = '₹' }) {
+  const symbol = (currencySymbol !== undefined && currencySymbol !== null) ? currencySymbol : '₹';
   const isAvailable = dish.available !== false;
   const hasHalfPrice = dish.price_half !== null && dish.price_half !== undefined && Number(dish.price_half) > 0;
   const imageSrc = resolveImageUrl(dish.image);
@@ -253,7 +254,7 @@ export default function DishCard({ dish, onClick, onAddToCart, currencySymbol = 
               whiteSpace: 'nowrap',
               boxShadow: '0 1px 4px rgba(0,0,0,0.06)'
             }}>
-              {currencySymbol}{Number(dish.price).toLocaleString('en-IN')}
+              {symbol}{Number(dish.price).toLocaleString('en-IN')}
             </span>
           </div>
 
@@ -285,7 +286,7 @@ export default function DishCard({ dish, onClick, onAddToCart, currencySymbol = 
             fontWeight: 700,
             color: 'var(--primary-emerald)'
           }}>
-            {hasHalfPrice ? `Half ${currencySymbol}${dish.price_half} | Full ${currencySymbol}${dish.price}` : (dish.portion || 'Special Portion')}
+            {hasHalfPrice ? `Half ${symbol}${dish.price_half} | Full ${symbol}${dish.price}` : (dish.portion || 'Special Portion')}
           </span>
 
           <span style={{

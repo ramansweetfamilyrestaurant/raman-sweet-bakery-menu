@@ -214,13 +214,14 @@ export default function MenuCardItem({ dish, lang, onClick, onAddToCart, currenc
             <button
               onClick={() => setPortionMode('half')}
               style={{
-                fontSize: '0.72rem',
-                fontWeight: 800,
-                padding: '4px 8px',
+                fontSize: '0.74rem',
+                fontWeight: 900,
+                padding: '3px 9px',
                 borderRadius: 'var(--radius-pill)',
-                background: portionMode === 'half' ? 'var(--primary-emerald)' : 'var(--bg-secondary)',
-                color: portionMode === 'half' ? '#FFFFFF' : 'var(--text-muted)',
+                background: portionMode === 'half' ? 'var(--primary-emerald)' : '#FFFFFF',
+                color: portionMode === 'half' ? '#FFFFFF' : 'var(--text-dark)',
                 border: portionMode === 'half' ? '1.5px solid var(--primary-emerald)' : '1.5px solid var(--border-light)',
+                boxShadow: '0 1px 4px rgba(0,0,0,0.06)',
                 cursor: 'pointer',
                 transition: 'all 0.2s ease',
                 whiteSpace: 'nowrap',
@@ -232,13 +233,14 @@ export default function MenuCardItem({ dish, lang, onClick, onAddToCart, currenc
             <button
               onClick={() => setPortionMode('full')}
               style={{
-                fontSize: '0.72rem',
-                fontWeight: 800,
-                padding: '4px 8px',
+                fontSize: '0.74rem',
+                fontWeight: 900,
+                padding: '3px 9px',
                 borderRadius: 'var(--radius-pill)',
-                background: portionMode === 'full' ? 'var(--primary-emerald)' : 'var(--bg-secondary)',
-                color: portionMode === 'full' ? '#FFFFFF' : 'var(--text-muted)',
+                background: portionMode === 'full' ? 'var(--primary-emerald)' : '#FFFFFF',
+                color: portionMode === 'full' ? '#FFFFFF' : 'var(--text-dark)',
                 border: portionMode === 'full' ? '1.5px solid var(--primary-emerald)' : '1.5px solid var(--border-light)',
+                boxShadow: '0 1px 4px rgba(0,0,0,0.06)',
                 cursor: 'pointer',
                 transition: 'all 0.2s ease',
                 whiteSpace: 'nowrap',
