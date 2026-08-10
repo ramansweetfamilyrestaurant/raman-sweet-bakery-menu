@@ -1,5 +1,6 @@
 import React from 'react';
 import { LayoutDashboard, Store, CreditCard, Layers, History, Megaphone, Settings, LogOut, ChevronLeft, ChevronRight, Sparkles } from 'lucide-react';
+import { resolveImageUrl } from '../../../utils/imageHelper';
 
 export default function Sidebar({ activeView, setActiveView, collapsed, setCollapsed, onLogout, logoUrl }) {
   const [logoErr, setLogoErr] = React.useState(false);
@@ -26,7 +27,7 @@ export default function Sidebar({ activeView, setActiveView, collapsed, setColla
           <div className="sa-brand">
             {logoUrl && !logoErr ? (
               <img
-                src={logoUrl}
+                src={resolveImageUrl(logoUrl)}
                 alt="Super Admin Logo"
                 referrerPolicy="no-referrer"
                 onError={() => setLogoErr(true)}

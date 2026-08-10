@@ -1,11 +1,18 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Settings, CreditCard, Clock, Phone, Lock, CheckCircle2, ShieldCheck } from 'lucide-react';
+import { resolveImageUrl } from '../../../utils/imageHelper';
 
 export default function SettingsView({ paymentKeys, onSavePaymentKeys, securityForm, setSecurityForm, onSaveSecurity, savingKeys, savingSecurity, keysMsg, securityMsg, securityError, onUploadLogo, onResetLogo }) {
   const [activeTab, setActiveTab] = useState('payments');
   const [keysForm, setKeysForm] = useState(paymentKeys);
   const [uploadingLogo, setUploadingLogo] = useState(false);
   const [logoErr, setLogoErr] = useState(false);
+
+  useEffect(() => {
+    if (keysForm.platform_logo_url) {
+      setLogoErr(false);
+    }
+  }, [keysForm.platform_logo_url]);
 
   const handleSaveKeysSubmit = (e) => {
     e.preventDefault();
@@ -296,7 +303,7 @@ export default function SettingsView({ paymentKeys, onSavePaymentKeys, securityF
             }}>
               {keysForm.platform_logo_url && !logoErr ? (
                 <img
-                  src={keysForm.platform_logo_url}
+                  src={resolveImageUrl(keysForm.platform_logo_url)}
                   alt="Platform Logo"
                   referrerPolicy="no-referrer"
                   onError={() => setLogoErr(true)}

@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { Menu, X, ArrowRight, UserCheck } from 'lucide-react';
+import { resolveImageUrl } from '../../../utils/imageHelper';
 
 export default function Navbar({ onOpenLogin, onStartTrial, logoUrl }) {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
@@ -22,7 +23,7 @@ export default function Navbar({ onOpenLogin, onStartTrial, logoUrl }) {
       <div className="km-container km-navbar-container">
         <div className="km-logo" onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}>
           {logoUrl && !logoErr ? (
-            <img src={logoUrl} alt="TouchQR Logo" referrerPolicy="no-referrer" onError={() => setLogoErr(true)} style={{ width: '30px', height: '30px', borderRadius: '8px', objectFit: 'contain', background: '#FFF', padding: '2px', flexShrink: 0 }} />
+            <img src={resolveImageUrl(logoUrl)} alt="TouchQR Logo" referrerPolicy="no-referrer" onError={() => setLogoErr(true)} style={{ width: '30px', height: '30px', borderRadius: '8px', objectFit: 'contain', background: '#FFF', padding: '2px', flexShrink: 0 }} />
           ) : (
             <div className="km-logo-icon">🍱</div>
           )}

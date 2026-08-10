@@ -16,11 +16,12 @@ export function resolveImageUrl(url) {
     return cleanUrl;
   }
 
-  // 3. Cloudflare R2 direct domain (pub-xxxx.r2.dev/restaurants/...) -> Convert to reliable /api/r2-proxy/
-  if (cleanUrl.includes('.r2.dev/restaurants/')) {
-    const idx = cleanUrl.indexOf('restaurants/');
+  // 3. Cloudflare R2 direct domain (pub-xxxx.r2.dev/...) -> Convert to reliable /api/r2-proxy/
+  if (cleanUrl.includes('.r2.dev/')) {
+    const idx = cleanUrl.indexOf('.r2.dev/');
     if (idx !== -1) {
-      return `/api/r2-proxy/${cleanUrl.substring(idx)}`;
+      const keyPath = cleanUrl.substring(idx + 8);
+      return `/api/r2-proxy/${keyPath}`;
     }
   }
 

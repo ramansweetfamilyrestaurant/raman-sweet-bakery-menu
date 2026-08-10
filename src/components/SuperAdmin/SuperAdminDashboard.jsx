@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Crown, Plus, LogOut, ExternalLink, Trash2, CheckCircle, Store, Utensils, DollarSign, Phone, MapPin, Copy, Check, Search, Edit3, Shield, ShieldCheck, RefreshCw, QrCode, Megaphone, FileText, Calendar, Palette, MessageSquare, Upload, X, XCircle, CreditCard, Lock, Sparkles, Eye, EyeOff, Key, Database, Sliders, Image } from 'lucide-react';
 import { fetchSuperAdminRestaurants, createTenantRestaurant, toggleTenantRestaurantActive, deleteTenantRestaurant, impersonateTenantRestaurant, updateTenantRestaurant, createAnnouncement, fetchSuperAnnouncements, deleteAnnouncement, clearAllAnnouncements, fetchAuditLogs, uploadImage, fetchSaaSPlans, createSaaSPlan, updateSaaSPlan, deleteSaaSPlan, superAdminOptimizeDatabase, updateSuperAdminCredentials, grantFreeAccess, revokeFreeAccess } from '../../api/client';
 import { SAAS_PLANS, getPlanDetails } from '../../config/plans';
+import { resolveImageUrl } from '../../utils/imageHelper';
 import GrantFreeAccessModal from './modals/GrantFreeAccessModal';
 import RevokeFreeAccessModal from './modals/RevokeFreeAccessModal';
 
@@ -494,7 +495,7 @@ export default function SuperAdminDashboard({ token, username, onLogout, onRetur
                   flexShrink: 0
                 }}>
                   <img
-                    src={paymentKeys.platform_logo_url}
+                    src={resolveImageUrl(paymentKeys.platform_logo_url)}
                     alt="Super Admin Logo"
                     referrerPolicy="no-referrer"
                     onError={() => setLogoErr(true)}
@@ -3314,7 +3315,7 @@ export default function SuperAdminDashboard({ token, username, onLogout, onRetur
                   <div style={{ display: 'flex', alignItems: 'center', gap: '14px', marginBottom: '12px' }}>
                     {paymentKeys.platform_logo_url && !logoErr ? (
                       <img
-                        src={paymentKeys.platform_logo_url}
+                        src={resolveImageUrl(paymentKeys.platform_logo_url)}
                         alt="Logo Preview"
                         referrerPolicy="no-referrer"
                         onError={() => setLogoErr(true)}

@@ -1,5 +1,6 @@
 import React from 'react';
 import { UserCircle, Lock, LogOut, ShieldCheck } from 'lucide-react';
+import { resolveImageUrl } from '../../../utils/imageHelper';
 
 export default function ProfileView({ username, securityForm, setSecurityForm, onSaveSecurity, savingSecurity, securityMsg, securityError, onLogout, logoUrl }) {
   const [logoErr, setLogoErr] = React.useState(false);
@@ -24,7 +25,7 @@ export default function ProfileView({ username, securityForm, setSecurityForm, o
       }}>
         {logoUrl && !logoErr ? (
           <img
-            src={logoUrl}
+            src={resolveImageUrl(logoUrl)}
             alt="Super Admin Logo"
             referrerPolicy="no-referrer"
             onError={() => setLogoErr(true)}
