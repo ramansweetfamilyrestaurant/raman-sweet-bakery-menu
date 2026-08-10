@@ -3,9 +3,21 @@ import LegalPageLayout from './LegalPageLayout';
 import { Mail, Phone, MessageSquare, Clock, CheckCircle, Send } from 'lucide-react';
 
 export default function ContactSupport({ onOpenLogin, onStartTrial }) {
+  const [supportPhone, setSupportPhone] = useState('919876543210');
+  const [loading, setLoading] = useState(false);
+
   useEffect(() => {
     document.title = 'KhanaMaster - Contact & Support';
     window.scrollTo(0, 0);
+
+    fetch('/api/keys')
+      .then(res => res.json())
+      .then(data => {
+        if (data && data.support_whatsapp) {
+          setSupportPhone(data.support_whatsapp);
+        }
+      })
+      .catch(() => {});
   }, []);
 
   const [formData, setFormData] = useState({
@@ -18,10 +30,41 @@ export default function ContactSupport({ onOpenLogin, onStartTrial }) {
 
   const [submitted, setSubmitted] = useState(false);
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
     if (!formData.name || !formData.phone || !formData.message) return;
+
+    setLoading(true);
+
+    // 1. Post to backend contact API if available
+    try {
+      await fetch('/api/contact', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(formData)
+      });
+    } catch (err) {
+      // Proceed even if backend API route is silent
+    }
+
+    // 2. Build WhatsApp support inquiry URL
+    const targetPhone = supportPhone.replace(/[^0-9]/g, '') || '919876543210';
+    const waText = `*New KhanaMaster Support Request*\n\n` +
+      `👤 *Name:* ${formData.name}\n` +
+      `📞 *Phone:* ${formData.phone}\n` +
+      `🏪 *Restaurant:* ${formData.restaurantName || 'N/A'}\n` +
+      `📌 *Topic:* ${formData.subject}\n\n` +
+      `💬 *Message:* ${formData.message}`;
+
+    const waUrl = `https://wa.me/${targetPhone}?text=${encodeURIComponent(waText)}`;
+
     setSubmitted(true);
+    setLoading(false);
+
+    // Auto-open WhatsApp chat with support team
+    setTimeout(() => {
+      window.open(waUrl, '_blank');
+    }, 400);
   };
 
   return (
