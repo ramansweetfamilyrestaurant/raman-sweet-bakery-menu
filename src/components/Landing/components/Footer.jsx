@@ -1,6 +1,8 @@
 import React from 'react';
 
-export default function Footer({ onOpenLogin, onStartTrial }) {
+export default function Footer({ logoUrl, onOpenLogin, onStartTrial }) {
+  const [logoErr, setLogoErr] = React.useState(false);
+
   const scrollToSection = (id) => {
     const element = document.getElementById(id);
     if (element) {
@@ -21,7 +23,17 @@ export default function Footer({ onOpenLogin, onStartTrial }) {
           {/* Brand Column */}
           <div className="km-footer-brand">
             <div className="km-logo" onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}>
-              <div className="km-logo-icon">🍱</div>
+              {logoUrl && !logoErr ? (
+                <img
+                  src={logoUrl}
+                  alt="TouchQR Logo"
+                  referrerPolicy="no-referrer"
+                  onError={() => setLogoErr(true)}
+                  style={{ width: '30px', height: '30px', borderRadius: '8px', objectFit: 'contain', background: '#FFF', padding: '2px', flexShrink: 0 }}
+                />
+              ) : (
+                <div className="km-logo-icon">🍱</div>
+              )}
               <span className="km-logo-text" style={{ color: '#FFF' }}>TouchQR</span>
               <span className="km-logo-tag">SaaS</span>
             </div>
