@@ -37,16 +37,6 @@ export default function Hero({ trialDays = 17, onStartTrial, onLiveDemo }) {
               </button>
             </div>
 
-            <div className="km-hero-qr-badge" onClick={onLiveDemo}>
-              <div style={{ background: '#FFF', padding: '6px', borderRadius: '8px', boxShadow: '0 2px 8px rgba(0,0,0,0.1)' }}>
-                <span style={{ fontSize: '1.4rem' }}>📱</span>
-              </div>
-              <div>
-                <strong style={{ display: 'block', fontSize: '0.86rem', color: '#DFBA67' }}>Scan & Test Sample Table QR</strong>
-                <span style={{ fontSize: '0.78rem', color: '#E2E8F0' }}>Click to experience 0.3s fast digital menu on phone</span>
-              </div>
-            </div>
-
             <div className="km-hero-proof-list">
               <div className="km-hero-proof-item">
                 <span>✓</span> No Credit Card Required

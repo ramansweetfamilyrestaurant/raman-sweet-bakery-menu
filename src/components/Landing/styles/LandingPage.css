@@ -1375,27 +1375,6 @@
    CONVERSION UPGRADES: STICKY MOBILE BAR, WHATSAPP FLOAT & SHOWCASE TABS
    ========================================================================== */
 
-/* Hero QR Sample Badge */
-.km-hero-qr-badge {
-  display: inline-flex;
-  align-items: center;
-  gap: 12px;
-  background: rgba(255, 255, 255, 0.06);
-  border: 1px solid rgba(212, 175, 55, 0.35);
-  border-radius: 12px;
-  padding: 10px 16px;
-  margin-top: 18px;
-  cursor: pointer;
-  transition: all 0.2s ease;
-  backdrop-filter: blur(8px);
-}
-
-.km-hero-qr-badge:hover {
-  background: rgba(212, 175, 55, 0.12);
-  transform: translateY(-2px);
-  border-color: #D4AF37;
-}
-
 /* Showcase Mobile Tab Switcher */
 .km-showcase-tabs-container {
   display: none;
