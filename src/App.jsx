@@ -1798,9 +1798,6 @@ export default function App() {
         onOpenInfoModal={() => setShowInfoModal(true)}
         onCallStaff={() => setShowServiceModal(true)}
         onOpenReviewModal={() => setShowReviewModal(true)}
-        onLogout={adminToken ? handleAdminLogout : undefined}
-        onOpenHelp={() => setShowHelpModal(true)}
-        supportPhone={info?.phone || '919876543210'}
         onOpenAdmin={() => {
           if (adminToken) {
             setView('admin-dashboard');
