@@ -286,6 +286,7 @@ export default function SuperAdminDashboard({ token, username, onLogout, onImper
           onOpenMobileMenu={() => {}}
           pendingCount={pendingRegistrations.length}
           onLogout={onLogout}
+          logoUrl={paymentKeys.platform_logo_url}
         />
 
         <div className="sa-content-body">
@@ -352,6 +353,7 @@ export default function SuperAdminDashboard({ token, username, onLogout, onImper
               securityMsg={securityMsg}
               securityError={securityError}
               onLogout={onLogout}
+              logoUrl={paymentKeys.platform_logo_url}
             />
           )}
         </div>

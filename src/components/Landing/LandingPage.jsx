@@ -40,6 +40,18 @@ export default function LandingPage({
   onSubmitLogin = () => {},
   onSubmitResetPassword = () => {}
 }) {
+  const [platformLogoUrl, setPlatformLogoUrl] = React.useState('');
+
+  React.useEffect(() => {
+    fetch('/api/settings')
+      .then(res => res.json())
+      .then(data => {
+        if (data && data.platform_logo_url) {
+          setPlatformLogoUrl(data.platform_logo_url);
+        }
+      })
+      .catch(() => {});
+  }, []);
 
   const handleStartTrial = (planKey = '') => {
     const url = planKey ? `/register?plan=${planKey}` : '/register';
@@ -63,6 +75,7 @@ export default function LandingPage({
       <Navbar 
         onOpenLogin={() => setShowLoginModal(true)} 
         onStartTrial={() => handleStartTrial('')} 
+        logoUrl={platformLogoUrl}
       />
 
       {/* Conversion Hero Section */}

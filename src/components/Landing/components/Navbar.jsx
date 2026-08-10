@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { Menu, X, ArrowRight, UserCheck } from 'lucide-react';
 
-export default function Navbar({ onOpenLogin, onStartTrial }) {
+export default function Navbar({ onOpenLogin, onStartTrial, logoUrl }) {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
   const scrollToSection = (id) => {
@@ -16,7 +16,11 @@ export default function Navbar({ onOpenLogin, onStartTrial }) {
     <nav className="km-navbar">
       <div className="km-container km-navbar-container">
         <div className="km-logo" onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}>
-          <div className="km-logo-icon">🍱</div>
+          {logoUrl ? (
+            <img src={logoUrl} alt="TouchQR Logo" style={{ width: '30px', height: '30px', borderRadius: '8px', objectFit: 'contain', background: '#FFF', padding: '2px', flexShrink: 0 }} />
+          ) : (
+            <div className="km-logo-icon">🍱</div>
+          )}
           <span className="km-logo-text">TouchQR</span>
           <span className="km-logo-tag">SaaS</span>
         </div>

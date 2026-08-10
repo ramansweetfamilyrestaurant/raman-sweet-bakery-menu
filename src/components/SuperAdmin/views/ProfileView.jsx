@@ -1,7 +1,7 @@
 import React from 'react';
 import { UserCircle, Lock, LogOut, ShieldCheck } from 'lucide-react';
 
-export default function ProfileView({ username, securityForm, setSecurityForm, onSaveSecurity, savingSecurity, securityMsg, securityError, onLogout }) {
+export default function ProfileView({ username, securityForm, setSecurityForm, onSaveSecurity, savingSecurity, securityMsg, securityError, onLogout, logoUrl }) {
   const inputStyle = { width: '100%', padding: '10px 12px', borderRadius: 'var(--sa-radius-md)', border: '1.5px solid var(--sa-border)', fontSize: '0.88rem', boxSizing: 'border-box' };
   const labelStyle = { fontSize: '0.75rem', fontWeight: 800, color: 'var(--sa-text-muted)', display: 'block', marginBottom: '6px' };
 
@@ -16,14 +16,26 @@ export default function ProfileView({ username, securityForm, setSecurityForm, o
         textAlign: 'center',
         border: '1px solid rgba(212, 175, 55, 0.3)'
       }}>
-        <div style={{
-          width: '56px', height: '56px', borderRadius: '50%',
-          background: 'linear-gradient(135deg, #D4AF37, #B48F27)',
-          display: 'flex', alignItems: 'center', justifyContent: 'center',
-          margin: '0 auto 12px auto', fontSize: '1.5rem'
-        }}>
-          👑
-        </div>
+        {logoUrl ? (
+          <img
+            src={logoUrl}
+            alt="Super Admin Logo"
+            style={{
+              width: '60px', height: '60px', borderRadius: '50%',
+              objectFit: 'contain', background: '#FFF', padding: '4px',
+              border: '2px solid #D4AF37', margin: '0 auto 12px auto', display: 'block'
+            }}
+          />
+        ) : (
+          <div style={{
+            width: '56px', height: '56px', borderRadius: '50%',
+            background: 'linear-gradient(135deg, #D4AF37, #B48F27)',
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            margin: '0 auto 12px auto', fontSize: '1.5rem'
+          }}>
+            👑
+          </div>
+        )}
         <h2 style={{ fontSize: '1.2rem', fontWeight: 900, margin: '0 0 4px 0' }}>Super Admin</h2>
         <p style={{ fontSize: '0.85rem', color: '#A7F3D0', margin: 0 }}>@{username}</p>
       </div>

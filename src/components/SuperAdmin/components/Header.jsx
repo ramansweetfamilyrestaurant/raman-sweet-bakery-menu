@@ -1,7 +1,7 @@
 import React from 'react';
 import { Search, ShieldCheck } from 'lucide-react';
 
-export default function Header({ username, activeView, searchQuery, setSearchQuery }) {
+export default function Header({ username, activeView, searchQuery, setSearchQuery, logoUrl }) {
   const shortTitles = {
     overview: 'Overview',
     tenants: 'Tenants',
@@ -10,6 +10,7 @@ export default function Header({ username, activeView, searchQuery, setSearchQue
     audit: 'Audit Logs',
     communication: 'Broadcast',
     settings: 'Settings',
+    profile: 'Profile'
   };
 
   const placeholders = {
@@ -20,6 +21,7 @@ export default function Header({ username, activeView, searchQuery, setSearchQue
     audit: 'Search logs...',
     communication: 'Search notices...',
     settings: 'Search settings...',
+    profile: 'Search...'
   };
 
   const currentTitle = shortTitles[activeView] || 'Dashboard';
@@ -58,10 +60,14 @@ export default function Header({ username, activeView, searchQuery, setSearchQue
           </div>
         </div>
 
-        {/* Profile Avatar (Hidden on tiny screens to preserve single row) */}
+        {/* Profile Avatar */}
         <div className="sa-header-profile">
-          <div className="sa-profile-avatar">
-            {username ? username.charAt(0).toUpperCase() : 'S'}
+          <div className="sa-profile-avatar" style={{ overflow: 'hidden' }}>
+            {logoUrl ? (
+              <img src={logoUrl} alt="Super Admin Logo" style={{ width: '100%', height: '100%', objectFit: 'contain', background: '#FFF' }} />
+            ) : (
+              username ? username.charAt(0).toUpperCase() : 'S'
+            )}
           </div>
           <span className="sa-profile-name">
             {username || 'Super Admin'}
