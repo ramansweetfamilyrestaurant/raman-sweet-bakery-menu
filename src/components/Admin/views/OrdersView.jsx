@@ -14,6 +14,7 @@ export default function OrdersView({
   restaurantInfo,
   onPrintQR,
   onDirectPrint,
+  onPrintBill,
   onPreviewPrint,
   printingOrderId,
   printingType,
@@ -219,7 +220,7 @@ export default function OrdersView({
                         </button>
                       )}
                       <button
-                        onClick={() => onOpenBillModal(order)}
+                        onClick={() => onPrintBill ? onPrintBill(order) : onOpenBillModal(order)}
                         disabled={printingOrderId === order.id}
                         className="adm-btn adm-btn-secondary adm-btn-sm"
                         style={{

@@ -441,10 +441,81 @@ export default function AdminDashboard({ token, username, onLogout, onReturnToMe
     }
   };
 
-  // 🖨️ Silent Thermal Printer Engine (Zero-Popup Hidden Iframe Printer)
-  const silentIframePrint = (htmlContent) => {
+  // ⚡ RawBT Direct Thermal Printer ESC/POS Generator
+  const generateRawBTText = (order, type = 'kot', restoInfo = {}) => {
+    let text = '';
+    if (type === 'kot') {
+      text += "================================" + "\n";
+      text += "    KITCHEN ORDER TICKET        " + "\n";
+      text += `    TABLE #${order.table_number || '1'}           ` + "\n";
+      text += "================================" + "\n";
+      text += `Order ID: #${order.id}\n`;
+      text += `Customer: ${order.customer_name || 'Dine-In Guest'}\n`;
+      text += `Time: ${new Date(order.created_at || Date.now()).toLocaleTimeString('en-IN')}\n`;
+      text += "--------------------------------" + "\n";
+      text += "QTY  ITEM NAME            AMOUNT" + "\n";
+      text += "--------------------------------" + "\n";
+      (order.items || []).forEach(i => {
+        const name = (i.name + (i.portion ? ` (${i.portion})` : '')).padEnd(20).substring(0, 20);
+        const qty = String(i.quantity).padEnd(4);
+        const amt = `₹${i.price * i.quantity}`.padStart(7);
+        text += `${qty}${name}${amt}\n`;
+      });
+      text += "================================" + "\n";
+      text += `TOTAL BILL: ₹${order.total_amount}\n`;
+      text += "================================" + "\n";
+      text += "  *** READY FOR KITCHEN ***\n\n\n";
+    } else {
+      const isGst = restoInfo?.gst_enabled;
+      const gstin = restoInfo?.gstin_number || '';
+      const fssai = restoInfo?.fssai_lic_no || '';
+
+      text += "================================" + "\n";
+      text += `   ${(restoInfo?.name || 'RAMAN SWEET BAKERY').toUpperCase()}\n`;
+      if (restoInfo?.address) text += `   ${restoInfo.address}\n`;
+      if (restoInfo?.phone) text += `   Ph: ${restoInfo.phone}\n`;
+      if (fssai) text += `   FSSAI Lic: ${fssai}\n`;
+      if (gstin) text += `   GSTIN: ${gstin}\n`;
+      text += `   --- ${isGst ? 'TAX INVOICE' : 'FINAL BILL'} ---\n`;
+      text += "================================" + "\n";
+      text += `Bill No: INV-${order.id}\n`;
+      text += `Table: TABLE #${order.table_number || '1'}\n`;
+      text += `Date: ${new Date(order.created_at || Date.now()).toLocaleString('en-IN')}\n`;
+      text += `Customer: ${order.customer_name || 'Dine-In Guest'}\n`;
+      text += "--------------------------------" + "\n";
+      text += "QTY  ITEM NAME            AMOUNT" + "\n";
+      text += "--------------------------------" + "\n";
+      (order.items || []).forEach(i => {
+        const name = (i.name + (i.portion ? ` (${i.portion})` : '')).padEnd(20).substring(0, 20);
+        const qty = String(i.quantity).padEnd(4);
+        const amt = `₹${i.price * i.quantity}`.padStart(7);
+        text += `${qty}${name}${amt}\n`;
+      });
+      text += "--------------------------------" + "\n";
+      text += `Grand Total: ₹${order.total_amount}\n`;
+      text += "================================" + "\n";
+      text += "   Thank you! Visit Again 🙏\n\n\n";
+    }
+    return text;
+  };
+
+  // 🖨️ Silent Thermal Printer Engine (Zero-Popup Hidden Iframe / RawBT Printer)
+  const silentIframePrint = (htmlContent, order = null, type = 'kot') => {
     return new Promise((resolve, reject) => {
       try {
+        const isAndroid = /Android/i.test(navigator.userAgent);
+        if (isAndroid && order) {
+          try {
+            const rawText = generateRawBTText(order, type, restaurantInfo);
+            const b64Data = btoa(unescape(encodeURIComponent(rawText)));
+            window.location.href = `intent:base64,${b64Data}#Intent;scheme=rawbt;package=ru.a2o.rawbtprinter;end;`;
+            resolve(true);
+            return;
+          } catch (e) {
+            console.warn('RawBT intent fallback to iframe print:', e);
+          }
+        }
+
         let iframe = document.getElementById('khana-silent-printer-frame');
         if (!iframe) {
           iframe = document.createElement('iframe');
@@ -1676,6 +1747,7 @@ export default function AdminDashboard({ token, username, onLogout, onReturnToMe
                 setKotFilter={setKotFilter}
                 onUpdateStatus={handleUpdateStatus}
                 onOpenBillModal={setBillOrderModal}
+                onPrintBill={(order) => handlePrintCustomerBill(order, 'CASH')}
                 serviceRequests={serviceRequests}
                 onResolveServiceRequest={handleResolveServiceRequest}
                 restaurantInfo={restaurantInfo}
