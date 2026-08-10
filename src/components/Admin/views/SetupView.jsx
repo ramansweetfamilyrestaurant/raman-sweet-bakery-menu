@@ -59,23 +59,29 @@ export default function SetupView({
   };
 
   const [gpsSuccess, setGpsSuccess] = useState(false);
-  const [gpsErrorMsg, setGpsErrorMsg] = useState('');
-  const [showHowToAllow, setShowHowToAllow] = useState(false);
+  const [gpsErrorState, setGpsErrorState] = useState(null); // { title, msg, isDenied }
 
   const handleDetectGps = async () => {
     setGpsSuccess(false);
-    setGpsErrorMsg('');
-    setShowHowToAllow(false);
+    setGpsErrorState(null);
 
     // Step 1: Check if geolocation API exists
     if (!navigator.geolocation) {
-      setGpsErrorMsg('Unable to detect location. Browser does not support geolocation.');
+      setGpsErrorState({
+        title: '❌ GPS Not Supported',
+        msg: 'Unable to detect location. Browser does not support geolocation.',
+        isDenied: false
+      });
       return;
     }
 
     // Step 2: Check secure context (HTTPS required for geolocation)
     if (window.isSecureContext === false) {
-      setGpsErrorMsg('HTTPS is required for browser location detection. Please access via https:// URL.');
+      setGpsErrorState({
+        title: '🔒 HTTPS Required',
+        msg: 'HTTPS is required for browser location detection. Please access via https:// URL.',
+        isDenied: false
+      });
       return;
     }
 
@@ -84,8 +90,11 @@ export default function SetupView({
       try {
         const permStatus = await navigator.permissions.query({ name: 'geolocation' });
         if (permStatus.state === 'denied') {
-          setGpsErrorMsg('Location access is blocked for this site.');
-          setShowHowToAllow(true);
+          setGpsErrorState({
+            title: '🔒 Location Permission Required',
+            msg: 'Location access is blocked for this site. Please allow Location permission in your browser settings.',
+            isDenied: true
+          });
           return;
         }
       } catch (e) {
@@ -97,7 +106,8 @@ export default function SetupView({
     setGpsLoading(true);
     navigator.geolocation.getCurrentPosition(
       (pos) => {
-        if (setSettingsForm) {
+        // PRESERVE EXISTING COORDINATES ON FAIL, ONLY POPULATE ON REAL SUCCESS
+        if (setSettingsForm && pos?.coords?.latitude && pos?.coords?.longitude) {
           setSettingsForm(prev => ({
             ...prev,
             latitude: pos.coords.latitude,
@@ -112,16 +122,31 @@ export default function SetupView({
         setGpsLoading(false);
         if (err.code === 1) {
           // PERMISSION_DENIED
-          setGpsErrorMsg('Location permission was denied. Please allow location access in your browser/device settings and try again.');
-          setShowHowToAllow(true);
+          setGpsErrorState({
+            title: '🔒 Location Permission Required',
+            msg: 'Location permission was denied. Please allow location access in your browser/device settings and try again.',
+            isDenied: true
+          });
         } else if (err.code === 2) {
           // POSITION_UNAVAILABLE
-          setGpsErrorMsg('Unable to detect your location. Please make sure Location/GPS is enabled.');
+          setGpsErrorState({
+            title: '📍 Location is turned off',
+            msg: 'Please turn on Location/GPS on your device and try again.',
+            isDenied: false
+          });
         } else if (err.code === 3) {
           // TIMEOUT
-          setGpsErrorMsg('Location detection timed out. Please try again.');
+          setGpsErrorState({
+            title: '⏱️ Location Timeout',
+            msg: 'Location detection timed out. Please move to an area with better GPS/network signal and try again.',
+            isDenied: false
+          });
         } else {
-          setGpsErrorMsg('Unable to detect location. Please try again.');
+          setGpsErrorState({
+            title: '❌ Location Error',
+            msg: 'Unable to detect your location. Please try again.',
+            isDenied: false
+          });
         }
       },
       { enableHighAccuracy: true, timeout: 15000, maximumAge: 0 }
@@ -664,9 +689,20 @@ export default function SetupView({
         )}
       >
         <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
-          <button onClick={handleDetectGps} disabled={gpsLoading} className="adm-btn adm-btn-accent" style={{ width: '100%', padding: '12px', fontWeight: 800 }}>
-            <MapPin size={16} /> {gpsLoading ? '📍 Detecting Location...' : 'Detect Current Location'}
+          <button
+            type="button"
+            onClick={handleDetectGps}
+            disabled={gpsLoading}
+            className="adm-btn adm-btn-accent"
+            style={{ width: '100%', padding: '12px 16px', minHeight: '44px', fontWeight: 800, fontSize: '0.9rem', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}
+          >
+            <MapPin size={18} />
+            {gpsLoading ? '📍 Detecting Location...' : gpsSuccess ? '✓ Location Detected' : gpsErrorState ? '⚠ Try Again' : '📍 Detect Current Location'}
           </button>
+
+          <span style={{ fontSize: '0.72rem', color: 'var(--adm-muted)', marginTop: '-8px', display: 'block', lineHeight: 1.4 }}>
+            Location detection uses your device's GPS/location service. If detection fails, turn on Location and allow browser permission.
+          </span>
 
           {gpsSuccess && (
             <div style={{ background: 'var(--adm-success-bg)', color: 'var(--adm-success)', padding: '10px 14px', borderRadius: 'var(--adm-radius-md)', fontSize: '0.84rem', fontWeight: 800, border: '1px solid var(--adm-success-border)' }}>
@@ -674,19 +710,30 @@ export default function SetupView({
             </div>
           )}
 
-          {gpsErrorMsg && (
-            <div style={{ background: 'var(--adm-danger-bg)', color: 'var(--adm-danger)', padding: '10px 14px', borderRadius: 'var(--adm-radius-md)', fontSize: '0.82rem', fontWeight: 700, border: '1px solid var(--adm-danger-border)', display: 'flex', flexDirection: 'column', gap: '8px' }}>
-              <div>{gpsErrorMsg}</div>
-              {showHowToAllow && (
+          {gpsErrorState && (
+            <div style={{ background: 'var(--adm-danger-bg)', color: 'var(--adm-danger)', padding: '12px 14px', borderRadius: 'var(--adm-radius-md)', fontSize: '0.82rem', fontWeight: 700, border: '1px solid var(--adm-danger-border)', display: 'flex', flexDirection: 'column', gap: '10px' }}>
+              <strong style={{ fontSize: '0.88rem', display: 'block' }}>{gpsErrorState.title}</strong>
+              <div style={{ lineHeight: 1.4 }}>{gpsErrorState.msg}</div>
+              <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', marginTop: '4px' }}>
                 <button
                   type="button"
-                  onClick={() => alert('📱 How to Allow Location Access:\n\n1. Tap the 🔒 lock or ⓘ info icon in your browser address bar\n2. Tap "Site Settings" or "Permissions"\n3. Change "Location" from Blocked to Allow\n4. Refresh the page and click Detect Current Location again.')}
-                  className="adm-btn adm-btn-secondary adm-btn-sm"
-                  style={{ alignSelf: 'flex-start', fontSize: '0.74rem', fontWeight: 800 }}
+                  onClick={handleDetectGps}
+                  className="adm-btn adm-btn-primary adm-btn-sm"
+                  style={{ fontWeight: 800 }}
                 >
-                  How to Allow Location
+                  Try Again
                 </button>
-              )}
+                {gpsErrorState.isDenied && (
+                  <button
+                    type="button"
+                    onClick={() => alert('📱 How to Allow Location Access:\n\n1. Tap the 🔒 lock or ⓘ info icon in your browser address bar\n2. Tap "Site Settings" or "Permissions"\n3. Change "Location" from Blocked to Allow\n4. Refresh the page and click Detect Current Location again.')}
+                    className="adm-btn adm-btn-secondary adm-btn-sm"
+                    style={{ fontWeight: 800 }}
+                  >
+                    How to Allow
+                  </button>
+                )}
+              </div>
             </div>
           )}
 
