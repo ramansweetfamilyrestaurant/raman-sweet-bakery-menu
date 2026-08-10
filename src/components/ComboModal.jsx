@@ -166,14 +166,14 @@ export default function ComboModal({ combo, onClose, onAddToCart, canOrder = fal
 
             <div style={{ textAlign: 'right', flexShrink: 0 }}>
               <div style={{
-                fontSize: '1.25rem',
+                fontSize: '1.1rem',
                 fontWeight: 900,
                 padding: '4px 14px',
                 borderRadius: 'var(--radius-pill)',
                 background: '#FFFFFF',
-                color: 'var(--primary-emerald)',
+                color: 'var(--text-dark)',
                 border: '1.5px solid var(--border-light)',
-                boxShadow: '0 1px 6px rgba(0,0,0,0.08)',
+                boxShadow: '0 1px 4px rgba(0,0,0,0.06)',
                 whiteSpace: 'nowrap',
                 lineHeight: 1.2
               }}>
