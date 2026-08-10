@@ -433,65 +433,60 @@ router.post('/upload', authenticateToken, requireActiveSubscription, upload.sing
     return res.status(400).json({ success: false, error: 'Invalid file type. Only JPEG, PNG, WebP, GIF, and AVIF images are allowed' });
   }
 
-  const r2Configured = isR2Active();
-  console.log('[R2 UPLOAD TRACE] R2 configured:', r2Configured);
-
-  // STRICT REQUIREMENT: Return HTTP 500 if R2 is not configured. NO Base64 or local fallback allowed for NEW uploads.
-  if (!r2Configured) {
-    if (req.file.path && fs.existsSync(req.file.path)) fs.unlinkSync(req.file.path);
-    console.error('[R2 UPLOAD TRACE] R2 not configured in environment');
-    return res.status(500).json({
-      success: false,
-      error: 'Image storage unavailable: R2 environment variables missing or unconfigured'
-    });
-  }
-
   const fileBuffer = fs.readFileSync(req.file.path);
   const restaurantId = req.user?.restaurant_id || 1;
   const entityType = req.query?.entityType || req.body?.entityType || 'dishes';
 
+  const r2Configured = isR2Active();
+
+  if (r2Configured) {
+    try {
+      console.log('[R2 UPLOAD TRACE] Uploading to Cloudflare R2 bucket');
+      const r2Result = await uploadImageToR2({
+        buffer: fileBuffer,
+        mimeType: req.file.mimetype,
+        restaurantId,
+        entityType
+      });
+
+      await saveR2ImageToDb(
+        req.file.filename,
+        r2Result.mimeType,
+        r2Result.objectKey,
+        r2Result.publicUrl,
+        restaurantId
+      );
+
+      if (req.file.path && fs.existsSync(req.file.path)) fs.unlinkSync(req.file.path);
+
+      const proxyUrl = `/api/r2-proxy/${r2Result.objectKey}`;
+      return res.json({
+        success: true,
+        url: proxyUrl,
+        r2ProxyUrl: proxyUrl,
+        key: r2Result.objectKey,
+        r2Url: r2Result.publicUrl
+      });
+    } catch (r2Err) {
+      console.warn('[R2 UPLOAD NOTICE] R2 upload failed, falling back to local/DB storage:', r2Err.message);
+    }
+  }
+
+  // FALLBACK: Save locally and store in database
   try {
-    console.log('[R2 UPLOAD TRACE] calling R2 upload');
-    const r2Result = await uploadImageToR2({
-      buffer: fileBuffer,
-      mimeType: req.file.mimetype,
-      restaurantId,
-      entityType
-    });
-
-    console.log('[R2 UPLOAD TRACE] R2 upload successful:', r2Result.objectKey);
-    console.log('[R2 UPLOAD TRACE] saving R2 metadata');
-    console.log('[R2 UPLOAD TRACE] storage_provider=r2');
-
-    // Save ONLY R2 metadata record in DB (data = NULL)
-    await saveR2ImageToDb(
-      req.file.filename,
-      r2Result.mimeType,
-      r2Result.objectKey,
-      r2Result.publicUrl,
-      restaurantId
-    );
-
-    // Cleanup temp upload file
-    if (req.file.path && fs.existsSync(req.file.path)) fs.unlinkSync(req.file.path);
-
-    const proxyUrl = `/api/r2-proxy/${r2Result.objectKey}`;
-    const returnUrl = proxyUrl;
-
+    const localUrl = `/uploads/${req.file.filename}`;
+    await saveImageToDb(req.file.filename, req.file.mimetype, fileBuffer);
     return res.json({
       success: true,
-      url: returnUrl,
-      r2ProxyUrl: proxyUrl,
-      key: r2Result.objectKey,
-      r2Url: r2Result.publicUrl
+      url: localUrl,
+      r2ProxyUrl: localUrl,
+      key: req.file.filename,
+      storage: 'local'
     });
-  } catch (r2Err) {
+  } catch (localErr) {
     if (req.file.path && fs.existsSync(req.file.path)) fs.unlinkSync(req.file.path);
-    console.error('[R2 UPLOAD TRACE] R2 upload failed:', r2Err.message);
-    return res.status(500).json({
-      success: false,
-      error: `Image storage unavailable: ${r2Err.message || r2Err.name}`
-    });
+    console.error('[IMAGE UPLOAD ERROR] Local upload fallback error:', localErr.message);
+    return res.status(500).json({ success: false, error: localErr.message });
   }
 });
 
