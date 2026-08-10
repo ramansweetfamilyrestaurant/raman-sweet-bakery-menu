@@ -466,12 +466,26 @@ export default function SetupView({
                 </div>
                 <div>
                   <strong style={{ fontSize: '0.9rem', color: 'var(--adm-text)', display: 'block' }}>Reviews & Feedback</strong>
-                  <span style={{ fontSize: '0.74rem', color: 'var(--adm-muted)' }}>Google Review page link & customer feedback</span>
                 </div>
               </div>
               <ChevronRight size={16} color="var(--adm-muted)" />
             </div>
 
+            <div
+              onClick={() => onOptimizeDatabase && onOptimizeDatabase()}
+              style={{ cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '14px 16px', minHeight: '68px' }}
+            >
+              <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                <div style={{ width: '38px', height: '38px', borderRadius: '10px', background: 'var(--adm-success-bg)', color: 'var(--adm-success)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                  <Upload size={18} />
+                </div>
+                <div>
+                  <strong style={{ fontSize: '0.9rem', color: 'var(--adm-text)', display: 'block' }}>Database Tools</strong>
+                  <span style={{ fontSize: '0.74rem', color: 'var(--adm-muted)' }}>Purge temporary logs & optimize database engine</span>
+                </div>
+              </div>
+              <ChevronRight size={16} color="var(--adm-muted)" />
+            </div>
           </div>
         </div>
       </div>
