@@ -810,6 +810,84 @@ export default function App() {
     }
   };
 
+  const handleLandingAdminLoginSubmit = async (e) => {
+    if (e && e.preventDefault) e.preventDefault();
+    if (!loginSlugInput.trim() || !loginPassInput) return;
+
+    setLandingLoginLoading(true);
+    setLoginErrMessage('');
+    setLandingSuccessMessage('');
+
+    try {
+      const res = await fetch('/api/admin/login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          username: loginSlugInput.trim(),
+          password: loginPassInput
+        })
+      });
+
+      const data = await res.json();
+      if (!res.ok) {
+        throw new Error(data.error || 'Login failed');
+      }
+
+      // Save admin session tokens
+      localStorage.setItem('raman_admin_token', data.token);
+      localStorage.setItem('raman_admin_user', data.username);
+      localStorage.setItem('raman_admin_slug', data.slug);
+      setAdminToken(data.token);
+      setAdminUsername(data.username);
+      setAdminSlug(data.slug);
+
+      setShowLandingLoginModal(false);
+      window.history.pushState({}, '', `/${data.slug}/admin`);
+      window.dispatchEvent(new PopStateEvent('popstate'));
+    } catch (err) {
+      console.error('Landing login error:', err);
+      setLoginErrMessage(err.message);
+    } finally {
+      setLandingLoginLoading(false);
+    }
+  };
+
+  const handleLandingPasswordResetSubmit = async (e) => {
+    if (e && e.preventDefault) e.preventDefault();
+    if (!loginSlugInput.trim() || !landingNewPassInput) {
+      setLoginErrMessage('Please fill in all fields');
+      return;
+    }
+    if (landingNewPassInput.length < 4) {
+      setLoginErrMessage('New password must be at least 4 characters long');
+      return;
+    }
+    setLandingLoginLoading(true);
+    setLoginErrMessage('');
+    setLandingSuccessMessage('');
+
+    try {
+      const res = await fetch('/api/admin/forgot-password', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          phone_or_username: loginSlugInput.trim(),
+          new_password: landingNewPassInput
+        })
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Failed to reset password');
+
+      setLandingSuccessMessage(data.message || 'Password reset successfully!');
+      setLandingLoginMode('login');
+      setLoginPassInput('');
+    } catch (err) {
+      setLoginErrMessage(err.message);
+    } finally {
+      setLandingLoginLoading(false);
+    }
+  };
+
   // Landing Page View — Public SaaS Home
   if (view === 'landing') {
     return (
