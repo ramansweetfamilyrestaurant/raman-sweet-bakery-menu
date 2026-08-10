@@ -20,25 +20,27 @@ export default function OrdersView({
   printingType,
   currencySymbol = '₹'
 }) {
-  const safeOrders = Array.isArray(orders) ? orders : [];
+  const validOrders = (Array.isArray(orders) ? orders : []).filter(o => o.status !== 'rejected' && o.status !== 'cancelled');
   const safeServiceRequests = Array.isArray(serviceRequests) ? serviceRequests : [];
 
-  const pendingCount = safeOrders.filter(o => o.status === 'pending').length;
-  const kitchenCount = safeOrders.filter(o => o.status === 'kitchen' || o.status === 'accepted').length;
-  const todayTotalSales = safeOrders.reduce((sum, o) => sum + (Number(o.total_amount) || 0), 0);
+  const pendingCount = validOrders.filter(o => o.status === 'pending').length;
+  const kitchenCount = validOrders.filter(o => o.status === 'kitchen' || o.status === 'accepted').length;
+  const servedCount = validOrders.filter(o => o.status === 'served').length;
+  const completedCount = validOrders.filter(o => o.status === 'completed').length;
+  const todayTotalSales = validOrders.reduce((sum, o) => sum + (Number(o.total_amount) || 0), 0);
 
-  const filteredOrders = safeOrders.filter(o => {
+  const filteredOrders = validOrders.filter(o => {
     if (kotFilter === 'pending') return o.status === 'pending';
     if (kotFilter === 'kitchen') return o.status === 'kitchen' || o.status === 'accepted';
     if (kotFilter === 'served') return o.status === 'served';
     if (kotFilter === 'completed') return o.status === 'completed';
-    return o.status !== 'rejected';
+    return true;
   });
 
   const totalTables = Number(restaurantInfo?.total_tables) || 10;
   const tableGrid = Array.from({ length: totalTables }, (_, i) => {
     const tableNum = String(i + 1);
-    const activeOrder = safeOrders.find(o => String(o.table_number) === tableNum && o.status !== 'completed' && o.status !== 'rejected');
+    const activeOrder = validOrders.find(o => String(o.table_number) === tableNum && o.status !== 'completed' && o.status !== 'rejected' && o.status !== 'cancelled');
     const serviceReq = safeServiceRequests.find(s => String(s.table_number) === tableNum);
 
     let status = 'available';
@@ -78,7 +80,7 @@ export default function OrdersView({
           className={`adm-btn adm-btn-sm ${activeSubTab === 'orders' ? 'adm-btn-primary' : 'adm-btn-secondary'}`}
           style={{ padding: '6px 14px', borderRadius: 'var(--adm-radius-full)' }}
         >
-          Live Orders ({safeOrders.length})
+          Live Orders ({validOrders.length})
         </button>
         <button
           onClick={() => setActiveSubTab('floor-map')}
@@ -102,11 +104,11 @@ export default function OrdersView({
           {/* Status Filter Horizontal Strip */}
           <div style={{ display: 'flex', gap: '6px', overflowX: 'auto', paddingBottom: '4px' }}>
             {[
-              { id: 'all', label: `All (${safeOrders.length})` },
+              { id: 'all', label: `All (${validOrders.length})` },
               { id: 'pending', label: `🟡 Pending (${pendingCount})` },
               { id: 'kitchen', label: `👨‍🍳 Kitchen (${kitchenCount})` },
-              { id: 'served', label: `🍽 Served (${safeOrders.filter(o => o.status === 'served').length})` },
-              { id: 'completed', label: `✅ Complete (${safeOrders.filter(o => o.status === 'completed').length})` }
+              { id: 'served', label: `🍽 Served (${servedCount})` },
+              { id: 'completed', label: `✅ Complete (${completedCount})` }
             ].map(filter => (
               <button
                 key={filter.id}

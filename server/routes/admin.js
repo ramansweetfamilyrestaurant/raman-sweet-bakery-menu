@@ -1225,7 +1225,7 @@ router.get('/analytics', authenticateToken, requireActiveSubscription, async (re
     const targetId = restoId || 1;
 
     const orders = await query(
-      "SELECT id, total_amount, status, items, created_at FROM orders WHERE restaurant_id = $1 AND status != 'cancelled' ORDER BY id DESC",
+      "SELECT id, total_amount, status, items, created_at FROM orders WHERE restaurant_id = $1 AND status NOT IN ('rejected', 'cancelled') ORDER BY id DESC",
       [targetId]
     );
 
