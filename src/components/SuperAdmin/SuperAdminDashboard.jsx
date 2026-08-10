@@ -515,18 +515,18 @@ export default function SuperAdminDashboard({ token, username, onLogout, onRetur
               )}
               <div>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flexWrap: 'wrap' }}>
-                  <h1 style={{ fontSize: '1.2rem', fontWeight: 900, color: '#DFBA67', margin: 0, letterSpacing: '-0.02em' }}>
-                    SaaS Master Control Portal
+                  <h1 style={{ fontSize: '1.15rem', fontWeight: 900, color: '#DFBA67', margin: 0, letterSpacing: '-0.02em' }}>
+                    SaaS Master Control
                   </h1>
-                  <span style={{ background: '#DFBA67', color: '#0A2315', fontSize: '0.64rem', fontWeight: 900, padding: '2px 7px', borderRadius: '10px' }}>
+                  <span style={{ background: '#DFBA67', color: '#0A2315', fontSize: '0.62rem', fontWeight: 900, padding: '2px 6px', borderRadius: '8px' }}>
                     SUPER ADMIN
                   </span>
                 </div>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.74rem', color: 'rgba(255,255,255,0.85)', fontWeight: 600, marginTop: '2px', flexWrap: 'wrap' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.72rem', color: 'rgba(255,255,255,0.85)', fontWeight: 600, marginTop: '2px', flexWrap: 'wrap' }}>
                   <span>Master: <strong style={{ color: '#FFFFFF' }}>{username}</strong></span>
                   <span style={{ color: 'rgba(255,255,255,0.4)' }}>•</span>
                   <span style={{ display: 'flex', alignItems: 'center', gap: '4px', color: '#86EFAC' }}>
-                    <span style={{ width: '6px', height: '6px', borderRadius: '50%', background: '#22C55E', boxShadow: '0 0 6px #22C55E' }}></span> DB Connected
+                    <span style={{ width: '6px', height: '6px', borderRadius: '50%', background: '#22C55E', boxShadow: '0 0 6px #22C55E' }}></span> DB Active
                   </span>
                 </div>
               </div>
@@ -538,9 +538,9 @@ export default function SuperAdminDashboard({ token, username, onLogout, onRetur
               style={{
                 background: 'linear-gradient(135deg, #DC2626 0%, #991B1B 100%)',
                 color: '#FFFFFF',
-                padding: '8px 14px',
+                padding: '7px 12px',
                 borderRadius: 'var(--radius-pill)',
-                fontSize: '0.78rem',
+                fontSize: '0.76rem',
                 fontWeight: 900,
                 border: 'none',
                 cursor: 'pointer',
@@ -548,36 +548,36 @@ export default function SuperAdminDashboard({ token, username, onLogout, onRetur
                 alignItems: 'center',
                 gap: '5px',
                 whiteSpace: 'nowrap',
-                boxShadow: '0 4px 14px rgba(220,38,38,0.4)',
+                boxShadow: '0 4px 12px rgba(220,38,38,0.4)',
                 marginLeft: 'auto'
               }}
               title="Sign out of Super Admin Portal"
             >
-              <LogOut size={15} /> Logout
+              <LogOut size={14} /> Logout
             </button>
           </div>
 
           {/* Row 2: Master Header Actions Nav Pills */}
-          <div className="sa-header-actions" style={{ display: 'flex', gap: '8px', alignItems: 'center', flexWrap: 'wrap', overflowX: 'auto', paddingBottom: '2px' }}>
+          <div className="sa-header-actions" style={{ display: 'flex', gap: '6px', alignItems: 'center', flexWrap: 'wrap', overflowX: 'auto', paddingBottom: '2px' }}>
             <button
               onClick={handleOpenBroadcastModal}
               style={{
                 background: 'rgba(212, 175, 55, 0.18)',
                 color: '#DFBA67',
-                padding: '7px 12px',
+                padding: '6px 11px',
                 borderRadius: 'var(--radius-pill)',
-                fontSize: '0.76rem',
+                fontSize: '0.74rem',
                 fontWeight: 900,
                 border: '1px solid rgba(212, 175, 55, 0.45)',
                 cursor: 'pointer',
                 display: 'flex',
                 alignItems: 'center',
-                gap: '5px',
+                gap: '4px',
                 whiteSpace: 'nowrap'
               }}
               title="Broadcast global announcement banner to all tenant dashboards"
             >
-              <Megaphone size={14} color="#DFBA67" /> Broadcast
+              <Megaphone size={13} color="#DFBA67" /> Broadcast
             </button>
 
             <button
@@ -588,20 +588,20 @@ export default function SuperAdminDashboard({ token, username, onLogout, onRetur
               style={{
                 background: 'rgba(255, 255, 255, 0.12)',
                 color: '#FFFFFF',
-                padding: '7px 12px',
+                padding: '6px 11px',
                 borderRadius: 'var(--radius-pill)',
-                fontSize: '0.76rem',
+                fontSize: '0.74rem',
                 fontWeight: 800,
                 border: '1px solid rgba(255, 255, 255, 0.25)',
                 cursor: 'pointer',
                 display: 'flex',
                 alignItems: 'center',
-                gap: '5px',
+                gap: '4px',
                 whiteSpace: 'nowrap'
               }}
               title="View real-time platform activity & security audit logs"
             >
-              <FileText size={14} color="#38BDF8" /> Audit Stream
+              <FileText size={13} color="#38BDF8" /> Audit
             </button>
 
             <button
@@ -609,20 +609,20 @@ export default function SuperAdminDashboard({ token, username, onLogout, onRetur
               style={{
                 background: 'rgba(34, 197, 94, 0.2)',
                 color: '#4ADE80',
-                padding: '7px 12px',
+                padding: '6px 11px',
                 borderRadius: 'var(--radius-pill)',
-                fontSize: '0.76rem',
+                fontSize: '0.74rem',
                 fontWeight: 900,
                 border: '1px solid rgba(34, 197, 94, 0.5)',
                 cursor: 'pointer',
                 display: 'flex',
                 alignItems: 'center',
-                gap: '5px',
+                gap: '4px',
                 whiteSpace: 'nowrap'
               }}
               title="Set Master Super Admin WhatsApp Support Number"
             >
-              <MessageSquare size={14} color="#4ADE80" /> WhatsApp
+              <MessageSquare size={13} color="#4ADE80" /> Support
             </button>
 
             {/* 💳 SaaS Plans Manager Button */}
@@ -634,21 +634,21 @@ export default function SuperAdminDashboard({ token, username, onLogout, onRetur
               style={{
                 background: 'linear-gradient(135deg, #164E2A 0%, #0A2315 100%)',
                 color: '#FFFFFF',
-                padding: '7px 13px',
+                padding: '6px 12px',
                 borderRadius: 'var(--radius-pill)',
-                fontSize: '0.76rem',
+                fontSize: '0.74rem',
                 fontWeight: 900,
                 border: '1.5px solid #D4AF37',
                 cursor: 'pointer',
                 display: 'flex',
                 alignItems: 'center',
-                gap: '5px',
+                gap: '4px',
                 whiteSpace: 'nowrap',
                 boxShadow: '0 4px 12px rgba(0,0,0,0.3)'
               }}
               title="Manage SaaS Plan Tiers, Pricing & Feature Matrix"
             >
-              <CreditCard size={14} color="#DFBA67" /> SaaS Plans
+              <CreditCard size={13} color="#DFBA67" /> Plans
             </button>
 
             {/* 🔑 Security & Payment API Keys Button */}
@@ -669,20 +669,20 @@ export default function SuperAdminDashboard({ token, username, onLogout, onRetur
               style={{
                 background: 'rgba(255,255,255,0.12)',
                 color: '#FFFFFF',
-                padding: '7px 12px',
+                padding: '6px 11px',
                 borderRadius: 'var(--radius-pill)',
-                fontSize: '0.76rem',
+                fontSize: '0.74rem',
                 fontWeight: 800,
                 border: '1px solid rgba(255,255,255,0.25)',
                 cursor: 'pointer',
                 display: 'flex',
                 alignItems: 'center',
-                gap: '5px',
+                gap: '4px',
                 whiteSpace: 'nowrap'
               }}
               title="Security, Credentials, Gateway & System Settings"
             >
-              <Lock size={14} color="#DFBA67" /> Security & Portal
+              <Lock size={13} color="#DFBA67" /> Security
             </button>
           </div>
         </div>
