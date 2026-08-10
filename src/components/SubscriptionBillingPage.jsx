@@ -377,13 +377,13 @@ export default function SubscriptionBillingPage({ restoInfo, token, onProceedToD
         padding: '0 4px'
       }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-          {logoUrl && !logoErr ? (
+          {(logoUrl || activeResto?.logo) && !logoErr ? (
             <img
-              src={logoUrl}
+              src={logoUrl || activeResto?.logo}
               alt="TouchQR Logo"
               referrerPolicy="no-referrer"
               onError={() => setLogoErr(true)}
-              style={{ width: '28px', height: '28px', borderRadius: '6px', objectFit: 'contain', background: '#FFF', padding: '2px', flexShrink: 0 }}
+              style={{ width: '32px', height: '32px', borderRadius: '8px', objectFit: 'contain', background: '#FFF', padding: '2px', flexShrink: 0 }}
             />
           ) : (
             <span style={{ fontSize: '1.4rem' }}>🍱</span>
@@ -425,21 +425,32 @@ export default function SubscriptionBillingPage({ restoInfo, token, onProceedToD
         textAlign: 'center',
         position: 'relative'
       }}>
-        {/* Header Icon */}
+        {/* Header Icon / Logo */}
         <div style={{
-          width: '56px',
-          height: '56px',
+          width: '64px',
+          height: '64px',
           borderRadius: '50%',
           background: 'rgba(223,186,103,0.15)',
           color: '#DFBA67',
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'center',
-          margin: '0 auto 12px',
+          margin: '0 auto 14px',
           border: '2px solid #DFBA67',
-          boxShadow: '0 0 24px rgba(223,186,103,0.3)'
+          boxShadow: '0 0 24px rgba(223,186,103,0.3)',
+          overflow: 'hidden'
         }}>
-          <Sparkles size={28} />
+          {(logoUrl || activeResto?.logo) && !logoErr ? (
+            <img
+              src={logoUrl || activeResto?.logo}
+              alt="Logo"
+              referrerPolicy="no-referrer"
+              onError={() => setLogoErr(true)}
+              style={{ width: '100%', height: '100%', objectFit: 'contain', background: '#FFF', padding: '4px' }}
+            />
+          ) : (
+            <Sparkles size={28} />
+          )}
         </div>
 
         <h1 style={{ fontSize: '1.45rem', fontWeight: 900, color: '#FFFFFF', margin: '0 0 4px 0', letterSpacing: '-0.3px' }}>
