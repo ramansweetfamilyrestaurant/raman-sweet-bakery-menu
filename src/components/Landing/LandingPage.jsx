@@ -8,10 +8,11 @@ import HowItWorks from './components/HowItWorks';
 import ProductShowcase from './components/ProductShowcase';
 import Pricing from './components/Pricing';
 import Comparison from './components/Comparison';
-import TrialCTA from './components/TrialCTA';
 import FAQ from './components/FAQ';
 import Footer from './components/Footer';
 import OwnerLoginModal from './components/OwnerLoginModal';
+import StickyMobileBar from './components/StickyMobileBar';
+import WhatsAppFloat from './components/WhatsAppFloat';
 import './styles/LandingPage.css';
 
 export default function LandingPage({
@@ -78,7 +79,7 @@ export default function LandingPage({
       {/* How It Works (3-Step Workflow) */}
       <HowItWorks />
 
-      {/* Large Product Showcase Sections */}
+      {/* Product Showcase Sections (Mobile Tab Switcher Enabled) */}
       <ProductShowcase />
 
       {/* Dynamic Database SaaS Pricing */}
@@ -91,12 +92,6 @@ export default function LandingPage({
       {/* Plan Feature Comparison Table */}
       <Comparison />
 
-      {/* High-Conversion Pre-FAQ Trial CTA Banner */}
-      <TrialCTA 
-        trialDays={trialDays} 
-        onStartTrial={() => handleStartTrial('')} 
-      />
-
       {/* Accordion FAQ */}
       <FAQ trialDays={trialDays} />
 
@@ -105,6 +100,15 @@ export default function LandingPage({
         onOpenLogin={() => setShowLoginModal(true)} 
         onStartTrial={() => handleStartTrial('')} 
       />
+
+      {/* High-Conversion Sticky Mobile Action Bar (< 768px) */}
+      <StickyMobileBar 
+        onOpenLogin={() => setShowLoginModal(true)} 
+        onStartTrial={() => handleStartTrial('')} 
+      />
+
+      {/* Floating WhatsApp Quick-Chat Widget */}
+      <WhatsAppFloat />
 
       {/* Owner Login & Password Reset Dialog Modal */}
       <OwnerLoginModal

@@ -1,11 +1,40 @@
-import React from 'react';
-import { Smartphone, Bell, TrendingUp, CheckCircle, Star, Printer, Layers } from 'lucide-react';
+import React, { useState } from 'react';
+import { Smartphone, Bell, TrendingUp, CheckCircle, Star } from 'lucide-react';
 
 export default function ProductShowcase() {
+  const [activeTab, setActiveTab] = useState('qr');
+
   return (
-    <div>
+    <div className="km-showcase-wrapper">
+      {/* Showcase Mobile Tab Switcher */}
+      <div className="km-showcase-tabs-container">
+        <button
+          className={`km-showcase-tab ${activeTab === 'qr' ? 'active' : ''}`}
+          onClick={() => setActiveTab('qr')}
+        >
+          <Smartphone size={16} />
+          <span>QR Menu</span>
+        </button>
+
+        <button
+          className={`km-showcase-tab ${activeTab === 'kot' ? 'active' : ''}`}
+          onClick={() => setActiveTab('kot')}
+        >
+          <Bell size={16} />
+          <span>Live KOT</span>
+        </button>
+
+        <button
+          className={`km-showcase-tab ${activeTab === 'growth' ? 'active' : ''}`}
+          onClick={() => setActiveTab('growth')}
+        >
+          <TrendingUp size={16} />
+          <span>Reviews & Growth</span>
+        </button>
+      </div>
+
       {/* Showcase Section A: Table Ordering */}
-      <section className="km-showcase-section">
+      <section className={`km-showcase-section ${activeTab === 'qr' ? 'tab-active' : 'tab-hidden-mobile'}`}>
         <div className="km-container">
           <div className="km-showcase-grid">
             <div>
@@ -85,7 +114,7 @@ export default function ProductShowcase() {
       </section>
 
       {/* Showcase Section B: Real Time Kitchen KOT */}
-      <section className="km-showcase-section dark">
+      <section className={`km-showcase-section dark ${activeTab === 'kot' ? 'tab-active' : 'tab-hidden-mobile'}`}>
         <div className="km-container">
           <div className="km-showcase-grid reverse">
             <div>
@@ -150,7 +179,7 @@ export default function ProductShowcase() {
       </section>
 
       {/* Showcase Section C: Revenue & Google Reviews Growth */}
-      <section className="km-showcase-section">
+      <section className={`km-showcase-section ${activeTab === 'growth' ? 'tab-active' : 'tab-hidden-mobile'}`}>
         <div className="km-container">
           <div className="km-showcase-grid">
             <div>
