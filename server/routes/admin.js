@@ -121,7 +121,7 @@ const storage = multer.diskStorage({
 
 const upload = multer({
   storage,
-  limits: { fileSize: 5 * 1024 * 1024 },
+  limits: { fileSize: 25 * 1024 * 1024 },
   fileFilter: (req, file, cb) => {
     if (file.mimetype.startsWith('image/')) {
       cb(null, true);
@@ -412,8 +412,15 @@ router.get('/storage-status', authenticateToken, (req, res) => {
   res.json(getR2Diagnostics());
 });
 
-// File Upload Endpoint (OPERATIONAL ROUTE - STRICT R2 ONLY FOR NEW UPLOADS)
-router.post('/upload', authenticateToken, requireActiveSubscription, upload.single('image'), async (req, res) => {
+router.post('/upload', authenticateToken, requireActiveSubscription, (req, res, next) => {
+  upload.single('image')(req, res, (err) => {
+    if (err) {
+      console.warn('[UPLOAD NOTICE] Multer file upload error:', err.message);
+      return res.status(400).json({ success: false, error: err.message || 'Image upload failed' });
+    }
+    next();
+  });
+}, async (req, res) => {
   console.log('[R2 UPLOAD TRACE] request received');
   console.log('[R2 UPLOAD TRACE] route reached');
 
