@@ -1,5 +1,5 @@
 import React from 'react';
-import { Clock, Printer, MapPin, Bell, RefreshCw, CheckCircle2, QrCode } from 'lucide-react';
+import { Clock, Printer, MapPin, Bell, RefreshCw, CheckCircle2, QrCode, XCircle } from 'lucide-react';
 
 export default function OrdersView({
   orders = [],
@@ -17,6 +17,10 @@ export default function OrdersView({
 }) {
   const safeOrders = Array.isArray(orders) ? orders : [];
   const safeServiceRequests = Array.isArray(serviceRequests) ? serviceRequests : [];
+
+  const pendingCount = safeOrders.filter(o => o.status === 'pending').length;
+  const kitchenCount = safeOrders.filter(o => o.status === 'kitchen' || o.status === 'accepted').length;
+  const todayTotalSales = safeOrders.reduce((sum, o) => sum + (Number(o.total_amount) || 0), 0);
 
   const filteredOrders = safeOrders.filter(o => {
     if (kotFilter === 'pending') return o.status === 'pending';
@@ -41,7 +45,7 @@ export default function OrdersView({
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-      {/* Header */}
+      {/* Header with Quick Stat Counters */}
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '10px' }}>
         <div>
           <h2 style={{ fontSize: '1.25rem', fontWeight: 900, color: 'var(--adm-primary)', margin: '0 0 2px 0' }}>
@@ -49,6 +53,15 @@ export default function OrdersView({
           </h2>
           <span style={{ fontSize: '0.8rem', color: 'var(--adm-muted)', fontWeight: 600 }}>
             Live table orders, dining hall floor map, and waiter service calls.
+          </span>
+        </div>
+
+        <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+          <span style={{ background: 'var(--adm-surface-subtle)', padding: '6px 12px', borderRadius: 'var(--adm-radius-md)', border: '1px solid var(--adm-border)', fontSize: '0.78rem', fontWeight: 800 }}>
+            💰 Today Sales: <strong style={{ color: 'var(--adm-success)' }}>₹{todayTotalSales.toLocaleString()}</strong>
+          </span>
+          <span style={{ background: 'var(--adm-warning-bg)', color: 'var(--adm-warning)', padding: '6px 12px', borderRadius: 'var(--adm-radius-md)', border: '1px solid var(--adm-warning-border)', fontSize: '0.78rem', fontWeight: 800 }}>
+            🟡 Pending: {pendingCount}
           </span>
         </div>
       </div>
@@ -85,8 +98,8 @@ export default function OrdersView({
           <div style={{ display: 'flex', gap: '6px', overflowX: 'auto', paddingBottom: '4px' }}>
             {[
               { id: 'all', label: `All (${safeOrders.length})` },
-              { id: 'pending', label: `🟡 Pending (${safeOrders.filter(o => o.status === 'pending').length})` },
-              { id: 'kitchen', label: `👨‍🍳 Kitchen (${safeOrders.filter(o => o.status === 'kitchen' || o.status === 'accepted').length})` },
+              { id: 'pending', label: `🟡 Pending (${pendingCount})` },
+              { id: 'kitchen', label: `👨‍🍳 Kitchen (${kitchenCount})` },
               { id: 'served', label: `🍽 Served (${safeOrders.filter(o => o.status === 'served').length})` },
               { id: 'completed', label: `✅ Complete (${safeOrders.filter(o => o.status === 'completed').length})` }
             ].map(filter => (
@@ -142,9 +155,14 @@ export default function OrdersView({
                     <strong style={{ fontSize: '1rem', color: 'var(--adm-primary)' }}>₹{order.total_amount}</strong>
                     <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap' }}>
                       {order.status === 'pending' && (
-                        <button onClick={() => onUpdateStatus(order.id, 'kitchen')} className="adm-btn adm-btn-primary adm-btn-sm" style={{ fontWeight: 800 }}>
-                          Accept to Kitchen
-                        </button>
+                        <>
+                          <button onClick={() => onUpdateStatus(order.id, 'kitchen')} className="adm-btn adm-btn-primary adm-btn-sm" style={{ fontWeight: 800 }}>
+                            Accept to Kitchen
+                          </button>
+                          <button onClick={() => onUpdateStatus(order.id, 'rejected')} className="adm-btn adm-btn-danger adm-btn-sm" style={{ fontWeight: 700 }}>
+                            <XCircle size={14} /> Reject
+                          </button>
+                        </>
                       )}
                       {(order.status === 'kitchen' || order.status === 'accepted') && (
                         <button onClick={() => onUpdateStatus(order.id, 'served')} className="adm-btn adm-btn-accent adm-btn-sm" style={{ fontWeight: 800 }}>

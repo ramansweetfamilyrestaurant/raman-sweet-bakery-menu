@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Plus, Search, MoreVertical, Edit, Trash2, Star, Sparkles, DollarSign } from 'lucide-react';
+import { Plus, Search, MoreVertical, Edit, Trash2, Star, Sparkles, DollarSign, Filter } from 'lucide-react';
 import AdminDrawer from '../components/AdminDrawer';
 
 export default function MenuView({
@@ -30,6 +30,7 @@ export default function MenuView({
   const [selectedDishForMore, setSelectedDishForMore] = useState(null);
   const [quickPriceDish, setQuickPriceDish] = useState(null);
   const [quickPriceVal, setQuickPriceVal] = useState({ price: '', price_half: '' });
+  const [badgeFilter, setBadgeFilter] = useState('all'); // 'all', 'veg', 'nonveg', 'must_try', 'special'
 
   const safeDishes = Array.isArray(dishes) ? dishes : [];
   const safeCategories = Array.isArray(categories) ? categories : [];
@@ -38,7 +39,13 @@ export default function MenuView({
   const filteredDishes = safeDishes.filter(d => {
     const matchesSearch = !search || d.name.toLowerCase().includes(search.toLowerCase());
     const matchesCat = selectedCatFilter === 'all' || String(d.category_id) === String(selectedCatFilter);
-    return matchesSearch && matchesCat;
+    let matchesBadge = true;
+    if (badgeFilter === 'veg') matchesBadge = d.type === 'veg';
+    if (badgeFilter === 'nonveg') matchesBadge = d.type === 'nonveg';
+    if (badgeFilter === 'must_try') matchesBadge = Boolean(d.must_try);
+    if (badgeFilter === 'special') matchesBadge = Boolean(d.is_special);
+
+    return matchesSearch && matchesCat && matchesBadge;
   });
 
   const handleQuickPriceSubmit = (e) => {
@@ -148,6 +155,26 @@ export default function MenuView({
             </select>
           </div>
 
+          {/* Quick Filter Chips (Veg / NonVeg / Must Try / Special) */}
+          <div style={{ display: 'flex', gap: '6px', overflowX: 'auto', paddingBottom: '2px' }}>
+            {[
+              { id: 'all', label: `All (${safeDishes.length})` },
+              { id: 'veg', label: `🟢 Veg (${safeDishes.filter(d => d.type === 'veg').length})` },
+              { id: 'nonveg', label: `🔴 Non-Veg (${safeDishes.filter(d => d.type === 'nonveg').length})` },
+              { id: 'must_try', label: `⭐ Must Try (${safeDishes.filter(d => d.must_try).length})` },
+              { id: 'special', label: `✨ Special (${safeDishes.filter(d => d.is_special).length})` }
+            ].map(f => (
+              <button
+                key={f.id}
+                onClick={() => setBadgeFilter(f.id)}
+                className={`adm-btn adm-btn-sm ${badgeFilter === f.id ? 'adm-btn-primary' : 'adm-btn-secondary'}`}
+                style={{ flexShrink: 0, padding: '5px 12px', fontSize: '0.76rem', borderRadius: 'var(--adm-radius-full)' }}
+              >
+                {f.label}
+              </button>
+            ))}
+          </div>
+
           {/* POS DISH GRID */}
           <div className="adm-dish-grid">
             {filteredDishes.length === 0 ? (
@@ -210,6 +237,9 @@ export default function MenuView({
                         }}>
                           {dish.name}
                         </strong>
+
+                        {dish.must_try && <span style={{ fontSize: '0.72rem' }} title="Must Try">⭐</span>}
+                        {dish.is_special && <span style={{ fontSize: '0.72rem' }} title="Special">✨</span>}
                       </div>
 
                       <div style={{ fontSize: '0.78rem', color: 'var(--adm-muted)', marginBottom: '3px' }}>
