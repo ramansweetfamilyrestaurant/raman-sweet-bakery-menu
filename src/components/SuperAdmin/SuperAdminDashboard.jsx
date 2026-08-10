@@ -2445,39 +2445,44 @@ export default function SuperAdminDashboard({ token, username, onLogout, onRetur
             display: 'flex',
             flexDirection: 'column'
           }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                <div style={{ width: '44px', height: '44px', borderRadius: '14px', background: 'linear-gradient(135deg, #0A2315 0%, #164E2A 100%)', color: '#DFBA67', display: 'flex', alignItems: 'center', justifyContent: 'center', border: '1px solid #D4AF37' }}>
+            {/* Header Section */}
+            <div className="sa-plans-modal-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '18px', flexWrap: 'wrap', gap: '12px' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '12px', flex: 1, minWidth: '220px' }}>
+                <div style={{ width: '42px', height: '42px', borderRadius: '14px', background: 'linear-gradient(135deg, #0A2315 0%, #164E2A 100%)', color: '#DFBA67', display: 'flex', alignItems: 'center', justifyContent: 'center', border: '1px solid #D4AF37', flexShrink: 0 }}>
                   <CreditCard size={22} />
                 </div>
                 <div>
-                  <h3 style={{ fontSize: '1.3rem', fontWeight: 900, color: 'var(--primary-emerald)', margin: 0 }}>
-                    💳 Enterprise SaaS Plans & Pricing Matrix
+                  <h3 style={{ fontSize: '1.2rem', fontWeight: 900, color: 'var(--primary-emerald)', margin: 0, lineHeight: 1.2 }}>
+                    Enterprise SaaS Plans Matrix
                   </h3>
-                  <span style={{ fontSize: '0.78rem', color: 'var(--text-muted)' }}>Manage base plan tiers, monthly pricing, feature access matrices, and create custom plans</span>
+                  <span style={{ fontSize: '0.76rem', color: 'var(--text-muted)', fontWeight: 600, display: 'block', marginTop: '2px' }}>
+                    Manage pricing tiers & feature access matrices
+                  </span>
                 </div>
               </div>
               
-              <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+              <div className="sa-plans-header-btns" style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                 <button
                   onClick={() => setShowCreatePlanForm(!showCreatePlanForm)}
                   style={{
-                    background: 'var(--header-gradient)',
-                    color: '#FFFFFF',
-                    border: 'none',
-                    padding: '8px 16px',
+                    background: 'linear-gradient(135deg, #0A2315 0%, #164E2A 100%)',
+                    color: '#DFBA67',
+                    border: '1px solid #D4AF37',
+                    padding: '8px 14px',
                     borderRadius: 'var(--radius-pill)',
                     fontSize: '0.78rem',
-                    fontWeight: 800,
+                    fontWeight: 900,
                     cursor: 'pointer',
                     display: 'flex',
                     alignItems: 'center',
-                    gap: '6px'
+                    justifyContent: 'center',
+                    gap: '6px',
+                    whiteSpace: 'nowrap'
                   }}
                 >
-                  <Plus size={16} /> {showCreatePlanForm ? 'Hide Form' : 'Create Custom SaaS Plan'}
+                  <Plus size={16} /> {showCreatePlanForm ? 'Hide Form' : 'Create Custom Plan'}
                 </button>
-                <button onClick={() => setShowPlansModal(false)} style={{ background: 'none', border: 'none', fontSize: '1.5rem', fontWeight: 700, cursor: 'pointer', color: 'var(--text-muted)' }}>✕</button>
+                <button onClick={() => setShowPlansModal(false)} style={{ background: '#F1F5F9', border: 'none', width: '32px', height: '32px', borderRadius: '50%', fontSize: '1.1rem', fontWeight: 900, cursor: 'pointer', color: '#64748B', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>✕</button>
               </div>
             </div>
 
