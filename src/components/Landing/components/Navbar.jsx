@@ -40,11 +40,10 @@ export default function Navbar({ onOpenLogin, onStartTrial }) {
           </button>
 
           <button 
-            className="km-btn-primary"
+            className="km-btn-primary km-nav-btn-trial"
             onClick={onStartTrial}
-            style={{ padding: '8px 20px', fontSize: '0.86rem', minHeight: '40px' }}
           >
-            Start Free Trial <ArrowRight size={15} />
+            Start Free Trial <ArrowRight size={14} />
           </button>
 
           <button 
@@ -52,7 +51,7 @@ export default function Navbar({ onOpenLogin, onStartTrial }) {
             onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
             aria-label="Toggle menu"
           >
-            {mobileMenuOpen ? <X size={24} /> : <Menu size={24} />}
+            {mobileMenuOpen ? <X size={22} /> : <Menu size={22} />}
           </button>
         </div>
       </div>

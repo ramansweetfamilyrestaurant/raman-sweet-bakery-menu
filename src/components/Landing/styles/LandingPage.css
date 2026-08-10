@@ -981,9 +981,21 @@
   }
 
   .km-nav-links,
-  .km-nav-actions .km-btn-secondary,
-  .km-nav-actions .km-btn-primary {
+  .km-nav-actions .km-btn-secondary {
     display: none;
+  }
+
+  .km-nav-actions {
+    gap: 8px;
+  }
+
+  .km-nav-btn-trial {
+    display: inline-flex;
+    padding: 6px 12px;
+    font-size: 0.78rem;
+    min-height: 38px;
+    border-radius: 10px;
+    white-space: nowrap;
   }
   
   .km-mobile-toggle {
