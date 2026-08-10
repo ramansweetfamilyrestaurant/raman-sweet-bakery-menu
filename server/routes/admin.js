@@ -814,17 +814,15 @@ router.put('/categories/:id', authenticateToken, requireActiveSubscription, asyn
 
     const processedImage = await processExternalImageUrl(image, targetId, 'categories');
 
-    // Fetch old category image to clean up if replaced
-    if (processedImage) {
-      try {
-        const oldCatRows = await query('SELECT image FROM categories WHERE id = $1 AND restaurant_id = $2', [id, targetId]);
-        const oldImage = oldCatRows && oldCatRows.length > 0 ? oldCatRows[0].image : null;
-        if (oldImage && oldImage !== processedImage) {
-          await cleanupImage(oldImage);
-        }
-      } catch (cleanErr) {
-        console.warn('Notice cleaning up replaced category image:', cleanErr.message);
+    // Fetch old category image to clean up if replaced or removed
+    try {
+      const oldCatRows = await query('SELECT image FROM categories WHERE id = $1 AND restaurant_id = $2', [id, targetId]);
+      const oldImage = oldCatRows && oldCatRows.length > 0 ? oldCatRows[0].image : null;
+      if (oldImage && oldImage !== processedImage) {
+        await cleanupImage(oldImage);
       }
+    } catch (cleanErr) {
+      console.warn('Notice cleaning up replaced category image:', cleanErr.message);
     }
 
     await query(
@@ -946,17 +944,15 @@ router.put('/dishes/:id', authenticateToken, requireActiveSubscription, async (r
 
     const processedImage = await processExternalImageUrl(image, targetId, 'dishes');
 
-    // Fetch old dish image to clean up if replaced
-    if (processedImage) {
-      try {
-        const oldDishRows = await query('SELECT image FROM dishes WHERE id = $1 AND restaurant_id = $2', [id, targetId]);
-        const oldImage = oldDishRows && oldDishRows.length > 0 ? oldDishRows[0].image : null;
-        if (oldImage && oldImage !== processedImage) {
-          await cleanupImage(oldImage);
-        }
-      } catch (cleanErr) {
-        console.warn('Notice cleaning up replaced dish image:', cleanErr.message);
+    // Fetch old dish image to clean up if replaced or removed
+    try {
+      const oldDishRows = await query('SELECT image FROM dishes WHERE id = $1 AND restaurant_id = $2', [id, targetId]);
+      const oldImage = oldDishRows && oldDishRows.length > 0 ? oldDishRows[0].image : null;
+      if (oldImage && oldImage !== processedImage) {
+        await cleanupImage(oldImage);
       }
+    } catch (cleanErr) {
+      console.warn('Notice cleaning up replaced dish image:', cleanErr.message);
     }
 
     const availVal = available ? 1 : 0;
@@ -1446,9 +1442,10 @@ router.post('/combos', authenticateToken, requireActiveSubscription, async (req,
     }
 
     const itemsStr = typeof items === 'string' ? items : JSON.stringify(items);
+    const processedImage = await processExternalImageUrl(image, targetId, 'combos');
     const result = await query(
       'INSERT INTO combos (restaurant_id, name, description, price, image, items, badge, sort_order) VALUES ($1, $2, $3, $4, $5, $6, $7, $8) RETURNING id',
-      [targetId, name, description || '', price, image || '', itemsStr, badge || '', sort_order || 0]
+      [targetId, name, description || '', price, processedImage || null, itemsStr, badge || '', sort_order || 0]
     );
     res.json({ id: result[0]?.id || result.lastInsertRowid, message: 'Combo created successfully' });
   } catch (err) {
@@ -1467,9 +1464,23 @@ router.put('/combos/:id', authenticateToken, requireActiveSubscription, async (r
     const targetId = restoId || 1;
     const { name, description, price, image, items, badge, sort_order, available } = req.body;
     const itemsStr = typeof items === 'string' ? items : JSON.stringify(items);
+
+    const processedImage = await processExternalImageUrl(image, targetId, 'combos');
+
+    // Fetch old combo image to clean up if replaced or removed
+    try {
+      const oldComboRows = await query('SELECT image FROM combos WHERE id = $1 AND restaurant_id = $2', [req.params.id, targetId]);
+      const oldImage = oldComboRows && oldComboRows.length > 0 ? oldComboRows[0].image : null;
+      if (oldImage && oldImage !== processedImage) {
+        await cleanupImage(oldImage);
+      }
+    } catch (cleanErr) {
+      console.warn('Notice cleaning up replaced combo image:', cleanErr.message);
+    }
+
     await query(
       'UPDATE combos SET name = $1, description = $2, price = $3, image = $4, items = $5, badge = $6, sort_order = $7, available = $8 WHERE id = $9 AND restaurant_id = $10',
-      [name, description || '', price, image || '', itemsStr, badge || '', sort_order || 0, available !== undefined ? available : 1, req.params.id, targetId]
+      [name, description || '', price, processedImage, itemsStr, badge || '', sort_order || 0, available !== undefined ? available : 1, req.params.id, targetId]
     );
     res.json({ message: 'Combo updated successfully' });
   } catch (err) {
@@ -1503,6 +1514,13 @@ router.delete('/combos/:id', authenticateToken, requireActiveSubscription, async
       return res.status(401).json({ error: 'Unauthorized: Restaurant session required' });
     }
     const targetId = restoId || 1;
+
+    // Fetch combo image before deleting
+    const comboRows = await query('SELECT image FROM combos WHERE id = $1 AND restaurant_id = $2', [req.params.id, targetId]);
+    if (comboRows && comboRows.length > 0 && comboRows[0].image) {
+      await cleanupImage(comboRows[0].image);
+    }
+
     await query('DELETE FROM combos WHERE id = $1 AND restaurant_id = $2', [req.params.id, targetId]);
     res.json({ message: 'Combo deleted successfully' });
   } catch (err) {
