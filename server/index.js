@@ -193,6 +193,11 @@ async function startServer(portToTry = PORT) {
   try {
     await initDb();
     startSubscriptionCron();
+
+    // 🧹 Purge all old cancelled/rejected orders immediately on startup
+    purgeCancelledOrdersOlderThan3Mins().then(res => {
+      console.log('⚡ [ORDER CLEANUP] Purged old cancelled/rejected orders from database.');
+    }).catch(err => console.warn('Startup order purge notice:', err.message));
     
     // ⚡ 100% Hands-Free Automated Background Compaction Engine
     // Runs automatically on server startup and every 24 hours in background (Purges raw order records > 24 hours into daily summaries)
