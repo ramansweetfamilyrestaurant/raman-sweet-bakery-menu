@@ -68,7 +68,39 @@ export default function SettingsView({
         </span>
       </div>
 
-      {/* 1. Payment Gateway */}
+      {/* 1. Logo & Branding */}
+      <AccordionHeader sectionKey="branding" emoji="🖼️" title="Super Admin Logo & Branding" />
+      <AccordionBody sectionKey="branding">
+        <form onSubmit={(e) => { e.preventDefault(); onSavePaymentKeys(keysForm); }} style={{ display: 'flex', flexDirection: 'column', gap: '14px', maxWidth: '500px' }}>
+          <div>
+            <label style={labelStyle}>PLATFORM LOGO IMAGE URL:</label>
+            <input
+              type="url"
+              placeholder="e.g. https://your-domain.com/logo.png"
+              value={keysForm.platform_logo_url || ''}
+              onChange={(e) => setKeysForm({ ...keysForm, platform_logo_url: e.target.value })}
+              style={inputStyle}
+            />
+            <span style={{ fontSize: '0.73rem', color: 'var(--sa-text-muted)', marginTop: '4px', display: 'block' }}>
+              Paste image URL for custom Super Admin logo (displays in sidebar & header).
+            </span>
+          </div>
+
+          {keysForm.platform_logo_url && (
+            <div style={{ display: 'flex', alignItems: 'center', gap: '12px', padding: '10px', background: 'var(--sa-surface-subtle)', borderRadius: '8px', border: '1px solid var(--sa-border)' }}>
+              <span style={{ fontSize: '0.75rem', fontWeight: 800 }}>Preview:</span>
+              <img src={keysForm.platform_logo_url} alt="Logo preview" style={{ height: '36px', width: 'auto', borderRadius: '6px', objectFit: 'contain' }} onError={(e) => { e.target.style.display = 'none'; }} />
+            </div>
+          )}
+
+          {keysMsg && <div style={{ color: 'var(--sa-success)', fontWeight: 700, fontSize: '0.85rem' }}>{keysMsg}</div>}
+          <button type="submit" className="sa-btn sa-btn-primary" disabled={savingKeys} style={{ alignSelf: 'flex-start' }}>
+            {savingKeys ? 'Saving...' : '💾 Save Logo URL'}
+          </button>
+        </form>
+      </AccordionBody>
+
+      {/* 2. Payment Gateway */}
       <AccordionHeader sectionKey="payments" emoji="💳" title="Payment Gateway" />
       <AccordionBody sectionKey="payments">
         <form onSubmit={(e) => { e.preventDefault(); onSavePaymentKeys(keysForm); }} style={{ display: 'flex', flexDirection: 'column', gap: '14px', maxWidth: '500px' }}>

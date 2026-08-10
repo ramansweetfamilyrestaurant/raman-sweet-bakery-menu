@@ -693,14 +693,15 @@ router.get('/settings', authenticateToken, requireSuperAdmin, async (req, res) =
 // POST Update System Settings for Super Admin
 router.post('/settings', authenticateToken, requireSuperAdmin, async (req, res) => {
   try {
-    const { support_whatsapp, cashfree_app_id, cashfree_secret_key, default_trial_days, grace_period_days } = req.body;
+    const { support_whatsapp, cashfree_app_id, cashfree_secret_key, default_trial_days, grace_period_days, platform_logo_url } = req.body;
     
     const settingsToSave = {
       support_whatsapp: support_whatsapp ? support_whatsapp.replace(/[^0-9]/g, '') : undefined,
       cashfree_app_id: cashfree_app_id !== undefined ? String(cashfree_app_id).trim() : undefined,
       cashfree_secret_key: cashfree_secret_key !== undefined ? String(cashfree_secret_key).trim() : undefined,
       default_trial_days: default_trial_days !== undefined ? String(Math.max(1, parseInt(default_trial_days, 10) || 14)) : undefined,
-      grace_period_days: grace_period_days !== undefined ? String(Math.max(0, parseInt(grace_period_days, 10) || 7)) : undefined
+      grace_period_days: grace_period_days !== undefined ? String(Math.max(0, parseInt(grace_period_days, 10) || 7)) : undefined,
+      platform_logo_url: platform_logo_url !== undefined ? String(platform_logo_url).trim() : undefined
     };
 
     for (const [k, v] of Object.entries(settingsToSave)) {

@@ -1,7 +1,7 @@
 import React from 'react';
 import { LayoutDashboard, Store, Settings, UserCircle, ChevronLeft, ChevronRight } from 'lucide-react';
 
-export default function Sidebar({ activeView, setActiveView, collapsed, setCollapsed, onLogout }) {
+export default function Sidebar({ activeView, setActiveView, collapsed, setCollapsed, logoUrl }) {
   const navItems = [
     { id: 'overview', label: 'Home', icon: LayoutDashboard },
     { id: 'tenants', label: 'Restaurants', icon: Store },
@@ -14,14 +14,25 @@ export default function Sidebar({ activeView, setActiveView, collapsed, setColla
       <div>
         <div className="sa-sidebar-header">
           <div className="sa-brand">
-            <div style={{
-              width: '32px', height: '32px', borderRadius: '8px',
-              background: 'linear-gradient(135deg, #D4AF37 0%, #B48F27 100%)',
-              color: '#0A2315', display: 'flex', alignItems: 'center', justifyContent: 'center',
-              fontWeight: 900, flexShrink: 0
-            }}>
-              👑
-            </div>
+            {logoUrl ? (
+              <img
+                src={logoUrl}
+                alt="Super Admin Logo"
+                style={{
+                  width: '32px', height: '32px', borderRadius: '8px',
+                  objectFit: 'contain', background: '#FFF', flexShrink: 0, padding: '2px'
+                }}
+              />
+            ) : (
+              <div style={{
+                width: '32px', height: '32px', borderRadius: '8px',
+                background: 'linear-gradient(135deg, #D4AF37 0%, #B48F27 100%)',
+                color: '#0A2315', display: 'flex', alignItems: 'center', justifyContent: 'center',
+                fontWeight: 900, flexShrink: 0
+              }}>
+                👑
+              </div>
+            )}
             {!collapsed && (
               <div style={{ display: 'flex', flexDirection: 'column' }}>
                 <span style={{ fontSize: '0.95rem', fontWeight: 900, letterSpacing: '-0.3px', color: '#FFF' }}>

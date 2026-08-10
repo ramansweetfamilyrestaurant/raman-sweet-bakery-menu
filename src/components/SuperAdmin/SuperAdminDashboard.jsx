@@ -52,7 +52,8 @@ export default function SuperAdminDashboard({ token, username, onLogout, onImper
     cashfree_app_id: '',
     cashfree_secret_key: '',
     support_whatsapp: '919876543210',
-    default_trial_days: '14'
+    default_trial_days: '14',
+    platform_logo_url: ''
   });
   const [savingKeys, setSavingKeys] = useState(false);
   const [keysMsg, setKeysMsg] = useState('');
@@ -107,7 +108,8 @@ export default function SuperAdminDashboard({ token, username, onLogout, onImper
           cashfree_app_id: data.cashfree_app_id || '',
           cashfree_secret_key: data.cashfree_secret_key || '',
           support_whatsapp: data.support_whatsapp || '919876543210',
-          default_trial_days: data.default_trial_days || '14'
+          default_trial_days: data.default_trial_days || '14',
+          platform_logo_url: data.platform_logo_url || ''
         });
       }
     } catch (err) {
@@ -267,7 +269,7 @@ export default function SuperAdminDashboard({ token, username, onLogout, onImper
         setActiveView={setActiveView}
         collapsed={sidebarCollapsed}
         setCollapsed={setSidebarCollapsed}
-        onLogout={onLogout}
+        logoUrl={paymentKeys.platform_logo_url}
       />
 
       {/* Main Canvas */}
