@@ -2,7 +2,8 @@ import React from 'react';
 import { Sparkles } from 'lucide-react';
 import { resolveImageUrl } from '../utils/imageHelper';
 
-export default function BestsellersCarousel({ dishes, onSelectDish }) {
+export default function BestsellersCarousel({ dishes, onSelectDish, currencySymbol }) {
+  const symbol = currencySymbol !== undefined && currencySymbol !== null ? currencySymbol : '₹';
   const bestsellers = dishes.filter(d => d.badge && (d.badge.includes('Bestseller') || d.badge.includes('Must Try') || d.badge.includes('Royal'))).slice(0, 5);
 
   if (bestsellers.length === 0) return null;
@@ -160,7 +161,7 @@ export default function BestsellersCarousel({ dishes, onSelectDish }) {
                     fontWeight: 800,
                     color: 'var(--primary-emerald)'
                   }}>
-                    ₹{Math.round(dish.price)}
+                    {symbol}{Math.round(dish.price)}
                   </span>
                 </div>
               </div>

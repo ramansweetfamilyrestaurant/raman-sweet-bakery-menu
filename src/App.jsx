@@ -247,13 +247,14 @@ export default function App() {
     }
     let msg = `👋 Hello *${info.name}*!\nI would like to place an order from table #${effectiveTableNum || '1'}:\n\n`;
     let grandTotal = 0;
+    const sym = (info?.currency_symbol !== undefined && info?.currency_symbol !== null) ? info.currency_symbol : '₹';
     cartItems.forEach(item => {
       const itemPrice = item.price * item.quantity;
       grandTotal += itemPrice;
       const portionText = item.portion ? ` (${item.portion})` : '';
-      msg += `• ${item.quantity}x *${item.dish.name}${portionText}* - ${info.currency_symbol || '₹'}${itemPrice}\n`;
+      msg += `• ${item.quantity}x *${item.dish.name}${portionText}* - ${sym}${itemPrice}\n`;
     });
-    msg += `\n*Total Amount:* ${info.currency_symbol || '₹'}${grandTotal}\n\nThank you!`;
+    msg += `\n*Total Amount:* ${sym}${grandTotal}\n\nThank you!`;
     const targetPhone = phone.length === 10 ? `91${phone}` : phone;
     window.open(`https://wa.me/${targetPhone}?text=${encodeURIComponent(msg)}`, '_blank');
   };
@@ -2175,11 +2176,11 @@ export default function App() {
                         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
                           <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
                             <strong style={{ fontWeight: 900, fontSize: '0.88rem', color: 'var(--primary-emerald)' }}>
-                              {info?.currency_symbol || '₹'}{Math.round(Number(combo.price))}
+                              {(info?.currency_symbol !== undefined && info?.currency_symbol !== null) ? info.currency_symbol : '₹'}{Math.round(Number(combo.price))}
                             </strong>
                             {savings > 0 && (
                               <span style={{ fontSize: '0.6rem', color: '#059669', fontWeight: 800, background: '#D1FAE5', padding: '1px 4px', borderRadius: '4px' }}>
-                                -₹{Math.round(savings)}
+                                -{(info?.currency_symbol !== undefined && info?.currency_symbol !== null) ? info.currency_symbol : '₹'}{Math.round(savings)}
                               </span>
                             )}
                           </div>
@@ -2337,7 +2338,7 @@ export default function App() {
 
             <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
               <span style={{ fontSize: '1rem', fontWeight: 900, color: '#FFFFFF' }}>
-                ₹{cartItems.reduce((sum, item) => sum + (item.price * item.quantity), 0)}
+                {(info?.currency_symbol !== undefined && info?.currency_symbol !== null) ? info.currency_symbol : '₹'}{cartItems.reduce((sum, item) => sum + (item.price * item.quantity), 0)}
               </span>
               <span>→</span>
             </div>
@@ -2445,7 +2446,7 @@ export default function App() {
                         </span>
                       )}
                       <span style={{ fontSize: '0.82rem', color: 'var(--gold-primary)', fontWeight: 800 }}>
-                        {info?.currency_symbol || '₹'}{item.price} x {item.quantity} = {info?.currency_symbol || '₹'}{item.price * item.quantity}
+                        {(info?.currency_symbol !== undefined && info?.currency_symbol !== null) ? info.currency_symbol : '₹'}{item.price} x {item.quantity} = {(info?.currency_symbol !== undefined && info?.currency_symbol !== null) ? info.currency_symbol : '₹'}{item.price * item.quantity}
                       </span>
                     </div>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
@@ -2508,7 +2509,7 @@ export default function App() {
                     }}
                   >
                     <Sparkles size={18} color="#FDE047" />
-                    <span>{placingOrder ? 'Sending to Kitchen...' : `⚡ PLACE DIRECT KITCHEN ORDER (${info?.currency_symbol || '₹'}${cartItems.reduce((sum, i) => sum + i.price * i.quantity, 0)})`}</span>
+                    <span>{placingOrder ? 'Sending to Kitchen...' : `⚡ PLACE DIRECT KITCHEN ORDER (${(info?.currency_symbol !== undefined && info?.currency_symbol !== null) ? info.currency_symbol : '₹'}${cartItems.reduce((sum, i) => sum + i.price * i.quantity, 0)})`}</span>
                   </button>
                 )}
 
@@ -2771,7 +2772,7 @@ export default function App() {
           onClose={() => setSelectedComboModal(null)}
           onAddToCart={handleAddComboToCart}
           canOrder={Boolean(effectiveTableNum && (info?.direct_ordering_enabled === true || info?.direct_ordering_enabled === 1))}
-          currencySymbol={info?.currency_symbol || '₹'}
+          currencySymbol={info?.currency_symbol !== undefined && info?.currency_symbol !== null ? info.currency_symbol : '₹'}
         />
       )}
 

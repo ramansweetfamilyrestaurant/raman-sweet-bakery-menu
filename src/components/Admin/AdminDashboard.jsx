@@ -636,7 +636,7 @@ export default function AdminDashboard({ token, username, onLogout, onReturnToMe
     const isGst = restaurantInfo?.gst_enabled;
     const gstin = restaurantInfo?.gstin_number || '';
     const fssai = restaurantInfo?.fssai_lic_no || '';
-    const currency = restaurantInfo?.currency_symbol || '₹';
+    const currency = (restaurantInfo?.currency_symbol !== undefined && restaurantInfo?.currency_symbol !== null) ? restaurantInfo.currency_symbol : '₹';
 
     let subtotal = 0;
     let itemsHtml = '';
@@ -1760,7 +1760,7 @@ export default function AdminDashboard({ token, username, onLogout, onReturnToMe
                 onPreviewPrint={handlePreviewPrint}
                 printingOrderId={printingOrderId}
                 printingType={printingType}
-                currencySymbol={settingsForm.currency_symbol || '₹'}
+                currencySymbol={settingsForm.currency_symbol !== undefined && settingsForm.currency_symbol !== null ? settingsForm.currency_symbol : '₹'}
               />
             )}
 
@@ -1769,7 +1769,7 @@ export default function AdminDashboard({ token, username, onLogout, onReturnToMe
               <AnalyticsView
                 analyticsData={analyticsData}
                 onDownloadCSV={handleDownloadSalesReport}
-                currencySymbol={settingsForm.currency_symbol || '₹'}
+                currencySymbol={settingsForm.currency_symbol !== undefined && settingsForm.currency_symbol !== null ? settingsForm.currency_symbol : '₹'}
               />
             )}
 
@@ -1799,7 +1799,7 @@ export default function AdminDashboard({ token, username, onLogout, onReturnToMe
                 onDeleteCombo={deleteCombo}
                 onToggleComboAvailability={toggleComboAvailability}
                 onToggleBadge={handleToggleBadge}
-                currencySymbol={settingsForm.currency_symbol || '₹'}
+                currencySymbol={settingsForm.currency_symbol !== undefined && settingsForm.currency_symbol !== null ? settingsForm.currency_symbol : '₹'}
               />
             )}
 
