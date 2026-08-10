@@ -24,6 +24,7 @@ export default function Sidebar({ activeView, setActiveView, collapsed, setColla
               <img
                 src={logoUrl}
                 alt="Super Admin Logo"
+                referrerPolicy="no-referrer"
                 onError={() => setLogoErr(true)}
                 style={{
                   width: '32px', height: '32px', borderRadius: '8px',

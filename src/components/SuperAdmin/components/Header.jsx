@@ -70,7 +70,7 @@ export default function Header({ username, activeView, searchQuery, setSearchQue
         <div className="sa-header-profile">
           <div className="sa-profile-avatar" style={{ overflow: 'hidden' }}>
             {logoUrl && !logoErr ? (
-              <img src={logoUrl} alt="Super Admin Logo" onError={() => setLogoErr(true)} style={{ width: '100%', height: '100%', objectFit: 'contain', background: '#FFF' }} />
+              <img src={logoUrl} alt="Super Admin Logo" referrerPolicy="no-referrer" onError={() => setLogoErr(true)} style={{ width: '100%', height: '100%', objectFit: 'contain', background: '#FFF' }} />
             ) : (
               username ? username.charAt(0).toUpperCase() : 'S'
             )}

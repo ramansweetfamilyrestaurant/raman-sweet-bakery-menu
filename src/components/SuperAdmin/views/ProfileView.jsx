@@ -26,6 +26,7 @@ export default function ProfileView({ username, securityForm, setSecurityForm, o
           <img
             src={logoUrl}
             alt="Super Admin Logo"
+            referrerPolicy="no-referrer"
             onError={() => setLogoErr(true)}
             style={{
               width: '60px', height: '60px', borderRadius: '50%',

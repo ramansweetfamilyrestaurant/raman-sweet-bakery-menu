@@ -11,12 +11,18 @@ export default function SettingsView({
   const [keysForm, setKeysForm] = useState(paymentKeys);
   const [uploadingLogo, setUploadingLogo] = useState(false);
 
-  // Sync keysForm whenever paymentKeys prop changes (e.g. after loadSystemSettings finishes)
+  // Sync keysForm whenever backend paymentKeys values change (e.g. after loadSystemSettings finishes)
   React.useEffect(() => {
     if (paymentKeys && typeof paymentKeys === 'object') {
       setKeysForm(paymentKeys);
     }
-  }, [paymentKeys]);
+  }, [
+    paymentKeys?.platform_logo_url,
+    paymentKeys?.cashfree_app_id,
+    paymentKeys?.cashfree_secret_key,
+    paymentKeys?.support_whatsapp,
+    paymentKeys?.default_trial_days
+  ]);
 
   const handleLogoFileSelect = async (e) => {
     const file = e.target.files && e.target.files[0];
@@ -154,7 +160,12 @@ export default function SettingsView({
           {keysForm.platform_logo_url && (
             <div style={{ display: 'flex', alignItems: 'center', gap: '12px', padding: '12px', background: 'var(--sa-surface-subtle)', borderRadius: 'var(--sa-radius-md)', border: '1px solid var(--sa-border)' }}>
               <span style={{ fontSize: '0.75rem', fontWeight: 800 }}>Active Logo Preview:</span>
-              <img src={keysForm.platform_logo_url} alt="Logo preview" style={{ height: '38px', width: 'auto', borderRadius: '6px', objectFit: 'contain', background: '#FFF', padding: '2px' }} onError={(e) => { e.target.style.display = 'none'; }} />
+              <img
+                src={keysForm.platform_logo_url}
+                alt="Logo preview"
+                referrerPolicy="no-referrer"
+                style={{ height: '38px', width: 'auto', borderRadius: '6px', objectFit: 'contain', background: '#FFF', padding: '2px' }}
+              />
             </div>
           )}
 
