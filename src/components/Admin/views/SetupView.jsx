@@ -58,16 +58,24 @@ export default function SetupView({
     }
   };
 
+  const [gpsSuccess, setGpsSuccess] = useState(false);
+  const [gpsErrorMsg, setGpsErrorMsg] = useState('');
+  const [showHowToAllow, setShowHowToAllow] = useState(false);
+
   const handleDetectGps = async () => {
+    setGpsSuccess(false);
+    setGpsErrorMsg('');
+    setShowHowToAllow(false);
+
     // Step 1: Check if geolocation API exists
     if (!navigator.geolocation) {
-      alert('❌ GPS Not Supported\n\nYour browser does not support geolocation.\nPlease use Chrome, Safari, or Edge browser.');
+      setGpsErrorMsg('Unable to detect location. Browser does not support geolocation.');
       return;
     }
 
     // Step 2: Check secure context (HTTPS required for geolocation)
     if (window.isSecureContext === false) {
-      alert('🔒 HTTPS Required\n\nGPS location only works on HTTPS websites.\nPlease open your admin panel using https:// URL.');
+      setGpsErrorMsg('HTTPS is required for browser location detection. Please access via https:// URL.');
       return;
     }
 
@@ -76,15 +84,16 @@ export default function SetupView({
       try {
         const permStatus = await navigator.permissions.query({ name: 'geolocation' });
         if (permStatus.state === 'denied') {
-          alert('🚫 Location Permission Blocked!\n\nYour browser has blocked location access.\n\nTo fix:\n1. Tap the 🔒 lock icon in address bar\n2. Find "Location" setting\n3. Change to "Allow"\n4. Refresh the page and try again');
+          setGpsErrorMsg('Location access is blocked for this site.');
+          setShowHowToAllow(true);
           return;
         }
       } catch (e) {
-        // Permissions API not fully supported, continue anyway
+        // Permissions API not fully supported, continue to getCurrentPosition
       }
     }
 
-    // Step 4: Request location
+    // Step 4: Request real location via browser Geolocation API
     setGpsLoading(true);
     navigator.geolocation.getCurrentPosition(
       (pos) => {
@@ -96,21 +105,23 @@ export default function SetupView({
           }));
         }
         setGpsLoading(false);
-        alert(`📍 GPS Location Detected!\n\nLatitude: ${pos.coords.latitude}\nLongitude: ${pos.coords.longitude}\n\nAccuracy: ${Math.round(pos.coords.accuracy)} meters\n\nClick "Save Location & Geofence" to save.`);
+        setGpsSuccess(true);
+        setTimeout(() => setGpsSuccess(false), 5000);
       },
       (err) => {
         setGpsLoading(false);
         if (err.code === 1) {
           // PERMISSION_DENIED
-          alert('🚫 Location Permission Denied!\n\nPlease allow location access:\n\n📱 Mobile: Tap the 🔒 icon in address bar → Location → Allow\n💻 Desktop: Click 🔒 icon → Site Settings → Location → Allow\n\nThen refresh and try again.');
+          setGpsErrorMsg('Location permission was denied. Please allow location access in your browser/device settings and try again.');
+          setShowHowToAllow(true);
         } else if (err.code === 2) {
           // POSITION_UNAVAILABLE
-          alert('📍 Location Unavailable\n\nYour device could not determine your position.\n\nPlease check:\n1. GPS/Location is turned ON in device settings\n2. You are not in airplane mode\n3. Try moving near a window for better signal');
+          setGpsErrorMsg('Unable to detect your location. Please make sure Location/GPS is enabled.');
         } else if (err.code === 3) {
           // TIMEOUT
-          alert('⏱️ Location Timeout\n\nGPS detection took too long.\n\nPlease check:\n1. GPS/Location is turned ON\n2. You have a clear view of the sky\n3. Try again in a moment');
+          setGpsErrorMsg('Location detection timed out. Please try again.');
         } else {
-          alert('❌ Location Error: ' + err.message);
+          setGpsErrorMsg('Unable to detect location. Please try again.');
         }
       },
       { enableHighAccuracy: true, timeout: 15000, maximumAge: 0 }
@@ -654,8 +665,30 @@ export default function SetupView({
       >
         <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
           <button onClick={handleDetectGps} disabled={gpsLoading} className="adm-btn adm-btn-accent" style={{ width: '100%', padding: '12px', fontWeight: 800 }}>
-            <MapPin size={16} /> {gpsLoading ? 'Detecting Location...' : '📍 Auto-Detect Current GPS Coordinates'}
+            <MapPin size={16} /> {gpsLoading ? '📍 Detecting Location...' : 'Detect Current Location'}
           </button>
+
+          {gpsSuccess && (
+            <div style={{ background: 'var(--adm-success-bg)', color: 'var(--adm-success)', padding: '10px 14px', borderRadius: 'var(--adm-radius-md)', fontSize: '0.84rem', fontWeight: 800, border: '1px solid var(--adm-success-border)' }}>
+              ✓ Location detected successfully
+            </div>
+          )}
+
+          {gpsErrorMsg && (
+            <div style={{ background: 'var(--adm-danger-bg)', color: 'var(--adm-danger)', padding: '10px 14px', borderRadius: 'var(--adm-radius-md)', fontSize: '0.82rem', fontWeight: 700, border: '1px solid var(--adm-danger-border)', display: 'flex', flexDirection: 'column', gap: '8px' }}>
+              <div>{gpsErrorMsg}</div>
+              {showHowToAllow && (
+                <button
+                  type="button"
+                  onClick={() => alert('📱 How to Allow Location Access:\n\n1. Tap the 🔒 lock or ⓘ info icon in your browser address bar\n2. Tap "Site Settings" or "Permissions"\n3. Change "Location" from Blocked to Allow\n4. Refresh the page and click Detect Current Location again.')}
+                  className="adm-btn adm-btn-secondary adm-btn-sm"
+                  style={{ alignSelf: 'flex-start', fontSize: '0.74rem', fontWeight: 800 }}
+                >
+                  How to Allow Location
+                </button>
+              )}
+            </div>
+          )}
 
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
             <div>
