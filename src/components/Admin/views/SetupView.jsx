@@ -102,7 +102,7 @@ export default function SetupView({
       }
     }
 
-    // Step 4: Request real location via fast 2-tier strategy (Instant Network/Wi-Fi location first, then GPS fallback)
+    // Step 4: Request real location via browser Geolocation API with instant cached maximumAge & IP fallback
     setGpsLoading(true);
 
     const onGpsSuccess = (pos) => {
@@ -118,53 +118,61 @@ export default function SetupView({
       setTimeout(() => setGpsSuccess(false), 5000);
     };
 
-    const onGpsError = (err) => {
-      // If fast mode timed out or failed, try high accuracy mode as 2nd attempt
-      if (err.code === 3) {
-        navigator.geolocation.getCurrentPosition(
-          onGpsSuccess,
-          (finalErr) => handleFinalGpsError(finalErr),
-          { enableHighAccuracy: true, timeout: 7000, maximumAge: 60000 }
-        );
-      } else {
-        handleFinalGpsError(err);
+    const handleGpsFallback = async () => {
+      try {
+        const res = await fetch('https://ipapi.co/json/');
+        const data = await res.json();
+        if (data && data.latitude && data.longitude) {
+          if (setSettingsForm) {
+            setSettingsForm(prev => ({
+              ...prev,
+              latitude: data.latitude,
+              longitude: data.longitude
+            }));
+          }
+          setGpsLoading(false);
+          setGpsSuccess(true);
+          setTimeout(() => setGpsSuccess(false), 5000);
+          return;
+        }
+      } catch (e) {
+        // IP fallback failed
       }
-    };
 
-    const handleFinalGpsError = (err) => {
       setGpsLoading(false);
-      if (err.code === 1) {
-        setGpsErrorState({
-          title: '🔒 Location Permission Required',
-          msg: 'Location permission was denied. Please allow location access in your browser/device settings and try again.',
-          isDenied: true
-        });
-      } else if (err.code === 2) {
-        setGpsErrorState({
-          title: '📍 Location is turned off',
-          msg: 'Please turn on Location/GPS on your device and try again.',
-          isDenied: false
-        });
-      } else if (err.code === 3) {
-        setGpsErrorState({
-          title: '⏱️ Location Timeout',
-          msg: 'Location detection timed out. Please check your network/GPS connection and try again.',
-          isDenied: false
-        });
-      } else {
-        setGpsErrorState({
-          title: '❌ Location Error',
-          msg: 'Unable to detect your location. Please try again.',
-          isDenied: false
-        });
-      }
+      setGpsErrorState({
+        title: '⏱️ Location Timeout',
+        msg: 'GPS signal weak indoors. Try moving near a window or turn on Wi-Fi for better location signal.',
+        isDenied: false
+      });
     };
 
-    // Fast 0.2s Primary Attempt (Network/Wi-Fi/Cell tower location)
+    // Primary attempt: Use cached/instant device position (maximumAge: Infinity, enableHighAccuracy: false)
     navigator.geolocation.getCurrentPosition(
       onGpsSuccess,
-      onGpsError,
-      { enableHighAccuracy: false, timeout: 4000, maximumAge: 300000 }
+      (err) => {
+        if (err.code === 1) {
+          // PERMISSION_DENIED
+          setGpsLoading(false);
+          setGpsErrorState({
+            title: '🔒 Location Permission Required',
+            msg: 'Location permission was denied. Please allow location access in your browser settings.',
+            isDenied: true
+          });
+        } else if (err.code === 2) {
+          // POSITION_UNAVAILABLE
+          setGpsLoading(false);
+          setGpsErrorState({
+            title: '📍 Location is turned off',
+            msg: 'Please turn on Location/GPS on your device and try again.',
+            isDenied: false
+          });
+        } else {
+          // Timeout or general error: Try IP-based location fallback
+          handleGpsFallback();
+        }
+      },
+      { enableHighAccuracy: false, timeout: 8000, maximumAge: Infinity }
     );
   };
 
