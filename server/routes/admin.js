@@ -20,6 +20,7 @@ async function cleanupImage(imageUrl) {
       const r2Key = r2Match[0];
       console.log('🗑️ Deleting R2 object key directly:', r2Key);
       await deleteImageFromR2(r2Key);
+      await deleteImageRecordFromDb(r2Key);
     }
 
     const filename = path.basename(imageUrl);
@@ -29,9 +30,11 @@ async function cleanupImage(imageUrl) {
         if (imgRecord.image_key && (!r2Match || imgRecord.image_key !== r2Match[0])) {
           await deleteImageFromR2(imgRecord.image_key);
         }
-        await deleteImageRecordFromDb(filename);
+        await deleteImageRecordFromDb(imgRecord.image_key || filename);
       }
+      await deleteImageRecordFromDb(filename);
     }
+    await deleteImageRecordFromDb(imageUrl);
   } catch (err) {
     console.warn('⚠️ Cleanup image notice:', err.message);
   }

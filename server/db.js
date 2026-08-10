@@ -1274,41 +1274,31 @@ export async function saveImageToDb(filename, mimeType, bufferData) {
 
 export async function saveR2ImageToDb(filename, mimeType, imageKey, imageUrl, restaurantId = 1) {
   try {
-    if (dbType === 'postgres' || pgPool) {
-      await query(
-        `INSERT INTO stored_images (filename, mime_type, storage_provider, image_key, image_url, restaurant_id, data)
-         VALUES ($1, $2, 'r2', $3, $4, $5, NULL)
-         ON CONFLICT (filename) DO UPDATE SET
-           storage_provider = 'r2',
-           image_key = EXCLUDED.image_key,
-           image_url = EXCLUDED.image_url,
-           restaurant_id = EXCLUDED.restaurant_id,
-           mime_type = EXCLUDED.mime_type,
-           data = NULL`,
-        [filename, mimeType, imageKey, imageUrl, restaurantId]
-      );
-    } else {
-      await query(
-        `INSERT INTO stored_images (filename, mime_type, storage_provider, image_key, image_url, restaurant_id, data)
-         VALUES ($1, $2, 'r2', $3, $4, $5, NULL)
-         ON CONFLICT(filename) DO UPDATE SET
-           storage_provider = 'r2',
-           image_key = excluded.image_key,
-           image_url = excluded.image_url,
-           restaurant_id = excluded.restaurant_id,
-           mime_type = excluded.mime_type,
-           data = NULL`,
-        [filename, mimeType, imageKey, imageUrl, restaurantId]
-      );
-    }
+    // Delete any old record for this exact imageKey, imageUrl, or filename first to prevent duplicate entries in stored_images
+    await query(
+      `DELETE FROM stored_images WHERE image_key = $1 OR image_url = $2 OR filename = $3`,
+      [imageKey, imageUrl, filename]
+    );
+
+    await query(
+      `INSERT INTO stored_images (filename, mime_type, storage_provider, image_key, image_url, restaurant_id, data)
+       VALUES ($1, $2, 'r2', $3, $4, $5, NULL)`,
+      [filename, mimeType, imageKey, imageUrl, restaurantId]
+    );
   } catch (err) {
     console.error('Failed to save R2 image metadata to DB:', err.message);
   }
 }
 
-export async function getImageRecordFromDb(filename) {
+export async function getImageRecordFromDb(identifier) {
+  if (!identifier) return null;
   try {
-    const rows = await query('SELECT filename, mime_type, data, storage_provider, image_key, image_url, restaurant_id FROM stored_images WHERE filename = $1', [filename]);
+    const rows = await query(
+      `SELECT filename, mime_type, data, storage_provider, image_key, image_url, restaurant_id 
+       FROM stored_images 
+       WHERE filename = $1 OR image_key = $1 OR image_url = $1 OR image_key LIKE '%' || $1 OR image_url LIKE '%' || $1`,
+      [identifier]
+    );
     if (rows && rows.length > 0) {
       return rows[0];
     }
@@ -1318,9 +1308,14 @@ export async function getImageRecordFromDb(filename) {
   return null;
 }
 
-export async function deleteImageRecordFromDb(filename) {
+export async function deleteImageRecordFromDb(identifier) {
+  if (!identifier) return;
   try {
-    await query('DELETE FROM stored_images WHERE filename = $1', [filename]);
+    await query(
+      `DELETE FROM stored_images 
+       WHERE filename = $1 OR image_key = $1 OR image_url = $1 OR image_key LIKE '%' || $1 OR image_url LIKE '%' || $1`,
+      [identifier]
+    );
   } catch (err) {
     console.error('Failed to delete image record from DB:', err.message);
   }
