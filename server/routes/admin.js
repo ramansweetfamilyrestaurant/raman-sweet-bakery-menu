@@ -1237,10 +1237,20 @@ router.get('/analytics', authenticateToken, requireActiveSubscription, async (re
       [targetId]
     );
 
+    const parseSafeDate = (dateVal) => {
+      if (!dateVal) return null;
+      if (dateVal instanceof Date) return isNaN(dateVal.getTime()) ? null : dateVal;
+      let str = String(dateVal).trim();
+      if (str.includes(' ') && !str.includes('T')) {
+        str = str.replace(' ', 'T');
+      }
+      const d = new Date(str);
+      return isNaN(d.getTime()) ? null : d;
+    };
+
     const getFormattedLocalDate = (dateObj) => {
-      if (!dateObj) return '';
-      const d = new Date(dateObj);
-      if (isNaN(d.getTime())) return '';
+      const d = parseSafeDate(dateObj);
+      if (!d) return '';
       const year = d.getFullYear();
       const month = String(d.getMonth() + 1).padStart(2, '0');
       const day = String(d.getDate()).padStart(2, '0');
@@ -1276,7 +1286,7 @@ router.get('/analytics', authenticateToken, requireActiveSubscription, async (re
       const amt = Number(o.total_amount) || 0;
       totalSales += amt;
 
-      const createdAtDate = o.created_at ? new Date(o.created_at) : new Date();
+      const createdAtDate = parseSafeDate(o.created_at) || new Date();
       const dateStr = getFormattedLocalDate(createdAtDate);
 
       if (dateStr === todayStr) {
