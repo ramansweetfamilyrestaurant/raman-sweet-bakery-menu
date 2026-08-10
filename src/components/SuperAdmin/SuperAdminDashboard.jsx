@@ -106,6 +106,8 @@ export default function SuperAdminDashboard({ token, username, onLogout, onRetur
   const [showAuditModal, setShowAuditModal] = useState(false);
   const [auditLogs, setAuditLogs] = useState([]);
   const [auditLoading, setAuditLoading] = useState(false);
+  const [auditFilter, setAuditFilter] = useState('all'); // 'all', 'activations', 'suspensions', 'settings', 'security'
+  const [auditSearch, setAuditSearch] = useState('');
 
   // New Restaurant Form State
   const [form, setForm] = useState({
@@ -2005,71 +2007,228 @@ export default function SuperAdminDashboard({ token, username, onLogout, onRetur
           <div style={{
             background: '#FFFFFF',
             borderRadius: '24px',
-            maxWidth: '650px',
+            maxWidth: '740px',
             width: '100%',
-            padding: '24px',
+            padding: '26px',
             boxShadow: '0 20px 60px rgba(0,0,0,0.4)',
             border: '2px solid #D4AF37',
-            maxHeight: '85vh',
+            maxHeight: '88vh',
             display: 'flex',
-            flexDirection: 'column'
+            flexDirection: 'column',
+            position: 'relative'
           }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                <div style={{ width: '38px', height: '38px', borderRadius: '12px', background: '#E0E7FF', color: '#4338CA', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                  <FileText size={20} />
+              <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                <div style={{
+                  width: '44px',
+                  height: '44px',
+                  borderRadius: '14px',
+                  background: 'linear-gradient(135deg, #0A2315 0%, #164E2A 100%)',
+                  color: '#DFBA67',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  border: '1.5px solid #D4AF37',
+                  boxShadow: '0 4px 14px rgba(10,35,21,0.2)'
+                }}>
+                  <FileText size={22} />
                 </div>
                 <div>
-                  <h3 style={{ fontSize: '1.2rem', fontWeight: 900, color: 'var(--primary-emerald)', margin: 0 }}>
-                    Platform Activity & Security Audit Logs
+                  <h3 style={{ fontSize: '1.25rem', fontWeight: 900, color: 'var(--primary-emerald)', margin: 0 }}>
+                    Platform Activity & Security Audit Stream
                   </h3>
-                  <span style={{ fontSize: '0.74rem', color: 'var(--text-muted)' }}>Real-time logging of logins, tenant creations, and admin actions</span>
+                  <span style={{ fontSize: '0.78rem', color: 'var(--text-muted)', fontWeight: 600 }}>
+                    Real-time immutable logging of admin actions, tenant access, and security events
+                  </span>
                 </div>
               </div>
-              <button onClick={() => setShowAuditModal(false)} style={{ background: 'none', border: 'none', fontSize: '1.4rem', fontWeight: 700, cursor: 'pointer', color: 'var(--text-muted)' }}>✕</button>
+
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <button
+                  type="button"
+                  onClick={loadAuditLogs}
+                  style={{
+                    background: '#F1F5F9',
+                    color: '#0F172A',
+                    border: '1px solid #CBD5E1',
+                    padding: '6px 12px',
+                    borderRadius: 'var(--radius-pill)',
+                    fontSize: '0.76rem',
+                    fontWeight: 800,
+                    cursor: 'pointer',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '4px'
+                  }}
+                  title="Refresh Audit Logs Stream"
+                >
+                  <RefreshCw size={13} /> Refresh
+                </button>
+                <button onClick={() => setShowAuditModal(false)} style={{ background: 'none', border: 'none', fontSize: '1.5rem', fontWeight: 700, cursor: 'pointer', color: '#64748B' }}>✕</button>
+              </div>
             </div>
 
+            {/* Filter Pills Bar & Search Row */}
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px', alignItems: 'center', justifyContent: 'space-between', marginBottom: '14px', background: '#F8FAFC', padding: '10px 12px', borderRadius: '14px', border: '1px solid #E2E8F0' }}>
+              <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap' }}>
+                {[
+                  { id: 'all', label: '📜 All Logs' },
+                  { id: 'activations', label: '🟢 Activations' },
+                  { id: 'suspensions', label: '🔴 Suspensions' },
+                  { id: 'settings', label: '⚙️ Settings' },
+                  { id: 'security', label: '🔑 Security' },
+                ].map(pill => {
+                  const isActive = auditFilter === pill.id;
+                  return (
+                    <button
+                      key={pill.id}
+                      type="button"
+                      onClick={() => setAuditFilter(pill.id)}
+                      style={{
+                        background: isActive ? 'linear-gradient(135deg, #0A2315 0%, #164E2A 100%)' : '#FFFFFF',
+                        color: isActive ? '#DFBA67' : '#475569',
+                        border: isActive ? '1px solid #D4AF37' : '1px solid #CBD5E1',
+                        padding: '4px 10px',
+                        borderRadius: 'var(--radius-pill)',
+                        fontSize: '0.72rem',
+                        fontWeight: 900,
+                        cursor: 'pointer',
+                        boxShadow: isActive ? '0 2px 6px rgba(10,35,21,0.2)' : 'none'
+                      }}
+                    >
+                      {pill.label}
+                    </button>
+                  );
+                })}
+              </div>
+
+              <div style={{ position: 'relative', width: '200px' }}>
+                <input
+                  type="text"
+                  placeholder="🔍 Search logs..."
+                  value={auditSearch}
+                  onChange={e => setAuditSearch(e.target.value)}
+                  style={{ width: '100%', padding: '6px 10px 6px 28px', borderRadius: '8px', border: '1px solid #CBD5E1', fontSize: '0.78rem', boxSizing: 'border-box' }}
+                />
+                <Search size={13} style={{ position: 'absolute', left: '9px', top: '50%', transform: 'translateY(-50%)', color: '#94A3B8' }} />
+              </div>
+            </div>
+
+            {/* Logs List Container */}
             <div style={{ flex: 1, overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '10px', paddingRight: '4px' }}>
               {auditLoading ? (
-                <div style={{ textAlign: 'center', padding: '40px', color: 'var(--gold-primary)', fontWeight: 800 }}>
-                  📜 Loading audit logs...
+                <div style={{ textAlign: 'center', padding: '40px', color: '#B45309', fontWeight: 800 }}>
+                  📜 Loading real-time audit logs...
                 </div>
-              ) : auditLogs.length === 0 ? (
-                <div style={{ textAlign: 'center', padding: '40px', color: 'var(--text-muted)' }}>
-                  No audit logs recorded yet.
-                </div>
-              ) : (
-                auditLogs.map(log => (
-                  <div
-                    key={log.id}
-                    style={{
-                      background: 'var(--bg-app)',
-                      borderRadius: '14px',
-                      padding: '12px 14px',
-                      border: '1px solid var(--border-light)',
-                      display: 'flex',
-                      justifyContent: 'space-between',
-                      alignItems: 'center',
-                      fontSize: '0.82rem'
-                    }}
-                  >
-                    <div>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '4px' }}>
-                        <span style={{ background: '#0A2315', color: '#DFBA67', fontSize: '0.66rem', fontWeight: 900, padding: '2px 7px', borderRadius: '6px' }}>
-                          {log.actor_role.toUpperCase()}
-                        </span>
-                        <strong style={{ color: 'var(--primary-emerald)' }}>{log.action}</strong>
+              ) : (() => {
+                const filtered = auditLogs.filter(log => {
+                  const act = (log.action || '').toLowerCase();
+                  const det = (log.details || '').toLowerCase();
+                  const query = auditSearch.toLowerCase();
+                  if (query && !act.includes(query) && !det.includes(query)) return false;
+
+                  if (auditFilter === 'activations') {
+                    return act.includes('activate') || act.includes('grant') || act.includes('create');
+                  }
+                  if (auditFilter === 'suspensions') {
+                    return act.includes('suspend') || act.includes('revoke') || act.includes('delete');
+                  }
+                  if (auditFilter === 'settings') {
+                    return act.includes('settings') || act.includes('logo') || act.includes('gateway') || act.includes('vacuum');
+                  }
+                  if (auditFilter === 'security') {
+                    return act.includes('password') || act.includes('security') || act.includes('credentials') || act.includes('login');
+                  }
+                  return true;
+                });
+
+                if (filtered.length === 0) {
+                  return (
+                    <div style={{ textAlign: 'center', padding: '40px', color: '#94A3B8', fontWeight: 700 }}>
+                      No matching audit logs found.
+                    </div>
+                  );
+                }
+
+                return filtered.map(log => {
+                  const act = (log.action || '').toLowerCase();
+                  let badgeBg = 'linear-gradient(135deg, #0A2315 0%, #164E2A 100%)';
+                  let badgeColor = '#DFBA67';
+                  let icon = '📜';
+
+                  if (act.includes('activate') || act.includes('grant') || act.includes('create')) {
+                    badgeBg = 'linear-gradient(135deg, #15803D 0%, #22C55E 100%)';
+                    badgeColor = '#FFFFFF';
+                    icon = '🟢';
+                  } else if (act.includes('suspend') || act.includes('revoke') || act.includes('delete')) {
+                    badgeBg = 'linear-gradient(135deg, #991B1B 0%, #EF4444 100%)';
+                    badgeColor = '#FFFFFF';
+                    icon = '🔴';
+                  } else if (act.includes('settings') || act.includes('logo') || act.includes('gateway') || act.includes('vacuum')) {
+                    badgeBg = 'linear-gradient(135deg, #0369A1 0%, #0EA5E9 100%)';
+                    badgeColor = '#FFFFFF';
+                    icon = '⚙️';
+                  } else if (act.includes('security') || act.includes('password') || act.includes('credentials')) {
+                    badgeBg = 'linear-gradient(135deg, #7E22CE 0%, #A855F7 100%)';
+                    badgeColor = '#FFFFFF';
+                    icon = '🔑';
+                  }
+
+                  const dateObj = new Date(log.created_at);
+                  const formattedTime = dateObj.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+                  const formattedDate = dateObj.toLocaleDateString([], { month: 'short', day: 'numeric' });
+
+                  return (
+                    <div
+                      key={log.id}
+                      style={{
+                        background: '#FFFFFF',
+                        borderRadius: '14px',
+                        padding: '12px 14px',
+                        border: '1.5px solid #E2E8F0',
+                        display: 'flex',
+                        justifyContent: 'space-between',
+                        alignItems: 'center',
+                        fontSize: '0.82rem',
+                        boxShadow: '0 2px 8px rgba(0,0,0,0.03)'
+                      }}
+                    >
+                      <div>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '4px' }}>
+                          <span style={{
+                            background: badgeBg,
+                            color: badgeColor,
+                            fontSize: '0.66rem',
+                            fontWeight: 900,
+                            padding: '3px 8px',
+                            borderRadius: '6px',
+                            display: 'inline-flex',
+                            alignItems: 'center',
+                            gap: '3px',
+                            boxShadow: '0 2px 6px rgba(0,0,0,0.1)'
+                          }}>
+                            {icon} {log.action.toUpperCase()}
+                          </span>
+                          <span style={{ fontFamily: 'monospace', fontSize: '0.72rem', color: '#64748B', background: '#F1F5F9', padding: '1px 6px', borderRadius: '4px', border: '1px solid #E2E8F0' }}>
+                            by {log.actor_role || 'superadmin'}
+                          </span>
+                        </div>
+                        <div style={{ color: '#0F172A', fontWeight: 700, fontSize: '0.84rem' }}>
+                          {log.details}
+                        </div>
                       </div>
-                      <div style={{ color: 'var(--text-dark)', fontWeight: 600 }}>
-                        {log.details}
+                      <div style={{ textAlign: 'right', flexShrink: 0, marginLeft: '12px' }}>
+                        <div style={{ fontSize: '0.76rem', color: '#0F172A', fontWeight: 800 }}>
+                          {formattedTime}
+                        </div>
+                        <div style={{ fontSize: '0.68rem', color: '#94A3B8', fontWeight: 600 }}>
+                          {formattedDate}
+                        </div>
                       </div>
                     </div>
-                    <span style={{ fontSize: '0.7rem', color: 'var(--text-muted)', fontWeight: 600, flexShrink: 0, marginLeft: '12px' }}>
-                      {new Date(log.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                    </span>
-                  </div>
-                ))
-              )}
+                  );
+                });
+              })()}
             </div>
           </div>
         </div>
