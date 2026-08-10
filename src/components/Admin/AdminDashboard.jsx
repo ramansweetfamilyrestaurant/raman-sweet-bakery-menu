@@ -16,6 +16,8 @@ import OrdersView from './views/OrdersView';
 import AnalyticsView from './views/AnalyticsView';
 import MenuView from './views/MenuView';
 import SetupView from './views/SetupView';
+import QrGeneratorView from './views/QrGeneratorView';
+import ReviewView from './views/ReviewView';
 
 export default function AdminDashboard({ token, username, onLogout, onReturnToMenu }) {
   const [showPaymentModal, setShowPaymentModal] = useState(false);
@@ -1785,8 +1787,32 @@ export default function AdminDashboard({ token, username, onLogout, onReturnToMe
               />
             )}
 
+            {/* QR GENERATOR VIEW */}
+            {activeTab === 'qr-generator' && (
+              <QrGeneratorView
+                tableNumber={tableNumber}
+                setTableNumber={setTableNumber}
+                totalTablesCount={totalTablesCount}
+                onAddTable={handleAddTable}
+                onDeleteTable={() => handleDeleteTable()}
+                onPrintQR={handlePrintQR}
+                onPrintAllQRs={handlePrintAllQRs}
+                settingsForm={settingsForm}
+                onReturnToMenu={onReturnToMenu}
+              />
+            )}
+
+            {/* REVIEWS & FEEDBACK VIEW */}
+            {activeTab === 'review' && (
+              <ReviewView
+                settingsForm={settingsForm}
+                setSettingsForm={setSettingsForm}
+                handleSaveSettings={handleSaveSettings}
+              />
+            )}
+
             {/* SETUP VIEW */}
-            {['settings', 'qr-generator', 'review'].includes(activeTab) && (
+            {activeTab === 'settings' && (
               <SetupView
                 restaurantInfo={restaurantInfo}
                 settingsForm={settingsForm}
@@ -1802,6 +1828,15 @@ export default function AdminDashboard({ token, username, onLogout, onReturnToMe
                 setShowHelpModal={setShowHelpModal}
                 onOpenBillingModal={() => setShowPaymentModal(true)}
                 supportPhone={masterSupportPhone}
+                onOptimizeDatabase={async () => {
+                  try {
+                    await optimizeDatabase(token);
+                    alert('⚡ Database optimized successfully!');
+                  } catch (e) {
+                    alert('Optimization failed: ' + e.message);
+                  }
+                }}
+                onNavigate={(tab) => setActiveTab(tab)}
               />
             )}
           </div>

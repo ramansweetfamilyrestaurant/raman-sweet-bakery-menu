@@ -16,7 +16,9 @@ export default function SetupView({
   setShowHelpModal,
   onOpenBillingModal,
   supportPhone,
-  restaurantInfo
+  restaurantInfo,
+  onNavigate,
+  onOptimizeDatabase
 }) {
   const [openDrawer, setOpenDrawer] = useState(null); // 'profile', 'devices', 'menu', 'location', 'subscription', 'security'
   const [uploadingLogo, setUploadingLogo] = useState(false);
@@ -227,6 +229,60 @@ export default function SetupView({
             <div>
               <strong style={{ fontSize: '0.95rem', color: 'var(--adm-text)', display: 'block' }}>🔐 Admin Security</strong>
               <span style={{ fontSize: '0.75rem', color: 'var(--adm-muted)' }}>Owner username and password login</span>
+            </div>
+          </div>
+          <ChevronRight size={18} color="var(--adm-muted)" />
+        </div>
+
+        {/* Card 7: Table QR Standees */}
+        <div
+          onClick={() => onNavigate && onNavigate('qr-generator')}
+          className="adm-card"
+          style={{ cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '16px' }}
+        >
+          <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+            <div style={{ width: '42px', height: '42px', borderRadius: '12px', background: 'var(--adm-warning-bg)', color: 'var(--adm-warning)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+              <Printer size={20} />
+            </div>
+            <div>
+              <strong style={{ fontSize: '0.95rem', color: 'var(--adm-text)', display: 'block' }}>📱 QR Standees & Printer</strong>
+              <span style={{ fontSize: '0.75rem', color: 'var(--adm-muted)' }}>Print table QR stickers, uniform standees</span>
+            </div>
+          </div>
+          <ChevronRight size={18} color="var(--adm-muted)" />
+        </div>
+
+        {/* Card 8: Customer Reviews */}
+        <div
+          onClick={() => onNavigate && onNavigate('review')}
+          className="adm-card"
+          style={{ cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '16px' }}
+        >
+          <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+            <div style={{ width: '42px', height: '42px', borderRadius: '12px', background: 'var(--adm-purple-bg)', color: 'var(--adm-purple)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+              <ShieldCheck size={20} />
+            </div>
+            <div>
+              <strong style={{ fontSize: '0.95rem', color: 'var(--adm-text)', display: 'block' }}>⭐ Reviews & Feedback</strong>
+              <span style={{ fontSize: '0.75rem', color: 'var(--adm-muted)' }}>Google Review link, customer rating</span>
+            </div>
+          </div>
+          <ChevronRight size={18} color="var(--adm-muted)" />
+        </div>
+
+        {/* Card 9: Database Engine Optimization */}
+        <div
+          onClick={() => onOptimizeDatabase && onOptimizeDatabase()}
+          className="adm-card"
+          style={{ cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '16px' }}
+        >
+          <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+            <div style={{ width: '42px', height: '42px', borderRadius: '12px', background: 'var(--adm-success-bg)', color: 'var(--adm-success)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+              <Upload size={20} />
+            </div>
+            <div>
+              <strong style={{ fontSize: '0.95rem', color: 'var(--adm-text)', display: 'block' }}>⚡ Optimize Database Engine</strong>
+              <span style={{ fontSize: '0.75rem', color: 'var(--adm-muted)' }}>Purge temporary logs, speed up queries</span>
             </div>
           </div>
           <ChevronRight size={18} color="var(--adm-muted)" />
