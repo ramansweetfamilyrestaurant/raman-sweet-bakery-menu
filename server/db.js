@@ -941,10 +941,7 @@ async function seedData() {
   const catCheck = await query('SELECT COUNT(*) as count FROM categories WHERE restaurant_id = $1', [primaryRestoId]);
   const count = parseInt(catCheck[0]?.count || 0, 10);
 
-  const imgCheck = await query("SELECT COUNT(*) as count FROM dishes WHERE image LIKE 'http%'");
-  const hasRealImages = parseInt(imgCheck[0]?.count || 0, 10) > 0;
-
-  if (count === 0 || !hasRealImages) {
+  if (count === 0) {
     console.log('🌱 Seeding authentic menu data for Raman Sweet Bakery...');
     try {
       await query('DELETE FROM order_items WHERE order_id IN (SELECT id FROM orders WHERE restaurant_id = $1)', [primaryRestoId]);
