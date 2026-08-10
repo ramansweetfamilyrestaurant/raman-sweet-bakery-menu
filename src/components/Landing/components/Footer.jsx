@@ -1,0 +1,80 @@
+import React from 'react';
+
+export default function Footer({ onOpenLogin, onStartTrial }) {
+  const scrollToSection = (id) => {
+    const element = document.getElementById(id);
+    if (element) {
+      element.scrollIntoView({ behavior: 'smooth' });
+    }
+  };
+
+  return (
+    <footer className="km-footer">
+      <div className="km-container">
+        <div className="km-footer-grid">
+          {/* Brand Column */}
+          <div className="km-footer-brand">
+            <div className="km-logo" onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}>
+              <div className="km-logo-icon">🍱</div>
+              <span className="km-logo-text" style={{ color: '#FFF' }}>KhanaMaster</span>
+              <span className="km-logo-tag">SaaS</span>
+            </div>
+            <p>
+              India’s Premier Smart Digital Menu, Live Kitchen KOT, and Restaurant Management SaaS Platform.
+            </p>
+          </div>
+
+          {/* Product Links */}
+          <div>
+            <h4 className="km-footer-title">Product</h4>
+            <ul className="km-footer-links">
+              <li><a onClick={() => scrollToSection('features')}>Digital QR Menu</a></li>
+              <li><a onClick={() => scrollToSection('features')}>Live Kitchen KOT</a></li>
+              <li><a onClick={() => scrollToSection('features')}>Smart Google Reviews</a></li>
+              <li><a onClick={() => scrollToSection('features')}>Thermal Printing</a></li>
+              <li><a onClick={() => scrollToSection('features')}>WhatsApp Integration</a></li>
+            </ul>
+          </div>
+
+          {/* Restaurant Owners */}
+          <div>
+            <h4 className="km-footer-title">Restaurant Owners</h4>
+            <ul className="km-footer-links">
+              <li><a onClick={onOpenLogin}>Owner Login</a></li>
+              <li><a onClick={onStartTrial}>Start Free Trial</a></li>
+              <li><a onClick={() => scrollToSection('pricing')}>View SaaS Plans</a></li>
+              <li><a onClick={() => scrollToSection('faq')}>FAQ</a></li>
+            </ul>
+          </div>
+
+          {/* Legal */}
+          <div>
+            <h4 className="km-footer-title">Legal & Security</h4>
+            <ul className="km-footer-links">
+              <li><a onClick={() => scrollToSection('faq')}>Privacy Policy</a></li>
+              <li><a onClick={() => scrollToSection('faq')}>Terms of Service</a></li>
+              <li><a onClick={() => scrollToSection('faq')}>Refund Policy</a></li>
+              <li><a onClick={() => scrollToSection('faq')}>Data Security</a></li>
+            </ul>
+          </div>
+        </div>
+
+        <div className="km-footer-bottom">
+          <div>
+            © {new Date().getFullYear()} KhanaMaster SaaS. All rights reserved. Built for Indian Restaurant Growth.
+          </div>
+
+          <div style={{ display: 'flex', gap: '16px' }}>
+            <span onClick={onOpenLogin} style={{ cursor: 'pointer', color: '#D4AF37', fontWeight: 700 }}>
+              🔑 Owner Login
+            </span>
+            <span>•</span>
+            <span onClick={onStartTrial} style={{ cursor: 'pointer', color: '#D4AF37', fontWeight: 700 }}>
+              🚀 Start Free Trial
+            </span>
+          </div>
+        </div>
+      </div>
+    </footer>
+  );
+}
