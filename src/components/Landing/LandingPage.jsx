@@ -50,9 +50,14 @@ export default function LandingPage({
     fetch('/api/settings')
       .then(res => res.json())
       .then(data => {
-        if (data && data.platform_logo_url) {
-          setPlatformLogoUrl(data.platform_logo_url);
-          try { localStorage.setItem('km_platform_logo_url', data.platform_logo_url); } catch {}
+        if (data && typeof data.platform_logo_url === 'string') {
+          if (data.platform_logo_url.trim() !== '') {
+            setPlatformLogoUrl(data.platform_logo_url);
+            try { localStorage.setItem('km_platform_logo_url', data.platform_logo_url); } catch {}
+          } else {
+            setPlatformLogoUrl('');
+            try { localStorage.removeItem('km_platform_logo_url'); } catch {}
+          }
         }
       })
       .catch(() => {});

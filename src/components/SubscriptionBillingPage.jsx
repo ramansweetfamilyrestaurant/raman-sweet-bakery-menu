@@ -82,9 +82,14 @@ export default function SubscriptionBillingPage({ restoInfo, token, onProceedToD
             const days = parseInt(data.default_trial_days, 10);
             if (!isNaN(days) && days > 0) setTrialSettingDays(days);
           }
-          if (data.platform_logo_url) {
-            setLogoUrl(data.platform_logo_url);
-            try { localStorage.setItem('km_platform_logo_url', data.platform_logo_url); } catch {}
+          if (typeof data.platform_logo_url === 'string') {
+            if (data.platform_logo_url.trim() !== '') {
+              setLogoUrl(data.platform_logo_url);
+              try { localStorage.setItem('km_platform_logo_url', data.platform_logo_url); } catch {}
+            } else {
+              setLogoUrl('');
+              try { localStorage.removeItem('km_platform_logo_url'); } catch {}
+            }
           }
         }
       })
