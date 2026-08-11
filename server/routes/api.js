@@ -51,17 +51,18 @@ router.get('/plans', async (req, res) => {
 // Helper to resolve target restaurant by JWT token or slug (or fallback to primary raman-sweet-bakery)
 // Helper to resolve target restaurant by slug or JWT token
 async function resolveRestaurant(req, slug) {
-  // 1. If an explicit slug parameter is passed in URL/query, prioritize searching by slug!
+  // 1. If an explicit valid slug parameter is passed in URL/query, prioritize searching by slug!
   if (slug && typeof slug === 'string' && slug.trim() !== '') {
-    const restos = await query('SELECT * FROM restaurants WHERE slug = $1', [slug.trim()]);
-    if (restos && restos.length > 0) {
-      return restos[0];
+    const cleanSlug = slug.trim().toLowerCase();
+    if (!['menu', 'default', 'null', 'undefined', 'home', 'index', 'api'].includes(cleanSlug)) {
+      const restos = await query('SELECT * FROM restaurants WHERE slug = $1', [slug.trim()]);
+      if (restos && restos.length > 0) {
+        return restos[0];
+      }
     }
-    // Explicit slug requested but restaurant DOES NOT exist in DB (deleted or invalid link) -> return null! DO NOT FALLBACK!
-    return null;
   }
 
-  // 2. If NO slug was specified in URL, check if JWT token is in Authorization header
+  // 2. Check if JWT token is in Authorization header
   if (req && req.headers && req.headers.authorization) {
     try {
       const authHeader = req.headers.authorization;
@@ -76,8 +77,8 @@ async function resolveRestaurant(req, slug) {
     } catch (e) {}
   }
 
-  // 3. Fallback ONLY if NO slug parameter was provided at all (e.g. visiting bare domain root /)
-  const firstResto = await query("SELECT * FROM restaurants WHERE slug = 'raman-sweet-bakery' OR id = 1 ORDER BY id ASC LIMIT 1");
+  // 3. Fallback to primary default active restaurant (Raman Sweet Bakery / first active tenant in DB)
+  const firstResto = await query("SELECT * FROM restaurants WHERE active = 1 OR active IS NOT FALSE ORDER BY id ASC LIMIT 1");
   return firstResto[0] || null;
 }
 

@@ -429,7 +429,7 @@ export default function App() {
     const candidate = parts[0];
     
     // Filter out system routes
-    if (['admin', 'superadmin', 'super-admin', 'api', 'uploads', 'assets', 'register', 'billing'].includes(candidate.toLowerCase())) {
+    if (['menu', 'admin', 'superadmin', 'super-admin', 'api', 'uploads', 'assets', 'register', 'billing'].includes(candidate.toLowerCase())) {
       return '';
     }
     
