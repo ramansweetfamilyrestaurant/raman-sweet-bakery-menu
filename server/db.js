@@ -45,8 +45,10 @@ async function initDb() {
     }
   }
 
-  await createTables();
-  await seedData();
+  if (!process.env.VERCEL) {
+    await createTables();
+    await seedData();
+  }
   isDbInitialized = true;
 }
 
