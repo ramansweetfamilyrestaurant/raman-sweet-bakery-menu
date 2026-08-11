@@ -242,10 +242,32 @@ router.get('/subscription-status', authenticateToken, async (req, res) => {
     const saasPlan = planRows[0] || {};
 
     const planPrice = Number(r.plan_price || saasPlan.price || (tierKey === 'enterprise' ? 1999 : tierKey === 'basic' ? 499 : 999));
-    const whatsappEnabled = saasPlan.whatsapp_enabled !== undefined ? (saasPlan.whatsapp_enabled === 1 || saasPlan.whatsapp_enabled === true || saasPlan.whatsapp_enabled === '1') : (tierKey !== 'basic');
-    const directOrderingEnabled = saasPlan.direct_ordering_enabled !== undefined ? (saasPlan.direct_ordering_enabled === 1 || saasPlan.direct_ordering_enabled === true || saasPlan.direct_ordering_enabled === '1') : (tierKey === 'enterprise');
-    const googleReviewsEnabled = saasPlan.google_reviews_enabled !== undefined ? (saasPlan.google_reviews_enabled === 1 || saasPlan.google_reviews_enabled === true || saasPlan.google_reviews_enabled === '1') : (tierKey !== 'basic');
-    const maxCombos = saasPlan.max_combos !== undefined ? Number(saasPlan.max_combos) : (tierKey === 'basic' ? 3 : tierKey === 'pro' ? 10 : 9999);
+    const isValTrue = (val, def = true) => val !== undefined && val !== null ? (val === 1 || val === true || val === '1') : def;
+
+    const matrixPermissions = {
+      max_dishes: saasPlan.max_dishes !== undefined && saasPlan.max_dishes !== null ? Number(saasPlan.max_dishes) : 9999,
+      max_categories: saasPlan.max_categories !== undefined && saasPlan.max_categories !== null ? Number(saasPlan.max_categories) : 9999,
+      max_combos: saasPlan.max_combos !== undefined && saasPlan.max_combos !== null ? Number(saasPlan.max_combos) : (tierKey === 'basic' ? 3 : tierKey === 'pro' ? 10 : 9999),
+      max_tables: saasPlan.max_tables !== undefined && saasPlan.max_tables !== null ? Number(saasPlan.max_tables) : 9999,
+      max_staff_accounts: saasPlan.max_staff_accounts !== undefined && saasPlan.max_staff_accounts !== null ? Number(saasPlan.max_staff_accounts) : 9999,
+      order_retention_days: saasPlan.order_retention_days !== undefined && saasPlan.order_retention_days !== null ? Number(saasPlan.order_retention_days) : 365,
+      modifiers_enabled: isValTrue(saasPlan.modifiers_enabled, true),
+      staff_roles_enabled: isValTrue(saasPlan.staff_roles_enabled, true),
+      whatsapp_enabled: isValTrue(saasPlan.whatsapp_ordering_enabled ?? saasPlan.whatsapp_enabled, tierKey !== 'basic'),
+      direct_ordering_enabled: isValTrue(saasPlan.direct_ordering_enabled, tierKey === 'enterprise'),
+      audio_alarm_enabled: isValTrue(saasPlan.audio_alarm_enabled, true),
+      order_status_whatsapp_enabled: isValTrue(saasPlan.order_status_whatsapp_enabled, true),
+      kds_enabled: isValTrue(saasPlan.kds_enabled, true),
+      bluetooth_kot_enabled: isValTrue(saasPlan.bluetooth_kot_enabled, true),
+      google_reviews_enabled: isValTrue(saasPlan.google_reviews_enabled, tierKey !== 'basic'),
+      ai_review_enabled: isValTrue(saasPlan.ai_review_enabled, true),
+      stories_enabled: isValTrue(saasPlan.stories_enabled, true),
+      gst_invoice_enabled: isValTrue(saasPlan.gst_invoice_enabled, true),
+      analytics_export_enabled: isValTrue(saasPlan.analytics_export_enabled, true),
+      multi_language_enabled: isValTrue(saasPlan.multi_language_enabled, true),
+      watermark_removal_enabled: isValTrue(saasPlan.watermark_removal_enabled, true),
+      custom_domain_enabled: isValTrue(saasPlan.custom_domain_enabled, true),
+    };
 
     const parseDate = (val) => {
       if (!val) return null;
@@ -310,10 +332,11 @@ router.get('/subscription-status', authenticateToken, async (req, res) => {
       grace_period_active: isGracePeriodActive,
       plan_tier: r.plan_tier || 'pro',
       plan_price: planPrice,
-      whatsapp_enabled: whatsappEnabled,
-      direct_ordering_enabled: directOrderingEnabled,
-      google_reviews_enabled: googleReviewsEnabled,
-      max_combos: maxCombos,
+      whatsapp_enabled: matrixPermissions.whatsapp_enabled,
+      direct_ordering_enabled: matrixPermissions.direct_ordering_enabled,
+      google_reviews_enabled: matrixPermissions.google_reviews_enabled,
+      max_combos: matrixPermissions.max_combos,
+      permissions: matrixPermissions,
       default_trial_days: defaultTrialDays,
       trial_started_at: r.trial_started_at,
       trial_ends_at: r.trial_ends_at || r.plan_expires_at,

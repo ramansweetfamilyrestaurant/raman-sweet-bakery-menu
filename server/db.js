@@ -413,7 +413,30 @@ async function createTables() {
       `ALTER TABLE subscriptions ADD COLUMN IF NOT EXISTS plan_change_effective_at TIMESTAMP;`,
       `ALTER TABLE subscriptions ADD COLUMN IF NOT EXISTS cancellation_reason TEXT;`,
       `CREATE INDEX IF NOT EXISTS idx_subscriptions_cancel ON subscriptions(cancel_requested_at);`,
-      `CREATE INDEX IF NOT EXISTS idx_subscriptions_plan_change ON subscriptions(scheduled_plan_key);`
+      `CREATE INDEX IF NOT EXISTS idx_subscriptions_plan_change ON subscriptions(scheduled_plan_key);`,
+      // Master 24-Point SaaS Plan Permission Matrix Columns
+      `ALTER TABLE saas_plans ADD COLUMN IF NOT EXISTS max_dishes INT DEFAULT 9999;`,
+      `ALTER TABLE saas_plans ADD COLUMN IF NOT EXISTS max_categories INT DEFAULT 9999;`,
+      `ALTER TABLE saas_plans ADD COLUMN IF NOT EXISTS max_combos INT DEFAULT 9999;`,
+      `ALTER TABLE saas_plans ADD COLUMN IF NOT EXISTS max_tables INT DEFAULT 9999;`,
+      `ALTER TABLE saas_plans ADD COLUMN IF NOT EXISTS max_staff_accounts INT DEFAULT 9999;`,
+      `ALTER TABLE saas_plans ADD COLUMN IF NOT EXISTS order_retention_days INT DEFAULT 365;`,
+      `ALTER TABLE saas_plans ADD COLUMN IF NOT EXISTS modifiers_enabled INT DEFAULT 1;`,
+      `ALTER TABLE saas_plans ADD COLUMN IF NOT EXISTS staff_roles_enabled INT DEFAULT 1;`,
+      `ALTER TABLE saas_plans ADD COLUMN IF NOT EXISTS whatsapp_ordering_enabled INT DEFAULT 1;`,
+      `ALTER TABLE saas_plans ADD COLUMN IF NOT EXISTS direct_ordering_enabled INT DEFAULT 1;`,
+      `ALTER TABLE saas_plans ADD COLUMN IF NOT EXISTS audio_alarm_enabled INT DEFAULT 1;`,
+      `ALTER TABLE saas_plans ADD COLUMN IF NOT EXISTS order_status_whatsapp_enabled INT DEFAULT 1;`,
+      `ALTER TABLE saas_plans ADD COLUMN IF NOT EXISTS kds_enabled INT DEFAULT 1;`,
+      `ALTER TABLE saas_plans ADD COLUMN IF NOT EXISTS bluetooth_kot_enabled INT DEFAULT 1;`,
+      `ALTER TABLE saas_plans ADD COLUMN IF NOT EXISTS google_reviews_enabled INT DEFAULT 1;`,
+      `ALTER TABLE saas_plans ADD COLUMN IF NOT EXISTS ai_review_enabled INT DEFAULT 1;`,
+      `ALTER TABLE saas_plans ADD COLUMN IF NOT EXISTS stories_enabled INT DEFAULT 1;`,
+      `ALTER TABLE saas_plans ADD COLUMN IF NOT EXISTS gst_invoice_enabled INT DEFAULT 1;`,
+      `ALTER TABLE saas_plans ADD COLUMN IF NOT EXISTS analytics_export_enabled INT DEFAULT 1;`,
+      `ALTER TABLE saas_plans ADD COLUMN IF NOT EXISTS multi_language_enabled INT DEFAULT 1;`,
+      `ALTER TABLE saas_plans ADD COLUMN IF NOT EXISTS watermark_removal_enabled INT DEFAULT 1;`,
+      `ALTER TABLE saas_plans ADD COLUMN IF NOT EXISTS custom_domain_enabled INT DEFAULT 1;`
     ];
 
     for (const alt of pgAlters) {
@@ -759,6 +782,30 @@ async function createTables() {
       if (!restoCols.some(c => c.name === 'trial_ends_at')) sqliteDb.exec("ALTER TABLE restaurants ADD COLUMN trial_ends_at TEXT");
       if (!restoCols.some(c => c.name === 'auto_debit_enabled')) sqliteDb.exec("ALTER TABLE restaurants ADD COLUMN auto_debit_enabled INTEGER DEFAULT 0");
       if (!restoCols.some(c => c.name === 'trial_started_at')) sqliteDb.exec("ALTER TABLE restaurants ADD COLUMN trial_started_at TEXT");
+
+      const planCols = sqliteDb.pragma('table_info(saas_plans)');
+      if (!planCols.some(c => c.name === 'max_dishes')) sqliteDb.exec("ALTER TABLE saas_plans ADD COLUMN max_dishes INTEGER DEFAULT 9999");
+      if (!planCols.some(c => c.name === 'max_categories')) sqliteDb.exec("ALTER TABLE saas_plans ADD COLUMN max_categories INTEGER DEFAULT 9999");
+      if (!planCols.some(c => c.name === 'max_combos')) sqliteDb.exec("ALTER TABLE saas_plans ADD COLUMN max_combos INTEGER DEFAULT 9999");
+      if (!planCols.some(c => c.name === 'max_tables')) sqliteDb.exec("ALTER TABLE saas_plans ADD COLUMN max_tables INTEGER DEFAULT 9999");
+      if (!planCols.some(c => c.name === 'max_staff_accounts')) sqliteDb.exec("ALTER TABLE saas_plans ADD COLUMN max_staff_accounts INTEGER DEFAULT 9999");
+      if (!planCols.some(c => c.name === 'order_retention_days')) sqliteDb.exec("ALTER TABLE saas_plans ADD COLUMN order_retention_days INTEGER DEFAULT 365");
+      if (!planCols.some(c => c.name === 'modifiers_enabled')) sqliteDb.exec("ALTER TABLE saas_plans ADD COLUMN modifiers_enabled INTEGER DEFAULT 1");
+      if (!planCols.some(c => c.name === 'staff_roles_enabled')) sqliteDb.exec("ALTER TABLE saas_plans ADD COLUMN staff_roles_enabled INTEGER DEFAULT 1");
+      if (!planCols.some(c => c.name === 'whatsapp_ordering_enabled')) sqliteDb.exec("ALTER TABLE saas_plans ADD COLUMN whatsapp_ordering_enabled INTEGER DEFAULT 1");
+      if (!planCols.some(c => c.name === 'direct_ordering_enabled')) sqliteDb.exec("ALTER TABLE saas_plans ADD COLUMN direct_ordering_enabled INTEGER DEFAULT 1");
+      if (!planCols.some(c => c.name === 'audio_alarm_enabled')) sqliteDb.exec("ALTER TABLE saas_plans ADD COLUMN audio_alarm_enabled INTEGER DEFAULT 1");
+      if (!planCols.some(c => c.name === 'order_status_whatsapp_enabled')) sqliteDb.exec("ALTER TABLE saas_plans ADD COLUMN order_status_whatsapp_enabled INTEGER DEFAULT 1");
+      if (!planCols.some(c => c.name === 'kds_enabled')) sqliteDb.exec("ALTER TABLE saas_plans ADD COLUMN kds_enabled INTEGER DEFAULT 1");
+      if (!planCols.some(c => c.name === 'bluetooth_kot_enabled')) sqliteDb.exec("ALTER TABLE saas_plans ADD COLUMN bluetooth_kot_enabled INTEGER DEFAULT 1");
+      if (!planCols.some(c => c.name === 'google_reviews_enabled')) sqliteDb.exec("ALTER TABLE saas_plans ADD COLUMN google_reviews_enabled INTEGER DEFAULT 1");
+      if (!planCols.some(c => c.name === 'ai_review_enabled')) sqliteDb.exec("ALTER TABLE saas_plans ADD COLUMN ai_review_enabled INTEGER DEFAULT 1");
+      if (!planCols.some(c => c.name === 'stories_enabled')) sqliteDb.exec("ALTER TABLE saas_plans ADD COLUMN stories_enabled INTEGER DEFAULT 1");
+      if (!planCols.some(c => c.name === 'gst_invoice_enabled')) sqliteDb.exec("ALTER TABLE saas_plans ADD COLUMN gst_invoice_enabled INTEGER DEFAULT 1");
+      if (!planCols.some(c => c.name === 'analytics_export_enabled')) sqliteDb.exec("ALTER TABLE saas_plans ADD COLUMN analytics_export_enabled INTEGER DEFAULT 1");
+      if (!planCols.some(c => c.name === 'multi_language_enabled')) sqliteDb.exec("ALTER TABLE saas_plans ADD COLUMN multi_language_enabled INTEGER DEFAULT 1");
+      if (!planCols.some(c => c.name === 'watermark_removal_enabled')) sqliteDb.exec("ALTER TABLE saas_plans ADD COLUMN watermark_removal_enabled INTEGER DEFAULT 1");
+      if (!planCols.some(c => c.name === 'custom_domain_enabled')) sqliteDb.exec("ALTER TABLE saas_plans ADD COLUMN custom_domain_enabled INTEGER DEFAULT 1");
 
       sqliteDb.exec("CREATE INDEX IF NOT EXISTS idx_restaurants_active_expires ON restaurants(active, plan_expires_at)");
       sqliteDb.exec("CREATE INDEX IF NOT EXISTS idx_subscriptions_restaurant ON subscriptions(restaurant_id)");

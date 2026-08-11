@@ -552,34 +552,63 @@ router.post('/plans', authenticateToken, requireSuperAdmin, async (req, res) => 
   }
 });
 
-// PUT Update SaaS Plan Details & Features Matrix
+// PUT Update SaaS Plan Details & 24-Point Feature Matrix
 router.put('/plans/:key', authenticateToken, requireSuperAdmin, async (req, res) => {
   try {
     const { key } = req.params;
-    const { name, price, original_price, badge, description, whatsapp_enabled, direct_ordering_enabled, google_reviews_enabled } = req.body;
+    const {
+      name, price, badge, description,
+      max_dishes, max_categories, max_combos, max_tables, max_staff_accounts, order_retention_days,
+      modifiers_enabled, staff_roles_enabled, whatsapp_ordering_enabled, direct_ordering_enabled,
+      audio_alarm_enabled, order_status_whatsapp_enabled, kds_enabled, bluetooth_kot_enabled,
+      google_reviews_enabled, ai_review_enabled, stories_enabled, gst_invoice_enabled,
+      analytics_export_enabled, multi_language_enabled, watermark_removal_enabled, custom_domain_enabled
+    } = req.body;
 
     await query(`
       UPDATE saas_plans
-      SET name = $1, price = $2, original_price = $3, badge = $4, description = $5,
-          whatsapp_enabled = $6, direct_ordering_enabled = $7, google_reviews_enabled = $8
-      WHERE key = $9
+      SET name = $1, price = $2, badge = $3, description = $4,
+          max_dishes = $5, max_categories = $6, max_combos = $7, max_tables = $8, max_staff_accounts = $9, order_retention_days = $10,
+          modifiers_enabled = $11, staff_roles_enabled = $12, whatsapp_ordering_enabled = $13, direct_ordering_enabled = $14,
+          audio_alarm_enabled = $15, order_status_whatsapp_enabled = $16, kds_enabled = $17, bluetooth_kot_enabled = $18,
+          google_reviews_enabled = $19, ai_review_enabled = $20, stories_enabled = $21, gst_invoice_enabled = $22,
+          analytics_export_enabled = $23, multi_language_enabled = $24, watermark_removal_enabled = $25, custom_domain_enabled = $26
+      WHERE key = $27
     `, [
-      name,
-      price ? parseFloat(price) : 999,
-      original_price ? parseFloat(original_price) : null,
+      name || key,
+      price !== undefined ? parseFloat(price) : 999,
       badge || '👑 PRO',
       description || '',
-      whatsapp_enabled ? 1 : 0,
+      max_dishes !== undefined ? parseInt(max_dishes, 10) : 9999,
+      max_categories !== undefined ? parseInt(max_categories, 10) : 9999,
+      max_combos !== undefined ? parseInt(max_combos, 10) : 9999,
+      max_tables !== undefined ? parseInt(max_tables, 10) : 9999,
+      max_staff_accounts !== undefined ? parseInt(max_staff_accounts, 10) : 9999,
+      order_retention_days !== undefined ? parseInt(order_retention_days, 10) : 365,
+      modifiers_enabled ? 1 : 0,
+      staff_roles_enabled ? 1 : 0,
+      whatsapp_ordering_enabled ? 1 : 0,
       direct_ordering_enabled ? 1 : 0,
+      audio_alarm_enabled ? 1 : 0,
+      order_status_whatsapp_enabled ? 1 : 0,
+      kds_enabled ? 1 : 0,
+      bluetooth_kot_enabled ? 1 : 0,
       google_reviews_enabled ? 1 : 0,
+      ai_review_enabled ? 1 : 0,
+      stories_enabled ? 1 : 0,
+      gst_invoice_enabled ? 1 : 0,
+      analytics_export_enabled ? 1 : 0,
+      multi_language_enabled ? 1 : 0,
+      watermark_removal_enabled ? 1 : 0,
+      custom_domain_enabled ? 1 : 0,
       key
     ]);
 
-    await logAudit(null, 'superadmin', 'Update SaaS Plan', `Updated plan details for '${key}'`);
-    res.json({ success: true, message: `SaaS Plan '${name}' updated successfully!` });
+    await logAudit(null, 'superadmin', 'Update SaaS Plan Matrix', `Updated 24-point plan matrix for '${key}'`);
+    res.json({ success: true, message: `SaaS Plan '${name || key}' matrix updated successfully!` });
   } catch (err) {
-    console.error('Update SaaS plan error:', err);
-    res.status(500).json({ error: 'Failed to update SaaS plan' });
+    console.error('Update SaaS plan matrix error:', err);
+    res.status(500).json({ error: 'Failed to update SaaS plan matrix' });
   }
 });
 
