@@ -1,7 +1,7 @@
 import express from 'express';
 import fs from 'fs';
 import path from 'path';
-import { query, withTransaction } from '../db.js';
+import { query, withTransaction, getDbType } from '../db.js';
 
 import jwt from 'jsonwebtoken';
 import bcrypt from 'bcryptjs';
@@ -9,6 +9,25 @@ import bcrypt from 'bcryptjs';
 const router = express.Router();
 const settingsPath = path.resolve('server/settings.json');
 const JWT_SECRET = process.env.JWT_SECRET || 'raman_bakery_secret_jwt_key_2026_super_secure';
+
+// GET Database Debug & Diagnostics Endpoint
+router.get('/debug-db', async (req, res) => {
+  try {
+    const isPg = Boolean(process.env.DATABASE_URL);
+    const activeDbType = getDbType();
+    const dishesCount = await query('SELECT count(*) as count FROM dishes');
+    const restos = await query('SELECT id, name, slug, active FROM restaurants LIMIT 10');
+    res.json({
+      status: 'OK',
+      hasDATABASE_URLEnv: isPg,
+      activeDbType: activeDbType,
+      totalDishesCount: parseInt(dishesCount[0]?.count || 0, 10),
+      restaurants: restos
+    });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
 
 // GET public system settings (e.g. Master Super Admin WhatsApp Support Number)
 router.get('/settings', async (req, res) => {

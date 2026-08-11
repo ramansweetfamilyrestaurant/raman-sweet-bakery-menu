@@ -1440,5 +1440,9 @@ export async function purgeCancelledOrdersOlderThan3Mins() {
   }
 }
 
-export { initDb, query, logAudit, runAutoDataSummarization, withTransaction };
+function getDbType() {
+  return dbType;
+}
+
+export { initDb, query, logAudit, runAutoDataSummarization, withTransaction, getDbType };
 

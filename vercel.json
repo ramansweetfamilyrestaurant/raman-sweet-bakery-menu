@@ -5,6 +5,7 @@
     { "source": "/uploads/(.*)", "destination": "/api/index.js" },
     { "source": "/r2-proxy/(.*)", "destination": "/api/index.js" },
     { "source": "/health", "destination": "/api/index.js" },
+    { "source": "/debug-db", "destination": "/api/index.js" },
     { "source": "/(.*)", "destination": "/index.html" }
   ]
 }
