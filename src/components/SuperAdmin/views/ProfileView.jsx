@@ -5,9 +5,14 @@ import { resolveImageUrl } from '../../../utils/imageHelper';
 export default function ProfileView({ username, securityForm, setSecurityForm, onSaveSecurity, savingSecurity, securityMsg, securityError, onLogout, logoUrl }) {
   const [logoErr, setLogoErr] = React.useState(false);
 
+  let cachedLogo = '';
+  try { cachedLogo = localStorage.getItem('km_platform_logo_url') || ''; } catch {}
+  const effectiveLogoUrl = logoUrl || cachedLogo;
+  const resolvedUrl = effectiveLogoUrl ? resolveImageUrl(effectiveLogoUrl) : '';
+
   React.useEffect(() => {
     setLogoErr(false);
-  }, [logoUrl]);
+  }, [effectiveLogoUrl]);
 
   const inputStyle = { width: '100%', padding: '10px 12px', borderRadius: 'var(--sa-radius-md)', border: '1.5px solid var(--sa-border)', fontSize: '0.88rem', boxSizing: 'border-box' };
   const labelStyle = { fontSize: '0.75rem', fontWeight: 800, color: 'var(--sa-text-muted)', display: 'block', marginBottom: '6px' };
@@ -23,9 +28,10 @@ export default function ProfileView({ username, securityForm, setSecurityForm, o
         textAlign: 'center',
         border: '1px solid rgba(212, 175, 55, 0.3)'
       }}>
-        {logoUrl && !logoErr ? (
+        {resolvedUrl && !logoErr ? (
           <img
-            src={resolveImageUrl(logoUrl)}
+            key={resolvedUrl}
+            src={resolvedUrl}
             alt="Super Admin Logo"
             referrerPolicy="no-referrer"
             onError={() => setLogoErr(true)}

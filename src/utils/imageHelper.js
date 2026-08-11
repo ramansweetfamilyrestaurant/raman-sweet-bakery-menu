@@ -6,8 +6,8 @@ export function resolveImageUrl(url) {
   if (!url || typeof url !== 'string') return '';
   const cleanUrl = url.trim();
 
-  // 1. Filter out invalid default logos, nulls, or empty strings
-  if (!cleanUrl || cleanUrl === '/uploads/logo.jpg' || cleanUrl === 'null' || cleanUrl === 'undefined') {
+  // 1. Filter out invalid nulls or empty strings
+  if (!cleanUrl || cleanUrl === 'null' || cleanUrl === 'undefined') {
     return '';
   }
 

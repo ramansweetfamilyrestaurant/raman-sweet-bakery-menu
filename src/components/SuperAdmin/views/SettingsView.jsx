@@ -10,10 +10,11 @@ export default function SettingsView({ paymentKeys, onSavePaymentKeys, securityF
   const [logoPreview, setLogoPreview] = useState(null);
 
   useEffect(() => {
-    if (keysForm.platform_logo_url) {
+    setKeysForm(paymentKeys);
+    if (paymentKeys.platform_logo_url) {
       setLogoErr(false);
     }
-  }, [keysForm.platform_logo_url]);
+  }, [paymentKeys]);
 
   const handleSaveKeysSubmit = (e) => {
     e.preventDefault();

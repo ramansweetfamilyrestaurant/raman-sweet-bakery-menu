@@ -40,7 +40,11 @@ export default function LandingPage({
   onSubmitLogin = () => {},
   onSubmitResetPassword = () => {}
 }) {
-  const [platformLogoUrl, setPlatformLogoUrl] = React.useState('');
+  const [platformLogoUrl, setPlatformLogoUrl] = React.useState(() => {
+    let cached = '';
+    try { cached = localStorage.getItem('km_platform_logo_url') || ''; } catch {}
+    return cached;
+  });
 
   React.useEffect(() => {
     fetch('/api/settings')
@@ -48,6 +52,7 @@ export default function LandingPage({
       .then(data => {
         if (data && data.platform_logo_url) {
           setPlatformLogoUrl(data.platform_logo_url);
+          try { localStorage.setItem('km_platform_logo_url', data.platform_logo_url); } catch {}
         }
       })
       .catch(() => {});

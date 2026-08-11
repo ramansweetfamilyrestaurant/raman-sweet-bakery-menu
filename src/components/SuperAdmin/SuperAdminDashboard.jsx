@@ -63,12 +63,16 @@ export default function SuperAdminDashboard({ token, username, onLogout, onRetur
   });
 
   // Payment Gateway API Keys & System Settings State
-  const [paymentKeys, setPaymentKeys] = useState({
-    cashfree_app_id: '',
-    cashfree_secret_key: '',
-    support_whatsapp: '919876543210',
-    default_trial_days: '14',
-    platform_logo_url: ''
+  const [paymentKeys, setPaymentKeys] = useState(() => {
+    let cachedLogo = '';
+    try { cachedLogo = localStorage.getItem('km_platform_logo_url') || ''; } catch {}
+    return {
+      cashfree_app_id: '',
+      cashfree_secret_key: '',
+      support_whatsapp: '919876543210',
+      default_trial_days: '14',
+      platform_logo_url: cachedLogo
+    };
   });
   const [keysSaving, setKeysSaving] = useState(false);
   const [keysMsg, setKeysMsg] = useState('');
@@ -84,15 +88,19 @@ export default function SuperAdminDashboard({ token, username, onLogout, onRetur
       });
       const data = await res.json();
       if (data && typeof data === 'object') {
+        const logoUrlFromBackend = data.platform_logo_url;
+        if (logoUrlFromBackend) {
+          try { localStorage.setItem('km_platform_logo_url', logoUrlFromBackend); } catch {}
+        }
         setPaymentKeys(prev => ({
           ...prev,
-          cashfree_app_id: data.cashfree_app_id || '',
-          cashfree_secret_key: data.cashfree_secret_key || '',
-          support_whatsapp: data.support_whatsapp || '919876543210',
-          default_trial_days: data.default_trial_days || '14',
-          platform_logo_url: data.platform_logo_url || ''
+          cashfree_app_id: data.cashfree_app_id || prev.cashfree_app_id || '',
+          cashfree_secret_key: data.cashfree_secret_key || prev.cashfree_secret_key || '',
+          support_whatsapp: data.support_whatsapp || prev.support_whatsapp || '919876543210',
+          default_trial_days: data.default_trial_days || prev.default_trial_days || '14',
+          platform_logo_url: logoUrlFromBackend ?? prev.platform_logo_url ?? ''
         }));
-        if (data.platform_logo_url) {
+        if (logoUrlFromBackend) {
           setLogoErr(false);
         }
       }

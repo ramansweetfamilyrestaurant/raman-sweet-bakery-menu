@@ -6,9 +6,14 @@ export default function Navbar({ onOpenLogin, onStartTrial, logoUrl }) {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [logoErr, setLogoErr] = useState(false);
 
+  let cachedLogo = '';
+  try { cachedLogo = localStorage.getItem('km_platform_logo_url') || ''; } catch {}
+  const effectiveLogoUrl = logoUrl || cachedLogo;
+  const resolvedUrl = effectiveLogoUrl ? resolveImageUrl(effectiveLogoUrl) : '';
+
   React.useEffect(() => {
     setLogoErr(false);
-  }, [logoUrl]);
+  }, [effectiveLogoUrl]);
 
   const scrollToSection = (id) => {
     setMobileMenuOpen(false);
@@ -22,8 +27,8 @@ export default function Navbar({ onOpenLogin, onStartTrial, logoUrl }) {
     <nav className="km-navbar">
       <div className="km-container km-navbar-container">
         <div className="km-logo" onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}>
-          {logoUrl && !logoErr ? (
-            <img src={resolveImageUrl(logoUrl)} alt="TouchQR Logo" referrerPolicy="no-referrer" onError={() => setLogoErr(true)} style={{ width: '30px', height: '30px', borderRadius: '8px', objectFit: 'contain', background: '#FFF', padding: '2px', flexShrink: 0 }} />
+          {resolvedUrl && !logoErr ? (
+            <img key={resolvedUrl} src={resolvedUrl} alt="TouchQR Logo" referrerPolicy="no-referrer" onError={() => setLogoErr(true)} style={{ width: '30px', height: '30px', borderRadius: '8px', objectFit: 'contain', background: '#FFF', padding: '2px', flexShrink: 0 }} />
           ) : (
             <div className="km-logo-icon">🍱</div>
           )}

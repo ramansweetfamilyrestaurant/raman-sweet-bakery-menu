@@ -58,7 +58,11 @@ export default function SubscriptionBillingPage({ restoInfo, token, onProceedToD
   const [planKey, setPlanKey] = useState('pro');
   const [trialSettingDays, setTrialSettingDays] = useState(null);
 
-  const [logoUrl, setLogoUrl] = useState('');
+  const [logoUrl, setLogoUrl] = useState(() => {
+    let cached = '';
+    try { cached = localStorage.getItem('km_platform_logo_url') || ''; } catch {}
+    return cached;
+  });
   const [logoErr, setLogoErr] = useState(false);
 
   const [loading, setLoading] = useState(false);
@@ -80,6 +84,7 @@ export default function SubscriptionBillingPage({ restoInfo, token, onProceedToD
           }
           if (data.platform_logo_url) {
             setLogoUrl(data.platform_logo_url);
+            try { localStorage.setItem('km_platform_logo_url', data.platform_logo_url); } catch {}
           }
         }
       })

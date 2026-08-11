@@ -5,9 +5,14 @@ import { resolveImageUrl } from '../../../utils/imageHelper';
 export default function Sidebar({ activeView, setActiveView, collapsed, setCollapsed, onLogout, logoUrl }) {
   const [logoErr, setLogoErr] = React.useState(false);
 
+  let cachedLogo = '';
+  try { cachedLogo = localStorage.getItem('km_platform_logo_url') || ''; } catch {}
+  const effectiveLogoUrl = logoUrl || cachedLogo;
+  const resolvedUrl = effectiveLogoUrl ? resolveImageUrl(effectiveLogoUrl) : '';
+
   React.useEffect(() => {
     setLogoErr(false);
-  }, [logoUrl]);
+  }, [effectiveLogoUrl]);
 
   const navItems = [
     { id: 'overview', label: 'Overview', icon: LayoutDashboard },
@@ -25,9 +30,10 @@ export default function Sidebar({ activeView, setActiveView, collapsed, setColla
         {/* Brand Bar */}
         <div className="sa-sidebar-header">
           <div className="sa-brand">
-            {logoUrl && !logoErr ? (
+            {resolvedUrl && !logoErr ? (
               <img
-                src={resolveImageUrl(logoUrl)}
+                key={resolvedUrl}
+                src={resolvedUrl}
                 alt="Super Admin Logo"
                 referrerPolicy="no-referrer"
                 onError={() => setLogoErr(true)}

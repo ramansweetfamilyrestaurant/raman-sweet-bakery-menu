@@ -13,7 +13,11 @@ export default function RegisterPage({ onRegisterSuccess }) {
 
   const [trialDays, setTrialDays] = useState(null);
   const [plans, setPlans] = useState([]);
-  const [logoUrl, setLogoUrl] = useState('');
+  const [logoUrl, setLogoUrl] = useState(() => {
+    let cached = '';
+    try { cached = localStorage.getItem('km_platform_logo_url') || ''; } catch {}
+    return cached;
+  });
   const [logoErr, setLogoErr] = useState(false);
 
   useEffect(() => {
@@ -50,6 +54,7 @@ export default function RegisterPage({ onRegisterSuccess }) {
           }
           if (data.platform_logo_url) {
             setLogoUrl(data.platform_logo_url);
+            try { localStorage.setItem('km_platform_logo_url', data.platform_logo_url); } catch {}
           }
         }
       })
