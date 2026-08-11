@@ -238,12 +238,12 @@ app.get('/health', (req, res) => {
   });
 });
 
-// API Routes
-app.use('/api/superadmin', superadminRoutes);
-app.use('/api/admin', adminRoutes);
-app.use('/api/payment', paymentRoutes);
-app.use('/api/webhooks', paymentRoutes);
-app.use('/api', apiRoutes);
+// API Routes (Dual-mounted for standard Express & Vercel Serverless Function rewrites)
+app.use(['/api/superadmin', '/superadmin'], superadminRoutes);
+app.use(['/api/admin', '/admin'], adminRoutes);
+app.use(['/api/payment', '/payment'], paymentRoutes);
+app.use(['/api/webhooks', '/webhooks'], paymentRoutes);
+app.use(['/api', '/'], apiRoutes);
 
 // API 404 Handler (Guarantees JSON error instead of index.html fallback)
 app.use('/api/*', (req, res) => {
