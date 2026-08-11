@@ -452,7 +452,13 @@ export default function App() {
     }
     const isAdminMode = Boolean(adminToken);
     try {
-      const infoData = await fetchRestaurantInfo(slug);
+      const [infoData, catData, dishData, comboData] = await Promise.all([
+        fetchRestaurantInfo(slug),
+        fetchCategories({ slug, adminView: isAdminMode }),
+        fetchDishes({ query: searchQuery, slug, adminView: isAdminMode }),
+        fetchCombos(slug).catch(() => [])
+      ]);
+
       if (!infoData || infoData.notFound) {
         setRestaurantStatus('not_found');
         setLoading(false);
@@ -465,14 +471,9 @@ export default function App() {
         return;
       }
 
-      const [catData, dishData, comboData] = await Promise.all([
-        fetchCategories({ slug, adminView: isAdminMode }),
-        fetchDishes({ query: searchQuery, slug, adminView: isAdminMode }),
-        fetchCombos(slug).catch(() => [])
-      ]);
       setInfo(infoData);
-      setCategories(catData);
-      setDishes(dishData);
+      setCategories(catData || []);
+      setDishes(dishData || []);
       setCombos(Array.isArray(comboData) ? comboData : []);
       if (infoData && infoData.name && window.location.pathname !== '/' && window.location.pathname !== '/register') {
         document.title = `${infoData.name} - Digital Menu & Ordering`;
