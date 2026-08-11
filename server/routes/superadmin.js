@@ -2,7 +2,7 @@ import express from 'express';
 import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
 import sharp from 'sharp';
-import { query, runAutoDataSummarization, logAudit, saveR2ImageToDb, saveImageToDb } from '../db.js';
+import { query, runAutoDataSummarization, logAudit, saveR2ImageToDb, saveImageToDb, purgeLocalR2DiskCache } from '../db.js';
 import { authenticateToken } from '../middleware/auth.js';
 import { isR2Active, uploadImageToR2, deleteImageFromR2 } from '../services/r2ImageService.js';
 
@@ -753,6 +753,12 @@ router.post('/settings', authenticateToken, requireSuperAdmin, async (req, res) 
       if (v !== undefined && v !== null) {
         let strVal = String(v).trim().replace(/^['"]+|['"]+$/g, '');
         
+        if (k === 'platform_logo_url') {
+          purgeLocalR2DiskCache('logo.webp');
+          purgeLocalR2DiskCache('superadmin/branding/logo.webp');
+          purgeLocalR2DiskCache(strVal);
+        }
+
         // Auto-mirror external image URLs to R2 & Neon DB with restaurant_id = NULL
         if (k === 'platform_logo_url' && strVal.startsWith('http')) {
           strVal = await mirrorExternalLogoToR2(strVal);

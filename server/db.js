@@ -1269,9 +1269,26 @@ export async function saveImageToDb(filename, mimeType, bufferData) {
   }
 }
 
+export function purgeLocalR2DiskCache(identifier) {
+  if (!identifier) return;
+  try {
+    const baseName = path.basename(identifier);
+    const localCachePath = path.resolve('public/uploads/r2-cache', baseName);
+    if (fs.existsSync(localCachePath)) {
+      fs.unlinkSync(localCachePath);
+      console.log('[CACHE PURGE SUCCESS] Deleted local R2 disk cache file:', localCachePath);
+    }
+  } catch (err) {
+    console.warn('Notice purging local R2 disk cache:', err.message);
+  }
+}
+
 export async function saveR2ImageToDb(filename, mimeType, imageKey, imageUrl, restaurantId = 1, buffer = null) {
   try {
     const base64Data = buffer ? (Buffer.isBuffer(buffer) ? buffer.toString('base64') : buffer) : null;
+
+    if (filename) purgeLocalR2DiskCache(filename);
+    if (imageKey) purgeLocalR2DiskCache(imageKey);
 
     // If saving a superadmin platform asset, purge all old superadmin logo rows first to prevent duplication
     if (restaurantId === null || (imageKey && imageKey.startsWith('superadmin/'))) {
@@ -1317,6 +1334,7 @@ export async function getImageRecordFromDb(identifier) {
 export async function deleteImageRecordFromDb(identifier) {
   if (!identifier) return;
   try {
+    purgeLocalR2DiskCache(identifier);
     await query(
       `DELETE FROM stored_images 
        WHERE filename = $1 OR image_key = $1 OR image_url = $1 OR image_key LIKE '%' || $1 OR image_url LIKE '%' || $1`,
