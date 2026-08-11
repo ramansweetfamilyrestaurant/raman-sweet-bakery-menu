@@ -168,12 +168,10 @@ router.get('/info', async (req, res) => {
     console.error('Error fetching restaurant info:', err);
     res.status(500).json({ error: 'Failed to fetch restaurant info' });
   }
-});
-
 // Get Active Global System Announcements
 router.get('/announcements', async (req, res) => {
   try {
-    const list = await query('SELECT * FROM announcements WHERE active IS NOT FALSE ORDER BY id DESC LIMIT 5');
+    const list = await query('SELECT * FROM announcements WHERE (active = 1 OR active = true OR active IS NOT FALSE OR active IS NULL) ORDER BY id DESC LIMIT 5');
     res.json(list);
   } catch (err) {
     res.status(500).json({ error: err.message });
@@ -196,8 +194,9 @@ router.get('/categories', async (req, res) => {
     const params = [targetId];
 
     if (!admin_view) {
-      sql += ' AND active IS NOT FALSE';
+      sql += ' AND (active = 1 OR active = true OR active IS NOT FALSE OR active IS NULL)';
     }
+
     sql += ' ORDER BY sort_order ASC, id ASC';
 
     const categories = await query(sql, params);
@@ -230,8 +229,8 @@ router.get('/dishes', async (req, res) => {
 
     // By default, customer view only sees available dishes in active categories
     if (!admin_view) {
-      sql += ` AND d.available IS TRUE AND (c.active IS NOT FALSE OR c.id IS NULL)`;
-    }
+      sql += ` AND (d.available = 1 OR d.available = true OR d.available IS TRUE OR d.available IS NULL) AND (c.active = 1 OR c.active = true OR c.active IS NOT FALSE OR c.id IS NULL)`;
+    }    }
 
     if (category_id && category_id !== 'all') {
       params.push(Number(category_id));
