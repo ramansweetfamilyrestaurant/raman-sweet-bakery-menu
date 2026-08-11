@@ -500,12 +500,12 @@ export default function App() {
 
   // Dynamic Theme Color Engine Applicator
   useEffect(() => {
-    if (info && info.theme_color) {
+    if ((view === 'customer' || view === 'admin' || view === 'menu-preview') && info && info.theme_color) {
       document.documentElement.setAttribute('data-theme', info.theme_color);
     } else {
       document.documentElement.setAttribute('data-theme', 'gold');
     }
-  }, [info]);
+  }, [info, view]);
 
   const [subscriptionLoading, setSubscriptionLoading] = useState(false);
 

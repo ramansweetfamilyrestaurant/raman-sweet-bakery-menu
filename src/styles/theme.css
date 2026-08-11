@@ -46,7 +46,7 @@
 /* ========== MULTI-TENANT BRAND THEME PRESETS ========== */
 
 /* Theme 1: Gold & Forest Green (Default Luxury) */
-[data-theme="gold"] {
+[data-theme="gold"], [data-theme="default"], :root:not([data-theme]) {
   --primary-emerald: #0A2315;
   --header-gradient: linear-gradient(180deg, #0A2315 0%, #123722 100%);
   --footer-gradient: linear-gradient(180deg, #05140B 0%, #0A2315 100%);
