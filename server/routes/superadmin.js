@@ -38,7 +38,18 @@ router.post('/login', async (req, res) => {
       return res.status(400).json({ error: 'Username and password are required' });
     }
 
-    const admins = await query("SELECT * FROM admins WHERE (username = $1 OR role = 'superadmin') AND role = 'superadmin'", [username]);
+    const trimmedUser = username.trim();
+
+    // STRICT ROLE SECURITY: Reject Restaurant Owner attempts on Super Admin login
+    const ownerCheck = await query("SELECT id FROM admins WHERE username = $1 AND role != 'superadmin'", [trimmedUser]);
+    if (ownerCheck && ownerCheck.length > 0) {
+      return res.status(403).json({
+        error: 'ACCESS_DENIED_ROLE_MISMATCH',
+        message: 'Restaurant Owner credentials cannot be used for Super Admin login. Please log in at your restaurant owner portal.'
+      });
+    }
+
+    const admins = await query("SELECT * FROM admins WHERE username = $1 AND role = 'superadmin'", [trimmedUser]);
     if (!admins || admins.length === 0) {
       return res.status(401).json({ error: 'Invalid Super Admin credentials' });
     }

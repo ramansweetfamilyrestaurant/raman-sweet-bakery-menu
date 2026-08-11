@@ -143,7 +143,7 @@ const upload = multer({
   }
 });
 
-// Admin Login (Supports login by Username, Restaurant Slug, or Phone number)
+// Admin Login (Supports login by Username, Restaurant Slug, or Phone number for Restaurant Owners ONLY)
 router.post('/login', async (req, res) => {
   try {
     const { username, password, slug: targetSlug } = req.body;
@@ -152,6 +152,16 @@ router.post('/login', async (req, res) => {
     }
 
     const trimmedIdentifier = username.trim();
+
+    // STRICT ROLE SECURITY: Reject Super Admin attempts on Restaurant Owner login
+    const superCheck = await query("SELECT id FROM admins WHERE username = $1 AND role = 'superadmin'", [trimmedIdentifier]);
+    if (superCheck && superCheck.length > 0) {
+      return res.status(403).json({
+        error: 'ACCESS_DENIED_ROLE_MISMATCH',
+        message: 'Super Admin credentials cannot be used for Restaurant Owner login. Please use the Master Super Admin portal at /super-admin.'
+      });
+    }
+
     let admins = [];
 
     // 0. If explicit restaurant slug is provided (e.g. from /rama/admin), prioritize matching that restaurant!
@@ -160,25 +170,25 @@ router.post('/login', async (req, res) => {
       const restos = await query('SELECT id, slug, active, name FROM restaurants WHERE slug = $1 OR slug = $2', [targetSlug.trim(), cleanSlug]);
       if (restos && restos.length > 0) {
         const targetRestoId = restos[0].id;
-        admins = await query('SELECT * FROM admins WHERE restaurant_id = $1 AND username = $2', [targetRestoId, trimmedIdentifier]);
+        admins = await query("SELECT * FROM admins WHERE restaurant_id = $1 AND username = $2 AND role != 'superadmin'", [targetRestoId, trimmedIdentifier]);
         if (!admins || admins.length === 0) {
-          admins = await query('SELECT * FROM admins WHERE restaurant_id = $1 ORDER BY id ASC LIMIT 1', [targetRestoId]);
+          admins = await query("SELECT * FROM admins WHERE restaurant_id = $1 AND role != 'superadmin' ORDER BY id ASC LIMIT 1", [targetRestoId]);
         }
       }
     }
 
-    // 1. Try finding admin by exact username if not matched via slug
+    // 1. Try finding admin by exact username excluding superadmin role
     if (!admins || admins.length === 0) {
-      admins = await query('SELECT * FROM admins WHERE username = $1', [trimmedIdentifier]);
+      admins = await query("SELECT * FROM admins WHERE username = $1 AND role != 'superadmin'", [trimmedIdentifier]);
     }
 
-    // 2. Fallback: Try finding restaurant by slug or phone, then fetch its primary admin
+    // 2. Fallback: Try finding restaurant by slug or phone, then fetch its primary restaurant_admin
     if (!admins || admins.length === 0) {
       const cleanSlug = trimmedIdentifier.toLowerCase().replace(/[^a-z0-9-]/g, '-');
       const restos = await query('SELECT id, slug, active, name FROM restaurants WHERE slug = $1 OR slug = $2 OR phone = $3', [trimmedIdentifier, cleanSlug, trimmedIdentifier]);
       if (restos && restos.length > 0) {
         const targetRestoId = restos[0].id;
-        admins = await query('SELECT * FROM admins WHERE restaurant_id = $1 ORDER BY id ASC LIMIT 1', [targetRestoId]);
+        admins = await query("SELECT * FROM admins WHERE restaurant_id = $1 AND role != 'superadmin' ORDER BY id ASC LIMIT 1", [targetRestoId]);
       }
     }
 
@@ -337,8 +347,8 @@ router.get('/subscription-status', authenticateToken, async (req, res) => {
 
     res.json({
       status: isComplimentary ? 'active' : subStatus,
-      active: true,
-      is_allowed: true,
+      active: !billingRequired,
+      is_allowed: !billingRequired,
       billing_required: billingRequired,
       billing_setup: isComplimentary || mandateStatus === 'active' ? 'complete' : 'incomplete',
       grace_period_active: isGracePeriodActive,
