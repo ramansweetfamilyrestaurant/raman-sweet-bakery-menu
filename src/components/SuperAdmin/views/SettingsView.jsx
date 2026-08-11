@@ -7,6 +7,7 @@ export default function SettingsView({ paymentKeys, onSavePaymentKeys, securityF
   const [keysForm, setKeysForm] = useState(paymentKeys);
   const [uploadingLogo, setUploadingLogo] = useState(false);
   const [logoErr, setLogoErr] = useState(false);
+  const [logoPreview, setLogoPreview] = useState(null);
 
   useEffect(() => {
     if (keysForm.platform_logo_url) {
@@ -301,9 +302,9 @@ export default function SettingsView({ paymentKeys, onSavePaymentKeys, securityF
               display: 'flex', alignItems: 'center', gap: '16px', padding: '16px',
               background: 'var(--sa-surface-subtle)', borderRadius: '12px', border: '1px solid var(--sa-border)'
             }}>
-              {keysForm.platform_logo_url && !logoErr ? (
+              {logoPreview || (keysForm.platform_logo_url && !logoErr) ? (
                 <img
-                  src={resolveImageUrl(keysForm.platform_logo_url)}
+                  src={logoPreview || resolveImageUrl(keysForm.platform_logo_url)}
                   alt="Platform Logo"
                   referrerPolicy="no-referrer"
                   onError={() => setLogoErr(true)}
@@ -328,10 +329,14 @@ export default function SettingsView({ paymentKeys, onSavePaymentKeys, securityF
                   onChange={async (e) => {
                     const file = e.target.files?.[0];
                     if (!file || !onUploadLogo) return;
+                    const localObjUrl = URL.createObjectURL(file);
+                    setLogoPreview(localObjUrl);
+                    setLogoErr(false);
                     setUploadingLogo(true);
                     try {
                       const newUrl = await onUploadLogo(file);
-                      setKeysForm(prev => ({ ...prev, platform_logo_url: newUrl }));
+                      const timestampedUrl = newUrl.includes('?') ? `${newUrl}&t=${Date.now()}` : `${newUrl}?t=${Date.now()}`;
+                      setKeysForm(prev => ({ ...prev, platform_logo_url: timestampedUrl }));
                       setLogoErr(false);
                     } catch (err) {
                       alert('Logo upload failed: ' + err.message);
@@ -342,7 +347,7 @@ export default function SettingsView({ paymentKeys, onSavePaymentKeys, securityF
                   disabled={uploadingLogo}
                   style={{ fontSize: '0.8rem' }}
                 />
-                {uploadingLogo && <span style={{ fontSize: '0.75rem', color: '#DFBA67', fontWeight: 700 }}>Uploading image to R2 storage...</span>}
+                {uploadingLogo && <span style={{ fontSize: '0.75rem', color: '#DFBA67', fontWeight: 700 }}>⏳ Uploading image to R2 storage & Database...</span>}
               </div>
             </div>
 

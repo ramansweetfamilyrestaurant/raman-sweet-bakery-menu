@@ -99,6 +99,8 @@ export default function SuperAdminDashboard({ token, username, onLogout, onRetur
     } catch {}
   };
 
+  const [logoPreview, setLogoPreview] = useState(null);
+
   useEffect(() => {
     if (paymentKeys.platform_logo_url) {
       setLogoErr(false);
@@ -3312,16 +3314,16 @@ export default function SuperAdminDashboard({ token, username, onLogout, onRetur
                     CURRENT PLATFORM LOGO PREVIEW:
                   </label>
                   <div style={{ display: 'flex', alignItems: 'center', gap: '14px', marginBottom: '12px' }}>
-                    {paymentKeys.platform_logo_url && !logoErr ? (
+                    {logoPreview || (paymentKeys.platform_logo_url && !logoErr) ? (
                       <img
-                        src={resolveImageUrl(paymentKeys.platform_logo_url)}
+                        src={logoPreview || resolveImageUrl(paymentKeys.platform_logo_url)}
                         alt="Logo Preview"
                         referrerPolicy="no-referrer"
                         onError={() => setLogoErr(true)}
-                        style={{ width: '54px', height: '54px', borderRadius: '12px', objectFit: 'contain', background: '#FFF', padding: '4px', border: '1.5px solid #CBD5E1', boxShadow: '0 2px 8px rgba(0,0,0,0.08)' }}
+                        style={{ width: '64px', height: '64px', borderRadius: '12px', objectFit: 'contain', background: '#FFF', padding: '4px', border: '1.5px solid #CBD5E1', boxShadow: '0 2px 8px rgba(0,0,0,0.08)' }}
                       />
                     ) : (
-                      <div style={{ width: '54px', height: '54px', borderRadius: '12px', background: '#0A2315', color: '#DFBA67', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 900, fontSize: '1.4rem' }}>👑</div>
+                      <div style={{ width: '64px', height: '64px', borderRadius: '12px', background: '#0A2315', color: '#DFBA67', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 900, fontSize: '1.6rem' }}>👑</div>
                     )}
                     <div style={{ flex: 1 }}>
                       <input
@@ -3330,12 +3332,16 @@ export default function SuperAdminDashboard({ token, username, onLogout, onRetur
                         onChange={async (e) => {
                           const file = e.target.files?.[0];
                           if (!file) return;
+                          const localPreview = URL.createObjectURL(file);
+                          setLogoPreview(localPreview);
+                          setLogoErr(false);
                           setUploadingLogo(true);
                           try {
                             const uploadedData = await uploadImage(file, token, 'superadmin');
-                            const newUrl = typeof uploadedData === 'string' ? uploadedData : (uploadedData?.r2ProxyUrl || uploadedData?.url || uploadedData?.path);
+                            let newUrl = typeof uploadedData === 'string' ? uploadedData : (uploadedData?.r2ProxyUrl || uploadedData?.url || uploadedData?.path);
                             if (!newUrl) throw new Error('Invalid image URL returned from server');
-                            const updated = { ...paymentKeys, platform_logo_url: newUrl };
+                            const timestampedUrl = newUrl.includes('?') ? `${newUrl}&t=${Date.now()}` : `${newUrl}?t=${Date.now()}`;
+                            const updated = { ...paymentKeys, platform_logo_url: timestampedUrl };
                             setPaymentKeys(updated);
                             await fetch('/api/superadmin/settings', {
                               method: 'POST',
@@ -3343,7 +3349,7 @@ export default function SuperAdminDashboard({ token, username, onLogout, onRetur
                               body: JSON.stringify(updated)
                             });
                             setLogoErr(false);
-                            setKeysMsg('✅ Platform Logo uploaded & mirrored successfully!');
+                            setKeysMsg('✅ New Platform Logo uploaded & saved successfully across all pages!');
                           } catch (err) {
                             alert('Logo upload failed: ' + err.message);
                           } finally {
@@ -3353,7 +3359,7 @@ export default function SuperAdminDashboard({ token, username, onLogout, onRetur
                         disabled={uploadingLogo}
                         style={{ fontSize: '0.8rem' }}
                       />
-                      {uploadingLogo && <span style={{ fontSize: '0.74rem', color: '#0284C7', fontWeight: 700, display: 'block', marginTop: '4px' }}>Uploading to Cloudflare R2...</span>}
+                      {uploadingLogo && <span style={{ fontSize: '0.76rem', color: '#0284C7', fontWeight: 700, display: 'block', marginTop: '4px' }}>⏳ Uploading image to R2 Storage & Database...</span>}
                     </div>
                   </div>
 
