@@ -45,6 +45,25 @@ if (!fs.existsSync(uploadsDir)) {
   fs.mkdirSync(uploadsDir, { recursive: true });
 }
 
+// Serverless DB Auto-Init Middleware for Vercel / Cloud Functions
+let isDbReady = false;
+let dbInitPromise = null;
+
+app.use(async (req, res, next) => {
+  if (isDbReady) return next();
+  if (!dbInitPromise) {
+    dbInitPromise = initDb().then(() => {
+      isDbReady = true;
+      startSubscriptionCron();
+    }).catch(err => {
+      dbInitPromise = null;
+      console.error('Serverless DB init error:', err);
+    });
+  }
+  await dbInitPromise;
+  next();
+});
+
 // Universal R2 Proxy Stream Endpoint for any R2 object key
 app.get(['/api/r2-proxy/*', '/r2-proxy/*'], async (req, res) => {
   const rawPath = req.params[0] || '';
@@ -302,4 +321,10 @@ async function startServer(portToTry = PORT) {
   }
 }
 
-startServer();
+if (process.env.VERCEL || process.env.NODE_ENV === 'test') {
+  // Serverless execution environment
+} else {
+  startServer();
+}
+
+module.exports = app;
