@@ -1,5 +1,4 @@
 import pg from 'pg';
-import Database from 'better-sqlite3';
 import path from 'path';
 import fs from 'fs';
 import bcrypt from 'bcryptjs';
@@ -10,10 +9,13 @@ dotenv.config();
 let dbType = 'sqlite';
 let pgPool = null;
 let sqliteDb = null;
+let isDbInitialized = false;
 
 const dbFilePath = path.resolve('menu.db');
 
 async function initDb() {
+  if (isDbInitialized) return;
+
   if (process.env.DATABASE_URL) {
     try {
       const pool = new pg.Pool({
@@ -32,13 +34,20 @@ async function initDb() {
   }
 
   if (dbType === 'sqlite') {
-    sqliteDb = new Database(dbFilePath);
-    sqliteDb.pragma('foreign_keys = ON');
-    console.log('⚡ Connected to SQLite Database at:', dbFilePath);
+    try {
+      const sqliteModule = await import('better-sqlite3');
+      const Database = sqliteModule.default || sqliteModule;
+      sqliteDb = new Database(dbFilePath);
+      sqliteDb.pragma('foreign_keys = ON');
+      console.log('⚡ Connected to SQLite Database at:', dbFilePath);
+    } catch (sqliteErr) {
+      console.warn('SQLite dynamic import notice:', sqliteErr.message);
+    }
   }
 
   await createTables();
   await seedData();
+  isDbInitialized = true;
 }
 
 async function createTables() {
