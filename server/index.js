@@ -71,24 +71,17 @@ app.get(['/api/r2-proxy/*', '/r2-proxy/*'], async (req, res) => {
   res.setHeader('Pragma', 'no-cache');
   res.setHeader('Expires', '0');
 
-  // 1. Check local r2-cache disk
-  if (fs.existsSync(localCachePath)) {
-    res.setHeader('Content-Type', getContentType(filename));
-    return res.sendFile(localCachePath);
-  }
-
-  // 2. Check local uploads directory
-  if (fs.existsSync(localUploadPath)) {
-    res.setHeader('Content-Type', getContentType(filename));
-    return res.sendFile(localUploadPath);
-  }
-
-  // 3. Fetch from Cloudflare R2 bucket
+  // 1. Primary Source of Truth: Fetch directly from Cloudflare R2 bucket if active
   try {
     if (isR2Active()) {
       const r2Obj = await getR2ObjectBuffer(key);
-      if (r2Obj && r2Obj.buffer) {
-        res.setHeader('Content-Type', r2Obj.contentType || getContentType(filename));
+      if (r2Obj && r2Obj.buffer && r2Obj.buffer.length > 0) {
+        const mime = r2Obj.contentType || getContentType(filename);
+        res.setHeader('Content-Type', mime);
+        try {
+          fs.mkdirSync(path.dirname(localCachePath), { recursive: true });
+          fs.writeFileSync(localCachePath, r2Obj.buffer);
+        } catch {}
         return res.send(r2Obj.buffer);
       }
     }
@@ -96,7 +89,7 @@ app.get(['/api/r2-proxy/*', '/r2-proxy/*'], async (req, res) => {
     console.warn('R2 proxy buffer notice:', err.message);
   }
 
-  // 4. Fallback: Fetch from stored_images table in database
+  // 2. Secondary Source of Truth: Fetch from stored_images table in Neon Database
   try {
     const dbRecord = await getImageRecordFromDb(key) || await getImageRecordFromDb(filename);
     const dbImg = dbRecord || await getImageFromDb(filename) || await getImageFromDb(key);
@@ -108,14 +101,24 @@ app.get(['/api/r2-proxy/*', '/r2-proxy/*'], async (req, res) => {
         try {
           fs.mkdirSync(path.dirname(localCachePath), { recursive: true });
           fs.writeFileSync(localCachePath, buf);
-        } catch (cacheErr) {
-          console.warn('Notice re-caching R2 proxy logo to disk:', cacheErr.message);
-        }
+        } catch {}
         return res.send(buf);
       }
     }
   } catch (dbErr) {
-    console.warn('R2 proxy DB fallback notice:', dbErr.message);
+    console.warn('R2 proxy DB notice:', dbErr.message);
+  }
+
+  // 3. Fallback: Check local r2-cache disk
+  if (fs.existsSync(localCachePath)) {
+    res.setHeader('Content-Type', getContentType(filename));
+    return res.sendFile(localCachePath);
+  }
+
+  // 4. Fallback: Check local uploads directory
+  if (fs.existsSync(localUploadPath)) {
+    res.setHeader('Content-Type', getContentType(filename));
+    return res.sendFile(localUploadPath);
   }
 
   // 5. Fallback to default logo.jpg on disk if present
