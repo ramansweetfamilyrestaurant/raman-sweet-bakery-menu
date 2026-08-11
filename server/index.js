@@ -47,8 +47,8 @@ if (!fs.existsSync(uploadsDir)) {
 
 // Universal R2 Proxy Stream Endpoint for any R2 object key
 app.get(['/api/r2-proxy/*', '/r2-proxy/*'], async (req, res) => {
-  const rawPath = req.params[0] || '';
-  const key = decodeURIComponent(rawPath).replace(/^\/+/, '');
+  const rawKey = decodeURIComponent(rawPath).replace(/^\/+/, '');
+  const key = rawKey.split('?')[0];
   if (!key) return res.status(404).send('Image key missing');
 
   const filename = path.basename(key);

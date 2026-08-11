@@ -754,6 +754,7 @@ router.post('/settings', authenticateToken, requireSuperAdmin, async (req, res) 
         let strVal = String(v).trim().replace(/^['"]+|['"]+$/g, '');
         
         if (k === 'platform_logo_url') {
+          strVal = strVal.split('?')[0];
           purgeLocalR2DiskCache('logo.webp');
           purgeLocalR2DiskCache('superadmin/branding/logo.webp');
           purgeLocalR2DiskCache(strVal);
