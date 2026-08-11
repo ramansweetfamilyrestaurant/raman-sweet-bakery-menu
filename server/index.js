@@ -66,11 +66,6 @@ app.get(['/api/r2-proxy/*', '/r2-proxy/*'], async (req, res) => {
     return 'image/webp';
   };
 
-  // Set strict no-cache headers so browser cache is always updated when logo/image changes
-  res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
-  res.setHeader('Pragma', 'no-cache');
-  res.setHeader('Expires', '0');
-
   const detectMimeFromBuffer = (buf) => {
     if (!buf || buf.length < 4) return null;
     if (buf[0] === 0xFF && buf[1] === 0xD8 && buf[2] === 0xFF) return 'image/jpeg';
@@ -80,6 +75,29 @@ app.get(['/api/r2-proxy/*', '/r2-proxy/*'], async (req, res) => {
     return null;
   };
 
+  const sendBufferWithETag = (buf, mime) => {
+    const etag = `W/"${buf.length.toString(16)}-${key.replace(/[^a-zA-Z0-9]/g, '')}"`;
+    res.setHeader('ETag', etag);
+    res.setHeader('Content-Type', mime);
+
+    if (req.query && (req.query.v || req.query.t)) {
+      res.setHeader('Cache-Control', 'public, max-age=31536000, immutable');
+    } else {
+      res.setHeader('Cache-Control', 'public, max-age=86400, stale-while-revalidate=604800');
+    }
+
+    if (req.headers['if-none-match'] === etag) {
+      return res.status(304).end();
+    }
+
+    try {
+      fs.mkdirSync(path.dirname(localCachePath), { recursive: true });
+      fs.writeFileSync(localCachePath, buf);
+    } catch {}
+
+    return res.send(buf);
+  };
+
   // 1. Primary Source of Truth: Fetch directly from Cloudflare R2 bucket if active
   try {
     if (isR2Active()) {
@@ -87,12 +105,7 @@ app.get(['/api/r2-proxy/*', '/r2-proxy/*'], async (req, res) => {
       if (r2Obj && r2Obj.buffer && r2Obj.buffer.length > 0) {
         const detected = detectMimeFromBuffer(r2Obj.buffer);
         const mime = detected || r2Obj.contentType || getContentType(filename);
-        res.setHeader('Content-Type', mime);
-        try {
-          fs.mkdirSync(path.dirname(localCachePath), { recursive: true });
-          fs.writeFileSync(localCachePath, r2Obj.buffer);
-        } catch {}
-        return res.send(r2Obj.buffer);
+        return sendBufferWithETag(r2Obj.buffer, mime);
       }
     }
   } catch (err) {
@@ -108,12 +121,7 @@ app.get(['/api/r2-proxy/*', '/r2-proxy/*'], async (req, res) => {
       if (buf && buf.length > 0) {
         const detected = detectMimeFromBuffer(buf);
         const mime = detected || dbImg.mimeType || dbImg.mime_type || getContentType(filename);
-        res.setHeader('Content-Type', mime);
-        try {
-          fs.mkdirSync(path.dirname(localCachePath), { recursive: true });
-          fs.writeFileSync(localCachePath, buf);
-        } catch {}
-        return res.send(buf);
+        return sendBufferWithETag(buf, mime);
       }
     }
   } catch (dbErr) {
@@ -123,12 +131,14 @@ app.get(['/api/r2-proxy/*', '/r2-proxy/*'], async (req, res) => {
   // 3. Fallback: Check local r2-cache disk
   if (fs.existsSync(localCachePath)) {
     res.setHeader('Content-Type', getContentType(filename));
+    res.setHeader('Cache-Control', 'public, max-age=86400, stale-while-revalidate=604800');
     return res.sendFile(localCachePath);
   }
 
   // 4. Fallback: Check local uploads directory
   if (fs.existsSync(localUploadPath)) {
     res.setHeader('Content-Type', getContentType(filename));
+    res.setHeader('Cache-Control', 'public, max-age=86400, stale-while-revalidate=604800');
     return res.sendFile(localUploadPath);
   }
 
