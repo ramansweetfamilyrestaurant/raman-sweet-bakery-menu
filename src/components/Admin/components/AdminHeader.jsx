@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Utensils, MoreVertical, HelpCircle, Phone, LogOut, ExternalLink } from 'lucide-react';
+import { resolveImageUrl } from '../../../utils/imageHelper';
 
 export default function AdminHeader({
   restaurantInfo,
