@@ -4,10 +4,22 @@ import jwt from 'jsonwebtoken';
 import multer from 'multer';
 import path from 'path';
 import fs from 'fs';
-import sharp from 'sharp';
 import { query, runAutoDataSummarization, saveImageToDb, saveR2ImageToDb, getImageRecordFromDb, deleteImageRecordFromDb } from '../db.js';
 import { isR2Active, uploadImageToR2, deleteImageFromR2, getR2Diagnostics, purgeOrphanedR2Objects } from '../services/r2ImageService.js';
 import { authenticateToken, requireActiveSubscription, checkSubscriptionStatus } from '../middleware/auth.js';
+
+let sharpModule = null;
+async function getSharp() {
+  if (!sharpModule) {
+    try {
+      const m = await import('sharp');
+      sharpModule = m.default || m;
+    } catch (e) {
+      console.warn('Sharp module import notice in admin route:', e.message);
+    }
+  }
+  return sharpModule;
+}
 
 const router = express.Router();
 const JWT_SECRET = process.env.JWT_SECRET || 'raman_bakery_secret_jwt_key_2026_super_secure';

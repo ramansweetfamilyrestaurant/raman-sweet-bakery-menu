@@ -40,10 +40,12 @@ app.use(express.json({
 app.use(express.urlencoded({ extended: true }));
 
 // Smart Persistent Uploads Handler (DB-backed fallback so Render restarts never corrupt images)
-const uploadsDir = path.resolve('public/uploads');
-if (!fs.existsSync(uploadsDir)) {
-  fs.mkdirSync(uploadsDir, { recursive: true });
-}
+const uploadsDir = process.env.VERCEL ? '/tmp/uploads' : path.resolve('public/uploads');
+try {
+  if (!fs.existsSync(uploadsDir)) {
+    fs.mkdirSync(uploadsDir, { recursive: true });
+  }
+} catch (e) {}
 
 // Serverless DB Auto-Init Middleware for Vercel / Cloud Functions
 let isDbReady = false;
@@ -54,7 +56,9 @@ app.use(async (req, res, next) => {
   if (!dbInitPromise) {
     dbInitPromise = initDb().then(() => {
       isDbReady = true;
-      startSubscriptionCron();
+      if (!process.env.VERCEL) {
+        startSubscriptionCron();
+      }
     }).catch(err => {
       dbInitPromise = null;
       console.error('Serverless DB init error:', err);

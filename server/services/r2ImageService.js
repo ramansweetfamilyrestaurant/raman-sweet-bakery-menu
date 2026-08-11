@@ -1,14 +1,28 @@
 import { S3Client, PutObjectCommand, DeleteObjectCommand, HeadObjectCommand, GetObjectCommand, ListObjectsV2Command } from '@aws-sdk/client-s3';
-import sharp from 'sharp';
 import path from 'path';
 import fs from 'fs';
 import dotenv from 'dotenv';
 dotenv.config();
 
-const r2CacheDir = path.resolve('public/uploads/r2-cache');
-if (!fs.existsSync(r2CacheDir)) {
-  fs.mkdirSync(r2CacheDir, { recursive: true });
+let sharpModule = null;
+async function getSharp() {
+  if (!sharpModule) {
+    try {
+      const m = await import('sharp');
+      sharpModule = m.default || m;
+    } catch (e) {
+      console.warn('Sharp module import notice:', e.message);
+    }
+  }
+  return sharpModule;
 }
+
+const r2CacheDir = process.env.VERCEL ? '/tmp/r2-cache' : path.resolve('public/uploads/r2-cache');
+try {
+  if (!fs.existsSync(r2CacheDir)) {
+    fs.mkdirSync(r2CacheDir, { recursive: true });
+  }
+} catch (e) {}
 
 function getCacheFilePath(objectKey) {
   if (!objectKey) return null;
@@ -115,6 +129,18 @@ export function getR2Diagnostics() {
 export async function optimizeImage(buffer, originalMime = 'image/jpeg') {
   if (!buffer || !Buffer.isBuffer(buffer)) {
     throw new Error('Invalid image buffer provided');
+  }
+
+  const sharp = await getSharp();
+  if (!sharp) {
+    return {
+      buffer,
+      mimeType: originalMime,
+      extension: '.jpg',
+      originalFormat: 'jpeg',
+      originalSize: buffer.length,
+      optimizedSize: buffer.length
+    };
   }
 
   try {
