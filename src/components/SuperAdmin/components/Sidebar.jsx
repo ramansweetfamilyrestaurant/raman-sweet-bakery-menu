@@ -38,7 +38,7 @@ export default function Sidebar({ activeView, setActiveView, collapsed, setColla
                 referrerPolicy="no-referrer"
                 onError={() => setLogoErr(true)}
                 style={{
-                  width: '32px', height: '32px', borderRadius: '8px',
+                  maxHeight: '36px', maxWidth: '120px', width: 'auto', height: 'auto', borderRadius: '8px',
                   objectFit: 'contain', background: '#FFF', flexShrink: 0, padding: '2px'
                 }}
               />

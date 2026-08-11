@@ -71,12 +71,22 @@ app.get(['/api/r2-proxy/*', '/r2-proxy/*'], async (req, res) => {
   res.setHeader('Pragma', 'no-cache');
   res.setHeader('Expires', '0');
 
+  const detectMimeFromBuffer = (buf) => {
+    if (!buf || buf.length < 4) return null;
+    if (buf[0] === 0xFF && buf[1] === 0xD8 && buf[2] === 0xFF) return 'image/jpeg';
+    if (buf[0] === 0x89 && buf[1] === 0x50 && buf[2] === 0x4E && buf[3] === 0x47) return 'image/png';
+    if (buf[0] === 0x47 && buf[1] === 0x49 && buf[2] === 0x46) return 'image/gif';
+    if (buf.length >= 12 && buf[0] === 0x52 && buf[1] === 0x49 && buf[2] === 0x46 && buf[3] === 0x46 && buf[8] === 0x57 && buf[9] === 0x45 && buf[10] === 0x42 && buf[11] === 0x50) return 'image/webp';
+    return null;
+  };
+
   // 1. Primary Source of Truth: Fetch directly from Cloudflare R2 bucket if active
   try {
     if (isR2Active()) {
       const r2Obj = await getR2ObjectBuffer(key);
       if (r2Obj && r2Obj.buffer && r2Obj.buffer.length > 0) {
-        const mime = r2Obj.contentType || getContentType(filename);
+        const detected = detectMimeFromBuffer(r2Obj.buffer);
+        const mime = detected || r2Obj.contentType || getContentType(filename);
         res.setHeader('Content-Type', mime);
         try {
           fs.mkdirSync(path.dirname(localCachePath), { recursive: true });
@@ -96,7 +106,8 @@ app.get(['/api/r2-proxy/*', '/r2-proxy/*'], async (req, res) => {
     if (dbImg) {
       const buf = dbImg.buffer || (dbImg.data ? (Buffer.isBuffer(dbImg.data) ? dbImg.data : Buffer.from(dbImg.data, 'base64')) : null);
       if (buf && buf.length > 0) {
-        const mime = dbImg.mimeType || dbImg.mime_type || getContentType(filename);
+        const detected = detectMimeFromBuffer(buf);
+        const mime = detected || dbImg.mimeType || dbImg.mime_type || getContentType(filename);
         res.setHeader('Content-Type', mime);
         try {
           fs.mkdirSync(path.dirname(localCachePath), { recursive: true });
