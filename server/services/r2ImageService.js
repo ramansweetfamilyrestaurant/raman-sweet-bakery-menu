@@ -251,6 +251,7 @@ export async function uploadImageToR2({ buffer, mimeType, restaurantId = 1, enti
     objectKey,
     publicUrl,
     mimeType: optimized.mimeType,
+    buffer: optimized.buffer,
     size: optimized.buffer.length
   };
 }
