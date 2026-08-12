@@ -181,7 +181,7 @@ export default function RestaurantInfoModal({ info, onClose, onOpenReviewModal }
                   </a>
                 )}
 
-                {(info?.google_reviews_enabled !== false && info?.google_reviews_enabled !== 0) && (
+                {Boolean(info?.google_reviews_enabled) && (
                   <button
                     type="button"
                     onClick={() => {

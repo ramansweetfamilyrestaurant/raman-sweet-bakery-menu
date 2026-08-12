@@ -48,7 +48,7 @@ export default function CustomerHeader({ info, lang, tableNum, onToggleLang, onO
 
         {/* Right Action Group: Rate Us + Table Indicator + Call Staff */}
         <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-          {onOpenReviewModal && (info?.google_reviews_enabled !== false && info?.google_reviews_enabled !== 0) && (
+          {onOpenReviewModal && Boolean(info?.google_reviews_enabled) && (
             <button
               onClick={onOpenReviewModal}
               style={{

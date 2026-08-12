@@ -1928,7 +1928,7 @@ export default function App() {
       )}
 
       {/* 🌟 Smart AI Google Review Booster Modal */}
-      {showReviewModal && (info?.google_reviews_enabled !== false && info?.google_reviews_enabled !== 0) && (
+      {showReviewModal && Boolean(info?.google_reviews_enabled) && (
         <CustomerReviewModal
           info={info}
           onClose={() => setShowReviewModal(false)}

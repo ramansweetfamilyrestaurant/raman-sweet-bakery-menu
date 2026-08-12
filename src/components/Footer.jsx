@@ -74,7 +74,7 @@ export default function Footer({ info, onOpenAdmin, onOpenReviewModal }) {
           </div>
         )}
 
-        {(info?.google_reviews_enabled !== false && info?.google_reviews_enabled !== 0 && onOpenReviewModal) && (
+        {Boolean(info?.google_reviews_enabled) && onOpenReviewModal && (
           <button
             type="button"
             onClick={onOpenReviewModal}
