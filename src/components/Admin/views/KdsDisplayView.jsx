@@ -231,8 +231,8 @@ export default function KdsDisplayView({
                       transition: 'all 0.15s ease'
                     }}
                   >
-                    <CheckCircle2 size={22} />
-                    <span>✅ MARK ORDER COMPLETE</span>
+                    <Bell size={22} />
+                    <span>🔔 MARK FOOD PREPARED (NOTIFY WAITER)</span>
                   </button>
                 </div>
               </div>
