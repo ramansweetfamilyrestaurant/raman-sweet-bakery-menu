@@ -115,6 +115,9 @@ export default function StandaloneKdsPage({ slug = '' }) {
         }
       }
       if (!targetSlug) {
+        targetSlug = localStorage.getItem('raman_admin_slug') || localStorage.getItem('raman_last_slug') || '';
+      }
+      if (!targetSlug) {
         setNotFound(true);
         return;
       }
