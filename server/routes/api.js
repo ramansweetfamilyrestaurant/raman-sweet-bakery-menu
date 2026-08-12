@@ -158,7 +158,7 @@ router.get('/menu-bundle', async (req, res) => {
       filtersVis = { must_try: true, combo: true, special: true, under100: true };
     }
 
-    const planRows = await query('SELECT watermark_removal_enabled, custom_domain_enabled, multi_language_enabled, analytics_export_enabled, gst_invoice_enabled, ai_review_enabled, google_reviews_enabled FROM saas_plans WHERE key = $1', [resto.plan_tier || 'pro']).catch(() => []);
+    const planRows = await query('SELECT watermark_removal_enabled, custom_domain_enabled, multi_language_enabled, analytics_export_enabled, gst_invoice_enabled, ai_review_enabled, google_reviews_enabled, bluetooth_kot_enabled FROM saas_plans WHERE key = $1', [resto.plan_tier || 'pro']).catch(() => []);
     const saasP = (planRows && planRows.length > 0) ? planRows[0] : {};
     const watermarkRemoval = saasP.watermark_removal_enabled !== undefined ? (saasP.watermark_removal_enabled === 1 || saasP.watermark_removal_enabled === true || saasP.watermark_removal_enabled === '1') : true;
     const customDomainEnabled = saasP.custom_domain_enabled !== undefined ? (saasP.custom_domain_enabled === 1 || saasP.custom_domain_enabled === true || saasP.custom_domain_enabled === '1') : true;
@@ -167,6 +167,7 @@ router.get('/menu-bundle', async (req, res) => {
     const gstInvoiceEnabled = saasP.gst_invoice_enabled !== undefined ? (saasP.gst_invoice_enabled === 1 || saasP.gst_invoice_enabled === true || saasP.gst_invoice_enabled === '1') : true;
     const aiReviewEnabled = saasP.ai_review_enabled !== undefined ? (saasP.ai_review_enabled === 1 || saasP.ai_review_enabled === true || saasP.ai_review_enabled === '1') : true;
     const googleReviewsEnabled = saasP.google_reviews_enabled !== undefined ? (saasP.google_reviews_enabled === 1 || saasP.google_reviews_enabled === true || saasP.google_reviews_enabled === '1') : (resto.plan_tier !== 'basic');
+    const bluetoothKotEnabled = saasP.bluetooth_kot_enabled !== undefined ? (saasP.bluetooth_kot_enabled === 1 || saasP.bluetooth_kot_enabled === true || saasP.bluetooth_kot_enabled === '1') : true;
 
     const infoObj = {
       id: resto.id,
@@ -192,6 +193,7 @@ router.get('/menu-bundle', async (req, res) => {
       gst_invoice_enabled: gstInvoiceEnabled,
       ai_review_enabled: aiReviewEnabled,
       google_reviews_enabled: googleReviewsEnabled,
+      bluetooth_kot_enabled: bluetoothKotEnabled,
       custom_domain: resto.custom_domain || '',
       whatsapp_number: resto.whatsapp_number || resto.phone || '',
       active: true
@@ -265,6 +267,7 @@ router.get('/info', async (req, res) => {
     const analyticsExportEnabled = saasPlan.analytics_export_enabled !== undefined ? (saasPlan.analytics_export_enabled === 1 || saasPlan.analytics_export_enabled === true || saasPlan.analytics_export_enabled === '1') : true;
     const gstInvoiceEnabled = saasPlan.gst_invoice_enabled !== undefined ? (saasPlan.gst_invoice_enabled === 1 || saasPlan.gst_invoice_enabled === true || saasPlan.gst_invoice_enabled === '1') : true;
     const aiReviewEnabled = saasPlan.ai_review_enabled !== undefined ? (saasPlan.ai_review_enabled === 1 || saasPlan.ai_review_enabled === true || saasPlan.ai_review_enabled === '1') : true;
+    const bluetoothKotEnabled = saasPlan.bluetooth_kot_enabled !== undefined ? (saasPlan.bluetooth_kot_enabled === 1 || saasPlan.bluetooth_kot_enabled === true || saasPlan.bluetooth_kot_enabled === '1') : true;
 
     return res.json({
       id: resto.id,
@@ -295,6 +298,7 @@ router.get('/info', async (req, res) => {
       analytics_export_enabled: analyticsExportEnabled,
       gst_invoice_enabled: gstInvoiceEnabled,
       ai_review_enabled: aiReviewEnabled,
+      bluetooth_kot_enabled: bluetoothKotEnabled,
       max_combos: maxCombos,
       theme_color: resto.theme_color || 'gold',
       scan_count: resto.scan_count || 0,

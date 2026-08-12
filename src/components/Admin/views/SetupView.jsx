@@ -714,12 +714,19 @@ export default function SetupView({
 
           {/* Printer Setup Box */}
           <div style={{ padding: '14px', background: 'var(--adm-surface-subtle)', borderRadius: 'var(--adm-radius-md)', border: '1px solid var(--adm-border)' }}>
-            <strong style={{ fontSize: '0.9rem', color: 'var(--adm-primary)', display: 'block', marginBottom: '4px' }}>🖨️ Thermal Receipt Printer</strong>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '4px' }}>
+              <strong style={{ fontSize: '0.9rem', color: 'var(--adm-primary)' }}>🖨️ Thermal Receipt Printer & ESC/POS KOT</strong>
+              {!(settingsForm?.bluetooth_kot_enabled !== false && settingsForm?.bluetooth_kot_enabled !== 0) && (
+                <span style={{ fontSize: '0.7rem', fontWeight: 800, color: '#B45309', background: '#FEF3C7', border: '1px solid #F59E0B', padding: '2px 8px', borderRadius: 'var(--radius-pill)' }}>
+                  🔒 Pro Feature
+                </span>
+              )}
+            </div>
             <p style={{ fontSize: '0.76rem', color: 'var(--adm-muted)', margin: '0 0 10px 0' }}>
-              Supports 58mm & 80mm ESC/POS Bluetooth and USB thermal printers.
+              Supports 58mm & 80mm ESC/POS Bluetooth, USB, and RawBT silent thermal printers for instant Kitchen Order Tickets (KOT) & Customer Tax Receipts.
             </p>
             <button onClick={() => { setOpenDrawer(null); setShowPrinterModal(true); }} className="adm-btn adm-btn-secondary adm-btn-sm" style={{ width: '100%' }}>
-              <Printer size={15} /> Open Printer Pairing Guide
+              <Printer size={15} /> Open Printer Pairing & Bluetooth Setup Guide
             </button>
           </div>
         </div>

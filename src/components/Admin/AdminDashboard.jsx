@@ -857,6 +857,7 @@ export default function AdminDashboard({ token, username, onLogout, onReturnToMe
         analytics_export_enabled: infoData.analytics_export_enabled !== undefined ? infoData.analytics_export_enabled : true,
         gst_invoice_enabled: infoData.gst_invoice_enabled !== undefined ? infoData.gst_invoice_enabled : true,
         ai_review_enabled: infoData.ai_review_enabled !== undefined ? infoData.ai_review_enabled : true,
+        bluetooth_kot_enabled: infoData.bluetooth_kot_enabled !== undefined ? infoData.bluetooth_kot_enabled : true,
         filters_visibility: { ...defaultVis, ...infoData.filters_visibility }
       };
     }
@@ -875,6 +876,7 @@ export default function AdminDashboard({ token, username, onLogout, onReturnToMe
       analytics_export_enabled: true,
       gst_invoice_enabled: true,
       ai_review_enabled: true,
+      bluetooth_kot_enabled: true,
       filters_visibility: defaultVis
     };
   });
@@ -1020,6 +1022,7 @@ export default function AdminDashboard({ token, username, onLogout, onReturnToMe
           analytics_export_enabled: infoData.analytics_export_enabled !== undefined ? infoData.analytics_export_enabled : true,
           gst_invoice_enabled: infoData.gst_invoice_enabled !== undefined ? infoData.gst_invoice_enabled : true,
           ai_review_enabled: infoData.ai_review_enabled !== undefined ? infoData.ai_review_enabled : true,
+          bluetooth_kot_enabled: infoData.bluetooth_kot_enabled !== undefined ? infoData.bluetooth_kot_enabled : true,
           filters_visibility: { ...defaultVis, ...infoData.filters_visibility }
         });
       }
