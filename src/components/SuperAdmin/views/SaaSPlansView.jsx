@@ -145,7 +145,7 @@ export default function SaaSPlansView({ token }) {
     { key: 'audio_alarm_enabled', label: '📢 New Order Audio / Voice Alarm' },
     { key: 'order_status_whatsapp_enabled', label: '📲 WhatsApp Order Status Alerts' },
     { key: 'kds_enabled', label: '🍳 Kitchen Display System (KDS Screen)' },
-    { key: 'bluetooth_kot_enabled', label: 'Bluetooth KOT & Thermal Printing' },
+    { key: 'bluetooth_kot_enabled', label: '🖨️ Flexible Single & Dual Thermal Printer Routing (Kitchen KOT + Counter Bill)' },
     { key: 'google_reviews_enabled', label: 'Google Review Collector' },
     { key: 'ai_review_enabled', label: '🤖 Google Review AI Auto-Reply Assistant' },
     { key: 'gst_invoice_enabled', label: 'GST Invoice & Custom Tax Receipt' },
