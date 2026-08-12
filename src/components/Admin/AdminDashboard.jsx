@@ -1948,7 +1948,7 @@ export default function AdminDashboard({ token, username, onLogout, onReturnToMe
         <main className="adm-main-canvas">
           <div className="adm-content-body">
             {/* ORDERS VIEW */}
-            {['orders', 'kds-screen', 'floor-map', 'service-requests'].includes(activeTab) && (
+            {['orders', 'floor-map', 'service-requests'].includes(activeTab) && (
               <OrdersView
                 orders={orders}
                 activeSubTab={activeTab}

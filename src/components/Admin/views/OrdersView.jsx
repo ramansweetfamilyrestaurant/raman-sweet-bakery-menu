@@ -119,13 +119,6 @@ export default function OrdersView({
         >
           Live Orders ({validOrders.length})
         </button>
-        <button
-          onClick={() => setActiveSubTab('kds-screen')}
-          className={`adm-btn adm-btn-sm ${activeSubTab === 'kds-screen' ? 'adm-btn-primary' : 'adm-btn-secondary'}`}
-          style={{ padding: '6px 14px', borderRadius: 'var(--adm-radius-full)', background: activeSubTab === 'kds-screen' ? 'linear-gradient(135deg, #0F172A 0%, #1E293B 100%)' : undefined, color: activeSubTab === 'kds-screen' ? '#38BDF8' : undefined, border: activeSubTab === 'kds-screen' ? '1px solid #38BDF8' : undefined }}
-        >
-          🍳 Kitchen KDS Screen ({pendingCount + kitchenCount})
-        </button>
         <a
           href={`/${restaurantInfo?.slug || ''}/kitchen`}
           target="_blank"
@@ -133,7 +126,7 @@ export default function OrdersView({
           className="adm-btn adm-btn-sm adm-btn-secondary"
           style={{ padding: '6px 14px', borderRadius: 'var(--adm-radius-full)', background: '#0F172A', color: '#38BDF8', border: '1px solid #38BDF8', textDecoration: 'none', display: 'inline-flex', alignItems: 'center', gap: '4px', fontWeight: 800 }}
         >
-          🔗 Open Standalone /kitchen Screen ↗
+          🍳 Open /kitchen Screen ↗
         </a>
         <button
           onClick={() => setActiveSubTab('floor-map')}
@@ -345,15 +338,7 @@ export default function OrdersView({
         </div>
       )}
 
-      {/* KDS KITCHEN DISPLAY SUBTAB */}
-      {activeSubTab === 'kds-screen' && (
-        <KdsDisplayView
-          orders={orders}
-          onUpdateStatus={onUpdateStatus}
-          restaurantInfo={restaurantInfo}
-          kdsEnabled={kdsEnabled}
-        />
-      )}
+
 
       {/* FLOOR MAP SUBTAB */}
       {activeSubTab === 'floor-map' && (
