@@ -591,12 +591,19 @@ export default function AdminDashboard({ token, username, onLogout, onReturnToMe
   };
 
   const handleUpdateStatus = async (orderId, newStatus, extraParams = {}) => {
+    // ⚡ Optimistic UI update (0ms lag, zero flickering)
+    if (newStatus === 'accepted' || newStatus === 'kitchen' || newStatus === 'preparing') {
+      stopPendingAlarm();
+    }
+    if (newStatus === 'rejected' || newStatus === 'cancelled') {
+      setOrders(prev => prev.filter(o => String(o.id) !== String(orderId)));
+    } else {
+      setOrders(prev => prev.map(o => String(o.id) === String(orderId) ? { ...o, status: newStatus, ...extraParams } : o));
+    }
+
     try {
       await updateOrderStatus(orderId, newStatus, token, extraParams);
-      if (newStatus === 'accepted' || newStatus === 'kitchen' || newStatus === 'preparing') {
-        stopPendingAlarm();
-      }
-      if (extraParams.kitchen_prepared === 1) {
+      if (extraParams.kitchen_prepared === 1 || extraParams.kitchen_prepared === '1' || extraParams.kitchen_prepared === true) {
         if (!extraParams.silent) {
           playWaiterBellFor6Seconds();
         }
@@ -614,13 +621,9 @@ export default function AdminDashboard({ token, username, onLogout, onReturnToMe
         setToastMessage(msg);
         setTimeout(() => setToastMessage(''), 4000);
       }
-      if (newStatus === 'rejected' || newStatus === 'cancelled') {
-        setOrders(prev => prev.filter(o => String(o.id) !== String(orderId)));
-      } else {
-        setOrders(prev => prev.map(o => String(o.id) === String(orderId) ? { ...o, status: newStatus, ...extraParams } : o));
-      }
     } catch (err) {
       alert(err.message || 'Failed to update order status');
+      loadOrders(); // rollback on failure
     }
   };
 

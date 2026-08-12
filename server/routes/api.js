@@ -505,7 +505,7 @@ router.post('/orders', async (req, res) => {
 router.get('/orders/track/:id', async (req, res) => {
   try {
     const { id } = req.params;
-    const orders = await query('SELECT id, table_number, status, total_amount, items, created_at FROM orders WHERE id = $1', [id]);
+    const orders = await query('SELECT id, table_number, status, kitchen_prepared, sent_to_kds, total_amount, items, created_at FROM orders WHERE id = $1', [id]);
     if (orders.length === 0) {
       return res.status(404).json({ error: 'Order not found' });
     }
@@ -535,7 +535,7 @@ router.get('/orders/active-table', async (req, res) => {
     const targetId = resto?.id || 1;
 
     const orders = await query(`
-      SELECT id, table_number, status, total_amount, items, created_at
+      SELECT id, table_number, status, kitchen_prepared, sent_to_kds, total_amount, items, created_at
       FROM orders
       WHERE restaurant_id = $1 AND table_number = $2 AND status IN ('pending', 'preparing', 'kitchen', 'accepted', 'served')
       ORDER BY id DESC LIMIT 1
