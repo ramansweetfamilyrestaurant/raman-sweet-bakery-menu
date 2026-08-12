@@ -2,17 +2,19 @@ import React, { useState } from 'react';
 import { X, ShieldCheck, Sparkles, Clock, Utensils, CheckCircle } from 'lucide-react';
 import { resolveImageUrl } from '../utils/imageHelper';
 
-export default function DishModal({ dish, onClose, currencySymbol = '₹' }) {
+export default function DishModal({ dish, onClose, currencySymbol = '₹', lang = 'en' }) {
   if (!dish) return null;
 
   const symbol = (currencySymbol !== undefined && currencySymbol !== null) ? currencySymbol : '₹';
+  const displayName = (lang === 'hi' && dish.name_hi) ? dish.name_hi : dish.name;
+  const displayDesc = (lang === 'hi' && dish.description_hi) ? dish.description_hi : dish.description;
   const hasHalfPrice = dish.price_half !== null && dish.price_half !== undefined && Number(dish.price_half) > 0;
   const [selectedPortion, setSelectedPortion] = useState(hasHalfPrice ? 'half' : 'full');
 
   const activePrice = (selectedPortion === 'half' && hasHalfPrice) ? dish.price_half : dish.price;
   const activePortionLabel = selectedPortion === 'half'
-    ? (dish.portion_half_label || 'Half Portion')
-    : (dish.portion_full_label || dish.portion || 'Full Portion');
+    ? (dish.portion_half_label || (lang === 'hi' ? 'हाफ हाफ पोर्शन' : 'Half Portion'))
+    : (dish.portion_full_label || dish.portion || (lang === 'hi' ? 'फुल पोर्शन' : 'Full Portion'));
 
   const ingredientsList = dish.ingredients ? dish.ingredients.split(',').map(i => i.trim()) : [];
   const imageSrc = resolveImageUrl(dish.image);
@@ -178,7 +180,7 @@ export default function DishModal({ dish, onClose, currencySymbol = '₹' }) {
                 alignItems: 'center',
                 gap: '6px'
               }}>
-                {dish.name}
+                {displayName}
               </h2>
             </div>
 
@@ -210,7 +212,7 @@ export default function DishModal({ dish, onClose, currencySymbol = '₹' }) {
               marginBottom: '14px'
             }}>
               <span style={{ fontSize: '0.74rem', fontWeight: 800, color: 'var(--primary-emerald)', textTransform: 'uppercase', display: 'block', marginBottom: '6px' }}>
-                Select Portion Size:
+                {lang === 'hi' ? 'पोर्शन साइज चुनें:' : 'Select Portion Size:'}
               </span>
               <div style={{ display: 'flex', gap: '8px' }}>
                 <button
@@ -229,7 +231,7 @@ export default function DishModal({ dish, onClose, currencySymbol = '₹' }) {
                     transition: 'var(--transition-fast)'
                   }}
                 >
-                  {dish.portion_half_label || 'Half'} • {symbol}{dish.price_half}
+                  {dish.portion_half_label || (lang === 'hi' ? 'हाफ' : 'Half')} • {symbol}{dish.price_half}
                 </button>
 
                 <button
@@ -248,7 +250,7 @@ export default function DishModal({ dish, onClose, currencySymbol = '₹' }) {
                     transition: 'var(--transition-fast)'
                   }}
                 >
-                  {dish.portion_full_label || 'Full'} • {symbol}{dish.price}
+                  {dish.portion_full_label || (lang === 'hi' ? 'फुल' : 'Full')} • {symbol}{dish.price}
                 </button>
               </div>
             </div>
@@ -277,7 +279,7 @@ export default function DishModal({ dish, onClose, currencySymbol = '₹' }) {
             lineHeight: 1.6,
             marginBottom: '20px'
           }}>
-            {dish.description || 'Prepared fresh using fine quality ingredients & authentic traditional recipes.'}
+            {displayDesc || (lang === 'hi' ? 'ताजा और शुद्ध सामग्री से निर्मित प्रामाणिक व्यंजन।' : 'Prepared fresh using fine quality ingredients & authentic traditional recipes.')}
           </p>
 
           {/* Ingredients List */}

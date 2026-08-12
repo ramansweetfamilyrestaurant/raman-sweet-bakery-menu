@@ -2,11 +2,13 @@ import React from 'react';
 import { ChevronRight } from 'lucide-react';
 import { resolveImageUrl } from '../utils/imageHelper';
 
-export default function DishCard({ dish, onClick, onAddToCart, currencySymbol = '₹' }) {
+export default function DishCard({ dish, onClick, onAddToCart, currencySymbol = '₹', lang = 'en' }) {
   const symbol = (currencySymbol !== undefined && currencySymbol !== null) ? currencySymbol : '₹';
   const isAvailable = dish.available !== false;
   const hasHalfPrice = dish.price_half !== null && dish.price_half !== undefined && Number(dish.price_half) > 0;
   const imageSrc = resolveImageUrl(dish.image);
+  const displayName = (lang === 'hi' && dish.name_hi) ? dish.name_hi : dish.name;
+  const displayDesc = (lang === 'hi' && dish.description_hi) ? dish.description_hi : dish.description;
 
   return (
     <article 
@@ -240,7 +242,7 @@ export default function DishCard({ dish, onClick, onAddToCart, currencySymbol = 
               color: 'var(--text-dark)',
               lineHeight: 1.25
             }}>
-              {dish.name}
+              {displayName}
             </h3>
 
             <span style={{
@@ -258,7 +260,7 @@ export default function DishCard({ dish, onClick, onAddToCart, currencySymbol = 
             </span>
           </div>
 
-          {dish.description && (
+          {displayDesc && (
             <p style={{
               fontSize: '0.82rem',
               color: 'var(--text-muted)',
@@ -268,7 +270,7 @@ export default function DishCard({ dish, onClick, onAddToCart, currencySymbol = 
               WebkitBoxOrient: 'vertical',
               overflow: 'hidden'
             }}>
-              {dish.description}
+              {displayDesc}
             </p>
           )}
         </div>
