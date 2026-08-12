@@ -609,6 +609,9 @@ export default function App() {
       // Route: /billing → Subscription Billing Page
       const isBilling = path === '/billing' || path === '/billing/';
 
+      // Route: /kitchen or /:slug/kitchen → Dedicated KDS Screen
+      const isKitchen = path.includes('/kitchen');
+
       // Legal & Support Routes
       const isPrivacy = path === '/privacy-policy' || path === '/privacy-policy/' || path === '/privacy';
       const isTerms = path === '/terms' || path === '/terms/' || path === '/terms-of-service';
@@ -616,7 +619,10 @@ export default function App() {
       const isSecurity = path === '/security' || path === '/security/';
       const isContact = path === '/contact' || path === '/contact/' || path === '/support';
 
-      if (isPrivacy) {
+      if (isKitchen) {
+        setView('kitchen-kds');
+        document.title = 'Kitchen KDS Display System';
+      } else if (isPrivacy) {
         setView('privacy-policy');
         document.title = 'TouchQR - Privacy Policy';
       } else if (isTerms) {
