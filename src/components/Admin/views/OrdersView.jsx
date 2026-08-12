@@ -283,17 +283,14 @@ export default function OrdersView({
                               🔔 Mark Ready
                             </button>
                           )}
-                          <button onClick={() => onUpdateStatus(order.id, 'served')} className="adm-btn adm-btn-accent adm-btn-sm" style={{ fontWeight: 800, minHeight: '44px', padding: '0 12px' }}>
-                            🛎️ Mark Served
-                          </button>
-                          <button onClick={() => onUpdateStatus(order.id, 'completed')} className="adm-btn adm-btn-primary adm-btn-sm" style={{ fontWeight: 800, minHeight: '44px', padding: '0 12px' }}>
-                            💳 Complete & Bill
+                          <button onClick={() => onUpdateStatus(order.id, 'completed')} className="adm-btn adm-btn-primary adm-btn-sm" style={{ fontWeight: 800, minHeight: '44px', padding: '0 14px' }}>
+                            💳 Serve & Complete Bill
                           </button>
                         </>
                       )}
                       {order.status === 'served' && (
-                        <button onClick={() => onUpdateStatus(order.id, 'completed')} className="adm-btn adm-btn-primary adm-btn-sm" style={{ fontWeight: 800, minHeight: '44px', padding: '0 12px' }}>
-                          💳 Complete Order & Bill
+                        <button onClick={() => onUpdateStatus(order.id, 'completed')} className="adm-btn adm-btn-primary adm-btn-sm" style={{ fontWeight: 800, minHeight: '44px', padding: '0 14px' }}>
+                          💳 Serve & Complete Bill
                         </button>
                       )}
                       {onDirectPrint && (

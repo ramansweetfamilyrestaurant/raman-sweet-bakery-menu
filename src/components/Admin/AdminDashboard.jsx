@@ -617,7 +617,7 @@ export default function AdminDashboard({ token, username, onLogout, onReturnToMe
         }
         const targetOrder = orders.find(o => String(o.id) === String(orderId));
         const tblNum = targetOrder?.table_number ? `Table #${targetOrder.table_number}` : `Order #${orderId}`;
-        const msg = newStatus === 'served' ? `📦 ${tblNum} Marked SERVED at Counter` : `💳 ${tblNum} Completed & Billed`;
+        const msg = newStatus === 'served' ? `📦 ${tblNum} Marked SERVED at Counter` : `💳 ${tblNum} Served & Bill Completed!`;
         setToastMessage(msg);
         setTimeout(() => setToastMessage(''), 4000);
       }
