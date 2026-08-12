@@ -826,24 +826,53 @@ export default function AdminDashboard({ token, username, onLogout, onReturnToMe
   }, [token]);
 
   // Settings State
-  const [settingsForm, setSettingsForm] = useState({
-    name: '',
-    tagline: '',
-    phone: '',
-    address: '',
-    openingHours: '',
-    google_review_url: '',
-    google_maps_url: '',
-    currency_symbol: '₹',
-    fssai_lic_no: '',
-    resto_type: 'pure_veg',
-    custom_domain: '',
-    filters_visibility: {
-      must_try: true,
-      combo: true,
-      special: true,
-      under100: true
+  const [settingsForm, setSettingsForm] = useState(() => {
+    const infoData = getInitialAdminState('info', null);
+    const defaultVis = { must_try: true, combo: true, special: true, under100: true };
+    if (infoData) {
+      return {
+        id: infoData.id,
+        name: infoData.name || '',
+        slug: infoData.slug || '',
+        tagline: infoData.tagline || '',
+        logo: infoData.logo || '',
+        phone: infoData.phone || '',
+        address: infoData.address || '',
+        openingHours: infoData.openingHours || '',
+        google_review_url: infoData.google_review_url || '',
+        google_maps_url: infoData.google_maps_url || '',
+        currency_symbol: (infoData.currency_symbol !== null && infoData.currency_symbol !== undefined) ? infoData.currency_symbol : '₹',
+        fssai_lic_no: infoData.fssai_lic_no || '',
+        resto_type: infoData.resto_type || 'pure_veg',
+        latitude: infoData.latitude !== undefined && infoData.latitude !== null ? infoData.latitude : 26.6500,
+        longitude: infoData.longitude !== undefined && infoData.longitude !== null ? infoData.longitude : 84.9167,
+        max_distance_meters: infoData.max_distance_meters || 100,
+        gst_enabled: infoData.gst_enabled !== undefined ? infoData.gst_enabled : false,
+        gstin_number: infoData.gstin_number || '',
+        total_tables: infoData.total_tables !== undefined && infoData.total_tables !== null ? Number(infoData.total_tables) : 0,
+        order_retention_days: infoData.order_retention_days || 7,
+        custom_domain: infoData.custom_domain || '',
+        watermark_removal_enabled: infoData.watermark_removal_enabled !== undefined ? infoData.watermark_removal_enabled : true,
+        custom_domain_enabled: infoData.custom_domain_enabled !== undefined ? infoData.custom_domain_enabled : true,
+        analytics_export_enabled: infoData.analytics_export_enabled !== undefined ? infoData.analytics_export_enabled : true,
+        filters_visibility: { ...defaultVis, ...infoData.filters_visibility }
+      };
     }
+    return {
+      name: '',
+      tagline: '',
+      phone: '',
+      address: '',
+      openingHours: '',
+      google_review_url: '',
+      google_maps_url: '',
+      currency_symbol: '₹',
+      fssai_lic_no: '',
+      resto_type: 'pure_veg',
+      custom_domain: '',
+      analytics_export_enabled: true,
+      filters_visibility: defaultVis
+    };
   });
   const [settingsSavedMsg, setSettingsSavedMsg] = useState(false);
 
@@ -1770,7 +1799,7 @@ export default function AdminDashboard({ token, username, onLogout, onReturnToMe
           activeTab={activeTab}
           setActiveTab={setActiveTab}
           pendingOrdersCount={orders.filter(o => o.status === 'pending').length}
-          analyticsEnabled={settingsForm.analytics_export_enabled !== false && settingsForm.analytics_export_enabled !== 0}
+          analyticsEnabled={isAnalyticsEnabled}
         />
 
         <main className="adm-main-canvas">
@@ -1799,11 +1828,11 @@ export default function AdminDashboard({ token, username, onLogout, onReturnToMe
             )}
 
             {/* ANALYTICS VIEW */}
-            {activeTab === 'analytics' && (settingsForm.analytics_export_enabled !== false && settingsForm.analytics_export_enabled !== 0) && (
+            {activeTab === 'analytics' && isAnalyticsEnabled && (
               <AnalyticsView
                 analyticsData={analyticsData}
                 onDownloadCSV={handleDownloadSalesReport}
-                analyticsExportEnabled={settingsForm.analytics_export_enabled !== false && settingsForm.analytics_export_enabled !== 0}
+                analyticsExportEnabled={isAnalyticsEnabled}
                 currencySymbol={settingsForm.currency_symbol !== undefined && settingsForm.currency_symbol !== null ? settingsForm.currency_symbol : '₹'}
               />
             )}
@@ -1897,7 +1926,7 @@ export default function AdminDashboard({ token, username, onLogout, onReturnToMe
           activeTab={activeTab}
           setActiveTab={setActiveTab}
           pendingOrdersCount={orders.filter(o => o.status === 'pending').length}
-          analyticsEnabled={settingsForm.analytics_export_enabled !== false && settingsForm.analytics_export_enabled !== 0}
+          analyticsEnabled={isAnalyticsEnabled}
         />
       </div>
 
