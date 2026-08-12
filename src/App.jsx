@@ -2350,6 +2350,7 @@ export default function App() {
           info={info}
           lang={lang}
           onClose={() => setShowInfoModal(false)}
+          onOpenReviewModal={() => setShowReviewModal(true)}
         />
       )}
 
@@ -2377,6 +2378,7 @@ export default function App() {
       {/* Footer */}
       <Footer
         info={info}
+        onOpenReviewModal={() => setShowReviewModal(true)}
         onOpenAdmin={() => {
           const currentSlug = getSlugFromUrl() || (info && info.slug) || 'raman-sweet-bakery';
           const storedSlug = localStorage.getItem('raman_admin_slug');

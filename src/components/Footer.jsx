@@ -1,7 +1,7 @@
 import React from 'react';
 import { Phone, Clock, MapPin, ShieldCheck } from 'lucide-react';
 
-export default function Footer({ info, onOpenAdmin }) {
+export default function Footer({ info, onOpenAdmin, onOpenReviewModal }) {
   return (
     <footer style={{
       background: 'var(--footer-gradient, linear-gradient(180deg, #05140B 0%, #0A2315 100%))',
@@ -72,6 +72,30 @@ export default function Footer({ info, onOpenAdmin }) {
             <MapPin size={14} color="#A7F3D0" style={{ verticalAlign: 'middle', marginRight: '4px' }} />
             {info.address}
           </div>
+        )}
+
+        {(info?.google_reviews_enabled !== false && info?.google_reviews_enabled !== 0 && onOpenReviewModal) && (
+          <button
+            type="button"
+            onClick={onOpenReviewModal}
+            style={{
+              background: 'linear-gradient(135deg, #FFD700 0%, #FFA500 100%)',
+              color: '#0A2315',
+              border: 'none',
+              padding: '8px 18px',
+              borderRadius: 'var(--radius-pill)',
+              fontSize: '0.82rem',
+              fontWeight: 800,
+              cursor: 'pointer',
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: '6px',
+              boxShadow: '0 4px 12px rgba(255, 215, 0, 0.3)',
+              marginTop: '4px'
+            }}
+          >
+            ⭐ Rate & Review Us on Google
+          </button>
         )}
 
         <div style={{

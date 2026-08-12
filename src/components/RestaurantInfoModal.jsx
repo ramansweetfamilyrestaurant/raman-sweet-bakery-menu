@@ -1,7 +1,7 @@
 import React from 'react';
 import { X, Clock, Phone, MapPin, ShieldCheck, ExternalLink } from 'lucide-react';
 
-export default function RestaurantInfoModal({ info, onClose }) {
+export default function RestaurantInfoModal({ info, onClose, onOpenReviewModal }) {
   return (
     <div style={{
       position: 'fixed',
@@ -181,11 +181,14 @@ export default function RestaurantInfoModal({ info, onClose }) {
                   </a>
                 )}
 
-                {info?.google_review_url && (
-                  <a
-                    href={info.google_review_url}
-                    target="_blank"
-                    rel="noopener noreferrer"
+                {(info?.google_reviews_enabled !== false && info?.google_reviews_enabled !== 0) && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      onClose();
+                      if (onOpenReviewModal) onOpenReviewModal();
+                      else if (info?.google_review_url) window.open(info.google_review_url, '_blank');
+                    }}
                     style={{
                       display: 'inline-flex',
                       alignItems: 'center',
@@ -197,12 +200,12 @@ export default function RestaurantInfoModal({ info, onClose }) {
                       borderRadius: 'var(--radius-pill)',
                       fontSize: '0.78rem',
                       fontWeight: 800,
-                      textDecoration: 'none',
+                      cursor: 'pointer',
                       boxShadow: '0 2px 6px rgba(255, 215, 0, 0.3)'
                     }}
                   >
                     ⭐ Rate Us on Google Reviews <ExternalLink size={12} />
-                  </a>
+                  </button>
                 )}
               </div>
             </div>
