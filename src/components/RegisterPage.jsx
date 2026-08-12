@@ -419,7 +419,7 @@ export default function RegisterPage({ onRegisterSuccess }) {
                 />
               </div>
               <div style={{ fontSize: '0.7rem', color: '#9CA3AF', marginTop: '4px' }}>
-                Live Menu URL: <span style={{ color: '#34D399', fontWeight: 700 }}>touchqr.com/{liveSlug}</span>
+                Live Menu URL: <span style={{ color: '#34D399', fontWeight: 700 }}>touchqr.in/{liveSlug}</span>
               </div>
             </div>
 
