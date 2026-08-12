@@ -472,8 +472,8 @@ router.post('/orders', async (req, res) => {
 
     const result = await query(`
       INSERT INTO orders (
-        restaurant_id, table_number, customer_name, customer_phone, items, total_amount, status, created_at
-      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8) RETURNING id
+        restaurant_id, table_number, customer_name, customer_phone, items, total_amount, status, sent_to_kds, created_at
+      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9) RETURNING id
     `, [
       targetId,
       table_number || '1',
@@ -482,6 +482,7 @@ router.post('/orders', async (req, res) => {
       itemsJson,
       total_amount || 0,
       'pending',
+      0,
       createdAt
     ]);
 
@@ -610,8 +611,7 @@ router.get('/kitchen/orders', async (req, res) => {
     const orders = await query(`
       SELECT * FROM orders
       WHERE restaurant_id = $1
-        AND status IN ('kitchen', 'accepted', 'preparing')
-        AND (sent_to_kds IS NULL OR sent_to_kds != 0)
+        AND (status = 'kitchen' OR (status IN ('preparing', 'accepted') AND (sent_to_kds = 1 OR sent_to_kds IS TRUE)))
         AND (kitchen_prepared IS NULL OR kitchen_prepared = 0)
       ORDER BY id ASC LIMIT 50
     `, [targetId]);
