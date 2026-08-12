@@ -227,11 +227,29 @@ export default function AdminDashboard({ token, username, onLogout, onReturnToMe
     requestGpsPermission();
   };
 
+  const pendingLoopRef = useRef(null);
+  const activeAudioCtxRef = useRef(null);
+
+  const stopPendingAlarm = () => {
+    if (pendingLoopRef.current) {
+      clearInterval(pendingLoopRef.current);
+      pendingLoopRef.current = null;
+    }
+    if (activeAudioCtxRef.current) {
+      try {
+        activeAudioCtxRef.current.close();
+      } catch (e) {}
+      activeAudioCtxRef.current = null;
+    }
+  };
+
   const playKitchenChime = () => {
     try {
+      stopPendingAlarm();
       const AudioCtx = window.AudioContext || window.webkitAudioContext;
       if (!AudioCtx) return;
       const ctx = new AudioCtx();
+      activeAudioCtxRef.current = ctx;
       if (ctx.state === 'suspended') {
         ctx.resume();
       }
@@ -282,15 +300,6 @@ export default function AdminDashboard({ token, username, onLogout, onReturnToMe
       }
     } catch (e) {
       console.warn('Loud Kitchen Alarm error:', e);
-    }
-  };
-
-  const pendingLoopRef = useRef(null);
-
-  const stopPendingAlarm = () => {
-    if (pendingLoopRef.current) {
-      clearInterval(pendingLoopRef.current);
-      pendingLoopRef.current = null;
     }
   };
 
