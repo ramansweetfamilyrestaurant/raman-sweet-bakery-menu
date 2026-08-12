@@ -16,9 +16,9 @@ export default function KdsDisplayView({
     return () => clearInterval(timer);
   }, []);
 
-  // Filter ONLY active kitchen tickets (status === 'kitchen', sent_to_kds !== 0, kitchen_prepared !== 1)
+  // Filter active running kitchen tickets (sent_to_kds !== 0 and kitchen_prepared !== 1)
   const activeKitchenOrders = (Array.isArray(orders) ? orders : []).filter(
-    o => o.status === 'kitchen' &&
+    o => ['kitchen', 'accepted', 'pending', 'preparing'].includes(o.status) &&
          (o.sent_to_kds !== 0 && o.sent_to_kds !== false && o.sent_to_kds !== '0') &&
          (o.kitchen_prepared !== 1 && o.kitchen_prepared !== true && o.kitchen_prepared !== '1')
   );
