@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Clock, Maximize2, Minimize2, CheckCircle2, Flame, BellRing, UtensilsCrossed, AlertTriangle } from 'lucide-react';
+import { Clock, Maximize2, Minimize2, CheckCircle2, Flame, Bell, BellRing, UtensilsCrossed, AlertTriangle } from 'lucide-react';
 
 export default function KdsDisplayView({
   orders = [],
