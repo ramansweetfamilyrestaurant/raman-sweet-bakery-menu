@@ -156,6 +156,9 @@ router.get('/menu-bundle', async (req, res) => {
       filtersVis = { must_try: true, combo: true, special: true, under100: true };
     }
 
+    const planRows = await query('SELECT watermark_removal_enabled FROM saas_plans WHERE key = $1', [resto.plan_tier || 'pro']).catch(() => []);
+    const watermarkRemoval = planRows && planRows.length > 0 ? (planRows[0].watermark_removal_enabled === 1 || planRows[0].watermark_removal_enabled === true) : true;
+
     const infoObj = {
       id: resto.id,
       name: resto.name,
@@ -173,6 +176,7 @@ router.get('/menu-bundle', async (req, res) => {
       filters_visibility: filtersVis,
       currency_symbol: (resto.currency_symbol !== null && resto.currency_symbol !== undefined) ? resto.currency_symbol : '₹',
       plan_tier: resto.plan_tier || 'pro',
+      watermark_removal_enabled: watermarkRemoval,
       whatsapp_number: resto.whatsapp_number || resto.phone || '',
       active: true
     };

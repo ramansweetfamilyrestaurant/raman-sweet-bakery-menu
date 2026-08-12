@@ -87,7 +87,15 @@ export default function Footer({ info, onOpenAdmin }) {
           fontSize: '0.78rem',
           color: 'rgba(255, 255, 255, 0.6)'
         }}>
-          <span>© {new Date().getFullYear()} {info?.name || 'Digital Menu'}. All rights reserved.</span>
+          <div>© {new Date().getFullYear()} {info?.name || 'Digital Menu'}. All rights reserved.</div>
+          {!info?.watermark_removal_enabled && (
+            <div style={{ marginTop: '10px', paddingTop: '10px', borderTop: '1px solid rgba(255,255,255,0.12)', fontSize: '0.75rem', color: 'rgba(255,255,255,0.75)' }}>
+              <span>Powered by </span>
+              <a href="/" target="_blank" rel="noopener noreferrer" style={{ color: '#DFBA67', fontWeight: 800, textDecoration: 'none' }}>
+                ⚡ TouchQR — Smart Digital Menu & QR Platform
+              </a>
+            </div>
+          )}
         </div>
       </div>
     </footer>
