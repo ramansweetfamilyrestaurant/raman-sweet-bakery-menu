@@ -125,7 +125,7 @@ async function createTables() {
         items JSONB,
         total_amount DECIMAL(10, 2) NOT NULL,
         status VARCHAR(50) DEFAULT 'pending',
-        sent_to_kds INT DEFAULT 1,
+        sent_to_kds INT DEFAULT 0,
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
       );`,
 
@@ -450,7 +450,7 @@ async function createTables() {
       `ALTER TABLE saas_plans ADD COLUMN IF NOT EXISTS watermark_removal_enabled INT DEFAULT 1;`,
       `ALTER TABLE saas_plans ADD COLUMN IF NOT EXISTS custom_domain_enabled INT DEFAULT 1;`,
       `ALTER TABLE saas_plans ADD COLUMN IF NOT EXISTS dual_printer_enabled INT DEFAULT 0;`,
-      `ALTER TABLE orders ADD COLUMN IF NOT EXISTS sent_to_kds INT DEFAULT 1;`,
+      `ALTER TABLE orders ADD COLUMN IF NOT EXISTS sent_to_kds INT DEFAULT 0;`,
       `ALTER TABLE orders ADD COLUMN IF NOT EXISTS kitchen_prepared INT DEFAULT 0;`,
       `ALTER TABLE restaurants ADD COLUMN IF NOT EXISTS kds_screen_enabled INT DEFAULT 1;`
     ];
@@ -464,6 +464,13 @@ async function createTables() {
         UPDATE restaurants SET auto_debit_enabled = 0 WHERE mandate_status IS NULL OR mandate_status != 'active';
       `);
     } catch (e) { console.warn('Postgres init notice:', e.message); }
+
+    // One-time fix: reset sent_to_kds=0 for orders that are still pending/accepted (not yet sent to kitchen)
+    try {
+      await pgPool.query(`
+        UPDATE orders SET sent_to_kds = 0 WHERE status IN ('pending', 'accepted') AND sent_to_kds = 1 AND (kitchen_prepared IS NULL OR kitchen_prepared = 0);
+      `);
+    } catch (e) { console.warn('Postgres sent_to_kds reset notice:', e.message); }
   } else {
     sqliteDb.exec(`
       CREATE TABLE IF NOT EXISTS restaurants (
@@ -576,7 +583,7 @@ async function createTables() {
         items TEXT,
         total_amount REAL NOT NULL,
         status TEXT DEFAULT 'pending',
-        sent_to_kds INTEGER DEFAULT 1,
+        sent_to_kds INTEGER DEFAULT 0,
         created_at TEXT DEFAULT CURRENT_TIMESTAMP,
         FOREIGN KEY (restaurant_id) REFERENCES restaurants (id) ON DELETE CASCADE
       );
@@ -826,7 +833,7 @@ async function createTables() {
       if (!planCols.some(c => c.name === 'dual_printer_enabled')) sqliteDb.exec("ALTER TABLE saas_plans ADD COLUMN dual_printer_enabled INTEGER DEFAULT 0");
 
       const orderCols = sqliteDb.pragma("table_info(orders)");
-      if (!orderCols.some(c => c.name === 'sent_to_kds')) sqliteDb.exec("ALTER TABLE orders ADD COLUMN sent_to_kds INTEGER DEFAULT 1");
+      if (!orderCols.some(c => c.name === 'sent_to_kds')) sqliteDb.exec("ALTER TABLE orders ADD COLUMN sent_to_kds INTEGER DEFAULT 0");
       if (!orderCols.some(c => c.name === 'kitchen_prepared')) sqliteDb.exec("ALTER TABLE orders ADD COLUMN kitchen_prepared INTEGER DEFAULT 0");
 
       if (!restoCols.some(c => c.name === 'kds_screen_enabled')) sqliteDb.exec("ALTER TABLE restaurants ADD COLUMN kds_screen_enabled INTEGER DEFAULT 1");
