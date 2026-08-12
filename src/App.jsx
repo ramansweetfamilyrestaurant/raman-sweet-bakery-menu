@@ -50,7 +50,7 @@ export default function App() {
   const getInitialView = () => {
     const path = (window.location.pathname || '/').toLowerCase().replace(/\/$/, '') || '/';
     const hash = (window.location.hash || '').toLowerCase();
-    if (path.endsWith('/kitchen') || path === '/kitchen') return 'kitchen-kds';
+    if (path.includes('/kitchen')) return 'kitchen-kds';
     if (path === '/privacy-policy' || path === '/privacy') return 'privacy-policy';
     if (path === '/terms' || path === '/terms-of-service') return 'terms';
     if (path === '/refund-policy' || path === '/refunds') return 'refund-policy';
@@ -431,7 +431,7 @@ export default function App() {
     const candidate = parts[0];
     
     // Filter out system routes
-    if (['menu', 'admin', 'superadmin', 'super-admin', 'api', 'uploads', 'assets', 'register', 'billing'].includes(candidate.toLowerCase())) {
+    if (['menu', 'admin', 'superadmin', 'super-admin', 'api', 'uploads', 'assets', 'register', 'billing', 'kitchen'].includes(candidate.toLowerCase())) {
       return '';
     }
     
@@ -440,7 +440,7 @@ export default function App() {
 
   // Load Menu Data
   const loadMenuData = async (forcedSlug = '') => {
-    if (view === 'admin-dashboard' || view === 'super-admin-dashboard' || window.location.pathname.toLowerCase().includes('/admin')) {
+    if (view === 'kitchen-kds' || view === 'admin-dashboard' || view === 'super-admin-dashboard' || window.location.pathname.toLowerCase().includes('/admin') || window.location.pathname.toLowerCase().includes('/kitchen')) {
       setLoading(false);
       return;
     }
@@ -524,7 +524,7 @@ export default function App() {
   };
 
   useEffect(() => {
-    if (view === 'admin-login' || view === 'super-admin-login' || view === 'admin-dashboard' || view === 'super-admin-dashboard' || window.location.pathname.toLowerCase().includes('/admin')) {
+    if (view === 'kitchen-kds' || view === 'admin-login' || view === 'super-admin-login' || view === 'admin-dashboard' || view === 'super-admin-dashboard' || window.location.pathname.toLowerCase().includes('/admin') || window.location.pathname.toLowerCase().includes('/kitchen')) {
       setLoading(false);
     } else {
       loadMenuData();
