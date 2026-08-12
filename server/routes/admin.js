@@ -295,6 +295,7 @@ router.get('/subscription-status', authenticateToken, async (req, res) => {
       multi_language_enabled: isValTrue(saasPlan.multi_language_enabled, true),
       watermark_removal_enabled: isValTrue(saasPlan.watermark_removal_enabled, true),
       custom_domain_enabled: isValTrue(saasPlan.custom_domain_enabled, true),
+      dual_printer_enabled: isValTrue(saasPlan.dual_printer_enabled, tierKey === 'enterprise' || tierKey === 'vip_ultra_plan'),
     };
 
     const parseDate = (val) => {
