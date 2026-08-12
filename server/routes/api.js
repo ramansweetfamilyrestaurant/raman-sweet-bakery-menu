@@ -502,9 +502,15 @@ router.get('/orders/track/:id', async (req, res) => {
       return res.status(404).json({ error: 'Order not found' });
     }
     const order = orders[0];
+    let parsedItems = [];
+    if (typeof order.items === 'string') {
+      try { parsedItems = JSON.parse(order.items); } catch (e) { parsedItems = []; }
+    } else if (Array.isArray(order.items)) {
+      parsedItems = order.items;
+    }
     res.json({
       ...order,
-      items: typeof order.items === 'string' ? JSON.parse(order.items) : order.items
+      items: parsedItems
     });
   } catch (err) {
     console.error('Track order error:', err);
@@ -530,9 +536,15 @@ router.get('/orders/active-table', async (req, res) => {
     if (orders.length === 0) return res.json(null);
 
     const order = orders[0];
+    let tableItems = [];
+    if (typeof order.items === 'string') {
+      try { tableItems = JSON.parse(order.items); } catch (e) { tableItems = []; }
+    } else if (Array.isArray(order.items)) {
+      tableItems = order.items;
+    }
     res.json({
       ...order,
-      items: typeof order.items === 'string' ? JSON.parse(order.items) : order.items
+      items: tableItems
     });
   } catch (err) {
     console.error('Active table order fetch error:', err);

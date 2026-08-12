@@ -1216,10 +1216,18 @@ router.get('/orders', authenticateToken, requireActiveSubscription, async (req, 
       [targetId]
     );
 
-    const formatted = orders.map(o => ({
-      ...o,
-      items: typeof o.items === 'string' ? JSON.parse(o.items) : o.items
-    }));
+    const formatted = orders.map(o => {
+      let parsedItems = [];
+      if (typeof o.items === 'string') {
+        try { parsedItems = JSON.parse(o.items); } catch (e) { parsedItems = []; }
+      } else if (Array.isArray(o.items)) {
+        parsedItems = o.items;
+      }
+      return {
+        ...o,
+        items: parsedItems
+      };
+    });
 
     res.json(formatted);
   } catch (err) {

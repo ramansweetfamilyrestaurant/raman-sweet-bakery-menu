@@ -362,8 +362,13 @@ export default function AdminDashboard({ token, username, onLogout, onReturnToMe
 
     const headers = ['Order ID', 'Date', 'Time', 'Table No', 'Total Amount (Rs)', 'Status', 'Items Ordered'];
     const rows = orders.map(o => {
-      const itemsList = typeof o.items === 'string' ? JSON.parse(o.items) : (Array.isArray(o.items) ? o.items : []);
-      const itemSummary = itemsList.map(i => `${i.name}${i.portion ? ' (' + i.portion + ')' : ''} x${i.quantity}`).join('; ');
+      let itemsList = [];
+      if (typeof o.items === 'string') {
+        try { itemsList = JSON.parse(o.items); } catch (e) { itemsList = []; }
+      } else if (Array.isArray(o.items)) {
+        itemsList = o.items;
+      }
+      const itemSummary = (Array.isArray(itemsList) ? itemsList : []).map(i => `${i.name || 'Item'}${i.portion ? ' (' + i.portion + ')' : ''} x${i.quantity || 1}`).join('; ');
       const { date, time } = getDateParts(o.created_at);
       return [
         o.id,

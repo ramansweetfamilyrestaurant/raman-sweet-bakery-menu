@@ -183,7 +183,13 @@ export async function finalizePendingRegistration(reg_id, inputSubId = null) {
   }
 
   const regRecord = regRows[0];
-  const regData = JSON.parse(regRecord.payload);
+  let regData = {};
+  try {
+    regData = typeof regRecord.payload === 'string' ? JSON.parse(regRecord.payload) : (regRecord.payload || {});
+  } catch (err) {
+    console.error('Failed to parse registration payload:', err);
+    throw new Error('Corrupted registration session payload');
+  }
 
   // Idempotent Check: Return existing result if already finalized
   if (regRecord.created_jwt && regRecord.created_slug) {
@@ -674,7 +680,12 @@ const handleCashfreeWebhook = async (req, res) => {
     return res.status(401).json({ error: 'INVALID_SIGNATURE', message: 'Webhook signature verification failed' });
   }
 
-  const payload = typeof req.body === 'object' ? req.body : JSON.parse(rawBody || '{}');
+  let payload = {};
+  try {
+    payload = (typeof req.body === 'object' && req.body !== null) ? req.body : JSON.parse(rawBody || '{}');
+  } catch (e) {
+    payload = {};
+  }
   const eventType = payload.type || payload.event_type || 'UNKNOWN_EVENT';
   const data = payload.data || payload;
 
