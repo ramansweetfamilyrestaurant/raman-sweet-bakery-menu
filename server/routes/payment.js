@@ -5,6 +5,9 @@ import { query, withTransaction } from '../db.js';
 import { authenticateToken } from '../middleware/auth.js';
 import { createCashfreeSubscriptionSession, fetchCashfreeSubscriptionStatus, getCashfreeConfig, getCashfreeConfigAsync, verifyCashfreeWebhookSignature } from '../services/cashfree.js';
 
+const router = express.Router();
+const JWT_SECRET = process.env.JWT_SECRET || 'raman_bakery_secret_jwt_key_2026_super_secure';
+
 function getAppBaseUrl(req) {
   if (process.env.APP_BASE_URL && !process.env.APP_BASE_URL.includes('onrender.com')) {
     return process.env.APP_BASE_URL.replace(/\/$/, '');
