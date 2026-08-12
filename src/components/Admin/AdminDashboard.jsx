@@ -22,7 +22,9 @@ import ReviewView from './views/ReviewView';
 export default function AdminDashboard({ token, username, onLogout, onReturnToMenu }) {
   const getInitialAdminState = (key, fallback) => {
     try {
-      const saved = localStorage.getItem(`admin_cache_${key}`);
+      const currentSlug = localStorage.getItem('raman_admin_slug') || '';
+      if (!currentSlug) return fallback;
+      const saved = localStorage.getItem(`admin_cache_${currentSlug}_${key}`);
       return saved ? JSON.parse(saved) : fallback;
     } catch {
       return fallback;
@@ -946,10 +948,13 @@ export default function AdminDashboard({ token, username, onLogout, onReturnToMe
       setCombos(safeCombos);
 
       try {
-        localStorage.setItem('admin_cache_categories', JSON.stringify(safeCats));
-        localStorage.setItem('admin_cache_dishes', JSON.stringify(safeDishes));
-        if (infoData) localStorage.setItem('admin_cache_info', JSON.stringify(infoData));
-        localStorage.setItem('admin_cache_combos', JSON.stringify(safeCombos));
+        const currentSlug = localStorage.getItem('raman_admin_slug') || (infoData && infoData.slug) || '';
+        if (currentSlug) {
+          localStorage.setItem(`admin_cache_${currentSlug}_categories`, JSON.stringify(safeCats));
+          localStorage.setItem(`admin_cache_${currentSlug}_dishes`, JSON.stringify(safeDishes));
+          if (infoData) localStorage.setItem(`admin_cache_${currentSlug}_info`, JSON.stringify(infoData));
+          localStorage.setItem(`admin_cache_${currentSlug}_combos`, JSON.stringify(safeCombos));
+        }
       } catch (e) {}
 
       if (subStatusData) setSubscriptionStatus(subStatusData);
