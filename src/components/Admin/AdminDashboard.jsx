@@ -1556,6 +1556,13 @@ export default function AdminDashboard({ token, username, onLogout, onReturnToMe
   const occupiedTablesCount = tableGrid.filter(t => t.status === 'occupied').length;
   const serviceNeededCount = tableGrid.filter(t => t.status === 'service_needed').length;
 
+  const isAnalyticsEnabled = (
+    settingsForm.analytics_export_enabled !== false &&
+    settingsForm.analytics_export_enabled !== 0 &&
+    restaurantInfo?.analytics_export_enabled !== false &&
+    restaurantInfo?.analytics_export_enabled !== 0
+  );
+
   return (
     <div style={{ minHeight: '100vh', background: 'var(--bg-app)', paddingBottom: '70px' }}>
       <style>{`
