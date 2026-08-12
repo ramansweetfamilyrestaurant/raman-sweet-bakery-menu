@@ -158,10 +158,11 @@ router.get('/menu-bundle', async (req, res) => {
       filtersVis = { must_try: true, combo: true, special: true, under100: true };
     }
 
-    const planRows = await query('SELECT watermark_removal_enabled, custom_domain_enabled FROM saas_plans WHERE key = $1', [resto.plan_tier || 'pro']).catch(() => []);
+    const planRows = await query('SELECT watermark_removal_enabled, custom_domain_enabled, multi_language_enabled FROM saas_plans WHERE key = $1', [resto.plan_tier || 'pro']).catch(() => []);
     const saasP = (planRows && planRows.length > 0) ? planRows[0] : {};
     const watermarkRemoval = saasP.watermark_removal_enabled !== undefined ? (saasP.watermark_removal_enabled === 1 || saasP.watermark_removal_enabled === true || saasP.watermark_removal_enabled === '1') : true;
     const customDomainEnabled = saasP.custom_domain_enabled !== undefined ? (saasP.custom_domain_enabled === 1 || saasP.custom_domain_enabled === true || saasP.custom_domain_enabled === '1') : true;
+    const multiLanguageEnabled = saasP.multi_language_enabled !== undefined ? (saasP.multi_language_enabled === 1 || saasP.multi_language_enabled === true || saasP.multi_language_enabled === '1') : true;
 
     const infoObj = {
       id: resto.id,
@@ -182,6 +183,7 @@ router.get('/menu-bundle', async (req, res) => {
       plan_tier: resto.plan_tier || 'pro',
       watermark_removal_enabled: watermarkRemoval,
       custom_domain_enabled: customDomainEnabled,
+      multi_language_enabled: multiLanguageEnabled,
       custom_domain: resto.custom_domain || '',
       whatsapp_number: resto.whatsapp_number || resto.phone || '',
       active: true
@@ -251,6 +253,7 @@ router.get('/info', async (req, res) => {
     const maxCombos = saasPlan.max_combos !== undefined ? Number(saasPlan.max_combos) : (planTierKey === 'basic' ? 3 : planTierKey === 'pro' ? 10 : 9999);
     const watermarkRemovalEnabled = saasPlan.watermark_removal_enabled !== undefined ? (saasPlan.watermark_removal_enabled === 1 || saasPlan.watermark_removal_enabled === true || saasPlan.watermark_removal_enabled === '1') : true;
     const customDomainEnabled = saasPlan.custom_domain_enabled !== undefined ? (saasPlan.custom_domain_enabled === 1 || saasPlan.custom_domain_enabled === true || saasPlan.custom_domain_enabled === '1') : true;
+    const multiLanguageEnabled = saasPlan.multi_language_enabled !== undefined ? (saasPlan.multi_language_enabled === 1 || saasPlan.multi_language_enabled === true || saasPlan.multi_language_enabled === '1') : true;
 
     return res.json({
       id: resto.id,
@@ -277,6 +280,7 @@ router.get('/info', async (req, res) => {
       google_reviews_enabled: googleReviewsEnabled,
       watermark_removal_enabled: watermarkRemovalEnabled,
       custom_domain_enabled: customDomainEnabled,
+      multi_language_enabled: multiLanguageEnabled,
       max_combos: maxCombos,
       theme_color: resto.theme_color || 'gold',
       scan_count: resto.scan_count || 0,

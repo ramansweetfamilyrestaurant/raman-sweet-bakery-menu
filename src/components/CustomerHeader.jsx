@@ -24,25 +24,27 @@ export default function CustomerHeader({ info, lang, tableNum, onToggleLang, onO
         flexWrap: 'wrap',
         gap: '6px'
       }}>
-        {/* Language Switcher */}
-        <button
-          onClick={onToggleLang}
-          style={{
-            fontSize: '0.68rem',
-            fontWeight: 800,
-            color: '#FFFFFF',
-            background: 'rgba(255, 255, 255, 0.14)',
-            border: '1px solid rgba(212, 175, 55, 0.5)',
-            padding: '3px 8px',
-            borderRadius: 'var(--radius-pill)',
-            display: 'inline-flex',
-            alignItems: 'center',
-            gap: '4px'
-          }}
-        >
-          <Globe size={12} color="#D4AF37" />
-          {lang === 'hi' ? 'हिंदी' : 'EN / हिंदी'}
-        </button>
+        {/* Language Switcher (Gated by Plan matrix: multi_language_enabled) */}
+        {(info?.multi_language_enabled !== false && info?.multi_language_enabled !== 0) ? (
+          <button
+            onClick={onToggleLang}
+            style={{
+              fontSize: '0.68rem',
+              fontWeight: 800,
+              color: '#FFFFFF',
+              background: 'rgba(255, 255, 255, 0.14)',
+              border: '1px solid rgba(212, 175, 55, 0.5)',
+              padding: '3px 8px',
+              borderRadius: 'var(--radius-pill)',
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: '4px'
+            }}
+          >
+            <Globe size={12} color="#D4AF37" />
+            {lang === 'hi' ? 'हिंदी' : 'EN / हिंदी'}
+          </button>
+        ) : <div />}
 
         {/* Right Action Group: Rate Us + Table Indicator + Call Staff */}
         <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
