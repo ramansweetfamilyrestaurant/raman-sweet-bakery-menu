@@ -116,7 +116,7 @@ export default function KdsDisplayView({
           {activeKitchenOrders.map(order => {
             const elapsedMins = getElapsedMins(order.created_at);
             const isDelayed = elapsedMins >= 15;
-            const items = Array.isArray(order.items) ? order.items : [];
+            const items = Array.isArray(order.items) ? order.items : (typeof order.items === 'string' ? (() => { try { return JSON.parse(order.items); } catch(e){ return []; } })() : []);
             const hasNotes = Boolean(order.notes || order.special_instructions || order.customer_notes);
             const notesText = order.notes || order.special_instructions || order.customer_notes || '';
 

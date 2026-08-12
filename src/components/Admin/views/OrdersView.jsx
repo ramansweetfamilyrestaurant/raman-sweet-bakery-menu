@@ -23,6 +23,20 @@ export default function OrdersView({
   currencySymbol = '₹',
   ordersEnabled = true
 }) {
+  const safeParseItems = (rawItems) => {
+    if (!rawItems) return [];
+    if (Array.isArray(rawItems)) return rawItems;
+    if (typeof rawItems === 'string') {
+      try {
+        const parsed = JSON.parse(rawItems);
+        return Array.isArray(parsed) ? parsed : [];
+      } catch (e) {
+        return [];
+      }
+    }
+    return [];
+  };
+
   const validOrders = (Array.isArray(orders) ? orders : []).filter(o => o.status !== 'rejected' && o.status !== 'cancelled');
   const safeServiceRequests = Array.isArray(serviceRequests) ? serviceRequests : [];
 
@@ -210,12 +224,12 @@ export default function OrdersView({
 
                   {/* Order Items */}
                   <div style={{ fontSize: '0.84rem', background: 'var(--adm-surface-subtle)', padding: '10px 12px', borderRadius: 'var(--adm-radius-sm)', display: 'flex', flexDirection: 'column', gap: '4px' }}>
-                    {Array.isArray(order.items) ? order.items.map((item, idx) => (
+                    {safeParseItems(order.items).map((item, idx) => (
                       <div key={idx} style={{ display: 'flex', justifyContent: 'space-between' }}>
                         <span>{item.name} ×{item.quantity}</span>
                         <strong>{currencySymbol}{item.price * item.quantity}</strong>
                       </div>
-                    )) : <span>Order Items</span>}
+                    ))}
                   </div>
 
                   {/* Action Buttons Toolbar */}
@@ -360,7 +374,7 @@ export default function OrdersView({
                         <span style={{ color: 'var(--adm-danger)' }}>{currencySymbol}{t.activeOrder.total_amount}</span>
                       </div>
                       <div style={{ color: 'var(--adm-muted)', marginTop: '2px' }}>
-                        {t.activeOrder.customer_name || 'Guest'} • {Array.isArray(t.activeOrder.items) ? t.activeOrder.items.length : 1} items
+                        {t.activeOrder.customer_name || 'Guest'} • {safeParseItems(t.activeOrder.items).length} items
                       </div>
                     </div>
                   )}

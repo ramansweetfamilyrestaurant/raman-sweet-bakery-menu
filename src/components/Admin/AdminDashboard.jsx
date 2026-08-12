@@ -510,9 +510,24 @@ export default function AdminDashboard({ token, username, onLogout, onReturnToMe
     }
   };
 
+  const safeParseItems = (rawItems) => {
+    if (!rawItems) return [];
+    if (Array.isArray(rawItems)) return rawItems;
+    if (typeof rawItems === 'string') {
+      try {
+        const parsed = JSON.parse(rawItems);
+        return Array.isArray(parsed) ? parsed : [];
+      } catch (e) {
+        return [];
+      }
+    }
+    return [];
+  };
+
   // ⚡ RawBT Direct Thermal Printer ESC/POS Generator
   const generateRawBTText = (order, type = 'kot', restoInfo = {}) => {
     let text = '';
+    const orderItems = safeParseItems(order.items);
     if (type === 'kot') {
       text += "================================" + "\n";
       text += "    KITCHEN ORDER TICKET        " + "\n";
@@ -524,7 +539,7 @@ export default function AdminDashboard({ token, username, onLogout, onReturnToMe
       text += "--------------------------------" + "\n";
       text += "QTY  ITEM NAME            AMOUNT" + "\n";
       text += "--------------------------------" + "\n";
-      (order.items || []).forEach(i => {
+      orderItems.forEach(i => {
         const name = (i.name + (i.portion ? ` (${i.portion})` : '')).padEnd(20).substring(0, 20);
         const qty = String(i.quantity).padEnd(4);
         const amt = `₹${i.price * i.quantity}`.padStart(7);
@@ -554,7 +569,7 @@ export default function AdminDashboard({ token, username, onLogout, onReturnToMe
       text += "--------------------------------" + "\n";
       text += "QTY  ITEM NAME            AMOUNT" + "\n";
       text += "--------------------------------" + "\n";
-      (order.items || []).forEach(i => {
+      orderItems.forEach(i => {
         const name = (i.name + (i.portion ? ` (${i.portion})` : '')).padEnd(20).substring(0, 20);
         const qty = String(i.quantity).padEnd(4);
         const amt = `₹${i.price * i.quantity}`.padStart(7);
@@ -636,7 +651,7 @@ export default function AdminDashboard({ token, username, onLogout, onReturnToMe
 
   const getKOTHTML = (order) => {
     let itemsHtml = '';
-    (order.items || []).forEach(i => {
+    safeParseItems(order.items).forEach(i => {
       const portionText = i.portion ? ` (${i.portion})` : '';
       itemsHtml += `
         <tr>
@@ -705,7 +720,7 @@ export default function AdminDashboard({ token, username, onLogout, onReturnToMe
 
     let subtotal = 0;
     let itemsHtml = '';
-    (order.items || []).forEach(i => {
+    safeParseItems(order.items).forEach(i => {
       const portionText = i.portion ? ` (${i.portion})` : '';
       const lineTotal = Number(i.price) * Number(i.quantity);
       subtotal += lineTotal;
