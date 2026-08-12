@@ -471,14 +471,15 @@ export async function fetchAdminOrders(token) {
   return handleResponse(res, 'Failed to fetch orders');
 }
 
-export async function updateOrderStatus(id, status, token) {
+export async function updateOrderStatus(id, status, token, extraBody = {}) {
+  const payload = typeof status === 'object' ? { ...status } : { status, ...extraBody };
   const res = await fetch(`${API_BASE}/admin/orders/${id}/status`, {
     method: 'PATCH',
     headers: {
       'Content-Type': 'application/json',
       Authorization: `Bearer ${token}`
     },
-    body: JSON.stringify({ status })
+    body: JSON.stringify(payload)
   });
   return handleResponse(res, 'Failed to update order status');
 }

@@ -9,6 +9,7 @@ export default function OrdersView({
   kotFilter = 'all',
   setKotFilter,
   onUpdateStatus,
+  onOpenAcceptRouting,
   onOpenBillModal,
   serviceRequests = [],
   onResolveServiceRequest,
@@ -51,7 +52,9 @@ export default function OrdersView({
     return { tableNumber: tableNum, status, activeOrder, serviceRequest: serviceReq };
   });
 
-  const kdsEnabled = restaurantInfo?.kds_enabled !== undefined ? Boolean(restaurantInfo.kds_enabled) : true;
+  const kdsPlanEnabled = restaurantInfo?.kds_enabled !== undefined ? (restaurantInfo.kds_enabled === 1 || restaurantInfo.kds_enabled === true || restaurantInfo.kds_enabled === '1') : true;
+  const kdsScreenEnabled = restaurantInfo?.kds_screen_enabled !== undefined ? (restaurantInfo.kds_screen_enabled === 1 || restaurantInfo.kds_screen_enabled === true || restaurantInfo.kds_screen_enabled === '1') : true;
+  const kdsEnabled = kdsPlanEnabled && kdsScreenEnabled;
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
@@ -156,6 +159,11 @@ export default function OrdersView({
                       <span className={`adm-badge adm-badge-${order.status === 'pending' ? 'warning' : (order.status === 'kitchen' || order.status === 'accepted') ? 'info' : 'success'}`}>
                         {(order.status || 'PENDING').toUpperCase()}
                       </span>
+                      {order.sent_to_kds === 0 ? (
+                        <span style={{ fontSize: '0.68rem', background: '#F3E8FF', color: '#6B21A8', border: '1px solid #E9D5FF', padding: '1px 6px', borderRadius: '12px', fontWeight: 800 }}>📦 Counter Only</span>
+                      ) : order.status !== 'pending' ? (
+                        <span style={{ fontSize: '0.68rem', background: '#E0F2FE', color: '#0369A1', border: '1px solid #BAE6FD', padding: '1px 6px', borderRadius: '12px', fontWeight: 800 }}>🍳 Kitchen KDS</span>
+                      ) : null}
                       {onPreviewPrint && (
                         <button
                           onClick={() => onPreviewPrint(order, 'kot')}
@@ -195,7 +203,11 @@ export default function OrdersView({
                     <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap', alignItems: 'center' }}>
                       {order.status === 'pending' && (
                         <>
-                          <button onClick={() => onUpdateStatus(order.id, 'kitchen')} className="adm-btn adm-btn-primary adm-btn-sm" style={{ fontWeight: 800, minHeight: '44px', padding: '0 12px' }}>
+                          <button
+                            onClick={() => onOpenAcceptRouting ? onOpenAcceptRouting(order) : onUpdateStatus(order.id, 'kitchen')}
+                            className="adm-btn adm-btn-primary adm-btn-sm"
+                            style={{ fontWeight: 800, minHeight: '44px', padding: '0 12px' }}
+                          >
                             Accept to Kitchen
                           </button>
                           <button onClick={() => onUpdateStatus(order.id, 'rejected')} className="adm-btn adm-btn-danger adm-btn-sm" style={{ fontWeight: 700, minHeight: '44px', padding: '0 10px' }}>

@@ -448,7 +448,9 @@ async function createTables() {
       `ALTER TABLE saas_plans ADD COLUMN IF NOT EXISTS multi_language_enabled INT DEFAULT 1;`,
       `ALTER TABLE saas_plans ADD COLUMN IF NOT EXISTS watermark_removal_enabled INT DEFAULT 1;`,
       `ALTER TABLE saas_plans ADD COLUMN IF NOT EXISTS custom_domain_enabled INT DEFAULT 1;`,
-      `ALTER TABLE saas_plans ADD COLUMN IF NOT EXISTS dual_printer_enabled INT DEFAULT 0;`
+      `ALTER TABLE saas_plans ADD COLUMN IF NOT EXISTS dual_printer_enabled INT DEFAULT 0;`,
+      `ALTER TABLE orders ADD COLUMN IF NOT EXISTS sent_to_kds INT DEFAULT 1;`,
+      `ALTER TABLE restaurants ADD COLUMN IF NOT EXISTS kds_screen_enabled INT DEFAULT 1;`
     ];
 
     for (const alt of pgAlters) {
@@ -819,6 +821,11 @@ async function createTables() {
       if (!planCols.some(c => c.name === 'watermark_removal_enabled')) sqliteDb.exec("ALTER TABLE saas_plans ADD COLUMN watermark_removal_enabled INTEGER DEFAULT 1");
       if (!planCols.some(c => c.name === 'custom_domain_enabled')) sqliteDb.exec("ALTER TABLE saas_plans ADD COLUMN custom_domain_enabled INTEGER DEFAULT 1");
       if (!planCols.some(c => c.name === 'dual_printer_enabled')) sqliteDb.exec("ALTER TABLE saas_plans ADD COLUMN dual_printer_enabled INTEGER DEFAULT 0");
+
+      const orderCols = sqliteDb.pragma("table_info(orders)");
+      if (!orderCols.some(c => c.name === 'sent_to_kds')) sqliteDb.exec("ALTER TABLE orders ADD COLUMN sent_to_kds INTEGER DEFAULT 1");
+
+      if (!restoCols.some(c => c.name === 'kds_screen_enabled')) sqliteDb.exec("ALTER TABLE restaurants ADD COLUMN kds_screen_enabled INTEGER DEFAULT 1");
 
       sqliteDb.exec("CREATE INDEX IF NOT EXISTS idx_restaurants_active_expires ON restaurants(active, plan_expires_at)");
       sqliteDb.exec("CREATE INDEX IF NOT EXISTS idx_subscriptions_restaurant ON subscriptions(restaurant_id)");

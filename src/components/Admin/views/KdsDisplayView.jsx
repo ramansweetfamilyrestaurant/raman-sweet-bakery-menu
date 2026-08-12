@@ -16,9 +16,10 @@ export default function KdsDisplayView({
     return () => clearInterval(timer);
   }, []);
 
-  // Filter ONLY active / running orders (pending, kitchen, accepted, preparing)
+  // Filter ONLY active / running orders meant for Kitchen KDS (excludes sent_to_kds === 0 Counter Only orders)
   const activeKitchenOrders = (Array.isArray(orders) ? orders : []).filter(
-    o => o.status === 'pending' || o.status === 'kitchen' || o.status === 'accepted' || o.status === 'preparing'
+    o => (o.status === 'pending' || o.status === 'kitchen' || o.status === 'accepted' || o.status === 'preparing') &&
+         (o.sent_to_kds !== 0 && o.sent_to_kds !== false && o.sent_to_kds !== '0')
   );
 
   const toggleFullscreen = () => {

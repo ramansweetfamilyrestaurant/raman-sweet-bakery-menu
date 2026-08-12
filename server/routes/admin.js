@@ -1246,14 +1246,22 @@ router.patch('/orders/:id/status', authenticateToken, requireActiveSubscription,
     }
     const targetId = restoId || 1;
     const { id } = req.params;
-    const { status } = req.body;
+    const { status, sent_to_kds } = req.body;
 
-    await query(
-      'UPDATE orders SET status = $1 WHERE id = $2 AND restaurant_id = $3',
-      [status, id, targetId]
-    );
+    if (sent_to_kds !== undefined && sent_to_kds !== null) {
+      const kdsVal = (sent_to_kds === 1 || sent_to_kds === true || sent_to_kds === '1') ? 1 : 0;
+      await query(
+        'UPDATE orders SET status = $1, sent_to_kds = $2 WHERE id = $3 AND restaurant_id = $4',
+        [status, kdsVal, id, targetId]
+      );
+    } else {
+      await query(
+        'UPDATE orders SET status = $1 WHERE id = $2 AND restaurant_id = $3',
+        [status, id, targetId]
+      );
+    }
 
-    res.json({ success: true, id, status });
+    res.json({ success: true, id, status, sent_to_kds });
   } catch (err) {
     console.error('Update order status error:', err);
     res.status(500).json({ error: 'Failed to update order status' });

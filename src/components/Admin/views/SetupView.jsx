@@ -700,6 +700,22 @@ export default function SetupView({
             </div>
           </div>
 
+          {/* Kitchen Display System (KDS) Screen Toggle */}
+          <div style={{ padding: '14px', background: 'var(--adm-surface-subtle)', borderRadius: 'var(--adm-radius-md)', border: '1px solid var(--adm-border)' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '4px' }}>
+              <strong style={{ fontSize: '0.9rem', color: 'var(--adm-primary)' }}>🍳 Kitchen Display System (KDS Screen) Access</strong>
+              <input
+                type="checkbox"
+                checked={settingsForm.kds_screen_enabled !== false && settingsForm.kds_screen_enabled !== 0}
+                onChange={(e) => setSettingsForm({ ...settingsForm, kds_screen_enabled: e.target.checked ? 1 : 0 })}
+                style={{ width: '18px', height: '18px', cursor: 'pointer' }}
+              />
+            </div>
+            <p style={{ fontSize: '0.76rem', color: 'var(--adm-muted)', margin: 0 }}>
+              Enables the dedicated fullscreen Kitchen Display Screen tab for chef order preparation and instant completed alerts.
+            </p>
+          </div>
+
           {/* Order Retention Period */}
           <div style={{ padding: '14px', background: 'var(--adm-surface-subtle)', borderRadius: 'var(--adm-radius-md)', border: '1px solid var(--adm-border)' }}>
             <label style={{ fontSize: '0.76rem', fontWeight: 800, color: 'var(--adm-primary)', display: 'block', marginBottom: '4px' }}>ORDER HISTORY RETENTION (DAYS):</label>

@@ -52,6 +52,7 @@ export default function AdminDashboard({ token, username, onLogout, onReturnToMe
   const [serviceRequests, setServiceRequests] = useState([]);
   const [analyticsData, setAnalyticsData] = useState(null);
   const [billOrderModal, setBillOrderModal] = useState(null);
+  const [acceptRoutingModal, setAcceptRoutingModal] = useState(null); // { order, show: true }
   const [kotFilter, setKotFilter] = useState('all');
   const [prevPendingCount, setPrevPendingCount] = useState(0);
   const [restaurantInfo, setRestaurantInfo] = useState(() => getInitialAdminState('info', null));
@@ -483,9 +484,9 @@ export default function AdminDashboard({ token, username, onLogout, onReturnToMe
     return { timeStr: String(dateStr), agoStr: '' };
   };
 
-  const handleUpdateStatus = async (orderId, newStatus) => {
+  const handleUpdateStatus = async (orderId, newStatus, extraParams = {}) => {
     try {
-      await updateOrderStatus(orderId, newStatus, token);
+      await updateOrderStatus(orderId, newStatus, token, extraParams);
       if (newStatus === 'served' || newStatus === 'completed') {
         playWaiterBellChime();
         const targetOrder = orders.find(o => o.id === orderId);
@@ -496,7 +497,7 @@ export default function AdminDashboard({ token, username, onLogout, onReturnToMe
       if (newStatus === 'rejected' || newStatus === 'cancelled') {
         setOrders(prev => prev.filter(o => o.id !== orderId));
       } else {
-        setOrders(prev => prev.map(o => o.id === orderId ? { ...o, status: newStatus } : o));
+        setOrders(prev => prev.map(o => o.id === orderId ? { ...o, status: newStatus, ...extraParams } : o));
       }
     } catch (err) {
       alert(err.message || 'Failed to update order status');
@@ -902,6 +903,7 @@ export default function AdminDashboard({ token, username, onLogout, onReturnToMe
         gst_invoice_enabled: infoData.gst_invoice_enabled !== undefined ? infoData.gst_invoice_enabled : true,
         ai_review_enabled: infoData.ai_review_enabled !== undefined ? infoData.ai_review_enabled : true,
         bluetooth_kot_enabled: infoData.bluetooth_kot_enabled !== undefined ? infoData.bluetooth_kot_enabled : true,
+        kds_screen_enabled: infoData.kds_screen_enabled !== undefined ? infoData.kds_screen_enabled : 1,
         dual_printer_enabled: (infoData.dual_printer_enabled ?? infoData.permissions?.dual_printer_enabled) !== undefined ? (infoData.dual_printer_enabled ?? infoData.permissions?.dual_printer_enabled) === 1 || (infoData.dual_printer_enabled ?? infoData.permissions?.dual_printer_enabled) === true || (infoData.dual_printer_enabled ?? infoData.permissions?.dual_printer_enabled) === '1' : (infoData.plan_tier === 'enterprise' || infoData.plan_tier === 'vip_ultra_plan'),
         filters_visibility: { ...defaultVis, ...infoData.filters_visibility }
       };
@@ -922,6 +924,7 @@ export default function AdminDashboard({ token, username, onLogout, onReturnToMe
       gst_invoice_enabled: true,
       ai_review_enabled: true,
       bluetooth_kot_enabled: true,
+      kds_screen_enabled: 1,
       dual_printer_enabled: false,
       filters_visibility: defaultVis
     };
@@ -1069,6 +1072,7 @@ export default function AdminDashboard({ token, username, onLogout, onReturnToMe
           gst_invoice_enabled: infoData.gst_invoice_enabled !== undefined ? infoData.gst_invoice_enabled : true,
           ai_review_enabled: infoData.ai_review_enabled !== undefined ? infoData.ai_review_enabled : true,
           bluetooth_kot_enabled: infoData.bluetooth_kot_enabled !== undefined ? infoData.bluetooth_kot_enabled : true,
+          kds_screen_enabled: infoData.kds_screen_enabled !== undefined ? infoData.kds_screen_enabled : 1,
           dual_printer_enabled: (infoData.dual_printer_enabled ?? infoData.permissions?.dual_printer_enabled) !== undefined ? (infoData.dual_printer_enabled ?? infoData.permissions?.dual_printer_enabled) === 1 || (infoData.dual_printer_enabled ?? infoData.permissions?.dual_printer_enabled) === true || (infoData.dual_printer_enabled ?? infoData.permissions?.dual_printer_enabled) === '1' : (infoData.plan_tier === 'enterprise' || infoData.plan_tier === 'vip_ultra_plan'),
           filters_visibility: { ...defaultVis, ...infoData.filters_visibility }
         });
@@ -1876,6 +1880,7 @@ export default function AdminDashboard({ token, username, onLogout, onReturnToMe
                 kotFilter={kotFilter}
                 setKotFilter={setKotFilter}
                 onUpdateStatus={handleUpdateStatus}
+                onOpenAcceptRouting={(order) => setAcceptRoutingModal(order)}
                 onOpenBillModal={setBillOrderModal}
                 onPrintBill={(order) => handlePrintCustomerBill(order, 'CASH')}
                 serviceRequests={serviceRequests}
@@ -2075,6 +2080,116 @@ export default function AdminDashboard({ token, username, onLogout, onReturnToMe
                 background: 'linear-gradient(135deg, #FFD700, #F59E0B)', color: '#0A0A0A',
                 fontWeight: 900, cursor: 'pointer', boxShadow: '0 4px 14px rgba(245,158,11,0.4)'
               }}>🚀 Upgrade Plan</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* 🍳 Accept Order & Kitchen KDS Routing Modal */}
+      {acceptRoutingModal && (
+        <div style={{
+          position: 'fixed',
+          top: 0, left: 0, right: 0, bottom: 0,
+          background: 'rgba(15, 23, 42, 0.75)',
+          backdropFilter: 'blur(6px)',
+          zIndex: 10025,
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          padding: '16px'
+        }}>
+          <div style={{
+            background: '#FFFFFF',
+            borderRadius: '20px',
+            maxWidth: '440px',
+            width: '100%',
+            padding: '24px',
+            boxShadow: '0 20px 40px rgba(0,0,0,0.3)',
+            display: 'flex',
+            flexDirection: 'column',
+            gap: '16px'
+          }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <strong style={{ fontSize: '1.15rem', color: 'var(--adm-primary)' }}>
+                🍳 Accept Order & KDS Routing
+              </strong>
+              <button
+                onClick={() => setAcceptRoutingModal(null)}
+                style={{ background: 'none', border: 'none', fontSize: '1.2rem', cursor: 'pointer', color: 'var(--adm-muted)' }}
+              >
+                ✕
+              </button>
+            </div>
+
+            <div style={{ background: 'var(--adm-surface-subtle)', padding: '12px 14px', borderRadius: '12px', border: '1px solid var(--adm-border)' }}>
+              <div style={{ fontWeight: 800, fontSize: '0.95rem', color: 'var(--adm-primary)' }}>
+                Table #{acceptRoutingModal.table_number || 'Takeaway'} • Order #{acceptRoutingModal.id}
+              </div>
+              <div style={{ fontSize: '0.78rem', color: 'var(--adm-muted)', marginTop: '2px' }}>
+                Customer: {acceptRoutingModal.customer_name || 'Dine-In Guest'} • Total: {settingsForm.currency_symbol || '₹'}{acceptRoutingModal.total_amount}
+              </div>
+            </div>
+
+            <p style={{ fontSize: '0.82rem', color: 'var(--adm-text)', margin: 0, fontWeight: 700 }}>
+              Where would you like to route this order for preparation?
+            </p>
+
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+              <button
+                onClick={async () => {
+                  const targetId = acceptRoutingModal.id;
+                  setAcceptRoutingModal(null);
+                  await handleUpdateStatus(targetId, 'kitchen', { sent_to_kds: 1 });
+                }}
+                style={{
+                  padding: '14px',
+                  borderRadius: '12px',
+                  background: 'linear-gradient(135deg, #0F172A 0%, #1E293B 100%)',
+                  color: '#38BDF8',
+                  border: '1px solid #38BDF8',
+                  fontWeight: 900,
+                  fontSize: '0.92rem',
+                  cursor: 'pointer',
+                  textAlign: 'left',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '10px'
+                }}
+              >
+                <span style={{ fontSize: '1.4rem' }}>🍳</span>
+                <div>
+                  <strong style={{ display: 'block', color: '#F8FAFC' }}>Send to Kitchen KDS Screen</strong>
+                  <span style={{ fontSize: '0.74rem', color: '#94A3B8', fontWeight: 600 }}>Hot food, freshly cooked dishes for Chef Display</span>
+                </div>
+              </button>
+
+              <button
+                onClick={async () => {
+                  const targetId = acceptRoutingModal.id;
+                  setAcceptRoutingModal(null);
+                  await handleUpdateStatus(targetId, 'kitchen', { sent_to_kds: 0 });
+                }}
+                style={{
+                  padding: '14px',
+                  borderRadius: '12px',
+                  background: 'var(--adm-surface-subtle)',
+                  color: 'var(--adm-primary)',
+                  border: '1px solid var(--adm-border)',
+                  fontWeight: 800,
+                  fontSize: '0.92rem',
+                  cursor: 'pointer',
+                  textAlign: 'left',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '10px'
+                }}
+              >
+                <span style={{ fontSize: '1.4rem' }}>📦</span>
+                <div>
+                  <strong style={{ display: 'block' }}>Counter / Direct Fulfillment</strong>
+                  <span style={{ fontSize: '0.74rem', color: 'var(--adm-muted)', fontWeight: 600 }}>Ready sweets, bakery, packaged items (Skips Kitchen KDS)</span>
+                </div>
+              </button>
             </div>
           </div>
         </div>

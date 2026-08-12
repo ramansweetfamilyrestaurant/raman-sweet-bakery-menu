@@ -314,6 +314,7 @@ router.get('/info', async (req, res) => {
       total_tables: resto.total_tables !== undefined && resto.total_tables !== null ? Number(resto.total_tables) : 0,
       order_retention_days: resto.order_retention_days || 7,
       custom_domain: resto.custom_domain || '',
+      kds_screen_enabled: resto.kds_screen_enabled !== undefined && resto.kds_screen_enabled !== null ? Number(resto.kds_screen_enabled) : 1,
       active: true
     });
   } catch (err) {
