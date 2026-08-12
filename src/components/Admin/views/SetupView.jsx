@@ -726,65 +726,80 @@ export default function SetupView({
               Supports 58mm & 80mm ESC/POS Bluetooth, USB, and RawBT silent thermal printers for Kitchen KOT & Customer Receipts.
             </p>
 
-            <div>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '4px' }}>
-                <label style={{ fontSize: '0.74rem', fontWeight: 800, color: 'var(--adm-primary)', margin: 0 }}>
-                  PRINTER ROUTING MODE:
-                </label>
-                {!(settingsForm?.dual_printer_enabled !== false && settingsForm?.dual_printer_enabled !== 0) && (
-                  <span style={{ fontSize: '0.68rem', fontWeight: 800, color: '#B45309', background: '#FEF3C7', border: '1px solid #F59E0B', padding: '1px 7px', borderRadius: 'var(--radius-pill)' }}>
-                    🔒 Enterprise Dual Printer Feature
-                  </span>
-                )}
-              </div>
-              <select
-                value={settingsForm.printer_mode || 'single'}
-                onChange={(e) => {
-                  const val = e.target.value;
-                  const isDualPermitted = settingsForm?.dual_printer_enabled !== false && settingsForm?.dual_printer_enabled !== 0;
-                  if (val === 'dual' && !isDualPermitted) {
-                    alert('🔒 Dual Separate Printers (Kitchen + Counter) is locked on your current plan. Please upgrade your SaaS subscription plan to Enterprise / VIP Ultra to activate Dual Printer Routing!');
-                    return;
-                  }
-                  setSettingsForm({ ...settingsForm, printer_mode: val });
-                }}
-                style={{ width: '100%', padding: '8px 10px', borderRadius: 'var(--adm-radius-md)', border: '1px solid var(--adm-border)', fontSize: '0.85rem' }}
-              >
-                <option value="single">🟢 Single Printer (Same Printer for KOT & Customer Bill)</option>
-                <option value="dual" disabled={!(settingsForm?.dual_printer_enabled !== false && settingsForm?.dual_printer_enabled !== 0)}>
-                  ⚡ Dual Separate Printers (Kitchen KOT + Counter Bill Printers) {!(settingsForm?.dual_printer_enabled !== false && settingsForm?.dual_printer_enabled !== 0) ? '🔒 (Enterprise Upgrade Required)' : ''}
-                </option>
-              </select>
-            </div>
+            {(() => {
+              const isDualAllowed = Boolean(
+                settingsForm?.dual_printer_enabled === 1 ||
+                settingsForm?.dual_printer_enabled === true ||
+                settingsForm?.dual_printer_enabled === '1'
+              );
 
-            {settingsForm.printer_mode === 'dual' && (settingsForm?.dual_printer_enabled !== false && settingsForm?.dual_printer_enabled !== 0) && (
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', padding: '10px', background: 'var(--adm-surface)', borderRadius: 'var(--adm-radius-md)', border: '1px dashed var(--adm-accent)' }}>
-                <div>
-                  <label style={{ fontSize: '0.72rem', fontWeight: 800, color: 'var(--adm-muted)', display: 'block', marginBottom: '2px' }}>
-                    🍳 KITCHEN KOT PRINTER NAME / IP:
-                  </label>
-                  <input
-                    type="text"
-                    placeholder="e.g. Kitchen_KOT or 192.168.1.200"
-                    value={settingsForm.kot_printer_target || ''}
-                    onChange={(e) => setSettingsForm({ ...settingsForm, kot_printer_target: e.target.value })}
-                    style={{ width: '100%', padding: '6px 10px', borderRadius: 'var(--adm-radius-md)', border: '1px solid var(--adm-border)', fontSize: '0.82rem' }}
-                  />
-                </div>
-                <div>
-                  <label style={{ fontSize: '0.72rem', fontWeight: 800, color: 'var(--adm-muted)', display: 'block', marginBottom: '2px' }}>
-                    🧾 COUNTER BILL PRINTER NAME / IP:
-                  </label>
-                  <input
-                    type="text"
-                    placeholder="e.g. Counter_Bill or 192.168.1.201"
-                    value={settingsForm.bill_printer_target || ''}
-                    onChange={(e) => setSettingsForm({ ...settingsForm, bill_printer_target: e.target.value })}
-                    style={{ width: '100%', padding: '6px 10px', borderRadius: 'var(--adm-radius-md)', border: '1px solid var(--adm-border)', fontSize: '0.82rem' }}
-                  />
-                </div>
-              </div>
-            )}
+              return (
+                <>
+                  <div>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '4px' }}>
+                      <label style={{ fontSize: '0.74rem', fontWeight: 800, color: 'var(--adm-primary)', margin: 0 }}>
+                        PRINTER ROUTING MODE:
+                      </label>
+                      {!isDualAllowed && (
+                        <span style={{ fontSize: '0.68rem', fontWeight: 800, color: '#B45309', background: '#FEF3C7', border: '1px solid #F59E0B', padding: '1px 7px', borderRadius: 'var(--radius-pill)' }}>
+                          🔒 Enterprise Feature
+                        </span>
+                      )}
+                    </div>
+
+                    <select
+                      value={isDualAllowed ? (settingsForm.printer_mode || 'single') : 'single'}
+                      onChange={(e) => {
+                        if (!isDualAllowed) return;
+                        setSettingsForm({ ...settingsForm, printer_mode: e.target.value });
+                      }}
+                      disabled={!isDualAllowed}
+                      style={{ width: '100%', padding: '8px 10px', borderRadius: 'var(--adm-radius-md)', border: '1px solid var(--adm-border)', fontSize: '0.85rem', opacity: isDualAllowed ? 1 : 0.8 }}
+                    >
+                      <option value="single">🟢 Single Printer (Same Printer for KOT & Customer Bill)</option>
+                      {isDualAllowed && (
+                        <option value="dual">⚡ Dual Separate Printers (Kitchen KOT + Counter Bill Printers)</option>
+                      )}
+                    </select>
+                  </div>
+
+                  {!isDualAllowed && (
+                    <div style={{ padding: '10px 12px', background: '#FEF3C7', borderRadius: 'var(--adm-radius-md)', border: '1px solid #F59E0B', fontSize: '0.74rem', color: '#92400E', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                      <span>🔒 <strong>Dual Separate Printers (Kitchen KOT + Counter Bill)</strong> is disabled on your current plan. Upgrade to Enterprise Plan in SuperAdmin to unlock Dual Printer Routing.</span>
+                    </div>
+                  )}
+
+                  {isDualAllowed && settingsForm.printer_mode === 'dual' && (
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', padding: '10px', background: 'var(--adm-surface)', borderRadius: 'var(--adm-radius-md)', border: '1px dashed var(--adm-accent)' }}>
+                      <div>
+                        <label style={{ fontSize: '0.72rem', fontWeight: 800, color: 'var(--adm-muted)', display: 'block', marginBottom: '2px' }}>
+                          🍳 KITCHEN KOT PRINTER NAME / IP:
+                        </label>
+                        <input
+                          type="text"
+                          placeholder="e.g. Kitchen_KOT or 192.168.1.200"
+                          value={settingsForm.kot_printer_target || ''}
+                          onChange={(e) => setSettingsForm({ ...settingsForm, kot_printer_target: e.target.value })}
+                          style={{ width: '100%', padding: '6px 10px', borderRadius: 'var(--adm-radius-md)', border: '1px solid var(--adm-border)', fontSize: '0.82rem' }}
+                        />
+                      </div>
+                      <div>
+                        <label style={{ fontSize: '0.72rem', fontWeight: 800, color: 'var(--adm-muted)', display: 'block', marginBottom: '2px' }}>
+                          🧾 COUNTER BILL PRINTER NAME / IP:
+                        </label>
+                        <input
+                          type="text"
+                          placeholder="e.g. Counter_Bill or 192.168.1.201"
+                          value={settingsForm.bill_printer_target || ''}
+                          onChange={(e) => setSettingsForm({ ...settingsForm, bill_printer_target: e.target.value })}
+                          style={{ width: '100%', padding: '6px 10px', borderRadius: 'var(--adm-radius-md)', border: '1px solid var(--adm-border)', fontSize: '0.82rem' }}
+                        />
+                      </div>
+                    </div>
+                  )}
+                </>
+              );
+            })()}
 
             <button onClick={() => { setOpenDrawer(null); setShowPrinterModal(true); }} className="adm-btn adm-btn-secondary adm-btn-sm" style={{ width: '100%' }}>
               <Printer size={15} /> Open Printer Pairing & Bluetooth Setup Guide
