@@ -608,9 +608,14 @@ router.get('/kitchen/orders', async (req, res) => {
     const targetId = resto.id;
 
     // Check SaaS Plan Permission Matrix for kds_enabled
-    const planRows = await query('SELECT * FROM saas_plans WHERE key = $1', [resto.plan_type || 'basic']);
+    const planKey = resto.plan_tier || resto.plan_type || 'pro';
+    const planRows = await query('SELECT * FROM saas_plans WHERE key = $1', [planKey]);
     const saasPlan = planRows && planRows.length > 0 ? planRows[0] : {};
-    const kdsEnabled = saasPlan.kds_enabled !== undefined ? (saasPlan.kds_enabled === 1 || saasPlan.kds_enabled === true || saasPlan.kds_enabled === '1') : true;
+    
+    // Default to true if undefined so active restaurants have KDS ON by default
+    const kdsEnabled = saasPlan.kds_enabled !== undefined && saasPlan.kds_enabled !== null
+      ? (saasPlan.kds_enabled === 1 || saasPlan.kds_enabled === true || saasPlan.kds_enabled === '1')
+      : true;
 
     if (!kdsEnabled) {
       return res.status(403).json({
