@@ -1251,55 +1251,32 @@ router.patch('/orders/:id/status', authenticateToken, requireActiveSubscription,
     const numericId = parseInt(id, 10);
     const orderId = isNaN(numericId) ? id : numericId;
 
-    if (kitchen_prepared !== undefined && kitchen_prepared !== null) {
-      const prepVal = (kitchen_prepared === 1 || kitchen_prepared === true || kitchen_prepared === '1') ? 1 : 0;
-      try {
-        await query(
-          'UPDATE orders SET status = $1, kitchen_prepared = $2 WHERE id = $3',
-          [status, prepVal, orderId]
-        );
-      } catch (colErr) {
-        console.warn('Auto-healing kitchen_prepared column:', colErr.message);
-        try {
-          await query('ALTER TABLE orders ADD COLUMN kitchen_prepared INT DEFAULT 0');
-        } catch (e1) {
-          try { await query('ALTER TABLE orders ADD COLUMN kitchen_prepared INTEGER DEFAULT 0'); } catch (e2) {}
-        }
-        await query(
-          'UPDATE orders SET status = $1, kitchen_prepared = $2 WHERE id = $3',
-          [status, prepVal, orderId]
-        );
-      }
-    } else if (sent_to_kds !== undefined && sent_to_kds !== null) {
-      const kdsVal = (sent_to_kds === 1 || sent_to_kds === true || sent_to_kds === '1') ? 1 : 0;
-      try {
-        await query(
-          'UPDATE orders SET status = $1, sent_to_kds = $2 WHERE id = $3',
-          [status, kdsVal, orderId]
-        );
-      } catch (colErr) {
-        console.warn('Auto-healing sent_to_kds column:', colErr.message);
-        try {
-          await query('ALTER TABLE orders ADD COLUMN sent_to_kds INT DEFAULT 1');
-        } catch (e1) {
-          try { await query('ALTER TABLE orders ADD COLUMN sent_to_kds INTEGER DEFAULT 1'); } catch (e2) {}
-        }
-        await query(
-          'UPDATE orders SET status = $1, sent_to_kds = $2 WHERE id = $3',
-          [status, kdsVal, orderId]
-        );
-      }
-    } else {
+    let kdsVal = (sent_to_kds === 1 || sent_to_kds === true || sent_to_kds === '1' || status === 'kitchen') ? 1 : 0;
+    if (status === 'accepted' && (sent_to_kds === 0 || sent_to_kds === '0')) {
+      kdsVal = 0;
+    }
+
+    let prepVal = (kitchen_prepared === 1 || kitchen_prepared === true || kitchen_prepared === '1') ? 1 : 0;
+
+    try {
       await query(
-        'UPDATE orders SET status = $1 WHERE id = $2',
-        [status, orderId]
+        'UPDATE orders SET status = $1, sent_to_kds = $2, kitchen_prepared = $3 WHERE id = $4',
+        [status, kdsVal, prepVal, orderId]
+      );
+    } catch (colErr) {
+      console.warn('Auto-healing columns in orders table:', colErr.message);
+      try { await query('ALTER TABLE orders ADD COLUMN sent_to_kds INT DEFAULT 0'); } catch (e1) {}
+      try { await query('ALTER TABLE orders ADD COLUMN kitchen_prepared INT DEFAULT 0'); } catch (e2) {}
+      await query(
+        'UPDATE orders SET status = $1, sent_to_kds = $2, kitchen_prepared = $3 WHERE id = $4',
+        [status, kdsVal, prepVal, orderId]
       );
     }
 
-    res.json({ success: true, id: orderId, status, sent_to_kds, kitchen_prepared });
+    res.json({ success: true, id: orderId, status, sent_to_kds: kdsVal, kitchen_prepared: prepVal });
   } catch (err) {
     console.error('Update order status error:', err);
-    res.status(500).json({ error: err.message || 'Failed to update order status' });
+    res.status(500).json({ error: 'Failed to update order status' });
   }
 });
 
