@@ -236,26 +236,28 @@ export default function AdminDashboard({ token, username, onLogout, onReturnToMe
         ctx.resume();
       }
 
-      // 🚨 Super Loud Zomato/Swiggy Style 6-Cycle Emergency Order Siren Ringtone 🚨
+      // 🚨 Super Loud Zomato/Swiggy Style 8-Cycle Emergency Order Siren Ringtone 🚨
       const pulses = [
-        { freq1: 1050, freq2: 1550, start: 0.0 },
-        { freq1: 1250, freq2: 1750, start: 0.35 },
-        { freq1: 1050, freq2: 1550, start: 0.70 },
-        { freq1: 1400, freq2: 1950, start: 1.05 },
-        { freq1: 1250, freq2: 1750, start: 1.40 },
-        { freq1: 1550, freq2: 2100, start: 1.75 }
+        { freq1: 1050, freq2: 1650, start: 0.0 },
+        { freq1: 1350, freq2: 1850, start: 0.30 },
+        { freq1: 1050, freq2: 1650, start: 0.60 },
+        { freq1: 1450, freq2: 2050, start: 0.90 },
+        { freq1: 1250, freq2: 1750, start: 1.20 },
+        { freq1: 1550, freq2: 2150, start: 1.50 },
+        { freq1: 1350, freq2: 1850, start: 1.80 },
+        { freq1: 1650, freq2: 2250, start: 2.10 }
       ];
 
       pulses.forEach(p => {
         const t = ctx.currentTime + p.start;
 
-        // Sharp Piercing Siren Tone 1 (Sawtooth)
+        // Piercing Siren Tone 1 (Sawtooth)
         const osc1 = ctx.createOscillator();
         const gain1 = ctx.createGain();
         osc1.type = 'sawtooth';
         osc1.frequency.setValueAtTime(p.freq1, t);
         osc1.frequency.linearRampToValueAtTime(p.freq2, t + 0.14);
-        gain1.gain.setValueAtTime(0.8, t);
+        gain1.gain.setValueAtTime(1.0, t);
         gain1.gain.exponentialRampToValueAtTime(0.001, t + 0.28);
         osc1.connect(gain1);
         gain1.connect(ctx.destination);
@@ -266,15 +268,18 @@ export default function AdminDashboard({ token, username, onLogout, onReturnToMe
         const osc2 = ctx.createOscillator();
         const gain2 = ctx.createGain();
         osc2.type = 'square';
-        osc2.frequency.setValueAtTime(p.freq2, t + 0.12);
-        osc2.frequency.linearRampToValueAtTime(p.freq1, t + 0.26);
-        gain2.gain.setValueAtTime(0.7, t + 0.12);
-        gain2.gain.exponentialRampToValueAtTime(0.001, t + 0.30);
+        osc2.frequency.setValueAtTime(p.freq2, t + 0.10);
+        osc2.frequency.linearRampToValueAtTime(p.freq1, t + 0.24);
+        gain2.gain.setValueAtTime(0.9, t + 0.10);
+        gain2.gain.exponentialRampToValueAtTime(0.001, t + 0.28);
         osc2.connect(gain2);
         gain2.connect(ctx.destination);
-        osc2.start(t + 0.12);
-        osc2.stop(t + 0.30);
+        osc2.start(t + 0.10);
+        osc2.stop(t + 0.28);
       });
+      if ('vibrate' in navigator) {
+        navigator.vibrate([400, 200, 400, 200, 600]);
+      }
     } catch (e) {
       console.warn('Loud Kitchen Alarm error:', e);
     }
@@ -317,7 +322,7 @@ export default function AdminDashboard({ token, username, onLogout, onReturnToMe
     try {
       if ('Notification' in window && Notification.permission === 'granted') {
         const notif = new Notification('🛎️ NEW LIVE ORDER RECEIVED!', {
-          body: `You have ${count} new pending order(s)! Click to view order details & print KOT.`,
+          body: `You have ${count} active pending/kitchen order(s)! Click to view order details & print KOT.`,
           icon: '/favicon.svg',
           badge: '/favicon.svg',
           tag: 'new-order',
@@ -371,12 +376,13 @@ export default function AdminDashboard({ token, username, onLogout, onReturnToMe
       const safeData = Array.isArray(data) ? data : [];
       const safeReqs = Array.isArray(reqsData) ? reqsData : [];
 
-      const pendingCount = safeData.filter(o => o.status === 'pending').length + safeReqs.length;
-      if (pendingCount > prevPendingCount) {
+      // Total active live orders (pending + kitchen + accepted) + waiter calls
+      const activeOrderCount = safeData.filter(o => ['pending', 'kitchen', 'accepted', 'preparing'].includes(o.status)).length + safeReqs.length;
+      if (activeOrderCount > prevPendingCount) {
         playKitchenChime();
-        triggerBackgroundNotification(pendingCount);
+        triggerBackgroundNotification(activeOrderCount);
       }
-      setPrevPendingCount(pendingCount);
+      setPrevPendingCount(activeOrderCount);
 
       // 🛎️ Cross-device/Cross-tab detection: check if any order newly became kitchen_prepared === 1
       setOrders(prevOrders => {
@@ -534,21 +540,21 @@ export default function AdminDashboard({ token, username, onLogout, onReturnToMe
       await updateOrderStatus(orderId, newStatus, token, extraParams);
       if (extraParams.kitchen_prepared === 1) {
         playWaiterBellChime();
-        const targetOrder = orders.find(o => o.id === orderId);
+        const targetOrder = orders.find(o => String(o.id) === String(orderId));
         const tblNum = targetOrder?.table_number ? `Table #${targetOrder.table_number}` : `Order #${orderId}`;
         setToastMessage(`🛎️ ${tblNum} Food is PREPARED in Kitchen! Ready to Serve.`);
         setTimeout(() => setToastMessage(''), 5000);
       } else if (newStatus === 'served' || newStatus === 'completed') {
         playWaiterBellChime();
-        const targetOrder = orders.find(o => o.id === orderId);
+        const targetOrder = orders.find(o => String(o.id) === String(orderId));
         const tblNum = targetOrder?.table_number ? `Table #${targetOrder.table_number}` : `Order #${orderId}`;
         setToastMessage(`🛎️ ${tblNum} Marked ${newStatus.toUpperCase()}`);
         setTimeout(() => setToastMessage(''), 4000);
       }
       if (newStatus === 'rejected' || newStatus === 'cancelled') {
-        setOrders(prev => prev.filter(o => o.id !== orderId));
+        setOrders(prev => prev.filter(o => String(o.id) !== String(orderId)));
       } else {
-        setOrders(prev => prev.map(o => o.id === orderId ? { ...o, status: newStatus, ...extraParams } : o));
+        setOrders(prev => prev.map(o => String(o.id) === String(orderId) ? { ...o, status: newStatus, ...extraParams } : o));
       }
     } catch (err) {
       alert(err.message || 'Failed to update order status');

@@ -20,18 +20,53 @@ export default function StandaloneKdsPage({ slug = '' }) {
       const ctx = new AudioCtx();
       if (ctx.state === 'suspended') ctx.resume();
 
-      const osc = ctx.createOscillator();
-      const gain = ctx.createGain();
-      osc.type = 'sawtooth';
-      osc.frequency.setValueAtTime(1050, ctx.currentTime);
-      osc.frequency.linearRampToValueAtTime(1550, ctx.currentTime + 0.3);
-      gain.gain.setValueAtTime(0.8, ctx.currentTime);
-      gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.5);
-      osc.connect(gain);
-      gain.connect(ctx.destination);
-      osc.start(ctx.currentTime);
-      osc.stop(ctx.currentTime + 0.5);
-    } catch (e) {}
+      // 🚨 Super Loud Zomato/Swiggy Style 8-Cycle Emergency Order Siren Ringtone 🚨
+      const pulses = [
+        { freq1: 1050, freq2: 1650, start: 0.0 },
+        { freq1: 1350, freq2: 1850, start: 0.30 },
+        { freq1: 1050, freq2: 1650, start: 0.60 },
+        { freq1: 1450, freq2: 2050, start: 0.90 },
+        { freq1: 1250, freq2: 1750, start: 1.20 },
+        { freq1: 1550, freq2: 2150, start: 1.50 },
+        { freq1: 1350, freq2: 1850, start: 1.80 },
+        { freq1: 1650, freq2: 2250, start: 2.10 }
+      ];
+
+      pulses.forEach(p => {
+        const t = ctx.currentTime + p.start;
+
+        // Piercing Siren Tone 1 (Sawtooth)
+        const osc1 = ctx.createOscillator();
+        const gain1 = ctx.createGain();
+        osc1.type = 'sawtooth';
+        osc1.frequency.setValueAtTime(p.freq1, t);
+        osc1.frequency.linearRampToValueAtTime(p.freq2, t + 0.14);
+        gain1.gain.setValueAtTime(1.0, t);
+        gain1.gain.exponentialRampToValueAtTime(0.001, t + 0.28);
+        osc1.connect(gain1);
+        gain1.connect(ctx.destination);
+        osc1.start(t);
+        osc1.stop(t + 0.28);
+
+        // High Alarm Resonance Tone 2 (Square)
+        const osc2 = ctx.createOscillator();
+        const gain2 = ctx.createGain();
+        osc2.type = 'square';
+        osc2.frequency.setValueAtTime(p.freq2, t + 0.10);
+        osc2.frequency.linearRampToValueAtTime(p.freq1, t + 0.24);
+        gain2.gain.setValueAtTime(0.9, t + 0.10);
+        gain2.gain.exponentialRampToValueAtTime(0.001, t + 0.28);
+        osc2.connect(gain2);
+        gain2.connect(ctx.destination);
+        osc2.start(t + 0.10);
+        osc2.stop(t + 0.28);
+      });
+      if ('vibrate' in navigator) {
+        navigator.vibrate([400, 200, 400, 200, 600]);
+      }
+    } catch (e) {
+      console.warn('Standalone KDS Siren error:', e);
+    }
   };
 
   const [notFound, setNotFound] = useState(false);
