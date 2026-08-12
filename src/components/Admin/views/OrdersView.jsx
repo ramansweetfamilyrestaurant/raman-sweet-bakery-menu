@@ -87,9 +87,11 @@ export default function OrdersView({
     );
   }
 
+  const isPrep = (val) => val === 1 || val === '1' || val === true;
+
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-      {/* Header with Quick Stat Counters */}
+    <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
+      {/* Header Controls */}
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '10px' }}>
         <div>
           <h2 style={{ fontSize: '1.25rem', fontWeight: 900, color: 'var(--adm-primary)', margin: '0 0 2px 0' }}>
@@ -192,7 +194,7 @@ export default function OrdersView({
                       <span className={`adm-badge adm-badge-${order.status === 'pending' ? 'warning' : (order.status === 'kitchen' || order.status === 'accepted') ? 'info' : 'success'}`}>
                         {(order.status || 'PENDING').toUpperCase()}
                       </span>
-                      {order.kitchen_prepared === 1 ? (
+                      {isPrep(order.kitchen_prepared) ? (
                         <span style={{ fontSize: '0.68rem', background: '#DCFCE7', color: '#15803D', border: '1px solid #86EFAC', padding: '2px 8px', borderRadius: '12px', fontWeight: 900, boxShadow: '0 0 10px rgba(34, 197, 94, 0.3)' }}>
                           🍳 PREPARED IN KITCHEN
                         </span>
@@ -272,7 +274,7 @@ export default function OrdersView({
                       )}
                       {order.status === 'kitchen' && (
                         <>
-                          {order.kitchen_prepared !== 1 && (
+                          {!isPrep(order.kitchen_prepared) && (
                             <button
                               onClick={() => onUpdateStatus(order.id, 'kitchen', { kitchen_prepared: 1, silent: true })}
                               className="adm-btn adm-btn-secondary adm-btn-sm"
