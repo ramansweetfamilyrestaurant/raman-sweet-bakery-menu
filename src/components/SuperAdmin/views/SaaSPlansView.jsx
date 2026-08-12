@@ -148,7 +148,6 @@ export default function SaaSPlansView({ token }) {
     { key: 'bluetooth_kot_enabled', label: 'Bluetooth KOT & Thermal Printing' },
     { key: 'google_reviews_enabled', label: 'Google Review Collector' },
     { key: 'ai_review_enabled', label: '🤖 Google Review AI Auto-Reply Assistant' },
-    { key: 'stories_enabled', label: 'Category Stories & Video Banners' },
     { key: 'gst_invoice_enabled', label: 'GST Invoice & Custom Tax Receipt' },
     { key: 'analytics_export_enabled', label: 'Advanced Sales Analytics & CSV Export' },
     { key: 'multi_language_enabled', label: 'Multi-Language Auto Translation' },
