@@ -645,17 +645,16 @@ export default function SetupView({
           <div>
             <label style={{ fontSize: '0.76rem', fontWeight: 800, color: 'var(--adm-muted)', display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '4px' }}>
               🌐 CUSTOM MENU DOMAIN (CNAME):
-              <span style={{ fontSize: '0.65rem', padding: '2px 6px', borderRadius: '4px', background: permissions?.custom_domain_enabled ? 'rgba(52,211,153,0.15)' : 'rgba(239,68,68,0.15)', color: permissions?.custom_domain_enabled ? '#10B981' : '#EF4444', fontWeight: 800 }}>
-                {permissions?.custom_domain_enabled ? '✅ ENABLED' : '👑 PRO FEATURE'}
+              <span style={{ fontSize: '0.65rem', padding: '2px 6px', borderRadius: '4px', background: 'rgba(52,211,153,0.15)', color: '#10B981', fontWeight: 800 }}>
+                ✅ ENABLED
               </span>
             </label>
             <input
               type="text"
               placeholder="e.g. menu.ramansweets.com"
-              disabled={!permissions?.custom_domain_enabled}
               value={settingsForm.custom_domain || ''}
               onChange={(e) => setSettingsForm({ ...settingsForm, custom_domain: e.target.value })}
-              style={{ width: '100%', padding: '10px 12px', borderRadius: 'var(--adm-radius-md)', border: '1px solid var(--adm-border)', fontSize: '0.9rem', background: !permissions?.custom_domain_enabled ? 'rgba(0,0,0,0.05)' : 'white' }}
+              style={{ width: '100%', padding: '10px 12px', borderRadius: 'var(--adm-radius-md)', border: '1px solid var(--adm-border)', fontSize: '0.9rem', background: 'white' }}
             />
             <div style={{ fontSize: '0.68rem', color: '#6B7280', marginTop: '4px' }}>
               Point CNAME record in GoDaddy to: <strong style={{ color: '#10B981' }}>cname.vercel-dns.com</strong>
