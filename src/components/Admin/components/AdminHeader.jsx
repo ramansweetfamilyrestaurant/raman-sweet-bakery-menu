@@ -11,7 +11,8 @@ export default function AdminHeader({
   supportPhone,
   activeTab,
   setActiveTab,
-  pendingOrdersCount = 0
+  pendingOrdersCount = 0,
+  analyticsEnabled = true
 }) {
   const [showMoreMenu, setShowMoreMenu] = useState(false);
   const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
@@ -90,12 +91,14 @@ export default function AdminHeader({
           >
             Orders {pendingOrdersCount > 0 ? `(${pendingOrdersCount})` : ''}
           </button>
-          <button
-            onClick={() => setActiveTab('analytics')}
-            className={`adm-header-tab ${isAnalyticsActive ? 'active' : ''}`}
-          >
-            Analytics
-          </button>
+          {analyticsEnabled && (
+            <button
+              onClick={() => setActiveTab('analytics')}
+              className={`adm-header-tab ${isAnalyticsActive ? 'active' : ''}`}
+            >
+              Analytics
+            </button>
+          )}
           <button
             onClick={() => setActiveTab('dishes')}
             className={`adm-header-tab ${isMenuActive ? 'active' : ''}`}

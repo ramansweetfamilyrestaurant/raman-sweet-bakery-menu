@@ -1,7 +1,7 @@
 import React from 'react';
 import { ShoppingBag, BarChart2, Utensils, Settings } from 'lucide-react';
 
-export default function AdminDesktopNavigation({ activeTab, setActiveTab, pendingOrdersCount = 0 }) {
+export default function AdminDesktopNavigation({ activeTab, setActiveTab, pendingOrdersCount = 0, analyticsEnabled = true }) {
   const isOrdersActive = ['orders', 'floor-map', 'service-requests'].includes(activeTab);
   const isMenuActive = ['dishes', 'categories', 'combos'].includes(activeTab);
   const isSetupActive = ['settings', 'qr-generator', 'review'].includes(activeTab);
@@ -17,13 +17,15 @@ export default function AdminDesktopNavigation({ activeTab, setActiveTab, pendin
         <span>Orders {pendingOrdersCount > 0 ? `(${pendingOrdersCount})` : ''}</span>
       </button>
 
-      <button
-        onClick={() => setActiveTab('analytics')}
-        className={`adm-desktop-nav-item ${isAnalyticsActive ? 'active' : ''}`}
-      >
-        <BarChart2 size={16} />
-        <span>Analytics</span>
-      </button>
+      {analyticsEnabled && (
+        <button
+          onClick={() => setActiveTab('analytics')}
+          className={`adm-desktop-nav-item ${isAnalyticsActive ? 'active' : ''}`}
+        >
+          <BarChart2 size={16} />
+          <span>Analytics</span>
+        </button>
+      )}
 
       <button
         onClick={() => setActiveTab('dishes')}

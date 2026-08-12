@@ -1770,6 +1770,7 @@ export default function AdminDashboard({ token, username, onLogout, onReturnToMe
           activeTab={activeTab}
           setActiveTab={setActiveTab}
           pendingOrdersCount={orders.filter(o => o.status === 'pending').length}
+          analyticsEnabled={settingsForm.analytics_export_enabled !== false && settingsForm.analytics_export_enabled !== 0}
         />
 
         <main className="adm-main-canvas">
@@ -1798,7 +1799,7 @@ export default function AdminDashboard({ token, username, onLogout, onReturnToMe
             )}
 
             {/* ANALYTICS VIEW */}
-            {activeTab === 'analytics' && (
+            {activeTab === 'analytics' && (settingsForm.analytics_export_enabled !== false && settingsForm.analytics_export_enabled !== 0) && (
               <AnalyticsView
                 analyticsData={analyticsData}
                 onDownloadCSV={handleDownloadSalesReport}
@@ -1896,6 +1897,7 @@ export default function AdminDashboard({ token, username, onLogout, onReturnToMe
           activeTab={activeTab}
           setActiveTab={setActiveTab}
           pendingOrdersCount={orders.filter(o => o.status === 'pending').length}
+          analyticsEnabled={settingsForm.analytics_export_enabled !== false && settingsForm.analytics_export_enabled !== 0}
         />
       </div>
 
