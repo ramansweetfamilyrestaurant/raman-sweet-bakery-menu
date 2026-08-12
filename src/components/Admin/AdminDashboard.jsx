@@ -856,6 +856,7 @@ export default function AdminDashboard({ token, username, onLogout, onReturnToMe
         custom_domain_enabled: infoData.custom_domain_enabled !== undefined ? infoData.custom_domain_enabled : true,
         analytics_export_enabled: infoData.analytics_export_enabled !== undefined ? infoData.analytics_export_enabled : true,
         gst_invoice_enabled: infoData.gst_invoice_enabled !== undefined ? infoData.gst_invoice_enabled : true,
+        ai_review_enabled: infoData.ai_review_enabled !== undefined ? infoData.ai_review_enabled : true,
         filters_visibility: { ...defaultVis, ...infoData.filters_visibility }
       };
     }
@@ -873,6 +874,7 @@ export default function AdminDashboard({ token, username, onLogout, onReturnToMe
       custom_domain: '',
       analytics_export_enabled: true,
       gst_invoice_enabled: true,
+      ai_review_enabled: true,
       filters_visibility: defaultVis
     };
   });
@@ -1017,6 +1019,7 @@ export default function AdminDashboard({ token, username, onLogout, onReturnToMe
           custom_domain_enabled: infoData.custom_domain_enabled !== undefined ? infoData.custom_domain_enabled : true,
           analytics_export_enabled: infoData.analytics_export_enabled !== undefined ? infoData.analytics_export_enabled : true,
           gst_invoice_enabled: infoData.gst_invoice_enabled !== undefined ? infoData.gst_invoice_enabled : true,
+          ai_review_enabled: infoData.ai_review_enabled !== undefined ? infoData.ai_review_enabled : true,
           filters_visibility: { ...defaultVis, ...infoData.filters_visibility }
         });
       }
