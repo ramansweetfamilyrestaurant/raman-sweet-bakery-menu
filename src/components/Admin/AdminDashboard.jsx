@@ -287,8 +287,19 @@ export default function AdminDashboard({ token, username, onLogout, onReturnToMe
 
   const pendingLoopRef = useRef(null);
 
+  const stopPendingAlarm = () => {
+    if (pendingLoopRef.current) {
+      clearInterval(pendingLoopRef.current);
+      pendingLoopRef.current = null;
+    }
+  };
+
   useEffect(() => {
-    const hasPendingOrders = Array.isArray(orders) && orders.some(o => o.status === 'pending' || o.status === 'placed');
+    const hasPendingOrders = Array.isArray(orders) && orders.some(o => {
+      const st = String(o.status || '').toLowerCase();
+      return st === 'pending' || st === 'placed' || st === 'new';
+    });
+
     if (hasPendingOrders) {
       if (!pendingLoopRef.current) {
         playKitchenChime();
@@ -297,16 +308,10 @@ export default function AdminDashboard({ token, username, onLogout, onReturnToMe
         }, 2500);
       }
     } else {
-      if (pendingLoopRef.current) {
-        clearInterval(pendingLoopRef.current);
-        pendingLoopRef.current = null;
-      }
+      stopPendingAlarm();
     }
     return () => {
-      if (pendingLoopRef.current) {
-        clearInterval(pendingLoopRef.current);
-        pendingLoopRef.current = null;
-      }
+      stopPendingAlarm();
     };
   }, [orders]);
 
@@ -579,6 +584,9 @@ export default function AdminDashboard({ token, username, onLogout, onReturnToMe
   const handleUpdateStatus = async (orderId, newStatus, extraParams = {}) => {
     try {
       await updateOrderStatus(orderId, newStatus, token, extraParams);
+      if (newStatus === 'accepted' || newStatus === 'kitchen' || newStatus === 'preparing') {
+        stopPendingAlarm();
+      }
       if (extraParams.kitchen_prepared === 1) {
         if (!extraParams.silent) {
           playWaiterBellFor6Seconds();

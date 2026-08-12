@@ -85,6 +85,21 @@ export default function StandaloneKdsPage({ slug = '' }) {
     }
   };
 
+  const knownOrderIdsRef = React.useRef(null);
+  const [audioUnlocked, setAudioUnlocked] = useState(false);
+
+  const unlockAudio = () => {
+    try {
+      const AudioCtx = window.AudioContext || window.webkitAudioContext;
+      if (AudioCtx) {
+        const ctx = new AudioCtx();
+        if (ctx.state === 'suspended') ctx.resume();
+      }
+      playSiren();
+    } catch (e) {}
+    setAudioUnlocked(true);
+  };
+
   const [notFound, setNotFound] = useState(false);
   const [kdsDisabled, setKdsDisabled] = useState(false);
 
@@ -117,10 +132,21 @@ export default function StandaloneKdsPage({ slug = '' }) {
           setRestaurantName(data.restaurant.name);
         }
         const activeOrders = Array.isArray(data.orders) ? data.orders : [];
-        if (activeOrders.length > prevCount) {
-          playSirenFor8Seconds();
+        const currentIds = new Set(activeOrders.map(o => String(o.id)));
+
+        if (knownOrderIdsRef.current !== null) {
+          let hasNewOrder = false;
+          for (const id of currentIds) {
+            if (!knownOrderIdsRef.current.has(id)) {
+              hasNewOrder = true;
+              break;
+            }
+          }
+          if (hasNewOrder) {
+            playSirenFor8Seconds();
+          }
         }
-        setPrevCount(activeOrders.length);
+        knownOrderIdsRef.current = currentIds;
         setOrders(activeOrders);
       } else if (res.status === 404 || data.error === 'Restaurant not found') {
         setNotFound(true);
@@ -258,6 +284,26 @@ export default function StandaloneKdsPage({ slug = '' }) {
 
   return (
     <div style={{ minHeight: '100vh', background: '#090D16', color: '#F8FAFC', padding: '16px', fontFamily: 'system-ui, sans-serif' }}>
+      {!audioUnlocked && (
+        <div
+          onClick={unlockAudio}
+          style={{
+            background: 'linear-gradient(90deg, #EA580C 0%, #DC2626 100%)',
+            color: '#FFFFFF',
+            padding: '14px 20px',
+            borderRadius: '12px',
+            marginBottom: '16px',
+            textAlign: 'center',
+            fontWeight: 900,
+            fontSize: '0.98rem',
+            cursor: 'pointer',
+            boxShadow: '0 4px 16px rgba(234, 88, 12, 0.4)',
+            border: '2px solid #FDE047'
+          }}
+        >
+          🔊 TAP HERE TO UNLOCK KITCHEN EMERGENCY ALARM SOUND & FULL LOUD SIREN
+        </div>
+      )}
       {/* Header Bar */}
       <div style={{
         display: 'flex', alignItems: 'center', justifyContent: 'space-between',
