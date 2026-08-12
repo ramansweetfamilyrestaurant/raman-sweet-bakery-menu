@@ -648,32 +648,18 @@ router.patch('/kitchen/orders/:id/complete', async (req, res) => {
       if (restos && restos.length > 0) targetId = restos[0].id;
     }
 
+    // Set kitchen_prepared=1 so it disappears from KDS and admin gets notified
     if (targetId) {
-      try {
-        await query(
-          'UPDATE orders SET status = $1, kitchen_prepared = $2 WHERE id = $3 AND restaurant_id = $4',
-          ['kitchen', 1, orderId, targetId]
-        );
-      } catch (colErr) {
-        try { await query('ALTER TABLE orders ADD COLUMN kitchen_prepared INT DEFAULT 0'); } catch (e) {}
-        await query(
-          'UPDATE orders SET status = $1, kitchen_prepared = $2 WHERE id = $3 AND restaurant_id = $4',
-          ['kitchen', 1, orderId, targetId]
-        );
-      }
+      await query(
+        'UPDATE orders SET kitchen_prepared = 1 WHERE id = $1 AND restaurant_id = $2',
+        [orderId, targetId]
+      );
     } else {
-      try {
-        await query(
-          'UPDATE orders SET status = $1, kitchen_prepared = $2 WHERE id = $3',
-          ['kitchen', 1, orderId]
-        );
-      } catch (colErr) {
-        try { await query('ALTER TABLE orders ADD COLUMN kitchen_prepared INT DEFAULT 0'); } catch (e) {}
-        await query(
-          'UPDATE orders SET status = $1, kitchen_prepared = $2 WHERE id = $3',
-          ['kitchen', 1, orderId]
-        );
-      }
+      // No slug provided - update by id only (fallback)
+      await query(
+        'UPDATE orders SET kitchen_prepared = 1 WHERE id = $1',
+        [orderId]
+      );
     }
 
     res.json({ success: true, id: orderId, kitchen_prepared: 1 });

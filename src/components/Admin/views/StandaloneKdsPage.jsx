@@ -170,9 +170,18 @@ export default function StandaloneKdsPage({ slug = '' }) {
   }, [slug]);
 
   const handleMarkPrepared = async (orderId) => {
+    // Get the current slug for tenant scoping
+    const parts = window.location.pathname.split('/').filter(Boolean);
+    let currentSlug = slug;
+    if (!currentSlug && parts.length >= 2 && parts[parts.length - 1] === 'kitchen') {
+      currentSlug = parts[parts.length - 2];
+    }
+    if (!currentSlug) {
+      currentSlug = localStorage.getItem('raman_admin_slug') || '';
+    }
     try {
       setOrders(prev => prev.filter(o => o.id !== orderId));
-      await fetch(`/api/kitchen/orders/${orderId}/complete`, {
+      await fetch(`/api/kitchen/orders/${orderId}/complete${currentSlug ? `?slug=${encodeURIComponent(currentSlug)}` : ''}`, {
         method: 'PATCH'
       });
       fetchOrders();
