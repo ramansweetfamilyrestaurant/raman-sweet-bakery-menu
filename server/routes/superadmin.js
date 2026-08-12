@@ -78,10 +78,12 @@ router.post('/login', async (req, res) => {
 // GET All Tenant Restaurants with stats & subscription lifecycle details
 router.get('/restaurants', authenticateToken, requireSuperAdmin, async (req, res) => {
   try {
-    const restaurants = await query('SELECT * FROM restaurants ORDER BY id DESC');
-    const dishesCount = await query('SELECT restaurant_id, COUNT(*) as count FROM dishes GROUP BY restaurant_id');
-    const adminsList = await query("SELECT id, restaurant_id, username FROM admins WHERE role = 'restaurant_admin'");
-    const subsList = await query('SELECT * FROM subscriptions ORDER BY id DESC').catch(() => []);
+    const [restaurants, dishesCount, adminsList, subsList] = await Promise.all([
+      query('SELECT * FROM restaurants ORDER BY id DESC'),
+      query('SELECT restaurant_id, COUNT(*) as count FROM dishes GROUP BY restaurant_id'),
+      query("SELECT id, restaurant_id, username FROM admins WHERE role = 'restaurant_admin'"),
+      query('SELECT * FROM subscriptions ORDER BY id DESC').catch(() => [])
+    ]);
 
     const countMap = {};
     dishesCount.forEach(row => {
