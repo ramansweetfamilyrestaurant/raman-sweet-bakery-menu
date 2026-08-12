@@ -599,13 +599,26 @@ router.get('/kitchen/orders', async (req, res) => {
     }
 
     const cleanSlug = slug.trim().toLowerCase();
-    const restos = await query('SELECT id, name, slug FROM restaurants WHERE LOWER(slug) = $1', [cleanSlug]);
+    const restos = await query('SELECT * FROM restaurants WHERE LOWER(slug) = $1', [cleanSlug]);
     if (!restos || restos.length === 0) {
       return res.status(404).json({ error: 'Restaurant not found' });
     }
 
     const resto = restos[0];
     const targetId = resto.id;
+
+    // Check SaaS Plan Permission Matrix for kds_enabled
+    const planRows = await query('SELECT * FROM saas_plans WHERE key = $1', [resto.plan_type || 'basic']);
+    const saasPlan = planRows && planRows.length > 0 ? planRows[0] : {};
+    const kdsEnabled = saasPlan.kds_enabled !== undefined ? (saasPlan.kds_enabled === 1 || saasPlan.kds_enabled === true || saasPlan.kds_enabled === '1') : true;
+
+    if (!kdsEnabled) {
+      return res.status(403).json({
+        success: false,
+        error: 'KDS_DISABLED',
+        message: 'Dedicated Kitchen Display System (KDS) is locked on your current plan tier.'
+      });
+    }
 
     const orders = await query(`
       SELECT * FROM orders

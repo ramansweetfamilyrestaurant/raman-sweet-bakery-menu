@@ -35,6 +35,7 @@ export default function StandaloneKdsPage({ slug = '' }) {
   };
 
   const [notFound, setNotFound] = useState(false);
+  const [kdsDisabled, setKdsDisabled] = useState(false);
 
   const fetchOrders = async () => {
     try {
@@ -55,6 +56,10 @@ export default function StandaloneKdsPage({ slug = '' }) {
         setNotFound(true);
         return;
       }
+      if (res.status === 403) {
+        setKdsDisabled(true);
+        return;
+      }
       const data = await res.json();
       if (data.success) {
         if (data.restaurant?.name) {
@@ -68,6 +73,8 @@ export default function StandaloneKdsPage({ slug = '' }) {
         setOrders(activeOrders);
       } else if (res.status === 404 || data.error === 'Restaurant not found') {
         setNotFound(true);
+      } else if (res.status === 403 || data.error === 'KDS_DISABLED') {
+        setKdsDisabled(true);
       }
     } catch (e) {
       console.warn('Failed to poll kitchen orders:', e);
@@ -153,6 +160,46 @@ export default function StandaloneKdsPage({ slug = '' }) {
           }}
         >
           🏠 Go to TouchQR Homepage
+        </button>
+      </div>
+    );
+  }
+
+  if (kdsDisabled) {
+    return (
+      <div style={{
+        minHeight: '100vh', display: 'flex', flexDirection: 'column',
+        alignItems: 'center', justifyContent: 'center', padding: '32px 20px',
+        background: 'linear-gradient(135deg, #0F172A 0%, #1E293B 100%)',
+        color: '#FFFFFF', textAlign: 'center', fontFamily: 'system-ui, sans-serif'
+      }}>
+        <div style={{
+          width: '72px', height: '72px', borderRadius: '50%', background: '#FEF3C7', color: '#B45309',
+          display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 20px', border: '2px solid #F59E0B'
+        }}>
+          <Flame size={38} color="#D97706" />
+        </div>
+        <h1 style={{ fontSize: '1.75rem', fontWeight: 900, color: '#FCD34D', margin: '0 0 8px 0' }}>
+          🔒 Kitchen KDS Display Screen Locked
+        </h1>
+        <p style={{ fontSize: '0.94rem', color: '#94A3B8', maxWidth: '480px', margin: '0 auto 24px auto', lineHeight: 1.6 }}>
+          Dedicated Kitchen Display System (KDS) is locked for this restaurant under its current SaaS subscription plan tier. Please upgrade to Pro or Enterprise plan in SuperAdmin to unlock KDS.
+        </p>
+        <button
+          onClick={() => { window.location.href = '/'; }}
+          style={{
+            padding: '13px 30px',
+            borderRadius: '9999px',
+            border: 'none',
+            background: 'linear-gradient(135deg, #FFD700 0%, #D4AF37 100%)',
+            color: '#0A0A0A',
+            fontWeight: 900,
+            fontSize: '0.92rem',
+            cursor: 'pointer',
+            boxShadow: '0 4px 16px rgba(255,215,0,0.3)'
+          }}
+        >
+          🏠 Return to Homepage
         </button>
       </div>
     );
