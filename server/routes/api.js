@@ -114,7 +114,9 @@ async function resolveRestaurant(req, slug) {
 
 // Restaurant General Info (/api/info or /api/info?slug=royal-pizz// GET Ultra-Fast Combined Menu Bundle (Single 0-latency HTTP call for complete Digital Menu)
 router.get('/menu-bundle', async (req, res) => {
-  res.setHeader('Cache-Control', 'public, max-age=5, s-maxage=10, stale-while-revalidate=60');
+  res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate, private');
+  res.setHeader('Pragma', 'no-cache');
+  res.setHeader('Expires', '0');
   try {
     const { slug } = req.query;
     const resto = await resolveRestaurant(req, slug);
@@ -199,7 +201,9 @@ router.get('/menu-bundle', async (req, res) => {
 
 // Restaurant General Info (/api/info or /api/info?slug=royal-pizza)
 router.get('/info', async (req, res) => {
-  res.setHeader('Cache-Control', 'public, max-age=5, s-maxage=10, stale-while-revalidate=60');
+  res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate, private');
+  res.setHeader('Pragma', 'no-cache');
+  res.setHeader('Expires', '0');
   try {
     const { slug } = req.query;
     const resto = await resolveRestaurant(req, slug);
@@ -304,9 +308,9 @@ router.get('/announcements', async (req, res) => {
 
 // Get Categories for a specific restaurant
 router.get('/categories', async (req, res) => {
-  if (!req.query.admin_view) {
-    res.setHeader('Cache-Control', 'public, max-age=5, s-maxage=10, stale-while-revalidate=60');
-  }
+  res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate, private');
+  res.setHeader('Pragma', 'no-cache');
+  res.setHeader('Expires', '0');
   try {
     const { admin_view, slug, restaurant_id } = req.query;
     let targetId = restaurant_id;
@@ -336,9 +340,9 @@ router.get('/categories', async (req, res) => {
 
 // Get Dishes with search & category filter for a specific restaurant
 router.get('/dishes', async (req, res) => {
-  if (!req.query.admin_view) {
-    res.setHeader('Cache-Control', 'public, max-age=5, s-maxage=10, stale-while-revalidate=60');
-  }
+  res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate, private');
+  res.setHeader('Pragma', 'no-cache');
+  res.setHeader('Expires', '0');
   try {
     const { q, category_id, admin_view, slug, restaurant_id } = req.query;
     let targetId = restaurant_id;

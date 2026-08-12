@@ -32,7 +32,7 @@ export async function fetchRestaurantInfo(slugOrToken = '') {
     if (slugOrToken.slug) url += `?slug=${encodeURIComponent(slugOrToken.slug)}`;
   }
 
-  const res = await fetch(url, { headers });
+  const res = await fetch(url, { headers, cache: 'no-store' });
   return handleResponse(res, 'Failed to fetch restaurant info');
 }
 
@@ -44,7 +44,7 @@ export async function fetchCategories({ adminView = false, slug = '', token = ''
   const headers = {};
   if (token) headers.Authorization = `Bearer ${token}`;
 
-  const res = await fetch(`${API_BASE}/categories?${params.toString()}`, { headers });
+  const res = await fetch(`${API_BASE}/categories?${params.toString()}`, { headers, cache: 'no-store' });
   return handleResponse(res, 'Failed to fetch categories');
 }
 
@@ -58,7 +58,7 @@ export async function fetchDishes({ query = '', category_id = 'all', adminView =
   const headers = {};
   if (token) headers.Authorization = `Bearer ${token}`;
 
-  const res = await fetch(`${API_BASE}/dishes?${params.toString()}`, { headers });
+  const res = await fetch(`${API_BASE}/dishes?${params.toString()}`, { headers, cache: 'no-store' });
   return handleResponse(res, 'Failed to fetch dishes');
 }
 
