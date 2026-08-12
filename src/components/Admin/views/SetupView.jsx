@@ -713,18 +713,62 @@ export default function SetupView({
           </div>
 
           {/* Printer Setup Box */}
-          <div style={{ padding: '14px', background: 'var(--adm-surface-subtle)', borderRadius: 'var(--adm-radius-md)', border: '1px solid var(--adm-border)' }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '4px' }}>
-              <strong style={{ fontSize: '0.9rem', color: 'var(--adm-primary)' }}>🖨️ Thermal Receipt Printer & ESC/POS KOT</strong>
+          <div style={{ padding: '14px', background: 'var(--adm-surface-subtle)', borderRadius: 'var(--adm-radius-md)', border: '1px solid var(--adm-border)', display: 'flex', flexDirection: 'column', gap: '10px' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <strong style={{ fontSize: '0.9rem', color: 'var(--adm-primary)' }}>🖨️ Thermal Receipt Printer & Routing Mode</strong>
               {!(settingsForm?.bluetooth_kot_enabled !== false && settingsForm?.bluetooth_kot_enabled !== 0) && (
                 <span style={{ fontSize: '0.7rem', fontWeight: 800, color: '#B45309', background: '#FEF3C7', border: '1px solid #F59E0B', padding: '2px 8px', borderRadius: 'var(--radius-pill)' }}>
                   🔒 Pro Feature
                 </span>
               )}
             </div>
-            <p style={{ fontSize: '0.76rem', color: 'var(--adm-muted)', margin: '0 0 10px 0' }}>
-              Supports 58mm & 80mm ESC/POS Bluetooth, USB, and RawBT silent thermal printers for instant Kitchen Order Tickets (KOT) & Customer Tax Receipts.
+            <p style={{ fontSize: '0.76rem', color: 'var(--adm-muted)', margin: 0 }}>
+              Supports 58mm & 80mm ESC/POS Bluetooth, USB, and RawBT silent thermal printers for Kitchen KOT & Customer Receipts.
             </p>
+
+            <div>
+              <label style={{ fontSize: '0.74rem', fontWeight: 800, color: 'var(--adm-primary)', display: 'block', marginBottom: '4px' }}>
+                PRINTER ROUTING MODE:
+              </label>
+              <select
+                value={settingsForm.printer_mode || 'single'}
+                onChange={(e) => setSettingsForm({ ...settingsForm, printer_mode: e.target.value })}
+                style={{ width: '100%', padding: '8px 10px', borderRadius: 'var(--adm-radius-md)', border: '1px solid var(--adm-border)', fontSize: '0.85rem' }}
+              >
+                <option value="single">🟢 Single Printer (Same Printer for KOT & Customer Bill)</option>
+                <option value="dual">⚡ Dual Separate Printers (Kitchen KOT + Counter Bill Printers)</option>
+              </select>
+            </div>
+
+            {settingsForm.printer_mode === 'dual' && (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', padding: '10px', background: 'var(--adm-surface)', borderRadius: 'var(--adm-radius-md)', border: '1px dashed var(--adm-accent)' }}>
+                <div>
+                  <label style={{ fontSize: '0.72rem', fontWeight: 800, color: 'var(--adm-muted)', display: 'block', marginBottom: '2px' }}>
+                    🍳 KITCHEN KOT PRINTER NAME / IP:
+                  </label>
+                  <input
+                    type="text"
+                    placeholder="e.g. Kitchen_KOT or 192.168.1.200"
+                    value={settingsForm.kot_printer_target || ''}
+                    onChange={(e) => setSettingsForm({ ...settingsForm, kot_printer_target: e.target.value })}
+                    style={{ width: '100%', padding: '6px 10px', borderRadius: 'var(--adm-radius-md)', border: '1px solid var(--adm-border)', fontSize: '0.82rem' }}
+                  />
+                </div>
+                <div>
+                  <label style={{ fontSize: '0.72rem', fontWeight: 800, color: 'var(--adm-muted)', display: 'block', marginBottom: '2px' }}>
+                    🧾 COUNTER BILL PRINTER NAME / IP:
+                  </label>
+                  <input
+                    type="text"
+                    placeholder="e.g. Counter_Bill or 192.168.1.201"
+                    value={settingsForm.bill_printer_target || ''}
+                    onChange={(e) => setSettingsForm({ ...settingsForm, bill_printer_target: e.target.value })}
+                    style={{ width: '100%', padding: '6px 10px', borderRadius: 'var(--adm-radius-md)', border: '1px solid var(--adm-border)', fontSize: '0.82rem' }}
+                  />
+                </div>
+              </div>
+            )}
+
             <button onClick={() => { setOpenDrawer(null); setShowPrinterModal(true); }} className="adm-btn adm-btn-secondary adm-btn-sm" style={{ width: '100%' }}>
               <Printer size={15} /> Open Printer Pairing & Bluetooth Setup Guide
             </button>
