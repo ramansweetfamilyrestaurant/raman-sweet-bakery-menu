@@ -230,8 +230,8 @@ export default function OrdersView({
                   <div style={{ fontSize: '0.84rem', background: 'var(--adm-surface-subtle)', padding: '10px 12px', borderRadius: 'var(--adm-radius-sm)', display: 'flex', flexDirection: 'column', gap: '4px' }}>
                     {safeParseItems(order.items).map((item, idx) => (
                       <div key={idx} style={{ display: 'flex', justifyContent: 'space-between' }}>
-                        <span>{item.name} ×{item.quantity}</span>
-                        <strong>{currencySymbol}{item.price * item.quantity}</strong>
+                        <span>{item.name}{item.portion ? ` (${item.portion})` : ''} ×{item.quantity || item.qty || 1}</span>
+                        <strong>{currencySymbol}{(Number(item.price) || 0) * (item.quantity || item.qty || 1)}</strong>
                       </div>
                     ))}
                   </div>

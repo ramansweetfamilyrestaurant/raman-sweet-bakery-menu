@@ -191,7 +191,7 @@ export default function KdsDisplayView({
                             borderRadius: '8px', display: 'flex', alignItems: 'center', justifyContent: 'center',
                             fontSize: '1.1rem', fontWeight: 900
                           }}>
-                            ×{item.quantity}
+                            ×{item.quantity || item.qty || 1}
                           </span>
                           <div>
                             <strong style={{ fontSize: '1.05rem', color: '#F8FAFC', display: 'block', fontWeight: 800 }}>

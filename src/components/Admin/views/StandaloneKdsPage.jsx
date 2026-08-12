@@ -448,7 +448,7 @@ export default function StandaloneKdsPage({ slug = '' }) {
                             display: 'flex', alignItems: 'center', justifyContent: 'center',
                             fontSize: '0.95rem', fontWeight: 900
                           }}>
-                            {item.quantity}×
+                            {item.quantity || item.qty || 1}×
                           </span>
                           <div>
                             <strong style={{ fontSize: '1.02rem', color: '#F8FAFC', display: 'block' }}>
