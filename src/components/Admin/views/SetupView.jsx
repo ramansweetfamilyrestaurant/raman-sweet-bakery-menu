@@ -787,28 +787,39 @@ export default function SetupView({
             </select>
           </div>
 
-          {/* GST Configuration */}
+          {/* GST Configuration (Gated by Plan matrix: gst_invoice_enabled) */}
           <div style={{ padding: '12px', background: 'var(--adm-surface-subtle)', borderRadius: 'var(--adm-radius-md)', border: '1px solid var(--adm-border)' }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
-              <strong style={{ fontSize: '0.88rem', color: 'var(--adm-primary)' }}>🏷️ Enable 5% GST Tax Billing</strong>
-              <input
-                type="checkbox"
-                checked={Boolean(settingsForm.gst_enabled)}
-                onChange={(e) => setSettingsForm({ ...settingsForm, gst_enabled: e.target.checked })}
-                style={{ width: '18px', height: '18px', cursor: 'pointer' }}
-              />
-            </div>
+            {(settingsForm.gst_invoice_enabled !== false && settingsForm.gst_invoice_enabled !== 0) ? (
+              <>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
+                  <strong style={{ fontSize: '0.88rem', color: 'var(--adm-primary)' }}>🏷️ Enable 5% GST Tax Billing</strong>
+                  <input
+                    type="checkbox"
+                    checked={Boolean(settingsForm.gst_enabled)}
+                    onChange={(e) => setSettingsForm({ ...settingsForm, gst_enabled: e.target.checked })}
+                    style={{ width: '18px', height: '18px', cursor: 'pointer' }}
+                  />
+                </div>
 
-            {settingsForm.gst_enabled && (
-              <div style={{ marginTop: '8px' }}>
-                <label style={{ fontSize: '0.74rem', fontWeight: 800, color: 'var(--adm-muted)', display: 'block', marginBottom: '4px' }}>GSTIN NUMBER:</label>
-                <input
-                  type="text"
-                  placeholder="e.g. 10AAAAA0000A1Z5"
-                  value={settingsForm.gstin_number || ''}
-                  onChange={(e) => setSettingsForm({ ...settingsForm, gstin_number: e.target.value })}
-                  style={{ width: '100%', padding: '8px 10px', borderRadius: 'var(--adm-radius-md)', border: '1px solid var(--adm-border)', fontSize: '0.86rem' }}
-                />
+                {settingsForm.gst_enabled && (
+                  <div style={{ marginTop: '8px' }}>
+                    <label style={{ fontSize: '0.74rem', fontWeight: 800, color: 'var(--adm-muted)', display: 'block', marginBottom: '4px' }}>GSTIN NUMBER:</label>
+                    <input
+                      type="text"
+                      placeholder="e.g. 10AAAAA0000A1Z5"
+                      value={settingsForm.gstin_number || ''}
+                      onChange={(e) => setSettingsForm({ ...settingsForm, gstin_number: e.target.value })}
+                      style={{ width: '100%', padding: '8px 10px', borderRadius: 'var(--adm-radius-md)', border: '1px solid var(--adm-border)', fontSize: '0.86rem' }}
+                    />
+                  </div>
+                )}
+              </>
+            ) : (
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <strong style={{ fontSize: '0.88rem', color: 'var(--adm-primary)' }}>🏷️ GST Invoice & Custom Tax Billing</strong>
+                <span style={{ fontSize: '0.72rem', fontWeight: 800, color: '#B45309', background: '#FEF3C7', border: '1px solid #F59E0B', padding: '3px 8px', borderRadius: 'var(--radius-pill)' }}>
+                  🔒 Pro Feature
+                </span>
               </div>
             )}
           </div>
