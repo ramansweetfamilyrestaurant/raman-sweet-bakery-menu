@@ -133,13 +133,11 @@ export default function SaaSPlansView({ token }) {
     { key: 'max_categories', label: 'Max Categories Limit', placeholder: '9999' },
     { key: 'max_combos', label: 'Max Combos Limit', placeholder: '9999' },
     { key: 'max_tables', label: 'Max Tables / QR Standees Limit', placeholder: '9999' },
-    { key: 'max_staff_accounts', label: 'Max Staff Accounts / Logins Limit', placeholder: '9999' },
     { key: 'order_retention_days', label: 'Order Retention History (Days)', placeholder: '365' },
   ];
 
   const toggleFields = [
     { key: 'modifiers_enabled', label: 'Advanced Modifiers & Half/Full Variants' },
-    { key: 'staff_roles_enabled', label: 'Staff Roles (Waiter / Kitchen / Cashier)' },
     { key: 'whatsapp_ordering_enabled', label: 'WhatsApp Customer Ordering' },
     { key: 'direct_ordering_enabled', label: '📋 Customer QR Direct Ordering & Live Order Receive Page' },
     { key: 'audio_alarm_enabled', label: '📢 New Order Audio / Voice Alarm' },
