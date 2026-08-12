@@ -596,17 +596,7 @@ router.put('/plans/:key', authenticateToken, requireSuperAdmin, async (req, res)
       analytics_export_enabled, multi_language_enabled, watermark_removal_enabled, custom_domain_enabled, dual_printer_enabled
     } = req.body;
 
-    await query(`
-      UPDATE saas_plans
-      SET name = $1, price = $2, badge = $3, description = $4,
-          max_dishes = $5, max_categories = $6, max_combos = $7, max_tables = $8, max_staff_accounts = $9, order_retention_days = $10,
-          modifiers_enabled = $11, staff_roles_enabled = $12, whatsapp_ordering_enabled = $13, direct_ordering_enabled = $14,
-          audio_alarm_enabled = $15, order_status_whatsapp_enabled = $16, kds_enabled = $17, bluetooth_kot_enabled = $18,
-          google_reviews_enabled = $19, ai_review_enabled = $20, stories_enabled = $21, gst_invoice_enabled = $22,
-          analytics_export_enabled = $23, multi_language_enabled = $24, watermark_removal_enabled = $25, custom_domain_enabled = $26,
-          dual_printer_enabled = $27
-      WHERE key = $28
-    `, [
+    const queryParams = [
       name || key,
       price !== undefined ? parseFloat(price) : 999,
       badge || '👑 PRO',
@@ -635,13 +625,46 @@ router.put('/plans/:key', authenticateToken, requireSuperAdmin, async (req, res)
       custom_domain_enabled ? 1 : 0,
       dual_printer_enabled ? 1 : 0,
       key
-    ]);
+    ];
+
+    try {
+      await query(`
+        UPDATE saas_plans
+        SET name = $1, price = $2, badge = $3, description = $4,
+            max_dishes = $5, max_categories = $6, max_combos = $7, max_tables = $8, max_staff_accounts = $9, order_retention_days = $10,
+            modifiers_enabled = $11, staff_roles_enabled = $12, whatsapp_ordering_enabled = $13, direct_ordering_enabled = $14,
+            audio_alarm_enabled = $15, order_status_whatsapp_enabled = $16, kds_enabled = $17, bluetooth_kot_enabled = $18,
+            google_reviews_enabled = $19, ai_review_enabled = $20, stories_enabled = $21, gst_invoice_enabled = $22,
+            analytics_export_enabled = $23, multi_language_enabled = $24, watermark_removal_enabled = $25, custom_domain_enabled = $26,
+            dual_printer_enabled = $27
+        WHERE key = $28
+      `, queryParams);
+    } catch (dbErr) {
+      console.warn('[SAAS PLAN MATRIX] Auto-healing table schema for missing columns...', dbErr.message);
+      await query('ALTER TABLE saas_plans ADD COLUMN IF NOT EXISTS dual_printer_enabled INT DEFAULT 1;').catch(() => {});
+      await query('ALTER TABLE saas_plans ADD COLUMN IF NOT EXISTS bluetooth_kot_enabled INT DEFAULT 1;').catch(() => {});
+      await query('ALTER TABLE saas_plans ADD COLUMN IF NOT EXISTS gst_invoice_enabled INT DEFAULT 1;').catch(() => {});
+      await query('ALTER TABLE saas_plans ADD COLUMN IF NOT EXISTS ai_review_enabled INT DEFAULT 1;').catch(() => {});
+      await query('ALTER TABLE saas_plans ADD COLUMN IF NOT EXISTS google_reviews_enabled INT DEFAULT 1;').catch(() => {});
+      
+      await query(`
+        UPDATE saas_plans
+        SET name = $1, price = $2, badge = $3, description = $4,
+            max_dishes = $5, max_categories = $6, max_combos = $7, max_tables = $8, max_staff_accounts = $9, order_retention_days = $10,
+            modifiers_enabled = $11, staff_roles_enabled = $12, whatsapp_ordering_enabled = $13, direct_ordering_enabled = $14,
+            audio_alarm_enabled = $15, order_status_whatsapp_enabled = $16, kds_enabled = $17, bluetooth_kot_enabled = $18,
+            google_reviews_enabled = $19, ai_review_enabled = $20, stories_enabled = $21, gst_invoice_enabled = $22,
+            analytics_export_enabled = $23, multi_language_enabled = $24, watermark_removal_enabled = $25, custom_domain_enabled = $26,
+            dual_printer_enabled = $27
+        WHERE key = $28
+      `, queryParams);
+    }
 
     await logAudit(null, 'superadmin', 'Update SaaS Plan Matrix', `Updated 24-point plan matrix for '${key}'`);
     res.json({ success: true, message: `SaaS Plan '${name || key}' matrix updated successfully!` });
   } catch (err) {
     console.error('Update SaaS plan matrix error:', err);
-    res.status(500).json({ error: 'Failed to update SaaS plan matrix' });
+    res.status(500).json({ error: err.message || 'Failed to update SaaS plan matrix' });
   }
 });
 
