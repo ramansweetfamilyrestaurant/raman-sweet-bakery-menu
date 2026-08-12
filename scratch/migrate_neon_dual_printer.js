@@ -4,7 +4,7 @@ async function runMigration() {
   try {
     await initDb();
     console.log('Adding dual_printer_enabled column if not exists...');
-    await query('ALTER TABLE saas_plans ADD COLUMN IF NOT EXISTS dual_printer_enabled INT DEFAULT 1;');
+    await query('ALTER TABLE saas_plans ADD COLUMN IF NOT EXISTS dual_printer_enabled INT DEFAULT 0;');
     console.log('✓ Migration executed successfully!');
     process.exit(0);
   } catch (err) {

@@ -641,7 +641,7 @@ router.put('/plans/:key', authenticateToken, requireSuperAdmin, async (req, res)
       `, queryParams);
     } catch (dbErr) {
       console.warn('[SAAS PLAN MATRIX] Auto-healing table schema for missing columns...', dbErr.message);
-      await query('ALTER TABLE saas_plans ADD COLUMN IF NOT EXISTS dual_printer_enabled INT DEFAULT 1;').catch(() => {});
+      await query('ALTER TABLE saas_plans ADD COLUMN IF NOT EXISTS dual_printer_enabled INT DEFAULT 0;').catch(() => {});
       await query('ALTER TABLE saas_plans ADD COLUMN IF NOT EXISTS bluetooth_kot_enabled INT DEFAULT 1;').catch(() => {});
       await query('ALTER TABLE saas_plans ADD COLUMN IF NOT EXISTS gst_invoice_enabled INT DEFAULT 1;').catch(() => {});
       await query('ALTER TABLE saas_plans ADD COLUMN IF NOT EXISTS ai_review_enabled INT DEFAULT 1;').catch(() => {});
