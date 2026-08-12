@@ -580,7 +580,9 @@ export default function AdminDashboard({ token, username, onLogout, onReturnToMe
     try {
       await updateOrderStatus(orderId, newStatus, token, extraParams);
       if (extraParams.kitchen_prepared === 1) {
-        playWaiterBellFor6Seconds();
+        if (!extraParams.silent) {
+          playWaiterBellFor6Seconds();
+        }
         const targetOrder = orders.find(o => String(o.id) === String(orderId));
         const tblNum = targetOrder?.table_number ? `Table #${targetOrder.table_number}` : `Order #${orderId}`;
         setToastMessage(`🛎️ ${tblNum} Food is PREPARED in Kitchen! Ready to Serve.`);
