@@ -14,7 +14,9 @@ const resolveImageUrl = (url) => {
 export default function DishFormModal({ dish, categories, token, onSave, onClose }) {
   const [categoryId, setCategoryId] = useState(dish?.category_id || categories[0]?.id || '');
   const [name, setName] = useState(dish?.name || '');
+  const [nameHi, setNameHi] = useState(dish?.name_hi || '');
   const [description, setDescription] = useState(dish?.description || '');
+  const [descriptionHi, setDescriptionHi] = useState(dish?.description_hi || '');
   const [price, setPrice] = useState(dish?.price || '');
   const [priceHalf, setPriceHalf] = useState(dish?.price_half || '');
   const [hasHalf, setHasHalf] = useState(Boolean(dish?.price_half));
@@ -65,7 +67,9 @@ export default function DishFormModal({ dish, categories, token, onSave, onClose
       await onSave({
         category_id: Number(categoryId),
         name,
+        name_hi: nameHi,
         description,
+        description_hi: descriptionHi,
         image,
         price: Number(price),
         price_half: (hasHalf && priceHalf) ? Number(priceHalf) : null,
@@ -252,11 +256,11 @@ export default function DishFormModal({ dish, categories, token, onSave, onClose
             </div>
           </div>
 
-          {/* Name & Badge */}
-          <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr', gap: '12px', marginBottom: '14px' }}>
+          {/* Name (EN + HI) & Badge */}
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '10px', marginBottom: '14px' }}>
             <div>
               <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: 600, marginBottom: '4px' }}>
-                Dish Name *
+                Dish Name (English) *
               </label>
               <input
                 type="text"
@@ -264,6 +268,25 @@ export default function DishFormModal({ dish, categories, token, onSave, onClose
                 value={name}
                 onChange={(e) => setName(e.target.value)}
                 placeholder="e.g. Royal Shahi Paneer"
+                style={{
+                  width: '100%',
+                  padding: '10px',
+                  borderRadius: 'var(--radius-sm)',
+                  border: '1px solid rgba(197, 160, 89, 0.4)',
+                  fontSize: '0.9rem'
+                }}
+              />
+            </div>
+
+            <div>
+              <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: 600, marginBottom: '4px' }}>
+                Dish Name (हिंदी)
+              </label>
+              <input
+                type="text"
+                value={nameHi}
+                onChange={(e) => setNameHi(e.target.value)}
+                placeholder="e.g. शाही पनीर"
                 style={{
                   width: '100%',
                   padding: '10px',
@@ -315,9 +338,9 @@ export default function DishFormModal({ dish, categories, token, onSave, onClose
                     fontWeight: 700,
                     padding: '2px 8px',
                     borderRadius: 'var(--radius-pill)',
-                    background: badge === 'Bestseller' ? '#FFEDD5' : '#F3F4F6',
-                    color: badge === 'Bestseller' ? '#C2410C' : '#374151',
-                    border: badge === 'Bestseller' ? '1px solid #FB923C' : '1px solid #D1D5DB'
+                    background: badge === 'Bestseller' ? '#FFFBEB' : '#F3F4F6',
+                    color: badge === 'Bestseller' ? '#B45309' : '#374151',
+                    border: badge === 'Bestseller' ? '1px solid #F59E0B' : '1px solid #D1D5DB'
                   }}
                 >
                   🔥 Bestseller
@@ -409,24 +432,45 @@ export default function DishFormModal({ dish, categories, token, onSave, onClose
             </div>
           </div>
 
-          {/* Description */}
-          <div style={{ marginBottom: '14px' }}>
-            <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: 600, marginBottom: '4px' }}>
-              Description
-            </label>
-            <textarea
-              rows="2"
-              value={description}
-              onChange={(e) => setDescription(e.target.value)}
-              placeholder="Fresh paneer cooked in velvety tomato gravy..."
-              style={{
-                width: '100%',
-                padding: '10px',
-                borderRadius: 'var(--radius-sm)',
-                border: '1px solid rgba(197, 160, 89, 0.4)',
-                fontSize: '0.85rem'
-              }}
-            />
+          {/* Description (EN + HI) */}
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', marginBottom: '14px' }}>
+            <div>
+              <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: 600, marginBottom: '4px' }}>
+                Description (English)
+              </label>
+              <textarea
+                rows="2"
+                value={description}
+                onChange={(e) => setDescription(e.target.value)}
+                placeholder="Fresh paneer cooked in velvety tomato gravy..."
+                style={{
+                  width: '100%',
+                  padding: '10px',
+                  borderRadius: 'var(--radius-sm)',
+                  border: '1px solid rgba(197, 160, 89, 0.4)',
+                  fontSize: '0.85rem'
+                }}
+              />
+            </div>
+
+            <div>
+              <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: 600, marginBottom: '4px' }}>
+                Description (हिंदी - Optional)
+              </label>
+              <textarea
+                rows="2"
+                value={descriptionHi}
+                onChange={(e) => setDescriptionHi(e.target.value)}
+                placeholder="ताज़ा पनीर मखमली टमाटर ग्रेवी में पकाया गया..."
+                style={{
+                  width: '100%',
+                  padding: '10px',
+                  borderRadius: 'var(--radius-sm)',
+                  border: '1px solid rgba(197, 160, 89, 0.4)',
+                  fontSize: '0.85rem'
+                }}
+              />
+            </div>
           </div>
 
           {/* Ingredients & Portion Size text */}

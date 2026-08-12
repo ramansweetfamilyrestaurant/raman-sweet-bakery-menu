@@ -4,6 +4,7 @@ import { uploadImage } from '../../api/client';
 
 export default function CategoryFormModal({ category, token, onSave, onClose }) {
   const [name, setName] = useState(category?.name || '');
+  const [nameHi, setNameHi] = useState(category?.name_hi || '');
   const [image, setImage] = useState(category?.image && category.image !== '/uploads/logo.jpg' ? category.image : '');
   const [sortOrder, setSortOrder] = useState(category?.sort_order || 0);
 
@@ -39,6 +40,7 @@ export default function CategoryFormModal({ category, token, onSave, onClose }) 
     try {
       await onSave({
         name,
+        name_hi: nameHi,
         image,
         sort_order: Number(sortOrder)
       });
@@ -73,18 +75,20 @@ export default function CategoryFormModal({ category, token, onSave, onClose }) 
         }}
       >
         <div style={{
-          background: 'var(--primary-dark-green)',
-          color: '#FFFFFF',
           padding: '16px 20px',
+          background: 'var(--header-gradient)',
+          color: '#FFFFFF',
           display: 'flex',
           justifyContent: 'space-between',
-          alignItems: 'center',
-          borderBottom: '1px solid var(--accent-gold)'
+          alignItems: 'center'
         }}>
-          <h3 style={{ fontFamily: 'var(--font-heading)', fontSize: '1.2rem', color: '#FFFFFF' }}>
+          <h3 style={{ fontSize: '1.1rem', fontWeight: 700, margin: 0 }}>
             {category ? 'Edit Category' : 'Create New Category'}
           </h3>
-          <button onClick={onClose} style={{ color: '#FFFFFF' }}>
+          <button 
+            onClick={onClose}
+            style={{ background: 'none', border: 'none', color: '#FFFFFF', cursor: 'pointer' }}
+          >
             <X size={20} />
           </button>
         </div>
@@ -92,11 +96,11 @@ export default function CategoryFormModal({ category, token, onSave, onClose }) 
         <form onSubmit={handleSubmit} style={{ padding: '20px' }}>
           {error && (
             <div style={{
-              background: '#FEF2F2',
-              border: '1px solid #FCA5A5',
-              borderRadius: 'var(--radius-sm)',
-              padding: '8px 12px',
+              background: '#FEE2E2',
+              border: '1px solid #EF4444',
               color: '#991B1B',
+              padding: '10px 12px',
+              borderRadius: 'var(--radius-sm)',
               fontSize: '0.84rem',
               marginBottom: '14px'
             }}>
@@ -106,7 +110,7 @@ export default function CategoryFormModal({ category, token, onSave, onClose }) 
 
           <div style={{ marginBottom: '14px' }}>
             <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: 600, marginBottom: '4px' }}>
-              Category Name *
+              Category Name (English) *
             </label>
             <input
               type="text"
@@ -114,6 +118,25 @@ export default function CategoryFormModal({ category, token, onSave, onClose }) 
               value={name}
               onChange={(e) => setName(e.target.value)}
               placeholder="e.g. Pure Desi Ghee Sweets"
+              style={{
+                width: '100%',
+                padding: '10px',
+                borderRadius: 'var(--radius-sm)',
+                border: '1px solid rgba(197, 160, 89, 0.4)',
+                fontSize: '0.9rem'
+              }}
+            />
+          </div>
+
+          <div style={{ marginBottom: '14px' }}>
+            <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: 600, marginBottom: '4px' }}>
+              Category Name (हिंदी - Optional)
+            </label>
+            <input
+              type="text"
+              value={nameHi}
+              onChange={(e) => setNameHi(e.target.value)}
+              placeholder="e.g. शुद्ध देसी घी मिठाइयां"
               style={{
                 width: '100%',
                 padding: '10px',

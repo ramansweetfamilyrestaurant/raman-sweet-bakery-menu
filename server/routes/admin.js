@@ -838,15 +838,15 @@ router.post('/categories', authenticateToken, requireActiveSubscription, async (
       return res.status(401).json({ error: 'Unauthorized: Restaurant session required' });
     }
     const targetId = restoId || 1;
-    const { name, image, sort_order } = req.body;
+    const { name, name_hi, image, sort_order } = req.body;
     if (!name) {
       return res.status(400).json({ error: 'Category name is required' });
     }
     const processedImage = await processExternalImageUrl(image, targetId, 'categories');
     const order = sort_order || 0;
     const result = await query(
-      'INSERT INTO categories (restaurant_id, name, image, sort_order) VALUES ($1, $2, $3, $4) RETURNING id',
-      [targetId, name, processedImage || null, order]
+      'INSERT INTO categories (restaurant_id, name, name_hi, image, sort_order) VALUES ($1, $2, $3, $4, $5) RETURNING id',
+      [targetId, name, name_hi || '', processedImage || null, order]
     );
     res.json({ success: true, id: result[0]?.id || result.lastInsertRowid });
   } catch (err) {
@@ -863,7 +863,7 @@ router.put('/categories/:id', authenticateToken, requireActiveSubscription, asyn
     }
     const targetId = restoId || 1;
     const { id } = req.params;
-    const { name, image, sort_order } = req.body;
+    const { name, name_hi, image, sort_order } = req.body;
 
     const processedImage = await processExternalImageUrl(image, targetId, 'categories');
 
@@ -879,8 +879,8 @@ router.put('/categories/:id', authenticateToken, requireActiveSubscription, asyn
     }
 
     await query(
-      'UPDATE categories SET name = $1, image = $2, sort_order = $3 WHERE id = $4 AND restaurant_id = $5',
-      [name, processedImage, sort_order || 0, id, targetId]
+      'UPDATE categories SET name = $1, name_hi = $2, image = $3, sort_order = $4 WHERE id = $5 AND restaurant_id = $6',
+      [name, name_hi || '', processedImage, sort_order || 0, id, targetId]
     );
     res.json({ success: true });
   } catch (err) {
@@ -954,7 +954,7 @@ router.post('/dishes', authenticateToken, requireActiveSubscription, async (req,
     }
     const targetId = restoId || 1;
     const { 
-      category_id, name, description, image, price, price_half, 
+      category_id, name, name_hi, description, description_hi, image, price, price_half, 
       portion, portion_half_label, portion_full_label, badge, ingredients, taste_profile, type, available 
     } = req.body;
 
@@ -967,11 +967,11 @@ router.post('/dishes', authenticateToken, requireActiveSubscription, async (req,
     const availVal = available === false ? 0 : 1;
     const result = await query(
       `INSERT INTO dishes (
-        restaurant_id, category_id, name, description, image, price, price_half, 
+        restaurant_id, category_id, name, name_hi, description, description_hi, image, price, price_half, 
         portion, portion_half_label, portion_full_label, badge, ingredients, taste_profile, type, available
-      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15) RETURNING id`,
+      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17) RETURNING id`,
       [
-        targetId, category_id, name, description || '', processedImage || '', price, price_half || null,
+        targetId, category_id, name, name_hi || '', description || '', description_hi || '', processedImage || '', price, price_half || null,
         portion || '', portion_half_label || '', portion_full_label || '', badge || '', ingredients || '', taste_profile || '', type || 'veg', availVal
       ]
     );
@@ -991,7 +991,7 @@ router.put('/dishes/:id', authenticateToken, requireActiveSubscription, async (r
     const targetId = restoId || 1;
     const { id } = req.params;
     const { 
-      category_id, name, description, image, price, price_half, 
+      category_id, name, name_hi, description, description_hi, image, price, price_half, 
       portion, portion_half_label, portion_full_label, badge, ingredients, taste_profile, type, available 
     } = req.body;
 
@@ -1011,12 +1011,12 @@ router.put('/dishes/:id', authenticateToken, requireActiveSubscription, async (r
     const availVal = available ? 1 : 0;
     await query(
       `UPDATE dishes 
-       SET category_id = $1, name = $2, description = $3, image = $4, price = $5, price_half = $6,
-           portion = $7, portion_half_label = $8, portion_full_label = $9, badge = $10,
-           ingredients = $11, taste_profile = $12, type = $13, available = $14, updated_at = CURRENT_TIMESTAMP 
-       WHERE id = $15 AND restaurant_id = $16`,
+       SET category_id = $1, name = $2, name_hi = $3, description = $4, description_hi = $5, image = $6, price = $7, price_half = $8,
+           portion = $9, portion_half_label = $10, portion_full_label = $11, badge = $12,
+           ingredients = $13, taste_profile = $14, type = $15, available = $16, updated_at = CURRENT_TIMESTAMP 
+       WHERE id = $17 AND restaurant_id = $18`,
       [
-        category_id, name, description || '', processedImage, price, price_half || null,
+        category_id, name, name_hi || '', description || '', description_hi || '', processedImage, price, price_half || null,
         portion || '', portion_half_label || '', portion_full_label || '', badge || '',
         ingredients || '', taste_profile || '', type || 'veg', availVal, id, targetId
       ]
