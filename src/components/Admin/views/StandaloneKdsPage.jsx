@@ -108,8 +108,10 @@ export default function StandaloneKdsPage({ slug = '' }) {
       let targetSlug = slug;
       if (!targetSlug) {
         const parts = window.location.pathname.split('/').filter(Boolean);
-        if (parts.length > 0 && parts[parts.length - 1] === 'kitchen') {
-          targetSlug = parts.length > 1 ? parts[0] : '';
+        if (parts.length >= 2 && parts[parts.length - 1] === 'kitchen') {
+          targetSlug = parts[parts.length - 2];
+        } else if (parts.length > 0 && parts[0] !== 'kitchen') {
+          targetSlug = parts[0];
         }
       }
       if (!targetSlug) {

@@ -595,17 +595,11 @@ router.post('/service-requests', async (req, res) => {
 router.get('/kitchen/orders', async (req, res) => {
   try {
     const { slug } = req.query;
-    if (!slug || typeof slug !== 'string' || !slug.trim()) {
-      return res.status(400).json({ error: 'Restaurant slug is required' });
-    }
-
-    const cleanSlug = slug.trim().toLowerCase();
-    const restos = await query('SELECT * FROM restaurants WHERE LOWER(slug) = $1', [cleanSlug]);
-    if (!restos || restos.length === 0) {
+    const resto = await resolveRestaurant(req, slug);
+    if (!resto) {
       return res.status(404).json({ error: 'Restaurant not found' });
     }
 
-    const resto = restos[0];
     const targetId = resto.id;
 
     const orders = await query(`
