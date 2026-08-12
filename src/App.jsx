@@ -47,10 +47,24 @@ export default function App() {
   // Language State ('en' or 'hi')
   const [lang, setLang] = useState('en');
 
+  const isSlugKitchenPath = (rawPath) => {
+    if (!rawPath) return false;
+    const cleanPath = String(rawPath).toLowerCase().replace(/\/$/, '');
+    const parts = cleanPath.split('/').filter(Boolean);
+    if (parts.length === 2 && parts[1] === 'kitchen') {
+      const slugCandidate = parts[0];
+      return !['admin', 'superadmin', 'super-admin', 'api', 'uploads', 'assets', 'register', 'billing', 'privacy', 'terms'].includes(slugCandidate);
+    }
+    if (parts.length === 3 && parts[0] === 'r' && parts[2] === 'kitchen') {
+      return true;
+    }
+    return false;
+  };
+
   const getInitialView = () => {
     const path = (window.location.pathname || '/').toLowerCase().replace(/\/$/, '') || '/';
     const hash = (window.location.hash || '').toLowerCase();
-    if (path.includes('/kitchen')) return 'kitchen-kds';
+    if (isSlugKitchenPath(path)) return 'kitchen-kds';
     if (path === '/privacy-policy' || path === '/privacy') return 'privacy-policy';
     if (path === '/terms' || path === '/terms-of-service') return 'terms';
     if (path === '/refund-policy' || path === '/refunds') return 'refund-policy';
@@ -440,7 +454,7 @@ export default function App() {
 
   // Load Menu Data
   const loadMenuData = async (forcedSlug = '') => {
-    if (view === 'kitchen-kds' || view === 'admin-dashboard' || view === 'super-admin-dashboard' || window.location.pathname.toLowerCase().includes('/admin') || window.location.pathname.toLowerCase().includes('/kitchen')) {
+    if (view === 'kitchen-kds' || view === 'admin-dashboard' || view === 'super-admin-dashboard' || window.location.pathname.toLowerCase().includes('/admin') || isSlugKitchenPath(window.location.pathname)) {
       setLoading(false);
       return;
     }
@@ -524,7 +538,7 @@ export default function App() {
   };
 
   useEffect(() => {
-    if (view === 'kitchen-kds' || view === 'admin-login' || view === 'super-admin-login' || view === 'admin-dashboard' || view === 'super-admin-dashboard' || window.location.pathname.toLowerCase().includes('/admin') || window.location.pathname.toLowerCase().includes('/kitchen')) {
+    if (view === 'kitchen-kds' || view === 'admin-login' || view === 'super-admin-login' || view === 'admin-dashboard' || view === 'super-admin-dashboard' || window.location.pathname.toLowerCase().includes('/admin') || isSlugKitchenPath(window.location.pathname)) {
       setLoading(false);
     } else {
       loadMenuData();
@@ -609,8 +623,8 @@ export default function App() {
       // Route: /billing → Subscription Billing Page
       const isBilling = path === '/billing' || path === '/billing/';
 
-      // Route: /kitchen or /:slug/kitchen → Dedicated KDS Screen
-      const isKitchen = path.includes('/kitchen');
+      // Route: /:slug/kitchen → Dedicated KDS Screen (slug required)
+      const isKitchen = isSlugKitchenPath(path);
 
       // Legal & Support Routes
       const isPrivacy = path === '/privacy-policy' || path === '/privacy-policy/' || path === '/privacy';
