@@ -522,7 +522,9 @@ export default function App() {
   };
 
   useEffect(() => {
-    if (view !== 'admin-dashboard' && view !== 'super-admin-dashboard' && !window.location.pathname.toLowerCase().includes('/admin')) {
+    if (view === 'admin-login' || view === 'super-admin-login' || view === 'admin-dashboard' || view === 'super-admin-dashboard' || window.location.pathname.toLowerCase().includes('/admin')) {
+      setLoading(false);
+    } else {
       loadMenuData();
     }
   }, [searchQuery, adminToken, view]);
