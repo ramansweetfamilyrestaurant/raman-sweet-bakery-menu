@@ -727,20 +727,37 @@ export default function SetupView({
             </p>
 
             <div>
-              <label style={{ fontSize: '0.74rem', fontWeight: 800, color: 'var(--adm-primary)', display: 'block', marginBottom: '4px' }}>
-                PRINTER ROUTING MODE:
-              </label>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '4px' }}>
+                <label style={{ fontSize: '0.74rem', fontWeight: 800, color: 'var(--adm-primary)', margin: 0 }}>
+                  PRINTER ROUTING MODE:
+                </label>
+                {!(settingsForm?.dual_printer_enabled !== false && settingsForm?.dual_printer_enabled !== 0) && (
+                  <span style={{ fontSize: '0.68rem', fontWeight: 800, color: '#B45309', background: '#FEF3C7', border: '1px solid #F59E0B', padding: '1px 7px', borderRadius: 'var(--radius-pill)' }}>
+                    🔒 Enterprise Dual Printer Feature
+                  </span>
+                )}
+              </div>
               <select
                 value={settingsForm.printer_mode || 'single'}
-                onChange={(e) => setSettingsForm({ ...settingsForm, printer_mode: e.target.value })}
+                onChange={(e) => {
+                  const val = e.target.value;
+                  const isDualPermitted = settingsForm?.dual_printer_enabled !== false && settingsForm?.dual_printer_enabled !== 0;
+                  if (val === 'dual' && !isDualPermitted) {
+                    alert('🔒 Dual Separate Printers (Kitchen + Counter) is locked on your current plan. Please upgrade your SaaS subscription plan to Enterprise / VIP Ultra to activate Dual Printer Routing!');
+                    return;
+                  }
+                  setSettingsForm({ ...settingsForm, printer_mode: val });
+                }}
                 style={{ width: '100%', padding: '8px 10px', borderRadius: 'var(--adm-radius-md)', border: '1px solid var(--adm-border)', fontSize: '0.85rem' }}
               >
                 <option value="single">🟢 Single Printer (Same Printer for KOT & Customer Bill)</option>
-                <option value="dual">⚡ Dual Separate Printers (Kitchen KOT + Counter Bill Printers)</option>
+                <option value="dual" disabled={!(settingsForm?.dual_printer_enabled !== false && settingsForm?.dual_printer_enabled !== 0)}>
+                  ⚡ Dual Separate Printers (Kitchen KOT + Counter Bill Printers) {!(settingsForm?.dual_printer_enabled !== false && settingsForm?.dual_printer_enabled !== 0) ? '🔒 (Enterprise Upgrade Required)' : ''}
+                </option>
               </select>
             </div>
 
-            {settingsForm.printer_mode === 'dual' && (
+            {settingsForm.printer_mode === 'dual' && (settingsForm?.dual_printer_enabled !== false && settingsForm?.dual_printer_enabled !== 0) && (
               <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', padding: '10px', background: 'var(--adm-surface)', borderRadius: 'var(--adm-radius-md)', border: '1px dashed var(--adm-accent)' }}>
                 <div>
                   <label style={{ fontSize: '0.72rem', fontWeight: 800, color: 'var(--adm-muted)', display: 'block', marginBottom: '2px' }}>

@@ -593,7 +593,7 @@ router.put('/plans/:key', authenticateToken, requireSuperAdmin, async (req, res)
       modifiers_enabled, staff_roles_enabled, whatsapp_ordering_enabled, direct_ordering_enabled,
       audio_alarm_enabled, order_status_whatsapp_enabled, kds_enabled, bluetooth_kot_enabled,
       google_reviews_enabled, ai_review_enabled, stories_enabled, gst_invoice_enabled,
-      analytics_export_enabled, multi_language_enabled, watermark_removal_enabled, custom_domain_enabled
+      analytics_export_enabled, multi_language_enabled, watermark_removal_enabled, custom_domain_enabled, dual_printer_enabled
     } = req.body;
 
     await query(`
@@ -603,8 +603,9 @@ router.put('/plans/:key', authenticateToken, requireSuperAdmin, async (req, res)
           modifiers_enabled = $11, staff_roles_enabled = $12, whatsapp_ordering_enabled = $13, direct_ordering_enabled = $14,
           audio_alarm_enabled = $15, order_status_whatsapp_enabled = $16, kds_enabled = $17, bluetooth_kot_enabled = $18,
           google_reviews_enabled = $19, ai_review_enabled = $20, stories_enabled = $21, gst_invoice_enabled = $22,
-          analytics_export_enabled = $23, multi_language_enabled = $24, watermark_removal_enabled = $25, custom_domain_enabled = $26
-      WHERE key = $27
+          analytics_export_enabled = $23, multi_language_enabled = $24, watermark_removal_enabled = $25, custom_domain_enabled = $26,
+          dual_printer_enabled = $27
+      WHERE key = $28
     `, [
       name || key,
       price !== undefined ? parseFloat(price) : 999,
@@ -632,6 +633,7 @@ router.put('/plans/:key', authenticateToken, requireSuperAdmin, async (req, res)
       multi_language_enabled ? 1 : 0,
       watermark_removal_enabled ? 1 : 0,
       custom_domain_enabled ? 1 : 0,
+      dual_printer_enabled ? 1 : 0,
       key
     ]);
 
