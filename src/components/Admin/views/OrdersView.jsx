@@ -270,6 +270,15 @@ export default function OrdersView({
                       )}
                       {order.status === 'kitchen' && (
                         <>
+                          {order.kitchen_prepared !== 1 && (
+                            <button
+                              onClick={() => onUpdateStatus(order.id, 'kitchen', { kitchen_prepared: 1 })}
+                              className="adm-btn adm-btn-secondary adm-btn-sm"
+                              style={{ fontWeight: 800, minHeight: '44px', padding: '0 12px', background: '#DCFCE7', color: '#15803D', border: '1px solid #86EFAC' }}
+                            >
+                              🔔 Mark Ready
+                            </button>
+                          )}
                           <button onClick={() => onUpdateStatus(order.id, 'served')} className="adm-btn adm-btn-accent adm-btn-sm" style={{ fontWeight: 800, minHeight: '44px', padding: '0 12px' }}>
                             🛎️ Mark Served
                           </button>
