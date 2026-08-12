@@ -125,6 +125,7 @@ async function createTables() {
         items JSONB,
         total_amount DECIMAL(10, 2) NOT NULL,
         status VARCHAR(50) DEFAULT 'pending',
+        sent_to_kds INT DEFAULT 1,
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
       );`,
 
@@ -574,6 +575,7 @@ async function createTables() {
         items TEXT,
         total_amount REAL NOT NULL,
         status TEXT DEFAULT 'pending',
+        sent_to_kds INTEGER DEFAULT 1,
         created_at TEXT DEFAULT CURRENT_TIMESTAMP,
         FOREIGN KEY (restaurant_id) REFERENCES restaurants (id) ON DELETE CASCADE
       );

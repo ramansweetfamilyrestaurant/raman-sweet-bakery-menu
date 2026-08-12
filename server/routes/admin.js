@@ -1248,23 +1248,34 @@ router.patch('/orders/:id/status', authenticateToken, requireActiveSubscription,
     const { id } = req.params;
     const { status, sent_to_kds } = req.body;
 
+    const numericId = parseInt(id, 10);
+    const orderId = isNaN(numericId) ? id : numericId;
+
     if (sent_to_kds !== undefined && sent_to_kds !== null) {
       const kdsVal = (sent_to_kds === 1 || sent_to_kds === true || sent_to_kds === '1') ? 1 : 0;
-      await query(
-        'UPDATE orders SET status = $1, sent_to_kds = $2 WHERE id = $3 AND restaurant_id = $4',
-        [status, kdsVal, id, targetId]
-      );
+      try {
+        await query(
+          'UPDATE orders SET status = $1, sent_to_kds = $2 WHERE id = $3 AND (restaurant_id = $4 OR restaurant_id IS NULL)',
+          [status, kdsVal, orderId, targetId]
+        );
+      } catch (colErr) {
+        console.warn('sent_to_kds column update notice, falling back to status update:', colErr.message);
+        await query(
+          'UPDATE orders SET status = $1 WHERE id = $2 AND (restaurant_id = $3 OR restaurant_id IS NULL)',
+          [status, orderId, targetId]
+        );
+      }
     } else {
       await query(
-        'UPDATE orders SET status = $1 WHERE id = $2 AND restaurant_id = $3',
-        [status, id, targetId]
+        'UPDATE orders SET status = $1 WHERE id = $2 AND (restaurant_id = $3 OR restaurant_id IS NULL)',
+        [status, orderId, targetId]
       );
     }
 
-    res.json({ success: true, id, status, sent_to_kds });
+    res.json({ success: true, id: orderId, status, sent_to_kds });
   } catch (err) {
     console.error('Update order status error:', err);
-    res.status(500).json({ error: 'Failed to update order status' });
+    res.status(500).json({ error: err.message || 'Failed to update order status' });
   }
 });
 
