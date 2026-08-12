@@ -1,7 +1,7 @@
 import React from 'react';
 import { ShoppingBag, BarChart2, Utensils, Settings } from 'lucide-react';
 
-export default function AdminBottomNavigation({ activeTab, setActiveTab, pendingOrdersCount = 0, analyticsEnabled = true }) {
+export default function AdminBottomNavigation({ activeTab, setActiveTab, pendingOrdersCount = 0, analyticsEnabled = true, ordersEnabled = true }) {
   const isOrdersActive = ['orders', 'kds-screen', 'floor-map', 'service-requests'].includes(activeTab);
   const isMenuActive = ['dishes', 'categories', 'combos'].includes(activeTab);
   const isSetupActive = ['settings', 'qr-generator', 'review'].includes(activeTab);
@@ -9,23 +9,25 @@ export default function AdminBottomNavigation({ activeTab, setActiveTab, pending
 
   return (
     <nav className="adm-mobile-nav">
-      <button
-        onClick={() => setActiveTab('orders')}
-        className={`adm-mobile-nav-item ${isOrdersActive ? 'active' : ''}`}
-        style={{ position: 'relative' }}
-      >
-        <ShoppingBag size={20} />
-        <span>Orders</span>
-        {pendingOrdersCount > 0 && (
-          <span style={{
-            position: 'absolute', top: '4px', right: 'calc(50% - 18px)',
-            background: 'var(--adm-danger)', color: '#FFF', fontSize: '0.62rem',
-            fontWeight: 900, borderRadius: '9999px', padding: '1px 5px', minWidth: '16px', textAlign: 'center'
-          }}>
-            {pendingOrdersCount}
-          </span>
-        )}
-      </button>
+      {ordersEnabled && (
+        <button
+          onClick={() => setActiveTab('orders')}
+          className={`adm-mobile-nav-item ${isOrdersActive ? 'active' : ''}`}
+          style={{ position: 'relative' }}
+        >
+          <ShoppingBag size={20} />
+          <span>Orders</span>
+          {pendingOrdersCount > 0 && (
+            <span style={{
+              position: 'absolute', top: '4px', right: 'calc(50% - 18px)',
+              background: 'var(--adm-danger)', color: '#FFF', fontSize: '0.62rem',
+              fontWeight: 900, borderRadius: '9999px', padding: '1px 5px', minWidth: '16px', textAlign: 'center'
+            }}>
+              {pendingOrdersCount}
+            </span>
+          )}
+        </button>
+      )}
 
       {analyticsEnabled && (
         <button

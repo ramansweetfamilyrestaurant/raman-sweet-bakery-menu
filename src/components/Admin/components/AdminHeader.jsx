@@ -12,7 +12,8 @@ export default function AdminHeader({
   activeTab,
   setActiveTab,
   pendingOrdersCount = 0,
-  analyticsEnabled = true
+  analyticsEnabled = true,
+  ordersEnabled = true
 }) {
   const [showMoreMenu, setShowMoreMenu] = useState(false);
   const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
@@ -85,12 +86,14 @@ export default function AdminHeader({
       {/* CENTER: Desktop Integrated Nav Tabs (hidden on mobile) */}
       {setActiveTab && (
         <div className="adm-header-desktop-tabs">
-          <button
-            onClick={() => setActiveTab('orders')}
-            className={`adm-header-tab ${isOrdersActive ? 'active' : ''}`}
-          >
-            Orders {pendingOrdersCount > 0 ? `(${pendingOrdersCount})` : ''}
-          </button>
+          {ordersEnabled && (
+            <button
+              onClick={() => setActiveTab('orders')}
+              className={`adm-header-tab ${isOrdersActive ? 'active' : ''}`}
+            >
+              Orders {pendingOrdersCount > 0 ? `(${pendingOrdersCount})` : ''}
+            </button>
+          )}
           {analyticsEnabled && (
             <button
               onClick={() => setActiveTab('analytics')}

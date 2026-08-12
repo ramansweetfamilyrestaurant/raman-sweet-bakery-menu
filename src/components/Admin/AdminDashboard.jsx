@@ -1625,6 +1625,13 @@ export default function AdminDashboard({ token, username, onLogout, onReturnToMe
     restaurantInfo?.analytics_export_enabled !== 0
   );
 
+  const isDirectOrderingEnabled = (
+    restaurantInfo?.direct_ordering_enabled !== false &&
+    restaurantInfo?.direct_ordering_enabled !== 0 &&
+    restaurantInfo?.permissions?.direct_ordering_enabled !== false &&
+    restaurantInfo?.permissions?.direct_ordering_enabled !== 0
+  );
+
   return (
     <div style={{ minHeight: '100vh', background: 'var(--bg-app)', paddingBottom: '70px' }}>
       <style>{`
@@ -1869,6 +1876,7 @@ export default function AdminDashboard({ token, username, onLogout, onReturnToMe
           setActiveTab={setActiveTab}
           pendingOrdersCount={orders.filter(o => o.status === 'pending').length}
           analyticsEnabled={isAnalyticsEnabled}
+          ordersEnabled={isDirectOrderingEnabled}
         />
 
         <main className="adm-main-canvas">
@@ -1894,6 +1902,7 @@ export default function AdminDashboard({ token, username, onLogout, onReturnToMe
                 printingOrderId={printingOrderId}
                 printingType={printingType}
                 currencySymbol={settingsForm.currency_symbol !== undefined && settingsForm.currency_symbol !== null ? settingsForm.currency_symbol : '₹'}
+                ordersEnabled={isDirectOrderingEnabled}
               />
             )}
 
@@ -1998,6 +2007,7 @@ export default function AdminDashboard({ token, username, onLogout, onReturnToMe
           setActiveTab={setActiveTab}
           pendingOrdersCount={orders.filter(o => o.status === 'pending').length}
           analyticsEnabled={isAnalyticsEnabled}
+          ordersEnabled={isDirectOrderingEnabled}
         />
       </div>
 

@@ -20,7 +20,8 @@ export default function OrdersView({
   onPreviewPrint,
   printingOrderId,
   printingType,
-  currencySymbol = '₹'
+  currencySymbol = '₹',
+  ordersEnabled = true
 }) {
   const validOrders = (Array.isArray(orders) ? orders : []).filter(o => o.status !== 'rejected' && o.status !== 'cancelled');
   const safeServiceRequests = Array.isArray(serviceRequests) ? serviceRequests : [];
@@ -55,6 +56,22 @@ export default function OrdersView({
   const kdsPlanEnabled = restaurantInfo?.kds_enabled !== undefined ? (restaurantInfo.kds_enabled === 1 || restaurantInfo.kds_enabled === true || restaurantInfo.kds_enabled === '1') : true;
   const kdsScreenEnabled = restaurantInfo?.kds_screen_enabled !== undefined ? (restaurantInfo.kds_screen_enabled === 1 || restaurantInfo.kds_screen_enabled === true || restaurantInfo.kds_screen_enabled === '1') : true;
   const kdsEnabled = kdsPlanEnabled && kdsScreenEnabled;
+
+  if (ordersEnabled === false) {
+    return (
+      <div style={{ padding: '40px 20px', textAlign: 'center', background: '#FFF', borderRadius: 'var(--adm-radius-lg)', border: '1px solid var(--adm-border)' }}>
+        <div style={{ width: '60px', height: '60px', borderRadius: '50%', background: '#FEF3C7', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 16px auto', border: '1px solid #F59E0B' }}>
+          <XCircle size={32} color="#B45309" />
+        </div>
+        <h3 style={{ fontSize: '1.2rem', fontWeight: 900, color: 'var(--adm-primary)', margin: '0 0 6px 0' }}>
+          🔒 Live Customer QR Order Receiving Page Locked
+        </h3>
+        <p style={{ fontSize: '0.86rem', color: 'var(--adm-muted)', maxWidth: '480px', margin: '0 auto 16px auto' }}>
+          Live order receiving is disabled for your restaurant on the current plan tier. Upgrade to Pro or Enterprise plan in SuperAdmin to unlock live QR table order receiving!
+        </p>
+      </div>
+    );
+  }
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
