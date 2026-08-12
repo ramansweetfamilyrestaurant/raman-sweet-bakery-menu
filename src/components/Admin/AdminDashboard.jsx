@@ -352,7 +352,24 @@ export default function AdminDashboard({ token, username, onLogout, onReturnToMe
         triggerBackgroundNotification(pendingCount);
       }
       setPrevPendingCount(pendingCount);
-      setOrders(safeData);
+
+      // 🛎️ Cross-device/Cross-tab detection: check if any order newly became kitchen_prepared === 1
+      setOrders(prevOrders => {
+        const newlyPrepared = safeData.find(newOrd => {
+          const newIsPrep = newOrd.kitchen_prepared === 1 || newOrd.kitchen_prepared === true || newOrd.kitchen_prepared === '1';
+          const oldOrd = prevOrders.find(o => String(o.id) === String(newOrd.id));
+          const oldIsPrep = oldOrd && (oldOrd.kitchen_prepared === 1 || oldOrd.kitchen_prepared === true || oldOrd.kitchen_prepared === '1');
+          return newIsPrep && !oldIsPrep;
+        });
+
+        if (newlyPrepared) {
+          playWaiterBellChime();
+          const tblNum = newlyPrepared.table_number ? `Table #${newlyPrepared.table_number}` : `Order #${newlyPrepared.id}`;
+          setToastMessage(`🛎️ ${tblNum} Food is PREPARED in Kitchen! Ready to Serve.`);
+          setTimeout(() => setToastMessage(''), 6000);
+        }
+        return safeData;
+      });
       try {
         localStorage.setItem('admin_cache_orders', JSON.stringify(safeData));
       } catch (e) {}

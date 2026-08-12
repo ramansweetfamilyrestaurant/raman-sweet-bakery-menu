@@ -1255,32 +1255,32 @@ router.patch('/orders/:id/status', authenticateToken, requireActiveSubscription,
       const prepVal = (kitchen_prepared === 1 || kitchen_prepared === true || kitchen_prepared === '1') ? 1 : 0;
       try {
         await query(
-          'UPDATE orders SET status = $1, kitchen_prepared = $2 WHERE id = $3 AND (restaurant_id = $4 OR restaurant_id IS NULL)',
-          [status, prepVal, orderId, targetId]
+          'UPDATE orders SET status = $1, kitchen_prepared = $2 WHERE id = $3',
+          [status, prepVal, orderId]
         );
       } catch (colErr) {
         await query(
-          'UPDATE orders SET status = $1 WHERE id = $2 AND (restaurant_id = $3 OR restaurant_id IS NULL)',
-          [status, orderId, targetId]
+          'UPDATE orders SET status = $1 WHERE id = $2',
+          [status, orderId]
         );
       }
     } else if (sent_to_kds !== undefined && sent_to_kds !== null) {
       const kdsVal = (sent_to_kds === 1 || sent_to_kds === true || sent_to_kds === '1') ? 1 : 0;
       try {
         await query(
-          'UPDATE orders SET status = $1, sent_to_kds = $2 WHERE id = $3 AND (restaurant_id = $4 OR restaurant_id IS NULL)',
-          [status, kdsVal, orderId, targetId]
+          'UPDATE orders SET status = $1, sent_to_kds = $2 WHERE id = $3',
+          [status, kdsVal, orderId]
         );
       } catch (colErr) {
         await query(
-          'UPDATE orders SET status = $1 WHERE id = $2 AND (restaurant_id = $3 OR restaurant_id IS NULL)',
-          [status, orderId, targetId]
+          'UPDATE orders SET status = $1 WHERE id = $2',
+          [status, orderId]
         );
       }
     } else {
       await query(
-        'UPDATE orders SET status = $1 WHERE id = $2 AND (restaurant_id = $3 OR restaurant_id IS NULL)',
-        [status, orderId, targetId]
+        'UPDATE orders SET status = $1 WHERE id = $2',
+        [status, orderId]
       );
     }
 
