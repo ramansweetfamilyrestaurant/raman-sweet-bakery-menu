@@ -1,7 +1,7 @@
 import React from 'react';
 import { BarChart2, Download, TrendingUp, DollarSign, Award } from 'lucide-react';
 
-export default function AnalyticsView({ analyticsData, onDownloadCSV, currencySymbol = '₹' }) {
+export default function AnalyticsView({ analyticsData, onDownloadCSV, analyticsExportEnabled = true, currencySymbol = '₹' }) {
   const todayRevenue = analyticsData?.today_sales ?? analyticsData?.today_revenue ?? 0;
   const days7Revenue = analyticsData?.weekly_sales ?? analyticsData?.days_7_revenue ?? 0;
   const days30Revenue = analyticsData?.monthly_sales ?? analyticsData?.days_30_revenue ?? 0;
@@ -14,16 +14,22 @@ export default function AnalyticsView({ analyticsData, onDownloadCSV, currencySy
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '10px' }}>
         <div>
           <h2 style={{ fontSize: '1.25rem', fontWeight: 900, color: 'var(--adm-primary)', margin: '0 0 2px 0' }}>
-            Analytics
+            Sales Analytics & Reports
           </h2>
           <span style={{ fontSize: '0.8rem', color: 'var(--adm-muted)', fontWeight: 600 }}>
-            Sales & performance
+            Real-time revenue metrics & CSV sales export
           </span>
         </div>
 
-        <button onClick={onDownloadCSV} className="adm-btn adm-btn-secondary adm-btn-sm" style={{ fontWeight: 800 }}>
-          <Download size={14} /> Download CSV
-        </button>
+        {analyticsExportEnabled ? (
+          <button onClick={onDownloadCSV} className="adm-btn adm-btn-secondary adm-btn-sm" style={{ fontWeight: 800 }}>
+            <Download size={14} /> Export CSV Sales Report
+          </button>
+        ) : (
+          <span style={{ fontSize: '0.75rem', fontWeight: 800, color: '#B45309', background: '#FEF3C7', border: '1px solid #F59E0B', padding: '4px 10px', borderRadius: 'var(--radius-pill)' }}>
+            🔒 CSV Export (Pro Feature)
+          </span>
+        )}
       </div>
 
       {/* KPI Cards Grid */}

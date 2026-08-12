@@ -984,6 +984,7 @@ export default function AdminDashboard({ token, username, onLogout, onReturnToMe
           custom_domain: infoData.custom_domain || '',
           watermark_removal_enabled: infoData.watermark_removal_enabled !== undefined ? infoData.watermark_removal_enabled : true,
           custom_domain_enabled: infoData.custom_domain_enabled !== undefined ? infoData.custom_domain_enabled : true,
+          analytics_export_enabled: infoData.analytics_export_enabled !== undefined ? infoData.analytics_export_enabled : true,
           filters_visibility: { ...defaultVis, ...infoData.filters_visibility }
         });
       }
@@ -1801,6 +1802,7 @@ export default function AdminDashboard({ token, username, onLogout, onReturnToMe
               <AnalyticsView
                 analyticsData={analyticsData}
                 onDownloadCSV={handleDownloadSalesReport}
+                analyticsExportEnabled={settingsForm.analytics_export_enabled !== false && settingsForm.analytics_export_enabled !== 0}
                 currencySymbol={settingsForm.currency_symbol !== undefined && settingsForm.currency_symbol !== null ? settingsForm.currency_symbol : '₹'}
               />
             )}
