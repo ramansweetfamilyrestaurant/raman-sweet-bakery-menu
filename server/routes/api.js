@@ -606,7 +606,7 @@ router.get('/kitchen/orders', async (req, res) => {
       SELECT * FROM orders
       WHERE restaurant_id = $1
         AND status IN ('kitchen', 'preparing')
-        AND (kitchen_prepared IS NULL OR kitchen_prepared = 0 OR kitchen_prepared IS FALSE)
+        AND (kitchen_prepared IS NULL OR kitchen_prepared = 0)
       ORDER BY id ASC LIMIT 50
     `, [targetId]);
 
