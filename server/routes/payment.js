@@ -5,8 +5,19 @@ import { query, withTransaction } from '../db.js';
 import { authenticateToken } from '../middleware/auth.js';
 import { createCashfreeSubscriptionSession, fetchCashfreeSubscriptionStatus, getCashfreeConfig, getCashfreeConfigAsync, verifyCashfreeWebhookSignature } from '../services/cashfree.js';
 
-const router = express.Router();
-const JWT_SECRET = process.env.JWT_SECRET || 'raman_bakery_secret_jwt_key_2026_super_secure';
+function getAppBaseUrl(req) {
+  if (process.env.APP_BASE_URL && !process.env.APP_BASE_URL.includes('onrender.com')) {
+    return process.env.APP_BASE_URL.replace(/\/$/, '');
+  }
+  if (req && req.headers) {
+    const proto = req.headers['x-forwarded-proto'] || (req.secure ? 'https' : 'http');
+    const host = req.headers['x-forwarded-host'] || req.headers.host;
+    if (host && !host.includes('onrender.com')) {
+      return `${proto}://${host}`;
+    }
+  }
+  return 'https://touchqr.vercel.app';
+}
 
 // Helper to log payment audit trail
 async function logPaymentAudit(restaurantId, action, details) {
@@ -81,7 +92,7 @@ router.post('/checkout-pre-register', async (req, res) => {
     const trialEndISO = new Date(Date.now() + trialDays * 86400 * 1000).toISOString();
 
     const regId = `reg_${Date.now()}_${Math.floor(1000 + Math.random() * 9000)}`;
-    const baseUrl = process.env.APP_BASE_URL || 'https://khana-master.onrender.com';
+    const baseUrl = getAppBaseUrl(req);
     const returnUrl = `${baseUrl}/api/payment/register-return?reg_id=${regId}`;
 
     // 3. Create Cashfree Subscription Session WITHOUT touching restaurants or admins tables!
@@ -318,7 +329,7 @@ export async function finalizePendingRegistration(reg_id, inputSubId = null) {
 router.all('/register-return', async (req, res) => {
   const reg_id = req.query.reg_id || req.body?.reg_id || req.query.reg_token || req.body?.reg_token;
   const inputSubId = req.query.subscription_id || req.query.sub_id || req.body?.subscription_id || req.body?.sub_id;
-  const baseUrl = process.env.APP_BASE_URL || 'https://khana-master.onrender.com';
+  const baseUrl = getAppBaseUrl(req);
 
   console.log('[REGISTRATION] Received callback. Method:', req.method, 'reg_id:', reg_id);
 
@@ -379,7 +390,7 @@ const handleCreateSubscription = async (req, res) => {
       trialEndISO,
       customerName: resto.name,
       customerPhone: resto.phone,
-      returnUrl: return_url || `${process.env.APP_BASE_URL || 'https://khana-master.onrender.com'}/api/payment/subscription-return`
+      returnUrl: return_url || `${getAppBaseUrl(req)}/api/payment/subscription-return`
     });
 
     if (!cfResult.configured) {
@@ -550,7 +561,7 @@ const handleSubscriptionReturn = async (req, res) => {
     req.query.orderId ||
     null;
 
-  const appBase = process.env.APP_BASE_URL || 'https://khana-master.onrender.com';
+  const appBase = getAppBaseUrl(req);
   const baseRedirectUrl = `${appBase}/billing`;
 
   // Fallback: If subscriptionId missing in request, lookup the most recent subscription in DB
