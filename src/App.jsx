@@ -452,12 +452,40 @@ export default function App() {
     }
     const isAdminMode = Boolean(adminToken);
     try {
-      const [infoData, catData, dishData, comboData] = await Promise.all([
-        fetchRestaurantInfo(slug),
-        fetchCategories({ slug, adminView: isAdminMode }),
-        fetchDishes({ query: searchQuery, slug, adminView: isAdminMode }),
-        fetchCombos(slug).catch(() => [])
-      ]);
+      let infoData = null;
+      let catData = [];
+      let dishData = [];
+      let comboData = [];
+
+      // Fast single-bundle fetch for public customer view
+      if (!isAdminMode && !searchQuery) {
+        try {
+          const bundleRes = await fetch(`/api/menu-bundle?slug=${encodeURIComponent(slug)}`);
+          if (bundleRes.ok) {
+            const bundle = await bundleRes.json();
+            if (bundle && bundle.info) {
+              infoData = bundle.info;
+              catData = bundle.categories || [];
+              dishData = bundle.dishes || [];
+              comboData = bundle.combos || [];
+            }
+          }
+        } catch (e) {}
+      }
+
+      // Fallback or Admin/Search view: parallel fetch
+      if (!infoData) {
+        const [resInfo, resCat, resDish, resCombo] = await Promise.all([
+          fetchRestaurantInfo(slug),
+          fetchCategories({ slug, adminView: isAdminMode }),
+          fetchDishes({ query: searchQuery, slug, adminView: isAdminMode }),
+          fetchCombos(slug).catch(() => [])
+        ]);
+        infoData = resInfo;
+        catData = resCat || [];
+        dishData = resDish || [];
+        comboData = resCombo || [];
+      }
 
       if (!infoData || infoData.notFound) {
         setRestaurantStatus('not_found');
@@ -472,8 +500,8 @@ export default function App() {
       }
 
       setInfo(infoData);
-      setCategories(catData || []);
-      setDishes(dishData || []);
+      setCategories(catData);
+      setDishes(dishData);
       setCombos(Array.isArray(comboData) ? comboData : []);
       if (infoData && infoData.name && window.location.pathname !== '/' && window.location.pathname !== '/register') {
         document.title = `${infoData.name} - Digital Menu & Ordering`;

@@ -101,8 +101,79 @@ async function resolveRestaurant(req, slug) {
   return firstResto[0] || null;
 }
 
+// Restaurant General Info (/api/info or /api/info?slug=royal-pizz// GET Ultra-Fast Combined Menu Bundle (Single 0-latency HTTP call for complete Digital Menu)
+router.get('/menu-bundle', async (req, res) => {
+  res.setHeader('Cache-Control', 'public, max-age=5, s-maxage=10, stale-while-revalidate=60');
+  try {
+    const { slug } = req.query;
+    const resto = await resolveRestaurant(req, slug);
+
+    if (!resto) {
+      return res.status(404).json({ error: 'Restaurant Not Found', notFound: true });
+    }
+
+    const targetId = resto.id;
+
+    // Asynchronously increment scan_count in background
+    query('UPDATE restaurants SET scan_count = COALESCE(scan_count, 0) + 1 WHERE id = $1', [targetId]).catch(() => {});
+
+    // Execute queries in parallel
+    const [categories, dishes, combos] = await Promise.all([
+      query('SELECT * FROM categories WHERE restaurant_id = $1 AND (active = true OR active IS NOT FALSE) ORDER BY sort_order ASC, id ASC', [targetId]),
+      query(`
+        SELECT d.*, c.name as category_name 
+        FROM dishes d 
+        LEFT JOIN categories c ON d.category_id = c.id
+        WHERE d.restaurant_id = $1 AND (d.available = true OR d.available IS NOT FALSE) AND (c.active = true OR c.active IS NOT FALSE OR c.id IS NULL)
+        ORDER BY d.id ASC
+      `, [targetId]),
+      query('SELECT * FROM combos WHERE restaurant_id = $1 AND (active = true OR active IS NOT FALSE) ORDER BY id ASC', [targetId]).catch(() => [])
+    ]);
+
+    let filtersVis = resto.filters_visibility;
+    if (typeof filtersVis === 'string') {
+      try { filtersVis = JSON.parse(filtersVis); } catch (e) {}
+    }
+    if (!filtersVis) {
+      filtersVis = { must_try: true, combo: true, special: true, under100: true };
+    }
+
+    const infoObj = {
+      id: resto.id,
+      name: resto.name,
+      slug: resto.slug,
+      tagline: resto.tagline || '',
+      badge: resto.resto_type === 'pure_veg' ? '100% Pure Veg' : 'Veg & Non-Veg',
+      resto_type: resto.resto_type || 'pure_veg',
+      logo: resto.logo || '',
+      openingHours: resto.opening_hours || '',
+      phone: resto.phone || '',
+      address: resto.address || '',
+      google_review_url: resto.google_review_url || '',
+      google_maps_url: resto.google_maps_url || '',
+      fssai_lic_no: resto.fssai_lic_no || '',
+      filters_visibility: filtersVis,
+      currency_symbol: (resto.currency_symbol !== null && resto.currency_symbol !== undefined) ? resto.currency_symbol : '₹',
+      plan_tier: resto.plan_tier || 'pro',
+      whatsapp_number: resto.whatsapp_number || resto.phone || '',
+      active: true
+    };
+
+    res.json({
+      info: infoObj,
+      categories: categories || [],
+      dishes: dishes || [],
+      combos: combos || []
+    });
+  } catch (err) {
+    console.error('Error fetching menu bundle:', err);
+    res.status(500).json({ error: 'Failed to fetch menu bundle' });
+  }
+});
+
 // Restaurant General Info (/api/info or /api/info?slug=royal-pizza)
 router.get('/info', async (req, res) => {
+  res.setHeader('Cache-Control', 'public, max-age=5, s-maxage=10, stale-while-revalidate=60');
   try {
     const { slug } = req.query;
     const resto = await resolveRestaurant(req, slug);
@@ -189,6 +260,7 @@ router.get('/info', async (req, res) => {
     res.status(500).json({ error: 'Failed to fetch restaurant info' });
   }
 });
+
 // Get Active Global System Announcements
 router.get('/announcements', async (req, res) => {
   try {
@@ -201,6 +273,9 @@ router.get('/announcements', async (req, res) => {
 
 // Get Categories for a specific restaurant
 router.get('/categories', async (req, res) => {
+  if (!req.query.admin_view) {
+    res.setHeader('Cache-Control', 'public, max-age=5, s-maxage=10, stale-while-revalidate=60');
+  }
   try {
     const { admin_view, slug, restaurant_id } = req.query;
     let targetId = restaurant_id;
@@ -230,6 +305,9 @@ router.get('/categories', async (req, res) => {
 
 // Get Dishes with search & category filter for a specific restaurant
 router.get('/dishes', async (req, res) => {
+  if (!req.query.admin_view) {
+    res.setHeader('Cache-Control', 'public, max-age=5, s-maxage=10, stale-while-revalidate=60');
+  }
   try {
     const { q, category_id, admin_view, slug, restaurant_id } = req.query;
     let targetId = restaurant_id;
