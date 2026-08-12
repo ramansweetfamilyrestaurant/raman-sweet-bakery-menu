@@ -14,6 +14,12 @@ export async function checkSubscriptionStatus(restaurantId) {
     if (!rows || rows.length === 0) return { status: 'not_found', active: false };
     const resto = rows[0];
 
+    // Explicit Super Admin Suspension check - MUST override all trial & granted access!
+    const isExplicitlyActive = resto.active === 1 || resto.active === true || resto.active === '1' || resto.active === undefined || resto.active === null;
+    if (!isExplicitlyActive || resto.active === false || resto.active === 0 || resto.active === 'false') {
+      return { status: 'suspended', active: false, resto, sub: null };
+    }
+
     // Super Admin granted 100% complimentary VIP lifetime access
     if (resto.mandate_status === 'admin_granted' || resto.subscription_type === 'ADMIN_GRANTED') {
       return { status: 'active', active: true, resto, sub: null, isComplimentary: true };

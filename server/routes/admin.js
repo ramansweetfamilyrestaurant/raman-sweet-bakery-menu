@@ -204,6 +204,12 @@ router.post('/login', async (req, res) => {
 
     const restoRes = await query('SELECT slug, active, name FROM restaurants WHERE id = $1', [admin.restaurant_id]);
     const resto = restoRes[0];
+
+    const isActive = resto?.active === 1 || resto?.active === true || resto?.active === '1' || resto?.active === undefined || resto?.active === null;
+    if (!isActive || resto?.active === false || resto?.active === 0 || resto?.active === 'false') {
+      return res.status(403).json({ error: `Restaurant '${resto?.name || 'Account'}' has been suspended by Super Admin. Access disabled.` });
+    }
+
     const slug = resto?.slug || 'raman-sweet-bakery';
 
     const token = jwt.sign(
