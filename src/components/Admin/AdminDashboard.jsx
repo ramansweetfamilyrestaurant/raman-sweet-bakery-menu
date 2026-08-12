@@ -956,7 +956,9 @@ export default function AdminDashboard({ token, username, onLogout, onReturnToMe
       if (infoData) {
         const defaultVis = { must_try: true, combo: true, special: true, under100: true };
         setSettingsForm({
+          id: infoData.id,
           name: infoData.name || '',
+          slug: infoData.slug || '',
           tagline: infoData.tagline || '',
           logo: infoData.logo || '',
           phone: infoData.phone || '',
@@ -975,6 +977,8 @@ export default function AdminDashboard({ token, username, onLogout, onReturnToMe
           total_tables: infoData.total_tables !== undefined && infoData.total_tables !== null ? Number(infoData.total_tables) : 0,
           order_retention_days: infoData.order_retention_days || 7,
           custom_domain: infoData.custom_domain || '',
+          watermark_removal_enabled: infoData.watermark_removal_enabled !== undefined ? infoData.watermark_removal_enabled : true,
+          custom_domain_enabled: infoData.custom_domain_enabled !== undefined ? infoData.custom_domain_enabled : true,
           filters_visibility: { ...defaultVis, ...infoData.filters_visibility }
         });
       }
@@ -1086,7 +1090,8 @@ export default function AdminDashboard({ token, username, onLogout, onReturnToMe
     ensureTableCreated(activeTableNum);
 
     const liveOrigin = window.location.origin;
-    const targetUrl = `${liveOrigin}/${settingsForm.slug || 'raman-sweet-bakery'}?table=${activeTableNum}`;
+    const activeSlug = settingsForm.slug || restaurantInfo?.slug || '';
+    const targetUrl = `${liveOrigin}/${activeSlug}?table=${activeTableNum}`;
     const qrImgUrl = `https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=${encodeURIComponent(targetUrl)}`;
     const currentName = settingsForm.name || 'Digital Menu';
     const currentTagline = settingsForm.tagline || 'Scan QR Code for Digital Menu';
@@ -1100,65 +1105,62 @@ export default function AdminDashboard({ token, username, onLogout, onReturnToMe
       <!DOCTYPE html>
       <html>
         <head>
-          <title>Table Standee QR - Table ${tableNumber || '1'}</title>
+          <title>${currentName} - Table ${activeTableNum} QR Standee</title>
           <style>
             @import url('https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700;800;900&family=Plus+Jakarta+Sans:wght@600;700;800&display=swap');
             body {
               margin: 0;
-              padding: 40px;
-              background-color: #FFFFFF;
+              padding: 40px 20px;
+              background-color: #F8FAFC;
               font-family: 'Plus Jakarta Sans', sans-serif;
               display: flex;
               justify-content: center;
               align-items: center;
               min-height: 100vh;
+              box-sizing: border-box;
             }
             .standee-card {
-              width: 350px;
-              padding: 32px 24px;
-              border: 3px double #C5A059;
+              width: 380px;
+              background: #FFFFFF;
               border-radius: 24px;
-              background: linear-gradient(180deg, #FFFFFF 0%, #FAF8F5 100%);
+              border: 3px solid #D4AF37;
+              box-shadow: 0 20px 40px rgba(10,35,21,0.15);
+              padding: 32px 24px;
               text-align: center;
-              box-shadow: 0 10px 30px rgba(10, 35, 21, 0.1);
+              box-sizing: border-box;
               position: relative;
             }
             .table-badge {
               display: inline-block;
               background: #0A2315;
               color: #DFBA67;
-              padding: 6px 22px;
-              border-radius: 9999px;
-              font-size: 1.05rem;
+              font-size: 0.85rem;
               font-weight: 800;
-              border: 1.5px solid #C5A059;
+              padding: 6px 18px;
+              border-radius: 20px;
               letter-spacing: 1px;
               margin-bottom: 16px;
             }
             .logo-title {
               font-family: 'Playfair Display', serif;
-              font-size: 1.35rem;
+              font-size: 1.6rem;
               font-weight: 900;
               color: #0A2315;
               margin: 0 0 6px 0;
-              line-height: 1.2;
             }
             .subtitle {
               font-size: 0.78rem;
-              font-weight: 800;
-              color: #15803D;
-              letter-spacing: 0.5px;
-              margin-bottom: 16px;
-              line-height: 1.3;
+              font-weight: 700;
+              color: #16A34A;
+              margin-bottom: 20px;
             }
             .qr-box {
               background: #FFFFFF;
               padding: 16px;
-              border-radius: 16px;
-              border: 1px solid #E5E7EB;
+              border-radius: 18px;
+              border: 1px solid #E2E8F0;
               display: inline-block;
-              box-shadow: 0 4px 12px rgba(0,0,0,0.06);
-              margin-bottom: 16px;
+              margin-bottom: 20px;
             }
             .qr-box img {
               width: 200px;
@@ -1173,31 +1175,26 @@ export default function AdminDashboard({ token, username, onLogout, onReturnToMe
             }
             .instruction-hi {
               font-size: 0.82rem;
-              font-weight: 700;
-              color: #666157;
-              margin-bottom: 16px;
+              color: #64748B;
+              font-weight: 600;
             }
             .footer-info {
-              font-size: 0.72rem;
-              font-weight: 700;
-              color: #B88E3E;
-              border-top: 1px dashed rgba(197, 160, 89, 0.4);
+              margin-top: 16px;
               padding-top: 12px;
-            }
-            @media print {
-              body { padding: 0; background: none; }
-              .standee-card { box-shadow: none; page-break-inside: avoid; }
+              border-top: 1px solid #E2E8F0;
+              font-size: 0.72rem;
+              color: #64748B;
             }
           </style>
         </head>
         <body>
           <div class="standee-card">
-            <div class="table-badge">TABLE NO. ${tableNumber || '1'}</div>
-            <h1 class="logo-title">${currentName}</h1>
+            <div class="table-badge">TABLE NO. ${activeTableNum}</div>
+            <h2 class="logo-title">${currentName}</h2>
             <div class="subtitle">${currentTagline}</div>
 
             <div class="qr-box">
-              <img src="${qrImgUrl}" alt="Table ${tableNumber || '1'} QR Code" />
+              <img src="${qrImgUrl}" alt="Table ${activeTableNum} QR Code" />
             </div>
 
             <div class="instruction-en">📱 SCAN FOR DIGITAL MENU & ORDER</div>
@@ -1230,6 +1227,7 @@ export default function AdminDashboard({ token, username, onLogout, onReturnToMe
     const liveOrigin = window.location.origin;
     const currentName = settingsForm.name || 'Digital Menu';
     const currentTagline = settingsForm.tagline || 'Scan QR Code for Digital Menu';
+    const activeSlug = settingsForm.slug || restaurantInfo?.slug || '';
 
     const printWindow = window.open('', '_blank', 'width=950,height=900');
     if (!printWindow) {
@@ -1239,7 +1237,7 @@ export default function AdminDashboard({ token, username, onLogout, onReturnToMe
 
     let cardsHtml = '';
     for (let tNum = 1; tNum <= totalCount; tNum++) {
-      const targetUrl = `${liveOrigin}/${settingsForm.slug || 'raman-sweet-bakery'}?table=${tNum}`;
+      const targetUrl = `${liveOrigin}/${activeSlug}?table=${tNum}`;
       const qrImgUrl = `https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=${encodeURIComponent(targetUrl)}`;
       cardsHtml += `
         <div class="standee-card">
