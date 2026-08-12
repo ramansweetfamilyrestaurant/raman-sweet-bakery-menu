@@ -1259,9 +1259,15 @@ router.patch('/orders/:id/status', authenticateToken, requireActiveSubscription,
           [status, prepVal, orderId]
         );
       } catch (colErr) {
+        console.warn('Auto-healing kitchen_prepared column:', colErr.message);
+        try {
+          await query('ALTER TABLE orders ADD COLUMN kitchen_prepared INT DEFAULT 0');
+        } catch (e1) {
+          try { await query('ALTER TABLE orders ADD COLUMN kitchen_prepared INTEGER DEFAULT 0'); } catch (e2) {}
+        }
         await query(
-          'UPDATE orders SET status = $1 WHERE id = $2',
-          [status, orderId]
+          'UPDATE orders SET status = $1, kitchen_prepared = $2 WHERE id = $3',
+          [status, prepVal, orderId]
         );
       }
     } else if (sent_to_kds !== undefined && sent_to_kds !== null) {
@@ -1272,9 +1278,15 @@ router.patch('/orders/:id/status', authenticateToken, requireActiveSubscription,
           [status, kdsVal, orderId]
         );
       } catch (colErr) {
+        console.warn('Auto-healing sent_to_kds column:', colErr.message);
+        try {
+          await query('ALTER TABLE orders ADD COLUMN sent_to_kds INT DEFAULT 1');
+        } catch (e1) {
+          try { await query('ALTER TABLE orders ADD COLUMN sent_to_kds INTEGER DEFAULT 1'); } catch (e2) {}
+        }
         await query(
-          'UPDATE orders SET status = $1 WHERE id = $2',
-          [status, orderId]
+          'UPDATE orders SET status = $1, sent_to_kds = $2 WHERE id = $3',
+          [status, kdsVal, orderId]
         );
       }
     } else {
