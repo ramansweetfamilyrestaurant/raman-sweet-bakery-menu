@@ -69,6 +69,22 @@ export default function StandaloneKdsPage({ slug = '' }) {
     }
   };
 
+  const playSirenFor8Seconds = () => {
+    try {
+      const startTime = Date.now();
+      playSiren();
+      const sirenTimer = setInterval(() => {
+        if (Date.now() - startTime >= 8000) {
+          clearInterval(sirenTimer);
+        } else {
+          playSiren();
+        }
+      }, 2400);
+    } catch (e) {
+      console.warn('8-second Siren error:', e);
+    }
+  };
+
   const [notFound, setNotFound] = useState(false);
   const [kdsDisabled, setKdsDisabled] = useState(false);
 
@@ -102,7 +118,7 @@ export default function StandaloneKdsPage({ slug = '' }) {
         }
         const activeOrders = Array.isArray(data.orders) ? data.orders : [];
         if (activeOrders.length > prevCount) {
-          playSiren();
+          playSirenFor8Seconds();
         }
         setPrevCount(activeOrders.length);
         setOrders(activeOrders);

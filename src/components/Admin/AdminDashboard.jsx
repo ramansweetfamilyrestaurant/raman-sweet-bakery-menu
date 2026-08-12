@@ -285,6 +285,31 @@ export default function AdminDashboard({ token, username, onLogout, onReturnToMe
     }
   };
 
+  const pendingLoopRef = useRef(null);
+
+  useEffect(() => {
+    const hasPendingOrders = Array.isArray(orders) && orders.some(o => o.status === 'pending' || o.status === 'placed');
+    if (hasPendingOrders) {
+      if (!pendingLoopRef.current) {
+        playKitchenChime();
+        pendingLoopRef.current = setInterval(() => {
+          playKitchenChime();
+        }, 2500);
+      }
+    } else {
+      if (pendingLoopRef.current) {
+        clearInterval(pendingLoopRef.current);
+        pendingLoopRef.current = null;
+      }
+    }
+    return () => {
+      if (pendingLoopRef.current) {
+        clearInterval(pendingLoopRef.current);
+        pendingLoopRef.current = null;
+      }
+    };
+  }, [orders]);
+
   const playWaiterBellChime = () => {
     try {
       const AudioCtx = window.AudioContext || window.webkitAudioContext;
@@ -315,6 +340,22 @@ export default function AdminDashboard({ token, username, onLogout, onReturnToMe
       });
     } catch (e) {
       console.warn('Waiter Bell Chime error:', e);
+    }
+  };
+
+  const playWaiterBellFor6Seconds = () => {
+    try {
+      const startTime = Date.now();
+      playWaiterBellChime();
+      const bellInterval = setInterval(() => {
+        if (Date.now() - startTime >= 6000) {
+          clearInterval(bellInterval);
+        } else {
+          playWaiterBellChime();
+        }
+      }, 1200);
+    } catch (e) {
+      console.warn('6-second Waiter Bell error:', e);
     }
   };
 
@@ -395,7 +436,7 @@ export default function AdminDashboard({ token, username, onLogout, onReturnToMe
           });
 
           if (newlyPrepared) {
-            playWaiterBellChime();
+            playWaiterBellFor6Seconds();
             const tblNum = newlyPrepared.table_number ? `Table #${newlyPrepared.table_number}` : `Order #${newlyPrepared.id}`;
             triggerFoodPreparedNotification(tblNum);
             setToastMessage(`🛎️ ${tblNum} Food is PREPARED in Kitchen! Ready to Serve.`);
@@ -539,7 +580,7 @@ export default function AdminDashboard({ token, username, onLogout, onReturnToMe
     try {
       await updateOrderStatus(orderId, newStatus, token, extraParams);
       if (extraParams.kitchen_prepared === 1) {
-        playWaiterBellChime();
+        playWaiterBellFor6Seconds();
         const targetOrder = orders.find(o => String(o.id) === String(orderId));
         const tblNum = targetOrder?.table_number ? `Table #${targetOrder.table_number}` : `Order #${orderId}`;
         setToastMessage(`🛎️ ${tblNum} Food is PREPARED in Kitchen! Ready to Serve.`);
