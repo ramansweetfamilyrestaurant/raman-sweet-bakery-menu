@@ -1901,6 +1901,7 @@ export default function AdminDashboard({ token, username, onLogout, onReturnToMe
                 settingsForm={settingsForm}
                 setSettingsForm={setSettingsForm}
                 handleSaveSettings={handleSaveSettings}
+                token={token}
               />
             )}
 

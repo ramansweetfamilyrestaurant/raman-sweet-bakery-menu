@@ -1619,4 +1619,82 @@ router.delete('/combos/:id', authenticateToken, requireActiveSubscription, async
   }
 });
 
+// POST generate Google Review AI Auto-Reply using Google Gemini 1.5 Flash (with fallback smart engine)
+router.post('/generate-ai-review-reply', authenticateToken, requireActiveSubscription, async (req, res) => {
+  try {
+    const { reviewText, starRating = 5, selectedTone = 'warm', restaurantName } = req.body;
+    const targetRestoName = restaurantName || 'our restaurant';
+
+    // 1. Check if GEMINI_API_KEY is available in process.env
+    const apiKey = process.env.GEMINI_API_KEY || process.env.GOOGLE_AI_KEY || process.env.VITE_GEMINI_API_KEY;
+
+    if (apiKey) {
+      try {
+        const prompt = `You are a polite, professional restaurant customer relationship assistant for '${targetRestoName}'. 
+Generate a personalized, gracious, customer-friendly reply to the following ${starRating}-star customer review.
+Tone: ${selectedTone} (e.g. warm, professional, apologetic, short).
+Customer Review: "${reviewText || 'Great food and service!'}"
+Instructions:
+- Keep the reply concise (under 60 words).
+- If dishes or specific experiences are mentioned in the review, acknowledge them nicely.
+- If it's a 1-3 star review, be humble, express sincere regret, and invite them to contact management.
+- Do not use hashtags or excessive emojis.
+- Output ONLY the reply text, no extra commentary or quotes.`;
+
+        const geminiRes = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKey}`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            contents: [{ parts: [{ text: prompt }] }]
+          })
+        });
+
+        if (geminiRes.ok) {
+          const data = await geminiRes.json();
+          const replyText = data?.candidates?.[0]?.content?.parts?.[0]?.text?.trim();
+          if (replyText) {
+            return res.json({ success: true, reply: replyText, provider: 'gemini_ai' });
+          }
+        }
+      } catch (geminiErr) {
+        console.warn('Gemini API fetch error, falling back to smart engine:', geminiErr.message);
+      }
+    }
+
+    // 2. Smart Natural Language Engine Fallback (Dual Resilience)
+    const textLower = (reviewText || '').toLowerCase();
+    const mentionsPaneer = textLower.includes('paneer');
+    const mentionsNaan = textLower.includes('naan');
+    const mentionsSweet = textLower.includes('sweet') || textLower.includes('mithai');
+    const dishMention = mentionsPaneer ? 'Paneer dishes' : mentionsSweet ? 'sweet delicacies' : mentionsNaan ? 'freshly baked Naans' : 'dishes';
+
+    let reply = '';
+    const rating = Number(starRating);
+    if (rating >= 4) {
+      if (selectedTone === 'warm') {
+        reply = `Thank you so much for the glowing ${rating}-star review! 🌟 We are absolutely thrilled to hear that you enjoyed ${reviewText ? `our ${dishMention}` : 'your dining experience'} at ${targetRestoName}. Serving you fresh, flavorful meals is our top priority. We look forward to welcoming you back again soon for another delicious feast! 🙏😊`;
+      } else if (selectedTone === 'professional') {
+        reply = `Dear Guest, thank you for sharing your positive feedback and ${rating}-star rating for ${targetRestoName}. We take immense pride in maintaining high standards of quality and service. Your appreciation motivates our entire team. We look forward to serving you again soon. Best regards, Management Team.`;
+      } else if (selectedTone === 'short') {
+        reply = `Thank you for the fantastic ${rating}-star review! 🙏 We are delighted you loved your meal at ${targetRestoName}. Hope to see you again soon!`;
+      } else {
+        reply = `Thank you for choosing ${targetRestoName}! We truly appreciate your feedback and hope your next visit is even more memorable. ✨`;
+      }
+    } else {
+      if (selectedTone === 'apologetic') {
+        reply = `Dear Guest, thank you for bringing your concern to our attention. We sincerely apologize for not meeting your expectations during your recent visit to ${targetRestoName}. Providing prompt and high-quality food is our commitment, and we regret the issue you experienced. Please reach out directly to us so we can make this right for you. We hope to serve you better next time.`;
+      } else if (selectedTone === 'professional') {
+        reply = `Dear Valued Customer, thank you for providing your constructive feedback regarding ${targetRestoName}. We apologize for the inconvenience caused. We have shared your comments with our kitchen & service staff for immediate corrective action. Please give us another opportunity to serve you a better experience.`;
+      } else {
+        reply = `We sincerely apologize for your experience at ${targetRestoName}. We take all customer feedback seriously and are taking immediate steps to resolve this. Kindly contact our team so we can assist you personally.`;
+      }
+    }
+
+    return res.json({ success: true, reply, provider: 'smart_engine' });
+  } catch (err) {
+    console.error('Generate AI Review Reply error:', err);
+    res.status(500).json({ error: 'Failed to generate AI reply' });
+  }
+});
+
 export default router;

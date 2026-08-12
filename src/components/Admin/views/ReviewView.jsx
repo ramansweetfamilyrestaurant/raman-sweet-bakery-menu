@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { Star, MessageSquare, ExternalLink, Save, Bot, Copy, Check, RefreshCw, Sparkles, ThumbsUp, AlertTriangle } from 'lucide-react';
 
-export default function ReviewView({ settingsForm, setSettingsForm, handleSaveSettings }) {
+export default function ReviewView({ settingsForm, setSettingsForm, handleSaveSettings, token }) {
   const [saving, setSaving] = useState(false);
   const [successMsg, setSuccessMsg] = useState('');
 
@@ -10,6 +10,7 @@ export default function ReviewView({ settingsForm, setSettingsForm, handleSaveSe
   const [starRating, setStarRating] = useState(5);
   const [selectedTone, setSelectedTone] = useState('warm'); // warm, professional, apologetic, short
   const [generatedReply, setGeneratedReply] = useState('');
+  const [aiProvider, setAiProvider] = useState('gemini_ai');
   const [generating, setGenerating] = useState(false);
   const [copied, setCopied] = useState(false);
   const [quickCopiedId, setQuickCopiedId] = useState(null);
@@ -49,42 +50,65 @@ export default function ReviewView({ settingsForm, setSettingsForm, handleSaveSe
     }
   ];
 
-  const handleGenerateAIReply = () => {
+  const handleGenerateAIReply = async () => {
     setGenerating(true);
     setCopied(false);
     
-    setTimeout(() => {
-      let reply = '';
-      const textLower = customerReview.toLowerCase();
-      const mentionsPaneer = textLower.includes('paneer');
-      const mentionsNaan = textLower.includes('naan');
-      const mentionsSweet = textLower.includes('sweet') || textLower.includes('mithai');
-      const dishMention = mentionsPaneer ? 'Paneer dishes' : mentionsSweet ? 'sweet delicacies' : mentionsNaan ? 'freshly baked Naans' : 'dishes';
-
-      if (starRating >= 4) {
-        if (selectedTone === 'warm') {
-          reply = `Thank you so much for the glowing ${starRating}-star review! 🌟 We are absolutely thrilled to hear that you enjoyed ${customerReview ? `our ${dishMention}` : 'your dining experience'} at ${restoName}. Serving you fresh, flavorful meals is our top priority. We look forward to welcoming you back again soon for another delicious feast! 🙏😊`;
-        } else if (selectedTone === 'professional') {
-          reply = `Dear Guest, thank you for sharing your positive feedback and ${starRating}-star rating for ${restoName}. We take immense pride in maintaining high standards of quality and service. Your appreciation motivates our entire culinary team. We look forward to serving you again in the near future. Best regards, Management Team.`;
-        } else if (selectedTone === 'short') {
-          reply = `Thank you for the fantastic ${starRating}-star review! 🙏 We are delighted you loved your meal at ${restoName}. Hope to see you again soon!`;
-        } else {
-          reply = `Thank you for choosing ${restoName}! We truly appreciate your feedback and hope your next visit is even more memorable. ✨`;
-        }
-      } else {
-        // 1 - 3 Star Reviews
-        if (selectedTone === 'apologetic') {
-          reply = `Dear Guest, thank you for bringing your concern to our attention. We sincerely apologize for not meeting your expectations during your recent visit to ${restoName}. Providing prompt and high-quality food is our commitment, and we regret the delay/issue you experienced. Please reach out directly to us at ${settingsForm?.phone || 'our restaurant contact'} so we can make this right for you. We hope to have the chance to serve you better next time.`;
-        } else if (selectedTone === 'professional') {
-          reply = `Dear Valued Customer, thank you for providing your constructive feedback regarding ${restoName}. We apologize for the inconvenience caused. We have shared your comments with our kitchen & service staff to ensure immediate corrective action. Please give us another opportunity to serve you a better experience.`;
-        } else {
-          reply = `We sincerely apologize for your experience at ${restoName}. We take all customer feedback seriously and are taking immediate steps to resolve this. Kindly contact our team at ${settingsForm?.phone || 'phone'} so we can assist you personally.`;
-        }
+    try {
+      const res = await fetch('/api/admin/generate-ai-review-reply', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({
+          reviewText: customerReview,
+          starRating,
+          selectedTone,
+          restaurantName: restoName
+        })
+      });
+      const data = await res.json();
+      if (res.ok && data?.reply) {
+        setGeneratedReply(data.reply);
+        setAiProvider(data.provider || 'gemini_ai');
+        return;
       }
+    } catch (err) {
+      console.warn('Backend AI route skipped, using smart fallback engine:', err.message);
+    }
 
-      setGeneratedReply(reply);
-      setGenerating(false);
-    }, 400);
+    // Local fallback engine if network/API is offline
+    let reply = '';
+    const textLower = customerReview.toLowerCase();
+    const mentionsPaneer = textLower.includes('paneer');
+    const mentionsNaan = textLower.includes('naan');
+    const mentionsSweet = textLower.includes('sweet') || textLower.includes('mithai');
+    const dishMention = mentionsPaneer ? 'Paneer dishes' : mentionsSweet ? 'sweet delicacies' : mentionsNaan ? 'freshly baked Naans' : 'dishes';
+
+    if (starRating >= 4) {
+      if (selectedTone === 'warm') {
+        reply = `Thank you so much for the glowing ${starRating}-star review! 🌟 We are absolutely thrilled to hear that you enjoyed ${customerReview ? `our ${dishMention}` : 'your dining experience'} at ${restoName}. Serving you fresh, flavorful meals is our top priority. We look forward to welcoming you back again soon for another delicious feast! 🙏😊`;
+      } else if (selectedTone === 'professional') {
+        reply = `Dear Guest, thank you for sharing your positive feedback and ${starRating}-star rating for ${restoName}. We take immense pride in maintaining high standards of quality and service. Your appreciation motivates our entire culinary team. We look forward to serving you again in the near future. Best regards, Management Team.`;
+      } else if (selectedTone === 'short') {
+        reply = `Thank you for the fantastic ${starRating}-star review! 🙏 We are delighted you loved your meal at ${restoName}. Hope to see you again soon!`;
+      } else {
+        reply = `Thank you for choosing ${restoName}! We truly appreciate your feedback and hope your next visit is even more memorable. ✨`;
+      }
+    } else {
+      if (selectedTone === 'apologetic') {
+        reply = `Dear Guest, thank you for bringing your concern to our attention. We sincerely apologize for not meeting your expectations during your recent visit to ${restoName}. Providing prompt and high-quality food is our commitment, and we regret the delay/issue you experienced. Please reach out directly to us at ${settingsForm?.phone || 'our restaurant contact'} so we can make this right for you. We hope to serve you better next time.`;
+      } else if (selectedTone === 'professional') {
+        reply = `Dear Valued Customer, thank you for providing your constructive feedback regarding ${restoName}. We apologize for the inconvenience caused. We have shared your comments with our kitchen & service staff to ensure immediate corrective action. Please give us another opportunity to serve you a better experience.`;
+      } else {
+        reply = `We sincerely apologize for your experience at ${restoName}. We take all customer feedback seriously and are taking immediate steps to resolve this. Kindly contact our team at ${settingsForm?.phone || 'phone'} so we can assist you personally.`;
+      }
+    }
+
+    setGeneratedReply(reply);
+    setAiProvider('smart_engine');
+    setGenerating(false);
   };
 
   const handleCopyReply = (text, id = null) => {
@@ -312,7 +336,7 @@ export default function ReviewView({ settingsForm, setSettingsForm, handleSaveSe
               }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                   <span style={{ fontSize: '0.74rem', fontWeight: 900, color: '#8B5CF6', textTransform: 'uppercase', display: 'flex', alignItems: 'center', gap: '4px' }}>
-                    <Bot size={14} /> AI GENERATED GOOGLE RESPONSE:
+                    <Bot size={14} /> {aiProvider === 'gemini_ai' ? '✨ GEMINI 1.5 FLASH AI GENERATED RESPONSE:' : '🤖 SMART ENGINE GENERATED RESPONSE:'}
                   </span>
 
                   <div style={{ display: 'flex', gap: '8px' }}>
