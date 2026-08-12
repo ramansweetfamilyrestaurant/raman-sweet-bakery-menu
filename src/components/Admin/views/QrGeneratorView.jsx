@@ -14,6 +14,7 @@ export default function QrGeneratorView({
 }) {
   const [copied, setCopied] = React.useState(false);
   const liveOrigin = window.location.origin;
+  const activeTableNum = tableNumber || '1';
   const activeSlug = settingsForm?.slug || '';
   const targetUrl = `${liveOrigin}/${activeSlug}?table=${activeTableNum}`;
   const qrImgUrl = `https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=${encodeURIComponent(targetUrl)}`;
