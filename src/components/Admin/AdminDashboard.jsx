@@ -289,10 +289,11 @@ export default function AdminDashboard({ token, username, onLogout, onReturnToMe
         ctx.resume();
       }
 
-      // 🛎️ Crisp Double-Ding Reception Bell Chime (880Hz -> 1320Hz)
+      // 🛎️ Loud 3-Cycle Reception Bell Chime (880Hz -> 1320Hz -> 1760Hz)
       const tones = [
-        { freq: 880, start: 0.0, duration: 0.35 },
-        { freq: 1320, start: 0.18, duration: 0.45 }
+        { freq: 880, start: 0.0, duration: 0.30 },
+        { freq: 1320, start: 0.18, duration: 0.35 },
+        { freq: 1760, start: 0.36, duration: 0.50 }
       ];
 
       tones.forEach(t => {
@@ -300,7 +301,7 @@ export default function AdminDashboard({ token, username, onLogout, onReturnToMe
         const gain = ctx.createGain();
         osc.type = 'sine';
         osc.frequency.setValueAtTime(t.freq, ctx.currentTime + t.start);
-        gain.gain.setValueAtTime(0.6, ctx.currentTime + t.start);
+        gain.gain.setValueAtTime(1.0, ctx.currentTime + t.start);
         gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + t.start + t.duration);
         osc.connect(gain);
         gain.connect(ctx.destination);
@@ -336,6 +337,30 @@ export default function AdminDashboard({ token, username, onLogout, onReturnToMe
     }
   };
 
+  const triggerFoodPreparedNotification = (tblNum) => {
+    try {
+      if ('Notification' in window && Notification.permission === 'granted') {
+        const notif = new Notification('🍳 FOOD PREPARED IN KITCHEN!', {
+          body: `🛎️ ${tblNum} Food is Prepared in Kitchen! Ready to serve to customer.`,
+          icon: '/favicon.svg',
+          badge: '/favicon.svg',
+          tag: 'food-prepared',
+          requireInteraction: true,
+          vibrate: [200, 100, 200, 100, 400]
+        });
+        notif.onclick = () => {
+          window.focus();
+          notif.close();
+        };
+      }
+      if ('vibrate' in navigator) {
+        navigator.vibrate([200, 100, 200, 100, 400]);
+      }
+    } catch (e) {
+      console.warn('Food prepared notification error:', e);
+    }
+  };
+
   const loadOrders = async () => {
     try {
       const [data, reqsData, analytics] = await Promise.all([
@@ -355,18 +380,21 @@ export default function AdminDashboard({ token, username, onLogout, onReturnToMe
 
       // 🛎️ Cross-device/Cross-tab detection: check if any order newly became kitchen_prepared === 1
       setOrders(prevOrders => {
-        const newlyPrepared = safeData.find(newOrd => {
-          const newIsPrep = newOrd.kitchen_prepared === 1 || newOrd.kitchen_prepared === true || newOrd.kitchen_prepared === '1';
-          const oldOrd = prevOrders.find(o => String(o.id) === String(newOrd.id));
-          const oldIsPrep = oldOrd && (oldOrd.kitchen_prepared === 1 || oldOrd.kitchen_prepared === true || oldOrd.kitchen_prepared === '1');
-          return newIsPrep && !oldIsPrep;
-        });
+        if (Array.isArray(prevOrders) && prevOrders.length > 0) {
+          const newlyPrepared = safeData.find(newOrd => {
+            const newIsPrep = newOrd.kitchen_prepared === 1 || newOrd.kitchen_prepared === true || newOrd.kitchen_prepared === '1';
+            const oldOrd = prevOrders.find(o => String(o.id) === String(newOrd.id));
+            const oldIsPrep = oldOrd && (oldOrd.kitchen_prepared === 1 || oldOrd.kitchen_prepared === true || oldOrd.kitchen_prepared === '1');
+            return newIsPrep && !oldIsPrep;
+          });
 
-        if (newlyPrepared) {
-          playWaiterBellChime();
-          const tblNum = newlyPrepared.table_number ? `Table #${newlyPrepared.table_number}` : `Order #${newlyPrepared.id}`;
-          setToastMessage(`🛎️ ${tblNum} Food is PREPARED in Kitchen! Ready to Serve.`);
-          setTimeout(() => setToastMessage(''), 6000);
+          if (newlyPrepared) {
+            playWaiterBellChime();
+            const tblNum = newlyPrepared.table_number ? `Table #${newlyPrepared.table_number}` : `Order #${newlyPrepared.id}`;
+            triggerFoodPreparedNotification(tblNum);
+            setToastMessage(`🛎️ ${tblNum} Food is PREPARED in Kitchen! Ready to Serve.`);
+            setTimeout(() => setToastMessage(''), 7000);
+          }
         }
         return safeData;
       });
