@@ -607,24 +607,6 @@ router.get('/kitchen/orders', async (req, res) => {
     const resto = restos[0];
     const targetId = resto.id;
 
-    // Check SaaS Plan Permission Matrix for kds_enabled
-    const planKey = resto.plan_tier || resto.plan_type || 'pro';
-    const planRows = await query('SELECT * FROM saas_plans WHERE key = $1', [planKey]);
-    const saasPlan = planRows && planRows.length > 0 ? planRows[0] : {};
-    
-    // Default to true if undefined so active restaurants have KDS ON by default
-    const kdsEnabled = saasPlan.kds_enabled !== undefined && saasPlan.kds_enabled !== null
-      ? (saasPlan.kds_enabled === 1 || saasPlan.kds_enabled === true || saasPlan.kds_enabled === '1')
-      : true;
-
-    if (!kdsEnabled) {
-      return res.status(403).json({
-        success: false,
-        error: 'KDS_DISABLED',
-        message: 'Dedicated Kitchen Display System (KDS) is locked on your current plan tier.'
-      });
-    }
-
     const orders = await query(`
       SELECT * FROM orders
       WHERE restaurant_id = $1
