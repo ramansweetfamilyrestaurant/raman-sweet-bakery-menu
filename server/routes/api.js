@@ -158,7 +158,7 @@ router.get('/menu-bundle', async (req, res) => {
       filtersVis = { must_try: true, combo: true, special: true, under100: true };
     }
 
-    const planRows = await query('SELECT watermark_removal_enabled, custom_domain_enabled, multi_language_enabled, analytics_export_enabled, gst_invoice_enabled, ai_review_enabled FROM saas_plans WHERE key = $1', [resto.plan_tier || 'pro']).catch(() => []);
+    const planRows = await query('SELECT watermark_removal_enabled, custom_domain_enabled, multi_language_enabled, analytics_export_enabled, gst_invoice_enabled, ai_review_enabled, google_reviews_enabled FROM saas_plans WHERE key = $1', [resto.plan_tier || 'pro']).catch(() => []);
     const saasP = (planRows && planRows.length > 0) ? planRows[0] : {};
     const watermarkRemoval = saasP.watermark_removal_enabled !== undefined ? (saasP.watermark_removal_enabled === 1 || saasP.watermark_removal_enabled === true || saasP.watermark_removal_enabled === '1') : true;
     const customDomainEnabled = saasP.custom_domain_enabled !== undefined ? (saasP.custom_domain_enabled === 1 || saasP.custom_domain_enabled === true || saasP.custom_domain_enabled === '1') : true;
@@ -166,6 +166,7 @@ router.get('/menu-bundle', async (req, res) => {
     const analyticsExportEnabled = saasP.analytics_export_enabled !== undefined ? (saasP.analytics_export_enabled === 1 || saasP.analytics_export_enabled === true || saasP.analytics_export_enabled === '1') : true;
     const gstInvoiceEnabled = saasP.gst_invoice_enabled !== undefined ? (saasP.gst_invoice_enabled === 1 || saasP.gst_invoice_enabled === true || saasP.gst_invoice_enabled === '1') : true;
     const aiReviewEnabled = saasP.ai_review_enabled !== undefined ? (saasP.ai_review_enabled === 1 || saasP.ai_review_enabled === true || saasP.ai_review_enabled === '1') : true;
+    const googleReviewsEnabled = saasP.google_reviews_enabled !== undefined ? (saasP.google_reviews_enabled === 1 || saasP.google_reviews_enabled === true || saasP.google_reviews_enabled === '1') : (resto.plan_tier !== 'basic');
 
     const infoObj = {
       id: resto.id,
@@ -190,6 +191,7 @@ router.get('/menu-bundle', async (req, res) => {
       analytics_export_enabled: analyticsExportEnabled,
       gst_invoice_enabled: gstInvoiceEnabled,
       ai_review_enabled: aiReviewEnabled,
+      google_reviews_enabled: googleReviewsEnabled,
       custom_domain: resto.custom_domain || '',
       whatsapp_number: resto.whatsapp_number || resto.phone || '',
       active: true
