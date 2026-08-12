@@ -81,18 +81,7 @@ async function resolveRestaurant(req, slug) {
     }
   }
 
-  // 1. If an explicit valid slug parameter is passed in URL/query, prioritize searching by slug!
-  if (slug && typeof slug === 'string' && slug.trim() !== '') {
-    const cleanSlug = slug.trim().toLowerCase();
-    if (!['menu', 'default', 'null', 'undefined', 'home', 'index', 'api'].includes(cleanSlug)) {
-      const restos = await query('SELECT * FROM restaurants WHERE slug = $1', [slug.trim()]);
-      if (restos && restos.length > 0) {
-        return restos[0];
-      }
-    }
-  }
-
-  // 2. Check if JWT token is in Authorization header
+  // 1. Check if JWT token is in Authorization header - ALWAYS PRIORITIZE LOGGED IN TOKEN FOR AUTHENTICATED REQUESTS!
   if (req && req.headers && req.headers.authorization) {
     try {
       const authHeader = req.headers.authorization;
@@ -105,6 +94,17 @@ async function resolveRestaurant(req, slug) {
         }
       }
     } catch (e) {}
+  }
+
+  // 2. If no valid JWT token, check if an explicit valid slug parameter is passed in URL/query for public menu
+  if (slug && typeof slug === 'string' && slug.trim() !== '') {
+    const cleanSlug = slug.trim().toLowerCase();
+    if (!['menu', 'default', 'null', 'undefined', 'home', 'index', 'api'].includes(cleanSlug)) {
+      const restos = await query('SELECT * FROM restaurants WHERE slug = $1', [slug.trim()]);
+      if (restos && restos.length > 0) {
+        return restos[0];
+      }
+    }
   }
 
   // 3. Fallback to primary default active restaurant (Raman Sweet Bakery / first active tenant in DB)
