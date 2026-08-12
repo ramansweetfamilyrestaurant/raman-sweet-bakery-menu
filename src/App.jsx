@@ -454,6 +454,12 @@ export default function App() {
 
   // Load Menu Data
   const loadMenuData = async (forcedSlug = '') => {
+    const rawPath = window.location.pathname.toLowerCase().replace(/\/$/, '');
+    if (rawPath === '/kitchen') {
+      setRestaurantStatus('not_found');
+      setLoading(false);
+      return;
+    }
     if (view === 'kitchen-kds' || view === 'admin-dashboard' || view === 'super-admin-dashboard' || window.location.pathname.toLowerCase().includes('/admin') || isSlugKitchenPath(window.location.pathname)) {
       setLoading(false);
       return;
@@ -623,6 +629,9 @@ export default function App() {
       // Route: /billing → Subscription Billing Page
       const isBilling = path === '/billing' || path === '/billing/';
 
+      // Route: /kitchen without slug → 404 Invalid URL
+      const isGenericKitchen = path === '/kitchen' || path === '/kitchen/';
+
       // Route: /:slug/kitchen → Dedicated KDS Screen (slug required)
       const isKitchen = isSlugKitchenPath(path);
 
@@ -633,7 +642,9 @@ export default function App() {
       const isSecurity = path === '/security' || path === '/security/';
       const isContact = path === '/contact' || path === '/contact/' || path === '/support';
 
-      if (isKitchen) {
+      if (isGenericKitchen) {
+        setRestaurantStatus('not_found');
+      } else if (isKitchen) {
         setView('kitchen-kds');
         document.title = 'Kitchen KDS Display System';
       } else if (isPrivacy) {
@@ -1208,10 +1219,12 @@ export default function App() {
           fontSize: '4.5rem', marginBottom: '16px', filter: 'drop-shadow(0 4px 16px rgba(239,68,68,0.3))'
         }}>❌</div>
         <h1 style={{ fontSize: '1.75rem', fontWeight: 900, color: '#F87171', margin: '0 0 8px 0' }}>
-          Restaurant Not Found / Deleted
+          {window.location.pathname.toLowerCase().includes('/kitchen') ? 'Invalid Kitchen Display URL' : 'Restaurant Not Found / Deleted'}
         </h1>
         <p style={{ fontSize: '0.92rem', color: '#94A3B8', maxWidth: '440px', margin: '0 auto 24px auto', lineHeight: 1.6 }}>
-          Yeh restaurant ab platform par active nahi hai ya iska URL delete kar diya gaya hai.
+          {window.location.pathname.toLowerCase().includes('/kitchen')
+            ? 'Kitchen Display System (KDS) requires a valid restaurant slug in the URL (e.g., /your-restaurant-slug/kitchen).'
+            : 'Yeh restaurant ab platform par active nahi hai ya iska URL delete kar diya gaya hai.'}
         </p>
         <button
           onClick={() => { window.location.href = '/'; }}
