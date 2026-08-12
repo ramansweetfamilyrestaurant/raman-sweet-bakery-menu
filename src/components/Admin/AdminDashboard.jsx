@@ -423,10 +423,9 @@ export default function AdminDashboard({ token, username, onLogout, onReturnToMe
 
   const loadOrders = async () => {
     try {
-      const [data, reqsData, analytics] = await Promise.all([
+      const [data, reqsData] = await Promise.all([
         fetchAdminOrders(token).catch(() => []),
-        fetchServiceRequests(token).catch(() => []),
-        fetchAdminAnalytics(token).catch(() => null)
+        fetchServiceRequests(token).catch(() => [])
       ]);
       const safeData = Array.isArray(data) ? data : [];
       const safeReqs = Array.isArray(reqsData) ? reqsData : [];
@@ -463,7 +462,6 @@ export default function AdminDashboard({ token, username, onLogout, onReturnToMe
         localStorage.setItem('admin_cache_orders', JSON.stringify(safeData));
       } catch (e) {}
       setServiceRequests(safeReqs);
-      if (analytics) setAnalyticsData(analytics);
     } catch (err) {
       console.error('Failed to load orders & requests:', err);
     }
@@ -1004,9 +1002,17 @@ export default function AdminDashboard({ token, username, onLogout, onReturnToMe
 
   useEffect(() => {
     loadOrders();
-    const interval = setInterval(loadOrders, 2000);
+    const interval = setInterval(loadOrders, 3500);
     return () => clearInterval(interval);
   }, [token]);
+
+  useEffect(() => {
+    if (activeTab === 'analytics' && token) {
+      fetchAdminAnalytics(token)
+        .then(data => { if (data) setAnalyticsData(data); })
+        .catch(() => {});
+    }
+  }, [activeTab, token]);
 
   // Settings State
   const [settingsForm, setSettingsForm] = useState(() => {
