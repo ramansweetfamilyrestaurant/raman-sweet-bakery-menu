@@ -903,6 +903,7 @@ export default function AdminDashboard({ token, username, onLogout, onReturnToMe
         gst_invoice_enabled: infoData.gst_invoice_enabled !== undefined ? infoData.gst_invoice_enabled : true,
         ai_review_enabled: infoData.ai_review_enabled !== undefined ? infoData.ai_review_enabled : true,
         bluetooth_kot_enabled: infoData.bluetooth_kot_enabled !== undefined ? infoData.bluetooth_kot_enabled : true,
+        kds_enabled: (infoData.kds_enabled ?? infoData.permissions?.kds_enabled) !== undefined ? (infoData.kds_enabled ?? infoData.permissions?.kds_enabled) === 1 || (infoData.kds_enabled ?? infoData.permissions?.kds_enabled) === true || (infoData.kds_enabled ?? infoData.permissions?.kds_enabled) === '1' : true,
         kds_screen_enabled: infoData.kds_screen_enabled !== undefined ? infoData.kds_screen_enabled : 1,
         dual_printer_enabled: (infoData.dual_printer_enabled ?? infoData.permissions?.dual_printer_enabled) !== undefined ? (infoData.dual_printer_enabled ?? infoData.permissions?.dual_printer_enabled) === 1 || (infoData.dual_printer_enabled ?? infoData.permissions?.dual_printer_enabled) === true || (infoData.dual_printer_enabled ?? infoData.permissions?.dual_printer_enabled) === '1' : (infoData.plan_tier === 'enterprise' || infoData.plan_tier === 'vip_ultra_plan'),
         filters_visibility: { ...defaultVis, ...infoData.filters_visibility }
@@ -1072,6 +1073,7 @@ export default function AdminDashboard({ token, username, onLogout, onReturnToMe
           gst_invoice_enabled: infoData.gst_invoice_enabled !== undefined ? infoData.gst_invoice_enabled : true,
           ai_review_enabled: infoData.ai_review_enabled !== undefined ? infoData.ai_review_enabled : true,
           bluetooth_kot_enabled: infoData.bluetooth_kot_enabled !== undefined ? infoData.bluetooth_kot_enabled : true,
+          kds_enabled: (infoData.kds_enabled ?? infoData.permissions?.kds_enabled) !== undefined ? (infoData.kds_enabled ?? infoData.permissions?.kds_enabled) === 1 || (infoData.kds_enabled ?? infoData.permissions?.kds_enabled) === true || (infoData.kds_enabled ?? infoData.permissions?.kds_enabled) === '1' : true,
           kds_screen_enabled: infoData.kds_screen_enabled !== undefined ? infoData.kds_screen_enabled : 1,
           dual_printer_enabled: (infoData.dual_printer_enabled ?? infoData.permissions?.dual_printer_enabled) !== undefined ? (infoData.dual_printer_enabled ?? infoData.permissions?.dual_printer_enabled) === 1 || (infoData.dual_printer_enabled ?? infoData.permissions?.dual_printer_enabled) === true || (infoData.dual_printer_enabled ?? infoData.permissions?.dual_printer_enabled) === '1' : (infoData.plan_tier === 'enterprise' || infoData.plan_tier === 'vip_ultra_plan'),
           filters_visibility: { ...defaultVis, ...infoData.filters_visibility }
