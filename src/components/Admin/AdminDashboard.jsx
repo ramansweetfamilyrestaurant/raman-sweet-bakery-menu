@@ -1205,6 +1205,7 @@ export default function AdminDashboard({ token, username, onLogout, onReturnToMe
 
             <div class="footer-info">
               ${settingsForm.address || ''}${settingsForm.phone ? ' • Phone: ' + settingsForm.phone : ''}
+              ${!settingsForm.watermark_removal_enabled ? '<div style="margin-top: 4px; font-size: 0.65rem; color: #15803D; font-weight: 800;">⚡ Powered by TouchQR</div>' : ''}
             </div>
           </div>
           <script>
@@ -1252,6 +1253,7 @@ export default function AdminDashboard({ token, username, onLogout, onReturnToMe
           <div class="instruction-hi">स्कैन करें और डिजिटल मेन्यू देखें</div>
           <div class="footer-info">
             ${settingsForm.address || ''}${settingsForm.phone ? ' • Phone: ' + settingsForm.phone : ''}
+            ${!settingsForm.watermark_removal_enabled ? '<div style="margin-top: 4px; font-size: 0.65rem; color: #15803D; font-weight: 800;">⚡ Powered by TouchQR</div>' : ''}
           </div>
         </div>
       `;

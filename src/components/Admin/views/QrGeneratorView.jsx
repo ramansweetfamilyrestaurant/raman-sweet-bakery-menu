@@ -163,9 +163,19 @@ export default function QrGeneratorView({
             <div style={{ fontSize: '0.84rem', fontWeight: 800, color: '#0A2315', marginBottom: '2px' }}>
               📱 SCAN FOR DIGITAL MENU & ORDER
             </div>
-            <div style={{ fontSize: '0.78rem', color: '#68756D', fontWeight: 600 }}>
+            <div style={{ fontSize: '0.78rem', color: '#68756D', fontWeight: 600, marginBottom: '6px' }}>
               स्कैन करें और डिजिटल मेन्यू देखें
             </div>
+            {(settingsForm?.address || settingsForm?.phone) && (
+              <div style={{ fontSize: '0.68rem', color: '#64748B', borderTop: '1px solid #E2E8F0', paddingTop: '6px', marginTop: '4px' }}>
+                {settingsForm.address || ''} {settingsForm.phone ? `• Phone: ${settingsForm.phone}` : ''}
+              </div>
+            )}
+            {!settingsForm?.watermark_removal_enabled && (
+              <div style={{ fontSize: '0.64rem', color: '#15803D', fontWeight: 800, marginTop: '4px' }}>
+                ⚡ Powered by TouchQR
+              </div>
+            )}
           </div>
         </div>
       </div>
