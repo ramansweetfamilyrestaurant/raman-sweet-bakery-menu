@@ -19,7 +19,7 @@ function getAppBaseUrl(req) {
       return `${proto}://${host}`;
     }
   }
-  return 'https://touchqr.vercel.app';
+  return 'https://touchqr.in';
 }
 
 // Helper to log payment audit trail
