@@ -34,6 +34,8 @@ export default function StandaloneKdsPage({ slug = '' }) {
     } catch (e) {}
   };
 
+  const [notFound, setNotFound] = useState(false);
+
   const fetchOrders = async () => {
     try {
       let targetSlug = slug;
@@ -43,7 +45,16 @@ export default function StandaloneKdsPage({ slug = '' }) {
           targetSlug = parts.length > 1 ? parts[0] : '';
         }
       }
+      if (!targetSlug) {
+        setNotFound(true);
+        return;
+      }
+
       const res = await fetch(`/api/kitchen/orders?slug=${encodeURIComponent(targetSlug)}`);
+      if (res.status === 404) {
+        setNotFound(true);
+        return;
+      }
       const data = await res.json();
       if (data.success) {
         if (data.restaurant?.name) {
@@ -55,6 +66,8 @@ export default function StandaloneKdsPage({ slug = '' }) {
         }
         setPrevCount(activeOrders.length);
         setOrders(activeOrders);
+      } else if (res.status === 404 || data.error === 'Restaurant not found') {
+        setNotFound(true);
       }
     } catch (e) {
       console.warn('Failed to poll kitchen orders:', e);
@@ -107,6 +120,43 @@ export default function StandaloneKdsPage({ slug = '' }) {
     }
     return [];
   };
+
+  if (notFound) {
+    return (
+      <div style={{
+        minHeight: '100vh', display: 'flex', flexDirection: 'column',
+        alignItems: 'center', justifyContent: 'center', padding: '32px 20px',
+        background: 'linear-gradient(135deg, #0F172A 0%, #1E293B 100%)',
+        color: '#FFFFFF', textAlign: 'center', fontFamily: 'system-ui, sans-serif'
+      }}>
+        <div style={{
+          fontSize: '4.5rem', marginBottom: '16px', filter: 'drop-shadow(0 4px 16px rgba(239,68,68,0.3))'
+        }}>❌</div>
+        <h1 style={{ fontSize: '1.75rem', fontWeight: 900, color: '#F87171', margin: '0 0 8px 0' }}>
+          404 - Page Not Found
+        </h1>
+        <p style={{ fontSize: '0.92rem', color: '#94A3B8', maxWidth: '440px', margin: '0 auto 24px auto', lineHeight: 1.6 }}>
+          The page you are looking for does not exist or has been moved.
+        </p>
+        <button
+          onClick={() => { window.location.href = '/'; }}
+          style={{
+            padding: '13px 30px',
+            borderRadius: '9999px',
+            border: 'none',
+            background: 'linear-gradient(135deg, #FFD700 0%, #D4AF37 100%)',
+            color: '#0A0A0A',
+            fontWeight: 900,
+            fontSize: '0.92rem',
+            cursor: 'pointer',
+            boxShadow: '0 4px 16px rgba(255,215,0,0.3)'
+          }}
+        >
+          🏠 Go to TouchQR Homepage
+        </button>
+      </div>
+    );
+  }
 
   return (
     <div style={{ minHeight: '100vh', background: '#090D16', color: '#F8FAFC', padding: '16px', fontFamily: 'system-ui, sans-serif' }}>

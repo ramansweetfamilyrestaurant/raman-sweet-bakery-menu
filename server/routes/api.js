@@ -590,12 +590,22 @@ router.post('/service-requests', async (req, res) => {
   }
 });
 
-// GET /api/kitchen/orders - Dedicated KDS route per restaurant slug
+// GET /api/kitchen/orders - Dedicated KDS route per restaurant slug (Strict Multi-Tenant Isolation)
 router.get('/kitchen/orders', async (req, res) => {
   try {
     const { slug } = req.query;
-    const resto = await resolveRestaurant(req, slug);
-    const targetId = resto?.id || 1;
+    if (!slug || typeof slug !== 'string' || !slug.trim()) {
+      return res.status(400).json({ error: 'Restaurant slug is required' });
+    }
+
+    const cleanSlug = slug.trim().toLowerCase();
+    const restos = await query('SELECT id, name, slug FROM restaurants WHERE LOWER(slug) = $1', [cleanSlug]);
+    if (!restos || restos.length === 0) {
+      return res.status(404).json({ error: 'Restaurant not found' });
+    }
+
+    const resto = restos[0];
+    const targetId = resto.id;
 
     const orders = await query(`
       SELECT * FROM orders
@@ -621,7 +631,7 @@ router.get('/kitchen/orders', async (req, res) => {
 
     res.json({
       success: true,
-      restaurant: { id: targetId, name: resto?.name || 'Restaurant Kitchen' },
+      restaurant: { id: targetId, name: resto.name, slug: resto.slug },
       orders: formatted
     });
   } catch (err) {
@@ -630,24 +640,46 @@ router.get('/kitchen/orders', async (req, res) => {
   }
 });
 
-// PATCH /api/kitchen/orders/:id/complete - Mark order food prepared from /kitchen page
+// PATCH /api/kitchen/orders/:id/complete - Mark order food prepared from /kitchen page (Tenant Scoped)
 router.patch('/kitchen/orders/:id/complete', async (req, res) => {
   try {
     const { id } = req.params;
+    const { slug } = req.query;
     const numericId = parseInt(id, 10);
     const orderId = isNaN(numericId) ? id : numericId;
 
-    try {
-      await query(
-        'UPDATE orders SET status = $1, kitchen_prepared = $2 WHERE id = $3',
-        ['kitchen', 1, orderId]
-      );
-    } catch (colErr) {
-      try { await query('ALTER TABLE orders ADD COLUMN kitchen_prepared INT DEFAULT 0'); } catch (e) {}
-      await query(
-        'UPDATE orders SET status = $1, kitchen_prepared = $2 WHERE id = $3',
-        ['kitchen', 1, orderId]
-      );
+    let targetId = null;
+    if (slug && typeof slug === 'string' && slug.trim() !== '') {
+      const restos = await query('SELECT id FROM restaurants WHERE LOWER(slug) = $1', [slug.trim().toLowerCase()]);
+      if (restos && restos.length > 0) targetId = restos[0].id;
+    }
+
+    if (targetId) {
+      try {
+        await query(
+          'UPDATE orders SET status = $1, kitchen_prepared = $2 WHERE id = $3 AND restaurant_id = $4',
+          ['kitchen', 1, orderId, targetId]
+        );
+      } catch (colErr) {
+        try { await query('ALTER TABLE orders ADD COLUMN kitchen_prepared INT DEFAULT 0'); } catch (e) {}
+        await query(
+          'UPDATE orders SET status = $1, kitchen_prepared = $2 WHERE id = $3 AND restaurant_id = $4',
+          ['kitchen', 1, orderId, targetId]
+        );
+      }
+    } else {
+      try {
+        await query(
+          'UPDATE orders SET status = $1, kitchen_prepared = $2 WHERE id = $3',
+          ['kitchen', 1, orderId]
+        );
+      } catch (colErr) {
+        try { await query('ALTER TABLE orders ADD COLUMN kitchen_prepared INT DEFAULT 0'); } catch (e) {}
+        await query(
+          'UPDATE orders SET status = $1, kitchen_prepared = $2 WHERE id = $3',
+          ['kitchen', 1, orderId]
+        );
+      }
     }
 
     res.json({ success: true, id: orderId, kitchen_prepared: 1 });
