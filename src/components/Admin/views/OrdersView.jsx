@@ -262,7 +262,7 @@ export default function OrdersView({
                             🍳 Send to Kitchen
                           </button>
                           <button
-                            onClick={() => onUpdateStatus(order.id, 'accepted', { sent_to_kds: 0 })}
+                            onClick={() => onUpdateStatus(order.id, 'served', { sent_to_kds: 0, kitchen_prepared: 1, silent: true })}
                             className="adm-btn adm-btn-secondary adm-btn-sm"
                             style={{ fontWeight: 800, minHeight: '44px', padding: '0 12px' }}
                           >

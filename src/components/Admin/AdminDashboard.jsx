@@ -605,10 +605,13 @@ export default function AdminDashboard({ token, username, onLogout, onReturnToMe
         setToastMessage(`🛎️ ${tblNum} Food is PREPARED in Kitchen! Ready to Serve.`);
         setTimeout(() => setToastMessage(''), 5000);
       } else if (newStatus === 'served' || newStatus === 'completed') {
-        playWaiterBellChime();
+        if (!extraParams.silent) {
+          playWaiterBellChime();
+        }
         const targetOrder = orders.find(o => String(o.id) === String(orderId));
         const tblNum = targetOrder?.table_number ? `Table #${targetOrder.table_number}` : `Order #${orderId}`;
-        setToastMessage(`🛎️ ${tblNum} Marked ${newStatus.toUpperCase()}`);
+        const msg = newStatus === 'served' ? `📦 ${tblNum} Marked SERVED at Counter` : `💳 ${tblNum} Completed & Billed`;
+        setToastMessage(msg);
         setTimeout(() => setToastMessage(''), 4000);
       }
       if (newStatus === 'rejected' || newStatus === 'cancelled') {
