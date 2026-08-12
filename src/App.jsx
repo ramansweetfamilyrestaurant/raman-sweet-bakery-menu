@@ -31,6 +31,7 @@ const TermsOfService = lazy(() => import('./components/Legal/TermsOfService'));
 const RefundPolicy = lazy(() => import('./components/Legal/RefundPolicy'));
 const SecurityPolicy = lazy(() => import('./components/Legal/SecurityPolicy'));
 const ContactSupport = lazy(() => import('./components/Legal/ContactSupport'));
+const StandaloneKdsPage = lazy(() => import('./components/Admin/views/StandaloneKdsPage'));
 
 export default function App() {
   // Parse Table Number from URL query parameter ?table=5
@@ -49,6 +50,7 @@ export default function App() {
   const getInitialView = () => {
     const path = (window.location.pathname || '/').toLowerCase().replace(/\/$/, '') || '/';
     const hash = (window.location.hash || '').toLowerCase();
+    if (path.endsWith('/kitchen') || path === '/kitchen') return 'kitchen-kds';
     if (path === '/privacy-policy' || path === '/privacy') return 'privacy-policy';
     if (path === '/terms' || path === '/terms-of-service') return 'terms';
     if (path === '/refund-policy' || path === '/refunds') return 'refund-policy';
@@ -1228,6 +1230,15 @@ export default function App() {
           <strong>{info?.name || 'Yeh restaurant'}</strong> ki digital menu service filhal suspended hai. Kripya restaurant manager se sampark karein.
         </p>
       </div>
+    );
+  }
+
+  // Dedicated Kitchen Display System (KDS) View Render
+  if (view === 'kitchen-kds') {
+    return (
+      <Suspense fallback={<div style={{ padding: '60px', textAlign: 'center', background: '#090D16', color: '#F8FAFC', minHeight: '100vh', fontWeight: 800 }}>🍳 Loading Kitchen Display System...</div>}>
+        <StandaloneKdsPage slug={getSlugFromUrl() || (info && info.slug) || ''} />
+      </Suspense>
     );
   }
 

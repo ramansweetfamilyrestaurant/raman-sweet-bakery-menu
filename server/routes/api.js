@@ -590,6 +590,73 @@ router.post('/service-requests', async (req, res) => {
   }
 });
 
+// GET /api/kitchen/orders - Dedicated KDS route per restaurant slug
+router.get('/kitchen/orders', async (req, res) => {
+  try {
+    const { slug } = req.query;
+    const resto = await resolveRestaurant(req, slug);
+    const targetId = resto?.id || 1;
+
+    const orders = await query(`
+      SELECT * FROM orders
+      WHERE restaurant_id = $1
+        AND status IN ('pending', 'preparing', 'kitchen', 'accepted')
+        AND (sent_to_kds != 0 OR sent_to_kds IS NULL)
+        AND (kitchen_prepared != 1 OR kitchen_prepared IS NULL)
+      ORDER BY id ASC LIMIT 50
+    `, [targetId]);
+
+    const formatted = orders.map(o => {
+      let parsedItems = [];
+      if (typeof o.items === 'string') {
+        try { parsedItems = JSON.parse(o.items); } catch (e) { parsedItems = []; }
+      } else if (Array.isArray(o.items)) {
+        parsedItems = o.items;
+      }
+      return {
+        ...o,
+        items: parsedItems
+      };
+    });
+
+    res.json({
+      success: true,
+      restaurant: { id: targetId, name: resto?.name || 'Restaurant Kitchen' },
+      orders: formatted
+    });
+  } catch (err) {
+    console.error('Fetch kitchen orders error:', err);
+    res.status(500).json({ error: 'Failed to fetch kitchen orders' });
+  }
+});
+
+// PATCH /api/kitchen/orders/:id/complete - Mark order food prepared from /kitchen page
+router.patch('/kitchen/orders/:id/complete', async (req, res) => {
+  try {
+    const { id } = req.params;
+    const numericId = parseInt(id, 10);
+    const orderId = isNaN(numericId) ? id : numericId;
+
+    try {
+      await query(
+        'UPDATE orders SET status = $1, kitchen_prepared = $2 WHERE id = $3',
+        ['kitchen', 1, orderId]
+      );
+    } catch (colErr) {
+      try { await query('ALTER TABLE orders ADD COLUMN kitchen_prepared INT DEFAULT 0'); } catch (e) {}
+      await query(
+        'UPDATE orders SET status = $1, kitchen_prepared = $2 WHERE id = $3',
+        ['kitchen', 1, orderId]
+      );
+    }
+
+    res.json({ success: true, id: orderId, kitchen_prepared: 1 });
+  } catch (err) {
+    console.error('Mark kitchen prepared error:', err);
+    res.status(500).json({ error: 'Failed to mark kitchen prepared' });
+  }
+});
+
 // POST /api/register/pre-validate - Validate form inputs & username/phone availability BEFORE payment
 router.post('/register/pre-validate', async (req, res) => {
   try {
