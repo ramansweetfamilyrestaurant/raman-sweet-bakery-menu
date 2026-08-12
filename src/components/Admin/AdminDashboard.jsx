@@ -229,6 +229,7 @@ export default function AdminDashboard({ token, username, onLogout, onReturnToMe
 
   const pendingLoopRef = useRef(null);
   const activeAudioCtxRef = useRef(null);
+  const pendingUpdatesRef = useRef(new Map());
 
   const stopPendingAlarm = () => {
     if (pendingLoopRef.current) {
@@ -438,10 +439,19 @@ export default function AdminDashboard({ token, username, onLogout, onReturnToMe
       }
       setPrevPendingCount(activeOrderCount);
 
+      // Merge safeData with pendingUpdatesRef so optimistic state is never overwritten during background polling
+      const mergedOrders = safeData.map(backendOrd => {
+        const override = pendingUpdatesRef.current.get(String(backendOrd.id));
+        if (override) {
+          return { ...backendOrd, ...override };
+        }
+        return backendOrd;
+      });
+
       // 🛎️ Cross-device/Cross-tab detection: check if any order newly became kitchen_prepared === 1
       setOrders(prevOrders => {
         if (Array.isArray(prevOrders) && prevOrders.length > 0) {
-          const newlyPrepared = safeData.find(newOrd => {
+          const newlyPrepared = mergedOrders.find(newOrd => {
             const newIsPrep = newOrd.kitchen_prepared === 1 || newOrd.kitchen_prepared === true || newOrd.kitchen_prepared === '1';
             const oldOrd = prevOrders.find(o => String(o.id) === String(newOrd.id));
             const oldIsPrep = oldOrd && (oldOrd.kitchen_prepared === 1 || oldOrd.kitchen_prepared === true || oldOrd.kitchen_prepared === '1');
@@ -456,10 +466,10 @@ export default function AdminDashboard({ token, username, onLogout, onReturnToMe
             setTimeout(() => setToastMessage(''), 7000);
           }
         }
-        return safeData;
+        return mergedOrders;
       });
       try {
-        localStorage.setItem('admin_cache_orders', JSON.stringify(safeData));
+        localStorage.setItem('admin_cache_orders', JSON.stringify(mergedOrders));
       } catch (e) {}
       setServiceRequests(safeReqs);
     } catch (err) {
@@ -497,24 +507,32 @@ export default function AdminDashboard({ token, username, onLogout, onReturnToMe
       return { date: str, time: 'N/A' };
     };
 
-    const headers = ['Order ID', 'Date', 'Time', 'Table No', 'Total Amount (Rs)', 'Status', 'Items Ordered'];
-    const rows = orders.map(o => {
-      let itemsList = [];
-      if (typeof o.items === 'string') {
-        try { itemsList = JSON.parse(o.items); } catch (e) { itemsList = []; }
-      } else if (Array.isArray(o.items)) {
-        itemsList = o.items;
-      }
-      const itemSummary = (Array.isArray(itemsList) ? itemsList : []).map(i => `${i.name || 'Item'}${i.portion ? ' (' + i.portion + ')' : ''} x${i.quantity || 1}`).join('; ');
-      const { date, time } = getDateParts(o.created_at);
+    const headers = [
+      'Order ID',
+      'Date',
+      'Time',
+      'Table Number',
+      'Customer Name',
+      'Items Count',
+      'Items List',
+      'Status',
+      'Amount (INR)'
+    ];
+
+    const rows = orders.map(order => {
+      const { date, time } = getDateParts(order.created_at);
+      const parsedItems = safeParseItems(order.items);
+      const itemsListStr = parsedItems.map(i => `${i.name} (x${i.quantity})`).join(' | ');
       return [
-        o.id,
-        `"'${date}"`,
-        `"'${time}"`,
-        `"Table ${o.table_number || '1'}"`,
-        o.total_amount,
-        `"${o.status ? o.status.toUpperCase() : 'PENDING'}"`,
-        `"${itemSummary.replace(/"/g, '""')}"`
+        `"#${order.id}"`,
+        `"${date}"`,
+        `"${time}"`,
+        `"${order.table_number || 'N/A'}"`,
+        `"${(order.customer_name || 'Guest').replace(/"/g, '""')}"`,
+        parsedItems.reduce((acc, i) => acc + i.quantity, 0),
+        `"${itemsListStr.replace(/"/g, '""')}"`,
+        `"${(order.status || 'PENDING').toUpperCase()}"`,
+        order.total_amount || 0
       ].join(',');
     });
 
@@ -556,56 +574,47 @@ export default function AdminDashboard({ token, username, onLogout, onReturnToMe
     if (!dateStr) return '';
     try {
       let d = parseDateRobust(dateStr);
-      if (!isNaN(d.getTime())) {
-        const datePart = d.toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' });
-        const timePart = d.toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit', hour12: true });
-        return `${datePart} • ${timePart}`;
+      const now = new Date();
+      const diffMins = Math.floor((now - d) / 60000);
+      const timeStr = d.toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' });
+      if (diffMins < 1) return { timeStr, agoStr: 'Just now' };
+      let agoStr = 'Just now';
+      if (diffMins >= 1 && diffMins < 60) agoStr = `${diffMins}m ago`;
+      else if (diffMins >= 60) {
+        const hrs = Math.floor(diffMins / 60);
+        const mins = diffMins % 60;
+        agoStr = `${hrs}h ${mins}m ago`;
       }
-    } catch (e) {}
-    return String(dateStr);
-  };
-
-  const getSeatedTimeInfo = (dateStr) => {
-    if (!dateStr) return { timeStr: '', agoStr: '' };
-    try {
-      let d = parseDateRobust(dateStr);
-      if (!isNaN(d.getTime())) {
-        const timeStr = d.toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit', hour12: true });
-        const now = new Date();
-        const diffMs = Math.max(0, now.getTime() - d.getTime());
-        const diffMins = Math.floor(diffMs / 60000);
-
-        let agoStr = 'Just now';
-        if (diffMins >= 1 && diffMins < 60) agoStr = `${diffMins}m ago`;
-        else if (diffMins >= 60) {
-          const hrs = Math.floor(diffMins / 60);
-          const mins = diffMins % 60;
-          agoStr = `${hrs}h ${mins}m ago`;
-        }
-        return { timeStr, agoStr };
-      }
+      return { timeStr, agoStr };
     } catch (e) {}
     return { timeStr: String(dateStr), agoStr: '' };
   };
 
   const handleUpdateStatus = async (orderId, newStatus, extraParams = {}) => {
+    const key = String(orderId);
+    pendingUpdatesRef.current.set(key, { status: newStatus, ...extraParams });
+
     // ⚡ Optimistic UI update (0ms lag, zero flickering)
     if (newStatus === 'accepted' || newStatus === 'kitchen' || newStatus === 'preparing') {
       stopPendingAlarm();
     }
     if (newStatus === 'rejected' || newStatus === 'cancelled') {
-      setOrders(prev => prev.filter(o => String(o.id) !== String(orderId)));
+      setOrders(prev => prev.filter(o => String(o.id) !== key));
     } else {
-      setOrders(prev => prev.map(o => String(o.id) === String(orderId) ? { ...o, status: newStatus, ...extraParams } : o));
+      setOrders(prev => prev.map(o => String(o.id) === key ? { ...o, status: newStatus, ...extraParams } : o));
     }
 
     try {
       await updateOrderStatus(orderId, newStatus, token, extraParams);
+      setTimeout(() => {
+        pendingUpdatesRef.current.delete(key);
+      }, 3000);
+
       if (extraParams.kitchen_prepared === 1 || extraParams.kitchen_prepared === '1' || extraParams.kitchen_prepared === true) {
         if (!extraParams.silent) {
           playWaiterBellFor6Seconds();
         }
-        const targetOrder = orders.find(o => String(o.id) === String(orderId));
+        const targetOrder = orders.find(o => String(o.id) === key);
         const tblNum = targetOrder?.table_number ? `Table #${targetOrder.table_number}` : `Order #${orderId}`;
         setToastMessage(`🛎️ ${tblNum} Food is PREPARED in Kitchen! Ready to Serve.`);
         setTimeout(() => setToastMessage(''), 5000);
@@ -613,13 +622,14 @@ export default function AdminDashboard({ token, username, onLogout, onReturnToMe
         if (!extraParams.silent) {
           playWaiterBellChime();
         }
-        const targetOrder = orders.find(o => String(o.id) === String(orderId));
+        const targetOrder = orders.find(o => String(o.id) === key);
         const tblNum = targetOrder?.table_number ? `Table #${targetOrder.table_number}` : `Order #${orderId}`;
         const msg = newStatus === 'served' ? `📦 ${tblNum} Marked SERVED at Counter` : `💳 ${tblNum} Served & Bill Completed!`;
         setToastMessage(msg);
         setTimeout(() => setToastMessage(''), 4000);
       }
     } catch (err) {
+      pendingUpdatesRef.current.delete(key);
       alert(err.message || 'Failed to update order status');
       loadOrders(); // rollback on failure
     }
