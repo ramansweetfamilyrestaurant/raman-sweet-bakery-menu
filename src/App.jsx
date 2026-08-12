@@ -873,6 +873,24 @@ export default function App() {
     }
   };
 
+  const handleRateUsClick = () => {
+    if (!Boolean(info?.google_reviews_enabled)) return;
+
+    const isAiReviewEnabled = info?.ai_review_enabled !== false && info?.ai_review_enabled !== 0 && info?.ai_review_enabled !== '0';
+
+    if (isAiReviewEnabled) {
+      setShowReviewModal(true);
+    } else {
+      const targetUrl = (info?.google_review_url && typeof info.google_review_url === 'string' && info.google_review_url.trim())
+        ? info.google_review_url.trim()
+        : (info?.google_maps_url && typeof info.google_maps_url === 'string' && info.google_maps_url.trim())
+          ? info.google_maps_url.trim()
+          : `https://www.google.com/search?q=${encodeURIComponent((info?.name || 'Restaurant') + ' ' + (info?.address || ''))}`;
+      
+      window.open(targetUrl, '_blank');
+    }
+  };
+
   const handleLandingAdminLoginSubmit = async (e) => {
     if (e && e.preventDefault) e.preventDefault();
     if (!loginSlugInput.trim() || !loginPassInput) return;
@@ -1354,7 +1372,7 @@ export default function App() {
         onToggleLang={() => setLang(lang === 'en' ? 'hi' : 'en')}
         onOpenInfoModal={() => setShowInfoModal(true)}
         onCallStaff={() => setShowServiceModal(true)}
-        onOpenReviewModal={() => setShowReviewModal(true)}
+        onOpenReviewModal={handleRateUsClick}
         onOpenAdmin={() => {
           if (adminToken) {
             setView('admin-dashboard');
@@ -2350,7 +2368,7 @@ export default function App() {
           info={info}
           lang={lang}
           onClose={() => setShowInfoModal(false)}
-          onOpenReviewModal={() => setShowReviewModal(true)}
+          onOpenReviewModal={handleRateUsClick}
         />
       )}
 
@@ -2378,7 +2396,7 @@ export default function App() {
       {/* Footer */}
       <Footer
         info={info}
-        onOpenReviewModal={() => setShowReviewModal(true)}
+        onOpenReviewModal={handleRateUsClick}
         onOpenAdmin={() => {
           const currentSlug = getSlugFromUrl() || (info && info.slug) || 'raman-sweet-bakery';
           const storedSlug = localStorage.getItem('raman_admin_slug');
