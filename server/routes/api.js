@@ -156,8 +156,10 @@ router.get('/menu-bundle', async (req, res) => {
       filtersVis = { must_try: true, combo: true, special: true, under100: true };
     }
 
-    const planRows = await query('SELECT watermark_removal_enabled FROM saas_plans WHERE key = $1', [resto.plan_tier || 'pro']).catch(() => []);
-    const watermarkRemoval = planRows && planRows.length > 0 ? (planRows[0].watermark_removal_enabled === 1 || planRows[0].watermark_removal_enabled === true) : true;
+    const planRows = await query('SELECT watermark_removal_enabled, custom_domain_enabled FROM saas_plans WHERE key = $1', [resto.plan_tier || 'pro']).catch(() => []);
+    const saasP = (planRows && planRows.length > 0) ? planRows[0] : {};
+    const watermarkRemoval = saasP.watermark_removal_enabled !== undefined ? (saasP.watermark_removal_enabled === 1 || saasP.watermark_removal_enabled === true || saasP.watermark_removal_enabled === '1') : true;
+    const customDomainEnabled = saasP.custom_domain_enabled !== undefined ? (saasP.custom_domain_enabled === 1 || saasP.custom_domain_enabled === true || saasP.custom_domain_enabled === '1') : true;
 
     const infoObj = {
       id: resto.id,
@@ -177,6 +179,8 @@ router.get('/menu-bundle', async (req, res) => {
       currency_symbol: (resto.currency_symbol !== null && resto.currency_symbol !== undefined) ? resto.currency_symbol : '₹',
       plan_tier: resto.plan_tier || 'pro',
       watermark_removal_enabled: watermarkRemoval,
+      custom_domain_enabled: customDomainEnabled,
+      custom_domain: resto.custom_domain || '',
       whatsapp_number: resto.whatsapp_number || resto.phone || '',
       active: true
     };
@@ -241,6 +245,8 @@ router.get('/info', async (req, res) => {
     const directOrderingEnabled = saasPlan.direct_ordering_enabled !== undefined ? (saasPlan.direct_ordering_enabled === 1 || saasPlan.direct_ordering_enabled === true || saasPlan.direct_ordering_enabled === '1') : (planTierKey === 'enterprise');
     const googleReviewsEnabled = saasPlan.google_reviews_enabled !== undefined ? (saasPlan.google_reviews_enabled === 1 || saasPlan.google_reviews_enabled === true || saasPlan.google_reviews_enabled === '1') : (planTierKey !== 'basic');
     const maxCombos = saasPlan.max_combos !== undefined ? Number(saasPlan.max_combos) : (planTierKey === 'basic' ? 3 : planTierKey === 'pro' ? 10 : 9999);
+    const watermarkRemovalEnabled = saasPlan.watermark_removal_enabled !== undefined ? (saasPlan.watermark_removal_enabled === 1 || saasPlan.watermark_removal_enabled === true || saasPlan.watermark_removal_enabled === '1') : true;
+    const customDomainEnabled = saasPlan.custom_domain_enabled !== undefined ? (saasPlan.custom_domain_enabled === 1 || saasPlan.custom_domain_enabled === true || saasPlan.custom_domain_enabled === '1') : true;
 
     return res.json({
       id: resto.id,
@@ -265,6 +271,8 @@ router.get('/info', async (req, res) => {
       whatsapp_enabled: whatsappEnabled,
       direct_ordering_enabled: directOrderingEnabled,
       google_reviews_enabled: googleReviewsEnabled,
+      watermark_removal_enabled: watermarkRemovalEnabled,
+      custom_domain_enabled: customDomainEnabled,
       max_combos: maxCombos,
       theme_color: resto.theme_color || 'gold',
       scan_count: resto.scan_count || 0,
@@ -275,6 +283,7 @@ router.get('/info', async (req, res) => {
       gstin_number: resto.gstin_number || '',
       total_tables: resto.total_tables !== undefined && resto.total_tables !== null ? Number(resto.total_tables) : 0,
       order_retention_days: resto.order_retention_days || 7,
+      custom_domain: resto.custom_domain || '',
       active: true
     });
   } catch (err) {
