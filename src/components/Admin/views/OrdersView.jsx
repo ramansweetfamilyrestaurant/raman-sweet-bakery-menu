@@ -1,5 +1,6 @@
 import React from 'react';
-import { Clock, Printer, MapPin, Bell, RefreshCw, CheckCircle2, QrCode, XCircle } from 'lucide-react';
+import { Clock, Printer, MapPin, Bell, RefreshCw, CheckCircle2, QrCode, XCircle, UtensilsCrossed } from 'lucide-react';
+import KdsDisplayView from './KdsDisplayView';
 
 export default function OrdersView({
   orders = [],
@@ -50,16 +51,18 @@ export default function OrdersView({
     return { tableNumber: tableNum, status, activeOrder, serviceRequest: serviceReq };
   });
 
+  const kdsEnabled = restaurantInfo?.kds_enabled !== undefined ? Boolean(restaurantInfo.kds_enabled) : true;
+
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
       {/* Header with Quick Stat Counters */}
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '10px' }}>
         <div>
           <h2 style={{ fontSize: '1.25rem', fontWeight: 900, color: 'var(--adm-primary)', margin: '0 0 2px 0' }}>
-            Orders
+            Orders & Kitchen Operations
           </h2>
           <span style={{ fontSize: '0.8rem', color: 'var(--adm-muted)', fontWeight: 600 }}>
-            Live orders & kitchen activity
+            Live table orders, floor map & kitchen display screen
           </span>
         </div>
 
@@ -74,13 +77,20 @@ export default function OrdersView({
       </div>
 
       {/* Sub-Navigation Chips */}
-      <div style={{ display: 'flex', gap: '6px' }}>
+      <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap' }}>
         <button
           onClick={() => setActiveSubTab('orders')}
           className={`adm-btn adm-btn-sm ${activeSubTab === 'orders' ? 'adm-btn-primary' : 'adm-btn-secondary'}`}
           style={{ padding: '6px 14px', borderRadius: 'var(--adm-radius-full)' }}
         >
           Live Orders ({validOrders.length})
+        </button>
+        <button
+          onClick={() => setActiveSubTab('kds-screen')}
+          className={`adm-btn adm-btn-sm ${activeSubTab === 'kds-screen' ? 'adm-btn-primary' : 'adm-btn-secondary'}`}
+          style={{ padding: '6px 14px', borderRadius: 'var(--adm-radius-full)', background: activeSubTab === 'kds-screen' ? 'linear-gradient(135deg, #0F172A 0%, #1E293B 100%)' : undefined, color: activeSubTab === 'kds-screen' ? '#38BDF8' : undefined, border: activeSubTab === 'kds-screen' ? '1px solid #38BDF8' : undefined }}
+        >
+          🍳 Kitchen KDS Screen ({pendingCount + kitchenCount})
         </button>
         <button
           onClick={() => setActiveSubTab('floor-map')}
@@ -245,6 +255,16 @@ export default function OrdersView({
             )}
           </div>
         </div>
+      )}
+
+      {/* KDS KITCHEN DISPLAY SUBTAB */}
+      {activeSubTab === 'kds-screen' && (
+        <KdsDisplayView
+          orders={orders}
+          onUpdateStatus={onUpdateStatus}
+          restaurantInfo={restaurantInfo}
+          kdsEnabled={kdsEnabled}
+        />
       )}
 
       {/* FLOOR MAP SUBTAB */}

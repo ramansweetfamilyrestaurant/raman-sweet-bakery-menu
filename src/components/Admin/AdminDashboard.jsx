@@ -279,6 +279,38 @@ export default function AdminDashboard({ token, username, onLogout, onReturnToMe
     }
   };
 
+  const playWaiterBellChime = () => {
+    try {
+      const AudioCtx = window.AudioContext || window.webkitAudioContext;
+      if (!AudioCtx) return;
+      const ctx = new AudioCtx();
+      if (ctx.state === 'suspended') {
+        ctx.resume();
+      }
+
+      // 🛎️ Crisp Double-Ding Reception Bell Chime (880Hz -> 1320Hz)
+      const tones = [
+        { freq: 880, start: 0.0, duration: 0.35 },
+        { freq: 1320, start: 0.18, duration: 0.45 }
+      ];
+
+      tones.forEach(t => {
+        const osc = ctx.createOscillator();
+        const gain = ctx.createGain();
+        osc.type = 'sine';
+        osc.frequency.setValueAtTime(t.freq, ctx.currentTime + t.start);
+        gain.gain.setValueAtTime(0.6, ctx.currentTime + t.start);
+        gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + t.start + t.duration);
+        osc.connect(gain);
+        gain.connect(ctx.destination);
+        osc.start(ctx.currentTime + t.start);
+        osc.stop(ctx.currentTime + t.start + t.duration);
+      });
+    } catch (e) {
+      console.warn('Waiter Bell Chime error:', e);
+    }
+  };
+
   const triggerBackgroundNotification = (count) => {
     try {
       if ('Notification' in window && Notification.permission === 'granted') {
@@ -454,6 +486,13 @@ export default function AdminDashboard({ token, username, onLogout, onReturnToMe
   const handleUpdateStatus = async (orderId, newStatus) => {
     try {
       await updateOrderStatus(orderId, newStatus, token);
+      if (newStatus === 'served' || newStatus === 'completed') {
+        playWaiterBellChime();
+        const targetOrder = orders.find(o => o.id === orderId);
+        const tblNum = targetOrder?.table_number ? `Table #${targetOrder.table_number}` : `Order #${orderId}`;
+        setToastMessage(`🛎️ ${tblNum} Food is READY! Marked COMPLETE by Kitchen.`);
+        setTimeout(() => setToastMessage(''), 4000);
+      }
       if (newStatus === 'rejected' || newStatus === 'cancelled') {
         setOrders(prev => prev.filter(o => o.id !== orderId));
       } else {
@@ -1829,7 +1868,7 @@ export default function AdminDashboard({ token, username, onLogout, onReturnToMe
         <main className="adm-main-canvas">
           <div className="adm-content-body">
             {/* ORDERS VIEW */}
-            {['orders', 'floor-map', 'service-requests'].includes(activeTab) && (
+            {['orders', 'kds-screen', 'floor-map', 'service-requests'].includes(activeTab) && (
               <OrdersView
                 orders={orders}
                 activeSubTab={activeTab}

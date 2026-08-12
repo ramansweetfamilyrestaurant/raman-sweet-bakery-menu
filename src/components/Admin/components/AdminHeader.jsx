@@ -31,7 +31,7 @@ export default function AdminHeader({
   const logoUrl = restaurantInfo?.logo;
   const resolvedLogo = resolveImageUrl(logoUrl);
 
-  const isOrdersActive = ['orders', 'floor-map', 'service-requests'].includes(activeTab);
+  const isOrdersActive = ['orders', 'kds-screen', 'floor-map', 'service-requests'].includes(activeTab);
   const isMenuActive = ['dishes', 'categories', 'combos'].includes(activeTab);
   const isSetupActive = ['settings', 'qr-generator', 'review'].includes(activeTab);
   const isAnalyticsActive = activeTab === 'analytics';
