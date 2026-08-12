@@ -1219,12 +1219,10 @@ export default function App() {
           fontSize: '4.5rem', marginBottom: '16px', filter: 'drop-shadow(0 4px 16px rgba(239,68,68,0.3))'
         }}>❌</div>
         <h1 style={{ fontSize: '1.75rem', fontWeight: 900, color: '#F87171', margin: '0 0 8px 0' }}>
-          {window.location.pathname.toLowerCase().includes('/kitchen') ? 'Invalid Kitchen Display URL' : 'Restaurant Not Found / Deleted'}
+          404 - Page Not Found
         </h1>
         <p style={{ fontSize: '0.92rem', color: '#94A3B8', maxWidth: '440px', margin: '0 auto 24px auto', lineHeight: 1.6 }}>
-          {window.location.pathname.toLowerCase().includes('/kitchen')
-            ? 'Kitchen Display System (KDS) requires a valid restaurant slug in the URL (e.g., /your-restaurant-slug/kitchen).'
-            : 'Yeh restaurant ab platform par active nahi hai ya iska URL delete kar diya gaya hai.'}
+          The page you are looking for does not exist or has been moved.
         </p>
         <button
           onClick={() => { window.location.href = '/'; }}
