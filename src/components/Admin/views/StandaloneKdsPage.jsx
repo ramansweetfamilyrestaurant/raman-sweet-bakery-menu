@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Clock, Maximize2, Minimize2, Flame, Bell, AlertTriangle } from 'lucide-react';
 
 export default function StandaloneKdsPage({ slug = '' }) {
