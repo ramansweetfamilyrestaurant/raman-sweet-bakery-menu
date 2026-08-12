@@ -1246,12 +1246,25 @@ router.patch('/orders/:id/status', authenticateToken, requireActiveSubscription,
     }
     const targetId = restoId || 1;
     const { id } = req.params;
-    const { status, sent_to_kds } = req.body;
+    const { status, sent_to_kds, kitchen_prepared } = req.body;
 
     const numericId = parseInt(id, 10);
     const orderId = isNaN(numericId) ? id : numericId;
 
-    if (sent_to_kds !== undefined && sent_to_kds !== null) {
+    if (kitchen_prepared !== undefined && kitchen_prepared !== null) {
+      const prepVal = (kitchen_prepared === 1 || kitchen_prepared === true || kitchen_prepared === '1') ? 1 : 0;
+      try {
+        await query(
+          'UPDATE orders SET status = $1, kitchen_prepared = $2 WHERE id = $3 AND (restaurant_id = $4 OR restaurant_id IS NULL)',
+          [status, prepVal, orderId, targetId]
+        );
+      } catch (colErr) {
+        await query(
+          'UPDATE orders SET status = $1 WHERE id = $2 AND (restaurant_id = $3 OR restaurant_id IS NULL)',
+          [status, orderId, targetId]
+        );
+      }
+    } else if (sent_to_kds !== undefined && sent_to_kds !== null) {
       const kdsVal = (sent_to_kds === 1 || sent_to_kds === true || sent_to_kds === '1') ? 1 : 0;
       try {
         await query(
@@ -1259,7 +1272,6 @@ router.patch('/orders/:id/status', authenticateToken, requireActiveSubscription,
           [status, kdsVal, orderId, targetId]
         );
       } catch (colErr) {
-        console.warn('sent_to_kds column update notice, falling back to status update:', colErr.message);
         await query(
           'UPDATE orders SET status = $1 WHERE id = $2 AND (restaurant_id = $3 OR restaurant_id IS NULL)',
           [status, orderId, targetId]
@@ -1272,7 +1284,7 @@ router.patch('/orders/:id/status', authenticateToken, requireActiveSubscription,
       );
     }
 
-    res.json({ success: true, id: orderId, status, sent_to_kds });
+    res.json({ success: true, id: orderId, status, sent_to_kds, kitchen_prepared });
   } catch (err) {
     console.error('Update order status error:', err);
     res.status(500).json({ error: err.message || 'Failed to update order status' });

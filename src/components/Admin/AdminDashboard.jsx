@@ -487,11 +487,17 @@ export default function AdminDashboard({ token, username, onLogout, onReturnToMe
   const handleUpdateStatus = async (orderId, newStatus, extraParams = {}) => {
     try {
       await updateOrderStatus(orderId, newStatus, token, extraParams);
-      if (newStatus === 'served' || newStatus === 'completed') {
+      if (extraParams.kitchen_prepared === 1) {
         playWaiterBellChime();
         const targetOrder = orders.find(o => o.id === orderId);
         const tblNum = targetOrder?.table_number ? `Table #${targetOrder.table_number}` : `Order #${orderId}`;
-        setToastMessage(`🛎️ ${tblNum} Food is READY! Marked COMPLETE by Kitchen.`);
+        setToastMessage(`🛎️ ${tblNum} Food is PREPARED in Kitchen! Ready to Serve.`);
+        setTimeout(() => setToastMessage(''), 5000);
+      } else if (newStatus === 'served' || newStatus === 'completed') {
+        playWaiterBellChime();
+        const targetOrder = orders.find(o => o.id === orderId);
+        const tblNum = targetOrder?.table_number ? `Table #${targetOrder.table_number}` : `Order #${orderId}`;
+        setToastMessage(`🛎️ ${tblNum} Marked ${newStatus.toUpperCase()}`);
         setTimeout(() => setToastMessage(''), 4000);
       }
       if (newStatus === 'rejected' || newStatus === 'cancelled') {

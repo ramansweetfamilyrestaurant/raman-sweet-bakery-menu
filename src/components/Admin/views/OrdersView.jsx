@@ -176,7 +176,11 @@ export default function OrdersView({
                       <span className={`adm-badge adm-badge-${order.status === 'pending' ? 'warning' : (order.status === 'kitchen' || order.status === 'accepted') ? 'info' : 'success'}`}>
                         {(order.status || 'PENDING').toUpperCase()}
                       </span>
-                      {order.sent_to_kds === 0 ? (
+                      {order.kitchen_prepared === 1 ? (
+                        <span style={{ fontSize: '0.68rem', background: '#DCFCE7', color: '#15803D', border: '1px solid #86EFAC', padding: '2px 8px', borderRadius: '12px', fontWeight: 900, boxShadow: '0 0 10px rgba(34, 197, 94, 0.3)' }}>
+                          🍳 PREPARED IN KITCHEN
+                        </span>
+                      ) : order.sent_to_kds === 0 ? (
                         <span style={{ fontSize: '0.68rem', background: '#F3E8FF', color: '#6B21A8', border: '1px solid #E9D5FF', padding: '1px 6px', borderRadius: '12px', fontWeight: 800 }}>📦 Counter Only</span>
                       ) : order.status !== 'pending' ? (
                         <span style={{ fontSize: '0.68rem', background: '#E0F2FE', color: '#0369A1', border: '1px solid #BAE6FD', padding: '1px 6px', borderRadius: '12px', fontWeight: 800 }}>🍳 Kitchen KDS</span>
@@ -221,25 +225,43 @@ export default function OrdersView({
                       {order.status === 'pending' && (
                         <>
                           <button
-                            onClick={() => onOpenAcceptRouting ? onOpenAcceptRouting(order) : onUpdateStatus(order.id, 'kitchen')}
+                            onClick={() => onUpdateStatus(order.id, 'accepted')}
                             className="adm-btn adm-btn-primary adm-btn-sm"
-                            style={{ fontWeight: 800, minHeight: '44px', padding: '0 12px' }}
+                            style={{ fontWeight: 800, minHeight: '44px', padding: '0 14px' }}
                           >
-                            Accept to Kitchen
+                            ✓ Accept Order
                           </button>
                           <button onClick={() => onUpdateStatus(order.id, 'rejected')} className="adm-btn adm-btn-danger adm-btn-sm" style={{ fontWeight: 700, minHeight: '44px', padding: '0 10px' }}>
                             <XCircle size={14} /> Reject
                           </button>
                         </>
                       )}
-                      {(order.status === 'kitchen' || order.status === 'accepted') && (
+                      {order.status === 'accepted' && (
+                        <>
+                          <button
+                            onClick={() => onUpdateStatus(order.id, 'kitchen', { sent_to_kds: 1 })}
+                            className="adm-btn adm-btn-primary adm-btn-sm"
+                            style={{ fontWeight: 800, minHeight: '44px', padding: '0 12px', background: 'linear-gradient(135deg, #0F172A 0%, #1E293B 100%)', color: '#38BDF8', border: '1px solid #38BDF8' }}
+                          >
+                            🍳 Send to Kitchen
+                          </button>
+                          <button
+                            onClick={() => onUpdateStatus(order.id, 'accepted', { sent_to_kds: 0 })}
+                            className="adm-btn adm-btn-secondary adm-btn-sm"
+                            style={{ fontWeight: 800, minHeight: '44px', padding: '0 12px' }}
+                          >
+                            📦 Fulfill at Counter
+                          </button>
+                        </>
+                      )}
+                      {order.status === 'kitchen' && (
                         <button onClick={() => onUpdateStatus(order.id, 'served')} className="adm-btn adm-btn-accent adm-btn-sm" style={{ fontWeight: 800, minHeight: '44px', padding: '0 12px' }}>
                           Mark Served
                         </button>
                       )}
                       {order.status === 'served' && (
                         <button onClick={() => onUpdateStatus(order.id, 'completed')} className="adm-btn adm-btn-primary adm-btn-sm" style={{ fontWeight: 800, minHeight: '44px', padding: '0 12px' }}>
-                          Complete Order
+                          Complete Order & Bill
                         </button>
                       )}
                       {onDirectPrint && (

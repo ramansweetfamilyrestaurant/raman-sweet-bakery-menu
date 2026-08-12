@@ -16,10 +16,11 @@ export default function KdsDisplayView({
     return () => clearInterval(timer);
   }, []);
 
-  // Filter ONLY active / running orders meant for Kitchen KDS (excludes sent_to_kds === 0 Counter Only orders)
+  // Filter ONLY active kitchen tickets (status === 'kitchen', sent_to_kds !== 0, kitchen_prepared !== 1)
   const activeKitchenOrders = (Array.isArray(orders) ? orders : []).filter(
-    o => (o.status === 'pending' || o.status === 'kitchen' || o.status === 'accepted' || o.status === 'preparing') &&
-         (o.sent_to_kds !== 0 && o.sent_to_kds !== false && o.sent_to_kds !== '0')
+    o => o.status === 'kitchen' &&
+         (o.sent_to_kds !== 0 && o.sent_to_kds !== false && o.sent_to_kds !== '0') &&
+         (o.kitchen_prepared !== 1 && o.kitchen_prepared !== true && o.kitchen_prepared !== '1')
   );
 
   const toggleFullscreen = () => {
@@ -211,7 +212,7 @@ export default function KdsDisplayView({
                 {/* Card Footer - SINGLE COMPLETE BUTTON */}
                 <div style={{ padding: '14px 16px', background: '#0F172A', borderTop: '1px solid #334155' }}>
                   <button
-                    onClick={() => onUpdateStatus(order.id, 'completed')}
+                    onClick={() => onUpdateStatus(order.id, 'kitchen', { kitchen_prepared: 1 })}
                     style={{
                       width: '100%',
                       padding: '14px',
