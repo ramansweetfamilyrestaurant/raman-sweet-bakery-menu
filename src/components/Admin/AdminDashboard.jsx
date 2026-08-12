@@ -835,6 +835,7 @@ export default function AdminDashboard({ token, username, onLogout, onReturnToMe
     currency_symbol: '₹',
     fssai_lic_no: '',
     resto_type: 'pure_veg',
+    custom_domain: '',
     filters_visibility: {
       must_try: true,
       combo: true,
@@ -973,6 +974,7 @@ export default function AdminDashboard({ token, username, onLogout, onReturnToMe
           gstin_number: infoData.gstin_number || '',
           total_tables: infoData.total_tables !== undefined && infoData.total_tables !== null ? Number(infoData.total_tables) : 0,
           order_retention_days: infoData.order_retention_days || 7,
+          custom_domain: infoData.custom_domain || '',
           filters_visibility: { ...defaultVis, ...infoData.filters_visibility }
         });
       }

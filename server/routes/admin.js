@@ -1095,7 +1095,18 @@ const handleUpdateSettings = async (req, res) => {
     }
     const targetId = restoId || 1;
 
-    const { name, tagline, logo, phone, address, openingHours, google_review_url, google_reviews_enabled, filters_visibility, currency_symbol, fssai_lic_no, resto_type, whatsapp_number, whatsapp_enabled, theme_color, latitude, longitude, max_distance_meters, gst_enabled, gstin_number, total_tables, order_retention_days } = req.body;
+    const { name, tagline, logo, phone, address, openingHours, google_review_url, google_reviews_enabled, filters_visibility, currency_symbol, fssai_lic_no, resto_type, whatsapp_number, whatsapp_enabled, theme_color, latitude, longitude, max_distance_meters, gst_enabled, gstin_number, total_tables, order_retention_days, custom_domain } = req.body;
+
+    let cleanDomain = null;
+    if (custom_domain !== undefined) {
+      cleanDomain = (custom_domain || '').toLowerCase().trim().replace(/^https?:\/\//, '').replace(/\/.*$/, '').replace(/^www\./, '');
+      if (cleanDomain) {
+        const domainCheck = await query('SELECT id FROM restaurants WHERE (LOWER(custom_domain) = $1 OR LOWER(custom_domain) = $2) AND id != $3', [cleanDomain, `www.${cleanDomain}`, targetId]);
+        if (domainCheck && domainCheck.length > 0) {
+          return res.status(400).json({ error: `Domain '${cleanDomain}' is already mapped to another restaurant!` });
+        }
+      }
+    }
 
     const visJson = typeof filters_visibility === 'object' ? JSON.stringify(filters_visibility) : filters_visibility;
 
@@ -1116,8 +1127,8 @@ const handleUpdateSettings = async (req, res) => {
 
     await query(`
       UPDATE restaurants 
-      SET name = $1, tagline = $2, logo = $3, phone = $4, address = $5, opening_hours = $6, google_review_url = $7, filters_visibility = $8, currency_symbol = $9, fssai_lic_no = $10, resto_type = $11, whatsapp_number = $12, whatsapp_enabled = $13, theme_color = $14, latitude = $15, longitude = $16, max_distance_meters = $17, gst_enabled = $18, gstin_number = $19, total_tables = $20, order_retention_days = $21, google_reviews_enabled = $22
-      WHERE id = $23
+      SET name = $1, tagline = $2, logo = $3, phone = $4, address = $5, opening_hours = $6, google_review_url = $7, filters_visibility = $8, currency_symbol = $9, fssai_lic_no = $10, resto_type = $11, whatsapp_number = $12, whatsapp_enabled = $13, theme_color = $14, latitude = $15, longitude = $16, max_distance_meters = $17, gst_enabled = $18, gstin_number = $19, total_tables = $20, order_retention_days = $21, google_reviews_enabled = $22, custom_domain = $23
+      WHERE id = $24
     `, [
       name, tagline,
       processedLogo !== null ? processedLogo : (logo !== undefined ? '' : null),
@@ -1136,6 +1147,7 @@ const handleUpdateSettings = async (req, res) => {
       total_tables !== undefined && total_tables !== null ? Number(total_tables) : 0,
       order_retention_days || 90,
       google_reviews_enabled !== false && google_reviews_enabled !== 0 ? 1 : 0,
+      cleanDomain !== null ? cleanDomain : (custom_domain !== undefined ? '' : null),
       targetId
     ]);
 

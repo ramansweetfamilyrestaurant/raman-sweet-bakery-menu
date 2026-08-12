@@ -70,6 +70,17 @@ router.get('/plans', async (req, res) => {
 // Helper to resolve target restaurant by JWT token or slug (or fallback to primary raman-sweet-bakery)
 // Helper to resolve target restaurant by slug or JWT token
 async function resolveRestaurant(req, slug) {
+  // 0. Check incoming Host header for custom domain mapping (e.g. menu.ramansweets.com)
+  if (req && req.headers) {
+    const rawHost = (req.headers['x-forwarded-host'] || req.headers.host || '').split(':')[0].toLowerCase().replace(/^www\./, '');
+    if (rawHost && !rawHost.includes('touchqr') && !rawHost.includes('localhost') && !rawHost.includes('vercel.app') && !rawHost.includes('127.0.0.1')) {
+      const domainRestos = await query('SELECT * FROM restaurants WHERE LOWER(custom_domain) = $1 OR LOWER(custom_domain) = $2', [rawHost, `www.${rawHost}`]);
+      if (domainRestos && domainRestos.length > 0) {
+        return domainRestos[0];
+      }
+    }
+  }
+
   // 1. If an explicit valid slug parameter is passed in URL/query, prioritize searching by slug!
   if (slug && typeof slug === 'string' && slug.trim() !== '') {
     const cleanSlug = slug.trim().toLowerCase();

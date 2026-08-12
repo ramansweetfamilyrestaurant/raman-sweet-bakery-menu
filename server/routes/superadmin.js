@@ -261,7 +261,12 @@ router.post('/restaurants/:id/impersonate', authenticateToken, requireSuperAdmin
 router.put('/restaurants/:id', authenticateToken, requireSuperAdmin, async (req, res) => {
   try {
     const { id } = req.params;
-    const { name, tagline, logo, phone, address, fssai_lic_no, owner_username, owner_password, plan_tier, plan_price, plan_expires_at, whatsapp_number, whatsapp_enabled, direct_ordering_enabled, google_reviews_enabled, theme_color, order_retention_days } = req.body;
+    const { name, tagline, logo, phone, address, fssai_lic_no, owner_username, owner_password, plan_tier, plan_price, plan_expires_at, whatsapp_number, whatsapp_enabled, direct_ordering_enabled, google_reviews_enabled, theme_color, order_retention_days, custom_domain } = req.body;
+
+    let cleanDomain = null;
+    if (custom_domain !== undefined) {
+      cleanDomain = (custom_domain || '').toLowerCase().trim().replace(/^https?:\/\//, '').replace(/\/.*$/, '').replace(/^www\./, '');
+    }
 
     // Update restaurant info & Feature Control Matrix & Logo
     await query(`
@@ -269,8 +274,8 @@ router.put('/restaurants/:id', authenticateToken, requireSuperAdmin, async (req,
       SET name = $1, tagline = $2, logo = $3, phone = $4, address = $5, fssai_lic_no = $6,
           plan_tier = $7, plan_price = $8, plan_expires_at = $9, whatsapp_number = $10,
           whatsapp_enabled = $11, direct_ordering_enabled = $12, google_reviews_enabled = $13, theme_color = $14,
-          order_retention_days = $15
-      WHERE id = $16
+          order_retention_days = $15, custom_domain = $16
+      WHERE id = $17
     `, [
       name,
       tagline || '',
@@ -287,6 +292,7 @@ router.put('/restaurants/:id', authenticateToken, requireSuperAdmin, async (req,
       google_reviews_enabled !== false && google_reviews_enabled !== 0 && google_reviews_enabled !== 'false' ? 1 : 0,
       theme_color || 'gold',
       order_retention_days ? parseInt(order_retention_days, 10) : 90,
+      cleanDomain !== null ? cleanDomain : (custom_domain !== undefined ? '' : null),
       id
     ]);
 

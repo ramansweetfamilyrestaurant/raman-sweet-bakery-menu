@@ -69,7 +69,7 @@ async function createTables() {
         filters_visibility JSONB,
         currency_symbol VARCHAR(10) DEFAULT '₹',
         fssai_lic_no VARCHAR(100) DEFAULT '',
-        resto_type VARCHAR(50) DEFAULT 'pure_veg',
+        custom_domain VARCHAR(255),
         active BOOLEAN DEFAULT TRUE,
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
       );`,
