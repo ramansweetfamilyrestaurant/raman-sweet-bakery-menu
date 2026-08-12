@@ -99,7 +99,7 @@ async function resolveRestaurant(req, slug) {
   // 2. If no valid JWT token, check if an explicit valid slug parameter is passed in URL/query for public menu
   if (slug && typeof slug === 'string' && slug.trim() !== '') {
     const cleanSlug = slug.trim().toLowerCase();
-    if (!['menu', 'default', 'null', 'undefined', 'home', 'index', 'api'].includes(cleanSlug)) {
+    if (!['menu', 'default', 'null', 'undefined', 'home', 'index', 'api', 'kitchen'].includes(cleanSlug)) {
       const restos = await query('SELECT * FROM restaurants WHERE slug = $1', [slug.trim()]);
       if (restos && restos.length > 0) {
         return restos[0];
@@ -601,8 +601,8 @@ router.get('/kitchen/orders', async (req, res) => {
       SELECT * FROM orders
       WHERE restaurant_id = $1
         AND status IN ('pending', 'preparing', 'kitchen', 'accepted')
-        AND (sent_to_kds != 0 OR sent_to_kds IS NULL)
-        AND (kitchen_prepared != 1 OR kitchen_prepared IS NULL)
+        AND (sent_to_kds IS NULL OR sent_to_kds != 0)
+        AND (kitchen_prepared IS NULL OR kitchen_prepared = 0)
       ORDER BY id ASC LIMIT 50
     `, [targetId]);
 
