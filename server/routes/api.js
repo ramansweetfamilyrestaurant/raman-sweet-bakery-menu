@@ -104,6 +104,13 @@ async function resolveRestaurant(req, slug) {
       if (restos && restos.length > 0) {
         return restos[0];
       }
+      if (cleanSlug.endsWith('-menu')) {
+        const altSlug = cleanSlug.replace(/-menu$/, '');
+        const altRestos = await query('SELECT * FROM restaurants WHERE LOWER(slug) = $1', [altSlug]);
+        if (altRestos && altRestos.length > 0) {
+          return altRestos[0];
+        }
+      }
       // Explicit slug passed but NOT found in DB -> return null (404)
       return null;
     }
