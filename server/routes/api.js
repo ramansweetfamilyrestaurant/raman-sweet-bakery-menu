@@ -116,8 +116,8 @@ async function resolveRestaurant(req, slug) {
     }
   }
 
-  // 3. Fallback to primary default active restaurant ONLY when NO slug parameter was passed at all (root domain)
-  if (!slug || typeof slug !== 'string' || slug.trim() === '') {
+  // 3. Fallback to primary default active restaurant when no slug or system route like /menu is passed
+  if (!slug || typeof slug !== 'string' || slug.trim() === '' || ['menu', 'default', 'null', 'undefined', 'home', 'index'].includes(slug.trim().toLowerCase())) {
     const firstResto = await query("SELECT * FROM restaurants WHERE (active = true OR active IS NOT FALSE) ORDER BY id ASC LIMIT 1");
     return firstResto[0] || null;
   }
