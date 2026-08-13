@@ -312,12 +312,20 @@ export default function App() {
   const [orderSuccessModal, setOrderSuccessModal] = useState(null);
   const [placingOrder, setPlacingOrder] = useState(false);
 
-  // FIX: Table-specific localStorage key to prevent cross-table order leakage
-  const getOrderStorageKey = () => {
-    const t = effectiveTableNum || orderTableInput || '1';
-    return `raman_active_order_id_table_${t}`;
+  // FIX: Table-specific localStorage key (Only for scanned table QR or active table number)
+  const getOrderStorageKey = (tbl) => {
+    const t = tbl || effectiveTableNum || orderTableInput;
+    return t ? `raman_active_order_id_table_${t}` : null;
   };
-  const [activeOrderId, setActiveOrderId] = useState(localStorage.getItem(getOrderStorageKey()) || null);
+
+  const getInitialActiveOrderId = () => {
+    if (initialTableNum) {
+      return localStorage.getItem(`raman_active_order_id_table_${initialTableNum}`) || null;
+    }
+    return null;
+  };
+
+  const [activeOrderId, setActiveOrderId] = useState(getInitialActiveOrderId);
   const [activeOrderTrack, setActiveOrderTrack] = useState(null);
 
   // 3-Minute (180s) Persistent Auto-Kill Session Protection after order completion, cancellation, or rejection
@@ -341,7 +349,8 @@ export default function App() {
 
       if (remainingSec <= 0) {
         // Auto-kill session cleanly after 3 mins
-        localStorage.removeItem(getOrderStorageKey());
+        const key = getOrderStorageKey(activeOrderTrack.table_number);
+        if (key) localStorage.removeItem(key);
         localStorage.removeItem(timeKey);
         setActiveOrderId(null);
         setActiveOrderTrack(null);
@@ -359,9 +368,13 @@ export default function App() {
     return () => clearInterval(timer);
   }, [activeOrderTrack?.status, activeOrderTrack?.id]);
 
-  // Multi-Device Table-Level Live Sync Effect
+  // Multi-Device Table-Level Live Sync Effect (Only runs if table QR code scanned OR order active in session)
   useEffect(() => {
-    const activeTargetTable = effectiveTableNum || orderTableInput || '1';
+    if (!effectiveTableNum && !activeOrderId) {
+      setActiveOrderTrack(null);
+      return;
+    }
+
     const currentSlug = getSlugFromUrl() || (info && info.slug) || '';
 
     const checkTableStatus = async () => {
@@ -373,9 +386,9 @@ export default function App() {
             return;
           }
         }
-        // Multi-device table sync: fetch latest active order for this table
-        if (activeTargetTable && !sessionExpired) {
-          const tableData = await fetchActiveTableOrder(currentSlug, activeTargetTable);
+        // Multi-device table sync ONLY if table QR code was scanned
+        if (effectiveTableNum && !sessionExpired) {
+          const tableData = await fetchActiveTableOrder(currentSlug, effectiveTableNum);
           if (tableData) {
             setActiveOrderTrack(tableData);
           } else {
@@ -390,13 +403,13 @@ export default function App() {
     checkTableStatus();
     const interval = setInterval(checkTableStatus, 4000);
     return () => clearInterval(interval);
-  }, [activeOrderId, effectiveTableNum, orderTableInput, info, sessionExpired]);
+  }, [activeOrderId, effectiveTableNum, info, sessionExpired]);
 
   const handleSendDirectOrder = async () => {
     if (cartItems.length === 0) return;
     setPlacingOrder(true);
     try {
-      // 📍 GPS Geo-Fencing Radius Check (Verifies customer is physically within restaurant radius)
+      // 📍 GPS Geo-Fencing Radius Check
       if (info && info.latitude && info.longitude) {
         const geoCheck = await verifyCustomerLocation(
           info.latitude,
@@ -412,6 +425,7 @@ export default function App() {
       }
 
       const currentSlug = getSlugFromUrl() || (info && info.slug) || '';
+      const targetTable = effectiveTableNum || orderTableInput || '1';
       const itemsPayload = cartItems.map(item => ({
         dish_id: item.isCombo ? item.dish.id : item.dish.id,
         name: item.dish.name,
@@ -424,7 +438,7 @@ export default function App() {
 
       const res = await createDirectOrder({
         slug: currentSlug,
-        table_number: orderTableInput || '1',
+        table_number: targetTable,
         customer_name: customerNameInput || 'Dine-In Customer',
         customer_phone: customerPhoneInput || '',
         items: itemsPayload,
@@ -432,7 +446,8 @@ export default function App() {
       });
 
       if (res && res.order_id) {
-        localStorage.setItem(getOrderStorageKey(), String(res.order_id));
+        const storageKey = `raman_active_order_id_table_${targetTable}`;
+        localStorage.setItem(storageKey, String(res.order_id));
         setActiveOrderId(String(res.order_id));
       }
 
