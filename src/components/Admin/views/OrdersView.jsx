@@ -315,7 +315,7 @@ export default function OrdersView({
                         </button>
                       )}
                       <button
-                        onClick={() => onPrintBill ? onPrintBill(order) : onOpenBillModal(order)}
+                        onClick={() => onOpenBillModal ? onOpenBillModal(order) : (onPrintBill && onPrintBill(order))}
                         disabled={printingOrderId === order.id}
                         className="adm-btn adm-btn-secondary adm-btn-sm"
                         style={{
