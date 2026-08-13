@@ -522,7 +522,7 @@ export default function App() {
   // Load Menu Data
   const loadMenuData = async (forcedSlug = '') => {
     const rawPath = window.location.pathname.toLowerCase().replace(/\/$/, '');
-    if (rawPath === '/kitchen') {
+    if (rawPath === '/kitchen' || rawPath === '/menu') {
       setRestaurantStatus('not_found');
       setLoading(false);
       return;
