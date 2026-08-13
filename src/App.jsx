@@ -320,38 +320,44 @@ export default function App() {
   const [activeOrderId, setActiveOrderId] = useState(localStorage.getItem(getOrderStorageKey()) || null);
   const [activeOrderTrack, setActiveOrderTrack] = useState(null);
 
-  // 3-Minute (180s) Auto-Kill Timer Effect after order completion, cancellation, or rejection
+  // 3-Minute (180s) Persistent Auto-Kill Session Protection after order completion, cancellation, or rejection
   useEffect(() => {
-    if (activeOrderTrack && (activeOrderTrack.status === 'completed' || activeOrderTrack.status === 'cancelled' || activeOrderTrack.status === 'rejected')) {
-      if (autoKillSeconds === null) {
-        setAutoKillSeconds(180); // 3 minutes countdown (180s)
-      }
-    } else {
+    if (!activeOrderTrack || !['completed', 'cancelled', 'rejected'].includes(activeOrderTrack.status)) {
       setAutoKillSeconds(null);
-    }
-  }, [activeOrderTrack?.status]);
-
-  useEffect(() => {
-    if (autoKillSeconds === null) return;
-    if (autoKillSeconds <= 0) {
-      // Auto-kill session after 2 mins
-      localStorage.removeItem(getOrderStorageKey());
-      setActiveOrderId(null);
-      setActiveOrderTrack(null);
-      setCurrentTableNum('');
-      setSessionExpired(true);
-      setAutoKillSeconds(null);
-      // Clean URL parameter without reloading page
-      window.history.replaceState({}, '', window.location.pathname);
       return;
     }
 
-    const timer = setInterval(() => {
-      setAutoKillSeconds(prev => (prev !== null && prev > 0 ? prev - 1 : 0));
-    }, 1000);
+    const orderId = activeOrderTrack.id;
+    const timeKey = `raman_order_completed_time_${orderId}`;
+    let completedAt = Number(localStorage.getItem(timeKey));
+    if (!completedAt || isNaN(completedAt)) {
+      completedAt = Date.now();
+      localStorage.setItem(timeKey, String(completedAt));
+    }
 
+    const updateCountdown = () => {
+      const elapsedSec = Math.floor((Date.now() - completedAt) / 1000);
+      const remainingSec = Math.max(0, 180 - elapsedSec);
+
+      if (remainingSec <= 0) {
+        // Auto-kill session cleanly after 3 mins
+        localStorage.removeItem(getOrderStorageKey());
+        localStorage.removeItem(timeKey);
+        setActiveOrderId(null);
+        setActiveOrderTrack(null);
+        setCurrentTableNum('');
+        setSessionExpired(true);
+        setAutoKillSeconds(null);
+        window.history.replaceState({}, '', window.location.pathname);
+      } else {
+        setAutoKillSeconds(remainingSec);
+      }
+    };
+
+    updateCountdown();
+    const timer = setInterval(updateCountdown, 1000);
     return () => clearInterval(timer);
-  }, [autoKillSeconds]);
+  }, [activeOrderTrack?.status, activeOrderTrack?.id]);
 
   // Multi-Device Table-Level Live Sync Effect
   useEffect(() => {
@@ -1463,9 +1469,9 @@ export default function App() {
                   (activeOrderTrack.kitchen_prepared === 1 || activeOrderTrack.kitchen_prepared === '1' || activeOrderTrack.kitchen_prepared === true) ? '🎉 Food Prepared! Ready to Serve 🛎️' :
                   (activeOrderTrack.status === 'accepted' || activeOrderTrack.status === 'kitchen' || activeOrderTrack.status === 'preparing') ? 'Order Accepted - Chef Preparing 👨‍🍳' :
                   activeOrderTrack.status === 'served' ? 'Served to Table 🟢' :
-                  activeOrderTrack.status === 'completed' ? 'Order Completed & Paid 🏁' :
+                  activeOrderTrack.status === 'completed' ? `Order Completed & Paid 🏁${autoKillSeconds ? ` (Session closes in ${Math.floor(autoKillSeconds / 60)}m ${autoKillSeconds % 60}s)` : ''}` :
                   activeOrderTrack.status === 'pending' ? 'Pending Kitchen Acceptance 🟡' :
-                  activeOrderTrack.status === 'cancelled' || activeOrderTrack.status === 'rejected' ? 'Order Cancelled 🔴' :
+                  activeOrderTrack.status === 'cancelled' || activeOrderTrack.status === 'rejected' ? `Order Cancelled 🔴${autoKillSeconds ? ` (Session closes in ${Math.floor(autoKillSeconds / 60)}m ${autoKillSeconds % 60}s)` : ''}` :
                   'Order Received 🟢'
                 }
               </span>
@@ -1474,11 +1480,15 @@ export default function App() {
 
           <button
             onClick={() => {
+              if (activeOrderTrack?.id) {
+                localStorage.removeItem(`raman_order_completed_time_${activeOrderTrack.id}`);
+              }
               localStorage.removeItem(getOrderStorageKey());
               setActiveOrderId(null);
               setActiveOrderTrack(null);
               setCurrentTableNum('');
               setSessionExpired(true);
+              setAutoKillSeconds(null);
               window.history.replaceState({}, '', window.location.pathname);
             }}
             style={{
