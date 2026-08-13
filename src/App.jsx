@@ -540,6 +540,14 @@ export default function App() {
       setLoading(false);
       return;
     }
+
+    // Bare path without tenant slug (e.g. /menu) -> strictly 404 Not Found
+    if (!slug && rawPath !== '' && rawPath !== '/' && rawPath !== '/register' && rawPath !== '/billing' && rawPath !== '/super-admin' && rawPath !== '/superadmin') {
+      setRestaurantStatus('not_found');
+      setLoading(false);
+      return;
+    }
+
     setLoading(true);
     setRestaurantStatus('active');
     const isSystemRoute = ['/', '/register', '/billing', '/super-admin', '/superadmin'].includes(rawPath);
