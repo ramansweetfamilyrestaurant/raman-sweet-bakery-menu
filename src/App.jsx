@@ -542,8 +542,8 @@ export default function App() {
     }
     setLoading(true);
     setRestaurantStatus('active');
-    const isSystemRoute = ['/', '/register', '/billing', '/super-admin', '/superadmin'].includes(rawPath);
-    if (!slug && isSystemRoute) {
+    const isSystemNonMenuRoute = ['/register', '/billing', '/super-admin', '/superadmin'].includes(rawPath);
+    if (!slug && isSystemNonMenuRoute) {
       setLoading(false);
       return;
     }
