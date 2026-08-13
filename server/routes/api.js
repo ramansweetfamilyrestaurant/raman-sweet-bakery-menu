@@ -160,7 +160,7 @@ router.get('/menu-bundle', async (req, res) => {
         SELECT d.*, c.name as category_name 
         FROM dishes d 
         LEFT JOIN categories c ON d.category_id = c.id
-        WHERE d.restaurant_id = $1 AND (d.available = true OR d.available IS NOT FALSE) AND (c.active = true OR c.active IS NOT FALSE OR c.id IS NULL)
+        WHERE d.restaurant_id = $1 AND (d.available IS NOT FALSE) AND (c.active IS NOT FALSE OR c.id IS NULL)
         ORDER BY d.id ASC
       `, [targetId]),
       query('SELECT * FROM combos WHERE restaurant_id = $1 AND (active = true OR active IS NOT FALSE) ORDER BY id ASC', [targetId]).catch(() => [])
@@ -426,7 +426,7 @@ router.get('/dishes', async (req, res) => {
 
     // By default, customer view only sees available dishes in active categories
     if (!admin_view) {
-      sql += ` AND (d.available = true OR d.available IS NOT FALSE) AND (c.active = true OR c.active IS NOT FALSE OR c.id IS NULL)`;
+      sql += ` AND (d.available IS NOT FALSE) AND (c.active IS NOT FALSE OR c.id IS NULL)`;
     }
 
     if (category_id && category_id !== 'all') {

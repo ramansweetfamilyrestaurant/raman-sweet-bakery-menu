@@ -572,17 +572,17 @@ export default function App() {
       }
 
       // Fallback or Admin/Search view: parallel fetch
-      if (!infoData) {
+      if (!infoData || !dishData || dishData.length === 0) {
         const [resInfo, resCat, resDish, resCombo] = await Promise.all([
           fetchRestaurantInfo(slug),
           fetchCategories({ slug, adminView: isAdminMode }),
           fetchDishes({ query: searchQuery, slug, adminView: isAdminMode }),
           fetchCombos(slug).catch(() => [])
         ]);
-        infoData = resInfo;
-        catData = resCat || [];
-        dishData = resDish || [];
-        comboData = resCombo || [];
+        if (!infoData) infoData = resInfo;
+        if (!catData || catData.length === 0) catData = resCat || [];
+        if (!dishData || dishData.length === 0) dishData = resDish || [];
+        if (!comboData || comboData.length === 0) comboData = resCombo || [];
       }
 
       if (!infoData || infoData.notFound) {
