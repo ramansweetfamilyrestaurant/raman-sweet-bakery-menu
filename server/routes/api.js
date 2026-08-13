@@ -348,7 +348,7 @@ router.get('/info', async (req, res) => {
     });
   } catch (err) {
     console.error('Error fetching restaurant info:', err);
-    res.status(500).json({ error: 'Failed to fetch restaurant info' });
+    res.status(500).json({ error: 'Failed to fetch restaurant info', details: err.message, stack: err.stack });
   }
 });
 
