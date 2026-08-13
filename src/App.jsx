@@ -328,7 +328,7 @@ export default function App() {
   const [activeOrderId, setActiveOrderId] = useState(getInitialActiveOrderId);
   const [activeOrderTrack, setActiveOrderTrack] = useState(null);
 
-  // 3-Minute (180s) Persistent Auto-Kill Session Protection after order completion, cancellation, or rejection
+  // 40-Second Persistent Auto-Kill Session Protection after order completion, cancellation, or rejection
   useEffect(() => {
     if (!activeOrderTrack || !['completed', 'cancelled', 'rejected'].includes(activeOrderTrack.status)) {
       setAutoKillSeconds(null);
@@ -345,10 +345,10 @@ export default function App() {
 
     const updateCountdown = () => {
       const elapsedSec = Math.floor((Date.now() - completedAt) / 1000);
-      const remainingSec = Math.max(0, 180 - elapsedSec);
+      const remainingSec = Math.max(0, 40 - elapsedSec);
 
       if (remainingSec <= 0) {
-        // Auto-kill session cleanly after 3 mins
+        // Auto-kill session cleanly after 40 seconds
         const key = getOrderStorageKey(activeOrderTrack.table_number);
         if (key) localStorage.removeItem(key);
         localStorage.removeItem(timeKey);
@@ -1484,9 +1484,9 @@ export default function App() {
                   (activeOrderTrack.kitchen_prepared === 1 || activeOrderTrack.kitchen_prepared === '1' || activeOrderTrack.kitchen_prepared === true) ? '🎉 Food Prepared! Ready to Serve 🛎️' :
                   (activeOrderTrack.status === 'accepted' || activeOrderTrack.status === 'kitchen' || activeOrderTrack.status === 'preparing') ? 'Order Accepted - Chef Preparing 👨‍🍳' :
                   activeOrderTrack.status === 'served' ? 'Served to Table 🟢' :
-                  activeOrderTrack.status === 'completed' ? `Order Completed & Paid 🏁${autoKillSeconds ? ` (Session closes in ${Math.floor(autoKillSeconds / 60)}m ${autoKillSeconds % 60}s)` : ''}` :
+                  activeOrderTrack.status === 'completed' ? `Order Completed & Paid 🏁${autoKillSeconds ? ` (Session closes in ${autoKillSeconds >= 60 ? `${Math.floor(autoKillSeconds / 60)}m ${autoKillSeconds % 60}s` : `${autoKillSeconds}s`})` : ''}` :
                   activeOrderTrack.status === 'pending' ? 'Pending Kitchen Acceptance 🟡' :
-                  activeOrderTrack.status === 'cancelled' || activeOrderTrack.status === 'rejected' ? `Order Cancelled 🔴${autoKillSeconds ? ` (Session closes in ${Math.floor(autoKillSeconds / 60)}m ${autoKillSeconds % 60}s)` : ''}` :
+                  activeOrderTrack.status === 'cancelled' || activeOrderTrack.status === 'rejected' ? `Order Cancelled 🔴${autoKillSeconds ? ` (Session closes in ${autoKillSeconds >= 60 ? `${Math.floor(autoKillSeconds / 60)}m ${autoKillSeconds % 60}s` : `${autoKillSeconds}s`})` : ''}` :
                   'Order Received 🟢'
                 }
               </span>
