@@ -2229,8 +2229,8 @@ export default function App() {
                   </button>
                 )}
 
-                {/* 💬 WhatsApp Alternative Order Button (Gated by Super Admin) */}
-                {info && info.whatsapp_enabled !== false && (
+                {/* 💬 WhatsApp Alternative Order Button (Strictly Gated by Super Admin SaaS Plan & Restaurant Settings) */}
+                {info && (info.whatsapp_enabled === 1 || info.whatsapp_enabled === true || info.whatsapp_enabled === '1') && (
                   <button
                     onClick={handleSendWhatsAppOrder}
                     style={{
