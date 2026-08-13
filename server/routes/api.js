@@ -104,12 +104,18 @@ async function resolveRestaurant(req, slug) {
       if (restos && restos.length > 0) {
         return restos[0];
       }
+      // Explicit slug passed but NOT found in DB -> return null (404)
+      return null;
     }
   }
 
-  // 3. Fallback to primary default active restaurant (Raman Sweet Bakery / first active tenant in DB)
-  const firstResto = await query("SELECT * FROM restaurants WHERE (active = true OR active IS NOT FALSE) ORDER BY id ASC LIMIT 1");
-  return firstResto[0] || null;
+  // 3. Fallback to primary default active restaurant ONLY when NO slug parameter was passed at all (root domain)
+  if (!slug || typeof slug !== 'string' || slug.trim() === '') {
+    const firstResto = await query("SELECT * FROM restaurants WHERE (active = true OR active IS NOT FALSE) ORDER BY id ASC LIMIT 1");
+    return firstResto[0] || null;
+  }
+
+  return null;
 }
 
 // Restaurant General Info (/api/info or /api/info?slug=royal-pizz// GET Ultra-Fast Combined Menu Bundle (Single 0-latency HTTP call for complete Digital Menu)
