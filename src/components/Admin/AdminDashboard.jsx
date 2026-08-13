@@ -19,10 +19,10 @@ import SetupView from './views/SetupView';
 import QrGeneratorView from './views/QrGeneratorView';
 import ReviewView from './views/ReviewView';
 
-export default function AdminDashboard({ token, username, onLogout, onReturnToMenu }) {
+export default function AdminDashboard({ token, username, slug: propSlug = '', onLogout, onReturnToMenu }) {
   const getInitialAdminState = (key, fallback) => {
     try {
-      const currentSlug = localStorage.getItem('raman_admin_slug') || '';
+      const currentSlug = propSlug || localStorage.getItem('raman_admin_slug') || '';
       if (!currentSlug) return fallback;
       const saved = localStorage.getItem(`admin_cache_${currentSlug}_${key}`);
       return saved ? JSON.parse(saved) : fallback;
@@ -1170,19 +1170,20 @@ export default function AdminDashboard({ token, username, onLogout, onReturnToMe
       setLoading(true);
     }
     try {
-      const currentSlug = localStorage.getItem('raman_admin_slug') || '';
+      const currentSlug = propSlug || localStorage.getItem('raman_admin_slug') || (restaurantInfo && restaurantInfo.slug) || '';
       let [catData, dishData, infoData, comboData, subStatusData] = await Promise.all([
         fetchCategories({ adminView: true, token, slug: currentSlug }).catch(() => []),
         fetchDishes({ adminView: true, token, slug: currentSlug }).catch(() => []),
-        fetchRestaurantInfo(token).catch(() => null),
+        fetchRestaurantInfo(token || currentSlug).catch(() => null),
         fetchAdminCombos(token).catch(() => []),
         fetch('/api/admin/subscription-status', { headers: { Authorization: `Bearer ${token}` } }).then(r => r.ok ? r.json() : null).catch(() => null)
       ]);
 
-      // If dishData or catData is empty, fallback to menu-bundle endpoint using tenant slug
-      if ((!dishData || dishData.length === 0 || !catData || catData.length === 0) && currentSlug) {
+      // If dishData or catData is empty, fallback to menu-bundle endpoint using tenant slug or fallback
+      if (!dishData || dishData.length === 0 || !catData || catData.length === 0) {
         try {
-          const bundleRes = await fetch(`/api/menu-bundle?slug=${encodeURIComponent(currentSlug)}`);
+          const bundleSlug = currentSlug || '';
+          const bundleRes = await fetch(`/api/menu-bundle?slug=${encodeURIComponent(bundleSlug)}`);
           if (bundleRes.ok) {
             const bundle = await bundleRes.json();
             if (bundle) {
@@ -1209,6 +1210,7 @@ export default function AdminDashboard({ token, username, onLogout, onReturnToMe
       try {
         const effectiveSlug = currentSlug || (infoData && infoData.slug) || '';
         if (effectiveSlug) {
+          localStorage.setItem('raman_admin_slug', effectiveSlug);
           localStorage.setItem(`admin_cache_${effectiveSlug}_categories`, JSON.stringify(safeCats));
           localStorage.setItem(`admin_cache_${effectiveSlug}_dishes`, JSON.stringify(safeDishes));
           if (infoData) localStorage.setItem(`admin_cache_${effectiveSlug}_info`, JSON.stringify(infoData));

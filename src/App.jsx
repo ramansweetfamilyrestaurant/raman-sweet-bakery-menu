@@ -1389,13 +1389,15 @@ export default function App() {
   }
 
   if (view === 'admin-dashboard') {
+    const activeAdminSlug = adminSlug || getSlugFromUrl() || (info && info.slug) || localStorage.getItem('raman_admin_slug') || '';
     return (
       <AdminDashboard
         token={adminToken}
         username={adminUsername}
+        slug={activeAdminSlug}
         onLogout={handleAdminLogout}
         onReturnToMenu={(tenantSlug) => {
-          const targetSlug = tenantSlug || (info && info.slug) || getSlugFromUrl() || '';
+          const targetSlug = tenantSlug || activeAdminSlug || (info && info.slug) || getSlugFromUrl() || '';
           setView('menu');
           window.history.pushState({}, '', targetSlug ? `/${targetSlug}` : '/');
           loadMenuData(targetSlug);
