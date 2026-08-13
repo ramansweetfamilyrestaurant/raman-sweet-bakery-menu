@@ -1139,11 +1139,23 @@ async function seedData() {
   }
 }
 
+let initDbPromise = null;
+
 async function query(text, params = []) {
-  if (dbType === 'postgres') {
+  if (!isDbInitialized || (!pgPool && !sqliteDb)) {
+    if (!initDbPromise) {
+      initDbPromise = initDb().catch(err => {
+        initDbPromise = null;
+        throw err;
+      });
+    }
+    await initDbPromise;
+  }
+
+  if (dbType === 'postgres' && pgPool) {
     const res = await pgPool.query(text, params);
     return res.rows;
-  } else {
+  } else if (sqliteDb) {
     let sql = text;
     // Convert $1, $2 parameter placeholders to SQLite ?
     sql = sql.replace(/\$(\d+)/g, () => '?');
@@ -1163,6 +1175,8 @@ async function query(text, params = []) {
       const stmt = sqliteDb.prepare(sql);
       return stmt.run(sanitizedParams);
     }
+  } else {
+    throw new Error('Database connection not initialized');
   }
 }
 
