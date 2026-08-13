@@ -70,6 +70,7 @@ export default function OrdersView({
   const kdsPlanEnabled = restaurantInfo?.kds_enabled !== undefined ? (restaurantInfo.kds_enabled === 1 || restaurantInfo.kds_enabled === true || restaurantInfo.kds_enabled === '1') : true;
   const kdsScreenEnabled = restaurantInfo?.kds_screen_enabled !== undefined ? (restaurantInfo.kds_screen_enabled === 1 || restaurantInfo.kds_screen_enabled === true || restaurantInfo.kds_screen_enabled === '1') : true;
   const kdsEnabled = kdsPlanEnabled && kdsScreenEnabled;
+  const dualPrinterEnabled = restaurantInfo?.dual_printer_enabled === 1 || restaurantInfo?.dual_printer_enabled === true || restaurantInfo?.dual_printer_enabled === '1';
 
   if (ordersEnabled === false) {
     return (
@@ -200,9 +201,9 @@ export default function OrdersView({
                         <span style={{ fontSize: '0.68rem', background: '#DCFCE7', color: '#15803D', border: '1px solid #86EFAC', padding: '2px 8px', borderRadius: '12px', fontWeight: 900, boxShadow: '0 0 10px rgba(34, 197, 94, 0.3)' }}>
                           🍳 PREPARED IN KITCHEN
                         </span>
-                      ) : order.sent_to_kds === 0 ? (
+                      ) : (dualPrinterEnabled && (order.sent_to_kds === 0 || order.sent_to_kds === '0')) ? (
                         <span style={{ fontSize: '0.68rem', background: '#F3E8FF', color: '#6B21A8', border: '1px solid #E9D5FF', padding: '1px 6px', borderRadius: '12px', fontWeight: 800 }}>📦 Counter Only</span>
-                      ) : order.status !== 'pending' ? (
+                      ) : (order.status === 'kitchen' || order.status === 'preparing' || order.status === 'accepted') ? (
                         <span style={{ fontSize: '0.68rem', background: '#E0F2FE', color: '#0369A1', border: '1px solid #BAE6FD', padding: '1px 6px', borderRadius: '12px', fontWeight: 800 }}>🍳 Kitchen KDS</span>
                       ) : null}
                       {onPreviewPrint && (
