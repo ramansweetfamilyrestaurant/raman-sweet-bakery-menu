@@ -1,5 +1,42 @@
+# Dependencies
 node_modules/
+
+# Build output
 dist/
+
+# Database
 menu.db
+*.db
+
+# Environment files (NEVER commit secrets)
 .env
+.env.*
+!.env.example
+
+# OS files
 .DS_Store
+Thumbs.db
+
+# Vercel
+.vercel
+
+# Backup & debug files
+backup_*.json
+server/exported_menu_data.json
+
+# Scratch / temporary scripts
+scratch/
+
+# Debug & test scripts in server
+server/debug_*.cjs
+server/check_*.cjs
+server/test_*.js
+server/test_*.cjs
+server/testSaaSLocal.js
+server/testSecurityLocal.js
+server/enable_kds_enterprise.cjs
+
+# Server migration scripts (keep in repo but optionally ignore)
+# server/migrate*.js
+# server/populateNeon.js
+# server/resetMenuData.js
