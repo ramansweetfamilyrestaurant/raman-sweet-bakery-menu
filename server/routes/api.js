@@ -126,6 +126,9 @@ router.get('/menu-bundle', async (req, res) => {
   try {
     const { slug } = req.query;
     const resto = await resolveRestaurant(req, slug);
+    if (!resto) {
+      return res.status(404).json({ error: 'Restaurant Not Found', notFound: true });
+    }
 
     const isActive = resto.active === 1 || resto.active === true || resto.active === '1' || resto.active === undefined || resto.active === null;
     if (!isActive || resto.active === false || resto.active === 0 || resto.active === 'false') {
