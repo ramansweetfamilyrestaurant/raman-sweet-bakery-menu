@@ -96,26 +96,22 @@ async function resolveRestaurant(req, slug) {
     } catch (e) {}
   }
 
-  // 2. If no valid JWT token, check if an explicit valid slug parameter is passed in URL/query for public menu
-  if (slug && typeof slug === 'string' && slug.trim() !== '') {
-    const cleanSlug = slug.trim().toLowerCase();
-    if (!['menu', 'default', 'null', 'undefined', 'home', 'index', 'api', 'kitchen'].includes(cleanSlug)) {
-      const restos = await query('SELECT * FROM restaurants WHERE LOWER(slug) = $1', [cleanSlug]);
-      if (restos && restos.length > 0) {
-        return restos[0];
-      }
-      // Explicit slug passed but NOT found in DB -> return null (404)
-      return null;
+  // 2. If an explicit tenant slug parameter is passed in URL/query (e.g. raman-sweet-bakery)
+  const cleanSlug = (slug && typeof slug === 'string') ? slug.trim().toLowerCase() : '';
+  const systemReservedSlugs = ['menu', 'default', 'null', 'undefined', 'home', 'index', 'api', 'kitchen'];
+
+  if (cleanSlug && !systemReservedSlugs.includes(cleanSlug)) {
+    const restos = await query('SELECT * FROM restaurants WHERE LOWER(slug) = $1', [cleanSlug]);
+    if (restos && restos.length > 0) {
+      return restos[0];
     }
+    // Explicit tenant slug passed but NOT found in DB -> return null (404)
+    return null;
   }
 
-  // 3. Fallback to primary default active restaurant ONLY when NO slug parameter was passed at all (root domain)
-  if (!slug || typeof slug !== 'string' || slug.trim() === '') {
-    const firstResto = await query("SELECT * FROM restaurants WHERE (active = true OR active IS NOT FALSE) ORDER BY id ASC LIMIT 1");
-    return firstResto[0] || null;
-  }
-
-  return null;
+  // 3. Fallback to primary default active restaurant (Raman Sweet Bakery / first tenant) for root domain or reserved system routes ('/', '/menu')
+  const firstResto = await query("SELECT * FROM restaurants WHERE (active = true OR active IS NOT FALSE) ORDER BY id ASC LIMIT 1");
+  return firstResto[0] || null;
 }
 
 // Restaurant General Info (/api/info or /api/info?slug=royal-pizz// GET Ultra-Fast Combined Menu Bundle (Single 0-latency HTTP call for complete Digital Menu)
