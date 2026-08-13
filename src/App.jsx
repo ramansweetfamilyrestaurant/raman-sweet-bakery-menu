@@ -34,9 +34,23 @@ const ContactSupport = lazy(() => import('./components/Legal/ContactSupport'));
 const StandaloneKdsPage = lazy(() => import('./components/Admin/views/StandaloneKdsPage'));
 
 export default function App() {
-  // Parse Table Number from URL query parameter ?table=5
-  const urlParams = new URLSearchParams(window.location.search);
-  const initialTableNum = urlParams.get('table') || '';
+  // Parse Table Number from URL query parameters (?table=5, ?t=5, ?tbl=5) or path (/table/5)
+  const getTableNumFromUrl = () => {
+    const urlParams = new URLSearchParams(window.location.search);
+    let t = urlParams.get('table') || urlParams.get('t') || urlParams.get('tableno') || urlParams.get('tbl') || '';
+    if (!t) {
+      const parts = window.location.pathname.split('/').filter(Boolean);
+      if (parts.length >= 2) {
+        const lastPart = parts[parts.length - 1];
+        const prevPart = parts[parts.length - 2].toLowerCase();
+        if (/^\d+$/.test(lastPart) && (prevPart === 'table' || prevPart === 'tbl' || prevPart === 'r')) {
+          t = lastPart;
+        }
+      }
+    }
+    return t;
+  };
+  const initialTableNum = getTableNumFromUrl();
   const [currentTableNum, setCurrentTableNum] = useState(initialTableNum);
   const [sessionExpired, setSessionExpired] = useState(false);
   const [autoKillSeconds, setAutoKillSeconds] = useState(null);
