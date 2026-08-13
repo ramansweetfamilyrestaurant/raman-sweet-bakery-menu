@@ -1170,9 +1170,10 @@ export default function AdminDashboard({ token, username, onLogout, onReturnToMe
       setLoading(true);
     }
     try {
+      const currentSlug = localStorage.getItem('raman_admin_slug') || '';
       const [catData, dishData, infoData, comboData, subStatusData] = await Promise.all([
-        fetchCategories({ adminView: true, token }),
-        fetchDishes({ adminView: true, token }),
+        fetchCategories({ adminView: true, token, slug: currentSlug }),
+        fetchDishes({ adminView: true, token, slug: currentSlug }),
         fetchRestaurantInfo(token),
         fetchAdminCombos(token).catch(() => []),
         fetch('/api/admin/subscription-status', { headers: { Authorization: `Bearer ${token}` } }).then(r => r.ok ? r.json() : null).catch(() => null)
