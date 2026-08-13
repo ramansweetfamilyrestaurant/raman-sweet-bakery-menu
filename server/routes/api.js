@@ -600,6 +600,18 @@ router.get('/kitchen/orders', async (req, res) => {
       return res.status(404).json({ error: 'Restaurant not found' });
     }
 
+    // Check SaaS Plan permissions for kds_enabled
+    const planTierKey = (resto.plan_tier || 'pro').toLowerCase();
+    const planRows = await query('SELECT kds_enabled FROM saas_plans WHERE LOWER(key) = $1', [planTierKey]);
+    const saasPlan = planRows[0] || {};
+    const kdsPlanEnabled = saasPlan.kds_enabled !== undefined && saasPlan.kds_enabled !== null
+      ? (saasPlan.kds_enabled === 1 || saasPlan.kds_enabled === true || saasPlan.kds_enabled === '1')
+      : true;
+
+    if (!kdsPlanEnabled) {
+      return res.status(403).json({ error: 'KDS_DISABLED', message: 'Kitchen Display System (KDS) is disabled on your SaaS plan tier.' });
+    }
+
     const targetId = resto.id;
 
     const orders = await query(`
