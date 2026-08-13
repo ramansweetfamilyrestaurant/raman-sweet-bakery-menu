@@ -257,8 +257,8 @@ router.get('/info', async (req, res) => {
       });
     }
 
-    const isActive = resto.active === 1 || resto.active === true || resto.active === '1' || resto.active === undefined;
-    if (!isActive) {
+    const isActive = resto.active === 1 || resto.active === true || resto.active === '1' || resto.active === undefined || resto.active === null;
+    if (!isActive && resto.active === false) {
       return res.status(403).json({
         error: 'Restaurant Suspended',
         suspended: true,
@@ -272,7 +272,7 @@ router.get('/info', async (req, res) => {
     if (typeof filtersVis === 'string') {
       try { filtersVis = JSON.parse(filtersVis); } catch (e) {}
     }
-    if (!filtersVis) {
+    if (!filtersVis || typeof filtersVis !== 'object') {
       filtersVis = { must_try: true, combo: true, special: true, under100: true };
     }
 
@@ -281,7 +281,7 @@ router.get('/info', async (req, res) => {
       query('UPDATE restaurants SET scan_count = COALESCE(scan_count, 0) + 1 WHERE id = $1', [resto.id]).catch(() => {});
     }
 
-    const planTierKey = (resto.plan_tier || 'pro').toLowerCase();
+    const planTierKey = String(resto.plan_tier || 'pro').toLowerCase();
     const planRows = await query('SELECT * FROM saas_plans WHERE LOWER(key) = $1', [planTierKey]).catch(() => []);
     const saasPlan = (planRows && planRows.length > 0) ? planRows[0] : {};
 
@@ -302,8 +302,8 @@ router.get('/info', async (req, res) => {
 
     return res.json({
       id: resto.id,
-      name: resto.name,
-      slug: resto.slug,
+      name: resto.name || 'Restaurant',
+      slug: resto.slug || '',
       tagline: resto.tagline || '',
       badge: resto.resto_type === 'pure_veg' ? '100% Pure Veg' : 'Veg & Non-Veg',
       resto_type: resto.resto_type || 'pure_veg',
@@ -348,7 +348,7 @@ router.get('/info', async (req, res) => {
     });
   } catch (err) {
     console.error('Error fetching restaurant info:', err);
-    res.status(500).json({ error: 'Failed to fetch restaurant info', details: err.message, stack: err.stack });
+    res.status(500).json({ error: 'Failed to fetch restaurant info', details: String(err && err.message ? err.message : err) });
   }
 });
 
