@@ -121,15 +121,17 @@ export default function OrdersView({
         >
           Live Orders ({validOrders.length})
         </button>
-        <a
-          href={`/${localStorage.getItem('raman_admin_slug') || restaurantInfo?.slug || ''}/kitchen`}
-          target="_blank"
-          rel="noopener noreferrer"
-          className="adm-btn adm-btn-sm adm-btn-secondary"
-          style={{ padding: '6px 14px', borderRadius: 'var(--adm-radius-full)', background: '#0F172A', color: '#38BDF8', border: '1px solid #38BDF8', textDecoration: 'none', display: 'inline-flex', alignItems: 'center', gap: '4px', fontWeight: 800 }}
-        >
-          🍳 Open /kitchen Screen ↗
-        </a>
+        {kdsEnabled && (
+          <a
+            href={`/${localStorage.getItem('raman_admin_slug') || restaurantInfo?.slug || ''}/kitchen`}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="adm-btn adm-btn-sm adm-btn-secondary"
+            style={{ padding: '6px 14px', borderRadius: 'var(--adm-radius-full)', background: '#0F172A', color: '#38BDF8', border: '1px solid #38BDF8', textDecoration: 'none', display: 'inline-flex', alignItems: 'center', gap: '4px', fontWeight: 800 }}
+          >
+            🍳 Open /kitchen Screen ↗
+          </a>
+        )}
         <button
           onClick={() => setActiveSubTab('floor-map')}
           className={`adm-btn adm-btn-sm ${activeSubTab === 'floor-map' ? 'adm-btn-primary' : 'adm-btn-secondary'}`}

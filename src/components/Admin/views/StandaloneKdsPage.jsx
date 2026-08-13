@@ -102,6 +102,7 @@ export default function StandaloneKdsPage({ slug = '' }) {
 
   const [notFound, setNotFound] = useState(false);
   const [kdsDisabled, setKdsDisabled] = useState(false);
+  const [loading, setLoading] = useState(true);
 
   const fetchOrders = async () => {
     try {
@@ -119,16 +120,19 @@ export default function StandaloneKdsPage({ slug = '' }) {
       }
       if (!targetSlug) {
         setNotFound(true);
+        setLoading(false);
         return;
       }
 
       const res = await fetch(`/api/kitchen/orders?slug=${encodeURIComponent(targetSlug)}`);
       if (res.status === 404) {
         setNotFound(true);
+        setLoading(false);
         return;
       }
       if (res.status === 403) {
         setKdsDisabled(true);
+        setLoading(false);
         return;
       }
       const data = await res.json();
@@ -160,6 +164,8 @@ export default function StandaloneKdsPage({ slug = '' }) {
       }
     } catch (e) {
       console.warn('Failed to poll kitchen orders:', e);
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -218,6 +224,25 @@ export default function StandaloneKdsPage({ slug = '' }) {
     }
     return [];
   };
+
+  if (loading) {
+    return (
+      <div style={{
+        minHeight: '100vh', display: 'flex', flexDirection: 'column',
+        alignItems: 'center', justifyContent: 'center', padding: '32px 20px',
+        background: 'linear-gradient(135deg, #0F172A 0%, #1E293B 100%)',
+        color: '#FFFFFF', textAlign: 'center', fontFamily: 'system-ui, sans-serif'
+      }}>
+        <Flame size={48} color="#38BDF8" style={{ marginBottom: '16px' }} />
+        <h2 style={{ fontSize: '1.25rem', fontWeight: 800, color: '#F8FAFC', margin: '0 0 8px 0' }}>
+          🍳 Connecting to Kitchen Display System...
+        </h2>
+        <span style={{ fontSize: '0.84rem', color: '#64748B' }}>
+          Verifying restaurant authorization & permissions
+        </span>
+      </div>
+    );
+  }
 
   if (notFound) {
     return (
