@@ -522,7 +522,7 @@ export default function App() {
   // Load Menu Data
   const loadMenuData = async (forcedSlug = '') => {
     const rawPath = window.location.pathname.toLowerCase().replace(/\/$/, '');
-    if (rawPath === '/kitchen' || rawPath === '/menu') {
+    if (rawPath === '/kitchen') {
       setRestaurantStatus('not_found');
       setLoading(false);
       return;
@@ -541,17 +541,10 @@ export default function App() {
       return;
     }
 
-    // Bare path without tenant slug (e.g. /menu) -> strictly 404 Not Found
-    if (!slug && rawPath !== '' && rawPath !== '/' && rawPath !== '/register' && rawPath !== '/billing' && rawPath !== '/super-admin' && rawPath !== '/superadmin') {
-      setRestaurantStatus('not_found');
-      setLoading(false);
-      return;
-    }
-
     setLoading(true);
     setRestaurantStatus('active');
-    const isSystemRoute = ['/', '/register', '/billing', '/super-admin', '/superadmin'].includes(rawPath);
-    if (!slug && isSystemRoute) {
+    const isSystemNonMenuRoute = ['/register', '/billing', '/super-admin', '/superadmin'].includes(rawPath);
+    if (!slug && isSystemNonMenuRoute) {
       setLoading(false);
       return;
     }
