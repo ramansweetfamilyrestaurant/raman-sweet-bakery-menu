@@ -527,22 +527,14 @@ export default function App() {
       setLoading(false);
       return;
     }
-    const slug = forcedSlug || getSlugFromUrl();
-    const isRootAdminRoute = rawPath === '/admin' || rawPath === '/super-admin' || rawPath === '/superadmin';
-
-    // Skip full menu load for superadmin dashboard or standalone kitchen KDS
-    if (view === 'super-admin-dashboard' || isSlugKitchenPath(window.location.pathname)) {
-      setLoading(false);
-      return;
-    }
-    // If root system admin route without tenant slug, render admin directly
-    if (!slug && isRootAdminRoute) {
+    if (view === 'kitchen-kds' || view === 'admin-login' || view === 'super-admin-login' || view === 'admin-dashboard' || view === 'super-admin-dashboard' || window.location.pathname.toLowerCase().includes('/admin') || isSlugKitchenPath(window.location.pathname)) {
       setLoading(false);
       return;
     }
     setLoading(true);
     setRestaurantStatus('active');
-    const isSystemRoute = ['/', '/register', '/billing', '/super-admin', '/superadmin'].includes(rawPath);
+    const slug = forcedSlug || getSlugFromUrl();
+    const isSystemRoute = ['/', '/register', '/billing', '/super-admin', '/superadmin'].includes(window.location.pathname.toLowerCase());
     if (!slug && isSystemRoute) {
       setLoading(false);
       return;
@@ -619,11 +611,7 @@ export default function App() {
   };
 
   useEffect(() => {
-    const rawPath = window.location.pathname.toLowerCase().replace(/\/$/, '');
-    const isRootAdminRoute = rawPath === '/admin' || rawPath === '/super-admin' || rawPath === '/superadmin';
-    const slug = getSlugFromUrl();
-
-    if (view === 'kitchen-kds' || view === 'super-admin-dashboard' || (isRootAdminRoute && !slug) || isSlugKitchenPath(window.location.pathname)) {
+    if (view === 'kitchen-kds' || view === 'admin-login' || view === 'super-admin-login' || view === 'admin-dashboard' || view === 'super-admin-dashboard' || window.location.pathname.toLowerCase().includes('/admin') || isSlugKitchenPath(window.location.pathname)) {
       setLoading(false);
     } else {
       loadMenuData();
