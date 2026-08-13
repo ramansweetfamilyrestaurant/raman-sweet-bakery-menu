@@ -282,9 +282,10 @@ router.get('/info', async (req, res) => {
     }
 
     const planTierKey = (resto.plan_tier || 'pro').toLowerCase();
-    const planRows = await query('SELECT * FROM saas_plans WHERE LOWER(key) = $1', [planTierKey]);
-    const saasPlan = planRows[0] || {};
+    const planRows = await query('SELECT * FROM saas_plans WHERE LOWER(key) = $1', [planTierKey]).catch(() => []);
+    const saasPlan = (planRows && planRows.length > 0) ? planRows[0] : {};
 
+    const planPrice = Number(resto.plan_price || saasPlan.price || (planTierKey === 'enterprise' ? 1999 : planTierKey === 'basic' ? 499 : 999));
     const whatsappEnabled = saasPlan.whatsapp_enabled !== undefined ? (saasPlan.whatsapp_enabled === 1 || saasPlan.whatsapp_enabled === true || saasPlan.whatsapp_enabled === '1') : (planTierKey !== 'basic');
     const directOrderingEnabled = saasPlan.direct_ordering_enabled !== undefined ? (saasPlan.direct_ordering_enabled === 1 || saasPlan.direct_ordering_enabled === true || saasPlan.direct_ordering_enabled === '1') : (planTierKey === 'enterprise');
     const googleReviewsEnabled = saasPlan.google_reviews_enabled !== undefined ? (saasPlan.google_reviews_enabled === 1 || saasPlan.google_reviews_enabled === true || saasPlan.google_reviews_enabled === '1') : (planTierKey !== 'basic');
@@ -354,10 +355,10 @@ router.get('/info', async (req, res) => {
 // Get Active Global System Announcements
 router.get('/announcements', async (req, res) => {
   try {
-    const list = await query('SELECT * FROM announcements WHERE (active = true OR active IS NOT FALSE) ORDER BY id DESC LIMIT 5');
-    res.json(list);
+    const list = await query('SELECT * FROM announcements WHERE (active = true OR active IS NOT FALSE) ORDER BY id DESC LIMIT 5').catch(() => []);
+    res.json(Array.isArray(list) ? list : []);
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    res.json([]);
   }
 });
 

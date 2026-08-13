@@ -130,7 +130,11 @@ export default function AdminDashboard({ token, username, slug: propSlug = '', o
           console.log('📍 Auto GPS location granted:', lat, lng);
           setSettingsForm(prev => ({ ...prev, latitude: lat, longitude: lng }));
           if (token) {
-            updateTenantSettings(token, { latitude: lat, longitude: lng }).catch(e => console.warn('Auto GPS save error:', e));
+            fetch('/api/admin/settings', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+              body: JSON.stringify({ latitude: lat, longitude: lng })
+            }).catch(e => console.warn('Auto GPS save error:', e));
           }
         },
         (err) => console.warn('Auto GPS location skipped:', err),
@@ -204,7 +208,11 @@ export default function AdminDashboard({ token, username, slug: propSlug = '', o
         const lng = pos.coords.longitude;
         setSettingsForm(prev => ({ ...prev, latitude: lat, longitude: lng }));
         if (token) {
-          updateTenantSettings(token, { latitude: lat, longitude: lng }).then(() => {
+          fetch('/api/admin/settings', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+            body: JSON.stringify({ latitude: lat, longitude: lng })
+          }).then(() => {
             setToastMessage(`✨ GPS Coordinates Captured & Auto-Saved! (${lat.toFixed(4)}, ${lng.toFixed(4)})`);
             setTimeout(() => setToastMessage(''), 5000);
           }).catch(() => {
