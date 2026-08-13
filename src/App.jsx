@@ -542,8 +542,8 @@ export default function App() {
     }
     setLoading(true);
     setRestaurantStatus('active');
-    const isSystemNonMenuRoute = ['/register', '/billing', '/super-admin', '/superadmin'].includes(rawPath);
-    if (!slug && isSystemNonMenuRoute) {
+    const isSystemRoute = ['/', '/register', '/billing', '/super-admin', '/superadmin'].includes(rawPath);
+    if (!slug && isSystemRoute) {
       setLoading(false);
       return;
     }
@@ -2229,8 +2229,8 @@ export default function App() {
                   </button>
                 )}
 
-                {/* 💬 WhatsApp Alternative Order Button (Strictly Gated by Super Admin SaaS Plan & Restaurant Settings) */}
-                {info && (info.whatsapp_enabled === 1 || info.whatsapp_enabled === true || info.whatsapp_enabled === '1') && (
+                {/* 💬 WhatsApp Alternative Order Button (Gated by Super Admin) */}
+                {info && info.whatsapp_enabled !== false && (
                   <button
                     onClick={handleSendWhatsAppOrder}
                     style={{
