@@ -45,9 +45,11 @@ async function initDb() {
     }
   }
 
-  if (!process.env.VERCEL) {
-    await createTables();
-    await seedData();
+  if (dbType === 'postgres') {
+    await createTables().catch(e => console.warn('PostgreSQL migration notice:', e.message));
+  } else if (!process.env.VERCEL) {
+    await createTables().catch(() => {});
+    await seedData().catch(() => {});
   }
   isDbInitialized = true;
 }
