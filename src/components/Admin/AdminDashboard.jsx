@@ -1171,29 +1171,48 @@ export default function AdminDashboard({ token, username, onLogout, onReturnToMe
     }
     try {
       const currentSlug = localStorage.getItem('raman_admin_slug') || '';
-      const [catData, dishData, infoData, comboData, subStatusData] = await Promise.all([
-        fetchCategories({ adminView: true, token, slug: currentSlug }),
-        fetchDishes({ adminView: true, token, slug: currentSlug }),
-        fetchRestaurantInfo(token),
+      let [catData, dishData, infoData, comboData, subStatusData] = await Promise.all([
+        fetchCategories({ adminView: true, token, slug: currentSlug }).catch(() => []),
+        fetchDishes({ adminView: true, token, slug: currentSlug }).catch(() => []),
+        fetchRestaurantInfo(token).catch(() => null),
         fetchAdminCombos(token).catch(() => []),
         fetch('/api/admin/subscription-status', { headers: { Authorization: `Bearer ${token}` } }).then(r => r.ok ? r.json() : null).catch(() => null)
       ]);
+
+      // If dishData or catData is empty, fallback to menu-bundle endpoint using tenant slug
+      if ((!dishData || dishData.length === 0 || !catData || catData.length === 0) && currentSlug) {
+        try {
+          const bundleRes = await fetch(`/api/menu-bundle?slug=${encodeURIComponent(currentSlug)}`);
+          if (bundleRes.ok) {
+            const bundle = await bundleRes.json();
+            if (bundle) {
+              if (!dishData || dishData.length === 0) dishData = bundle.dishes || [];
+              if (!catData || catData.length === 0) catData = bundle.categories || [];
+              if (!comboData || comboData.length === 0) comboData = bundle.combos || [];
+              if (!infoData) infoData = bundle.info || null;
+            }
+          }
+        } catch (e) {
+          console.warn('Bundle fallback error:', e);
+        }
+      }
+
       const safeCats = Array.isArray(catData) ? catData : [];
       const safeDishes = Array.isArray(dishData) ? dishData : [];
       const safeCombos = Array.isArray(comboData) ? comboData : [];
 
       setCategories(safeCats);
       setDishes(safeDishes);
-      setRestaurantInfo(infoData);
+      if (infoData) setRestaurantInfo(infoData);
       setCombos(safeCombos);
 
       try {
-        const currentSlug = localStorage.getItem('raman_admin_slug') || (infoData && infoData.slug) || '';
-        if (currentSlug) {
-          localStorage.setItem(`admin_cache_${currentSlug}_categories`, JSON.stringify(safeCats));
-          localStorage.setItem(`admin_cache_${currentSlug}_dishes`, JSON.stringify(safeDishes));
-          if (infoData) localStorage.setItem(`admin_cache_${currentSlug}_info`, JSON.stringify(infoData));
-          localStorage.setItem(`admin_cache_${currentSlug}_combos`, JSON.stringify(safeCombos));
+        const effectiveSlug = currentSlug || (infoData && infoData.slug) || '';
+        if (effectiveSlug) {
+          localStorage.setItem(`admin_cache_${effectiveSlug}_categories`, JSON.stringify(safeCats));
+          localStorage.setItem(`admin_cache_${effectiveSlug}_dishes`, JSON.stringify(safeDishes));
+          if (infoData) localStorage.setItem(`admin_cache_${effectiveSlug}_info`, JSON.stringify(infoData));
+          localStorage.setItem(`admin_cache_${effectiveSlug}_combos`, JSON.stringify(safeCombos));
         }
       } catch (e) {}
 
