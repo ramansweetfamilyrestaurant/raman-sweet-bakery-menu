@@ -1495,12 +1495,14 @@ export default function App() {
         onCallStaff={() => setShowServiceModal(true)}
         onOpenReviewModal={handleRateUsClick}
         onOpenAdmin={() => {
+          const targetSlug = getSlugFromUrl() || (info && info.slug) || localStorage.getItem('raman_admin_slug') || '';
+          const targetUrl = (targetSlug && targetSlug !== 'undefined' && targetSlug !== 'null') ? `/${targetSlug}/admin` : '/admin';
           if (adminToken) {
             setView('admin-dashboard');
-            window.history.pushState({}, '', '/admin');
+            window.history.pushState({}, '', targetUrl);
           } else {
             setView('admin-login');
-            window.history.pushState({}, '', '/admin');
+            window.history.pushState({}, '', targetUrl);
           }
         }}
       />
@@ -2341,12 +2343,14 @@ export default function App() {
         onOpenCategories={() => setShowCategoryDrawer(true)}
         onOpenInfo={() => setShowInfoModal(true)}
         onOpenAdmin={() => {
+          const targetSlug = getSlugFromUrl() || (info && info.slug) || localStorage.getItem('raman_admin_slug') || '';
+          const targetUrl = (targetSlug && targetSlug !== 'undefined' && targetSlug !== 'null') ? `/${targetSlug}/admin` : '/admin';
           if (adminToken) {
             setView('admin-dashboard');
-            window.history.pushState({}, '', '/admin');
+            window.history.pushState({}, '', targetUrl);
           } else {
             setView('admin-login');
-            window.history.pushState({}, '', '/admin');
+            window.history.pushState({}, '', targetUrl);
           }
         }}
       />
