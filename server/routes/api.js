@@ -174,17 +174,28 @@ router.get('/menu-bundle', async (req, res) => {
       filtersVis = { must_try: true, combo: true, special: true, under100: true };
     }
 
-    const planRows = await query('SELECT watermark_removal_enabled, custom_domain_enabled, multi_language_enabled, analytics_export_enabled, gst_invoice_enabled, ai_review_enabled, google_reviews_enabled, bluetooth_kot_enabled, dual_printer_enabled FROM saas_plans WHERE key = $1', [resto.plan_tier || 'pro']).catch(() => []);
+    const planTierKey = (resto.plan_tier || 'pro').toLowerCase();
+    const planRows = await query('SELECT whatsapp_ordering_enabled, whatsapp_enabled, direct_ordering_enabled, watermark_removal_enabled, custom_domain_enabled, multi_language_enabled, analytics_export_enabled, gst_invoice_enabled, ai_review_enabled, google_reviews_enabled, bluetooth_kot_enabled, dual_printer_enabled FROM saas_plans WHERE LOWER(key) = $1', [planTierKey]).catch(() => []);
     const saasP = (planRows && planRows.length > 0) ? planRows[0] : {};
+    
+    const saasWhatsappOrderingEnabled = (saasP.whatsapp_ordering_enabled ?? saasP.whatsapp_enabled) !== undefined 
+      ? ((saasP.whatsapp_ordering_enabled ?? saasP.whatsapp_enabled) === 1 || (saasP.whatsapp_ordering_enabled ?? saasP.whatsapp_enabled) === true || (saasP.whatsapp_ordering_enabled ?? saasP.whatsapp_enabled) === '1') 
+      : (planTierKey !== 'basic');
+    const restoWhatsappEnabled = resto.whatsapp_enabled !== undefined && resto.whatsapp_enabled !== null
+      ? (resto.whatsapp_enabled === 1 || resto.whatsapp_enabled === true || resto.whatsapp_enabled === '1')
+      : true;
+    const whatsappEnabled = saasWhatsappOrderingEnabled && restoWhatsappEnabled;
+    const directOrderingEnabled = saasP.direct_ordering_enabled !== undefined ? (saasP.direct_ordering_enabled === 1 || saasP.direct_ordering_enabled === true || saasP.direct_ordering_enabled === '1') : (planTierKey === 'enterprise');
+
     const watermarkRemoval = saasP.watermark_removal_enabled !== undefined ? (saasP.watermark_removal_enabled === 1 || saasP.watermark_removal_enabled === true || saasP.watermark_removal_enabled === '1') : true;
     const customDomainEnabled = saasP.custom_domain_enabled !== undefined ? (saasP.custom_domain_enabled === 1 || saasP.custom_domain_enabled === true || saasP.custom_domain_enabled === '1') : true;
     const multiLanguageEnabled = saasP.multi_language_enabled !== undefined ? (saasP.multi_language_enabled === 1 || saasP.multi_language_enabled === true || saasP.multi_language_enabled === '1') : true;
     const analyticsExportEnabled = saasP.analytics_export_enabled !== undefined ? (saasP.analytics_export_enabled === 1 || saasP.analytics_export_enabled === true || saasP.analytics_export_enabled === '1') : true;
     const gstInvoiceEnabled = saasP.gst_invoice_enabled !== undefined ? (saasP.gst_invoice_enabled === 1 || saasP.gst_invoice_enabled === true || saasP.gst_invoice_enabled === '1') : true;
     const aiReviewEnabled = saasP.ai_review_enabled !== undefined ? (saasP.ai_review_enabled === 1 || saasP.ai_review_enabled === true || saasP.ai_review_enabled === '1') : true;
-    const googleReviewsEnabled = saasP.google_reviews_enabled !== undefined ? (saasP.google_reviews_enabled === 1 || saasP.google_reviews_enabled === true || saasP.google_reviews_enabled === '1') : (resto.plan_tier !== 'basic');
+    const googleReviewsEnabled = saasP.google_reviews_enabled !== undefined ? (saasP.google_reviews_enabled === 1 || saasP.google_reviews_enabled === true || saasP.google_reviews_enabled === '1') : (planTierKey !== 'basic');
     const bluetoothKotEnabled = saasP.bluetooth_kot_enabled !== undefined ? (saasP.bluetooth_kot_enabled === 1 || saasP.bluetooth_kot_enabled === true || saasP.bluetooth_kot_enabled === '1') : true;
-    const dualPrinterEnabled = saasP.dual_printer_enabled !== undefined ? (saasP.dual_printer_enabled === 1 || saasP.dual_printer_enabled === true || saasP.dual_printer_enabled === '1') : (resto.plan_tier === 'enterprise' || resto.plan_tier === 'vip_ultra_plan');
+    const dualPrinterEnabled = saasP.dual_printer_enabled !== undefined ? (saasP.dual_printer_enabled === 1 || saasP.dual_printer_enabled === true || saasP.dual_printer_enabled === '1') : (planTierKey === 'enterprise' || planTierKey === 'vip_ultra_plan');
 
     const infoObj = {
       id: resto.id,
@@ -203,6 +214,9 @@ router.get('/menu-bundle', async (req, res) => {
       filters_visibility: filtersVis,
       currency_symbol: (resto.currency_symbol !== null && resto.currency_symbol !== undefined) ? resto.currency_symbol : '₹',
       plan_tier: resto.plan_tier || 'pro',
+      whatsapp_number: resto.whatsapp_number || resto.phone || '',
+      whatsapp_enabled: whatsappEnabled,
+      direct_ordering_enabled: directOrderingEnabled,
       watermark_removal_enabled: watermarkRemoval,
       custom_domain_enabled: customDomainEnabled,
       multi_language_enabled: multiLanguageEnabled,
@@ -213,7 +227,6 @@ router.get('/menu-bundle', async (req, res) => {
       bluetooth_kot_enabled: bluetoothKotEnabled,
       dual_printer_enabled: dualPrinterEnabled,
       custom_domain: resto.custom_domain || '',
-      whatsapp_number: resto.whatsapp_number || resto.phone || '',
       active: true
     };
 
