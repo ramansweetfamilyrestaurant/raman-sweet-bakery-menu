@@ -328,7 +328,7 @@ export default function App() {
   const [activeOrderId, setActiveOrderId] = useState(getInitialActiveOrderId);
   const [activeOrderTrack, setActiveOrderTrack] = useState(null);
 
-  // 40-Second Persistent Auto-Kill Session Protection after order completion, cancellation, or rejection
+  // 5-Second Persistent Auto-Kill Session Protection after order completion, cancellation, or rejection
   useEffect(() => {
     if (!activeOrderTrack || !['completed', 'cancelled', 'rejected'].includes(activeOrderTrack.status)) {
       setAutoKillSeconds(null);
@@ -345,10 +345,10 @@ export default function App() {
 
     const updateCountdown = () => {
       const elapsedSec = Math.floor((Date.now() - completedAt) / 1000);
-      const remainingSec = Math.max(0, 40 - elapsedSec);
+      const remainingSec = Math.max(0, 5 - elapsedSec);
 
       if (remainingSec <= 0) {
-        // Auto-kill session cleanly after 40 seconds
+        // Auto-kill session cleanly after 5 seconds
         const key = getOrderStorageKey(activeOrderTrack.table_number);
         if (key) localStorage.removeItem(key);
         localStorage.removeItem(timeKey);
@@ -367,6 +367,37 @@ export default function App() {
     const timer = setInterval(updateCountdown, 1000);
     return () => clearInterval(timer);
   }, [activeOrderTrack?.status, activeOrderTrack?.id]);
+
+  // 3-Minute Inactivity Auto-Kill for Table QR Scanned Customers who haven't placed an order
+  useEffect(() => {
+    if (!effectiveTableNum || sessionExpired || activeOrderId || (activeOrderTrack && ['pending', 'accepted', 'kitchen', 'preparing', 'served'].includes(activeOrderTrack.status))) {
+      return;
+    }
+
+    const scanTimeKey = `raman_table_scan_time_${effectiveTableNum}`;
+    let scanTime = Number(localStorage.getItem(scanTimeKey));
+    if (!scanTime || isNaN(scanTime)) {
+      scanTime = Date.now();
+      localStorage.setItem(scanTimeKey, String(scanTime));
+    }
+
+    const checkInactivity = () => {
+      const elapsedSec = Math.floor((Date.now() - scanTime) / 1000);
+      const remainingSec = Math.max(0, 180 - elapsedSec);
+
+      if (remainingSec <= 0) {
+        // 3 minutes inactivity without placing an order -> shift to read-only menu
+        localStorage.removeItem(scanTimeKey);
+        setCurrentTableNum('');
+        setSessionExpired(true);
+        window.history.replaceState({}, '', window.location.pathname);
+      }
+    };
+
+    checkInactivity();
+    const timer = setInterval(checkInactivity, 1000);
+    return () => clearInterval(timer);
+  }, [effectiveTableNum, activeOrderId, activeOrderTrack?.status, sessionExpired]);
 
   // Multi-Device Table-Level Live Sync Effect (Only runs if table QR code scanned OR order active in session)
   useEffect(() => {
@@ -448,6 +479,7 @@ export default function App() {
       if (res && res.order_id) {
         const storageKey = `raman_active_order_id_table_${targetTable}`;
         localStorage.setItem(storageKey, String(res.order_id));
+        localStorage.removeItem(`raman_table_scan_time_${targetTable}`);
         setActiveOrderId(String(res.order_id));
       }
 
@@ -1539,20 +1571,24 @@ export default function App() {
         <div style={{
           background: 'linear-gradient(135deg, #7F1D1D 0%, #991B1B 100%)',
           color: '#FFFFFF',
-          padding: '10px 16px',
+          padding: '12px 18px',
           borderBottom: '2px solid #F87171',
           display: 'flex',
           justifyContent: 'space-between',
           alignItems: 'center',
-          fontSize: '0.8rem',
-          fontWeight: 700
+          fontSize: '0.84rem',
+          fontWeight: 700,
+          boxShadow: '0 4px 12px rgba(0,0,0,0.3)'
         }}>
-          <span>⌛ <strong>Session Expired:</strong> Order complete ho chuka hai! Naya order karne ke liye table QR dubara scan karein.</span>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+            <span style={{ fontSize: '1.2rem' }}>📱</span>
+            <span><strong>Session Expired (Read-Only Menu):</strong> Table session ended. Naya order place karne ke liye table QR code dubara scan karein!</span>
+          </div>
           <button
             onClick={() => setSessionExpired(false)}
-            style={{ background: 'transparent', border: 'none', color: '#FFFFFF', fontWeight: 900, cursor: 'pointer', fontSize: '1rem' }}
+            style={{ background: '#FFFFFF', color: '#991B1B', border: 'none', borderRadius: '9999px', padding: '4px 10px', fontWeight: 900, cursor: 'pointer', fontSize: '0.76rem' }}
           >
-            ✕
+            Got it ✖
           </button>
         </div>
       )}
