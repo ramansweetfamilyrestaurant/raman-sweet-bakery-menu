@@ -178,13 +178,11 @@ router.get('/menu-bundle', async (req, res) => {
     const planRows = await query('SELECT whatsapp_ordering_enabled, whatsapp_enabled, direct_ordering_enabled, watermark_removal_enabled, custom_domain_enabled, multi_language_enabled, analytics_export_enabled, gst_invoice_enabled, ai_review_enabled, google_reviews_enabled, bluetooth_kot_enabled, dual_printer_enabled FROM saas_plans WHERE LOWER(key) = $1', [planTierKey]).catch(() => []);
     const saasP = (planRows && planRows.length > 0) ? planRows[0] : {};
     
-    const saasWhatsappOrderingEnabled = (saasP.whatsapp_ordering_enabled ?? saasP.whatsapp_enabled) !== undefined 
-      ? ((saasP.whatsapp_ordering_enabled ?? saasP.whatsapp_enabled) === 1 || (saasP.whatsapp_ordering_enabled ?? saasP.whatsapp_enabled) === true || (saasP.whatsapp_ordering_enabled ?? saasP.whatsapp_enabled) === '1') 
-      : (planTierKey !== 'basic');
+    const saasWhatsappEnabled = saasP.whatsapp_enabled !== undefined ? (saasP.whatsapp_enabled === 1 || saasP.whatsapp_enabled === true || saasP.whatsapp_enabled === '1') : (planTierKey !== 'basic');
     const restoWhatsappEnabled = resto.whatsapp_enabled !== undefined && resto.whatsapp_enabled !== null
       ? (resto.whatsapp_enabled === 1 || resto.whatsapp_enabled === true || resto.whatsapp_enabled === '1')
       : true;
-    const whatsappEnabled = saasWhatsappOrderingEnabled && restoWhatsappEnabled;
+    const whatsappEnabled = saasWhatsappEnabled && restoWhatsappEnabled;
     const directOrderingEnabled = saasP.direct_ordering_enabled !== undefined ? (saasP.direct_ordering_enabled === 1 || saasP.direct_ordering_enabled === true || saasP.direct_ordering_enabled === '1') : (planTierKey === 'enterprise');
 
     const watermarkRemoval = saasP.watermark_removal_enabled !== undefined ? (saasP.watermark_removal_enabled === 1 || saasP.watermark_removal_enabled === true || saasP.watermark_removal_enabled === '1') : true;
@@ -287,13 +285,7 @@ router.get('/info', async (req, res) => {
     const planRows = await query('SELECT * FROM saas_plans WHERE LOWER(key) = $1', [planTierKey]);
     const saasPlan = planRows[0] || {};
 
-    const saasWhatsappOrderingEnabled = (saasPlan.whatsapp_ordering_enabled ?? saasPlan.whatsapp_enabled) !== undefined 
-      ? ((saasPlan.whatsapp_ordering_enabled ?? saasPlan.whatsapp_enabled) === 1 || (saasPlan.whatsapp_ordering_enabled ?? saasPlan.whatsapp_enabled) === true || (saasPlan.whatsapp_ordering_enabled ?? saasPlan.whatsapp_enabled) === '1') 
-      : (planTierKey !== 'basic');
-    const restoWhatsappEnabled = resto.whatsapp_enabled !== undefined && resto.whatsapp_enabled !== null
-      ? (resto.whatsapp_enabled === 1 || resto.whatsapp_enabled === true || resto.whatsapp_enabled === '1')
-      : true;
-    const whatsappEnabled = saasWhatsappOrderingEnabled && restoWhatsappEnabled;
+    const whatsappEnabled = saasPlan.whatsapp_enabled !== undefined ? (saasPlan.whatsapp_enabled === 1 || saasPlan.whatsapp_enabled === true || saasPlan.whatsapp_enabled === '1') : (planTierKey !== 'basic');
     const directOrderingEnabled = saasPlan.direct_ordering_enabled !== undefined ? (saasPlan.direct_ordering_enabled === 1 || saasPlan.direct_ordering_enabled === true || saasPlan.direct_ordering_enabled === '1') : (planTierKey === 'enterprise');
     const googleReviewsEnabled = saasPlan.google_reviews_enabled !== undefined ? (saasPlan.google_reviews_enabled === 1 || saasPlan.google_reviews_enabled === true || saasPlan.google_reviews_enabled === '1') : (planTierKey !== 'basic');
     const maxCombos = saasPlan.max_combos !== undefined ? Number(saasPlan.max_combos) : (planTierKey === 'basic' ? 3 : planTierKey === 'pro' ? 10 : 9999);
