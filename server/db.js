@@ -1378,7 +1378,8 @@ export function purgeLocalR2DiskCache(identifier) {
 
 export async function saveR2ImageToDb(filename, mimeType, imageKey, imageUrl, restaurantId = 1, buffer = null) {
   try {
-    const base64Data = buffer ? (Buffer.isBuffer(buffer) ? buffer.toString('base64') : buffer) : null;
+    // For R2-backed uploads, stored_images.data MUST be NULL to keep Neon PostgreSQL lightweight and metadata-only
+    const base64Data = null;
 
     if (filename) purgeLocalR2DiskCache(filename);
     if (imageKey) purgeLocalR2DiskCache(imageKey);

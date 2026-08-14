@@ -1,6 +1,7 @@
 import { S3Client, PutObjectCommand, DeleteObjectCommand, HeadObjectCommand, GetObjectCommand, ListObjectsV2Command } from '@aws-sdk/client-s3';
 import path from 'path';
 import fs from 'fs';
+import crypto from 'crypto';
 import dotenv from 'dotenv';
 dotenv.config();
 
@@ -34,9 +35,9 @@ function getR2Config() {
   const accountId = (process.env.R2_ACCOUNT_ID || '').trim();
   const accessKeyId = (process.env.R2_ACCESS_KEY_ID || '').trim();
   const secretAccessKey = (process.env.R2_SECRET_ACCESS_KEY || '').trim();
-  let bucketName = (process.env.R2_BUCKET_NAME || 'khana-master-media').trim();
-  if (bucketName === 'khana-master_media') {
-    bucketName = 'khana-master-media';
+  let bucketName = (process.env.R2_BUCKET_NAME || 'touchqr-media').trim();
+  if (bucketName === 'khana-master_media' || bucketName === 'khana-master-media') {
+    bucketName = 'touchqr-media';
   }
   const publicDomain = (process.env.R2_PUBLIC_DOMAIN || '').trim();
   const endpoint = (process.env.R2_ENDPOINT || '').trim();
@@ -192,11 +193,8 @@ export function generateObjectKey(restaurantId, entityType = 'dishes', filename 
   const validTypes = ['dishes', 'categories', 'banners', 'avatars', 'logos', 'migrated', 'misc', 'superadmin', 'branding'];
   const safeType = validTypes.includes(entityType) ? entityType : 'dishes';
   
-  const timestamp = Date.now();
-  const randomSuffix = Math.round(Math.random() * 1e9);
-  const uniqueId = `${safeType}-${timestamp}-${randomSuffix}`;
-  
-  return `restaurants/${safeRestoId}/${safeType}/${uniqueId}.webp`;
+  const uuid = crypto.randomUUID ? crypto.randomUUID() : `${Date.now()}-${Math.round(Math.random() * 1e9)}`;
+  return `restaurants/${safeRestoId}/${safeType}/${uuid}.webp`;
 }
 
 /**

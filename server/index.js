@@ -75,6 +75,17 @@ app.get(['/api/r2-proxy/*', '/r2-proxy/*'], async (req, res) => {
   const key = rawKey.split('?')[0];
   if (!key) return res.status(404).send('Image key missing');
 
+  // Path traversal & security protection: block '..', null bytes, and backslashes
+  if (key.includes('..') || key.includes('\\') || key.includes('\0')) {
+    return res.status(400).send('Invalid or dangerous image key path');
+  }
+
+  // Ensure key format belongs to expected public asset namespaces
+  const isAllowedNamespace = key.startsWith('restaurants/') || key.startsWith('superadmin/') || key.startsWith('uploads/');
+  if (!isAllowedNamespace) {
+    return res.status(403).send('Forbidden: Access denied to object namespace');
+  }
+
   const filename = path.basename(key);
   const localCachePath = path.resolve('public/uploads/r2-cache', filename);
   const localUploadPath = path.resolve('public/uploads', filename);

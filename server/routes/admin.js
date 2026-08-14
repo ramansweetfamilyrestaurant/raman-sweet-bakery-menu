@@ -24,12 +24,38 @@ async function getSharp() {
 const router = express.Router();
 const JWT_SECRET = process.env.JWT_SECRET || 'touchqr_secret_jwt_key_change_me';
 
+async function isImageKeyInUse(imageUrl, r2Key) {
+  try {
+    const searchPattern = r2Key || path.basename(imageUrl || '');
+    if (!searchPattern || searchPattern.length < 5) return false;
+    const refChecks = await Promise.all([
+      query("SELECT COUNT(*)::int as count FROM dishes WHERE image LIKE '%' || $1 || '%'", [searchPattern]).catch(() => [{ count: 0 }]),
+      query("SELECT COUNT(*)::int as count FROM categories WHERE image LIKE '%' || $1 || '%'", [searchPattern]).catch(() => [{ count: 0 }]),
+      query("SELECT COUNT(*)::int as count FROM restaurants WHERE logo LIKE '%' || $1 || '%'", [searchPattern]).catch(() => [{ count: 0 }]),
+      query("SELECT COUNT(*)::int as count FROM combos WHERE image LIKE '%' || $1 || '%'", [searchPattern]).catch(() => [{ count: 0 }]),
+      query("SELECT COUNT(*)::int as count FROM announcements WHERE image_url LIKE '%' || $1 || '%'", [searchPattern]).catch(() => [{ count: 0 }])
+    ]);
+    const totalRefs = refChecks.reduce((sum, res) => sum + (Number(res?.[0]?.count) || 0), 0);
+    return totalRefs > 0;
+  } catch (e) {
+    return false;
+  }
+}
+
 async function cleanupImage(imageUrl) {
   if (!imageUrl || typeof imageUrl !== 'string') return;
   try {
     const r2Match = imageUrl.match(/restaurants\/[^\s'"]+/);
-    if (r2Match && r2Match[0]) {
-      const r2Key = r2Match[0];
+    const r2Key = r2Match ? r2Match[0] : null;
+
+    // Safety check: do not delete R2 object if it is still referenced elsewhere in DB
+    const inUse = await isImageKeyInUse(imageUrl, r2Key);
+    if (inUse) {
+      console.log('ℹ️ [CLEANUP NOTICE] Image key is still referenced by another active DB record. Skipping R2 object deletion:', r2Key || imageUrl);
+      return;
+    }
+
+    if (r2Key) {
       console.log('🗑️ Deleting R2 object key directly:', r2Key);
       await deleteImageFromR2(r2Key);
       await deleteImageRecordFromDb(r2Key);
@@ -40,7 +66,10 @@ async function cleanupImage(imageUrl) {
       const imgRecord = await getImageRecordFromDb(filename);
       if (imgRecord) {
         if (imgRecord.image_key && (!r2Match || imgRecord.image_key !== r2Match[0])) {
-          await deleteImageFromR2(imgRecord.image_key);
+          const keyInUse = await isImageKeyInUse(imgRecord.image_key, imgRecord.image_key);
+          if (!keyInUse) {
+            await deleteImageFromR2(imgRecord.image_key);
+          }
         }
         await deleteImageRecordFromDb(imgRecord.image_key || filename);
       }
