@@ -3,6 +3,7 @@ import path from 'path';
 import fs from 'fs';
 import crypto from 'crypto';
 import dotenv from 'dotenv';
+import { getR2Config } from '../config/r2.js';
 dotenv.config();
 
 let sharpModule = null;
@@ -29,27 +30,6 @@ function getCacheFilePath(objectKey) {
   if (!objectKey) return null;
   const safeFilename = path.basename(objectKey);
   return path.join(r2CacheDir, safeFilename);
-}
-
-function getR2Config() {
-  const accountId = (process.env.R2_ACCOUNT_ID || '').trim();
-  const accessKeyId = (process.env.R2_ACCESS_KEY_ID || '').trim();
-  const secretAccessKey = (process.env.R2_SECRET_ACCESS_KEY || '').trim();
-  let bucketName = (process.env.R2_BUCKET_NAME || 'touchqr-media').trim();
-  if (bucketName === 'khana-master_media' || bucketName === 'khana-master-media') {
-    bucketName = 'touchqr-media';
-  }
-  const publicDomain = (process.env.R2_PUBLIC_DOMAIN || '').trim();
-  const endpoint = (process.env.R2_ENDPOINT || '').trim();
-
-  return {
-    accountId,
-    accessKeyId,
-    secretAccessKey,
-    bucketName,
-    publicDomain,
-    endpoint
-  };
 }
 
 function getR2Client() {
@@ -221,9 +201,9 @@ export async function uploadImageToR2({ buffer, mimeType, restaurantId, entityTy
   // 2. Generate structured key
   const objectKey = generateObjectKey(restaurantId, entityType);
 
-  let targetBucket = config.bucketName;
+  const targetBucket = config.bucketName;
 
-  // 3. Upload to R2 Bucket (with automatic fallback bucket attempt if primary fails)
+  // 3. Upload to configured R2 Bucket
   try {
     const command = new PutObjectCommand({
       Bucket: targetBucket,
@@ -233,26 +213,12 @@ export async function uploadImageToR2({ buffer, mimeType, restaurantId, entityTy
     });
     await client.send(command);
   } catch (primaryErr) {
-    console.warn(`⚠️ R2 upload to bucket "${targetBucket}" failed (${primaryErr.name}: ${primaryErr.message}). Trying fallback bucket...`);
-
-    const fallbackBucket = targetBucket === 'touchqr-media' ? 'touchqr-menu-images' : 'touchqr-media';
-    try {
-      const fallbackCommand = new PutObjectCommand({
-        Bucket: fallbackBucket,
-        Key: objectKey,
-        Body: optimized.buffer,
-        ContentType: optimized.mimeType,
-      });
-      await client.send(fallbackCommand);
-      targetBucket = fallbackBucket;
-      console.log(`⚡ Successfully uploaded to fallback R2 bucket "${fallbackBucket}"!`);
-    } catch (fallbackErr) {
-      const isAccessDenied = primaryErr.name === 'AccessDenied' || primaryErr.message?.includes('Access Denied');
-      if (isAccessDenied) {
-        throw new Error(`Access Denied to R2 bucket "${config.bucketName}". Please check Cloudflare R2 API Token permissions (must be set to "Admin Read & Write" or "Object Read & Write", not "Read-Only").`);
-      }
-      throw primaryErr;
+    console.error(`⚠️ R2 upload to bucket "${targetBucket}" failed (${primaryErr.name}: ${primaryErr.message}).`);
+    const isAccessDenied = primaryErr.name === 'AccessDenied' || primaryErr.message?.includes('Access Denied');
+    if (isAccessDenied) {
+      throw new Error(`Access Denied to R2 bucket "${config.bucketName}". Please check Cloudflare R2 API Token permissions.`);
     }
+    throw primaryErr;
   }
 
   // Cache optimized WebP locally for instant zero-latency serving
@@ -378,32 +344,8 @@ export async function getR2ObjectBuffer(objectKey) {
       contentType: response.ContentType || 'image/webp'
     };
   } catch (err) {
-    const fallbackBucket = config.bucketName === 'touchqr-media' ? 'touchqr-menu-images' : 'touchqr-media';
-    try {
-      const fallbackCommand = new GetObjectCommand({
-        Bucket: fallbackBucket,
-        Key: objectKey
-      });
-      const response = await client.send(fallbackCommand);
-      const byteArray = await response.Body.transformToByteArray();
-      const buffer = Buffer.from(byteArray);
-
-      if (cachePath && buffer && buffer.length > 0) {
-        try {
-          fs.writeFileSync(cachePath, buffer);
-        } catch (wErr) {
-          console.warn('Cache write notice:', wErr.message);
-        }
-      }
-
-      return {
-        buffer,
-        contentType: response.ContentType || 'image/webp'
-      };
-    } catch (fbErr) {
-      console.warn(`⚠️ Failed to fetch R2 object (${objectKey}):`, err.message);
-      return null;
-    }
+    console.warn(`⚠️ Failed to fetch R2 object (${objectKey}) from bucket "${config.bucketName}":`, err.message);
+    return null;
   }
 }
 
