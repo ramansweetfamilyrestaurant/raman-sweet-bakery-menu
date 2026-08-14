@@ -19,7 +19,10 @@ function sanitizeConfigValue(val) {
  * Single Source of Truth for R2 Bucket Name and API Credentials.
  */
 export function getR2Config() {
-  const rawBucket = sanitizeConfigValue(process.env.R2_BUCKET_NAME);
+  let rawBucket = sanitizeConfigValue(process.env.R2_BUCKET_NAME);
+  if (rawBucket) {
+    rawBucket = rawBucket.replace(/_/g, '-');
+  }
   // Default to active production bucket if environment variable is not explicitly set
   const bucketName = rawBucket || 'khana-master-media';
   const accountId = sanitizeConfigValue(process.env.R2_ACCOUNT_ID);
