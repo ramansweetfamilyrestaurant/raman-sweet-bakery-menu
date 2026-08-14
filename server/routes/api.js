@@ -122,10 +122,14 @@ async function resolveRestaurant(req, slug) {
     }
   }
 
-  // 3. Fallback to primary default active restaurant when no slug or system route like /menu is passed
-  if (!slug || typeof slug !== 'string' || slug.trim() === '' || ['menu', 'default', 'null', 'undefined', 'home', 'index'].includes(slug.trim().toLowerCase())) {
-    const firstResto = await query("SELECT * FROM restaurants WHERE (active IS NULL OR active::text NOT IN ('0', 'false', 'f')) ORDER BY id ASC LIMIT 1");
-    return firstResto[0] || null;
+  // 3. Handle no slug or generic /menu route request: NEVER fall back to restaurant ID 1 automatically
+  const cleanSlug = (slug && typeof slug === 'string') ? slug.trim().toLowerCase() : '';
+  if (!cleanSlug || ['menu', 'default', 'null', 'undefined', 'home', 'index'].includes(cleanSlug)) {
+    const demoRestos = await query("SELECT * FROM restaurants WHERE LOWER(slug) = 'touchqr-demo'");
+    if (demoRestos && demoRestos.length > 0) {
+      return demoRestos[0];
+    }
+    return null;
   }
 
   return null;

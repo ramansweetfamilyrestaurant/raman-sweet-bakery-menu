@@ -814,6 +814,10 @@ export default function App() {
       } else if (isRootPath) {
         setView('landing');
         document.title = 'TouchQR - Digital Menu & QR Ordering Platform';
+      } else if (path === '/menu' || path === '/menu/') {
+        window.history.replaceState({}, '', '/touchqr-demo');
+        loadMenuData('touchqr-demo');
+        setView('menu');
       } else {
         setView('menu');
         if (info && info.name) {
