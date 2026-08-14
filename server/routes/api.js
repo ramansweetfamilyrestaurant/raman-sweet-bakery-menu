@@ -67,10 +67,30 @@ router.get('/plans', async (req, res) => {
 
 
 
-// Helper to resolve target restaurant by JWT token, slug, or custom domain.
-// Helper to resolve target restaurant by slug or JWT token
+// Helper to resolve target restaurant by explicit public URL slug, custom domain, or JWT token
 async function resolveRestaurant(req, slug) {
-  // 0. Check incoming Host header for custom domain mapping (e.g. menu.restaurant.com)
+  // 1. Explicit URL slug parameter passed in public route (e.g. /api/menu-bundle?slug=rama or /api/info?slug=rama)
+  // ALWAYS PRIORITIZE THE EXPLICIT PUBLIC URL SLUG SO SLUG IS AUTHORITATIVE!
+  if (slug && typeof slug === 'string' && slug.trim() !== '') {
+    const cleanSlug = slug.trim().toLowerCase();
+    if (!['menu', 'default', 'null', 'undefined', 'home', 'index', 'api', 'kitchen'].includes(cleanSlug)) {
+      const restos = await query('SELECT * FROM restaurants WHERE LOWER(slug) = $1', [cleanSlug]);
+      if (restos && restos.length > 0) {
+        return restos[0];
+      }
+      if (cleanSlug.endsWith('-menu')) {
+        const altSlug = cleanSlug.replace(/-menu$/, '');
+        const altRestos = await query('SELECT * FROM restaurants WHERE LOWER(slug) = $1', [altSlug]);
+        if (altRestos && altRestos.length > 0) {
+          return altRestos[0];
+        }
+      }
+      // Explicit public slug provided but NOT found in DB -> return null (404 Not Found)
+      return null;
+    }
+  }
+
+  // 2. Check incoming Host header for custom domain mapping (e.g. menu.restaurant.com)
   if (req && req.headers) {
     try {
       const rawHeader = req.headers['x-forwarded-host'] || req.headers.host || '';
@@ -87,7 +107,7 @@ async function resolveRestaurant(req, slug) {
     }
   }
 
-  // 1. Check if JWT token is in Authorization header - ALWAYS PRIORITIZE LOGGED IN TOKEN FOR AUTHENTICATED REQUESTS!
+  // 3. For generic requests without an explicit public URL slug, check JWT token (authenticated admin routes)
   if (req && req.headers && req.headers.authorization) {
     try {
       const authHeader = req.headers.authorization;
@@ -102,34 +122,13 @@ async function resolveRestaurant(req, slug) {
     } catch (e) {}
   }
 
-  // 2. If no valid JWT token, check if an explicit valid slug parameter is passed in URL/query for public menu
-  if (slug && typeof slug === 'string' && slug.trim() !== '') {
-    const cleanSlug = slug.trim().toLowerCase();
-    if (!['menu', 'default', 'null', 'undefined', 'home', 'index', 'api', 'kitchen'].includes(cleanSlug)) {
-      const restos = await query('SELECT * FROM restaurants WHERE LOWER(slug) = $1', [cleanSlug]);
-      if (restos && restos.length > 0) {
-        return restos[0];
-      }
-      if (cleanSlug.endsWith('-menu')) {
-        const altSlug = cleanSlug.replace(/-menu$/, '');
-        const altRestos = await query('SELECT * FROM restaurants WHERE LOWER(slug) = $1', [altSlug]);
-        if (altRestos && altRestos.length > 0) {
-          return altRestos[0];
-        }
-      }
-      // Explicit slug passed but NOT found in DB -> return null (404)
-      return null;
-    }
-  }
-
-  // 3. Handle no slug or generic /menu route request: NEVER fall back to restaurant ID 1 automatically
+  // 4. Generic /menu or fallback route: return demo tenant
   const cleanSlug = (slug && typeof slug === 'string') ? slug.trim().toLowerCase() : '';
   if (!cleanSlug || ['menu', 'default', 'null', 'undefined', 'home', 'index'].includes(cleanSlug)) {
     const demoRestos = await query("SELECT * FROM restaurants WHERE LOWER(slug) = 'touchqr-demo'");
     if (demoRestos && demoRestos.length > 0) {
       return demoRestos[0];
     }
-    return null;
   }
 
   return null;

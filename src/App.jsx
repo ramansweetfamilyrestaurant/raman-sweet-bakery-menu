@@ -527,7 +527,8 @@ export default function App() {
       setLoading(false);
       return;
     }
-    const slug = forcedSlug || getSlugFromUrl() || (info && info.slug) || localStorage.getItem('touchqr_admin_slug') || localStorage.getItem('raman_admin_slug') || '';
+    const urlSlug = getSlugFromUrl();
+    const slug = forcedSlug || urlSlug || (isAdminRoute ? (localStorage.getItem('touchqr_admin_slug') || localStorage.getItem('raman_admin_slug') || '') : '');
     const isRootAdminRoute = rawPath === '/admin' || rawPath === '/super-admin' || rawPath === '/superadmin';
 
     // Skip full menu load for superadmin dashboard or standalone kitchen KDS
@@ -548,8 +549,9 @@ export default function App() {
       setLoading(false);
       return;
     }
-    const isAdminMode = Boolean(adminToken);
-    console.log('[MENU] requested slug:', slug || '(default active tenant)');
+    const isAdminMode = Boolean(adminToken && isAdminRoute);
+    console.log('[PUBLIC TENANT] URL slug:', urlSlug || '(none)');
+    console.log('[PUBLIC TENANT] resolved slug:', slug || '(default demo tenant)');
     try {
       let infoData = null;
       let catData = [];
@@ -567,6 +569,8 @@ export default function App() {
               catData = bundle.categories || [];
               dishData = bundle.dishes || [];
               comboData = bundle.combos || [];
+              console.log('[PUBLIC TENANT] resolved restaurant id:', infoData.id);
+              console.log('[PUBLIC TENANT] resolved restaurant name:', infoData.name);
             }
           } else {
             console.warn('[MENU] menu-bundle HTTP status:', bundleRes.status);
@@ -578,10 +582,11 @@ export default function App() {
 
       // Fallback or Admin/Search view: parallel fetch
       if (!infoData || !dishData || dishData.length === 0) {
+        const publicToken = isAdminMode ? adminToken : undefined;
         const [resInfo, resCat, resDish, resCombo] = await Promise.all([
-          fetchRestaurantInfo({ token: adminToken, slug }),
-          fetchCategories({ slug, adminView: isAdminMode, token: adminToken }),
-          fetchDishes({ query: searchQuery, slug, adminView: isAdminMode, token: adminToken }),
+          fetchRestaurantInfo({ token: publicToken, slug }),
+          fetchCategories({ slug, adminView: isAdminMode, token: publicToken }),
+          fetchDishes({ query: searchQuery, slug, adminView: isAdminMode, token: publicToken }),
           fetchCombos(slug).catch((err) => { console.warn('[MENU] fetchCombos notice:', err); return []; })
         ]);
         if (!infoData) infoData = resInfo;
@@ -591,7 +596,7 @@ export default function App() {
       }
 
       if (!infoData && dishData && dishData.length > 0) {
-        infoData = { id: 1, name: 'Digital Restaurant Menu', slug: slug || 'menu' };
+        infoData = { id: dishData[0]?.restaurant_id || 0, name: 'Digital Restaurant Menu', slug: slug || 'menu' };
       }
 
       if ((!infoData || infoData.notFound) && (!dishData || dishData.length === 0)) {
