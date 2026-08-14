@@ -1174,7 +1174,7 @@ export default function AdminDashboard({ token, username, slug: propSlug = '', o
       let [catData, dishData, infoData, comboData, subStatusData] = await Promise.all([
         fetchCategories({ adminView: true, token, slug: currentSlug }).catch(() => []),
         fetchDishes({ adminView: true, token, slug: currentSlug }).catch(() => []),
-        fetchRestaurantInfo(token || currentSlug).catch(() => null),
+        fetchRestaurantInfo({ token, slug: currentSlug }).catch((err) => { console.warn('[MENU] fetchRestaurantInfo notice:', err); return null; }),
         fetchAdminCombos(token).catch(() => []),
         fetch('/api/admin/subscription-status', { headers: { Authorization: `Bearer ${token}` } }).then(r => r.ok ? r.json() : null).catch(() => null)
       ]);
@@ -1194,7 +1194,7 @@ export default function AdminDashboard({ token, username, slug: propSlug = '', o
             }
           }
         } catch (e) {
-          console.warn('Bundle fallback error:', e);
+          console.warn('[MENU] Bundle fallback notice:', e);
         }
       }
 
@@ -1202,21 +1202,16 @@ export default function AdminDashboard({ token, username, slug: propSlug = '', o
       const safeDishes = Array.isArray(dishData) ? dishData : [];
       const safeCombos = Array.isArray(comboData) ? comboData : [];
 
+      console.log('[MENU] requested slug:', currentSlug || '(authenticated tenant)');
+      console.log('[MENU] resolved restaurant id:', infoData ? infoData.id : 'none');
+      console.log('[MENU] API dishes count:', safeDishes.length);
+      console.log('[MENU] API categories count:', safeCats.length);
+      console.log('[MENU] final dishes count:', safeDishes.length);
+
       setCategories(safeCats);
       setDishes(safeDishes);
       if (infoData) setRestaurantInfo(infoData);
       setCombos(safeCombos);
-
-      try {
-        const effectiveSlug = currentSlug || (infoData && infoData.slug) || '';
-        if (effectiveSlug) {
-          localStorage.setItem('touchqr_admin_slug', effectiveSlug);
-          localStorage.setItem(`admin_cache_${effectiveSlug}_categories`, JSON.stringify(safeCats));
-          localStorage.setItem(`admin_cache_${effectiveSlug}_dishes`, JSON.stringify(safeDishes));
-          if (infoData) localStorage.setItem(`admin_cache_${effectiveSlug}_info`, JSON.stringify(infoData));
-          localStorage.setItem(`admin_cache_${effectiveSlug}_combos`, JSON.stringify(safeCombos));
-        }
-      } catch (e) {}
 
       if (subStatusData) setSubscriptionStatus(subStatusData);
       if (infoData) {
@@ -1225,7 +1220,6 @@ export default function AdminDashboard({ token, username, slug: propSlug = '', o
           id: infoData.id,
           name: infoData.name || '',
           slug: infoData.slug || '',
-          tagline: infoData.tagline || '',
           logo: infoData.logo || '',
           phone: infoData.phone || '',
           address: infoData.address || '',

@@ -527,7 +527,7 @@ export default function App() {
       setLoading(false);
       return;
     }
-    const slug = forcedSlug || getSlugFromUrl() || (info && info.slug) || localStorage.getItem('touchqr_admin_slug') || '';
+    const slug = forcedSlug || getSlugFromUrl() || (info && info.slug) || localStorage.getItem('touchqr_admin_slug') || localStorage.getItem('raman_admin_slug') || '';
     const isRootAdminRoute = rawPath === '/admin' || rawPath === '/super-admin' || rawPath === '/superadmin';
 
     // Skip full menu load for superadmin dashboard or standalone kitchen KDS
@@ -549,6 +549,7 @@ export default function App() {
       return;
     }
     const isAdminMode = Boolean(adminToken);
+    console.log('[MENU] requested slug:', slug || '(default active tenant)');
     try {
       let infoData = null;
       let catData = [];
@@ -567,17 +568,21 @@ export default function App() {
               dishData = bundle.dishes || [];
               comboData = bundle.combos || [];
             }
+          } else {
+            console.warn('[MENU] menu-bundle HTTP status:', bundleRes.status);
           }
-        } catch (e) {}
+        } catch (e) {
+          console.warn('[MENU] menu-bundle fetch error:', e);
+        }
       }
 
       // Fallback or Admin/Search view: parallel fetch
       if (!infoData || !dishData || dishData.length === 0) {
         const [resInfo, resCat, resDish, resCombo] = await Promise.all([
-          fetchRestaurantInfo(slug),
-          fetchCategories({ slug, adminView: isAdminMode }),
-          fetchDishes({ query: searchQuery, slug, adminView: isAdminMode }),
-          fetchCombos(slug).catch(() => [])
+          fetchRestaurantInfo({ token: adminToken, slug }),
+          fetchCategories({ slug, adminView: isAdminMode, token: adminToken }),
+          fetchDishes({ query: searchQuery, slug, adminView: isAdminMode, token: adminToken }),
+          fetchCombos(slug).catch((err) => { console.warn('[MENU] fetchCombos notice:', err); return []; })
         ]);
         if (!infoData) infoData = resInfo;
         if (!catData || catData.length === 0) catData = resCat || [];
@@ -586,16 +591,23 @@ export default function App() {
       }
 
       if (!infoData || infoData.notFound) {
+        console.warn('[MENU] Restaurant not found for slug:', slug);
         setRestaurantStatus('not_found');
         setLoading(false);
         return;
       }
       if (infoData.suspended) {
+        console.warn('[MENU] Restaurant suspended:', infoData.name);
         setRestaurantStatus('suspended');
         setInfo(infoData);
         setLoading(false);
         return;
       }
+
+      console.log('[MENU] resolved restaurant id:', infoData ? infoData.id : 'none');
+      console.log('[MENU] API dishes count:', dishData ? dishData.length : 0);
+      console.log('[MENU] API categories count:', catData ? catData.length : 0);
+      console.log('[MENU] final dishes count:', dishData ? dishData.length : 0);
 
       setInfo(infoData);
       setCategories(catData);
