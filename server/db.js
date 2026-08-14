@@ -23,7 +23,7 @@ async function initDb() {
           connectionString: process.env.DATABASE_URL,
           ssl: { rejectUnauthorized: false },
           connectionTimeoutMillis: 10000,
-          max: process.env.VERCEL ? 3 : 10,
+          max: 10,
           idleTimeoutMillis: 30000,
         });
       }

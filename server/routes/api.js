@@ -158,9 +158,6 @@ router.get('/menu-bundle', async (req, res) => {
     const targetId = resto.id;
     const planTierKey = (resto.plan_tier || 'pro').toLowerCase();
 
-    // Asynchronously increment scan_count in background
-    query('UPDATE restaurants SET scan_count = COALESCE(scan_count, 0) + 1 WHERE id = $1', [targetId]).catch(() => {});
-
     // Execute queries in parallel
     const [categories, dishes, combos, planRows] = await Promise.all([
       query("SELECT * FROM categories WHERE restaurant_id = $1 AND (active IS NULL OR active::text NOT IN ('0', 'false', 'f')) ORDER BY sort_order ASC, id ASC", [targetId]),
@@ -174,6 +171,9 @@ router.get('/menu-bundle', async (req, res) => {
       query("SELECT * FROM combos WHERE restaurant_id = $1 AND (available IS NOT FALSE) ORDER BY sort_order ASC, id ASC", [targetId]),
       query('SELECT whatsapp_ordering_enabled, whatsapp_enabled, direct_ordering_enabled, watermark_removal_enabled, custom_domain_enabled, multi_language_enabled, analytics_export_enabled, gst_invoice_enabled, ai_review_enabled, google_reviews_enabled, bluetooth_kot_enabled, dual_printer_enabled FROM saas_plans WHERE key = $1 OR LOWER(key) = $1', [planTierKey]).catch(() => [])
     ]);
+
+    // Increment scan count asynchronously after main data fetch
+    query('UPDATE restaurants SET scan_count = COALESCE(scan_count, 0) + 1 WHERE id = $1', [targetId]).catch(() => {});
 
     let filtersVis = resto.filters_visibility;
     if (typeof filtersVis === 'string') {
