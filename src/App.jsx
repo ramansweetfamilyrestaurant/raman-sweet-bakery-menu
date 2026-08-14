@@ -591,7 +591,7 @@ export default function App() {
       }
 
       if (!infoData && dishData && dishData.length > 0) {
-        infoData = { id: 1, name: 'Raman Sweet Bakery & Family Restaurant', slug: slug || 'raman-sweet-bakery' };
+        infoData = { id: 1, name: 'Digital Restaurant Menu', slug: slug || 'menu' };
       }
 
       if ((!infoData || infoData.notFound) && (!dishData || dishData.length === 0)) {
