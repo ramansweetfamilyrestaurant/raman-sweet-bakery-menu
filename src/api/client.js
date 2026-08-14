@@ -172,6 +172,18 @@ export async function fetchAdminStats(token) {
   return handleResponse(res, 'Failed to fetch admin stats');
 }
 
+export async function updateTenantSettings(token, settingsData) {
+  const res = await fetch(`${API_BASE}/admin/settings`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      Authorization: `Bearer ${token}`,
+    },
+    body: JSON.stringify(settingsData),
+  });
+  return handleResponse(res, 'Failed to update tenant settings');
+}
+
 // Helper: Compress image file on client-side before uploading (max 800px, 82% JPEG quality)
 async function compressImageFile(file) {
   if (!file || !file.type || !file.type.startsWith('image/')) return file;

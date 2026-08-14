@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { fetchCategories, fetchDishes, toggleDishAvailability, toggleCategoryActive, deleteDish, deleteCategory, fetchRestaurantInfo, updateDishPrice, fetchAnnouncements, fetchAdminOrders, updateOrderStatus, uploadImage, fetchServiceRequests, resolveServiceRequest, fetchAdminAnalytics, fetchAdminCombos, createCombo, updateCombo, deleteCombo, toggleComboAvailability, optimizeDatabase } from '../../api/client';
+import { fetchCategories, fetchDishes, toggleDishAvailability, toggleCategoryActive, deleteDish, deleteCategory, fetchRestaurantInfo, updateDishPrice, fetchAnnouncements, fetchAdminOrders, updateOrderStatus, uploadImage, fetchServiceRequests, resolveServiceRequest, fetchAdminAnalytics, fetchAdminCombos, createCombo, updateCombo, deleteCombo, toggleComboAvailability, optimizeDatabase, updateTenantSettings } from '../../api/client';
 import { getPlanDetails } from '../../config/plans';
 import DishFormModal from './DishFormModal';
 import CategoryFormModal from './CategoryFormModal';
@@ -130,11 +130,7 @@ export default function AdminDashboard({ token, username, slug: propSlug = '', o
           console.log('📍 Auto GPS location granted:', lat, lng);
           setSettingsForm(prev => ({ ...prev, latitude: lat, longitude: lng }));
           if (token) {
-            fetch('/api/admin/settings', {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
-              body: JSON.stringify({ latitude: lat, longitude: lng })
-            }).catch(e => console.warn('Auto GPS save error:', e));
+            updateTenantSettings(token, { latitude: lat, longitude: lng }).catch(e => console.warn('Auto GPS save error:', e));
           }
         },
         (err) => console.warn('Auto GPS location skipped:', err),
@@ -208,11 +204,7 @@ export default function AdminDashboard({ token, username, slug: propSlug = '', o
         const lng = pos.coords.longitude;
         setSettingsForm(prev => ({ ...prev, latitude: lat, longitude: lng }));
         if (token) {
-          fetch('/api/admin/settings', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
-            body: JSON.stringify({ latitude: lat, longitude: lng })
-          }).then(() => {
+          updateTenantSettings(token, { latitude: lat, longitude: lng }).then(() => {
             setToastMessage(`✨ GPS Coordinates Captured & Auto-Saved! (${lat.toFixed(4)}, ${lng.toFixed(4)})`);
             setTimeout(() => setToastMessage(''), 5000);
           }).catch(() => {
