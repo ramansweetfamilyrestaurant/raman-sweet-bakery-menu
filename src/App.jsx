@@ -527,7 +527,7 @@ export default function App() {
       setLoading(false);
       return;
     }
-    const slug = forcedSlug || getSlugFromUrl();
+    const slug = forcedSlug || getSlugFromUrl() || (info && info.slug) || localStorage.getItem('raman_admin_slug') || 'raman-sweet-bakery';
     const isRootAdminRoute = rawPath === '/admin' || rawPath === '/super-admin' || rawPath === '/superadmin';
 
     // Skip full menu load for superadmin dashboard or standalone kitchen KDS
@@ -558,7 +558,8 @@ export default function App() {
       // Fast single-bundle fetch for public customer view
       if (!isAdminMode && !searchQuery) {
         try {
-          const bundleRes = await fetch(`/api/menu-bundle?slug=${encodeURIComponent(slug)}`);
+          const effectiveSlug = slug || 'raman-sweet-bakery';
+          const bundleRes = await fetch(`/api/menu-bundle?slug=${encodeURIComponent(effectiveSlug)}`);
           if (bundleRes.ok) {
             const bundle = await bundleRes.json();
             if (bundle && bundle.info) {

@@ -1170,7 +1170,7 @@ export default function AdminDashboard({ token, username, slug: propSlug = '', o
       setLoading(true);
     }
     try {
-      const currentSlug = propSlug || localStorage.getItem('raman_admin_slug') || (restaurantInfo && restaurantInfo.slug) || '';
+      const currentSlug = propSlug || localStorage.getItem('raman_admin_slug') || (restaurantInfo && restaurantInfo.slug) || 'raman-sweet-bakery';
       let [catData, dishData, infoData, comboData, subStatusData] = await Promise.all([
         fetchCategories({ adminView: true, token, slug: currentSlug }).catch(() => []),
         fetchDishes({ adminView: true, token, slug: currentSlug }).catch(() => []),
@@ -1182,7 +1182,7 @@ export default function AdminDashboard({ token, username, slug: propSlug = '', o
       // If dishData or catData is empty, fallback to menu-bundle endpoint using tenant slug or fallback
       if (!dishData || dishData.length === 0 || !catData || catData.length === 0) {
         try {
-          const bundleSlug = currentSlug || '';
+          const bundleSlug = currentSlug || 'raman-sweet-bakery';
           const bundleRes = await fetch(`/api/menu-bundle?slug=${encodeURIComponent(bundleSlug)}`);
           if (bundleRes.ok) {
             const bundle = await bundleRes.json();
