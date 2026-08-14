@@ -36,8 +36,8 @@ async function runSaaSMigration() {
     await pool.query('ALTER TABLE admins ADD COLUMN IF NOT EXISTS restaurant_id INT REFERENCES restaurants(id) ON DELETE CASCADE;');
     await pool.query("ALTER TABLE admins ADD COLUMN IF NOT EXISTS role VARCHAR(50) DEFAULT 'restaurant_admin';");
 
-    // 3. Seed primary restaurant
-    const restoCheck = await pool.query("SELECT * FROM restaurants WHERE slug = 'raman-sweet-bakery'");
+    // 3. Seed demo restaurant
+    const restoCheck = await pool.query("SELECT * FROM restaurants WHERE slug = 'touchqr-demo'");
     let primaryRestoId = restoCheck.rows[0]?.id;
 
     if (!primaryRestoId) {
@@ -46,12 +46,12 @@ async function runSaaSMigration() {
           name, slug, tagline, logo, phone, address, opening_hours, google_review_url, google_maps_url, active
         ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10) RETURNING id
       `, [
-        'Raman Sweet Bakery & Family Restaurant',
-        'raman-sweet-bakery',
-        '100% Pure Vegetarian • Pure Desi Ghee Sweets • Live Bakery',
+        'TouchQR Demo Restaurant',
+        'touchqr-demo',
+        'QR Menu - Table Ordering - Restaurant Operations',
         '/uploads/logo.jpg',
         '+91 9708366583',
-        'HawaiAdda Chowk, Near katchari Gumti, Motihari, Bihar',
+        'Demo Address, Your City',
         '8:00 AM - 10:30 PM (Mon - Sun)',
         'https://r.revmeai.com/r/ee7e4c91-f85e-4a01-8767-eeaee0a89341',
         'https://share.google/2M5mFMPlmS6pAXRf7',

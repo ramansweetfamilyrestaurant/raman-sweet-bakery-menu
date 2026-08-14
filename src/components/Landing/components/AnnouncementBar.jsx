@@ -1,6 +1,6 @@
 import React from 'react';
 
-export default function AnnouncementBar({ trialDays = 17, onStartTrial }) {
+export default function AnnouncementBar({ trialDays = 16, onStartTrial }) {
   return (
     <div className="km-announcement-bar">
       <div className="km-announcement-content">

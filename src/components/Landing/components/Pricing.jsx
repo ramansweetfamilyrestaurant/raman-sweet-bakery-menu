@@ -1,7 +1,7 @@
 import React from 'react';
 import { Check, ArrowRight, Sparkles } from 'lucide-react';
 
-export default function Pricing({ publicPlans = [], trialDays = 17, onSelectPlan }) {
+export default function Pricing({ publicPlans = [], trialDays = 16, onSelectPlan }) {
   const [showMoreMap, setShowMoreMap] = React.useState({});
 
   const toggleShowMore = (key) => {

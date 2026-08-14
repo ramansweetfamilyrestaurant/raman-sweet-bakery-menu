@@ -1,7 +1,7 @@
 import React from 'react';
 import { ArrowRight, CheckCircle2, Play, Sparkles, Smartphone, ShieldCheck, Printer, Bell, Star } from 'lucide-react';
 
-export default function Hero({ trialDays = 17, onStartTrial, onLiveDemo }) {
+export default function Hero({ trialDays = 16, onStartTrial, onLiveDemo }) {
   return (
     <section className="km-hero-section">
       <div className="km-container">

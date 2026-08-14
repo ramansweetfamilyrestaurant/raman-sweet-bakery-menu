@@ -230,7 +230,7 @@ export async function uploadImageToR2({ buffer, mimeType, restaurantId = 1, enti
   } catch (primaryErr) {
     console.warn(`⚠️ R2 upload to bucket "${targetBucket}" failed (${primaryErr.name}: ${primaryErr.message}). Trying fallback bucket...`);
 
-    const fallbackBucket = targetBucket === 'khana-master-media' ? 'khanamaster-menu-images' : 'khana-master-media';
+    const fallbackBucket = targetBucket === 'touchqr-media' ? 'touchqr-menu-images' : 'touchqr-media';
     try {
       const fallbackCommand = new PutObjectCommand({
         Bucket: fallbackBucket,
@@ -373,7 +373,7 @@ export async function getR2ObjectBuffer(objectKey) {
       contentType: response.ContentType || 'image/webp'
     };
   } catch (err) {
-    const fallbackBucket = config.bucketName === 'khana-master-media' ? 'khanamaster-menu-images' : 'khana-master-media';
+    const fallbackBucket = config.bucketName === 'touchqr-media' ? 'touchqr-menu-images' : 'touchqr-media';
     try {
       const fallbackCommand = new GetObjectCommand({
         Bucket: fallbackBucket,

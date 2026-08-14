@@ -116,7 +116,7 @@ export default function StandaloneKdsPage({ slug = '' }) {
         }
       }
       if (!targetSlug) {
-        targetSlug = localStorage.getItem('raman_admin_slug') || localStorage.getItem('raman_last_slug') || '';
+        targetSlug = localStorage.getItem('touchqr_admin_slug') || localStorage.getItem('touchqr_last_slug') || '';
       }
       if (!targetSlug) {
         setNotFound(true);
@@ -183,7 +183,7 @@ export default function StandaloneKdsPage({ slug = '' }) {
       currentSlug = parts[parts.length - 2];
     }
     if (!currentSlug) {
-      currentSlug = localStorage.getItem('raman_admin_slug') || '';
+      currentSlug = localStorage.getItem('touchqr_admin_slug') || '';
     }
     try {
       setOrders(prev => prev.filter(o => o.id !== orderId));
@@ -516,3 +516,4 @@ export default function StandaloneKdsPage({ slug = '' }) {
     </div>
   );
 }
+

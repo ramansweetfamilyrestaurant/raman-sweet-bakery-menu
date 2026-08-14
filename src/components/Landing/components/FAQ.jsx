@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { Plus, Minus } from 'lucide-react';
 
-export default function FAQ({ trialDays = 17 }) {
+export default function FAQ({ trialDays = 16 }) {
   const [openIndex, setOpenIndex] = useState(0);
 
   const faqItems = [

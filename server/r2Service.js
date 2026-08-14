@@ -56,7 +56,7 @@ export async function uploadToR2(filename, buffer, mimeType) {
     throw new Error('Cloudflare R2 credentials are missing or invalid in environment variables');
   }
 
-  const bucketName = (process.env.R2_BUCKET_NAME || 'khanamaster-menu-images').trim();
+  const bucketName = (process.env.R2_BUCKET_NAME || 'touchqr-menu-images').trim();
   const publicDomain = (process.env.R2_PUBLIC_DOMAIN || '').trim();
   const endpointEnv = (process.env.R2_ENDPOINT || '').trim();
 

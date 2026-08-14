@@ -66,12 +66,12 @@ export default function SuperAdminDashboard({ token, username, onLogout, onRetur
   // Payment Gateway API Keys & System Settings State
   const [paymentKeys, setPaymentKeys] = useState(() => {
     let cachedLogo = '';
-    try { cachedLogo = localStorage.getItem('km_platform_logo_url') || ''; } catch {}
+    try { cachedLogo = localStorage.getItem('touchqr_platform_logo_url') || ''; } catch {}
     return {
       cashfree_app_id: '',
       cashfree_secret_key: '',
       support_whatsapp: '919876543210',
-      default_trial_days: '14',
+      default_trial_days: '16',
       platform_logo_url: cachedLogo
     };
   });
@@ -91,10 +91,10 @@ export default function SuperAdminDashboard({ token, username, onLogout, onRetur
       if (data && typeof data === 'object') {
         const logoUrlFromBackend = data.platform_logo_url;
         if (typeof logoUrlFromBackend === 'string' && logoUrlFromBackend.trim() !== '') {
-          try { localStorage.setItem('km_platform_logo_url', logoUrlFromBackend); } catch {}
+          try { localStorage.setItem('touchqr_platform_logo_url', logoUrlFromBackend); } catch {}
           setLogoErr(false);
         } else if (logoUrlFromBackend === '' || logoUrlFromBackend === null) {
-          try { localStorage.removeItem('km_platform_logo_url'); } catch {}
+          try { localStorage.removeItem('touchqr_platform_logo_url'); } catch {}
           setLogoErr(false);
         }
         setPaymentKeys(prev => ({
@@ -102,7 +102,7 @@ export default function SuperAdminDashboard({ token, username, onLogout, onRetur
           cashfree_app_id: data.cashfree_app_id !== undefined ? data.cashfree_app_id : prev.cashfree_app_id,
           cashfree_secret_key: data.cashfree_secret_key !== undefined ? data.cashfree_secret_key : prev.cashfree_secret_key,
           support_whatsapp: data.support_whatsapp || prev.support_whatsapp || '919876543210',
-          default_trial_days: data.default_trial_days || prev.default_trial_days || '14',
+          default_trial_days: data.default_trial_days || prev.default_trial_days || '16',
           platform_logo_url: logoUrlFromBackend !== undefined ? logoUrlFromBackend : prev.platform_logo_url
         }));
       }
@@ -2984,7 +2984,7 @@ export default function SuperAdminDashboard({ token, username, onLogout, onRetur
                         type="button"
                         onClick={async () => {
                           if (window.confirm('Reset platform logo to default crown icon?')) {
-                            try { localStorage.removeItem('km_platform_logo_url'); } catch {}
+                            try { localStorage.removeItem('touchqr_platform_logo_url'); } catch {}
                             const updated = { ...paymentKeys, platform_logo_url: '' };
                             setPaymentKeys(updated);
                             await fetch('/api/superadmin/settings', {
@@ -3328,3 +3328,4 @@ export default function SuperAdminDashboard({ token, username, onLogout, onRetur
     </div>
   );
 }
+

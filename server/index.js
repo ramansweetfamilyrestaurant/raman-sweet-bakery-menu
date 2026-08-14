@@ -269,7 +269,7 @@ if (fs.existsSync(distDir)) {
     if (fs.existsSync(devHtml)) {
       res.sendFile(devHtml);
     } else {
-      res.send(`<!DOCTYPE html><html><head><title>Khana Master SaaS</title></head><body><div id="root"></div></body></html>`);
+      res.send(`<!DOCTYPE html><html><head><title>TouchQR SaaS</title></head><body><div id="root"></div></body></html>`);
     }
   });
 }
@@ -310,7 +310,7 @@ async function startServer(portToTry = PORT) {
     console.log('⚡ [R2 STORAGE DIAGNOSTICS] Status:', JSON.stringify(diag));
 
     const server = app.listen(portToTry, () => {
-      console.log(`✨ Raman Sweet Bakery Server running on http://localhost:${portToTry}`);
+      console.log(`✨ TouchQR Server running on http://localhost:${portToTry}`);
     });
     server.on('error', (err) => {
       if (err.code === 'EADDRINUSE') {

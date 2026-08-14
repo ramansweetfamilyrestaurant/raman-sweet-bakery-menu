@@ -27,7 +27,7 @@ export default function AdminHeader({
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [showMoreMenu]);
 
-  const restoName = restaurantInfo?.name || 'Raman Sweet Bakery & Family Restaurant';
+  const restoName = restaurantInfo?.name || 'Your Restaurant';
   const truncatedName = restoName.length > 22 ? `${restoName.substring(0, 20)}...` : restoName;
   const logoUrl = restaurantInfo?.logo;
   const resolvedLogo = resolveImageUrl(logoUrl);
@@ -259,4 +259,3 @@ export default function AdminHeader({
     </header>
   );
 }
-

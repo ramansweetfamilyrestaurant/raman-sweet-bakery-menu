@@ -13,7 +13,7 @@ export default function PaymentModal({ restoInfo, planTier = 'pro', planPrice = 
     setErrorMsg('');
 
     try {
-      const token = localStorage.getItem('raman_admin_token') || localStorage.getItem('adminToken');
+      const token = localStorage.getItem('touchqr_admin_token') || localStorage.getItem('adminToken');
       if (!token) {
         throw new Error('Admin session token missing. Please log in again.');
       }
@@ -207,3 +207,4 @@ export default function PaymentModal({ restoInfo, planTier = 'pro', planPrice = 
     </div>
   );
 }
+

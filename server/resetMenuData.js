@@ -1,7 +1,7 @@
 import { initDb, query } from './db.js';
 
 async function resetMenu() {
-  console.log('🔄 Initializing DB and resetting menu to new Raman Restaurant menu card...');
+  console.log('Initializing DB and resetting demo menu data...');
   await initDb();
 
   // Clear existing dishes and categories

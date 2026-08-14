@@ -8,7 +8,7 @@ import bcrypt from 'bcryptjs';
 
 const router = express.Router();
 const settingsPath = path.resolve('server/settings.json');
-const JWT_SECRET = process.env.JWT_SECRET || 'raman_bakery_secret_jwt_key_2026_super_secure';
+const JWT_SECRET = process.env.JWT_SECRET || 'touchqr_secret_jwt_key_change_me';
 
 // GET Database Debug & Diagnostics Endpoint
 router.get('/debug-db', async (req, res) => {
@@ -67,10 +67,10 @@ router.get('/plans', async (req, res) => {
 
 
 
-// Helper to resolve target restaurant by JWT token or slug (or fallback to primary raman-sweet-bakery)
+// Helper to resolve target restaurant by JWT token, slug, or custom domain.
 // Helper to resolve target restaurant by slug or JWT token
 async function resolveRestaurant(req, slug) {
-  // 0. Check incoming Host header for custom domain mapping (e.g. menu.ramansweets.com)
+  // 0. Check incoming Host header for custom domain mapping (e.g. menu.restaurant.com)
   if (req && req.headers) {
     const rawHost = (req.headers['x-forwarded-host'] || req.headers.host || '').split(':')[0].toLowerCase().replace(/^www\./, '');
     if (rawHost && !rawHost.includes('touchqr') && !rawHost.includes('localhost') && !rawHost.includes('vercel.app') && !rawHost.includes('127.0.0.1')) {
@@ -815,7 +815,7 @@ router.post('/register', async (req, res) => {
 
       const now = new Date();
       const trialDaysRow = await txQuery("SELECT value FROM system_settings WHERE key = 'default_trial_days'");
-      const trialDays = Math.max(1, parseInt(trialDaysRow[0]?.value || '14', 10));
+      const trialDays = Math.max(1, parseInt(trialDaysRow[0]?.value || '16', 10));
       const trialEnd = new Date(now.getTime() + trialDays * 24 * 60 * 60 * 1000);
       const nowISO = now.toISOString();
       const expiryDateISO = trialEnd.toISOString();

@@ -124,7 +124,7 @@ export default function OrdersView({
         </button>
         {kdsEnabled && (
           <a
-            href={`/${localStorage.getItem('raman_admin_slug') || restaurantInfo?.slug || ''}/kitchen`}
+            href={`/${localStorage.getItem('touchqr_admin_slug') || restaurantInfo?.slug || ''}/kitchen`}
             target="_blank"
             rel="noopener noreferrer"
             className="adm-btn adm-btn-sm adm-btn-secondary"
@@ -462,3 +462,4 @@ export default function OrdersView({
     </div>
   );
 }
+

@@ -22,7 +22,7 @@ import ReviewView from './views/ReviewView';
 export default function AdminDashboard({ token, username, slug: propSlug = '', onLogout, onReturnToMenu }) {
   const getInitialAdminState = (key, fallback) => {
     try {
-      const currentSlug = propSlug || localStorage.getItem('raman_admin_slug') || '';
+      const currentSlug = propSlug || localStorage.getItem('touchqr_admin_slug') || '';
       if (!currentSlug) return fallback;
       const saved = localStorage.getItem(`admin_cache_${currentSlug}_${key}`);
       return saved ? JSON.parse(saved) : fallback;
@@ -1170,7 +1170,7 @@ export default function AdminDashboard({ token, username, slug: propSlug = '', o
       setLoading(true);
     }
     try {
-      const currentSlug = propSlug || localStorage.getItem('raman_admin_slug') || (restaurantInfo && restaurantInfo.slug) || 'raman-sweet-bakery';
+      const currentSlug = propSlug || localStorage.getItem('touchqr_admin_slug') || (restaurantInfo && restaurantInfo.slug) || '';
       let [catData, dishData, infoData, comboData, subStatusData] = await Promise.all([
         fetchCategories({ adminView: true, token, slug: currentSlug }).catch(() => []),
         fetchDishes({ adminView: true, token, slug: currentSlug }).catch(() => []),
@@ -1182,7 +1182,7 @@ export default function AdminDashboard({ token, username, slug: propSlug = '', o
       // If dishData or catData is empty, fallback to menu-bundle endpoint using tenant slug or fallback
       if (!dishData || dishData.length === 0 || !catData || catData.length === 0) {
         try {
-          const bundleSlug = currentSlug || 'raman-sweet-bakery';
+          const bundleSlug = currentSlug || '';
           const bundleRes = await fetch(`/api/menu-bundle?slug=${encodeURIComponent(bundleSlug)}`);
           if (bundleRes.ok) {
             const bundle = await bundleRes.json();
@@ -1210,7 +1210,7 @@ export default function AdminDashboard({ token, username, slug: propSlug = '', o
       try {
         const effectiveSlug = currentSlug || (infoData && infoData.slug) || '';
         if (effectiveSlug) {
-          localStorage.setItem('raman_admin_slug', effectiveSlug);
+          localStorage.setItem('touchqr_admin_slug', effectiveSlug);
           localStorage.setItem(`admin_cache_${effectiveSlug}_categories`, JSON.stringify(safeCats));
           localStorage.setItem(`admin_cache_${effectiveSlug}_dishes`, JSON.stringify(safeDishes));
           if (infoData) localStorage.setItem(`admin_cache_${effectiveSlug}_info`, JSON.stringify(infoData));
@@ -2732,3 +2732,4 @@ export default function AdminDashboard({ token, username, slug: propSlug = '', o
     </div>
   );
 }
+

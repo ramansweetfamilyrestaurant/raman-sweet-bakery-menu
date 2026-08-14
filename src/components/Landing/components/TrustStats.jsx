@@ -1,6 +1,6 @@
 import React from 'react';
 
-export default function TrustStats({ trialDays = 17 }) {
+export default function TrustStats({ trialDays = 16 }) {
   return (
     <section className="km-trust-section">
       <div className="km-container">

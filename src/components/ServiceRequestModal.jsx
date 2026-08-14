@@ -20,7 +20,7 @@ export default function ServiceRequestModal({ tableNum, slug, onClose, onSuccess
       const selectedObj = requestOptions.find(o => o.id === selectedType);
       const reqLabel = selectedObj ? selectedObj.label : 'Call Waiter';
       const res = await createServiceRequest({
-        slug: slug || 'raman-sweet-bakery',
+        slug: slug || '',
         table_number: tableNum || '1',
         request_type: reqLabel,
         note: customNote

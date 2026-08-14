@@ -60,7 +60,7 @@ export default function SubscriptionBillingPage({ restoInfo, token, onProceedToD
 
   const [logoUrl, setLogoUrl] = useState(() => {
     let cached = '';
-    try { cached = localStorage.getItem('km_platform_logo_url') || ''; } catch {}
+    try { cached = localStorage.getItem('touchqr_platform_logo_url') || ''; } catch {}
     return cached;
   });
   const [logoErr, setLogoErr] = useState(false);
@@ -85,10 +85,10 @@ export default function SubscriptionBillingPage({ restoInfo, token, onProceedToD
           if (typeof data.platform_logo_url === 'string') {
             if (data.platform_logo_url.trim() !== '') {
               setLogoUrl(data.platform_logo_url);
-              try { localStorage.setItem('km_platform_logo_url', data.platform_logo_url); } catch {}
+              try { localStorage.setItem('touchqr_platform_logo_url', data.platform_logo_url); } catch {}
             } else {
               setLogoUrl('');
-              try { localStorage.removeItem('km_platform_logo_url'); } catch {}
+              try { localStorage.removeItem('touchqr_platform_logo_url'); } catch {}
             }
           }
         }
@@ -98,7 +98,7 @@ export default function SubscriptionBillingPage({ restoInfo, token, onProceedToD
 
   // 1. Fetch current restaurant details & subscription status server-side if restoInfo is empty
   useEffect(() => {
-    const authToken = token || localStorage.getItem('raman_admin_token') || localStorage.getItem('adminToken');
+    const authToken = token || localStorage.getItem('touchqr_admin_token') || localStorage.getItem('adminToken');
     if (!restoInfo && authToken) {
       fetch('/api/admin/subscription-status', {
         headers: { Authorization: `Bearer ${authToken}` }
@@ -106,10 +106,10 @@ export default function SubscriptionBillingPage({ restoInfo, token, onProceedToD
         .then(res => {
           if (res.status === 401 || res.status === 403) {
             console.warn('[Billing] Stale/expired token detected. Clearing storage...');
-            localStorage.removeItem('raman_admin_token');
+            localStorage.removeItem('touchqr_admin_token');
             localStorage.removeItem('adminToken');
-            localStorage.removeItem('raman_admin_user');
-            localStorage.removeItem('raman_admin_slug');
+            localStorage.removeItem('touchqr_admin_user');
+            localStorage.removeItem('touchqr_admin_slug');
             window.location.href = '/register';
             return null;
           }
@@ -118,7 +118,7 @@ export default function SubscriptionBillingPage({ restoInfo, token, onProceedToD
         .then(data => {
           if (data && !data.error) {
             setCurrentResto({
-              name: data.restaurant_name || localStorage.getItem('raman_admin_user') || 'Your Restaurant',
+              name: data.restaurant_name || localStorage.getItem('touchqr_admin_user') || 'Your Restaurant',
               plan_tier: data.plan_tier || 'pro',
               mandate_status: data.mandate_status || 'pending',
               auto_debit_enabled: data.auto_debit_enabled,
@@ -126,13 +126,13 @@ export default function SubscriptionBillingPage({ restoInfo, token, onProceedToD
               trial_ends_at: data.trial_ends_at || data.plan_expires_at
             });
             if (data.default_trial_days) {
-              setTrialSettingDays(Math.max(1, parseInt(data.default_trial_days, 10) || 14));
+              setTrialSettingDays(Math.max(1, parseInt(data.default_trial_days, 10) || 16));
             }
             if (data.mandate_status === 'active') {
               setMandateActive(true);
             }
           } else if (data && data.error && (data.error.includes('token') || data.error.includes('expired'))) {
-            localStorage.removeItem('raman_admin_token');
+            localStorage.removeItem('touchqr_admin_token');
             localStorage.removeItem('adminToken');
             window.location.href = '/register';
           }
@@ -171,7 +171,7 @@ export default function SubscriptionBillingPage({ restoInfo, token, onProceedToD
       return () => clearTimeout(timer);
     }
 
-    const authToken = token || localStorage.getItem('raman_admin_token') || localStorage.getItem('adminToken');
+    const authToken = token || localStorage.getItem('touchqr_admin_token') || localStorage.getItem('adminToken');
     if (!authToken) return;
 
     const pollInterval = setInterval(async () => {
@@ -260,7 +260,7 @@ export default function SubscriptionBillingPage({ restoInfo, token, onProceedToD
     localStorage.removeItem('pending_subscription_id');
 
     try {
-      const authToken = token || localStorage.getItem('raman_admin_token') || localStorage.getItem('adminToken');
+      const authToken = token || localStorage.getItem('touchqr_admin_token') || localStorage.getItem('adminToken');
       if (!authToken) {
         throw new Error('Admin session token missing. Please register or log in again.');
       }
@@ -332,7 +332,7 @@ export default function SubscriptionBillingPage({ restoInfo, token, onProceedToD
     if (!subId) return;
     setVerifying(true);
     try {
-      const authToken = token || localStorage.getItem('raman_admin_token') || localStorage.getItem('adminToken');
+      const authToken = token || localStorage.getItem('touchqr_admin_token') || localStorage.getItem('adminToken');
       const res = await verifyCashfreeSubscription(subId, authToken);
 
       if (res.authorized === true || res.subscription_status === 'ACTIVE') {
@@ -354,10 +354,10 @@ export default function SubscriptionBillingPage({ restoInfo, token, onProceedToD
   };
 
   const handleLogout = () => {
-    localStorage.removeItem('raman_admin_token');
+    localStorage.removeItem('touchqr_admin_token');
     localStorage.removeItem('adminToken');
-    localStorage.removeItem('raman_admin_user');
-    localStorage.removeItem('raman_admin_slug');
+    localStorage.removeItem('touchqr_admin_user');
+    localStorage.removeItem('touchqr_admin_slug');
     window.location.href = '/register';
   };
 
@@ -467,7 +467,7 @@ export default function SubscriptionBillingPage({ restoInfo, token, onProceedToD
           Activate {calcDays}-Day Free Trial 🚀
         </h1>
         <p style={{ fontSize: '0.84rem', color: '#A7F3D0', margin: '0 0 16px 0', lineHeight: 1.4 }}>
-          Account <strong>{activeResto?.name || localStorage.getItem('raman_admin_user') || 'Restaurant'}</strong> ready! Authorize UPI AutoPay to start.
+          Account <strong>{activeResto?.name || localStorage.getItem('touchqr_admin_user') || 'Restaurant'}</strong> ready! Authorize UPI AutoPay to start.
         </p>
 
         {/* Interactive SaaS Plan Selector Tabs */}
@@ -809,3 +809,5 @@ export default function SubscriptionBillingPage({ restoInfo, token, onProceedToD
     </div>
   );
 }
+
+

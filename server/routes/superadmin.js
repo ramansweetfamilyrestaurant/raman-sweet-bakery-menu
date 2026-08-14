@@ -19,7 +19,7 @@ async function getSharp() {
 }
 
 const router = express.Router();
-const JWT_SECRET = process.env.JWT_SECRET || 'raman_bakery_secret_jwt_key_2026_super_secure';
+const JWT_SECRET = process.env.JWT_SECRET || 'touchqr_secret_jwt_key_change_me';
 
 // Helper middleware to restrict endpoints to superadmin role only
 function requireSuperAdmin(req, res, next) {

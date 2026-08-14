@@ -78,7 +78,7 @@ export default function TermsOfService({ onOpenLogin, onStartTrial }) {
       <section id="free-trial" className="km-legal-section">
         <h2 className="km-legal-h2">7. Free Trial Terms</h2>
         <p className="km-legal-p">
-          New accounts are eligible for a zero-risk 17-Day Free Trial without entering credit card details. Upon expiration of the free trial period, continued access to public digital menus and kitchen tools requires selecting an active subscription plan.
+          New accounts are eligible for a zero-risk 16-Day Free Trial without entering credit card details. Upon expiration of the free trial period, continued access to public digital menus and kitchen tools requires selecting an active subscription plan.
         </p>
       </section>
 

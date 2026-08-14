@@ -618,7 +618,7 @@ async function createTables() {
         value TEXT NOT NULL
       );
       INSERT OR IGNORE INTO system_settings (key, value) VALUES ('support_whatsapp', '919876543210');
-      INSERT OR IGNORE INTO system_settings (key, value) VALUES ('default_trial_days', '14');
+      INSERT OR IGNORE INTO system_settings (key, value) VALUES ('default_trial_days', '16');
 
       CREATE TABLE IF NOT EXISTS stored_images (
         filename TEXT PRIMARY KEY,
@@ -851,8 +851,8 @@ async function createTables() {
 }
 
 async function seedData() {
-  // Ensure default primary restaurant (Raman Sweet Bakery) exists
-  const restoCheck = await query('SELECT * FROM restaurants WHERE slug = $1', ['raman-sweet-bakery']);
+  // Ensure a generic TouchQR demo restaurant exists for local/dev previews.
+  const restoCheck = await query('SELECT * FROM restaurants WHERE slug = $1', ['touchqr-demo']);
   let primaryRestoId = restoCheck[0]?.id;
 
   if (!primaryRestoId) {
@@ -861,19 +861,19 @@ async function seedData() {
         name, slug, tagline, logo, phone, address, opening_hours, google_review_url, google_maps_url, active
       ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10) RETURNING id
     `, [
-      'Raman Sweet Bakery & Family Restaurant',
-      'raman-sweet-bakery',
-      '100% Pure Vegetarian • Pure Desi Ghee Sweets • Live Bakery',
+      'TouchQR Demo Restaurant',
+      'touchqr-demo',
+      'QR Menu - Table Ordering - Restaurant Operations',
       '/uploads/logo.jpg',
       '+91 9708366583',
-      'HawaiAdda Chowk, Near katchari Gumti, Motihari, Bihar',
+      'Demo Address, Your City',
       '8:00 AM - 10:30 PM (Mon - Sun)',
       'https://r.revmeai.com/r/ee7e4c91-f85e-4a01-8767-eeaee0a89341',
       'https://share.google/2M5mFMPlmS6pAXRf7',
       1
     ]);
     primaryRestoId = res[0]?.id || res.lastInsertRowid || 1;
-    console.log(`🏨 Created primary tenant restaurant Raman Sweet Bakery (ID: ${primaryRestoId})`);
+    console.log(`Created TouchQR demo tenant restaurant (ID: ${primaryRestoId})`);
   }
 
   // Ensure Raja Restaurant exists by default
@@ -941,7 +941,7 @@ async function seedData() {
       await query("DELETE FROM service_requests WHERE status = 'resolved'");
       await query("DELETE FROM system_settings WHERE key LIKE '%razorpay%' OR key LIKE '%rzp%'");
       if (dbType === 'postgres') {
-        await query("INSERT INTO system_settings (key, value) VALUES ('default_trial_days', '14') ON CONFLICT (key) DO NOTHING");
+        await query("INSERT INTO system_settings (key, value) VALUES ('default_trial_days', '16') ON CONFLICT (key) DO NOTHING");
         await query("INSERT INTO system_settings (key, value) VALUES ('support_whatsapp', '919876543210') ON CONFLICT (key) DO NOTHING");
       }
     } catch {}
@@ -959,7 +959,7 @@ async function seedData() {
       console.log('💳 Seeded default SaaS Plans into saas_plans table');
     }
 
-    // Auto-sync missing subscriptions records for existing restaurants (e.g. Raman Sweet Bakery, Raman Gourmet, Raja Restaurant)
+    // Auto-sync missing subscription records for existing restaurants.
     try {
       const restosWithoutSub = await query(`
         SELECT r.id, r.name, r.plan_tier, r.trial_started_at, r.trial_ends_at 
@@ -974,7 +974,7 @@ async function seedData() {
         (plans || []).forEach(p => { planMap[p.key] = p; });
 
         const now = new Date();
-        const defaultTrialEnd = new Date(now.getTime() + 14 * 86400 * 1000);
+        const defaultTrialEnd = new Date(now.getTime() + 16 * 86400 * 1000);
 
         for (const r of restosWithoutSub) {
           const tier = r.plan_tier || 'pro';
@@ -1020,7 +1020,7 @@ async function seedData() {
   const count = parseInt(catCheck[0]?.count || 0, 10);
 
   if (count === 0) {
-    console.log('🌱 Seeding authentic menu data for Raman Sweet Bakery...');
+    console.log('Seeding demo menu data for TouchQR demo tenant...');
     try {
       await query('DELETE FROM order_items WHERE order_id IN (SELECT id FROM orders WHERE restaurant_id = $1)', [primaryRestoId]);
       await query('DELETE FROM orders WHERE restaurant_id = $1', [primaryRestoId]);
@@ -1061,11 +1061,11 @@ async function seedData() {
           console.warn('Skipping existing dish:', d.name);
         }
       }
-      console.log(`✅ Seeded ${data.categories.length} categories and ${data.dishes.length} dishes for Raman Sweet Bakery!`);
+      console.log(`Seeded ${data.categories.length} categories and ${data.dishes.length} dishes for TouchQR demo tenant.`);
     }
   }
 
-  // Ensure Admin user exists for Raman Sweet Bakery
+  // Ensure a demo admin user exists.
   const adminCheck = await query('SELECT COUNT(*) as count FROM admins WHERE username = $1', ['admin']);
   const adminCount = parseInt(adminCheck[0]?.count || 0, 10);
   if (adminCount === 0) {
@@ -1104,7 +1104,7 @@ async function seedData() {
         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
       `, [
         primaryRestoId,
-        '🌟 Raman Special Chaat & Pakoda Thali',
+        'TouchQR Demo Snacks Combo',
         'Complete evening snacks platter with Aloo Tikki, Paneer Pakoda & 2x Kachoris',
         149,
         'https://images.unsplash.com/photo-1617692855027-33b14f061079?w=600&auto=format&fit=crop&q=80',
@@ -1482,4 +1482,3 @@ function getDbType() {
 }
 
 export { initDb, query, logAudit, runAutoDataSummarization, withTransaction, getDbType };
-

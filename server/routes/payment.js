@@ -6,7 +6,7 @@ import { authenticateToken } from '../middleware/auth.js';
 import { createCashfreeSubscriptionSession, fetchCashfreeSubscriptionStatus, getCashfreeConfig, getCashfreeConfigAsync, verifyCashfreeWebhookSignature } from '../services/cashfree.js';
 
 const router = express.Router();
-const JWT_SECRET = process.env.JWT_SECRET || 'raman_bakery_secret_jwt_key_2026_super_secure';
+const JWT_SECRET = process.env.JWT_SECRET || 'touchqr_secret_jwt_key_change_me';
 
 function getAppBaseUrl(req) {
   if (process.env.APP_BASE_URL && !process.env.APP_BASE_URL.includes('onrender.com')) {
@@ -91,7 +91,7 @@ router.post('/checkout-pre-register', async (req, res) => {
     };
 
     const sysRows = await query("SELECT value FROM system_settings WHERE key = 'default_trial_days'");
-    const trialDays = Math.max(1, parseInt(sysRows[0]?.value || '14', 10));
+    const trialDays = Math.max(1, parseInt(sysRows[0]?.value || '16', 10));
     const trialEndISO = new Date(Date.now() + trialDays * 86400 * 1000).toISOString();
 
     const regId = `reg_${Date.now()}_${Math.floor(1000 + Math.random() * 9000)}`;
@@ -267,7 +267,7 @@ export async function finalizePendingRegistration(reg_id, inputSubId = null) {
     const dbPlan = planRows[0] || { id: 2, key: 'pro', name: 'Pro Luxury Plan', price: 999 };
 
     const now = new Date();
-    const trialDays = regData.trial_days || 14;
+    const trialDays = regData.trial_days || 16;
     const trialEnd = new Date(now.getTime() + trialDays * 86400 * 1000);
     const nowISO = now.toISOString();
     const expiryDateISO = trialEnd.toISOString();
@@ -388,7 +388,7 @@ const handleCreateSubscription = async (req, res) => {
     const subTrailRows = await query(`
       SELECT trial_end FROM subscriptions WHERE restaurant_id = $1 ORDER BY id DESC LIMIT 1
     `, [targetRestoId]);
-    const trialEndISO = subTrailRows[0]?.trial_end || new Date(Date.now() + 14 * 86400 * 1000).toISOString();
+    const trialEndISO = subTrailRows[0]?.trial_end || new Date(Date.now() + 16 * 86400 * 1000).toISOString();
 
     // 2. Call Cashfree Sandbox Client Service — planPrice = ORIGINAL FULL PRICE for recurring billing
     const cfResult = await createCashfreeSubscriptionSession({
@@ -1117,5 +1117,3 @@ router.post('/change-plan', authenticateToken, async (req, res) => {
 });
 
 export default router;
-
-

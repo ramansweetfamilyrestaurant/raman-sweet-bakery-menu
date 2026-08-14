@@ -651,7 +651,7 @@ export default function SetupView({
             </label>
             <input
               type="text"
-              placeholder="e.g. menu.ramansweets.com"
+              placeholder="e.g. menu.yourrestaurant.com"
               value={settingsForm.custom_domain || ''}
               onChange={(e) => setSettingsForm({ ...settingsForm, custom_domain: e.target.value })}
               style={{ width: '100%', padding: '10px 12px', borderRadius: 'var(--adm-radius-md)', border: '1px solid var(--adm-border)', fontSize: '0.9rem', background: 'white' }}

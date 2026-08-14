@@ -37,7 +37,7 @@ export default function StickyMobileBar({ onOpenLogin, onStartTrial }) {
         aria-label="Start Free Trial"
       >
         <Sparkles size={16} />
-        <span>Start 17-Day Free Trial</span>
+        <span>Start 16-Day Free Trial</span>
       </button>
     </div>
   );

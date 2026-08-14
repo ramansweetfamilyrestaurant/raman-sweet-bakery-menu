@@ -6,7 +6,7 @@ export default function ProfileView({ username, securityForm, setSecurityForm, o
   const [logoErr, setLogoErr] = React.useState(false);
 
   let cachedLogo = '';
-  try { cachedLogo = localStorage.getItem('km_platform_logo_url') || ''; } catch {}
+  try { cachedLogo = localStorage.getItem('touchqr_platform_logo_url') || ''; } catch {}
   const effectiveLogoUrl = logoUrl || cachedLogo;
   const resolvedUrl = effectiveLogoUrl ? resolveImageUrl(effectiveLogoUrl) : '';
 
@@ -114,3 +114,4 @@ export default function ProfileView({ username, securityForm, setSecurityForm, o
     </div>
   );
 }
+

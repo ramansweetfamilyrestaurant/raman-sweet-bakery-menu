@@ -8,7 +8,7 @@ export default function RefundPolicy({ onOpenLogin, onStartTrial }) {
   }, []);
 
   const tocItems = [
-    { id: 'free-trial', title: '17-Day Free Trial Policy' },
+    { id: 'free-trial', title: '16-Day Free Trial Policy' },
     { id: 'subscription-billing', title: 'Subscription Billing Cycle' },
     { id: 'cancellation', title: 'Account Cancellation Requests' },
     { id: 'refund-eligibility', title: 'Refund Eligibility' },
@@ -29,9 +29,9 @@ export default function RefundPolicy({ onOpenLogin, onStartTrial }) {
       onStartTrial={onStartTrial}
     >
       <section id="free-trial" className="km-legal-section">
-        <h2 className="km-legal-h2">1. 17-Day Free Trial Policy</h2>
+        <h2 className="km-legal-h2">1. 16-Day Free Trial Policy</h2>
         <p className="km-legal-p">
-          TouchQR provides a <strong>17-Day Free Trial</strong> for all new restaurant accounts. No credit card, debit card, or payment details are required to begin the trial. This allows restaurant operators to thoroughly evaluate digital menu creation, live kitchen KOT, thermal printing, and smart review tools risk-free prior to financial commitment.
+          TouchQR provides a <strong>16-Day Free Trial</strong> for all new restaurant accounts. No credit card, debit card, or payment details are required to begin the trial. This allows restaurant operators to thoroughly evaluate digital menu creation, live kitchen KOT, thermal printing, and smart review tools risk-free prior to financial commitment.
         </p>
       </section>
 
@@ -52,7 +52,7 @@ export default function RefundPolicy({ onOpenLogin, onStartTrial }) {
       <section id="refund-eligibility" className="km-legal-section">
         <h2 className="km-legal-h2">4. Refund Eligibility</h2>
         <p className="km-legal-p">
-          Because TouchQR offers an unrestricted 17-day free trial, subscription payments are generally non-refundable once a billing cycle commences. However, refund requests are evaluated fairly on a case-by-case basis under the following eligible circumstances:
+          Because TouchQR offers an unrestricted 16-day free trial, subscription payments are generally non-refundable once a billing cycle commences. However, refund requests are evaluated fairly on a case-by-case basis under the following eligible circumstances:
         </p>
         <ul className="km-legal-list">
           <li>Duplicate billing or technical system overcharges resulting from payment gateway errors.</li>

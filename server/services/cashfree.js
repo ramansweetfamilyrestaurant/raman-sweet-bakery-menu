@@ -99,7 +99,7 @@ export function verifyCashfreeWebhookSignature(rawBody, timestamp, signature) {
  * Format a Date object or ISO string to ISO 8601 format in IST timezone (YYYY-MM-DDTHH:MM:SS+05:30)
  */
 export function formatISTISO(dateOrIso) {
-  const d = dateOrIso ? new Date(dateOrIso) : new Date(Date.now() + 14 * 86400 * 1000);
+  const d = dateOrIso ? new Date(dateOrIso) : new Date(Date.now() + 16 * 86400 * 1000);
   // IST is UTC + 5:30 (330 minutes)
   const istOffsetMs = 5.5 * 60 * 60 * 1000;
   const istDate = new Date(d.getTime() + istOffsetMs);
@@ -143,7 +143,7 @@ export async function createCashfreeSubscriptionSession({
   const customerId = `cust_${restaurantId}`;
   const cleanPhone = (customerPhone || '9876543210').replace(/[^0-9]/g, '').slice(-10) || '9876543210';
   const cleanName = (customerName || `Restaurant ${restaurantId}`).trim();
-  const cleanEmail = (customerEmail || `owner_${restaurantId}@khanamaster.com`).trim();
+  const cleanEmail = (customerEmail || `owner_${restaurantId}@touchqr.app`).trim();
 
   // 14-day SaaS trial alignment for subscription_first_charge_time
   const firstChargeTime = formatISTISO(trialEndISO);
@@ -167,7 +167,7 @@ export async function createCashfreeSubscriptionSession({
       customer_email: cleanEmail
     },
     plan_details: {
-      plan_name: planName || `Khana Master ${planKey.toUpperCase()} Plan`,
+      plan_name: planName || `TouchQR ${planKey.toUpperCase()} Plan`,
       plan_type: 'PERIODIC',
       plan_amount: amount,
       plan_currency: 'INR',
@@ -335,4 +335,3 @@ export async function fetchCashfreeSubscriptionStatus(subscriptionId) {
     };
   }
 }
-

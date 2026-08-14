@@ -19,7 +19,7 @@ import './styles/LandingPage.css';
 
 export default function LandingPage({
   publicPlans = [],
-  trialDays = 17,
+  trialDays = 16,
   showLoginModal = false,
   setShowLoginModal = () => {},
   loginMode = 'login',
@@ -42,7 +42,7 @@ export default function LandingPage({
 }) {
   const [platformLogoUrl, setPlatformLogoUrl] = React.useState(() => {
     let cached = '';
-    try { cached = localStorage.getItem('km_platform_logo_url') || ''; } catch {}
+    try { cached = localStorage.getItem('touchqr_platform_logo_url') || ''; } catch {}
     return cached;
   });
 
@@ -53,10 +53,10 @@ export default function LandingPage({
         if (data && typeof data.platform_logo_url === 'string') {
           if (data.platform_logo_url.trim() !== '') {
             setPlatformLogoUrl(data.platform_logo_url);
-            try { localStorage.setItem('km_platform_logo_url', data.platform_logo_url); } catch {}
+            try { localStorage.setItem('touchqr_platform_logo_url', data.platform_logo_url); } catch {}
           } else {
             setPlatformLogoUrl('');
-            try { localStorage.removeItem('km_platform_logo_url'); } catch {}
+            try { localStorage.removeItem('touchqr_platform_logo_url'); } catch {}
           }
         }
       })
@@ -70,7 +70,7 @@ export default function LandingPage({
   };
 
   const handleLiveDemo = () => {
-    window.open('/raman-sweet-bakery', '_blank');
+    window.open('/touchqr-demo', '_blank');
   };
 
   return (
@@ -165,3 +165,4 @@ export default function LandingPage({
     </div>
   );
 }
+

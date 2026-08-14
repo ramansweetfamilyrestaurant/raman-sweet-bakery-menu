@@ -4,7 +4,7 @@ import { query } from '../db.js';
 
 dotenv.config();
 
-const JWT_SECRET = process.env.JWT_SECRET || 'raman_bakery_secret_jwt_key_2026_super_secure';
+const JWT_SECRET = process.env.JWT_SECRET || 'touchqr_secret_jwt_key_change_me';
 
 export async function checkSubscriptionStatus(restaurantId) {
   if (!restaurantId) return { status: 'unknown', active: false };

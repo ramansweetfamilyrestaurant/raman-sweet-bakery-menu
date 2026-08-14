@@ -1,7 +1,7 @@
 import React from 'react';
 import { ArrowRight, Sparkles } from 'lucide-react';
 
-export default function TrialCTA({ trialDays = 17, onStartTrial }) {
+export default function TrialCTA({ trialDays = 16, onStartTrial }) {
   return (
     <section className="km-container">
       <div className="km-trial-cta-section">

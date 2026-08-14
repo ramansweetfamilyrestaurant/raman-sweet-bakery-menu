@@ -245,7 +245,7 @@ export default function OwnerLoginModal({
             }}
             style={{ fontSize: '0.82rem', color: '#FFD700', fontWeight: 900, cursor: 'pointer', textDecoration: 'underline' }}
           >
-            Start 17-Day Free Trial →
+            Start 16-Day Free Trial →
           </a>
         </div>
       </div>

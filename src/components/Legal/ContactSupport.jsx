@@ -97,7 +97,7 @@ export default function ContactSupport({ onOpenLogin, onStartTrial }) {
           <div style={{ background: '#F8FAFC', border: '1px solid #E2E8F0', borderRadius: '12px', padding: '16px' }}>
             <div style={{ color: '#6366F1', marginBottom: '8px' }}><MessageSquare size={20} /></div>
             <strong style={{ display: 'block', color: 'var(--km-text)', fontSize: '0.95rem' }}>Instant Menu Setup</strong>
-            <span style={{ fontSize: '0.84rem', color: 'var(--km-muted)' }}>Start your 17-day free trial instantly without waiting.</span>
+            <span style={{ fontSize: '0.84rem', color: 'var(--km-muted)' }}>Start your 16-day free trial instantly without waiting.</span>
           </div>
         </div>
 

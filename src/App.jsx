@@ -91,7 +91,7 @@ export default function App() {
       return (t && t !== 'undefined' && t !== 'null') ? 'super-admin-dashboard' : 'super-admin-login';
     }
     if (path.includes('/admin') || hash === '#admin') {
-      const t = localStorage.getItem('raman_admin_token');
+      const t = localStorage.getItem('touchqr_admin_token');
       return (t && t !== 'undefined' && t !== 'null') ? 'admin-dashboard' : 'admin-login';
     }
     if (path === '' || path === '/') return 'landing';
@@ -103,15 +103,15 @@ export default function App() {
   const [layoutMode, setLayoutMode] = useState('list'); // 'list' or 'grid'
 
   const getInitialToken = () => {
-    const t = localStorage.getItem('raman_admin_token');
+    const t = localStorage.getItem('touchqr_admin_token');
     return (t && t !== 'undefined' && t !== 'null') ? t : '';
   };
   const getInitialUser = () => {
-    const u = localStorage.getItem('raman_admin_user');
+    const u = localStorage.getItem('touchqr_admin_user');
     return (u && u !== 'undefined' && u !== 'null') ? u : '';
   };
   const getInitialSlug = () => {
-    const s = localStorage.getItem('raman_admin_slug');
+    const s = localStorage.getItem('touchqr_admin_slug');
     return (s && s !== 'undefined' && s !== 'null') ? s : '';
   };
 
@@ -156,9 +156,9 @@ export default function App() {
     const slugParam = params.get('slug');
 
     if (tokenParam && slugParam) {
-      localStorage.setItem('raman_admin_token', tokenParam);
-      localStorage.setItem('raman_admin_user', userParam || 'admin');
-      localStorage.setItem('raman_admin_slug', slugParam);
+      localStorage.setItem('touchqr_admin_token', tokenParam);
+      localStorage.setItem('touchqr_admin_user', userParam || 'admin');
+      localStorage.setItem('touchqr_admin_slug', slugParam);
       setAdminToken(tokenParam);
       setAdminUsername(userParam || 'admin');
       setAdminSlug(slugParam);
@@ -315,12 +315,12 @@ export default function App() {
   // FIX: Table-specific localStorage key (Only for scanned table QR or active table number)
   const getOrderStorageKey = (tbl) => {
     const t = tbl || effectiveTableNum || orderTableInput;
-    return t ? `raman_active_order_id_table_${t}` : null;
+    return t ? `touchqr_active_order_id_table_${t}` : null;
   };
 
   const getInitialActiveOrderId = () => {
     if (initialTableNum) {
-      return localStorage.getItem(`raman_active_order_id_table_${initialTableNum}`) || null;
+      return localStorage.getItem(`touchqr_active_order_id_table_${initialTableNum}`) || null;
     }
     return null;
   };
@@ -336,7 +336,7 @@ export default function App() {
     }
 
     const orderId = activeOrderTrack.id;
-    const timeKey = `raman_order_completed_time_${orderId}`;
+    const timeKey = `touchqr_order_completed_time_${orderId}`;
     let completedAt = Number(localStorage.getItem(timeKey));
     if (!completedAt || isNaN(completedAt)) {
       completedAt = Date.now();
@@ -374,7 +374,7 @@ export default function App() {
       return;
     }
 
-    const scanTimeKey = `raman_table_scan_time_${effectiveTableNum}`;
+    const scanTimeKey = `touchqr_table_scan_time_${effectiveTableNum}`;
     let scanTime = Number(localStorage.getItem(scanTimeKey));
     if (!scanTime || isNaN(scanTime)) {
       scanTime = Date.now();
@@ -477,9 +477,9 @@ export default function App() {
       });
 
       if (res && res.order_id) {
-        const storageKey = `raman_active_order_id_table_${targetTable}`;
+        const storageKey = `touchqr_active_order_id_table_${targetTable}`;
         localStorage.setItem(storageKey, String(res.order_id));
-        localStorage.removeItem(`raman_table_scan_time_${targetTable}`);
+        localStorage.removeItem(`touchqr_table_scan_time_${targetTable}`);
         setActiveOrderId(String(res.order_id));
       }
 
@@ -527,7 +527,7 @@ export default function App() {
       setLoading(false);
       return;
     }
-    const slug = forcedSlug || getSlugFromUrl() || (info && info.slug) || localStorage.getItem('raman_admin_slug') || 'raman-sweet-bakery';
+    const slug = forcedSlug || getSlugFromUrl() || (info && info.slug) || localStorage.getItem('touchqr_admin_slug') || '';
     const isRootAdminRoute = rawPath === '/admin' || rawPath === '/super-admin' || rawPath === '/superadmin';
 
     // Skip full menu load for superadmin dashboard or standalone kitchen KDS
@@ -558,8 +558,7 @@ export default function App() {
       // Fast single-bundle fetch for public customer view
       if (!isAdminMode && !searchQuery) {
         try {
-          const effectiveSlug = slug || 'raman-sweet-bakery';
-          const bundleRes = await fetch(`/api/menu-bundle?slug=${encodeURIComponent(effectiveSlug)}`);
+          const bundleRes = await fetch(`/api/menu-bundle?slug=${encodeURIComponent(slug)}`);
           if (bundleRes.ok) {
             const bundle = await bundleRes.json();
             if (bundle && bundle.info) {
@@ -659,9 +658,9 @@ export default function App() {
         }
         if (res.status === 401 || res.status === 403) {
           console.warn('Expired token detected in checkMandateGating. Clearing stored credentials.');
-          localStorage.removeItem('raman_admin_token');
-          localStorage.removeItem('raman_admin_user');
-          localStorage.removeItem('raman_admin_slug');
+          localStorage.removeItem('touchqr_admin_token');
+          localStorage.removeItem('touchqr_admin_user');
+          localStorage.removeItem('touchqr_admin_slug');
           localStorage.removeItem('adminToken');
           setAdminToken('');
           setAdminUsername('');
@@ -687,7 +686,7 @@ export default function App() {
 
       // If someone types bare /admin without restaurant slug
       if (path === '/admin' || path === '/admin/') {
-        let storedSlug = localStorage.getItem('raman_admin_slug');
+        let storedSlug = localStorage.getItem('touchqr_admin_slug');
         if (storedSlug && storedSlug !== 'undefined' && storedSlug !== 'null') {
           window.history.replaceState({}, '', `/${storedSlug}/admin`);
         }
@@ -759,7 +758,7 @@ export default function App() {
       } else if (isRegister) {
         setView('register');
       } else if (isRouteAdmin) {
-        let storedSlug = localStorage.getItem('raman_admin_slug');
+        let storedSlug = localStorage.getItem('touchqr_admin_slug');
         if (storedSlug === 'undefined' || storedSlug === 'null') storedSlug = '';
 
         const urlSlug = getSlugFromUrl();
@@ -817,7 +816,7 @@ export default function App() {
   }, [adminToken, superToken]);
 
   const handleAdminLoginSuccess = async (token, username, slug) => {
-    let currentSlug = slug || getSlugFromUrl() || (info && info.slug) || localStorage.getItem('raman_admin_slug') || '';
+    let currentSlug = slug || getSlugFromUrl() || (info && info.slug) || localStorage.getItem('touchqr_admin_slug') || '';
     if (!currentSlug || currentSlug === 'undefined' || currentSlug === 'null') {
       try {
         const rInfo = await fetchRestaurantInfo(token);
@@ -828,10 +827,10 @@ export default function App() {
     }
 
     if (currentSlug && currentSlug !== 'undefined' && currentSlug !== 'null') {
-      localStorage.setItem('raman_admin_slug', currentSlug);
+      localStorage.setItem('touchqr_admin_slug', currentSlug);
     }
-    localStorage.setItem('raman_admin_token', token);
-    localStorage.setItem('raman_admin_user', username);
+    localStorage.setItem('touchqr_admin_token', token);
+    localStorage.setItem('touchqr_admin_user', username);
     setAdminToken(token);
     setAdminUsername(username);
     setAdminSlug(currentSlug);
@@ -849,9 +848,9 @@ export default function App() {
 
   const handleAdminLogout = () => {
     const currentSlug = getSlugFromUrl() || (info && info.slug) || '';
-    localStorage.removeItem('raman_admin_token');
-    localStorage.removeItem('raman_admin_user');
-    localStorage.removeItem('raman_admin_slug');
+    localStorage.removeItem('touchqr_admin_token');
+    localStorage.removeItem('touchqr_admin_user');
+    localStorage.removeItem('touchqr_admin_slug');
     setAdminToken('');
     setAdminUsername('');
     setAdminSlug('');
@@ -1029,9 +1028,9 @@ export default function App() {
       }
 
       // Save admin session tokens
-      localStorage.setItem('raman_admin_token', data.token);
-      localStorage.setItem('raman_admin_user', data.username);
-      localStorage.setItem('raman_admin_slug', data.slug);
+      localStorage.setItem('touchqr_admin_token', data.token);
+      localStorage.setItem('touchqr_admin_user', data.username);
+      localStorage.setItem('touchqr_admin_slug', data.slug);
       setAdminToken(data.token);
       setAdminUsername(data.username);
       setAdminSlug(data.slug);
@@ -1239,10 +1238,10 @@ export default function App() {
           username={superUsername}
           onLogout={handleSuperAdminLogout}
           onImpersonate={(tenantToken, tenantUsername, tenantSlug) => {
-            const targetSlug = tenantSlug || (info && info.slug) || 'raman-sweet-bakery';
-            localStorage.setItem('raman_admin_token', tenantToken);
-            localStorage.setItem('raman_admin_user', tenantUsername);
-            localStorage.setItem('raman_admin_slug', targetSlug);
+            const targetSlug = tenantSlug || (info && info.slug) || '';
+            localStorage.setItem('touchqr_admin_token', tenantToken);
+            localStorage.setItem('touchqr_admin_user', tenantUsername);
+            localStorage.setItem('touchqr_admin_slug', targetSlug);
             setAdminToken(tenantToken);
             setAdminUsername(tenantUsername);
             setAdminSlug(targetSlug);
@@ -1250,7 +1249,7 @@ export default function App() {
             window.history.pushState({}, '', `/r/${targetSlug}/admin`);
           }}
           onReturnToMenu={(tenantSlug) => {
-            const targetSlug = tenantSlug || (info && info.slug) || getSlugFromUrl() || 'raman-sweet-bakery';
+            const targetSlug = tenantSlug || (info && info.slug) || getSlugFromUrl() || '';
             setView('menu');
             window.history.pushState({}, '', `/r/${targetSlug}`);
             loadMenuData(targetSlug);
@@ -1390,7 +1389,7 @@ export default function App() {
   }
 
   if (view === 'admin-dashboard') {
-    const activeAdminSlug = adminSlug || getSlugFromUrl() || (info && info.slug) || localStorage.getItem('raman_admin_slug') || '';
+    const activeAdminSlug = adminSlug || getSlugFromUrl() || (info && info.slug) || localStorage.getItem('touchqr_admin_slug') || '';
     return (
       <AdminDashboard
         token={adminToken}
@@ -1499,7 +1498,7 @@ export default function App() {
         onCallStaff={() => setShowServiceModal(true)}
         onOpenReviewModal={handleRateUsClick}
         onOpenAdmin={() => {
-          const targetSlug = getSlugFromUrl() || (info && info.slug) || localStorage.getItem('raman_admin_slug') || '';
+          const targetSlug = getSlugFromUrl() || (info && info.slug) || localStorage.getItem('touchqr_admin_slug') || '';
           const targetUrl = (targetSlug && targetSlug !== 'undefined' && targetSlug !== 'null') ? `/${targetSlug}/admin` : '/admin';
           if (adminToken) {
             setView('admin-dashboard');
@@ -1546,7 +1545,7 @@ export default function App() {
           <button
             onClick={() => {
               if (activeOrderTrack?.id) {
-                localStorage.removeItem(`raman_order_completed_time_${activeOrderTrack.id}`);
+                localStorage.removeItem(`touchqr_order_completed_time_${activeOrderTrack.id}`);
               }
               localStorage.removeItem(getOrderStorageKey());
               setActiveOrderId(null);
@@ -2347,7 +2346,7 @@ export default function App() {
         onOpenCategories={() => setShowCategoryDrawer(true)}
         onOpenInfo={() => setShowInfoModal(true)}
         onOpenAdmin={() => {
-          const targetSlug = getSlugFromUrl() || (info && info.slug) || localStorage.getItem('raman_admin_slug') || '';
+          const targetSlug = getSlugFromUrl() || (info && info.slug) || localStorage.getItem('touchqr_admin_slug') || '';
           const targetUrl = (targetSlug && targetSlug !== 'undefined' && targetSlug !== 'null') ? `/${targetSlug}/admin` : '/admin';
           if (adminToken) {
             setView('admin-dashboard');
@@ -2536,15 +2535,15 @@ export default function App() {
         info={info}
         onOpenReviewModal={handleRateUsClick}
         onOpenAdmin={() => {
-          const currentSlug = getSlugFromUrl() || (info && info.slug) || 'raman-sweet-bakery';
-          const storedSlug = localStorage.getItem('raman_admin_slug');
+          const currentSlug = getSlugFromUrl() || (info && info.slug) || '';
+          const storedSlug = localStorage.getItem('touchqr_admin_slug');
           if (adminToken && storedSlug && storedSlug === currentSlug) {
             setView('admin-dashboard');
           } else {
             if (storedSlug !== currentSlug) {
-              localStorage.removeItem('raman_admin_token');
-              localStorage.removeItem('raman_admin_user');
-              localStorage.removeItem('raman_admin_slug');
+              localStorage.removeItem('touchqr_admin_token');
+              localStorage.removeItem('touchqr_admin_user');
+              localStorage.removeItem('touchqr_admin_slug');
               setAdminToken('');
               setAdminUsername('');
               setAdminSlug('');
@@ -2557,3 +2556,4 @@ export default function App() {
     </div>
   );
 }
+
