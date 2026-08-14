@@ -1174,7 +1174,7 @@ export default function AdminDashboard({ token, username, slug: propSlug = '', o
       let [catData, dishData, infoData, comboData, subStatusData] = await Promise.all([
         fetchCategories({ adminView: true, token, slug: currentSlug }).catch(() => []),
         fetchDishes({ adminView: true, token, slug: currentSlug }).catch(() => []),
-        fetchRestaurantInfo({ token, slug: currentSlug }).catch((err) => { console.warn('[MENU] fetchRestaurantInfo notice:', err); return null; }),
+        restaurantInfo ? Promise.resolve(restaurantInfo) : fetchRestaurantInfo({ token, slug: currentSlug }).catch((err) => { console.warn('[MENU] fetchRestaurantInfo notice:', err); return null; }),
         fetchAdminCombos(token).catch(() => []),
         fetch('/api/admin/subscription-status', { headers: { Authorization: `Bearer ${token}` } }).then(r => r.ok ? r.json() : null).catch(() => null)
       ]);
