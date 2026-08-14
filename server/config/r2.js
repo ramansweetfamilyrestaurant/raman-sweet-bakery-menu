@@ -5,13 +5,28 @@ dotenv.config();
  * Centralized Cloudflare R2 Configuration Module
  * Single Source of Truth for R2 Bucket Name and API Credentials.
  */
+function sanitizeConfigValue(val) {
+  if (!val || typeof val !== 'string') return '';
+  let clean = val.trim();
+  if ((clean.startsWith('"') && clean.endsWith('"')) || (clean.startsWith("'") && clean.endsWith("'"))) {
+    clean = clean.slice(1, -1).trim();
+  }
+  return clean;
+}
+
+/**
+ * Centralized Cloudflare R2 Configuration Module
+ * Single Source of Truth for R2 Bucket Name and API Credentials.
+ */
 export function getR2Config() {
-  const bucketName = (process.env.R2_BUCKET_NAME || '').trim();
-  const accountId = (process.env.R2_ACCOUNT_ID || '').trim();
-  const accessKeyId = (process.env.R2_ACCESS_KEY_ID || '').trim();
-  const secretAccessKey = (process.env.R2_SECRET_ACCESS_KEY || '').trim();
-  const publicDomain = (process.env.R2_PUBLIC_DOMAIN || '').trim();
-  const endpoint = (process.env.R2_ENDPOINT || '').trim();
+  const rawBucket = sanitizeConfigValue(process.env.R2_BUCKET_NAME);
+  // Default to active production bucket if environment variable is not explicitly set
+  const bucketName = rawBucket || 'khana-master-media';
+  const accountId = sanitizeConfigValue(process.env.R2_ACCOUNT_ID);
+  const accessKeyId = sanitizeConfigValue(process.env.R2_ACCESS_KEY_ID);
+  const secretAccessKey = sanitizeConfigValue(process.env.R2_SECRET_ACCESS_KEY);
+  const publicDomain = sanitizeConfigValue(process.env.R2_PUBLIC_DOMAIN);
+  const endpoint = sanitizeConfigValue(process.env.R2_ENDPOINT);
 
   return {
     bucketName,
