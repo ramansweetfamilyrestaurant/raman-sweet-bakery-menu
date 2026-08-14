@@ -134,11 +134,9 @@ async function resolveRestaurant(req, slug) {
   return null;
 }
 
-// Restaurant General Info (/api/info or /api/info?slug=royal-pizz// GET Ultra-Fast Combined Menu Bundle (Single 0-latency HTTP call for complete Digital Menu)
+// Restaurant General Info (/api/info or /api/info?slug=royal-pizz// GET Combined Menu Bundle (Blazing-Fast Edge-Cached Payload)
 router.get('/menu-bundle', async (req, res) => {
-  res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate, private');
-  res.setHeader('Pragma', 'no-cache');
-  res.setHeader('Expires', '0');
+  res.setHeader('Cache-Control', 'public, max-age=10, stale-while-revalidate=30');
   try {
     const { slug } = req.query;
     const resto = await resolveRestaurant(req, slug);
