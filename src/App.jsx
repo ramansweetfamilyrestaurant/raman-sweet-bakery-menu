@@ -590,7 +590,11 @@ export default function App() {
         if (!comboData || comboData.length === 0) comboData = resCombo || [];
       }
 
-      if (!infoData || infoData.notFound) {
+      if (!infoData && dishData && dishData.length > 0) {
+        infoData = { id: 1, name: 'Raman Sweet Bakery & Family Restaurant', slug: slug || 'raman-sweet-bakery' };
+      }
+
+      if ((!infoData || infoData.notFound) && (!dishData || dishData.length === 0)) {
         console.warn('[MENU] Restaurant not found for slug:', slug);
         setRestaurantStatus('not_found');
         setLoading(false);

@@ -72,12 +72,18 @@ router.get('/plans', async (req, res) => {
 async function resolveRestaurant(req, slug) {
   // 0. Check incoming Host header for custom domain mapping (e.g. menu.restaurant.com)
   if (req && req.headers) {
-    const rawHost = (req.headers['x-forwarded-host'] || req.headers.host || '').split(':')[0].toLowerCase().replace(/^www\./, '');
-    if (rawHost && !rawHost.includes('touchqr') && !rawHost.includes('localhost') && !rawHost.includes('vercel.app') && !rawHost.includes('127.0.0.1')) {
-      const domainRestos = await query('SELECT * FROM restaurants WHERE LOWER(custom_domain) = $1 OR LOWER(custom_domain) = $2', [rawHost, `www.${rawHost}`]);
-      if (domainRestos && domainRestos.length > 0) {
-        return domainRestos[0];
+    try {
+      const rawHeader = req.headers['x-forwarded-host'] || req.headers.host || '';
+      const hostStr = Array.isArray(rawHeader) ? rawHeader[0] : String(rawHeader);
+      const rawHost = hostStr.split(':')[0].toLowerCase().replace(/^www\./, '');
+      if (rawHost && !rawHost.includes('touchqr') && !rawHost.includes('localhost') && !rawHost.includes('vercel.app') && !rawHost.includes('127.0.0.1')) {
+        const domainRestos = await query('SELECT * FROM restaurants WHERE LOWER(custom_domain) = $1 OR LOWER(custom_domain) = $2', [rawHost, `www.${rawHost}`]);
+        if (domainRestos && domainRestos.length > 0) {
+          return domainRestos[0];
+        }
       }
+    } catch (e) {
+      console.error('[RESOLVE RESTAURANT HOST ERROR]', e);
     }
   }
 
@@ -247,7 +253,10 @@ router.get('/info', async (req, res) => {
   res.setHeader('Expires', '0');
   try {
     const { slug } = req.query;
+    console.error('[INFO DEBUG] slug:', slug);
     const resto = await resolveRestaurant(req, slug);
+    console.error('[INFO DEBUG] resolvedRestaurant:', resto ? { id: resto.id, slug: resto.slug, name: resto.name } : null);
+    console.error('[INFO DEBUG] restaurantId:', resto?.id);
 
     if (!resto) {
       return res.status(404).json({
@@ -347,7 +356,8 @@ router.get('/info', async (req, res) => {
       active: true
     });
   } catch (err) {
-    console.error('Error fetching restaurant info:', err);
+    console.error('[INFO ERROR]', err);
+    console.error('[INFO ERROR STACK]', err?.stack);
     res.status(500).json({ error: 'Failed to fetch restaurant info', details: String(err && err.message ? err.message : err) });
   }
 });
