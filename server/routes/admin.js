@@ -145,20 +145,7 @@ async function processExternalImageUrl(imageUrl, restaurantId, entityType = 'dis
   return imageUrl;
 }
 
-const storage = multer.diskStorage({
-  destination: (req, file, cb) => {
-    const uploadDir = path.resolve('public/uploads');
-    if (!fs.existsSync(uploadDir)) {
-      fs.mkdirSync(uploadDir, { recursive: true });
-    }
-    cb(null, uploadDir);
-  },
-  filename: (req, file, cb) => {
-    const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
-    const ext = path.extname(file.originalname);
-    cb(null, 'dish-' + uniqueSuffix + ext);
-  }
-});
+const storage = multer.memoryStorage();
 
 const upload = multer({
   storage,
@@ -509,7 +496,14 @@ router.post('/upload', authenticateToken, requireActiveSubscription, (req, res, 
     return res.status(400).json({ success: false, error: 'No image file uploaded' });
   }
 
-  console.log('[R2 UPLOAD TRACE] filename:', req.file.filename);
+  // Get buffer safely from memoryStorage (or fallback file path if present)
+  const fileBuffer = req.file.buffer || (req.file.path && fs.existsSync(req.file.path) ? fs.readFileSync(req.file.path) : null);
+  if (!fileBuffer) {
+    return res.status(400).json({ success: false, error: 'No image buffer received' });
+  }
+
+  const safeFilename = req.file.filename || req.file.originalname || `${Date.now()}-${Math.round(Math.random() * 1e9)}`;
+  console.log('[R2 UPLOAD TRACE] filename:', safeFilename);
 
   // Validate File Size (max 10MB)
   if (req.file.size > 10 * 1024 * 1024) {
@@ -524,7 +518,6 @@ router.post('/upload', authenticateToken, requireActiveSubscription, (req, res, 
     return res.status(400).json({ success: false, error: 'Invalid file type. Only JPEG, PNG, WebP, GIF, and AVIF images are allowed' });
   }
 
-  const fileBuffer = fs.readFileSync(req.file.path);
   const entityType = req.query?.entityType || req.body?.entityType || 'dishes';
   const isSuperAdminUpload = req.user?.role === 'superadmin' || entityType === 'superadmin' || entityType === 'branding';
   const restaurantId = isSuperAdminUpload ? null : (req.user ? req.user.restaurant_id : null);
@@ -546,12 +539,12 @@ router.post('/upload', authenticateToken, requireActiveSubscription, (req, res, 
       });
 
       await saveR2ImageToDb(
-        req.file.filename,
+        safeFilename,
         r2Result.mimeType,
         r2Result.objectKey,
         r2Result.publicUrl,
         restaurantId,
-        r2Result.buffer || fileBuffer
+        null
       );
 
       if (req.file.path && fs.existsSync(req.file.path)) fs.unlinkSync(req.file.path);
@@ -579,13 +572,13 @@ router.post('/upload', authenticateToken, requireActiveSubscription, (req, res, 
 
   // LOCAL DEV ONLY FALLBACK: Save locally and store in database
   try {
-    const localUrl = `/uploads/${req.file.filename}`;
-    await saveImageToDb(req.file.filename, req.file.mimetype, fileBuffer);
+    const localUrl = `/uploads/${safeFilename}`;
+    await saveImageToDb(safeFilename, req.file.mimetype, fileBuffer);
     return res.json({
       success: true,
       url: localUrl,
       r2ProxyUrl: localUrl,
-      key: req.file.filename,
+      key: safeFilename,
       storage: 'local'
     });
   } catch (localErr) {
