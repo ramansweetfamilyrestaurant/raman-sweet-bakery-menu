@@ -523,7 +523,7 @@ export default function App() {
   };
 
   // Load Menu Data
-  const loadMenuData = async (forcedSlug = '') => {
+  const loadMenuData = async (forcedSlug = '', silent = false) => {
     const rawPath = window.location.pathname.toLowerCase().replace(/\/$/, '');
     if (rawPath === '/kitchen') {
       setRestaurantStatus('not_found');
@@ -545,7 +545,9 @@ export default function App() {
       return;
     }
 
-    setLoading(true);
+    if (!silent) {
+      setLoading(true);
+    }
     setRestaurantStatus('active');
     const isSystemNonMenuRoute = ['/register', '/billing', '/super-admin', '/superadmin'].includes(rawPath);
     if (!slug && isSystemNonMenuRoute) {
@@ -1279,8 +1281,8 @@ export default function App() {
           onReturnToMenu={(tenantSlug) => {
             const targetSlug = tenantSlug || (info && info.slug) || getSlugFromUrl() || '';
             setView('menu');
-            window.history.pushState({}, '', `/r/${targetSlug}`);
-            loadMenuData(targetSlug);
+            window.history.pushState({}, '', targetSlug ? `/${targetSlug}` : '/');
+            loadMenuData(targetSlug, true);
           }}
         />
       </Suspense>
@@ -1428,7 +1430,7 @@ export default function App() {
           const targetSlug = tenantSlug || activeAdminSlug || (info && info.slug) || getSlugFromUrl() || '';
           setView('menu');
           window.history.pushState({}, '', targetSlug ? `/${targetSlug}` : '/');
-          loadMenuData(targetSlug);
+          loadMenuData(targetSlug, true);
         }}
       />
     );

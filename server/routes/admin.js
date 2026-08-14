@@ -276,10 +276,8 @@ router.get('/subscription-status', authenticateToken, async (req, res) => {
     const targetId = restoId;
 
     const subInfo = await checkSubscriptionStatus(targetId);
-    const restos = await query('SELECT active, plan_tier, plan_price, plan_expires_at, trial_started_at, trial_ends_at, grace_period_expires_at, mandate_id, mandate_status, auto_debit_enabled FROM restaurants WHERE id = $1', [targetId]);
-    const r = restos[0] || {};
-    const subRows = await query('SELECT * FROM subscriptions WHERE restaurant_id = $1 ORDER BY id DESC LIMIT 1', [targetId]);
-    const sub = subRows[0] || null;
+    const r = subInfo.resto || {};
+    const sub = subInfo.sub || null;
 
     const tierKey = (r.plan_tier || 'pro').toLowerCase();
     const planRows = await query('SELECT * FROM saas_plans WHERE LOWER(key) = $1', [tierKey]);
