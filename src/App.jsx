@@ -17,10 +17,9 @@ import { verifyCustomerLocation } from './utils/geo';
 import ServiceRequestModal from './components/ServiceRequestModal';
 import CustomerReviewModal from './components/CustomerReviewModal';
 
-import AdminDashboard from './components/Admin/AdminDashboard';
-import LandingPage from './components/Landing/LandingPage';
-
-// Code Splitting (Lazy Loading) for secondary admin & legal views
+// Code Splitting (Lazy Loading) for secondary admin, landing & legal views
+const AdminDashboard = lazy(() => import('./components/Admin/AdminDashboard'));
+const LandingPage = lazy(() => import('./components/Landing/LandingPage'));
 const AdminLogin = lazy(() => import('./components/Admin/AdminLogin'));
 const SuperAdminLogin = lazy(() => import('./components/SuperAdmin/SuperAdminLogin'));
 const SuperAdminDashboard = lazy(() => import('./components/SuperAdmin/SuperAdminDashboard'));
@@ -207,14 +206,18 @@ export default function App() {
       setShowReviewModal(true);
     }
 
-    fetch('/api/plans')
-      .then(res => res.json())
-      .then(data => {
-        if (Array.isArray(data) && data.length > 0) {
-          setPublicPlans(data);
-        }
-      })
-      .catch(() => {});
+    const currentPath = window.location.pathname.toLowerCase();
+    const isPublicPlanRoute = currentPath === '/' || currentPath.includes('/register') || currentPath.includes('/billing') || currentPath.includes('/plan');
+    if (isPublicPlanRoute) {
+      fetch('/api/plans')
+        .then(res => res.json())
+        .then(data => {
+          if (Array.isArray(data) && data.length > 0) {
+            setPublicPlans(data);
+          }
+        })
+        .catch(() => {});
+    }
   }, []);
 
   // In-Context Owner Modals State
@@ -581,7 +584,7 @@ export default function App() {
       }
 
       // Fallback or Admin/Search view: parallel fetch
-      if (!infoData || !dishData || dishData.length === 0) {
+      if (!infoData) {
         const publicToken = isAdminMode ? adminToken : undefined;
         const [resInfo, resCat, resDish, resCombo] = await Promise.all([
           fetchRestaurantInfo({ token: publicToken, slug }),
