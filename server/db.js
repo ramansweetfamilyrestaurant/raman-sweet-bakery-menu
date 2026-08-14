@@ -1161,6 +1161,7 @@ async function query(text, params = []) {
     let sql = text;
     // Convert $1, $2 parameter placeholders to SQLite ?
     sql = sql.replace(/\$(\d+)/g, () => '?');
+    sql = sql.replace(/::text/g, '');
 
     // Convert booleans to 1 or 0 for SQLite (better-sqlite3 only accepts numbers/strings)
     const sanitizedParams = params.map(p => (typeof p === 'boolean' ? (p ? 1 : 0) : p));

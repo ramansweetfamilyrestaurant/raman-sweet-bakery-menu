@@ -118,7 +118,7 @@ async function resolveRestaurant(req, slug) {
 
   // 3. Fallback to primary default active restaurant when no slug or system route like /menu is passed
   if (!slug || typeof slug !== 'string' || slug.trim() === '' || ['menu', 'default', 'null', 'undefined', 'home', 'index'].includes(slug.trim().toLowerCase())) {
-    const firstResto = await query("SELECT * FROM restaurants WHERE (active = true OR active IS NOT FALSE) ORDER BY id ASC LIMIT 1");
+    const firstResto = await query("SELECT * FROM restaurants WHERE (active IS NULL OR active::text NOT IN ('0', 'false', 'f')) ORDER BY id ASC LIMIT 1");
     return firstResto[0] || null;
   }
 
@@ -155,7 +155,7 @@ router.get('/menu-bundle', async (req, res) => {
 
     // Execute queries in parallel
     const [categories, dishes, combos] = await Promise.all([
-      query('SELECT * FROM categories WHERE restaurant_id = $1 AND (active = true OR active IS NOT FALSE) ORDER BY sort_order ASC, id ASC', [targetId]),
+      query("SELECT * FROM categories WHERE restaurant_id = $1 AND (active IS NULL OR active::text NOT IN ('0', 'false', 'f')) ORDER BY sort_order ASC, id ASC", [targetId]),
       query(`
         SELECT d.*, c.name as category_name 
         FROM dishes d 
@@ -163,7 +163,7 @@ router.get('/menu-bundle', async (req, res) => {
         WHERE d.restaurant_id = $1 AND (d.available IS NOT FALSE) AND (c.active IS NOT FALSE OR c.id IS NULL)
         ORDER BY d.id ASC
       `, [targetId]),
-      query('SELECT * FROM combos WHERE restaurant_id = $1 AND (active = true OR active IS NOT FALSE) ORDER BY id ASC', [targetId]).catch(() => [])
+      query("SELECT * FROM combos WHERE restaurant_id = $1 AND (active IS NULL OR active::text NOT IN ('0', 'false', 'f')) ORDER BY id ASC", [targetId]).catch(() => [])
     ]);
 
     let filtersVis = resto.filters_visibility;
@@ -355,7 +355,7 @@ router.get('/info', async (req, res) => {
 // Get Active Global System Announcements
 router.get('/announcements', async (req, res) => {
   try {
-    const list = await query('SELECT * FROM announcements WHERE (active = true OR active IS NOT FALSE) ORDER BY id DESC LIMIT 5').catch(() => []);
+    const list = await query("SELECT * FROM announcements WHERE (active IS NULL OR active::text NOT IN ('0', 'false', 'f')) ORDER BY id DESC LIMIT 5").catch(() => []);
     res.json(Array.isArray(list) ? list : []);
   } catch (err) {
     res.json([]);
@@ -381,7 +381,7 @@ router.get('/categories', async (req, res) => {
     const params = [targetId];
 
     if (!admin_view) {
-      sql += ' AND (active = true OR active IS NOT FALSE)';
+      sql += " AND (active IS NULL OR active::text NOT IN ('0', 'false', 'f'))";
     }
 
     sql += ' ORDER BY sort_order ASC, id ASC';
