@@ -236,6 +236,7 @@ app.use('/uploads', express.static(uploadsDir));
 app.get('/health', (req, res) => {
   res.json({
     status: 'OK',
+    build_id: 'BUILD_2026_08_14_VERSION_77',
     timestamp: new Date().toISOString(),
     service: 'QR Menu & SaaS Billing API',
     environment: (process.env.NODE_ENV || 'development').toLowerCase()
