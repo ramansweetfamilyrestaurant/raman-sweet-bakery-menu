@@ -189,7 +189,11 @@ export function generateObjectKey(restaurantId, entityType = 'dishes', filename 
     return `superadmin/branding/logo.webp`;
   }
 
-  const safeRestoId = parseInt(restaurantId, 10) || 1;
+  const safeRestoId = parseInt(restaurantId, 10);
+  if (!safeRestoId || isNaN(safeRestoId)) {
+    throw new Error('restaurantId is required for tenant R2 object key generation');
+  }
+
   const validTypes = ['dishes', 'categories', 'banners', 'avatars', 'logos', 'migrated', 'misc', 'superadmin', 'branding'];
   const safeType = validTypes.includes(entityType) ? entityType : 'dishes';
   
@@ -200,7 +204,10 @@ export function generateObjectKey(restaurantId, entityType = 'dishes', filename 
 /**
  * Uploads an image buffer to Cloudflare R2 storage bucket.
  */
-export async function uploadImageToR2({ buffer, mimeType, restaurantId = 1, entityType = 'dishes' }) {
+export async function uploadImageToR2({ buffer, mimeType, restaurantId, entityType = 'dishes' }) {
+  if (!restaurantId && entityType !== 'superadmin' && entityType !== 'branding') {
+    throw new Error('restaurantId is required for R2 image persistence');
+  }
   const client = getR2Client();
   if (!client) {
     throw new Error('Cloudflare R2 is not configured in environment variables');

@@ -1376,8 +1376,12 @@ export function purgeLocalR2DiskCache(identifier) {
   }
 }
 
-export async function saveR2ImageToDb(filename, mimeType, imageKey, imageUrl, restaurantId = 1, buffer = null) {
+export async function saveR2ImageToDb(filename, mimeType, imageKey, imageUrl, restaurantId, buffer = null) {
   try {
+    if (!restaurantId && restaurantId !== null && (!imageKey || !imageKey.startsWith('superadmin/'))) {
+      throw new Error('restaurantId is required for saving R2 image metadata');
+    }
+
     // For R2-backed uploads, stored_images.data MUST be NULL to keep Neon PostgreSQL lightweight and metadata-only
     const base64Data = null;
 

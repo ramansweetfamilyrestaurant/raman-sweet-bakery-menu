@@ -81,8 +81,8 @@ async function cleanupImage(imageUrl) {
   }
 }
 
-async function processExternalImageUrl(imageUrl, restaurantId = 1, entityType = 'dishes') {
-  if (!imageUrl || typeof imageUrl !== 'string') return imageUrl;
+async function processExternalImageUrl(imageUrl, restaurantId, entityType = 'dishes') {
+  if (!imageUrl || typeof imageUrl !== 'string' || (!restaurantId && entityType !== 'superadmin' && entityType !== 'branding')) return imageUrl;
   
   if (imageUrl.startsWith('/api/r2-proxy/') || imageUrl === '/uploads/logo.jpg') {
     return imageUrl;
@@ -527,7 +527,11 @@ router.post('/upload', authenticateToken, requireActiveSubscription, (req, res, 
   const fileBuffer = fs.readFileSync(req.file.path);
   const entityType = req.query?.entityType || req.body?.entityType || 'dishes';
   const isSuperAdminUpload = req.user?.role === 'superadmin' || entityType === 'superadmin' || entityType === 'branding';
-  const restaurantId = isSuperAdminUpload ? null : (req.user?.restaurant_id || 1);
+  const restaurantId = isSuperAdminUpload ? null : (req.user ? req.user.restaurant_id : null);
+  if (!isSuperAdminUpload && !restaurantId) {
+    if (req.file.path && fs.existsSync(req.file.path)) fs.unlinkSync(req.file.path);
+    return res.status(401).json({ success: false, error: 'Unauthorized: Valid tenant restaurant_id is required for image upload' });
+  }
 
   const r2Configured = isR2Active();
 
@@ -796,13 +800,13 @@ router.post('/r2/mirror-external', authenticateToken, requireActiveSubscription,
           if (fetchRes.ok) inputBuffer = Buffer.from(await fetchRes.arrayBuffer());
         }
 
-        if (inputBuffer && inputBuffer.length > 0) {
+        if (inputBuffer && inputBuffer.length > 0 && cat.restaurant_id) {
           const webpBuffer = await sharp(inputBuffer).resize(1000, null, { withoutEnlargement: true }).webp({ quality: 85 }).toBuffer();
-          const r2Result = await uploadImageToR2({ buffer: webpBuffer, mimeType: 'image/webp', restaurantId: cat.restaurant_id || 1, entityType: 'categories' });
+          const r2Result = await uploadImageToR2({ buffer: webpBuffer, mimeType: 'image/webp', restaurantId: cat.restaurant_id, entityType: 'categories' });
           if (r2Result && r2Result.objectKey) {
             const proxyUrl = `/api/r2-proxy/${r2Result.objectKey}`;
             await query("UPDATE categories SET image = $1 WHERE id = $2", [proxyUrl, cat.id]);
-            await saveR2ImageToDb(`cat-mirrored-${cat.id}-${Date.now()}.webp`, 'image/webp', r2Result.objectKey, r2Result.publicUrl || proxyUrl, cat.restaurant_id || 1);
+            await saveR2ImageToDb(`cat-mirrored-${cat.id}-${Date.now()}.webp`, 'image/webp', r2Result.objectKey, r2Result.publicUrl || proxyUrl, cat.restaurant_id);
             mirroredCount++;
           }
         }
@@ -824,13 +828,13 @@ router.post('/r2/mirror-external', authenticateToken, requireActiveSubscription,
           if (fetchRes.ok) inputBuffer = Buffer.from(await fetchRes.arrayBuffer());
         }
 
-        if (inputBuffer && inputBuffer.length > 0) {
+        if (inputBuffer && inputBuffer.length > 0 && dish.restaurant_id) {
           const webpBuffer = await sharp(inputBuffer).resize(1200, null, { withoutEnlargement: true }).webp({ quality: 85 }).toBuffer();
-          const r2Result = await uploadImageToR2({ buffer: webpBuffer, mimeType: 'image/webp', restaurantId: dish.restaurant_id || 1, entityType: 'dishes' });
+          const r2Result = await uploadImageToR2({ buffer: webpBuffer, mimeType: 'image/webp', restaurantId: dish.restaurant_id, entityType: 'dishes' });
           if (r2Result && r2Result.objectKey) {
             const proxyUrl = `/api/r2-proxy/${r2Result.objectKey}`;
             await query("UPDATE dishes SET image = $1 WHERE id = $2", [proxyUrl, dish.id]);
-            await saveR2ImageToDb(`dish-mirrored-${dish.id}-${Date.now()}.webp`, 'image/webp', r2Result.objectKey, r2Result.publicUrl || proxyUrl, dish.restaurant_id || 1);
+            await saveR2ImageToDb(`dish-mirrored-${dish.id}-${Date.now()}.webp`, 'image/webp', r2Result.objectKey, r2Result.publicUrl || proxyUrl, dish.restaurant_id);
             mirroredCount++;
           }
         }
