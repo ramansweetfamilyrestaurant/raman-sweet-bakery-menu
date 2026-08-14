@@ -1,11 +1,11 @@
 import React, { useState } from 'react';
-import { resolveImageUrl } from '../utils/imageHelper';
+import { getDishImageUrl } from '../utils/imageHelper';
 
 export default function MenuCardItem({ dish, lang, onClick, onAddToCart, currencySymbol }) {
   const symbol = currencySymbol !== undefined ? currencySymbol : '₹';
   const isAvailable = dish.available !== false;
   const hasHalfPrice = dish.price_half !== null && dish.price_half !== undefined && Number(dish.price_half) > 0;
-  const imageSrc = resolveImageUrl(dish.image);
+  const imageSrc = getDishImageUrl(dish.image);
 
   const [portionMode, setPortionMode] = useState(hasHalfPrice ? 'half' : 'full');
 
@@ -276,31 +276,29 @@ export default function MenuCardItem({ dish, lang, onClick, onAddToCart, currenc
 
         {/* Dish Thumbnail & + Add WhatsApp Button */}
         <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '4px' }}>
-          {imageSrc && (
-            <div 
-              onClick={() => onClick(dish)}
-              style={{
-                width: '46px',
-                height: '46px',
-                minWidth: '46px',
-                flexShrink: 0,
-                borderRadius: 'var(--radius-sm)',
-                overflow: 'hidden',
-                border: '1.5px solid var(--gold-border)',
-                position: 'relative',
-                background: 'var(--gold-soft)',
-                cursor: 'pointer',
-                boxShadow: 'var(--shadow-sm)'
-              }}
-            >
-              <img
-                src={imageSrc}
-                alt={displayName}
-                style={{ width: '100%', height: '100%', objectFit: 'cover' }}
-                onError={(e) => { e.target.style.display = 'none'; }}
-              />
-            </div>
-          )}
+          <div 
+            onClick={() => onClick(dish)}
+            style={{
+              width: '46px',
+              height: '46px',
+              minWidth: '46px',
+              flexShrink: 0,
+              borderRadius: 'var(--radius-sm)',
+              overflow: 'hidden',
+              border: '1.5px solid var(--gold-border)',
+              position: 'relative',
+              background: 'var(--gold-soft)',
+              cursor: 'pointer',
+              boxShadow: 'var(--shadow-sm)'
+            }}
+          >
+            <img
+              src={imageSrc}
+              alt={displayName}
+              style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+              onError={(e) => { e.currentTarget.src = '/images/default-dish.webp'; }}
+            />
+          </div>
 
           {onAddToCart && isAvailable && (
             <button

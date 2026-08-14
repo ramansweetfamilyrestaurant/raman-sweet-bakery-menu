@@ -235,7 +235,7 @@ export default function PhysicalMenuItem({ dish, onClick }) {
               src={dish.image}
               alt={dish.name}
               style={{ width: '100%', height: '100%', objectFit: 'cover' }}
-              onError={(e) => { e.target.src = '/uploads/logo.jpg'; }}
+              onError={(e) => { e.currentTarget.src = '/images/default-dish.webp'; }}
             />
           </div>
         )}

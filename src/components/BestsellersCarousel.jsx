@@ -1,52 +1,36 @@
 import React from 'react';
-import { Sparkles } from 'lucide-react';
-import { resolveImageUrl } from '../utils/imageHelper';
+import { Flame } from 'lucide-react';
+import { getDishImageUrl } from '../utils/imageHelper';
 
-export default function BestsellersCarousel({ dishes, onSelectDish, currencySymbol }) {
-  const symbol = currencySymbol !== undefined && currencySymbol !== null ? currencySymbol : '₹';
-  const bestsellers = dishes.filter(d => d.badge && (d.badge.includes('Bestseller') || d.badge.includes('Must Try') || d.badge.includes('Royal'))).slice(0, 5);
+export default function BestsellersCarousel({ dishes = [], onSelectDish, currencySymbol = '₹', lang = 'en' }) {
+  const bestsellers = dishes.filter(d => d.must_try || d.bestseller || d.is_must_try || d.is_bestseller).slice(0, 10);
 
-  if (bestsellers.length === 0) return null;
+  if (!bestsellers || bestsellers.length === 0) return null;
 
   return (
-    <div style={{
-      maxWidth: '800px',
-      margin: '0 auto',
-      padding: '24px 20px 8px',
-    }}>
-      {/* Title */}
+    <div style={{ marginBottom: '22px' }}>
+      {/* Header */}
       <div style={{
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'space-between',
-        marginBottom: '14px'
+        marginBottom: '10px',
+        padding: '0 4px'
       }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-          <div style={{
-            width: '28px',
-            height: '28px',
-            borderRadius: '50%',
-            background: 'linear-gradient(135deg, var(--gold-bright) 0%, #D4AF37 100%)',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            boxShadow: '0 2px 8px rgba(212, 175, 55, 0.4)'
-          }}>
-            <Sparkles size={16} color="#0A2315" />
-          </div>
-          <h2 style={{
-            fontFamily: 'var(--font-heading)',
-            fontSize: '1.15rem',
+        <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+          <Flame size={20} color="var(--accent-coral)" style={{ animation: 'pulse 1.5s infinite' }} />
+          <h3 style={{
+            fontSize: '1.05rem',
             fontWeight: 800,
-            color: 'var(--primary-emerald)',
+            color: 'var(--text-dark)',
+            letterSpacing: '-0.02em',
             margin: 0
           }}>
-            Bestsellers
-          </h2>
+            {lang === 'hi' ? '🔥 हमारे सबसे प्रसिद्ध व्यंजन (Must Try)' : '🔥 Must Try & Bestsellers'}
+          </h3>
         </div>
-
-        <span style={{ fontSize: '0.75rem', fontWeight: 700, color: 'var(--gold-bright)', letterSpacing: '0.5px' }}>
-          MOST POPULAR
+        <span style={{ fontSize: '0.78rem', color: 'var(--gold-bright)', fontWeight: 700 }}>
+          {bestsellers.length} Items
         </span>
       </div>
 
@@ -60,7 +44,7 @@ export default function BestsellersCarousel({ dishes, onSelectDish, currencySymb
         msOverflowStyle: 'none'
       }}>
         {bestsellers.map((dish) => {
-          const imageSrc = resolveImageUrl(dish.image);
+          const imageSrc = getDishImageUrl(dish.image);
           return (
             <div
               key={dish.id}
@@ -96,27 +80,12 @@ export default function BestsellersCarousel({ dishes, onSelectDish, currencySymb
                 background: 'var(--gold-soft)',
                 overflow: 'hidden'
               }}>
-                {imageSrc ? (
-                  <img
-                    src={imageSrc}
-                    alt={dish.name}
-                    style={{ width: '100%', height: '100%', objectFit: 'cover' }}
-                    onError={(e) => { e.target.style.display = 'none'; }}
-                  />
-                ) : (
-                  <div style={{
-                    width: '100%',
-                    height: '100%',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    background: 'var(--header-gradient)',
-                    color: 'var(--gold-bright)',
-                    fontSize: '2rem'
-                  }}>
-                    🌟
-                  </div>
-                )}
+                <img
+                  src={imageSrc}
+                  alt={dish.name}
+                  style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                  onError={(e) => { e.currentTarget.src = '/images/default-dish.webp'; }}
+                />
 
                 <div style={{
                   position: 'absolute',

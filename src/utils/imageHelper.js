@@ -42,3 +42,27 @@ export function resolveImageUrl(url) {
 
   return `/${cleanUrl}`;
 }
+
+/**
+ * Dish Image Fallback Helper
+ */
+export function getDishImageUrl(url) {
+  if (!url || typeof url !== 'string') return '/images/default-dish.webp';
+  const cleanUrl = url.trim();
+  if (!cleanUrl || cleanUrl === 'null' || cleanUrl === 'undefined' || cleanUrl === '/uploads/logo.jpg') {
+    return '/images/default-dish.webp';
+  }
+  return resolveImageUrl(cleanUrl);
+}
+
+/**
+ * Category Image Fallback Helper
+ */
+export function getCategoryImageUrl(url) {
+  if (!url || typeof url !== 'string') return '/images/default-category.webp';
+  const cleanUrl = url.trim();
+  if (!cleanUrl || cleanUrl === 'null' || cleanUrl === 'undefined' || cleanUrl === '/uploads/logo.jpg') {
+    return '/images/default-category.webp';
+  }
+  return resolveImageUrl(cleanUrl);
+}

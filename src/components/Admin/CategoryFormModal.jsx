@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { X, Upload } from 'lucide-react';
 import { uploadImage } from '../../api/client';
+import { getCategoryImageUrl } from '../../utils/imageHelper';
 
 export default function CategoryFormModal({ category, token, onSave, onClose }) {
   const [name, setName] = useState(category?.name || '');
@@ -171,35 +172,18 @@ export default function CategoryFormModal({ category, token, onSave, onClose }) 
               Category Image
             </label>
             <div style={{ display: 'flex', gap: '10px', alignItems: 'center', marginBottom: '8px' }}>
-              {image ? (
-                <img
-                  src={image}
-                  alt="Preview"
-                  style={{
-                    width: '46px',
-                    height: '46px',
-                    borderRadius: '50%',
-                    objectFit: 'cover',
-                    border: '1px solid var(--accent-gold)'
-                  }}
-                  onError={(e) => { e.target.src = '/uploads/logo.jpg'; }}
-                />
-              ) : (
-                <div style={{
+              <img
+                src={getCategoryImageUrl(image)}
+                alt="Preview"
+                style={{
                   width: '46px',
                   height: '46px',
                   borderRadius: '50%',
-                  background: 'var(--header-gradient)',
-                  color: 'var(--gold-bright)',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  fontWeight: 900,
-                  fontSize: '1rem'
-                }}>
-                  {(name || 'C').charAt(0).toUpperCase()}
-                </div>
-              )}
+                  objectFit: 'cover',
+                  border: '1px solid var(--accent-gold)'
+                }}
+                onError={(e) => { e.currentTarget.src = '/images/default-category.webp'; }}
+              />
               <label style={{
                 cursor: 'pointer',
                 display: 'inline-flex',

@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { X, Upload, Image as ImageIcon } from 'lucide-react';
 import { uploadImage, deleteImageApi } from '../../api/client';
+import { getDishImageUrl } from '../../utils/imageHelper';
 
 const resolveImageUrl = (url) => {
   if (!url || url === '/uploads/logo.jpg') return '';
@@ -520,43 +521,20 @@ export default function DishFormModal({ dish, categories, token, onSave, onClose
               Dish Image
             </label>
             <div style={{ display: 'flex', gap: '10px', alignItems: 'center', marginBottom: '8px' }}>
-              {image ? (
-                <img
-                  src={resolveImageUrl(image)}
-                  alt="Preview"
-                  style={{
-                    width: '54px',
-                    height: '54px',
-                    borderRadius: 'var(--radius-sm)',
-                    objectFit: 'cover',
-                    border: '1px solid var(--accent-gold)'
-                  }}
-                  onError={(e) => {
-                    if (image.includes('.r2.dev/')) {
-                      const idx = image.indexOf('restaurants/');
-                      if (idx !== -1) {
-                        e.target.src = `/api/r2-proxy/${image.substring(idx)}`;
-                        return;
-                      }
-                    }
-                    e.target.style.opacity = '0.4';
-                  }}
-                />
-              ) : (
-                <div style={{
+              <img
+                src={getDishImageUrl(image)}
+                alt="Preview"
+                style={{
                   width: '54px',
                   height: '54px',
                   borderRadius: 'var(--radius-sm)',
-                  background: 'var(--header-gradient)',
-                  color: 'var(--gold-bright)',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  fontSize: '1.4rem'
-                }}>
-                  🍲
-                </div>
-              )}
+                  objectFit: 'cover',
+                  border: '1px solid var(--accent-gold)'
+                }}
+                onError={(e) => {
+                  e.currentTarget.src = '/images/default-dish.webp';
+                }}
+              />
               <label style={{
                 cursor: 'pointer',
                 display: 'inline-flex',

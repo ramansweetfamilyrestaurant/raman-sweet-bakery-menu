@@ -1,12 +1,12 @@
 import React from 'react';
 import { ChevronRight } from 'lucide-react';
-import { resolveImageUrl } from '../utils/imageHelper';
+import { getDishImageUrl } from '../utils/imageHelper';
 
 export default function DishCard({ dish, onClick, onAddToCart, currencySymbol = '₹', lang = 'en' }) {
   const symbol = (currencySymbol !== undefined && currencySymbol !== null) ? currencySymbol : '₹';
   const isAvailable = dish.available !== false;
   const hasHalfPrice = dish.price_half !== null && dish.price_half !== undefined && Number(dish.price_half) > 0;
-  const imageSrc = resolveImageUrl(dish.image);
+  const imageSrc = getDishImageUrl(dish.image);
   const displayName = (lang === 'hi' && dish.name_hi) ? dish.name_hi : dish.name;
   const displayDesc = (lang === 'hi' && dish.description_hi) ? dish.description_hi : dish.description;
 
@@ -46,40 +46,22 @@ export default function DishCard({ dish, onClick, onAddToCart, currencySymbol = 
         backgroundColor: 'var(--bg-secondary)',
         overflow: 'hidden'
       }}>
-        {imageSrc ? (
-          <img 
-            src={imageSrc} 
-            alt={dish.name}
-            loading="lazy"
-            style={{
-              position: 'absolute',
-              top: 0,
-              left: 0,
-              width: '100%',
-              height: '100%',
-              objectFit: 'cover'
-            }}
-            onError={(e) => {
-              e.target.style.display = 'none';
-            }}
-          />
-        ) : (
-          <div style={{
+        <img 
+          src={imageSrc} 
+          alt={dish.name}
+          loading="lazy"
+          onError={(e) => {
+            e.currentTarget.src = '/images/default-dish.webp';
+          }}
+          style={{
             position: 'absolute',
             top: 0,
             left: 0,
             width: '100%',
             height: '100%',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            background: 'var(--header-gradient)',
-            color: 'var(--gold-bright)',
-            fontSize: '1.8rem'
-          }}>
-            🍽️
-          </div>
-        )}
+            objectFit: 'cover'
+          }}
+        />
 
         {/* Ultra-Clean Non-Overlapping Badges Overlay */}
         <div style={{

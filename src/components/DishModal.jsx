@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { X, ShieldCheck, Sparkles, Clock, Utensils, CheckCircle } from 'lucide-react';
-import { resolveImageUrl } from '../utils/imageHelper';
+import { getDishImageUrl } from '../utils/imageHelper';
 
 export default function DishModal({ dish, onClose, currencySymbol = '₹', lang = 'en' }) {
   if (!dish) return null;
@@ -17,7 +17,7 @@ export default function DishModal({ dish, onClose, currencySymbol = '₹', lang 
     : (dish.portion_full_label || dish.portion || (lang === 'hi' ? 'फुल पोर्शन' : 'Full Portion'));
 
   const ingredientsList = dish.ingredients ? dish.ingredients.split(',').map(i => i.trim()) : [];
-  const imageSrc = resolveImageUrl(dish.image);
+  const imageSrc = getDishImageUrl(dish.image);
 
   return (
     <div style={{
@@ -82,31 +82,16 @@ export default function DishModal({ dish, onClose, currencySymbol = '₹', lang 
           position: 'relative',
           flexShrink: 0
         }}>
-          {imageSrc ? (
-            <img
-              src={imageSrc}
-              alt={dish.name}
-              style={{
-                width: '100%',
-                height: '100%',
-                objectFit: 'cover'
-              }}
-              onError={(e) => { e.target.style.display = 'none'; }}
-            />
-          ) : (
-            <div style={{
+          <img
+            src={imageSrc}
+            alt={dish.name}
+            onError={(e) => { e.currentTarget.src = '/images/default-dish.webp'; }}
+            style={{
               width: '100%',
               height: '100%',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              background: 'var(--header-gradient)',
-              color: 'var(--gold-bright)',
-              fontSize: '3rem'
-            }}>
-              🍲
-            </div>
-          )}
+              objectFit: 'cover'
+            }}
+          />
           
           {/* FSSAI 100% Pure Veg Badge Overlay */}
           <div style={{
