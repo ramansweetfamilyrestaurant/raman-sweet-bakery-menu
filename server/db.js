@@ -18,15 +18,17 @@ async function initDb() {
 
   if (process.env.DATABASE_URL) {
     try {
-      const pool = new pg.Pool({
-        connectionString: process.env.DATABASE_URL,
-        ssl: { rejectUnauthorized: false },
-        connectionTimeoutMillis: 10000,
-      });
-      await pool.query('SELECT 1');
-      pgPool = pool;
+      if (!pgPool) {
+        pgPool = new pg.Pool({
+          connectionString: process.env.DATABASE_URL,
+          ssl: { rejectUnauthorized: false },
+          connectionTimeoutMillis: 10000,
+          max: process.env.VERCEL ? 3 : 10,
+          idleTimeoutMillis: 30000,
+        });
+      }
       dbType = 'postgres';
-      console.log('⚡ Connected to PostgreSQL Database');
+      console.log('⚡ Connected to PostgreSQL Database pool');
     } catch (err) {
       console.warn('⚠️ PostgreSQL connection failed. Falling back to SQLite database:', err.message);
       dbType = 'sqlite';
