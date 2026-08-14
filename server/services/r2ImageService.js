@@ -201,7 +201,25 @@ export async function uploadImageToR2({ buffer, mimeType, restaurantId, entityTy
   // 2. Generate structured key
   const objectKey = generateObjectKey(restaurantId, entityType);
 
-  const targetBucket = config.bucketName;
+  const targetBucket = String(config.bucketName || '').trim();
+
+  if (!targetBucket) {
+    throw new Error('R2_BUCKET_NAME is missing in environment configuration');
+  }
+
+  if (!/^[a-z0-9][a-z0-9.-]{1,61}[a-z0-9]$/.test(targetBucket)) {
+    throw new Error(`Invalid R2 bucket name configuration: "${targetBucket}"`);
+  }
+
+  console.error('[R2 DEBUG]', {
+    bucket: targetBucket,
+    bucketType: typeof targetBucket,
+    bucketLength: typeof targetBucket === 'string' ? targetBucket.length : null,
+    hasLeadingWhitespace:
+      typeof targetBucket === 'string' ? targetBucket !== targetBucket.trimStart() : null,
+    hasTrailingWhitespace:
+      typeof targetBucket === 'string' ? targetBucket !== targetBucket.trimEnd() : null
+  });
 
   // 3. Upload to configured R2 Bucket
   try {
