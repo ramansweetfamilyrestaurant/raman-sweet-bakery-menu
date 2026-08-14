@@ -565,11 +565,19 @@ router.post('/upload', authenticateToken, requireActiveSubscription, (req, res, 
         r2Url: r2Result.publicUrl
       });
     } catch (r2Err) {
-      console.warn('[R2 UPLOAD NOTICE] R2 upload failed, falling back to local/DB storage:', r2Err.message);
+      console.error('[R2 UPLOAD ERROR] R2 upload failed:', r2Err.message);
+      if (req.file.path && fs.existsSync(req.file.path)) fs.unlinkSync(req.file.path);
+      return res.status(500).json({ success: false, error: `R2 Storage upload failed: ${r2Err.message}` });
     }
   }
 
-  // FALLBACK: Save locally and store in database
+  const isProduction = Boolean(process.env.VERCEL || process.env.NODE_ENV === 'production');
+  if (isProduction) {
+    if (req.file.path && fs.existsSync(req.file.path)) fs.unlinkSync(req.file.path);
+    return res.status(500).json({ success: false, error: 'Cloudflare R2 is not configured in production environment variables' });
+  }
+
+  // LOCAL DEV ONLY FALLBACK: Save locally and store in database
   try {
     const localUrl = `/uploads/${req.file.filename}`;
     await saveImageToDb(req.file.filename, req.file.mimetype, fileBuffer);
