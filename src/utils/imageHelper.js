@@ -66,3 +66,26 @@ export function getCategoryImageUrl(url) {
   }
   return resolveImageUrl(cleanUrl);
 }
+
+/**
+ * Restaurant Custom Logo Checker
+ */
+export function hasCustomRestaurantLogo(logo) {
+  if (!logo || typeof logo !== 'string') return false;
+  const clean = logo.trim();
+  if (!clean || clean === 'null' || clean === 'undefined') return false;
+  if (clean === '/uploads/logo.jpg' || clean === '/images/default-logo.webp') return false;
+  if (clean.includes('images.unsplash.com/photo-1555396273-367ea4eb4db5')) return false;
+  return true;
+}
+
+/**
+ * Universal Restaurant Logo URL Resolver
+ * Guarantees that uncustomized or invalid logos resolve strictly to /uploads/logo.jpg
+ */
+export function getRestaurantLogoUrl(logo) {
+  if (!hasCustomRestaurantLogo(logo)) {
+    return '/uploads/logo.jpg';
+  }
+  return resolveImageUrl(logo);
+}

@@ -1,5 +1,6 @@
 import React from 'react';
 import { ShieldCheck, Clock, Phone, Info } from 'lucide-react';
+import { getRestaurantLogoUrl } from '../utils/imageHelper';
 
 export default function PhysicalMenuHeader({ info, categories, selectedCategory, onSelectCategory, onOpenInfoModal, onOpenAdmin }) {
   return (
@@ -68,9 +69,10 @@ export default function PhysicalMenuHeader({ info, categories, selectedCategory,
           boxShadow: '0 0 20px rgba(212, 175, 55, 0.4)'
         }}>
           <img 
-            src={info?.logo || '/uploads/logo.jpg'} 
+            src={getRestaurantLogoUrl(info?.logo)} 
             alt="Logo"
             style={{ width: '100%', height: '100%', objectFit: 'cover', borderRadius: '50%' }}
+            onError={(e) => { e.currentTarget.src = '/uploads/logo.jpg'; }}
           />
         </div>
 

@@ -1,5 +1,6 @@
 import React from 'react';
 import { X, Clock, Phone, MapPin, ShieldCheck, ExternalLink } from 'lucide-react';
+import { getRestaurantLogoUrl } from '../utils/imageHelper';
 
 export default function RestaurantInfoModal({ info, onClose, onOpenReviewModal }) {
   return (
@@ -61,8 +62,9 @@ export default function RestaurantInfoModal({ info, onClose, onOpenReviewModal }
 
           <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
             <img
-              src={info?.logo || '/uploads/logo.jpg'}
+              src={getRestaurantLogoUrl(info?.logo)}
               alt="Logo"
+              onError={(e) => { e.currentTarget.src = '/uploads/logo.jpg'; }}
               style={{ width: '48px', height: '48px', borderRadius: '50%', border: '2px solid #D4AF37', objectFit: 'cover' }}
             />
             <div>

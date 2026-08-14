@@ -1,5 +1,6 @@
 import React from 'react';
 import { ShieldCheck, Globe, Star, Info, Clock, Phone, MapPin } from 'lucide-react';
+import { getRestaurantLogoUrl } from '../utils/imageHelper';
 
 export default function CustomerHeader({ info, lang, tableNum, onToggleLang, onOpenInfoModal, onOpenAdmin, onCallStaff, onOpenReviewModal }) {
   return (
@@ -147,18 +148,12 @@ export default function CustomerHeader({ info, lang, tableNum, onToggleLang, onO
           background: '#0A2315',
           flexShrink: 0
         }}>
-          {info?.logo && info.logo !== '/uploads/logo.jpg' ? (
-            <img 
-              src={info.logo} 
-              alt={info.name}
-              style={{ width: '100%', height: '100%', objectFit: 'cover', borderRadius: '50%' }}
-              onError={(e) => { e.target.style.display = 'none'; }}
-            />
-          ) : (
-            <div style={{ width: '100%', height: '100%', borderRadius: '50%', background: 'var(--gold-bright)', color: '#0A2315', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 900, fontSize: '1rem' }}>
-              {(info?.name || 'R').charAt(0).toUpperCase()}
-            </div>
-          )}
+          <img 
+            src={getRestaurantLogoUrl(info?.logo)} 
+            alt={info?.name || 'Restaurant Logo'}
+            style={{ width: '100%', height: '100%', objectFit: 'cover', borderRadius: '50%' }}
+            onError={(e) => { e.currentTarget.src = '/uploads/logo.jpg'; }}
+          />
         </div>
 
         {/* Titles */}

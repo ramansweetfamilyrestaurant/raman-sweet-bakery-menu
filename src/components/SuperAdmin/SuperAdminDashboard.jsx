@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Crown, Plus, LogOut, ExternalLink, Trash2, CheckCircle, Store, Utensils, DollarSign, Phone, MapPin, Copy, Check, Search, Edit3, Shield, ShieldCheck, RefreshCw, QrCode, Megaphone, FileText, Calendar, Palette, MessageSquare, Upload, X, XCircle, CreditCard, Lock, Sparkles, Eye, EyeOff, Key, Database, Sliders, Image } from 'lucide-react';
 import { fetchSuperAdminRestaurants, createTenantRestaurant, toggleTenantRestaurantActive, deleteTenantRestaurant, impersonateTenantRestaurant, updateTenantRestaurant, createAnnouncement, fetchSuperAnnouncements, deleteAnnouncement, clearAllAnnouncements, fetchAuditLogs, uploadImage, fetchSaaSPlans, createSaaSPlan, updateSaaSPlan, deleteSaaSPlan, superAdminOptimizeDatabase, updateSuperAdminCredentials, grantFreeAccess, revokeFreeAccess } from '../../api/client';
 import { SAAS_PLANS, getPlanDetails } from '../../config/plans';
-import { resolveImageUrl } from '../../utils/imageHelper';
+import { resolveImageUrl, getRestaurantLogoUrl } from '../../utils/imageHelper';
 import GrantFreeAccessModal from './modals/GrantFreeAccessModal';
 import RevokeFreeAccessModal from './modals/RevokeFreeAccessModal';
 import SaaSPlansView from './views/SaaSPlansView';
@@ -1038,23 +1038,21 @@ export default function SuperAdminDashboard({ token, username, onLogout, onRetur
                   <div>
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '12px' }}>
                       <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                        {(r.logo && r.logo !== '/uploads/logo.jpg') || paymentKeys.platform_logo_url ? (
-                          <img
-                            src={resolveImageUrl(r.logo && r.logo !== '/uploads/logo.jpg' ? r.logo : paymentKeys.platform_logo_url)}
-                            alt={r.name}
-                            style={{
-                              width: '46px',
-                              height: '46px',
-                              borderRadius: '50%',
-                              objectFit: 'cover',
-                              border: '2px solid #D4AF37'
-                            }}
-                          />
-                        ) : (
-                          <div style={{ width: '46px', height: '46px', borderRadius: '50%', background: 'linear-gradient(135deg, #0A2315 0%, #164E2A 100%)', color: '#FFD700', border: '2px solid #D4AF37', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 900, fontSize: '1.2rem', flexShrink: 0 }}>
-                            {r.name.charAt(0).toUpperCase()}
-                          </div>
-                        )}
+                        <img
+                          src={getRestaurantLogoUrl(r.logo)}
+                          alt={r.name}
+                          onError={(e) => {
+                            e.currentTarget.src = '/uploads/logo.jpg';
+                          }}
+                          style={{
+                            width: '46px',
+                            height: '46px',
+                            borderRadius: '50%',
+                            objectFit: 'cover',
+                            border: '2px solid #D4AF37',
+                            flexShrink: 0
+                          }}
+                        />
                         <div>
                           <h3 style={{ fontSize: '1.05rem', fontWeight: 900, margin: 0, color: 'var(--text-dark)', lineHeight: 1.2 }}>
                             {r.name}
@@ -1681,13 +1679,14 @@ export default function SuperAdminDashboard({ token, username, onLogout, onRetur
             <form onSubmit={handleUpdateRestaurant} style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
               {/* Logo Uploader in Super Admin Edit Modal */}
               <div style={{ display: 'flex', alignItems: 'center', gap: '14px', background: '#F8FAFC', padding: '12px 16px', borderRadius: '14px', border: '1.5px solid #CBD5E1' }}>
-                {(editModalData.logo && editModalData.logo !== '/uploads/logo.jpg') || paymentKeys.platform_logo_url ? (
-                  <img src={resolveImageUrl(editModalData.logo && editModalData.logo !== '/uploads/logo.jpg' ? editModalData.logo : paymentKeys.platform_logo_url)} alt="Logo" style={{ width: '48px', height: '48px', borderRadius: '50%', objectFit: 'cover', border: '2px solid #D4AF37' }} />
-                ) : (
-                  <div style={{ width: '48px', height: '48px', borderRadius: '50%', background: '#0A2315', color: '#DFBA67', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 900, fontSize: '1.2rem', flexShrink: 0 }}>
-                    {(editModalData.name || 'R').charAt(0).toUpperCase()}
-                  </div>
-                )}
+                <img
+                  src={getRestaurantLogoUrl(editModalData.logo)}
+                  alt="Logo"
+                  onError={(e) => {
+                    e.currentTarget.src = '/uploads/logo.jpg';
+                  }}
+                  style={{ width: '48px', height: '48px', borderRadius: '50%', objectFit: 'cover', border: '2px solid #D4AF37', flexShrink: 0 }}
+                />
                 <div style={{ flexGrow: 1 }}>
                   <label style={{ fontSize: '0.8rem', fontWeight: 800, color: 'var(--text-dark)', display: 'block', marginBottom: '4px' }}>RESTAURANT BRAND LOGO</label>
                   <label style={{ cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: '6px', background: '#0A2315', color: '#DFBA67', padding: '5px 12px', borderRadius: 'var(--radius-pill)', fontSize: '0.76rem', fontWeight: 800 }}>
