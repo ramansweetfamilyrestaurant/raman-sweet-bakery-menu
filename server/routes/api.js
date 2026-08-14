@@ -172,7 +172,7 @@ router.get('/menu-bundle', async (req, res) => {
         WHERE d.restaurant_id = $1 AND (d.available IS NOT FALSE) AND (c.active IS NOT FALSE OR c.id IS NULL)
         ORDER BY d.id ASC
       `, [targetId]),
-      query("SELECT * FROM combos WHERE restaurant_id = $1 AND (active IS NULL OR active::text NOT IN ('0', 'false', 'f')) ORDER BY id ASC", [targetId]).catch(() => [])
+      query("SELECT * FROM combos WHERE restaurant_id = $1 AND (available IS NOT FALSE) ORDER BY sort_order ASC, id ASC", [targetId])
     ]);
 
     let filtersVis = resto.filters_visibility;
