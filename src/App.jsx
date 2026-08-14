@@ -545,11 +545,11 @@ export default function App() {
       return;
     }
 
-    if (!silent) {
+    if (!silent && !info) {
       setLoading(true);
     }
     setRestaurantStatus('active');
-    const isSystemNonMenuRoute = ['/register', '/billing', '/super-admin', '/superadmin'].includes(rawPath);
+    const isSystemNonMenuRoute = ['/', '/register', '/billing', '/super-admin', '/superadmin', '/privacy-policy', '/privacy', '/terms', '/terms-of-service', '/refund-policy', '/refunds', '/security', '/contact', '/support'].includes(rawPath);
     if (!slug && isSystemNonMenuRoute) {
       setLoading(false);
       return;
@@ -648,10 +648,14 @@ export default function App() {
   useEffect(() => {
     const rawPath = window.location.pathname.toLowerCase().replace(/\/$/, '');
     const isRootAdminRoute = rawPath === '/admin' || rawPath === '/super-admin' || rawPath === '/superadmin';
+    const isNonMenuSystemView = ['landing', 'admin-dashboard', 'admin-login', 'super-admin-dashboard', 'super-admin-login', 'register', 'billing', 'privacy-policy', 'terms', 'refund-policy', 'security', 'contact'].includes(view);
     const slug = getSlugFromUrl();
 
-    if (view === 'kitchen-kds' || view === 'super-admin-dashboard' || (isRootAdminRoute && !slug) || isSlugKitchenPath(window.location.pathname)) {
+    if (isNonMenuSystemView || isRootAdminRoute || isSlugKitchenPath(window.location.pathname)) {
       setLoading(false);
+      if (view === 'menu' && slug) {
+        loadMenuData(slug, true);
+      }
     } else {
       loadMenuData();
     }
