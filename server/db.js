@@ -852,63 +852,37 @@ async function createTables() {
 
 async function seedData() {
   // Ensure a generic TouchQR demo restaurant exists for local/dev previews.
-  const restoCheck = await query('SELECT * FROM restaurants WHERE slug = $1', ['touchqr-demo']);
-  let primaryRestoId = restoCheck[0]?.id;
-
-  if (!primaryRestoId) {
-    const res = await query(`
-      INSERT INTO restaurants (
-        name, slug, tagline, logo, phone, address, opening_hours, google_review_url, google_maps_url, active
-      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10) RETURNING id
-    `, [
-      'TouchQR Demo Restaurant',
-      'touchqr-demo',
-      'QR Menu - Table Ordering - Restaurant Operations',
-      '/uploads/logo.jpg',
-      '+91 9708366583',
-      'Demo Address, Your City',
-      '8:00 AM - 10:30 PM (Mon - Sun)',
-      'https://r.revmeai.com/r/ee7e4c91-f85e-4a01-8767-eeaee0a89341',
-      'https://share.google/2M5mFMPlmS6pAXRf7',
-      1
-    ]);
-    primaryRestoId = res[0]?.id || res.lastInsertRowid || 1;
-    console.log(`Created TouchQR demo tenant restaurant (ID: ${primaryRestoId})`);
-  }
-
-  // Ensure Raja Restaurant exists by default
   try {
-    const rajaCheck = await query('SELECT * FROM restaurants WHERE slug = $1', ['raja-restaurant']);
-    if (!rajaCheck || rajaCheck.length === 0) {
-      const rajaRes = await query(`
+    const demoCheck = await query('SELECT * FROM restaurants WHERE slug = $1', ['touchqr-demo']);
+    if (!demoCheck || demoCheck.length === 0) {
+      const demoRes = await query(`
         INSERT INTO restaurants (
           name, slug, tagline, logo, phone, address, opening_hours, active, plan_tier, plan_price, order_retention_days
         ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11) RETURNING id
       `, [
-        'raja restaurant',
-        'raja-restaurant',
-        'Authentic Indian Sweets & Fast Food',
-        '/uploads/logo.jpg',
-        '+919999999999',
-        'Motihari, Bihar',
-        '8:00 AM - 10:30 PM',
+        'TouchQR Demo Restaurant',
+        'touchqr-demo',
+        'Experience the TouchQR Digital Menu',
+        null,
+        '+919876543210',
+        'Demo Business Center, Suite 100',
+        '8:00 AM - 10:30 PM (Mon - Sun)',
         1,
         'enterprise',
         1990,
         90
       ]);
-      const rajaId = rajaRes[0]?.id || rajaRes.lastInsertRowid;
+      const demoId = demoRes[0]?.id || demoRes.lastInsertRowid;
       
       const salt = await bcrypt.genSalt(10);
       const hash = await bcrypt.hash('admin123', salt);
       await query(`
         INSERT INTO admins (restaurant_id, username, password_hash, role)
         VALUES ($1, $2, $3, $4)
-      `, [rajaId, 'admin', hash, 'restaurant_admin']);
-      console.log(`🏨 Seeded tenant restaurant Raja Restaurant (ID: ${rajaId})`);
+      `, [demoId, 'demo_admin', hash, 'restaurant_admin']);
     }
-  } catch (err) {
-    console.warn('Raja restaurant seeding notice:', err.message);
+  } catch (e) {
+    console.error('Demo tenant seed notice:', e);
   }
 
   // Seed default SaaS Plans if empty
