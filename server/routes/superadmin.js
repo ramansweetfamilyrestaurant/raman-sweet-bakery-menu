@@ -538,11 +538,28 @@ router.get('/plans', authenticateToken, requireSuperAdmin, async (req, res) => {
     const countMap = {};
     (counts || []).forEach(c => { countMap[c.plan_tier] = parseInt(c.count, 10); });
 
+    const isTrue = (val, def = true) => val !== undefined && val !== null ? (val === 1 || val === true || val === '1' || val === 'true') : def;
+
     const result = (plans || []).map(p => ({
       ...p,
-      whatsapp_enabled: p.whatsapp_enabled !== 0 && p.whatsapp_enabled !== false,
-      direct_ordering_enabled: p.direct_ordering_enabled !== 0 && p.direct_ordering_enabled !== false,
-      google_reviews_enabled: p.google_reviews_enabled !== 0 && p.google_reviews_enabled !== false,
+      whatsapp_enabled: isTrue(p.whatsapp_ordering_enabled ?? p.whatsapp_enabled, true),
+      whatsapp_ordering_enabled: isTrue(p.whatsapp_ordering_enabled ?? p.whatsapp_enabled, true),
+      direct_ordering_enabled: isTrue(p.direct_ordering_enabled, false),
+      google_reviews_enabled: isTrue(p.google_reviews_enabled, true),
+      modifiers_enabled: isTrue(p.modifiers_enabled, true),
+      staff_roles_enabled: isTrue(p.staff_roles_enabled, true),
+      audio_alarm_enabled: isTrue(p.audio_alarm_enabled, true),
+      order_status_whatsapp_enabled: isTrue(p.order_status_whatsapp_enabled, true),
+      kds_enabled: isTrue(p.kds_enabled, true),
+      bluetooth_kot_enabled: isTrue(p.bluetooth_kot_enabled, true),
+      ai_review_enabled: isTrue(p.ai_review_enabled, true),
+      stories_enabled: isTrue(p.stories_enabled, true),
+      gst_invoice_enabled: isTrue(p.gst_invoice_enabled, true),
+      analytics_export_enabled: isTrue(p.analytics_export_enabled, true),
+      multi_language_enabled: isTrue(p.multi_language_enabled, true),
+      watermark_removal_enabled: isTrue(p.watermark_removal_enabled, true),
+      custom_domain_enabled: isTrue(p.custom_domain_enabled, true),
+      dual_printer_enabled: isTrue(p.dual_printer_enabled, false),
       enrolled_count: countMap[p.key] || 0
     }));
     res.json(result);
@@ -560,9 +577,12 @@ router.post('/plans', authenticateToken, requireSuperAdmin, async (req, res) => 
 
     const cleanKey = (key || name.toLowerCase().replace(/[^a-z0-9]/g, '_')).trim();
 
+    const toBoolInt = (val) => (val === 1 || val === true || val === '1' || val === 'true') ? 1 : 0;
+    const wVal = toBoolInt(whatsapp_enabled);
+
     await query(`
-      INSERT INTO saas_plans (key, name, price, original_price, badge, description, whatsapp_enabled, direct_ordering_enabled, google_reviews_enabled)
-      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
+      INSERT INTO saas_plans (key, name, price, original_price, badge, description, whatsapp_enabled, whatsapp_ordering_enabled, direct_ordering_enabled, google_reviews_enabled)
+      VALUES ($1, $2, $3, $4, $5, $6, $7, $7, $8, $9)
     `, [
       cleanKey,
       name.trim(),
@@ -570,9 +590,9 @@ router.post('/plans', authenticateToken, requireSuperAdmin, async (req, res) => 
       original_price ? parseFloat(original_price) : (price ? parseFloat(price) * 2 - 1 : 1999),
       badge || '👑 CUSTOM',
       description || '',
-      whatsapp_enabled ? 1 : 0,
-      direct_ordering_enabled ? 1 : 0,
-      google_reviews_enabled ? 1 : 0
+      wVal,
+      toBoolInt(direct_ordering_enabled),
+      toBoolInt(google_reviews_enabled)
     ]);
 
     await logAudit(null, 'superadmin', 'Create SaaS Plan', `Created plan '${name}' (${cleanKey})`);
@@ -596,6 +616,8 @@ router.put('/plans/:key', authenticateToken, requireSuperAdmin, async (req, res)
       analytics_export_enabled, multi_language_enabled, watermark_removal_enabled, custom_domain_enabled, dual_printer_enabled
     } = req.body;
 
+    const toBoolInt = (val) => (val === 1 || val === true || val === '1' || val === 'true') ? 1 : 0;
+
     const queryParams = [
       name || key,
       price !== undefined ? parseFloat(price) : 999,
@@ -607,23 +629,23 @@ router.put('/plans/:key', authenticateToken, requireSuperAdmin, async (req, res)
       max_tables !== undefined ? parseInt(max_tables, 10) : 9999,
       max_staff_accounts !== undefined ? parseInt(max_staff_accounts, 10) : 9999,
       order_retention_days !== undefined ? parseInt(order_retention_days, 10) : 365,
-      modifiers_enabled ? 1 : 0,
-      staff_roles_enabled ? 1 : 0,
-      whatsapp_ordering_enabled ? 1 : 0,
-      direct_ordering_enabled ? 1 : 0,
-      audio_alarm_enabled ? 1 : 0,
-      order_status_whatsapp_enabled ? 1 : 0,
-      kds_enabled ? 1 : 0,
-      bluetooth_kot_enabled ? 1 : 0,
-      google_reviews_enabled ? 1 : 0,
-      ai_review_enabled ? 1 : 0,
-      stories_enabled ? 1 : 0,
-      gst_invoice_enabled ? 1 : 0,
-      analytics_export_enabled ? 1 : 0,
-      multi_language_enabled ? 1 : 0,
-      watermark_removal_enabled ? 1 : 0,
-      custom_domain_enabled ? 1 : 0,
-      dual_printer_enabled ? 1 : 0,
+      toBoolInt(modifiers_enabled),
+      toBoolInt(staff_roles_enabled),
+      toBoolInt(whatsapp_ordering_enabled !== undefined ? whatsapp_ordering_enabled : req.body.whatsapp_enabled),
+      toBoolInt(direct_ordering_enabled),
+      toBoolInt(audio_alarm_enabled),
+      toBoolInt(order_status_whatsapp_enabled),
+      toBoolInt(kds_enabled),
+      toBoolInt(bluetooth_kot_enabled),
+      toBoolInt(google_reviews_enabled),
+      toBoolInt(ai_review_enabled),
+      toBoolInt(stories_enabled),
+      toBoolInt(gst_invoice_enabled),
+      toBoolInt(analytics_export_enabled),
+      toBoolInt(multi_language_enabled),
+      toBoolInt(watermark_removal_enabled),
+      toBoolInt(custom_domain_enabled),
+      toBoolInt(dual_printer_enabled),
       key
     ];
 
@@ -632,7 +654,7 @@ router.put('/plans/:key', authenticateToken, requireSuperAdmin, async (req, res)
         UPDATE saas_plans
         SET name = $1, price = $2, badge = $3, description = $4,
             max_dishes = $5, max_categories = $6, max_combos = $7, max_tables = $8, max_staff_accounts = $9, order_retention_days = $10,
-            modifiers_enabled = $11, staff_roles_enabled = $12, whatsapp_ordering_enabled = $13, direct_ordering_enabled = $14,
+            modifiers_enabled = $11, staff_roles_enabled = $12, whatsapp_ordering_enabled = $13, whatsapp_enabled = $13, direct_ordering_enabled = $14,
             audio_alarm_enabled = $15, order_status_whatsapp_enabled = $16, kds_enabled = $17, bluetooth_kot_enabled = $18,
             google_reviews_enabled = $19, ai_review_enabled = $20, stories_enabled = $21, gst_invoice_enabled = $22,
             analytics_export_enabled = $23, multi_language_enabled = $24, watermark_removal_enabled = $25, custom_domain_enabled = $26,
@@ -651,7 +673,7 @@ router.put('/plans/:key', authenticateToken, requireSuperAdmin, async (req, res)
         UPDATE saas_plans
         SET name = $1, price = $2, badge = $3, description = $4,
             max_dishes = $5, max_categories = $6, max_combos = $7, max_tables = $8, max_staff_accounts = $9, order_retention_days = $10,
-            modifiers_enabled = $11, staff_roles_enabled = $12, whatsapp_ordering_enabled = $13, direct_ordering_enabled = $14,
+            modifiers_enabled = $11, staff_roles_enabled = $12, whatsapp_ordering_enabled = $13, whatsapp_enabled = $13, direct_ordering_enabled = $14,
             audio_alarm_enabled = $15, order_status_whatsapp_enabled = $16, kds_enabled = $17, bluetooth_kot_enabled = $18,
             google_reviews_enabled = $19, ai_review_enabled = $20, stories_enabled = $21, gst_invoice_enabled = $22,
             analytics_export_enabled = $23, multi_language_enabled = $24, watermark_removal_enabled = $25, custom_domain_enabled = $26,
