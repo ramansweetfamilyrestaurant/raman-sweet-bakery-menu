@@ -80,11 +80,11 @@ export function hasCustomRestaurantLogo(logo) {
 
 /**
  * Universal Restaurant Logo URL Resolver
- * Guarantees that uncustomized or invalid logos resolve cleanly to /images/default-logo.svg
+ * Guarantees that uncustomized or invalid logos resolve cleanly to user's official /images/default-logo.webp
  */
 export function getRestaurantLogoUrl(logo) {
   if (!hasCustomRestaurantLogo(logo)) {
-    return '/images/default-logo.svg';
+    return '/images/default-logo.webp';
   }
   return resolveImageUrl(logo);
 }

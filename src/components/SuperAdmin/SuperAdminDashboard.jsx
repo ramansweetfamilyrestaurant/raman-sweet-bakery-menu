@@ -1042,7 +1042,7 @@ export default function SuperAdminDashboard({ token, username, onLogout, onRetur
                           src={getRestaurantLogoUrl(r.logo)}
                           alt={r.name}
                           onError={(e) => {
-                            e.currentTarget.src = '/images/default-logo.svg';
+                            e.currentTarget.src = '/images/default-logo.webp';
                           }}
                           style={{
                             width: '46px',
@@ -1683,7 +1683,7 @@ export default function SuperAdminDashboard({ token, username, onLogout, onRetur
                   src={getRestaurantLogoUrl(editModalData.logo)}
                   alt="Logo"
                   onError={(e) => {
-                    e.currentTarget.src = '/images/default-logo.svg';
+                    e.currentTarget.src = '/images/default-logo.webp';
                   }}
                   style={{ width: '48px', height: '48px', borderRadius: '50%', objectFit: 'cover', border: '2px solid #D4AF37', flexShrink: 0 }}
                 />
