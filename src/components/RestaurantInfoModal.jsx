@@ -64,7 +64,7 @@ export default function RestaurantInfoModal({ info, onClose, onOpenReviewModal }
             <img
               src={getRestaurantLogoUrl(info?.logo)}
               alt="Logo"
-              onError={(e) => { e.currentTarget.src = '/uploads/logo.jpg'; }}
+              onError={(e) => { e.currentTarget.src = '/images/default-logo.svg'; }}
               style={{ width: '48px', height: '48px', borderRadius: '50%', border: '2px solid #D4AF37', objectFit: 'cover' }}
             />
             <div>

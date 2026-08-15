@@ -1,0 +1,19 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200" width="200" height="200">
+  <defs>
+    <linearGradient id="bgGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#0A2315" />
+      <stop offset="100%" stop-color="#164E2A" />
+    </linearGradient>
+    <linearGradient id="goldGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#FFD700" />
+      <stop offset="100%" stop-color="#DFBA67" />
+    </linearGradient>
+  </defs>
+  <circle cx="100" cy="100" r="96" fill="url(#bgGrad)" stroke="url(#goldGrad)" stroke-width="4" />
+  <circle cx="100" cy="100" r="82" fill="none" stroke="rgba(223, 186, 103, 0.3)" stroke-width="2" stroke-dasharray="6,4" />
+  <!-- Cloche / Chef Hat & Fork Knife Icon -->
+  <path d="M 60 125 C 60 90, 140 90, 140 125 Z" fill="url(#goldGrad)" />
+  <rect x="55" y="128" width="90" height="8" rx="4" fill="url(#goldGrad)" />
+  <circle cx="100" cy="85" r="10" fill="url(#goldGrad)" />
+  <path d="M 80 145 L 120 145" stroke="url(#goldGrad)" stroke-width="4" stroke-linecap="round" />
+</svg>

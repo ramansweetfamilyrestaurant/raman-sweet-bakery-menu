@@ -177,7 +177,13 @@ app.get(['/api/r2-proxy/*', '/r2-proxy/*'], async (req, res) => {
     return res.sendFile(localUploadPath);
   }
 
-  // 5. Fallback to default logo.jpg on disk if present
+  // 5. Fallback to default logo SVG on disk if present
+  const defaultLogoSvg = path.resolve('public/images/default-logo.svg');
+  if (fs.existsSync(defaultLogoSvg)) {
+    res.setHeader('Content-Type', 'image/svg+xml');
+    return res.sendFile(defaultLogoSvg);
+  }
+
   const defaultLogoPath = path.resolve('public/uploads/logo.jpg');
   if (fs.existsSync(defaultLogoPath)) {
     res.setHeader('Content-Type', 'image/jpeg');
@@ -232,7 +238,12 @@ app.get('/uploads/:filename', async (req, res) => {
   }
 
   // 4. Fallback to default placeholder logo if image is missing everywhere
-  const defaultLogo = path.join(uploadsDir, 'logo.jpg');
+  const defaultLogoSvg = path.resolve('public/images/default-logo.svg');
+  if (fs.existsSync(defaultLogoSvg)) {
+    res.setHeader('Content-Type', 'image/svg+xml');
+    return res.sendFile(defaultLogoSvg);
+  }
+  const defaultLogo = path.resolve('public/uploads/logo.jpg');
   if (fs.existsSync(defaultLogo)) {
     return res.sendFile(defaultLogo);
   }
