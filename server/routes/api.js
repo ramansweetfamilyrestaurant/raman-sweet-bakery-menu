@@ -7,8 +7,7 @@ import jwt from 'jsonwebtoken';
 import bcrypt from 'bcryptjs';
 
 const router = express.Router();
-const settingsPath = path.resolve('server/settings.json');
-const JWT_SECRET = process.env.JWT_SECRET || 'touchqr_secret_jwt_key_change_me';
+import { JWT_SECRET } from '../config/jwt.js';
 
 // GET Database Debug & Diagnostics Endpoint
 router.get('/debug-db', async (req, res) => {

@@ -6,7 +6,7 @@ import { authenticateToken } from '../middleware/auth.js';
 import { createCashfreeSubscriptionSession, fetchCashfreeSubscriptionStatus, getCashfreeConfig, getCashfreeConfigAsync, verifyCashfreeWebhookSignature } from '../services/cashfree.js';
 
 const router = express.Router();
-const JWT_SECRET = process.env.JWT_SECRET || 'touchqr_secret_jwt_key_change_me';
+import { JWT_SECRET } from '../config/jwt.js';
 
 function getAppBaseUrl(req) {
   if (process.env.APP_BASE_URL && !process.env.APP_BASE_URL.includes('onrender.com')) {

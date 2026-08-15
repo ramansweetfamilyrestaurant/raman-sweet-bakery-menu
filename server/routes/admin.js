@@ -22,7 +22,7 @@ async function getSharp() {
 }
 
 const router = express.Router();
-const JWT_SECRET = process.env.JWT_SECRET || 'touchqr_secret_jwt_key_change_me';
+import { JWT_SECRET } from '../config/jwt.js';
 
 async function isImageKeyInUse(imageUrl, r2Key) {
   try {
@@ -1290,19 +1290,24 @@ router.patch('/orders/:id/status', authenticateToken, requireActiveSubscription,
 
     let prepVal = (kitchen_prepared === 1 || kitchen_prepared === true || kitchen_prepared === '1') ? 1 : 0;
 
+    let updateRes = null;
     try {
-      await query(
-        'UPDATE orders SET status = $1, sent_to_kds = $2, kitchen_prepared = $3 WHERE id = $4',
-        [status, kdsVal, prepVal, orderId]
+      updateRes = await query(
+        'UPDATE orders SET status = $1, sent_to_kds = $2, kitchen_prepared = $3 WHERE id = $4 AND restaurant_id = $5 RETURNING id',
+        [status, kdsVal, prepVal, orderId, targetId]
       );
     } catch (colErr) {
       console.warn('Auto-healing columns in orders table:', colErr.message);
       try { await query('ALTER TABLE orders ADD COLUMN sent_to_kds INT DEFAULT 0'); } catch (e1) {}
       try { await query('ALTER TABLE orders ADD COLUMN kitchen_prepared INT DEFAULT 0'); } catch (e2) {}
-      await query(
-        'UPDATE orders SET status = $1, sent_to_kds = $2, kitchen_prepared = $3 WHERE id = $4',
-        [status, kdsVal, prepVal, orderId]
+      updateRes = await query(
+        'UPDATE orders SET status = $1, sent_to_kds = $2, kitchen_prepared = $3 WHERE id = $4 AND restaurant_id = $5 RETURNING id',
+        [status, kdsVal, prepVal, orderId, targetId]
       );
+    }
+
+    if (!updateRes || updateRes.length === 0) {
+      return res.status(404).json({ error: 'Order not found or does not belong to this restaurant' });
     }
 
     res.json({ success: true, id: orderId, status, sent_to_kds: kdsVal, kitchen_prepared: prepVal });
