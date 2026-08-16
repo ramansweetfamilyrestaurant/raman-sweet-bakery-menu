@@ -29,7 +29,7 @@ app.use(cors({
     if (allowedOrigins.includes(origin)) {
       return callback(null, true);
     }
-    return callback(new Error('CORS request blocked by production origin policy'));
+    return callback(null, false);
   }
 }));
 app.use(express.json({
