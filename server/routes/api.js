@@ -1013,13 +1013,11 @@ router.get(['/cron/subscription-check', '/api/cron/subscription-check'], async (
   if (cronSecret) {
     const authHeader = req.headers['authorization'] || '';
     const cronHeader = req.headers['x-cron-secret'] || '';
-    const querySecret = req.query.secret || '';
 
     const isBearerValid = authHeader === `Bearer ${cronSecret}`;
     const isHeaderValid = cronHeader === cronSecret;
-    const isQueryValid = querySecret === cronSecret;
 
-    if (!isBearerValid && !isHeaderValid && !isQueryValid) {
+    if (!isBearerValid && !isHeaderValid) {
       console.warn(`⚠️ [CRON DENIED] Unauthorized cron attempt from IP: ${req.ip}`);
       return res.status(401).json({ error: 'Unauthorized: Invalid cron authorization credentials' });
     }
