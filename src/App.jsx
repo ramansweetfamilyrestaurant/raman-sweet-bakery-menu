@@ -148,21 +148,53 @@ export default function App() {
       })
       .catch(console.error);
 
-    // Read registration callback tokens from URL query params (when redirected back from Cashfree)
+    // Read single-use authorization code from URL query params (when redirected back from Cashfree/Registration)
     const params = new URLSearchParams(window.location.search);
-    const tokenParam = params.get('token');
-    const userParam = params.get('username');
+    const codeParam = params.get('code');
     const slugParam = params.get('slug');
 
-    if (tokenParam && slugParam) {
-      localStorage.setItem('touchqr_admin_token', tokenParam);
-      localStorage.setItem('touchqr_admin_user', userParam || 'admin');
-      localStorage.setItem('touchqr_admin_slug', slugParam);
-      setAdminToken(tokenParam);
-      setAdminUsername(userParam || 'admin');
-      setAdminSlug(slugParam);
-      setView('admin-dashboard');
-      window.history.replaceState({}, '', `/${slugParam}/admin`);
+    if (codeParam) {
+      // 1. Immediately wipe single-use code from address bar to prevent history/referrer leakage
+      const cleanPath = slugParam ? `/${slugParam}/admin` : window.location.pathname;
+      window.history.replaceState({}, '', cleanPath);
+
+      // 2. Atomically exchange authorization code for JWT token
+      fetch('/api/auth/exchange', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ code: codeParam })
+      })
+        .then(res => res.json())
+        .then(data => {
+          if (data && data.success && data.token) {
+            localStorage.setItem('touchqr_admin_token', data.token);
+            localStorage.setItem('touchqr_admin_user', data.username || 'admin');
+            localStorage.setItem('touchqr_admin_slug', data.slug || slugParam || '');
+            setAdminToken(data.token);
+            setAdminUsername(data.username || 'admin');
+            setAdminSlug(data.slug || slugParam || '');
+            setView('admin-dashboard');
+          } else {
+            console.warn('Authorization code exchange notice:', data?.error);
+          }
+        })
+        .catch(err => {
+          console.error('Authorization code exchange network error:', err);
+        });
+    } else {
+      // Backward-compatibility fallback for legacy token links if any
+      const tokenParam = params.get('token');
+      const userParam = params.get('username');
+      if (tokenParam && slugParam) {
+        localStorage.setItem('touchqr_admin_token', tokenParam);
+        localStorage.setItem('touchqr_admin_user', userParam || 'admin');
+        localStorage.setItem('touchqr_admin_slug', slugParam);
+        setAdminToken(tokenParam);
+        setAdminUsername(userParam || 'admin');
+        setAdminSlug(slugParam);
+        setView('admin-dashboard');
+        window.history.replaceState({}, '', `/${slugParam}/admin`);
+      }
     }
   }, []);
 

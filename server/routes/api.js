@@ -983,4 +983,20 @@ router.post('/register', async (req, res) => {
   }
 });
 
+// POST /api/auth/exchange - Single-Use Authorization Code Exchange for JWT
+import { exchangeAuthCode } from '../services/authCodeService.js';
+router.post(['/auth/exchange', '/api/auth/exchange'], async (req, res) => {
+  try {
+    const { code } = req.body || {};
+    const result = await exchangeAuthCode(code);
+    if (!result.success) {
+      return res.status(result.status || 400).json({ error: result.error });
+    }
+    res.json(result);
+  } catch (err) {
+    console.error('Auth code exchange error:', err);
+    res.status(500).json({ error: 'Failed to exchange authorization code' });
+  }
+});
+
 export default router;

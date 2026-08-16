@@ -4,6 +4,7 @@ import bcrypt from 'bcryptjs';
 import { query, withTransaction } from '../db.js';
 import { authenticateToken } from '../middleware/auth.js';
 import { createCashfreeSubscriptionSession, fetchCashfreeSubscriptionStatus, getCashfreeConfig, getCashfreeConfigAsync, verifyCashfreeWebhookSignature } from '../services/cashfree.js';
+import { createOneTimeAuthCode } from '../services/authCodeService.js';
 
 const router = express.Router();
 import { JWT_SECRET } from '../config/jwt.js';
@@ -348,7 +349,12 @@ router.all('/register-return', async (req, res) => {
 
   try {
     const result = await finalizePendingRegistration(reg_id, inputSubId);
-    res.redirect(`${baseUrl}/${result.cleanSlug}/admin?token=${encodeURIComponent(result.jwtToken)}&username=${encodeURIComponent(result.username)}&slug=${encodeURIComponent(result.cleanSlug)}`);
+    const authCode = await createOneTimeAuthCode({
+      restaurant_id: result.newRestoId,
+      username: result.username,
+      slug: result.cleanSlug
+    });
+    res.redirect(`${baseUrl}/${result.cleanSlug}/admin?code=${encodeURIComponent(authCode)}&slug=${encodeURIComponent(result.cleanSlug)}`);
   } catch (err) {
     console.error('[REGISTRATION] verification failed:', err.message);
     res.redirect(`${baseUrl}/register?error=${encodeURIComponent(err.message)}`);
