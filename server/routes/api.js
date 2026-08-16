@@ -67,20 +67,33 @@ router.get('/plans', async (req, res) => {
 
 
 // Helper to resolve target restaurant by explicit public URL slug, custom domain, or JWT token
+const restoResolveCache = new Map();
+const RESOLVE_CACHE_TTL_MS = 20000;
+
+export function clearRestoResolveCache() {
+  restoResolveCache.clear();
+}
+
 async function resolveRestaurant(req, slug) {
   // 1. Explicit URL slug parameter passed in public route (e.g. /api/menu-bundle?slug=rama or /api/info?slug=rama)
   // ALWAYS PRIORITIZE THE EXPLICIT PUBLIC URL SLUG SO SLUG IS AUTHORITATIVE!
   if (slug && typeof slug === 'string' && slug.trim() !== '') {
     const cleanSlug = slug.trim().toLowerCase();
     if (!['menu', 'default', 'null', 'undefined', 'home', 'index', 'api', 'kitchen'].includes(cleanSlug)) {
+      const cached = restoResolveCache.get(cleanSlug);
+      if (cached && (Date.now() - cached.timestamp < RESOLVE_CACHE_TTL_MS)) {
+        return cached.data;
+      }
       const restos = await query('SELECT * FROM restaurants WHERE LOWER(slug) = $1', [cleanSlug]);
       if (restos && restos.length > 0) {
+        restoResolveCache.set(cleanSlug, { data: restos[0], timestamp: Date.now() });
         return restos[0];
       }
       if (cleanSlug.endsWith('-menu')) {
         const altSlug = cleanSlug.replace(/-menu$/, '');
         const altRestos = await query('SELECT * FROM restaurants WHERE LOWER(slug) = $1', [altSlug]);
         if (altRestos && altRestos.length > 0) {
+          restoResolveCache.set(cleanSlug, { data: altRestos[0], timestamp: Date.now() });
           return altRestos[0];
         }
       }
