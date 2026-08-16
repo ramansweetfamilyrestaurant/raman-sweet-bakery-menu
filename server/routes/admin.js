@@ -250,10 +250,11 @@ router.get('/me', authenticateToken, async (req, res) => {
       return res.status(401).json({ error: 'Restaurant identity is missing from authentication context' });
     }
 
-    const admins = await query('SELECT id, username, role, restaurant_id FROM admins WHERE id = $1', [req.user.id]);
-    const restos = await query('SELECT * FROM restaurants WHERE id = $1', [targetId]);
-
-    const subInfo = await checkSubscriptionStatus(targetId);
+    const [admins, restos, subInfo] = await Promise.all([
+      query('SELECT id, username, role, restaurant_id FROM admins WHERE id = $1', [req.user.id]),
+      query('SELECT * FROM restaurants WHERE id = $1', [targetId]),
+      checkSubscriptionStatus(targetId)
+    ]);
 
     res.json({
       user: admins[0] || req.user,
@@ -458,9 +459,11 @@ router.get('/stats', authenticateToken, requireActiveSubscription, async (req, r
       return res.status(401).json({ error: 'Restaurant identity is missing from authentication context' });
     }
 
-    const catRes = await query('SELECT COUNT(*) as count FROM categories WHERE restaurant_id = $1', [targetId]);
-    const dishRes = await query('SELECT COUNT(*) as count FROM dishes WHERE restaurant_id = $1', [targetId]);
-    const activeRes = await query('SELECT COUNT(*) as count FROM dishes WHERE restaurant_id = $1 AND available = 1', [targetId]);
+    const [catRes, dishRes, activeRes] = await Promise.all([
+      query('SELECT COUNT(*) as count FROM categories WHERE restaurant_id = $1', [targetId]),
+      query('SELECT COUNT(*) as count FROM dishes WHERE restaurant_id = $1', [targetId]),
+      query("SELECT COUNT(*) as count FROM dishes WHERE restaurant_id = $1 AND (available = 1 OR available IS TRUE OR available::text = '1')", [targetId])
+    ]);
 
     res.json({
       totalCategories: parseInt(catRes[0]?.count || 0, 10),

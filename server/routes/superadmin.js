@@ -535,8 +535,10 @@ router.delete('/announcements', authenticateToken, requireSuperAdmin, async (req
 // GET All SaaS Plans (with restaurant count per plan)
 router.get('/plans', authenticateToken, requireSuperAdmin, async (req, res) => {
   try {
-    const plans = await query('SELECT * FROM saas_plans ORDER BY price ASC');
-    const counts = await query('SELECT plan_tier, COUNT(*) as count FROM restaurants GROUP BY plan_tier');
+    const [plans, counts] = await Promise.all([
+      query('SELECT * FROM saas_plans ORDER BY price ASC'),
+      query('SELECT plan_tier, COUNT(*) as count FROM restaurants GROUP BY plan_tier')
+    ]);
     const countMap = {};
     (counts || []).forEach(c => { countMap[c.plan_tier] = parseInt(c.count, 10); });
 
