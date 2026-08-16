@@ -74,7 +74,10 @@ export async function exchangeAuthCode(code) {
     [record.restaurant_id, record.username]
   );
 
-  const adminId = adminRows[0]?.id || 1;
+  const adminId = adminRows[0]?.id;
+  if (!adminId) {
+    return { success: false, status: 401, error: 'Admin user account not found for this restaurant' };
+  }
 
   // 4. Issue standard JWT token
   const token = jwt.sign(

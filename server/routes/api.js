@@ -578,7 +578,8 @@ router.get('/orders/active-table', async (req, res) => {
     const { slug, table_number } = req.query;
     if (!table_number) return res.json(null);
     const resto = await resolveRestaurant(req, slug);
-    const targetId = resto?.id || 1;
+    if (!resto) return res.status(404).json({ error: 'Restaurant not found' });
+    const targetId = resto.id;
 
     const orders = await query(`
       SELECT id, table_number, status, kitchen_prepared, sent_to_kds, total_amount, items, created_at

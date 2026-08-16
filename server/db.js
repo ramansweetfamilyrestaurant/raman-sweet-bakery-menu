@@ -1198,7 +1198,8 @@ async function runAutoDataSummarization(daysOld = 30, targetRestaurantId = null)
 
     const grouped = {};
     for (const o of oldOrders) {
-      const restoId = o.restaurant_id || 1;
+      if (!o.restaurant_id) continue;
+      const restoId = o.restaurant_id;
       let dStr = '';
       if (o.created_at) {
         dStr = String(o.created_at).substring(0, 10);
@@ -1280,7 +1281,9 @@ async function runAutoDataSummarization(daysOld = 30, targetRestaurantId = null)
       summarizedDaysCount++;
     }
 
-    await logAudit(targetRestaurantId || 1, 'SYSTEM', 'AUTO_SUMMARIZATION', `Summarized ${summarizedDaysCount} days, purged ${purgedOrdersCount} old individual orders older than ${daysOld} days`);
+    if (targetRestaurantId) {
+      await logAudit(targetRestaurantId, 'SYSTEM', 'AUTO_SUMMARIZATION', `Summarized ${summarizedDaysCount} days, purged ${purgedOrdersCount} old individual orders older than ${daysOld} days`);
+    }
 
     return {
       summarized_days: summarizedDaysCount,

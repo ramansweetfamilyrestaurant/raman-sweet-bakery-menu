@@ -245,11 +245,10 @@ router.post('/login', adminLoginRateLimiter, async (req, res) => {
 // GET /api/admin/me - Verify session and fetch current tenant details (BILLING ALLOWED)
 router.get('/me', authenticateToken, async (req, res) => {
   try {
-    const restoId = req.user?.restaurant_id;
-    if (!restoId && req.user?.role !== 'superadmin') {
-      return res.status(401).json({ error: 'Unauthorized: Restaurant session required' });
+    const targetId = req.user?.restaurant_id;
+    if (!targetId) {
+      return res.status(401).json({ error: 'Restaurant identity is missing from authentication context' });
     }
-    const targetId = restoId || 1;
 
     const admins = await query('SELECT id, username, role, restaurant_id FROM admins WHERE id = $1', [req.user.id]);
     const restos = await query('SELECT * FROM restaurants WHERE id = $1', [targetId]);
@@ -454,11 +453,10 @@ router.post('/forgot-password', async (req, res) => {
 // Admin Dashboard Summary Statistics (OPERATIONAL ROUTE)
 router.get('/stats', authenticateToken, requireActiveSubscription, async (req, res) => {
   try {
-    const restoId = req.user?.restaurant_id;
-    if (!restoId && req.user?.role !== 'superadmin') {
-      return res.status(401).json({ error: 'Unauthorized: Restaurant session required' });
+    const targetId = req.user?.restaurant_id;
+    if (!targetId) {
+      return res.status(401).json({ error: 'Restaurant identity is missing from authentication context' });
     }
-    const targetId = restoId || 1;
 
     const catRes = await query('SELECT COUNT(*) as count FROM categories WHERE restaurant_id = $1', [targetId]);
     const dishRes = await query('SELECT COUNT(*) as count FROM dishes WHERE restaurant_id = $1', [targetId]);
@@ -669,8 +667,12 @@ router.post('/r2/migrate-images', authenticateToken, requireActiveSubscription, 
     for (let i = 0; i < itemsToProcess.length; i += batchSize) {
       const currentBatch = itemsToProcess.slice(i, i + batchSize);
       for (const row of currentBatch) {
-        const restoId = row.restaurant_id || 1;
-        if (!row.restaurant_id) stats.missingRestaurantId++;
+        const restoId = row.restaurant_id;
+        if (!restoId) {
+          stats.missingRestaurantId++;
+          stats.failed++;
+          continue;
+        }
 
         if (!row.data || typeof row.data !== 'string' || row.data.trim().length === 0) {
           stats.invalidBase64++;
@@ -853,11 +855,10 @@ router.post('/r2/mirror-external', authenticateToken, requireActiveSubscription,
 // Category Management (Tenant Scoped - OPERATIONAL ROUTES)
 router.get('/categories', authenticateToken, async (req, res) => {
   try {
-    const restoId = req.user?.restaurant_id;
-    if (!restoId && req.user?.role !== 'superadmin') {
-      return res.status(401).json({ error: 'Unauthorized: Restaurant session required' });
+    const targetId = req.user?.restaurant_id;
+    if (!targetId) {
+      return res.status(401).json({ error: 'Restaurant identity is missing from authentication context' });
     }
-    const targetId = restoId || 1;
     const categories = await query('SELECT * FROM categories WHERE restaurant_id = $1 ORDER BY sort_order ASC, id ASC', [targetId]);
     res.json(categories);
   } catch (err) {
@@ -868,11 +869,10 @@ router.get('/categories', authenticateToken, async (req, res) => {
 
 router.post('/categories', authenticateToken, requireActiveSubscription, async (req, res) => {
   try {
-    const restoId = req.user?.restaurant_id;
-    if (!restoId && req.user?.role !== 'superadmin') {
-      return res.status(401).json({ error: 'Unauthorized: Restaurant session required' });
+    const targetId = req.user?.restaurant_id;
+    if (!targetId) {
+      return res.status(401).json({ error: 'Restaurant identity is missing from authentication context' });
     }
-    const targetId = restoId || 1;
     const { name, name_hi, image, sort_order } = req.body;
     if (!name) {
       return res.status(400).json({ error: 'Category name is required' });
@@ -892,11 +892,10 @@ router.post('/categories', authenticateToken, requireActiveSubscription, async (
 
 router.put('/categories/:id', authenticateToken, requireActiveSubscription, async (req, res) => {
   try {
-    const restoId = req.user?.restaurant_id;
-    if (!restoId && req.user?.role !== 'superadmin') {
-      return res.status(401).json({ error: 'Unauthorized: Restaurant session required' });
+    const targetId = req.user?.restaurant_id;
+    if (!targetId) {
+      return res.status(401).json({ error: 'Restaurant identity is missing from authentication context' });
     }
-    const targetId = restoId || 1;
     const { id } = req.params;
     const { name, name_hi, image, sort_order } = req.body;
 
@@ -926,11 +925,10 @@ router.put('/categories/:id', authenticateToken, requireActiveSubscription, asyn
 
 router.delete('/categories/:id', authenticateToken, requireActiveSubscription, async (req, res) => {
   try {
-    const restoId = req.user?.restaurant_id;
-    if (!restoId && req.user?.role !== 'superadmin') {
-      return res.status(401).json({ error: 'Unauthorized: Restaurant session required' });
+    const targetId = req.user?.restaurant_id;
+    if (!targetId) {
+      return res.status(401).json({ error: 'Restaurant identity is missing from authentication context' });
     }
-    const targetId = restoId || 1;
     const { id } = req.params;
 
     // Fetch category image before deleting
@@ -949,11 +947,10 @@ router.delete('/categories/:id', authenticateToken, requireActiveSubscription, a
 
 router.patch('/categories/:id/toggle', authenticateToken, requireActiveSubscription, async (req, res) => {
   try {
-    const restoId = req.user?.restaurant_id;
-    if (!restoId && req.user?.role !== 'superadmin') {
-      return res.status(401).json({ error: 'Unauthorized: Restaurant session required' });
+    const targetId = req.user?.restaurant_id;
+    if (!targetId) {
+      return res.status(401).json({ error: 'Restaurant identity is missing from authentication context' });
     }
-    const targetId = restoId || 1;
     const { id } = req.params;
     const { active } = req.body;
     const activeBool = active === true || active === 1 || active === 'true';
@@ -968,11 +965,10 @@ router.patch('/categories/:id/toggle', authenticateToken, requireActiveSubscript
 // Dish Management (Tenant Scoped - OPERATIONAL ROUTES)
 router.get('/dishes', authenticateToken, async (req, res) => {
   try {
-    const restoId = req.user?.restaurant_id;
-    if (!restoId && req.user?.role !== 'superadmin') {
-      return res.status(401).json({ error: 'Unauthorized: Restaurant session required' });
+    const targetId = req.user?.restaurant_id;
+    if (!targetId) {
+      return res.status(401).json({ error: 'Restaurant identity is missing from authentication context' });
     }
-    const targetId = restoId || 1;
     const dishes = await query('SELECT * FROM dishes WHERE restaurant_id = $1 ORDER BY id DESC', [targetId]);
     res.json(dishes);
   } catch (err) {
@@ -983,11 +979,10 @@ router.get('/dishes', authenticateToken, async (req, res) => {
 
 router.post('/dishes', authenticateToken, requireActiveSubscription, async (req, res) => {
   try {
-    const restoId = req.user?.restaurant_id;
-    if (!restoId && req.user?.role !== 'superadmin') {
-      return res.status(401).json({ error: 'Unauthorized: Restaurant session required' });
+    const targetId = req.user?.restaurant_id;
+    if (!targetId) {
+      return res.status(401).json({ error: 'Restaurant identity is missing from authentication context' });
     }
-    const targetId = restoId || 1;
     const { 
       category_id, name, name_hi, description, description_hi, image, price, price_half, 
       portion, portion_half_label, portion_full_label, badge, ingredients, taste_profile, type, available 
@@ -1019,11 +1014,10 @@ router.post('/dishes', authenticateToken, requireActiveSubscription, async (req,
 
 router.put('/dishes/:id', authenticateToken, requireActiveSubscription, async (req, res) => {
   try {
-    const restoId = req.user?.restaurant_id;
-    if (!restoId && req.user?.role !== 'superadmin') {
-      return res.status(401).json({ error: 'Unauthorized: Restaurant session required' });
+    const targetId = req.user?.restaurant_id;
+    if (!targetId) {
+      return res.status(401).json({ error: 'Restaurant identity is missing from authentication context' });
     }
-    const targetId = restoId || 1;
     const { id } = req.params;
     const { 
       category_id, name, name_hi, description, description_hi, image, price, price_half, 
@@ -1065,11 +1059,10 @@ router.put('/dishes/:id', authenticateToken, requireActiveSubscription, async (r
 
 router.patch('/dishes/:id/toggle', authenticateToken, requireActiveSubscription, async (req, res) => {
   try {
-    const restoId = req.user?.restaurant_id;
-    if (!restoId && req.user?.role !== 'superadmin') {
-      return res.status(401).json({ error: 'Unauthorized: Restaurant session required' });
+    const targetId = req.user?.restaurant_id;
+    if (!targetId) {
+      return res.status(401).json({ error: 'Restaurant identity is missing from authentication context' });
     }
-    const targetId = restoId || 1;
     const { id } = req.params;
     const { available } = req.body;
     const availVal = available ? 1 : 0;
@@ -1083,11 +1076,10 @@ router.patch('/dishes/:id/toggle', authenticateToken, requireActiveSubscription,
 
 router.patch('/dishes/:id/price', authenticateToken, requireActiveSubscription, async (req, res) => {
   try {
-    const restoId = req.user?.restaurant_id;
-    if (!restoId && req.user?.role !== 'superadmin') {
-      return res.status(401).json({ error: 'Unauthorized: Restaurant session required' });
+    const targetId = req.user?.restaurant_id;
+    if (!targetId) {
+      return res.status(401).json({ error: 'Restaurant identity is missing from authentication context' });
     }
-    const targetId = restoId || 1;
     const { id } = req.params;
     const { price } = req.body;
     await query('UPDATE dishes SET price = $1 WHERE id = $2 AND restaurant_id = $3', [price, id, targetId]);
@@ -1100,11 +1092,10 @@ router.patch('/dishes/:id/price', authenticateToken, requireActiveSubscription, 
 
 router.delete('/dishes/:id', authenticateToken, requireActiveSubscription, async (req, res) => {
   try {
-    const restoId = req.user?.restaurant_id;
-    if (!restoId && req.user?.role !== 'superadmin') {
-      return res.status(401).json({ error: 'Unauthorized: Restaurant session required' });
+    const targetId = req.user?.restaurant_id;
+    if (!targetId) {
+      return res.status(401).json({ error: 'Restaurant identity is missing from authentication context' });
     }
-    const targetId = restoId || 1;
     const { id } = req.params;
 
     // Fetch dish image before deleting
@@ -1124,11 +1115,10 @@ router.delete('/dishes/:id', authenticateToken, requireActiveSubscription, async
 // Update Tenant Restaurant Settings
 const handleUpdateSettings = async (req, res) => {
   try {
-    const restoId = req.user?.restaurant_id;
-    if (!restoId && req.user?.role !== 'superadmin') {
-      return res.status(401).json({ error: 'Unauthorized: Restaurant session required' });
+    const targetId = req.user?.restaurant_id;
+    if (!targetId) {
+      return res.status(401).json({ error: 'Restaurant identity is missing from authentication context' });
     }
-    const targetId = restoId || 1;
 
     const { name, tagline, logo, phone, address, openingHours, google_review_url, google_reviews_enabled, filters_visibility, currency_symbol, fssai_lic_no, resto_type, whatsapp_number, whatsapp_enabled, theme_color, latitude, longitude, max_distance_meters, gst_enabled, gstin_number, total_tables, order_retention_days, custom_domain } = req.body;
 
@@ -1240,11 +1230,10 @@ router.post('/change-password', authenticateToken, async (req, res) => {
 // GET Live Orders for Tenant Restaurant (OPERATIONAL ROUTE)
 router.get('/orders', authenticateToken, requireActiveSubscription, async (req, res) => {
   try {
-    const restoId = req.user?.restaurant_id;
-    if (!restoId && req.user?.role !== 'superadmin') {
-      return res.status(401).json({ error: 'Unauthorized: Restaurant session required' });
+    const targetId = req.user?.restaurant_id;
+    if (!targetId) {
+      return res.status(401).json({ error: 'Restaurant identity is missing from authentication context' });
     }
-    const targetId = restoId || 1;
 
     const orders = await query(
       'SELECT * FROM orders WHERE restaurant_id = $1 ORDER BY id DESC LIMIT 100',
@@ -1274,11 +1263,10 @@ router.get('/orders', authenticateToken, requireActiveSubscription, async (req, 
 // PATCH Update Order Status (OPERATIONAL ROUTE)
 router.patch('/orders/:id/status', authenticateToken, requireActiveSubscription, async (req, res) => {
   try {
-    const restoId = req.user?.restaurant_id;
-    if (!restoId && req.user?.role !== 'superadmin') {
-      return res.status(401).json({ error: 'Unauthorized: Restaurant session required' });
+    const targetId = req.user?.restaurant_id;
+    if (!targetId) {
+      return res.status(401).json({ error: 'Restaurant identity is missing from authentication context' });
     }
-    const targetId = restoId || 1;
     const { id } = req.params;
     const { status, sent_to_kds, kitchen_prepared } = req.body;
 
@@ -1322,11 +1310,10 @@ router.patch('/orders/:id/status', authenticateToken, requireActiveSubscription,
 // DELETE Purge Order (Manual Hard Delete)
 router.delete('/orders/:id', authenticateToken, requireActiveSubscription, async (req, res) => {
   try {
-    const restoId = req.user?.restaurant_id;
-    if (!restoId && req.user?.role !== 'superadmin') {
-      return res.status(401).json({ error: 'Unauthorized: Restaurant session required' });
+    const targetId = req.user?.restaurant_id;
+    if (!targetId) {
+      return res.status(401).json({ error: 'Restaurant identity is missing from authentication context' });
     }
-    const targetId = restoId || 1;
     const { id } = req.params;
 
     await query('DELETE FROM orders WHERE id = $1 AND restaurant_id = $2', [id, targetId]);
@@ -1340,11 +1327,10 @@ router.delete('/orders/:id', authenticateToken, requireActiveSubscription, async
 // GET Live Table Service Requests / Waiter Calls (OPERATIONAL ROUTE)
 router.get('/service-requests', authenticateToken, requireActiveSubscription, async (req, res) => {
   try {
-    const restoId = req.user?.restaurant_id;
-    if (!restoId && req.user?.role !== 'superadmin') {
-      return res.status(401).json({ error: 'Unauthorized: Restaurant session required' });
+    const targetId = req.user?.restaurant_id;
+    if (!targetId) {
+      return res.status(401).json({ error: 'Restaurant identity is missing from authentication context' });
     }
-    const targetId = restoId || 1;
 
     const requests = await query(
       "SELECT * FROM service_requests WHERE restaurant_id = $1 AND status = 'pending' ORDER BY id DESC LIMIT 50",
@@ -1360,11 +1346,10 @@ router.get('/service-requests', authenticateToken, requireActiveSubscription, as
 // PATCH Resolve Service Request (OPERATIONAL ROUTE)
 router.patch('/service-requests/:id/resolve', authenticateToken, requireActiveSubscription, async (req, res) => {
   try {
-    const restoId = req.user?.restaurant_id;
-    if (!restoId && req.user?.role !== 'superadmin') {
-      return res.status(401).json({ error: 'Unauthorized: Restaurant session required' });
+    const targetId = req.user?.restaurant_id;
+    if (!targetId) {
+      return res.status(401).json({ error: 'Restaurant identity is missing from authentication context' });
     }
-    const targetId = restoId || 1;
     const { id } = req.params;
     await query(
       "DELETE FROM service_requests WHERE id = $1 AND restaurant_id = $2",
@@ -1380,11 +1365,10 @@ router.patch('/service-requests/:id/resolve', authenticateToken, requireActiveSu
 // GET Sales & Product Analytics (OPERATIONAL ROUTE)
 router.get('/analytics', authenticateToken, requireActiveSubscription, async (req, res) => {
   try {
-    const restoId = req.user?.restaurant_id;
-    if (!restoId && req.user?.role !== 'superadmin') {
-      return res.status(401).json({ error: 'Unauthorized: Restaurant session required' });
+    const targetId = req.user?.restaurant_id;
+    if (!targetId) {
+      return res.status(401).json({ error: 'Restaurant identity is missing from authentication context' });
     }
-    const targetId = restoId || 1;
 
     const orders = await query(
       "SELECT id, total_amount, status, items, created_at FROM orders WHERE restaurant_id = $1 AND status NOT IN ('rejected', 'cancelled') ORDER BY id DESC",
@@ -1532,11 +1516,10 @@ router.get('/analytics', authenticateToken, requireActiveSubscription, async (re
 // POST 1-Click Database Optimization & 90-Day Archival (OPERATIONAL ROUTE)
 router.post('/optimize-db', authenticateToken, requireActiveSubscription, async (req, res) => {
   try {
-    const restoId = req.user?.restaurant_id;
-    if (!restoId && req.user?.role !== 'superadmin') {
-      return res.status(401).json({ error: 'Unauthorized: Restaurant session required' });
+    const targetId = req.user?.restaurant_id;
+    if (!targetId) {
+      return res.status(401).json({ error: 'Restaurant identity is missing from authentication context' });
     }
-    const targetId = restoId || 1;
     const daysOld = req.body.daysOld || 90;
     const result = await runAutoDataSummarization(daysOld, targetId);
     res.json(result);
@@ -1551,11 +1534,10 @@ router.post('/optimize-db', authenticateToken, requireActiveSubscription, async 
 // GET all combos for admin
 router.get('/combos', authenticateToken, async (req, res) => {
   try {
-    const restoId = req.user?.restaurant_id;
-    if (!restoId && req.user?.role !== 'superadmin') {
-      return res.status(401).json({ error: 'Unauthorized: Restaurant session required' });
+    const targetId = req.user?.restaurant_id;
+    if (!targetId) {
+      return res.status(401).json({ error: 'Restaurant identity is missing from authentication context' });
     }
-    const targetId = restoId || 1;
     const combos = await query('SELECT * FROM combos WHERE restaurant_id = $1 ORDER BY sort_order ASC, id DESC', [targetId]);
     res.json(combos);
   } catch (err) {
@@ -1567,11 +1549,10 @@ router.get('/combos', authenticateToken, async (req, res) => {
 // POST create new combo
 router.post('/combos', authenticateToken, requireActiveSubscription, async (req, res) => {
   try {
-    const restoId = req.user?.restaurant_id;
-    if (!restoId && req.user?.role !== 'superadmin') {
-      return res.status(401).json({ error: 'Unauthorized: Restaurant session required' });
+    const targetId = req.user?.restaurant_id;
+    if (!targetId) {
+      return res.status(401).json({ error: 'Restaurant identity is missing from authentication context' });
     }
-    const targetId = restoId || 1;
     const { name, description, price, image, items, badge, sort_order } = req.body;
     if (!name || !price || !items) {
       return res.status(400).json({ error: 'Name, price, and items are required' });
@@ -1615,11 +1596,10 @@ router.post('/combos', authenticateToken, requireActiveSubscription, async (req,
 // PUT update combo
 router.put('/combos/:id', authenticateToken, requireActiveSubscription, async (req, res) => {
   try {
-    const restoId = req.user?.restaurant_id;
-    if (!restoId && req.user?.role !== 'superadmin') {
-      return res.status(401).json({ error: 'Unauthorized: Restaurant session required' });
+    const targetId = req.user?.restaurant_id;
+    if (!targetId) {
+      return res.status(401).json({ error: 'Restaurant identity is missing from authentication context' });
     }
-    const targetId = restoId || 1;
     const { name, description, price, image, items, badge, sort_order, available } = req.body;
     const itemsStr = typeof items === 'string' ? items : JSON.stringify(items);
 
@@ -1650,11 +1630,10 @@ router.put('/combos/:id', authenticateToken, requireActiveSubscription, async (r
 // PATCH toggle combo availability
 router.patch('/combos/:id/toggle', authenticateToken, requireActiveSubscription, async (req, res) => {
   try {
-    const restoId = req.user?.restaurant_id;
-    if (!restoId && req.user?.role !== 'superadmin') {
-      return res.status(401).json({ error: 'Unauthorized: Restaurant session required' });
+    const targetId = req.user?.restaurant_id;
+    if (!targetId) {
+      return res.status(401).json({ error: 'Restaurant identity is missing from authentication context' });
     }
-    const targetId = restoId || 1;
     const { available } = req.body;
     await query('UPDATE combos SET available = $1 WHERE id = $2 AND restaurant_id = $3', [available ? 1 : 0, req.params.id, targetId]);
     res.json({ message: 'Combo availability updated' });
@@ -1667,11 +1646,10 @@ router.patch('/combos/:id/toggle', authenticateToken, requireActiveSubscription,
 // DELETE combo
 router.delete('/combos/:id', authenticateToken, requireActiveSubscription, async (req, res) => {
   try {
-    const restoId = req.user?.restaurant_id;
-    if (!restoId && req.user?.role !== 'superadmin') {
-      return res.status(401).json({ error: 'Unauthorized: Restaurant session required' });
+    const targetId = req.user?.restaurant_id;
+    if (!targetId) {
+      return res.status(401).json({ error: 'Restaurant identity is missing from authentication context' });
     }
-    const targetId = restoId || 1;
 
     // Fetch combo image before deleting
     const comboRows = await query('SELECT image FROM combos WHERE id = $1 AND restaurant_id = $2', [req.params.id, targetId]);

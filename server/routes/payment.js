@@ -368,11 +368,10 @@ router.all('/register-return', async (req, res) => {
 // ==========================================
 const handleCreateSubscription = async (req, res) => {
   try {
-    const restoId = req.user?.restaurant_id;
-    if (!restoId && req.user?.role !== 'superadmin') {
-      return res.status(401).json({ error: 'Unauthorized: Restaurant session required for subscription setup' });
+    const targetRestoId = req.user?.restaurant_id;
+    if (!targetRestoId) {
+      return res.status(401).json({ error: 'Restaurant identity is missing from authentication context' });
     }
-    const targetRestoId = restoId || 1;
 
     const { plan_tier, return_url } = req.body;
     const requestedPlanKey = (plan_tier || 'pro').toLowerCase().trim();
@@ -868,11 +867,10 @@ router.post('/webhook/cashfree', handleCashfreeWebhook);
 // ==========================================
 router.get('/history', authenticateToken, async (req, res) => {
   try {
-    const restoId = req.user?.restaurant_id;
-    if (!restoId && req.user?.role !== 'superadmin') {
-      return res.status(401).json({ error: 'Unauthorized' });
+    const targetRestoId = req.user?.restaurant_id;
+    if (!targetRestoId) {
+      return res.status(401).json({ error: 'Restaurant identity is missing from authentication context' });
     }
-    const targetRestoId = restoId || 1;
 
     const payments = await query(`
       SELECT p.*, s.gateway_subscription_id 
@@ -904,11 +902,10 @@ router.get('/history', authenticateToken, async (req, res) => {
 // ==========================================
 router.post('/cancel-mandate', authenticateToken, async (req, res) => {
   try {
-    const restoId = req.user?.restaurant_id;
-    if (!restoId && req.user?.role !== 'superadmin') {
-      return res.status(401).json({ error: 'Unauthorized' });
+    const targetRestoId = req.user?.restaurant_id;
+    if (!targetRestoId) {
+      return res.status(401).json({ error: 'Restaurant identity is missing from authentication context' });
     }
-    const targetRestoId = restoId || 1;
 
     // Find the current active/trialing subscription
     const subRows = await query(
@@ -1006,11 +1003,10 @@ router.post('/cancel-mandate', authenticateToken, async (req, res) => {
 // ==========================================
 router.post('/change-plan', authenticateToken, async (req, res) => {
   try {
-    const restoId = req.user?.restaurant_id;
-    if (!restoId && req.user?.role !== 'superadmin') {
-      return res.status(401).json({ error: 'Unauthorized' });
+    const targetRestoId = req.user?.restaurant_id;
+    if (!targetRestoId) {
+      return res.status(401).json({ error: 'Restaurant identity is missing from authentication context' });
     }
-    const targetRestoId = restoId || 1;
 
     // Only accept plan key - NEVER accept price/amount from frontend
     const { plan } = req.body;
