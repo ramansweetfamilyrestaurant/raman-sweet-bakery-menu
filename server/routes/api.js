@@ -1003,4 +1003,47 @@ router.post(['/auth/exchange', '/api/auth/exchange'], authExchangeRateLimiter, a
   }
 });
 
+// GET /api/cron/subscription-check - Secure Vercel Cron Endpoint for Subscription Maintenance
+import { checkExpiredSubscriptions } from '../subscriptionCron.js';
+
+router.get(['/cron/subscription-check', '/api/cron/subscription-check'], async (req, res) => {
+  const cronSecret = (process.env.CRON_SECRET || '').trim();
+  const isProduction = Boolean(process.env.NODE_ENV === 'production' || process.env.VERCEL);
+
+  if (cronSecret) {
+    const authHeader = req.headers['authorization'] || '';
+    const cronHeader = req.headers['x-cron-secret'] || '';
+    const querySecret = req.query.secret || '';
+
+    const isBearerValid = authHeader === `Bearer ${cronSecret}`;
+    const isHeaderValid = cronHeader === cronSecret;
+    const isQueryValid = querySecret === cronSecret;
+
+    if (!isBearerValid && !isHeaderValid && !isQueryValid) {
+      console.warn(`⚠️ [CRON DENIED] Unauthorized cron attempt from IP: ${req.ip}`);
+      return res.status(401).json({ error: 'Unauthorized: Invalid cron authorization credentials' });
+    }
+  } else if (isProduction) {
+    console.error('⚠️ [CRON ERROR] CRON_SECRET is missing in production environment variables.');
+    return res.status(500).json({ error: 'CRON_SECRET environment variable is not configured' });
+  }
+
+  try {
+    const startTime = Date.now();
+    await checkExpiredSubscriptions();
+    const durationMs = Date.now() - startTime;
+    console.log(`✅ [VERCEL CRON SUCCESS] Subscription maintenance completed in ${durationMs}ms`);
+
+    res.json({
+      ok: true,
+      timestamp: new Date().toISOString(),
+      duration_ms: durationMs,
+      message: 'Subscription maintenance completed successfully'
+    });
+  } catch (err) {
+    console.error('❌ [VERCEL CRON ERROR] Maintenance execution failed:', err.message);
+    res.status(500).json({ error: 'Failed to execute subscription maintenance' });
+  }
+});
+
 export default router;

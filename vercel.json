@@ -34,6 +34,12 @@
       ]
     }
   ],
+  "crons": [
+    {
+      "path": "/api/cron/subscription-check",
+      "schedule": "0 * * * *"
+    }
+  ],
   "rewrites": [
     { "source": "/api/(.*)", "destination": "/api/index.js" },
     { "source": "/uploads/(.*)", "destination": "/api/index.js" },
