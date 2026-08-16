@@ -159,8 +159,10 @@ const upload = multer({
   }
 });
 
+import { adminLoginRateLimiter } from '../middleware/rateLimiters.js';
+
 // Admin Login (Supports login by Username, Restaurant Slug, or Phone number for Restaurant Owners ONLY)
-router.post('/login', async (req, res) => {
+router.post('/login', adminLoginRateLimiter, async (req, res) => {
   try {
     const { username, password, slug: targetSlug } = req.body;
     if (!username || !password) {

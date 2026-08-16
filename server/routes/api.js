@@ -767,9 +767,11 @@ router.post('/register/pre-validate', async (req, res) => {
   }
 });
 
+import { registrationRateLimiter } from '../middleware/rateLimiters.js';
+
 // POST /api/register - Public Self-Service 14-Day Free Trial Signup for Restaurants
 // Hardened with Atomic Database Transaction & Backend Authoritative Plan Resolution
-router.post('/register', async (req, res) => {
+router.post('/register', registrationRateLimiter, async (req, res) => {
   try {
     const { name, phone, owner_username, owner_password, plan_tier } = req.body;
 
@@ -985,7 +987,9 @@ router.post('/register', async (req, res) => {
 
 // POST /api/auth/exchange - Single-Use Authorization Code Exchange for JWT
 import { exchangeAuthCode } from '../services/authCodeService.js';
-router.post(['/auth/exchange', '/api/auth/exchange'], async (req, res) => {
+import { authExchangeRateLimiter } from '../middleware/rateLimiters.js';
+
+router.post(['/auth/exchange', '/api/auth/exchange'], authExchangeRateLimiter, async (req, res) => {
   try {
     const { code } = req.body || {};
     const result = await exchangeAuthCode(code);

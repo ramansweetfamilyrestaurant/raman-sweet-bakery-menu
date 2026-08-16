@@ -47,8 +47,10 @@ router.get('/config-status', async (req, res) => {
 });
 
 // POST /api/payment/checkout-pre-register
+import { registrationRateLimiter } from '../middleware/rateLimiters.js';
+
 // Validates registration form inputs and initiates Cashfree Subscription Checkout BEFORE creating any database record!
-router.post('/checkout-pre-register', async (req, res) => {
+router.post('/checkout-pre-register', registrationRateLimiter, async (req, res) => {
   try {
     const { name, phone, owner_username, owner_password, plan_tier } = req.body;
 

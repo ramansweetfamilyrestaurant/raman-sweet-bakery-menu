@@ -30,8 +30,10 @@ function requireSuperAdmin(req, res, next) {
   }
 }
 
+import { superAdminLoginRateLimiter } from '../middleware/rateLimiters.js';
+
 // Super Admin Login
-router.post('/login', async (req, res) => {
+router.post('/login', superAdminLoginRateLimiter, async (req, res) => {
   try {
     const { username, password } = req.body;
     if (!username || !password) {
