@@ -131,13 +131,32 @@ async function resolveRestaurant(req, slug) {
   }
 
   return null;
+}// In-Memory Fast Cache for Public Menu Bundle (20s TTL)
+const menuBundleCache = new Map();
+const CACHE_TTL_MS = 20000;
+
+export function clearMenuBundleCache(targetSlug) {
+  if (targetSlug) {
+    menuBundleCache.delete(String(targetSlug).toLowerCase().trim());
+  } else {
+    menuBundleCache.clear();
+  }
 }
 
-// Restaurant General Info (/api/info or /api/info?slug=royal-pizz// GET Combined Menu Bundle (Blazing-Fast Edge-Cached Payload)
+// GET Combined Menu Bundle (Blazing-Fast Edge-Cached Payload)
 router.get('/menu-bundle', async (req, res) => {
   res.setHeader('Cache-Control', 'public, max-age=10, stale-while-revalidate=30');
   try {
     const { slug } = req.query;
+    const cleanSlug = String(slug || '').trim().toLowerCase();
+
+    if (cleanSlug) {
+      const cached = menuBundleCache.get(cleanSlug);
+      if (cached && (Date.now() - cached.timestamp < CACHE_TTL_MS)) {
+        return res.json(cached.payload);
+      }
+    }
+
     const resto = await resolveRestaurant(req, slug);
     if (!resto) {
       return res.status(404).json({ error: 'Restaurant Not Found', notFound: true });
@@ -243,12 +262,18 @@ router.get('/menu-bundle', async (req, res) => {
       active: true
     };
 
-    res.json({
+    const payload = {
       info: infoObj,
       categories: categories || [],
       dishes: dishes || [],
       combos: combos || []
-    });
+    };
+
+    if (cleanSlug) {
+      menuBundleCache.set(cleanSlug, { payload, timestamp: Date.now() });
+    }
+
+    res.json(payload);
   } catch (err) {
     console.error('Error fetching menu bundle:', err);
     res.status(500).json({ error: 'Failed to fetch menu bundle' });
