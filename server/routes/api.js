@@ -8,6 +8,8 @@ import bcrypt from 'bcryptjs';
 
 import { isR2Active } from '../services/r2ImageService.js';
 
+const router = express.Router();
+
 // GET Automated Health & Capacity Monitoring Endpoint (Safe: Zero Secret Leakage)
 router.get('/health', async (req, res) => {
   const startTime = Date.now();
