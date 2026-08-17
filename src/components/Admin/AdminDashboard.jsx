@@ -1212,7 +1212,8 @@ export default function AdminDashboard({ token, username, slug: propSlug = '', o
       setDishes(safeDishes);
       if (infoData) {
         setRestaurantInfo(infoData);
-        if (infoData.onboarding_completed === false || infoData.onboarding_completed === 0 || infoData.onboarding_completed === 'false') {
+        const isCompleted = infoData.onboarding_completed === true || infoData.onboarding_completed === 1 || infoData.onboarding_completed === 'true';
+        if (!isCompleted) {
           const targetSlug = infoData.slug || currentSlug || '';
           window.history.pushState({}, '', targetSlug ? `/${targetSlug}/admin/setup` : '/admin/setup');
           window.location.reload();

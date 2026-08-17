@@ -888,13 +888,12 @@ export default function App() {
 
   const handleAdminLoginSuccess = async (token, username, slug) => {
     let currentSlug = slug || getSlugFromUrl() || (info && info.slug) || localStorage.getItem('touchqr_admin_slug') || '';
-    if (!currentSlug || currentSlug === 'undefined' || currentSlug === 'null') {
-      try {
-        const rInfo = await fetchRestaurantInfo(token);
-        if (rInfo && rInfo.slug) currentSlug = rInfo.slug;
-      } catch (err) {
-        console.warn('Notice fetching restaurant info on login:', err.message);
-      }
+    let restoInfo = info;
+    try {
+      restoInfo = await fetchRestaurantInfo(token);
+      if (restoInfo && restoInfo.slug) currentSlug = restoInfo.slug;
+    } catch (err) {
+      console.warn('Notice fetching restaurant info on login:', err.message);
     }
 
     if (currentSlug && currentSlug !== 'undefined' && currentSlug !== 'null') {
@@ -905,12 +904,20 @@ export default function App() {
     setAdminToken(token);
     setAdminUsername(username);
     setAdminSlug(currentSlug);
+    if (restoInfo) setInfo(restoInfo);
 
     const mandateActive = await checkMandateGating(token, currentSlug);
     if (mandateActive) {
-      setView('admin-dashboard');
-      const cleanUrl = (currentSlug && currentSlug !== 'undefined' && currentSlug !== 'null') ? `/${currentSlug}/admin` : '/admin';
-      window.history.pushState({}, '', cleanUrl);
+      const isCompleted = restoInfo && (restoInfo.onboarding_completed === true || restoInfo.onboarding_completed === 1 || restoInfo.onboarding_completed === 'true');
+      if (restoInfo && !isCompleted) {
+        setView('admin-setup');
+        const setupUrl = (currentSlug && currentSlug !== 'undefined' && currentSlug !== 'null') ? `/${currentSlug}/admin/setup` : '/admin/setup';
+        window.history.pushState({}, '', setupUrl);
+      } else {
+        setView('admin-dashboard');
+        const cleanUrl = (currentSlug && currentSlug !== 'undefined' && currentSlug !== 'null') ? `/${currentSlug}/admin` : '/admin';
+        window.history.pushState({}, '', cleanUrl);
+      }
     } else {
       setView('billing');
       window.history.pushState({}, '', '/billing');
