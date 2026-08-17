@@ -182,28 +182,25 @@ router.post('/login', adminLoginRateLimiter, async (req, res) => {
 
     let admins = [];
 
-    // 0. If explicit restaurant slug is provided (e.g. from /rama/admin), prioritize matching that restaurant!
+    // 0. If explicit restaurant slug is provided (e.g. from /rama/admin), check if username matches that restaurant first!
     if (targetSlug && typeof targetSlug === 'string' && targetSlug.trim() !== '') {
       const cleanSlug = targetSlug.trim().toLowerCase().replace(/[^a-z0-9-]/g, '-');
-      const restos = await query('SELECT id, slug, active, name FROM restaurants WHERE slug = $1 OR slug = $2', [targetSlug.trim(), cleanSlug]);
+      const restos = await query('SELECT id, slug, active, name FROM restaurants WHERE LOWER(slug) = LOWER($1) OR LOWER(slug) = LOWER($2)', [targetSlug.trim(), cleanSlug]);
       if (restos && restos.length > 0) {
         const targetRestoId = restos[0].id;
-        admins = await query("SELECT * FROM admins WHERE restaurant_id = $1 AND username = $2 AND role != 'superadmin'", [targetRestoId, trimmedIdentifier]);
-        if (!admins || admins.length === 0) {
-          admins = await query("SELECT * FROM admins WHERE restaurant_id = $1 AND role != 'superadmin' ORDER BY id ASC LIMIT 1", [targetRestoId]);
-        }
+        admins = await query("SELECT * FROM admins WHERE restaurant_id = $1 AND LOWER(username) = LOWER($2) AND role != 'superadmin'", [targetRestoId, trimmedIdentifier]);
       }
     }
 
-    // 1. Try finding admin by exact username excluding superadmin role
+    // 1. Try finding admin by case-insensitive username excluding superadmin role
     if (!admins || admins.length === 0) {
-      admins = await query("SELECT * FROM admins WHERE username = $1 AND role != 'superadmin'", [trimmedIdentifier]);
+      admins = await query("SELECT * FROM admins WHERE LOWER(username) = LOWER($1) AND role != 'superadmin'", [trimmedIdentifier]);
     }
 
     // 2. Fallback: Try finding restaurant by slug or phone, then fetch its primary restaurant_admin
     if (!admins || admins.length === 0) {
       const cleanSlug = trimmedIdentifier.toLowerCase().replace(/[^a-z0-9-]/g, '-');
-      const restos = await query('SELECT id, slug, active, name FROM restaurants WHERE slug = $1 OR slug = $2 OR phone = $3', [trimmedIdentifier, cleanSlug, trimmedIdentifier]);
+      const restos = await query('SELECT id, slug, active, name FROM restaurants WHERE LOWER(slug) = LOWER($1) OR LOWER(slug) = LOWER($2) OR phone = $3', [trimmedIdentifier, cleanSlug, trimmedIdentifier]);
       if (restos && restos.length > 0) {
         const targetRestoId = restos[0].id;
         admins = await query("SELECT * FROM admins WHERE restaurant_id = $1 AND role != 'superadmin' ORDER BY id ASC LIMIT 1", [targetRestoId]);
