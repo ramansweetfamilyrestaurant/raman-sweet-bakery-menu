@@ -1,6 +1,7 @@
 import jwt from 'jsonwebtoken';
 import dotenv from 'dotenv';
 import { query } from '../db.js';
+import { JWT_SECRET } from '../config/jwt.js';
 
 // Fast In-Memory Cache for Subscription Status (15s TTL)
 const subStatusCache = new Map();
