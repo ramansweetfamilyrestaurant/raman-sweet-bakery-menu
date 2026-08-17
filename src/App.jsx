@@ -19,6 +19,7 @@ import CustomerReviewModal from './components/CustomerReviewModal';
 
 // Code Splitting (Lazy Loading) for secondary admin, landing & legal views
 const AdminDashboard = lazy(() => import('./components/Admin/AdminDashboard'));
+const OnboardingSetup = lazy(() => import('./components/Admin/OnboardingSetup'));
 const LandingPage = lazy(() => import('./components/Landing/LandingPage'));
 const AdminLogin = lazy(() => import('./components/Admin/AdminLogin'));
 const SuperAdminLogin = lazy(() => import('./components/SuperAdmin/SuperAdminLogin'));
@@ -88,6 +89,10 @@ export default function App() {
     if (path === '/super-admin' || path === '/superadmin' || hash === '#super-admin') {
       const t = localStorage.getItem('saas_super_token');
       return (t && t !== 'undefined' && t !== 'null') ? 'super-admin-dashboard' : 'super-admin-login';
+    }
+    if (path.includes('/admin/setup') || hash === '#setup') {
+      const t = localStorage.getItem('touchqr_admin_token');
+      return (t && t !== 'undefined' && t !== 'null') ? 'admin-setup' : 'admin-login';
     }
     if (path.includes('/admin') || hash === '#admin') {
       const t = localStorage.getItem('touchqr_admin_token');
@@ -1448,6 +1453,23 @@ export default function App() {
             setView('menu');
             window.history.pushState({}, '', targetSlug ? `/${targetSlug}` : '/');
             loadMenuData(targetSlug);
+          }}
+        />
+      </Suspense>
+    );
+  }
+
+  if (view === 'admin-setup') {
+    const activeAdminSlug = adminSlug || getSlugFromUrl() || (info && info.slug) || localStorage.getItem('touchqr_admin_slug') || '';
+    return (
+      <Suspense fallback={<div className="min-h-screen bg-slate-900 flex items-center justify-center text-white"><div className="w-8 h-8 border-4 border-amber-500 border-t-transparent rounded-full animate-spin"></div></div>}>
+        <OnboardingSetup
+          token={adminToken}
+          restaurantInfo={info}
+          setRestaurantInfo={setInfo}
+          onComplete={() => {
+            setView('admin-dashboard');
+            window.history.pushState({}, '', activeAdminSlug ? `/${activeAdminSlug}/admin` : '/admin');
           }}
         />
       </Suspense>

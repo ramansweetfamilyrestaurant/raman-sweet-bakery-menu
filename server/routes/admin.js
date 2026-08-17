@@ -1123,7 +1123,7 @@ const handleUpdateSettings = async (req, res) => {
       return res.status(401).json({ error: 'Restaurant identity is missing from authentication context' });
     }
 
-    const { name, tagline, logo, phone, address, openingHours, google_review_url, google_reviews_enabled, filters_visibility, currency_symbol, fssai_lic_no, resto_type, whatsapp_number, whatsapp_enabled, theme_color, latitude, longitude, max_distance_meters, gst_enabled, gstin_number, total_tables, order_retention_days, custom_domain } = req.body;
+    const { name, tagline, logo, phone, address, openingHours, google_review_url, google_reviews_enabled, filters_visibility, currency_symbol, fssai_lic_no, resto_type, whatsapp_number, whatsapp_enabled, theme_color, latitude, longitude, max_distance_meters, gst_enabled, gstin_number, total_tables, order_retention_days, custom_domain, onboarding_completed, location_initialized } = req.body;
 
     let cleanDomain = null;
     if (custom_domain !== undefined) {
@@ -1153,29 +1153,39 @@ const handleUpdateSettings = async (req, res) => {
       }
     }
 
+    const onbBool = onboarding_completed !== undefined ? (onboarding_completed === true || onboarding_completed === 1 || onboarding_completed === 'true' ? true : false) : null;
+    const locBool = location_initialized !== undefined ? (location_initialized === true || location_initialized === 1 || location_initialized === 'true' ? true : false) : null;
+
     await query(`
       UPDATE restaurants 
-      SET name = $1, tagline = $2, logo = $3, phone = $4, address = $5, opening_hours = $6, google_review_url = $7, filters_visibility = $8, currency_symbol = $9, fssai_lic_no = $10, resto_type = $11, whatsapp_number = $12, whatsapp_enabled = $13, theme_color = $14, latitude = $15, longitude = $16, max_distance_meters = $17, gst_enabled = $18, gstin_number = $19, total_tables = $20, order_retention_days = $21, google_reviews_enabled = $22, custom_domain = $23
-      WHERE id = $24
+      SET name = COALESCE($1, name), tagline = COALESCE($2, tagline), logo = CASE WHEN $3::text IS NOT NULL THEN $3 ELSE logo END, phone = COALESCE($4, phone), address = COALESCE($5, address), opening_hours = COALESCE($6, opening_hours), google_review_url = COALESCE($7, google_review_url), filters_visibility = COALESCE($8, filters_visibility), currency_symbol = COALESCE($9, currency_symbol), fssai_lic_no = COALESCE($10, fssai_lic_no), resto_type = COALESCE($11, resto_type), whatsapp_number = COALESCE($12, whatsapp_number), whatsapp_enabled = COALESCE($13, whatsapp_enabled), theme_color = COALESCE($14, theme_color), latitude = COALESCE($15, latitude), longitude = COALESCE($16, longitude), max_distance_meters = COALESCE($17, max_distance_meters), gst_enabled = COALESCE($18, gst_enabled), gstin_number = COALESCE($19, gstin_number), total_tables = COALESCE($20, total_tables), order_retention_days = COALESCE($21, order_retention_days), google_reviews_enabled = COALESCE($22, google_reviews_enabled), custom_domain = CASE WHEN $23::text IS NOT NULL THEN $23 ELSE custom_domain END, onboarding_completed = COALESCE($24, onboarding_completed), location_initialized = COALESCE($25, location_initialized)
+      WHERE id = $26
     `, [
-      name, tagline,
+      name !== undefined ? name : null,
+      tagline !== undefined ? tagline : null,
       processedLogo !== null ? processedLogo : (logo !== undefined ? '' : null),
-      phone, address, openingHours, google_review_url, visJson,
-      currency_symbol !== undefined ? currency_symbol : '₹',
-      fssai_lic_no || '',
-      resto_type || 'pure_veg',
-      whatsapp_number || phone || '',
-      whatsapp_enabled !== false && whatsapp_enabled !== 0 ? 1 : 0,
-      theme_color || 'gold',
-      latitude !== undefined && latitude !== null ? Number(latitude) : 26.6500,
-      longitude !== undefined && longitude !== null ? Number(longitude) : 84.9167,
-      max_distance_meters || 100,
-      gst_enabled ? 1 : 0,
-      gstin_number || '',
-      total_tables !== undefined && total_tables !== null ? Number(total_tables) : 0,
-      order_retention_days || 90,
-      google_reviews_enabled !== false && google_reviews_enabled !== 0 ? 1 : 0,
+      phone !== undefined ? phone : null,
+      address !== undefined ? address : null,
+      openingHours !== undefined ? openingHours : null,
+      google_review_url !== undefined ? google_review_url : null,
+      visJson !== undefined ? visJson : null,
+      currency_symbol !== undefined ? currency_symbol : null,
+      fssai_lic_no !== undefined ? fssai_lic_no : null,
+      resto_type !== undefined ? resto_type : null,
+      whatsapp_number !== undefined ? whatsapp_number : null,
+      whatsapp_enabled !== undefined ? (whatsapp_enabled !== false && whatsapp_enabled !== 0 ? 1 : 0) : null,
+      theme_color !== undefined ? theme_color : null,
+      latitude !== undefined && latitude !== null ? Number(latitude) : null,
+      longitude !== undefined && longitude !== null ? Number(longitude) : null,
+      max_distance_meters !== undefined ? Number(max_distance_meters) : null,
+      gst_enabled !== undefined ? (gst_enabled ? 1 : 0) : null,
+      gstin_number !== undefined ? gstin_number : null,
+      total_tables !== undefined && total_tables !== null ? Number(total_tables) : null,
+      order_retention_days !== undefined ? Number(order_retention_days) : null,
+      google_reviews_enabled !== undefined ? (google_reviews_enabled !== false && google_reviews_enabled !== 0 ? 1 : 0) : null,
       cleanDomain !== null ? cleanDomain : (custom_domain !== undefined ? '' : null),
+      onbBool,
+      locBool,
       targetId
     ]);
 

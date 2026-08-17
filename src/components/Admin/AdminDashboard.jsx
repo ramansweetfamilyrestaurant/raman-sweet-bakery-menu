@@ -1210,7 +1210,15 @@ export default function AdminDashboard({ token, username, slug: propSlug = '', o
 
       setCategories(safeCats);
       setDishes(safeDishes);
-      if (infoData) setRestaurantInfo(infoData);
+      if (infoData) {
+        setRestaurantInfo(infoData);
+        if (infoData.onboarding_completed === false || infoData.onboarding_completed === 0 || infoData.onboarding_completed === 'false') {
+          const targetSlug = infoData.slug || currentSlug || '';
+          window.history.pushState({}, '', targetSlug ? `/${targetSlug}/admin/setup` : '/admin/setup');
+          window.location.reload();
+          return;
+        }
+      }
       setCombos(safeCombos);
 
       if (subStatusData) setSubscriptionStatus(subStatusData);
