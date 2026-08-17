@@ -264,6 +264,14 @@ export async function uploadImage(file, token, entityType = 'dishes') {
   return data.r2ProxyUrl || data.url;
 }
 
+export async function completeOnboarding(token) {
+  const res = await fetch(`${API_BASE}/admin/onboarding/complete`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` }
+  });
+  return handleResponse(res, 'Failed to complete onboarding');
+}
+
 export async function deleteImageApi(imageUrl, token) {
   if (!imageUrl) return;
   try {

@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { MapPin, Navigation, Store, CheckCircle2, ArrowRight, ArrowLeft, Upload, Loader2, AlertCircle, Building2, Phone, Sparkles } from 'lucide-react';
-import { uploadImage, updateTenantSettings } from '../../api/client';
+import { uploadImage, updateTenantSettings, completeOnboarding } from '../../api/client';
 
 export default function OnboardingSetup({ token, restaurantInfo, setRestaurantInfo, onComplete }) {
   const [currentStep, setCurrentStep] = useState(1);
@@ -189,9 +189,10 @@ export default function OnboardingSetup({ token, restaurantInfo, setRestaurantIn
         openingHours: formData.openingHours,
         resto_type: formData.resto_type,
         theme_color: formData.theme_color,
-        onboarding_completed: true,
         location_initialized: true
       }, token);
+
+      await completeOnboarding(token);
 
       setSuccessMsg('Your restaurant is ready!');
       setTimeout(() => {

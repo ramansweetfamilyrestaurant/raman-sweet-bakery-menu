@@ -256,15 +256,44 @@ router.get('/me', authenticateToken, async (req, res) => {
       checkSubscriptionStatus(targetId)
     ]);
 
+    const resto = restos[0] ? {
+      ...restos[0],
+      onboarding_completed: restos[0].onboarding_completed !== undefined && restos[0].onboarding_completed !== null ? (restos[0].onboarding_completed === true || restos[0].onboarding_completed === 1 || restos[0].onboarding_completed === 'true') : true,
+      location_initialized: restos[0].location_initialized !== undefined && restos[0].location_initialized !== null ? (restos[0].location_initialized === true || restos[0].location_initialized === 1 || restos[0].location_initialized === 'true') : false
+    } : null;
+
     res.json({
       user: admins[0] || req.user,
-      restaurant: restos[0] || null,
+      restaurant: resto,
       subscription_status: subInfo.status,
       active: subInfo.active
     });
   } catch (err) {
     console.error('Fetch me error:', err);
     res.status(500).json({ error: 'Failed to fetch user session' });
+  }
+});
+
+// POST /api/admin/onboarding/complete - Dedicated, authorized onboarding completion endpoint
+router.post('/onboarding/complete', authenticateToken, async (req, res) => {
+  try {
+    const targetId = req.user?.restaurant_id;
+    if (!targetId) {
+      return res.status(401).json({ error: 'Unauthorized: Valid restaurant session required' });
+    }
+
+    const restoRows = await query('SELECT id, name, phone, address FROM restaurants WHERE id = $1', [targetId]);
+    const resto = restoRows[0];
+    if (!resto || !resto.name || !resto.phone) {
+      return res.status(400).json({ error: 'Incomplete restaurant profile. Name and Phone are required before completing onboarding.' });
+    }
+
+    await query('UPDATE restaurants SET onboarding_completed = true, location_initialized = true WHERE id = $1', [targetId]);
+
+    res.json({ success: true, message: 'Onboarding completed successfully!', onboarding_completed: true });
+  } catch (err) {
+    console.error('Onboarding complete error:', err);
+    res.status(500).json({ error: 'Failed to complete onboarding' });
   }
 });
 
