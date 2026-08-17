@@ -437,6 +437,14 @@ async function createTables() {
       `ALTER TABLE subscriptions ADD COLUMN IF NOT EXISTS cancellation_reason TEXT;`,
       `CREATE INDEX IF NOT EXISTS idx_subscriptions_cancel ON subscriptions(cancel_requested_at);`,
       `CREATE INDEX IF NOT EXISTS idx_subscriptions_plan_change ON subscriptions(scheduled_plan_key);`,
+      // 1,000-Restaurant Composite Indexes for Fast Tenant Querying
+      `CREATE INDEX IF NOT EXISTS idx_categories_resto_sort ON categories(restaurant_id, sort_order ASC, id ASC);`,
+      `CREATE INDEX IF NOT EXISTS idx_dishes_resto_available ON dishes(restaurant_id, available);`,
+      `CREATE INDEX IF NOT EXISTS idx_combos_resto_sort ON combos(restaurant_id, sort_order ASC, id ASC);`,
+      `CREATE INDEX IF NOT EXISTS idx_orders_resto_created ON orders(restaurant_id, created_at DESC);`,
+      `CREATE INDEX IF NOT EXISTS idx_orders_resto_status ON orders(restaurant_id, status);`,
+      `CREATE INDEX IF NOT EXISTS idx_service_req_resto ON service_requests(restaurant_id, status, created_at DESC);`,
+      `CREATE INDEX IF NOT EXISTS idx_stored_images_resto_filename ON stored_images(restaurant_id, filename);`,
       // Master 24-Point SaaS Plan Permission Matrix Columns
       `ALTER TABLE saas_plans ADD COLUMN IF NOT EXISTS max_dishes INT DEFAULT 9999;`,
       `ALTER TABLE saas_plans ADD COLUMN IF NOT EXISTS max_categories INT DEFAULT 9999;`,

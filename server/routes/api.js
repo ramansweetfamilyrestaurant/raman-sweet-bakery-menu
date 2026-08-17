@@ -6,8 +6,42 @@ import { query, withTransaction, getDbType } from '../db.js';
 import jwt from 'jsonwebtoken';
 import bcrypt from 'bcryptjs';
 
-const router = express.Router();
-import { JWT_SECRET } from '../config/jwt.js';
+import { isR2Active } from '../services/r2ImageService.js';
+
+// GET Automated Health & Capacity Monitoring Endpoint (Safe: Zero Secret Leakage)
+router.get('/health', async (req, res) => {
+  const startTime = Date.now();
+  let dbStatus = 'healthy';
+  let dbLatencyMs = 0;
+
+  try {
+    const dbStart = Date.now();
+    await query('SELECT 1');
+    dbLatencyMs = Date.now() - dbStart;
+  } catch (err) {
+    dbStatus = 'degraded';
+    console.error('[HEALTH CHECK] Database ping failed:', err.message);
+  }
+
+  const overallDuration = Date.now() - startTime;
+  const isHealthy = dbStatus === 'healthy';
+
+  res.status(isHealthy ? 200 : 503).json({
+    status: isHealthy ? 'OK' : 'DEGRADED',
+    timestamp: new Date().toISOString(),
+    duration_ms: overallDuration,
+    database: {
+      status: dbStatus,
+      latency_ms: dbLatencyMs,
+      type: getDbType()
+    },
+    storage: {
+      provider: isR2Active() ? 'cloudflare_r2' : 'local_fallback',
+      active: isR2Active()
+    },
+    version: '1.0.0-1000-tenant-ready'
+  });
+});
 
 // GET Database Debug & Diagnostics Endpoint
 router.get('/debug-db', async (req, res) => {

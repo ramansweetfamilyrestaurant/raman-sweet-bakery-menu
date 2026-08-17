@@ -77,9 +77,73 @@ router.post('/login', superAdminLoginRateLimiter, async (req, res) => {
   }
 });
 
-// GET All Tenant Restaurants with stats & subscription lifecycle details
+// GET All Tenant Restaurants with stats & subscription lifecycle details (Supports Safe Pagination & Search)
 router.get('/restaurants', authenticateToken, requireSuperAdmin, async (req, res) => {
   try {
+    const isPaginatedReq = req.query.page !== undefined || req.query.limit !== undefined || req.query.search !== undefined || req.query.paginated === 'true';
+    const page = Math.max(1, parseInt(req.query.page || 1, 10));
+    const limit = Math.min(200, Math.max(1, parseInt(req.query.limit || 50, 10)));
+    const search = String(req.query.search || '').trim().toLowerCase();
+    const offset = (page - 1) * limit;
+
+    let restoSql = 'SELECT * FROM restaurants';
+    const sqlParams = [];
+    if (search) {
+      restoSql += ' WHERE LOWER(name) LIKE $1 OR LOWER(slug) LIKE $1 OR LOWER(phone) LIKE $1';
+      sqlParams.push(`%${search}%`);
+    }
+    restoSql += ' ORDER BY id DESC';
+
+    if (isPaginatedReq) {
+      const countSql = search ? 'SELECT COUNT(*) as count FROM restaurants WHERE LOWER(name) LIKE $1 OR LOWER(slug) LIKE $1 OR LOWER(phone) LIKE $1' : 'SELECT COUNT(*) as count FROM restaurants';
+      const countRows = await query(countSql, sqlParams);
+      const totalCount = parseInt(countRows[0]?.count || 0, 10);
+
+      restoSql += ` LIMIT $${sqlParams.length + 1} OFFSET $${sqlParams.length + 2}`;
+      sqlParams.push(limit, offset);
+
+      const [restaurants, dishesCount, adminsList, subsList] = await Promise.all([
+        query(restoSql, sqlParams),
+        query('SELECT restaurant_id, COUNT(*) as count FROM dishes GROUP BY restaurant_id'),
+        query("SELECT id, restaurant_id, username FROM admins WHERE role = 'restaurant_admin'"),
+        query('SELECT * FROM subscriptions ORDER BY id DESC').catch(() => [])
+      ]);
+
+      const countMap = {};
+      dishesCount.forEach(row => { countMap[row.restaurant_id] = parseInt(row.count || 0, 10); });
+      const adminMap = {};
+      adminsList.forEach(a => { adminMap[a.restaurant_id] = a.username; });
+      const subMap = {};
+      (subsList || []).forEach(s => { if (!subMap[s.restaurant_id]) subMap[s.restaurant_id] = s; });
+
+      const result = restaurants.map(r => {
+        const sub = subMap[r.id];
+        return {
+          ...r,
+          dish_count: countMap[r.id] || 0,
+          owner_username: adminMap[r.id] || 'N/A',
+          subscription_status: sub?.status || (r.trial_ends_at ? 'trialing' : 'active'),
+          cancel_requested_at: sub?.cancel_requested_at || null,
+          auto_renew: sub?.auto_renew !== undefined ? Number(sub.auto_renew) : 1,
+          scheduled_plan_key: sub?.scheduled_plan_key || null,
+          plan_change_effective_at: sub?.plan_change_effective_at || null,
+          cancellation_reason: sub?.cancellation_reason || null,
+          access_until: sub?.current_period_end || r.trial_ends_at || r.plan_expires_at || null
+        };
+      });
+
+      return res.json({
+        data: result,
+        pagination: {
+          total: totalCount,
+          page,
+          limit,
+          totalPages: Math.ceil(totalCount / limit)
+        }
+      });
+    }
+
+    // Default backward-compatible unpaginated list
     const [restaurants, dishesCount, adminsList, subsList] = await Promise.all([
       query('SELECT * FROM restaurants ORDER BY id DESC'),
       query('SELECT restaurant_id, COUNT(*) as count FROM dishes GROUP BY restaurant_id'),
@@ -88,21 +152,11 @@ router.get('/restaurants', authenticateToken, requireSuperAdmin, async (req, res
     ]);
 
     const countMap = {};
-    dishesCount.forEach(row => {
-      countMap[row.restaurant_id] = parseInt(row.count || 0, 10);
-    });
-
+    dishesCount.forEach(row => { countMap[row.restaurant_id] = parseInt(row.count || 0, 10); });
     const adminMap = {};
-    adminsList.forEach(a => {
-      adminMap[a.restaurant_id] = a.username;
-    });
-
+    adminsList.forEach(a => { adminMap[a.restaurant_id] = a.username; });
     const subMap = {};
-    (subsList || []).forEach(s => {
-      if (!subMap[s.restaurant_id]) {
-        subMap[s.restaurant_id] = s;
-      }
-    });
+    (subsList || []).forEach(s => { if (!subMap[s.restaurant_id]) subMap[s.restaurant_id] = s; });
 
     const result = restaurants.map(r => {
       const sub = subMap[r.id];
