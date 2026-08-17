@@ -59,21 +59,23 @@ export async function checkExpiredSubscriptions() {
       }
     } catch (e) { console.warn('Cron scheduled plan change error:', e.message); }
 
-    // === 3. Original: Expire subscriptions beyond grace period ===
+    // === 3. Expire subscriptions beyond grace period ===
     const expiredRestos = await query(`
       SELECT r.id, r.name, r.slug, r.plan_expires_at, r.trial_ends_at
       FROM restaurants r
-      WHERE (r.active IS TRUE OR r.active = TRUE)
-        AND (
-          (r.plan_expires_at IS NOT NULL AND r.plan_expires_at < $1)
-          OR (r.trial_ends_at IS NOT NULL AND r.trial_ends_at < $1)
-        )
+      WHERE (r.active IS TRUE OR r.active = TRUE OR r.active = 1)
+        AND (r.mandate_status IS NULL OR r.mandate_status != 'admin_granted')
+        AND (r.subscription_type IS NULL OR r.subscription_type != 'ADMIN_GRANTED')
+        AND (r.trial_ends_at IS NULL OR r.trial_ends_at < $1)
+        AND (r.plan_expires_at IS NULL OR r.plan_expires_at < $1)
         AND NOT EXISTS (
           SELECT 1 FROM subscriptions s
           WHERE s.restaurant_id = r.id
-            AND s.cancel_requested_at IS NOT NULL
-            AND s.status NOT IN ('cancelled', 'expired')
-            AND (s.current_period_end IS NOT NULL AND s.current_period_end >= $2)
+            AND (
+              (s.status = 'active' AND (s.current_period_end IS NULL OR s.current_period_end >= $2))
+              OR (s.cancel_requested_at IS NOT NULL AND s.current_period_end IS NOT NULL AND s.current_period_end >= $2)
+              OR (s.status = 'trialing' AND s.trial_end IS NOT NULL AND s.trial_end >= $2)
+            )
         )
     `, [graceThresholdISO, nowISO]);
 

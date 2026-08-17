@@ -127,8 +127,10 @@ app.get(['/api/r2-proxy/*', '/r2-proxy/*'], async (req, res) => {
     }
 
     try {
-      fs.mkdirSync(path.dirname(localCachePath), { recursive: true });
-      fs.writeFileSync(localCachePath, buf);
+      if (!process.env.VERCEL) {
+        fs.mkdirSync(path.dirname(localCachePath), { recursive: true });
+        fs.writeFileSync(localCachePath, buf);
+      }
     } catch {}
 
     return res.send(buf);
@@ -225,11 +227,13 @@ app.get('/uploads/:filename', async (req, res) => {
   try {
     const dbImg = await getImageFromDb(filename);
     if (dbImg && dbImg.buffer) {
-      // Re-cache file to local disk so subsequent reads are instant
-      try {
-        fs.writeFileSync(filePath, dbImg.buffer);
-      } catch (cacheErr) {
-        console.warn('Failed to re-cache image to local disk:', cacheErr.message);
+      // Re-cache file to local disk so subsequent reads are instant (non-Vercel only)
+      if (!process.env.VERCEL) {
+        try {
+          fs.writeFileSync(filePath, dbImg.buffer);
+        } catch (cacheErr) {
+          console.warn('Failed to re-cache image to local disk:', cacheErr.message);
+        }
       }
       res.setHeader('Content-Type', dbImg.mimeType || 'image/jpeg');
       return res.send(dbImg.buffer);

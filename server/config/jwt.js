@@ -8,9 +8,10 @@ dotenv.config();
 function resolveJwtSecret() {
   const secret = (process.env.JWT_SECRET || '').trim();
   const isProduction = Boolean(process.env.NODE_ENV === 'production' || process.env.VERCEL);
+  const isUnsafeDefault = !secret || secret === 'touchqr_secret_jwt_key_change_me';
 
-  if (isProduction && !secret) {
-    console.warn('⚠️ [JWT CONFIG WARNING] JWT_SECRET environment variable is missing. Falling back to default key.');
+  if (isProduction && isUnsafeDefault) {
+    throw new Error('FATAL: JWT_SECRET environment variable is missing or unsafe in production environment');
   }
 
   return secret || 'touchqr_secret_jwt_key_change_me';

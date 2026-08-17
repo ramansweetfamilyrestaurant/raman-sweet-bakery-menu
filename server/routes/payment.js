@@ -678,12 +678,21 @@ const handleCashfreeWebhook = async (req, res) => {
   const signature = req.headers['x-webhook-signature'] || req.headers['x-cashfree-signature'];
   const timestamp = req.headers['x-webhook-timestamp'] || req.headers['x-cashfree-timestamp'];
 
-  // 1. Signature Verification Security Check
-  const isBypassTesting = Boolean(req.headers['x-test-bypass'] === 'true' && process.env.NODE_ENV === 'test');
+  // 1. Signature Verification Security Check & Test Bypass Hardening
+  const isTestEnv = process.env.NODE_ENV === 'test';
+  const isProduction = Boolean(process.env.NODE_ENV === 'production' || process.env.VERCEL);
+  const isBypassTesting = Boolean(isTestEnv && req.headers['x-test-bypass'] === 'true');
+  const secretPresent = Boolean((process.env.CASHFREE_CLIENT_SECRET || '').trim());
+
+  if (isProduction && !secretPresent) {
+    console.error('⚠️ [WEBHOOK ERROR] CASHFREE_CLIENT_SECRET is missing in production environment.');
+    return res.status(500).json({ error: 'CONFIG_ERROR', message: 'Webhook secret is unconfigured in production environment' });
+  }
+
   const isValidSignature = isBypassTesting || verifyCashfreeWebhookSignature(rawBody, timestamp, signature);
 
-  if (!isValidSignature && process.env.CASHFREE_CLIENT_SECRET) {
-    console.warn('⚠️ Webhook rejected: Invalid Cashfree signature');
+  if (!isValidSignature) {
+    console.warn(`⚠️ [WEBHOOK REJECTED] Invalid Cashfree signature from IP: ${req.ip}`);
     return res.status(401).json({ error: 'INVALID_SIGNATURE', message: 'Webhook signature verification failed' });
   }
 

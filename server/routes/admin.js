@@ -434,51 +434,14 @@ router.get('/subscription-status', authenticateToken, async (req, res) => {
   }
 });
 
-// POST /api/admin/forgot-password - Reset password using registered phone or username
+// POST /api/admin/forgot-password - Unauthenticated password reset disabled for production security
 router.post('/forgot-password', async (req, res) => {
-  try {
-    const { phone_or_username, new_password } = req.body;
-
-    if (!phone_or_username || !new_password) {
-      return res.status(400).json({ error: 'Phone/Username and New Password are required' });
-    }
-
-    if (new_password.length < 4) {
-      return res.status(400).json({ error: 'New password must be at least 4 characters long' });
-    }
-
-    const trimmedInput = phone_or_username.trim();
-
-    let admins = await query('SELECT * FROM admins WHERE username = $1', [trimmedInput]);
-
-    if (!admins || admins.length === 0) {
-      const restos = await query('SELECT id FROM restaurants WHERE phone = $1 OR whatsapp_number = $1', [trimmedInput]);
-      if (restos && restos.length > 0) {
-        const targetRestoId = restos[0].id;
-        admins = await query('SELECT * FROM admins WHERE restaurant_id = $1 ORDER BY id ASC LIMIT 1', [targetRestoId]);
-      }
-    }
-
-    if (!admins || admins.length === 0) {
-      return res.status(404).json({ error: 'No account found matching this Username or Phone number.' });
-    }
-
-    const targetAdmin = admins[0];
-
-    const salt = await bcrypt.genSalt(10);
-    const newHash = await bcrypt.hash(new_password, salt);
-
-    await query('UPDATE admins SET password_hash = $1 WHERE id = $2', [newHash, targetAdmin.id]);
-
-    res.json({
-      success: true,
-      message: `🔑 Password for '${targetAdmin.username}' updated successfully! You can now log in.`
-    });
-  } catch (err) {
-    console.error('Forgot password error:', err);
-    res.status(500).json({ error: 'Failed to reset password. Please try again or contact Super Admin.' });
-  }
+  return res.status(410).json({
+    error: 'PASSWORD_RESET_DISABLED',
+    message: 'Direct password reset via this endpoint is disabled for account security. Please contact Super Admin support via WhatsApp or email to request account recovery.'
+  });
 });
+
 
 // Admin Dashboard Summary Statistics (OPERATIONAL ROUTE)
 router.get('/stats', authenticateToken, requireActiveSubscription, async (req, res) => {
@@ -1024,6 +987,12 @@ router.post('/dishes', authenticateToken, requireActiveSubscription, async (req,
       return res.status(400).json({ error: 'Category, name, and price are required' });
     }
 
+    // Verify category belongs strictly to this tenant restaurant
+    const catCheck = await query('SELECT id FROM categories WHERE id = $1 AND restaurant_id = $2', [category_id, targetId]);
+    if (!catCheck || catCheck.length === 0) {
+      return res.status(400).json({ error: 'Invalid category. The specified category does not belong to your restaurant.' });
+    }
+
     const processedImage = await processExternalImageUrl(image, targetId, 'dishes');
 
     const availVal = available === false ? 0 : 1;
@@ -1055,6 +1024,14 @@ router.put('/dishes/:id', authenticateToken, requireActiveSubscription, async (r
       category_id, name, name_hi, description, description_hi, image, price, price_half, 
       portion, portion_half_label, portion_full_label, badge, ingredients, taste_profile, type, available 
     } = req.body;
+
+    // Verify category belongs strictly to this tenant restaurant
+    if (category_id) {
+      const catCheck = await query('SELECT id FROM categories WHERE id = $1 AND restaurant_id = $2', [category_id, targetId]);
+      if (!catCheck || catCheck.length === 0) {
+        return res.status(400).json({ error: 'Invalid category. The specified category does not belong to your restaurant.' });
+      }
+    }
 
     const processedImage = await processExternalImageUrl(image, targetId, 'dishes');
 

@@ -46,23 +46,30 @@ export async function checkSubscriptionStatus(restaurantId) {
 
     const now = new Date();
     
-    // Check trial end date (trial_ends_at or plan_expires_at)
+    // 1. Check trial end date (trial_ends_at)
     let isTrialing = false;
-    const expStr = resto.trial_ends_at || resto.plan_expires_at;
-    if (expStr) {
-      const trialExp = new Date(String(expStr).includes('T') ? expStr : `${expStr}T23:59:59Z`);
+    if (resto.trial_ends_at) {
+      const trialExp = new Date(String(resto.trial_ends_at).includes('T') ? resto.trial_ends_at : `${resto.trial_ends_at}T23:59:59Z`);
       if (!isNaN(trialExp.getTime()) && trialExp >= now) {
         isTrialing = true;
       }
     }
 
-    // Check subscriptions table for active paid subscription status
+    // 2. Check plan expiration date (plan_expires_at)
+    let isPlanActive = false;
+    if (resto.plan_expires_at) {
+      const planExp = new Date(String(resto.plan_expires_at).includes('T') ? resto.plan_expires_at : `${resto.plan_expires_at}T23:59:59Z`);
+      if (!isNaN(planExp.getTime()) && planExp >= now) {
+        isPlanActive = true;
+      }
+    }
+
+    // 3. Check subscriptions table for active paid subscription status
     const subRows = await query('SELECT * FROM subscriptions WHERE restaurant_id = $1 ORDER BY id DESC LIMIT 1', [restaurantId]);
     const sub = subRows[0];
 
-    // Active paid subscription
+    // Active paid subscription in subscriptions table
     if (sub && sub.status === 'active') {
-      // Even if cancel_requested, if current_period_end is in the future, still active
       if (sub.cancel_requested_at && sub.current_period_end) {
         const periodEnd = new Date(sub.current_period_end);
         if (periodEnd >= now) {
@@ -78,7 +85,6 @@ export async function checkSubscriptionStatus(restaurantId) {
       if (isTrialing) {
         return { status: 'trialing', active: true, resto, sub };
       }
-      // Check current_period_end
       if (sub.current_period_end) {
         const periodEnd = new Date(sub.current_period_end);
         if (periodEnd >= now) {
@@ -87,20 +93,15 @@ export async function checkSubscriptionStatus(restaurantId) {
       }
     }
 
+    if (isPlanActive) {
+      return { status: 'active', active: true, resto, sub };
+    }
+
     if (isTrialing) {
       return { status: 'trialing', active: true, resto, sub };
     }
 
-    // If active flag is set to false in DB or trial/plan expired
-    if (resto.active === 0 || resto.active === false) {
-      return { status: 'expired', active: false, resto, sub };
-    }
-
-    // Default fallback
-    if (isTrialing || resto.active === 1 || resto.active === true) {
-      return { status: 'trialing', active: true, resto, sub };
-    }
-
+    // Expired fallback: If trial and plan dates have passed and no active subscription exists
     return { status: 'expired', active: false, resto, sub };
   } catch (err) {
     console.error('Subscription status check error:', err.message);

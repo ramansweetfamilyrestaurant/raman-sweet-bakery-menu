@@ -45,22 +45,23 @@ router.get('/health', async (req, res) => {
   });
 });
 
-// GET Database Debug & Diagnostics Endpoint
+// GET Database Debug & Diagnostics Endpoint (Disabled in production for security)
 router.get('/debug-db', async (req, res) => {
+  const isProduction = Boolean(process.env.NODE_ENV === 'production' || process.env.VERCEL);
+  if (isProduction) {
+    return res.status(404).json({ error: 'Endpoint not found' });
+  }
+
   try {
     const isPg = Boolean(process.env.DATABASE_URL);
     const activeDbType = getDbType();
-    const dishesCount = await query('SELECT count(*) as count FROM dishes');
-    const restos = await query('SELECT id, name, slug, active FROM restaurants LIMIT 10');
     res.json({
       status: 'OK',
       hasDATABASE_URLEnv: isPg,
-      activeDbType: activeDbType,
-      totalDishesCount: parseInt(dishesCount[0]?.count || 0, 10),
-      restaurants: restos
+      activeDbType: activeDbType
     });
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    res.status(500).json({ error: 'Diagnostic lookup failed' });
   }
 });
 

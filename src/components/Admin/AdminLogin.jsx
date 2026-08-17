@@ -203,7 +203,43 @@ export default function AdminLogin({ onLoginSuccess, onCancel, restaurantName, t
             </div>
           </div>
 
-          {mode === 'login' ? (
+          {mode === 'forgot' ? (
+            <div style={{
+              background: '#F0FDF4',
+              border: '1.5px solid #A7F3D0',
+              borderRadius: 'var(--radius-md)',
+              padding: '16px',
+              textAlign: 'center',
+              marginBottom: '20px'
+            }}>
+              <div style={{ fontWeight: 800, color: '#065F46', fontSize: '0.95rem', marginBottom: '8px' }}>
+                🔒 Account Recovery & Password Support
+              </div>
+              <p style={{ fontSize: '0.82rem', color: '#047857', lineHeight: 1.5, marginBottom: '16px' }}>
+                For account security, direct self-service password reset is disabled. Please contact Super Admin support via WhatsApp with your registered restaurant name to safely recover your account login.
+              </p>
+              <a
+                href={`https://wa.me/${(supportPhone || '919876543210').replace(/[^0-9]/g, '')}?text=${encodeURIComponent('Hello Super Admin, I am requesting password recovery assistance for my restaurant: ' + (restaurantName || targetSlug || ''))}`}
+                target="_blank"
+                rel="noopener noreferrer"
+                style={{
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: '6px',
+                  padding: '10px 18px',
+                  borderRadius: 'var(--radius-pill)',
+                  background: '#059669',
+                  color: '#FFFFFF',
+                  fontWeight: 800,
+                  fontSize: '0.85rem',
+                  textDecoration: 'none',
+                  boxShadow: '0 2px 8px rgba(5, 150, 105, 0.3)'
+                }}
+              >
+                💬 Request Account Recovery on WhatsApp
+              </a>
+            </div>
+          ) : (
             <div style={{ marginBottom: '20px' }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '6px' }}>
                 <label style={{
@@ -243,68 +279,28 @@ export default function AdminLogin({ onLoginSuccess, onCancel, restaurantName, t
                 />
               </div>
             </div>
-          ) : (
-            <>
-              <div style={{ marginBottom: '16px' }}>
-                <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: 600, color: 'var(--text-dark)', marginBottom: '6px' }}>
-                  New Password
-                </label>
-                <div style={{ position: 'relative', display: 'flex', alignItems: 'center' }}>
-                  <KeyRound size={16} color="var(--text-muted)" style={{ position: 'absolute', left: '12px' }} />
-                  <input
-                    type="password"
-                    required
-                    value={newPassword}
-                    onChange={(e) => setNewPassword(e.target.value)}
-                    placeholder="Enter new password (min 4 chars)"
-                    style={{
-                      width: '100%', padding: '10px 12px 10px 36px', fontSize: '0.9rem',
-                      borderRadius: 'var(--radius-sm)', border: '1px solid rgba(197, 160, 89, 0.4)', outline: 'none'
-                    }}
-                  />
-                </div>
-              </div>
-
-              <div style={{ marginBottom: '20px' }}>
-                <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: 600, color: 'var(--text-dark)', marginBottom: '6px' }}>
-                  Confirm New Password
-                </label>
-                <div style={{ position: 'relative', display: 'flex', alignItems: 'center' }}>
-                  <KeyRound size={16} color="var(--text-muted)" style={{ position: 'absolute', left: '12px' }} />
-                  <input
-                    type="password"
-                    required
-                    value={confirmPassword}
-                    onChange={(e) => setConfirmPassword(e.target.value)}
-                    placeholder="Repeat new password"
-                    style={{
-                      width: '100%', padding: '10px 12px 10px 36px', fontSize: '0.9rem',
-                      borderRadius: 'var(--radius-sm)', border: '1px solid rgba(197, 160, 89, 0.4)', outline: 'none'
-                    }}
-                  />
-                </div>
-              </div>
-            </>
           )}
 
-          <button
-            type="submit"
-            disabled={loading}
-            style={{
-              width: '100%',
-              padding: '12px',
-              borderRadius: 'var(--radius-pill)',
-              background: 'var(--primary-dark-green)',
-              color: '#FFFFFF',
-              border: '1px solid var(--accent-gold)',
-              fontSize: '0.95rem',
-              fontWeight: 700,
-              transition: 'var(--transition-fast)',
-              cursor: loading ? 'not-allowed' : 'pointer'
-            }}
-          >
-            {loading ? 'Processing...' : (mode === 'forgot' ? '🔑 Update Password' : 'Log In to Panel')}
-          </button>
+          {mode === 'login' && (
+            <button
+              type="submit"
+              disabled={loading}
+              style={{
+                width: '100%',
+                padding: '12px',
+                borderRadius: 'var(--radius-pill)',
+                background: 'var(--primary-dark-green)',
+                color: '#FFFFFF',
+                border: '1px solid var(--accent-gold)',
+                fontSize: '0.95rem',
+                fontWeight: 700,
+                transition: 'var(--transition-fast)',
+                cursor: loading ? 'not-allowed' : 'pointer'
+              }}
+            >
+              {loading ? 'Processing...' : 'Log In to Panel'}
+            </button>
+          )}
 
           {mode === 'forgot' ? (
             <button
