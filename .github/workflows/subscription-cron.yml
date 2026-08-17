@@ -1,0 +1,16 @@
+name: Hourly Subscription Maintenance Cron
+
+on:
+  schedule:
+    - cron: "0 * * * *"
+  workflow_dispatch:
+
+jobs:
+  subscription-check:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Trigger Subscription Check Endpoint
+        run: |
+          curl -s -S -X GET "${{ secrets.PRODUCTION_URL || 'https://raman-sweet-bakery-menu.vercel.app' }}/api/cron/subscription-check" \
+            -H "Authorization: Bearer ${{ secrets.CRON_SECRET }}" \
+            -H "Content-Type: application/json"
