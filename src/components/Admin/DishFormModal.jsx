@@ -398,15 +398,15 @@ export default function DishFormModal({ dish, categories, token, modifiersEnable
 
           {/* Pricing: Full & Optional Half Price */}
           <div style={{
-            background: 'var(--bg-cream-primary)',
+            background: modifiersEnabled !== false ? 'var(--bg-cream-primary)' : '#F8FAFC',
             padding: '14px 16px',
             borderRadius: 'var(--radius-sm)',
-            border: '1px solid rgba(197, 160, 89, 0.3)',
+            border: modifiersEnabled !== false ? '1px solid rgba(197, 160, 89, 0.3)' : '1px solid #E2E8F0',
             marginBottom: '14px'
           }}>
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '10px' }}>
-              <span style={{ fontSize: '0.82rem', fontWeight: 800, color: 'var(--primary-dark-green)', display: 'flex', alignItems: 'center', gap: '6px' }}>
-                ⚡ Portion Pricing & Modifiers
+              <span style={{ fontSize: '0.82rem', fontWeight: 800, color: modifiersEnabled !== false ? 'var(--primary-dark-green)' : '#64748B', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                {modifiersEnabled !== false ? '⚡ Portion Pricing & Modifiers' : '🔒 Portion Pricing & Modifiers'}
               </span>
               {modifiersEnabled !== false ? (
                 <label style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.8rem', fontWeight: 700, cursor: 'pointer', color: 'var(--primary-dark-green)' }}>
@@ -419,8 +419,8 @@ export default function DishFormModal({ dish, categories, token, modifiersEnable
                   Enable Half / Full Portion
                 </label>
               ) : (
-                <span style={{ fontSize: '0.72rem', fontWeight: 700, color: '#94A3B8', background: '#F1F5F9', padding: '4px 8px', borderRadius: '6px' }}>
-                  🔒 Feature Locked on Current Plan
+                <span style={{ fontSize: '0.74rem', fontWeight: 800, color: '#DC2626', background: '#FEE2E2', padding: '4px 10px', borderRadius: '6px', border: '1px solid #FCA5A5' }}>
+                  🔒 DISABLED in SuperAdmin Plan
                 </span>
               )}
             </div>

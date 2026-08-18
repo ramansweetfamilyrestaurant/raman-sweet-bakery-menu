@@ -298,6 +298,7 @@ router.get('/menu-bundle', async (req, res) => {
       whatsapp_number: resto.whatsapp_number || resto.phone || '',
       whatsapp_enabled: whatsappEnabled,
       direct_ordering_enabled: directOrderingEnabled,
+      modifiers_enabled: isFieldTrue(saasP.modifiers_enabled, true),
       watermark_removal_enabled: watermarkRemoval,
       custom_domain_enabled: customDomainEnabled,
       multi_language_enabled: multiLanguageEnabled,
