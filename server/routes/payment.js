@@ -283,7 +283,7 @@ export async function finalizePendingRegistration(reg_id, inputSubId = null) {
     `, [
       regData.name, cleanSlug, '100% Fresh & Authentic Food',
       '/images/default-logo.webp',
-      regData.phone, 'Main Market Street, City Center', '8:00 AM - 10:30 PM',
+      regData.phone, '', '8:00 AM - 10:30 PM',
       dbPlan.key, dbPlan.price, expiryDateISO, nowISO, expiryDateISO, regData.phone, 'gold',
       1, 0, 'active', targetSubId || null, 1, false, false, regData.owner_name || ''
     ]);

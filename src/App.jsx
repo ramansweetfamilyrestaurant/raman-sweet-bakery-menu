@@ -96,7 +96,11 @@ export default function App() {
     }
     if (path.includes('/admin') || hash === '#admin') {
       const t = localStorage.getItem('touchqr_admin_token');
-      return (t && t !== 'undefined' && t !== 'null') ? 'admin-dashboard' : 'admin-login';
+      const onb = localStorage.getItem('touchqr_onboarding_completed');
+      if (t && t !== 'undefined' && t !== 'null') {
+        return (onb === 'false') ? 'admin-setup' : 'admin-dashboard';
+      }
+      return 'admin-login';
     }
     if (path === '' || path === '/') return 'landing';
     return 'menu';
@@ -847,6 +851,7 @@ export default function App() {
             console.warn(`URL slug '${urlSlug}' does not match stored admin token slug '${storedSlug}'. Prompting fresh login for '${urlSlug}'.`);
             localStorage.removeItem('touchqr_admin_token');
             localStorage.removeItem('touchqr_admin_slug');
+            localStorage.removeItem('touchqr_onboarding_completed');
             setAdminToken('');
             setAdminSlug('');
             setView('admin-login');
@@ -854,7 +859,8 @@ export default function App() {
           }
 
           const isSetupPath = path.includes('/admin/setup') || hash === '#setup';
-          const isOnboardingIncomplete = info && (info.onboarding_completed === false || info.onboarding_completed === 0 || info.onboarding_completed === 'false');
+          const storedOnboarding = localStorage.getItem('touchqr_onboarding_completed');
+          const isOnboardingIncomplete = storedOnboarding === 'false' || (info && (info.onboarding_completed === false || info.onboarding_completed === 0 || info.onboarding_completed === 'false'));
 
           if (isSetupPath || isOnboardingIncomplete) {
             setView('admin-setup');
@@ -864,13 +870,19 @@ export default function App() {
             }
           } else {
             setView('admin-dashboard');
+            const cleanUrl = (effectiveSlug && effectiveSlug !== 'undefined' && effectiveSlug !== 'null') ? `/${effectiveSlug}/admin` : '/admin';
+            if (window.location.pathname !== cleanUrl) {
+              window.history.replaceState({}, '', cleanUrl);
+            }
           }
 
           // Fetch fresh tenant info to accurately evaluate onboarding & mandate status
           fetchRestaurantInfo({ token: adminToken, slug: effectiveSlug }).then(freshInfo => {
             if (freshInfo) {
               setInfo(freshInfo);
-              if (freshInfo.onboarding_completed === false || freshInfo.onboarding_completed === 0 || freshInfo.onboarding_completed === 'false') {
+              const freshOnboardingComplete = (freshInfo.onboarding_completed !== false && freshInfo.onboarding_completed !== 0 && freshInfo.onboarding_completed !== 'false');
+              localStorage.setItem('touchqr_onboarding_completed', freshOnboardingComplete ? 'true' : 'false');
+              if (!freshOnboardingComplete) {
                 setView('admin-setup');
                 const setupUrl = (effectiveSlug && effectiveSlug !== 'undefined' && effectiveSlug !== 'null') ? `/${effectiveSlug}/admin/setup` : '/admin/setup';
                 if (window.location.pathname !== setupUrl) {
@@ -885,14 +897,6 @@ export default function App() {
             if (!mandateActive) {
               window.history.replaceState({}, '', '/billing');
               setView('billing');
-            } else {
-              const currentPath = window.location.pathname;
-              if (!currentPath.includes('/admin/setup')) {
-                const cleanUrl = (effectiveSlug && effectiveSlug !== 'undefined' && effectiveSlug !== 'null') ? `/${effectiveSlug}/admin` : '/admin';
-                if (window.location.pathname !== cleanUrl) {
-                  window.history.replaceState({}, '', cleanUrl);
-                }
-              }
             }
           }).catch(() => {});
         } else {
@@ -939,7 +943,13 @@ export default function App() {
       currentSlug = (restoInfo && restoInfo.slug) || slug || '';
     }
 
-    const cleanUrl = (currentSlug && currentSlug !== 'undefined' && currentSlug !== 'null') ? `/${currentSlug}/admin` : '/admin';
+    const isOnboardingComplete = restoInfo
+      ? (restoInfo.onboarding_completed !== false && restoInfo.onboarding_completed !== 0 && restoInfo.onboarding_completed !== 'false')
+      : (localStorage.getItem('touchqr_onboarding_completed') !== 'false');
+
+    const targetUrl = !isOnboardingComplete
+      ? ((currentSlug && currentSlug !== 'undefined' && currentSlug !== 'null') ? `/${currentSlug}/admin/setup` : '/admin/setup')
+      : ((currentSlug && currentSlug !== 'undefined' && currentSlug !== 'null') ? `/${currentSlug}/admin` : '/admin');
 
     // 2. SYNCHRONOUSLY update URL & localStorage FIRST so browser path instantly matches new tenant
     if (currentSlug && currentSlug !== 'undefined' && currentSlug !== 'null') {
@@ -947,7 +957,8 @@ export default function App() {
     }
     localStorage.setItem('touchqr_admin_token', token);
     localStorage.setItem('touchqr_admin_user', username);
-    window.history.pushState({}, '', cleanUrl);
+    localStorage.setItem('touchqr_onboarding_completed', isOnboardingComplete ? 'true' : 'false');
+    window.history.replaceState({}, '', targetUrl);
 
     // 3. Update React state & route to OnboardingSetup wizard if onboarding not yet completed
     setAdminToken(token);
@@ -955,13 +966,8 @@ export default function App() {
     setAdminSlug(currentSlug);
     if (restoInfo) setInfo(restoInfo);
 
-    const isOnboardingComplete = restoInfo
-      ? (restoInfo.onboarding_completed !== false && restoInfo.onboarding_completed !== 0 && restoInfo.onboarding_completed !== 'false')
-      : true;
-
     if (!isOnboardingComplete) {
       setView('admin-setup');
-      window.history.pushState({}, '', currentSlug ? `/${currentSlug}/admin/setup` : '/admin/setup');
     } else {
       setView('admin-dashboard');
     }
@@ -970,7 +976,7 @@ export default function App() {
     checkMandateGating(token, currentSlug).then(mandateActive => {
       if (!mandateActive) {
         setView('billing');
-        window.history.pushState({}, '', '/billing');
+        window.history.replaceState({}, '', '/billing');
       }
     }).catch(() => {});
   };
@@ -980,6 +986,7 @@ export default function App() {
     localStorage.removeItem('touchqr_admin_token');
     localStorage.removeItem('touchqr_admin_user');
     localStorage.removeItem('touchqr_admin_slug');
+    localStorage.removeItem('touchqr_onboarding_completed');
     setAdminToken('');
     setAdminUsername('');
     setAdminSlug('');

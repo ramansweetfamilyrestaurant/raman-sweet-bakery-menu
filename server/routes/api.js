@@ -944,7 +944,7 @@ router.post('/register', registrationRateLimiter, async (req, res) => {
         '100% Fresh & Authentic Food',
         '/images/default-logo.webp',
         cleanPhone,
-        'Main Market Street, City Center',
+        '',
         '8:00 AM - 10:30 PM',
         dbPlan.key,
         dbPlan.price,
