@@ -35,7 +35,7 @@ async function initDb() {
     }
   }
 
-  if (dbType === 'sqlite') {
+  if (dbType === 'sqlite' && !process.env.VERCEL) {
     try {
       const sqliteModule = await import('better-sqlite3');
       const Database = sqliteModule.default || sqliteModule;

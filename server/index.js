@@ -302,6 +302,18 @@ if (fs.existsSync(distDir)) {
   });
 }
 
+// Global Express Serverless Error Handler (Guarantees clean JSON and prevents FUNCTION_INVOCATION_FAILED)
+app.use((err, req, res, next) => {
+  console.error('[UNHANDLED EXPRESS ERROR]', err);
+  if (res.headersSent) {
+    return next(err);
+  }
+  res.status(err.status || 500).json({
+    error: err.message || 'Internal Server Error',
+    status: err.status || 500
+  });
+});
+
 // Start Server
 async function startServer(portToTry = PORT) {
   try {
