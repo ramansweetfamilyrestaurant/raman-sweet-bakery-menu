@@ -315,21 +315,7 @@ export async function finalizePendingRegistration(reg_id, inputSubId = null) {
     return { newRestoId, cleanSlug, jwtToken, username: regData.owner_username };
   });
 
-  // Seed starter categories & dishes
-  try {
-    const cat1 = await query('INSERT INTO categories (restaurant_id, name, image, sort_order) VALUES ($1, $2, $3, $4) RETURNING id', [result.newRestoId, '⭐ Special Starters', 'https://images.unsplash.com/photo-1601050690597-df0568f70950?w=500&auto=format&fit=crop&q=80', 1]);
-    const cat2 = await query('INSERT INTO categories (restaurant_id, name, image, sort_order) VALUES ($1, $2, $3, $4) RETURNING id', [result.newRestoId, '🍛 Main Course & Thalis', 'https://images.unsplash.com/photo-1546833999-b9f581a1996d?w=500&auto=format&fit=crop&q=80', 2]);
-    const cat3 = await query('INSERT INTO categories (restaurant_id, name, image, sort_order) VALUES ($1, $2, $3, $4) RETURNING id', [result.newRestoId, '🥤 Beverages & Shakes', 'https://images.unsplash.com/photo-1544145945-f90425340c7e?w=500&auto=format&fit=crop&q=80', 3]);
-    const c1Id = cat1[0]?.id || cat1.lastInsertRowid;
-    const c2Id = cat2[0]?.id || cat2.lastInsertRowid;
-    const c3Id = cat3[0]?.id || cat3.lastInsertRowid;
-
-    await query(`INSERT INTO dishes (restaurant_id, category_id, name, description, image, price, available, type) VALUES ($1, $2, $3, $4, $5, $6, 1, 'veg')`, [result.newRestoId, c1Id, 'Paneer Tikka Platter', 'Sizzling tandoori paneer cubes with mint chutney', 'https://images.unsplash.com/photo-1567188040759-fb8a883dc6d8?w=500&auto=format&fit=crop&q=80', 240]);
-    await query(`INSERT INTO dishes (restaurant_id, category_id, name, description, image, price, available, type) VALUES ($1, $2, $3, $4, $5, $6, 1, 'veg')`, [result.newRestoId, c2Id, 'Royal Maharaja Thali', 'Full thali with 2 sabzi, dal makhani, naan, rice & gulab jamun', 'https://images.unsplash.com/photo-1585937421612-70a008356fbe?w=500&auto=format&fit=crop&q=80', 320]);
-    await query(`INSERT INTO dishes (restaurant_id, category_id, name, description, image, price, available, type) VALUES ($1, $2, $3, $4, $5, $6, 1, 'veg')`, [result.newRestoId, c3Id, 'Mango Lassi Special', 'Thick kulhad mango lassi with dry fruits topping', 'https://images.unsplash.com/photo-1571006682860-39826ec9d4a9?w=500&auto=format&fit=crop&q=80', 90]);
-  } catch (seedErr) {
-    console.warn('Notice seeding initial categories/dishes:', seedErr.message);
-  }
+  // Clean Fresh Start (No demo categories or dishes seeded)
 
   await query("UPDATE pending_registrations SET status = 'completed', completed_at = CURRENT_TIMESTAMP, restaurant_id = $1, created_slug = $2, created_jwt = $3, created_user = $4 WHERE id = $5", [result.newRestoId, result.cleanSlug, result.jwtToken, result.username, reg_id]);
 

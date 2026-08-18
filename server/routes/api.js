@@ -995,40 +995,7 @@ router.post('/register', registrationRateLimiter, async (req, res) => {
       };
     });
 
-    // 4. Seed Starter Categories & Starter Dishes (outside transaction so errors don't cause transaction abort)
-    try {
-      const cat1 = await query('INSERT INTO categories (restaurant_id, name, image, sort_order) VALUES ($1, $2, $3, $4) RETURNING id', [
-        result.newRestoId, '⭐ Special Starters', 'https://images.unsplash.com/photo-1601050690597-df0568f70950?w=500&auto=format&fit=crop&q=80', 1
-      ]);
-      const cat2 = await query('INSERT INTO categories (restaurant_id, name, image, sort_order) VALUES ($1, $2, $3, $4) RETURNING id', [
-        result.newRestoId, '🍛 Main Course & Thalis', 'https://images.unsplash.com/photo-1546833999-b9f581a1996d?w=500&auto=format&fit=crop&q=80', 2
-      ]);
-      const cat3 = await query('INSERT INTO categories (restaurant_id, name, image, sort_order) VALUES ($1, $2, $3, $4) RETURNING id', [
-        result.newRestoId, '🥤 Beverages & Shakes', 'https://images.unsplash.com/photo-1544145945-f90425340c7e?w=500&auto=format&fit=crop&q=80', 3
-      ]);
-
-      const cat1Id = cat1[0]?.id || cat1.lastInsertRowid;
-      const cat2Id = cat2[0]?.id || cat2.lastInsertRowid;
-      const cat3Id = cat3[0]?.id || cat3.lastInsertRowid;
-
-      if (cat1Id) {
-        await query('INSERT INTO dishes (restaurant_id, category_id, name, price, description, image, available) VALUES ($1, $2, $3, $4, $5, $6, $7)', [
-          result.newRestoId, cat1Id, 'Crispy Paneer Tikka', 240, 'Juicy cottage cheese cubes marinated in spices and grilled in tandoor', 'https://images.unsplash.com/photo-1567188040759-fb8a883dc6d8?w=500&auto=format&fit=crop&q=80', 1
-        ]);
-      }
-      if (cat2Id) {
-        await query('INSERT INTO dishes (restaurant_id, category_id, name, price, description, image, available) VALUES ($1, $2, $3, $4, $5, $6, $7)', [
-          result.newRestoId, cat2Id, 'Royal Butter Paneer & Naan Thali', 290, 'Rich butter paneer gravy served with 2 butter naans, dal makhani, and rice', 'https://images.unsplash.com/photo-1585937421612-70a008356fbe?w=500&auto=format&fit=crop&q=80', 1
-        ]);
-      }
-      if (cat3Id) {
-        await query('INSERT INTO dishes (restaurant_id, category_id, name, price, description, image, available) VALUES ($1, $2, $3, $4, $5, $6, $7)', [
-          result.newRestoId, cat3Id, 'Cold Coffee with Ice Cream', 120, 'Creamy chilled coffee topped with dark chocolate and vanilla ice cream', 'https://images.unsplash.com/photo-1572490122747-3968b75cc699?w=500&auto=format&fit=crop&q=80', 1
-        ]);
-      }
-    } catch (seedErr) {
-      console.warn('Starter menu seed notice:', seedErr.message);
-    }
+    // 4. Clean Fresh Start (No demo categories or dishes seeded)
 
     // 5. Generate JWT Auth Token for automatic login
     const token = jwt.sign(
