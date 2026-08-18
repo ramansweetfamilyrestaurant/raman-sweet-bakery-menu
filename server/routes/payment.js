@@ -52,7 +52,7 @@ router.get('/config-status', async (req, res) => {
 // Validates registration form inputs and initiates Cashfree Subscription Checkout BEFORE creating any database record!
 router.post('/checkout-pre-register', registrationRateLimiter, async (req, res) => {
   try {
-    const { name, phone, owner_username, owner_password, plan_tier } = req.body;
+    const { name, phone, owner_username, owner_password, plan_tier, owner_name } = req.body;
 
     if (!name || !name.trim()) {
       return res.status(400).json({ error: 'Restaurant Name is required!' });
@@ -109,7 +109,7 @@ router.post('/checkout-pre-register', registrationRateLimiter, async (req, res) 
       planName: dbPlan.name,
       planPrice: Number(dbPlan.price) || 999,
       trialEndISO,
-      customerName: name.trim(),
+      customerName: (owner_name || name).trim(),
       customerPhone: cleanPhone,
       returnUrl
     });
@@ -126,6 +126,7 @@ router.post('/checkout-pre-register', registrationRateLimiter, async (req, res) 
 
     const regPayload = {
       name: name.trim(),
+      owner_name: (owner_name || '').trim(),
       phone: cleanPhone,
       owner_username: owner_username.trim(),
       owner_password,
@@ -277,14 +278,14 @@ export async function finalizePendingRegistration(reg_id, inputSubId = null) {
 
     const restoRes = await txQuery(`
       INSERT INTO restaurants (
-        name, slug, tagline, logo, phone, address, opening_hours, plan_tier, plan_price, plan_expires_at, trial_started_at, trial_ends_at, whatsapp_number, theme_color, active, total_tables, mandate_status, mandate_id, auto_debit_enabled, onboarding_completed, location_initialized
-      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21) RETURNING id
+        name, slug, tagline, logo, phone, address, opening_hours, plan_tier, plan_price, plan_expires_at, trial_started_at, trial_ends_at, whatsapp_number, theme_color, active, total_tables, mandate_status, mandate_id, auto_debit_enabled, onboarding_completed, location_initialized, owner_name
+      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21, $22) RETURNING id
     `, [
       regData.name, cleanSlug, '100% Fresh & Authentic Food',
       '/images/default-logo.webp',
       regData.phone, 'Main Market Street, City Center', '8:00 AM - 10:30 PM',
       dbPlan.key, dbPlan.price, expiryDateISO, nowISO, expiryDateISO, regData.phone, 'gold',
-      1, 0, 'active', targetSubId || null, 1, false, false
+      1, 0, 'active', targetSubId || null, 1, false, false, regData.owner_name || ''
     ]);
 
     const newRestoId = restoRes[0]?.id || restoRes.lastInsertRowid;

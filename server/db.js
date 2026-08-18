@@ -49,9 +49,11 @@ async function initDb() {
 
   if (!process.env.VERCEL) {
     await createTables().catch(() => {});
+    isDbInitialized = true;
     await seedData().catch(() => {});
+  } else {
+    isDbInitialized = true;
   }
-  isDbInitialized = true;
 }
 
 async function createTables() {
@@ -473,7 +475,11 @@ async function createTables() {
       `ALTER TABLE saas_plans ADD COLUMN IF NOT EXISTS dual_printer_enabled INT DEFAULT 0;`,
       `ALTER TABLE orders ADD COLUMN IF NOT EXISTS sent_to_kds INT DEFAULT 0;`,
       `ALTER TABLE orders ADD COLUMN IF NOT EXISTS kitchen_prepared INT DEFAULT 0;`,
-      `ALTER TABLE restaurants ADD COLUMN IF NOT EXISTS kds_screen_enabled INT DEFAULT 1;`
+      `ALTER TABLE restaurants ADD COLUMN IF NOT EXISTS kds_screen_enabled INT DEFAULT 1;`,
+      `ALTER TABLE restaurants ADD COLUMN IF NOT EXISTS owner_name VARCHAR(255);`,
+      `ALTER TABLE restaurants ADD COLUMN IF NOT EXISTS city VARCHAR(100);`,
+      `ALTER TABLE restaurants ADD COLUMN IF NOT EXISTS state VARCHAR(100);`,
+      `ALTER TABLE restaurants ADD COLUMN IF NOT EXISTS pincode VARCHAR(20);`
     ];
 
     for (const alt of pgAlters) {
@@ -827,6 +833,10 @@ async function createTables() {
       if (!restoCols.some(c => c.name === 'trial_ends_at')) sqliteDb.exec("ALTER TABLE restaurants ADD COLUMN trial_ends_at TEXT");
       if (!restoCols.some(c => c.name === 'auto_debit_enabled')) sqliteDb.exec("ALTER TABLE restaurants ADD COLUMN auto_debit_enabled INTEGER DEFAULT 0");
       if (!restoCols.some(c => c.name === 'trial_started_at')) sqliteDb.exec("ALTER TABLE restaurants ADD COLUMN trial_started_at TEXT");
+      if (!restoCols.some(c => c.name === 'owner_name')) sqliteDb.exec("ALTER TABLE restaurants ADD COLUMN owner_name TEXT");
+      if (!restoCols.some(c => c.name === 'city')) sqliteDb.exec("ALTER TABLE restaurants ADD COLUMN city TEXT");
+      if (!restoCols.some(c => c.name === 'state')) sqliteDb.exec("ALTER TABLE restaurants ADD COLUMN state TEXT");
+      if (!restoCols.some(c => c.name === 'pincode')) sqliteDb.exec("ALTER TABLE restaurants ADD COLUMN pincode TEXT");
 
       const planCols = sqliteDb.pragma('table_info(saas_plans)');
       if (!planCols.some(c => c.name === 'max_dishes')) sqliteDb.exec("ALTER TABLE saas_plans ADD COLUMN max_dishes INTEGER DEFAULT 9999");

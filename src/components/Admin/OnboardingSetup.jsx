@@ -11,13 +11,14 @@ export default function OnboardingSetup({ token, restaurantInfo, setRestaurantIn
   // Form State initialized from prop or loaded data
   const [formData, setFormData] = useState({
     name: restaurantInfo?.name || '',
+    owner_name: restaurantInfo?.owner_name || '',
     tagline: restaurantInfo?.tagline || '100% Quality Food & Service',
     phone: restaurantInfo?.phone || '',
     whatsapp_number: restaurantInfo?.whatsapp_number || restaurantInfo?.phone || '',
     address: restaurantInfo?.address || '',
-    city: '',
-    state: '',
-    pincode: '',
+    city: restaurantInfo?.city || '',
+    state: restaurantInfo?.state || '',
+    pincode: restaurantInfo?.pincode || '',
     latitude: restaurantInfo?.latitude !== undefined && restaurantInfo?.latitude !== null ? restaurantInfo.latitude : 26.6500,
     longitude: restaurantInfo?.longitude !== undefined && restaurantInfo?.longitude !== null ? restaurantInfo.longitude : 84.9167,
     location_initialized: restaurantInfo?.location_initialized || false,
@@ -38,16 +39,21 @@ export default function OnboardingSetup({ token, restaurantInfo, setRestaurantIn
       setFormData(prev => ({
         ...prev,
         name: prev.name || restaurantInfo.name || '',
+        owner_name: prev.owner_name || restaurantInfo.owner_name || '',
         tagline: prev.tagline || restaurantInfo.tagline || '100% Quality Food & Service',
         phone: prev.phone || restaurantInfo.phone || '',
         whatsapp_number: prev.whatsapp_number || restaurantInfo.whatsapp_number || restaurantInfo.phone || '',
         address: prev.address || restaurantInfo.address || '',
+        city: prev.city || restaurantInfo.city || '',
+        state: prev.state || restaurantInfo.state || '',
+        pincode: prev.pincode || restaurantInfo.pincode || '',
         latitude: restaurantInfo.latitude !== undefined && restaurantInfo.latitude !== null ? restaurantInfo.latitude : prev.latitude,
         longitude: restaurantInfo.longitude !== undefined && restaurantInfo.longitude !== null ? restaurantInfo.longitude : prev.longitude,
         location_initialized: restaurantInfo.location_initialized !== undefined ? restaurantInfo.location_initialized : prev.location_initialized,
         logo: prev.logo || restaurantInfo.logo || '',
         openingHours: prev.openingHours || restaurantInfo.openingHours || restaurantInfo.opening_hours || '8:00 AM - 10:30 PM',
-        resto_type: prev.resto_type || restaurantInfo.resto_type || 'pure_veg'
+        resto_type: prev.resto_type || restaurantInfo.resto_type || 'pure_veg',
+        theme_color: prev.theme_color || restaurantInfo.theme_color || 'gold'
       }));
     }
   }, [restaurantInfo]);
@@ -91,7 +97,10 @@ export default function OnboardingSetup({ token, restaurantInfo, setRestaurantIn
         tagline: formData.tagline.trim(),
         phone: formData.phone.trim(),
         whatsapp_number: formData.whatsapp_number.trim() || formData.phone.trim(),
-        address: fullAddr || formData.address.trim()
+        address: fullAddr || formData.address.trim(),
+        city: formData.city.trim(),
+        state: formData.state.trim(),
+        pincode: formData.pincode.trim()
       });
 
       setCurrentStep(2);

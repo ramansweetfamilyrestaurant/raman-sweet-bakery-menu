@@ -1146,7 +1146,7 @@ const handleUpdateSettings = async (req, res) => {
       return res.status(401).json({ error: 'Restaurant identity is missing from authentication context' });
     }
 
-    const { name, tagline, logo, phone, address, openingHours, google_review_url, google_reviews_enabled, filters_visibility, currency_symbol, fssai_lic_no, resto_type, whatsapp_number, whatsapp_enabled, theme_color, latitude, longitude, max_distance_meters, gst_enabled, gstin_number, total_tables, order_retention_days, custom_domain, onboarding_completed, location_initialized } = req.body;
+    const { name, tagline, logo, phone, address, openingHours, google_review_url, google_reviews_enabled, filters_visibility, currency_symbol, fssai_lic_no, resto_type, whatsapp_number, whatsapp_enabled, theme_color, latitude, longitude, max_distance_meters, gst_enabled, gstin_number, total_tables, order_retention_days, custom_domain, location_initialized, owner_name, city, state, pincode } = req.body;
 
     let cleanDomain = null;
     if (custom_domain !== undefined) {
@@ -1168,7 +1168,7 @@ const handleUpdateSettings = async (req, res) => {
       try {
         const oldRestoRows = await query('SELECT logo FROM restaurants WHERE id = $1', [targetId]);
         const oldLogo = oldRestoRows && oldRestoRows.length > 0 ? oldRestoRows[0].logo : null;
-        if (oldLogo && oldLogo !== processedLogo && oldLogo !== '/uploads/logo.jpg') {
+        if (oldLogo && oldLogo !== processedLogo && oldLogo !== '/uploads/logo.jpg' && oldLogo !== '/images/default-logo.webp') {
           await cleanupImage(oldLogo);
         }
       } catch (cleanErr) {
@@ -1176,13 +1176,12 @@ const handleUpdateSettings = async (req, res) => {
       }
     }
 
-    const onbBool = onboarding_completed !== undefined ? (onboarding_completed === true || onboarding_completed === 1 || onboarding_completed === 'true' ? true : false) : null;
     const locBool = location_initialized !== undefined ? (location_initialized === true || location_initialized === 1 || location_initialized === 'true' ? true : false) : null;
 
     await query(`
       UPDATE restaurants 
-      SET name = COALESCE($1, name), tagline = COALESCE($2, tagline), logo = CASE WHEN $3::text IS NOT NULL THEN $3 ELSE logo END, phone = COALESCE($4, phone), address = COALESCE($5, address), opening_hours = COALESCE($6, opening_hours), google_review_url = COALESCE($7, google_review_url), filters_visibility = COALESCE($8, filters_visibility), currency_symbol = COALESCE($9, currency_symbol), fssai_lic_no = COALESCE($10, fssai_lic_no), resto_type = COALESCE($11, resto_type), whatsapp_number = COALESCE($12, whatsapp_number), whatsapp_enabled = COALESCE($13, whatsapp_enabled), theme_color = COALESCE($14, theme_color), latitude = COALESCE($15, latitude), longitude = COALESCE($16, longitude), max_distance_meters = COALESCE($17, max_distance_meters), gst_enabled = COALESCE($18, gst_enabled), gstin_number = COALESCE($19, gstin_number), total_tables = COALESCE($20, total_tables), order_retention_days = COALESCE($21, order_retention_days), google_reviews_enabled = COALESCE($22, google_reviews_enabled), custom_domain = CASE WHEN $23::text IS NOT NULL THEN $23 ELSE custom_domain END, onboarding_completed = COALESCE($24, onboarding_completed), location_initialized = COALESCE($25, location_initialized)
-      WHERE id = $26
+      SET name = COALESCE($1, name), tagline = COALESCE($2, tagline), logo = CASE WHEN $3::text IS NOT NULL THEN $3 ELSE logo END, phone = COALESCE($4, phone), address = COALESCE($5, address), opening_hours = COALESCE($6, opening_hours), google_review_url = COALESCE($7, google_review_url), filters_visibility = COALESCE($8, filters_visibility), currency_symbol = COALESCE($9, currency_symbol), fssai_lic_no = COALESCE($10, fssai_lic_no), resto_type = COALESCE($11, resto_type), whatsapp_number = COALESCE($12, whatsapp_number), whatsapp_enabled = COALESCE($13, whatsapp_enabled), theme_color = COALESCE($14, theme_color), latitude = COALESCE($15, latitude), longitude = COALESCE($16, longitude), max_distance_meters = COALESCE($17, max_distance_meters), gst_enabled = COALESCE($18, gst_enabled), gstin_number = COALESCE($19, gstin_number), total_tables = COALESCE($20, total_tables), order_retention_days = COALESCE($21, order_retention_days), google_reviews_enabled = COALESCE($22, google_reviews_enabled), custom_domain = CASE WHEN $23::text IS NOT NULL THEN $23 ELSE custom_domain END, location_initialized = COALESCE($24, location_initialized), owner_name = COALESCE($25, owner_name), city = COALESCE($26, city), state = COALESCE($27, state), pincode = COALESCE($28, pincode)
+      WHERE id = $29
     `, [
       name !== undefined ? name : null,
       tagline !== undefined ? tagline : null,
@@ -1207,8 +1206,11 @@ const handleUpdateSettings = async (req, res) => {
       order_retention_days !== undefined ? Number(order_retention_days) : null,
       google_reviews_enabled !== undefined ? (google_reviews_enabled !== false && google_reviews_enabled !== 0 ? 1 : 0) : null,
       cleanDomain !== null ? cleanDomain : (custom_domain !== undefined ? '' : null),
-      onbBool,
       locBool,
+      owner_name !== undefined ? owner_name : null,
+      city !== undefined ? city : null,
+      state !== undefined ? state : null,
+      pincode !== undefined ? pincode : null,
       targetId
     ]);
 

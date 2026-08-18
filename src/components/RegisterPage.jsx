@@ -4,11 +4,13 @@ import { Store, User, Lock, Phone, ArrowRight, CheckCircle2, ShieldCheck, Sparkl
 export default function RegisterPage({ onRegisterSuccess }) {
   const [formData, setFormData] = useState({
     name: '',
+    owner_name: '',
     phone: '',
     owner_username: '',
     owner_password: '',
     confirm_password: '',
-    plan_tier: 'pro'
+    plan_tier: 'pro',
+    agree_terms: false
   });
 
   const [trialDays, setTrialDays] = useState(null);
@@ -105,6 +107,10 @@ export default function RegisterPage({ onRegisterSuccess }) {
       setError('Please enter your Restaurant Name');
       return;
     }
+    if (!formData.owner_name.trim()) {
+      setError('Please enter the Owner Full Name');
+      return;
+    }
     const cleanPhone = formData.phone.replace(/[^0-9]/g, '');
     if (!cleanPhone || cleanPhone.length !== 10 || !/^[6-9]\d{9}$/.test(cleanPhone)) {
       setError('Please enter a valid 10-digit Mobile Number (e.g. 9876543210)');
@@ -126,6 +132,10 @@ export default function RegisterPage({ onRegisterSuccess }) {
       setError('Passwords do not match! Please check again.');
       return;
     }
+    if (!formData.agree_terms) {
+      setError('Please agree to the Terms of Service and Privacy Policy to continue.');
+      return;
+    }
 
     setLoading(true);
 
@@ -136,6 +146,7 @@ export default function RegisterPage({ onRegisterSuccess }) {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           name: formData.name,
+          owner_name: formData.owner_name,
           phone: formData.phone,
           owner_username: formData.owner_username,
           owner_password: formData.owner_password,
@@ -423,6 +434,28 @@ export default function RegisterPage({ onRegisterSuccess }) {
               </div>
             </div>
 
+            {/* Owner Full Name */}
+            <div>
+              <label style={{ display: 'block', fontSize: '0.74rem', fontWeight: 800, color: '#DFBA67', marginBottom: '4px' }}>
+                OWNER FULL NAME *
+              </label>
+              <div style={{ position: 'relative' }}>
+                <User size={16} color="#9CA3AF" style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)' }} />
+                <input
+                  type="text"
+                  required
+                  placeholder="e.g. Rahul Sharma"
+                  value={formData.owner_name}
+                  onChange={e => setFormData({ ...formData, owner_name: e.target.value })}
+                  style={{
+                    width: '100%', padding: '11px 12px 11px 38px', borderRadius: '12px',
+                    border: '1px solid rgba(255,255,255,0.15)', background: '#1F2937',
+                    color: '#FFFFFF', fontSize: '0.85rem', outline: 'none'
+                  }}
+                />
+              </div>
+            </div>
+
             {/* Phone Number */}
             <div>
               <label style={{ display: 'block', fontSize: '0.74rem', fontWeight: 800, color: '#DFBA67', marginBottom: '4px' }}>
@@ -547,6 +580,21 @@ export default function RegisterPage({ onRegisterSuccess }) {
                   </div>
                 ))}
               </div>
+            </div>
+
+            {/* Terms and Conditions Checkbox */}
+            <div style={{ display: 'flex', alignItems: 'flex-start', gap: '8px', marginTop: '2px' }}>
+              <input
+                type="checkbox"
+                id="agree_terms"
+                required
+                checked={formData.agree_terms}
+                onChange={e => setFormData({ ...formData, agree_terms: e.target.checked })}
+                style={{ marginTop: '2px', cursor: 'pointer', accentColor: '#DFBA67' }}
+              />
+              <label htmlFor="agree_terms" style={{ fontSize: '0.74rem', color: '#9CA3AF', cursor: 'pointer', lineHeight: 1.4 }}>
+                I agree to the <a href="/terms" target="_blank" rel="noreferrer" style={{ color: '#DFBA67', textDecoration: 'underline' }}>Terms of Service</a> and <a href="/privacy-policy" target="_blank" rel="noreferrer" style={{ color: '#DFBA67', textDecoration: 'underline' }}>Privacy Policy</a>.
+              </label>
             </div>
 
             {/* Submit Button */}
