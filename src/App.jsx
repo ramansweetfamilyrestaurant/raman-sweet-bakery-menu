@@ -1120,17 +1120,8 @@ export default function App() {
         throw new Error(data.error || 'Login failed');
       }
 
-      // Save admin session tokens
-      localStorage.setItem('touchqr_admin_token', data.token);
-      localStorage.setItem('touchqr_admin_user', data.username);
-      localStorage.setItem('touchqr_admin_slug', data.slug);
-      setAdminToken(data.token);
-      setAdminUsername(data.username);
-      setAdminSlug(data.slug);
-
       setShowLandingLoginModal(false);
-      window.history.pushState({}, '', `/${data.slug}/admin`);
-      window.dispatchEvent(new PopStateEvent('popstate'));
+      await handleAdminLoginSuccess(data.token, data.username, data.slug, data.restaurant);
     } catch (err) {
       console.error('Landing login error:', err);
       setLoginErrMessage(err.message);
@@ -1339,7 +1330,7 @@ export default function App() {
             setAdminUsername(tenantUsername);
             setAdminSlug(targetSlug);
             setView('admin-dashboard');
-            window.history.pushState({}, '', `/r/${targetSlug}/admin`);
+            window.history.pushState({}, '', `/${targetSlug}/admin`);
           }}
           onReturnToMenu={(tenantSlug) => {
             const targetSlug = tenantSlug || (info && info.slug) || getSlugFromUrl() || '';
@@ -2660,7 +2651,7 @@ export default function App() {
             }
             setView('admin-login');
           }
-          window.history.pushState({}, '', `/r/${currentSlug}/admin`);
+          window.history.pushState({}, '', `/${currentSlug}/admin`);
         }}
       />
     </div>
