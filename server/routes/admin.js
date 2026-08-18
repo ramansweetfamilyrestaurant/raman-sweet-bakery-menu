@@ -228,7 +228,7 @@ router.post('/login', adminLoginRateLimiter, async (req, res) => {
     }
 
     const admin = matchedAdmin;
-    const restoRes = await query('SELECT slug, active, name FROM restaurants WHERE id = $1', [admin.restaurant_id]);
+    const restoRes = await query('SELECT * FROM restaurants WHERE id = $1', [admin.restaurant_id]);
     const resto = restoRes[0];
 
     const isActive = resto?.active === 1 || resto?.active === true || resto?.active === '1' || resto?.active === undefined || resto?.active === null;
@@ -243,7 +243,14 @@ router.post('/login', adminLoginRateLimiter, async (req, res) => {
       JWT_SECRET,
       { expiresIn: '30d' }
     );
-    res.json({ token, username: admin.username, restaurant_id: admin.restaurant_id, slug, role: admin.role || 'restaurant_admin' });
+    res.json({
+      token,
+      username: admin.username,
+      restaurant_id: admin.restaurant_id,
+      slug,
+      role: admin.role || 'restaurant_admin',
+      restaurant: resto
+    });
   } catch (err) {
     console.error('Login error:', err);
     res.status(500).json({ error: 'Internal server error during login' });

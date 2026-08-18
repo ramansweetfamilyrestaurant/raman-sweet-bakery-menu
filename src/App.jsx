@@ -891,21 +891,31 @@ export default function App() {
     };
   }, [adminToken, superToken]);
 
-  const handleAdminLoginSuccess = async (token, username, slug) => {
+  const handleAdminLoginSuccess = async (token, username, slug, initialRestoInfo = null) => {
+    // 1. Immediately clear old tenant data state to prevent cross-tenant UI flash
+    setDishes([]);
+    setCategories([]);
+    setCombos([]);
+
     let currentSlug = slug || '';
-    let restoInfo = null;
-    try {
-      const meRes = await fetch('/api/admin/me', { headers: { Authorization: `Bearer ${token}` } });
-      if (meRes.ok) {
-        restoInfo = await meRes.json();
-        if (restoInfo && restoInfo.slug) currentSlug = restoInfo.slug;
+    let restoInfo = initialRestoInfo || null;
+
+    if (!restoInfo) {
+      try {
+        const meRes = await fetch('/api/admin/me', { headers: { Authorization: `Bearer ${token}` } });
+        if (meRes.ok) {
+          restoInfo = await meRes.json();
+          if (restoInfo && restoInfo.slug) currentSlug = restoInfo.slug;
+        }
+      } catch (err) {
+        console.warn('Notice fetching /api/admin/me on login:', err.message);
       }
-    } catch (err) {
-      console.warn('Notice fetching /api/admin/me on login:', err.message);
+    } else if (restoInfo.slug) {
+      currentSlug = restoInfo.slug;
     }
 
     if (!currentSlug) {
-      currentSlug = (restoInfo && restoInfo.slug) || slug || getSlugFromUrl() || (info && info.slug) || '';
+      currentSlug = (restoInfo && restoInfo.slug) || slug || '';
     }
 
     if (currentSlug && currentSlug !== 'undefined' && currentSlug !== 'null') {
@@ -1489,7 +1499,7 @@ export default function App() {
   }
 
   if (view === 'admin-dashboard') {
-    const activeAdminSlug = getSlugFromUrl() || adminSlug || (info && info.slug) || localStorage.getItem('touchqr_admin_slug') || '';
+    const activeAdminSlug = adminSlug || (info && info.slug) || getSlugFromUrl() || localStorage.getItem('touchqr_admin_slug') || '';
     return (
       <AdminDashboard
         token={adminToken}

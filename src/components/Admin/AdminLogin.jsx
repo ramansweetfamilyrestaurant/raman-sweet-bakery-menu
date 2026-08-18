@@ -70,7 +70,7 @@ export default function AdminLogin({ onLoginSuccess, onCancel, restaurantName, t
       const rawCandidate = targetSlug || (typeof window !== 'undefined' ? window.location.pathname.split('/')[1] : '');
       const slugToPass = ['touchqr-demo', 'menu', 'admin', 'default', 'null', 'undefined'].includes((rawCandidate || '').toLowerCase()) ? '' : rawCandidate;
       const data = await adminLogin(username, password, slugToPass);
-      onLoginSuccess(data.token, data.username, data.slug);
+      onLoginSuccess(data.token, data.username, data.slug, data.restaurant);
     } catch (err) {
       setError(err.message || 'Invalid admin credentials');
     } finally {
