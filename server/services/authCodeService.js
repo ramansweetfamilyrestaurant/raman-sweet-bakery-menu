@@ -91,11 +91,19 @@ export async function exchangeAuthCode(code) {
     { expiresIn: '7d' }
   );
 
+  const restoRows = await query('SELECT * FROM restaurants WHERE id = $1', [record.restaurant_id]);
+  const resto = restoRows[0] ? {
+    ...restoRows[0],
+    onboarding_completed: restoRows[0].onboarding_completed !== undefined && restoRows[0].onboarding_completed !== null ? (restoRows[0].onboarding_completed === true || restoRows[0].onboarding_completed === 1 || restoRows[0].onboarding_completed === 'true') : false,
+    location_initialized: restoRows[0].location_initialized !== undefined && restoRows[0].location_initialized !== null ? (restoRows[0].location_initialized === true || restoRows[0].location_initialized === 1 || restoRows[0].location_initialized === 'true') : false
+  } : null;
+
   return {
     success: true,
     token,
     username: record.username,
-    slug: record.slug,
-    restaurant_id: record.restaurant_id
+    slug: (resto && resto.slug) || record.slug,
+    restaurant_id: record.restaurant_id,
+    restaurant: resto
   };
 }

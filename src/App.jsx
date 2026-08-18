@@ -172,13 +172,7 @@ export default function App() {
         .then(res => res.json())
         .then(data => {
           if (data && data.success && data.token) {
-            localStorage.setItem('touchqr_admin_token', data.token);
-            localStorage.setItem('touchqr_admin_user', data.username || 'admin');
-            localStorage.setItem('touchqr_admin_slug', data.slug || slugParam || '');
-            setAdminToken(data.token);
-            setAdminUsername(data.username || 'admin');
-            setAdminSlug(data.slug || slugParam || '');
-            setView('admin-dashboard');
+            handleAdminLoginSuccess(data.token, data.username || 'admin', data.slug || slugParam || '', data.restaurant);
           } else {
             console.warn('Authorization code exchange notice:', data?.error);
           }
@@ -859,8 +853,32 @@ export default function App() {
             return;
           }
 
-          // Instant View Switch to Admin Dashboard (0ms delay!)
-          setView('admin-dashboard');
+          const isSetupPath = path.includes('/admin/setup') || hash === '#setup';
+          const isOnboardingIncomplete = info && (info.onboarding_completed === false || info.onboarding_completed === 0 || info.onboarding_completed === 'false');
+
+          if (isSetupPath || isOnboardingIncomplete) {
+            setView('admin-setup');
+            const setupUrl = (effectiveSlug && effectiveSlug !== 'undefined' && effectiveSlug !== 'null') ? `/${effectiveSlug}/admin/setup` : '/admin/setup';
+            if (window.location.pathname !== setupUrl) {
+              window.history.replaceState({}, '', setupUrl);
+            }
+          } else {
+            setView('admin-dashboard');
+          }
+
+          // Fetch fresh tenant info to accurately evaluate onboarding & mandate status
+          fetchRestaurantInfo({ token: adminToken, slug: effectiveSlug }).then(freshInfo => {
+            if (freshInfo) {
+              setInfo(freshInfo);
+              if (freshInfo.onboarding_completed === false || freshInfo.onboarding_completed === 0 || freshInfo.onboarding_completed === 'false') {
+                setView('admin-setup');
+                const setupUrl = (effectiveSlug && effectiveSlug !== 'undefined' && effectiveSlug !== 'null') ? `/${effectiveSlug}/admin/setup` : '/admin/setup';
+                if (window.location.pathname !== setupUrl) {
+                  window.history.replaceState({}, '', setupUrl);
+                }
+              }
+            }
+          }).catch(() => {});
 
           // Silent Mandate Verification in Background
           checkMandateGating(adminToken, effectiveSlug).then(mandateActive => {
@@ -868,9 +886,12 @@ export default function App() {
               window.history.replaceState({}, '', '/billing');
               setView('billing');
             } else {
-              const cleanUrl = (effectiveSlug && effectiveSlug !== 'undefined' && effectiveSlug !== 'null') ? `/${effectiveSlug}/admin` : '/admin';
-              if (window.location.pathname !== cleanUrl) {
-                window.history.replaceState({}, '', cleanUrl);
+              const currentPath = window.location.pathname;
+              if (!currentPath.includes('/admin/setup')) {
+                const cleanUrl = (effectiveSlug && effectiveSlug !== 'undefined' && effectiveSlug !== 'null') ? `/${effectiveSlug}/admin` : '/admin';
+                if (window.location.pathname !== cleanUrl) {
+                  window.history.replaceState({}, '', cleanUrl);
+                }
               }
             }
           }).catch(() => {});
@@ -1496,6 +1517,7 @@ export default function App() {
           restaurantInfo={info}
           setRestaurantInfo={setInfo}
           onComplete={() => {
+            setInfo(prev => prev ? { ...prev, onboarding_completed: true } : { onboarding_completed: true });
             setView('admin-dashboard');
             window.history.pushState({}, '', activeAdminSlug ? `/${activeAdminSlug}/admin` : '/admin');
           }}
