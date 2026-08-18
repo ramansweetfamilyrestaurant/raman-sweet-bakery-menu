@@ -288,11 +288,11 @@ export default function DishFormModal({ dish, categories, token, modifiersEnable
             </div>
           </div>
 
-          {/* Name (EN + HI) & Badge */}
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '10px', marginBottom: '14px' }}>
+          {/* Name & Badge */}
+          <div style={{ display: 'grid', gridTemplateColumns: '1.4fr 1fr', gap: '12px', marginBottom: '14px' }}>
             <div>
-              <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: 600, marginBottom: '4px' }}>
-                Dish Name (English) *
+              <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: 700, color: 'var(--primary-dark-green)', marginBottom: '4px' }}>
+                Dish Name *
               </label>
               <input
                 type="text"
@@ -302,36 +302,18 @@ export default function DishFormModal({ dish, categories, token, modifiersEnable
                 placeholder="e.g. Royal Shahi Paneer"
                 style={{
                   width: '100%',
-                  padding: '10px',
+                  padding: '10px 12px',
                   borderRadius: 'var(--radius-sm)',
                   border: '1px solid rgba(197, 160, 89, 0.4)',
-                  fontSize: '0.9rem'
+                  fontSize: '0.9rem',
+                  boxSizing: 'border-box'
                 }}
               />
             </div>
 
             <div>
-              <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: 600, marginBottom: '4px' }}>
-                Dish Name (हिंदी)
-              </label>
-              <input
-                type="text"
-                value={nameHi}
-                onChange={(e) => setNameHi(e.target.value)}
-                placeholder="e.g. शाही पनीर"
-                style={{
-                  width: '100%',
-                  padding: '10px',
-                  borderRadius: 'var(--radius-sm)',
-                  border: '1px solid rgba(197, 160, 89, 0.4)',
-                  fontSize: '0.9rem'
-                }}
-              />
-            </div>
-
-            <div>
-              <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: 600, marginBottom: '4px' }}>
-                Badge Tag
+              <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: 700, color: 'var(--primary-dark-green)', marginBottom: '4px' }}>
+                Badge Tag (Optional)
               </label>
               <input
                 type="text"
@@ -340,10 +322,11 @@ export default function DishFormModal({ dish, categories, token, modifiersEnable
                 placeholder="🔥 Bestseller"
                 style={{
                   width: '100%',
-                  padding: '10px',
+                  padding: '10px 12px',
                   borderRadius: 'var(--radius-sm)',
                   border: '1px solid rgba(197, 160, 89, 0.4)',
-                  fontSize: '0.9rem'
+                  fontSize: '0.9rem',
+                  boxSizing: 'border-box'
                 }}
               />
               <div style={{ display: 'flex', gap: '4px', marginTop: '6px', flexWrap: 'wrap' }}>
@@ -709,45 +692,25 @@ export default function DishFormModal({ dish, categories, token, modifiersEnable
             )}
           </div>
 
-          {/* Description (EN + HI) */}
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', marginBottom: '14px' }}>
-            <div>
-              <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: 600, marginBottom: '4px' }}>
-                Description (English)
-              </label>
-              <textarea
-                rows="2"
-                value={description}
-                onChange={(e) => setDescription(e.target.value)}
-                placeholder="Fresh paneer cooked in velvety tomato gravy..."
-                style={{
-                  width: '100%',
-                  padding: '10px',
-                  borderRadius: 'var(--radius-sm)',
-                  border: '1px solid rgba(197, 160, 89, 0.4)',
-                  fontSize: '0.85rem'
-                }}
-              />
-            </div>
-
-            <div>
-              <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: 600, marginBottom: '4px' }}>
-                Description (हिंदी - Optional)
-              </label>
-              <textarea
-                rows="2"
-                value={descriptionHi}
-                onChange={(e) => setDescriptionHi(e.target.value)}
-                placeholder="ताज़ा पनीर मखमली टमाटर ग्रेवी में पकाया गया..."
-                style={{
-                  width: '100%',
-                  padding: '10px',
-                  borderRadius: 'var(--radius-sm)',
-                  border: '1px solid rgba(197, 160, 89, 0.4)',
-                  fontSize: '0.85rem'
-                }}
-              />
-            </div>
+          {/* Description */}
+          <div style={{ marginBottom: '14px' }}>
+            <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: 700, color: 'var(--primary-dark-green)', marginBottom: '4px' }}>
+              Description
+            </label>
+            <textarea
+              rows="2"
+              value={description}
+              onChange={(e) => setDescription(e.target.value)}
+              placeholder="Fresh paneer cooked in velvety tomato gravy with aromatic spices..."
+              style={{
+                width: '100%',
+                padding: '10px 12px',
+                borderRadius: 'var(--radius-sm)',
+                border: '1px solid rgba(197, 160, 89, 0.4)',
+                fontSize: '0.85rem',
+                boxSizing: 'border-box'
+              }}
+            />
           </div>
 
           {/* Ingredients & Portion Size text */}

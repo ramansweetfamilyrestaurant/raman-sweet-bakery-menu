@@ -110,8 +110,8 @@ export default function CategoryFormModal({ category, token, onSave, onClose }) 
           )}
 
           <div style={{ marginBottom: '14px' }}>
-            <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: 600, marginBottom: '4px' }}>
-              Category Name (English) *
+            <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: 700, color: 'var(--primary-dark-green)', marginBottom: '4px' }}>
+              Category Name *
             </label>
             <input
               type="text"
@@ -121,29 +121,11 @@ export default function CategoryFormModal({ category, token, onSave, onClose }) 
               placeholder="e.g. Pure Desi Ghee Sweets"
               style={{
                 width: '100%',
-                padding: '10px',
+                padding: '10px 12px',
                 borderRadius: 'var(--radius-sm)',
                 border: '1px solid rgba(197, 160, 89, 0.4)',
-                fontSize: '0.9rem'
-              }}
-            />
-          </div>
-
-          <div style={{ marginBottom: '14px' }}>
-            <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: 600, marginBottom: '4px' }}>
-              Category Name (हिंदी - Optional)
-            </label>
-            <input
-              type="text"
-              value={nameHi}
-              onChange={(e) => setNameHi(e.target.value)}
-              placeholder="e.g. शुद्ध देसी घी मिठाइयां"
-              style={{
-                width: '100%',
-                padding: '10px',
-                borderRadius: 'var(--radius-sm)',
-                border: '1px solid rgba(197, 160, 89, 0.4)',
-                fontSize: '0.9rem'
+                fontSize: '0.9rem',
+                boxSizing: 'border-box'
               }}
             />
           </div>
