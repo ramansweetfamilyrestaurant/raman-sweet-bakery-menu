@@ -9,6 +9,12 @@ export default function DishCard({ dish, onClick, onAddToCart, currencySymbol = 
   const imageSrc = getDishImageUrl(dish.image);
   const displayName = (lang === 'hi' && dish.name_hi) ? dish.name_hi : dish.name;
   const displayDesc = (lang === 'hi' && dish.description_hi) ? dish.description_hi : dish.description;
+  const hasModifiers = Boolean(
+    dish.modifiers && (
+      (Array.isArray(dish.modifiers) && dish.modifiers.length > 0) ||
+      (typeof dish.modifiers === 'string' && dish.modifiers.length > 4 && dish.modifiers !== '[]')
+    )
+  );
 
   return (
     <article 
@@ -98,24 +104,42 @@ export default function DishCard({ dish, onClick, onAddToCart, currencySymbol = 
               alignItems: 'center',
               justifyContent: 'center',
               borderRadius: '2px',
-              flexShrink: 0
+              padding: '1px'
             }}>
               <span style={{
-                width: '2.5px',
-                height: '2.5px',
+                width: '3.5px',
+                height: '3.5px',
                 borderRadius: '50%',
-                backgroundColor: dish.type === 'nonveg' ? '#DC2626' : dish.type === 'egg' ? '#D97706' : 'var(--veg-green)'
+                background: dish.type === 'nonveg' ? '#DC2626' : dish.type === 'egg' ? '#D97706' : 'var(--veg-green)'
               }} />
             </span>
             <span style={{
-              fontSize: '0.56rem',
-              fontWeight: 900,
-              color: dish.type === 'nonveg' ? '#DC2626' : dish.type === 'egg' ? '#B45309' : 'var(--veg-green)',
+              fontSize: '0.62rem',
+              fontWeight: 800,
+              color: dish.type === 'nonveg' ? '#991B1B' : dish.type === 'egg' ? '#92400E' : 'var(--primary-dark-green)',
+              textTransform: 'uppercase',
               letterSpacing: '0.2px'
             }}>
-              {dish.type === 'nonveg' ? 'NON-VEG' : dish.type === 'egg' ? 'EGG' : 'VEG'}
+              {dish.type === 'nonveg' ? 'Non-Veg' : dish.type === 'egg' ? 'Egg' : 'Veg'}
             </span>
           </div>
+
+          {/* Customizable / Add-ons Badge */}
+          {(hasModifiers || hasHalfPrice) && (
+            <div style={{
+              background: '#0A2315',
+              color: '#DFBA67',
+              border: '1px solid #DFBA67',
+              borderRadius: 'var(--radius-pill)',
+              padding: '2px 7px',
+              fontSize: '0.62rem',
+              fontWeight: 900,
+              boxShadow: '0 2px 6px rgba(0,0,0,0.2)',
+              letterSpacing: '0.2px'
+            }}>
+              ✨ Customizable
+            </div>
+          )}
 
           {/* Dynamic Custom Special Badge (Must Try, Bestseller, etc.) */}
           {dish.badge && (() => {
