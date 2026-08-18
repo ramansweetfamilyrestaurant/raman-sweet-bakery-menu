@@ -7,6 +7,8 @@ import fs from 'fs';
 import { query, runAutoDataSummarization, saveImageToDb, saveR2ImageToDb, getImageRecordFromDb, deleteImageRecordFromDb } from '../db.js';
 import { isR2Active, uploadImageToR2, deleteImageFromR2, getR2Diagnostics, purgeOrphanedR2Objects } from '../services/r2ImageService.js';
 import { authenticateToken, requireActiveSubscription, checkSubscriptionStatus } from '../middleware/auth.js';
+import { JWT_SECRET } from '../config/jwt.js';
+import { adminLoginRateLimiter } from '../middleware/rateLimiters.js';
 
 let sharpModule = null;
 async function getSharp() {
@@ -22,7 +24,6 @@ async function getSharp() {
 }
 
 const router = express.Router();
-import { JWT_SECRET } from '../config/jwt.js';
 
 async function isImageKeyInUse(imageUrl, r2Key) {
   try {
@@ -159,7 +160,7 @@ const upload = multer({
   }
 });
 
-import { adminLoginRateLimiter } from '../middleware/rateLimiters.js';
+
 
 // Admin Login (Supports login by Username, Restaurant Slug, or Phone number for Restaurant Owners ONLY)
 router.post('/login', adminLoginRateLimiter, async (req, res) => {

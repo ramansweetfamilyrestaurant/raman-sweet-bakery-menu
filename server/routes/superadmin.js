@@ -4,6 +4,8 @@ import jwt from 'jsonwebtoken';
 import { query, runAutoDataSummarization, logAudit, saveR2ImageToDb, saveImageToDb, purgeLocalR2DiskCache } from '../db.js';
 import { authenticateToken } from '../middleware/auth.js';
 import { isR2Active, uploadImageToR2, deleteImageFromR2 } from '../services/r2ImageService.js';
+import { JWT_SECRET } from '../config/jwt.js';
+import { superAdminLoginRateLimiter } from '../middleware/rateLimiters.js';
 
 let sharpModule = null;
 async function getSharp() {
@@ -19,7 +21,6 @@ async function getSharp() {
 }
 
 const router = express.Router();
-import { JWT_SECRET } from '../config/jwt.js';
 
 // Helper middleware to restrict endpoints to superadmin role only
 function requireSuperAdmin(req, res, next) {
@@ -30,7 +31,7 @@ function requireSuperAdmin(req, res, next) {
   }
 }
 
-import { superAdminLoginRateLimiter } from '../middleware/rateLimiters.js';
+
 
 // Super Admin Login
 router.post('/login', superAdminLoginRateLimiter, async (req, res) => {

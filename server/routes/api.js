@@ -1,12 +1,13 @@
 import express from 'express';
 import fs from 'fs';
 import path from 'path';
-import { query, withTransaction, getDbType } from '../db.js';
-
 import jwt from 'jsonwebtoken';
 import bcrypt from 'bcryptjs';
-
+import { query, withTransaction, getDbType } from '../db.js';
 import { isR2Active } from '../services/r2ImageService.js';
+import { registrationRateLimiter, authExchangeRateLimiter } from '../middleware/rateLimiters.js';
+import { exchangeAuthCode } from '../services/authCodeService.js';
+import { checkExpiredSubscriptions } from '../subscriptionCron.js';
 
 const router = express.Router();
 
@@ -845,7 +846,7 @@ router.post('/register/pre-validate', async (req, res) => {
   }
 });
 
-import { registrationRateLimiter } from '../middleware/rateLimiters.js';
+
 
 // POST /api/register - Public Self-Service 14-Day Free Trial Signup for Restaurants
 // Hardened with Atomic Database Transaction & Backend Authoritative Plan Resolution
@@ -1064,8 +1065,6 @@ router.post('/register', registrationRateLimiter, async (req, res) => {
 });
 
 // POST /api/auth/exchange - Single-Use Authorization Code Exchange for JWT
-import { exchangeAuthCode } from '../services/authCodeService.js';
-import { authExchangeRateLimiter } from '../middleware/rateLimiters.js';
 
 router.post(['/auth/exchange', '/api/auth/exchange'], authExchangeRateLimiter, async (req, res) => {
   try {
@@ -1082,7 +1081,6 @@ router.post(['/auth/exchange', '/api/auth/exchange'], authExchangeRateLimiter, a
 });
 
 // GET /api/cron/subscription-check - Secure Vercel Cron Endpoint for Subscription Maintenance
-import { checkExpiredSubscriptions } from '../subscriptionCron.js';
 
 router.get(['/cron/subscription-check', '/api/cron/subscription-check'], async (req, res) => {
   const cronSecret = (process.env.CRON_SECRET || '').trim();

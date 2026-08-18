@@ -5,9 +5,10 @@ import { query, withTransaction } from '../db.js';
 import { authenticateToken } from '../middleware/auth.js';
 import { createCashfreeSubscriptionSession, fetchCashfreeSubscriptionStatus, getCashfreeConfig, getCashfreeConfigAsync, verifyCashfreeWebhookSignature } from '../services/cashfree.js';
 import { createOneTimeAuthCode } from '../services/authCodeService.js';
+import { JWT_SECRET } from '../config/jwt.js';
+import { registrationRateLimiter } from '../middleware/rateLimiters.js';
 
 const router = express.Router();
-import { JWT_SECRET } from '../config/jwt.js';
 
 function getAppBaseUrl(req) {
   if (process.env.APP_BASE_URL && !process.env.APP_BASE_URL.includes('onrender.com')) {
@@ -46,8 +47,7 @@ router.get('/config-status', async (req, res) => {
   });
 });
 
-// POST /api/payment/checkout-pre-register
-import { registrationRateLimiter } from '../middleware/rateLimiters.js';
+
 
 // Validates registration form inputs and initiates Cashfree Subscription Checkout BEFORE creating any database record!
 router.post('/checkout-pre-register', registrationRateLimiter, async (req, res) => {
