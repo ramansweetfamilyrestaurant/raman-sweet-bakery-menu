@@ -568,8 +568,9 @@ export default function App() {
       return;
     }
     const urlSlug = getSlugFromUrl();
-    const slug = forcedSlug || urlSlug || (isAdminRoute ? (localStorage.getItem('touchqr_admin_slug') || localStorage.getItem('raman_admin_slug') || '') : '');
     const isRootAdminRoute = rawPath === '/admin' || rawPath === '/super-admin' || rawPath === '/superadmin';
+    const isAdminRoute = isRootAdminRoute || rawPath.includes('/admin') || window.location.hash === '#admin';
+    const slug = forcedSlug || urlSlug || (isAdminRoute ? (localStorage.getItem('touchqr_admin_slug') || localStorage.getItem('raman_admin_slug') || '') : '');
 
     // Skip full menu load for superadmin dashboard or standalone kitchen KDS
     if (view === 'super-admin-dashboard' || isSlugKitchenPath(window.location.pathname)) {
