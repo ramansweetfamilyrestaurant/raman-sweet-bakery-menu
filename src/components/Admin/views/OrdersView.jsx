@@ -37,6 +37,20 @@ export default function OrdersView({
     return [];
   };
 
+  const safeParseModifiers = (rawModifiers) => {
+    if (!rawModifiers) return [];
+    if (Array.isArray(rawModifiers)) return rawModifiers;
+    if (typeof rawModifiers === 'string') {
+      try {
+        const parsed = JSON.parse(rawModifiers);
+        return Array.isArray(parsed) ? parsed : [];
+      } catch {
+        return [];
+      }
+    }
+    return [];
+  };
+
   const validOrders = (Array.isArray(orders) ? orders : []).filter(o => o.status !== 'rejected' && o.status !== 'cancelled');
   const safeServiceRequests = Array.isArray(serviceRequests) ? serviceRequests : [];
 
@@ -237,15 +251,19 @@ export default function OrdersView({
                           <span style={{ fontWeight: 700 }}>{item.name}{item.portion ? ` (${item.portion})` : ''} ×{item.quantity || item.qty || 1}</span>
                           <strong>{currencySymbol}{(Number(item.price) || 0) * (item.quantity || item.qty || 1)}</strong>
                         </div>
-                        {item.modifiers && Array.isArray(item.modifiers) && item.modifiers.length > 0 && (
-                          <div style={{ display: 'flex', gap: '4px', flexWrap: 'wrap', paddingLeft: '8px', marginTop: '2px' }}>
-                            {item.modifiers.map((m, mIdx) => (
-                              <span key={mIdx} style={{ fontSize: '0.72rem', color: '#065F46', background: '#D1FAE5', border: '1px solid #6EE7B7', padding: '1px 6px', borderRadius: '4px', fontWeight: 800 }}>
-                                ➕ {m.name} (+{currencySymbol}{m.price})
-                              </span>
-                            ))}
-                          </div>
-                        )}
+                        {(() => {
+                          const mods = safeParseModifiers(item.modifiers);
+                          if (mods.length === 0) return null;
+                          return (
+                            <div style={{ display: 'flex', gap: '4px', flexWrap: 'wrap', paddingLeft: '8px', marginTop: '2px' }}>
+                              {mods.map((m, mIdx) => (
+                                <span key={mIdx} style={{ fontSize: '0.72rem', color: '#065F46', background: '#D1FAE5', border: '1px solid #6EE7B7', padding: '1px 6px', borderRadius: '4px', fontWeight: 800 }}>
+                                  ➕ {m.name} (+{currencySymbol}{m.price})
+                                </span>
+                              ))}
+                            </div>
+                          );
+                        })()}
                       </div>
                     ))}
                   </div>

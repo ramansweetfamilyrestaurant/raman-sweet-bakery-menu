@@ -643,6 +643,20 @@ export default function AdminDashboard({ token, username, slug: propSlug = '', o
     return [];
   };
 
+  const safeParseModifiers = (rawModifiers) => {
+    if (!rawModifiers) return [];
+    if (Array.isArray(rawModifiers)) return rawModifiers;
+    if (typeof rawModifiers === 'string') {
+      try {
+        const parsed = JSON.parse(rawModifiers);
+        return Array.isArray(parsed) ? parsed : [];
+      } catch {
+        return [];
+      }
+    }
+    return [];
+  };
+
   // ⚡ RawBT Direct Thermal Printer ESC/POS Generator
   const generateRawBTText = (order, type = 'kot', restoInfo = {}) => {
     let text = '';
@@ -663,8 +677,9 @@ export default function AdminDashboard({ token, username, slug: propSlug = '', o
         const qty = String(i.quantity).padEnd(4);
         const amt = `₹${i.price * i.quantity}`.padStart(7);
         text += `${qty}${name}${amt}\n`;
-        if (i.modifiers && Array.isArray(i.modifiers) && i.modifiers.length > 0) {
-          text += `    ↳ + ${i.modifiers.map(m => m.name).join(', ')}\n`;
+        const mods = safeParseModifiers(i.modifiers);
+        if (mods.length > 0) {
+          text += `    ↳ + ${mods.map(m => m.name).join(', ')}\n`;
         }
       });
       text += "================================" + "\n";
@@ -696,8 +711,9 @@ export default function AdminDashboard({ token, username, slug: propSlug = '', o
         const qty = String(i.quantity).padEnd(4);
         const amt = `₹${i.price * i.quantity}`.padStart(7);
         text += `${qty}${name}${amt}\n`;
-        if (i.modifiers && Array.isArray(i.modifiers) && i.modifiers.length > 0) {
-          text += `    ↳ + ${i.modifiers.map(m => m.name).join(', ')}\n`;
+        const mods = safeParseModifiers(i.modifiers);
+        if (mods.length > 0) {
+          text += `    ↳ + ${mods.map(m => m.name).join(', ')}\n`;
         }
       });
       text += "--------------------------------" + "\n";
@@ -778,8 +794,9 @@ export default function AdminDashboard({ token, username, slug: propSlug = '', o
     let itemsHtml = '';
     safeParseItems(order.items).forEach(i => {
       const portionText = i.portion ? ` (${i.portion})` : '';
-      const modText = (i.modifiers && Array.isArray(i.modifiers) && i.modifiers.length > 0)
-        ? `<div style="font-size:11px;color:#333;font-weight:normal;padding-left:6px;margin-top:2px;">➕ ${i.modifiers.map(m => `${m.name} (+₹${m.price})`).join(', ')}</div>`
+      const mods = safeParseModifiers(i.modifiers);
+      const modText = mods.length > 0
+        ? `<div style="font-size:11px;color:#333;font-weight:normal;padding-left:6px;margin-top:2px;">➕ ${mods.map(m => `${m.name} (+₹${m.price})`).join(', ')}</div>`
         : '';
       itemsHtml += `
         <tr>
@@ -853,8 +870,9 @@ export default function AdminDashboard({ token, username, slug: propSlug = '', o
     let itemsHtml = '';
     safeParseItems(order.items).forEach(i => {
       const portionText = i.portion ? ` (${i.portion})` : '';
-      const modText = (i.modifiers && Array.isArray(i.modifiers) && i.modifiers.length > 0)
-        ? `<div style="font-size:11px;color:#555;font-weight:normal;padding-left:6px;margin-top:2px;">+ ${i.modifiers.map(m => `${m.name} (+${currency}${m.price})`).join(', ')}</div>`
+      const mods = safeParseModifiers(i.modifiers);
+      const modText = mods.length > 0
+        ? `<div style="font-size:11px;color:#555;font-weight:normal;padding-left:6px;margin-top:2px;">+ ${mods.map(m => `${m.name} (+${currency}${m.price})`).join(', ')}</div>`
         : '';
       const lineTotal = Number(i.price) * Number(i.quantity);
       subtotal += lineTotal;

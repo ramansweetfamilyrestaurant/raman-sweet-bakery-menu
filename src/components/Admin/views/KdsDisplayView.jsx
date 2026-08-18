@@ -203,15 +203,24 @@ export default function KdsDisplayView({
                                   Portion: {item.portion}
                                 </span>
                               )}
-                              {item.modifiers && Array.isArray(item.modifiers) && item.modifiers.length > 0 && (
-                                <div style={{ display: 'flex', gap: '4px', flexWrap: 'wrap' }}>
-                                  {item.modifiers.map((m, mIdx) => (
-                                    <span key={mIdx} style={{ fontSize: '0.72rem', color: '#FEF08A', background: '#854D0E', border: '1px solid #CA8A04', padding: '1px 6px', borderRadius: '4px', fontWeight: 800 }}>
-                                      ➕ {m.name}
-                                    </span>
-                                  ))}
-                                </div>
-                              )}
+                              {(() => {
+                                const rawMods = item.modifiers;
+                                let mods = [];
+                                if (Array.isArray(rawMods)) mods = rawMods;
+                                else if (typeof rawMods === 'string') {
+                                  try { const p = JSON.parse(rawMods); if (Array.isArray(p)) mods = p; } catch {}
+                                }
+                                if (mods.length === 0) return null;
+                                return (
+                                  <div style={{ display: 'flex', gap: '4px', flexWrap: 'wrap' }}>
+                                    {mods.map((m, mIdx) => (
+                                      <span key={mIdx} style={{ fontSize: '0.72rem', color: '#FEF08A', background: '#854D0E', border: '1px solid #CA8A04', padding: '1px 6px', borderRadius: '4px', fontWeight: 800 }}>
+                                        ➕ {m.name}
+                                      </span>
+                                    ))}
+                                  </div>
+                                );
+                              })()}
                             </div>
                           </div>
                         </div>
