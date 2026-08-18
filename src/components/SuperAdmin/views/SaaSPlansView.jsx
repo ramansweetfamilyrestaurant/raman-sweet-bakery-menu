@@ -162,7 +162,6 @@ export default function SaaSPlansView({ token }) {
     { key: 'modifiers_enabled', label: 'Advanced Modifiers & Half/Full Variants' },
     { key: 'whatsapp_ordering_enabled', label: 'WhatsApp Customer Ordering' },
     { key: 'direct_ordering_enabled', label: '📋 Customer QR Direct Ordering & Live Order Receive Page' },
-    { key: 'audio_alarm_enabled', label: '📢 New Order Audio / Voice Alarm' },
     { key: 'order_status_whatsapp_enabled', label: '📲 WhatsApp Order Status Alerts' },
     { key: 'kds_enabled', label: '🍳 Dedicated Kitchen Display System (KDS Chef Screen)' },
     { key: 'bluetooth_kot_enabled', label: '🖨️ Thermal Receipt Printer & KOT Ticket Printing' },
