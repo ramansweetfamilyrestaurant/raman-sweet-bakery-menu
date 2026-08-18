@@ -1009,16 +1009,17 @@ router.post('/dishes', authenticateToken, requireActiveSubscription, async (req,
     }
 
     const processedImage = await processExternalImageUrl(image, targetId, 'dishes');
+    const modifiersVal = Array.isArray(req.body.modifiers) ? JSON.stringify(req.body.modifiers) : (typeof req.body.modifiers === 'string' ? req.body.modifiers : '[]');
 
     const availVal = available === false ? 0 : 1;
     const result = await query(
       `INSERT INTO dishes (
         restaurant_id, category_id, name, name_hi, description, description_hi, image, price, price_half, 
-        portion, portion_half_label, portion_full_label, badge, ingredients, taste_profile, type, available
-      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17) RETURNING id`,
+        portion, portion_half_label, portion_full_label, badge, ingredients, taste_profile, type, available, modifiers
+      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18) RETURNING id`,
       [
         targetId, category_id, name, name_hi || '', description || '', description_hi || '', processedImage || '', price, price_half || null,
-        portion || '', portion_half_label || '', portion_full_label || '', badge || '', ingredients || '', taste_profile || '', type || 'veg', availVal
+        portion || '', portion_half_label || '', portion_full_label || '', badge || '', ingredients || '', taste_profile || '', type || 'veg', availVal, modifiersVal
       ]
     );
     res.json({ success: true, id: result[0]?.id || result.lastInsertRowid });
@@ -1037,7 +1038,7 @@ router.put('/dishes/:id', authenticateToken, requireActiveSubscription, async (r
     const { id } = req.params;
     const { 
       category_id, name, name_hi, description, description_hi, image, price, price_half, 
-      portion, portion_half_label, portion_full_label, badge, ingredients, taste_profile, type, available 
+      portion, portion_half_label, portion_full_label, badge, ingredients, taste_profile, type, available, modifiers 
     } = req.body;
 
     // Verify category belongs strictly to this tenant restaurant
@@ -1049,6 +1050,7 @@ router.put('/dishes/:id', authenticateToken, requireActiveSubscription, async (r
     }
 
     const processedImage = await processExternalImageUrl(image, targetId, 'dishes');
+    const modifiersVal = Array.isArray(modifiers) ? JSON.stringify(modifiers) : (typeof modifiers === 'string' ? modifiers : '[]');
 
     // Fetch old dish image to clean up if replaced or removed
     try {
@@ -1066,12 +1068,12 @@ router.put('/dishes/:id', authenticateToken, requireActiveSubscription, async (r
       `UPDATE dishes 
        SET category_id = $1, name = $2, name_hi = $3, description = $4, description_hi = $5, image = $6, price = $7, price_half = $8,
            portion = $9, portion_half_label = $10, portion_full_label = $11, badge = $12,
-           ingredients = $13, taste_profile = $14, type = $15, available = $16, updated_at = CURRENT_TIMESTAMP 
-       WHERE id = $17 AND restaurant_id = $18`,
+           ingredients = $13, taste_profile = $14, type = $15, available = $16, modifiers = $17, updated_at = CURRENT_TIMESTAMP 
+       WHERE id = $18 AND restaurant_id = $19`,
       [
         category_id, name, name_hi || '', description || '', description_hi || '', processedImage, price, price_half || null,
         portion || '', portion_half_label || '', portion_full_label || '', badge || '',
-        ingredients || '', taste_profile || '', type || 'veg', availVal, id, targetId
+        ingredients || '', taste_profile || '', type || 'veg', availVal, modifiersVal, id, targetId
       ]
     );
     res.json({ success: true });

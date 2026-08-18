@@ -11,7 +11,31 @@ export default function DishModal({ dish, onClose, currencySymbol = '₹', lang 
   const hasHalfPrice = dish.price_half !== null && dish.price_half !== undefined && Number(dish.price_half) > 0;
   const [selectedPortion, setSelectedPortion] = useState(hasHalfPrice ? 'half' : 'full');
 
-  const activePrice = (selectedPortion === 'half' && hasHalfPrice) ? dish.price_half : dish.price;
+  const parseDishModifiers = () => {
+    if (!dish?.modifiers) return [];
+    if (Array.isArray(dish.modifiers)) return dish.modifiers;
+    try {
+      const parsed = JSON.parse(dish.modifiers);
+      return Array.isArray(parsed) ? parsed : [];
+    } catch {
+      return [];
+    }
+  };
+  const availableModifiers = parseDishModifiers();
+  const [selectedModifiers, setSelectedModifiers] = useState([]);
+
+  const toggleModifier = (mod) => {
+    if (selectedModifiers.some(m => m.name === mod.name)) {
+      setSelectedModifiers(selectedModifiers.filter(m => m.name !== mod.name));
+    } else {
+      setSelectedModifiers([...selectedModifiers, mod]);
+    }
+  };
+
+  const basePrice = (selectedPortion === 'half' && hasHalfPrice) ? Number(dish.price_half) : Number(dish.price);
+  const extraModifiersPrice = selectedModifiers.reduce((acc, m) => acc + (Number(m.price) || 0), 0);
+  const activePrice = basePrice + extraModifiersPrice;
+
   const activePortionLabel = selectedPortion === 'half'
     ? (dish.portion_half_label || (lang === 'hi' ? 'हाफ हाफ पोर्शन' : 'Half Portion'))
     : (dish.portion_full_label || dish.portion || (lang === 'hi' ? 'फुल पोर्शन' : 'Full Portion'));
@@ -254,6 +278,58 @@ export default function DishModal({ dish, onClose, currencySymbol = '₹', lang 
                   📦 {activePortionLabel}
                 </span>
               )}
+            </div>
+          )}
+
+          {/* Interactive Custom Add-on Modifiers & Toppings */}
+          {availableModifiers.length > 0 && (
+            <div style={{
+              background: 'var(--bg-champagne)',
+              border: '1.5px solid var(--gold-border)',
+              borderRadius: 'var(--radius-md)',
+              padding: '10px 14px',
+              marginBottom: '14px'
+            }}>
+              <span style={{ fontSize: '0.74rem', fontWeight: 800, color: 'var(--primary-emerald)', textTransform: 'uppercase', display: 'block', marginBottom: '8px' }}>
+                {lang === 'hi' ? '➕ अतिरिक्त टॉपिंग्स / ऐड-ऑन्स चुनें:' : '➕ Choose Add-ons & Extra Toppings:'}
+              </span>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                {availableModifiers.map((mod, idx) => {
+                  const isSelected = selectedModifiers.some(m => m.name === mod.name);
+                  return (
+                    <label
+                      key={idx}
+                      onClick={(e) => { e.stopPropagation(); toggleModifier(mod); }}
+                      style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'space-between',
+                        padding: '8px 12px',
+                        borderRadius: 'var(--radius-sm)',
+                        background: isSelected ? '#FFFFFF' : 'rgba(255,255,255,0.6)',
+                        border: isSelected ? '1.5px solid var(--gold-bright)' : '1px solid var(--gold-border)',
+                        cursor: 'pointer',
+                        transition: 'var(--transition-fast)'
+                      }}
+                    >
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                        <input
+                          type="checkbox"
+                          checked={isSelected}
+                          onChange={() => {}}
+                          style={{ width: '16px', height: '16px', accentColor: 'var(--primary-emerald)', cursor: 'pointer' }}
+                        />
+                        <span style={{ fontSize: '0.84rem', fontWeight: 700, color: 'var(--text-primary)' }}>
+                          {mod.name}
+                        </span>
+                      </div>
+                      <span style={{ fontSize: '0.82rem', fontWeight: 800, color: 'var(--primary-emerald)' }}>
+                        +{symbol}{mod.price}
+                      </span>
+                    </label>
+                  );
+                })}
+              </div>
             </div>
           )}
 

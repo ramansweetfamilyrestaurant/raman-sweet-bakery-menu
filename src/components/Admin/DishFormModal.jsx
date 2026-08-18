@@ -23,6 +23,19 @@ export default function DishFormModal({ dish, categories, token, modifiersEnable
   const [hasHalf, setHasHalf] = useState(Boolean(dish?.price_half && modifiersEnabled !== false));
   const [portionHalfLabel, setPortionHalfLabel] = useState(dish?.portion_half_label || 'Half Portion');
   const [portionFullLabel, setPortionFullLabel] = useState(dish?.portion_full_label || 'Full Portion');
+  
+  const parseInitialModifiers = () => {
+    if (!dish?.modifiers) return [];
+    if (Array.isArray(dish.modifiers)) return dish.modifiers;
+    try {
+      const parsed = JSON.parse(dish.modifiers);
+      return Array.isArray(parsed) ? parsed : [];
+    } catch {
+      return [];
+    }
+  };
+  const [modifiers, setModifiers] = useState(parseInitialModifiers);
+
   const [portion, setPortion] = useState(dish?.portion || '');
   const [badge, setBadge] = useState(dish?.badge || '');
   const [ingredients, setIngredients] = useState(dish?.ingredients || '');
@@ -34,6 +47,16 @@ export default function DishFormModal({ dish, categories, token, modifiersEnable
   const [uploading, setUploading] = useState(false);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
+
+  const handleAddModifier = () => {
+    setModifiers([...modifiers, { name: '', price: '' }]);
+  };
+  const handleUpdateModifier = (idx, field, value) => {
+    setModifiers(modifiers.map((m, i) => i === idx ? { ...m, [field]: value } : m));
+  };
+  const handleRemoveModifier = (idx) => {
+    setModifiers(modifiers.filter((_, i) => i !== idx));
+  };
 
   const handleFileUpload = async (e) => {
     const file = e.target.files[0];
@@ -67,6 +90,11 @@ export default function DishFormModal({ dish, categories, token, modifiersEnable
     setSaving(true);
     setError('');
     try {
+      const cleanModifiers = (modifiersEnabled !== false) ? modifiers.filter(m => m.name && m.name.trim() !== '').map(m => ({
+        name: m.name.trim(),
+        price: Number(m.price) || 0
+      })) : [];
+
       await onSave({
         category_id: Number(categoryId),
         name,
@@ -79,6 +107,7 @@ export default function DishFormModal({ dish, categories, token, modifiersEnable
         portion,
         portion_half_label: (modifiersEnabled !== false && hasHalf) ? (portionHalfLabel || 'Half Portion') : '',
         portion_full_label: (modifiersEnabled !== false && hasHalf) ? (portionFullLabel || 'Full Portion') : '',
+        modifiers: cleanModifiers,
         badge,
         ingredients,
         taste_profile: tasteProfile,
@@ -480,6 +509,92 @@ export default function DishFormModal({ dish, categories, token, modifiersEnable
                     }}
                   />
                 </div>
+              </div>
+            )}
+
+            {/* Custom Add-ons & Modifiers (e.g. Extra Cheese, Mayo Dip, Butter) */}
+            {modifiersEnabled !== false && (
+              <div style={{ marginTop: '14px', paddingTop: '12px', borderTop: '1px dashed rgba(197, 160, 89, 0.4)' }}>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '8px' }}>
+                  <span style={{ fontSize: '0.78rem', fontWeight: 700, color: 'var(--primary-dark-green)', display: 'flex', alignItems: 'center', gap: '5px' }}>
+                    ➕ Custom Add-on Modifiers (Optional)
+                  </span>
+                  <button
+                    type="button"
+                    onClick={handleAddModifier}
+                    style={{
+                      padding: '4px 12px',
+                      borderRadius: 'var(--radius-pill)',
+                      background: '#0A2315',
+                      color: '#DFBA67',
+                      fontSize: '0.74rem',
+                      fontWeight: 800,
+                      border: '1px solid #DFBA67',
+                      cursor: 'pointer'
+                    }}
+                  >
+                    + Add Topping / Add-on
+                  </button>
+                </div>
+
+                {modifiers.length === 0 ? (
+                  <p style={{ fontSize: '0.72rem', color: '#6B7280', margin: 0, fontStyle: 'italic' }}>
+                    Click "+ Add Topping / Add-on" to create extra options (e.g. Extra Cheese +₹30, Dip +₹15, Butter +₹20).
+                  </p>
+                ) : (
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                    {modifiers.map((mod, idx) => (
+                      <div key={idx} style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                        <input
+                          type="text"
+                          placeholder="e.g. Extra Cheese / Dip / Butter"
+                          value={mod.name}
+                          onChange={(e) => handleUpdateModifier(idx, 'name', e.target.value)}
+                          style={{
+                            flex: 2,
+                            padding: '6px 10px',
+                            borderRadius: 'var(--radius-sm)',
+                            border: '1px solid rgba(197, 160, 89, 0.4)',
+                            fontSize: '0.82rem'
+                          }}
+                        />
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '4px', flex: 1 }}>
+                          <span style={{ fontSize: '0.78rem', fontWeight: 700, color: 'var(--primary-dark-green)' }}>+₹</span>
+                          <input
+                            type="number"
+                            placeholder="30"
+                            value={mod.price}
+                            onChange={(e) => handleUpdateModifier(idx, 'price', e.target.value)}
+                            style={{
+                              width: '100%',
+                              padding: '6px 8px',
+                              borderRadius: 'var(--radius-sm)',
+                              border: '1px solid rgba(197, 160, 89, 0.4)',
+                              fontSize: '0.82rem'
+                            }}
+                          />
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => handleRemoveModifier(idx)}
+                          style={{
+                            background: '#FEE2E2',
+                            color: '#DC2626',
+                            border: '1px solid #FCA5A5',
+                            borderRadius: 'var(--radius-sm)',
+                            padding: '6px 10px',
+                            cursor: 'pointer',
+                            fontSize: '0.75rem',
+                            fontWeight: 800
+                          }}
+                          title="Remove"
+                        >
+                          ✕
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                )}
               </div>
             )}
           </div>
