@@ -396,39 +396,103 @@ export default function DishFormModal({ dish, categories, token, modifiersEnable
             </div>
           </div>
 
-          {/* Pricing: Full & Optional Half Price */}
+          {/* Pricing: Full & Optional Half Price & Modifiers */}
           <div style={{
-            background: modifiersEnabled !== false ? 'var(--bg-cream-primary)' : '#F8FAFC',
-            padding: '14px 16px',
-            borderRadius: 'var(--radius-sm)',
-            border: modifiersEnabled !== false ? '1px solid rgba(197, 160, 89, 0.3)' : '1px solid #E2E8F0',
-            marginBottom: '14px'
+            background: modifiersEnabled !== false ? '#FDFBF7' : '#F8FAFC',
+            padding: '16px',
+            borderRadius: '12px',
+            border: modifiersEnabled !== false ? '1.5px solid #DFBA67' : '1px solid #E2E8F0',
+            marginBottom: '16px',
+            boxShadow: '0 2px 8px rgba(0,0,0,0.04)'
           }}>
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '10px' }}>
-              <span style={{ fontSize: '0.82rem', fontWeight: 800, color: modifiersEnabled !== false ? 'var(--primary-dark-green)' : '#64748B', display: 'flex', alignItems: 'center', gap: '6px' }}>
-                {modifiersEnabled !== false ? '⚡ Portion Pricing & Modifiers' : '🔒 Portion Pricing & Modifiers'}
-              </span>
-              {modifiersEnabled !== false ? (
-                <label style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.8rem', fontWeight: 700, cursor: 'pointer', color: 'var(--primary-dark-green)' }}>
-                  <input
-                    type="checkbox"
-                    checked={hasHalf}
-                    onChange={(e) => setHasHalf(e.target.checked)}
-                    style={{ width: '16px', height: '16px', accentColor: '#0A2315', cursor: 'pointer' }}
-                  />
-                  Enable Half / Full Portion
-                </label>
-              ) : (
-                <span style={{ fontSize: '0.74rem', fontWeight: 800, color: '#DC2626', background: '#FEE2E2', padding: '4px 10px', borderRadius: '6px', border: '1px solid #FCA5A5' }}>
-                  🔒 DISABLED in SuperAdmin Plan
+            {/* Header with SuperAdmin Permission Status */}
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '12px', flexWrap: 'wrap', gap: '8px' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <span style={{ fontSize: '0.9rem', fontWeight: 900, color: '#0A2315' }}>
+                  ⚡ Portion Pricing & Variants
+                </span>
+                <span style={{
+                  fontSize: '0.72rem',
+                  fontWeight: 800,
+                  padding: '3px 8px',
+                  borderRadius: '20px',
+                  background: modifiersEnabled !== false ? '#DCFCE7' : '#FEE2E2',
+                  color: modifiersEnabled !== false ? '#15803D' : '#DC2626',
+                  border: modifiersEnabled !== false ? '1px solid #86EFAC' : '1px solid #FCA5A5'
+                }}>
+                  {modifiersEnabled !== false ? '● PLAN PERMISSION: ACTIVE' : '● PLAN PERMISSION: DISABLED'}
+                </span>
+              </div>
+
+              {modifiersEnabled === false && (
+                <span style={{ fontSize: '0.74rem', fontWeight: 800, color: '#DC2626' }}>
+                  🔒 Locked in SuperAdmin
                 </span>
               )}
             </div>
 
+            {/* Mode Selector Buttons (Single Price vs Half/Full Dual Portion) */}
+            {modifiersEnabled !== false ? (
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px', marginBottom: '14px' }}>
+                <button
+                  type="button"
+                  onClick={() => setHasHalf(false)}
+                  style={{
+                    padding: '10px 12px',
+                    borderRadius: '10px',
+                    fontSize: '0.82rem',
+                    fontWeight: 800,
+                    cursor: 'pointer',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    gap: '6px',
+                    transition: 'all 0.2s ease',
+                    background: !hasHalf ? '#0A2315' : '#FFFFFF',
+                    color: !hasHalf ? '#DFBA67' : '#4B5563',
+                    border: !hasHalf ? '1.5px solid #0A2315' : '1px solid #D1D5DB',
+                    boxShadow: !hasHalf ? '0 3px 8px rgba(10,35,21,0.2)' : 'none'
+                  }}
+                >
+                  <span>🍽️</span>
+                  <span>Single Price Only</span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => setHasHalf(true)}
+                  style={{
+                    padding: '10px 12px',
+                    borderRadius: '10px',
+                    fontSize: '0.82rem',
+                    fontWeight: 800,
+                    cursor: 'pointer',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    gap: '6px',
+                    transition: 'all 0.2s ease',
+                    background: hasHalf ? '#0A2315' : '#FFFFFF',
+                    color: hasHalf ? '#DFBA67' : '#4B5563',
+                    border: hasHalf ? '1.5px solid #0A2315' : '1px solid #D1D5DB',
+                    boxShadow: hasHalf ? '0 3px 8px rgba(10,35,21,0.2)' : 'none'
+                  }}
+                >
+                  <span>🥣 🍲</span>
+                  <span>Half & Full Portions</span>
+                </button>
+              </div>
+            ) : (
+              <div style={{ padding: '10px 12px', background: '#FEF2F2', border: '1px solid #FECACA', borderRadius: '8px', color: '#991B1B', fontSize: '0.78rem', fontWeight: 700, marginBottom: '12px' }}>
+                ⚠️ Half/Full Portion variants are DISABLED in Super Admin for your current subscription tier. Only single standard pricing is active.
+              </div>
+            )}
+
+            {/* Price Inputs */}
             <div style={{ display: 'grid', gridTemplateColumns: (hasHalf && modifiersEnabled !== false) ? '1fr 1fr' : '1fr', gap: '12px' }}>
               <div>
-                <label style={{ display: 'block', fontSize: '0.78rem', fontWeight: 600, marginBottom: '4px' }}>
-                  {(hasHalf && modifiersEnabled !== false) ? 'Full Portion Price (₹) *' : 'Price (₹) *'}
+                <label style={{ display: 'block', fontSize: '0.78rem', fontWeight: 700, color: '#374151', marginBottom: '4px' }}>
+                  {(hasHalf && modifiersEnabled !== false) ? '🍲 Full Portion Price (₹) *' : '🍽️ Dish Price (₹) *'}
                 </label>
                 <input
                   type="number"
@@ -436,21 +500,23 @@ export default function DishFormModal({ dish, categories, token, modifiersEnable
                   required
                   value={price}
                   onChange={(e) => setPrice(e.target.value)}
-                  placeholder="260"
+                  placeholder="e.g. 260"
                   style={{
                     width: '100%',
-                    padding: '8px 10px',
-                    borderRadius: 'var(--radius-sm)',
-                    border: '1px solid rgba(197, 160, 89, 0.4)',
-                    fontSize: '0.9rem'
+                    padding: '10px 12px',
+                    borderRadius: '8px',
+                    border: '1.5px solid #D1D5DB',
+                    fontSize: '0.95rem',
+                    fontWeight: 800,
+                    boxSizing: 'border-box'
                   }}
                 />
               </div>
 
               {(hasHalf && modifiersEnabled !== false) && (
                 <div>
-                  <label style={{ display: 'block', fontSize: '0.78rem', fontWeight: 600, marginBottom: '4px' }}>
-                    Half Portion Price (₹) *
+                  <label style={{ display: 'block', fontSize: '0.78rem', fontWeight: 700, color: '#374151', marginBottom: '4px' }}>
+                    🥣 Half Portion Price (₹) *
                   </label>
                   <input
                     type="number"
@@ -458,24 +524,27 @@ export default function DishFormModal({ dish, categories, token, modifiersEnable
                     required={hasHalf}
                     value={priceHalf}
                     onChange={(e) => setPriceHalf(e.target.value)}
-                    placeholder="160"
+                    placeholder="e.g. 160"
                     style={{
                       width: '100%',
-                      padding: '8px 10px',
-                      borderRadius: 'var(--radius-sm)',
-                      border: '1px solid rgba(197, 160, 89, 0.4)',
-                      fontSize: '0.9rem'
+                      padding: '10px 12px',
+                      borderRadius: '8px',
+                      border: '1.5px solid #DFBA67',
+                      fontSize: '0.95rem',
+                      fontWeight: 800,
+                      boxSizing: 'border-box'
                     }}
                   />
                 </div>
               )}
             </div>
 
+            {/* Custom Portion Labels */}
             {(hasHalf && modifiersEnabled !== false) && (
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', marginTop: '10px' }}>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', marginTop: '12px' }}>
                 <div>
-                  <label style={{ display: 'block', fontSize: '0.72rem', fontWeight: 600, color: '#4B5563', marginBottom: '4px' }}>
-                    Full Portion Label
+                  <label style={{ display: 'block', fontSize: '0.72rem', fontWeight: 700, color: '#6B7280', marginBottom: '4px' }}>
+                    Full Label (Display Text)
                   </label>
                   <input
                     type="text"
@@ -484,16 +553,17 @@ export default function DishFormModal({ dish, categories, token, modifiersEnable
                     placeholder="e.g. Full Portion / 500g"
                     style={{
                       width: '100%',
-                      padding: '6px 10px',
-                      borderRadius: 'var(--radius-sm)',
-                      border: '1px solid rgba(197, 160, 89, 0.3)',
-                      fontSize: '0.82rem'
+                      padding: '8px 10px',
+                      borderRadius: '8px',
+                      border: '1px solid #D1D5DB',
+                      fontSize: '0.82rem',
+                      boxSizing: 'border-box'
                     }}
                   />
                 </div>
                 <div>
-                  <label style={{ display: 'block', fontSize: '0.72rem', fontWeight: 600, color: '#4B5563', marginBottom: '4px' }}>
-                    Half Portion Label
+                  <label style={{ display: 'block', fontSize: '0.72rem', fontWeight: 700, color: '#6B7280', marginBottom: '4px' }}>
+                    Half Label (Display Text)
                   </label>
                   <input
                     type="text"
@@ -502,64 +572,103 @@ export default function DishFormModal({ dish, categories, token, modifiersEnable
                     placeholder="e.g. Half Portion / 250g"
                     style={{
                       width: '100%',
-                      padding: '6px 10px',
-                      borderRadius: 'var(--radius-sm)',
-                      border: '1px solid rgba(197, 160, 89, 0.3)',
-                      fontSize: '0.82rem'
+                      padding: '8px 10px',
+                      borderRadius: '8px',
+                      border: '1px solid #D1D5DB',
+                      fontSize: '0.82rem',
+                      boxSizing: 'border-box'
                     }}
                   />
                 </div>
               </div>
             )}
 
-            {/* Custom Add-ons & Modifiers (e.g. Extra Cheese, Mayo Dip, Butter) */}
+            {/* Custom Add-ons & Modifiers Section */}
             {modifiersEnabled !== false && (
-              <div style={{ marginTop: '14px', paddingTop: '12px', borderTop: '1px dashed rgba(197, 160, 89, 0.4)' }}>
-                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '8px' }}>
-                  <span style={{ fontSize: '0.78rem', fontWeight: 700, color: 'var(--primary-dark-green)', display: 'flex', alignItems: 'center', gap: '5px' }}>
-                    ➕ Custom Add-on Modifiers (Optional)
-                  </span>
+              <div style={{ marginTop: '16px', paddingTop: '14px', borderTop: '1px dashed #D1D5DB' }}>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '10px', flexWrap: 'wrap', gap: '8px' }}>
+                  <div>
+                    <span style={{ fontSize: '0.82rem', fontWeight: 900, color: '#0A2315', display: 'flex', alignItems: 'center', gap: '5px' }}>
+                      ➕ Custom Add-on Modifiers & Toppings ({modifiers.length})
+                    </span>
+                    <span style={{ fontSize: '0.72rem', color: '#6B7280' }}>
+                      Extra toppings customers can check on the menu
+                    </span>
+                  </div>
                   <button
                     type="button"
                     onClick={handleAddModifier}
                     style={{
-                      padding: '4px 12px',
-                      borderRadius: 'var(--radius-pill)',
+                      padding: '5px 14px',
+                      borderRadius: '20px',
                       background: '#0A2315',
                       color: '#DFBA67',
-                      fontSize: '0.74rem',
-                      fontWeight: 800,
+                      fontSize: '0.75rem',
+                      fontWeight: 900,
                       border: '1px solid #DFBA67',
                       cursor: 'pointer'
                     }}
                   >
-                    + Add Topping / Add-on
+                    + Add New Option
                   </button>
                 </div>
 
+                {/* Quick Preset Buttons */}
+                <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap', marginBottom: '10px' }}>
+                  {[
+                    { name: 'Extra Cheese', price: '30' },
+                    { name: 'Extra Butter', price: '20' },
+                    { name: 'Mayo Dip', price: '15' },
+                    { name: 'Spicy Chutney', price: '10' }
+                  ].map((preset, pIdx) => (
+                    <button
+                      key={pIdx}
+                      type="button"
+                      onClick={() => {
+                        if (!modifiers.some(m => m.name.toLowerCase() === preset.name.toLowerCase())) {
+                          setModifiers([...modifiers, { name: preset.name, price: preset.price }]);
+                        }
+                      }}
+                      style={{
+                        padding: '3px 8px',
+                        borderRadius: '6px',
+                        background: '#FFFFFF',
+                        border: '1px solid #E5E7EB',
+                        fontSize: '0.72rem',
+                        fontWeight: 700,
+                        color: '#374151',
+                        cursor: 'pointer'
+                      }}
+                    >
+                      + {preset.name} (+₹{preset.price})
+                    </button>
+                  ))}
+                </div>
+
                 {modifiers.length === 0 ? (
-                  <p style={{ fontSize: '0.72rem', color: '#6B7280', margin: 0, fontStyle: 'italic' }}>
-                    Click "+ Add Topping / Add-on" to create extra options (e.g. Extra Cheese +₹30, Dip +₹15, Butter +₹20).
-                  </p>
+                  <div style={{ padding: '8px 12px', background: '#FFFFFF', borderRadius: '8px', border: '1px solid #E5E7EB', color: '#6B7280', fontSize: '0.75rem', fontStyle: 'italic' }}>
+                    No custom add-ons added yet. Click "+ Add New Option" or one of the quick presets above.
+                  </div>
                 ) : (
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
                     {modifiers.map((mod, idx) => (
-                      <div key={idx} style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                      <div key={idx} style={{ display: 'flex', alignItems: 'center', gap: '8px', background: '#FFFFFF', padding: '8px', borderRadius: '8px', border: '1px solid #E5E7EB' }}>
                         <input
                           type="text"
-                          placeholder="e.g. Extra Cheese / Dip / Butter"
+                          placeholder="e.g. Extra Cheese / Dip"
                           value={mod.name}
                           onChange={(e) => handleUpdateModifier(idx, 'name', e.target.value)}
                           style={{
                             flex: 2,
                             padding: '6px 10px',
-                            borderRadius: 'var(--radius-sm)',
-                            border: '1px solid rgba(197, 160, 89, 0.4)',
-                            fontSize: '0.82rem'
+                            borderRadius: '6px',
+                            border: '1px solid #D1D5DB',
+                            fontSize: '0.82rem',
+                            fontWeight: 700
                           }}
                         />
                         <div style={{ display: 'flex', alignItems: 'center', gap: '4px', flex: 1 }}>
-                          <span style={{ fontSize: '0.78rem', fontWeight: 700, color: 'var(--primary-dark-green)' }}>+₹</span>
+                          <span style={{ fontSize: '0.82rem', fontWeight: 800, color: '#0A2315' }}>+₹</span>
                           <input
                             type="number"
                             placeholder="30"
@@ -568,9 +677,10 @@ export default function DishFormModal({ dish, categories, token, modifiersEnable
                             style={{
                               width: '100%',
                               padding: '6px 8px',
-                              borderRadius: 'var(--radius-sm)',
-                              border: '1px solid rgba(197, 160, 89, 0.4)',
-                              fontSize: '0.82rem'
+                              borderRadius: '6px',
+                              border: '1px solid #D1D5DB',
+                              fontSize: '0.82rem',
+                              fontWeight: 800
                             }}
                           />
                         </div>
@@ -581,13 +691,13 @@ export default function DishFormModal({ dish, categories, token, modifiersEnable
                             background: '#FEE2E2',
                             color: '#DC2626',
                             border: '1px solid #FCA5A5',
-                            borderRadius: 'var(--radius-sm)',
+                            borderRadius: '6px',
                             padding: '6px 10px',
                             cursor: 'pointer',
                             fontSize: '0.75rem',
-                            fontWeight: 800
+                            fontWeight: 900
                           }}
-                          title="Remove"
+                          title="Delete"
                         >
                           ✕
                         </button>
