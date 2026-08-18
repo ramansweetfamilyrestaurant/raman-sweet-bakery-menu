@@ -67,7 +67,8 @@ export default function AdminLogin({ onLoginSuccess, onCancel, restaurantName, t
 
     setLoading(true);
     try {
-      const slugToPass = targetSlug || (typeof window !== 'undefined' ? window.location.pathname.split('/')[1] : '');
+      const rawCandidate = targetSlug || (typeof window !== 'undefined' ? window.location.pathname.split('/')[1] : '');
+      const slugToPass = ['touchqr-demo', 'menu', 'admin', 'default', 'null', 'undefined'].includes((rawCandidate || '').toLowerCase()) ? '' : rawCandidate;
       const data = await adminLogin(username, password, slugToPass);
       onLoginSuccess(data.token, data.username, data.slug);
     } catch (err) {

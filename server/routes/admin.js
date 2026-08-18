@@ -186,10 +186,12 @@ router.post('/login', adminLoginRateLimiter, async (req, res) => {
     // 0. If explicit restaurant slug is provided (e.g. from /rama/admin), check if username matches that restaurant first!
     if (targetSlug && typeof targetSlug === 'string' && targetSlug.trim() !== '') {
       const cleanSlug = targetSlug.trim().toLowerCase().replace(/[^a-z0-9-]/g, '-');
-      const restos = await query('SELECT id, slug, active, name FROM restaurants WHERE LOWER(slug) = LOWER($1) OR LOWER(slug) = LOWER($2)', [targetSlug.trim(), cleanSlug]);
-      if (restos && restos.length > 0) {
-        const targetRestoId = restos[0].id;
-        admins = await query("SELECT * FROM admins WHERE restaurant_id = $1 AND LOWER(username) = LOWER($2) AND role != 'superadmin'", [targetRestoId, trimmedIdentifier]);
+      if (!['touchqr-demo', 'menu', 'admin', 'default'].includes(cleanSlug)) {
+        const restos = await query('SELECT id, slug, active, name FROM restaurants WHERE LOWER(slug) = LOWER($1) OR LOWER(slug) = LOWER($2)', [targetSlug.trim(), cleanSlug]);
+        if (restos && restos.length > 0) {
+          const targetRestoId = restos[0].id;
+          admins = await query("SELECT * FROM admins WHERE restaurant_id = $1 AND LOWER(username) = LOWER($2) AND role != 'superadmin'", [targetRestoId, trimmedIdentifier]);
+        }
       }
     }
 
@@ -201,7 +203,7 @@ router.post('/login', adminLoginRateLimiter, async (req, res) => {
     // 2. Fallback: Try finding restaurant by slug or phone, then fetch its primary restaurant_admin
     if (!admins || admins.length === 0) {
       const cleanSlug = trimmedIdentifier.toLowerCase().replace(/[^a-z0-9-]/g, '-');
-      const restos = await query('SELECT id, slug, active, name FROM restaurants WHERE LOWER(slug) = LOWER($1) OR LOWER(slug) = LOWER($2) OR phone = $3', [trimmedIdentifier, cleanSlug, trimmedIdentifier]);
+      const restos = await query('SELECT id, slug, active, name FROM restaurants WHERE (LOWER(slug) = LOWER($1) OR LOWER(slug) = LOWER($2) OR phone = $3) AND LOWER(slug) != \'touchqr-demo\'', [trimmedIdentifier, cleanSlug, trimmedIdentifier]);
       if (restos && restos.length > 0) {
         const targetRestoId = restos[0].id;
         admins = await query("SELECT * FROM admins WHERE restaurant_id = $1 AND role != 'superadmin' ORDER BY id ASC LIMIT 1", [targetRestoId]);
@@ -212,12 +214,20 @@ router.post('/login', adminLoginRateLimiter, async (req, res) => {
       return res.status(401).json({ error: 'Invalid credentials. Username or restaurant not found.' });
     }
 
-    const admin = admins[0];
-    const match = await bcrypt.compare(password, admin.password_hash);
-    if (!match) {
+    let matchedAdmin = null;
+    for (const candidate of admins) {
+      const match = await bcrypt.compare(password, candidate.password_hash);
+      if (match) {
+        matchedAdmin = candidate;
+        break;
+      }
+    }
+
+    if (!matchedAdmin) {
       return res.status(401).json({ error: 'Invalid password. Please check your credentials.' });
     }
 
+    const admin = matchedAdmin;
     const restoRes = await query('SELECT slug, active, name FROM restaurants WHERE id = $1', [admin.restaurant_id]);
     const resto = restoRes[0];
 

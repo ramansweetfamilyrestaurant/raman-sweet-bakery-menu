@@ -113,8 +113,22 @@ export function clearRestoResolveCache() {
 }
 
 async function resolveRestaurant(req, slug) {
-  // 1. Explicit URL slug parameter passed in public route (e.g. /api/menu-bundle?slug=rama or /api/info?slug=rama)
-  // ALWAYS PRIORITIZE THE EXPLICIT PUBLIC URL SLUG SO SLUG IS AUTHORITATIVE!
+  // 1. Authenticated Admin Requests: If Authorization header with valid JWT is present, JWT restaurant_id is 100% authoritative!
+  if (req && req.headers && req.headers.authorization) {
+    try {
+      const authHeader = req.headers.authorization;
+      const token = authHeader.split(' ')[1];
+      if (token && token !== 'undefined' && token !== 'null') {
+        const decoded = jwt.verify(token, JWT_SECRET);
+        if (decoded && decoded.restaurant_id) {
+          const restos = await query('SELECT * FROM restaurants WHERE id = $1', [decoded.restaurant_id]);
+          if (restos && restos.length > 0) return restos[0];
+        }
+      }
+    } catch (e) {}
+  }
+
+  // 2. Explicit URL slug parameter passed in public route (e.g. /api/menu-bundle?slug=rama or /api/info?slug=rama)
   if (slug && typeof slug === 'string' && slug.trim() !== '') {
     const cleanSlug = slug.trim().toLowerCase();
     if (!['menu', 'default', 'null', 'undefined', 'home', 'index', 'api', 'kitchen'].includes(cleanSlug)) {
@@ -135,12 +149,11 @@ async function resolveRestaurant(req, slug) {
           return altRestos[0];
         }
       }
-      // Explicit public slug provided but NOT found in DB -> return null (404 Not Found)
       return null;
     }
   }
 
-  // 2. Check incoming Host header for custom domain mapping (e.g. menu.restaurant.com)
+  // 3. Check incoming Host header for custom domain mapping (e.g. menu.restaurant.com)
   if (req && req.headers) {
     try {
       const rawHeader = req.headers['x-forwarded-host'] || req.headers.host || '';
@@ -157,22 +170,7 @@ async function resolveRestaurant(req, slug) {
     }
   }
 
-  // 3. For generic requests without an explicit public URL slug, check JWT token (authenticated admin routes)
-  if (req && req.headers && req.headers.authorization) {
-    try {
-      const authHeader = req.headers.authorization;
-      const token = authHeader.split(' ')[1];
-      if (token && token !== 'undefined' && token !== 'null') {
-        const decoded = jwt.verify(token, JWT_SECRET);
-        if (decoded && decoded.restaurant_id) {
-          const restos = await query('SELECT * FROM restaurants WHERE id = $1', [decoded.restaurant_id]);
-          if (restos && restos.length > 0) return restos[0];
-        }
-      }
-    } catch (e) {}
-  }
-
-  // 4. Generic /menu or fallback route: return demo tenant
+  // 4. Generic public /menu fallback ONLY for unauthenticated public browsing:
   const cleanSlug = (slug && typeof slug === 'string') ? slug.trim().toLowerCase() : '';
   if (!cleanSlug || ['menu', 'default', 'null', 'undefined', 'home', 'index'].includes(cleanSlug)) {
     const demoRestos = await query("SELECT * FROM restaurants WHERE LOWER(slug) = 'touchqr-demo'");
