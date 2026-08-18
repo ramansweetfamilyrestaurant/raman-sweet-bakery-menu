@@ -443,7 +443,21 @@ export default function MenuView({
 
       {/* 4. CATEGORIES TAB VIEW */}
       {activeSubTab === 'categories' && (
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(290px, 1fr))', gap: '10px' }}>
+        safeCategories.length === 0 ? (
+          <div style={{ padding: '40px 20px', textAlign: 'center', background: '#FFFFFF', borderRadius: '14px', border: '1px solid #E2E8F0' }}>
+            <div style={{ fontSize: '2.5rem', marginBottom: '8px' }}>📁</div>
+            <h3 style={{ fontSize: '1rem', fontWeight: 800, color: 'var(--adm-primary)', margin: '0 0 4px 0' }}>
+              No categories yet
+            </h3>
+            <p style={{ fontSize: '0.8rem', color: 'var(--adm-muted)', margin: '0 0 16px 0' }}>
+              Create your first menu category (e.g. Starters, Main Course, Drinks) to organize your dishes.
+            </p>
+            <button onClick={onOpenAddCategory} className="adm-btn adm-btn-accent adm-btn-sm" style={{ fontWeight: 800 }}>
+              <Plus size={15} /> Add First Category
+            </button>
+          </div>
+        ) : (
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(290px, 1fr))', gap: '10px' }}>
           {safeCategories.map(cat => {
             const catImage = getCategoryImageUrl(cat.image || cat.image_url);
             const dishCount = safeDishes.filter(d => String(d.category_id) === String(cat.id)).length;
@@ -507,6 +521,7 @@ export default function MenuView({
             );
           })}
         </div>
+        )
       )}
 
       {/* 5. COMBOS TAB VIEW */}

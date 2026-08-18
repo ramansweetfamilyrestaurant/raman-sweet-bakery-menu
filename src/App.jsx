@@ -1887,16 +1887,18 @@ export default function App() {
         ) : groupedDishes.length === 0 ? (
           <div style={{
             textAlign: 'center',
-            padding: '40px 20px',
+            padding: '44px 20px',
             background: '#FFFFFF',
             borderRadius: 'var(--radius-md)',
-            border: '1px solid var(--border-light)'
+            border: '1px solid var(--border-light)',
+            boxShadow: '0 2px 8px rgba(0,0,0,0.03)'
           }}>
-            <p style={{ fontSize: '1rem', fontWeight: 700, color: 'var(--text-dark)' }}>
-              {lang === 'hi' ? 'कोई व्यंजन नहीं मिला' : 'No dishes found'}
+            <div style={{ fontSize: '2.5rem', marginBottom: '8px' }}>🍽️</div>
+            <p style={{ fontSize: '1.05rem', fontWeight: 800, color: 'var(--text-dark)', margin: '0 0 6px 0' }}>
+              {searchQuery ? (lang === 'hi' ? 'कोई व्यंजन नहीं मिला' : 'No dishes found') : (lang === 'hi' ? '✨ मेनू जल्द ही आ रहा है' : '✨ Digital Menu Coming Soon')}
             </p>
-            <p style={{ fontSize: '0.82rem', color: 'var(--text-muted)', marginTop: '4px' }}>
-              {lang === 'hi' ? 'कृपया अपनी खोज शब्द बदलें' : 'Try searching for something else'}
+            <p style={{ fontSize: '0.84rem', color: 'var(--text-muted)', margin: 0, lineHeight: 1.5 }}>
+              {searchQuery ? (lang === 'hi' ? 'कृपया अपनी खोज शब्द बदलें' : 'Try searching for something else') : (lang === 'hi' ? 'रेस्टोरेंट अपने स्वादिष्ट व्यंजन जोड़ रहा है।' : 'The restaurant is preparing delicious dishes for you!')}
             </p>
           </div>
         ) : (
