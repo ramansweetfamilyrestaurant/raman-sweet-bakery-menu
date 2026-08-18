@@ -281,7 +281,7 @@ export async function finalizePendingRegistration(reg_id, inputSubId = null) {
       ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21) RETURNING id
     `, [
       regData.name, cleanSlug, '100% Fresh & Authentic Food',
-      'https://images.unsplash.com/photo-1555396273-367ea4eb4db5?w=500&auto=format&fit=crop&q=80',
+      '/images/default-logo.webp',
       regData.phone, 'Main Market Street, City Center', '8:00 AM - 10:30 PM',
       dbPlan.key, dbPlan.price, expiryDateISO, nowISO, expiryDateISO, regData.phone, 'gold',
       1, 0, 'active', targetSubId || null, 1, false, false

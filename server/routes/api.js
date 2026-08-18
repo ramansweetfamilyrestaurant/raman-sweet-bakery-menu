@@ -938,7 +938,7 @@ router.post('/register', registrationRateLimiter, async (req, res) => {
         name.trim(),
         cleanSlug,
         '100% Fresh & Authentic Food',
-        'https://images.unsplash.com/photo-1555396273-367ea4eb4db5?w=500&auto=format&fit=crop&q=80',
+        '/images/default-logo.webp',
         cleanPhone,
         'Main Market Street, City Center',
         '8:00 AM - 10:30 PM',

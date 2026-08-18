@@ -227,7 +227,7 @@ router.post('/restaurants', authenticateToken, requireSuperAdmin, async (req, re
       name,
       cleanSlug,
       tagline || '100% Quality Food & Service',
-      '/uploads/logo.jpg',
+      '/images/default-logo.webp',
       phone || '',
       address || '',
       '8:00 AM - 10:30 PM',
