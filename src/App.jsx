@@ -570,7 +570,7 @@ export default function App() {
     const urlSlug = getSlugFromUrl();
     const isRootAdminRoute = rawPath === '/admin' || rawPath === '/super-admin' || rawPath === '/superadmin';
     const isAdminRoute = isRootAdminRoute || rawPath.includes('/admin') || window.location.hash === '#admin';
-    const slug = forcedSlug || urlSlug || (isAdminRoute ? (localStorage.getItem('touchqr_admin_slug') || localStorage.getItem('raman_admin_slug') || '') : '');
+    const slug = forcedSlug || urlSlug || (isRootAdminRoute ? (localStorage.getItem('touchqr_admin_slug') || '') : '');
 
     // Skip full menu load for superadmin dashboard or standalone kitchen KDS
     if (view === 'super-admin-dashboard' || isSlugKitchenPath(window.location.pathname)) {
@@ -840,7 +840,11 @@ export default function App() {
 
         if (adminToken) {
           if (urlSlug && storedSlug && urlSlug.toLowerCase() !== storedSlug.toLowerCase()) {
-            console.warn(`URL slug '${urlSlug}' does not match stored admin token slug '${storedSlug}'. Prompting login for '${urlSlug}'.`);
+            console.warn(`URL slug '${urlSlug}' does not match stored admin token slug '${storedSlug}'. Prompting fresh login for '${urlSlug}'.`);
+            localStorage.removeItem('touchqr_admin_token');
+            localStorage.removeItem('touchqr_admin_slug');
+            setAdminToken('');
+            setAdminSlug('');
             setView('admin-login');
             return;
           }
@@ -1485,7 +1489,7 @@ export default function App() {
   }
 
   if (view === 'admin-dashboard') {
-    const activeAdminSlug = adminSlug || getSlugFromUrl() || (info && info.slug) || localStorage.getItem('touchqr_admin_slug') || '';
+    const activeAdminSlug = getSlugFromUrl() || adminSlug || (info && info.slug) || localStorage.getItem('touchqr_admin_slug') || '';
     return (
       <AdminDashboard
         token={adminToken}

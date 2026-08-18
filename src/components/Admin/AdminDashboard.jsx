@@ -121,24 +121,7 @@ export default function AdminDashboard({ token, username, slug: propSlug = '', o
       }
     }
 
-    // 📍 2. Auto-Prompt GPS Geolocation Permission & Auto-Save Coordinates to DB
-    if ('geolocation' in navigator) {
-      navigator.geolocation.getCurrentPosition(
-        (pos) => {
-          const lat = pos.coords.latitude;
-          const lng = pos.coords.longitude;
-          console.log('📍 Auto GPS location granted:', lat, lng);
-          setSettingsForm(prev => ({ ...prev, latitude: lat, longitude: lng }));
-          if (token) {
-            updateTenantSettings(token, { latitude: lat, longitude: lng }).catch(e => console.warn('Auto GPS save error:', e));
-          }
-        },
-        (err) => console.warn('Auto GPS location skipped:', err),
-        { enableHighAccuracy: true, timeout: 8000 }
-      );
-    }
-
-    // 🔊 3. Unlock Web Audio Context on first tap/click anywhere
+    // 🔊 3. Unlock Web Audio Context on first user interaction gesture
     const unlockAudioOnTouch = () => {
       try {
         const AudioCtx = window.AudioContext || window.webkitAudioContext;
