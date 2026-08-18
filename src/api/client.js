@@ -10,6 +10,10 @@ async function handleResponse(res, fallbackErrorMsg = 'API request failed') {
   }
   if (!res.ok) {
     const err = new Error(data.error || data.message || fallbackErrorMsg);
+    if (res.status === 401 || (res.status === 403 && (data.error === 'Invalid or expired token.' || (data.message && data.message.includes('expired token'))))) {
+      err.isUnauthorized = true;
+      err.status = res.status;
+    }
     if (res.status === 403 && (data.error === 'SUBSCRIPTION_EXPIRED' || (data.message && data.message.includes('expired')))) {
       err.isSubscriptionExpired = true;
       err.code = 'SUBSCRIPTION_EXPIRED';

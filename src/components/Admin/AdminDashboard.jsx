@@ -406,10 +406,21 @@ export default function AdminDashboard({ token, username, slug: propSlug = '', o
   };
 
   const loadOrders = async () => {
+    if (!token) return;
     try {
       const [data, reqsData] = await Promise.all([
-        fetchAdminOrders(token).catch(() => []),
-        fetchServiceRequests(token).catch(() => [])
+        fetchAdminOrders(token).catch((err) => {
+          if (err && (err.isUnauthorized || err.status === 401 || err.message?.includes('401'))) {
+            if (onLogout) onLogout();
+          }
+          return [];
+        }),
+        fetchServiceRequests(token).catch((err) => {
+          if (err && (err.isUnauthorized || err.status === 401 || err.message?.includes('401'))) {
+            if (onLogout) onLogout();
+          }
+          return [];
+        })
       ]);
       const safeData = Array.isArray(data) ? data : [];
       const safeReqs = Array.isArray(reqsData) ? reqsData : [];
@@ -1249,11 +1260,15 @@ export default function AdminDashboard({ token, username, slug: propSlug = '', o
   };
 
   useEffect(() => {
+    if (!token) {
+      if (onLogout) onLogout();
+      return;
+    }
     loadData();
     fetchAnnouncements().then(data => {
       if (Array.isArray(data)) setAnnouncements(data);
     }).catch(() => {});
-  }, []);
+  }, [token]);
 
   const handleToggleDish = async (id, currentVal) => {
     try {
