@@ -3,7 +3,7 @@ import cors from 'cors';
 import path from 'path';
 import fs from 'fs';
 import dotenv from 'dotenv';
-import { initDb, runAutoDataSummarization, getImageFromDb, saveImageToDb, purgeCancelledOrdersOlderThan3Mins, getImageRecordFromDb, query, getDbType } from './db.js';
+import { initDb, runAutoDataSummarization, getImageFromDb, saveImageToDb, purgeCancelledOrdersOlderThan3Mins, getImageRecordFromDb, query, getDbType, pingDb } from './db.js';
 import { getR2Diagnostics, isR2Active, getR2ObjectBuffer } from './services/r2ImageService.js';
 import { startSubscriptionCron } from './subscriptionCron.js';
 import apiRoutes from './routes/api.js';
@@ -51,14 +51,17 @@ try {
 // Standalone Health & Capacity Monitoring (Bypasses DB initialization gate to guarantee instant response)
 app.get(['/health', '/api/health'], async (req, res) => {
   const startTime = Date.now();
-  let dbStatus = 'uninitialized';
+  let dbStatus = 'unavailable';
   let dbLatencyMs = 0;
 
   try {
-    const dbStart = Date.now();
-    await query('SELECT 1');
-    dbLatencyMs = Date.now() - dbStart;
-    dbStatus = 'healthy';
+    const pingResult = await pingDb();
+    if (pingResult && pingResult.connected) {
+      dbStatus = 'healthy';
+      dbLatencyMs = pingResult.latency_ms || 0;
+    } else {
+      dbStatus = 'unavailable';
+    }
   } catch (err) {
     dbStatus = 'unavailable';
     console.warn('[HEALTH CHECK] DB ping notice:', err.message);

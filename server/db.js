@@ -1484,4 +1484,19 @@ function getDbType() {
   return dbType;
 }
 
+export async function pingDb() {
+  if (dbType === 'postgres' && pgPool) {
+    try {
+      const start = Date.now();
+      await pgPool.query('SELECT 1');
+      return { connected: true, latency_ms: Date.now() - start };
+    } catch (e) {
+      return { connected: false, latency_ms: 0, error: e.message };
+    }
+  } else if (sqliteDb) {
+    return { connected: true, latency_ms: 0 };
+  }
+  return { connected: false, latency_ms: 0, error: 'Database pool not initialized' };
+}
+
 export { initDb, query, logAudit, runAutoDataSummarization, withTransaction, getDbType };
