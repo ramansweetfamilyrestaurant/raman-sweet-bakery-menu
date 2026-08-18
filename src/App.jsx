@@ -928,12 +928,22 @@ export default function App() {
     localStorage.setItem('touchqr_admin_user', username);
     window.history.pushState({}, '', cleanUrl);
 
-    // 3. Update React state immediately to switch view to Admin Dashboard (0ms delay)
+    // 3. Update React state & route to OnboardingSetup wizard if onboarding not yet completed
     setAdminToken(token);
     setAdminUsername(username);
     setAdminSlug(currentSlug);
     if (restoInfo) setInfo(restoInfo);
-    setView('admin-dashboard');
+
+    const isOnboardingComplete = restoInfo
+      ? (restoInfo.onboarding_completed !== false && restoInfo.onboarding_completed !== 0 && restoInfo.onboarding_completed !== 'false')
+      : true;
+
+    if (!isOnboardingComplete) {
+      setView('admin-setup');
+      window.history.pushState({}, '', currentSlug ? `/${currentSlug}/admin/setup` : '/admin/setup');
+    } else {
+      setView('admin-dashboard');
+    }
 
     // 4. Background Mandate Verification (non-blocking)
     checkMandateGating(token, currentSlug).then(mandateActive => {

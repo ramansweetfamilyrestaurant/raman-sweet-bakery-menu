@@ -929,11 +929,11 @@ router.post('/register', registrationRateLimiter, async (req, res) => {
 
       const isActive = !requireApproval;
 
-      // 1. Create Restaurant Record (mandate_status='pending', auto_debit_enabled=0)
+      // 1. Create Restaurant Record (mandate_status='pending', auto_debit_enabled=0, onboarding_completed=false)
       const restoRes = await txQuery(`
         INSERT INTO restaurants (
-          name, slug, tagline, logo, phone, address, opening_hours, plan_tier, plan_price, plan_expires_at, trial_started_at, trial_ends_at, whatsapp_number, theme_color, active, total_tables, mandate_status, auto_debit_enabled
-        ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18) RETURNING id
+          name, slug, tagline, logo, phone, address, opening_hours, plan_tier, plan_price, plan_expires_at, trial_started_at, trial_ends_at, whatsapp_number, theme_color, active, total_tables, mandate_status, auto_debit_enabled, onboarding_completed, location_initialized
+        ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20) RETURNING id
       `, [
         name.trim(),
         cleanSlug,
@@ -952,7 +952,9 @@ router.post('/register', registrationRateLimiter, async (req, res) => {
         isActive ? 1 : 0,
         0,
         'pending',
-        0
+        0,
+        false,
+        false
       ]);
 
       const newRestoId = restoRes[0]?.id || restoRes.lastInsertRowid;
@@ -1020,7 +1022,9 @@ router.post('/register', registrationRateLimiter, async (req, res) => {
         name: name.trim(),
         slug: result.cleanSlug,
         plan_tier: selectedPlanKey,
-        active: result.isActive
+        active: result.isActive,
+        onboarding_completed: false,
+        location_initialized: false
       },
       message: !result.isActive
         ? `⏳ Registration Submitted! Your restaurant '${name.trim()}' is pending Super Admin verification and approval.`
