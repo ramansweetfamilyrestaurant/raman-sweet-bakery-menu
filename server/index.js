@@ -3,7 +3,7 @@ import cors from 'cors';
 import path from 'path';
 import fs from 'fs';
 import dotenv from 'dotenv';
-import { initDb, runAutoDataSummarization, getImageFromDb, saveImageToDb, purgeCancelledOrdersOlderThan3Mins, getImageRecordFromDb } from './db.js';
+import { initDb, runAutoDataSummarization, getImageFromDb, saveImageToDb, purgeCancelledOrdersOlderThan3Mins, getImageRecordFromDb, query, getDbType } from './db.js';
 import { getR2Diagnostics, isR2Active, getR2ObjectBuffer } from './services/r2ImageService.js';
 import { startSubscriptionCron } from './subscriptionCron.js';
 import apiRoutes from './routes/api.js';
@@ -48,25 +48,78 @@ try {
   }
 } catch (e) {}
 
+// Standalone Health & Capacity Monitoring (Bypasses DB initialization gate to guarantee instant response)
+app.get(['/health', '/api/health'], async (req, res) => {
+  const startTime = Date.now();
+  let dbStatus = 'uninitialized';
+  let dbLatencyMs = 0;
+
+  try {
+    const dbStart = Date.now();
+    await query('SELECT 1');
+    dbLatencyMs = Date.now() - dbStart;
+    dbStatus = 'healthy';
+  } catch (err) {
+    dbStatus = 'unavailable';
+    console.warn('[HEALTH CHECK] DB ping notice:', err.message);
+  }
+
+  const isHealthy = dbStatus === 'healthy';
+  res.status(isHealthy ? 200 : 503).json({
+    status: isHealthy ? 'OK' : 'DEGRADED',
+    timestamp: new Date().toISOString(),
+    duration_ms: Date.now() - startTime,
+    server: 'healthy',
+    database: {
+      status: dbStatus,
+      latency_ms: dbLatencyMs,
+      type: typeof getDbType === 'function' ? getDbType() : 'postgres'
+    },
+    storage: {
+      provider: isR2Active() ? 'cloudflare_r2' : 'local_fallback',
+      active: isR2Active()
+    },
+    version: '1.0.0-1000-tenant-ready'
+  });
+});
+
 // Serverless DB Auto-Init Middleware for Vercel / Cloud Functions
 let isDbReady = false;
 let dbInitPromise = null;
 
 app.use(async (req, res, next) => {
-  if (isDbReady) return next();
-  if (!dbInitPromise) {
-    dbInitPromise = initDb().then(() => {
-      isDbReady = true;
-      if (!process.env.VERCEL) {
-        startSubscriptionCron();
-      }
-    }).catch(err => {
-      dbInitPromise = null;
-      console.error('Serverless DB init error:', err);
-    });
+  // Bypass DB gate for static files, r2 proxy, and health checks
+  const reqPath = req.path || '';
+  if (reqPath === '/health' || reqPath === '/api/health' || reqPath.startsWith('/r2-proxy') || reqPath.startsWith('/api/r2-proxy') || reqPath.startsWith('/assets')) {
+    return next();
   }
-  await dbInitPromise;
-  next();
+
+  if (isDbReady) return next();
+
+  try {
+    if (!dbInitPromise) {
+      dbInitPromise = initDb().then(() => {
+        isDbReady = true;
+        if (!process.env.VERCEL) {
+          startSubscriptionCron();
+        }
+      }).catch(err => {
+        dbInitPromise = null;
+        console.error('Serverless DB init error:', err.message);
+        throw err;
+      });
+    }
+    await dbInitPromise;
+    next();
+  } catch (err) {
+    console.error('DB Gate caught error:', err.message);
+    if (!res.headersSent) {
+      return res.status(503).json({
+        error: 'Database temporarily unavailable',
+        status: 503
+      });
+    }
+  }
 });
 
 // Universal R2 Proxy Stream Endpoint for any R2 object key
