@@ -12,7 +12,7 @@ const resolveImageUrl = (url) => {
   return url;
 };
 
-export default function DishFormModal({ dish, categories, token, onSave, onClose }) {
+export default function DishFormModal({ dish, categories, token, modifiersEnabled = true, onSave, onClose }) {
   const [categoryId, setCategoryId] = useState(dish?.category_id || categories[0]?.id || '');
   const [name, setName] = useState(dish?.name || '');
   const [nameHi, setNameHi] = useState(dish?.name_hi || '');
@@ -20,7 +20,9 @@ export default function DishFormModal({ dish, categories, token, onSave, onClose
   const [descriptionHi, setDescriptionHi] = useState(dish?.description_hi || '');
   const [price, setPrice] = useState(dish?.price || '');
   const [priceHalf, setPriceHalf] = useState(dish?.price_half || '');
-  const [hasHalf, setHasHalf] = useState(Boolean(dish?.price_half));
+  const [hasHalf, setHasHalf] = useState(Boolean(dish?.price_half && modifiersEnabled !== false));
+  const [portionHalfLabel, setPortionHalfLabel] = useState(dish?.portion_half_label || 'Half Portion');
+  const [portionFullLabel, setPortionFullLabel] = useState(dish?.portion_full_label || 'Full Portion');
   const [portion, setPortion] = useState(dish?.portion || '');
   const [badge, setBadge] = useState(dish?.badge || '');
   const [ingredients, setIngredients] = useState(dish?.ingredients || '');
@@ -73,10 +75,10 @@ export default function DishFormModal({ dish, categories, token, onSave, onClose
         description_hi: descriptionHi,
         image,
         price: Number(price),
-        price_half: (hasHalf && priceHalf) ? Number(priceHalf) : null,
+        price_half: (modifiersEnabled !== false && hasHalf && priceHalf) ? Number(priceHalf) : null,
         portion,
-        portion_half_label: hasHalf ? 'Half Portion' : '',
-        portion_full_label: hasHalf ? 'Full Portion' : '',
+        portion_half_label: (modifiersEnabled !== false && hasHalf) ? (portionHalfLabel || 'Half Portion') : '',
+        portion_full_label: (modifiersEnabled !== false && hasHalf) ? (portionFullLabel || 'Full Portion') : '',
         badge,
         ingredients,
         taste_profile: tasteProfile,
@@ -368,29 +370,36 @@ export default function DishFormModal({ dish, categories, token, onSave, onClose
           {/* Pricing: Full & Optional Half Price */}
           <div style={{
             background: 'var(--bg-cream-primary)',
-            padding: '12px 14px',
+            padding: '14px 16px',
             borderRadius: 'var(--radius-sm)',
             border: '1px solid rgba(197, 160, 89, 0.3)',
             marginBottom: '14px'
           }}>
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '10px' }}>
-              <span style={{ fontSize: '0.82rem', fontWeight: 700, color: 'var(--primary-dark-green)' }}>
-                Portion Pricing System
+              <span style={{ fontSize: '0.82rem', fontWeight: 800, color: 'var(--primary-dark-green)', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                ⚡ Portion Pricing & Modifiers
               </span>
-              <label style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.8rem', cursor: 'pointer' }}>
-                <input
-                  type="checkbox"
-                  checked={hasHalf}
-                  onChange={(e) => setHasHalf(e.target.checked)}
-                />
-                Enable Half / Full Option
-              </label>
+              {modifiersEnabled !== false ? (
+                <label style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.8rem', fontWeight: 700, cursor: 'pointer', color: 'var(--primary-dark-green)' }}>
+                  <input
+                    type="checkbox"
+                    checked={hasHalf}
+                    onChange={(e) => setHasHalf(e.target.checked)}
+                    style={{ width: '16px', height: '16px', accentColor: '#0A2315', cursor: 'pointer' }}
+                  />
+                  Enable Half / Full Portion
+                </label>
+              ) : (
+                <span style={{ fontSize: '0.72rem', fontWeight: 700, color: '#94A3B8', background: '#F1F5F9', padding: '4px 8px', borderRadius: '6px' }}>
+                  🔒 Feature Locked on Current Plan
+                </span>
+              )}
             </div>
 
-            <div style={{ display: 'grid', gridTemplateColumns: hasHalf ? '1fr 1fr' : '1fr', gap: '12px' }}>
+            <div style={{ display: 'grid', gridTemplateColumns: (hasHalf && modifiersEnabled !== false) ? '1fr 1fr' : '1fr', gap: '12px' }}>
               <div>
                 <label style={{ display: 'block', fontSize: '0.78rem', fontWeight: 600, marginBottom: '4px' }}>
-                  {hasHalf ? 'Full Portion Price (₹) *' : 'Price (₹) *'}
+                  {(hasHalf && modifiersEnabled !== false) ? 'Full Portion Price (₹) *' : 'Price (₹) *'}
                 </label>
                 <input
                   type="number"
@@ -409,14 +418,15 @@ export default function DishFormModal({ dish, categories, token, onSave, onClose
                 />
               </div>
 
-              {hasHalf && (
+              {(hasHalf && modifiersEnabled !== false) && (
                 <div>
                   <label style={{ display: 'block', fontSize: '0.78rem', fontWeight: 600, marginBottom: '4px' }}>
-                    Half Portion Price (₹)
+                    Half Portion Price (₹) *
                   </label>
                   <input
                     type="number"
                     step="1"
+                    required={hasHalf}
                     value={priceHalf}
                     onChange={(e) => setPriceHalf(e.target.value)}
                     placeholder="160"
@@ -431,6 +441,47 @@ export default function DishFormModal({ dish, categories, token, onSave, onClose
                 </div>
               )}
             </div>
+
+            {(hasHalf && modifiersEnabled !== false) && (
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', marginTop: '10px' }}>
+                <div>
+                  <label style={{ display: 'block', fontSize: '0.72rem', fontWeight: 600, color: '#4B5563', marginBottom: '4px' }}>
+                    Full Portion Label
+                  </label>
+                  <input
+                    type="text"
+                    value={portionFullLabel}
+                    onChange={(e) => setPortionFullLabel(e.target.value)}
+                    placeholder="e.g. Full Portion / 500g"
+                    style={{
+                      width: '100%',
+                      padding: '6px 10px',
+                      borderRadius: 'var(--radius-sm)',
+                      border: '1px solid rgba(197, 160, 89, 0.3)',
+                      fontSize: '0.82rem'
+                    }}
+                  />
+                </div>
+                <div>
+                  <label style={{ display: 'block', fontSize: '0.72rem', fontWeight: 600, color: '#4B5563', marginBottom: '4px' }}>
+                    Half Portion Label
+                  </label>
+                  <input
+                    type="text"
+                    value={portionHalfLabel}
+                    onChange={(e) => setPortionHalfLabel(e.target.value)}
+                    placeholder="e.g. Half Portion / 250g"
+                    style={{
+                      width: '100%',
+                      padding: '6px 10px',
+                      borderRadius: 'var(--radius-sm)',
+                      border: '1px solid rgba(197, 160, 89, 0.3)',
+                      fontSize: '0.82rem'
+                    }}
+                  />
+                </div>
+              </div>
+            )}
           </div>
 
           {/* Description (EN + HI) */}

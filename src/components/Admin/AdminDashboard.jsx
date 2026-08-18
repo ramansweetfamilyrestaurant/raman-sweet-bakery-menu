@@ -2168,6 +2168,7 @@ export default function AdminDashboard({ token, username, slug: propSlug = '', o
           dish={dishModalData === 'new' ? null : dishModalData}
           categories={categories}
           token={token}
+          modifiersEnabled={subscriptionStatus?.matrix_permissions?.modifiers_enabled !== false}
           onSave={handleSaveDish}
           onClose={() => setDishModalData(null)}
         />

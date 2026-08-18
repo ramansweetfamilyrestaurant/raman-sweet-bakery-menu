@@ -2611,6 +2611,7 @@ export default function App() {
           dish={ownerDishModalData === 'new' ? null : ownerDishModalData}
           categories={categories}
           token={adminToken}
+          modifiersEnabled={info?.modifiers_enabled !== false}
           onSave={handleSaveInlineDish}
           onClose={() => setOwnerDishModalData(null)}
         />
