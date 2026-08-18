@@ -266,22 +266,27 @@ export default function App() {
   const [combos, setCombos] = useState([]);
   const [showCartDrawer, setShowCartDrawer] = useState(false);
 
-  const handleAddToCart = (dish, portionType = 'full') => {
+  const handleAddToCart = (dish, portionType = 'full', selectedModifiers = []) => {
     const hasHalfPrice = dish.price_half !== null && dish.price_half !== undefined && Number(dish.price_half) > 0;
     const isHalf = portionType === 'half' && hasHalfPrice;
     
     // Explicit portion label for clear Kitchen KOT receipt printing
     let portionName = '';
     if (hasHalfPrice) {
-      portionName = isHalf ? 'Half' : 'Full';
+      portionName = isHalf ? (dish.portion_half_label || 'Half') : (dish.portion_full_label || 'Full');
     } else if (dish.portion && dish.portion.trim() !== '') {
       portionName = dish.portion.trim();
     }
 
-    const unitPrice = isHalf ? Math.round(Number(dish.price_half)) : Math.round(Number(dish.price));
-    const cartKey = `${dish.id}_${portionName || 'regular'}`;
+    const basePrice = isHalf ? Math.round(Number(dish.price_half)) : Math.round(Number(dish.price));
+    const extraPrice = (selectedModifiers || []).reduce((acc, m) => acc + (Number(m.price) || 0), 0);
+    const unitPrice = basePrice + extraPrice;
 
-    const existingIndex = cartItems.findIndex(i => (i.key === cartKey) || (i.dish.id === dish.id && i.portion === portionName));
+    // Unique cart key including selected modifiers
+    const modKey = (selectedModifiers || []).map(m => m.name).sort().join('_');
+    const cartKey = `${dish.id}_${portionName || 'regular'}${modKey ? '_' + modKey : ''}`;
+
+    const existingIndex = cartItems.findIndex(i => i.key === cartKey);
     if (existingIndex > -1) {
       const updated = [...cartItems];
       updated[existingIndex].quantity += 1;
@@ -291,6 +296,7 @@ export default function App() {
         key: cartKey,
         dish,
         portion: portionName,
+        modifiers: selectedModifiers || [],
         price: unitPrice,
         quantity: 1
       }]);
@@ -2262,12 +2268,21 @@ export default function App() {
                           📦 {item.comboIncludes}
                         </span>
                       )}
+                      {item.modifiers && item.modifiers.length > 0 && (
+                        <div style={{ display: 'flex', gap: '4px', flexWrap: 'wrap', marginTop: '3px', marginBottom: '2px' }}>
+                          {item.modifiers.map((m, mIdx) => (
+                            <span key={mIdx} style={{ fontSize: '0.68rem', background: '#F1F5F9', color: '#334155', padding: '1px 6px', borderRadius: '4px', border: '1px solid #CBD5E1', fontWeight: 700 }}>
+                              + {m.name} (+{(info?.currency_symbol !== undefined && info?.currency_symbol !== null) ? info.currency_symbol : '₹'}{m.price})
+                            </span>
+                          ))}
+                        </div>
+                      )}
                       <span style={{ fontSize: '0.82rem', color: 'var(--gold-primary)', fontWeight: 800 }}>
                         {(info?.currency_symbol !== undefined && info?.currency_symbol !== null) ? info.currency_symbol : '₹'}{item.price} x {item.quantity} = {(info?.currency_symbol !== undefined && info?.currency_symbol !== null) ? info.currency_symbol : '₹'}{item.price * item.quantity}
                       </span>
                     </div>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                      <button onClick={() => handleAddToCart(item.dish, item.portion === 'Half' ? 'half' : 'full')} style={{ background: 'var(--primary-emerald)', color: '#FFF', border: 'none', width: '28px', height: '28px', borderRadius: '50%', fontWeight: 900, cursor: 'pointer', fontSize: '1rem' }}>+</button>
+                      <button onClick={() => handleAddToCart(item.dish, (item.portion === 'Half' || item.portion === item.dish?.portion_half_label) ? 'half' : 'full', item.modifiers)} style={{ background: 'var(--primary-emerald)', color: '#FFF', border: 'none', width: '28px', height: '28px', borderRadius: '50%', fontWeight: 900, cursor: 'pointer', fontSize: '1rem' }}>+</button>
                       <span style={{ fontSize: '0.9rem', fontWeight: 800 }}>{item.quantity}</span>
                       <button onClick={() => handleRemoveFromCart(item.key || item.dish.id)} style={{ background: '#FEE2E2', color: '#DC2626', border: 'none', width: '28px', height: '28px', borderRadius: '50%', fontWeight: 900, cursor: 'pointer', fontSize: '0.9rem' }}>✕</button>
                     </div>
@@ -2580,6 +2595,7 @@ export default function App() {
           dish={selectedDishModal}
           lang={lang}
           currencySymbol={info?.currency_symbol !== undefined ? info.currency_symbol : '₹'}
+          onAddToCart={handleAddToCart}
           onClose={() => setSelectedDishModal(null)}
         />
       )}

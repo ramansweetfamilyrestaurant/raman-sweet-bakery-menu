@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { X, ShieldCheck, Sparkles, Clock, Utensils, CheckCircle } from 'lucide-react';
 import { getDishImageUrl } from '../utils/imageHelper';
 
-export default function DishModal({ dish, onClose, currencySymbol = '₹', lang = 'en' }) {
+export default function DishModal({ dish, onClose, onAddToCart, currencySymbol = '₹', lang = 'en' }) {
   if (!dish) return null;
 
   const symbol = (currencySymbol !== undefined && currencySymbol !== null) ? currencySymbol : '₹';
@@ -384,22 +384,72 @@ export default function DishModal({ dish, onClose, currencySymbol = '₹', lang 
           <div style={{
             background: 'var(--gold-soft)',
             borderRadius: 'var(--radius-md)',
-            padding: '12px 16px',
+            padding: '10px 14px',
             border: '1px solid var(--gold-primary)',
             display: 'flex',
             alignItems: 'center',
-            justifyContent: 'space-between'
+            justifyContent: 'space-between',
+            marginBottom: '14px'
           }}>
-            <span style={{ fontSize: '0.82rem', color: 'var(--primary-emerald)', fontWeight: 600 }}>
+            <span style={{ fontSize: '0.8rem', color: 'var(--primary-emerald)', fontWeight: 600 }}>
               Availability Status
             </span>
             <span style={{
-              fontSize: '0.82rem',
+              fontSize: '0.8rem',
               fontWeight: 800,
               color: dish.available !== false ? 'var(--veg-green)' : '#EF4444'
             }}>
               {dish.available !== false ? '● Available Fresh Now' : '● Currently Out of Stock'}
             </span>
+          </div>
+
+          {/* Action Bar (Dynamic Total + Add to Order Button) */}
+          <div style={{
+            paddingTop: '12px',
+            borderTop: '1.5px solid var(--gold-border)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            gap: '12px'
+          }}>
+            <div>
+              <span style={{ fontSize: '0.7rem', color: '#6B7280', display: 'block', fontWeight: 600, textTransform: 'uppercase' }}>
+                Total (incl. add-ons)
+              </span>
+              <span style={{ fontSize: '1.3rem', fontWeight: 900, color: 'var(--primary-emerald)' }}>
+                {symbol}{activePrice}
+              </span>
+            </div>
+
+            {dish.available !== false && onAddToCart && (
+              <button
+                type="button"
+                onClick={() => {
+                  onAddToCart(dish, selectedPortion, selectedModifiers);
+                  if (onClose) onClose();
+                }}
+                style={{
+                  flex: 1,
+                  padding: '12px 18px',
+                  borderRadius: 'var(--radius-pill)',
+                  background: 'linear-gradient(135deg, var(--primary-emerald) 0%, #059669 100%)',
+                  color: '#FFFFFF',
+                  fontWeight: 900,
+                  fontSize: '0.92rem',
+                  border: 'none',
+                  cursor: 'pointer',
+                  boxShadow: '0 4px 14px rgba(5, 150, 105, 0.4)',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  gap: '8px',
+                  transition: 'transform 0.15s ease'
+                }}
+              >
+                <span>➕</span>
+                <span>{lang === 'hi' ? 'ऑर्डर में जोड़ें' : 'Add to Order'} • {symbol}{activePrice}</span>
+              </button>
+            )}
           </div>
         </div>
       </div>
