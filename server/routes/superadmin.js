@@ -753,13 +753,15 @@ router.put('/plans/:key', authenticateToken, requireSuperAdmin, async (req, res)
 router.delete('/plans/:key', authenticateToken, requireSuperAdmin, async (req, res) => {
   try {
     const { key } = req.params;
-    if (['basic', 'pro', 'enterprise'].includes(key)) {
+    if (['basic', 'pro', 'enterprise'].includes(key.toLowerCase())) {
       return res.status(400).json({ error: 'Standard system plans (Basic, Pro, Enterprise) cannot be deleted.' });
     }
 
-    await query('DELETE FROM saas_plans WHERE key = $1', [key]);
-    await logAudit(null, 'superadmin', 'Delete SaaS Plan', `Deleted SaaS Plan '${key}'`);
-    res.json({ success: true, message: 'Plan deleted successfully' });
+    // Safely migrate any restaurant on this custom plan back to 'pro'
+    await query("UPDATE restaurants SET plan_tier = 'pro' WHERE LOWER(plan_tier) = LOWER($1)", [key]);
+    await query('DELETE FROM saas_plans WHERE LOWER(key) = LOWER($1)', [key]);
+    await logAudit(null, 'superadmin', 'Delete SaaS Plan', `Deleted SaaS Plan '${key}' (restaurants migrated to 'pro')`);
+    res.json({ success: true, message: `Plan '${key}' deleted successfully. Assigned restaurants safely migrated to Pro plan.` });
   } catch (err) {
     console.error('Delete SaaS plan error:', err);
     res.status(500).json({ error: 'Failed to delete SaaS plan' });

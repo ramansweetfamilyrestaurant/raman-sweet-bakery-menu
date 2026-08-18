@@ -118,6 +118,28 @@ export default function SaaSPlansView({ token }) {
     }
   };
 
+  const handleDeletePlan = async (planKey, planName) => {
+    if (['basic', 'pro', 'enterprise'].includes(planKey.toLowerCase())) {
+      return alert('Standard system plans (Basic, Pro, Enterprise) cannot be deleted.');
+    }
+    const confirmDelete = window.confirm(`Are you sure you want to delete custom plan "${planName}"? Any restaurants currently on this plan will be safely migrated to the Pro plan.`);
+    if (!confirmDelete) return;
+
+    try {
+      const res = await fetch(`/api/superadmin/plans/${planKey}`, {
+        method: 'DELETE',
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Failed to delete plan');
+      setMsg(data.message || `Plan "${planName}" deleted successfully!`);
+      setTimeout(() => setMsg(''), 4000);
+      await fetchPlans();
+    } catch (err) {
+      alert(err.message || 'Failed to delete plan');
+    }
+  };
+
   if (loading) {
     return (
       <div style={{ padding: '40px', textAlign: 'center', color: 'var(--sa-text-muted)' }}>
@@ -237,14 +259,38 @@ export default function SaaSPlansView({ token }) {
               <th style={{ padding: '16px 20px', fontSize: '0.85rem', fontWeight: 900, color: 'var(--sa-text-main)', width: '35%' }}>
                 FEATURE / PERMISSION CONTROL
               </th>
-              {plans.map(p => (
-                <th key={p.key} style={{ padding: '16px 20px', fontSize: '0.88rem', fontWeight: 900, color: '#0A2315', textTransform: 'uppercase' }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                    <span>{p.badge || '👑'}</span>
-                    <span>{p.name}</span>
-                  </div>
-                </th>
-              ))}
+              {plans.map(p => {
+                const isCustom = !['basic', 'pro', 'enterprise'].includes(p.key.toLowerCase());
+                return (
+                  <th key={p.key} style={{ padding: '16px 20px', fontSize: '0.88rem', fontWeight: 900, color: '#0A2315', textTransform: 'uppercase' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '8px' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                        <span>{p.badge || '👑'}</span>
+                        <span>{p.name}</span>
+                      </div>
+                      {isCustom && (
+                        <button
+                          type="button"
+                          onClick={() => handleDeletePlan(p.key, p.name)}
+                          style={{
+                            background: '#FEE2E2',
+                            color: '#DC2626',
+                            border: '1px solid #FCA5A5',
+                            borderRadius: '6px',
+                            padding: '3px 8px',
+                            fontSize: '0.72rem',
+                            fontWeight: 800,
+                            cursor: 'pointer'
+                          }}
+                          title="Delete Custom Plan"
+                        >
+                          🗑️ Delete
+                        </button>
+                      )}
+                    </div>
+                  </th>
+                );
+              })}
             </tr>
           </thead>
           <tbody>
