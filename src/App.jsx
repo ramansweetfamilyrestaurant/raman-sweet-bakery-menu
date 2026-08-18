@@ -892,13 +892,20 @@ export default function App() {
   }, [adminToken, superToken]);
 
   const handleAdminLoginSuccess = async (token, username, slug) => {
-    let currentSlug = slug || getSlugFromUrl() || (info && info.slug) || localStorage.getItem('touchqr_admin_slug') || '';
-    let restoInfo = info;
+    let currentSlug = slug || '';
+    let restoInfo = null;
     try {
-      restoInfo = await fetchRestaurantInfo(token);
-      if (restoInfo && restoInfo.slug) currentSlug = restoInfo.slug;
+      const meRes = await fetch('/api/admin/me', { headers: { Authorization: `Bearer ${token}` } });
+      if (meRes.ok) {
+        restoInfo = await meRes.json();
+        if (restoInfo && restoInfo.slug) currentSlug = restoInfo.slug;
+      }
     } catch (err) {
-      console.warn('Notice fetching restaurant info on login:', err.message);
+      console.warn('Notice fetching /api/admin/me on login:', err.message);
+    }
+
+    if (!currentSlug) {
+      currentSlug = (restoInfo && restoInfo.slug) || slug || getSlugFromUrl() || (info && info.slug) || '';
     }
 
     if (currentSlug && currentSlug !== 'undefined' && currentSlug !== 'null') {

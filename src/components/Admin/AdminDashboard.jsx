@@ -1173,25 +1173,6 @@ export default function AdminDashboard({ token, username, slug: propSlug = '', o
         fetch('/api/admin/subscription-status', { headers: { Authorization: `Bearer ${token}` } }).then(r => r.ok ? r.json() : null).catch(() => null)
       ]);
 
-      // If dishData or catData is empty, fallback to menu-bundle endpoint using tenant slug or fallback
-      if (!dishData || dishData.length === 0 || !catData || catData.length === 0) {
-        try {
-          const bundleSlug = currentSlug || '';
-          const bundleRes = await fetch(`/api/menu-bundle?slug=${encodeURIComponent(bundleSlug)}`);
-          if (bundleRes.ok) {
-            const bundle = await bundleRes.json();
-            if (bundle) {
-              if (!dishData || dishData.length === 0) dishData = bundle.dishes || [];
-              if (!catData || catData.length === 0) catData = bundle.categories || [];
-              if (!comboData || comboData.length === 0) comboData = bundle.combos || [];
-              if (!infoData) infoData = bundle.info || null;
-            }
-          }
-        } catch (e) {
-          console.warn('[MENU] Bundle fallback notice:', e);
-        }
-      }
-
       const safeCats = Array.isArray(catData) ? catData : [];
       const safeDishes = Array.isArray(dishData) ? dishData : [];
       const safeCombos = Array.isArray(comboData) ? comboData : [];
