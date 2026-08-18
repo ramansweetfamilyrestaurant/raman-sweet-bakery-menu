@@ -1187,13 +1187,6 @@ export default function AdminDashboard({ token, username, slug: propSlug = '', o
       setDishes(safeDishes);
       if (infoData) {
         setRestaurantInfo(infoData);
-        const isCompleted = infoData.onboarding_completed === true || infoData.onboarding_completed === 1 || infoData.onboarding_completed === 'true' || infoData.onboarding_completed === undefined || infoData.onboarding_completed === null;
-        if (!isCompleted && infoData.onboarding_completed === false) {
-          const targetSlug = infoData.slug || currentSlug || '';
-          window.history.pushState({}, '', targetSlug ? `/${targetSlug}/admin/setup` : '/admin/setup');
-          window.location.reload();
-          return;
-        }
       }
       setCombos(safeCombos);
 

@@ -920,16 +920,9 @@ export default function App() {
 
     const mandateActive = await checkMandateGating(token, currentSlug);
     if (mandateActive) {
-      const isCompleted = restoInfo ? (restoInfo.onboarding_completed === true || restoInfo.onboarding_completed === 1 || restoInfo.onboarding_completed === 'true' || restoInfo.onboarding_completed === undefined || restoInfo.onboarding_completed === null) : true;
-      if (restoInfo && !isCompleted) {
-        setView('admin-setup');
-        const setupUrl = (currentSlug && currentSlug !== 'undefined' && currentSlug !== 'null') ? `/${currentSlug}/admin/setup` : '/admin/setup';
-        window.history.pushState({}, '', setupUrl);
-      } else {
-        setView('admin-dashboard');
-        const cleanUrl = (currentSlug && currentSlug !== 'undefined' && currentSlug !== 'null') ? `/${currentSlug}/admin` : '/admin';
-        window.history.pushState({}, '', cleanUrl);
-      }
+      setView('admin-dashboard');
+      const cleanUrl = (currentSlug && currentSlug !== 'undefined' && currentSlug !== 'null') ? `/${currentSlug}/admin` : '/admin';
+      window.history.pushState({}, '', cleanUrl);
     } else {
       setView('billing');
       window.history.pushState({}, '', '/billing');
