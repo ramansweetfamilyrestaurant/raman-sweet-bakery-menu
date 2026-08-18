@@ -889,9 +889,9 @@ export default function App() {
       window.removeEventListener('hashchange', handleRouteCheck);
       window.removeEventListener('popstate', handleRouteCheck);
     };
-  }, [adminToken, superToken]);
+  }, []);
 
-  const handleAdminLoginSuccess = async (token, username, slug, initialRestoInfo = null) => {
+  const handleAdminLoginSuccess = (token, username, slug, initialRestoInfo = null) => {
     // 1. Immediately clear old tenant data state to prevent cross-tenant UI flash
     setDishes([]);
     setCategories([]);
@@ -900,17 +900,7 @@ export default function App() {
     let currentSlug = slug || '';
     let restoInfo = initialRestoInfo || null;
 
-    if (!restoInfo) {
-      try {
-        const meRes = await fetch('/api/admin/me', { headers: { Authorization: `Bearer ${token}` } });
-        if (meRes.ok) {
-          restoInfo = await meRes.json();
-          if (restoInfo && restoInfo.slug) currentSlug = restoInfo.slug;
-        }
-      } catch (err) {
-        console.warn('Notice fetching /api/admin/me on login:', err.message);
-      }
-    } else if (restoInfo.slug) {
+    if (restoInfo && restoInfo.slug) {
       currentSlug = restoInfo.slug;
     }
 
@@ -918,25 +908,30 @@ export default function App() {
       currentSlug = (restoInfo && restoInfo.slug) || slug || '';
     }
 
+    const cleanUrl = (currentSlug && currentSlug !== 'undefined' && currentSlug !== 'null') ? `/${currentSlug}/admin` : '/admin';
+
+    // 2. SYNCHRONOUSLY update URL & localStorage FIRST so browser path instantly matches new tenant
     if (currentSlug && currentSlug !== 'undefined' && currentSlug !== 'null') {
       localStorage.setItem('touchqr_admin_slug', currentSlug);
     }
     localStorage.setItem('touchqr_admin_token', token);
     localStorage.setItem('touchqr_admin_user', username);
+    window.history.pushState({}, '', cleanUrl);
+
+    // 3. Update React state immediately to switch view to Admin Dashboard (0ms delay)
     setAdminToken(token);
     setAdminUsername(username);
     setAdminSlug(currentSlug);
     if (restoInfo) setInfo(restoInfo);
+    setView('admin-dashboard');
 
-    const mandateActive = await checkMandateGating(token, currentSlug);
-    if (mandateActive) {
-      setView('admin-dashboard');
-      const cleanUrl = (currentSlug && currentSlug !== 'undefined' && currentSlug !== 'null') ? `/${currentSlug}/admin` : '/admin';
-      window.history.pushState({}, '', cleanUrl);
-    } else {
-      setView('billing');
-      window.history.pushState({}, '', '/billing');
-    }
+    // 4. Background Mandate Verification (non-blocking)
+    checkMandateGating(token, currentSlug).then(mandateActive => {
+      if (!mandateActive) {
+        setView('billing');
+        window.history.pushState({}, '', '/billing');
+      }
+    }).catch(() => {});
   };
 
   const handleAdminLogout = () => {
