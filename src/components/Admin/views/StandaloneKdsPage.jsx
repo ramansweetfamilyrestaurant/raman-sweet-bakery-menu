@@ -479,11 +479,22 @@ export default function StandaloneKdsPage({ slug = '' }) {
                             <strong style={{ fontSize: '1.02rem', color: '#F8FAFC', display: 'block' }}>
                               {item.name}
                             </strong>
-                            {item.portion && (
-                              <span style={{ fontSize: '0.74rem', color: '#94A3B8', fontWeight: 700 }}>
-                                Portion: {item.portion}
-                              </span>
-                            )}
+                            <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap', marginTop: '2px', alignItems: 'center' }}>
+                              {item.portion && (
+                                <span style={{ fontSize: '0.74rem', color: '#94A3B8', fontWeight: 700 }}>
+                                  Portion: {item.portion}
+                                </span>
+                              )}
+                              {item.modifiers && Array.isArray(item.modifiers) && item.modifiers.length > 0 && (
+                                <div style={{ display: 'flex', gap: '4px', flexWrap: 'wrap' }}>
+                                  {item.modifiers.map((m, mIdx) => (
+                                    <span key={mIdx} style={{ fontSize: '0.72rem', color: '#FEF08A', background: '#854D0E', border: '1px solid #CA8A04', padding: '1px 6px', borderRadius: '4px', fontWeight: 800 }}>
+                                      ➕ {m.name}
+                                    </span>
+                                  ))}
+                                </div>
+                              )}
+                            </div>
                           </div>
                         </div>
                       </div>

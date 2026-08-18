@@ -663,6 +663,9 @@ export default function AdminDashboard({ token, username, slug: propSlug = '', o
         const qty = String(i.quantity).padEnd(4);
         const amt = `₹${i.price * i.quantity}`.padStart(7);
         text += `${qty}${name}${amt}\n`;
+        if (i.modifiers && Array.isArray(i.modifiers) && i.modifiers.length > 0) {
+          text += `    ↳ + ${i.modifiers.map(m => m.name).join(', ')}\n`;
+        }
       });
       text += "================================" + "\n";
       text += `TOTAL BILL: ₹${order.total_amount}\n`;
@@ -693,6 +696,9 @@ export default function AdminDashboard({ token, username, slug: propSlug = '', o
         const qty = String(i.quantity).padEnd(4);
         const amt = `₹${i.price * i.quantity}`.padStart(7);
         text += `${qty}${name}${amt}\n`;
+        if (i.modifiers && Array.isArray(i.modifiers) && i.modifiers.length > 0) {
+          text += `    ↳ + ${i.modifiers.map(m => m.name).join(', ')}\n`;
+        }
       });
       text += "--------------------------------" + "\n";
       text += `Grand Total: ₹${order.total_amount}\n`;
@@ -772,10 +778,16 @@ export default function AdminDashboard({ token, username, slug: propSlug = '', o
     let itemsHtml = '';
     safeParseItems(order.items).forEach(i => {
       const portionText = i.portion ? ` (${i.portion})` : '';
+      const modText = (i.modifiers && Array.isArray(i.modifiers) && i.modifiers.length > 0)
+        ? `<div style="font-size:11px;color:#333;font-weight:normal;padding-left:6px;margin-top:2px;">➕ ${i.modifiers.map(m => `${m.name} (+₹${m.price})`).join(', ')}</div>`
+        : '';
       itemsHtml += `
         <tr>
-          <td style="padding:6px 0;font-weight:bold;font-size:14px;border-bottom:1px dashed #E5E7EB;">${i.quantity}x ${i.name}${portionText}</td>
-          <td style="text-align:right;font-weight:bold;font-size:14px;border-bottom:1px dashed #E5E7EB;">₹${i.price * i.quantity}</td>
+          <td style="padding:6px 0;font-weight:bold;font-size:14px;border-bottom:1px dashed #E5E7EB;">
+            ${i.quantity}x ${i.name}${portionText}
+            ${modText}
+          </td>
+          <td style="text-align:right;font-weight:bold;font-size:14px;border-bottom:1px dashed #E5E7EB;vertical-align:top;">₹${i.price * i.quantity}</td>
         </tr>
       `;
     });
@@ -841,12 +853,18 @@ export default function AdminDashboard({ token, username, slug: propSlug = '', o
     let itemsHtml = '';
     safeParseItems(order.items).forEach(i => {
       const portionText = i.portion ? ` (${i.portion})` : '';
+      const modText = (i.modifiers && Array.isArray(i.modifiers) && i.modifiers.length > 0)
+        ? `<div style="font-size:11px;color:#555;font-weight:normal;padding-left:6px;margin-top:2px;">+ ${i.modifiers.map(m => `${m.name} (+${currency}${m.price})`).join(', ')}</div>`
+        : '';
       const lineTotal = Number(i.price) * Number(i.quantity);
       subtotal += lineTotal;
       itemsHtml += `
         <tr>
-          <td style="padding:4px 0;font-weight:bold;font-size:13px;border-bottom:1px dashed #DDD;">${i.quantity}x ${i.name}${portionText}</td>
-          <td style="text-align:right;font-weight:bold;font-size:13px;border-bottom:1px dashed #DDD;">${currency}${lineTotal}</td>
+          <td style="padding:4px 0;font-weight:bold;font-size:13px;border-bottom:1px dashed #DDD;">
+            ${i.quantity}x ${i.name}${portionText}
+            ${modText}
+          </td>
+          <td style="text-align:right;font-weight:bold;font-size:13px;border-bottom:1px dashed #DDD;vertical-align:top;">${currency}${lineTotal}</td>
         </tr>
       `;
     });

@@ -345,7 +345,10 @@ export default function App() {
       const itemPrice = item.price * item.quantity;
       grandTotal += itemPrice;
       const portionText = item.portion ? ` (${item.portion})` : '';
-      msg += `• ${item.quantity}x *${item.dish.name}${portionText}* - ${sym}${itemPrice}\n`;
+      const modText = (item.modifiers && Array.isArray(item.modifiers) && item.modifiers.length > 0)
+        ? `\n   ↳ Add-ons: ${item.modifiers.map(m => `+${m.name} (+${sym}${m.price})`).join(', ')}`
+        : '';
+      msg += `• ${item.quantity}x *${item.dish.name}${portionText}* - ${sym}${itemPrice}${modText}\n`;
     });
     msg += `\n*Total Amount:* ${sym}${grandTotal}\n\nThank you!`;
     const targetPhone = phone.length === 10 ? `91${phone}` : phone;
@@ -507,6 +510,7 @@ export default function App() {
         dish_id: item.isCombo ? item.dish.id : item.dish.id,
         name: item.dish.name,
         portion: item.portion || '',
+        modifiers: item.modifiers || [],
         price: item.price,
         quantity: item.quantity,
         ...(item.isCombo ? { type: 'combo', includes: item.comboIncludes || '' } : {})
