@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { MapPin, Navigation, Store, CheckCircle2, ArrowRight, ArrowLeft, Upload, Loader2, AlertCircle, Building2, Phone, Sparkles } from 'lucide-react';
+import { MapPin, Navigation, Store, CheckCircle2, ArrowRight, ArrowLeft, Upload, Loader2, AlertCircle, Sparkles } from 'lucide-react';
 import { uploadImage, updateTenantSettings, completeOnboarding } from '../../api/client';
 
 export default function OnboardingSetup({ token, restaurantInfo, setRestaurantInfo, onComplete }) {
@@ -23,7 +23,7 @@ export default function OnboardingSetup({ token, restaurantInfo, setRestaurantIn
     location_initialized: restaurantInfo?.location_initialized || false,
     logo: restaurantInfo?.logo || '',
     openingHours: restaurantInfo?.openingHours || restaurantInfo?.opening_hours || '8:00 AM - 10:30 PM',
-    resto_type: restaurantInfo?.resto_type || 'veg',
+    resto_type: restaurantInfo?.resto_type || 'pure_veg',
     theme_color: restaurantInfo?.theme_color || 'gold'
   });
 
@@ -47,7 +47,7 @@ export default function OnboardingSetup({ token, restaurantInfo, setRestaurantIn
         location_initialized: restaurantInfo.location_initialized !== undefined ? restaurantInfo.location_initialized : prev.location_initialized,
         logo: prev.logo || restaurantInfo.logo || '',
         openingHours: prev.openingHours || restaurantInfo.openingHours || restaurantInfo.opening_hours || '8:00 AM - 10:30 PM',
-        resto_type: prev.resto_type || restaurantInfo.resto_type || 'veg'
+        resto_type: prev.resto_type || restaurantInfo.resto_type || 'pure_veg'
       }));
     }
   }, [restaurantInfo]);
@@ -86,13 +86,13 @@ export default function OnboardingSetup({ token, restaurantInfo, setRestaurantIn
     setErrorMsg('');
     try {
       const fullAddr = [formData.address.trim(), formData.city.trim(), formData.state.trim(), formData.pincode.trim()].filter(Boolean).join(', ');
-      await updateTenantSettings({
+      await updateTenantSettings(token, {
         name: formData.name.trim(),
         tagline: formData.tagline.trim(),
         phone: formData.phone.trim(),
         whatsapp_number: formData.whatsapp_number.trim() || formData.phone.trim(),
         address: fullAddr || formData.address.trim()
-      }, token);
+      });
 
       setCurrentStep(2);
     } catch (err) {
@@ -110,7 +110,7 @@ export default function OnboardingSetup({ token, restaurantInfo, setRestaurantIn
     }
 
     setDetectingLocation(true);
-    setLocationStatus('');
+    setLocationStatus('📍 Requesting GPS permission from device...');
 
     navigator.geolocation.getCurrentPosition(
       (position) => {
@@ -122,19 +122,19 @@ export default function OnboardingSetup({ token, restaurantInfo, setRestaurantIn
           longitude: lon,
           location_initialized: true
         }));
-        setLocationStatus('Location detected successfully!');
+        setLocationStatus('✅ Location detected successfully!');
         setDetectingLocation(false);
       },
       (error) => {
         setDetectingLocation(false);
         if (error.code === error.PERMISSION_DENIED) {
-          setLocationStatus('Location permission denied. Please allow location access or enter coordinates manually.');
+          setLocationStatus('⚠️ Location permission denied. Please allow location access or enter coordinates manually.');
         } else if (error.code === error.POSITION_UNAVAILABLE) {
-          setLocationStatus('Unable to detect your location. Please try again.');
+          setLocationStatus('⚠️ Unable to detect your location. Please try again.');
         } else if (error.code === error.TIMEOUT) {
-          setLocationStatus('Location detection timed out. Please try again.');
+          setLocationStatus('⚠️ Location detection timed out. Please try again.');
         } else {
-          setLocationStatus('Failed to detect location. Please enter coordinates manually.');
+          setLocationStatus('⚠️ Failed to detect location. Please enter coordinates manually.');
         }
       },
       { timeout: 10000, enableHighAccuracy: true }
@@ -146,11 +146,11 @@ export default function OnboardingSetup({ token, restaurantInfo, setRestaurantIn
     setSaving(true);
     setErrorMsg('');
     try {
-      await updateTenantSettings({
+      await updateTenantSettings(token, {
         latitude: Number(formData.latitude),
         longitude: Number(formData.longitude),
         location_initialized: true
-      }, token);
+      });
 
       setCurrentStep(3);
     } catch (err) {
@@ -184,17 +184,17 @@ export default function OnboardingSetup({ token, restaurantInfo, setRestaurantIn
     setSaving(true);
     setErrorMsg('');
     try {
-      await updateTenantSettings({
+      await updateTenantSettings(token, {
         logo: formData.logo,
         openingHours: formData.openingHours,
         resto_type: formData.resto_type,
         theme_color: formData.theme_color,
         location_initialized: true
-      }, token);
+      });
 
       await completeOnboarding(token);
 
-      setSuccessMsg('Your restaurant is ready!');
+      setSuccessMsg('✨ Setup Complete! Loading your restaurant dashboard...');
       setTimeout(() => {
         if (onComplete) onComplete();
       }, 800);
@@ -206,163 +206,265 @@ export default function OnboardingSetup({ token, restaurantInfo, setRestaurantIn
   };
 
   return (
-    <div className="min-h-screen bg-slate-900 text-slate-100 flex flex-col justify-center items-center p-4 sm:p-6">
-      <div className="w-full max-w-2xl bg-slate-800 border border-slate-700 rounded-2xl shadow-2xl overflow-hidden">
+    <div style={{
+      minHeight: '100vh',
+      background: 'linear-gradient(135deg, #05140B 0%, #0A2315 50%, #164E2A 100%)',
+      color: '#F8FAFC',
+      display: 'flex',
+      flexDirection: 'column',
+      alignItems: 'center',
+      justifyContent: 'center',
+      padding: '24px 16px',
+      fontFamily: "'Plus Jakarta Sans', system-ui, -apple-system, sans-serif"
+    }}>
+      <div style={{
+        width: '100%',
+        maxWidth: '620px',
+        background: 'rgba(17, 44, 27, 0.95)',
+        border: '1px solid rgba(223, 186, 103, 0.3)',
+        borderRadius: '24px',
+        boxShadow: '0 20px 50px rgba(0, 0, 0, 0.6)',
+        backdropFilter: 'blur(20px)',
+        overflow: 'hidden'
+      }}>
         
         {/* Header */}
-        <div className="p-6 bg-slate-850 border-b border-slate-700 text-center relative">
-          <div className="inline-flex items-center justify-center w-12 h-12 bg-amber-500/10 border border-amber-500/30 rounded-xl text-amber-500 mb-3">
-            <Store className="w-6 h-6" />
+        <div style={{
+          padding: '28px 24px 20px',
+          borderBottom: '1px solid rgba(255, 255, 255, 0.08)',
+          textAlign: 'center'
+        }}>
+          <div style={{
+            display: 'inline-flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            width: '52px',
+            height: '52px',
+            background: 'rgba(223, 186, 103, 0.15)',
+            border: '1.5px solid #DFBA67',
+            borderRadius: '16px',
+            color: '#DFBA67',
+            marginBottom: '12px'
+          }}>
+            <Store size={28} />
           </div>
-          <h1 className="text-2xl font-bold text-white">Complete Your Restaurant Setup</h1>
-          <p className="text-sm text-slate-400 mt-1">Add your basic restaurant information before continuing to your dashboard.</p>
+          <h1 style={{ fontSize: '1.45rem', fontWeight: 900, color: '#FFFFFF', margin: '0 0 6px' }}>
+            Complete Your Restaurant Setup
+          </h1>
+          <p style={{ fontSize: '0.84rem', color: '#94A3B8', margin: 0 }}>
+            Add your basic restaurant information before continuing to your dashboard.
+          </p>
 
-          {/* Step Progress Indicator */}
-          <div className="flex items-center justify-center gap-2 mt-6">
-            <div className={`flex items-center gap-2 px-3 py-1.5 rounded-full text-xs font-semibold ${currentStep === 1 ? 'bg-amber-500 text-slate-950' : 'bg-slate-700 text-slate-300'}`}>
-              <span>1</span> Step 1 of 3: Basic Details
+          {/* Stepper Indicator */}
+          <div style={{
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            gap: '8px',
+            marginTop: '20px'
+          }}>
+            <div style={{
+              display: 'flex', alignItems: 'center', gap: '6px', padding: '6px 14px', borderRadius: '9999px',
+              fontSize: '0.78rem', fontWeight: 800,
+              background: currentStep === 1 ? '#DFBA67' : 'rgba(255,255,255,0.08)',
+              color: currentStep === 1 ? '#0A2315' : '#94A3B8'
+            }}>
+              <span>1</span> Basic Details
             </div>
-            <div className={`w-4 h-0.5 ${currentStep >= 2 ? 'bg-amber-500' : 'bg-slate-700'}`}></div>
-            <div className={`flex items-center gap-2 px-3 py-1.5 rounded-full text-xs font-semibold ${currentStep === 2 ? 'bg-amber-500 text-slate-950' : 'bg-slate-700 text-slate-300'}`}>
-              <span>2</span> Step 2: Location
+            <div style={{ width: '20px', height: '2px', background: currentStep >= 2 ? '#DFBA67' : 'rgba(255,255,255,0.1)' }} />
+            <div style={{
+              display: 'flex', alignItems: 'center', gap: '6px', padding: '6px 14px', borderRadius: '9999px',
+              fontSize: '0.78rem', fontWeight: 800,
+              background: currentStep === 2 ? '#DFBA67' : 'rgba(255,255,255,0.08)',
+              color: currentStep === 2 ? '#0A2315' : '#94A3B8'
+            }}>
+              <span>2</span> Location
             </div>
-            <div className={`w-4 h-0.5 ${currentStep >= 3 ? 'bg-amber-500' : 'bg-slate-700'}`}></div>
-            <div className={`flex items-center gap-2 px-3 py-1.5 rounded-full text-xs font-semibold ${currentStep === 3 ? 'bg-amber-500 text-slate-950' : 'bg-slate-700 text-slate-300'}`}>
-              <span>3</span> Step 3: Branding
+            <div style={{ width: '20px', height: '2px', background: currentStep >= 3 ? '#DFBA67' : 'rgba(255,255,255,0.1)' }} />
+            <div style={{
+              display: 'flex', alignItems: 'center', gap: '6px', padding: '6px 14px', borderRadius: '9999px',
+              fontSize: '0.78rem', fontWeight: 800,
+              background: currentStep === 3 ? '#DFBA67' : 'rgba(255,255,255,0.08)',
+              color: currentStep === 3 ? '#0A2315' : '#94A3B8'
+            }}>
+              <span>3</span> Branding
             </div>
           </div>
         </div>
 
         {/* Global Messages */}
         {errorMsg && (
-          <div className="m-6 mb-0 p-4 bg-rose-500/10 border border-rose-500/30 rounded-xl text-rose-400 text-sm flex items-start gap-3">
-            <AlertCircle className="w-5 h-5 shrink-0 mt-0.5" />
+          <div style={{
+            margin: '16px 24px 0', padding: '12px 16px', borderRadius: '12px',
+            background: 'rgba(239, 68, 68, 0.15)', border: '1px solid #EF4444',
+            color: '#FCA5A5', fontSize: '0.82rem', display: 'flex', alignItems: 'center', gap: '10px'
+          }}>
+            <AlertCircle size={18} />
             <span>{errorMsg}</span>
           </div>
         )}
 
         {successMsg && (
-          <div className="m-6 mb-0 p-4 bg-emerald-500/10 border border-emerald-500/30 rounded-xl text-emerald-400 text-sm flex items-center gap-3">
-            <CheckCircle2 className="w-5 h-5 shrink-0" />
-            <span className="font-semibold">{successMsg}</span>
+          <div style={{
+            margin: '16px 24px 0', padding: '12px 16px', borderRadius: '12px',
+            background: 'rgba(34, 197, 94, 0.15)', border: '1px solid #22C55E',
+            color: '#86EFAC', fontSize: '0.82rem', display: 'flex', alignItems: 'center', gap: '10px'
+          }}>
+            <CheckCircle2 size={18} />
+            <span>{successMsg}</span>
           </div>
         )}
 
         {/* Form Body */}
-        <div className="p-6 sm:p-8">
-          {/* STEP 1: Basic Restaurant Details */}
+        <div style={{ padding: '24px' }}>
+          {/* STEP 1: Basic Details */}
           {currentStep === 1 && (
-            <div className="space-y-4">
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
               <div>
-                <label className="block text-xs font-medium text-slate-300 mb-1">Restaurant Name *</label>
+                <label style={{ display: 'block', fontSize: '0.78rem', fontWeight: 800, color: '#E2E8F0', marginBottom: '6px' }}>
+                  Restaurant Name *
+                </label>
                 <input
                   type="text"
                   name="name"
                   value={formData.name}
                   onChange={handleChange}
-                  placeholder="e.g. Royal Curry House"
-                  className={`w-full px-4 py-2.5 rounded-xl bg-slate-900 border text-white text-sm focus:outline-none focus:ring-2 focus:ring-amber-500 ${fieldErrors.name ? 'border-rose-500' : 'border-slate-700'}`}
+                  placeholder="e.g. Raman Sweet Bakery"
+                  style={{
+                    width: '100%', padding: '12px 16px', borderRadius: '12px',
+                    background: '#071A0E', border: fieldErrors.name ? '1.5px solid #EF4444' : '1px solid rgba(223, 186, 103, 0.3)',
+                    color: '#FFFFFF', fontSize: '0.9rem', outline: 'none', boxSizing: 'border-box'
+                  }}
                 />
-                {fieldErrors.name && <p className="text-xs text-rose-400 mt-1">{fieldErrors.name}</p>}
+                {fieldErrors.name && <p style={{ color: '#FCA5A5', fontSize: '0.74rem', margin: '4px 0 0' }}>{fieldErrors.name}</p>}
               </div>
 
               <div>
-                <label className="block text-xs font-medium text-slate-300 mb-1">Tagline</label>
+                <label style={{ display: 'block', fontSize: '0.78rem', fontWeight: 800, color: '#E2E8F0', marginBottom: '6px' }}>
+                  Tagline
+                </label>
                 <input
                   type="text"
                   name="tagline"
                   value={formData.tagline}
                   onChange={handleChange}
                   placeholder="e.g. 100% Quality Food & Service"
-                  className="w-full px-4 py-2.5 rounded-xl bg-slate-900 border border-slate-700 text-white text-sm focus:outline-none focus:ring-2 focus:ring-amber-500"
+                  style={{
+                    width: '100%', padding: '12px 16px', borderRadius: '12px',
+                    background: '#071A0E', border: '1px solid rgba(255, 255, 255, 0.15)',
+                    color: '#FFFFFF', fontSize: '0.9rem', outline: 'none', boxSizing: 'border-box'
+                  }}
                 />
               </div>
 
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '14px' }}>
                 <div>
-                  <label className="block text-xs font-medium text-slate-300 mb-1">Phone Number *</label>
+                  <label style={{ display: 'block', fontSize: '0.78rem', fontWeight: 800, color: '#E2E8F0', marginBottom: '6px' }}>
+                    Phone Number *
+                  </label>
                   <input
                     type="text"
                     name="phone"
                     value={formData.phone}
                     onChange={handleChange}
                     placeholder="e.g. 9876543210"
-                    className={`w-full px-4 py-2.5 rounded-xl bg-slate-900 border text-white text-sm focus:outline-none focus:ring-2 focus:ring-amber-500 ${fieldErrors.phone ? 'border-rose-500' : 'border-slate-700'}`}
+                    style={{
+                      width: '100%', padding: '12px 16px', borderRadius: '12px',
+                      background: '#071A0E', border: fieldErrors.phone ? '1.5px solid #EF4444' : '1px solid rgba(223, 186, 103, 0.3)',
+                      color: '#FFFFFF', fontSize: '0.9rem', outline: 'none', boxSizing: 'border-box'
+                    }}
                   />
-                  {fieldErrors.phone && <p className="text-xs text-rose-400 mt-1">{fieldErrors.phone}</p>}
+                  {fieldErrors.phone && <p style={{ color: '#FCA5A5', fontSize: '0.74rem', margin: '4px 0 0' }}>{fieldErrors.phone}</p>}
                 </div>
 
                 <div>
-                  <label className="block text-xs font-medium text-slate-300 mb-1">WhatsApp Ordering Number</label>
+                  <label style={{ display: 'block', fontSize: '0.78rem', fontWeight: 800, color: '#E2E8F0', marginBottom: '6px' }}>
+                    WhatsApp Ordering Number
+                  </label>
                   <input
                     type="text"
                     name="whatsapp_number"
                     value={formData.whatsapp_number}
                     onChange={handleChange}
                     placeholder="Same as phone if empty"
-                    className="w-full px-4 py-2.5 rounded-xl bg-slate-900 border border-slate-700 text-white text-sm focus:outline-none focus:ring-2 focus:ring-amber-500"
+                    style={{
+                      width: '100%', padding: '12px 16px', borderRadius: '12px',
+                      background: '#071A0E', border: '1px solid rgba(255, 255, 255, 0.15)',
+                      color: '#FFFFFF', fontSize: '0.9rem', outline: 'none', boxSizing: 'border-box'
+                    }}
                   />
                 </div>
               </div>
 
               <div>
-                <label className="block text-xs font-medium text-slate-300 mb-1">Address *</label>
+                <label style={{ display: 'block', fontSize: '0.78rem', fontWeight: 800, color: '#E2E8F0', marginBottom: '6px' }}>
+                  Address *
+                </label>
                 <textarea
                   name="address"
                   rows={2}
                   value={formData.address}
                   onChange={handleChange}
                   placeholder="Street address, landmark, building name..."
-                  className={`w-full px-4 py-2.5 rounded-xl bg-slate-900 border text-white text-sm focus:outline-none focus:ring-2 focus:ring-amber-500 ${fieldErrors.address ? 'border-rose-500' : 'border-slate-700'}`}
+                  style={{
+                    width: '100%', padding: '12px 16px', borderRadius: '12px',
+                    background: '#071A0E', border: fieldErrors.address ? '1.5px solid #EF4444' : '1px solid rgba(223, 186, 103, 0.3)',
+                    color: '#FFFFFF', fontSize: '0.9rem', outline: 'none', boxSizing: 'border-box', resize: 'vertical'
+                  }}
                 />
-                {fieldErrors.address && <p className="text-xs text-rose-400 mt-1">{fieldErrors.address}</p>}
+                {fieldErrors.address && <p style={{ color: '#FCA5A5', fontSize: '0.74rem', margin: '4px 0 0' }}>{fieldErrors.address}</p>}
               </div>
 
-              <div className="grid grid-cols-3 gap-3">
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '10px' }}>
                 <div>
-                  <label className="block text-xs font-medium text-slate-300 mb-1">City</label>
+                  <label style={{ display: 'block', fontSize: '0.74rem', fontWeight: 700, color: '#94A3B8', marginBottom: '4px' }}>City</label>
                   <input
                     type="text"
                     name="city"
                     value={formData.city}
                     onChange={handleChange}
                     placeholder="City"
-                    className="w-full px-3 py-2 rounded-xl bg-slate-900 border border-slate-700 text-white text-xs focus:outline-none focus:ring-2 focus:ring-amber-500"
+                    style={{ width: '100%', padding: '10px 12px', borderRadius: '10px', background: '#071A0E', border: '1px solid rgba(255,255,255,0.15)', color: '#FFF', fontSize: '0.84rem', outline: 'none', boxSizing: 'border-box' }}
                   />
                 </div>
                 <div>
-                  <label className="block text-xs font-medium text-slate-300 mb-1">State</label>
+                  <label style={{ display: 'block', fontSize: '0.74rem', fontWeight: 700, color: '#94A3B8', marginBottom: '4px' }}>State</label>
                   <input
                     type="text"
                     name="state"
                     value={formData.state}
                     onChange={handleChange}
                     placeholder="State"
-                    className="w-full px-3 py-2 rounded-xl bg-slate-900 border border-slate-700 text-white text-xs focus:outline-none focus:ring-2 focus:ring-amber-500"
+                    style={{ width: '100%', padding: '10px 12px', borderRadius: '10px', background: '#071A0E', border: '1px solid rgba(255,255,255,0.15)', color: '#FFF', fontSize: '0.84rem', outline: 'none', boxSizing: 'border-box' }}
                   />
                 </div>
                 <div>
-                  <label className="block text-xs font-medium text-slate-300 mb-1">Pincode</label>
+                  <label style={{ display: 'block', fontSize: '0.74rem', fontWeight: 700, color: '#94A3B8', marginBottom: '4px' }}>Pincode</label>
                   <input
                     type="text"
                     name="pincode"
                     value={formData.pincode}
                     onChange={handleChange}
                     placeholder="Pincode"
-                    className={`w-full px-3 py-2 rounded-xl bg-slate-900 border text-white text-xs focus:outline-none focus:ring-2 focus:ring-amber-500 ${fieldErrors.pincode ? 'border-rose-500' : 'border-slate-700'}`}
+                    style={{ width: '100%', padding: '10px 12px', borderRadius: '10px', background: '#071A0E', border: '1px solid rgba(255,255,255,0.15)', color: '#FFF', fontSize: '0.84rem', outline: 'none', boxSizing: 'border-box' }}
                   />
-                  {fieldErrors.pincode && <p className="text-[10px] text-rose-400 mt-1">{fieldErrors.pincode}</p>}
                 </div>
               </div>
 
-              <div className="pt-4 flex justify-end">
+              <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: '12px' }}>
                 <button
                   type="button"
                   onClick={handleSaveStep1}
                   disabled={saving}
-                  className="flex items-center gap-2 px-6 py-2.5 rounded-xl bg-amber-500 text-slate-950 font-semibold hover:bg-amber-400 transition-colors disabled:opacity-50"
+                  style={{
+                    display: 'inline-flex', alignItems: 'center', gap: '8px',
+                    padding: '12px 28px', borderRadius: '14px', border: 'none',
+                    background: 'linear-gradient(135deg, #DFBA67 0%, #C89F43 100%)',
+                    color: '#0A2315', fontWeight: 900, fontSize: '0.9rem', cursor: 'pointer',
+                    boxShadow: '0 4px 15px rgba(223, 186, 103, 0.35)'
+                  }}
                 >
-                  {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <>Save & Continue <ArrowRight className="w-4 h-4" /></>}
+                  {saving ? <Loader2 size={18} className="animate-spin" /> : <>Save & Continue <ArrowRight size={18} /></>}
                 </button>
               </div>
             </div>
@@ -370,129 +472,157 @@ export default function OnboardingSetup({ token, restaurantInfo, setRestaurantIn
 
           {/* STEP 2: Location */}
           {currentStep === 2 && (
-            <div className="space-y-6">
-              <div className="p-4 bg-amber-500/10 border border-amber-500/20 rounded-xl text-xs text-amber-300">
-                <p className="font-semibold text-amber-200 mb-1 flex items-center gap-1.5">
-                  <Navigation className="w-4 h-4" /> GPS Location Setup
-                </p>
-                Auto-detecting your location helps customers find your restaurant accurately. GPS permission is only requested when you click the button below.
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
+              <div style={{
+                padding: '16px', borderRadius: '14px', background: 'rgba(223, 186, 103, 0.1)',
+                border: '1px solid rgba(223, 186, 103, 0.3)', color: '#DFBA67', fontSize: '0.82rem', lineHeight: 1.5
+              }}>
+                <strong style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.88rem', color: '#DFBA67', marginBottom: '4px' }}>
+                  <Navigation size={18} /> GPS Location Setup
+                </strong>
+                Auto-detecting your location helps customers verify dining distance and order accurately. GPS permission is only requested when you click the button below.
               </div>
 
-              <div className="text-center py-4">
+              <div style={{ textAlign: 'center', padding: '16px 0' }}>
                 <button
                   type="button"
                   onClick={handleDetectLocation}
                   disabled={detectingLocation}
-                  className="inline-flex items-center gap-2 px-6 py-3 rounded-xl bg-blue-600 text-white font-semibold hover:bg-blue-500 transition-colors disabled:opacity-50 shadow-lg shadow-blue-600/20"
+                  style={{
+                    display: 'inline-flex', alignItems: 'center', gap: '8px',
+                    padding: '14px 28px', borderRadius: '14px', border: 'none',
+                    background: 'linear-gradient(135deg, #0284C7 0%, #0369A1 100%)',
+                    color: '#FFFFFF', fontWeight: 900, fontSize: '0.92rem', cursor: 'pointer',
+                    boxShadow: '0 4px 15px rgba(2, 132, 199, 0.4)'
+                  }}
                 >
                   {detectingLocation ? (
                     <>
-                      <Loader2 className="w-5 h-5 animate-spin" />
+                      <Loader2 size={18} className="animate-spin" />
                       Detecting Coordinates...
                     </>
                   ) : (
                     <>
-                      <Navigation className="w-5 h-5" />
+                      <Navigation size={18} />
                       Auto Detect Location
                     </>
                   )}
                 </button>
 
                 {locationStatus && (
-                  <p className={`mt-3 text-xs ${locationStatus.includes('success') ? 'text-emerald-400 font-semibold' : 'text-amber-400'}`}>
+                  <p style={{ marginTop: '12px', fontSize: '0.8rem', fontWeight: 700, color: locationStatus.includes('success') ? '#86EFAC' : '#FDE047' }}>
                     {locationStatus}
                   </p>
                 )}
               </div>
 
-              <div className="grid grid-cols-2 gap-4 pt-2">
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '14px' }}>
                 <div>
-                  <label className="block text-xs font-medium text-slate-300 mb-1">Latitude</label>
+                  <label style={{ display: 'block', fontSize: '0.78rem', fontWeight: 800, color: '#E2E8F0', marginBottom: '6px' }}>Latitude</label>
                   <input
                     type="number"
                     step="any"
                     name="latitude"
                     value={formData.latitude}
                     onChange={handleChange}
-                    className="w-full px-4 py-2.5 rounded-xl bg-slate-900 border border-slate-700 text-white text-sm focus:outline-none focus:ring-2 focus:ring-amber-500"
+                    style={{ width: '100%', padding: '12px 16px', borderRadius: '12px', background: '#071A0E', border: '1px solid rgba(255,255,255,0.15)', color: '#FFF', fontSize: '0.9rem', outline: 'none', boxSizing: 'border-box' }}
                   />
                 </div>
                 <div>
-                  <label className="block text-xs font-medium text-slate-300 mb-1">Longitude</label>
+                  <label style={{ display: 'block', fontSize: '0.78rem', fontWeight: 800, color: '#E2E8F0', marginBottom: '6px' }}>Longitude</label>
                   <input
                     type="number"
                     step="any"
                     name="longitude"
                     value={formData.longitude}
                     onChange={handleChange}
-                    className="w-full px-4 py-2.5 rounded-xl bg-slate-900 border border-slate-700 text-white text-sm focus:outline-none focus:ring-2 focus:ring-amber-500"
+                    style={{ width: '100%', padding: '12px 16px', borderRadius: '12px', background: '#071A0E', border: '1px solid rgba(255,255,255,0.15)', color: '#FFF', fontSize: '0.9rem', outline: 'none', boxSizing: 'border-box' }}
                   />
                 </div>
               </div>
 
-              <div className="pt-4 flex justify-between">
+              <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: '12px' }}>
                 <button
                   type="button"
                   onClick={() => setCurrentStep(1)}
-                  className="flex items-center gap-2 px-5 py-2.5 rounded-xl bg-slate-700 text-slate-300 font-medium hover:bg-slate-600 transition-colors"
+                  style={{
+                    display: 'inline-flex', alignItems: 'center', gap: '8px',
+                    padding: '12px 22px', borderRadius: '14px', border: '1px solid rgba(255,255,255,0.2)',
+                    background: 'rgba(255,255,255,0.06)', color: '#E2E8F0', fontWeight: 700, fontSize: '0.86rem', cursor: 'pointer'
+                  }}
                 >
-                  <ArrowLeft className="w-4 h-4" /> Back
+                  <ArrowLeft size={16} /> Back
                 </button>
                 <button
                   type="button"
                   onClick={handleSaveStep2}
                   disabled={saving}
-                  className="flex items-center gap-2 px-6 py-2.5 rounded-xl bg-amber-500 text-slate-950 font-semibold hover:bg-amber-400 transition-colors disabled:opacity-50"
+                  style={{
+                    display: 'inline-flex', alignItems: 'center', gap: '8px',
+                    padding: '12px 28px', borderRadius: '14px', border: 'none',
+                    background: 'linear-gradient(135deg, #DFBA67 0%, #C89F43 100%)',
+                    color: '#0A2315', fontWeight: 900, fontSize: '0.9rem', cursor: 'pointer',
+                    boxShadow: '0 4px 15px rgba(223, 186, 103, 0.35)'
+                  }}
                 >
-                  {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <>Save & Continue <ArrowRight className="w-4 h-4" /></>}
+                  {saving ? <Loader2 size={18} className="animate-spin" /> : <>Save & Continue <ArrowRight size={18} /></>}
                 </button>
               </div>
             </div>
           )}
 
-          {/* STEP 3: Branding & Basic Settings */}
+          {/* STEP 3: Branding */}
           {currentStep === 3 && (
-            <div className="space-y-6">
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
               <div>
-                <label className="block text-xs font-medium text-slate-300 mb-2">Restaurant Logo</label>
-                <div className="flex items-center gap-4">
-                  <div className="w-20 h-20 rounded-2xl bg-slate-900 border border-slate-700 overflow-hidden flex items-center justify-center text-slate-500">
+                <label style={{ display: 'block', fontSize: '0.78rem', fontWeight: 800, color: '#E2E8F0', marginBottom: '8px' }}>Restaurant Logo</label>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
+                  <div style={{
+                    width: '74px', height: '74px', borderRadius: '16px', background: '#071A0E',
+                    border: '1.5px solid rgba(223, 186, 103, 0.4)', overflow: 'hidden',
+                    display: 'flex', alignItems: 'center', justifyContent: 'center'
+                  }}>
                     {formData.logo ? (
-                      <img src={formData.logo} alt="Logo Preview" className="w-full h-full object-cover" />
+                      <img src={formData.logo} alt="Logo Preview" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
                     ) : (
-                      <Store className="w-8 h-8 opacity-40" />
+                      <Store size={32} color="#94A3B8" />
                     )}
                   </div>
-                  <label className="cursor-pointer inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-slate-700 hover:bg-slate-650 text-white text-sm font-medium transition-colors">
-                    {uploadingLogo ? <Loader2 className="w-4 h-4 animate-spin" /> : <Upload className="w-4 h-4" />}
+                  <label style={{
+                    display: 'inline-flex', alignItems: 'center', gap: '8px',
+                    padding: '12px 20px', borderRadius: '12px', background: 'rgba(255,255,255,0.08)',
+                    border: '1px solid rgba(255,255,255,0.2)', color: '#FFFFFF', fontWeight: 700,
+                    fontSize: '0.84rem', cursor: 'pointer'
+                  }}>
+                    {uploadingLogo ? <Loader2 size={16} className="animate-spin" /> : <Upload size={16} />}
                     Upload Logo
-                    <input type="file" accept="image/*" onChange={handleLogoUpload} className="hidden" />
+                    <input type="file" accept="image/*" onChange={handleLogoUpload} style={{ display: 'none' }} />
                   </label>
                 </div>
               </div>
 
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '14px' }}>
                 <div>
-                  <label className="block text-xs font-medium text-slate-300 mb-1">Opening Hours</label>
+                  <label style={{ display: 'block', fontSize: '0.78rem', fontWeight: 800, color: '#E2E8F0', marginBottom: '6px' }}>Opening Hours</label>
                   <input
                     type="text"
                     name="openingHours"
                     value={formData.openingHours}
                     onChange={handleChange}
                     placeholder="e.g. 8:00 AM - 10:30 PM"
-                    className="w-full px-4 py-2.5 rounded-xl bg-slate-900 border border-slate-700 text-white text-sm focus:outline-none focus:ring-2 focus:ring-amber-500"
+                    style={{ width: '100%', padding: '12px 16px', borderRadius: '12px', background: '#071A0E', border: '1px solid rgba(255,255,255,0.15)', color: '#FFF', fontSize: '0.9rem', outline: 'none', boxSizing: 'border-box' }}
                   />
                 </div>
 
                 <div>
-                  <label className="block text-xs font-medium text-slate-300 mb-1">Restaurant Type</label>
+                  <label style={{ display: 'block', fontSize: '0.78rem', fontWeight: 800, color: '#E2E8F0', marginBottom: '6px' }}>Restaurant Type</label>
                   <select
                     name="resto_type"
                     value={formData.resto_type}
                     onChange={handleChange}
-                    className="w-full px-4 py-2.5 rounded-xl bg-slate-900 border border-slate-700 text-white text-sm focus:outline-none focus:ring-2 focus:ring-amber-500"
+                    style={{ width: '100%', padding: '12px 16px', borderRadius: '12px', background: '#071A0E', border: '1px solid rgba(255,255,255,0.15)', color: '#FFF', fontSize: '0.9rem', outline: 'none', boxSizing: 'border-box' }}
                   >
-                    <option value="veg">Pure Veg 🟢</option>
+                    <option value="pure_veg">Pure Veg 🟢</option>
                     <option value="non_veg">Non-Veg / Both 🔴</option>
                     <option value="cafe">Cafe / Bakery ☕</option>
                     <option value="fast_food">Fast Food 🍔</option>
@@ -500,21 +630,31 @@ export default function OnboardingSetup({ token, restaurantInfo, setRestaurantIn
                 </div>
               </div>
 
-              <div className="pt-4 flex justify-between">
+              <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: '12px' }}>
                 <button
                   type="button"
                   onClick={() => setCurrentStep(2)}
-                  className="flex items-center gap-2 px-5 py-2.5 rounded-xl bg-slate-700 text-slate-300 font-medium hover:bg-slate-600 transition-colors"
+                  style={{
+                    display: 'inline-flex', alignItems: 'center', gap: '8px',
+                    padding: '12px 22px', borderRadius: '14px', border: '1px solid rgba(255,255,255,0.2)',
+                    background: 'rgba(255,255,255,0.06)', color: '#E2E8F0', fontWeight: 700, fontSize: '0.86rem', cursor: 'pointer'
+                  }}
                 >
-                  <ArrowLeft className="w-4 h-4" /> Back
+                  <ArrowLeft size={16} /> Back
                 </button>
                 <button
                   type="button"
                   onClick={handleCompleteSetup}
                   disabled={saving}
-                  className="flex items-center gap-2 px-8 py-3 rounded-xl bg-emerald-500 text-slate-950 font-bold hover:bg-emerald-400 transition-colors disabled:opacity-50 shadow-lg shadow-emerald-500/20"
+                  style={{
+                    display: 'inline-flex', alignItems: 'center', gap: '8px',
+                    padding: '14px 32px', borderRadius: '14px', border: 'none',
+                    background: 'linear-gradient(135deg, #15803D 0%, #22C55E 100%)',
+                    color: '#FFFFFF', fontWeight: 900, fontSize: '0.94rem', cursor: 'pointer',
+                    boxShadow: '0 4px 20px rgba(34, 197, 94, 0.4)'
+                  }}
                 >
-                  {saving ? <Loader2 className="w-5 h-5 animate-spin" /> : <><Sparkles className="w-5 h-5" /> Complete Setup</>}
+                  {saving ? <Loader2 size={18} className="animate-spin" /> : <><Sparkles size={18} /> Complete Setup & Open Dashboard</>}
                 </button>
               </div>
             </div>
