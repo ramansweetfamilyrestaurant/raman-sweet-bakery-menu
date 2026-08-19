@@ -485,7 +485,14 @@ export default function App() {
         : '';
       msg += `• ${item.quantity}x *${item.dish.name}${portionText}* - ${sym}${itemPrice}${modText}\n`;
     });
-    msg += `\n*Total Amount:* ${sym}${grandTotal}\n\nThank you!`;
+    msg += `\n*Total Amount:* ${sym}${grandTotal}`;
+    if (customerNameInput) {
+      msg += `\n👤 *Customer Name:* ${customerNameInput}`;
+    }
+    if (customerPhoneInput) {
+      msg += `\n📞 *Customer Phone:* ${customerPhoneInput}`;
+    }
+    msg += `\n\nThank you!`;
     const targetPhone = phone.length === 10 ? `91${phone}` : phone;
     window.open(`https://wa.me/${targetPhone}?text=${encodeURIComponent(msg)}`, '_blank');
   };
@@ -2609,24 +2616,58 @@ export default function App() {
                 {cartItems.length > 0 && (
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', marginTop: 'auto', borderTop: '1px solid var(--border-light)', paddingTop: '14px' }}>
                     {!isAddon && (
-                      <div style={{ display: 'flex', gap: '8px' }}>
-                        <div style={{ flex: 1 }}>
-                          <label style={{ fontSize: '0.72rem', fontWeight: 800, color: 'var(--text-muted)', display: 'block', marginBottom: '2px' }}>TABLE #</label>
-                          <input
-                            type="text"
-                            value={orderTableInput}
-                            onChange={(e) => setOrderTableInput(e.target.value)}
-                            placeholder="e.g. 4"
-                            style={{ width: '100%', padding: '8px 12px', borderRadius: '10px', border: '1.5px solid #CBD5E1', fontSize: '0.86rem', fontWeight: 800 }}
-                          />
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                        <div style={{ display: 'flex', gap: '8px' }}>
+                          <div style={{ flex: 1 }}>
+                            <label style={{ fontSize: '0.72rem', fontWeight: 800, color: 'var(--text-muted)', display: 'block', marginBottom: '2px' }}>
+                              {getDynamicSpaceLabel() ? 'SCANNED TABLE/SPACE 🔒' : 'TABLE #'}
+                            </label>
+                            <input
+                              type="text"
+                              value={getDynamicSpaceLabel() || orderTableInput}
+                              onChange={(e) => {
+                                if (!effectiveTableNum) {
+                                  setOrderTableInput(e.target.value);
+                                }
+                              }}
+                              readOnly={Boolean(effectiveTableNum)}
+                              placeholder="e.g. 1"
+                              style={{
+                                width: '100%',
+                                padding: '8px 12px',
+                                borderRadius: '10px',
+                                border: '1.5px solid #CBD5E1',
+                                fontSize: '0.82rem',
+                                fontWeight: 800,
+                                background: effectiveTableNum ? '#F1F5F9' : '#FFFFFF',
+                                color: effectiveTableNum ? '#0F172A' : '#000000',
+                                cursor: effectiveTableNum ? 'not-allowed' : 'text'
+                              }}
+                            />
+                          </div>
+                          <div style={{ flex: 1.2 }}>
+                            <label style={{ fontSize: '0.72rem', fontWeight: 800, color: 'var(--text-muted)', display: 'block', marginBottom: '2px' }}>YOUR NAME (OPTIONAL)</label>
+                            <input
+                              type="text"
+                              value={customerNameInput}
+                              onChange={(e) => setCustomerNameInput(e.target.value)}
+                              placeholder="e.g. Rahul"
+                              style={{ width: '100%', padding: '8px 12px', borderRadius: '10px', border: '1.5px solid #CBD5E1', fontSize: '0.86rem' }}
+                            />
+                          </div>
                         </div>
-                        <div style={{ flex: 2 }}>
-                          <label style={{ fontSize: '0.72rem', fontWeight: 800, color: 'var(--text-muted)', display: 'block', marginBottom: '2px' }}>YOUR NAME (OPTIONAL)</label>
+
+                        {/* 📞 Customer Mobile Number Input Field */}
+                        <div>
+                          <label style={{ fontSize: '0.72rem', fontWeight: 800, color: 'var(--text-muted)', display: 'block', marginBottom: '2px' }}>
+                            📞 MOBILE NUMBER (OPTIONAL)
+                          </label>
                           <input
-                            type="text"
-                            value={customerNameInput}
-                            onChange={(e) => setCustomerNameInput(e.target.value)}
-                            placeholder="e.g. Rahul"
+                            type="tel"
+                            maxLength="10"
+                            value={customerPhoneInput}
+                            onChange={(e) => setCustomerPhoneInput(e.target.value.replace(/\D/g, ''))}
+                            placeholder="e.g. 9876543210"
                             style={{ width: '100%', padding: '8px 12px', borderRadius: '10px', border: '1.5px solid #CBD5E1', fontSize: '0.86rem' }}
                           />
                         </div>
