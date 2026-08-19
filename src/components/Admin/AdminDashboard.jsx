@@ -1135,6 +1135,17 @@ export default function AdminDashboard({ token, username, slug: propSlug = '', o
     };
   });
   const [settingsSavedMsg, setSettingsSavedMsg] = useState(false);
+  const toastTimeoutRef = useRef(null);
+
+  const showToast = (msg, duration = 2500) => {
+    if (toastTimeoutRef.current) clearTimeout(toastTimeoutRef.current);
+    setToastMessage(msg);
+    if (duration > 0) {
+      toastTimeoutRef.current = setTimeout(() => {
+        setToastMessage('');
+      }, duration);
+    }
+  };
 
   const getSpaceField = (prefix) => {
     const t = String(prefix || settingsForm.table_prefix || 'table').toLowerCase();
@@ -1183,7 +1194,7 @@ export default function AdminDashboard({ token, username, slug: propSlug = '', o
     setSettingsForm(updatedForm);
     setRestaurantInfo(prev => prev ? ({ ...prev, [field]: newCount }) : prev);
     setTableNumber(String(Math.max(1, newCount)));
-    setToastMessage(`✅ Total ${spaceInfo.plural} updated to ${newCount}! Saving...`);
+    showToast(`✅ Total ${spaceInfo.plural}: ${newCount}`, 2000);
 
     const currentSlug = propSlug || localStorage.getItem('touchqr_admin_slug') || (restaurantInfo && restaurantInfo.slug) || '';
     if (currentSlug) {
@@ -1228,7 +1239,7 @@ export default function AdminDashboard({ token, username, slug: propSlug = '', o
     setSettingsForm(updatedForm);
     setRestaurantInfo(prev => prev ? ({ ...prev, [field]: newCount }) : prev);
     setTableNumber(String(Math.max(1, Math.min(Number(tableNumber), newCount))));
-    setToastMessage(`🗑️ ${spaceInfo.singular} ${targetNum} removed. Total ${spaceInfo.plural.toLowerCase()}: ${newCount}`);
+    showToast(`🗑️ ${spaceInfo.singular} ${targetNum} removed. Total: ${newCount}`, 2000);
 
     const currentSlug = propSlug || localStorage.getItem('touchqr_admin_slug') || (restaurantInfo && restaurantInfo.slug) || '';
     if (currentSlug) {
@@ -1467,7 +1478,7 @@ export default function AdminDashboard({ token, username, slug: propSlug = '', o
     setSettingsForm(updatedForm);
     setRestaurantInfo(prev => prev ? ({ ...prev, table_prefix: newType }) : prev);
     const spaceInfo = getSpaceConfig(newType);
-    setToastMessage(`✅ Space type set to ${spaceInfo.singular}! Saving...`);
+    showToast(`✅ Switched to ${spaceInfo.singular}!`, 2000);
 
     try {
       await fetch('/api/admin/settings', {
