@@ -1524,6 +1524,7 @@ export default function App() {
           restaurantInfo={info}
           setRestaurantInfo={setInfo}
           onComplete={() => {
+            localStorage.setItem('touchqr_onboarding_completed', 'true');
             setInfo(prev => prev ? { ...prev, onboarding_completed: true } : { onboarding_completed: true });
             setView('admin-dashboard');
             window.history.pushState({}, '', activeAdminSlug ? `/${activeAdminSlug}/admin` : '/admin');
