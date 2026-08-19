@@ -502,6 +502,7 @@ export default function App() {
   const [customerPhoneInput, setCustomerPhoneInput] = useState('');
   const [orderSuccessModal, setOrderSuccessModal] = useState(null);
   const [placingOrder, setPlacingOrder] = useState(false);
+  const isPlacingOrderRef = useRef(false);
 
   // FIX: Table-specific localStorage key (Only for scanned table QR or active table number)
   const getOrderStorageKey = (tbl) => {
@@ -648,7 +649,8 @@ export default function App() {
   }, [activeOrderId, effectiveTableNum, info, sessionExpired]);
 
   const handleSendDirectOrder = async () => {
-    if (cartItems.length === 0) return;
+    if (cartItems.length === 0 || isPlacingOrderRef.current || placingOrder) return;
+    isPlacingOrderRef.current = true;
     setPlacingOrder(true);
     try {
       // 📍 GPS Geo-Fencing Radius Check
@@ -663,6 +665,7 @@ export default function App() {
         if (!geoCheck.allowed) {
           alert(`📍 ${geoCheck.message || 'Location verification failed.'}`);
           setPlacingOrder(false);
+          isPlacingOrderRef.current = false;
           return;
         }
 
@@ -712,6 +715,9 @@ export default function App() {
       alert(err.message || 'Failed to place order.');
     } finally {
       setPlacingOrder(false);
+      setTimeout(() => {
+        isPlacingOrderRef.current = false;
+      }, 1500);
     }
   };
 

@@ -753,6 +753,32 @@ router.post('/orders', async (req, res) => {
 
     // Step 5: Multi-Round Table Session Detection
     const cleanTable = String(table_number || '1').trim();
+
+    // 🛡️ Rapid Multi-Tap / Duplicate Submission Guard (3-Second Window)
+    try {
+      const recentOrder = await query(`
+        SELECT id, total_amount, created_at, session_id, round_number
+        FROM orders
+        WHERE restaurant_id = $1 AND table_number = $2 AND created_at >= $3
+        ORDER BY id DESC LIMIT 1
+      `, [targetId, cleanTable, new Date(Date.now() - 3000).toISOString()]);
+
+      if (recentOrder && recentOrder.length > 0) {
+        const prev = recentOrder[0];
+        if (Number(prev.total_amount) === serverVerifiedTotal) {
+          console.log(`🛡️ [DEBOUNCE GUARD] Prevented duplicate order creation from rapid multi-tap for Table ${cleanTable} (Order #${prev.id})`);
+          return res.json({
+            success: true,
+            order_id: prev.id,
+            total_amount: prev.total_amount,
+            session_id: prev.session_id,
+            round_number: prev.round_number,
+            status: 'pending'
+          });
+        }
+      }
+    } catch (e) {}
+
     let openOrders = [];
     try {
       openOrders = await query(`
