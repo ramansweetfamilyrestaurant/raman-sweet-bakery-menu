@@ -109,6 +109,15 @@ export default function OrdersView({
 
   const isPrep = (val) => val === 1 || val === '1' || val === true;
 
+  const formatCleanTableLabel = (raw) => {
+    if (!raw) return 'Table 1';
+    const str = String(raw).trim();
+    if (/^(table|room|cabin|vip|takeaway|parcel)/i.test(str) || /^[\p{Emoji}\u2000-\u3300]/u.test(str)) {
+      return str;
+    }
+    return `Table #${str}`;
+  };
+
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
       {/* Header Controls */}
@@ -205,7 +214,7 @@ export default function OrdersView({
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
                     <div>
                       <strong style={{ fontSize: '1rem', color: 'var(--adm-primary)', display: 'flex', alignItems: 'center', gap: '6px', flexWrap: 'wrap' }}>
-                        <span>Table {order.table_number || 'Takeaway'}</span>
+                        <span>{formatCleanTableLabel(order.table_number)}</span>
                         <span style={{ fontSize: '0.78rem', color: 'var(--adm-muted)' }}>#{order.id}</span>
                         {Number(order.round_number) > 1 && (
                           <span style={{ background: '#FEF3C7', color: '#B45309', border: '1px solid #FCD34D', padding: '1px 7px', borderRadius: '12px', fontSize: '0.72rem', fontWeight: 900 }}>
@@ -502,7 +511,7 @@ export default function OrdersView({
               <div key={sr.id} className="adm-card" style={{ padding: '14px', display: 'flex', flexDirection: 'column', justifyContent: 'space-between', gap: '10px', background: 'var(--adm-warning-bg)', borderColor: 'var(--adm-warning-border)' }}>
                 <div>
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '4px' }}>
-                    <strong style={{ fontSize: '1rem', color: 'var(--adm-warning)' }}>TABLE #{sr.table_number}</strong>
+                    <strong style={{ fontSize: '1rem', color: 'var(--adm-warning)' }}>{formatCleanTableLabel(sr.table_number)}</strong>
                     <span className="adm-badge adm-badge-warning">PENDING CALL</span>
                   </div>
                   <strong style={{ fontSize: '0.9rem', color: 'var(--adm-text)', display: 'block' }}>{sr.request_type}</strong>
