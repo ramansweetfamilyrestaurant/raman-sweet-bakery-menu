@@ -488,11 +488,12 @@ export default function App() {
     setPlacingOrder(true);
     try {
       // 📍 GPS Geo-Fencing Radius Check
-      if (info && info.latitude && info.longitude) {
+      let customerGeo = {};
+      if (info && info.latitude && info.longitude && info.location_initialized) {
         const geoCheck = await verifyCustomerLocation(
           info.latitude,
           info.longitude,
-          info.max_distance_meters || 100
+          info.max_distance_meters || 500
         );
 
         if (!geoCheck.allowed) {
@@ -500,6 +501,13 @@ export default function App() {
           setPlacingOrder(false);
           return;
         }
+
+        customerGeo = {
+          customer_latitude: geoCheck.customerLat,
+          customer_longitude: geoCheck.customerLng,
+          customer_accuracy: geoCheck.accuracy,
+          distance_meters: geoCheck.distanceMeters
+        };
       }
 
       const currentSlug = getSlugFromUrl() || (info && info.slug) || '';
@@ -521,7 +529,8 @@ export default function App() {
         customer_name: customerNameInput || 'Dine-In Customer',
         customer_phone: customerPhoneInput || '',
         items: itemsPayload,
-        total_amount: grandTotal
+        total_amount: grandTotal,
+        ...customerGeo
       });
 
       if (res && res.order_id) {

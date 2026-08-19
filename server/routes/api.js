@@ -11,6 +11,19 @@ import { checkExpiredSubscriptions } from '../subscriptionCron.js';
 
 const router = express.Router();
 
+// Haversine formula: Calculates distance in meters between two GPS points
+function calculateHaversineDistance(lat1, lon1, lat2, lon2) {
+  const R = 6371000;
+  const rad = Math.PI / 180;
+  const dLat = (lat2 - lat1) * rad;
+  const dLon = (lon2 - lon1) * rad;
+  const a = Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+            Math.cos(lat1 * rad) * Math.cos(lat2 * rad) *
+            Math.sin(dLon / 2) * Math.sin(dLon / 2);
+  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+  return Math.round(R * c);
+}
+
 // GET Automated Health & Capacity Monitoring Endpoint (Safe: Zero Secret Leakage)
 router.get('/health', async (req, res) => {
   const startTime = Date.now();
@@ -585,7 +598,18 @@ router.get('/combos', async (req, res) => {
 // POST Create Direct Table Order (KOT Order)
 router.post('/orders', async (req, res) => {
   try {
-    const { slug, table_number, customer_name, customer_phone, items, total_amount } = req.body;
+    const {
+      slug,
+      table_number,
+      customer_name,
+      customer_phone,
+      items,
+      total_amount,
+      customer_latitude,
+      customer_longitude,
+      customer_accuracy
+    } = req.body;
+
     const resto = await resolveRestaurant(req, slug);
     if (!resto) {
       return res.status(404).json({ error: 'Restaurant not found' });
@@ -596,13 +620,45 @@ router.post('/orders', async (req, res) => {
       return res.status(400).json({ error: 'Order items are required' });
     }
 
+    // Authoritative Server-Side Geofence Distance Validation
+    let calculatedDistance = null;
+    if (
+      resto.location_initialized &&
+      resto.latitude &&
+      resto.longitude &&
+      customer_latitude !== undefined &&
+      customer_longitude !== undefined &&
+      customer_latitude !== null &&
+      customer_longitude !== null
+    ) {
+      calculatedDistance = calculateHaversineDistance(
+        Number(customer_latitude),
+        Number(customer_longitude),
+        Number(resto.latitude),
+        Number(resto.longitude)
+      );
+
+      const accBuffer = Math.min(Number(customer_accuracy) || 0, 50);
+      const effectiveDist = Math.max(0, calculatedDistance - accBuffer);
+      const allowedRadius = Number(resto.max_distance_meters) || 500;
+
+      if (effectiveDist > allowedRadius) {
+        const displayDist = calculatedDistance > 1000 ? `${(calculatedDistance / 1000).toFixed(1)} km` : `${calculatedDistance} meters`;
+        return res.status(403).json({
+          error: 'outside_service_area',
+          message: `Order rejected: You are ${displayDist} away from this restaurant (Allowed radius: ${allowedRadius}m). Table orders must be placed within the dining area.`
+        });
+      }
+    }
+
     const itemsJson = typeof items === 'object' ? JSON.stringify(items) : items;
     const createdAt = new Date().toISOString();
 
     const result = await query(`
       INSERT INTO orders (
-        restaurant_id, table_number, customer_name, customer_phone, items, total_amount, status, sent_to_kds, created_at
-      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9) RETURNING id
+        restaurant_id, table_number, customer_name, customer_phone, items, total_amount, status, sent_to_kds, created_at,
+        customer_latitude, customer_longitude, customer_accuracy, distance_meters
+      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13) RETURNING id
     `, [
       targetId,
       table_number || '1',
@@ -612,7 +668,11 @@ router.post('/orders', async (req, res) => {
       total_amount || 0,
       'pending',
       0,
-      createdAt
+      createdAt,
+      customer_latitude !== undefined && customer_latitude !== null ? Number(customer_latitude) : null,
+      customer_longitude !== undefined && customer_longitude !== null ? Number(customer_longitude) : null,
+      customer_accuracy !== undefined && customer_accuracy !== null ? Number(customer_accuracy) : null,
+      calculatedDistance !== null ? Number(calculatedDistance) : null
     ]);
 
     const orderId = result[0]?.id || result.lastInsertRowid;
@@ -622,6 +682,7 @@ router.post('/orders', async (req, res) => {
       order_id: orderId,
       status: 'pending',
       table_number: table_number || '1',
+      distance_meters: calculatedDistance,
       message: `🎉 Order #${orderId} placed successfully for Table #${table_number || '1'}!`
     });
   } catch (err) {

@@ -207,7 +207,9 @@ export default function AdminDashboard({ token, username, slug: propSlug = '', o
   const requestDevicePermissions = async () => {
     requestAudioPermission();
     requestNotificationPermission();
-    requestGpsPermission();
+    if (!restaurantInfo?.location_initialized) {
+      requestGpsPermission();
+    }
   };
 
   const pendingLoopRef = useRef(null);

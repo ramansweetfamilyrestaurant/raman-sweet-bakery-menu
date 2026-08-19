@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
-import { Store, Bell, Utensils, MapPin, CreditCard, Lock, ChevronRight, Upload, Volume2, ShieldCheck, Printer } from 'lucide-react';
+import { Store, Bell, Utensils, MapPin, CreditCard, Lock, ChevronRight, Upload, Volume2, ShieldCheck, Printer, Map } from 'lucide-react';
 import AdminDrawer from '../components/AdminDrawer';
+import LocationPickerModal from '../../Common/LocationPickerModal';
 
 export default function SetupView({
   settingsForm = {},
@@ -24,6 +25,7 @@ export default function SetupView({
   const [uploadingLogo, setUploadingLogo] = useState(false);
   const [gpsLoading, setGpsLoading] = useState(false);
   const [saveSuccessMsg, setSaveSuccessMsg] = useState('');
+  const [showMapModal, setShowMapModal] = useState(false);
 
   const handleFormSave = async (e) => {
     if (e) e.preventDefault();
@@ -981,19 +983,31 @@ export default function SetupView({
         )}
       >
         <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
-          <button
-            type="button"
-            onClick={handleDetectGps}
-            disabled={gpsLoading}
-            className="adm-btn adm-btn-accent"
-            style={{ width: '100%', padding: '12px 16px', minHeight: '44px', fontWeight: 800, fontSize: '0.9rem', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}
-          >
-            <MapPin size={18} />
-            {gpsLoading ? '📍 Detecting Location...' : gpsSuccessMsg ? '✓ Location Detected' : gpsErrorState ? '⚠ Try Again' : '📍 Detect Current Location'}
-          </button>
+          <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+            <button
+              type="button"
+              onClick={handleDetectGps}
+              disabled={gpsLoading}
+              className="adm-btn adm-btn-accent"
+              style={{ flex: '1 1 150px', padding: '12px 14px', minHeight: '44px', fontWeight: 800, fontSize: '0.86rem', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}
+            >
+              <MapPin size={16} />
+              {gpsLoading ? 'Detecting GPS...' : gpsSuccessMsg ? '✓ GPS Captured' : '🎯 Auto Detect GPS'}
+            </button>
 
-          <span style={{ fontSize: '0.72rem', color: 'var(--adm-muted)', marginTop: '-8px', display: 'block', lineHeight: 1.4 }}>
-            Location detection uses your device's GPS/location service. If detection fails, turn on Location and allow browser permission.
+            <button
+              type="button"
+              onClick={() => setShowMapModal(true)}
+              className="adm-btn adm-btn-primary"
+              style={{ flex: '1 1 150px', padding: '12px 14px', minHeight: '44px', fontWeight: 800, fontSize: '0.86rem', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}
+            >
+              <Map size={16} />
+              🗺️ Interactive Map & Pinpoint
+            </button>
+          </div>
+
+          <span style={{ fontSize: '0.72rem', color: 'var(--adm-muted)', marginTop: '-4px', display: 'block', lineHeight: 1.4 }}>
+            Click Auto Detect or use the interactive map to drag your pin to the exact dining entrance.
           </span>
 
           {gpsSuccessMsg && (
@@ -1062,6 +1076,26 @@ export default function SetupView({
             />
             <span style={{ fontSize: '0.72rem', color: 'var(--adm-muted)', marginTop: '2px', display: 'block' }}>Default: 100 meters (dining hall boundary)</span>
           </div>
+
+          <LocationPickerModal
+            isOpen={showMapModal}
+            onClose={() => setShowMapModal(false)}
+            initialLat={Number(settingsForm.latitude) || 26.6500}
+            initialLng={Number(settingsForm.longitude) || 86.5800}
+            initialRadius={Number(settingsForm.max_distance_meters) || 100}
+            initialAddress={settingsForm.address || ''}
+            onSave={(loc) => {
+              setSettingsForm(prev => ({
+                ...prev,
+                latitude: loc.latitude,
+                longitude: loc.longitude,
+                max_distance_meters: loc.max_distance_meters,
+                location_initialized: true
+              }));
+              setGpsSuccessMsg(`✓ Location & Geofence updated via interactive map!`);
+              setTimeout(() => setGpsSuccessMsg(''), 5000);
+            }}
+          />
         </div>
       </AdminDrawer>
 

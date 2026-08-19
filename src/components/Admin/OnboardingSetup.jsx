@@ -1,12 +1,14 @@
 import React, { useState, useEffect } from 'react';
-import { MapPin, Navigation, Store, CheckCircle2, ArrowRight, ArrowLeft, Upload, Loader2, AlertCircle, Sparkles, Search, ExternalLink, Compass } from 'lucide-react';
+import { MapPin, Navigation, Store, CheckCircle2, ArrowRight, ArrowLeft, Upload, Loader2, AlertCircle, Sparkles, Search, ExternalLink, Compass, Map } from 'lucide-react';
 import { uploadImage, updateTenantSettings, completeOnboarding } from '../../api/client';
+import LocationPickerModal from '../Common/LocationPickerModal';
 
 export default function OnboardingSetup({ token, restaurantInfo, setRestaurantInfo, onComplete }) {
   const [currentStep, setCurrentStep] = useState(1);
   const [saving, setSaving] = useState(false);
   const [errorMsg, setErrorMsg] = useState('');
   const [successMsg, setSuccessMsg] = useState('');
+  const [showMapPicker, setShowMapPicker] = useState(false);
 
   // Form State initialized from prop or loaded data
   const [formData, setFormData] = useState({
@@ -580,9 +582,9 @@ export default function OnboardingSetup({ token, restaurantInfo, setRestaurantIn
                   onClick={handleDetectLocation}
                   disabled={detectingLocation || geocodingAddress}
                   style={{
-                    flex: '1 1 200px',
+                    flex: '1 1 180px',
                     display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: '8px',
-                    padding: '14px 20px', borderRadius: '14px', border: 'none',
+                    padding: '14px 18px', borderRadius: '14px', border: 'none',
                     background: 'linear-gradient(135deg, #0284C7 0%, #0369A1 100%)',
                     color: '#FFFFFF', fontWeight: 900, fontSize: '0.88rem', cursor: 'pointer',
                     boxShadow: '0 4px 15px rgba(2, 132, 199, 0.4)'
@@ -591,7 +593,7 @@ export default function OnboardingSetup({ token, restaurantInfo, setRestaurantIn
                   {detectingLocation ? (
                     <>
                       <Loader2 size={18} className="animate-spin" />
-                      Detecting Satellite GPS...
+                      Detecting GPS...
                     </>
                   ) : (
                     <>
@@ -603,12 +605,28 @@ export default function OnboardingSetup({ token, restaurantInfo, setRestaurantIn
 
                 <button
                   type="button"
+                  onClick={() => setShowMapPicker(true)}
+                  style={{
+                    flex: '1 1 180px',
+                    display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: '8px',
+                    padding: '14px 18px', borderRadius: '14px', border: '1px solid #DFBA67',
+                    background: 'linear-gradient(135deg, #DFBA67 0%, #C89F43 100%)',
+                    color: '#0A2315', fontWeight: 900, fontSize: '0.88rem', cursor: 'pointer',
+                    boxShadow: '0 4px 15px rgba(223, 186, 103, 0.35)'
+                  }}
+                >
+                  <Map size={18} />
+                  🗺️ Interactive Map & Pinpoint
+                </button>
+
+                <button
+                  type="button"
                   onClick={handleGeocodeAddress}
                   disabled={detectingLocation || geocodingAddress}
                   style={{
-                    flex: '1 1 200px',
+                    flex: '1 1 180px',
                     display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: '8px',
-                    padding: '14px 20px', borderRadius: '14px', border: '1px solid rgba(223, 186, 103, 0.4)',
+                    padding: '14px 18px', borderRadius: '14px', border: '1px solid rgba(223, 186, 103, 0.4)',
                     background: 'rgba(223, 186, 103, 0.12)',
                     color: '#DFBA67', fontWeight: 800, fontSize: '0.88rem', cursor: 'pointer'
                   }}
@@ -621,7 +639,7 @@ export default function OnboardingSetup({ token, restaurantInfo, setRestaurantIn
                   ) : (
                     <>
                       <Search size={18} />
-                      📍 Search from Address
+                      📍 Search Address
                     </>
                   )}
                 </button>
@@ -669,7 +687,16 @@ export default function OnboardingSetup({ token, restaurantInfo, setRestaurantIn
 
               {/* Verify on Google Maps preview */}
               {Boolean(Number(formData.latitude) && Number(formData.longitude)) && (
-                <div style={{ textAlign: 'center' }}>
+                <div style={{ display: 'flex', justifyContent: 'center', gap: '16px', flexWrap: 'wrap', alignItems: 'center' }}>
+                  <button
+                    type="button"
+                    onClick={() => setShowMapPicker(true)}
+                    style={{
+                      background: 'none', border: 'none', color: '#DFBA67', fontSize: '0.8rem', fontWeight: 800, cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: '4px', textDecoration: 'underline'
+                    }}
+                  >
+                    🗺️ Open Map Editor
+                  </button>
                   <a
                     href={`https://www.google.com/maps?q=${formData.latitude},${formData.longitude}`}
                     target="_blank"
@@ -679,10 +706,28 @@ export default function OnboardingSetup({ token, restaurantInfo, setRestaurantIn
                       color: '#38BDF8', fontSize: '0.8rem', fontWeight: 800, textDecoration: 'none'
                     }}
                   >
-                    🗺️ Verify Restaurant Pin on Google Maps <ExternalLink size={13} />
+                    Google Maps Pin <ExternalLink size={13} />
                   </a>
                 </div>
               )}
+
+              {/* Location Picker Modal */}
+              <LocationPickerModal
+                isOpen={showMapPicker}
+                onClose={() => setShowMapPicker(false)}
+                initialLat={Number(formData.latitude) || 26.6500}
+                initialLng={Number(formData.longitude) || 86.5800}
+                initialAddress={`${formData.address || ''} ${formData.city || ''} ${formData.state || ''} ${formData.pincode || ''}`.trim()}
+                onSave={(loc) => {
+                  setFormData(prev => ({
+                    ...prev,
+                    latitude: loc.latitude,
+                    longitude: loc.longitude,
+                    location_initialized: true
+                  }));
+                  setLocationStatus(`✅ Location pinned on map! Lat: ${loc.latitude}, Lng: ${loc.longitude}`);
+                }}
+              />
 
               <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: '12px' }}>
                 <button
