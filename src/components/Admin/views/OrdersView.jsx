@@ -334,7 +334,7 @@ export default function OrdersView({
                             🍽️ Mark Served
                           </button>
                           <button
-                            onClick={() => onOpenBillModal ? onOpenBillModal(order) : onUpdateStatus(order.id, 'completed')}
+                            onClick={() => onUpdateStatus(order.id, 'completed')}
                             className="adm-btn adm-btn-secondary adm-btn-sm"
                             style={{ fontWeight: 800, minHeight: '44px', padding: '0 12px' }}
                           >
@@ -361,7 +361,7 @@ export default function OrdersView({
                             🍽️ Mark Served
                           </button>
                           <button
-                            onClick={() => onOpenBillModal ? onOpenBillModal(order) : onUpdateStatus(order.id, 'completed')}
+                            onClick={() => onUpdateStatus(order.id, 'completed')}
                             className="adm-btn adm-btn-secondary adm-btn-sm"
                             style={{ fontWeight: 800, minHeight: '44px', padding: '0 12px' }}
                           >
@@ -371,7 +371,7 @@ export default function OrdersView({
                       )}
                       {order.status === 'served' && (
                         <button
-                          onClick={() => onOpenBillModal ? onOpenBillModal(order) : onUpdateStatus(order.id, 'completed')}
+                          onClick={() => onUpdateStatus(order.id, 'completed')}
                           className="adm-btn adm-btn-primary adm-btn-sm"
                           style={{ fontWeight: 800, minHeight: '44px', padding: '0 14px', background: '#10B981', color: '#FFFFFF' }}
                         >
