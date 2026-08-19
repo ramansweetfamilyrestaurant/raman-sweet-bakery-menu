@@ -15,9 +15,12 @@ export default function QrGeneratorView({
 }) {
   const [copied, setCopied] = React.useState(false);
   const liveOrigin = window.location.origin;
-  const activeTableNum = tableNumber || '1';
+  const hasTables = totalTablesCount > 0;
+  const activeTableNum = hasTables ? (tableNumber || '1') : '';
   const activeSlug = settingsForm?.slug || '';
-  const targetUrl = `${liveOrigin}/${activeSlug}?table=${activeTableNum}`;
+  const targetUrl = hasTables 
+    ? `${liveOrigin}/${activeSlug}?table=${activeTableNum}`
+    : `${liveOrigin}/${activeSlug}`;
   const qrImgUrl = `https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=${encodeURIComponent(targetUrl)}`;
 
   const handleCopyLink = () => {
@@ -46,7 +49,12 @@ export default function QrGeneratorView({
           </div>
         </div>
 
-        <button onClick={onPrintAllQRs} className="adm-btn adm-btn-accent" style={{ fontWeight: 800 }}>
+        <button
+          onClick={onPrintAllQRs}
+          disabled={!hasTables}
+          className="adm-btn adm-btn-accent"
+          style={{ fontWeight: 800, opacity: !hasTables ? 0.5 : 1, cursor: !hasTables ? 'not-allowed' : 'pointer' }}
+        >
           <Printer size={16} /> Print All Table QRs ({totalTablesCount} Standees)
         </button>
       </div>
@@ -57,12 +65,12 @@ export default function QrGeneratorView({
           <div>
             <strong style={{ fontSize: '0.95rem', color: 'var(--adm-primary)', display: 'flex', alignItems: 'center', gap: '8px' }}>
               <span>🍽️ Dining Hall Tables:</span>
-              <span style={{ background: totalTablesCount > 0 ? 'var(--adm-primary)' : '#9CA3AF', color: '#FFFFFF', padding: '2px 10px', borderRadius: 'var(--radius-pill)', fontSize: '0.82rem', fontWeight: 900 }}>
+              <span style={{ background: hasTables ? 'var(--adm-primary)' : '#9CA3AF', color: '#FFFFFF', padding: '2px 10px', borderRadius: 'var(--radius-pill)', fontSize: '0.82rem', fontWeight: 900 }}>
                 {totalTablesCount} Total {totalTablesCount === 1 ? 'Table' : 'Tables'}
               </span>
             </strong>
             <span style={{ fontSize: '0.78rem', color: 'var(--adm-muted)' }}>
-              {totalTablesCount > 0 
+              {hasTables 
                 ? 'Manage dining hall capacity or generate instant QR stickers.'
                 : 'Click "+ Add Table" below to configure your dining tables.'}
             </span>
@@ -71,10 +79,10 @@ export default function QrGeneratorView({
           <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
             <button
               onClick={() => onDeleteTable && onDeleteTable(tableNumber || totalTablesCount)}
-              disabled={totalTablesCount <= 0}
+              disabled={!hasTables}
               className="adm-btn adm-btn-danger adm-btn-sm"
               title="Remove Table"
-              style={{ opacity: totalTablesCount <= 0 ? 0.5 : 1, cursor: totalTablesCount <= 0 ? 'not-allowed' : 'pointer' }}
+              style={{ opacity: !hasTables ? 0.5 : 1, cursor: !hasTables ? 'not-allowed' : 'pointer' }}
             >
               <Trash2 size={15} /> Remove Table
             </button>
@@ -123,7 +131,7 @@ export default function QrGeneratorView({
             <select
               value={tableNumber}
               onChange={(e) => setTableNumber(e.target.value)}
-              disabled={totalTablesCount <= 0}
+              disabled={!hasTables}
               style={{
                 width: '100%',
                 padding: '10px 14px',
@@ -133,22 +141,22 @@ export default function QrGeneratorView({
                 fontWeight: 800,
                 color: 'var(--adm-primary)',
                 background: '#FFF',
-                opacity: totalTablesCount <= 0 ? 0.6 : 1
+                opacity: !hasTables ? 0.6 : 1
               }}
             >
-              {totalTablesCount > 0 ? (
+              {hasTables ? (
                 Array.from({ length: totalTablesCount }, (_, i) => String(i + 1)).map(tNum => (
                   <option key={tNum} value={tNum}>Table #{tNum}</option>
                 ))
               ) : (
-                <option value="1">No tables added yet</option>
+                <option value="">No tables configured</option>
               )}
             </select>
           </div>
 
           <div>
             <label style={{ fontSize: '0.76rem', fontWeight: 800, color: 'var(--adm-muted)', display: 'block', marginBottom: '6px' }}>
-              TABLE MENU DIRECT URL:
+              {hasTables ? 'TABLE MENU DIRECT URL:' : 'GENERAL RESTAURANT MENU URL:'}
             </label>
             <div style={{ display: 'flex', gap: '6px' }}>
               <input
@@ -166,11 +174,11 @@ export default function QrGeneratorView({
           <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', marginTop: '10px' }}>
             <button
               onClick={() => onPrintQR(tableNumber)}
-              disabled={totalTablesCount <= 0}
+              disabled={!hasTables}
               className="adm-btn adm-btn-primary"
-              style={{ padding: '12px', fontWeight: 800, opacity: totalTablesCount <= 0 ? 0.5 : 1, cursor: totalTablesCount <= 0 ? 'not-allowed' : 'pointer' }}
+              style={{ padding: '12px', fontWeight: 800, opacity: !hasTables ? 0.5 : 1, cursor: !hasTables ? 'not-allowed' : 'pointer' }}
             >
-              <Printer size={16} /> Print Table #{activeTableNum} QR Standee
+              <Printer size={16} /> {hasTables ? `Print Table #${activeTableNum} QR Standee` : 'No Tables to Print'}
             </button>
             <button onClick={() => onReturnToMenu && onReturnToMenu(settingsForm?.slug)} className="adm-btn adm-btn-secondary" style={{ padding: '10px', fontWeight: 700 }}>
               <ExternalLink size={15} /> Open Live Customer Menu Preview ➔
@@ -178,61 +186,106 @@ export default function QrGeneratorView({
           </div>
         </div>
 
-        {/* Right Column: Live Gold-Framed Standee Preview Canvas */}
+        {/* Right Column: Live Gold-Framed Standee Preview Canvas or Empty State */}
         <div style={{ display: 'flex', justifyContent: 'center' }}>
-          <div style={{
-            width: '320px',
-            padding: '24px 20px',
-            borderRadius: '20px',
-            border: '3px double #D4AF37',
-            background: 'linear-gradient(180deg, #FFFFFF 0%, #FAF8F5 100%)',
-            textAlign: 'center',
-            boxShadow: 'var(--adm-shadow-md)',
-            boxSizing: 'border-box'
-          }}>
+          {hasTables ? (
             <div style={{
-              display: 'inline-block',
-              background: '#0A2315',
-              color: '#D4AF37',
-              padding: '4px 18px',
-              borderRadius: '9999px',
-              fontSize: '0.95rem',
-              fontWeight: 800,
-              border: '1.5px solid #D4AF37',
-              letterSpacing: '1px',
-              marginBottom: '12px'
+              width: '320px',
+              padding: '24px 20px',
+              borderRadius: '20px',
+              border: '3px double #D4AF37',
+              background: 'linear-gradient(180deg, #FFFFFF 0%, #FAF8F5 100%)',
+              textAlign: 'center',
+              boxShadow: 'var(--adm-shadow-md)',
+              boxSizing: 'border-box'
             }}>
-              TABLE NO. {activeTableNum}
-            </div>
-
-            <h3 style={{ fontSize: '1.2rem', fontWeight: 900, color: '#0A2315', margin: '0 0 4px 0' }}>
-              {settingsForm?.name || 'Digital Menu'}
-            </h3>
-            <span style={{ fontSize: '0.74rem', fontWeight: 700, color: '#16A34A', display: 'block', marginBottom: '12px' }}>
-              {settingsForm?.tagline || 'Scan QR Code for Digital Menu'}
-            </span>
-
-            <div style={{ background: '#FFF', padding: '12px', borderRadius: '14px', border: '1px solid #E2E8E3', display: 'inline-block', marginBottom: '12px' }}>
-              <img src={qrImgUrl} alt="Table QR" style={{ width: '170px', height: '170px', display: 'block' }} />
-            </div>
-
-            <div style={{ fontSize: '0.84rem', fontWeight: 800, color: '#0A2315', marginBottom: '2px' }}>
-              📱 SCAN FOR DIGITAL MENU & ORDER
-            </div>
-            <div style={{ fontSize: '0.78rem', color: '#68756D', fontWeight: 600, marginBottom: '6px' }}>
-              स्कैन करें और डिजिटल मेन्यू देखें
-            </div>
-            {(settingsForm?.address || settingsForm?.phone) && (
-              <div style={{ fontSize: '0.68rem', color: '#64748B', borderTop: '1px solid #E2E8F0', paddingTop: '6px', marginTop: '4px' }}>
-                {settingsForm.address || ''} {settingsForm.phone ? `• Phone: ${settingsForm.phone}` : ''}
+              <div style={{
+                display: 'inline-block',
+                background: '#0A2315',
+                color: '#D4AF37',
+                padding: '4px 18px',
+                borderRadius: '9999px',
+                fontSize: '0.95rem',
+                fontWeight: 800,
+                border: '1.5px solid #D4AF37',
+                letterSpacing: '1px',
+                marginBottom: '12px'
+              }}>
+                TABLE NO. {activeTableNum}
               </div>
-            )}
-            {!settingsForm?.watermark_removal_enabled && (
-              <div style={{ fontSize: '0.64rem', color: '#15803D', fontWeight: 800, marginTop: '4px' }}>
-                ⚡ Powered by TouchQR
+
+              <h3 style={{ fontSize: '1.2rem', fontWeight: 900, color: '#0A2315', margin: '0 0 4px 0' }}>
+                {settingsForm?.name || 'Digital Menu'}
+              </h3>
+              <span style={{ fontSize: '0.74rem', fontWeight: 700, color: '#16A34A', display: 'block', marginBottom: '12px' }}>
+                {settingsForm?.tagline || 'Scan QR Code for Digital Menu'}
+              </span>
+
+              <div style={{ background: '#FFF', padding: '12px', borderRadius: '14px', border: '1px solid #E2E8E3', display: 'inline-block', marginBottom: '12px' }}>
+                <img src={qrImgUrl} alt="Table QR" style={{ width: '170px', height: '170px', display: 'block' }} />
               </div>
-            )}
-          </div>
+
+              <div style={{ fontSize: '0.84rem', fontWeight: 800, color: '#0A2315', marginBottom: '2px' }}>
+                📱 SCAN FOR DIGITAL MENU & ORDER
+              </div>
+              <div style={{ fontSize: '0.78rem', color: '#68756D', fontWeight: 600, marginBottom: '6px' }}>
+                स्कैन करें और डिजिटल मेन्यू देखें
+              </div>
+              {(settingsForm?.address || settingsForm?.phone) && (
+                <div style={{ fontSize: '0.68rem', color: '#64748B', borderTop: '1px solid #E2E8F0', paddingTop: '6px', marginTop: '4px' }}>
+                  {settingsForm.address || ''} {settingsForm.phone ? `• Phone: ${settingsForm.phone}` : ''}
+                </div>
+              )}
+              {!settingsForm?.watermark_removal_enabled && (
+                <div style={{ fontSize: '0.64rem', color: '#15803D', fontWeight: 800, marginTop: '4px' }}>
+                  ⚡ Powered by TouchQR
+                </div>
+              )}
+            </div>
+          ) : (
+            <div style={{
+              width: '320px',
+              minHeight: '420px',
+              padding: '32px 20px',
+              borderRadius: '20px',
+              border: '2px dashed #CBD5E1',
+              background: '#FFFFFF',
+              textAlign: 'center',
+              display: 'flex',
+              flexDirection: 'column',
+              alignItems: 'center',
+              justifyContent: 'center',
+              gap: '12px',
+              boxShadow: 'var(--adm-shadow-sm)'
+            }}>
+              <div style={{
+                width: '64px',
+                height: '64px',
+                borderRadius: '50%',
+                background: 'var(--adm-surface-subtle)',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                fontSize: '2rem',
+                border: '1.5px solid var(--adm-border)'
+              }}>
+                🍽️
+              </div>
+              <h4 style={{ margin: 0, fontSize: '1.1rem', fontWeight: 900, color: 'var(--adm-primary)' }}>
+                No Dining Tables Configured
+              </h4>
+              <p style={{ margin: 0, fontSize: '0.82rem', color: 'var(--adm-muted)', lineHeight: 1.5, maxWidth: '240px' }}>
+                You currently have <strong>0 tables</strong>. Click <strong>+ Add Table</strong> to generate your first dining table QR standee!
+              </p>
+              <button
+                onClick={() => onAddTable && onAddTable(1)}
+                className="adm-btn adm-btn-primary"
+                style={{ marginTop: '8px', padding: '10px 18px', fontWeight: 800 }}
+              >
+                <Plus size={16} /> Add Table #1 Now
+              </button>
+            </div>
+          )}
         </div>
       </div>
     </div>
