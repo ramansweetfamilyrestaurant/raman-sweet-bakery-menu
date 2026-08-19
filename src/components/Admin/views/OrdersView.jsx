@@ -308,6 +308,15 @@ export default function OrdersView({
                       )}
                       {order.status === 'accepted' && (
                         <>
+                          {kdsEnabled && (
+                            <button
+                              onClick={() => onUpdateStatus(order.id, 'kitchen', { sent_to_kds: 1 })}
+                              className="adm-btn adm-btn-primary adm-btn-sm"
+                              style={{ fontWeight: 800, minHeight: '44px', padding: '0 12px', background: 'linear-gradient(135deg, #0F172A 0%, #1E293B 100%)', color: '#38BDF8', border: '1px solid #38BDF8' }}
+                            >
+                              🍳 Send to Kitchen
+                            </button>
+                          )}
                           {!isPrep(order.kitchen_prepared) && (
                             <button
                               onClick={() => onUpdateStatus(order.id, 'accepted', { kitchen_prepared: 1, silent: true })}
