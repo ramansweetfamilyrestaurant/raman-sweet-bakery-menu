@@ -584,7 +584,7 @@ export default function AdminDashboard({ token, username, slug: propSlug = '', o
   };
 
   const formatDateTime = (dateStr) => {
-    if (!dateStr) return '';
+    if (!dateStr) return { timeStr: '', agoStr: '' };
     try {
       let d = parseDateRobust(dateStr);
       const now = new Date();
@@ -601,6 +601,24 @@ export default function AdminDashboard({ token, username, slug: propSlug = '', o
       return { timeStr, agoStr };
     } catch (e) {}
     return { timeStr: String(dateStr), agoStr: '' };
+  };
+
+  const formatDateTimeString = (dateStr) => {
+    if (!dateStr) return '';
+    try {
+      const d = parseDateRobust(dateStr);
+      if (isNaN(d.getTime())) return String(dateStr);
+      return d.toLocaleString('en-IN', {
+        day: '2-digit',
+        month: 'short',
+        year: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit',
+        hour12: true
+      });
+    } catch (e) {
+      return String(dateStr);
+    }
   };
 
   const handleUpdateStatus = async (orderId, newStatus, extraParams = {}) => {
@@ -853,7 +871,7 @@ export default function AdminDashboard({ token, username, slug: propSlug = '', o
             ${Number(order.round_number) > 1 ? `<div style="font-weight:900;font-size:14px;color:#000;margin-top:4px;">🔄 ROUND ${order.round_number} (ADD-ON ITEMS ONLY)</div>` : `<div style="font-weight:700;font-size:12px;color:#333;margin-top:2px;">ROUND 1</div>`}
           </div>
           <div class="meta">
-            <div><strong>Date & Time:</strong> ${formatDateTime(order.created_at)}</div>
+            <div><strong>Date & Time:</strong> ${formatDateTimeString(order.created_at)}</div>
             <div><strong>Customer:</strong> ${order.customer_name || 'Dine-In Guest'}</div>
           </div>
           <table>
@@ -885,13 +903,30 @@ export default function AdminDashboard({ token, username, slug: propSlug = '', o
     const fssai = restaurantInfo?.fssai_lic_no || '';
     const currency = (restaurantInfo?.currency_symbol !== undefined && restaurantInfo?.currency_symbol !== null) ? restaurantInfo.currency_symbol : '₹';
 
-    // Consolidate all non-cancelled rounds for this table session
-    const sessionOrders = (Array.isArray(orders) ? orders : []).filter(o => 
-      ((order.session_id && o.session_id === order.session_id) || (String(o.table_number) === String(order.table_number) && (!o.is_settled || o.id === order.id))) &&
-      o.status !== 'rejected' && o.status !== 'cancelled'
-    );
+    // Consolidate ONLY orders belonging to this exact dining session
+    let sessionOrders = [];
+    if (order.session_id) {
+      sessionOrders = (Array.isArray(orders) ? orders : []).filter(o => 
+        o.session_id === order.session_id &&
+        o.status !== 'rejected' && o.status !== 'cancelled'
+      );
+    } else if (order.parent_order_id) {
+      sessionOrders = (Array.isArray(orders) ? orders : []).filter(o => 
+        (o.id === order.parent_order_id || o.parent_order_id === order.parent_order_id || o.id === order.id) &&
+        o.status !== 'rejected' && o.status !== 'cancelled'
+      );
+    } else {
+      // Standalone single order (or parent order without session_id)
+      sessionOrders = (Array.isArray(orders) ? orders : []).filter(o => 
+        (o.id === order.id || o.parent_order_id === order.id) &&
+        o.status !== 'rejected' && o.status !== 'cancelled'
+      );
+    }
 
-    const targetOrders = sessionOrders.length > 0 ? sessionOrders : [order];
+    if (sessionOrders.length === 0) sessionOrders = [order];
+    sessionOrders.sort((a, b) => (Number(a.round_number) || Number(a.id)) - (Number(b.round_number) || Number(b.id)));
+
+    const targetOrders = sessionOrders;
     const totalRoundsCount = targetOrders.length;
 
     let subtotal = 0;
@@ -972,7 +1007,7 @@ export default function AdminDashboard({ token, username, slug: propSlug = '', o
               <strong>TABLE #${order.table_number || '1'}</strong>
               <span class="badge">${paymentMode}</span>
             </div>
-            <div><strong>Date:</strong> ${formatDateTime(order.created_at)}</div>
+            <div><strong>Date:</strong> ${formatDateTimeString(order.created_at)}</div>
             <div><strong>Guest:</strong> ${order.customer_name || 'Dine-In Customer'}</div>
             ${totalRoundsCount > 1 ? `<div style="font-weight:bold;color:#0F766E;">Consolidated Bill: ${totalRoundsCount} Rounds</div>` : ''}
           </div>
