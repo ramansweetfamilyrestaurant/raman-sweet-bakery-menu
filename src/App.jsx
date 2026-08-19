@@ -1881,12 +1881,12 @@ export default function App() {
               </strong>
               <span style={{ fontSize: '0.76rem', color: '#E5E7EB', fontWeight: 700 }}>
                 Status: {
-                  (activeOrderTrack.kitchen_prepared === 1 || activeOrderTrack.kitchen_prepared === '1' || activeOrderTrack.kitchen_prepared === true) ? '🎉 Food Prepared! Ready to Serve 🛎️' :
-                  (activeOrderTrack.status === 'accepted' || activeOrderTrack.status === 'kitchen' || activeOrderTrack.status === 'preparing') ? 'Order Accepted - Chef Preparing 👨‍🍳' :
-                  activeOrderTrack.status === 'served' ? 'Served to Table 🟢' :
                   activeOrderTrack.status === 'completed' ? `Order Completed & Paid 🏁${autoKillSeconds ? ` (Session closes in ${autoKillSeconds >= 60 ? `${Math.floor(autoKillSeconds / 60)}m ${autoKillSeconds % 60}s` : `${autoKillSeconds}s`})` : ''}` :
-                  activeOrderTrack.status === 'pending' ? 'Pending Kitchen Acceptance 🟡' :
                   activeOrderTrack.status === 'cancelled' || activeOrderTrack.status === 'rejected' ? `Order Cancelled 🔴${autoKillSeconds ? ` (Session closes in ${autoKillSeconds >= 60 ? `${Math.floor(autoKillSeconds / 60)}m ${autoKillSeconds % 60}s` : `${autoKillSeconds}s`})` : ''}` :
+                  activeOrderTrack.status === 'served' ? 'Food Served to Table 🍽️ Enjoy your meal!' :
+                  (activeOrderTrack.kitchen_prepared === 1 || activeOrderTrack.kitchen_prepared === '1' || activeOrderTrack.kitchen_prepared === true) ? '🎉 Food Prepared! Waiter bringing to table 🛎️' :
+                  (activeOrderTrack.status === 'accepted' || activeOrderTrack.status === 'kitchen' || activeOrderTrack.status === 'preparing') ? 'Order Accepted - Chef Preparing 👨‍🍳' :
+                  activeOrderTrack.status === 'pending' ? 'Pending Kitchen Acceptance 🟡' :
                   'Order Received 🟢'
                 }
               </span>
