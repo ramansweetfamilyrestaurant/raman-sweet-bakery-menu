@@ -2231,7 +2231,14 @@ export default function AdminDashboard({ token, username, slug: propSlug = '', o
                 kotFilter={kotFilter}
                 setKotFilter={setKotFilter}
                 onUpdateStatus={handleUpdateStatus}
-                onOpenAcceptRouting={(order) => setAcceptRoutingModal(order)}
+                onOpenAcceptRouting={(order) => {
+                  const isKdsEnabled = settingsForm.kds_screen_enabled !== 0 && settingsForm.kds_screen_enabled !== false && restaurantInfo?.kds_screen_enabled !== 0 && restaurantInfo?.kds_screen_enabled !== false;
+                  if (!isKdsEnabled) {
+                    handleUpdateStatus(order.id, 'accepted', { sent_to_kds: 0 });
+                  } else {
+                    setAcceptRoutingModal(order);
+                  }
+                }}
                 onOpenBillModal={setBillOrderModal}
                 onPrintBill={(order) => handlePrintCustomerBill(order, 'CASH')}
                 serviceRequests={serviceRequests}
