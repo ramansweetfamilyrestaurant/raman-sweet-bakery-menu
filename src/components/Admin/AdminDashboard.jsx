@@ -828,69 +828,117 @@ export default function AdminDashboard({ token, username, slug: propSlug = '', o
   };
 
   const getKOTHTML = (order) => {
+    let totalQty = 0;
     let itemsHtml = '';
-    safeParseItems(order.items).forEach(i => {
-      const portionText = i.portion ? ` (${i.portion})` : '';
+    const parsedItems = safeParseItems(order.items);
+
+    parsedItems.forEach(i => {
+      const q = Number(i.quantity) || 1;
+      totalQty += q;
+      const portionText = i.portion ? ` [${i.portion}]` : '';
       const mods = safeParseModifiers(i.modifiers);
       const modText = mods.length > 0
-        ? `<div style="font-size:11px;color:#333;font-weight:normal;padding-left:6px;margin-top:2px;">➕ ${mods.map(m => `${m.name} (+₹${m.price})`).join(', ')}</div>`
+        ? `<div style="font-size:12px;color:#222;font-weight:600;padding-left:28px;margin-top:2px;">👉 ${mods.map(m => m.name).join(', ')}</div>`
         : '';
+      const comboText = (i.includes || i.comboIncludes)
+        ? `<div style="font-size:11px;color:#444;font-style:italic;padding-left:28px;margin-top:2px;">📦 ${i.includes || i.comboIncludes}</div>`
+        : '';
+
       itemsHtml += `
-        <tr>
-          <td style="padding:6px 0;font-weight:bold;font-size:14px;border-bottom:1px dashed #E5E7EB;">
-            ${i.quantity}x ${i.name}${portionText}
-            ${modText}
+        <tr style="border-bottom:1px solid #000;">
+          <td style="padding:8px 0;vertical-align:top;">
+            <div style="display:flex;align-items:flex-start;">
+              <span style="font-size:18px;font-weight:900;min-width:32px;display:inline-block;">${q}x</span>
+              <div>
+                <span style="font-size:15px;font-weight:900;letter-spacing:-0.2px;">${i.name}${portionText}</span>
+                ${comboText}
+                ${modText}
+              </div>
+            </div>
           </td>
-          <td style="text-align:right;font-weight:bold;font-size:14px;border-bottom:1px dashed #E5E7EB;vertical-align:top;">₹${i.price * i.quantity}</td>
         </tr>
       `;
     });
+
+    const isRoundAddon = Number(order.round_number) > 1;
+
     return `
       <!DOCTYPE html>
       <html>
         <head>
-          <title>KOT Ticket - Table ${order.table_number || '1'}</title>
+          <meta charset="utf-8" />
+          <title>KOT - Table #${order.table_number || '1'} (KOT #${order.id})</title>
           <style>
-            @media print {
-              body { margin: 0; padding: 0; width: 100%; }
+            @page { margin: 0; size: 80mm auto; }
+            body {
+              font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+              width: 72mm;
+              margin: 0 auto;
+              padding: 10px;
+              color: #000;
+              -webkit-print-color-adjust: exact;
+              print-color-adjust: exact;
             }
-            body { font-family: 'Courier New', Courier, monospace; padding: 14px; width: 280px; margin: 0 auto; background: #FFF; color: #000; }
-            .header { text-align: center; border-bottom: 2px solid #000; padding-bottom: 8px; margin-bottom: 10px; }
-            .header h2 { margin: 0; font-size: 20px; font-weight: 900; }
-            .header h3 { margin: 4px 0 0 0; font-size: 16px; background: #000; color: #FFF; display: inline-block; padding: 2px 8px; }
-            .meta { border-bottom: 1px dashed #000; padding-bottom: 8px; margin-bottom: 10px; font-size: 13px; line-height: 1.4; }
-            table { width: 100%; font-size: 14px; border-collapse: collapse; margin-bottom: 10px; }
-            .total { border-top: 2px solid #000; border-bottom: 2px solid #000; padding: 8px 0; font-weight: 900; font-size: 18px; display: flex; justify-content: space-between; }
-            .footer { text-align: center; font-size: 11px; margin-top: 12px; font-weight: bold; }
+            .header { text-align: center; border-bottom: 2px solid #000; padding-bottom: 8px; margin-bottom: 8px; }
+            .header h2 { margin: 0; font-size: 19px; font-weight: 900; letter-spacing: 0.5px; }
+            .table-badge {
+              border: 2px solid #000;
+              padding: 4px 10px;
+              font-size: 18px;
+              font-weight: 900;
+              display: inline-block;
+              margin: 6px 0 4px 0;
+            }
+            .round-badge {
+              background: #000;
+              color: #FFF;
+              padding: 4px 10px;
+              font-size: 13px;
+              font-weight: 900;
+              display: block;
+              margin: 4px auto 0 auto;
+              border-radius: 4px;
+              border: 1px solid #000;
+            }
+            .meta { border-bottom: 1.5px dashed #000; padding-bottom: 6px; margin-bottom: 8px; font-size: 12px; line-height: 1.5; }
+            table { width: 100%; font-size: 14px; border-collapse: collapse; margin-bottom: 8px; }
+            .total-qty { border-top: 2px solid #000; border-bottom: 2px solid #000; padding: 6px 0; font-weight: 900; font-size: 15px; display: flex; justify-content: space-between; margin-top: 4px; }
+            .footer { text-align: center; font-size: 11px; margin-top: 10px; font-weight: bold; border-top: 1px dashed #000; padding-top: 6px; }
           </style>
         </head>
         <body>
           <div class="header">
             <h2>KITCHEN ORDER TICKET</h2>
-            <h3>TABLE #${order.table_number || '1'} • KOT #${order.id}</h3>
-            ${Number(order.round_number) > 1 ? `<div style="font-weight:900;font-size:14px;color:#000;margin-top:4px;">🔄 ROUND ${order.round_number} (ADD-ON ITEMS ONLY)</div>` : `<div style="font-weight:700;font-size:12px;color:#333;margin-top:2px;">ROUND 1</div>`}
+            <div class="table-badge">TABLE #${order.table_number || '1'} &bull; KOT #${order.id}</div>
+            ${isRoundAddon
+              ? `<div class="round-badge">🔄 ROUND ${order.round_number} (ADD-ON ORDER)</div>`
+              : `<div style="font-weight:900;font-size:12px;margin-top:2px;">ROUND 1 (NEW ORDER)</div>`
+            }
           </div>
+
           <div class="meta">
             <div><strong>Date & Time:</strong> ${formatDateTimeString(order.created_at)}</div>
             <div><strong>Customer:</strong> ${order.customer_name || 'Dine-In Guest'}</div>
           </div>
+
           <table>
             <thead>
-              <tr style="border-bottom:1px solid #000;text-align:left;font-size:12px;">
-                <th>ITEM & QTY</th>
-                <th style="text-align:right;">AMOUNT</th>
+              <tr style="border-bottom:2px solid #000;text-align:left;font-size:13px;">
+                <th style="padding-bottom:4px;">ITEMS TO COOK</th>
               </tr>
             </thead>
             <tbody>
               ${itemsHtml}
             </tbody>
           </table>
-          <div class="total">
-            <span>KOT BATCH TOTAL:</span>
-            <span>₹${order.total_amount}</span>
+
+          <div class="total-qty">
+            <span>TOTAL ITEMS IN THIS KOT:</span>
+            <span>${totalQty}</span>
           </div>
+
           <div class="footer">
-            *** COOK ONLY THE ITEMS LISTED ABOVE ***
+            *** COOK ONLY THE ITEMS LISTED IN THIS KOT ***
           </div>
         </body>
       </html>
