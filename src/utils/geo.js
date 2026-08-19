@@ -23,14 +23,14 @@ export function verifyCustomerLocation(targetLat, targetLng, maxRadiusMeters = 5
 
     let resolved = false;
 
-    // Safety Timeout: Never block table order for more than 1.5 seconds!
+    // Safety Timeout: Never block table order for more than 4.5 seconds
     const timer = setTimeout(() => {
       if (!resolved) {
         resolved = true;
         console.log('⚡ Location check fast-passed (timeout safety guard triggered for instant order)');
         resolve({ allowed: true, distanceMeters: 0 });
       }
-    }, 1500);
+    }, 4500);
 
     navigator.geolocation.getCurrentPosition(
       (position) => {
@@ -64,9 +64,9 @@ export function verifyCustomerLocation(targetLat, targetLng, maxRadiusMeters = 5
         resolve({ allowed: true, distanceMeters: 0 });
       },
       {
-        enableHighAccuracy: false, // Fast Cellular/Wi-Fi positioning (0.1s response)
-        timeout: 1400,
-        maximumAge: 300000 // Cache position for 5 minutes for instant response
+        enableHighAccuracy: true,
+        timeout: 4000,
+        maximumAge: 10000
       }
     );
   });

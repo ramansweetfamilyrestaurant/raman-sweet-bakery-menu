@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { MapPin, Navigation, Store, CheckCircle2, ArrowRight, ArrowLeft, Upload, Loader2, AlertCircle, Sparkles } from 'lucide-react';
+import { MapPin, Navigation, Store, CheckCircle2, ArrowRight, ArrowLeft, Upload, Loader2, AlertCircle, Sparkles, Search, ExternalLink, Compass } from 'lucide-react';
 import { uploadImage, updateTenantSettings, completeOnboarding } from '../../api/client';
 
 export default function OnboardingSetup({ token, restaurantInfo, setRestaurantInfo, onComplete }) {
@@ -111,43 +111,124 @@ export default function OnboardingSetup({ token, restaurantInfo, setRestaurantIn
     }
   };
 
-  // Auto Detect GPS Location
+  // Multi-Sample Precision GPS Engine
   const handleDetectLocation = () => {
     if (!navigator.geolocation) {
-      setLocationStatus('Geolocation is not supported by your browser. Please enter coordinates manually.');
+      setLocationStatus('⚠️ Geolocation is not supported by your browser. Please enter coordinates manually.');
       return;
     }
 
     setDetectingLocation(true);
-    setLocationStatus('📍 Requesting GPS permission from device...');
+    setLocationStatus('📍 Accessing high-precision GPS satellite sensor...');
 
-    navigator.geolocation.getCurrentPosition(
-      (position) => {
-        const lat = parseFloat(position.coords.latitude.toFixed(6));
-        const lon = parseFloat(position.coords.longitude.toFixed(6));
+    let bestReading = null;
+    let watchId = null;
+    let finished = false;
+
+    const finalize = (reading) => {
+      if (finished) return;
+      finished = true;
+      if (watchId !== null) {
+        try { navigator.geolocation.clearWatch(watchId); } catch {}
+      }
+      setDetectingLocation(false);
+
+      if (reading && reading.coords) {
+        const lat = parseFloat(reading.coords.latitude.toFixed(6));
+        const lon = parseFloat(reading.coords.longitude.toFixed(6));
+        const accuracy = Math.round(reading.coords.accuracy || 0);
+
         setFormData(prev => ({
           ...prev,
           latitude: lat,
           longitude: lon,
           location_initialized: true
         }));
-        setLocationStatus('✅ Location detected successfully!');
-        setDetectingLocation(false);
+        setLocationStatus(`✅ GPS Fixed! Lat: ${lat}, Lng: ${lon} (Accuracy: ±${accuracy}m)`);
+      } else {
+        setLocationStatus('⚠️ Could not get accurate GPS lock. You can search from your restaurant address below.');
+      }
+    };
+
+    // 1. Initial High-Accuracy Fix
+    navigator.geolocation.getCurrentPosition(
+      (pos) => {
+        bestReading = pos;
+        // If accuracy is sharp (<= 20 meters), finalize immediately
+        if (pos.coords.accuracy && pos.coords.accuracy <= 20) {
+          finalize(pos);
+          return;
+        }
+
+        // Otherwise, watch for 3.5 seconds to acquire a tighter GPS fix
+        const startTime = Date.now();
+        watchId = navigator.geolocation.watchPosition(
+          (watchPos) => {
+            if (!bestReading || (watchPos.coords.accuracy && watchPos.coords.accuracy < bestReading.coords.accuracy)) {
+              bestReading = watchPos;
+            }
+            if ((watchPos.coords.accuracy && watchPos.coords.accuracy <= 15) || (Date.now() - startTime >= 3500)) {
+              finalize(bestReading);
+            }
+          },
+          () => {
+            finalize(bestReading);
+          },
+          { enableHighAccuracy: true, timeout: 5000, maximumAge: 0 }
+        );
+
+        setTimeout(() => {
+          finalize(bestReading);
+        }, 4000);
       },
-      (error) => {
-        setDetectingLocation(false);
-        if (error.code === error.PERMISSION_DENIED) {
-          setLocationStatus('⚠️ Location permission denied. Please allow location access or enter coordinates manually.');
-        } else if (error.code === error.POSITION_UNAVAILABLE) {
-          setLocationStatus('⚠️ Unable to detect your location. Please try again.');
-        } else if (error.code === error.TIMEOUT) {
-          setLocationStatus('⚠️ Location detection timed out. Please try again.');
+      (err) => {
+        if (err.code === err.PERMISSION_DENIED) {
+          setLocationStatus('⚠️ GPS Permission Denied. Please enable location in browser settings or use Address Search.');
+          setDetectingLocation(false);
         } else {
-          setLocationStatus('⚠️ Failed to detect location. Please enter coordinates manually.');
+          finalize(null);
         }
       },
-      { timeout: 10000, enableHighAccuracy: true }
+      { enableHighAccuracy: true, timeout: 8000, maximumAge: 0 }
     );
+  };
+
+  // Address Geocoder fallback using OpenStreetMap Nominatim API
+  const [geocodingAddress, setGeocodingAddress] = useState(false);
+  const handleGeocodeAddress = async () => {
+    const queryParts = [formData.address, formData.city, formData.state, formData.pincode, 'India'].filter(Boolean);
+    const fullQuery = queryParts.join(', ').trim();
+    if (!fullQuery || fullQuery === 'India') {
+      setLocationStatus('⚠️ Please enter your Street Address and City in Step 1 to lookup coordinates.');
+      return;
+    }
+
+    setGeocodingAddress(true);
+    setLocationStatus('🔍 Searching coordinates from address on OpenStreetMap...');
+    try {
+      const res = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(fullQuery)}&limit=1`, {
+        headers: { 'Accept-Language': 'en' }
+      });
+      const data = await res.json();
+      if (data && data.length > 0) {
+        const item = data[0];
+        const lat = parseFloat(parseFloat(item.lat).toFixed(6));
+        const lon = parseFloat(parseFloat(item.lon).toFixed(6));
+        setFormData(prev => ({
+          ...prev,
+          latitude: lat,
+          longitude: lon,
+          location_initialized: true
+        }));
+        setLocationStatus(`✅ Address coordinates matched: ${item.display_name.substring(0, 65)}...`);
+      } else {
+        setLocationStatus('⚠️ Could not find exact coordinates for this address. Try entering nearby landmark or manual lat/lng.');
+      }
+    } catch (e) {
+      setLocationStatus('⚠️ Address lookup failed. Please enter coordinates manually.');
+    } finally {
+      setGeocodingAddress(false);
+    }
   };
 
   // Save Step 2
@@ -487,43 +568,77 @@ export default function OnboardingSetup({ token, restaurantInfo, setRestaurantIn
                 border: '1px solid rgba(223, 186, 103, 0.3)', color: '#DFBA67', fontSize: '0.82rem', lineHeight: 1.5
               }}>
                 <strong style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.88rem', color: '#DFBA67', marginBottom: '4px' }}>
-                  <Navigation size={18} /> GPS Location Setup
+                  <Navigation size={18} /> High-Precision GPS Location Setup
                 </strong>
-                Auto-detecting your location helps customers verify dining distance and order accurately. GPS permission is only requested when you click the button below.
+                Accurate coordinates ensure customers can only place orders when physically dining at your restaurant. You can detect via live device GPS or search your address.
               </div>
 
-              <div style={{ textAlign: 'center', padding: '16px 0' }}>
+              {/* Action Buttons: Auto GPS + Address Search */}
+              <div style={{ display: 'flex', gap: '12px', flexWrap: 'wrap', justifyContent: 'center' }}>
                 <button
                   type="button"
                   onClick={handleDetectLocation}
-                  disabled={detectingLocation}
+                  disabled={detectingLocation || geocodingAddress}
                   style={{
-                    display: 'inline-flex', alignItems: 'center', gap: '8px',
-                    padding: '14px 28px', borderRadius: '14px', border: 'none',
+                    flex: '1 1 200px',
+                    display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: '8px',
+                    padding: '14px 20px', borderRadius: '14px', border: 'none',
                     background: 'linear-gradient(135deg, #0284C7 0%, #0369A1 100%)',
-                    color: '#FFFFFF', fontWeight: 900, fontSize: '0.92rem', cursor: 'pointer',
+                    color: '#FFFFFF', fontWeight: 900, fontSize: '0.88rem', cursor: 'pointer',
                     boxShadow: '0 4px 15px rgba(2, 132, 199, 0.4)'
                   }}
                 >
                   {detectingLocation ? (
                     <>
                       <Loader2 size={18} className="animate-spin" />
-                      Detecting Coordinates...
+                      Detecting Satellite GPS...
                     </>
                   ) : (
                     <>
-                      <Navigation size={18} />
-                      Auto Detect Location
+                      <Compass size={18} />
+                      🎯 Auto Detect GPS
                     </>
                   )}
                 </button>
 
-                {locationStatus && (
-                  <p style={{ marginTop: '12px', fontSize: '0.8rem', fontWeight: 700, color: locationStatus.includes('success') ? '#86EFAC' : '#FDE047' }}>
-                    {locationStatus}
-                  </p>
-                )}
+                <button
+                  type="button"
+                  onClick={handleGeocodeAddress}
+                  disabled={detectingLocation || geocodingAddress}
+                  style={{
+                    flex: '1 1 200px',
+                    display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: '8px',
+                    padding: '14px 20px', borderRadius: '14px', border: '1px solid rgba(223, 186, 103, 0.4)',
+                    background: 'rgba(223, 186, 103, 0.12)',
+                    color: '#DFBA67', fontWeight: 800, fontSize: '0.88rem', cursor: 'pointer'
+                  }}
+                >
+                  {geocodingAddress ? (
+                    <>
+                      <Loader2 size={18} className="animate-spin" />
+                      Searching Address...
+                    </>
+                  ) : (
+                    <>
+                      <Search size={18} />
+                      📍 Search from Address
+                    </>
+                  )}
+                </button>
               </div>
+
+              {locationStatus && (
+                <div style={{
+                  padding: '10px 14px', borderRadius: '10px',
+                  background: locationStatus.includes('✅') ? 'rgba(34, 197, 94, 0.12)' : 'rgba(234, 179, 8, 0.12)',
+                  border: locationStatus.includes('✅') ? '1px solid rgba(34, 197, 94, 0.3)' : '1px solid rgba(234, 179, 8, 0.3)',
+                  fontSize: '0.82rem', fontWeight: 700,
+                  color: locationStatus.includes('✅') ? '#86EFAC' : '#FDE047',
+                  textAlign: 'center'
+                }}>
+                  {locationStatus}
+                </div>
+              )}
 
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '14px' }}>
                 <div>
@@ -534,6 +649,7 @@ export default function OnboardingSetup({ token, restaurantInfo, setRestaurantIn
                     name="latitude"
                     value={formData.latitude}
                     onChange={handleChange}
+                    placeholder="e.g. 28.6139"
                     style={{ width: '100%', padding: '12px 16px', borderRadius: '12px', background: '#071A0E', border: '1px solid rgba(255,255,255,0.15)', color: '#FFF', fontSize: '0.9rem', outline: 'none', boxSizing: 'border-box' }}
                   />
                 </div>
@@ -545,10 +661,28 @@ export default function OnboardingSetup({ token, restaurantInfo, setRestaurantIn
                     name="longitude"
                     value={formData.longitude}
                     onChange={handleChange}
+                    placeholder="e.g. 77.2090"
                     style={{ width: '100%', padding: '12px 16px', borderRadius: '12px', background: '#071A0E', border: '1px solid rgba(255,255,255,0.15)', color: '#FFF', fontSize: '0.9rem', outline: 'none', boxSizing: 'border-box' }}
                   />
                 </div>
               </div>
+
+              {/* Verify on Google Maps preview */}
+              {Boolean(Number(formData.latitude) && Number(formData.longitude)) && (
+                <div style={{ textAlign: 'center' }}>
+                  <a
+                    href={`https://www.google.com/maps?q=${formData.latitude},${formData.longitude}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    style={{
+                      display: 'inline-flex', alignItems: 'center', gap: '6px',
+                      color: '#38BDF8', fontSize: '0.8rem', fontWeight: 800, textDecoration: 'none'
+                    }}
+                  >
+                    🗺️ Verify Restaurant Pin on Google Maps <ExternalLink size={13} />
+                  </a>
+                </div>
+              )}
 
               <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: '12px' }}>
                 <button
