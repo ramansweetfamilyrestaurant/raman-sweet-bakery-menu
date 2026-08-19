@@ -78,6 +78,14 @@ export default function App() {
   const getInitialView = () => {
     const path = (window.location.pathname || '/').toLowerCase().replace(/\/$/, '') || '/';
     const hash = (window.location.hash || '').toLowerCase();
+    const urlParams = new URLSearchParams(window.location.search);
+    const hasAuthCodeOrToken = urlParams.get('code') || urlParams.get('token');
+
+    // Prevent any AdminLogin flash during post-registration / Cashfree authorization code exchange
+    if (hasAuthCodeOrToken) {
+      return 'auth-exchanging';
+    }
+
     if (isSlugKitchenPath(path)) return 'kitchen-kds';
     if (path === '/privacy-policy' || path === '/privacy') return 'privacy-policy';
     if (path === '/terms' || path === '/terms-of-service') return 'terms';
@@ -179,10 +187,12 @@ export default function App() {
             handleAdminLoginSuccess(data.token, data.username || 'admin', data.slug || slugParam || '', data.restaurant);
           } else {
             console.warn('Authorization code exchange notice:', data?.error);
+            setView('admin-login');
           }
         })
         .catch(err => {
           console.error('Authorization code exchange network error:', err);
+          setView('admin-login');
         });
     } else {
       // Backward-compatibility fallback for legacy token links if any
@@ -1509,6 +1519,39 @@ export default function App() {
       <Suspense fallback={<div style={{ padding: '60px', textAlign: 'center', background: '#090D16', color: '#F8FAFC', minHeight: '100vh', fontWeight: 800 }}>🍳 Loading Kitchen Display System...</div>}>
         <StandaloneKdsPage slug={getSlugFromUrl() || (info && info.slug) || ''} />
       </Suspense>
+    );
+  }
+
+  // Dedicated Auth Exchanging Screen (Prevents 1.5s flash of AdminLogin screen after registration / Cashfree redirect)
+  if (view === 'auth-exchanging') {
+    return (
+      <div style={{
+        minHeight: '100vh',
+        background: '#0A2315',
+        display: 'flex',
+        flexDirection: 'column',
+        alignItems: 'center',
+        justifyContent: 'center',
+        color: '#DFBA67',
+        fontFamily: "'Plus Jakarta Sans', sans-serif",
+        textAlign: 'center',
+        padding: '24px'
+      }}>
+        <div style={{
+          width: '48px', height: '48px',
+          border: '4px solid rgba(223,186,103,0.25)',
+          borderTopColor: '#FFD700',
+          borderRadius: '50%',
+          marginBottom: '20px',
+          animation: 'spin 0.8s linear infinite'
+        }} />
+        <div style={{ fontSize: '1.25rem', fontWeight: 900, color: '#FFD700', letterSpacing: '0.3px' }}>
+          🎉 Welcome to TouchQR!
+        </div>
+        <p style={{ fontSize: '0.88rem', color: '#E2E8F0', marginTop: '8px', fontWeight: 600, maxWidth: '380px', lineHeight: 1.5 }}>
+          Setting up your restaurant security & launching Admin Dashboard...
+        </p>
+      </div>
     );
   }
 
