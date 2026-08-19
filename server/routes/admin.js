@@ -9,6 +9,7 @@ import { isR2Active, uploadImageToR2, deleteImageFromR2, getR2Diagnostics, purge
 import { authenticateToken, requireActiveSubscription, checkSubscriptionStatus } from '../middleware/auth.js';
 import { JWT_SECRET } from '../config/jwt.js';
 import { adminLoginRateLimiter } from '../middleware/rateLimiters.js';
+import { clearRestoResolveCache } from './api.js';
 
 let sharpModule = null;
 async function getSharp() {
@@ -1222,6 +1223,8 @@ const handleUpdateSettings = async (req, res) => {
       pincode !== undefined ? pincode : null,
       targetId
     ]);
+
+    clearRestoResolveCache();
 
     res.json({ success: true, message: 'Restaurant settings updated successfully!' });
   } catch (err) {

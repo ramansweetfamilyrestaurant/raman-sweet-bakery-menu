@@ -453,6 +453,7 @@ router.get('/info', async (req, res) => {
       gst_enabled: resto.gst_enabled === 1 || resto.gst_enabled === true,
       gstin_number: resto.gstin_number || '',
       total_tables: resto.total_tables !== undefined && resto.total_tables !== null ? Number(resto.total_tables) : 0,
+      table_prefix: resto.table_prefix || 'table',
       order_retention_days: resto.order_retention_days || 7,
       custom_domain: resto.custom_domain || '',
       kds_screen_enabled: resto.kds_screen_enabled !== undefined && resto.kds_screen_enabled !== null ? Number(resto.kds_screen_enabled) : 1,
