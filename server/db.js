@@ -484,6 +484,10 @@ async function createTables() {
       `ALTER TABLE orders ADD COLUMN IF NOT EXISTS customer_longitude NUMERIC;`,
       `ALTER TABLE orders ADD COLUMN IF NOT EXISTS customer_accuracy NUMERIC;`,
       `ALTER TABLE orders ADD COLUMN IF NOT EXISTS distance_meters NUMERIC;`,
+      `ALTER TABLE orders ADD COLUMN IF NOT EXISTS session_id VARCHAR(100);`,
+      `ALTER TABLE orders ADD COLUMN IF NOT EXISTS round_number INT DEFAULT 1;`,
+      `ALTER TABLE orders ADD COLUMN IF NOT EXISTS parent_order_id INT;`,
+      `ALTER TABLE orders ADD COLUMN IF NOT EXISTS is_settled INT DEFAULT 0;`,
       `ALTER TABLE restaurants ADD COLUMN IF NOT EXISTS kds_screen_enabled INT DEFAULT 1;`,
       `ALTER TABLE restaurants ADD COLUMN IF NOT EXISTS owner_name VARCHAR(255);`,
       `ALTER TABLE restaurants ADD COLUMN IF NOT EXISTS city VARCHAR(100);`,
@@ -884,6 +888,10 @@ async function createTables() {
       if (!orderCols.some(c => c.name === 'customer_longitude')) sqliteDb.exec("ALTER TABLE orders ADD COLUMN customer_longitude REAL");
       if (!orderCols.some(c => c.name === 'customer_accuracy')) sqliteDb.exec("ALTER TABLE orders ADD COLUMN customer_accuracy REAL");
       if (!orderCols.some(c => c.name === 'distance_meters')) sqliteDb.exec("ALTER TABLE orders ADD COLUMN distance_meters REAL");
+      if (!orderCols.some(c => c.name === 'session_id')) sqliteDb.exec("ALTER TABLE orders ADD COLUMN session_id TEXT");
+      if (!orderCols.some(c => c.name === 'round_number')) sqliteDb.exec("ALTER TABLE orders ADD COLUMN round_number INTEGER DEFAULT 1");
+      if (!orderCols.some(c => c.name === 'parent_order_id')) sqliteDb.exec("ALTER TABLE orders ADD COLUMN parent_order_id INTEGER");
+      if (!orderCols.some(c => c.name === 'is_settled')) sqliteDb.exec("ALTER TABLE orders ADD COLUMN is_settled INTEGER DEFAULT 0");
 
       if (!restoCols.some(c => c.name === 'kds_screen_enabled')) sqliteDb.exec("ALTER TABLE restaurants ADD COLUMN kds_screen_enabled INTEGER DEFAULT 1");
 

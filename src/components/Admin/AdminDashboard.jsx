@@ -849,12 +849,12 @@ export default function AdminDashboard({ token, username, slug: propSlug = '', o
         <body>
           <div class="header">
             <h2>KITCHEN ORDER TICKET</h2>
-            <h3>TABLE #${order.table_number || '1'}</h3>
+            <h3>TABLE #${order.table_number || '1'} • KOT #${order.id}</h3>
+            ${Number(order.round_number) > 1 ? `<div style="font-weight:900;font-size:14px;color:#000;margin-top:4px;">🔄 ROUND ${order.round_number} (ADD-ON ITEMS ONLY)</div>` : `<div style="font-weight:700;font-size:12px;color:#333;margin-top:2px;">ROUND 1</div>`}
           </div>
           <div class="meta">
-            <div><strong>KOT Order ID:</strong> #${order.id}</div>
-            <div><strong>Customer:</strong> ${order.customer_name || 'Dine-In Guest'}</div>
             <div><strong>Date & Time:</strong> ${formatDateTime(order.created_at)}</div>
+            <div><strong>Customer:</strong> ${order.customer_name || 'Dine-In Guest'}</div>
           </div>
           <table>
             <thead>
@@ -868,11 +868,11 @@ export default function AdminDashboard({ token, username, slug: propSlug = '', o
             </tbody>
           </table>
           <div class="total">
-            <span>TOTAL BILL:</span>
+            <span>KOT BATCH TOTAL:</span>
             <span>₹${order.total_amount}</span>
           </div>
           <div class="footer">
-            *** READY FOR KITCHEN PREPARATION ***
+            *** COOK ONLY THE ITEMS LISTED ABOVE ***
           </div>
         </body>
       </html>
@@ -885,25 +885,47 @@ export default function AdminDashboard({ token, username, slug: propSlug = '', o
     const fssai = restaurantInfo?.fssai_lic_no || '';
     const currency = (restaurantInfo?.currency_symbol !== undefined && restaurantInfo?.currency_symbol !== null) ? restaurantInfo.currency_symbol : '₹';
 
+    // Consolidate all non-cancelled rounds for this table session
+    const sessionOrders = (Array.isArray(orders) ? orders : []).filter(o => 
+      ((order.session_id && o.session_id === order.session_id) || (String(o.table_number) === String(order.table_number) && (!o.is_settled || o.id === order.id))) &&
+      o.status !== 'rejected' && o.status !== 'cancelled'
+    );
+
+    const targetOrders = sessionOrders.length > 0 ? sessionOrders : [order];
+    const totalRoundsCount = targetOrders.length;
+
     let subtotal = 0;
     let itemsHtml = '';
-    safeParseItems(order.items).forEach(i => {
-      const portionText = i.portion ? ` (${i.portion})` : '';
-      const mods = safeParseModifiers(i.modifiers);
-      const modText = mods.length > 0
-        ? `<div style="font-size:11px;color:#555;font-weight:normal;padding-left:6px;margin-top:2px;">+ ${mods.map(m => `${m.name} (+${currency}${m.price})`).join(', ')}</div>`
-        : '';
-      const lineTotal = Number(i.price) * Number(i.quantity);
-      subtotal += lineTotal;
-      itemsHtml += `
-        <tr>
-          <td style="padding:4px 0;font-weight:bold;font-size:13px;border-bottom:1px dashed #DDD;">
-            ${i.quantity}x ${i.name}${portionText}
-            ${modText}
-          </td>
-          <td style="text-align:right;font-weight:bold;font-size:13px;border-bottom:1px dashed #DDD;vertical-align:top;">${currency}${lineTotal}</td>
-        </tr>
-      `;
+
+    targetOrders.forEach((ord, oIdx) => {
+      const parsed = safeParseItems(ord.items);
+      if (totalRoundsCount > 1) {
+        itemsHtml += `
+          <tr style="background:#F1F5F9;">
+            <td colspan="2" style="padding:4px 6px;font-weight:900;font-size:11px;color:#334155;border-top:1px solid #CBD5E1;">
+              ROUND ${ord.round_number || (oIdx + 1)} • KOT #${ord.id}
+            </td>
+          </tr>
+        `;
+      }
+      parsed.forEach(i => {
+        const portionText = i.portion ? ` (${i.portion})` : '';
+        const mods = safeParseModifiers(i.modifiers);
+        const modText = mods.length > 0
+          ? `<div style="font-size:11px;color:#555;font-weight:normal;padding-left:6px;margin-top:2px;">+ ${mods.map(m => `${m.name} (+${currency}${m.price})`).join(', ')}</div>`
+          : '';
+        const lineTotal = Number(i.price) * Number(i.quantity);
+        subtotal += lineTotal;
+        itemsHtml += `
+          <tr>
+            <td style="padding:4px 0;font-weight:bold;font-size:13px;border-bottom:1px dashed #DDD;">
+              ${i.quantity}x ${i.name}${portionText}
+              ${modText}
+            </td>
+            <td style="text-align:right;font-weight:bold;font-size:13px;border-bottom:1px dashed #DDD;vertical-align:top;">${currency}${lineTotal}</td>
+          </tr>
+        `;
+      });
     });
 
     let cgst = 0;
@@ -920,43 +942,45 @@ export default function AdminDashboard({ token, username, slug: propSlug = '', o
       <!DOCTYPE html>
       <html>
         <head>
-          <title>Tax Invoice / Customer Bill - Order #${order.id}</title>
+          <meta charset="utf-8" />
+          <title>Customer Bill - Table #${order.table_number}</title>
           <style>
-            @media print {
-              body { margin: 0; padding: 0; width: 100%; }
-            }
-            body { font-family: 'Courier New', Courier, monospace; padding: 14px; width: 290px; margin: 0 auto; background: #FFF; color: #000; }
-            .header { text-align: center; border-bottom: 2px double #000; padding-bottom: 8px; margin-bottom: 10px; }
+            @page { margin: 0; size: 80mm auto; }
+            body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; width: 72mm; margin: 0 auto; padding: 10px; color: #000; }
+            .header { text-align: center; border-bottom: 2px solid #000; padding-bottom: 8px; margin-bottom: 8px; }
             .header h2 { margin: 0; font-size: 18px; font-weight: 900; }
             .header p { margin: 2px 0; font-size: 11px; }
-            .badge { background: #000; color: #FFF; font-weight: 900; font-size: 12px; padding: 2px 8px; display: inline-block; margin-top: 4px; }
-            .meta { border-bottom: 1px dashed #000; padding-bottom: 8px; margin-bottom: 10px; font-size: 12px; line-height: 1.5; }
-            table { width: 100%; font-size: 13px; border-collapse: collapse; margin-bottom: 10px; }
-            .totals { border-top: 1px solid #000; border-bottom: 2px solid #000; padding: 6px 0; font-size: 13px; line-height: 1.5; }
-            .grand-total { font-weight: 900; font-size: 17px; display: flex; justify-content: space-between; margin-top: 4px; border-top: 1px dashed #000; padding-top: 4px; }
-            .footer { text-align: center; font-size: 11px; margin-top: 14px; border-top: 1px dashed #000; padding-top: 8px; }
+            .meta { border-bottom: 1px dashed #000; padding-bottom: 6px; margin-bottom: 8px; font-size: 12px; line-height: 1.4; }
+            table { width: 100%; font-size: 12px; border-collapse: collapse; margin-bottom: 8px; }
+            .totals { border-top: 1px dashed #000; padding-top: 6px; margin-bottom: 8px; }
+            .grand-total { border-top: 2px solid #000; border-bottom: 2px solid #000; padding: 6px 0; font-weight: 900; font-size: 16px; display: flex; justify-content: space-between; margin-top: 4px; }
+            .footer { text-align: center; font-size: 11px; margin-top: 10px; }
+            .badge { display: inline-block; padding: 2px 6px; background: #000; color: #fff; font-size: 11px; font-weight: bold; border-radius: 4px; }
           </style>
         </head>
         <body>
           <div class="header">
-            <h2>${restaurantInfo?.name || 'RAMAN SWEET BAKERY'}</h2>
-            <p>${restaurantInfo?.address || ''}</p>
-            <p>Ph: ${restaurantInfo?.phone || ''}</p>
-            ${fssai ? `<p>FSSAI Lic No: ${fssai}</p>` : ''}
-            ${gstin ? `<p><strong>GSTIN:</strong> ${gstin}</p>` : ''}
-            <div class="badge">${isGst ? 'TAX INVOICE' : 'FINAL BILL'}</div>
+            <h2>${restaurantInfo?.name || 'Restaurant'}</h2>
+            ${restaurantInfo?.address ? `<p>${restaurantInfo.address}</p>` : ''}
+            ${restaurantInfo?.phone ? `<p>Tel: ${restaurantInfo.phone}</p>` : ''}
+            ${gstin ? `<p style="font-weight:bold;">GSTIN: ${gstin}</p>` : ''}
+            ${fssai ? `<p>FSSAI: ${fssai}</p>` : ''}
           </div>
+
           <div class="meta">
-            <div><strong>Bill No:</strong> INV-${order.id}</div>
-            <div><strong>Table:</strong> TABLE #${order.table_number || '1'}</div>
-            <div><strong>Date & Time:</strong> ${formatDateTime(order.created_at)}</div>
-            <div><strong>Customer:</strong> ${order.customer_name || 'Dine-In Guest'}</div>
-            <div><strong>Payment Mode:</strong> <span style="background:#000;color:#FFF;padding:1px 6px;">${paymentMode}</span></div>
+            <div style="display:flex;justify-content:space-between;">
+              <strong>TABLE #${order.table_number || '1'}</strong>
+              <span class="badge">${paymentMode}</span>
+            </div>
+            <div><strong>Date:</strong> ${formatDateTime(order.created_at)}</div>
+            <div><strong>Guest:</strong> ${order.customer_name || 'Dine-In Customer'}</div>
+            ${totalRoundsCount > 1 ? `<div style="font-weight:bold;color:#0F766E;">Consolidated Bill: ${totalRoundsCount} Rounds</div>` : ''}
           </div>
+
           <table>
             <thead>
-              <tr style="border-bottom:1px solid #000;text-align:left;font-size:12px;">
-                <th>ITEM & QTY</th>
+              <tr style="border-bottom:1px solid #000;text-align:left;font-size:11px;">
+                <th>ITEM</th>
                 <th style="text-align:right;">AMOUNT</th>
               </tr>
             </thead>
@@ -966,7 +990,7 @@ export default function AdminDashboard({ token, username, slug: propSlug = '', o
           </table>
 
           <div class="totals">
-            <div style="display:flex;justify-content:space-between;">
+            <div style="display:flex;justify-content:space-between;font-size:12px;">
               <span>Subtotal:</span>
               <span>${currency}${subtotal}</span>
             </div>

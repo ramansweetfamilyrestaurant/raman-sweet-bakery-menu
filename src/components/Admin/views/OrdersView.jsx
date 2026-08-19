@@ -204,8 +204,14 @@ export default function OrdersView({
                 <div key={order.id} className="adm-card" style={{ padding: '14px', display: 'flex', flexDirection: 'column', gap: '10px' }}>
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
                     <div>
-                      <strong style={{ fontSize: '1rem', color: 'var(--adm-primary)', display: 'block' }}>
-                        Table {order.table_number || 'Takeaway'} <span style={{ fontSize: '0.78rem', color: 'var(--adm-muted)' }}>#{order.id}</span>
+                      <strong style={{ fontSize: '1rem', color: 'var(--adm-primary)', display: 'flex', alignItems: 'center', gap: '6px', flexWrap: 'wrap' }}>
+                        <span>Table {order.table_number || 'Takeaway'}</span>
+                        <span style={{ fontSize: '0.78rem', color: 'var(--adm-muted)' }}>#{order.id}</span>
+                        {Number(order.round_number) > 1 && (
+                          <span style={{ background: '#FEF3C7', color: '#B45309', border: '1px solid #FCD34D', padding: '1px 7px', borderRadius: '12px', fontSize: '0.72rem', fontWeight: 900 }}>
+                            🔄 Round {order.round_number} (Add-on)
+                          </span>
+                        )}
                       </strong>
                       <span style={{ fontSize: '0.74rem', color: 'var(--adm-muted)' }}>
                         {order.customer_name || 'Dine-in Guest'} • {new Date(order.created_at || Date.now()).toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' })}

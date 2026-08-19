@@ -751,21 +751,67 @@ router.post('/orders', async (req, res) => {
       }
     }
 
-    // Step 5: Atomic Order Insertion
-    const itemsJson = JSON.stringify(verifiedItems);
+    // Step 5: Multi-Round Table Session Detection
+    const cleanTable = String(table_number || '1').trim();
+    const openOrders = await query(`
+      SELECT id, session_id, round_number, customer_name, customer_phone, items, total_amount, status
+      FROM orders
+      WHERE restaurant_id = $1 AND table_number = $2 AND status IN ('pending', 'preparing', 'kitchen', 'accepted', 'served') AND (is_settled = 0 OR is_settled IS NULL)
+      ORDER BY id ASC
+    `, [targetId, cleanTable]);
+
+    let sessionId = null;
+    let roundNumber = 1;
+    let parentOrderId = null;
+    let customerName = customer_name || 'Dine-In Customer';
+    let customerPhone = customer_phone || '';
+    const isAddonOrder = openOrders.length > 0;
+
+    if (isAddonOrder) {
+      const primaryOrder = openOrders[0];
+      sessionId = primaryOrder.session_id || `sess_${targetId}_${cleanTable}_${primaryOrder.id}`;
+      parentOrderId = primaryOrder.id;
+      customerName = primaryOrder.customer_name || customerName;
+      customerPhone = primaryOrder.customer_phone || customerPhone;
+
+      // Determine next round number in this table session
+      const maxRound = openOrders.reduce((max, o) => Math.max(max, Number(o.round_number) || 1), 1);
+      roundNumber = maxRound + 1;
+
+      // Backfill session_id on primary order if needed
+      if (!primaryOrder.session_id) {
+        try {
+          await query('UPDATE orders SET session_id = $1 WHERE id = $2', [sessionId, primaryOrder.id]);
+        } catch (e) {}
+      }
+    } else {
+      sessionId = `sess_${targetId}_${cleanTable}_${Date.now()}`;
+      roundNumber = 1;
+      parentOrderId = null;
+    }
+
+    // Tag each verified item with this specific cooking round
+    const taggedItems = verifiedItems.map(item => ({
+      ...item,
+      round: roundNumber,
+      ordered_at: new Date().toISOString()
+    }));
+
+    const itemsJson = JSON.stringify(taggedItems);
     const createdAt = new Date().toISOString();
     const finalTotal = serverVerifiedTotal > 0 ? serverVerifiedTotal : (Number(total_amount) || 0);
 
     const result = await query(`
       INSERT INTO orders (
         restaurant_id, table_number, customer_name, customer_phone, items, total_amount, status, sent_to_kds, created_at,
-        customer_latitude, customer_longitude, customer_accuracy, distance_meters
-      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13) RETURNING id
+        customer_latitude, customer_longitude, customer_accuracy, distance_meters,
+        session_id, round_number, parent_order_id, is_settled
+      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17) RETURNING id
     `, [
       targetId,
-      table_number || '1',
-      customer_name || 'Dine-In Customer',
-      customer_phone || '',
+      cleanTable,
+      customerName,
+      customerPhone,
       itemsJson,
       finalTotal,
       'pending',
@@ -774,7 +820,11 @@ router.post('/orders', async (req, res) => {
       customer_latitude !== undefined && customer_latitude !== null ? Number(customer_latitude) : null,
       customer_longitude !== undefined && customer_longitude !== null ? Number(customer_longitude) : null,
       customer_accuracy !== undefined && customer_accuracy !== null ? Number(customer_accuracy) : null,
-      calculatedDistance !== null ? Number(calculatedDistance) : null
+      calculatedDistance !== null ? Number(calculatedDistance) : null,
+      sessionId,
+      roundNumber,
+      parentOrderId,
+      0
     ]);
 
     const orderId = result[0]?.id || result.lastInsertRowid;
@@ -782,11 +832,17 @@ router.post('/orders', async (req, res) => {
     res.json({
       success: true,
       order_id: orderId,
+      primary_order_id: parentOrderId || orderId,
+      session_id: sessionId,
+      round_number: roundNumber,
+      is_addon: isAddonOrder,
       status: 'pending',
-      table_number: table_number || '1',
+      table_number: cleanTable,
       total_amount: finalTotal,
       distance_meters: calculatedDistance,
-      message: `🎉 Order #${orderId} placed successfully for Table #${table_number || '1'}!`
+      message: isAddonOrder
+        ? `🎉 Round ${roundNumber} (Add-on Order #${orderId}) placed for Table #${cleanTable}!`
+        : `🎉 Order #${orderId} placed successfully for Table #${cleanTable}!`
     });
   } catch (err) {
     console.error('Create order error:', err);
@@ -798,7 +854,7 @@ router.post('/orders', async (req, res) => {
 router.get('/orders/track/:id', async (req, res) => {
   try {
     const { id } = req.params;
-    const orders = await query('SELECT id, table_number, status, kitchen_prepared, sent_to_kds, total_amount, items, created_at FROM orders WHERE id = $1', [id]);
+    const orders = await query('SELECT id, session_id, round_number, parent_order_id, table_number, customer_name, status, kitchen_prepared, sent_to_kds, total_amount, items, created_at FROM orders WHERE id = $1', [id]);
     if (orders.length === 0) {
       return res.status(404).json({ error: 'Order not found' });
     }
@@ -819,7 +875,7 @@ router.get('/orders/track/:id', async (req, res) => {
   }
 });
 
-// GET Active Table Order Sync
+// GET Active Table Order Sync (Consolidates active session items & round history)
 router.get('/orders/active-table', async (req, res) => {
   try {
     const { slug, table_number } = req.query;
@@ -829,25 +885,59 @@ router.get('/orders/active-table', async (req, res) => {
     const targetId = resto.id;
 
     const orders = await query(`
-      SELECT id, table_number, status, kitchen_prepared, sent_to_kds, total_amount, items, created_at
+      SELECT id, session_id, round_number, parent_order_id, table_number, customer_name, status, kitchen_prepared, sent_to_kds, total_amount, items, created_at
       FROM orders
-      WHERE restaurant_id = $1 AND table_number = $2 AND status IN ('pending', 'preparing', 'kitchen', 'accepted', 'served')
-      ORDER BY id DESC LIMIT 1
-    `, [targetId, String(table_number)]);
+      WHERE restaurant_id = $1 AND table_number = $2 AND status IN ('pending', 'preparing', 'kitchen', 'accepted', 'served') AND (is_settled = 0 OR is_settled IS NULL)
+      ORDER BY id ASC
+    `, [targetId, String(table_number).trim()]);
 
     if (orders.length === 0) return res.json(null);
 
-    const order = orders[0];
-    let tableItems = [];
-    if (typeof order.items === 'string') {
-      try { tableItems = JSON.parse(order.items); } catch (e) { tableItems = []; }
-    } else if (Array.isArray(order.items)) {
-      tableItems = order.items;
-    }
-    res.json({
-      ...order,
-      items: tableItems
+    const primaryOrder = orders[0];
+    const latestOrder = orders[orders.length - 1];
+
+    let allItemsAcrossRounds = [];
+    let runningGrandTotal = 0;
+
+    const rounds = orders.map(o => {
+      let rItems = [];
+      if (typeof o.items === 'string') {
+        try { rItems = JSON.parse(o.items); } catch (e) { rItems = []; }
+      } else if (Array.isArray(o.items)) {
+        rItems = o.items;
+      }
+      runningGrandTotal += Number(o.total_amount) || 0;
+      allItemsAcrossRounds.push(...rItems);
+
+      return {
+        id: o.id,
+        round_number: Number(o.round_number) || 1,
+        status: o.status,
+        kitchen_prepared: o.kitchen_prepared,
+        sent_to_kds: o.sent_to_kds,
+        total_amount: o.total_amount,
+        items: rItems,
+        created_at: o.created_at
+      };
     });
+
+    res.json({
+      id: primaryOrder.id,
+      latest_order_id: latestOrder.id,
+      session_id: primaryOrder.session_id,
+      table_number: primaryOrder.table_number,
+      customer_name: primaryOrder.customer_name,
+      status: latestOrder.status,
+      current_round: Number(latestOrder.round_number) || 1,
+      total_amount: runningGrandTotal,
+      items: allItemsAcrossRounds,
+      rounds
+    });
+  } catch (err) {
+    console.error('Active table order fetch error:', err);
+    res.status(500).json({ error: 'Failed to fetch active table order' });
+  }
+});
   } catch (err) {
     console.error('Active table order fetch error:', err);
     res.status(500).json({ error: 'Failed to fetch active table order' });

@@ -1387,16 +1387,18 @@ router.patch('/orders/:id/status', authenticateToken, requireActiveSubscription,
 
     let prepVal = (kitchen_prepared === 1 || kitchen_prepared === true || kitchen_prepared === '1') ? 1 : 0;
 
+    // Fetch order to check session_id
+    const existing = await query('SELECT id, session_id, parent_order_id, table_number FROM orders WHERE id = $1 AND restaurant_id = $2', [orderId, targetId]);
+    const targetOrder = existing[0] || null;
+
     let updateRes = null;
-    try {
+    if (status === 'completed' && targetOrder?.session_id) {
+      // Settle entire Table Session in one single transaction
       updateRes = await query(
-        'UPDATE orders SET status = $1, sent_to_kds = $2, kitchen_prepared = $3 WHERE id = $4 AND restaurant_id = $5 RETURNING id',
-        [status, kdsVal, prepVal, orderId, targetId]
+        'UPDATE orders SET status = $1, is_settled = 1 WHERE restaurant_id = $2 AND session_id = $3 RETURNING id',
+        ['completed', targetId, targetOrder.session_id]
       );
-    } catch (colErr) {
-      console.warn('Auto-healing columns in orders table:', colErr.message);
-      try { await query('ALTER TABLE orders ADD COLUMN sent_to_kds INT DEFAULT 0'); } catch (e1) {}
-      try { await query('ALTER TABLE orders ADD COLUMN kitchen_prepared INT DEFAULT 0'); } catch (e2) {}
+    } else {
       updateRes = await query(
         'UPDATE orders SET status = $1, sent_to_kds = $2, kitchen_prepared = $3 WHERE id = $4 AND restaurant_id = $5 RETURNING id',
         [status, kdsVal, prepVal, orderId, targetId]
@@ -1407,7 +1409,7 @@ router.patch('/orders/:id/status', authenticateToken, requireActiveSubscription,
       return res.status(404).json({ error: 'Order not found or does not belong to this restaurant' });
     }
 
-    res.json({ success: true, id: orderId, status, sent_to_kds: kdsVal, kitchen_prepared: prepVal });
+    res.json({ success: true, id: orderId, status, sent_to_kds: kdsVal, kitchen_prepared: prepVal, is_settled: status === 'completed' ? 1 : 0 });
   } catch (err) {
     console.error('Update order status error:', err);
     res.status(500).json({ error: 'Failed to update order status' });

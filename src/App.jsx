@@ -2393,39 +2393,47 @@ export default function App() {
           width: 'calc(100% - 32px)',
           maxWidth: '440px'
         }}>
-          <button
-            onClick={() => setShowCartDrawer(true)}
-            style={{
-              width: '100%',
-              background: 'linear-gradient(135deg, #10B981 0%, #059669 100%)',
-              color: '#FFFFFF',
-              padding: '12px 20px',
-              borderRadius: 'var(--radius-pill)',
-              fontWeight: 900,
-              fontSize: '0.9rem',
-              border: '2px solid #FFFFFF',
-              cursor: 'pointer',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'space-between',
-              boxShadow: '0 10px 30px rgba(16, 185, 129, 0.45)',
-              animation: 'fadeIn 0.25s ease-out'
-            }}
-          >
-            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-              <span style={{ background: '#FFFFFF', color: '#059669', width: '22px', height: '22px', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.78rem', fontWeight: 900 }}>
-                {cartItems.reduce((acc, i) => acc + i.quantity, 0)}
-              </span>
-              <span>{lang === 'hi' ? 'कार्ट देखें' : 'View Cart'}</span>
-            </div>
+          {(() => {
+            const isAddon = Boolean(activeOrderId && activeOrderTrack && ['pending', 'accepted', 'kitchen', 'preparing', 'served'].includes(activeOrderTrack.status));
+            const nextRound = (Number(activeOrderTrack?.current_round) || Number(activeOrderTrack?.round_number) || 1) + 1;
+            return (
+              <button
+                onClick={() => setShowCartDrawer(true)}
+                style={{
+                  width: '100%',
+                  background: isAddon
+                    ? 'linear-gradient(135deg, #059669 0%, #047857 100%)'
+                    : 'linear-gradient(135deg, #10B981 0%, #059669 100%)',
+                  color: '#FFFFFF',
+                  padding: '12px 20px',
+                  borderRadius: 'var(--radius-pill)',
+                  fontWeight: 900,
+                  fontSize: '0.9rem',
+                  border: '2px solid #FFFFFF',
+                  cursor: 'pointer',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'space-between',
+                  boxShadow: '0 10px 30px rgba(16, 185, 129, 0.45)',
+                  animation: 'fadeIn 0.25s ease-out'
+                }}
+              >
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                  <span style={{ background: '#FFFFFF', color: '#059669', width: '22px', height: '22px', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.78rem', fontWeight: 900 }}>
+                    {cartItems.reduce((acc, i) => acc + i.quantity, 0)}
+                  </span>
+                  <span>{isAddon ? `+ Add to ${getDynamicSpaceLabel() || 'Table'} (Round ${nextRound})` : (lang === 'hi' ? 'कार्ट देखें' : 'View Cart')}</span>
+                </div>
 
-            <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-              <span style={{ fontSize: '1rem', fontWeight: 900, color: '#FFFFFF' }}>
-                {(info?.currency_symbol !== undefined && info?.currency_symbol !== null) ? info.currency_symbol : '₹'}{cartItems.reduce((sum, item) => sum + (item.price * item.quantity), 0)}
-              </span>
-              <span>→</span>
-            </div>
-          </button>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                  <span style={{ fontSize: '1rem', fontWeight: 900, color: '#FFFFFF' }}>
+                    {(info?.currency_symbol !== undefined && info?.currency_symbol !== null) ? info.currency_symbol : '₹'}{cartItems.reduce((sum, item) => sum + (item.price * item.quantity), 0)}
+                  </span>
+                  <span>→</span>
+                </div>
+              </button>
+            );
+          })()}
         </div>
       )}
 
@@ -2472,7 +2480,7 @@ export default function App() {
         </div>
       )}
 
-      {/* 📲 Order Cart Drawer */}
+      {/* 🛒 Cart Modal / Bottom Drawer */}
       {showCartDrawer && (
         <div style={{
           position: 'fixed',
@@ -2484,154 +2492,187 @@ export default function App() {
           alignItems: 'flex-end',
           justifyContent: 'center'
         }}>
-          <div style={{
-            background: '#FFFFFF',
-            borderRadius: '28px 28px 0 0',
-            maxWidth: '520px',
-            width: '100%',
-            padding: '24px 20px 36px 20px',
-            boxShadow: '0 -10px 40px rgba(0,0,0,0.5)',
-            maxHeight: '85vh',
-            display: 'flex',
-            flexDirection: 'column'
-          }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px', borderBottom: '1px solid var(--border-light)', paddingBottom: '12px' }}>
-              <strong style={{ fontSize: '1.1rem', color: 'var(--primary-emerald)' }}>🛒 My Order Items ({cartItems.reduce((acc, i) => acc + i.quantity, 0)})</strong>
-              <button onClick={() => setShowCartDrawer(false)} style={{ background: '#F3F4F6', color: '#374151', border: 'none', width: '32px', height: '32px', borderRadius: '50%', cursor: 'pointer', fontWeight: 900 }}>✕</button>
-            </div>
+          {(() => {
+            const isAddon = Boolean(activeOrderId && activeOrderTrack && ['pending', 'accepted', 'kitchen', 'preparing', 'served'].includes(activeOrderTrack.status));
+            const nextRound = (Number(activeOrderTrack?.current_round) || Number(activeOrderTrack?.round_number) || 1) + 1;
+            const sym = (info?.currency_symbol !== undefined && info?.currency_symbol !== null) ? info.currency_symbol : '₹';
+            const cartTotal = cartItems.reduce((sum, item) => sum + (item.price * item.quantity), 0);
 
-            {cartItems.length === 0 ? (
-              <div style={{ textAlign: 'center', padding: '40px 10px', color: 'var(--text-muted)' }}>
-                <MessageSquare size={40} color="#10B981" style={{ marginBottom: '10px', opacity: 0.6 }} />
-                <p style={{ fontSize: '0.95rem', margin: '0 0 6px 0', fontWeight: 800, color: 'var(--text-dark)' }}>Your order cart is empty.</p>
-                <p style={{ fontSize: '0.8rem', opacity: 0.75, margin: 0 }}>Tap <strong>"+ ADD"</strong> on any dish to add items!</p>
-              </div>
-            ) : (
-              <div style={{ flex: 1, overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '10px', marginBottom: '16px' }}>
-                {cartItems.map((item) => (
-                  <div key={item.key || item.dish.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: 'var(--bg-app)', padding: '12px 14px', borderRadius: '16px', border: '1px solid var(--border-light)' }}>
-                    <div>
-                      <strong style={{ fontSize: '0.92rem', color: 'var(--text-dark)', display: 'flex', alignItems: 'center', gap: '6px' }}>
-                        {item.dish.name}
-                        {item.isCombo ? (
-                          <span style={{ background: '#D1FAE5', color: '#059669', fontSize: '0.68rem', padding: '2px 7px', borderRadius: '4px', border: '1px solid #6EE7B7', fontWeight: 900 }}>
-                            COMBO
-                          </span>
-                        ) : item.portion && (
-                          <span style={{ background: '#FEF3C7', color: '#B45309', fontSize: '0.72rem', padding: '2px 7px', borderRadius: '4px', border: '1px solid #FCD34D', fontWeight: 900 }}>
-                            {item.portion}
-                          </span>
-                        )}
-                      </strong>
-                      {item.isCombo && item.comboIncludes && (
-                        <span style={{ fontSize: '0.7rem', color: 'var(--text-muted)', display: 'block', marginTop: '2px' }}>
-                          📦 {item.comboIncludes}
-                        </span>
-                      )}
-                      {item.modifiers && item.modifiers.length > 0 && (
-                        <div style={{ display: 'flex', gap: '4px', flexWrap: 'wrap', marginTop: '3px', marginBottom: '2px' }}>
-                          {item.modifiers.map((m, mIdx) => (
-                            <span key={mIdx} style={{ fontSize: '0.68rem', background: '#F1F5F9', color: '#334155', padding: '1px 6px', borderRadius: '4px', border: '1px solid #CBD5E1', fontWeight: 700 }}>
-                              + {m.name} (+{(info?.currency_symbol !== undefined && info?.currency_symbol !== null) ? info.currency_symbol : '₹'}{m.price})
-                            </span>
-                          ))}
-                        </div>
-                      )}
-                      <span style={{ fontSize: '0.82rem', color: 'var(--gold-primary)', fontWeight: 800 }}>
-                        {(info?.currency_symbol !== undefined && info?.currency_symbol !== null) ? info.currency_symbol : '₹'}{item.price} x {item.quantity} = {(info?.currency_symbol !== undefined && info?.currency_symbol !== null) ? info.currency_symbol : '₹'}{item.price * item.quantity}
+            return (
+              <div style={{
+                background: '#FFFFFF',
+                borderRadius: '28px 28px 0 0',
+                maxWidth: '520px',
+                width: '100%',
+                padding: '24px 20px 36px 20px',
+                boxShadow: '0 -10px 40px rgba(0,0,0,0.5)',
+                maxHeight: '85vh',
+                display: 'flex',
+                flexDirection: 'column'
+              }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '14px', borderBottom: '1px solid var(--border-light)', paddingBottom: '12px' }}>
+                  <div>
+                    <strong style={{ fontSize: '1.1rem', color: 'var(--primary-emerald)', display: 'block' }}>
+                      {isAddon ? `🛒 Round ${nextRound} (Add-on Items)` : `🛒 My Order Items (${cartItems.reduce((acc, i) => acc + i.quantity, 0)})`}
+                    </strong>
+                    {isAddon && (
+                      <span style={{ fontSize: '0.74rem', color: '#059669', fontWeight: 800 }}>
+                        Active Session: {getDynamicSpaceLabel() || `Table #${effectiveTableNum || '1'}`}
                       </span>
-                    </div>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                      <button onClick={() => handleAddToCart(item.dish, (item.portion === 'Half' || item.portion === item.dish?.portion_half_label) ? 'half' : 'full', item.modifiers)} style={{ background: 'var(--primary-emerald)', color: '#FFF', border: 'none', width: '28px', height: '28px', borderRadius: '50%', fontWeight: 900, cursor: 'pointer', fontSize: '1rem' }}>+</button>
-                      <span style={{ fontSize: '0.9rem', fontWeight: 800 }}>{item.quantity}</span>
-                      <button onClick={() => handleRemoveFromCart(item.key || item.dish.id)} style={{ background: '#FEE2E2', color: '#DC2626', border: 'none', width: '28px', height: '28px', borderRadius: '50%', fontWeight: 900, cursor: 'pointer', fontSize: '0.9rem' }}>✕</button>
-                    </div>
+                    )}
                   </div>
-                ))}
-              </div>
-            )}
-
-            {cartItems.length > 0 && (
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', marginTop: 'auto', borderTop: '1px solid var(--border-light)', paddingTop: '14px' }}>
-                {/* Table Number & Customer Name Inputs */}
-                <div style={{ display: 'flex', gap: '8px' }}>
-                  <div style={{ flex: 1 }}>
-                    <label style={{ fontSize: '0.72rem', fontWeight: 800, color: 'var(--text-muted)', display: 'block', marginBottom: '2px' }}>TABLE #</label>
-                    <input
-                      type="text"
-                      value={orderTableInput}
-                      onChange={(e) => setOrderTableInput(e.target.value)}
-                      placeholder="e.g. 4"
-                      style={{ width: '100%', padding: '8px 12px', borderRadius: '10px', border: '1.5px solid #CBD5E1', fontSize: '0.86rem', fontWeight: 800 }}
-                    />
-                  </div>
-                  <div style={{ flex: 2 }}>
-                    <label style={{ fontSize: '0.72rem', fontWeight: 800, color: 'var(--text-muted)', display: 'block', marginBottom: '2px' }}>YOUR NAME (OPTIONAL)</label>
-                    <input
-                      type="text"
-                      value={customerNameInput}
-                      onChange={(e) => setCustomerNameInput(e.target.value)}
-                      placeholder="e.g. Rahul"
-                      style={{ width: '100%', padding: '8px 12px', borderRadius: '10px', border: '1.5px solid #CBD5E1', fontSize: '0.86rem' }}
-                    />
-                  </div>
+                  <button onClick={() => setShowCartDrawer(false)} style={{ background: '#F3F4F6', color: '#374151', border: 'none', width: '32px', height: '32px', borderRadius: '50%', cursor: 'pointer', fontWeight: 900 }}>✕</button>
                 </div>
 
-                {/* ⚡ 1-Click Direct Table Order Button (Only when QR scanned and session active) */}
-                {effectiveTableNum && info && info.direct_ordering_enabled !== false && (
-                  <button
-                    onClick={handleSendDirectOrder}
-                    disabled={placingOrder}
-                    style={{
-                      width: '100%',
-                      background: 'linear-gradient(135deg, #059669 0%, #047857 100%)',
-                      color: '#FFFFFF',
-                      padding: '14px 18px',
-                      borderRadius: 'var(--radius-pill)',
-                      fontWeight: 900,
-                      fontSize: '0.96rem',
-                      border: 'none',
-                      cursor: placingOrder ? 'not-allowed' : 'pointer',
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      gap: '8px',
-                      boxShadow: '0 6px 20px rgba(5, 150, 105, 0.45)',
-                      opacity: placingOrder ? 0.7 : 1
-                    }}
-                  >
-                    <Sparkles size={18} color="#FDE047" />
-                    <span>{placingOrder ? 'Sending to Kitchen...' : `⚡ PLACE DIRECT KITCHEN ORDER (${(info?.currency_symbol !== undefined && info?.currency_symbol !== null) ? info.currency_symbol : '₹'}${cartItems.reduce((sum, i) => sum + i.price * i.quantity, 0)})`}</span>
-                  </button>
+                {isAddon && (
+                  <div style={{ background: '#ECFDF5', border: '1px solid #A7F3D0', padding: '8px 12px', borderRadius: '12px', marginBottom: '12px', fontSize: '0.78rem', color: '#065F46', fontWeight: 700, display: 'flex', alignItems: 'center', gap: '6px' }}>
+                    <span>🔄</span>
+                    <span>These new items will be sent as <strong>Round {nextRound} KOT</strong> and merged with your running table bill.</span>
+                  </div>
                 )}
 
-                {/* 💬 WhatsApp Alternative Order Button */}
-                {info && info.whatsapp_enabled !== false && (
-                  <button
-                    onClick={handleSendWhatsAppOrder}
-                    style={{
-                      width: '100%',
-                      background: '#F0FDF4',
-                      color: '#15803D',
-                      padding: '10px 14px',
-                      borderRadius: 'var(--radius-pill)',
-                      fontWeight: 800,
-                      fontSize: '0.82rem',
-                      border: '1.5px solid #86EFAC',
-                      cursor: 'pointer',
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      gap: '6px'
-                    }}
-                  >
-                    <MessageSquare size={16} color="#15803D" />
-                    <span>Or Send via WhatsApp</span>
-                  </button>
+                {cartItems.length === 0 ? (
+                  <div style={{ textAlign: 'center', padding: '40px 10px', color: 'var(--text-muted)' }}>
+                    <MessageSquare size={40} color="#10B981" style={{ marginBottom: '10px', opacity: 0.6 }} />
+                    <p style={{ fontSize: '0.95rem', margin: '0 0 6px 0', fontWeight: 800, color: 'var(--text-dark)' }}>Your order cart is empty.</p>
+                    <p style={{ fontSize: '0.8rem', opacity: 0.75, margin: 0 }}>Tap <strong>"+ ADD"</strong> on any dish to add items!</p>
+                  </div>
+                ) : (
+                  <div style={{ flex: 1, overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '10px', marginBottom: '16px' }}>
+                    {cartItems.map((item) => (
+                      <div key={item.key || item.dish.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: 'var(--bg-app)', padding: '12px 14px', borderRadius: '16px', border: '1px solid var(--border-light)' }}>
+                        <div>
+                          <strong style={{ fontSize: '0.92rem', color: 'var(--text-dark)', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                            {item.dish.name}
+                            {item.isCombo ? (
+                              <span style={{ background: '#D1FAE5', color: '#059669', fontSize: '0.68rem', padding: '2px 7px', borderRadius: '4px', border: '1px solid #6EE7B7', fontWeight: 900 }}>
+                                COMBO
+                              </span>
+                            ) : item.portion && (
+                              <span style={{ background: '#FEF3C7', color: '#B45309', fontSize: '0.72rem', padding: '2px 7px', borderRadius: '4px', border: '1px solid #FCD34D', fontWeight: 900 }}>
+                                {item.portion}
+                              </span>
+                            )}
+                          </strong>
+                          {item.isCombo && item.comboIncludes && (
+                            <span style={{ fontSize: '0.7rem', color: 'var(--text-muted)', display: 'block', marginTop: '2px' }}>
+                              📦 {item.comboIncludes}
+                            </span>
+                          )}
+                          {item.modifiers && item.modifiers.length > 0 && (
+                            <div style={{ display: 'flex', gap: '4px', flexWrap: 'wrap', marginTop: '3px', marginBottom: '2px' }}>
+                              {item.modifiers.map((m, mIdx) => (
+                                <span key={mIdx} style={{ fontSize: '0.68rem', background: '#F1F5F9', color: '#334155', padding: '1px 6px', borderRadius: '4px', border: '1px solid #CBD5E1', fontWeight: 700 }}>
+                                  + {m.name} (+{sym}{m.price})
+                                </span>
+                              ))}
+                            </div>
+                          )}
+                          <span style={{ fontSize: '0.82rem', color: 'var(--gold-primary)', fontWeight: 800 }}>
+                            {sym}{item.price} x {item.quantity} = {sym}{item.price * item.quantity}
+                          </span>
+                        </div>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                          <button onClick={() => handleAddToCart(item.dish, (item.portion === 'Half' || item.portion === item.dish?.portion_half_label) ? 'half' : 'full', item.modifiers)} style={{ background: 'var(--primary-emerald)', color: '#FFF', border: 'none', width: '28px', height: '28px', borderRadius: '50%', fontWeight: 900, cursor: 'pointer', fontSize: '1rem' }}>+</button>
+                          <span style={{ fontSize: '0.9rem', fontWeight: 800 }}>{item.quantity}</span>
+                          <button onClick={() => handleRemoveFromCart(item.key || item.dish.id)} style={{ background: '#FEE2E2', color: '#DC2626', border: 'none', width: '28px', height: '28px', borderRadius: '50%', fontWeight: 900, cursor: 'pointer', fontSize: '0.9rem' }}>✕</button>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+
+                {cartItems.length > 0 && (
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', marginTop: 'auto', borderTop: '1px solid var(--border-light)', paddingTop: '14px' }}>
+                    {!isAddon && (
+                      <div style={{ display: 'flex', gap: '8px' }}>
+                        <div style={{ flex: 1 }}>
+                          <label style={{ fontSize: '0.72rem', fontWeight: 800, color: 'var(--text-muted)', display: 'block', marginBottom: '2px' }}>TABLE #</label>
+                          <input
+                            type="text"
+                            value={orderTableInput}
+                            onChange={(e) => setOrderTableInput(e.target.value)}
+                            placeholder="e.g. 4"
+                            style={{ width: '100%', padding: '8px 12px', borderRadius: '10px', border: '1.5px solid #CBD5E1', fontSize: '0.86rem', fontWeight: 800 }}
+                          />
+                        </div>
+                        <div style={{ flex: 2 }}>
+                          <label style={{ fontSize: '0.72rem', fontWeight: 800, color: 'var(--text-muted)', display: 'block', marginBottom: '2px' }}>YOUR NAME (OPTIONAL)</label>
+                          <input
+                            type="text"
+                            value={customerNameInput}
+                            onChange={(e) => setCustomerNameInput(e.target.value)}
+                            placeholder="e.g. Rahul"
+                            style={{ width: '100%', padding: '8px 12px', borderRadius: '10px', border: '1.5px solid #CBD5E1', fontSize: '0.86rem' }}
+                          />
+                        </div>
+                      </div>
+                    )}
+
+                    {effectiveTableNum && info && info.direct_ordering_enabled !== false && (
+                      <button
+                        onClick={handleSendDirectOrder}
+                        disabled={placingOrder}
+                        style={{
+                          width: '100%',
+                          background: isAddon
+                            ? 'linear-gradient(135deg, #059669 0%, #047857 100%)'
+                            : 'linear-gradient(135deg, #10B981 0%, #059669 100%)',
+                          color: '#FFFFFF',
+                          padding: '14px 18px',
+                          borderRadius: 'var(--radius-pill)',
+                          fontWeight: 900,
+                          fontSize: '0.96rem',
+                          border: 'none',
+                          cursor: placingOrder ? 'not-allowed' : 'pointer',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          gap: '8px',
+                          boxShadow: '0 6px 20px rgba(5, 150, 105, 0.45)',
+                          opacity: placingOrder ? 0.7 : 1
+                        }}
+                      >
+                        <Sparkles size={18} color="#FDE047" />
+                        <span>
+                          {placingOrder
+                            ? 'Sending to Kitchen...'
+                            : isAddon
+                              ? `⚡ PLACE ROUND ${nextRound} ADD-ON ORDER (${sym}${cartTotal})`
+                              : `⚡ PLACE DIRECT KITCHEN ORDER (${sym}${cartTotal})`}
+                        </span>
+                      </button>
+                    )}
+
+                    {info && info.whatsapp_enabled !== false && (
+                      <button
+                        onClick={handleSendWhatsAppOrder}
+                        style={{
+                          width: '100%',
+                          background: '#25D366',
+                          color: '#FFFFFF',
+                          padding: '12px 18px',
+                          borderRadius: 'var(--radius-pill)',
+                          fontWeight: 800,
+                          fontSize: '0.86rem',
+                          border: 'none',
+                          cursor: 'pointer',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          gap: '6px',
+                          boxShadow: '0 4px 14px rgba(37, 211, 102, 0.3)'
+                        }}
+                      >
+                        <MessageSquare size={16} />
+                        <span>Order via WhatsApp ({sym}{cartTotal})</span>
+                      </button>
+                    )}
+                  </div>
                 )}
               </div>
-            )}
-          </div>
+            );
+          })()}
         </div>
       )}
 
