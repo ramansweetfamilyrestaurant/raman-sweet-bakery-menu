@@ -637,7 +637,7 @@ router.post('/orders', async (req, res) => {
 
     // Step 3: Check cart + price + availability on SERVER
     const dbDishes = await query('SELECT id, name, price, price_half, available FROM dishes WHERE restaurant_id = $1', [targetId]);
-    const dbCombos = await query('SELECT id, name, combo_price as price, available FROM combos WHERE restaurant_id = $1', [targetId]);
+    const dbCombos = await query('SELECT id, name, price, available FROM combos WHERE restaurant_id = $1', [targetId]);
     const dishMap = new Map((dbDishes || []).map(d => [String(d.id), d]));
     const comboMap = new Map((dbCombos || []).map(c => [String(c.id), c]));
 
@@ -703,7 +703,7 @@ router.post('/orders', async (req, res) => {
         Number(resto.longitude)
       );
 
-      const accBuffer = Math.min(Number(customer_accuracy) || 0, 50);
+      const accBuffer = Math.min(Number(customer_accuracy) || 0, 150);
       const effectiveDist = Math.max(0, calculatedDistance - accBuffer);
       const allowedRadius = Number(resto.max_distance_meters) || 500;
 

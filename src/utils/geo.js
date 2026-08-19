@@ -42,8 +42,8 @@ export function verifyCustomerLocation(targetLat, targetLng, maxRadiusMeters = 5
       const accuracy = Math.round(reading.coords.accuracy || 999);
       const rawDistance = getDistanceMeters(userLat, userLng, Number(targetLat), Number(targetLng));
 
-      // Accuracy tolerance buffer: allow up to min(accuracy, 50m) to prevent false-blocks from indoor drift
-      const accuracyBuffer = Math.min(accuracy, 50);
+      // Accuracy tolerance buffer: allow up to min(accuracy, 150m) to prevent false-blocks from indoor GPS drift
+      const accuracyBuffer = Math.min(accuracy, 150);
       const effectiveDistance = Math.max(0, rawDistance - accuracyBuffer);
       const radius = Number(maxRadiusMeters) || 500;
 
