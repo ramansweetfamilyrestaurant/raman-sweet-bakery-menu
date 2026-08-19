@@ -308,41 +308,29 @@ export default function OrdersView({
                       )}
                       {order.status === 'accepted' && (
                         <>
-                          {kdsEnabled ? (
-                            <>
-                              <button
-                                onClick={() => onUpdateStatus(order.id, 'kitchen', { sent_to_kds: 1 })}
-                                className="adm-btn adm-btn-primary adm-btn-sm"
-                                style={{ fontWeight: 800, minHeight: '44px', padding: '0 12px', background: 'linear-gradient(135deg, #0F172A 0%, #1E293B 100%)', color: '#38BDF8', border: '1px solid #38BDF8' }}
-                              >
-                                🍳 Send to Kitchen
-                              </button>
-                              <button
-                                onClick={() => onUpdateStatus(order.id, 'served', { sent_to_kds: 0, kitchen_prepared: 1, silent: true })}
-                                className="adm-btn adm-btn-secondary adm-btn-sm"
-                                style={{ fontWeight: 800, minHeight: '44px', padding: '0 12px' }}
-                              >
-                                📦 Fulfill at Counter
-                              </button>
-                            </>
-                          ) : (
-                            <>
-                              <button
-                                onClick={() => onUpdateStatus(order.id, 'served', { sent_to_kds: 0, kitchen_prepared: 1, silent: true })}
-                                className="adm-btn adm-btn-primary adm-btn-sm"
-                                style={{ fontWeight: 800, minHeight: '44px', padding: '0 12px' }}
-                              >
-                                🍽️ Mark Served
-                              </button>
-                              <button
-                                onClick={() => onUpdateStatus(order.id, 'completed')}
-                                className="adm-btn adm-btn-secondary adm-btn-sm"
-                                style={{ fontWeight: 800, minHeight: '44px', padding: '0 12px' }}
-                              >
-                                💳 Settle Bill
-                              </button>
-                            </>
+                          {!isPrep(order.kitchen_prepared) && (
+                            <button
+                              onClick={() => onUpdateStatus(order.id, 'accepted', { kitchen_prepared: 1, silent: true })}
+                              className="adm-btn adm-btn-secondary adm-btn-sm"
+                              style={{ fontWeight: 800, minHeight: '44px', padding: '0 12px', background: '#DCFCE7', color: '#15803D', border: '1px solid #86EFAC' }}
+                            >
+                              🔔 Mark Ready
+                            </button>
                           )}
+                          <button
+                            onClick={() => onUpdateStatus(order.id, 'served', { sent_to_kds: 0, kitchen_prepared: 1, silent: true })}
+                            className="adm-btn adm-btn-primary adm-btn-sm"
+                            style={{ fontWeight: 800, minHeight: '44px', padding: '0 12px' }}
+                          >
+                            🍽️ Mark Served
+                          </button>
+                          <button
+                            onClick={() => onOpenBillModal ? onOpenBillModal(order) : onUpdateStatus(order.id, 'completed')}
+                            className="adm-btn adm-btn-secondary adm-btn-sm"
+                            style={{ fontWeight: 800, minHeight: '44px', padding: '0 12px' }}
+                          >
+                            💳 Settle Bill
+                          </button>
                         </>
                       )}
                       {order.status === 'kitchen' && (
@@ -356,14 +344,29 @@ export default function OrdersView({
                               🔔 Mark Ready
                             </button>
                           )}
-                          <button onClick={() => onUpdateStatus(order.id, 'completed')} className="adm-btn adm-btn-primary adm-btn-sm" style={{ fontWeight: 800, minHeight: '44px', padding: '0 14px' }}>
-                            💳 Serve & Complete Bill
+                          <button
+                            onClick={() => onUpdateStatus(order.id, 'served', { sent_to_kds: 0, kitchen_prepared: 1, silent: true })}
+                            className="adm-btn adm-btn-primary adm-btn-sm"
+                            style={{ fontWeight: 800, minHeight: '44px', padding: '0 12px' }}
+                          >
+                            🍽️ Mark Served
+                          </button>
+                          <button
+                            onClick={() => onOpenBillModal ? onOpenBillModal(order) : onUpdateStatus(order.id, 'completed')}
+                            className="adm-btn adm-btn-secondary adm-btn-sm"
+                            style={{ fontWeight: 800, minHeight: '44px', padding: '0 12px' }}
+                          >
+                            💳 Settle Bill
                           </button>
                         </>
                       )}
                       {order.status === 'served' && (
-                        <button onClick={() => onUpdateStatus(order.id, 'completed')} className="adm-btn adm-btn-primary adm-btn-sm" style={{ fontWeight: 800, minHeight: '44px', padding: '0 14px' }}>
-                          💳 Serve & Complete Bill
+                        <button
+                          onClick={() => onOpenBillModal ? onOpenBillModal(order) : onUpdateStatus(order.id, 'completed')}
+                          className="adm-btn adm-btn-primary adm-btn-sm"
+                          style={{ fontWeight: 800, minHeight: '44px', padding: '0 14px', background: '#10B981', color: '#FFFFFF' }}
+                        >
+                          💳 Settle Bill
                         </button>
                       )}
                       {onDirectPrint && (
