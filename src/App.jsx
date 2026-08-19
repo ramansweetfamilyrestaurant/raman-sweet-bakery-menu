@@ -2432,7 +2432,7 @@ export default function App() {
       {/* 🛎️ Service Request Modal & Toast */}
       {showServiceModal && (
         <ServiceRequestModal
-          tableNum={effectiveTableNum}
+          tableNum={getDynamicSpaceLabel() || (effectiveTableNum ? `Table ${effectiveTableNum}` : 'Table 1')}
           slug={getSlugFromUrl() || (info && info.slug)}
           onClose={() => setShowServiceModal(false)}
           onSuccess={(msg) => {

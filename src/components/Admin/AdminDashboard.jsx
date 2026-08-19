@@ -408,6 +408,8 @@ export default function AdminDashboard({ token, username, slug: propSlug = '', o
     }
   };
 
+  const prevServiceReqIdsRef = useRef(new Set());
+
   const loadOrders = async () => {
     if (!token) return;
     try {
@@ -427,6 +429,20 @@ export default function AdminDashboard({ token, username, slug: propSlug = '', o
       ]);
       const safeData = Array.isArray(data) ? data : [];
       const safeReqs = Array.isArray(reqsData) ? reqsData : [];
+
+      // 🛎️ Dedicated Waiter Call / Service Request Alert Trigger
+      const newServiceCalls = safeReqs.filter(r => !prevServiceReqIdsRef.current.has(String(r.id)));
+      if (newServiceCalls.length > 0 && prevServiceReqIdsRef.current.size > 0) {
+        playWaiterBellFor6Seconds();
+        const latestCall = newServiceCalls[0];
+        const rawTbl = String(latestCall.table_number || '1');
+        const formattedTbl = (rawTbl.toLowerCase().includes('table') || rawTbl.toLowerCase().includes('cabin') || rawTbl.toLowerCase().includes('room') || rawTbl.toLowerCase().includes('vip'))
+          ? rawTbl 
+          : `Table #${rawTbl}`;
+        setToastMessage(`🛎️ ${formattedTbl} Calling Waiter: "${latestCall.request_type}"!`);
+        setTimeout(() => setToastMessage(''), 7000);
+      }
+      prevServiceReqIdsRef.current = new Set(safeReqs.map(r => String(r.id)));
 
       // Total active live orders (pending + kitchen + accepted) + waiter calls
       const activeOrderCount = safeData.filter(o => ['pending', 'kitchen', 'accepted', 'preparing'].includes(o.status)).length + safeReqs.length;
@@ -1045,7 +1061,7 @@ export default function AdminDashboard({ token, username, slug: propSlug = '', o
 
   useEffect(() => {
     loadOrders();
-    const interval = setInterval(loadOrders, 3500);
+    const interval = setInterval(loadOrders, 2000);
     return () => clearInterval(interval);
   }, [token]);
 
