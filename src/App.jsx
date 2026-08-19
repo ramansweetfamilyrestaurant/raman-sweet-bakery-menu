@@ -17,21 +17,42 @@ import { verifyCustomerLocation } from './utils/geo';
 import ServiceRequestModal from './components/ServiceRequestModal';
 import CustomerReviewModal from './components/CustomerReviewModal';
 
-// Code Splitting (Lazy Loading) for secondary admin, landing & legal views
-const AdminDashboard = lazy(() => import('./components/Admin/AdminDashboard'));
-const OnboardingSetup = lazy(() => import('./components/Admin/OnboardingSetup'));
-const LandingPage = lazy(() => import('./components/Landing/LandingPage'));
-const AdminLogin = lazy(() => import('./components/Admin/AdminLogin'));
-const SuperAdminLogin = lazy(() => import('./components/SuperAdmin/SuperAdminLogin'));
-const SuperAdminDashboard = lazy(() => import('./components/SuperAdmin/SuperAdminDashboard'));
-const RegisterPage = lazy(() => import('./components/RegisterPage'));
-const SubscriptionBillingPage = lazy(() => import('./components/SubscriptionBillingPage'));
-const PrivacyPolicy = lazy(() => import('./components/Legal/PrivacyPolicy'));
-const TermsOfService = lazy(() => import('./components/Legal/TermsOfService'));
-const RefundPolicy = lazy(() => import('./components/Legal/RefundPolicy'));
-const SecurityPolicy = lazy(() => import('./components/Legal/SecurityPolicy'));
-const ContactSupport = lazy(() => import('./components/Legal/ContactSupport'));
-const StandaloneKdsPage = lazy(() => import('./components/Admin/views/StandaloneKdsPage'));
+// Robust Lazy Loading with automatic retry on new production deploys
+const lazyWithRetry = (componentImport) =>
+  lazy(async () => {
+    try {
+      return await componentImport();
+    } catch (error) {
+      const alreadyReloaded = sessionStorage.getItem('chunk_retry_' + String(componentImport));
+      if (!alreadyReloaded) {
+        sessionStorage.setItem('chunk_retry_' + String(componentImport), 'true');
+        if ('caches' in window) {
+          try {
+            const names = await caches.keys();
+            await Promise.all(names.map(name => caches.delete(name)));
+          } catch {}
+        }
+        window.location.reload();
+        return { default: () => null };
+      }
+      throw error;
+    }
+  });
+
+const AdminDashboard = lazyWithRetry(() => import('./components/Admin/AdminDashboard'));
+const OnboardingSetup = lazyWithRetry(() => import('./components/Admin/OnboardingSetup'));
+const LandingPage = lazyWithRetry(() => import('./components/Landing/LandingPage'));
+const AdminLogin = lazyWithRetry(() => import('./components/Admin/AdminLogin'));
+const SuperAdminLogin = lazyWithRetry(() => import('./components/SuperAdmin/SuperAdminLogin'));
+const SuperAdminDashboard = lazyWithRetry(() => import('./components/SuperAdmin/SuperAdminDashboard'));
+const RegisterPage = lazyWithRetry(() => import('./components/RegisterPage'));
+const SubscriptionBillingPage = lazyWithRetry(() => import('./components/SubscriptionBillingPage'));
+const PrivacyPolicy = lazyWithRetry(() => import('./components/Legal/PrivacyPolicy'));
+const TermsOfService = lazyWithRetry(() => import('./components/Legal/TermsOfService'));
+const RefundPolicy = lazyWithRetry(() => import('./components/Legal/RefundPolicy'));
+const SecurityPolicy = lazyWithRetry(() => import('./components/Legal/SecurityPolicy'));
+const ContactSupport = lazyWithRetry(() => import('./components/Legal/ContactSupport'));
+const StandaloneKdsPage = lazyWithRetry(() => import('./components/Admin/views/StandaloneKdsPage'));
 
 export default function App() {
   // Parse Space / Table info from URL query parameters (?cabin=2, ?room=5, ?vip=1, ?table=5, ?t=5)

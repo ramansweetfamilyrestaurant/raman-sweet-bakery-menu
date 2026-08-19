@@ -12,6 +12,18 @@ export default class ErrorBoundary extends React.Component {
 
   componentDidCatch(error, errorInfo) {
     console.error('Uncaught React Error caught by ErrorBoundary:', error, errorInfo);
+    if (error && (String(error).includes('dynamically imported module') || String(error).includes('Failed to fetch') || String(error).includes('chunk'))) {
+      const alreadyReloaded = sessionStorage.getItem('auto_chunk_reload');
+      if (!alreadyReloaded) {
+        sessionStorage.setItem('auto_chunk_reload', 'true');
+        if ('caches' in window) {
+          caches.keys().then((names) => {
+            names.forEach((name) => caches.delete(name));
+          });
+        }
+        window.location.reload();
+      }
+    }
   }
 
   render() {
