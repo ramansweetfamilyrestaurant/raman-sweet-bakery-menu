@@ -34,29 +34,58 @@ const ContactSupport = lazy(() => import('./components/Legal/ContactSupport'));
 const StandaloneKdsPage = lazy(() => import('./components/Admin/views/StandaloneKdsPage'));
 
 export default function App() {
-  // Parse Table Number from URL query parameters (?table=5, ?t=5, ?tbl=5) or path (/table/5)
-  const getTableNumFromUrl = () => {
+  // Parse Space / Table info from URL query parameters (?cabin=2, ?room=5, ?vip=1, ?table=5, ?t=5)
+  const getSpaceInfoFromUrl = () => {
     const urlParams = new URLSearchParams(window.location.search);
+    if (urlParams.get('cabin')) {
+      const num = urlParams.get('cabin');
+      return { type: 'cabin', num, label: `Cabin ${num}`, badge: `🛋️ Cabin ${num}` };
+    }
+    if (urlParams.get('room')) {
+      const num = urlParams.get('room');
+      return { type: 'room', num, label: `Room ${num}`, badge: `🏨 Room ${num}` };
+    }
+    if (urlParams.get('vip')) {
+      const num = urlParams.get('vip');
+      return { type: 'vip', num, label: `VIP ${num}`, badge: `👑 VIP ${num}` };
+    }
     let t = urlParams.get('table') || urlParams.get('t') || urlParams.get('tableno') || urlParams.get('tbl') || '';
     if (!t) {
       const parts = window.location.pathname.split('/').filter(Boolean);
       if (parts.length >= 2) {
         const lastPart = parts[parts.length - 1];
         const prevPart = parts[parts.length - 2].toLowerCase();
-        if (/^\d+$/.test(lastPart) && (prevPart === 'table' || prevPart === 'tbl' || prevPart === 'r')) {
+        if (/^\d+$/.test(lastPart) && (prevPart === 'table' || prevPart === 'tbl' || prevPart === 'r' || prevPart === 'cabin' || prevPart === 'room' || prevPart === 'vip')) {
           t = lastPart;
+          if (prevPart === 'cabin') return { type: 'cabin', num: t, label: `Cabin ${t}`, badge: `🛋️ Cabin ${t}` };
+          if (prevPart === 'room') return { type: 'room', num: t, label: `Room ${t}`, badge: `🏨 Room ${t}` };
+          if (prevPart === 'vip') return { type: 'vip', num: t, label: `VIP ${t}`, badge: `👑 VIP ${t}` };
         }
       }
     }
-    return t;
+    if (t) {
+      return { type: 'table', num: t, label: `Table ${t}`, badge: `🍽️ Table ${t}` };
+    }
+    return { type: '', num: '', label: '', badge: '' };
   };
-  const initialTableNum = getTableNumFromUrl();
-  const [currentTableNum, setCurrentTableNum] = useState(initialTableNum);
+
+  const initialSpaceInfo = getSpaceInfoFromUrl();
+  const [currentTableNum, setCurrentTableNum] = useState(initialSpaceInfo.num);
+  const [currentSpaceType, setCurrentSpaceType] = useState(initialSpaceInfo.type);
   const [sessionExpired, setSessionExpired] = useState(false);
   const [autoKillSeconds, setAutoKillSeconds] = useState(null);
 
   // Effective Table Number (Empty if session expired or no QR scanned)
   const effectiveTableNum = sessionExpired ? '' : currentTableNum;
+
+  const getDynamicSpaceLabel = () => {
+    if (!effectiveTableNum) return '';
+    const activeType = currentSpaceType || String(info?.table_prefix || 'table').toLowerCase();
+    if (activeType === 'cabin') return `🛋️ Cabin ${effectiveTableNum}`;
+    if (activeType === 'room') return `🏨 Room ${effectiveTableNum}`;
+    if (activeType === 'vip') return `👑 VIP ${effectiveTableNum}`;
+    return `🍽️ Table ${effectiveTableNum}`;
+  };
 
   // Language State ('en' or 'hi')
   const [lang, setLang] = useState('en');
@@ -346,7 +375,7 @@ export default function App() {
       alert('WhatsApp number is not configured for this restaurant yet.');
       return;
     }
-    let msg = `👋 Hello *${info.name}*!\nI would like to place an order from table #${effectiveTableNum || '1'}:\n\n`;
+    let msg = `👋 Hello *${info.name}*!\nI would like to place an order from ${getDynamicSpaceLabel() || 'Table ' + (effectiveTableNum || '1')}:\n\n`;
     let grandTotal = 0;
     const sym = (info?.currency_symbol !== undefined && info?.currency_symbol !== null) ? info.currency_symbol : '₹';
     cartItems.forEach(item => {
@@ -1729,6 +1758,7 @@ export default function App() {
         info={info}
         lang={lang}
         tableNum={effectiveTableNum}
+        spaceLabel={getDynamicSpaceLabel()}
         onToggleLang={() => setLang(lang === 'en' ? 'hi' : 'en')}
         onOpenInfoModal={() => setShowInfoModal(true)}
         onCallStaff={() => setShowServiceModal(true)}

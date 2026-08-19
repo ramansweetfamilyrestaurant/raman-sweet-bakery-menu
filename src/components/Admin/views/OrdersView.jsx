@@ -68,11 +68,16 @@ export default function OrdersView({
     return true;
   });
 
-  const totalTables = Number(restaurantInfo?.total_tables) || 10;
+  const prefix = String(restaurantInfo?.table_prefix || 'table').toLowerCase();
+  const spaceLabel = prefix === 'cabin' ? 'Cabin' : prefix === 'room' ? 'Room' : prefix === 'vip' ? 'VIP Lounge' : 'Table';
+  const spacePlural = prefix === 'cabin' ? 'Cabins' : prefix === 'room' ? 'Rooms' : prefix === 'vip' ? 'VIP Lounges' : 'Tables';
+  const spaceField = prefix === 'cabin' ? 'total_cabins' : prefix === 'room' ? 'total_rooms' : prefix === 'vip' ? 'total_vip' : 'total_tables';
+
+  const totalTables = Number(restaurantInfo?.[spaceField]) || Number(restaurantInfo?.total_tables) || 10;
   const tableGrid = Array.from({ length: totalTables }, (_, i) => {
     const tableNum = String(i + 1);
-    const activeOrder = validOrders.find(o => String(o.table_number) === tableNum && o.status !== 'completed' && o.status !== 'rejected' && o.status !== 'cancelled');
-    const serviceReq = safeServiceRequests.find(s => String(s.table_number) === tableNum);
+    const activeOrder = validOrders.find(o => (String(o.table_number) === tableNum || String(o.table_number).toLowerCase().includes(tableNum)) && o.status !== 'completed' && o.status !== 'rejected' && o.status !== 'cancelled');
+    const serviceReq = safeServiceRequests.find(s => String(s.table_number) === tableNum || String(s.table_number).toLowerCase().includes(tableNum));
 
     let status = 'available';
     if (serviceReq) status = 'service_needed';
@@ -395,7 +400,7 @@ export default function OrdersView({
               >
                 <div>
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '6px' }}>
-                    <strong style={{ fontSize: '1rem', color: 'var(--adm-primary)' }}>TABLE #{t.tableNumber}</strong>
+                    <strong style={{ fontSize: '1rem', color: 'var(--adm-primary)' }}>{spaceLabel.toUpperCase()} {t.tableNumber}</strong>
                     <span className={`adm-badge adm-badge-${isOccupied ? 'danger' : isService ? 'warning' : 'success'}`} style={{ fontSize: '0.64rem' }}>
                       {isOccupied ? '🔴 SEATED' : isService ? '🟡 CALL' : '🟢 FREE'}
                     </span>

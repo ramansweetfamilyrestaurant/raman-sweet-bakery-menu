@@ -2,7 +2,16 @@ import React from 'react';
 import { ShieldCheck, Globe, Star, Info, Clock, Phone, MapPin } from 'lucide-react';
 import { getRestaurantLogoUrl } from '../utils/imageHelper';
 
-export default function CustomerHeader({ info, lang, tableNum, onToggleLang, onOpenInfoModal, onOpenAdmin, onCallStaff, onOpenReviewModal }) {
+export default function CustomerHeader({ info, lang, tableNum, spaceLabel, onToggleLang, onOpenInfoModal, onOpenAdmin, onCallStaff, onOpenReviewModal }) {
+  const getDisplayBadge = () => {
+    if (!tableNum) return '';
+    if (spaceLabel) return spaceLabel;
+    const prefix = String(info?.table_prefix || 'table').toLowerCase();
+    if (prefix === 'cabin') return `🛋️ Cabin ${tableNum}`;
+    if (prefix === 'room') return `🏨 Room ${tableNum}`;
+    if (prefix === 'vip') return `👑 VIP ${tableNum}`;
+    return `🍽️ Table ${tableNum}`;
+  };
   return (
     <header style={{
       background: 'var(--header-gradient, linear-gradient(180deg, rgba(10, 35, 21, 0.94) 0%, rgba(18, 55, 34, 0.94) 100%))',
@@ -88,7 +97,7 @@ export default function CustomerHeader({ info, lang, tableNum, onToggleLang, onO
                 gap: '4px'
               }}>
                 <span style={{ width: '5px', height: '5px', borderRadius: '50%', backgroundColor: '#4ADE80' }} />
-                T-{tableNum}
+                {getDisplayBadge()}
               </span>
 
               {onCallStaff && (

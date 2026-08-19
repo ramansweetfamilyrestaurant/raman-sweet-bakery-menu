@@ -1081,6 +1081,9 @@ export default function AdminDashboard({ token, username, slug: propSlug = '', o
         gst_enabled: infoData.gst_enabled !== undefined ? infoData.gst_enabled : false,
         gstin_number: infoData.gstin_number || '',
         total_tables: infoData.total_tables !== undefined && infoData.total_tables !== null ? Number(infoData.total_tables) : 0,
+        total_cabins: infoData.total_cabins !== undefined && infoData.total_cabins !== null ? Number(infoData.total_cabins) : 0,
+        total_rooms: infoData.total_rooms !== undefined && infoData.total_rooms !== null ? Number(infoData.total_rooms) : 0,
+        total_vip: infoData.total_vip !== undefined && infoData.total_vip !== null ? Number(infoData.total_vip) : 0,
         table_prefix: infoData.table_prefix || 'table',
         order_retention_days: infoData.order_retention_days || 7,
         custom_domain: infoData.custom_domain || '',
@@ -1108,6 +1111,10 @@ export default function AdminDashboard({ token, username, slug: propSlug = '', o
       fssai_lic_no: '',
       resto_type: 'pure_veg',
       custom_domain: '',
+      total_tables: 0,
+      total_cabins: 0,
+      total_rooms: 0,
+      total_vip: 0,
       table_prefix: 'table',
       watermark_removal_enabled: false,
       custom_domain_enabled: false,
@@ -1118,10 +1125,24 @@ export default function AdminDashboard({ token, username, slug: propSlug = '', o
       kds_enabled: false,
       kds_screen_enabled: 0,
       dual_printer_enabled: false,
+      latitude: 26.6500,
+      longitude: 84.9167,
+      max_distance_meters: 100,
+      gst_enabled: false,
+      gstin_number: '',
+      order_retention_days: 7,
       filters_visibility: defaultVis
     };
   });
   const [settingsSavedMsg, setSettingsSavedMsg] = useState(false);
+
+  const getSpaceField = (prefix) => {
+    const t = String(prefix || settingsForm.table_prefix || 'table').toLowerCase();
+    if (t === 'cabin') return 'total_cabins';
+    if (t === 'room') return 'total_rooms';
+    if (t === 'vip') return 'total_vip';
+    return 'total_tables';
+  };
 
   // Credential Change State
   const [credForm, setCredForm] = useState({ currentPassword: '', newUsername: '', newPassword: '', confirmPassword: '' });
@@ -1152,14 +1173,17 @@ export default function AdminDashboard({ token, username, slug: propSlug = '', o
     setComboModalData('new');
   };
 
-  const handleAddTable = async (customCount = null) => {
-    const currentCount = Number(settingsForm.total_tables) || 0;
+  const handleAddTable = async (customCount = null, targetPrefix = null) => {
+    const prefix = targetPrefix || settingsForm.table_prefix || 'table';
+    const field = getSpaceField(prefix);
+    const spaceInfo = getSpaceConfig(prefix);
+    const currentCount = Number(settingsForm[field]) || 0;
     const newCount = customCount !== null ? Math.max(0, Number(customCount)) : (currentCount + 1);
-    const updatedForm = { ...settingsForm, total_tables: newCount };
+    const updatedForm = { ...settingsForm, [field]: newCount };
     setSettingsForm(updatedForm);
-    setRestaurantInfo(prev => prev ? ({ ...prev, total_tables: newCount }) : prev);
+    setRestaurantInfo(prev => prev ? ({ ...prev, [field]: newCount }) : prev);
     setTableNumber(String(Math.max(1, newCount)));
-    setToastMessage(`✅ Total Tables updated to ${newCount}! Saving...`);
+    setToastMessage(`✅ Total ${spaceInfo.plural} updated to ${newCount}! Saving...`);
 
     const currentSlug = propSlug || localStorage.getItem('touchqr_admin_slug') || (restaurantInfo && restaurantInfo.slug) || '';
     if (currentSlug) {
@@ -1167,7 +1191,7 @@ export default function AdminDashboard({ token, username, slug: propSlug = '', o
       if (cached) {
         try {
           const parsed = JSON.parse(cached);
-          parsed.total_tables = newCount;
+          parsed[field] = newCount;
           localStorage.setItem(`admin_cache_${currentSlug}_info`, JSON.stringify(parsed));
         } catch {}
       }
@@ -1182,26 +1206,27 @@ export default function AdminDashboard({ token, username, slug: propSlug = '', o
         },
         body: JSON.stringify(updatedForm)
       });
-      loadData(true);
     } catch (err) {
-      console.error('Failed to add table:', err);
+      console.error('Failed to add space unit:', err);
     }
   };
 
-  const handleDeleteTable = async (tableNumToDelete = null) => {
-    const currentCount = Number(settingsForm.total_tables) || 0;
+  const handleDeleteTable = async (tableNumToDelete = null, targetPrefix = null) => {
+    const prefix = targetPrefix || settingsForm.table_prefix || 'table';
+    const field = getSpaceField(prefix);
+    const spaceInfo = getSpaceConfig(prefix);
+    const currentCount = Number(settingsForm[field]) || 0;
     if (currentCount <= 0) {
-      alert('No tables to delete!');
+      alert(`No ${spaceInfo.plural.toLowerCase()} to delete!`);
       return;
     }
     const targetNum = tableNumToDelete || currentCount;
-    const spaceInfo = getSpaceConfig(settingsForm.table_prefix || 'table');
     if (!window.confirm(`Are you sure you want to remove ${spaceInfo.singular} ${targetNum}? (Total ${spaceInfo.plural.toLowerCase()} will become ${currentCount - 1})`)) return;
 
     const newCount = Math.max(0, currentCount - 1);
-    const updatedForm = { ...settingsForm, total_tables: newCount };
+    const updatedForm = { ...settingsForm, [field]: newCount };
     setSettingsForm(updatedForm);
-    setRestaurantInfo(prev => prev ? ({ ...prev, total_tables: newCount }) : prev);
+    setRestaurantInfo(prev => prev ? ({ ...prev, [field]: newCount }) : prev);
     setTableNumber(String(Math.max(1, Math.min(Number(tableNumber), newCount))));
     setToastMessage(`🗑️ ${spaceInfo.singular} ${targetNum} removed. Total ${spaceInfo.plural.toLowerCase()}: ${newCount}`);
 
@@ -1211,7 +1236,7 @@ export default function AdminDashboard({ token, username, slug: propSlug = '', o
       if (cached) {
         try {
           const parsed = JSON.parse(cached);
-          parsed.total_tables = newCount;
+          parsed[field] = newCount;
           localStorage.setItem(`admin_cache_${currentSlug}_info`, JSON.stringify(parsed));
         } catch {}
       }
@@ -1226,9 +1251,8 @@ export default function AdminDashboard({ token, username, slug: propSlug = '', o
         },
         body: JSON.stringify(updatedForm)
       });
-      loadData(true);
     } catch (err) {
-      console.error('Failed to delete table:', err);
+      console.error('Failed to delete space unit:', err);
     }
   };
 
@@ -1292,6 +1316,9 @@ export default function AdminDashboard({ token, username, slug: propSlug = '', o
           gst_enabled: infoData.gst_enabled !== undefined ? infoData.gst_enabled : false,
           gstin_number: infoData.gstin_number || '',
           total_tables: infoData.total_tables !== undefined && infoData.total_tables !== null ? Number(infoData.total_tables) : 0,
+          total_cabins: infoData.total_cabins !== undefined && infoData.total_cabins !== null ? Number(infoData.total_cabins) : 0,
+          total_rooms: infoData.total_rooms !== undefined && infoData.total_rooms !== null ? Number(infoData.total_rooms) : 0,
+          total_vip: infoData.total_vip !== undefined && infoData.total_vip !== null ? Number(infoData.total_vip) : 0,
           table_prefix: (currentSlug && localStorage.getItem(`touchqr_table_prefix_${currentSlug}`)) || infoData.table_prefix || 'table',
           order_retention_days: infoData.order_retention_days || 7,
           custom_domain: infoData.custom_domain || '',
@@ -1456,14 +1483,16 @@ export default function AdminDashboard({ token, username, slug: propSlug = '', o
     }
   };
 
-  const handlePrintQR = (overrideNum) => {
+  const handlePrintQR = (overrideNum, targetPrefix = null) => {
     const activeTableNum = overrideNum || tableNumber || '1';
     ensureTableCreated(activeTableNum);
 
-    const spaceConfig = getSpaceConfig(settingsForm.table_prefix || restaurantInfo?.table_prefix || 'table');
+    const prefix = targetPrefix || settingsForm.table_prefix || restaurantInfo?.table_prefix || 'table';
+    const spaceConfig = getSpaceConfig(prefix);
+    const paramName = prefix === 'cabin' ? 'cabin' : prefix === 'room' ? 'room' : prefix === 'vip' ? 'vip' : 'table';
     const liveOrigin = window.location.origin;
     const activeSlug = settingsForm.slug || restaurantInfo?.slug || '';
-    const targetUrl = `${liveOrigin}/${activeSlug}?table=${activeTableNum}`;
+    const targetUrl = `${liveOrigin}/${activeSlug}?${paramName}=${activeTableNum}`;
     const qrImgUrl = `https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=${encodeURIComponent(targetUrl)}`;
     const currentName = settingsForm.name || 'Digital Menu';
     const currentTagline = settingsForm.tagline || 'Scan QR Code for Digital Menu';
@@ -1590,13 +1619,16 @@ export default function AdminDashboard({ token, username, slug: propSlug = '', o
     printWindow.document.close();
   };
 
-  const handlePrintAllQRs = () => {
-    const totalCount = Number(settingsForm.total_tables) || 0;
+  const handlePrintAllQRs = (targetPrefix = null) => {
+    const prefix = targetPrefix || settingsForm.table_prefix || restaurantInfo?.table_prefix || 'table';
+    const field = getSpaceField(prefix);
+    const spaceConfig = getSpaceConfig(prefix);
+    const paramName = prefix === 'cabin' ? 'cabin' : prefix === 'room' ? 'room' : prefix === 'vip' ? 'vip' : 'table';
+    const totalCount = Number(settingsForm[field]) || 0;
     if (totalCount === 0) {
-      alert('No tables added yet! Click "+ Add New Table" to create dining table QRs.');
+      alert(`No ${spaceConfig.plural.toLowerCase()} added yet! Click "+ Add ${spaceConfig.singular}" to create QR standees.`);
       return;
     }
-    const spaceConfig = getSpaceConfig(settingsForm.table_prefix || restaurantInfo?.table_prefix || 'table');
     const liveOrigin = window.location.origin;
     const currentName = settingsForm.name || 'Digital Menu';
     const currentTagline = settingsForm.tagline || 'Scan QR Code for Digital Menu';
@@ -1604,13 +1636,13 @@ export default function AdminDashboard({ token, username, slug: propSlug = '', o
 
     const printWindow = window.open('', '_blank', 'width=950,height=900');
     if (!printWindow) {
-      alert('Please allow popups for this site to print all Table QR Standees.');
+      alert(`Please allow popups for this site to print all ${spaceConfig.plural} QR Standees.`);
       return;
     }
 
     let cardsHtml = '';
     for (let tNum = 1; tNum <= totalCount; tNum++) {
-      const targetUrl = `${liveOrigin}/${activeSlug}?table=${tNum}`;
+      const targetUrl = `${liveOrigin}/${activeSlug}?${paramName}=${tNum}`;
       const qrImgUrl = `https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=${encodeURIComponent(targetUrl)}`;
       cardsHtml += `
         <div class="standee-card">
@@ -1634,7 +1666,7 @@ export default function AdminDashboard({ token, username, slug: propSlug = '', o
       <!DOCTYPE html>
       <html>
         <head>
-          <title>All Table QR Standees - ${currentName}</title>
+          <title>All ${spaceConfig.plural} QR Standees - ${currentName}</title>
           <style>
             @import url('https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700;800;900&family=Plus+Jakarta+Sans:wght@600;700;800&display=swap');
             body {

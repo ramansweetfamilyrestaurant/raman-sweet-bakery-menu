@@ -14,16 +14,7 @@ export default function QrGeneratorView({
   onBackToSetup,
   onUpdateSpaceType
 }) {
-  const [copied, setCopied] = React.useState(false);
-  const liveOrigin = window.location.origin;
-  const hasTables = totalTablesCount > 0;
-  const activeTableNum = hasTables ? (tableNumber || '1') : '';
   const activeSlug = settingsForm?.slug || '';
-  const targetUrl = hasTables 
-    ? `${liveOrigin}/${activeSlug}?table=${activeTableNum}`
-    : `${liveOrigin}/${activeSlug}`;
-  const qrImgUrl = `https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=${encodeURIComponent(targetUrl)}`;
-
   const currentPrefix = (
     settingsForm?.table_prefix || 
     (activeSlug ? localStorage.getItem(`touchqr_table_prefix_${activeSlug}`) : null) || 
@@ -32,13 +23,29 @@ export default function QrGeneratorView({
 
   const getSpaceConfig = (type) => {
     const t = String(type || 'table').toLowerCase();
-    if (t === 'cabin') return { singular: 'Cabin', plural: 'Cabins', badge: 'CABIN NO.' };
-    if (t === 'room') return { singular: 'Room', plural: 'Rooms', badge: 'ROOM NO.' };
-    if (t === 'vip') return { singular: 'VIP Lounge', plural: 'VIP Lounges', badge: 'VIP LOUNGE' };
-    return { singular: 'Table', plural: 'Tables', badge: 'TABLE NO.' };
+    if (t === 'cabin') return { singular: 'Cabin', plural: 'Cabins', badge: 'CABIN NO.', param: 'cabin' };
+    if (t === 'room') return { singular: 'Room', plural: 'Rooms', badge: 'ROOM NO.', param: 'room' };
+    if (t === 'vip') return { singular: 'VIP Lounge', plural: 'VIP Lounges', badge: 'VIP LOUNGE', param: 'vip' };
+    return { singular: 'Table', plural: 'Tables', badge: 'TABLE NO.', param: 'table' };
   };
 
   const spaceConfig = getSpaceConfig(currentPrefix);
+
+  const spaceCounts = {
+    table: Number(settingsForm?.total_tables) || 0,
+    cabin: Number(settingsForm?.total_cabins) || 0,
+    room: Number(settingsForm?.total_rooms) || 0,
+    vip: Number(settingsForm?.total_vip) || 0
+  };
+
+  const currentCount = spaceCounts[currentPrefix] !== undefined ? spaceCounts[currentPrefix] : (totalTablesCount || 0);
+  const hasTables = currentCount > 0;
+  const activeTableNum = hasTables ? (tableNumber || '1') : '';
+
+  const targetUrl = hasTables 
+    ? `${liveOrigin}/${activeSlug}?${spaceConfig.param}=${activeTableNum}`
+    : `${liveOrigin}/${activeSlug}`;
+  const qrImgUrl = `https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=${encodeURIComponent(targetUrl)}`;
 
   const handleSpaceTypeClick = (typeId) => {
     if (activeSlug) {
@@ -76,12 +83,12 @@ export default function QrGeneratorView({
         </div>
 
         <button
-          onClick={onPrintAllQRs}
+          onClick={() => onPrintAllQRs && onPrintAllQRs(currentPrefix)}
           disabled={!hasTables}
           className="adm-btn adm-btn-accent"
           style={{ fontWeight: 800, opacity: !hasTables ? 0.5 : 1, cursor: !hasTables ? 'not-allowed' : 'pointer' }}
         >
-          <Printer size={16} /> Print All {spaceConfig.plural} ({totalTablesCount} Standees)
+          <Printer size={16} /> Print All {spaceConfig.plural} ({currentCount} Standees)
         </button>
       </div>
 
@@ -99,6 +106,7 @@ export default function QrGeneratorView({
               { id: 'vip', label: '👑 VIP Lounge' }
             ].map(item => {
               const isActive = currentPrefix === item.id;
+              const count = spaceCounts[item.id] || 0;
               return (
                 <button
                   key={item.id}
@@ -114,10 +122,23 @@ export default function QrGeneratorView({
                     fontWeight: 800,
                     cursor: 'pointer',
                     transition: 'all 0.15s ease',
-                    boxShadow: isActive ? '0 2px 8px rgba(10,35,21,0.15)' : 'none'
+                    boxShadow: isActive ? '0 2px 8px rgba(10,35,21,0.15)' : 'none',
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: '6px'
                   }}
                 >
-                  {item.label}
+                  <span>{item.label}</span>
+                  <span style={{
+                    fontSize: '0.72rem',
+                    padding: '1px 6px',
+                    borderRadius: '10px',
+                    background: isActive ? 'rgba(255,255,255,0.25)' : 'var(--adm-surface-subtle)',
+                    color: isActive ? '#FFFFFF' : 'var(--adm-muted)',
+                    fontWeight: 900
+                  }}>
+                    {count}
+                  </span>
                 </button>
               );
             })}
@@ -130,7 +151,7 @@ export default function QrGeneratorView({
             <strong style={{ fontSize: '0.95rem', color: 'var(--adm-primary)', display: 'flex', alignItems: 'center', gap: '8px' }}>
               <span>Total {spaceConfig.plural}:</span>
               <span style={{ background: hasTables ? 'var(--adm-primary)' : '#9CA3AF', color: '#FFFFFF', padding: '2px 10px', borderRadius: 'var(--radius-pill)', fontSize: '0.82rem', fontWeight: 900 }}>
-                {totalTablesCount} Total {totalTablesCount === 1 ? spaceConfig.singular : spaceConfig.plural}
+                {currentCount} Total {currentCount === 1 ? spaceConfig.singular : spaceConfig.plural}
               </span>
             </strong>
             <span style={{ fontSize: '0.78rem', color: 'var(--adm-muted)' }}>
@@ -142,7 +163,7 @@ export default function QrGeneratorView({
 
           <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
             <button
-              onClick={() => onDeleteTable && onDeleteTable(tableNumber || totalTablesCount)}
+              onClick={() => onDeleteTable && onDeleteTable(tableNumber || currentCount, currentPrefix)}
               disabled={!hasTables}
               className="adm-btn adm-btn-danger adm-btn-sm"
               title={`Remove ${spaceConfig.singular}`}
@@ -152,7 +173,7 @@ export default function QrGeneratorView({
             </button>
 
             <button
-              onClick={() => onAddTable && onAddTable()}
+              onClick={() => onAddTable && onAddTable(null, currentPrefix)}
               className="adm-btn adm-btn-primary adm-btn-sm"
               title={`Add Next ${spaceConfig.singular}`}
             >
@@ -170,7 +191,7 @@ export default function QrGeneratorView({
             <button
               key={count}
               type="button"
-              onClick={() => onAddTable && onAddTable(count)}
+              onClick={() => onAddTable && onAddTable(count, currentPrefix)}
               className="adm-btn adm-btn-secondary adm-btn-sm"
               style={{ padding: '3px 10px', fontSize: '0.72rem', fontWeight: 800 }}
             >
@@ -209,7 +230,7 @@ export default function QrGeneratorView({
               }}
             >
               {hasTables ? (
-                Array.from({ length: totalTablesCount }, (_, i) => String(i + 1)).map(tNum => (
+                Array.from({ length: currentCount }, (_, i) => String(i + 1)).map(tNum => (
                   <option key={tNum} value={tNum}>{spaceConfig.singular} {tNum}</option>
                 ))
               ) : (
