@@ -24,17 +24,29 @@ const lazyWithRetry = (componentImport) =>
     try {
       return await componentImport();
     } catch (error) {
-      const alreadyReloaded = sessionStorage.getItem('chunk_retry_' + String(componentImport));
-      if (!alreadyReloaded) {
-        sessionStorage.setItem('chunk_retry_' + String(componentImport), 'true');
+      console.warn('Chunk loading failed, checking for updated deploy...', error);
+      const isChunkError = error?.message && (
+        error.message.includes('dynamically imported module') ||
+        error.message.includes('Loading chunk') ||
+        error.message.includes('Failed to fetch')
+      );
+
+      const retryKey = 'chunk_retry_timestamp';
+      const lastRetry = Number(sessionStorage.getItem(retryKey)) || 0;
+      const now = Date.now();
+
+      // If chunk failed and we haven't auto-reloaded in the last 10 seconds
+      if (isChunkError && (now - lastRetry > 10000)) {
+        sessionStorage.setItem(retryKey, String(now));
         if ('caches' in window) {
           try {
             const names = await caches.keys();
             await Promise.all(names.map(name => caches.delete(name)));
           } catch {}
         }
+        // Force reload from server to get fresh HTML & chunks
         window.location.reload();
-        return { default: () => null };
+        return new Promise(() => {});
       }
       throw error;
     }
