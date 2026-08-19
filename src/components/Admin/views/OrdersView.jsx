@@ -115,10 +115,10 @@ export default function OrdersView({
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '10px' }}>
         <div>
           <h2 style={{ fontSize: '1.25rem', fontWeight: 900, color: 'var(--adm-primary)', margin: '0 0 2px 0' }}>
-            Orders & Kitchen Operations
+            {kdsEnabled ? 'Orders & Kitchen Operations' : 'Live Table Orders & Operations'}
           </h2>
           <span style={{ fontSize: '0.8rem', color: 'var(--adm-muted)', fontWeight: 600 }}>
-            Live table orders, floor map & kitchen display screen
+            {kdsEnabled ? 'Live table orders, floor map & kitchen display screen' : 'Live table orders, floor map & waiter calls'}
           </span>
         </div>
 
@@ -176,7 +176,7 @@ export default function OrdersView({
             {[
               { id: 'all', label: `All (${validOrders.length})` },
               { id: 'pending', label: `🟡 Pending (${pendingCount})` },
-              { id: 'kitchen', label: `👨‍🍳 Kitchen (${kitchenCount})` },
+              { id: 'kitchen', label: kdsEnabled ? `👨‍🍳 Kitchen (${kitchenCount})` : `🟢 In Progress (${kitchenCount})` },
               { id: 'served', label: `🍽 Served (${servedCount})` },
               { id: 'completed', label: `✅ Complete (${completedCount})` }
             ].map(filter => (
@@ -216,13 +216,13 @@ export default function OrdersView({
                       <span className={`adm-badge adm-badge-${order.status === 'pending' ? 'warning' : (order.status === 'kitchen' || order.status === 'accepted') ? 'info' : 'success'}`}>
                         {(order.status || 'PENDING').toUpperCase()}
                       </span>
-                      {isPrep(order.kitchen_prepared) ? (
+                      {kdsEnabled && isPrep(order.kitchen_prepared) ? (
                         <span style={{ fontSize: '0.68rem', background: '#DCFCE7', color: '#15803D', border: '1px solid #86EFAC', padding: '2px 8px', borderRadius: '12px', fontWeight: 900, boxShadow: '0 0 10px rgba(34, 197, 94, 0.3)' }}>
                           🍳 PREPARED IN KITCHEN
                         </span>
-                      ) : (dualPrinterEnabled && (order.sent_to_kds === 0 || order.sent_to_kds === '0')) ? (
+                      ) : (kdsEnabled && dualPrinterEnabled && (order.sent_to_kds === 0 || order.sent_to_kds === '0')) ? (
                         <span style={{ fontSize: '0.68rem', background: '#F3E8FF', color: '#6B21A8', border: '1px solid #E9D5FF', padding: '1px 6px', borderRadius: '12px', fontWeight: 800 }}>📦 Counter Only</span>
-                      ) : (order.status === 'kitchen' || order.status === 'preparing' || order.status === 'accepted') ? (
+                      ) : (kdsEnabled && (order.status === 'kitchen' || order.status === 'preparing' || order.status === 'accepted')) ? (
                         <span style={{ fontSize: '0.68rem', background: '#E0F2FE', color: '#0369A1', border: '1px solid #BAE6FD', padding: '1px 6px', borderRadius: '12px', fontWeight: 800 }}>🍳 Kitchen KDS</span>
                       ) : null}
                       {onPreviewPrint && (
