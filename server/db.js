@@ -1515,10 +1515,8 @@ export async function getImageFromDb(filename) {
 
 export async function purgeCancelledOrdersOlderThan3Mins() {
   try {
-    const threeMinsAgo = new Date(Date.now() - 3 * 60 * 1000).toISOString();
     const result = await query(
-      `DELETE FROM orders WHERE status IN ('cancelled', 'rejected') AND created_at <= $1`,
-      [threeMinsAgo]
+      `DELETE FROM orders WHERE status IN ('cancelled', 'rejected')`
     );
     return result;
   } catch (err) {
