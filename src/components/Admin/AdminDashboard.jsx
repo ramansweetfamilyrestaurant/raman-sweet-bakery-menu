@@ -1150,12 +1150,26 @@ export default function AdminDashboard({ token, username, slug: propSlug = '', o
     setComboModalData('new');
   };
 
-  const handleAddTable = async () => {
+  const handleAddTable = async (customCount = null) => {
     const currentCount = Number(settingsForm.total_tables) || 0;
-    const newCount = currentCount + 1;
+    const newCount = customCount !== null ? Math.max(0, Number(customCount)) : (currentCount + 1);
     const updatedForm = { ...settingsForm, total_tables: newCount };
     setSettingsForm(updatedForm);
-    setToastMessage(`Table ${newCount} added successfully! Saving...`);
+    setRestaurantInfo(prev => prev ? ({ ...prev, total_tables: newCount }) : prev);
+    setTableNumber(String(Math.max(1, newCount)));
+    setToastMessage(`✅ Total Tables updated to ${newCount}! Saving...`);
+
+    const currentSlug = propSlug || localStorage.getItem('touchqr_admin_slug') || (restaurantInfo && restaurantInfo.slug) || '';
+    if (currentSlug) {
+      const cached = localStorage.getItem(`admin_cache_${currentSlug}_info`);
+      if (cached) {
+        try {
+          const parsed = JSON.parse(cached);
+          parsed.total_tables = newCount;
+          localStorage.setItem(`admin_cache_${currentSlug}_info`, JSON.stringify(parsed));
+        } catch {}
+      }
+    }
 
     try {
       await fetch('/api/admin/settings', {
@@ -1166,24 +1180,39 @@ export default function AdminDashboard({ token, username, slug: propSlug = '', o
         },
         body: JSON.stringify(updatedForm)
       });
-      loadData();
+      loadData(true);
     } catch (err) {
       console.error('Failed to add table:', err);
     }
   };
 
-  const handleDeleteTable = async (tableNumToDelete) => {
+  const handleDeleteTable = async (tableNumToDelete = null) => {
     const currentCount = Number(settingsForm.total_tables) || 0;
     if (currentCount <= 0) {
       alert('No tables to delete!');
       return;
     }
-    if (!window.confirm(`Are you sure you want to delete Table ${tableNumToDelete}?`)) return;
+    const targetNum = tableNumToDelete || currentCount;
+    if (!window.confirm(`Are you sure you want to remove Table #${targetNum}? (Total tables will become ${currentCount - 1})`)) return;
 
-    const newCount = currentCount - 1;
+    const newCount = Math.max(0, currentCount - 1);
     const updatedForm = { ...settingsForm, total_tables: newCount };
     setSettingsForm(updatedForm);
-    setToastMessage(`Table ${tableNumToDelete} deleted! Saving...`);
+    setRestaurantInfo(prev => prev ? ({ ...prev, total_tables: newCount }) : prev);
+    setTableNumber(String(Math.max(1, Math.min(Number(tableNumber), newCount))));
+    setToastMessage(`🗑️ Table #${targetNum} removed. Total tables: ${newCount}`);
+
+    const currentSlug = propSlug || localStorage.getItem('touchqr_admin_slug') || (restaurantInfo && restaurantInfo.slug) || '';
+    if (currentSlug) {
+      const cached = localStorage.getItem(`admin_cache_${currentSlug}_info`);
+      if (cached) {
+        try {
+          const parsed = JSON.parse(cached);
+          parsed.total_tables = newCount;
+          localStorage.setItem(`admin_cache_${currentSlug}_info`, JSON.stringify(parsed));
+        } catch {}
+      }
+    }
 
     try {
       await fetch('/api/admin/settings', {
@@ -1194,7 +1223,7 @@ export default function AdminDashboard({ token, username, slug: propSlug = '', o
         },
         body: JSON.stringify(updatedForm)
       });
-      loadData();
+      loadData(true);
     } catch (err) {
       console.error('Failed to delete table:', err);
     }

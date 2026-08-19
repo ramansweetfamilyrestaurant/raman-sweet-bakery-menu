@@ -52,23 +52,59 @@ export default function QrGeneratorView({
       </div>
 
       {/* Control Strip & Table Stepper */}
-      <div className="adm-card" style={{ padding: '16px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '14px' }}>
-        <div>
-          <strong style={{ fontSize: '0.95rem', color: 'var(--adm-primary)', display: 'block' }}>
-            Dining Hall Configuration ({totalTablesCount} Total Tables)
-          </strong>
-          <span style={{ fontSize: '0.78rem', color: 'var(--adm-muted)' }}>
-            Select a table number to preview or print its custom standee sticker.
-          </span>
+      <div className="adm-card" style={{ padding: '16px', display: 'flex', flexDirection: 'column', gap: '12px' }}>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '12px' }}>
+          <div>
+            <strong style={{ fontSize: '0.95rem', color: 'var(--adm-primary)', display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <span>🍽️ Dining Hall Tables:</span>
+              <span style={{ background: totalTablesCount > 0 ? 'var(--adm-primary)' : '#9CA3AF', color: '#FFFFFF', padding: '2px 10px', borderRadius: 'var(--radius-pill)', fontSize: '0.82rem', fontWeight: 900 }}>
+                {totalTablesCount} Total {totalTablesCount === 1 ? 'Table' : 'Tables'}
+              </span>
+            </strong>
+            <span style={{ fontSize: '0.78rem', color: 'var(--adm-muted)' }}>
+              {totalTablesCount > 0 
+                ? 'Manage dining hall capacity or generate instant QR stickers.'
+                : 'Click "+ Add Table" below to configure your dining tables.'}
+            </span>
+          </div>
+
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
+            <button
+              onClick={() => onDeleteTable && onDeleteTable(tableNumber || totalTablesCount)}
+              disabled={totalTablesCount <= 0}
+              className="adm-btn adm-btn-danger adm-btn-sm"
+              title="Remove Table"
+              style={{ opacity: totalTablesCount <= 0 ? 0.5 : 1, cursor: totalTablesCount <= 0 ? 'not-allowed' : 'pointer' }}
+            >
+              <Trash2 size={15} /> Remove Table
+            </button>
+
+            <button
+              onClick={() => onAddTable && onAddTable()}
+              className="adm-btn adm-btn-primary adm-btn-sm"
+              title="Add Next Table"
+            >
+              <Plus size={15} /> Add Table
+            </button>
+          </div>
         </div>
 
-        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-          <button onClick={onDeleteTable} className="adm-btn adm-btn-danger adm-btn-sm" title="Remove Last Table">
-            <Trash2 size={15} /> Remove Table
-          </button>
-          <button onClick={onAddTable} className="adm-btn adm-btn-primary adm-btn-sm" title="Add New Table">
-            <Plus size={15} /> Add Table
-          </button>
+        {/* Quick Batch Presets */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flexWrap: 'wrap', borderTop: '1px solid var(--adm-border)', paddingTop: '10px' }}>
+          <span style={{ fontSize: '0.72rem', fontWeight: 800, color: 'var(--adm-muted)', textTransform: 'uppercase', marginRight: '4px' }}>
+            Quick Set:
+          </span>
+          {[5, 10, 15, 20, 30].map(count => (
+            <button
+              key={count}
+              type="button"
+              onClick={() => onAddTable && onAddTable(count)}
+              className="adm-btn adm-btn-secondary adm-btn-sm"
+              style={{ padding: '3px 10px', fontSize: '0.72rem', fontWeight: 800 }}
+            >
+              Set {count} Tables
+            </button>
+          ))}
         </div>
       </div>
 
@@ -87,6 +123,7 @@ export default function QrGeneratorView({
             <select
               value={tableNumber}
               onChange={(e) => setTableNumber(e.target.value)}
+              disabled={totalTablesCount <= 0}
               style={{
                 width: '100%',
                 padding: '10px 14px',
@@ -95,12 +132,17 @@ export default function QrGeneratorView({
                 fontSize: '0.95rem',
                 fontWeight: 800,
                 color: 'var(--adm-primary)',
-                background: '#FFF'
+                background: '#FFF',
+                opacity: totalTablesCount <= 0 ? 0.6 : 1
               }}
             >
-              {Array.from({ length: Math.max(totalTablesCount, 1) }, (_, i) => String(i + 1)).map(tNum => (
-                <option key={tNum} value={tNum}>Table #{tNum}</option>
-              ))}
+              {totalTablesCount > 0 ? (
+                Array.from({ length: totalTablesCount }, (_, i) => String(i + 1)).map(tNum => (
+                  <option key={tNum} value={tNum}>Table #{tNum}</option>
+                ))
+              ) : (
+                <option value="1">No tables added yet</option>
+              )}
             </select>
           </div>
 
@@ -122,7 +164,12 @@ export default function QrGeneratorView({
           </div>
 
           <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', marginTop: '10px' }}>
-            <button onClick={() => onPrintQR(tableNumber)} className="adm-btn adm-btn-primary" style={{ padding: '12px', fontWeight: 800 }}>
+            <button
+              onClick={() => onPrintQR(tableNumber)}
+              disabled={totalTablesCount <= 0}
+              className="adm-btn adm-btn-primary"
+              style={{ padding: '12px', fontWeight: 800, opacity: totalTablesCount <= 0 ? 0.5 : 1, cursor: totalTablesCount <= 0 ? 'not-allowed' : 'pointer' }}
+            >
               <Printer size={16} /> Print Table #{activeTableNum} QR Standee
             </button>
             <button onClick={() => onReturnToMenu && onReturnToMenu(settingsForm?.slug)} className="adm-btn adm-btn-secondary" style={{ padding: '10px', fontWeight: 700 }}>
