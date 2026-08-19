@@ -610,17 +610,80 @@ router.post('/orders', async (req, res) => {
       customer_accuracy
     } = req.body;
 
+    // Step 1: Resolve Restaurant Context
     const resto = await resolveRestaurant(req, slug);
     if (!resto) {
       return res.status(404).json({ error: 'Restaurant not found' });
     }
     const targetId = resto.id;
 
+    // Step 2: Verify Restaurant is OPEN & accepting orders
+    if (resto.active === 0 || resto.active === false) {
+      return res.status(403).json({
+        error: 'restaurant_inactive',
+        message: 'This restaurant is currently closed / offline.'
+      });
+    }
+    if (resto.direct_ordering_enabled === 0 || resto.direct_ordering_enabled === false) {
+      return res.status(403).json({
+        error: 'ordering_disabled',
+        message: 'Direct table ordering is temporarily paused by the restaurant.'
+      });
+    }
+
     if (!items || !Array.isArray(items) || items.length === 0) {
       return res.status(400).json({ error: 'Order items are required' });
     }
 
-    // Authoritative Server-Side Geofence Distance Validation
+    // Step 3: Check cart + price + availability on SERVER
+    const dbDishes = await query('SELECT id, name, price, available FROM dishes WHERE restaurant_id = $1', [targetId]);
+    const dbCombos = await query('SELECT id, name, combo_price as price, available FROM combos WHERE restaurant_id = $1', [targetId]);
+    const dishMap = new Map((dbDishes || []).map(d => [String(d.id), d]));
+    const comboMap = new Map((dbCombos || []).map(c => [String(c.id), c]));
+
+    let serverVerifiedTotal = 0;
+    const verifiedItems = [];
+
+    for (const item of items) {
+      const isCombo = item.type === 'combo';
+      const dbItem = isCombo ? comboMap.get(String(item.dish_id)) : dishMap.get(String(item.dish_id));
+
+      if (dbItem) {
+        if (dbItem.available === false || dbItem.available === 0) {
+          return res.status(400).json({
+            error: 'dish_unavailable',
+            message: `"${dbItem.name}" is currently sold out / unavailable.`
+          });
+        }
+        const itemPrice = Number(dbItem.price) > 0 ? Number(dbItem.price) : (Number(item.price) || 0);
+        const qty = Math.max(1, parseInt(item.quantity) || 1);
+        serverVerifiedTotal += itemPrice * qty;
+
+        verifiedItems.push({
+          dish_id: item.dish_id,
+          name: dbItem.name || item.name,
+          portion: item.portion || '',
+          modifiers: Array.isArray(item.modifiers) ? item.modifiers : [],
+          price: itemPrice,
+          quantity: qty,
+          ...(isCombo ? { type: 'combo', includes: item.includes || '' } : {})
+        });
+      } else {
+        const itemPrice = Number(item.price) || 0;
+        const qty = Math.max(1, parseInt(item.quantity) || 1);
+        serverVerifiedTotal += itemPrice * qty;
+        verifiedItems.push({
+          dish_id: item.dish_id,
+          name: item.name,
+          portion: item.portion || '',
+          modifiers: Array.isArray(item.modifiers) ? item.modifiers : [],
+          price: itemPrice,
+          quantity: qty
+        });
+      }
+    }
+
+    // Step 4: Authoritative Server-Side Geofence Distance Validation
     let calculatedDistance = null;
     if (
       resto.location_initialized &&
@@ -651,8 +714,10 @@ router.post('/orders', async (req, res) => {
       }
     }
 
-    const itemsJson = typeof items === 'object' ? JSON.stringify(items) : items;
+    // Step 5: Atomic Order Insertion
+    const itemsJson = JSON.stringify(verifiedItems);
     const createdAt = new Date().toISOString();
+    const finalTotal = serverVerifiedTotal > 0 ? serverVerifiedTotal : (Number(total_amount) || 0);
 
     const result = await query(`
       INSERT INTO orders (
@@ -665,7 +730,7 @@ router.post('/orders', async (req, res) => {
       customer_name || 'Dine-In Customer',
       customer_phone || '',
       itemsJson,
-      total_amount || 0,
+      finalTotal,
       'pending',
       0,
       createdAt,
@@ -682,6 +747,7 @@ router.post('/orders', async (req, res) => {
       order_id: orderId,
       status: 'pending',
       table_number: table_number || '1',
+      total_amount: finalTotal,
       distance_meters: calculatedDistance,
       message: `🎉 Order #${orderId} placed successfully for Table #${table_number || '1'}!`
     });
