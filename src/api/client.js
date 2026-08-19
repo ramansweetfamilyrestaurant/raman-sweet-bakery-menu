@@ -245,7 +245,19 @@ async function compressImageFile(file) {
   });
 }
 
-export async function uploadImage(file, token, entityType = 'dishes') {
+export async function uploadImage(file, tokenOrEntityType, entityTypeOrToken = 'dishes') {
+  let token = tokenOrEntityType;
+  let entityType = entityTypeOrToken;
+
+  // Polymorphic argument handling if token & entityType are swapped
+  if (typeof tokenOrEntityType === 'string' && !tokenOrEntityType.includes('.') && (typeof entityTypeOrToken === 'string' && entityTypeOrToken.includes('.'))) {
+    entityType = tokenOrEntityType;
+    token = entityTypeOrToken;
+  }
+  if (!entityType || typeof entityType !== 'string' || entityType.includes('.')) {
+    entityType = 'dishes';
+  }
+
   let processedFile = file;
   try {
     processedFile = await compressImageFile(file);
@@ -255,11 +267,10 @@ export async function uploadImage(file, token, entityType = 'dishes') {
 
   const formData = new FormData();
   const filename = file.name || 'image.jpg';
-  // MUST append text fields BEFORE file fields so Multer parses req.body.entityType before file stream
   formData.append('entityType', entityType);
   formData.append('image', processedFile, filename);
 
-  const res = await fetch(`${API_BASE}/admin/upload`, {
+  const res = await fetch(`${API_BASE}/admin/upload?entityType=${encodeURIComponent(entityType)}`, {
     method: 'POST',
     headers: token ? { Authorization: `Bearer ${token}` } : {},
     body: formData,

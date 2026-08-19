@@ -2944,11 +2944,16 @@ export default function SuperAdminDashboard({ token, username, onLogout, onRetur
                             const timestampedUrl = newUrl.includes('?') ? `${newUrl}&t=${Date.now()}` : `${newUrl}?t=${Date.now()}`;
                             const updated = { ...paymentKeys, platform_logo_url: timestampedUrl };
                             setPaymentKeys(updated);
-                            await fetch('/api/superadmin/settings', {
+                            try { localStorage.setItem('touchqr_platform_logo_url', timestampedUrl); } catch {}
+                            const res = await fetch('/api/superadmin/settings', {
                               method: 'POST',
                               headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
                               body: JSON.stringify(updated)
                             });
+                            if (!res.ok) {
+                              const errData = await res.json().catch(() => ({}));
+                              throw new Error(errData.error || 'Failed to save logo to system settings');
+                            }
                             setLogoErr(false);
                             setKeysMsg('✅ New Platform Logo uploaded & saved successfully across all pages!');
                           } catch (err) {

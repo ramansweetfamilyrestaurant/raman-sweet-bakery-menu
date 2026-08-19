@@ -1,6 +1,7 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Crown, Lock, User, ArrowLeft, ShieldAlert, Eye, EyeOff, ShieldCheck } from 'lucide-react';
 import { superAdminLogin } from '../../api/client';
+import { resolveImageUrl } from '../../utils/imageHelper';
 
 export default function SuperAdminLogin({ onLoginSuccess, onCancel }) {
   const [username, setUsername] = useState('');
@@ -8,6 +9,28 @@ export default function SuperAdminLogin({ onLoginSuccess, onCancel }) {
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
+  const [platformLogo, setPlatformLogo] = useState(() => {
+    try { return localStorage.getItem('touchqr_platform_logo_url') || ''; } catch { return ''; }
+  });
+  const [logoErr, setLogoErr] = useState(false);
+
+  useEffect(() => {
+    fetch('/api/settings')
+      .then(res => res.json())
+      .then(data => {
+        if (data && typeof data.platform_logo_url === 'string') {
+          setPlatformLogo(data.platform_logo_url);
+          try {
+            if (data.platform_logo_url.trim()) {
+              localStorage.setItem('touchqr_platform_logo_url', data.platform_logo_url);
+            } else {
+              localStorage.removeItem('touchqr_platform_logo_url');
+            }
+          } catch {}
+        }
+      })
+      .catch(() => {});
+  }, []);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -80,22 +103,46 @@ export default function SuperAdminLogin({ onLoginSuccess, onCancel }) {
           <ArrowLeft size={15} /> Back
         </button>
 
-        {/* Crown Badge */}
-        <div style={{
-          width: '64px',
-          height: '64px',
-          borderRadius: '50%',
-          background: 'linear-gradient(135deg, #0A2315 0%, #164E2A 100%)',
-          color: '#DFBA67',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          margin: '12px auto 16px',
-          boxShadow: '0 8px 24px rgba(10, 35, 21, 0.3)',
-          border: '2px solid #D4AF37'
-        }}>
-          <Crown size={30} color="#DFBA67" />
-        </div>
+        {/* Crown Badge or Platform Logo */}
+        {platformLogo && !logoErr ? (
+          <div style={{
+            width: '64px',
+            height: '64px',
+            borderRadius: '16px',
+            background: '#FFFFFF',
+            padding: '4px',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            margin: '12px auto 16px',
+            boxShadow: '0 8px 24px rgba(10, 35, 21, 0.25)',
+            border: '2px solid #D4AF37',
+            overflow: 'hidden'
+          }}>
+            <img
+              src={resolveImageUrl(platformLogo)}
+              alt="Platform Logo"
+              onError={() => setLogoErr(true)}
+              style={{ width: '100%', height: '100%', objectFit: 'contain' }}
+            />
+          </div>
+        ) : (
+          <div style={{
+            width: '64px',
+            height: '64px',
+            borderRadius: '50%',
+            background: 'linear-gradient(135deg, #0A2315 0%, #164E2A 100%)',
+            color: '#DFBA67',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            margin: '12px auto 16px',
+            boxShadow: '0 8px 24px rgba(10, 35, 21, 0.3)',
+            border: '2px solid #D4AF37'
+          }}>
+            <Crown size={30} color="#DFBA67" />
+          </div>
+        )}
 
         <h2 style={{ fontSize: '1.35rem', fontWeight: 900, color: 'var(--primary-emerald)', marginBottom: '4px', letterSpacing: '-0.02em' }}>
           SaaS Master Control
