@@ -1195,14 +1195,15 @@ export default function AdminDashboard({ token, username, slug: propSlug = '', o
       return;
     }
     const targetNum = tableNumToDelete || currentCount;
-    if (!window.confirm(`Are you sure you want to remove Table #${targetNum}? (Total tables will become ${currentCount - 1})`)) return;
+    const spaceInfo = getSpaceConfig(settingsForm.table_prefix || 'table');
+    if (!window.confirm(`Are you sure you want to remove ${spaceInfo.singular} ${targetNum}? (Total ${spaceInfo.plural.toLowerCase()} will become ${currentCount - 1})`)) return;
 
     const newCount = Math.max(0, currentCount - 1);
     const updatedForm = { ...settingsForm, total_tables: newCount };
     setSettingsForm(updatedForm);
     setRestaurantInfo(prev => prev ? ({ ...prev, total_tables: newCount }) : prev);
     setTableNumber(String(Math.max(1, Math.min(Number(tableNumber), newCount))));
-    setToastMessage(`🗑️ Table #${targetNum} removed. Total tables: ${newCount}`);
+    setToastMessage(`🗑️ ${spaceInfo.singular} ${targetNum} removed. Total ${spaceInfo.plural.toLowerCase()}: ${newCount}`);
 
     const currentSlug = propSlug || localStorage.getItem('touchqr_admin_slug') || (restaurantInfo && restaurantInfo.slug) || '';
     if (currentSlug) {
