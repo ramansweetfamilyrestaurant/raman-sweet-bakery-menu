@@ -9,7 +9,7 @@ async function handleResponse(res, fallbackErrorMsg = 'API request failed') {
     throw new Error(`Server returned HTTP ${res.status}: ${text.substring(0, 120)}`);
   }
   if (!res.ok) {
-    const err = new Error(data.error || data.message || fallbackErrorMsg);
+    const err = new Error(data.message || data.error || fallbackErrorMsg);
     if (res.status === 401 || (res.status === 403 && (data.error === 'Invalid or expired token.' || (data.message && data.message.includes('expired token'))))) {
       err.isUnauthorized = true;
       err.status = res.status;

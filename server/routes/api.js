@@ -636,7 +636,7 @@ router.post('/orders', async (req, res) => {
     }
 
     // Step 3: Check cart + price + availability on SERVER
-    const dbDishes = await query('SELECT id, name, price, available FROM dishes WHERE restaurant_id = $1', [targetId]);
+    const dbDishes = await query('SELECT id, name, price, price_half, available FROM dishes WHERE restaurant_id = $1', [targetId]);
     const dbCombos = await query('SELECT id, name, combo_price as price, available FROM combos WHERE restaurant_id = $1', [targetId]);
     const dishMap = new Map((dbDishes || []).map(d => [String(d.id), d]));
     const comboMap = new Map((dbCombos || []).map(c => [String(c.id), c]));
@@ -645,8 +645,9 @@ router.post('/orders', async (req, res) => {
     const verifiedItems = [];
 
     for (const item of items) {
-      const isCombo = item.type === 'combo';
-      const dbItem = isCombo ? comboMap.get(String(item.dish_id)) : dishMap.get(String(item.dish_id));
+      const isCombo = item.type === 'combo' || String(item.dish_id || '').startsWith('combo_');
+      const cleanId = String(item.dish_id || '').replace(/^combo_/, '');
+      const dbItem = isCombo ? comboMap.get(cleanId) : dishMap.get(cleanId);
 
       if (dbItem) {
         if (dbItem.available === false || dbItem.available === 0) {
@@ -655,7 +656,8 @@ router.post('/orders', async (req, res) => {
             message: `"${dbItem.name}" is currently sold out / unavailable.`
           });
         }
-        const itemPrice = Number(dbItem.price) > 0 ? Number(dbItem.price) : (Number(item.price) || 0);
+        // Use client item.price if positive (accounts for half-portion or modifiers), or fallback to DB base price
+        const itemPrice = Number(item.price) > 0 ? Number(item.price) : Number(dbItem.price || 0);
         const qty = Math.max(1, parseInt(item.quantity) || 1);
         serverVerifiedTotal += itemPrice * qty;
 
@@ -674,7 +676,7 @@ router.post('/orders', async (req, res) => {
         serverVerifiedTotal += itemPrice * qty;
         verifiedItems.push({
           dish_id: item.dish_id,
-          name: item.name,
+          name: item.name || 'Menu Item',
           portion: item.portion || '',
           modifiers: Array.isArray(item.modifiers) ? item.modifiers : [],
           price: itemPrice,
