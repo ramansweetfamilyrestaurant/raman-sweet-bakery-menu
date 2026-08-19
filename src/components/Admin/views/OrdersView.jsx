@@ -500,33 +500,197 @@ export default function OrdersView({
 
       {/* WAITER CALLS SUBTAB */}
       {activeSubTab === 'service-requests' && (
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(260px, 1fr))', gap: '12px' }}>
-          {safeServiceRequests.length === 0 ? (
-            <div style={{ gridColumn: '1 / -1', padding: '36px', textAlign: 'center', background: '#FFF', borderRadius: 'var(--adm-radius-md)', border: '1px solid var(--adm-border)' }}>
-              <CheckCircle2 size={36} color="var(--adm-success)" style={{ margin: '0 auto 8px' }} />
-              <p style={{ margin: 0, fontWeight: 700, color: 'var(--adm-primary)' }}>No pending waiter calls. All tables are attended!</p>
-            </div>
-          ) : (
-            safeServiceRequests.map(sr => (
-              <div key={sr.id} className="adm-card" style={{ padding: '14px', display: 'flex', flexDirection: 'column', justifyContent: 'space-between', gap: '10px', background: 'var(--adm-warning-bg)', borderColor: 'var(--adm-warning-border)' }}>
-                <div>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '4px' }}>
-                    <strong style={{ fontSize: '1rem', color: 'var(--adm-warning)' }}>{formatCleanTableLabel(sr.table_number)}</strong>
-                    <span className="adm-badge adm-badge-warning">PENDING CALL</span>
-                  </div>
-                  <strong style={{ fontSize: '0.9rem', color: 'var(--adm-text)', display: 'block' }}>{sr.request_type}</strong>
-                  {sr.note && <span style={{ fontSize: '0.78rem', fontStyle: 'italic', color: 'var(--adm-muted)' }}>"{sr.note}"</span>}
-                  <span style={{ fontSize: '0.7rem', color: 'var(--adm-muted)', display: 'block', marginTop: '4px' }}>
-                    Called at {new Date(sr.created_at || Date.now()).toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' })}
-                  </span>
-                </div>
-
-                <button onClick={() => onResolveServiceRequest(sr.id)} className="adm-btn adm-btn-warning" style={{ width: '100%', fontWeight: 800 }}>
-                  ✓ Mark Attended & Resolve
-                </button>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+          {/* Subtab Status Summary Bar */}
+          <div style={{
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            background: safeServiceRequests.length > 0 ? '#FFFBEB' : '#F0FDF4',
+            border: safeServiceRequests.length > 0 ? '1px solid #FDE68A' : '1px solid #BBF7D0',
+            padding: '12px 18px',
+            borderRadius: '16px',
+            flexWrap: 'wrap',
+            gap: '10px'
+          }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+              <div style={{
+                width: '36px',
+                height: '36px',
+                borderRadius: '50%',
+                background: safeServiceRequests.length > 0 ? '#FEF3C7' : '#DCFCE7',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                fontSize: '1.1rem'
+              }}>
+                {safeServiceRequests.length > 0 ? '🛎️' : '✨'}
               </div>
-            ))
-          )}
+              <div>
+                <strong style={{ fontSize: '0.96rem', color: safeServiceRequests.length > 0 ? '#92400E' : '#166534', display: 'block' }}>
+                  {safeServiceRequests.length > 0 ? `Active Waiter Calls (${safeServiceRequests.length} Pending)` : 'All Tables Attended'}
+                </strong>
+                <span style={{ fontSize: '0.78rem', color: safeServiceRequests.length > 0 ? '#B45309' : '#15803D' }}>
+                  {safeServiceRequests.length > 0 ? 'Staff attention required at the tables listed below.' : 'No pending bell rings or customer assistance requests.'}
+                </span>
+              </div>
+            </div>
+
+            {safeServiceRequests.length > 0 && (
+              <span style={{
+                background: '#F59E0B',
+                color: '#FFFFFF',
+                padding: '4px 12px',
+                borderRadius: '20px',
+                fontSize: '0.76rem',
+                fontWeight: 900,
+                boxShadow: '0 2px 8px rgba(245, 158, 11, 0.35)'
+              }}>
+                ⚡ Needs Attention
+              </span>
+            )}
+          </div>
+
+          {/* Cards Grid */}
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: '16px' }}>
+            {safeServiceRequests.length === 0 ? (
+              <div style={{
+                gridColumn: '1 / -1',
+                padding: '48px 20px',
+                textAlign: 'center',
+                background: '#FFFFFF',
+                borderRadius: '20px',
+                border: '1.5px dashed #CBD5E1',
+                display: 'flex',
+                flexDirection: 'column',
+                alignItems: 'center',
+                justifyContent: 'center',
+                gap: '8px'
+              }}>
+                <div style={{
+                  width: '56px',
+                  height: '56px',
+                  borderRadius: '50%',
+                  background: '#DCFCE7',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  fontSize: '1.6rem',
+                  marginBottom: '4px'
+                }}>
+                  🎉
+                </div>
+                <strong style={{ fontSize: '1.1rem', color: '#0F172A' }}>No Pending Waiter Calls</strong>
+                <p style={{ fontSize: '0.84rem', color: '#64748B', margin: 0, maxWidth: '420px' }}>
+                  Customer requests made via the digital QR menu (e.g. "Call Waiter", "Clean Table", "Water") will ring and pop up here live.
+                </p>
+              </div>
+            ) : (
+              safeServiceRequests.map(sr => (
+                <div
+                  key={sr.id}
+                  style={{
+                    background: '#FFFFFF',
+                    border: '1.5px solid #FCD34D',
+                    borderLeft: '6px solid #F59E0B',
+                    borderRadius: '18px',
+                    padding: '16px',
+                    display: 'flex',
+                    flexDirection: 'column',
+                    justifyContent: 'space-between',
+                    gap: '14px',
+                    boxShadow: '0 8px 24px rgba(245, 158, 11, 0.12)',
+                    transition: 'transform 0.15s ease, box-shadow 0.15s ease'
+                  }}
+                >
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                    {/* Header: Table badge & Urgent status */}
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                      <span style={{
+                        background: '#0F172A',
+                        color: '#FFFFFF',
+                        padding: '4px 10px',
+                        borderRadius: '8px',
+                        fontSize: '0.88rem',
+                        fontWeight: 900,
+                        letterSpacing: '0.2px',
+                        display: 'inline-flex',
+                        alignItems: 'center',
+                        gap: '6px'
+                      }}>
+                        🍽️ {formatCleanTableLabel(sr.table_number)}
+                      </span>
+                      <span style={{
+                        background: '#FEF3C7',
+                        color: '#B45309',
+                        border: '1px solid #FCD34D',
+                        padding: '2px 8px',
+                        borderRadius: '12px',
+                        fontSize: '0.7rem',
+                        fontWeight: 900,
+                        display: 'inline-flex',
+                        alignItems: 'center',
+                        gap: '4px'
+                      }}>
+                        <span style={{ width: '6px', height: '6px', borderRadius: '50%', background: '#F59E0B', display: 'inline-block' }}></span>
+                        PENDING
+                      </span>
+                    </div>
+
+                    {/* Request Type */}
+                    <div>
+                      <strong style={{ fontSize: '1.05rem', color: '#1E293B', display: 'block', fontWeight: 900 }}>
+                        {sr.request_type}
+                      </strong>
+                      {sr.note && (
+                        <div style={{
+                          background: '#F8FAFC',
+                          border: '1px dashed #CBD5E1',
+                          padding: '8px 10px',
+                          borderRadius: '8px',
+                          fontSize: '0.8rem',
+                          color: '#475569',
+                          fontStyle: 'italic',
+                          marginTop: '6px'
+                        }}>
+                          💬 "{sr.note}"
+                        </div>
+                      )}
+                    </div>
+
+                    {/* Time Requested */}
+                    <span style={{ fontSize: '0.72rem', color: '#64748B', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '4px' }}>
+                      ⏱️ Requested at {new Date(sr.created_at || Date.now()).toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' })}
+                    </span>
+                  </div>
+
+                  {/* Action Button */}
+                  <button
+                    onClick={() => onResolveServiceRequest(sr.id)}
+                    style={{
+                      width: '100%',
+                      background: 'linear-gradient(135deg, #F59E0B 0%, #D97706 100%)',
+                      color: '#FFFFFF',
+                      padding: '10px 14px',
+                      borderRadius: '10px',
+                      fontWeight: 900,
+                      fontSize: '0.86rem',
+                      border: 'none',
+                      cursor: 'pointer',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      gap: '6px',
+                      boxShadow: '0 4px 14px rgba(245, 158, 11, 0.35)',
+                      transition: 'all 0.15s ease'
+                    }}
+                  >
+                    ✓ Mark Attended & Clear
+                  </button>
+                </div>
+              ))
+            )}
+          </div>
         </div>
       )}
     </div>
