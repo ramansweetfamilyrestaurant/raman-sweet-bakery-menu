@@ -1292,7 +1292,7 @@ export default function AdminDashboard({ token, username, slug: propSlug = '', o
           gst_enabled: infoData.gst_enabled !== undefined ? infoData.gst_enabled : false,
           gstin_number: infoData.gstin_number || '',
           total_tables: infoData.total_tables !== undefined && infoData.total_tables !== null ? Number(infoData.total_tables) : 0,
-          table_prefix: infoData.table_prefix || (currentSlug ? localStorage.getItem(`touchqr_table_prefix_${currentSlug}`) : null) || 'table',
+          table_prefix: (currentSlug && localStorage.getItem(`touchqr_table_prefix_${currentSlug}`)) || infoData.table_prefix || 'table',
           order_retention_days: infoData.order_retention_days || 7,
           custom_domain: infoData.custom_domain || '',
           watermark_removal_enabled: infoData.watermark_removal_enabled === 1 || infoData.watermark_removal_enabled === true || infoData.watermark_removal_enabled === '1',
@@ -1423,14 +1423,9 @@ export default function AdminDashboard({ token, username, slug: propSlug = '', o
   };
 
   const handleUpdateSpaceType = async (newType) => {
-    const updatedForm = { ...settingsForm, table_prefix: newType };
-    setSettingsForm(updatedForm);
-    setRestaurantInfo(prev => prev ? ({ ...prev, table_prefix: newType }) : prev);
-    const spaceInfo = getSpaceConfig(newType);
-    setToastMessage(`✅ Space type set to ${spaceInfo.singular}! Saving...`);
-
     const currentSlug = propSlug || localStorage.getItem('touchqr_admin_slug') || (restaurantInfo && restaurantInfo.slug) || '';
     if (currentSlug) {
+      localStorage.setItem(`touchqr_table_prefix_${currentSlug}`, newType);
       const cached = localStorage.getItem(`admin_cache_${currentSlug}_info`);
       if (cached) {
         try {
@@ -1441,6 +1436,12 @@ export default function AdminDashboard({ token, username, slug: propSlug = '', o
       }
     }
 
+    const updatedForm = { ...settingsForm, table_prefix: newType };
+    setSettingsForm(updatedForm);
+    setRestaurantInfo(prev => prev ? ({ ...prev, table_prefix: newType }) : prev);
+    const spaceInfo = getSpaceConfig(newType);
+    setToastMessage(`✅ Space type set to ${spaceInfo.singular}! Saving...`);
+
     try {
       await fetch('/api/admin/settings', {
         method: 'PUT',
@@ -1450,7 +1451,6 @@ export default function AdminDashboard({ token, username, slug: propSlug = '', o
         },
         body: JSON.stringify(updatedForm)
       });
-      loadData(true);
     } catch (err) {
       console.error('Failed to update space type:', err);
     }

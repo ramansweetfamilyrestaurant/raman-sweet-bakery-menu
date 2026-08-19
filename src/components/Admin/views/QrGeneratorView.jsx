@@ -24,17 +24,11 @@ export default function QrGeneratorView({
     : `${liveOrigin}/${activeSlug}`;
   const qrImgUrl = `https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=${encodeURIComponent(targetUrl)}`;
 
-  const [localPrefix, setLocalPrefix] = React.useState(() => {
-    return settingsForm?.table_prefix || (settingsForm?.slug ? localStorage.getItem(`touchqr_table_prefix_${settingsForm.slug}`) : null) || 'table';
-  });
-
-  React.useEffect(() => {
-    if (settingsForm?.table_prefix) {
-      setLocalPrefix(settingsForm.table_prefix);
-    }
-  }, [settingsForm?.table_prefix]);
-
-  const currentPrefix = (localPrefix || settingsForm?.table_prefix || 'table').toLowerCase();
+  const currentPrefix = (
+    settingsForm?.table_prefix || 
+    (activeSlug ? localStorage.getItem(`touchqr_table_prefix_${activeSlug}`) : null) || 
+    'table'
+  ).toLowerCase();
 
   const getSpaceConfig = (type) => {
     const t = String(type || 'table').toLowerCase();
@@ -47,9 +41,8 @@ export default function QrGeneratorView({
   const spaceConfig = getSpaceConfig(currentPrefix);
 
   const handleSpaceTypeClick = (typeId) => {
-    setLocalPrefix(typeId);
-    if (settingsForm?.slug) {
-      localStorage.setItem(`touchqr_table_prefix_${settingsForm.slug}`, typeId);
+    if (activeSlug) {
+      localStorage.setItem(`touchqr_table_prefix_${activeSlug}`, typeId);
     }
     if (onUpdateSpaceType) {
       onUpdateSpaceType(typeId);
