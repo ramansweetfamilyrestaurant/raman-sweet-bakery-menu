@@ -14,6 +14,8 @@ export default function QrGeneratorView({
   onBackToSetup,
   onUpdateSpaceType
 }) {
+  const [copied, setCopied] = React.useState(false);
+  const liveOrigin = window.location.origin;
   const activeSlug = settingsForm?.slug || '';
   const currentPrefix = (
     settingsForm?.table_prefix || 
