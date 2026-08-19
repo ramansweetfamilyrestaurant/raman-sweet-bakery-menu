@@ -1187,42 +1187,90 @@ const handleUpdateSettings = async (req, res) => {
 
     const locBool = location_initialized !== undefined ? (location_initialized === true || location_initialized === 1 || location_initialized === 'true' ? true : false) : null;
 
-    await query(`
-      UPDATE restaurants 
-      SET name = COALESCE($1, name), tagline = COALESCE($2, tagline), logo = CASE WHEN $3::text IS NOT NULL THEN $3 ELSE logo END, phone = COALESCE($4, phone), address = COALESCE($5, address), opening_hours = COALESCE($6, opening_hours), google_review_url = COALESCE($7, google_review_url), filters_visibility = COALESCE($8, filters_visibility), currency_symbol = COALESCE($9, currency_symbol), fssai_lic_no = COALESCE($10, fssai_lic_no), resto_type = COALESCE($11, resto_type), whatsapp_number = COALESCE($12, whatsapp_number), whatsapp_enabled = COALESCE($13, whatsapp_enabled), theme_color = COALESCE($14, theme_color), latitude = COALESCE($15, latitude), longitude = COALESCE($16, longitude), max_distance_meters = COALESCE($17, max_distance_meters), gst_enabled = COALESCE($18, gst_enabled), gstin_number = COALESCE($19, gstin_number), total_tables = COALESCE($20, total_tables), table_prefix = COALESCE($21, table_prefix), order_retention_days = COALESCE($22, order_retention_days), google_reviews_enabled = COALESCE($23, google_reviews_enabled), custom_domain = CASE WHEN $24::text IS NOT NULL THEN $24 ELSE custom_domain END, location_initialized = COALESCE($25, location_initialized), owner_name = COALESCE($26, owner_name), city = COALESCE($27, city), state = COALESCE($28, state), pincode = COALESCE($29, pincode)
-      WHERE id = $30
-    `, [
-      name !== undefined ? name : null,
-      tagline !== undefined ? tagline : null,
-      processedLogo !== null ? processedLogo : (logo !== undefined ? '' : null),
-      phone !== undefined ? phone : null,
-      address !== undefined ? address : null,
-      openingHours !== undefined ? openingHours : null,
-      google_review_url !== undefined ? google_review_url : null,
-      visJson !== undefined ? visJson : null,
-      currency_symbol !== undefined ? currency_symbol : null,
-      fssai_lic_no !== undefined ? fssai_lic_no : null,
-      resto_type !== undefined ? resto_type : null,
-      whatsapp_number !== undefined ? whatsapp_number : null,
-      whatsapp_enabled !== undefined ? (whatsapp_enabled !== false && whatsapp_enabled !== 0 ? 1 : 0) : null,
-      theme_color !== undefined ? theme_color : null,
-      latitude !== undefined && latitude !== null ? Number(latitude) : null,
-      longitude !== undefined && longitude !== null ? Number(longitude) : null,
-      max_distance_meters !== undefined ? Number(max_distance_meters) : null,
-      gst_enabled !== undefined ? (gst_enabled ? 1 : 0) : null,
-      gstin_number !== undefined ? gstin_number : null,
-      total_tables !== undefined && total_tables !== null ? Number(total_tables) : null,
-      table_prefix !== undefined ? table_prefix : null,
-      order_retention_days !== undefined ? Number(order_retention_days) : null,
-      google_reviews_enabled !== undefined ? (google_reviews_enabled !== false && google_reviews_enabled !== 0 ? 1 : 0) : null,
-      cleanDomain !== null ? cleanDomain : (custom_domain !== undefined ? '' : null),
-      locBool,
-      owner_name !== undefined ? owner_name : null,
-      city !== undefined ? city : null,
-      state !== undefined ? state : null,
-      pincode !== undefined ? pincode : null,
-      targetId
-    ]);
+    try {
+      await query(`
+        UPDATE restaurants 
+        SET name = COALESCE($1, name), tagline = COALESCE($2, tagline), logo = CASE WHEN $3::text IS NOT NULL THEN $3 ELSE logo END, phone = COALESCE($4, phone), address = COALESCE($5, address), opening_hours = COALESCE($6, opening_hours), google_review_url = COALESCE($7, google_review_url), filters_visibility = COALESCE($8, filters_visibility), currency_symbol = COALESCE($9, currency_symbol), fssai_lic_no = COALESCE($10, fssai_lic_no), resto_type = COALESCE($11, resto_type), whatsapp_number = COALESCE($12, whatsapp_number), whatsapp_enabled = COALESCE($13, whatsapp_enabled), theme_color = COALESCE($14, theme_color), latitude = COALESCE($15, latitude), longitude = COALESCE($16, longitude), max_distance_meters = COALESCE($17, max_distance_meters), gst_enabled = COALESCE($18, gst_enabled), gstin_number = COALESCE($19, gstin_number), total_tables = COALESCE($20, total_tables), table_prefix = COALESCE($21, table_prefix), order_retention_days = COALESCE($22, order_retention_days), google_reviews_enabled = COALESCE($23, google_reviews_enabled), custom_domain = CASE WHEN $24::text IS NOT NULL THEN $24 ELSE custom_domain END, location_initialized = COALESCE($25, location_initialized), owner_name = COALESCE($26, owner_name), city = COALESCE($27, city), state = COALESCE($28, state), pincode = COALESCE($29, pincode)
+        WHERE id = $30
+      `, [
+        name !== undefined ? name : null,
+        tagline !== undefined ? tagline : null,
+        processedLogo !== null ? processedLogo : (logo !== undefined ? '' : null),
+        phone !== undefined ? phone : null,
+        address !== undefined ? address : null,
+        openingHours !== undefined ? openingHours : null,
+        google_review_url !== undefined ? google_review_url : null,
+        visJson !== undefined ? visJson : null,
+        currency_symbol !== undefined ? currency_symbol : null,
+        fssai_lic_no !== undefined ? fssai_lic_no : null,
+        resto_type !== undefined ? resto_type : null,
+        whatsapp_number !== undefined ? whatsapp_number : null,
+        whatsapp_enabled !== undefined ? (whatsapp_enabled !== false && whatsapp_enabled !== 0 ? 1 : 0) : null,
+        theme_color !== undefined ? theme_color : null,
+        latitude !== undefined && latitude !== null ? Number(latitude) : null,
+        longitude !== undefined && longitude !== null ? Number(longitude) : null,
+        max_distance_meters !== undefined ? Number(max_distance_meters) : null,
+        gst_enabled !== undefined ? (gst_enabled ? 1 : 0) : null,
+        gstin_number !== undefined ? gstin_number : null,
+        total_tables !== undefined && total_tables !== null ? Number(total_tables) : null,
+        table_prefix !== undefined ? table_prefix : null,
+        order_retention_days !== undefined ? Number(order_retention_days) : null,
+        google_reviews_enabled !== undefined ? (google_reviews_enabled !== false && google_reviews_enabled !== 0 ? 1 : 0) : null,
+        cleanDomain !== null ? cleanDomain : (custom_domain !== undefined ? '' : null),
+        locBool,
+        owner_name !== undefined ? owner_name : null,
+        city !== undefined ? city : null,
+        state !== undefined ? state : null,
+        pincode !== undefined ? pincode : null,
+        targetId
+      ]);
+    } catch (sqlErr) {
+      if (sqlErr.message && (sqlErr.message.includes('table_prefix') || sqlErr.message.includes('column'))) {
+        try {
+          await query("ALTER TABLE restaurants ADD COLUMN IF NOT EXISTS table_prefix VARCHAR(50) DEFAULT 'table'");
+          await query(`
+            UPDATE restaurants 
+            SET name = COALESCE($1, name), tagline = COALESCE($2, tagline), logo = CASE WHEN $3::text IS NOT NULL THEN $3 ELSE logo END, phone = COALESCE($4, phone), address = COALESCE($5, address), opening_hours = COALESCE($6, opening_hours), google_review_url = COALESCE($7, google_review_url), filters_visibility = COALESCE($8, filters_visibility), currency_symbol = COALESCE($9, currency_symbol), fssai_lic_no = COALESCE($10, fssai_lic_no), resto_type = COALESCE($11, resto_type), whatsapp_number = COALESCE($12, whatsapp_number), whatsapp_enabled = COALESCE($13, whatsapp_enabled), theme_color = COALESCE($14, theme_color), latitude = COALESCE($15, latitude), longitude = COALESCE($16, longitude), max_distance_meters = COALESCE($17, max_distance_meters), gst_enabled = COALESCE($18, gst_enabled), gstin_number = COALESCE($19, gstin_number), total_tables = COALESCE($20, total_tables), table_prefix = COALESCE($21, table_prefix), order_retention_days = COALESCE($22, order_retention_days), google_reviews_enabled = COALESCE($23, google_reviews_enabled), custom_domain = CASE WHEN $24::text IS NOT NULL THEN $24 ELSE custom_domain END, location_initialized = COALESCE($25, location_initialized), owner_name = COALESCE($26, owner_name), city = COALESCE($27, city), state = COALESCE($28, state), pincode = COALESCE($29, pincode)
+            WHERE id = $30
+          `, [
+            name !== undefined ? name : null,
+            tagline !== undefined ? tagline : null,
+            processedLogo !== null ? processedLogo : (logo !== undefined ? '' : null),
+            phone !== undefined ? phone : null,
+            address !== undefined ? address : null,
+            openingHours !== undefined ? openingHours : null,
+            google_review_url !== undefined ? google_review_url : null,
+            visJson !== undefined ? visJson : null,
+            currency_symbol !== undefined ? currency_symbol : null,
+            fssai_lic_no !== undefined ? fssai_lic_no : null,
+            resto_type !== undefined ? resto_type : null,
+            whatsapp_number !== undefined ? whatsapp_number : null,
+            whatsapp_enabled !== undefined ? (whatsapp_enabled !== false && whatsapp_enabled !== 0 ? 1 : 0) : null,
+            theme_color !== undefined ? theme_color : null,
+            latitude !== undefined && latitude !== null ? Number(latitude) : null,
+            longitude !== undefined && longitude !== null ? Number(longitude) : null,
+            max_distance_meters !== undefined ? Number(max_distance_meters) : null,
+            gst_enabled !== undefined ? (gst_enabled ? 1 : 0) : null,
+            gstin_number !== undefined ? gstin_number : null,
+            total_tables !== undefined && total_tables !== null ? Number(total_tables) : null,
+            table_prefix !== undefined ? table_prefix : null,
+            order_retention_days !== undefined ? Number(order_retention_days) : null,
+            google_reviews_enabled !== undefined ? (google_reviews_enabled !== false && google_reviews_enabled !== 0 ? 1 : 0) : null,
+            cleanDomain !== null ? cleanDomain : (custom_domain !== undefined ? '' : null),
+            locBool,
+            owner_name !== undefined ? owner_name : null,
+            city !== undefined ? city : null,
+            state !== undefined ? state : null,
+            pincode !== undefined ? pincode : null,
+            targetId
+          ]);
+        } catch (innerErr) {
+          console.error('Failed auto-adding table_prefix column:', innerErr);
+        }
+      } else {
+        throw sqlErr;
+      }
+    }
 
     clearRestoResolveCache();
 

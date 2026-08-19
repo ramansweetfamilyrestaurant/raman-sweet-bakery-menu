@@ -1291,7 +1291,7 @@ export default function AdminDashboard({ token, username, slug: propSlug = '', o
           gst_enabled: infoData.gst_enabled !== undefined ? infoData.gst_enabled : false,
           gstin_number: infoData.gstin_number || '',
           total_tables: infoData.total_tables !== undefined && infoData.total_tables !== null ? Number(infoData.total_tables) : 0,
-          table_prefix: infoData.table_prefix || 'table',
+          table_prefix: infoData.table_prefix || (currentSlug ? localStorage.getItem(`touchqr_table_prefix_${currentSlug}`) : null) || 'table',
           order_retention_days: infoData.order_retention_days || 7,
           custom_domain: infoData.custom_domain || '',
           watermark_removal_enabled: infoData.watermark_removal_enabled === 1 || infoData.watermark_removal_enabled === true || infoData.watermark_removal_enabled === '1',

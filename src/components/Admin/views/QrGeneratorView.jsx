@@ -24,7 +24,17 @@ export default function QrGeneratorView({
     : `${liveOrigin}/${activeSlug}`;
   const qrImgUrl = `https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=${encodeURIComponent(targetUrl)}`;
 
-  const currentPrefix = (settingsForm?.table_prefix || 'table').toLowerCase();
+  const [localPrefix, setLocalPrefix] = React.useState(() => {
+    return settingsForm?.table_prefix || (settingsForm?.slug ? localStorage.getItem(`touchqr_table_prefix_${settingsForm.slug}`) : null) || 'table';
+  });
+
+  React.useEffect(() => {
+    if (settingsForm?.table_prefix) {
+      setLocalPrefix(settingsForm.table_prefix);
+    }
+  }, [settingsForm?.table_prefix]);
+
+  const currentPrefix = (localPrefix || settingsForm?.table_prefix || 'table').toLowerCase();
 
   const getSpaceConfig = (type) => {
     const t = String(type || 'table').toLowerCase();
@@ -35,6 +45,16 @@ export default function QrGeneratorView({
   };
 
   const spaceConfig = getSpaceConfig(currentPrefix);
+
+  const handleSpaceTypeClick = (typeId) => {
+    setLocalPrefix(typeId);
+    if (settingsForm?.slug) {
+      localStorage.setItem(`touchqr_table_prefix_${settingsForm.slug}`, typeId);
+    }
+    if (onUpdateSpaceType) {
+      onUpdateSpaceType(typeId);
+    }
+  };
 
   const handleCopyLink = () => {
     navigator.clipboard.writeText(targetUrl);
@@ -90,7 +110,7 @@ export default function QrGeneratorView({
                 <button
                   key={item.id}
                   type="button"
-                  onClick={() => onUpdateSpaceType && onUpdateSpaceType(item.id)}
+                  onClick={() => handleSpaceTypeClick(item.id)}
                   style={{
                     padding: '8px 16px',
                     borderRadius: 'var(--radius-pill)',
