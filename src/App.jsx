@@ -108,16 +108,17 @@ export default function App() {
     const activeType = (currentSpaceType || String(info.table_prefix || 'table')).toLowerCase();
     let maxAllowed = 0;
     if (activeType === 'cabin') {
-      maxAllowed = Number(info.total_cabins) || 0;
+      maxAllowed = Number(info.total_cabins) || Number(info.total_tables) || 0;
     } else if (activeType === 'room') {
-      maxAllowed = Number(info.total_rooms) || 0;
+      maxAllowed = Number(info.total_rooms) || Number(info.total_tables) || 0;
     } else if (activeType === 'vip') {
-      maxAllowed = Number(info.total_vip) || 0;
+      maxAllowed = Number(info.total_vip) || Number(info.total_tables) || 0;
     } else {
       maxAllowed = Number(info.total_tables) || 0;
     }
 
-    if (maxAllowed <= 0 || num > maxAllowed) {
+    // Only reject if capacity is explicitly configured (> 0) and scanned number exceeds it
+    if (maxAllowed > 0 && num > maxAllowed) {
       return false;
     }
     return true;

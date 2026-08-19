@@ -648,13 +648,13 @@ router.post('/orders', async (req, res) => {
       let maxAllowed = 0;
       let spaceName = 'Table';
       if (lowerTbl.includes('cabin')) {
-        maxAllowed = Number(resto.total_cabins) || 0;
+        maxAllowed = Number(resto.total_cabins) || Number(resto.total_tables) || 0;
         spaceName = 'Cabin';
       } else if (lowerTbl.includes('room')) {
-        maxAllowed = Number(resto.total_rooms) || 0;
+        maxAllowed = Number(resto.total_rooms) || Number(resto.total_tables) || 0;
         spaceName = 'Room';
       } else if (lowerTbl.includes('vip')) {
-        maxAllowed = Number(resto.total_vip) || 0;
+        maxAllowed = Number(resto.total_vip) || Number(resto.total_tables) || 0;
         spaceName = 'VIP Lounge';
       } else {
         maxAllowed = Number(resto.total_tables) || 0;
