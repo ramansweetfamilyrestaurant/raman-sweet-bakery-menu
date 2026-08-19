@@ -70,6 +70,7 @@ export default function App() {
   };
 
   const initialSpaceInfo = getSpaceInfoFromUrl();
+  const initialTableNum = initialSpaceInfo.num;
   const [currentTableNum, setCurrentTableNum] = useState(initialSpaceInfo.num);
   const [currentSpaceType, setCurrentSpaceType] = useState(initialSpaceInfo.type);
   const [sessionExpired, setSessionExpired] = useState(false);
