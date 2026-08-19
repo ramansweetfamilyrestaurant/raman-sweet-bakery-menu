@@ -603,10 +603,22 @@ export default function App() {
     const checkTableStatus = async () => {
       try {
         if (activeOrderId) {
-          const data = await trackOrderStatus(activeOrderId);
-          if (data) {
-            setActiveOrderTrack(data);
-            return;
+          try {
+            const data = await trackOrderStatus(activeOrderId);
+            if (data) {
+              setActiveOrderTrack(data);
+              return;
+            }
+          } catch (trackErr) {
+            // Order was rejected or purged by admin -> show cancelled state
+            if (trackErr?.message?.includes('not found') || trackErr?.status === 404 || String(trackErr).includes('404')) {
+              setActiveOrderTrack({
+                id: activeOrderId,
+                status: 'cancelled',
+                table_number: effectiveTableNum
+              });
+              return;
+            }
           }
         }
         // Multi-device table sync ONLY if table QR code was scanned

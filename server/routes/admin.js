@@ -1392,9 +1392,12 @@ router.patch('/orders/:id/status', authenticateToken, requireActiveSubscription,
     const targetOrder = existing[0] || null;
 
     if (status === 'rejected' || status === 'cancelled') {
-      // Instantly HARD DELETE rejected/cancelled order so ZERO record remains in DB or UI
-      await query('DELETE FROM orders WHERE id = $1 AND restaurant_id = $2', [orderId, targetId]);
-      return res.json({ success: true, id: orderId, status: 'cancelled', deleted: true });
+      // Mark cancelled order with is_settled = 1 so customer immediately receives the CANCELLED status notification
+      await query(
+        'UPDATE orders SET status = $1, is_settled = 1 WHERE id = $2 AND restaurant_id = $3',
+        ['cancelled', orderId, targetId]
+      );
+      return res.json({ success: true, id: orderId, status: 'cancelled', is_settled: 1 });
     }
 
     let updateRes = null;
