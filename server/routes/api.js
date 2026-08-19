@@ -457,6 +457,7 @@ router.get('/info', async (req, res) => {
       total_rooms: resto.total_rooms !== undefined && resto.total_rooms !== null ? Number(resto.total_rooms) : 0,
       total_vip: resto.total_vip !== undefined && resto.total_vip !== null ? Number(resto.total_vip) : 0,
       table_prefix: resto.table_prefix || 'table',
+      qr_secret: resto.qr_secret || (`${resto.id}_${resto.slug}_tq`),
       order_retention_days: resto.order_retention_days || 7,
       custom_domain: resto.custom_domain || '',
       kds_screen_enabled: resto.kds_screen_enabled !== undefined && resto.kds_screen_enabled !== null ? Number(resto.kds_screen_enabled) : 1,

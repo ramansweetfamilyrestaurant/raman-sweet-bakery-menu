@@ -1,5 +1,6 @@
 import React from 'react';
-import { QrCode, Printer, Plus, Trash2, ExternalLink, Copy, Check, ArrowLeft } from 'lucide-react';
+import { QrCode, Printer, Plus, Trash2, ExternalLink, Copy, Check, ArrowLeft, ShieldCheck } from 'lucide-react';
+import { generateQrToken } from '../../../utils/qrSecurity';
 
 export default function QrGeneratorView({
   tableNumber,
@@ -44,8 +45,11 @@ export default function QrGeneratorView({
   const hasTables = currentCount > 0;
   const activeTableNum = hasTables ? (tableNumber || '1') : '';
 
+  const secretKey = settingsForm?.qr_secret || `${settingsForm?.id || 1}_${activeSlug}_tq`;
+  const qrSig = hasTables ? generateQrToken(activeSlug, spaceConfig.param, activeTableNum, secretKey) : '';
+
   const targetUrl = hasTables 
-    ? `${liveOrigin}/${activeSlug}?${spaceConfig.param}=${activeTableNum}`
+    ? `${liveOrigin}/${activeSlug}?${spaceConfig.param}=${activeTableNum}&tkn=${qrSig}`
     : `${liveOrigin}/${activeSlug}`;
   const qrImgUrl = `https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=${encodeURIComponent(targetUrl)}`;
 

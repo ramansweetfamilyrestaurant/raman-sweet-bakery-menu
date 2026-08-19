@@ -16,6 +16,7 @@ import { LayoutList, Grid, BookOpen, X, Sparkles, ShieldAlert, Phone, Plus, Edit
 import { verifyCustomerLocation } from './utils/geo';
 import ServiceRequestModal from './components/ServiceRequestModal';
 import CustomerReviewModal from './components/CustomerReviewModal';
+import { generateQrToken, verifyQrToken } from './utils/qrSecurity';
 
 // Robust Lazy Loading with automatic retry on new production deploys
 const lazyWithRetry = (componentImport) =>
@@ -55,20 +56,21 @@ const ContactSupport = lazyWithRetry(() => import('./components/Legal/ContactSup
 const StandaloneKdsPage = lazyWithRetry(() => import('./components/Admin/views/StandaloneKdsPage'));
 
 export default function App() {
-  // Parse Space / Table info from URL query parameters (?cabin=2, ?room=5, ?vip=1, ?table=5, ?t=5)
+  // Parse Space / Table info and Cryptographic QR token from URL query parameters
   const getSpaceInfoFromUrl = () => {
     const urlParams = new URLSearchParams(window.location.search);
+    const token = urlParams.get('tkn') || urlParams.get('token') || urlParams.get('sig') || '';
     if (urlParams.get('cabin')) {
       const num = urlParams.get('cabin');
-      return { type: 'cabin', num, label: `Cabin ${num}`, badge: `🛋️ Cabin ${num}` };
+      return { type: 'cabin', num, label: `Cabin ${num}`, badge: `🛋️ Cabin ${num}`, token };
     }
     if (urlParams.get('room')) {
       const num = urlParams.get('room');
-      return { type: 'room', num, label: `Room ${num}`, badge: `🏨 Room ${num}` };
+      return { type: 'room', num, label: `Room ${num}`, badge: `🏨 Room ${num}`, token };
     }
     if (urlParams.get('vip')) {
       const num = urlParams.get('vip');
-      return { type: 'vip', num, label: `VIP ${num}`, badge: `👑 VIP ${num}` };
+      return { type: 'vip', num, label: `VIP ${num}`, badge: `👑 VIP ${num}`, token };
     }
     let t = urlParams.get('table') || urlParams.get('t') || urlParams.get('tableno') || urlParams.get('tbl') || '';
     if (!t) {
@@ -78,16 +80,16 @@ export default function App() {
         const prevPart = parts[parts.length - 2].toLowerCase();
         if (/^\d+$/.test(lastPart) && (prevPart === 'table' || prevPart === 'tbl' || prevPart === 'r' || prevPart === 'cabin' || prevPart === 'room' || prevPart === 'vip')) {
           t = lastPart;
-          if (prevPart === 'cabin') return { type: 'cabin', num: t, label: `Cabin ${t}`, badge: `🛋️ Cabin ${t}` };
-          if (prevPart === 'room') return { type: 'room', num: t, label: `Room ${t}`, badge: `🏨 Room ${t}` };
-          if (prevPart === 'vip') return { type: 'vip', num: t, label: `VIP ${t}`, badge: `👑 VIP ${t}` };
+          if (prevPart === 'cabin') return { type: 'cabin', num: t, label: `Cabin ${t}`, badge: `🛋️ Cabin ${t}`, token };
+          if (prevPart === 'room') return { type: 'room', num: t, label: `Room ${t}`, badge: `🏨 Room ${t}`, token };
+          if (prevPart === 'vip') return { type: 'vip', num: t, label: `VIP ${t}`, badge: `👑 VIP ${t}`, token };
         }
       }
     }
     if (t) {
-      return { type: 'table', num: t, label: `Table ${t}`, badge: `🍽️ Table ${t}` };
+      return { type: 'table', num: t, label: `Table ${t}`, badge: `🍽️ Table ${t}`, token };
     }
-    return { type: '', num: '', label: '', badge: '' };
+    return { type: '', num: '', label: '', badge: '', token: '' };
   };
 
   // Menu Data State (Declared at top of component to avoid TDZ access)
@@ -97,10 +99,11 @@ export default function App() {
   const initialTableNum = initialSpaceInfo.num;
   const [currentTableNum, setCurrentTableNum] = useState(initialSpaceInfo.num);
   const [currentSpaceType, setCurrentSpaceType] = useState(initialSpaceInfo.type);
+  const [currentTableToken, setCurrentTableToken] = useState(initialSpaceInfo.token);
   const [sessionExpired, setSessionExpired] = useState(false);
   const [autoKillSeconds, setAutoKillSeconds] = useState(null);
 
-  // Validate if the table/space number exists within the restaurant's configured capacity
+  // Validate if the table/space number exists within the restaurant's configured capacity & verified signature
   const isSpaceNumberValid = () => {
     if (!currentTableNum) return true;
     const num = parseInt(currentTableNum, 10);
@@ -120,10 +123,21 @@ export default function App() {
       maxAllowed = Number(info.total_tables) || 0;
     }
 
-    // Only reject if capacity is explicitly configured (> 0) and scanned number exceeds it
+    // Capacity check
     if (maxAllowed > 0 && num > maxAllowed) {
       return false;
     }
+
+    // Anti-Tamper Cryptographic Token Check (if token was present in URL, it MUST match the table)
+    if (currentTableToken) {
+      const activeSlug = getSlugFromUrl() || (info && info.slug) || '';
+      const secret = info?.qr_secret || (`${info?.id || 1}_${activeSlug}_tq`);
+      const isTokenValid = verifyQrToken(activeSlug, activeType, currentTableNum, secret, currentTableToken);
+      if (!isTokenValid) {
+        return false;
+      }
+    }
+
     return true;
   };
 
@@ -625,6 +639,7 @@ export default function App() {
       const res = await createDirectOrder({
         slug: currentSlug,
         table_number: targetTable,
+        table_token: currentTableToken,
         customer_name: customerNameInput || 'Dine-In Customer',
         customer_phone: customerPhoneInput || '',
         items: itemsPayload,

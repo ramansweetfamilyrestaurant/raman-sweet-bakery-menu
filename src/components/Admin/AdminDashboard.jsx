@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { fetchCategories, fetchDishes, toggleDishAvailability, toggleCategoryActive, deleteDish, deleteCategory, fetchRestaurantInfo, updateDishPrice, fetchAnnouncements, fetchAdminOrders, updateOrderStatus, uploadImage, fetchServiceRequests, resolveServiceRequest, fetchAdminAnalytics, fetchAdminCombos, createCombo, updateCombo, deleteCombo, toggleComboAvailability, optimizeDatabase, updateTenantSettings } from '../../api/client';
 import { getPlanDetails } from '../../config/plans';
+import { generateQrToken } from '../../utils/qrSecurity';
 import DishFormModal from './DishFormModal';
 import CategoryFormModal from './CategoryFormModal';
 import ComboFormModal from './ComboFormModal';
@@ -1503,7 +1504,9 @@ export default function AdminDashboard({ token, username, slug: propSlug = '', o
     const paramName = prefix === 'cabin' ? 'cabin' : prefix === 'room' ? 'room' : prefix === 'vip' ? 'vip' : 'table';
     const liveOrigin = window.location.origin;
     const activeSlug = settingsForm.slug || restaurantInfo?.slug || '';
-    const targetUrl = `${liveOrigin}/${activeSlug}?${paramName}=${activeTableNum}`;
+    const secretKey = settingsForm.qr_secret || restaurantInfo?.qr_secret || `${restaurantInfo?.id || 1}_${activeSlug}_tq`;
+    const qrSig = generateQrToken(activeSlug, paramName, activeTableNum, secretKey);
+    const targetUrl = `${liveOrigin}/${activeSlug}?${paramName}=${activeTableNum}&tkn=${qrSig}`;
     const qrImgUrl = `https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=${encodeURIComponent(targetUrl)}`;
     const currentName = settingsForm.name || 'Digital Menu';
     const currentTagline = settingsForm.tagline || 'Scan QR Code for Digital Menu';
@@ -1644,6 +1647,7 @@ export default function AdminDashboard({ token, username, slug: propSlug = '', o
     const currentName = settingsForm.name || 'Digital Menu';
     const currentTagline = settingsForm.tagline || 'Scan QR Code for Digital Menu';
     const activeSlug = settingsForm.slug || restaurantInfo?.slug || '';
+    const secretKey = settingsForm.qr_secret || restaurantInfo?.qr_secret || `${restaurantInfo?.id || 1}_${activeSlug}_tq`;
 
     const printWindow = window.open('', '_blank', 'width=950,height=900');
     if (!printWindow) {
@@ -1653,7 +1657,8 @@ export default function AdminDashboard({ token, username, slug: propSlug = '', o
 
     let cardsHtml = '';
     for (let tNum = 1; tNum <= totalCount; tNum++) {
-      const targetUrl = `${liveOrigin}/${activeSlug}?${paramName}=${tNum}`;
+      const qrSig = generateQrToken(activeSlug, paramName, tNum, secretKey);
+      const targetUrl = `${liveOrigin}/${activeSlug}?${paramName}=${tNum}&tkn=${qrSig}`;
       const qrImgUrl = `https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=${encodeURIComponent(targetUrl)}`;
       cardsHtml += `
         <div class="standee-card">
