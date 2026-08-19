@@ -404,7 +404,11 @@ export default function App() {
         setCurrentTableNum('');
         setSessionExpired(true);
         setAutoKillSeconds(null);
-        window.history.replaceState({}, '', window.location.pathname);
+        setCartItems([]);
+        setShowCartDrawer(false);
+        const currentSlug = getSlugFromUrl() || (info && info.slug) || '';
+        const cleanPath = currentSlug ? `/${currentSlug}` : '/';
+        window.history.replaceState({}, '', cleanPath);
       } else {
         setAutoKillSeconds(remainingSec);
       }
@@ -437,7 +441,11 @@ export default function App() {
         localStorage.removeItem(scanTimeKey);
         setCurrentTableNum('');
         setSessionExpired(true);
-        window.history.replaceState({}, '', window.location.pathname);
+        setCartItems([]);
+        setShowCartDrawer(false);
+        const currentSlug = getSlugFromUrl() || (info && info.slug) || '';
+        const cleanPath = currentSlug ? `/${currentSlug}` : '/';
+        window.history.replaceState({}, '', cleanPath);
       }
     };
 
@@ -1738,7 +1746,11 @@ export default function App() {
               setCurrentTableNum('');
               setSessionExpired(true);
               setAutoKillSeconds(null);
-              window.history.replaceState({}, '', window.location.pathname);
+              setCartItems([]);
+              setShowCartDrawer(false);
+              const currentSlug = getSlugFromUrl() || (info && info.slug) || '';
+              const cleanPath = currentSlug ? `/${currentSlug}` : '/';
+              window.history.replaceState({}, '', cleanPath);
             }}
             style={{
               background: 'rgba(255,255,255,0.15)',
@@ -2680,7 +2692,7 @@ export default function App() {
           dish={selectedDishModal}
           lang={lang}
           currencySymbol={info?.currency_symbol !== undefined ? info.currency_symbol : '₹'}
-          onAddToCart={handleAddToCart}
+          onAddToCart={Boolean(effectiveTableNum && (info?.direct_ordering_enabled === true || info?.direct_ordering_enabled === 1)) ? handleAddToCart : undefined}
           onClose={() => setSelectedDishModal(null)}
         />
       )}

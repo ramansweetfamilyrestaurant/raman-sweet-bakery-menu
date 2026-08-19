@@ -403,7 +403,7 @@ export default function DishModal({ dish, onClose, onAddToCart, currencySymbol =
             </span>
           </div>
 
-          {/* Action Bar (Dynamic Total + Add to Order Button) */}
+          {/* Action Bar (Dynamic Total + Add to Order Button or View-Only Close) */}
           <div style={{
             paddingTop: '12px',
             borderTop: '1.5px solid var(--gold-border)',
@@ -421,7 +421,7 @@ export default function DishModal({ dish, onClose, onAddToCart, currencySymbol =
               </span>
             </div>
 
-            {dish.available !== false && onAddToCart && (
+            {dish.available !== false && onAddToCart ? (
               <button
                 type="button"
                 onClick={() => {
@@ -448,6 +448,29 @@ export default function DishModal({ dish, onClose, onAddToCart, currencySymbol =
               >
                 <span>➕</span>
                 <span>{lang === 'hi' ? 'ऑर्डर में जोड़ें' : 'Add to Order'} • {symbol}{activePrice}</span>
+              </button>
+            ) : (
+              <button
+                type="button"
+                onClick={onClose}
+                style={{
+                  flex: 1,
+                  padding: '12px 18px',
+                  borderRadius: 'var(--radius-pill)',
+                  border: '1.5px solid var(--border-light)',
+                  background: 'var(--bg-secondary)',
+                  color: 'var(--text-dark)',
+                  fontWeight: 800,
+                  fontSize: '0.86rem',
+                  cursor: 'pointer',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  gap: '6px'
+                }}
+              >
+                <span>📖</span>
+                <span>{lang === 'hi' ? 'विवरण बंद करें (View Only)' : 'Close Details (View Only)'}</span>
               </button>
             )}
           </div>
