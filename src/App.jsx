@@ -90,6 +90,9 @@ export default function App() {
     return { type: '', num: '', label: '', badge: '' };
   };
 
+  // Menu Data State (Declared at top of component to avoid TDZ access)
+  const [info, setInfo] = useState(null);
+
   const initialSpaceInfo = getSpaceInfoFromUrl();
   const initialTableNum = initialSpaceInfo.num;
   const [currentTableNum, setCurrentTableNum] = useState(initialSpaceInfo.num);
@@ -304,7 +307,6 @@ export default function App() {
   const [superUsername, setSuperUsername] = useState(getInitialSuperUser());
 
   // Menu Data State
-  const [info, setInfo] = useState(null);
   const [categories, setCategories] = useState([]);
   const [dishes, setDishes] = useState([]);
   
