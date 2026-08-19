@@ -1081,6 +1081,7 @@ export default function AdminDashboard({ token, username, slug: propSlug = '', o
         gst_enabled: infoData.gst_enabled !== undefined ? infoData.gst_enabled : false,
         gstin_number: infoData.gstin_number || '',
         total_tables: infoData.total_tables !== undefined && infoData.total_tables !== null ? Number(infoData.total_tables) : 0,
+        table_prefix: infoData.table_prefix || 'table',
         order_retention_days: infoData.order_retention_days || 7,
         custom_domain: infoData.custom_domain || '',
         watermark_removal_enabled: infoData.watermark_removal_enabled === 1 || infoData.watermark_removal_enabled === true || infoData.watermark_removal_enabled === '1',
@@ -1107,6 +1108,7 @@ export default function AdminDashboard({ token, username, slug: propSlug = '', o
       fssai_lic_no: '',
       resto_type: 'pure_veg',
       custom_domain: '',
+      table_prefix: 'table',
       watermark_removal_enabled: false,
       custom_domain_enabled: false,
       analytics_export_enabled: false,
@@ -1289,6 +1291,7 @@ export default function AdminDashboard({ token, username, slug: propSlug = '', o
           gst_enabled: infoData.gst_enabled !== undefined ? infoData.gst_enabled : false,
           gstin_number: infoData.gstin_number || '',
           total_tables: infoData.total_tables !== undefined && infoData.total_tables !== null ? Number(infoData.total_tables) : 0,
+          table_prefix: infoData.table_prefix || 'table',
           order_retention_days: infoData.order_retention_days || 7,
           custom_domain: infoData.custom_domain || '',
           watermark_removal_enabled: infoData.watermark_removal_enabled === 1 || infoData.watermark_removal_enabled === true || infoData.watermark_removal_enabled === '1',
@@ -1410,10 +1413,53 @@ export default function AdminDashboard({ token, username, slug: propSlug = '', o
     }
   };
 
+  const getSpaceConfig = (type) => {
+    const t = String(type || 'table').toLowerCase();
+    if (t === 'cabin') return { singular: 'Cabin', badge: 'CABIN NO.' };
+    if (t === 'room') return { singular: 'Room', badge: 'ROOM NO.' };
+    if (t === 'vip') return { singular: 'VIP Lounge', badge: 'VIP LOUNGE' };
+    return { singular: 'Table', badge: 'TABLE NO.' };
+  };
+
+  const handleUpdateSpaceType = async (newType) => {
+    const updatedForm = { ...settingsForm, table_prefix: newType };
+    setSettingsForm(updatedForm);
+    setRestaurantInfo(prev => prev ? ({ ...prev, table_prefix: newType }) : prev);
+    const spaceInfo = getSpaceConfig(newType);
+    setToastMessage(`✅ Space type set to ${spaceInfo.singular}! Saving...`);
+
+    const currentSlug = propSlug || localStorage.getItem('touchqr_admin_slug') || (restaurantInfo && restaurantInfo.slug) || '';
+    if (currentSlug) {
+      const cached = localStorage.getItem(`admin_cache_${currentSlug}_info`);
+      if (cached) {
+        try {
+          const parsed = JSON.parse(cached);
+          parsed.table_prefix = newType;
+          localStorage.setItem(`admin_cache_${currentSlug}_info`, JSON.stringify(parsed));
+        } catch {}
+      }
+    }
+
+    try {
+      await fetch('/api/admin/settings', {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify(updatedForm)
+      });
+      loadData(true);
+    } catch (err) {
+      console.error('Failed to update space type:', err);
+    }
+  };
+
   const handlePrintQR = (overrideNum) => {
     const activeTableNum = overrideNum || tableNumber || '1';
     ensureTableCreated(activeTableNum);
 
+    const spaceConfig = getSpaceConfig(settingsForm.table_prefix || restaurantInfo?.table_prefix || 'table');
     const liveOrigin = window.location.origin;
     const activeSlug = settingsForm.slug || restaurantInfo?.slug || '';
     const targetUrl = `${liveOrigin}/${activeSlug}?table=${activeTableNum}`;
@@ -1430,7 +1476,7 @@ export default function AdminDashboard({ token, username, slug: propSlug = '', o
       <!DOCTYPE html>
       <html>
         <head>
-          <title>${currentName} - Table ${activeTableNum} QR Standee</title>
+          <title>${currentName} - ${spaceConfig.singular} ${activeTableNum} QR Standee</title>
           <style>
             @import url('https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700;800;900&family=Plus+Jakarta+Sans:wght@600;700;800&display=swap');
             body {
@@ -1514,12 +1560,12 @@ export default function AdminDashboard({ token, username, slug: propSlug = '', o
         </head>
         <body>
           <div class="standee-card">
-            <div class="table-badge">TABLE NO. ${activeTableNum}</div>
+            <div class="table-badge">${spaceConfig.badge} ${activeTableNum}</div>
             <h2 class="logo-title">${currentName}</h2>
             <div class="subtitle">${currentTagline}</div>
 
             <div class="qr-box">
-              <img src="${qrImgUrl}" alt="Table ${activeTableNum} QR Code" />
+              <img src="${qrImgUrl}" alt="${spaceConfig.singular} ${activeTableNum} QR Code" />
             </div>
 
             <div class="instruction-en">📱 SCAN FOR DIGITAL MENU & ORDER</div>
@@ -1549,6 +1595,7 @@ export default function AdminDashboard({ token, username, slug: propSlug = '', o
       alert('No tables added yet! Click "+ Add New Table" to create dining table QRs.');
       return;
     }
+    const spaceConfig = getSpaceConfig(settingsForm.table_prefix || restaurantInfo?.table_prefix || 'table');
     const liveOrigin = window.location.origin;
     const currentName = settingsForm.name || 'Digital Menu';
     const currentTagline = settingsForm.tagline || 'Scan QR Code for Digital Menu';
@@ -1566,11 +1613,11 @@ export default function AdminDashboard({ token, username, slug: propSlug = '', o
       const qrImgUrl = `https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=${encodeURIComponent(targetUrl)}`;
       cardsHtml += `
         <div class="standee-card">
-          <div class="table-badge">TABLE NO. ${tNum}</div>
+          <div class="table-badge">${spaceConfig.badge} ${tNum}</div>
           <h2 class="logo-title">${currentName}</h2>
           <div class="subtitle">${currentTagline}</div>
           <div class="qr-box">
-            <img src="${qrImgUrl}" alt="Table ${tNum} QR Code" />
+            <img src="${qrImgUrl}" alt="${spaceConfig.singular} ${tNum} QR Code" />
           </div>
           <div class="instruction-en">📱 SCAN FOR DIGITAL MENU & ORDER</div>
           <div class="instruction-hi">स्कैन करें और डिजिटल मेन्यू देखें</div>
@@ -2179,12 +2226,13 @@ export default function AdminDashboard({ token, username, slug: propSlug = '', o
                 setTableNumber={setTableNumber}
                 totalTablesCount={totalTablesCount}
                 onAddTable={handleAddTable}
-                onDeleteTable={() => handleDeleteTable()}
+                onDeleteTable={(num) => handleDeleteTable(num || tableNumber)}
                 onPrintQR={handlePrintQR}
                 onPrintAllQRs={handlePrintAllQRs}
                 settingsForm={settingsForm}
                 onReturnToMenu={onReturnToMenu}
                 onBackToSetup={() => setActiveTab('settings')}
+                onUpdateSpaceType={handleUpdateSpaceType}
               />
             )}
 

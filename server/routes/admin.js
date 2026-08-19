@@ -1154,7 +1154,7 @@ const handleUpdateSettings = async (req, res) => {
       return res.status(401).json({ error: 'Restaurant identity is missing from authentication context' });
     }
 
-    const { name, tagline, logo, phone, address, openingHours, google_review_url, google_reviews_enabled, filters_visibility, currency_symbol, fssai_lic_no, resto_type, whatsapp_number, whatsapp_enabled, theme_color, latitude, longitude, max_distance_meters, gst_enabled, gstin_number, total_tables, order_retention_days, custom_domain, location_initialized, owner_name, city, state, pincode } = req.body;
+    const { name, tagline, logo, phone, address, openingHours, google_review_url, google_reviews_enabled, filters_visibility, currency_symbol, fssai_lic_no, resto_type, whatsapp_number, whatsapp_enabled, theme_color, latitude, longitude, max_distance_meters, gst_enabled, gstin_number, total_tables, table_prefix, order_retention_days, custom_domain, location_initialized, owner_name, city, state, pincode } = req.body;
 
     let cleanDomain = null;
     if (custom_domain !== undefined) {
@@ -1188,8 +1188,8 @@ const handleUpdateSettings = async (req, res) => {
 
     await query(`
       UPDATE restaurants 
-      SET name = COALESCE($1, name), tagline = COALESCE($2, tagline), logo = CASE WHEN $3::text IS NOT NULL THEN $3 ELSE logo END, phone = COALESCE($4, phone), address = COALESCE($5, address), opening_hours = COALESCE($6, opening_hours), google_review_url = COALESCE($7, google_review_url), filters_visibility = COALESCE($8, filters_visibility), currency_symbol = COALESCE($9, currency_symbol), fssai_lic_no = COALESCE($10, fssai_lic_no), resto_type = COALESCE($11, resto_type), whatsapp_number = COALESCE($12, whatsapp_number), whatsapp_enabled = COALESCE($13, whatsapp_enabled), theme_color = COALESCE($14, theme_color), latitude = COALESCE($15, latitude), longitude = COALESCE($16, longitude), max_distance_meters = COALESCE($17, max_distance_meters), gst_enabled = COALESCE($18, gst_enabled), gstin_number = COALESCE($19, gstin_number), total_tables = COALESCE($20, total_tables), order_retention_days = COALESCE($21, order_retention_days), google_reviews_enabled = COALESCE($22, google_reviews_enabled), custom_domain = CASE WHEN $23::text IS NOT NULL THEN $23 ELSE custom_domain END, location_initialized = COALESCE($24, location_initialized), owner_name = COALESCE($25, owner_name), city = COALESCE($26, city), state = COALESCE($27, state), pincode = COALESCE($28, pincode)
-      WHERE id = $29
+      SET name = COALESCE($1, name), tagline = COALESCE($2, tagline), logo = CASE WHEN $3::text IS NOT NULL THEN $3 ELSE logo END, phone = COALESCE($4, phone), address = COALESCE($5, address), opening_hours = COALESCE($6, opening_hours), google_review_url = COALESCE($7, google_review_url), filters_visibility = COALESCE($8, filters_visibility), currency_symbol = COALESCE($9, currency_symbol), fssai_lic_no = COALESCE($10, fssai_lic_no), resto_type = COALESCE($11, resto_type), whatsapp_number = COALESCE($12, whatsapp_number), whatsapp_enabled = COALESCE($13, whatsapp_enabled), theme_color = COALESCE($14, theme_color), latitude = COALESCE($15, latitude), longitude = COALESCE($16, longitude), max_distance_meters = COALESCE($17, max_distance_meters), gst_enabled = COALESCE($18, gst_enabled), gstin_number = COALESCE($19, gstin_number), total_tables = COALESCE($20, total_tables), table_prefix = COALESCE($21, table_prefix), order_retention_days = COALESCE($22, order_retention_days), google_reviews_enabled = COALESCE($23, google_reviews_enabled), custom_domain = CASE WHEN $24::text IS NOT NULL THEN $24 ELSE custom_domain END, location_initialized = COALESCE($25, location_initialized), owner_name = COALESCE($26, owner_name), city = COALESCE($27, city), state = COALESCE($28, state), pincode = COALESCE($29, pincode)
+      WHERE id = $30
     `, [
       name !== undefined ? name : null,
       tagline !== undefined ? tagline : null,
@@ -1211,6 +1211,7 @@ const handleUpdateSettings = async (req, res) => {
       gst_enabled !== undefined ? (gst_enabled ? 1 : 0) : null,
       gstin_number !== undefined ? gstin_number : null,
       total_tables !== undefined && total_tables !== null ? Number(total_tables) : null,
+      table_prefix !== undefined ? table_prefix : null,
       order_retention_days !== undefined ? Number(order_retention_days) : null,
       google_reviews_enabled !== undefined ? (google_reviews_enabled !== false && google_reviews_enabled !== 0 ? 1 : 0) : null,
       cleanDomain !== null ? cleanDomain : (custom_domain !== undefined ? '' : null),
