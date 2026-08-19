@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
-import { Star, MessageSquare, ExternalLink, Save, Bot, Copy, Check, RefreshCw, Sparkles, ThumbsUp, AlertTriangle } from 'lucide-react';
+import { Star, MessageSquare, ExternalLink, Save, Bot, Copy, Check, RefreshCw, Sparkles, ThumbsUp, AlertTriangle, ArrowLeft } from 'lucide-react';
 
-export default function ReviewView({ settingsForm, setSettingsForm, handleSaveSettings, token }) {
+export default function ReviewView({ settingsForm, setSettingsForm, handleSaveSettings, token, onBackToSetup }) {
   const [saving, setSaving] = useState(false);
   const [successMsg, setSuccessMsg] = useState('');
 
@@ -72,6 +72,7 @@ export default function ReviewView({ settingsForm, setSettingsForm, handleSaveSe
       if (res.ok && data?.reply) {
         setGeneratedReply(data.reply);
         setAiProvider(data.provider || 'gemini_ai');
+        setGenerating(false);
         return;
       }
     } catch (err) {
@@ -98,41 +99,43 @@ export default function ReviewView({ settingsForm, setSettingsForm, handleSaveSe
       }
     } else {
       if (selectedTone === 'apologetic') {
-        reply = `Dear Guest, thank you for bringing your concern to our attention. We sincerely apologize for not meeting your expectations during your recent visit to ${restoName}. Providing prompt and high-quality food is our commitment, and we regret the delay/issue you experienced. Please reach out directly to us at ${settingsForm?.phone || 'our restaurant contact'} so we can make this right for you. We hope to serve you better next time.`;
+        reply = `Dear Valued Guest, we sincerely apologize for falling short of your expectations during your recent order with us. Prompt service and top-quality food are what we strive for, and we are truly sorry for the inconvenience caused. We have briefed our team to ensure this does not happen again. Please reach out directly to our management at ${settingsForm?.phone || 'our customer care'} so we can make this right for you. 🙏`;
       } else if (selectedTone === 'professional') {
-        reply = `Dear Valued Customer, thank you for providing your constructive feedback regarding ${restoName}. We apologize for the inconvenience caused. We have shared your comments with our kitchen & service staff to ensure immediate corrective action. Please give us another opportunity to serve you a better experience.`;
+        reply = `Dear Guest, thank you for bringing this to our attention. We regret to hear about your experience and take all guest feedback seriously. Our management team is reviewing this with our kitchen staff to ensure continuous improvement. We hope to have the opportunity to serve you better next time.`;
       } else {
-        reply = `We sincerely apologize for your experience at ${restoName}. We take all customer feedback seriously and are taking immediate steps to resolve this. Kindly contact our team at ${settingsForm?.phone || 'phone'} so we can assist you personally.`;
+        reply = `We are very sorry to hear about your experience at ${restoName}. Your satisfaction is important to us, and we are working diligently to improve our service speed and food temperature. Thank you for your feedback.`;
       }
     }
 
     setGeneratedReply(reply);
-    setAiProvider('smart_engine');
+    setAiProvider('smart_local_ai');
     setGenerating(false);
   };
 
-  const handleCopyReply = (text, id = null) => {
+  const handleCopyReply = (text) => {
     navigator.clipboard.writeText(text);
-    if (id) {
-      setQuickCopiedId(id);
-      setTimeout(() => setQuickCopiedId(null), 2500);
-    } else {
-      setCopied(true);
-      setTimeout(() => setCopied(false), 2500);
-    }
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
   };
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '18px' }}>
       {/* Header */}
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '10px' }}>
-        <div>
-          <h2 style={{ fontSize: '1.25rem', fontWeight: 900, color: 'var(--adm-primary)', margin: '0 0 2px 0', display: 'flex', alignItems: 'center', gap: '8px' }}>
-            <Star size={20} color="var(--adm-accent)" /> Customer Reviews & AI Auto-Reply Assistant
-          </h2>
-          <span style={{ fontSize: '0.8rem', color: 'var(--adm-muted)', fontWeight: 600 }}>
-            Configure Google Review links & generate instant AI responses for Google Business reviews.
-          </span>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+          {onBackToSetup && (
+            <button onClick={onBackToSetup} className="adm-btn adm-btn-secondary adm-btn-sm" style={{ fontWeight: 800 }}>
+              <ArrowLeft size={16} /> Back
+            </button>
+          )}
+          <div>
+            <h2 style={{ fontSize: '1.25rem', fontWeight: 900, color: 'var(--adm-primary)', margin: '0 0 2px 0', display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <Star size={20} color="var(--adm-accent)" /> Customer Reviews & AI Auto-Reply Assistant
+            </h2>
+            <span style={{ fontSize: '0.8rem', color: 'var(--adm-muted)', fontWeight: 600 }}>
+              Configure Google Review links & generate instant AI responses for Google Business reviews.
+            </span>
+          </div>
         </div>
 
         {successMsg && (

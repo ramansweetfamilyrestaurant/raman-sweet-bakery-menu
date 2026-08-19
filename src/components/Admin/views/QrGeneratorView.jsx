@@ -1,5 +1,5 @@
 import React from 'react';
-import { QrCode, Printer, Plus, Trash2, ExternalLink, Copy, Check } from 'lucide-react';
+import { QrCode, Printer, Plus, Trash2, ExternalLink, Copy, Check, ArrowLeft } from 'lucide-react';
 
 export default function QrGeneratorView({
   tableNumber,
@@ -10,7 +10,8 @@ export default function QrGeneratorView({
   onPrintQR,
   onPrintAllQRs,
   settingsForm,
-  onReturnToMenu
+  onReturnToMenu,
+  onBackToSetup
 }) {
   const [copied, setCopied] = React.useState(false);
   const liveOrigin = window.location.origin;
@@ -29,13 +30,20 @@ export default function QrGeneratorView({
     <div style={{ display: 'flex', flexDirection: 'column', gap: '18px' }}>
       {/* Header */}
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '10px' }}>
-        <div>
-          <h2 style={{ fontSize: '1.25rem', fontWeight: 900, color: 'var(--adm-primary)', margin: '0 0 2px 0' }}>
-            📱 Dining Table QR Standee Generator
-          </h2>
-          <span style={{ fontSize: '0.8rem', color: 'var(--adm-muted)', fontWeight: 600 }}>
-            Generate gold-framed QR standees for dining tables and contactless menu scanning.
-          </span>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+          {onBackToSetup && (
+            <button onClick={onBackToSetup} className="adm-btn adm-btn-secondary adm-btn-sm" style={{ fontWeight: 800 }}>
+              <ArrowLeft size={16} /> Back
+            </button>
+          )}
+          <div>
+            <h2 style={{ fontSize: '1.25rem', fontWeight: 900, color: 'var(--adm-primary)', margin: '0 0 2px 0' }}>
+              📱 Dining Table QR Standee Generator
+            </h2>
+            <span style={{ fontSize: '0.8rem', color: 'var(--adm-muted)', fontWeight: 600 }}>
+              Generate gold-framed QR standees for dining tables and contactless menu scanning.
+            </span>
+          </div>
         </div>
 
         <button onClick={onPrintAllQRs} className="adm-btn adm-btn-accent" style={{ fontWeight: 800 }}>

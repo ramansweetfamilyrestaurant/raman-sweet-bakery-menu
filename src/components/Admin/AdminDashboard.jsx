@@ -2155,6 +2155,7 @@ export default function AdminDashboard({ token, username, slug: propSlug = '', o
                 onPrintAllQRs={handlePrintAllQRs}
                 settingsForm={settingsForm}
                 onReturnToMenu={onReturnToMenu}
+                onBackToSetup={() => setActiveTab('settings')}
               />
             )}
 
@@ -2165,6 +2166,7 @@ export default function AdminDashboard({ token, username, slug: propSlug = '', o
                 setSettingsForm={setSettingsForm}
                 handleSaveSettings={handleSaveSettings}
                 token={token}
+                onBackToSetup={() => setActiveTab('settings')}
               />
             )}
 

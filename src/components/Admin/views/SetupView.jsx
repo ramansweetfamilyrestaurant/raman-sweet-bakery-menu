@@ -451,8 +451,8 @@ export default function SetupView({
                   <Printer size={18} />
                 </div>
                 <div>
-                  <strong style={{ fontSize: '0.9rem', color: 'var(--adm-text)', display: 'block' }}>QR Standees & Printer</strong>
-                  <span style={{ fontSize: '0.74rem', color: 'var(--adm-muted)' }}>Print table QR standees & stickers</span>
+                  <strong style={{ fontSize: '0.9rem', color: 'var(--adm-text)', display: 'block' }}>QR Standees & Table Stickers</strong>
+                  <span style={{ fontSize: '0.74rem', color: 'var(--adm-muted)' }}>Generate & print table QR standees & stickers</span>
                 </div>
               </div>
               <ChevronRight size={16} color="var(--adm-muted)" />
@@ -467,7 +467,8 @@ export default function SetupView({
                   <ShieldCheck size={18} />
                 </div>
                 <div>
-                  <strong style={{ fontSize: '0.9rem', color: 'var(--adm-text)', display: 'block' }}>Reviews & Feedback</strong>
+                  <strong style={{ fontSize: '0.9rem', color: 'var(--adm-text)', display: 'block' }}>Reviews & AI Auto-Reply</strong>
+                  <span style={{ fontSize: '0.74rem', color: 'var(--adm-muted)' }}>Google review link & instant AI review assistant</span>
                 </div>
               </div>
               <ChevronRight size={16} color="var(--adm-muted)" />
