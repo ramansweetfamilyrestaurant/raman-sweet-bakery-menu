@@ -1191,19 +1191,21 @@ export default function AdminDashboard({ token, username, slug: propSlug = '', o
     const spaceInfo = getSpaceConfig(prefix);
     const currentCount = Number(settingsForm[field]) || 0;
     const newCount = customCount !== null ? Math.max(0, Number(customCount)) : (currentCount + 1);
-    const updatedForm = { ...settingsForm, [field]: newCount };
+    const updatedForm = { ...settingsForm, [field]: newCount, table_prefix: prefix };
     setSettingsForm(updatedForm);
-    setRestaurantInfo(prev => prev ? ({ ...prev, [field]: newCount }) : prev);
+    setRestaurantInfo(prev => prev ? ({ ...prev, [field]: newCount, table_prefix: prefix }) : prev);
     setTableNumber(String(Math.max(1, newCount)));
     showToast(`✅ Total ${spaceInfo.plural}: ${newCount}`, 2000);
 
     const currentSlug = propSlug || localStorage.getItem('touchqr_admin_slug') || (restaurantInfo && restaurantInfo.slug) || '';
     if (currentSlug) {
+      localStorage.setItem(`touchqr_table_prefix_${currentSlug}`, prefix);
       const cached = localStorage.getItem(`admin_cache_${currentSlug}_info`);
       if (cached) {
         try {
           const parsed = JSON.parse(cached);
           parsed[field] = newCount;
+          parsed.table_prefix = prefix;
           localStorage.setItem(`admin_cache_${currentSlug}_info`, JSON.stringify(parsed));
         } catch {}
       }
@@ -1229,26 +1231,27 @@ export default function AdminDashboard({ token, username, slug: propSlug = '', o
     const spaceInfo = getSpaceConfig(prefix);
     const currentCount = Number(settingsForm[field]) || 0;
     if (currentCount <= 0) {
-      alert(`No ${spaceInfo.plural.toLowerCase()} to delete!`);
+      showToast(`⚠️ No ${spaceInfo.plural.toLowerCase()} to remove!`, 2000);
       return;
     }
-    const targetNum = tableNumToDelete || currentCount;
-    if (!window.confirm(`Are you sure you want to remove ${spaceInfo.singular} ${targetNum}? (Total ${spaceInfo.plural.toLowerCase()} will become ${currentCount - 1})`)) return;
+    const targetNum = (tableNumToDelete !== null && tableNumToDelete !== undefined) ? tableNumToDelete : currentCount;
 
     const newCount = Math.max(0, currentCount - 1);
-    const updatedForm = { ...settingsForm, [field]: newCount };
+    const updatedForm = { ...settingsForm, [field]: newCount, table_prefix: prefix };
     setSettingsForm(updatedForm);
-    setRestaurantInfo(prev => prev ? ({ ...prev, [field]: newCount }) : prev);
-    setTableNumber(String(Math.max(1, Math.min(Number(tableNumber), newCount))));
+    setRestaurantInfo(prev => prev ? ({ ...prev, [field]: newCount, table_prefix: prefix }) : prev);
+    setTableNumber(String(Math.max(1, Math.min(Number(tableNumber || 1), newCount))));
     showToast(`🗑️ ${spaceInfo.singular} ${targetNum} removed. Total: ${newCount}`, 2000);
 
     const currentSlug = propSlug || localStorage.getItem('touchqr_admin_slug') || (restaurantInfo && restaurantInfo.slug) || '';
     if (currentSlug) {
+      localStorage.setItem(`touchqr_table_prefix_${currentSlug}`, prefix);
       const cached = localStorage.getItem(`admin_cache_${currentSlug}_info`);
       if (cached) {
         try {
           const parsed = JSON.parse(cached);
           parsed[field] = newCount;
+          parsed.table_prefix = prefix;
           localStorage.setItem(`admin_cache_${currentSlug}_info`, JSON.stringify(parsed));
         } catch {}
       }
@@ -2274,8 +2277,8 @@ export default function AdminDashboard({ token, username, slug: propSlug = '', o
                 tableNumber={tableNumber}
                 setTableNumber={setTableNumber}
                 totalTablesCount={totalTablesCount}
-                onAddTable={handleAddTable}
-                onDeleteTable={(num) => handleDeleteTable(num || tableNumber)}
+                onAddTable={(count, prefix) => handleAddTable(count, prefix)}
+                onDeleteTable={(num, prefix) => handleDeleteTable(num, prefix)}
                 onPrintQR={handlePrintQR}
                 onPrintAllQRs={handlePrintAllQRs}
                 settingsForm={settingsForm}
