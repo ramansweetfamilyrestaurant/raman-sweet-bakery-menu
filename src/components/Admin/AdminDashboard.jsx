@@ -427,7 +427,7 @@ export default function AdminDashboard({ token, username, slug: propSlug = '', o
           return [];
         })
       ]);
-      const safeData = Array.isArray(data) ? data : [];
+      const safeData = (Array.isArray(data) ? data : []).filter(o => o.status !== 'rejected' && o.status !== 'cancelled');
       const safeReqs = Array.isArray(reqsData) ? reqsData : [];
 
       // 🛎️ Dedicated Waiter Call / Service Request Alert Trigger
@@ -971,7 +971,13 @@ export default function AdminDashboard({ token, username, slug: propSlug = '', o
       );
     }
 
-    if (sessionOrders.length === 0) sessionOrders = [order];
+    if (sessionOrders.length === 0) {
+      if (order.status !== 'rejected' && order.status !== 'cancelled') {
+        sessionOrders = [order];
+      } else {
+        sessionOrders = [];
+      }
+    }
     sessionOrders.sort((a, b) => (Number(a.round_number) || Number(a.id)) - (Number(b.round_number) || Number(b.id)));
 
     const targetOrders = sessionOrders;

@@ -1343,7 +1343,7 @@ router.get('/orders', authenticateToken, requireActiveSubscription, async (req, 
     }
 
     const orders = await query(
-      'SELECT * FROM orders WHERE restaurant_id = $1 ORDER BY id DESC LIMIT 100',
+      "SELECT * FROM orders WHERE restaurant_id = $1 AND status NOT IN ('cancelled', 'rejected') ORDER BY id DESC LIMIT 100",
       [targetId]
     );
 
@@ -1392,7 +1392,13 @@ router.patch('/orders/:id/status', authenticateToken, requireActiveSubscription,
     const targetOrder = existing[0] || null;
 
     let updateRes = null;
-    if (status === 'completed' && targetOrder?.session_id) {
+    if (status === 'rejected' || status === 'cancelled') {
+      // Mark cancelled order as settled so it never leaks into active table bills
+      updateRes = await query(
+        'UPDATE orders SET status = $1, is_settled = 1 WHERE id = $2 AND restaurant_id = $3 RETURNING id',
+        ['cancelled', orderId, targetId]
+      );
+    } else if (status === 'completed' && targetOrder?.session_id) {
       // Settle entire Table Session in one single transaction
       updateRes = await query(
         'UPDATE orders SET status = $1, is_settled = 1 WHERE restaurant_id = $2 AND session_id = $3 RETURNING id',
@@ -1409,7 +1415,7 @@ router.patch('/orders/:id/status', authenticateToken, requireActiveSubscription,
       return res.status(404).json({ error: 'Order not found or does not belong to this restaurant' });
     }
 
-    res.json({ success: true, id: orderId, status, sent_to_kds: kdsVal, kitchen_prepared: prepVal, is_settled: status === 'completed' ? 1 : 0 });
+    res.json({ success: true, id: orderId, status: (status === 'rejected' ? 'cancelled' : status), sent_to_kds: kdsVal, kitchen_prepared: prepVal, is_settled: (status === 'completed' || status === 'cancelled' || status === 'rejected') ? 1 : 0 });
   } catch (err) {
     console.error('Update order status error:', err);
     res.status(500).json({ error: 'Failed to update order status' });
