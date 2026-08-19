@@ -1221,29 +1221,44 @@ export default function App() {
   // Landing Page View — Public SaaS Home
   if (view === 'landing') {
     return (
-      <LandingPage
-        publicPlans={publicPlans}
-        trialDays={trialDays}
-        showLoginModal={showLandingLoginModal}
-        setShowLoginModal={setShowLandingLoginModal}
-        loginMode={landingLoginMode}
-        setLoginMode={setLandingLoginMode}
-        loginSlugInput={loginSlugInput}
-        setLoginSlugInput={setLoginSlugInput}
-        adminUsernameInput={loginSlugInput}
-        setAdminUsernameInput={setLoginSlugInput}
-        adminPasswordInput={loginPassInput}
-        setAdminPasswordInput={setLoginPassInput}
-        newPasswordInput={landingNewPassInput}
-        setNewPasswordInput={setLandingNewPassInput}
-        loginErrMessage={loginErrMessage}
-        setLoginErrMessage={setLoginErrMessage}
-        successMessage={landingSuccessMessage}
-        setSuccessMessage={setLandingSuccessMessage}
-        loginLoading={landingLoginLoading}
-        onSubmitLogin={handleLandingAdminLoginSubmit}
-        onSubmitResetPassword={handleLandingPasswordResetSubmit}
-      />
+      <Suspense fallback={
+        <div style={{
+          minHeight: '100vh', display: 'flex', flexDirection: 'column',
+          alignItems: 'center', justifyContent: 'center', background: '#0A2315',
+          color: '#DFBA67', fontWeight: 800
+        }}>
+          <div style={{
+            width: '44px', height: '44px', border: '3.5px solid rgba(223,186,103,0.2)',
+            borderTopColor: '#DFBA67', borderRadius: '50%', marginBottom: '16px',
+            animation: 'spin 0.8s linear infinite'
+          }} />
+          <span style={{ fontSize: '0.92rem' }}>⚡ Loading TouchQR Homepage...</span>
+        </div>
+      }>
+        <LandingPage
+          publicPlans={publicPlans}
+          trialDays={trialDays}
+          showLoginModal={showLandingLoginModal}
+          setShowLoginModal={setShowLandingLoginModal}
+          loginMode={landingLoginMode}
+          setLoginMode={setLandingLoginMode}
+          loginSlugInput={loginSlugInput}
+          setLoginSlugInput={setLoginSlugInput}
+          adminUsernameInput={loginSlugInput}
+          setAdminUsernameInput={setLoginSlugInput}
+          adminPasswordInput={loginPassInput}
+          setAdminPasswordInput={setLoginPassInput}
+          newPasswordInput={landingNewPassInput}
+          setNewPasswordInput={setLandingNewPassInput}
+          loginErrMessage={loginErrMessage}
+          setLoginErrMessage={setLoginErrMessage}
+          successMessage={landingSuccessMessage}
+          setSuccessMessage={setLandingSuccessMessage}
+          loginLoading={landingLoginLoading}
+          onSubmitLogin={handleLandingAdminLoginSubmit}
+          onSubmitResetPassword={handleLandingPasswordResetSubmit}
+        />
+      </Suspense>
     );
   }
 
@@ -1546,18 +1561,33 @@ export default function App() {
   if (view === 'admin-dashboard') {
     const activeAdminSlug = adminSlug || (info && info.slug) || getSlugFromUrl() || localStorage.getItem('touchqr_admin_slug') || '';
     return (
-      <AdminDashboard
-        token={adminToken}
-        username={adminUsername}
-        slug={activeAdminSlug}
-        onLogout={handleAdminLogout}
-        onReturnToMenu={(tenantSlug) => {
-          const targetSlug = tenantSlug || activeAdminSlug || (info && info.slug) || getSlugFromUrl() || '';
-          setView('menu');
-          window.history.pushState({}, '', targetSlug ? `/${targetSlug}` : '/');
-          loadMenuData(targetSlug, true);
-        }}
-      />
+      <Suspense fallback={
+        <div style={{
+          minHeight: '100vh', display: 'flex', flexDirection: 'column',
+          alignItems: 'center', justifyContent: 'center', background: '#0A2315',
+          color: '#DFBA67', fontWeight: 800
+        }}>
+          <div style={{
+            width: '44px', height: '44px', border: '3.5px solid rgba(223,186,103,0.2)',
+            borderTopColor: '#DFBA67', borderRadius: '50%', marginBottom: '16px',
+            animation: 'spin 0.8s linear infinite'
+          }} />
+          <span style={{ fontSize: '0.92rem' }}>📊 Loading Admin Dashboard...</span>
+        </div>
+      }>
+        <AdminDashboard
+          token={adminToken}
+          username={adminUsername}
+          slug={activeAdminSlug}
+          onLogout={handleAdminLogout}
+          onReturnToMenu={(tenantSlug) => {
+            const targetSlug = tenantSlug || activeAdminSlug || (info && info.slug) || getSlugFromUrl() || '';
+            setView('menu');
+            window.history.pushState({}, '', targetSlug ? `/${targetSlug}` : '/');
+            loadMenuData(targetSlug, true);
+          }}
+        />
+      </Suspense>
     );
   }
 
