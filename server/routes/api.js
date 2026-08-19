@@ -639,6 +639,36 @@ router.post('/orders', async (req, res) => {
       return res.status(400).json({ error: 'Order items are required' });
     }
 
+    // Step 2b: Validate Table / Space Number against Restaurant Capacity
+    if (table_number) {
+      const match = String(table_number).match(/\d+/);
+      const spaceNum = match ? parseInt(match[0], 10) : 0;
+      const lowerTbl = String(table_number).toLowerCase();
+      
+      let maxAllowed = 0;
+      let spaceName = 'Table';
+      if (lowerTbl.includes('cabin')) {
+        maxAllowed = Number(resto.total_cabins) || 0;
+        spaceName = 'Cabin';
+      } else if (lowerTbl.includes('room')) {
+        maxAllowed = Number(resto.total_rooms) || 0;
+        spaceName = 'Room';
+      } else if (lowerTbl.includes('vip')) {
+        maxAllowed = Number(resto.total_vip) || 0;
+        spaceName = 'VIP Lounge';
+      } else {
+        maxAllowed = Number(resto.total_tables) || 0;
+        spaceName = 'Table';
+      }
+
+      if (maxAllowed > 0 && spaceNum > maxAllowed) {
+        return res.status(400).json({
+          error: 'invalid_table_number',
+          message: `${spaceName} #${spaceNum} is not registered. Please scan the official QR code at your seat.`
+        });
+      }
+    }
+
     // Step 3: Check cart + price + availability on SERVER
     const dbDishes = await query('SELECT id, name, price, price_half, available FROM dishes WHERE restaurant_id = $1', [targetId]);
     const dbCombos = await query('SELECT id, name, price, available FROM combos WHERE restaurant_id = $1', [targetId]);

@@ -97,8 +97,35 @@ export default function App() {
   const [sessionExpired, setSessionExpired] = useState(false);
   const [autoKillSeconds, setAutoKillSeconds] = useState(null);
 
-  // Effective Table Number (Empty if session expired or no QR scanned)
-  const effectiveTableNum = sessionExpired ? '' : currentTableNum;
+  // Validate if the table/space number exists within the restaurant's configured capacity
+  const isSpaceNumberValid = () => {
+    if (!currentTableNum) return true;
+    const num = parseInt(currentTableNum, 10);
+    if (isNaN(num) || num <= 0) return false;
+
+    if (!info) return true; // Still loading restaurant info
+
+    const activeType = (currentSpaceType || String(info.table_prefix || 'table')).toLowerCase();
+    let maxAllowed = 0;
+    if (activeType === 'cabin') {
+      maxAllowed = Number(info.total_cabins) || 0;
+    } else if (activeType === 'room') {
+      maxAllowed = Number(info.total_rooms) || 0;
+    } else if (activeType === 'vip') {
+      maxAllowed = Number(info.total_vip) || 0;
+    } else {
+      maxAllowed = Number(info.total_tables) || 0;
+    }
+
+    if (maxAllowed <= 0 || num > maxAllowed) {
+      return false;
+    }
+    return true;
+  };
+
+  const isTableValid = isSpaceNumberValid();
+  // Effective Table Number (Empty if session expired or scanned number is invalid/out-of-range)
+  const effectiveTableNum = (sessionExpired || !isTableValid) ? '' : currentTableNum;
 
   const getDynamicSpaceLabel = () => {
     if (!effectiveTableNum) return '';
@@ -1883,6 +1910,35 @@ export default function App() {
           </div>
           <button
             onClick={() => setSessionExpired(false)}
+            style={{ background: '#FFFFFF', color: '#991B1B', border: 'none', borderRadius: '9999px', padding: '4px 10px', fontWeight: 900, cursor: 'pointer', fontSize: '0.76rem' }}
+          >
+            Got it ✖
+          </button>
+        </div>
+      )}
+
+      {/* ⚠️ Invalid Table / Space Warning Banner (When URL has a fake/unconfigured table number) */}
+      {currentTableNum && info && !isTableValid && (
+        <div style={{
+          background: 'linear-gradient(135deg, #7F1D1D 0%, #991B1B 100%)',
+          color: '#FFFFFF',
+          padding: '12px 18px',
+          borderBottom: '2px solid #F87171',
+          display: 'flex',
+          justifyContent: 'space-between',
+          alignItems: 'center',
+          fontSize: '0.84rem',
+          fontWeight: 700,
+          boxShadow: '0 4px 12px rgba(0,0,0,0.3)'
+        }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+            <span style={{ fontSize: '1.2rem' }}>⚠️</span>
+            <span>
+              <strong>Invalid {currentSpaceType === 'cabin' ? 'Cabin' : currentSpaceType === 'room' ? 'Room' : currentSpaceType === 'vip' ? 'VIP Lounge' : 'Table'} #{currentTableNum}:</strong> Yeh space registered nahi hai. Sahi table ya space ka QR code scan karein (Menu Read-Only mode mein hai).
+            </span>
+          </div>
+          <button
+            onClick={() => setCurrentTableNum('')}
             style={{ background: '#FFFFFF', color: '#991B1B', border: 'none', borderRadius: '9999px', padding: '4px 10px', fontWeight: 900, cursor: 'pointer', fontSize: '0.76rem' }}
           >
             Got it ✖
