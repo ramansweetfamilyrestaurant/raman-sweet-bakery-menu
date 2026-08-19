@@ -52,8 +52,42 @@ const PrivacyPolicy = lazyWithRetry(() => import('./components/Legal/PrivacyPoli
 const TermsOfService = lazyWithRetry(() => import('./components/Legal/TermsOfService'));
 const RefundPolicy = lazyWithRetry(() => import('./components/Legal/RefundPolicy'));
 const SecurityPolicy = lazyWithRetry(() => import('./components/Legal/SecurityPolicy'));
-const ContactSupport = lazyWithRetry(() => import('./components/Legal/ContactSupport'));
-const StandaloneKdsPage = lazyWithRetry(() => import('./components/Admin/views/StandaloneKdsPage'));
+// Pure URL helper functions declared at module level
+export const getSlugFromUrl = () => {
+  const path = window.location.pathname;
+  if (!path || path === '/' || path === '/admin' || path === '/super-admin' || path === '/superadmin' || path === '/register' || path === '/billing') {
+    return '';
+  }
+  
+  if (path.startsWith('/r/')) {
+    const parts = path.split('/r/')[1].split('/');
+    return parts[0] || '';
+  }
+
+  const cleanPath = path.startsWith('/') ? path.slice(1) : path;
+  const parts = cleanPath.split('/');
+  const candidate = parts[0];
+  
+  if (['menu', 'admin', 'superadmin', 'super-admin', 'api', 'uploads', 'assets', 'register', 'billing', 'kitchen', 'privacy', 'terms', 'privacy-policy', 'terms-of-service', 'refund-policy', 'security', 'contact'].includes(candidate.toLowerCase())) {
+    return '';
+  }
+  
+  return candidate || '';
+};
+
+export const isSlugKitchenPath = (rawPath) => {
+  if (!rawPath) return false;
+  const cleanPath = String(rawPath).toLowerCase().replace(/\/$/, '');
+  const parts = cleanPath.split('/').filter(Boolean);
+  if (parts.length === 2 && parts[1] === 'kitchen') {
+    const slugCandidate = parts[0];
+    return !['admin', 'superadmin', 'super-admin', 'api', 'uploads', 'assets', 'register', 'billing', 'privacy', 'terms'].includes(slugCandidate);
+  }
+  if (parts.length === 3 && parts[0] === 'r' && parts[2] === 'kitchen') {
+    return true;
+  }
+  return false;
+};
 
 export default function App() {
   // Parse Space / Table info and Cryptographic QR token from URL query parameters
@@ -156,20 +190,6 @@ export default function App() {
 
   // Language State ('en' or 'hi')
   const [lang, setLang] = useState('en');
-
-  const isSlugKitchenPath = (rawPath) => {
-    if (!rawPath) return false;
-    const cleanPath = String(rawPath).toLowerCase().replace(/\/$/, '');
-    const parts = cleanPath.split('/').filter(Boolean);
-    if (parts.length === 2 && parts[1] === 'kitchen') {
-      const slugCandidate = parts[0];
-      return !['admin', 'superadmin', 'super-admin', 'api', 'uploads', 'assets', 'register', 'billing', 'privacy', 'terms'].includes(slugCandidate);
-    }
-    if (parts.length === 3 && parts[0] === 'r' && parts[2] === 'kitchen') {
-      return true;
-    }
-    return false;
-  };
 
   const getInitialView = () => {
     const path = (window.location.pathname || '/').toLowerCase().replace(/\/$/, '') || '/';
@@ -662,32 +682,6 @@ export default function App() {
     } finally {
       setPlacingOrder(false);
     }
-  };
-
-  // Extract restaurant slug from URL (/slug, /r/:slug, or default)
-  const getSlugFromUrl = () => {
-    const path = window.location.pathname;
-    if (!path || path === '/' || path === '/admin' || path === '/super-admin' || path === '/superadmin' || path === '/register' || path === '/billing') {
-      return '';
-    }
-    
-    // Support legacy /r/:slug format
-    if (path.startsWith('/r/')) {
-      const parts = path.split('/r/')[1].split('/');
-      return parts[0] || '';
-    }
-
-    // Support clean direct /:slug format (e.g., /raja-restaurant or /raja-restaurant/admin)
-    const cleanPath = path.startsWith('/') ? path.slice(1) : path;
-    const parts = cleanPath.split('/');
-    const candidate = parts[0];
-    
-    // Filter out system routes
-    if (['menu', 'admin', 'superadmin', 'super-admin', 'api', 'uploads', 'assets', 'register', 'billing', 'kitchen'].includes(candidate.toLowerCase())) {
-      return '';
-    }
-    
-    return candidate || '';
   };
 
   // Load Menu Data
