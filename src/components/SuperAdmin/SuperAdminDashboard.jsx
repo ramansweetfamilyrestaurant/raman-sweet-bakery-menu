@@ -2955,8 +2955,10 @@ export default function SuperAdminDashboard({ token, username, onLogout, onRetur
                               throw new Error(errData.error || 'Failed to save logo to system settings');
                             }
                             setLogoErr(false);
+                            setLogoPreview(null);
                             setKeysMsg('✅ New Platform Logo uploaded & saved successfully across all pages!');
                           } catch (err) {
+                            setLogoPreview(null);
                             alert('Logo upload failed: ' + err.message);
                           } finally {
                             setUploadingLogo(false);

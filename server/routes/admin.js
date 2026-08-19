@@ -552,7 +552,7 @@ router.post('/upload', authenticateToken, requireActiveSubscription, (req, res, 
         r2Result.objectKey,
         r2Result.publicUrl,
         restaurantId,
-        null
+        fileBuffer
       );
 
       if (req.file.path && fs.existsSync(req.file.path)) fs.unlinkSync(req.file.path);
@@ -566,32 +566,40 @@ router.post('/upload', authenticateToken, requireActiveSubscription, (req, res, 
         r2Url: r2Result.publicUrl
       });
     } catch (r2Err) {
-      console.error('[R2 UPLOAD ERROR] R2 upload failed:', r2Err.message);
-      if (req.file.path && fs.existsSync(req.file.path)) fs.unlinkSync(req.file.path);
-      return res.status(500).json({ success: false, error: `R2 Storage upload failed: ${r2Err.message}` });
+      console.warn('[R2 UPLOAD NOTICE] R2 upload error, falling back to database storage:', r2Err.message);
     }
   }
 
-  const isProduction = Boolean(process.env.VERCEL || process.env.NODE_ENV === 'production');
-  if (isProduction) {
-    if (req.file.path && fs.existsSync(req.file.path)) fs.unlinkSync(req.file.path);
-    return res.status(500).json({ success: false, error: 'Cloudflare R2 is not configured in production environment variables' });
-  }
-
-  // LOCAL DEV ONLY FALLBACK: Save locally and store in database
+  // RESILIENT FALLBACK: Store image buffer in Neon PostgreSQL database stored_images table
   try {
-    const localUrl = `/uploads/${safeFilename}`;
+    const objectKey = (isSuperAdminUpload)
+      ? 'superadmin/branding/logo.webp'
+      : (restaurantId ? `restaurants/${restaurantId}/${entityType}/${safeFilename}.webp` : `uploads/${safeFilename}`);
+
+    const proxyUrl = `/api/r2-proxy/${objectKey}`;
+
+    await saveR2ImageToDb(
+      safeFilename,
+      req.file.mimetype,
+      objectKey,
+      proxyUrl,
+      restaurantId,
+      fileBuffer
+    );
     await saveImageToDb(safeFilename, req.file.mimetype, fileBuffer);
+
+    if (req.file.path && fs.existsSync(req.file.path)) fs.unlinkSync(req.file.path);
+
     return res.json({
       success: true,
-      url: localUrl,
-      r2ProxyUrl: localUrl,
-      key: safeFilename,
-      storage: 'local'
+      url: proxyUrl,
+      r2ProxyUrl: proxyUrl,
+      key: objectKey,
+      storage: 'database'
     });
   } catch (localErr) {
     if (req.file.path && fs.existsSync(req.file.path)) fs.unlinkSync(req.file.path);
-    console.error('[IMAGE UPLOAD ERROR] Local upload fallback error:', localErr.message);
+    console.error('[IMAGE UPLOAD ERROR] Storage fallback error:', localErr.message);
     return res.status(500).json({ success: false, error: localErr.message });
   }
 });

@@ -1390,30 +1390,41 @@ export async function saveR2ImageToDb(filename, mimeType, imageKey, imageUrl, re
       throw new Error('restaurantId is required for saving R2 image metadata');
     }
 
-    // For R2-backed uploads, stored_images.data MUST be NULL to keep Neon PostgreSQL lightweight and metadata-only
-    const base64Data = null;
+    const base64Data = buffer ? (Buffer.isBuffer(buffer) ? buffer.toString('base64') : buffer) : null;
 
     if (filename) purgeLocalR2DiskCache(filename);
     if (imageKey) purgeLocalR2DiskCache(imageKey);
 
-    // If saving a superadmin platform asset, purge all old superadmin logo rows first to prevent duplication
-    if (restaurantId === null || (imageKey && imageKey.startsWith('superadmin/'))) {
+    const hasR2 = Boolean(process.env.R2_ACCESS_KEY_ID && process.env.R2_SECRET_ACCESS_KEY && !process.env.R2_ACCESS_KEY_ID.includes('your_'));
+    const provider = hasR2 ? 'r2' : 'database';
+
+    if (dbType === 'postgres' || pgPool) {
       await query(
-        `DELETE FROM stored_images WHERE restaurant_id IS NULL OR image_key LIKE 'superadmin/%' OR filename LIKE 'logo-external-%'`
+        `INSERT INTO stored_images (filename, mime_type, storage_provider, image_key, image_url, restaurant_id, data)
+         VALUES ($1, $2, $3, $4, $5, $6, $7)
+         ON CONFLICT (filename) DO UPDATE SET
+           mime_type = EXCLUDED.mime_type,
+           storage_provider = EXCLUDED.storage_provider,
+           image_key = EXCLUDED.image_key,
+           image_url = EXCLUDED.image_url,
+           restaurant_id = EXCLUDED.restaurant_id,
+           data = COALESCE(EXCLUDED.data, stored_images.data)`,
+        [filename, mimeType, provider, imageKey, imageUrl, restaurantId, base64Data]
       );
     } else {
-      // Delete any old record for this exact imageKey, imageUrl, or filename first
       await query(
-        `DELETE FROM stored_images WHERE image_key = $1 OR image_url = $2 OR filename = $3`,
-        [imageKey, imageUrl, filename]
+        `INSERT INTO stored_images (filename, mime_type, storage_provider, image_key, image_url, restaurant_id, data)
+         VALUES ($1, $2, $3, $4, $5, $6, $7)
+         ON CONFLICT(filename) DO UPDATE SET
+           mime_type = excluded.mime_type,
+           storage_provider = excluded.storage_provider,
+           image_key = excluded.image_key,
+           image_url = excluded.image_url,
+           restaurant_id = excluded.restaurant_id,
+           data = COALESCE(excluded.data, stored_images.data)`,
+        [filename, mimeType, provider, imageKey, imageUrl, restaurantId, base64Data]
       );
     }
-
-    await query(
-      `INSERT INTO stored_images (filename, mime_type, storage_provider, image_key, image_url, restaurant_id, data)
-       VALUES ($1, $2, 'r2', $3, $4, $5, $6)`,
-      [filename, mimeType, imageKey, imageUrl, restaurantId, base64Data]
-    );
   } catch (err) {
     console.error('Failed to save R2 image metadata to DB:', err.message);
   }
