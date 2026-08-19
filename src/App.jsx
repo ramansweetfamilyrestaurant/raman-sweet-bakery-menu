@@ -2701,10 +2701,10 @@ export default function App() {
                         <Sparkles size={18} color="#FDE047" />
                         <span>
                           {placingOrder
-                            ? 'Sending to Kitchen...'
+                            ? 'Placing Order...'
                             : isAddon
-                              ? `⚡ PLACE ROUND ${nextRound} ADD-ON ORDER (${sym}${cartTotal})`
-                              : `⚡ PLACE DIRECT KITCHEN ORDER (${sym}${cartTotal})`}
+                              ? `⚡ Confirm & Place Round ${nextRound} Order (${sym}${cartTotal})`
+                              : `⚡ Confirm & Place Order (${sym}${cartTotal})`}
                         </span>
                       </button>
                     )}
