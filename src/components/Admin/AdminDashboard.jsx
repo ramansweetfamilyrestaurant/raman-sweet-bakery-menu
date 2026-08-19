@@ -1083,15 +1083,15 @@ export default function AdminDashboard({ token, username, slug: propSlug = '', o
         total_tables: infoData.total_tables !== undefined && infoData.total_tables !== null ? Number(infoData.total_tables) : 0,
         order_retention_days: infoData.order_retention_days || 7,
         custom_domain: infoData.custom_domain || '',
-        watermark_removal_enabled: infoData.watermark_removal_enabled !== undefined ? infoData.watermark_removal_enabled : true,
-        custom_domain_enabled: infoData.custom_domain_enabled !== undefined ? infoData.custom_domain_enabled : true,
-        analytics_export_enabled: infoData.analytics_export_enabled !== undefined ? infoData.analytics_export_enabled : true,
-        gst_invoice_enabled: infoData.gst_invoice_enabled !== undefined ? infoData.gst_invoice_enabled : true,
-        ai_review_enabled: infoData.ai_review_enabled !== undefined ? infoData.ai_review_enabled : true,
-        bluetooth_kot_enabled: infoData.bluetooth_kot_enabled !== undefined ? infoData.bluetooth_kot_enabled : true,
-        kds_enabled: (infoData.kds_enabled ?? infoData.permissions?.kds_enabled) !== undefined ? (infoData.kds_enabled ?? infoData.permissions?.kds_enabled) === 1 || (infoData.kds_enabled ?? infoData.permissions?.kds_enabled) === true || (infoData.kds_enabled ?? infoData.permissions?.kds_enabled) === '1' : true,
+        watermark_removal_enabled: infoData.watermark_removal_enabled === 1 || infoData.watermark_removal_enabled === true || infoData.watermark_removal_enabled === '1',
+        custom_domain_enabled: infoData.custom_domain_enabled === 1 || infoData.custom_domain_enabled === true || infoData.custom_domain_enabled === '1',
+        analytics_export_enabled: infoData.analytics_export_enabled === 1 || infoData.analytics_export_enabled === true || infoData.analytics_export_enabled === '1',
+        gst_invoice_enabled: infoData.gst_invoice_enabled === 1 || infoData.gst_invoice_enabled === true || infoData.gst_invoice_enabled === '1',
+        ai_review_enabled: infoData.ai_review_enabled === 1 || infoData.ai_review_enabled === true || infoData.ai_review_enabled === '1',
+        bluetooth_kot_enabled: infoData.bluetooth_kot_enabled === 1 || infoData.bluetooth_kot_enabled === true || infoData.bluetooth_kot_enabled === '1',
+        kds_enabled: (infoData.kds_enabled ?? infoData.permissions?.kds_enabled) === 1 || (infoData.kds_enabled ?? infoData.permissions?.kds_enabled) === true || (infoData.kds_enabled ?? infoData.permissions?.kds_enabled) === '1',
         kds_screen_enabled: infoData.kds_screen_enabled !== undefined ? infoData.kds_screen_enabled : 1,
-        dual_printer_enabled: (infoData.dual_printer_enabled ?? infoData.permissions?.dual_printer_enabled) !== undefined ? (infoData.dual_printer_enabled ?? infoData.permissions?.dual_printer_enabled) === 1 || (infoData.dual_printer_enabled ?? infoData.permissions?.dual_printer_enabled) === true || (infoData.dual_printer_enabled ?? infoData.permissions?.dual_printer_enabled) === '1' : (infoData.plan_tier === 'enterprise' || infoData.plan_tier === 'vip_ultra_plan'),
+        dual_printer_enabled: (infoData.dual_printer_enabled ?? infoData.permissions?.dual_printer_enabled) === 1 || (infoData.dual_printer_enabled ?? infoData.permissions?.dual_printer_enabled) === true || (infoData.dual_printer_enabled ?? infoData.permissions?.dual_printer_enabled) === '1',
         filters_visibility: { ...defaultVis, ...infoData.filters_visibility }
       };
     }
@@ -1107,11 +1107,14 @@ export default function AdminDashboard({ token, username, slug: propSlug = '', o
       fssai_lic_no: '',
       resto_type: 'pure_veg',
       custom_domain: '',
-      analytics_export_enabled: true,
-      gst_invoice_enabled: true,
-      ai_review_enabled: true,
-      bluetooth_kot_enabled: true,
-      kds_screen_enabled: 1,
+      watermark_removal_enabled: false,
+      custom_domain_enabled: false,
+      analytics_export_enabled: false,
+      gst_invoice_enabled: false,
+      ai_review_enabled: false,
+      bluetooth_kot_enabled: false,
+      kds_enabled: false,
+      kds_screen_enabled: 0,
       dual_printer_enabled: false,
       filters_visibility: defaultVis
     };
@@ -1228,6 +1231,13 @@ export default function AdminDashboard({ token, username, slug: propSlug = '', o
       }
       setCombos(safeCombos);
 
+      if (currentSlug) {
+        if (safeCats.length > 0) localStorage.setItem(`admin_cache_${currentSlug}_categories`, JSON.stringify(safeCats));
+        if (safeDishes.length > 0) localStorage.setItem(`admin_cache_${currentSlug}_dishes`, JSON.stringify(safeDishes));
+        if (infoData) localStorage.setItem(`admin_cache_${currentSlug}_info`, JSON.stringify(infoData));
+        if (safeCombos.length > 0) localStorage.setItem(`admin_cache_${currentSlug}_combos`, JSON.stringify(safeCombos));
+      }
+
       if (subStatusData) setSubscriptionStatus(subStatusData);
       if (infoData) {
         const defaultVis = { must_try: true, combo: true, special: true, under100: true };
@@ -1252,15 +1262,15 @@ export default function AdminDashboard({ token, username, slug: propSlug = '', o
           total_tables: infoData.total_tables !== undefined && infoData.total_tables !== null ? Number(infoData.total_tables) : 0,
           order_retention_days: infoData.order_retention_days || 7,
           custom_domain: infoData.custom_domain || '',
-          watermark_removal_enabled: infoData.watermark_removal_enabled !== undefined ? infoData.watermark_removal_enabled : true,
-          custom_domain_enabled: infoData.custom_domain_enabled !== undefined ? infoData.custom_domain_enabled : true,
-          analytics_export_enabled: infoData.analytics_export_enabled !== undefined ? infoData.analytics_export_enabled : true,
-          gst_invoice_enabled: infoData.gst_invoice_enabled !== undefined ? infoData.gst_invoice_enabled : true,
-          ai_review_enabled: infoData.ai_review_enabled !== undefined ? infoData.ai_review_enabled : true,
-          bluetooth_kot_enabled: infoData.bluetooth_kot_enabled !== undefined ? infoData.bluetooth_kot_enabled : true,
-          kds_enabled: (infoData.kds_enabled ?? infoData.permissions?.kds_enabled) !== undefined ? (infoData.kds_enabled ?? infoData.permissions?.kds_enabled) === 1 || (infoData.kds_enabled ?? infoData.permissions?.kds_enabled) === true || (infoData.kds_enabled ?? infoData.permissions?.kds_enabled) === '1' : true,
+          watermark_removal_enabled: infoData.watermark_removal_enabled === 1 || infoData.watermark_removal_enabled === true || infoData.watermark_removal_enabled === '1',
+          custom_domain_enabled: infoData.custom_domain_enabled === 1 || infoData.custom_domain_enabled === true || infoData.custom_domain_enabled === '1',
+          analytics_export_enabled: infoData.analytics_export_enabled === 1 || infoData.analytics_export_enabled === true || infoData.analytics_export_enabled === '1',
+          gst_invoice_enabled: infoData.gst_invoice_enabled === 1 || infoData.gst_invoice_enabled === true || infoData.gst_invoice_enabled === '1',
+          ai_review_enabled: infoData.ai_review_enabled === 1 || infoData.ai_review_enabled === true || infoData.ai_review_enabled === '1',
+          bluetooth_kot_enabled: infoData.bluetooth_kot_enabled === 1 || infoData.bluetooth_kot_enabled === true || infoData.bluetooth_kot_enabled === '1',
+          kds_enabled: (infoData.kds_enabled ?? infoData.permissions?.kds_enabled) === 1 || (infoData.kds_enabled ?? infoData.permissions?.kds_enabled) === true || (infoData.kds_enabled ?? infoData.permissions?.kds_enabled) === '1',
           kds_screen_enabled: infoData.kds_screen_enabled !== undefined ? infoData.kds_screen_enabled : 1,
-          dual_printer_enabled: (infoData.dual_printer_enabled ?? infoData.permissions?.dual_printer_enabled) !== undefined ? (infoData.dual_printer_enabled ?? infoData.permissions?.dual_printer_enabled) === 1 || (infoData.dual_printer_enabled ?? infoData.permissions?.dual_printer_enabled) === true || (infoData.dual_printer_enabled ?? infoData.permissions?.dual_printer_enabled) === '1' : (infoData.plan_tier === 'enterprise' || infoData.plan_tier === 'vip_ultra_plan'),
+          dual_printer_enabled: (infoData.dual_printer_enabled ?? infoData.permissions?.dual_printer_enabled) === 1 || (infoData.dual_printer_enabled ?? infoData.permissions?.dual_printer_enabled) === true || (infoData.dual_printer_enabled ?? infoData.permissions?.dual_printer_enabled) === '1',
           filters_visibility: { ...defaultVis, ...infoData.filters_visibility }
         });
       }
@@ -1807,18 +1817,16 @@ export default function AdminDashboard({ token, username, slug: propSlug = '', o
   const occupiedTablesCount = tableGrid.filter(t => t.status === 'occupied').length;
   const serviceNeededCount = tableGrid.filter(t => t.status === 'service_needed').length;
 
-  const isAnalyticsEnabled = (
-    settingsForm.analytics_export_enabled !== false &&
-    settingsForm.analytics_export_enabled !== 0 &&
-    restaurantInfo?.analytics_export_enabled !== false &&
-    restaurantInfo?.analytics_export_enabled !== 0
+  const isAnalyticsEnabled = Boolean(
+    restaurantInfo &&
+    (restaurantInfo.analytics_export_enabled === true || restaurantInfo.analytics_export_enabled === 1 || restaurantInfo.analytics_export_enabled === '1') &&
+    (settingsForm.analytics_export_enabled === true || settingsForm.analytics_export_enabled === 1 || settingsForm.analytics_export_enabled === '1')
   );
 
-  const isDirectOrderingEnabled = (
-    restaurantInfo?.direct_ordering_enabled !== false &&
-    restaurantInfo?.direct_ordering_enabled !== 0 &&
-    restaurantInfo?.permissions?.direct_ordering_enabled !== false &&
-    restaurantInfo?.permissions?.direct_ordering_enabled !== 0
+  const isDirectOrderingEnabled = Boolean(
+    restaurantInfo &&
+    (restaurantInfo.direct_ordering_enabled === true || restaurantInfo.direct_ordering_enabled === 1 || restaurantInfo.direct_ordering_enabled === '1') &&
+    (restaurantInfo.permissions?.direct_ordering_enabled !== false && restaurantInfo.permissions?.direct_ordering_enabled !== 0 && restaurantInfo.permissions?.direct_ordering_enabled !== 'false')
   );
 
   return (
