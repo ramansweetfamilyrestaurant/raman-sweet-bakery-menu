@@ -81,49 +81,64 @@ export function verifyCustomerLocation(targetLat, targetLng, maxRadiusMeters = 1
       }
     };
 
-    // Safety Timeout: 5 seconds max for GPS fix
+    // Safety Timeout: 8 seconds max for GPS fix
     const timer = setTimeout(() => {
       finalize(bestReading);
-    }, 5000);
+    }, 8000);
 
-    // Progressive High Accuracy GPS fix
+    // Primary High-Accuracy GPS fix
     navigator.geolocation.getCurrentPosition(
       (pos) => {
-        bestReading = pos;
-        if (pos.coords.accuracy && pos.coords.accuracy <= 25) {
-          clearTimeout(timer);
-          finalize(pos);
-          return;
-        }
-
-        // Refine lock for up to 3 seconds if first reading was coarse
-        const startTime = Date.now();
-        watchId = navigator.geolocation.watchPosition(
-          (watchPos) => {
-            if (!bestReading || (watchPos.coords.accuracy && watchPos.coords.accuracy < bestReading.coords.accuracy)) {
-              bestReading = watchPos;
-            }
-            if ((watchPos.coords.accuracy && watchPos.coords.accuracy <= 15) || (Date.now() - startTime >= 3000)) {
-              clearTimeout(timer);
-              finalize(bestReading);
-            }
-          },
-          () => {
-            clearTimeout(timer);
-            finalize(bestReading);
-          },
-          { enableHighAccuracy: true, timeout: 4000, maximumAge: 0 }
-        );
-      },
-      (error) => {
-        console.warn('Customer GPS check error:', error);
         clearTimeout(timer);
-        finalize(null);
+        finalize(pos);
+      },
+      (err) => {
+        // If high-accuracy timed out or had positioning lag, fallback to network location
+        if (err.code === 3 || err.code === 2) {
+          navigator.geolocation.getCurrentPosition(
+            (fallbackPos) => {
+              clearTimeout(timer);
+              finalize(fallbackPos);
+            },
+            (fallbackErr) => {
+              clearTimeout(timer);
+              if (fallbackErr.code === 1) {
+                resolve({
+                  allowed: false,
+                  reason: 'permission_denied',
+                  message: '📍 Location Permission Blocked:\n\n1. Browser me upar address bar ke 🔒 Lock icon par tap karein.\n2. Permissions ➔ Location ko "Allow" karein.\n3. Dobara "Place Order" dabayein.'
+                });
+              } else {
+                resolve({
+                  allowed: false,
+                  reason: 'location_off',
+                  message: '📍 Location is Turned OFF:\n\nApne mobile phone ke notification bar se Location/GPS ON karein aur dobara try karein.'
+                });
+              }
+            },
+            { enableHighAccuracy: false, timeout: 5000, maximumAge: 30000 }
+          );
+        } else if (err.code === 1) {
+          // Permission Denied
+          clearTimeout(timer);
+          resolve({
+            allowed: false,
+            reason: 'permission_denied',
+            message: '📍 Location Permission Blocked:\n\n1. Browser me upar address bar ke 🔒 Lock icon par tap karein.\n2. Permissions ➔ Location ko "Allow" karein.\n3. Dobara "Place Order" dabayein.'
+          });
+        } else {
+          clearTimeout(timer);
+          resolve({
+            allowed: false,
+            reason: 'location_unavailable',
+            message: '📍 Location verification required to place table orders. Make sure GPS is ON.'
+          });
+        }
       },
       {
         enableHighAccuracy: true,
-        timeout: 4500,
-        maximumAge: 0
+        timeout: 6000,
+        maximumAge: 10000
       }
     );
   });
