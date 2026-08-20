@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo, lazy, Suspense } from 'react';
+import React, { useState, useEffect, useMemo, useRef, lazy, Suspense } from 'react';
 import CustomerHeader from './components/CustomerHeader';
 import MenuCardItem from './components/MenuCardItem';
 import SearchBar from './components/SearchBar';
