@@ -504,14 +504,16 @@ export default function AdminDashboard({ token, username, slug: propSlug = '', o
         d = new Date(str.replace(' ', 'T'));
       }
       if (!isNaN(d.getTime())) {
-        const dateFormatted = d.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }).replace(/ /g, '-');
+        const day = String(d.getDate()).padStart(2, '0');
+        const month = String(d.getMonth() + 1).padStart(2, '0');
+        const year = d.getFullYear();
         let hours = d.getHours();
         const minutes = String(d.getMinutes()).padStart(2, '0');
         const ampm = hours >= 12 ? 'PM' : 'AM';
         hours = hours % 12;
         hours = hours ? hours : 12;
         const formattedHours = String(hours).padStart(2, '0');
-        return { date: dateFormatted, time: `${formattedHours}:${minutes} ${ampm}` };
+        return { date: `${day}-${month}-${year}`, time: `${formattedHours}:${minutes} ${ampm}` };
       }
       const parts = str.split(' ');
       if (parts.length >= 2) return { date: parts[0], time: parts[1] };
@@ -534,18 +536,33 @@ export default function AdminDashboard({ token, username, slug: propSlug = '', o
     const rows = orders.map(order => {
       const { date, time } = getDateParts(order.created_at);
       const parsedItems = safeParseItems(order.items);
-      const itemsListStr = parsedItems.map(i => `${i.name} (x${i.quantity})`).join(' | ');
+      const itemsListStr = parsedItems.map(i => {
+        const cleanName = (i.name || '').replace(/[\u{1F300}-\u{1F9FF}\u{2600}-\u{26FF}\u{2700}-\u{27BF}]/gu, '').trim();
+        return `${cleanName || i.name} (x${i.quantity || 1})`;
+      }).join('; ');
+
+      const orderIdCol = `="#${order.id}"`;
+      const dateCol = date !== 'N/A' ? `="${date}"` : '"N/A"';
+      const timeCol = time !== 'N/A' ? `="${time}"` : '"N/A"';
+      const tableCol = `="${order.table_number || '1'}"`;
+      const nameCol = `"${(order.customer_name || 'Guest').replace(/"/g, '""')}"`;
+      const phoneCol = order.customer_phone ? `="${order.customer_phone}"` : '"N/A"';
+      const countCol = parsedItems.reduce((acc, i) => acc + (Number(i.quantity) || 1), 0);
+      const itemsCol = `"${itemsListStr.replace(/"/g, '""')}"`;
+      const statusCol = `"${(order.status || 'COMPLETED').toUpperCase()}"`;
+      const amountCol = Number(order.total_amount) || 0;
+
       return [
-        `"#${order.id}"`,
-        `"${date}"`,
-        `"${time}"`,
-        `"${order.table_number || 'N/A'}"`,
-        `"${(order.customer_name || 'Guest').replace(/"/g, '""')}"`,
-        `"${(order.customer_phone || 'N/A').replace(/"/g, '""')}"`,
-        parsedItems.reduce((acc, i) => acc + i.quantity, 0),
-        `"${itemsListStr.replace(/"/g, '""')}"`,
-        `"${(order.status || 'COMPLETED').toUpperCase()}"`,
-        order.total_amount || 0
+        orderIdCol,
+        dateCol,
+        timeCol,
+        tableCol,
+        nameCol,
+        phoneCol,
+        countCol,
+        itemsCol,
+        statusCol,
+        amountCol
       ].join(',');
     });
 
