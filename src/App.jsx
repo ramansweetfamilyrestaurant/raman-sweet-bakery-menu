@@ -229,14 +229,22 @@ export default function App() {
     return `🍽️ Table ${effectiveTableNum}`;
   };
 
+  const hasScannedSpace = Boolean(currentTableNum && String(currentTableNum).trim() !== '');
+
   const isViewOnlyUrl = Boolean(
     new URLSearchParams(window.location.search).get('view') === '1' ||
     new URLSearchParams(window.location.search).get('view_only') === 'true' ||
     new URLSearchParams(window.location.search).get('mode') === 'view'
   );
 
+  // Direct Table Ordering is active ONLY when:
+  // 1. Not in view-only URL mode
+  // 2. A specific Table/Cabin/Room QR code is scanned (hasScannedSpace)
+  // 3. Restaurant has direct_ordering_enabled = 1
+  // 4. SaaS Plan permissions allow direct ordering
   const isDirectOrderingActive = Boolean(
     !isViewOnlyUrl &&
+    hasScannedSpace &&
     info &&
     (info.direct_ordering_enabled === true || info.direct_ordering_enabled === 1 || info.direct_ordering_enabled === '1') &&
     (info.permissions?.direct_ordering_enabled !== false && info.permissions?.direct_ordering_enabled !== 0 && info.permissions?.direct_ordering_enabled !== 'false')
@@ -2495,8 +2503,8 @@ export default function App() {
         )}
       </main>
 
-      {/* 🛒 Zomato-Style Floating Cart Bar (Appears ONLY when cart has items) */}
-      {cartItems.length > 0 && (
+      {/* 🛒 Zomato-Style Floating Cart Bar (Appears ONLY when cart has items AND direct ordering is active) */}
+      {cartItems.length > 0 && isDirectOrderingActive && (
         <div style={{
           position: 'fixed',
           bottom: '78px',
