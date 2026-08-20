@@ -63,96 +63,144 @@ export default function MenuView({
     <div style={{ display: 'flex', flexDirection: 'column', gap: '14px', maxWidth: '1400px', margin: '0 auto', width: '100%', boxSizing: 'border-box' }}>
       
       {/* 1. COMPACT POS MENU HEADER */}
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '12px', flexWrap: 'wrap' }}>
-        <div>
-          <div style={{ display: 'flex', alignItems: 'baseline', gap: '8px' }}>
-            <h2 style={{ fontSize: '1.25rem', fontWeight: 800, color: 'var(--adm-primary)', margin: 0, letterSpacing: '-0.3px' }}>
-              Menu
-            </h2>
-            <span style={{ fontSize: '0.8rem', color: 'var(--adm-muted)', fontWeight: 600 }}>
-              {safeDishes.length} dishes
-            </span>
-          </div>
+      <div style={{
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'space-between',
+        flexWrap: 'wrap',
+        gap: '12px',
+        background: '#FFFFFF',
+        padding: '16px 20px',
+        borderRadius: '16px',
+        border: '1px solid #E2E8F0',
+        boxShadow: '0 2px 8px rgba(0,0,0,0.02)'
+      }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap' }}>
+          <h2 style={{ fontSize: '1.3rem', fontWeight: 900, color: '#0F172A', margin: 0, letterSpacing: '-0.02em' }}>
+            Menu Management
+          </h2>
+          <span style={{ fontSize: '0.72rem', fontWeight: 800, background: '#F1F5F9', color: '#475569', border: '1px solid #E2E8F0', padding: '3px 10px', borderRadius: '12px' }}>
+            {safeDishes.length} Dishes • {safeCategories.length} Categories
+          </span>
         </div>
 
         {activeSubTab === 'dishes' && (
           <button
             onClick={onOpenAddDish}
-            className="adm-btn adm-btn-accent adm-btn-sm"
-            style={{ fontWeight: 800, padding: '7px 14px', borderRadius: 'var(--adm-radius-md)', fontSize: '0.82rem' }}
+            style={{
+              background: 'linear-gradient(135deg, #D4AF37 0%, #B48F27 100%)',
+              color: '#0A2315',
+              border: 'none',
+              padding: '9px 18px',
+              borderRadius: '10px',
+              fontSize: '0.82rem',
+              fontWeight: 900,
+              cursor: 'pointer',
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: '6px',
+              boxShadow: '0 2px 8px rgba(212, 175, 55, 0.3)',
+              transition: 'all 0.2s ease'
+            }}
           >
-            <Plus size={15} /> Add Dish
+            <Plus size={16} /> Add Dish
           </button>
         )}
         {activeSubTab === 'categories' && (
           <button
             onClick={onOpenAddCategory}
-            className="adm-btn adm-btn-accent adm-btn-sm"
-            style={{ fontWeight: 800, padding: '7px 14px', borderRadius: 'var(--adm-radius-md)', fontSize: '0.82rem' }}
+            style={{
+              background: 'linear-gradient(135deg, #059669 0%, #10B981 100%)',
+              color: '#FFFFFF',
+              border: 'none',
+              padding: '9px 18px',
+              borderRadius: '10px',
+              fontSize: '0.82rem',
+              fontWeight: 800,
+              cursor: 'pointer',
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: '6px',
+              boxShadow: '0 2px 8px rgba(16, 185, 129, 0.25)',
+              transition: 'all 0.2s ease'
+            }}
           >
-            <Plus size={15} /> Add Category
+            <Plus size={16} /> Add Category
           </button>
         )}
         {activeSubTab === 'combos' && (
           <button
             onClick={onOpenAddCombo}
-            className="adm-btn adm-btn-accent adm-btn-sm"
-            style={{ fontWeight: 800, padding: '7px 14px', borderRadius: 'var(--adm-radius-md)', fontSize: '0.82rem' }}
+            style={{
+              background: 'linear-gradient(135deg, #7C3AED 0%, #6D28D9 100%)',
+              color: '#FFFFFF',
+              border: 'none',
+              padding: '9px 18px',
+              borderRadius: '10px',
+              fontSize: '0.82rem',
+              fontWeight: 800,
+              cursor: 'pointer',
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: '6px',
+              boxShadow: '0 2px 8px rgba(124, 58, 237, 0.25)',
+              transition: 'all 0.2s ease'
+            }}
           >
-            <Plus size={15} /> Add Combo
+            <Plus size={16} /> Add Combo
           </button>
         )}
       </div>
 
       {/* 2. SEGMENTED NAVIGATION TABS */}
-      <div style={{ display: 'flex', gap: '4px', background: '#E2E8F0', padding: '3px', borderRadius: '10px', width: 'fit-content', maxWidth: '100%' }}>
+      <div style={{ display: 'flex', gap: '6px', background: '#FFFFFF', padding: '5px', borderRadius: '12px', width: 'fit-content', maxWidth: '100%', border: '1px solid #E2E8F0' }}>
         <button
           onClick={() => setActiveSubTab('dishes')}
           style={{
-            padding: '6px 14px',
-            borderRadius: '8px',
-            fontSize: '0.8rem',
+            padding: '7px 16px',
+            borderRadius: '9px',
+            fontSize: '0.82rem',
             fontWeight: 800,
             border: 'none',
             cursor: 'pointer',
-            background: activeSubTab === 'dishes' ? 'var(--adm-primary)' : 'transparent',
-            color: activeSubTab === 'dishes' ? '#FFFFFF' : '#475569',
+            background: activeSubTab === 'dishes' ? '#0F172A' : 'transparent',
+            color: activeSubTab === 'dishes' ? '#FFFFFF' : '#64748B',
             transition: 'all 0.15s ease'
           }}
         >
-          Dishes ({safeDishes.length})
+          🍲 Dishes ({safeDishes.length})
         </button>
         <button
           onClick={() => setActiveSubTab('categories')}
           style={{
-            padding: '6px 14px',
-            borderRadius: '8px',
-            fontSize: '0.8rem',
+            padding: '7px 16px',
+            borderRadius: '9px',
+            fontSize: '0.82rem',
             fontWeight: 800,
             border: 'none',
             cursor: 'pointer',
-            background: activeSubTab === 'categories' ? 'var(--adm-primary)' : 'transparent',
-            color: activeSubTab === 'categories' ? '#FFFFFF' : '#475569',
+            background: activeSubTab === 'categories' ? '#0F172A' : 'transparent',
+            color: activeSubTab === 'categories' ? '#FFFFFF' : '#64748B',
             transition: 'all 0.15s ease'
           }}
         >
-          Categories ({safeCategories.length})
+          📁 Categories ({safeCategories.length})
         </button>
         <button
           onClick={() => setActiveSubTab('combos')}
           style={{
-            padding: '6px 14px',
-            borderRadius: '8px',
-            fontSize: '0.8rem',
+            padding: '7px 16px',
+            borderRadius: '9px',
+            fontSize: '0.82rem',
             fontWeight: 800,
             border: 'none',
             cursor: 'pointer',
-            background: activeSubTab === 'combos' ? 'var(--adm-primary)' : 'transparent',
-            color: activeSubTab === 'combos' ? '#FFFFFF' : '#475569',
+            background: activeSubTab === 'combos' ? '#0F172A' : 'transparent',
+            color: activeSubTab === 'combos' ? '#FFFFFF' : '#64748B',
             transition: 'all 0.15s ease'
           }}
         >
-          Combos ({safeCombos.length})
+          🍱 Combos ({safeCombos.length})
         </button>
       </div>
 
@@ -160,27 +208,28 @@ export default function MenuView({
       {activeSubTab === 'dishes' && (
         <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
           
-          {/* SEARCH BAR & CATEGORY SELECTOR */}
-          <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
-            <div style={{ position: 'relative', flex: '1 1 200px', width: '100%', minWidth: 0 }}>
-              <Search size={17} style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', color: '#94A3B8' }} />
+          {/* SEARCH & CATEGORY SELECTOR TOOLBAR */}
+          <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
+            <div style={{ position: 'relative', flex: '1 1 240px', minWidth: '220px' }}>
+              <Search size={16} color="#94A3B8" style={{ position: 'absolute', left: '14px', top: '50%', transform: 'translateY(-50%)', pointerEvents: 'none' }} />
               <input
                 type="text"
-                placeholder="Search dishes by name..."
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
+                placeholder="Search dishes by name..."
                 style={{
                   width: '100%',
                   height: '44px',
                   padding: '0 36px 0 38px',
                   borderRadius: '12px',
                   border: '1px solid #E2E8F0',
-                  fontSize: '0.88rem',
+                  fontSize: '0.84rem',
                   fontWeight: 600,
                   background: '#FFFFFF',
                   color: '#0F172A',
                   outline: 'none',
-                  boxSizing: 'border-box'
+                  boxSizing: 'border-box',
+                  boxShadow: '0 1px 3px rgba(0,0,0,0.02)'
                 }}
               />
               {search && (
@@ -193,25 +242,25 @@ export default function MenuView({
               )}
             </div>
 
-            {/* Category Quick Selector Dropdown */}
             <select
               value={selectedCatFilter}
               onChange={(e) => setSelectedCatFilter(e.target.value)}
               style={{
                 height: '44px',
-                padding: '0 12px',
+                padding: '0 14px',
                 borderRadius: '12px',
                 border: '1px solid #E2E8F0',
                 fontSize: '0.82rem',
                 fontWeight: 700,
                 background: '#FFFFFF',
-                color: 'var(--adm-primary)',
+                color: '#0F172A',
                 cursor: 'pointer',
-                flex: '1 1 auto',
-                maxWidth: '100%'
+                flex: '1 1 180px',
+                maxWidth: '100%',
+                boxShadow: '0 1px 3px rgba(0,0,0,0.02)'
               }}
             >
-              <option value="all">All Categories ({safeCategories.length})</option>
+              <option value="all">📁 All Categories ({safeCategories.length})</option>
               {safeCategories.map(c => (
                 <option key={c.id} value={c.id}>{c.name}</option>
               ))}
@@ -219,7 +268,7 @@ export default function MenuView({
           </div>
 
           {/* HORIZONTALLY SCROLLABLE CHIP FILTERS */}
-          <div style={{ display: 'flex', gap: '6px', overflowX: 'auto', paddingBottom: '4px', scrollbarWidth: 'none', WebkitOverflowScrolling: 'touch' }}>
+          <div style={{ display: 'flex', gap: '8px', overflowX: 'auto', paddingBottom: '4px', scrollbarWidth: 'none', WebkitOverflowScrolling: 'touch' }}>
             {[
               { id: 'all', label: `All (${safeDishes.length})` },
               { id: 'veg', label: `🟢 Veg (${safeDishes.filter(d => d.type === 'veg').length})` },
@@ -234,14 +283,16 @@ export default function MenuView({
                   onClick={() => setBadgeFilter(f.id)}
                   style={{
                     flexShrink: 0,
-                    padding: '6px 12px',
-                    fontSize: '0.76rem',
+                    padding: '6px 14px',
+                    fontSize: '0.78rem',
                     fontWeight: 700,
                     borderRadius: '20px',
-                    border: 'none',
+                    border: '1px solid',
+                    borderColor: isActive ? '#0F172A' : '#E2E8F0',
                     cursor: 'pointer',
-                    background: isActive ? 'var(--adm-primary)' : '#E2E8F0',
-                    color: isActive ? '#FFFFFF' : '#334155',
+                    background: isActive ? '#0F172A' : '#FFFFFF',
+                    color: isActive ? '#FFFFFF' : '#475569',
+                    boxShadow: isActive ? '0 2px 6px rgba(15, 23, 42, 0.15)' : 'none',
                     transition: 'all 0.15s ease'
                   }}
                 >
@@ -251,14 +302,14 @@ export default function MenuView({
             })}
           </div>
 
-          {/* DISH LIST (COMPACT POS ROWS) */}
+          {/* DISH LIST (EXECUTIVE POS CARDS) */}
           {filteredDishes.length === 0 ? (
-            <div style={{ padding: '40px 20px', textAlign: 'center', background: '#FFFFFF', borderRadius: '14px', border: '1px solid #E2E8F0' }}>
+            <div style={{ padding: '40px 20px', textAlign: 'center', background: '#FFFFFF', borderRadius: '16px', border: '1px solid #E2E8F0' }}>
               <div style={{ fontSize: '2.5rem', marginBottom: '8px' }}>🍲</div>
-              <h3 style={{ fontSize: '1rem', fontWeight: 800, color: 'var(--adm-primary)', margin: '0 0 4px 0' }}>
+              <h3 style={{ fontSize: '1rem', fontWeight: 800, color: '#0F172A', margin: '0 0 4px 0' }}>
                 {search ? 'No dishes found' : 'No dishes yet'}
               </h3>
-              <p style={{ fontSize: '0.8rem', color: 'var(--adm-muted)', margin: '0 0 16px 0' }}>
+              <p style={{ fontSize: '0.8rem', color: '#64748B', margin: '0 0 16px 0' }}>
                 {search ? 'Try searching for another dish name or category.' : 'Add your first dish to start building your menu catalog.'}
               </p>
               {!search && (
@@ -268,33 +319,35 @@ export default function MenuView({
               )}
             </div>
           ) : (
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(320px, 1fr))', gap: '8px' }}>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(320px, 1fr))', gap: '10px' }}>
               {filteredDishes.map(dish => {
                 const catName = dish.category_name || safeCategories.find(c => String(c.id) === String(dish.category_id))?.name || 'General';
                 const imageSrc = getDishImageUrl(dish.image || dish.image_url);
+                const isAvail = dish.available !== false;
 
                 return (
                   <div
                     key={dish.id}
                     style={{
                       background: '#FFFFFF',
-                      border: '1px solid #E5E7EB',
-                      borderRadius: '14px',
-                      padding: '10px 12px',
+                      border: '1px solid #E2E8F0',
+                      borderRadius: '16px',
+                      padding: '12px 14px',
                       display: 'flex',
                       alignItems: 'center',
                       gap: '12px',
-                      opacity: dish.available !== false ? 1 : 0.6,
+                      opacity: isAvail ? 1 : 0.65,
                       boxSizing: 'border-box',
                       width: '100%',
-                      boxShadow: '0 2px 6px rgba(0,0,0,0.03)'
+                      boxShadow: '0 2px 8px rgba(0,0,0,0.02)',
+                      transition: 'transform 0.15s ease, box-shadow 0.15s ease'
                     }}
                   >
-                    {/* LEFT: Dish Image (56px Square) */}
+                    {/* LEFT: Dish Image (60px Square) */}
                     <div style={{
-                      width: '56px',
-                      height: '56px',
-                      borderRadius: '10px',
+                      width: '60px',
+                      height: '60px',
+                      borderRadius: '12px',
                       overflow: 'hidden',
                       flexShrink: 0,
                       background: '#F8FAFC',
@@ -311,12 +364,12 @@ export default function MenuView({
                       />
                     </div>
 
-                    {/* MIDDLE: Dish Name, Category, Price & Description (1-2 lines max) */}
-                    <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', gap: '2px' }}>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '5px' }}>
+                    {/* MIDDLE: Dish Name, Category, Price & Badges */}
+                    <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', gap: '3px' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
                         <span style={{
-                          width: '8px',
-                          height: '8px',
+                          width: '9px',
+                          height: '9px',
                           border: dish.type === 'nonveg' ? '1.5px solid #DC2626' : dish.type === 'egg' ? '1.5px solid #D97706' : '1.5px solid #16A34A',
                           display: 'inline-flex',
                           alignItems: 'center',
@@ -325,22 +378,21 @@ export default function MenuView({
                           flexShrink: 0
                         }}>
                           <span style={{
-                            width: '3.5px',
-                            height: '3.5px',
+                            width: '4px',
+                            height: '4px',
                             borderRadius: '50%',
                             backgroundColor: dish.type === 'nonveg' ? '#DC2626' : dish.type === 'egg' ? '#D97706' : '#16A34A'
                           }} />
                         </span>
 
                         <strong style={{
-                          fontSize: '0.90rem',
+                          fontSize: '0.92rem',
                           fontWeight: 800,
                           color: '#0F172A',
                           lineHeight: 1.25,
-                          display: '-webkit-box',
-                          WebkitLineClamp: 2,
-                          WebkitBoxOrient: 'vertical',
-                          overflow: 'hidden'
+                          whiteSpace: 'nowrap',
+                          overflow: 'hidden',
+                          textOverflow: 'ellipsis'
                         }}>
                           {dish.name}
                         </strong>
@@ -349,11 +401,11 @@ export default function MenuView({
                         {dish.is_special && <span style={{ fontSize: '0.7rem', flexShrink: 0 }} title="Special">✨</span>}
                       </div>
 
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flexWrap: 'wrap' }}>
-                        <span style={{ fontSize: '0.73rem', color: '#64748B', fontWeight: 600 }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
+                        <span style={{ fontSize: '0.72rem', color: '#64748B', fontWeight: 600, background: '#F1F5F9', padding: '1px 7px', borderRadius: '6px' }}>
                           {catName}
                         </span>
-                        <span style={{ fontSize: '0.86rem', fontWeight: 900, color: 'var(--adm-primary)' }}>
+                        <span style={{ fontSize: '0.90rem', fontWeight: 900, color: '#059669' }}>
                           {currencySymbol}{Math.round(dish.price)} {dish.price_half ? `/ ${currencySymbol}${Math.round(dish.price_half)}` : ''}
                         </span>
                       </div>
@@ -362,10 +414,8 @@ export default function MenuView({
                         <div style={{
                           fontSize: '0.70rem',
                           color: '#94A3B8',
-                          lineHeight: 1.25,
-                          display: '-webkit-box',
-                          WebkitLineClamp: 1,
-                          WebkitBoxOrient: 'vertical',
+                          lineHeight: 1.2,
+                          whiteSpace: 'nowrap',
                           overflow: 'hidden',
                           textOverflow: 'ellipsis'
                         }}>
@@ -374,9 +424,8 @@ export default function MenuView({
                       )}
                     </div>
 
-                    {/* RIGHT: Primary Action (Available Toggle) & Secondary Actions (Edit, Delete) */}
+                    {/* RIGHT: Availability Toggle & Action Buttons */}
                     <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: '6px', flexShrink: 0 }}>
-                      {/* PRIMARY ACTION: Available Status Badge */}
                       <button
                         onClick={() => onToggleAvailability(dish.id, dish.available)}
                         style={{
@@ -384,23 +433,21 @@ export default function MenuView({
                           borderRadius: '12px',
                           fontSize: '0.70rem',
                           fontWeight: 800,
-                          background: dish.available !== false ? '#DCFCE7' : '#FEE2E2',
-                          color: dish.available !== false ? '#15803D' : '#991B1B',
-                          border: dish.available !== false ? '1.5px solid #86EFAC' : '1.5px solid #FCA5A5',
+                          background: isAvail ? '#DCFCE7' : '#FEE2E2',
+                          color: isAvail ? '#15803D' : '#991B1B',
+                          border: isAvail ? '1px solid #86EFAC' : '1px solid #FCA5A5',
                           cursor: 'pointer',
                           whiteSpace: 'nowrap',
-                          boxShadow: dish.available !== false ? '0 1px 4px rgba(22, 163, 74, 0.15)' : 'none'
+                          boxShadow: isAvail ? '0 1px 4px rgba(22, 163, 74, 0.15)' : 'none'
                         }}
                         title="Toggle Dish Availability"
                       >
-                        {dish.available !== false ? '● Available' : '● Off'}
+                        {isAvail ? '● Available' : '● Off'}
                       </button>
 
-                      {/* SECONDARY ACTIONS: Edit & Delete */}
                       <div style={{ display: 'flex', gap: '4px' }}>
                         <button
                           onClick={() => onOpenEditDish(dish)}
-                          className="adm-btn adm-btn-secondary adm-btn-sm"
                           style={{
                             padding: '4px 8px',
                             borderRadius: '8px',
@@ -408,7 +455,11 @@ export default function MenuView({
                             alignItems: 'center',
                             gap: '3px',
                             fontWeight: 800,
-                            fontSize: '0.74rem'
+                            fontSize: '0.74rem',
+                            background: '#F1F5F9',
+                            color: '#334155',
+                            border: '1px solid #E2E8F0',
+                            cursor: 'pointer'
                           }}
                           title="Edit Dish"
                         >
@@ -417,7 +468,6 @@ export default function MenuView({
 
                         <button
                           onClick={() => setDeleteConfirmDish(dish)}
-                          className="adm-btn adm-btn-danger adm-btn-sm"
                           style={{
                             padding: '4px 8px',
                             borderRadius: '8px',
@@ -425,7 +475,11 @@ export default function MenuView({
                             alignItems: 'center',
                             justifyContent: 'center',
                             fontWeight: 800,
-                            fontSize: '0.74rem'
+                            fontSize: '0.74rem',
+                            background: '#FEE2E2',
+                            color: '#DC2626',
+                            border: '1px solid #FECACA',
+                            cursor: 'pointer'
                           }}
                           title="Delete Dish"
                         >
