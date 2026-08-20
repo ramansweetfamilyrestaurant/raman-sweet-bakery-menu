@@ -176,13 +176,6 @@ export default function App() {
         }
       }
     } catch {}
-
-    // If dining at a table, and restaurant has GPS location, and not yet verified:
-    // Prompt the verification modal once on landing
-    if (hasLocation && currentTableNum && !isSessionValid && !locationPromptShownRef.current) {
-      locationPromptShownRef.current = true;
-      setShowLocationModal(true);
-    }
   }, [info?.id, info?.latitude, info?.longitude, currentTableNum]);
 
   // Validate if the table/space number exists within the restaurant's configured capacity & verified signature
@@ -686,7 +679,7 @@ export default function App() {
     return () => clearInterval(interval);
   }, [activeOrderId, effectiveTableNum, info, sessionExpired]);
 
-  const handleSendDirectOrder = async () => {
+  const handleSendDirectOrder = async (overrideGeo = null) => {
     if (cartItems.length === 0 || isPlacingOrderRef.current || placingOrder) return;
     isPlacingOrderRef.current = true;
     setPlacingOrder(true);
@@ -698,7 +691,7 @@ export default function App() {
       const hasLocation = Boolean(info && !isNaN(restoLat) && !isNaN(restoLng) && restoLat !== 0 && restoLng !== 0);
 
       if (hasLocation) {
-        let cached = cachedCustomerGeoRef.current;
+        let cached = overrideGeo || cachedCustomerGeoRef.current;
         if (!cached && info?.id) {
           try {
             const raw = sessionStorage.getItem(`touchqr_geo_${info.id}`);
@@ -706,10 +699,10 @@ export default function App() {
           } catch {}
         }
         const storedLocToken = (info?.id ? sessionStorage.getItem(`touchqr_location_token_${info.id}`) : '') || '';
-        const effectiveToken = locationToken || (cached && cached.locationToken) || storedLocToken;
+        const effectiveToken = (overrideGeo && overrideGeo.locationToken) || locationToken || (cached && cached.locationToken) || storedLocToken;
         const isFresh = Boolean(effectiveToken || (cached && cached.timestamp && (Date.now() - cached.timestamp < 20 * 60 * 1000)));
 
-        if (!locationVerified && !isFresh) {
+        if (!overrideGeo && !locationVerified && !isFresh) {
           // Open the mobile location verification screen and block submission
           setShowLocationModal(true);
           setPlacingOrder(false);
@@ -719,8 +712,8 @@ export default function App() {
 
         const geoData = cached || {};
         customerGeo = {
-          location_token: effectiveToken || '',
-          verification_token: geoData.verificationToken || '',
+          location_token: effectiveToken || (geoData && geoData.locationToken) || '',
+          verification_token: (geoData && (geoData.verificationToken || geoData.verification_token)) || '',
           customer_latitude: geoData.customerLat,
           customer_longitude: geoData.customerLng,
           customer_accuracy: geoData.accuracy,
@@ -3106,9 +3099,7 @@ export default function App() {
               sessionStorage.setItem(`touchqr_geo_${info?.id}`, JSON.stringify(verifiedData));
             } catch {}
             if (cartItems.length > 0) {
-              setTimeout(() => {
-                handleSendDirectOrder();
-              }, 1400);
+              handleSendDirectOrder(verifiedData);
             }
           }}
         />

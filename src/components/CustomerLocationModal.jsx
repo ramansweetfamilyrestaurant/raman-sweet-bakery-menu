@@ -68,14 +68,14 @@ export default function CustomerLocationModal({
 
     const primaryOptions = {
       enableHighAccuracy: true,
-      timeout: 20000,
-      maximumAge: 0
+      timeout: 8000,
+      maximumAge: 60000
     };
 
     const fallbackOptions = {
       enableHighAccuracy: false,
-      timeout: 10000,
-      maximumAge: 30000
+      timeout: 8000,
+      maximumAge: 120000
     };
 
     const processPosition = async (pos) => {

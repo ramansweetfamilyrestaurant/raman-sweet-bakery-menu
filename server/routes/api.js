@@ -860,6 +860,8 @@ router.post('/orders', async (req, res) => {
     if (hasRestaurantLocation) {
       let isVerified = false;
       const cleanTable = String(table_number || '1').trim();
+      const normalizeSpace = (s) => String(s || '').replace(/^(table|cabin|room|vip|tbl|🍽️|🛋️|🏨|👑|\s)+/i, '').trim().toLowerCase();
+      const normOrderTable = normalizeSpace(cleanTable);
       const jwtSecret = process.env.JWT_SECRET || 'touchqr_secure_location_secret_key_2026';
       let extractedVToken = null;
 
@@ -870,7 +872,8 @@ router.post('/orders', async (req, res) => {
           if (decoded && Number(decoded.restaurant_id) === Number(resto.id)) {
             const tokenTable = String(decoded.table_number || '').trim().toLowerCase();
             const orderTable = cleanTable.toLowerCase();
-            if (tokenTable && tokenTable !== orderTable) {
+            const normTokenTable = normalizeSpace(tokenTable);
+            if (normTokenTable && normOrderTable && normTokenTable !== normOrderTable && tokenTable !== orderTable) {
               return res.status(403).json({
                 error: 'table_mismatch',
                 message: `📍 Location token was verified for a different space/table (${decoded.table_number}). Please verify location for Table ${cleanTable}.`
@@ -893,12 +896,21 @@ router.post('/orders', async (req, res) => {
         try {
           const verRows = await query(
             `SELECT id, distance_meters, expires_at, table_number FROM table_location_verifications 
-             WHERE restaurant_id = $1 AND verification_token = $2 AND LOWER(TRIM(table_number)) = LOWER(TRIM($3))
+             WHERE restaurant_id = $1 AND verification_token = $2 
              ORDER BY id DESC LIMIT 1`,
-            [resto.id, extractedVToken, cleanTable]
+            [resto.id, extractedVToken]
           );
           if (verRows && verRows.length > 0) {
             const vRecord = verRows[0];
+            const vTable = String(vRecord.table_number || '').trim().toLowerCase();
+            const orderTable = cleanTable.toLowerCase();
+            const normVTable = normalizeSpace(vTable);
+            if (normVTable && normOrderTable && normVTable !== normOrderTable && vTable !== orderTable) {
+              return res.status(403).json({
+                error: 'table_mismatch',
+                message: `📍 Location token was verified for Table ${vRecord.table_number}. Please verify location for Table ${cleanTable}.`
+              });
+            }
             const expTime = new Date(vRecord.expires_at).getTime();
             // Allow 5-minute clock skew buffer
             if (!isNaN(expTime) && expTime > (Date.now() - 5 * 60 * 1000)) {
@@ -906,20 +918,6 @@ router.post('/orders', async (req, res) => {
               if (vRecord.distance_meters != null && !isNaN(Number(vRecord.distance_meters))) {
                 distanceMetersValue = Number(vRecord.distance_meters);
               }
-            }
-          } else if (!isVerified) {
-            // Check if token exists but belongs to a different table/space
-            const otherTableRows = await query(
-              `SELECT id, table_number FROM table_location_verifications 
-               WHERE restaurant_id = $1 AND verification_token = $2 
-               ORDER BY id DESC LIMIT 1`,
-              [resto.id, extractedVToken]
-            );
-            if (otherTableRows && otherTableRows.length > 0) {
-              return res.status(403).json({
-                error: 'table_mismatch',
-                message: `📍 Location token was verified for Table ${otherTableRows[0].table_number}. Please verify location for Table ${cleanTable}.`
-              });
             }
           }
         } catch (vErr) {
