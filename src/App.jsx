@@ -3098,6 +3098,11 @@ export default function App() {
               sessionStorage.setItem(`touchqr_location_token_${info?.id}`, verifiedData.locationToken);
               sessionStorage.setItem(`touchqr_geo_${info?.id}`, JSON.stringify(verifiedData));
             } catch {}
+            if (cartItems.length > 0) {
+              setTimeout(() => {
+                handleSendDirectOrder();
+              }, 1400);
+            }
           }}
         />
       )}

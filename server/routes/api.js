@@ -872,12 +872,7 @@ router.post('/orders', async (req, res) => {
             isVerified = true;
           }
         } catch (tokErr) {
-          if (tokErr.name === 'TokenExpiredError') {
-            return res.status(403).json({
-              error: 'location_verification_expired',
-              message: 'Your table location verification has expired. Please tap verify to refresh your location.'
-            });
-          }
+          // Fall through to database or coordinate check
         }
       }
 
@@ -896,16 +891,13 @@ router.post('/orders', async (req, res) => {
           );
           if (verRows && verRows.length > 0) {
             const vRecord = verRows[0];
-            if (new Date(vRecord.expires_at).getTime() > Date.now()) {
+            const expTime = new Date(vRecord.expires_at).getTime();
+            // Allow 5-minute clock skew buffer
+            if (!isNaN(expTime) && expTime > (Date.now() - 5 * 60 * 1000)) {
               isVerified = true;
               if (vRecord.distance_meters != null && !isNaN(Number(vRecord.distance_meters))) {
                 distanceMetersValue = Number(vRecord.distance_meters);
               }
-            } else {
-              return res.status(403).json({
-                error: 'location_verification_expired',
-                message: 'Your table location verification has expired. Please tap verify to refresh your location.'
-              });
             }
           }
         } catch (vErr) {
@@ -914,33 +906,30 @@ router.post('/orders', async (req, res) => {
       }
 
       // 3. Fallback: Direct coordinate calculation if provided
-      if (!isVerified) {
-        if (
-          customer_latitude !== undefined && customer_longitude !== undefined &&
-          customer_latitude !== null && customer_longitude !== null &&
-          !isNaN(Number(customer_latitude)) && !isNaN(Number(customer_longitude))
-        ) {
-          const calculatedDistance = calculateHaversineDistance(
-            Number(customer_latitude),
-            Number(customer_longitude),
-            restoLat,
-            restoLng
-          );
+      if (
+        customer_latitude !== undefined && customer_longitude !== undefined &&
+        customer_latitude !== null && customer_longitude !== null &&
+        !isNaN(Number(customer_latitude)) && !isNaN(Number(customer_longitude))
+      ) {
+        const calculatedDistance = calculateHaversineDistance(
+          Number(customer_latitude),
+          Number(customer_longitude),
+          restoLat,
+          restoLng
+        );
+        const accBuffer = Math.min((Number(customer_accuracy) || 0) * 0.25, 25);
+        const effectiveDist = Math.max(0, calculatedDistance - accBuffer);
+        const allowedRadius = Number(resto.max_distance_meters) || 100;
+
+        if (effectiveDist <= allowedRadius) {
+          isVerified = true;
           distanceMetersValue = calculatedDistance;
-
-          const accBuffer = Math.min((Number(customer_accuracy) || 0) * 0.25, 25);
-          const effectiveDist = Math.max(0, calculatedDistance - accBuffer);
-          const allowedRadius = Number(resto.max_distance_meters) || 100;
-
-          if (effectiveDist <= allowedRadius) {
-            isVerified = true;
-          } else {
-            const displayDist = calculatedDistance > 1000 ? `${(calculatedDistance / 1000).toFixed(1)} km` : `${calculatedDistance} meters`;
-            return res.status(403).json({
-              error: 'outside_service_area',
-              message: `📍 Order Rejected: You appear to be ${displayDist} away from this restaurant (Allowed radius: ${allowedRadius}m). Table orders must be placed within the dining area.`
-            });
-          }
+        } else if (!isVerified) {
+          const displayDist = calculatedDistance > 1000 ? `${(calculatedDistance / 1000).toFixed(1)} km` : `${calculatedDistance} meters`;
+          return res.status(403).json({
+            error: 'outside_service_area',
+            message: `📍 Order Rejected: You appear to be ${displayDist} away from this restaurant (Allowed radius: ${allowedRadius}m). Table orders must be placed within the dining area.`
+          });
         }
       }
 
