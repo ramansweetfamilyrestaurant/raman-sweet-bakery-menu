@@ -140,6 +140,7 @@ export default function App() {
 
   // Menu Data State (Declared at top of component to avoid TDZ access)
   const [info, setInfo] = useState(null);
+  const cachedCustomerGeoRef = useRef(null);
 
   const initialSpaceInfo = getSpaceInfoFromUrl();
   const initialTableNum = initialSpaceInfo.num;
@@ -148,6 +149,48 @@ export default function App() {
   const [currentTableToken, setCurrentTableToken] = useState(initialSpaceInfo.token);
   const [sessionExpired, setSessionExpired] = useState(false);
   const [autoKillSeconds, setAutoKillSeconds] = useState(null);
+
+  // 📍 Proactive Location Pre-fetch on QR Menu Load:
+  // Requests location permission immediately when customer lands on the menu,
+  // caching it for the entire dining session so ordering & re-ordering are instant with zero repeated prompts.
+  useEffect(() => {
+    const restoLat = Number(info?.latitude);
+    const restoLng = Number(info?.longitude);
+    if (!info || isNaN(restoLat) || isNaN(restoLng) || restoLat === 0 || restoLng === 0) return;
+
+    // Check if we already have fresh cached location in session (< 15 mins)
+    try {
+      const stored = sessionStorage.getItem(`touchqr_geo_${info.id}`);
+      if (stored) {
+        const parsed = JSON.parse(stored);
+        if (parsed && parsed.timestamp && (Date.now() - parsed.timestamp < 15 * 60 * 1000)) {
+          cachedCustomerGeoRef.current = parsed;
+          return;
+        }
+      }
+    } catch {}
+
+    // Pre-fetch in background on menu open
+    if (navigator.geolocation) {
+      verifyCustomerLocation(restoLat, restoLng, info.max_distance_meters || 100)
+        .then(res => {
+          if (res && res.allowed && res.customerLat) {
+            const geoPayload = {
+              customerLat: res.customerLat,
+              customerLng: res.customerLng,
+              accuracy: res.accuracy,
+              distanceMeters: res.distanceMeters,
+              timestamp: Date.now()
+            };
+            cachedCustomerGeoRef.current = geoPayload;
+            try {
+              sessionStorage.setItem(`touchqr_geo_${info.id}`, JSON.stringify(geoPayload));
+            } catch {}
+          }
+        })
+        .catch(() => {});
+    }
+  }, [info?.id, info?.latitude, info?.longitude, info?.max_distance_meters]);
 
   // Validate if the table/space number exists within the restaurant's configured capacity & verified signature
   const isSpaceNumberValid = () => {
@@ -653,19 +696,45 @@ export default function App() {
     isPlacingOrderRef.current = true;
     setPlacingOrder(true);
     try {
-      // 📍 GPS Geo-Fencing Radius Check
+      // 📍 GPS Geo-Fencing Radius Check (Uses session-cached location for zero delay & zero repeated prompts)
       let customerGeo = {};
       const restoLat = Number(info?.latitude);
       const restoLng = Number(info?.longitude);
       if (info && !isNaN(restoLat) && !isNaN(restoLng) && restoLat !== 0 && restoLng !== 0) {
-        const geoCheck = await verifyCustomerLocation(
-          restoLat,
-          restoLng,
-          info.max_distance_meters || 100
-        );
+        let geoCheck = null;
+        const cached = cachedCustomerGeoRef.current;
+        if (cached && (Date.now() - cached.timestamp < 15 * 60 * 1000) && cached.customerLat) {
+          // Re-use verified session cache instantly (0ms delay / zero prompt during reordering)
+          geoCheck = {
+            allowed: true,
+            customerLat: cached.customerLat,
+            customerLng: cached.customerLng,
+            accuracy: cached.accuracy,
+            distanceMeters: cached.distanceMeters
+          };
+        } else {
+          geoCheck = await verifyCustomerLocation(
+            restoLat,
+            restoLng,
+            info.max_distance_meters || 100
+          );
+          if (geoCheck && geoCheck.allowed && geoCheck.customerLat) {
+            const geoPayload = {
+              customerLat: geoCheck.customerLat,
+              customerLng: geoCheck.customerLng,
+              accuracy: geoCheck.accuracy,
+              distanceMeters: geoCheck.distanceMeters,
+              timestamp: Date.now()
+            };
+            cachedCustomerGeoRef.current = geoPayload;
+            try {
+              sessionStorage.setItem(`touchqr_geo_${info.id}`, JSON.stringify(geoPayload));
+            } catch {}
+          }
+        }
 
-        if (!geoCheck.allowed) {
-          alert(geoCheck.message || '📍 Location verification failed. You must be present inside the restaurant dining area to place orders.');
+        if (!geoCheck || !geoCheck.allowed) {
+          alert(geoCheck?.message || '📍 Location verification failed. You must be present inside the restaurant dining area to place orders.');
           setPlacingOrder(false);
           isPlacingOrderRef.current = false;
           return;
