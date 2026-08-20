@@ -119,310 +119,498 @@ export default function OrdersView({
   };
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
+    <div style={{ display: 'flex', flexDirection: 'column', gap: '16px', maxWidth: '1400px', margin: '0 auto', width: '100%', boxSizing: 'border-box' }}>
       {/* Header Controls */}
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '10px' }}>
+      <div style={{
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'space-between',
+        flexWrap: 'wrap',
+        gap: '12px',
+        background: '#FFFFFF',
+        padding: '16px 20px',
+        borderRadius: '16px',
+        border: '1px solid #E2E8F0',
+        boxShadow: '0 2px 8px rgba(0,0,0,0.02)'
+      }}>
         <div>
-          <h2 style={{ fontSize: '1.25rem', fontWeight: 900, color: 'var(--adm-primary)', margin: '0 0 2px 0' }}>
-            {kdsEnabled ? 'Orders & Kitchen Operations' : 'Live Table Orders & Operations'}
-          </h2>
-          <span style={{ fontSize: '0.8rem', color: 'var(--adm-muted)', fontWeight: 600 }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '2px', flexWrap: 'wrap' }}>
+            <h2 style={{ fontSize: '1.3rem', fontWeight: 900, color: '#0F172A', margin: 0, letterSpacing: '-0.02em' }}>
+              {kdsEnabled ? 'Orders & Kitchen Operations' : 'Live Table Orders & Operations'}
+            </h2>
+            <span style={{ fontSize: '0.68rem', fontWeight: 800, background: '#DCFCE7', color: '#15803D', border: '1px solid #86EFAC', padding: '2px 8px', borderRadius: '12px', display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
+              ● LIVE
+            </span>
+          </div>
+          <span style={{ fontSize: '0.78rem', color: '#64748B', fontWeight: 500 }}>
             {kdsEnabled ? 'Live table orders, floor map & kitchen display screen' : 'Live table orders, floor map & waiter calls'}
           </span>
         </div>
 
         <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
-          <span style={{ background: 'var(--adm-surface-subtle)', padding: '6px 12px', borderRadius: 'var(--adm-radius-md)', border: '1px solid var(--adm-border)', fontSize: '0.78rem', fontWeight: 800 }}>
-            <strong style={{ color: 'var(--adm-success)' }}>{currencySymbol}{todayTotalSales.toLocaleString()}</strong> Today
+          <span style={{ background: '#DCFCE7', color: '#15803D', padding: '6px 14px', borderRadius: '10px', border: '1px solid #86EFAC', fontSize: '0.8rem', fontWeight: 800 }}>
+            {currencySymbol}{todayTotalSales.toLocaleString()} Today
           </span>
-          <span style={{ background: 'var(--adm-warning-bg)', color: 'var(--adm-warning)', padding: '6px 12px', borderRadius: 'var(--adm-radius-md)', border: '1px solid var(--adm-warning-border)', fontSize: '0.78rem', fontWeight: 800 }}>
-            {pendingCount} Pending
-          </span>
+          {pendingCount > 0 ? (
+            <span style={{ background: '#FEF3C7', color: '#B45309', padding: '6px 14px', borderRadius: '10px', border: '1px solid #FCD34D', fontSize: '0.8rem', fontWeight: 800 }}>
+              🔔 {pendingCount} Pending
+            </span>
+          ) : (
+            <span style={{ background: '#F1F5F9', color: '#475569', padding: '6px 14px', borderRadius: '10px', border: '1px solid #E2E8F0', fontSize: '0.8rem', fontWeight: 700 }}>
+              0 Pending
+            </span>
+          )}
         </div>
       </div>
 
-      {/* Sub-Navigation Chips */}
-      <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap' }}>
+      {/* Sub-Navigation Segmented Control */}
+      <div style={{ display: 'flex', gap: '6px', background: '#FFFFFF', padding: '5px', borderRadius: '12px', width: 'fit-content', maxWidth: '100%', border: '1px solid #E2E8F0', flexWrap: 'wrap' }}>
         <button
           onClick={() => setActiveSubTab('orders')}
-          className={`adm-btn adm-btn-sm ${activeSubTab === 'orders' ? 'adm-btn-primary' : 'adm-btn-secondary'}`}
-          style={{ padding: '6px 14px', borderRadius: 'var(--adm-radius-full)' }}
+          style={{
+            padding: '7px 16px',
+            borderRadius: '9px',
+            fontSize: '0.82rem',
+            fontWeight: 800,
+            border: 'none',
+            cursor: 'pointer',
+            background: activeSubTab === 'orders' ? '#0F172A' : 'transparent',
+            color: activeSubTab === 'orders' ? '#FFFFFF' : '#64748B',
+            transition: 'all 0.15s ease'
+          }}
         >
-          Live Orders ({validOrders.length})
+          📋 Live Orders ({validOrders.length})
+        </button>
+        <button
+          onClick={() => setActiveSubTab('floor-map')}
+          style={{
+            padding: '7px 16px',
+            borderRadius: '9px',
+            fontSize: '0.82rem',
+            fontWeight: 800,
+            border: 'none',
+            cursor: 'pointer',
+            background: activeSubTab === 'floor-map' ? '#0F172A' : 'transparent',
+            color: activeSubTab === 'floor-map' ? '#FFFFFF' : '#64748B',
+            transition: 'all 0.15s ease'
+          }}
+        >
+          🗺️ Floor Map ({totalTables} Tables)
+        </button>
+        <button
+          onClick={() => setActiveSubTab('service-requests')}
+          style={{
+            padding: '7px 16px',
+            borderRadius: '9px',
+            fontSize: '0.82rem',
+            fontWeight: 800,
+            border: 'none',
+            cursor: 'pointer',
+            background: activeSubTab === 'service-requests' ? '#0F172A' : 'transparent',
+            color: activeSubTab === 'service-requests' ? '#FFFFFF' : '#64748B',
+            transition: 'all 0.15s ease'
+          }}
+        >
+          🛎️ Waiter Calls ({safeServiceRequests.length})
         </button>
         {kdsEnabled && (
           <a
             href={`/${localStorage.getItem('touchqr_admin_slug') || restaurantInfo?.slug || ''}/kitchen`}
             target="_blank"
             rel="noopener noreferrer"
-            className="adm-btn adm-btn-sm adm-btn-secondary"
-            style={{ padding: '6px 14px', borderRadius: 'var(--adm-radius-full)', background: '#0F172A', color: '#38BDF8', border: '1px solid #38BDF8', textDecoration: 'none', display: 'inline-flex', alignItems: 'center', gap: '4px', fontWeight: 800 }}
+            style={{
+              padding: '7px 16px',
+              borderRadius: '9px',
+              fontSize: '0.82rem',
+              fontWeight: 800,
+              background: '#0F172A',
+              color: '#38BDF8',
+              border: '1px solid #38BDF8',
+              textDecoration: 'none',
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: '6px'
+            }}
           >
-            🍳 Open /kitchen Screen ↗
+            🍳 /kitchen Screen ↗
           </a>
         )}
-        <button
-          onClick={() => setActiveSubTab('floor-map')}
-          className={`adm-btn adm-btn-sm ${activeSubTab === 'floor-map' ? 'adm-btn-primary' : 'adm-btn-secondary'}`}
-          style={{ padding: '6px 14px', borderRadius: 'var(--adm-radius-full)' }}
-        >
-          🗺️ Floor Map ({totalTables} Tables)
-        </button>
-        <button
-          onClick={() => setActiveSubTab('service-requests')}
-          className={`adm-btn adm-btn-sm ${activeSubTab === 'service-requests' ? 'adm-btn-primary' : 'adm-btn-secondary'}`}
-          style={{ padding: '6px 14px', borderRadius: 'var(--adm-radius-full)' }}
-        >
-          🛎️ Waiter Calls ({safeServiceRequests.length})
-        </button>
       </div>
 
       {/* LIVE ORDERS SUBTAB */}
       {activeSubTab === 'orders' && (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
           {/* Status Filter Horizontal Strip */}
-          <div style={{ display: 'flex', gap: '6px', overflowX: 'auto', paddingBottom: '4px' }}>
+          <div style={{ display: 'flex', gap: '8px', overflowX: 'auto', paddingBottom: '4px', scrollbarWidth: 'none', WebkitOverflowScrolling: 'touch' }}>
             {[
               { id: 'all', label: `All (${validOrders.length})` },
               { id: 'pending', label: `🟡 Pending (${pendingCount})` },
               { id: 'kitchen', label: kdsEnabled ? `👨‍🍳 Kitchen (${kitchenCount})` : `🟢 In Progress (${kitchenCount})` },
               { id: 'served', label: `🍽 Served (${servedCount})` },
               { id: 'completed', label: `✅ Complete (${completedCount})` }
-            ].map(filter => (
-              <button
-                key={filter.id}
-                onClick={() => setKotFilter(filter.id)}
-                className={`adm-btn adm-btn-sm ${kotFilter === filter.id ? 'adm-btn-primary' : 'adm-btn-secondary'}`}
-                style={{ flexShrink: 0, padding: '6px 12px', borderRadius: 'var(--adm-radius-full)' }}
-              >
-                {filter.label}
-              </button>
-            ))}
+            ].map(filter => {
+              const isActive = kotFilter === filter.id;
+              return (
+                <button
+                  key={filter.id}
+                  onClick={() => setKotFilter(filter.id)}
+                  style={{
+                    flexShrink: 0,
+                    padding: '6px 14px',
+                    fontSize: '0.78rem',
+                    fontWeight: 700,
+                    borderRadius: '20px',
+                    border: '1px solid',
+                    borderColor: isActive ? '#0F172A' : '#E2E8F0',
+                    cursor: 'pointer',
+                    background: isActive ? '#0F172A' : '#FFFFFF',
+                    color: isActive ? '#FFFFFF' : '#475569',
+                    boxShadow: isActive ? '0 2px 6px rgba(15, 23, 42, 0.15)' : 'none',
+                    transition: 'all 0.15s ease'
+                  }}
+                >
+                  {filter.label}
+                </button>
+              );
+            })}
           </div>
 
           {/* Orders Cards */}
           <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
             {filteredOrders.length === 0 ? (
-              <div style={{ padding: '36px', textAlign: 'center', background: '#FFF', borderRadius: 'var(--adm-radius-md)', border: '1px solid var(--adm-border)' }}>
-                <Clock size={36} color="var(--adm-muted)" style={{ marginBottom: '8px' }} />
-                <h4 style={{ fontSize: '0.95rem', fontWeight: 800, margin: '0 0 2px 0' }}>No active orders in this view</h4>
-                <p style={{ fontSize: '0.78rem', color: 'var(--adm-muted)', margin: 0 }}>New orders scanned via QR will ring and appear here live.</p>
+              <div style={{ padding: '40px 20px', textAlign: 'center', background: '#FFFFFF', borderRadius: '16px', border: '1px solid #E2E8F0' }}>
+                <Clock size={36} color="#94A3B8" style={{ marginBottom: '8px' }} />
+                <h4 style={{ fontSize: '1rem', fontWeight: 800, color: '#0F172A', margin: '0 0 4px 0' }}>No active orders in this view</h4>
+                <p style={{ fontSize: '0.8rem', color: '#64748B', margin: 0 }}>New orders placed via QR will ring and appear here live.</p>
               </div>
             ) : (
-              filteredOrders.map(order => (
-                <div key={order.id} className="adm-card" style={{ padding: '14px', display: 'flex', flexDirection: 'column', gap: '10px' }}>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
-                    <div>
-                      <strong style={{ fontSize: '1rem', color: 'var(--adm-primary)', display: 'flex', alignItems: 'center', gap: '6px', flexWrap: 'wrap' }}>
-                        <span>{formatCleanTableLabel(order.table_number)}</span>
-                        <span style={{ fontSize: '0.78rem', color: 'var(--adm-muted)' }}>#{order.id}</span>
-                        {Number(order.round_number) > 1 && (
-                          <span style={{ background: '#FEF3C7', color: '#B45309', border: '1px solid #FCD34D', padding: '1px 7px', borderRadius: '12px', fontSize: '0.72rem', fontWeight: 900 }}>
-                            🔄 Round {order.round_number} (Add-on)
+              filteredOrders.map(order => {
+                const isCompleted = order.status === 'completed';
+                const isPending = order.status === 'pending';
+                const isKitchen = order.status === 'kitchen' || order.status === 'accepted';
+
+                return (
+                  <div
+                    key={order.id}
+                    style={{
+                      background: '#FFFFFF',
+                      border: '1px solid #E2E8F0',
+                      borderRadius: '16px',
+                      padding: '16px 18px',
+                      display: 'flex',
+                      flexDirection: 'column',
+                      gap: '12px',
+                      boxShadow: '0 2px 8px rgba(0,0,0,0.02)',
+                      position: 'relative'
+                    }}
+                  >
+                    {/* Top Row: Table Name + ID + Customer + Status */}
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '8px' }}>
+                      <div>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
+                          <span style={{
+                            background: '#0F172A',
+                            color: '#FFFFFF',
+                            padding: '3px 10px',
+                            borderRadius: '8px',
+                            fontWeight: 900,
+                            fontSize: '0.85rem'
+                          }}>
+                            {formatCleanTableLabel(order.table_number)}
                           </span>
-                        )}
-                      </strong>
-                      <span style={{ fontSize: '0.74rem', color: 'var(--adm-muted)' }}>
-                        {order.customer_name || 'Dine-in Guest'}{order.customer_phone ? ` (📞 ${order.customer_phone})` : ''} • {new Date(order.created_at || Date.now()).toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' })}
-                      </span>
-                    </div>
-
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                      <span className={`adm-badge adm-badge-${order.status === 'pending' ? 'warning' : (order.status === 'kitchen' || order.status === 'accepted') ? 'info' : 'success'}`}>
-                        {(order.status || 'PENDING').toUpperCase()}
-                      </span>
-                      {kdsEnabled && isPrep(order.kitchen_prepared) ? (
-                        <span style={{ fontSize: '0.68rem', background: '#DCFCE7', color: '#15803D', border: '1px solid #86EFAC', padding: '2px 8px', borderRadius: '12px', fontWeight: 900, boxShadow: '0 0 10px rgba(34, 197, 94, 0.3)' }}>
-                          🍳 PREPARED IN KITCHEN
-                        </span>
-                      ) : (kdsEnabled && dualPrinterEnabled && (order.sent_to_kds === 0 || order.sent_to_kds === '0')) ? (
-                        <span style={{ fontSize: '0.68rem', background: '#F3E8FF', color: '#6B21A8', border: '1px solid #E9D5FF', padding: '1px 6px', borderRadius: '12px', fontWeight: 800 }}>📦 Counter Only</span>
-                      ) : (kdsEnabled && (order.status === 'kitchen' || order.status === 'preparing' || order.status === 'accepted')) ? (
-                        <span style={{ fontSize: '0.68rem', background: '#E0F2FE', color: '#0369A1', border: '1px solid #BAE6FD', padding: '1px 6px', borderRadius: '12px', fontWeight: 800 }}>🍳 Kitchen KDS</span>
-                      ) : null}
-                      {onPreviewPrint && (
-                        <button
-                          onClick={() => onPreviewPrint(order, 'bill')}
-                          title="Preview Customer Bill Receipt"
-                          style={{
-                            background: 'none',
-                            border: 'none',
-                            color: 'var(--adm-muted)',
-                            cursor: 'pointer',
-                            fontSize: '0.74rem',
-                            fontWeight: 700,
-                            padding: '4px 6px',
-                            display: 'inline-flex',
-                            alignItems: 'center',
-                            gap: '2px'
-                          }}
-                        >
-                          👁️ Preview Bill
-                        </button>
-                      )}
-                    </div>
-                  </div>
-
-                  {/* Order Items */}
-                  <div style={{ fontSize: '0.84rem', background: 'var(--adm-surface-subtle)', padding: '10px 12px', borderRadius: 'var(--adm-radius-sm)', display: 'flex', flexDirection: 'column', gap: '6px' }}>
-                    {safeParseItems(order.items).map((item, idx) => (
-                      <div key={idx} style={{ display: 'flex', flexDirection: 'column', gap: '2px', borderBottom: idx < safeParseItems(order.items).length - 1 ? '1px dashed #E2E8F0' : 'none', paddingBottom: '4px' }}>
-                        <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                          <span style={{ fontWeight: 700 }}>{item.name}{item.portion ? ` (${item.portion})` : ''} ×{item.quantity || item.qty || 1}</span>
-                          <strong>{currencySymbol}{(Number(item.price) || 0) * (item.quantity || item.qty || 1)}</strong>
+                          <span style={{ fontSize: '0.85rem', fontWeight: 800, color: '#64748B' }}>
+                            #{order.id}
+                          </span>
+                          {Number(order.round_number) > 1 && (
+                            <span style={{ background: '#FEF3C7', color: '#B45309', border: '1px solid #FCD34D', padding: '2px 8px', borderRadius: '8px', fontSize: '0.72rem', fontWeight: 800 }}>
+                              🔄 Round {order.round_number} (Add-on)
+                            </span>
+                          )}
                         </div>
-                        {(() => {
-                          const mods = safeParseModifiers(item.modifiers);
-                          if (mods.length === 0) return null;
-                          return (
-                            <div style={{ display: 'flex', gap: '4px', flexWrap: 'wrap', paddingLeft: '8px', marginTop: '2px' }}>
-                              {mods.map((m, mIdx) => (
-                                <span key={mIdx} style={{ fontSize: '0.72rem', color: '#065F46', background: '#D1FAE5', border: '1px solid #6EE7B7', padding: '1px 6px', borderRadius: '4px', fontWeight: 800 }}>
-                                  ➕ {m.name} (+{currencySymbol}{m.price})
-                                </span>
-                              ))}
-                            </div>
-                          );
-                        })()}
-                      </div>
-                    ))}
-                  </div>
 
-                  {/* Action Buttons Toolbar */}
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', paddingTop: '4px', flexWrap: 'wrap', gap: '8px' }}>
-                    <strong style={{ fontSize: '1rem', color: 'var(--adm-primary)' }}>{currencySymbol}{order.total_amount}</strong>
-                    <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap', alignItems: 'center' }}>
-                      {order.status === 'pending' && (
-                        <>
+                        <div style={{ fontSize: '0.76rem', color: '#64748B', marginTop: '5px', fontWeight: 600 }}>
+                          {order.customer_name || 'Dine-in Guest'}
+                          {order.customer_phone ? <span style={{ color: '#0F172A', marginLeft: '6px' }}>📞 {order.customer_phone}</span> : ''}
+                          <span style={{ margin: '0 6px', color: '#CBD5E1' }}>•</span>
+                          {new Date(order.created_at || Date.now()).toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' })}
+                        </div>
+                      </div>
+
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
+                        <span style={{
+                          padding: '4px 10px',
+                          borderRadius: '10px',
+                          fontSize: '0.72rem',
+                          fontWeight: 900,
+                          background: isCompleted ? '#DCFCE7' : isPending ? '#FEF3C7' : '#E0F2FE',
+                          color: isCompleted ? '#15803D' : isPending ? '#B45309' : '#0369A1',
+                          border: isCompleted ? '1px solid #86EFAC' : isPending ? '1px solid #FCD34D' : '1px solid #BAE6FD'
+                        }}>
+                          {(order.status || 'PENDING').toUpperCase()}
+                        </span>
+
+                        {onPreviewPrint && (
                           <button
-                            onClick={() => onUpdateStatus(order.id, 'accepted')}
-                            className="adm-btn adm-btn-primary adm-btn-sm"
-                            style={{ fontWeight: 800, minHeight: '44px', padding: '0 14px' }}
+                            onClick={() => onPreviewPrint(order, 'bill')}
+                            title="Preview Customer Bill Receipt"
+                            style={{
+                              background: '#F1F5F9',
+                              border: '1px solid #E2E8F0',
+                              color: '#475569',
+                              cursor: 'pointer',
+                              fontSize: '0.74rem',
+                              fontWeight: 700,
+                              padding: '4px 10px',
+                              borderRadius: '8px',
+                              display: 'inline-flex',
+                              alignItems: 'center',
+                              gap: '4px'
+                            }}
                           >
-                            ✓ Accept Order
+                            👁️ Preview Bill
                           </button>
-                          <button onClick={() => onUpdateStatus(order.id, 'rejected')} className="adm-btn adm-btn-danger adm-btn-sm" style={{ fontWeight: 700, minHeight: '44px', padding: '0 10px' }}>
-                            <XCircle size={14} /> Reject
-                          </button>
-                        </>
-                      )}
-                      {order.status === 'accepted' && (
-                        <>
-                          {kdsEnabled && (
+                        )}
+                      </div>
+                    </div>
+
+                    {/* Order Items Container */}
+                    <div style={{ fontSize: '0.84rem', background: '#F8FAFC', padding: '12px 14px', borderRadius: '12px', border: '1px solid #F1F5F9', display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                      {safeParseItems(order.items).map((item, idx) => (
+                        <div key={idx} style={{ display: 'flex', flexDirection: 'column', gap: '2px', borderBottom: idx < safeParseItems(order.items).length - 1 ? '1px dashed #E2E8F0' : 'none', paddingBottom: '6px' }}>
+                          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                            <span style={{ fontWeight: 800, color: '#0F172A' }}>
+                              {item.name}{item.portion ? ` (${item.portion})` : ''} <span style={{ color: '#059669', marginLeft: '4px' }}>×{item.quantity || item.qty || 1}</span>
+                            </span>
+                            <strong style={{ color: '#0F172A', fontWeight: 800 }}>
+                              {currencySymbol}{(Number(item.price) || 0) * (item.quantity || item.qty || 1)}
+                            </strong>
+                          </div>
+                          {(() => {
+                            const mods = safeParseModifiers(item.modifiers);
+                            if (mods.length === 0) return null;
+                            return (
+                              <div style={{ display: 'flex', gap: '4px', flexWrap: 'wrap', paddingLeft: '8px', marginTop: '2px' }}>
+                                {mods.map((m, mIdx) => (
+                                  <span key={mIdx} style={{ fontSize: '0.70rem', color: '#065F46', background: '#D1FAE5', border: '1px solid #6EE7B7', padding: '1px 6px', borderRadius: '4px', fontWeight: 800 }}>
+                                    ➕ {m.name} (+{currencySymbol}{m.price})
+                                  </span>
+                                ))}
+                              </div>
+                            );
+                          })()}
+                        </div>
+                      ))}
+                    </div>
+
+                    {/* Action Buttons Toolbar */}
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', paddingTop: '6px', flexWrap: 'wrap', gap: '10px' }}>
+                      <strong style={{ fontSize: '1.15rem', color: '#059669', fontWeight: 900 }}>
+                        {currencySymbol}{Number(order.total_amount).toFixed(2)}
+                      </strong>
+
+                      <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap', alignItems: 'center' }}>
+                        {order.status === 'pending' && (
+                          <>
                             <button
-                              onClick={() => onUpdateStatus(order.id, 'kitchen', { sent_to_kds: 1 })}
-                              className="adm-btn adm-btn-primary adm-btn-sm"
-                              style={{ fontWeight: 800, minHeight: '44px', padding: '0 12px', background: 'linear-gradient(135deg, #0F172A 0%, #1E293B 100%)', color: '#38BDF8', border: '1px solid #38BDF8' }}
+                              onClick={() => onUpdateStatus(order.id, 'accepted')}
+                              style={{
+                                background: 'linear-gradient(135deg, #059669 0%, #10B981 100%)',
+                                color: '#FFFFFF',
+                                border: 'none',
+                                padding: '8px 16px',
+                                borderRadius: '10px',
+                                fontSize: '0.8rem',
+                                fontWeight: 800,
+                                cursor: 'pointer',
+                                minHeight: '40px',
+                                boxShadow: '0 2px 6px rgba(16, 185, 129, 0.25)'
+                              }}
                             >
-                              🍳 Send to Kitchen
+                              ✓ Accept Order
                             </button>
-                          )}
-                          {!isPrep(order.kitchen_prepared) && (
                             <button
-                              onClick={() => onUpdateStatus(order.id, 'accepted', { kitchen_prepared: 1, silent: true })}
-                              className="adm-btn adm-btn-secondary adm-btn-sm"
-                              style={{ fontWeight: 800, minHeight: '44px', padding: '0 12px', background: '#DCFCE7', color: '#15803D', border: '1px solid #86EFAC' }}
+                              onClick={() => onUpdateStatus(order.id, 'rejected')}
+                              style={{
+                                background: '#FEE2E2',
+                                color: '#DC2626',
+                                border: '1px solid #FECACA',
+                                padding: '8px 14px',
+                                borderRadius: '10px',
+                                fontSize: '0.8rem',
+                                fontWeight: 800,
+                                cursor: 'pointer',
+                                minHeight: '40px',
+                                display: 'inline-flex',
+                                alignItems: 'center',
+                                gap: '4px'
+                              }}
                             >
-                              🔔 Mark Ready
+                              <XCircle size={14} /> Reject
                             </button>
-                          )}
-                          <button
-                            onClick={() => onUpdateStatus(order.id, 'served', { sent_to_kds: 0, kitchen_prepared: 1, silent: true })}
-                            className="adm-btn adm-btn-primary adm-btn-sm"
-                            style={{ fontWeight: 800, minHeight: '44px', padding: '0 12px' }}
-                          >
-                            🍽️ Mark Served
-                          </button>
+                          </>
+                        )}
+                        {order.status === 'accepted' && (
+                          <>
+                            {kdsEnabled && (
+                              <button
+                                onClick={() => onUpdateStatus(order.id, 'kitchen', { sent_to_kds: 1 })}
+                                style={{
+                                  background: '#0F172A',
+                                  color: '#38BDF8',
+                                  border: '1px solid #38BDF8',
+                                  padding: '8px 14px',
+                                  borderRadius: '10px',
+                                  fontSize: '0.8rem',
+                                  fontWeight: 800,
+                                  cursor: 'pointer',
+                                  minHeight: '40px'
+                                }}
+                              >
+                                🍳 Send to Kitchen
+                              </button>
+                            )}
+                            <button
+                              onClick={() => onUpdateStatus(order.id, 'served', { sent_to_kds: 0, kitchen_prepared: 1, silent: true })}
+                              style={{
+                                background: '#0F172A',
+                                color: '#FFFFFF',
+                                border: 'none',
+                                padding: '8px 14px',
+                                borderRadius: '10px',
+                                fontSize: '0.8rem',
+                                fontWeight: 800,
+                                cursor: 'pointer',
+                                minHeight: '40px'
+                              }}
+                            >
+                              🍽️ Mark Served
+                            </button>
+                            <button
+                              onClick={() => onUpdateStatus(order.id, 'completed')}
+                              style={{
+                                background: '#F1F5F9',
+                                color: '#334155',
+                                border: '1px solid #E2E8F0',
+                                padding: '8px 14px',
+                                borderRadius: '10px',
+                                fontSize: '0.8rem',
+                                fontWeight: 800,
+                                cursor: 'pointer',
+                                minHeight: '40px'
+                              }}
+                            >
+                              💳 Settle Bill
+                            </button>
+                          </>
+                        )}
+                        {order.status === 'kitchen' && (
+                          <>
+                            <button
+                              onClick={() => onUpdateStatus(order.id, 'served', { sent_to_kds: 0, kitchen_prepared: 1, silent: true })}
+                              style={{
+                                background: '#0F172A',
+                                color: '#FFFFFF',
+                                border: 'none',
+                                padding: '8px 14px',
+                                borderRadius: '10px',
+                                fontSize: '0.8rem',
+                                fontWeight: 800,
+                                cursor: 'pointer',
+                                minHeight: '40px'
+                              }}
+                            >
+                              🍽️ Mark Served
+                            </button>
+                            <button
+                              onClick={() => onUpdateStatus(order.id, 'completed')}
+                              style={{
+                                background: '#F1F5F9',
+                                color: '#334155',
+                                border: '1px solid #E2E8F0',
+                                padding: '8px 14px',
+                                borderRadius: '10px',
+                                fontSize: '0.8rem',
+                                fontWeight: 800,
+                                cursor: 'pointer',
+                                minHeight: '40px'
+                              }}
+                            >
+                              💳 Settle Bill
+                            </button>
+                          </>
+                        )}
+                        {order.status === 'served' && (
                           <button
                             onClick={() => onUpdateStatus(order.id, 'completed')}
-                            className="adm-btn adm-btn-secondary adm-btn-sm"
-                            style={{ fontWeight: 800, minHeight: '44px', padding: '0 12px' }}
+                            style={{
+                              background: '#10B981',
+                              color: '#FFFFFF',
+                              border: 'none',
+                              padding: '8px 16px',
+                              borderRadius: '10px',
+                              fontSize: '0.8rem',
+                              fontWeight: 800,
+                              cursor: 'pointer',
+                              minHeight: '40px'
+                            }}
                           >
                             💳 Settle Bill
                           </button>
-                        </>
-                      )}
-                      {order.status === 'kitchen' && (
-                        <>
-                          {!isPrep(order.kitchen_prepared) && (
-                            <button
-                              onClick={() => onUpdateStatus(order.id, 'kitchen', { kitchen_prepared: 1, silent: true })}
-                              className="adm-btn adm-btn-secondary adm-btn-sm"
-                              style={{ fontWeight: 800, minHeight: '44px', padding: '0 12px', background: '#DCFCE7', color: '#15803D', border: '1px solid #86EFAC' }}
-                            >
-                              🔔 Mark Ready
-                            </button>
-                          )}
+                        )}
+                        {onDirectPrint && (
                           <button
-                            onClick={() => onUpdateStatus(order.id, 'served', { sent_to_kds: 0, kitchen_prepared: 1, silent: true })}
-                            className="adm-btn adm-btn-primary adm-btn-sm"
-                            style={{ fontWeight: 800, minHeight: '44px', padding: '0 12px' }}
+                            onClick={() => onDirectPrint(order, 'kot')}
+                            disabled={printingOrderId === order.id}
+                            style={{
+                              background: '#F1F5F9',
+                              color: '#334155',
+                              border: '1px solid #E2E8F0',
+                              padding: '8px 12px',
+                              borderRadius: '10px',
+                              fontSize: '0.78rem',
+                              fontWeight: 800,
+                              cursor: 'pointer',
+                              minHeight: '40px',
+                              display: 'inline-flex',
+                              alignItems: 'center',
+                              gap: '4px',
+                              opacity: printingOrderId === order.id ? 0.7 : 1
+                            }}
                           >
-                            🍽️ Mark Served
+                            {printingOrderId === order.id && printingType === 'kot' ? '⏳ Printing...' : '🖨️ KOT'}
                           </button>
-                          <button
-                            onClick={() => onUpdateStatus(order.id, 'completed')}
-                            className="adm-btn adm-btn-secondary adm-btn-sm"
-                            style={{ fontWeight: 800, minHeight: '44px', padding: '0 12px' }}
-                          >
-                            💳 Settle Bill
-                          </button>
-                        </>
-                      )}
-                      {order.status === 'served' && (
+                        )}
                         <button
-                          onClick={() => onUpdateStatus(order.id, 'completed')}
-                          className="adm-btn adm-btn-primary adm-btn-sm"
-                          style={{ fontWeight: 800, minHeight: '44px', padding: '0 14px', background: '#10B981', color: '#FFFFFF' }}
-                        >
-                          💳 Settle Bill
-                        </button>
-                      )}
-                      {onDirectPrint && (
-                        <button
-                          onClick={() => onDirectPrint(order, 'kot')}
+                          onClick={() => onOpenBillModal ? onOpenBillModal(order) : (onPrintBill && onPrintBill(order))}
                           disabled={printingOrderId === order.id}
-                          className="adm-btn adm-btn-secondary adm-btn-sm"
                           style={{
+                            background: '#F1F5F9',
+                            color: '#334155',
+                            border: '1px solid #E2E8F0',
+                            padding: '8px 14px',
+                            borderRadius: '10px',
+                            fontSize: '0.78rem',
                             fontWeight: 800,
-                            minHeight: '44px',
-                            padding: '0 12px',
+                            cursor: 'pointer',
+                            minHeight: '40px',
                             display: 'inline-flex',
                             alignItems: 'center',
                             gap: '4px',
                             opacity: printingOrderId === order.id ? 0.7 : 1
                           }}
                         >
-                          {printingOrderId === order.id && printingType === 'kot' ? '⏳ Printing...' : '🖨️ KOT'}
+                          <Printer size={14} />
+                          <span>{printingOrderId === order.id && printingType === 'bill' ? '⏳ Printing...' : 'Bill'}</span>
                         </button>
-                      )}
-                      <button
-                        onClick={() => onOpenBillModal ? onOpenBillModal(order) : (onPrintBill && onPrintBill(order))}
-                        disabled={printingOrderId === order.id}
-                        className="adm-btn adm-btn-secondary adm-btn-sm"
-                        style={{
-                          fontWeight: 800,
-                          minHeight: '44px',
-                          padding: '0 12px',
-                          display: 'inline-flex',
-                          alignItems: 'center',
-                          gap: '4px',
-                          opacity: printingOrderId === order.id ? 0.7 : 1
-                        }}
-                      >
-                        <Printer size={14} />
-                        <span>{printingOrderId === order.id && printingType === 'bill' ? '⏳ Printing...' : 'Bill'}</span>
-                      </button>
+                      </div>
                     </div>
                   </div>
-                </div>
-              ))
+                );
+              })
             )}
           </div>
         </div>
       )}
-
-
 
       {/* FLOOR MAP SUBTAB */}
       {activeSubTab === 'floor-map' && (
@@ -435,46 +623,58 @@ export default function OrdersView({
             return (
               <div
                 key={t.tableNumber}
-                className="adm-card"
                 style={{
-                  padding: '14px',
+                  background: isOccupied ? '#FEF2F2' : isService ? '#FFFBEB' : '#FFFFFF',
+                  border: '1px solid',
+                  borderColor: isOccupied ? '#FECACA' : isService ? '#FDE68A' : '#E2E8F0',
+                  borderRadius: '16px',
+                  padding: '16px',
                   display: 'flex',
                   flexDirection: 'column',
                   justifyContent: 'space-between',
-                  gap: '10px',
-                  borderColor: isOccupied ? 'var(--adm-danger-border)' : (isService ? 'var(--adm-warning-border)' : 'var(--adm-success-border)'),
-                  background: isOccupied ? 'var(--adm-danger-bg)' : (isService ? 'var(--adm-warning-bg)' : 'var(--adm-surface)')
+                  gap: '12px',
+                  boxShadow: '0 2px 8px rgba(0,0,0,0.02)'
                 }}
               >
                 <div>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '6px' }}>
-                    <strong style={{ fontSize: '1rem', color: 'var(--adm-primary)' }}>{spaceLabel.toUpperCase()} {t.tableNumber}</strong>
-                    <span className={`adm-badge adm-badge-${isOccupied ? 'danger' : isService ? 'warning' : 'success'}`} style={{ fontSize: '0.64rem' }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
+                    <strong style={{ fontSize: '1.05rem', color: '#0F172A', fontWeight: 900 }}>
+                      {spaceLabel.toUpperCase()} {t.tableNumber}
+                    </strong>
+                    <span style={{
+                      padding: '3px 8px',
+                      borderRadius: '8px',
+                      fontSize: '0.70rem',
+                      fontWeight: 800,
+                      background: isOccupied ? '#FEE2E2' : isService ? '#FEF3C7' : '#DCFCE7',
+                      color: isOccupied ? '#DC2626' : isService ? '#B45309' : '#15803D',
+                      border: isOccupied ? '1px solid #FCA5A5' : isService ? '1px solid #FCD34D' : '1px solid #86EFAC'
+                    }}>
                       {isOccupied ? '🔴 SEATED' : isService ? '🟡 CALL' : '🟢 FREE'}
                     </span>
                   </div>
 
                   {isOccupied && t.activeOrder && (
-                    <div style={{ fontSize: '0.78rem', background: '#FFF', padding: '8px', borderRadius: '8px', border: '1px solid var(--adm-border)' }}>
+                    <div style={{ fontSize: '0.80rem', background: '#FFFFFF', padding: '10px', borderRadius: '10px', border: '1px solid #E2E8F0' }}>
                       <div style={{ display: 'flex', justifyContent: 'space-between', fontWeight: 800 }}>
                         <span>Order #{t.activeOrder.id}</span>
-                        <span style={{ color: 'var(--adm-danger)' }}>{currencySymbol}{t.activeOrder.total_amount}</span>
+                        <span style={{ color: '#DC2626' }}>{currencySymbol}{t.activeOrder.total_amount}</span>
                       </div>
-                      <div style={{ color: 'var(--adm-muted)', marginTop: '2px' }}>
+                      <div style={{ color: '#64748B', marginTop: '3px' }}>
                         {t.activeOrder.customer_name || 'Guest'} • {safeParseItems(t.activeOrder.items).length} items
                       </div>
                     </div>
                   )}
 
                   {isService && t.serviceRequest && (
-                    <div style={{ fontSize: '0.78rem', background: '#FFF', padding: '8px', borderRadius: '8px', border: '1px solid var(--adm-warning-border)' }}>
-                      <strong style={{ color: 'var(--adm-warning)', display: 'block' }}>{t.serviceRequest.request_type}</strong>
-                      {t.serviceRequest.note && <span style={{ fontStyle: 'italic', color: 'var(--adm-muted)' }}>"{t.serviceRequest.note}"</span>}
+                    <div style={{ fontSize: '0.80rem', background: '#FFFFFF', padding: '10px', borderRadius: '10px', border: '1px solid #FDE68A' }}>
+                      <strong style={{ color: '#B45309', display: 'block' }}>{t.serviceRequest.request_type}</strong>
+                      {t.serviceRequest.note && <span style={{ fontStyle: 'italic', color: '#64748B' }}>"{t.serviceRequest.note}"</span>}
                     </div>
                   )}
 
                   {isFree && (
-                    <span style={{ fontSize: '0.76rem', color: 'var(--adm-success)', fontStyle: 'italic', display: 'block', margin: '8px 0' }}>
+                    <span style={{ fontSize: '0.78rem', color: '#15803D', fontWeight: 600, display: 'block', margin: '6px 0' }}>
                       Ready for guests ✨
                     </span>
                   )}
@@ -483,23 +683,83 @@ export default function OrdersView({
                 <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap' }}>
                   {isOccupied && t.activeOrder && (
                     <>
-                      <button onClick={() => onOpenBillModal(t.activeOrder)} className="adm-btn adm-btn-secondary adm-btn-sm" style={{ flex: 1 }}>
+                      <button
+                        onClick={() => onOpenBillModal(t.activeOrder)}
+                        style={{
+                          flex: 1,
+                          padding: '8px',
+                          borderRadius: '8px',
+                          background: '#F1F5F9',
+                          color: '#334155',
+                          border: '1px solid #E2E8F0',
+                          fontSize: '0.78rem',
+                          fontWeight: 800,
+                          cursor: 'pointer',
+                          display: 'inline-flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          gap: '4px'
+                        }}
+                      >
                         <Printer size={12} /> Bill
                       </button>
-                      <button onClick={() => onUpdateStatus(t.activeOrder.id, 'completed')} className="adm-btn adm-btn-primary adm-btn-sm" style={{ flex: 1 }}>
+                      <button
+                        onClick={() => onUpdateStatus(t.activeOrder.id, 'completed')}
+                        style={{
+                          flex: 1,
+                          padding: '8px',
+                          borderRadius: '8px',
+                          background: '#0F172A',
+                          color: '#FFFFFF',
+                          border: 'none',
+                          fontSize: '0.78rem',
+                          fontWeight: 800,
+                          cursor: 'pointer'
+                        }}
+                      >
                         Clear
                       </button>
                     </>
                   )}
 
                   {isService && t.serviceRequest && (
-                    <button onClick={() => onResolveServiceRequest(t.serviceRequest.id)} className="adm-btn adm-btn-warning adm-btn-sm" style={{ width: '100%' }}>
+                    <button
+                      onClick={() => onResolveServiceRequest(t.serviceRequest.id)}
+                      style={{
+                        width: '100%',
+                        padding: '8px',
+                        borderRadius: '8px',
+                        background: '#FEF3C7',
+                        color: '#B45309',
+                        border: '1px solid #FCD34D',
+                        fontSize: '0.78rem',
+                        fontWeight: 800,
+                        cursor: 'pointer'
+                      }}
+                    >
                       ✓ Attend Call
                     </button>
                   )}
 
                   {isFree && onPrintQR && (
-                    <button onClick={() => onPrintQR(t.tableNumber)} className="adm-btn adm-btn-secondary adm-btn-sm" style={{ width: '100%' }}>
+                    <button
+                      onClick={() => onPrintQR(t.tableNumber)}
+                      style={{
+                        width: '100%',
+                        padding: '8px',
+                        borderRadius: '8px',
+                        background: '#F8FAFC',
+                        color: '#475569',
+                        border: '1px solid #E2E8F0',
+                        fontSize: '0.76rem',
+                        fontWeight: 800,
+                        cursor: 'pointer',
+                        display: 'inline-flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        gap: '4px'
+                      }}
+                    >
                       <QrCode size={12} /> Print Table Standee
                     </button>
                   )}
