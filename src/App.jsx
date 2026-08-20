@@ -150,47 +150,19 @@ export default function App() {
   const [sessionExpired, setSessionExpired] = useState(false);
   const [autoKillSeconds, setAutoKillSeconds] = useState(null);
 
-  // 📍 Proactive Location Pre-fetch on QR Menu Load:
-  // Requests location permission immediately when customer lands on the menu,
-  // caching it for the entire dining session so ordering & re-ordering are instant with zero repeated prompts.
+  // Read previously verified location from session (< 15 mins)
   useEffect(() => {
-    const restoLat = Number(info?.latitude);
-    const restoLng = Number(info?.longitude);
-    if (!info || isNaN(restoLat) || isNaN(restoLng) || restoLat === 0 || restoLng === 0) return;
-
-    // Check if we already have fresh cached location in session (< 15 mins)
+    if (!info?.id) return;
     try {
       const stored = sessionStorage.getItem(`touchqr_geo_${info.id}`);
       if (stored) {
         const parsed = JSON.parse(stored);
-        if (parsed && parsed.timestamp && (Date.now() - parsed.timestamp < 15 * 60 * 1000)) {
+        if (parsed && parsed.timestamp && (Date.now() - parsed.timestamp < 15 * 60 * 1000) && parsed.customerLat) {
           cachedCustomerGeoRef.current = parsed;
-          return;
         }
       }
     } catch {}
-
-    // Pre-fetch in background on menu open
-    if (navigator.geolocation) {
-      verifyCustomerLocation(restoLat, restoLng, info.max_distance_meters || 100)
-        .then(res => {
-          if (res && res.allowed && res.customerLat) {
-            const geoPayload = {
-              customerLat: res.customerLat,
-              customerLng: res.customerLng,
-              accuracy: res.accuracy,
-              distanceMeters: res.distanceMeters,
-              timestamp: Date.now()
-            };
-            cachedCustomerGeoRef.current = geoPayload;
-            try {
-              sessionStorage.setItem(`touchqr_geo_${info.id}`, JSON.stringify(geoPayload));
-            } catch {}
-          }
-        })
-        .catch(() => {});
-    }
-  }, [info?.id, info?.latitude, info?.longitude, info?.max_distance_meters]);
+  }, [info?.id]);
 
   // Validate if the table/space number exists within the restaurant's configured capacity & verified signature
   const isSpaceNumberValid = () => {
