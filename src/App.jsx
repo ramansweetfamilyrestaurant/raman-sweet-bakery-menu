@@ -3151,6 +3151,7 @@ export default function App() {
           onClose={() => setShowLocationModal(false)}
           restaurantInfo={info}
           tableNumber={effectiveTableNum}
+          spaceType={currentSpaceType || 'table'}
           tableToken={currentTableToken}
           tableLabel={getDynamicSpaceLabel()}
           allowDismiss={true}

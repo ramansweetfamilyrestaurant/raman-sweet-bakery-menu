@@ -21,6 +21,7 @@ export default function CustomerLocationModal({
   onClose,
   restaurantInfo,
   tableNumber,
+  spaceType = 'table',
   tableToken,
   tableLabel,
   onLocationVerified,
@@ -78,14 +79,14 @@ export default function CustomerLocationModal({
 
     const primaryOptions = {
       enableHighAccuracy: true,
-      timeout: 8000,
-      maximumAge: 60000
+      timeout: 10000,
+      maximumAge: 30000
     };
 
     const fallbackOptions = {
       enableHighAccuracy: false,
-      timeout: 8000,
-      maximumAge: 120000
+      timeout: 10000,
+      maximumAge: 60000
     };
 
     const processPosition = async (pos) => {
@@ -100,7 +101,8 @@ export default function CustomerLocationModal({
         const verifyRes = await verifyCustomerLocationApi({
           slug,
           table_number: tableNumber || '1',
-          table_token: tableToken || '',
+          space_type: spaceType || 'table',
+          table_token: cleanToken,
           latitude: custLat,
           longitude: custLng,
           accuracy: custAcc
@@ -120,6 +122,9 @@ export default function CustomerLocationModal({
             customerLng: custLng,
             accuracy: custAcc,
             distanceMeters: verifyRes.distance_meters,
+            spaceType: spaceType || 'table',
+            tableNumber: tableNumber || '1',
+            qrToken: cleanToken,
             timestamp: Date.now()
           };
 
