@@ -491,8 +491,8 @@ export default function AdminDashboard({ token, username, slug: propSlug = '', o
     }
   };
 
-  const handleDownloadSalesReport = () => {
-    if (!orders || orders.length === 0) {
+  const generateAndDownloadExcel = (orderList, titlePrefix = 'Sales_Report') => {
+    if (!orderList || orderList.length === 0) {
       alert('No sales data available to export');
       return;
     }
@@ -521,7 +521,7 @@ export default function AdminDashboard({ token, username, slug: propSlug = '', o
       return { date: str, time: 'N/A' };
     };
 
-    const sheetData = orders.map(order => {
+    const sheetData = orderList.map(order => {
       const { date, time } = getDateParts(order.created_at);
       const parsedItems = safeParseItems(order.items);
       const itemsListStr = parsedItems.map(i => {
@@ -562,8 +562,40 @@ export default function AdminDashboard({ token, username, slug: propSlug = '', o
     const workbook = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(workbook, worksheet, 'Sales Report');
 
-    const fileName = `Sales_Report_${new Date().toISOString().substring(0, 10)}.xlsx`;
+    const fileName = `${titlePrefix}_${new Date().toISOString().substring(0, 10)}.xlsx`;
     XLSX.writeFile(workbook, fileName);
+  };
+
+  // 📅 Export Today's / Daily Sales (Last 24 Hours / Today)
+  const handleDownloadTodaySalesReport = () => {
+    const todayISO = new Date().toISOString().substring(0, 10);
+    const todayOrders = (orders || []).filter(o => {
+      if (!o.created_at) return true;
+      return String(o.created_at).substring(0, 10) === todayISO || (Date.now() - new Date(o.created_at).getTime()) <= 24 * 3600 * 1000;
+    });
+    if (todayOrders.length === 0) {
+      alert("No sales orders recorded for today yet.");
+      return;
+    }
+    generateAndDownloadExcel(todayOrders, 'Daily_Sales_Report');
+  };
+
+  // 📊 Export All-Time Sales (Complete History)
+  const [exportingAll, setExportingAll] = useState(false);
+  const handleDownloadAllSalesReport = async () => {
+    setExportingAll(true);
+    try {
+      const allOrders = await fetchAdminOrders(token, 'all');
+      if (!allOrders || allOrders.length === 0) {
+        alert('No historical sales data found.');
+        return;
+      }
+      generateAndDownloadExcel(allOrders, 'All_Time_Sales_Report');
+    } catch (err) {
+      alert(err.message || 'Failed to export all-time sales report');
+    } finally {
+      setExportingAll(false);
+    }
   };
 
   const handleResolveServiceRequest = async (id) => {
@@ -2376,7 +2408,9 @@ export default function AdminDashboard({ token, username, slug: propSlug = '', o
             {activeTab === 'analytics' && isAnalyticsEnabled && (
               <AnalyticsView
                 analyticsData={analyticsData}
-                onDownloadCSV={handleDownloadSalesReport}
+                onDownloadTodayCSV={handleDownloadTodaySalesReport}
+                onDownloadAllCSV={handleDownloadAllSalesReport}
+                exportingAll={exportingAll}
                 analyticsExportEnabled={isAnalyticsEnabled}
                 currencySymbol={settingsForm.currency_symbol !== undefined && settingsForm.currency_symbol !== null ? settingsForm.currency_symbol : '₹'}
               />

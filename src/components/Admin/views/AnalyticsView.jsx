@@ -1,7 +1,14 @@
 import React from 'react';
 import { BarChart2, Download, TrendingUp, DollarSign, Award } from 'lucide-react';
 
-export default function AnalyticsView({ analyticsData, onDownloadCSV, analyticsExportEnabled = true, currencySymbol = '₹' }) {
+export default function AnalyticsView({
+  analyticsData,
+  onDownloadTodayCSV,
+  onDownloadAllCSV,
+  exportingAll = false,
+  analyticsExportEnabled = true,
+  currencySymbol = '₹'
+}) {
   const todayRevenue = analyticsData?.today_sales ?? analyticsData?.today_revenue ?? 0;
   const days7Revenue = analyticsData?.weekly_sales ?? analyticsData?.days_7_revenue ?? 0;
   const days30Revenue = analyticsData?.monthly_sales ?? analyticsData?.days_30_revenue ?? 0;
@@ -22,9 +29,23 @@ export default function AnalyticsView({ analyticsData, onDownloadCSV, analyticsE
         </div>
 
         {analyticsExportEnabled ? (
-          <button onClick={onDownloadCSV} className="adm-btn adm-btn-secondary adm-btn-sm" style={{ fontWeight: 800 }}>
-            <Download size={14} /> 📊 Export Excel Report (.xlsx)
-          </button>
+          <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+            <button
+              onClick={onDownloadTodayCSV}
+              className="adm-btn adm-btn-primary adm-btn-sm"
+              style={{ fontWeight: 800, display: 'flex', alignItems: 'center', gap: '6px' }}
+            >
+              <Download size={14} /> 📅 Export Daily Sales (.xlsx)
+            </button>
+            <button
+              onClick={onDownloadAllCSV}
+              disabled={exportingAll}
+              className="adm-btn adm-btn-secondary adm-btn-sm"
+              style={{ fontWeight: 800, display: 'flex', alignItems: 'center', gap: '6px' }}
+            >
+              <Download size={14} /> {exportingAll ? 'Preparing...' : '📊 Export All-Time Sales (.xlsx)'}
+            </button>
+          </div>
         ) : (
           <span style={{ fontSize: '0.75rem', fontWeight: 800, color: '#B45309', background: '#FEF3C7', border: '1px solid #F59E0B', padding: '4px 10px', borderRadius: 'var(--radius-pill)' }}>
             🔒 Excel Export (Pro Feature)

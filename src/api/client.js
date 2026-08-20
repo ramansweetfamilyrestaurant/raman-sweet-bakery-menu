@@ -499,8 +499,8 @@ export async function createDirectOrder(orderData) {
   return handleResponse(res, 'Failed to place order');
 }
 
-export async function fetchAdminOrders(token) {
-  const res = await fetch(`${API_BASE}/admin/orders`, {
+export async function fetchAdminOrders(token, scope = 'live') {
+  const res = await fetch(`${API_BASE}/admin/orders?scope=${scope}`, {
     headers: { Authorization: `Bearer ${token}` }
   });
   return handleResponse(res, 'Failed to fetch orders');

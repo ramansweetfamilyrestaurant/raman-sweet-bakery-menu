@@ -1342,10 +1342,20 @@ router.get('/orders', authenticateToken, requireActiveSubscription, async (req, 
       return res.status(401).json({ error: 'Restaurant identity is missing from authentication context' });
     }
 
-    const orders = await query(
-      "SELECT * FROM orders WHERE restaurant_id = $1 AND status NOT IN ('cancelled', 'rejected') ORDER BY id DESC LIMIT 100",
-      [targetId]
-    );
+    const { scope } = req.query;
+    let sql = "SELECT * FROM orders WHERE restaurant_id = $1 AND status NOT IN ('cancelled', 'rejected')";
+    const params = [targetId];
+
+    if (scope !== 'all') {
+      // Default live operations: all active orders + completed orders from the last 24 hours
+      const twentyFourHoursAgo = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
+      sql += " AND (status != 'completed' OR created_at >= $2)";
+      params.push(twentyFourHoursAgo);
+    }
+
+    sql += " ORDER BY id DESC LIMIT 500";
+
+    const orders = await query(sql, params);
 
     const formatted = orders.map(o => {
       let parsedItems = [];
