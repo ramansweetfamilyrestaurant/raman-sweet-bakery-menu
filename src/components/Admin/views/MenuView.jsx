@@ -498,31 +498,59 @@ export default function MenuView({
       {/* 4. CATEGORIES TAB VIEW */}
       {activeSubTab === 'categories' && (
         safeCategories.length === 0 ? (
-          <div style={{ padding: '40px 20px', textAlign: 'center', background: '#FFFFFF', borderRadius: '14px', border: '1px solid #E2E8F0' }}>
+          <div style={{ padding: '40px 20px', textAlign: 'center', background: '#FFFFFF', borderRadius: '16px', border: '1px solid #E2E8F0' }}>
             <div style={{ fontSize: '2.5rem', marginBottom: '8px' }}>📁</div>
-            <h3 style={{ fontSize: '1rem', fontWeight: 800, color: 'var(--adm-primary)', margin: '0 0 4px 0' }}>
+            <h3 style={{ fontSize: '1rem', fontWeight: 800, color: '#0F172A', margin: '0 0 4px 0' }}>
               No categories yet
             </h3>
-            <p style={{ fontSize: '0.8rem', color: 'var(--adm-muted)', margin: '0 0 16px 0' }}>
+            <p style={{ fontSize: '0.8rem', color: '#64748B', margin: '0 0 16px 0' }}>
               Create your first menu category (e.g. Starters, Main Course, Drinks) to organize your dishes.
             </p>
-            <button onClick={onOpenAddCategory} className="adm-btn adm-btn-accent adm-btn-sm" style={{ fontWeight: 800 }}>
+            <button onClick={onOpenAddCategory} style={{
+              background: 'linear-gradient(135deg, #059669 0%, #10B981 100%)',
+              color: '#FFFFFF',
+              border: 'none',
+              padding: '9px 18px',
+              borderRadius: '10px',
+              fontSize: '0.82rem',
+              fontWeight: 800,
+              cursor: 'pointer',
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: '6px'
+            }}>
               <Plus size={15} /> Add First Category
             </button>
           </div>
         ) : (
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(290px, 1fr))', gap: '10px' }}>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: '10px' }}>
           {safeCategories.map(cat => {
             const catImage = getCategoryImageUrl(cat.image || cat.image_url);
             const dishCount = safeDishes.filter(d => String(d.category_id) === String(cat.id)).length;
+            const isActive = cat.active !== false;
+
             return (
-              <div key={cat.id} style={{ background: '#FFFFFF', border: '1px solid #E5E7EB', borderRadius: '14px', padding: '12px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '12px' }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '12px', minWidth: 0 }}>
-                  {/* Category Image (52px Square) */}
+              <div
+                key={cat.id}
+                style={{
+                  background: '#FFFFFF',
+                  border: '1px solid #E2E8F0',
+                  borderRadius: '16px',
+                  padding: '12px 14px',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'space-between',
+                  gap: '12px',
+                  opacity: isActive ? 1 : 0.65,
+                  boxShadow: '0 2px 8px rgba(0,0,0,0.02)'
+                }}
+              >
+                <div style={{ display: 'flex', alignItems: 'center', gap: '12px', minWidth: 0, flex: 1 }}>
+                  {/* Category Image (56px Square) */}
                   <div style={{
-                    width: '52px',
-                    height: '52px',
-                    borderRadius: '10px',
+                    width: '56px',
+                    height: '56px',
+                    borderRadius: '12px',
                     overflow: 'hidden',
                     flexShrink: 0,
                     background: '#F8FAFC',
@@ -540,9 +568,18 @@ export default function MenuView({
                   </div>
 
                   <div style={{ flex: 1, minWidth: 0 }}>
-                    <strong style={{ fontSize: '0.92rem', color: '#111827', display: 'block', fontWeight: 800 }}>{cat.name}</strong>
-                    <span style={{ fontSize: '0.76rem', color: '#64748B', fontWeight: 600 }}>
-                      {dishCount} {dishCount === 1 ? 'dish' : 'dishes'}
+                    <strong style={{
+                      fontSize: '0.92rem',
+                      color: '#0F172A',
+                      display: 'block',
+                      fontWeight: 800,
+                      lineHeight: 1.25,
+                      wordBreak: 'break-word'
+                    }}>
+                      {cat.name}
+                    </strong>
+                    <span style={{ fontSize: '0.74rem', color: '#64748B', fontWeight: 600, marginTop: '2px', display: 'inline-block' }}>
+                      🍲 {dishCount} {dishCount === 1 ? 'dish' : 'dishes'}
                     </span>
                   </div>
                 </div>
@@ -551,24 +588,51 @@ export default function MenuView({
                   <button
                     onClick={() => onToggleCategoryActive && onToggleCategoryActive(cat.id, cat.active !== false)}
                     style={{
-                      padding: '5px 10px',
-                      borderRadius: '20px',
+                      padding: '4px 10px',
+                      borderRadius: '12px',
                       fontSize: '0.70rem',
                       fontWeight: 800,
-                      background: cat.active !== false ? '#DCFCE7' : '#FEE2E2',
-                      color: cat.active !== false ? '#15803D' : '#991B1B',
-                      border: '1px solid #E2E8F0',
+                      background: isActive ? '#DCFCE7' : '#FEE2E2',
+                      color: isActive ? '#15803D' : '#991B1B',
+                      border: isActive ? '1px solid #86EFAC' : '1px solid #FCA5A5',
                       cursor: 'pointer',
-                      whiteSpace: 'nowrap'
+                      whiteSpace: 'nowrap',
+                      boxShadow: isActive ? '0 1px 4px rgba(22, 163, 74, 0.15)' : 'none'
                     }}
                   >
-                    {cat.active !== false ? '● Active' : '● Hidden'}
+                    {isActive ? '● Active' : '● Hidden'}
                   </button>
-                  <button onClick={() => onOpenEditCategory(cat)} className="adm-btn adm-btn-secondary adm-btn-sm" style={{ padding: '6px 8px' }} title="Edit Category">
-                    <Edit size={14} />
+                  <button
+                    onClick={() => onOpenEditCategory(cat)}
+                    style={{
+                      padding: '4px 8px',
+                      borderRadius: '8px',
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      background: '#F1F5F9',
+                      color: '#334155',
+                      border: '1px solid #E2E8F0',
+                      cursor: 'pointer'
+                    }}
+                    title="Edit Category"
+                  >
+                    <Edit size={13} />
                   </button>
-                  <button onClick={() => onDeleteCategory(cat.id)} className="adm-btn adm-btn-danger adm-btn-sm" style={{ padding: '6px 8px' }} title="Delete Category">
-                    <Trash2 size={14} />
+                  <button
+                    onClick={() => onDeleteCategory(cat.id)}
+                    style={{
+                      padding: '4px 8px',
+                      borderRadius: '8px',
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      background: '#FEE2E2',
+                      color: '#DC2626',
+                      border: '1px solid #FECACA',
+                      cursor: 'pointer'
+                    }}
+                    title="Delete Category"
+                  >
+                    <Trash2 size={13} />
                   </button>
                 </div>
               </div>
@@ -580,17 +644,32 @@ export default function MenuView({
 
       {/* 5. COMBOS TAB VIEW */}
       {activeSubTab === 'combos' && (
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))', gap: '10px' }}>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(320px, 1fr))', gap: '10px' }}>
           {safeCombos.map(combo => {
             const comboImage = resolveImageUrl(combo.image || combo.image_url);
+            const isAvail = combo.available !== false;
+
             return (
-              <div key={combo.id} style={{ background: '#FFFFFF', border: '1px solid #E5E7EB', borderRadius: '14px', padding: '12px', display: 'flex', flexDirection: 'column', gap: '10px' }}>
+              <div
+                key={combo.id}
+                style={{
+                  background: '#FFFFFF',
+                  border: '1px solid #E2E8F0',
+                  borderRadius: '16px',
+                  padding: '14px',
+                  display: 'flex',
+                  flexDirection: 'column',
+                  gap: '12px',
+                  opacity: isAvail ? 1 : 0.65,
+                  boxShadow: '0 2px 8px rgba(0,0,0,0.02)'
+                }}
+              >
                 <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                  {/* Combo Image (56px Square) */}
+                  {/* Combo Image (60px Square) */}
                   <div style={{
-                    width: '56px',
-                    height: '56px',
-                    borderRadius: '10px',
+                    width: '60px',
+                    height: '60px',
+                    borderRadius: '12px',
                     overflow: 'hidden',
                     flexShrink: 0,
                     background: '#F8FAFC',
@@ -607,53 +686,93 @@ export default function MenuView({
                         onError={(e) => { e.target.style.display = 'none'; }}
                       />
                     ) : (
-                      <span style={{ fontSize: '1.4rem' }}>🍱</span>
+                      <span style={{ fontSize: '1.5rem' }}>🍱</span>
                     )}
                   </div>
 
                   <div style={{ flex: 1, minWidth: 0 }}>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '8px' }}>
-                      <strong style={{ fontSize: '0.92rem', color: '#111827', fontWeight: 800 }}>{combo.title || combo.name}</strong>
-                      <strong style={{ fontSize: '0.92rem', color: 'var(--adm-primary)', fontWeight: 900 }}>{currencySymbol}{combo.price}</strong>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: '8px' }}>
+                      <strong style={{ fontSize: '0.94rem', color: '#0F172A', fontWeight: 800, lineHeight: 1.25 }}>
+                        {combo.title || combo.name}
+                      </strong>
+                      <strong style={{ fontSize: '0.94rem', color: '#059669', fontWeight: 900, whiteSpace: 'nowrap' }}>
+                        {currencySymbol}{Math.round(Number(combo.price) || 0)}
+                      </strong>
                     </div>
 
                     {combo.description && (
                       <p style={{
-                        fontSize: '0.76rem',
+                        fontSize: '0.74rem',
                         color: '#64748B',
-                        margin: '2px 0 0 0',
+                        margin: '4px 0 0 0',
                         display: '-webkit-box',
                         WebkitLineClamp: 2,
                         WebkitBoxOrient: 'vertical',
-                        overflow: 'hidden'
-                      }}>{combo.description}</p>
+                        overflow: 'hidden',
+                        lineHeight: 1.3
+                      }}>
+                        {combo.description}
+                      </p>
                     )}
                   </div>
                 </div>
 
-                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', paddingTop: '6px', borderTop: '1px solid #F1F5F9' }}>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', paddingTop: '10px', borderTop: '1px solid #F1F5F9' }}>
                   <button
                     onClick={() => onToggleComboAvailability && onToggleComboAvailability(combo.id, combo.available !== false)}
                     style={{
-                      padding: '5px 10px',
-                      borderRadius: '20px',
-                      fontSize: '0.72rem',
+                      padding: '4px 10px',
+                      borderRadius: '12px',
+                      fontSize: '0.70rem',
                       fontWeight: 800,
-                      background: combo.available !== false ? '#DCFCE7' : '#FEE2E2',
-                      color: combo.available !== false ? '#15803D' : '#991B1B',
-                      border: '1px solid #E2E8F0',
-                      cursor: 'pointer'
+                      background: isAvail ? '#DCFCE7' : '#FEE2E2',
+                      color: isAvail ? '#15803D' : '#991B1B',
+                      border: isAvail ? '1px solid #86EFAC' : '1px solid #FCA5A5',
+                      cursor: 'pointer',
+                      boxShadow: isAvail ? '0 1px 4px rgba(22, 163, 74, 0.15)' : 'none'
                     }}
                   >
-                    {combo.available !== false ? '● Available' : '● Off'}
+                    {isAvail ? '● Available' : '● Off'}
                   </button>
 
                   <div style={{ display: 'flex', gap: '6px' }}>
-                    <button onClick={() => onOpenEditCombo(combo)} className="adm-btn adm-btn-secondary adm-btn-sm" style={{ padding: '6px 10px', fontWeight: 800 }}>
-                      <Edit size={14} /> Edit
+                    <button
+                      onClick={() => onOpenEditCombo(combo)}
+                      style={{
+                        padding: '4px 10px',
+                        borderRadius: '8px',
+                        display: 'inline-flex',
+                        alignItems: 'center',
+                        gap: '4px',
+                        background: '#F1F5F9',
+                        color: '#334155',
+                        border: '1px solid #E2E8F0',
+                        fontWeight: 800,
+                        fontSize: '0.74rem',
+                        cursor: 'pointer'
+                      }}
+                    >
+                      <Edit size={13} /> Edit
                     </button>
-                    <button onClick={() => onDeleteCombo(combo.id)} className="adm-btn adm-btn-danger adm-btn-sm" style={{ padding: '6px 10px' }}>
-                      <Trash2 size={14} />
+
+                    <button
+                      onClick={() => onDeleteCombo && onDeleteCombo(combo.id)}
+                      style={{
+                        padding: '4px 8px',
+                        borderRadius: '8px',
+                        display: 'inline-flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        background: '#FEE2E2',
+                        color: '#DC2626',
+                        border: '1px solid #FECACA',
+                        fontWeight: 800,
+                        fontSize: '0.74rem',
+                        cursor: 'pointer'
+                      }}
+                      title="Delete Combo"
+                    >
+                      <Trash2 size={13} />
                     </button>
                   </div>
                 </div>
