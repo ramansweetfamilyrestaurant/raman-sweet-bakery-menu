@@ -242,8 +242,8 @@ export default function OrdersView({
                       ) : null}
                       {onPreviewPrint && (
                         <button
-                          onClick={() => onPreviewPrint(order, 'kot')}
-                          title="Open Print Preview Window"
+                          onClick={() => onPreviewPrint(order, 'bill')}
+                          title="Preview Customer Bill Receipt"
                           style={{
                             background: 'none',
                             border: 'none',
@@ -257,7 +257,7 @@ export default function OrdersView({
                             gap: '2px'
                           }}
                         >
-                          👁️ Preview
+                          👁️ Preview Bill
                         </button>
                       )}
                     </div>
