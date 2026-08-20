@@ -1523,10 +1523,14 @@ router.get('/analytics', authenticateToken, requireActiveSubscription, async (re
     const getFormattedLocalDate = (dateObj) => {
       const d = parseSafeDate(dateObj);
       if (!d) return '';
-      const year = d.getFullYear();
-      const month = String(d.getMonth() + 1).padStart(2, '0');
-      const day = String(d.getDate()).padStart(2, '0');
-      return `${year}-${month}-${day}`;
+      try {
+        return new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Kolkata' }).format(d);
+      } catch (e) {
+        const year = d.getFullYear();
+        const month = String(d.getMonth() + 1).padStart(2, '0');
+        const day = String(d.getDate()).padStart(2, '0');
+        return `${year}-${month}-${day}`;
+      }
     };
 
     const now = new Date();
