@@ -781,24 +781,32 @@ router.post('/orders', async (req, res) => {
 
     let openOrders = [];
     try {
+      const twelveHoursAgo = new Date(Date.now() - 12 * 60 * 60 * 1000).toISOString();
       openOrders = await query(`
         SELECT id, session_id, round_number, customer_name, customer_phone, items, total_amount, status
         FROM orders
-        WHERE restaurant_id = $1 AND table_number = $2 AND status IN ('pending', 'preparing', 'kitchen', 'accepted', 'served') AND (is_settled = 0 OR is_settled IS NULL)
+        WHERE restaurant_id = $1 AND table_number = $2 
+          AND status IN ('pending', 'preparing', 'kitchen', 'accepted', 'served') 
+          AND (is_settled = 0 OR is_settled IS NULL)
+          AND created_at >= $3
         ORDER BY id ASC
-      `, [targetId, cleanTable]);
+      `, [targetId, cleanTable, twelveHoursAgo]);
     } catch (openErr) {
       console.warn('Auto-healing session columns on open orders check:', openErr.message);
       try { await query('ALTER TABLE orders ADD COLUMN IF NOT EXISTS session_id VARCHAR(100)'); } catch (e) {}
       try { await query('ALTER TABLE orders ADD COLUMN IF NOT EXISTS round_number INT DEFAULT 1'); } catch (e) {}
       try { await query('ALTER TABLE orders ADD COLUMN IF NOT EXISTS parent_order_id INT'); } catch (e) {}
       try { await query('ALTER TABLE orders ADD COLUMN IF NOT EXISTS is_settled INT DEFAULT 0'); } catch (e) {}
+      const twelveHoursAgo = new Date(Date.now() - 12 * 60 * 60 * 1000).toISOString();
       openOrders = await query(`
         SELECT id, session_id, round_number, customer_name, customer_phone, items, total_amount, status
         FROM orders
-        WHERE restaurant_id = $1 AND table_number = $2 AND status IN ('pending', 'preparing', 'kitchen', 'accepted', 'served')
+        WHERE restaurant_id = $1 AND table_number = $2 
+          AND status IN ('pending', 'preparing', 'kitchen', 'accepted', 'served')
+          AND (is_settled = 0 OR is_settled IS NULL)
+          AND created_at >= $3
         ORDER BY id ASC
-      `, [targetId, cleanTable]);
+      `, [targetId, cleanTable, twelveHoursAgo]);
     }
 
     let sessionId = null;

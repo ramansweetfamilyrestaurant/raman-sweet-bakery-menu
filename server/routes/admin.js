@@ -1392,21 +1392,25 @@ router.patch('/orders/:id/status', authenticateToken, requireActiveSubscription,
     const targetOrder = existing[0] || null;
 
     if (status === 'rejected' || status === 'cancelled') {
-      // Mark cancelled order with is_settled = 1 so customer immediately receives the CANCELLED status notification
-      await query(
-        'UPDATE orders SET status = $1, is_settled = 1 WHERE id = $2 AND restaurant_id = $3',
-        ['cancelled', orderId, targetId]
-      );
-      return res.json({ success: true, id: orderId, status: 'cancelled', is_settled: 1 });
+      // Instantly HARD DELETE rejected/cancelled order so ZERO record remains in DB or UI
+      await query('DELETE FROM orders WHERE id = $1 AND restaurant_id = $2', [orderId, targetId]);
+      return res.json({ success: true, id: orderId, status: 'cancelled', deleted: true });
     }
 
     let updateRes = null;
-    if (status === 'completed' && targetOrder?.session_id) {
-      // Settle entire Table Session in one single transaction
-      updateRes = await query(
-        'UPDATE orders SET status = $1, is_settled = 1 WHERE restaurant_id = $2 AND session_id = $3 RETURNING id',
-        ['completed', targetId, targetOrder.session_id]
-      );
+    if (status === 'completed') {
+      if (targetOrder?.session_id) {
+        // Settle entire Table Session in one single transaction
+        updateRes = await query(
+          'UPDATE orders SET status = $1, is_settled = 1 WHERE restaurant_id = $2 AND session_id = $3 RETURNING id',
+          ['completed', targetId, targetOrder.session_id]
+        );
+      } else {
+        updateRes = await query(
+          'UPDATE orders SET status = $1, is_settled = 1 WHERE id = $2 AND restaurant_id = $3 RETURNING id',
+          ['completed', orderId, targetId]
+        );
+      }
     } else {
       updateRes = await query(
         'UPDATE orders SET status = $1, sent_to_kds = $2, kitchen_prepared = $3 WHERE id = $4 AND restaurant_id = $5 RETURNING id',
