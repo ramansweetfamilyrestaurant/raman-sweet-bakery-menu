@@ -14,6 +14,7 @@ import {
   Info
 } from 'lucide-react';
 import { verifyCustomerLocationApi } from '../api/client';
+import { isValidQrTokenFormat } from '../utils/qrSecurity';
 
 export default function CustomerLocationModal({
   isOpen,
@@ -28,7 +29,7 @@ export default function CustomerLocationModal({
   // State Machine:
   // 'idle' | 'requesting_location' | 'verifying_with_server' | 'verified' |
   // 'outside_boundary' | 'permission_denied' | 'permission_permanently_blocked' |
-  // 'location_services_off' | 'location_timeout' | 'low_accuracy' | 'error'
+  // 'location_services_off' | 'location_timeout' | 'low_accuracy' | 'invalid_qr' | 'error'
   const [status, setStatus] = useState('idle');
   const [errorMsg, setErrorMsg] = useState('');
   const [distanceInfo, setDistanceInfo] = useState(null);
@@ -55,6 +56,15 @@ export default function CustomerLocationModal({
   const handleRequestLocation = () => {
     if (isAcquiringRef.current) return; // Prevent duplicate rapid taps
     isAcquiringRef.current = true;
+
+    // Fast-Fail on Missing / Malformed QR Token before requesting GPS permission
+    const cleanToken = String(tableToken || '').trim();
+    if (!cleanToken || !isValidQrTokenFormat(cleanToken)) {
+      isAcquiringRef.current = false;
+      setStatus('invalid_qr');
+      setErrorMsg('Invalid or unverified Table QR code. Please scan the QR code printed on your table to verify and place orders.');
+      return;
+    }
 
     if (!navigator.geolocation) {
       isAcquiringRef.current = false;
@@ -133,10 +143,17 @@ export default function CustomerLocationModal({
       } catch (apiErr) {
         isAcquiringRef.current = false;
         const errMsg = String(apiErr.message || '');
-        if (errMsg.toLowerCase().includes('accuracy') || apiErr.error === 'low_accuracy') {
+        const errCode = apiErr.error || apiErr.code || '';
+        if (errCode === 'invalid_qr' || errMsg.toLowerCase().includes('qr')) {
+          setStatus('invalid_qr');
+          setErrorMsg('Invalid or unverified Table QR code. Please scan the QR code printed on your table again.');
+        } else if (errCode === 'table_mismatch' || errCode === 'space_mismatch') {
+          setStatus('invalid_qr');
+          setErrorMsg('Table verification mismatch. Please scan the QR code printed on your table again.');
+        } else if (errMsg.toLowerCase().includes('accuracy') || errCode === 'low_accuracy') {
           setStatus('low_accuracy');
           setErrorMsg(errMsg || 'GPS signal accuracy is too weak.');
-        } else if (errMsg.toLowerCase().includes('outside') || apiErr.status === 403 || apiErr.error === 'outside_boundary') {
+        } else if (errMsg.toLowerCase().includes('outside') || apiErr.status === 403 || errCode === 'outside_boundary') {
           setStatus('outside_boundary');
           setErrorMsg(errMsg || 'You appear to be outside the restaurant dining area.');
         } else {
@@ -776,7 +793,53 @@ export default function CustomerLocationModal({
         )}
 
         {/* ---------------------------------------------------- */}
-        {/* STATE 10: GENERIC FALLBACK ERROR */}
+        {/* STATE 10: INVALID / UNVERIFIED QR CODE */}
+        {/* ---------------------------------------------------- */}
+        {status === 'invalid_qr' && (
+          <>
+            <div style={{
+              width: '64px',
+              height: '64px',
+              borderRadius: '20px',
+              background: '#FEF2F2',
+              color: '#DC2626',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              marginBottom: '16px'
+            }}>
+              <AlertCircle size={32} />
+            </div>
+
+            <h3 style={{ fontSize: '1.15rem', fontWeight: 900, color: '#0F172A', margin: '0 0 8px 0' }}>
+              Invalid Table QR
+            </h3>
+
+            <p style={{ fontSize: '0.84rem', color: '#64748B', lineHeight: 1.5, margin: '0 0 18px 0' }}>
+              {errorMsg || 'This QR code is incomplete or has been changed. Please scan the QR code on your table again.'}
+            </p>
+
+            <button
+              onClick={onClose}
+              style={{
+                width: '100%',
+                padding: '13px 20px',
+                borderRadius: '14px',
+                border: 'none',
+                background: '#0F172A',
+                color: '#FFFFFF',
+                fontWeight: 900,
+                fontSize: '0.90rem',
+                cursor: 'pointer'
+              }}
+            >
+              Browse Menu
+            </button>
+          </>
+        )}
+
+        {/* ---------------------------------------------------- */}
+        {/* STATE 11: GENERIC FALLBACK ERROR */}
         {/* ---------------------------------------------------- */}
         {status === 'error' && (
           <>

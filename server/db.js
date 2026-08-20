@@ -502,6 +502,8 @@ async function createTables() {
       `ALTER TABLE orders ADD COLUMN IF NOT EXISTS round_number INT DEFAULT 1;`,
       `ALTER TABLE orders ADD COLUMN IF NOT EXISTS parent_order_id INT;`,
       `ALTER TABLE orders ADD COLUMN IF NOT EXISTS is_settled INT DEFAULT 0;`,
+      `ALTER TABLE orders ADD COLUMN IF NOT EXISTS idempotency_key VARCHAR(128);`,
+      `CREATE INDEX IF NOT EXISTS idx_orders_resto_idemp ON orders (restaurant_id, idempotency_key);`,
       `ALTER TABLE restaurants ADD COLUMN IF NOT EXISTS kds_screen_enabled INT DEFAULT 1;`,
       `ALTER TABLE restaurants ADD COLUMN IF NOT EXISTS owner_name VARCHAR(255);`,
       `ALTER TABLE restaurants ADD COLUMN IF NOT EXISTS city VARCHAR(100);`,
@@ -919,6 +921,7 @@ async function createTables() {
       if (!orderCols.some(c => c.name === 'round_number')) sqliteDb.exec("ALTER TABLE orders ADD COLUMN round_number INTEGER DEFAULT 1");
       if (!orderCols.some(c => c.name === 'parent_order_id')) sqliteDb.exec("ALTER TABLE orders ADD COLUMN parent_order_id INTEGER");
       if (!orderCols.some(c => c.name === 'is_settled')) sqliteDb.exec("ALTER TABLE orders ADD COLUMN is_settled INTEGER DEFAULT 0");
+      if (!orderCols.some(c => c.name === 'idempotency_key')) sqliteDb.exec("ALTER TABLE orders ADD COLUMN idempotency_key TEXT");
 
       if (!restoCols.some(c => c.name === 'kds_screen_enabled')) sqliteDb.exec("ALTER TABLE restaurants ADD COLUMN kds_screen_enabled INTEGER DEFAULT 1");
 
@@ -1557,7 +1560,7 @@ function getDbType() {
   return dbType;
 }
 
-export async function pingDb() {
+async function pingDb() {
   if (dbType === 'postgres' && pgPool) {
     try {
       const start = Date.now();
@@ -1572,4 +1575,12 @@ export async function pingDb() {
   return { connected: false, latency_ms: 0, error: 'Database pool not initialized' };
 }
 
-export { initDb, query, logAudit, runAutoDataSummarization, withTransaction, getDbType };
+async function closeDbPool() {
+  if (pgPool) {
+    try {
+      await pgPool.end();
+    } catch (e) {}
+  }
+}
+
+export { initDb, query, logAudit, runAutoDataSummarization, withTransaction, getDbType, closeDbPool, pingDb };

@@ -1,44 +1,81 @@
 import express from 'express';
 import cors from 'cors';
+import helmet from 'helmet';
 import path from 'path';
 import fs from 'fs';
 import dotenv from 'dotenv';
-import { initDb, runAutoDataSummarization, getImageFromDb, saveImageToDb, purgeCancelledOrdersOlderThan3Mins, getImageRecordFromDb, query, getDbType, pingDb } from './db.js';
+import { initDb, runAutoDataSummarization, getImageFromDb, saveImageToDb, purgeCancelledOrdersOlderThan3Mins, getImageRecordFromDb, query, getDbType, pingDb, closeDbPool } from './db.js';
 import { getR2Diagnostics, isR2Active, getR2ObjectBuffer } from './services/r2ImageService.js';
 import { startSubscriptionCron } from './subscriptionCron.js';
+import { validateEnvironment } from './config/envValidator.js';
 import apiRoutes from './routes/api.js';
 import adminRoutes from './routes/admin.js';
 import superadminRoutes from './routes/superadmin.js';
 import paymentRoutes from './routes/payment.js';
 
 dotenv.config();
+validateEnvironment();
 
 const app = express();
 app.set('trust proxy', 1);
 const PORT = process.env.PORT || 5000;
 
-// Middleware
+// 🛡️ HTTP Security Headers with Production-Compatible Content-Security-Policy
+app.use(helmet({
+  contentSecurityPolicy: {
+    directives: {
+      defaultSrc: ["'self'"],
+      scriptSrc: ["'self'", "'unsafe-inline'", "https://sdk.cashfree.com", "https://checkout.razorpay.com", "https://unpkg.com"],
+      styleSrc: ["'self'", "'unsafe-inline'", "https://fonts.googleapis.com", "https://unpkg.com"],
+      fontSrc: ["'self'", "https://fonts.gstatic.com", "data:"],
+      imgSrc: ["'self'", "data:", "blob:", "https:", "http:", "https://*.tile.openstreetmap.org", "https://*.r2.dev", "https://*.cloudflarestorage.com"],
+      connectSrc: ["'self'", "https://*.cashfree.com", "https://api.cashfree.com", "https://sandbox.cashfree.com", "https://*.razorpay.com", "https://api.razorpay.com", "https://*.tile.openstreetmap.org", "https://*.r2.dev", "https://*.cloudflarestorage.com"],
+      frameSrc: ["'self'", "https://*.cashfree.com", "https://sdk.cashfree.com", "https://*.razorpay.com", "https://api.razorpay.com"],
+      objectSrc: ["'none'"],
+      upgradeInsecureRequests: process.env.NODE_ENV === 'production' ? [] : null
+    }
+  },
+  crossOriginResourcePolicy: { policy: 'cross-origin' },
+  crossOriginEmbedderPolicy: false
+}));
+
+// 🛡️ Production CORS Lockdown
+const defaultProductionOrigins = [
+  'https://touchqr.in',
+  'https://www.touchqr.in',
+  'https://admin.touchqr.in'
+];
+
 const allowedOriginsStr = (process.env.ALLOWED_ORIGINS || '').trim();
-const allowedOrigins = allowedOriginsStr ? allowedOriginsStr.split(',').map(s => s.trim()) : null;
+const configuredAllowedOrigins = allowedOriginsStr 
+  ? allowedOriginsStr.split(',').map(s => s.trim().toLowerCase()) 
+  : (process.env.NODE_ENV === 'production' ? defaultProductionOrigins : null);
 
 app.use(cors({
   origin: (origin, callback) => {
     // Server-to-server (e.g. webhooks) & same-origin requests send no origin header
-    if (!origin || !allowedOrigins || allowedOrigins.includes('*')) {
+    if (!origin) {
       return callback(null, true);
     }
-    if (allowedOrigins.includes(origin)) {
+    // In non-production without explicit ALLOWED_ORIGINS: permit local origins
+    if (!configuredAllowedOrigins || configuredAllowedOrigins.includes('*')) {
       return callback(null, true);
     }
-    return callback(null, false);
-  }
+    const normalizedOrigin = origin.toLowerCase().trim();
+    if (configuredAllowedOrigins.includes(normalizedOrigin)) {
+      return callback(null, true);
+    }
+    return callback(new Error(`CORS blocked: Origin '${origin}' is not authorized.`));
+  },
+  credentials: true
 }));
 app.use(express.json({
+  limit: '1mb',
   verify: (req, res, buf) => {
     req.rawBody = buf ? buf.toString('utf8') : '';
   }
 }));
-app.use(express.urlencoded({ extended: true }));
+app.use(express.urlencoded({ extended: true, limit: '1mb' }));
 
 // Smart Persistent Uploads Handler (DB-backed fallback so Render restarts never corrupt images)
 const uploadsDir = process.env.VERCEL ? '/tmp/uploads' : path.resolve('public/uploads');
@@ -371,15 +408,22 @@ if (fs.existsSync(distDir)) {
   });
 }
 
-// Global Express Serverless Error Handler (Guarantees clean JSON and prevents FUNCTION_INVOCATION_FAILED)
+// Global Express Serverless Error Handler (Guarantees clean JSON and prevents sensitive error leaks)
 app.use((err, req, res, next) => {
   console.error('[UNHANDLED EXPRESS ERROR]', err);
   if (res.headersSent) {
     return next(err);
   }
-  res.status(err.status || 500).json({
-    error: err.message || 'Internal Server Error',
-    status: err.status || 500
+  const status = err.status || err.statusCode || 500;
+  if (status >= 400 && status < 500) {
+    return res.status(status).json({
+      error: err.type === 'entity.parse.failed' ? 'Invalid JSON payload' : (err.message || 'Bad Request'),
+      status
+    });
+  }
+  res.status(500).json({
+    error: 'Internal Server Error',
+    status: 500
   });
 });
 
@@ -423,6 +467,37 @@ async function startServer(portToTry = PORT) {
     const server = app.listen(portToTry, () => {
       console.log(`✨ TouchQR Server running on http://localhost:${portToTry}`);
     });
+
+    // 🛡️ Graceful Shutdown Handler
+    let isShuttingDown = false;
+    const shutdown = async (signal) => {
+      if (isShuttingDown) return;
+      isShuttingDown = true;
+      console.log(`\n🛑 [SHUTDOWN] Received ${signal}. Commencing graceful shutdown...`);
+
+      server.close(async () => {
+        console.log('⚡ [SHUTDOWN] HTTP server closed.');
+        try {
+          if (typeof closeDbPool === 'function') {
+            await closeDbPool();
+            console.log('⚡ [SHUTDOWN] Database pool closed.');
+          }
+        } catch (e) {
+          console.warn('Shutdown notice:', e.message);
+        }
+        console.log('✓ [SHUTDOWN] Graceful shutdown completed cleanly.');
+        process.exit(0);
+      });
+
+      setTimeout(() => {
+        console.error('⚠️ [SHUTDOWN] Forced shutdown after 10s timeout.');
+        process.exit(1);
+      }, 10000).unref();
+    };
+
+    process.on('SIGTERM', () => shutdown('SIGTERM'));
+    process.on('SIGINT', () => shutdown('SIGINT'));
+
     server.on('error', (err) => {
       if (err.code === 'EADDRINUSE') {
         console.warn(`Port ${portToTry} in use, trying port ${Number(portToTry) + 1}...`);

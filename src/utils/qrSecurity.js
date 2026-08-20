@@ -1,3 +1,6 @@
+// Client-side QR format validation & space normalization helpers
+// Note: Cryptographic verification is authoritatively performed exclusively on the server.
+
 export function generateQrToken(slug, type, num, secret) {
   const cleanSlug = String(slug || '').toLowerCase();
   const cleanType = String(type || 'table').toLowerCase();
@@ -14,10 +17,25 @@ export function generateQrToken(slug, type, num, secret) {
   return Math.abs(hash).toString(16).padStart(8, '0');
 }
 
-export function verifyQrToken(slug, type, num, secret, token) {
-  if (!token) return false;
-  const expected = generateQrToken(slug, type, num, secret);
-  return String(token).toLowerCase() === expected.toLowerCase();
+export function isValidQrTokenFormat(token) {
+  if (!token || typeof token !== 'string') return false;
+  const clean = token.trim();
+  // Validates legacy 8-character hex token shape
+  return /^[0-9a-fA-F]{8}$/.test(clean);
 }
 
-export default { generateQrToken, verifyQrToken };
+export function normalizeSpaceType(raw) {
+  const s = String(raw || '').trim().toLowerCase();
+  if (s.includes('cabin')) return 'cabin';
+  if (s.includes('room')) return 'room';
+  if (s.includes('vip')) return 'vip';
+  return 'table';
+}
+
+export function normalizeSpaceNumber(raw) {
+  const s = String(raw || '').trim();
+  const match = s.match(/\d+/);
+  return match ? String(parseInt(match[0], 10)) : '1';
+}
+
+export default { generateQrToken, isValidQrTokenFormat, normalizeSpaceType, normalizeSpaceNumber };

@@ -16,8 +16,7 @@ import { LayoutList, Grid, BookOpen, X, Sparkles, ShieldAlert, Phone, Plus, Edit
 import { verifyCustomerLocation } from './utils/geo';
 import ServiceRequestModal from './components/ServiceRequestModal';
 import CustomerReviewModal from './components/CustomerReviewModal';
-import CustomerLocationModal from './components/CustomerLocationModal';
-import { generateQrToken, verifyQrToken } from './utils/qrSecurity';
+import { isValidQrTokenFormat, normalizeSpaceType, normalizeSpaceNumber } from './utils/qrSecurity';
 
 // Robust Lazy Loading with automatic retry on new production deploys
 const lazyWithRetry = (componentImport) =>
@@ -103,40 +102,60 @@ export const isSlugKitchenPath = (rawPath) => {
 };
 
 export default function App() {
-  // Parse Space / Table info and Cryptographic QR token from URL query parameters
+  // 1. Canonical Scanned QR Identity from URL
   const getSpaceInfoFromUrl = () => {
     const urlParams = new URLSearchParams(window.location.search);
-    const token = urlParams.get('tkn') || urlParams.get('token') || urlParams.get('sig') || '';
+    const token = (urlParams.get('tkn') || urlParams.get('token') || urlParams.get('sig') || '').trim();
+    let type = '';
+    let num = '';
+
     if (urlParams.get('cabin')) {
-      const num = urlParams.get('cabin');
-      return { type: 'cabin', num, label: `Cabin ${num}`, badge: `🛋️ Cabin ${num}`, token };
-    }
-    if (urlParams.get('room')) {
-      const num = urlParams.get('room');
-      return { type: 'room', num, label: `Room ${num}`, badge: `🏨 Room ${num}`, token };
-    }
-    if (urlParams.get('vip')) {
-      const num = urlParams.get('vip');
-      return { type: 'vip', num, label: `VIP ${num}`, badge: `👑 VIP ${num}`, token };
-    }
-    let t = urlParams.get('table') || urlParams.get('t') || urlParams.get('tableno') || urlParams.get('tbl') || '';
-    if (!t) {
+      type = 'cabin';
+      num = urlParams.get('cabin').trim();
+    } else if (urlParams.get('room')) {
+      type = 'room';
+      num = urlParams.get('room').trim();
+    } else if (urlParams.get('vip')) {
+      type = 'vip';
+      num = urlParams.get('vip').trim();
+    } else if (urlParams.get('table') || urlParams.get('t') || urlParams.get('tableno') || urlParams.get('tbl')) {
+      type = 'table';
+      num = (urlParams.get('table') || urlParams.get('t') || urlParams.get('tableno') || urlParams.get('tbl')).trim();
+    } else {
       const parts = window.location.pathname.split('/').filter(Boolean);
       if (parts.length >= 2) {
         const lastPart = parts[parts.length - 1];
         const prevPart = parts[parts.length - 2].toLowerCase();
-        if (/^\d+$/.test(lastPart) && (prevPart === 'table' || prevPart === 'tbl' || prevPart === 'r' || prevPart === 'cabin' || prevPart === 'room' || prevPart === 'vip')) {
-          t = lastPart;
-          if (prevPart === 'cabin') return { type: 'cabin', num: t, label: `Cabin ${t}`, badge: `🛋️ Cabin ${t}`, token };
-          if (prevPart === 'room') return { type: 'room', num: t, label: `Room ${t}`, badge: `🏨 Room ${t}`, token };
-          if (prevPart === 'vip') return { type: 'vip', num: t, label: `VIP ${t}`, badge: `👑 VIP ${t}`, token };
+        if (/^\d+$/.test(lastPart)) {
+          if (prevPart === 'cabin') { type = 'cabin'; num = lastPart; }
+          else if (prevPart === 'room') { type = 'room'; num = lastPart; }
+          else if (prevPart === 'vip') { type = 'vip'; num = lastPart; }
+          else if (prevPart === 'table' || prevPart === 'tbl' || prevPart === 'r') { type = 'table'; num = lastPart; }
         }
       }
     }
-    if (t) {
-      return { type: 'table', num: t, label: `Table ${t}`, badge: `🍽️ Table ${t}`, token };
+
+    const isScanned = Boolean(type && num);
+    const isValidTokenShape = Boolean(token && isValidQrTokenFormat(token));
+
+    let label = '';
+    let badge = '';
+    if (isScanned) {
+      if (type === 'cabin') { label = `Cabin ${num}`; badge = `🛋️ Cabin ${num}`; }
+      else if (type === 'room') { label = `Room ${num}`; badge = `🏨 Room ${num}`; }
+      else if (type === 'vip') { label = `VIP ${num}`; badge = `👑 VIP ${num}`; }
+      else { label = `Table ${num}`; badge = `🍽️ Table ${num}`; }
     }
-    return { type: '', num: '', label: '', badge: '', token: '' };
+
+    return {
+      isScanned,
+      type,
+      num,
+      token,
+      isValidTokenShape,
+      label,
+      badge
+    };
   };
 
   // Menu Data State (Declared at top of component to avoid TDZ access)
@@ -155,34 +174,45 @@ export default function App() {
   const [sessionExpired, setSessionExpired] = useState(false);
   const [autoKillSeconds, setAutoKillSeconds] = useState(null);
 
-  // Read previously verified location from session (< 15 mins) and auto-prompt verification if needed
+  // Read previously verified location from session (< 15 mins) and clear if space/token changed
   useEffect(() => {
     if (!info?.id) return;
-    const restoLat = Number(info.latitude);
-    const restoLng = Number(info.longitude);
-    const hasLocation = !isNaN(restoLat) && !isNaN(restoLng) && restoLat !== 0 && restoLng !== 0;
-
-    let isSessionValid = false;
     try {
       const stored = sessionStorage.getItem(`touchqr_geo_${info.id}`);
       const storedToken = sessionStorage.getItem(`touchqr_location_token_${info.id}`);
       if (stored) {
         const parsed = JSON.parse(stored);
-        if (parsed && parsed.timestamp && (Date.now() - parsed.timestamp < 15 * 60 * 1000) && parsed.customerLat) {
+        const isSameTable = String(parsed.tableNumber || '').trim() === String(currentTableNum).trim();
+        const isSameType = String(parsed.spaceType || 'table').toLowerCase() === String(currentSpaceType || 'table').toLowerCase();
+        const isSameToken = String(parsed.qrToken || '').trim() === String(currentTableToken).trim();
+        const isFresh = parsed.timestamp && (Date.now() - parsed.timestamp < 15 * 60 * 1000);
+
+        if (isSameTable && isSameType && isSameToken && isFresh && initialSpaceInfo.isValidTokenShape && parsed.customerLat) {
           cachedCustomerGeoRef.current = parsed;
           setLocationVerified(true);
           setLocationToken(storedToken || parsed.locationToken || '');
-          isSessionValid = true;
+        } else {
+          // Clear stale transient location data from previous table/token
+          cachedCustomerGeoRef.current = null;
+          setLocationVerified(false);
+          setLocationToken('');
+          sessionStorage.removeItem(`touchqr_geo_${info.id}`);
+          sessionStorage.removeItem(`touchqr_location_token_${info.id}`);
         }
       }
     } catch {}
-  }, [info?.id, info?.latitude, info?.longitude, currentTableNum]);
+  }, [info?.id, currentSpaceType, currentTableNum, currentTableToken]);
 
-  // Validate if the table/space number exists within the restaurant's configured capacity & verified signature
+  // Validate if the table/space number exists within the restaurant's configured capacity & has valid token shape
   const isSpaceNumberValid = () => {
     if (!currentTableNum) return true;
     const num = parseInt(currentTableNum, 10);
     if (isNaN(num) || num <= 0) return false;
+
+    // Strict requirement: A scanned space QR MUST have a token with valid shape (8 hex chars)
+    if (!initialSpaceInfo.isValidTokenShape) {
+      return false;
+    }
 
     if (!info) return true; // Still loading restaurant info
 
@@ -203,21 +233,11 @@ export default function App() {
       return false;
     }
 
-    // Anti-Tamper Cryptographic Token Check (if token was present in URL, it MUST match the table)
-    if (currentTableToken) {
-      const activeSlug = getSlugFromUrl() || (info && info.slug) || '';
-      const secret = info?.qr_secret || (`${info?.id || 1}_${activeSlug}_tq`);
-      const isTokenValid = verifyQrToken(activeSlug, activeType, currentTableNum, secret, currentTableToken);
-      if (!isTokenValid) {
-        return false;
-      }
-    }
-
     return true;
   };
 
   const isTableValid = isSpaceNumberValid();
-  // Effective Table Number (Empty if session expired or scanned number is invalid/out-of-range)
+  // Effective Table Number (Empty if session expired or scanned QR identity is unverified/invalid/out-of-range)
   const effectiveTableNum = (sessionExpired || !isTableValid) ? '' : currentTableNum;
 
   const getDynamicSpaceLabel = () => {
@@ -229,7 +249,13 @@ export default function App() {
     return `🍽️ Table ${effectiveTableNum}`;
   };
 
-  const hasScannedSpace = Boolean(currentTableNum && String(currentTableNum).trim() !== '');
+  const hasScannedSpace = Boolean(
+    currentTableNum &&
+    String(currentTableNum).trim() !== '' &&
+    initialSpaceInfo.isValidTokenShape &&
+    isTableValid &&
+    effectiveTableNum
+  );
 
   const isViewOnlyUrl = Boolean(
     new URLSearchParams(window.location.search).get('view') === '1' ||
@@ -239,7 +265,7 @@ export default function App() {
 
   // Direct Table Ordering is active ONLY when:
   // 1. Not in view-only URL mode
-  // 2. A specific Table/Cabin/Room QR code is scanned (hasScannedSpace)
+  // 2. An authenticated Table/Cabin/Room QR code is scanned with valid token (hasScannedSpace)
   // 3. Restaurant has direct_ordering_enabled = 1
   // 4. SaaS Plan permissions allow direct ordering
   const isDirectOrderingActive = Boolean(
@@ -741,7 +767,13 @@ export default function App() {
       }
 
       const currentSlug = getSlugFromUrl() || (info && info.slug) || '';
-      const targetTable = effectiveTableNum || orderTableInput || '1';
+      const targetTable = effectiveTableNum;
+      if (!targetTable || !initialSpaceInfo.isValidTokenShape) {
+        alert('Invalid or missing Table QR. Please scan the official QR code at your dining table to place an order.');
+        setPlacingOrder(false);
+        isPlacingOrderRef.current = false;
+        return;
+      }
       const itemsPayload = cartItems.map(item => ({
         dish_id: item.isCombo ? item.dish.id : item.dish.id,
         name: item.dish.name,
@@ -756,6 +788,7 @@ export default function App() {
       const res = await createDirectOrder({
         slug: currentSlug,
         table_number: targetTable,
+        space_type: currentSpaceType || 'table',
         table_token: currentTableToken,
         customer_name: customerNameInput || 'Dine-In Customer',
         customer_phone: customerPhoneInput || '',
@@ -776,13 +809,24 @@ export default function App() {
       setShowCartDrawer(false);
     } catch (err) {
       const errMsg = String(err.message || '');
-      if (
+      const errCode = err.error || err.code || '';
+      if (errCode === 'invalid_qr' || errMsg.toLowerCase().includes('qr')) {
+        setLocationVerified(false);
+        setLocationToken('');
+        cachedCustomerGeoRef.current = null;
+        try {
+          sessionStorage.removeItem(`touchqr_location_token_${info?.id}`);
+          sessionStorage.removeItem(`touchqr_geo_${info?.id}`);
+        } catch {}
+        alert('Invalid or unverified Table QR code. Please scan the official QR code at your dining table.');
+      } else if (
         errMsg.toLowerCase().includes('location') ||
         errMsg.toLowerCase().includes('mismatch') ||
         errMsg.toLowerCase().includes('expired') ||
-        err.code === 'location_verification_expired' ||
-        err.error === 'location_required' ||
-        err.error === 'table_mismatch'
+        errCode === 'location_verification_expired' ||
+        errCode === 'location_required' ||
+        errCode === 'table_mismatch' ||
+        errCode === 'space_mismatch'
       ) {
         setLocationVerified(false);
         setLocationToken('');
@@ -2050,7 +2094,7 @@ export default function App() {
         </div>
       )}
 
-      {/* ⚠️ Invalid Table / Space Warning Banner (When URL has a fake/unconfigured table number) */}
+      {/* ⚠️ Invalid Table / Space Warning Banner (When URL has a missing token, fake/unconfigured table number) */}
       {currentTableNum && info && !isTableValid && (
         <div style={{
           background: 'linear-gradient(135deg, #7F1D1D 0%, #991B1B 100%)',
@@ -2067,7 +2111,7 @@ export default function App() {
           <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
             <span style={{ fontSize: '1.2rem' }}>⚠️</span>
             <span>
-              <strong>Invalid {currentSpaceType === 'cabin' ? 'Cabin' : currentSpaceType === 'room' ? 'Room' : currentSpaceType === 'vip' ? 'VIP Lounge' : 'Table'} #{currentTableNum}:</strong> Yeh space registered nahi hai. Sahi table ya space ka QR code scan karein (Menu Read-Only mode mein hai).
+              <strong>Invalid Table QR:</strong> {!initialSpaceInfo.isValidTokenShape ? 'This QR code is incomplete or modified. Please scan the official QR code at your dining table to order.' : `Table #${currentTableNum} is not registered. Please scan the official QR code at your seat.`} (Menu in View-Only mode).
             </span>
           </div>
           <button
@@ -3105,20 +3149,26 @@ export default function App() {
           isOpen={showLocationModal}
           onClose={() => setShowLocationModal(false)}
           restaurantInfo={info}
-          tableNumber={effectiveTableNum || orderTableInput || '1'}
+          tableNumber={effectiveTableNum}
           tableToken={currentTableToken}
           tableLabel={getDynamicSpaceLabel()}
           allowDismiss={true}
           onLocationVerified={(verifiedData) => {
             setLocationVerified(true);
             setLocationToken(verifiedData.locationToken);
-            cachedCustomerGeoRef.current = verifiedData;
+            const verifiedPayload = {
+              ...verifiedData,
+              tableNumber: effectiveTableNum,
+              spaceType: currentSpaceType,
+              qrToken: currentTableToken
+            };
+            cachedCustomerGeoRef.current = verifiedPayload;
             try {
               sessionStorage.setItem(`touchqr_location_token_${info?.id}`, verifiedData.locationToken);
-              sessionStorage.setItem(`touchqr_geo_${info?.id}`, JSON.stringify(verifiedData));
+              sessionStorage.setItem(`touchqr_geo_${info?.id}`, JSON.stringify(verifiedPayload));
             } catch {}
             if (cartItems.length > 0) {
-              handleSendDirectOrder(verifiedData);
+              handleSendDirectOrder(verifiedPayload);
             }
           }}
         />

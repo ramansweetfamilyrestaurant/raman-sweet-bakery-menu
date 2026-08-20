@@ -6,11 +6,32 @@ import jwt from 'jsonwebtoken';
 import bcrypt from 'bcryptjs';
 import { query, withTransaction, getDbType } from '../db.js';
 import { isR2Active } from '../services/r2ImageService.js';
-import { registrationRateLimiter, authExchangeRateLimiter } from '../middleware/rateLimiters.js';
+import { 
+  registrationRateLimiter, 
+  authExchangeRateLimiter,
+  locationVerifyRateLimiter,
+  orderCreationRateLimiter,
+  serviceRequestRateLimiter
+} from '../middleware/rateLimiters.js';
 import { exchangeAuthCode } from '../services/authCodeService.js';
 import { checkExpiredSubscriptions } from '../subscriptionCron.js';
+import { verifyQrToken, normalizeSpaceType, normalizeSpaceNumber } from '../utils/qrSecurity.js';
 
 const router = express.Router();
+
+// 🛡️ In-Memory Order Concurrency Mutex & Idempotency Store (Prevents race conditions & double submissions)
+const orderInFlightMutex = new Map(); // key -> Promise<response>
+const orderIdempotencyCache = new Map(); // key -> { timestamp, response }
+
+// Periodic cleanup of idempotency cache (keeps entries from last 60 seconds)
+setInterval(() => {
+  const now = Date.now();
+  for (const [k, v] of orderIdempotencyCache.entries()) {
+    if (now - v.timestamp > 60000) {
+      orderIdempotencyCache.delete(k);
+    }
+  }
+}, 30000);
 
 // Haversine formula: Calculates distance in meters between two GPS points
 function calculateHaversineDistance(lat1, lon1, lat2, lon2) {
@@ -458,7 +479,6 @@ router.get('/info', async (req, res) => {
       total_rooms: resto.total_rooms !== undefined && resto.total_rooms !== null ? Number(resto.total_rooms) : 0,
       total_vip: resto.total_vip !== undefined && resto.total_vip !== null ? Number(resto.total_vip) : 0,
       table_prefix: resto.table_prefix || 'table',
-      qr_secret: resto.qr_secret || (`${resto.id}_${resto.slug}_tq`),
       order_retention_days: resto.order_retention_days || 7,
       custom_domain: resto.custom_domain || '',
       kds_screen_enabled: resto.kds_screen_enabled !== undefined && resto.kds_screen_enabled !== null ? Number(resto.kds_screen_enabled) : 1,
@@ -601,24 +621,120 @@ router.get('/combos', async (req, res) => {
   }
 });
 
-// POST Verify Customer Location against Restaurant Boundary
-router.post('/orders/verify-location', async (req, res) => {
+// POST Verify Customer Location against Restaurant Boundary with Authoritative Server QR Validation
+router.post('/orders/verify-location', locationVerifyRateLimiter, async (req, res) => {
   try {
-    const { slug, table_number, latitude, longitude, accuracy } = req.body;
+    const {
+      slug,
+      table_number,
+      space_type,
+      table_token,
+      tkn,
+      token,
+      latitude,
+      longitude,
+      accuracy
+    } = req.body;
 
-    if (!slug) {
-      return res.status(400).json({ error: 'Missing restaurant slug' });
+    // Step 1: Validate Request Structure & Input Lengths
+    if (!slug || typeof slug !== 'string' || slug.trim() === '' || slug.length > 100) {
+      return res.status(400).json({ error: 'missing_slug', message: 'Valid restaurant slug is required' });
     }
 
+    if (latitude !== undefined && latitude !== null) {
+      const lat = Number(latitude);
+      if (isNaN(lat) || !isFinite(lat) || lat < -90 || lat > 90) {
+        return res.status(400).json({ error: 'invalid_coordinates', message: 'Latitude must be between -90 and 90' });
+      }
+    }
+
+    if (longitude !== undefined && longitude !== null) {
+      const lng = Number(longitude);
+      if (isNaN(lng) || !isFinite(lng) || lng < -180 || lng > 180) {
+        return res.status(400).json({ error: 'invalid_coordinates', message: 'Longitude must be between -180 and 180' });
+      }
+    }
+
+    if (accuracy !== undefined && accuracy !== null) {
+      const acc = Number(accuracy);
+      if (isNaN(acc) || !isFinite(acc) || acc < 0 || acc > 50000) {
+        return res.status(400).json({ error: 'invalid_accuracy', message: 'Accuracy value is invalid' });
+      }
+    }
+
+    // Step 2: Resolve Restaurant Context
     const resto = await resolveRestaurant(req, slug);
     if (!resto) {
-      return res.status(404).json({ error: 'Restaurant not found' });
+      return res.status(404).json({ error: 'restaurant_not_found', message: 'Restaurant not found' });
     }
 
+    // Step 3: Validate Restaurant is Active
     if (resto.active === 0 || resto.active === false || resto.active === 'false') {
-      return res.status(403).json({ error: 'Restaurant is currently inactive' });
+      return res.status(403).json({ error: 'restaurant_inactive', message: 'Restaurant is currently inactive' });
     }
 
+    // Step 4: Validate Direct Table Ordering is Enabled
+    if (resto.direct_ordering_enabled === 0 || resto.direct_ordering_enabled === false || resto.direct_ordering_enabled === 'false') {
+      return res.status(403).json({ error: 'ordering_disabled', message: 'Direct table ordering is currently paused by the restaurant.' });
+    }
+
+    // Step 5: Resolve Exact Space Type and Number
+    const rawTable = String(table_number || '').trim();
+    if (!rawTable) {
+      return res.status(400).json({ error: 'invalid_table_number', message: 'Table or space number is required' });
+    }
+    const resolvedSpaceType = normalizeSpaceType(space_type || rawTable || resto.table_prefix || 'table');
+    const resolvedSpaceNum = normalizeSpaceNumber(rawTable);
+    const cleanTable = rawTable;
+
+    // Step 6: Validate Space Capacity
+    let maxAllowed = 0;
+    if (resolvedSpaceType === 'cabin') {
+      maxAllowed = Number(resto.total_cabins) || Number(resto.total_tables) || 0;
+    } else if (resolvedSpaceType === 'room') {
+      maxAllowed = Number(resto.total_rooms) || Number(resto.total_tables) || 0;
+    } else if (resolvedSpaceType === 'vip') {
+      maxAllowed = Number(resto.total_vip) || Number(resto.total_tables) || 0;
+    } else {
+      maxAllowed = Number(resto.total_tables) || 0;
+    }
+
+    const parsedSpaceNum = parseInt(resolvedSpaceNum, 10);
+    if (maxAllowed > 0 && parsedSpaceNum > maxAllowed) {
+      return res.status(400).json({
+        error: 'invalid_table_number',
+        message: `${resolvedSpaceType} #${resolvedSpaceNum} is not registered for this restaurant.`
+      });
+    }
+
+    // Step 7: REQUIRE & Verify QR Token Server-Side
+    const receivedQrToken = String(table_token || tkn || token || '').trim();
+    if (!receivedQrToken) {
+      return res.status(403).json({
+        error: 'invalid_qr',
+        reason: 'missing_token',
+        message: 'A valid Table QR scan token is required to verify location.'
+      });
+    }
+
+    const secret = resto.qr_secret || (`${resto.id}_${resto.slug}_tq`);
+    const qrResult = verifyQrToken(
+      resto.slug,
+      resolvedSpaceType,
+      resolvedSpaceNum,
+      secret,
+      receivedQrToken
+    );
+
+    if (!qrResult || !qrResult.valid) {
+      return res.status(403).json({
+        error: 'invalid_qr',
+        reason: qrResult?.reason || 'invalid_token',
+        message: 'QR token verification failed. Please scan the official QR code at your seat.'
+      });
+    }
+
+    // Step 8: Authoritative Server-Side Geofence Validation (AFTER QR Verification)
     const restoLat = Number(resto.latitude);
     const restoLng = Number(resto.longitude);
     const hasRestaurantLocation = Boolean(
@@ -629,9 +745,27 @@ router.post('/orders/verify-location', async (req, res) => {
 
     // If restaurant has not configured GPS coordinates, verification is not required
     if (!hasRestaurantLocation) {
+      const verificationToken = 'tq_loc_' + crypto.randomBytes(24).toString('hex');
+      const expiryMinutes = 20;
+      const expiresAt = new Date(Date.now() + expiryMinutes * 60 * 1000);
+      const jwtSecret = process.env.JWT_SECRET || 'touchqr_secure_location_secret_key_2026';
+      const locationSessionToken = jwt.sign(
+        {
+          vtoken: verificationToken,
+          restaurant_id: resto.id,
+          slug: resto.slug,
+          table_number: cleanTable,
+          space_type: resolvedSpaceType,
+          table_token: receivedQrToken
+        },
+        jwtSecret,
+        { expiresIn: `${expiryMinutes}m` }
+      );
       return res.json({
         verified: true,
         required: false,
+        verification_token: verificationToken,
+        location_token: locationSessionToken,
         message: 'Location verification not required for this restaurant'
       });
     }
@@ -676,9 +810,8 @@ router.post('/orders/verify-location', async (req, res) => {
       });
     }
 
-    // Generate opaque verification token (NO raw lat/lng client payload)
+    // Step 9: BOTH QR AND GPS PASSED -> Generate Opaque Verification Token & JWT
     const verificationToken = 'tq_loc_' + crypto.randomBytes(24).toString('hex');
-    const cleanTable = String(table_number || '').trim();
     const expiryMinutes = 20;
     const expiresAt = new Date(Date.now() + expiryMinutes * 60 * 1000);
 
@@ -702,7 +835,9 @@ router.post('/orders/verify-location', async (req, res) => {
         vtoken: verificationToken,
         restaurant_id: resto.id,
         slug: resto.slug,
-        table_number: cleanTable
+        table_number: cleanTable,
+        space_type: resolvedSpaceType,
+        table_token: receivedQrToken
       },
       jwtSecret,
       { expiresIn: `${expiryMinutes}m` }
@@ -721,16 +856,22 @@ router.post('/orders/verify-location', async (req, res) => {
     });
   } catch (err) {
     console.error('[LOCATION VERIFY ERROR]', err);
-    return res.status(500).json({ error: 'Failed to verify location', details: err.message });
+    return res.status(500).json({ error: 'Failed to verify location' });
   }
 });
 
-// POST Create Direct Table Order (KOT Order)
-router.post('/orders', async (req, res) => {
+// POST Create Direct Table Order (KOT Order) with Authoritative Dual QR + Location Authorization
+router.post('/orders', orderCreationRateLimiter, async (req, res) => {
   try {
     const {
       slug,
       table_number,
+      space_type,
+      table_token,
+      tkn,
+      token,
+      location_token,
+      verification_token,
       customer_name,
       customer_phone,
       items,
@@ -738,65 +879,241 @@ router.post('/orders', async (req, res) => {
       customer_latitude,
       customer_longitude,
       customer_accuracy,
-      distance_meters
+      distance_meters,
+      idempotency_key
     } = req.body;
 
-    // Step 1: Resolve Restaurant Context
+    // Step 1: Validate Request Structure & Input Limits
+    if (!slug || typeof slug !== 'string' || slug.trim() === '' || slug.length > 100) {
+      return res.status(400).json({ error: 'missing_slug', message: 'Valid restaurant slug is required' });
+    }
+
+    if (!items || !Array.isArray(items) || items.length === 0) {
+      return res.status(400).json({ error: 'invalid_items', message: 'Order items are required' });
+    }
+
+    if (items.length > 100) {
+      return res.status(400).json({ error: 'invalid_items', message: 'Order item count cannot exceed 100 items per round' });
+    }
+
+    // Step 2: Validate Each Item's Quantities & Numeric Values
+    for (const it of items) {
+      if (!it || typeof it !== 'object') {
+        return res.status(400).json({ error: 'invalid_items', message: 'Invalid item format in payload' });
+      }
+      const rawQty = it.quantity;
+      const parsedQty = parseInt(rawQty, 10);
+      if (isNaN(parsedQty) || !isFinite(parsedQty) || parsedQty < 1 || parsedQty > 99) {
+        return res.status(400).json({ error: 'invalid_quantity', message: 'Item quantity must be a positive integer between 1 and 99' });
+      }
+      if (it.price !== undefined && it.price !== null) {
+        const p = Number(it.price);
+        if (isNaN(p) || !isFinite(p) || p < 0 || p > 1000000) {
+          return res.status(400).json({ error: 'invalid_price', message: 'Item price is invalid' });
+        }
+      }
+      if (it.dish_id && String(it.dish_id).length > 60) {
+        return res.status(400).json({ error: 'invalid_items', message: 'Item identifier is invalid' });
+      }
+    }
+
+    // Step 3: Resolve Restaurant Context
     const resto = await resolveRestaurant(req, slug);
     if (!resto) {
-      return res.status(404).json({ error: 'Restaurant not found' });
+      return res.status(404).json({ error: 'restaurant_not_found', message: 'Restaurant not found' });
     }
     const targetId = resto.id;
 
-    // Step 2: Verify Restaurant is OPEN & accepting orders
-    if (resto.active === 0 || resto.active === false) {
+    // Step 4: Verify Restaurant is OPEN & accepting orders
+    if (resto.active === 0 || resto.active === false || resto.active === 'false') {
       return res.status(403).json({
         error: 'restaurant_inactive',
         message: 'This restaurant is currently closed / offline.'
       });
     }
-    if (resto.direct_ordering_enabled === 0 || resto.direct_ordering_enabled === false) {
+    if (resto.direct_ordering_enabled === 0 || resto.direct_ordering_enabled === false || resto.direct_ordering_enabled === 'false') {
       return res.status(403).json({
         error: 'ordering_disabled',
         message: 'Direct table ordering is temporarily paused by the restaurant.'
       });
     }
 
-    if (!items || !Array.isArray(items) || items.length === 0) {
-      return res.status(400).json({ error: 'Order items are required' });
+    // Step 5: Resolve Canonical Exact Space Identity (Table, Cabin, Room, VIP)
+    const rawTable = String(table_number || '').trim();
+    if (!rawTable || rawTable.length > 20) {
+      return res.status(400).json({ error: 'invalid_table_number', message: 'Table or space number is required and must be valid' });
+    }
+    const resolvedSpaceType = normalizeSpaceType(space_type || rawTable || resto.table_prefix || 'table');
+    const resolvedSpaceNum = normalizeSpaceNumber(rawTable);
+    const cleanTable = rawTable;
+
+    // Step 6: Validate Space Capacity against Restaurant Configuration
+    let maxAllowed = 0;
+    if (resolvedSpaceType === 'cabin') {
+      maxAllowed = Number(resto.total_cabins) || Number(resto.total_tables) || 0;
+    } else if (resolvedSpaceType === 'room') {
+      maxAllowed = Number(resto.total_rooms) || Number(resto.total_tables) || 0;
+    } else if (resolvedSpaceType === 'vip') {
+      maxAllowed = Number(resto.total_vip) || Number(resto.total_tables) || 0;
+    } else {
+      maxAllowed = Number(resto.total_tables) || 0;
     }
 
-    // Step 2b: Validate Table / Space Number against Restaurant Capacity
-    if (table_number) {
-      const match = String(table_number).match(/\d+/);
-      const spaceNum = match ? parseInt(match[0], 10) : 0;
-      const lowerTbl = String(table_number).toLowerCase();
-      
-      let maxAllowed = 0;
-      let spaceName = 'Table';
-      if (lowerTbl.includes('cabin')) {
-        maxAllowed = Number(resto.total_cabins) || Number(resto.total_tables) || 0;
-        spaceName = 'Cabin';
-      } else if (lowerTbl.includes('room')) {
-        maxAllowed = Number(resto.total_rooms) || Number(resto.total_tables) || 0;
-        spaceName = 'Room';
-      } else if (lowerTbl.includes('vip')) {
-        maxAllowed = Number(resto.total_vip) || Number(resto.total_tables) || 0;
-        spaceName = 'VIP Lounge';
-      } else {
-        maxAllowed = Number(resto.total_tables) || 0;
-        spaceName = 'Table';
+    const spaceNum = parseInt(resolvedSpaceNum, 10);
+    if (maxAllowed > 0 && spaceNum > maxAllowed) {
+      return res.status(400).json({
+        error: 'invalid_table_number',
+        message: `${resolvedSpaceType} #${resolvedSpaceNum} is not registered. Please scan the official QR code at your seat.`
+      });
+    }
+
+    // Step 7: REQUIRE & Authoritatively Verify QR Token Server-Side
+    const receivedQrToken = String(table_token || tkn || token || '').trim();
+    if (!receivedQrToken) {
+      return res.status(403).json({
+        error: 'invalid_qr',
+        reason: 'missing_token',
+        message: 'A valid Table QR scan token is required to place an order.'
+      });
+    }
+
+    const secret = resto.qr_secret || (`${resto.id}_${resto.slug}_tq`);
+    const qrResult = verifyQrToken(
+      resto.slug,
+      resolvedSpaceType,
+      resolvedSpaceNum,
+      secret,
+      receivedQrToken
+    );
+
+    if (!qrResult || !qrResult.valid) {
+      return res.status(403).json({
+        error: 'invalid_qr',
+        reason: qrResult?.reason || 'invalid_token',
+        message: 'QR token verification failed. Please scan the official QR code at your seat.'
+      });
+    }
+
+    // Step 8: Authoritative Location Authorization Validation
+    const restoLat = Number(resto.latitude);
+    const restoLng = Number(resto.longitude);
+    const hasRestaurantLocation = Boolean(
+      resto.latitude != null && resto.longitude != null &&
+      !isNaN(restoLat) && !isNaN(restoLng) &&
+      restoLat !== 0 && restoLng !== 0
+    );
+
+    let distanceMetersValue = distance_meters !== undefined && distance_meters !== null && !isNaN(Number(distance_meters)) ? Number(distance_meters) : null;
+
+    if (hasRestaurantLocation) {
+      let isLocationValid = false;
+      const jwtSecret = process.env.JWT_SECRET || 'touchqr_secure_location_secret_key_2026';
+      let extractedVToken = null;
+
+      // 1. Verify signed session JWT if present (Enforces exact restaurant_id, space type & number)
+      if (location_token) {
+        try {
+          const decoded = jwt.verify(location_token, jwtSecret);
+          if (decoded && Number(decoded.restaurant_id) === Number(resto.id)) {
+            // Verify restaurant slug consistency
+            if (decoded.slug && decoded.slug.toLowerCase() !== resto.slug.toLowerCase()) {
+              return res.status(403).json({
+                error: 'restaurant_mismatch',
+                message: 'Location token was verified for a different restaurant.'
+              });
+            }
+
+            // Verify exact space type and space number match
+            const tokenSpaceType = normalizeSpaceType(decoded.space_type || decoded.table_number || 'table');
+            const tokenSpaceNum = normalizeSpaceNumber(decoded.table_number);
+
+            if (tokenSpaceType !== resolvedSpaceType) {
+              return res.status(403).json({
+                error: 'space_mismatch',
+                message: `📍 Location token was verified for ${tokenSpaceType} #${tokenSpaceNum}, but order is for ${resolvedSpaceType} #${resolvedSpaceNum}.`
+              });
+            }
+
+            if (tokenSpaceNum !== resolvedSpaceNum) {
+              return res.status(403).json({
+                error: 'table_mismatch',
+                message: `📍 Location token was verified for a different space (${tokenSpaceNum}). Please verify location for Table ${cleanTable}.`
+              });
+            }
+
+            // If location token contains QR token claim, verify consistency with received QR token
+            if (decoded.table_token && decoded.table_token.toLowerCase() !== receivedQrToken.toLowerCase()) {
+              return res.status(403).json({
+                error: 'invalid_qr',
+                reason: 'token_mismatch',
+                message: 'Location authorization was issued for a different QR token.'
+              });
+            }
+
+            extractedVToken = decoded.vtoken;
+            isLocationValid = true;
+          }
+        } catch (tokErr) {
+          // Token expired or invalid signature - fall through to database lookup or reject
+        }
       }
 
-      if (maxAllowed > 0 && spaceNum > maxAllowed) {
-        return res.status(400).json({
-          error: 'invalid_table_number',
-          message: `${spaceName} #${spaceNum} is not registered. Please scan the official QR code at your seat.`
+      if (!isLocationValid && verification_token) {
+        extractedVToken = verification_token;
+      }
+
+      // 2. Authoritative check against server-side database verification records
+      if (extractedVToken) {
+        try {
+          const verRows = await query(
+            `SELECT id, distance_meters, expires_at, table_number FROM table_location_verifications 
+             WHERE restaurant_id = $1 AND verification_token = $2 
+             ORDER BY id DESC LIMIT 1`,
+            [resto.id, extractedVToken]
+          );
+          if (verRows && verRows.length > 0) {
+            const vRecord = verRows[0];
+            const vSpaceType = normalizeSpaceType(vRecord.table_number);
+            const vSpaceNum = normalizeSpaceNumber(vRecord.table_number);
+
+            if (vSpaceType !== resolvedSpaceType) {
+              return res.status(403).json({
+                error: 'space_mismatch',
+                message: `📍 Location verification record was created for ${vSpaceType}, but order is for ${resolvedSpaceType}.`
+              });
+            }
+
+            if (vSpaceNum !== resolvedSpaceNum) {
+              return res.status(403).json({
+                error: 'table_mismatch',
+                message: `📍 Location verification record was created for Table ${vRecord.table_number}. Please verify location for Table ${cleanTable}.`
+              });
+            }
+
+            const expTime = new Date(vRecord.expires_at).getTime();
+            // Allow 5-minute clock skew buffer
+            if (!isNaN(expTime) && expTime > (Date.now() - 5 * 60 * 1000)) {
+              isLocationValid = true;
+              if (vRecord.distance_meters != null && !isNaN(Number(vRecord.distance_meters))) {
+                distanceMetersValue = Number(vRecord.distance_meters);
+              }
+            }
+          }
+        } catch (vErr) {
+          console.warn('Notice checking verification table:', vErr.message);
+        }
+      }
+
+      // STRICT DUAL AUTHORIZATION: Both QR and Location proofs are mandatory
+      if (!isLocationValid) {
+        return res.status(403).json({
+          error: 'location_required',
+          message: '📍 Location verification is required to place table orders. Please verify your location on your device.'
         });
       }
     }
 
-    // Step 3: Check cart + price + availability on SERVER
+    // Step 9: Check cart + price + availability on SERVER (Only after authorization passes)
     const dbDishes = await query('SELECT id, name, price, price_half, available FROM dishes WHERE restaurant_id = $1', [targetId]);
     const dbCombos = await query('SELECT id, name, price, available FROM combos WHERE restaurant_id = $1', [targetId]);
     const dishMap = new Map((dbDishes || []).map(d => [String(d.id), d]));
@@ -817,7 +1134,6 @@ router.post('/orders', async (req, res) => {
             message: `"${dbItem.name}" is currently sold out / unavailable.`
           });
         }
-        // Use client item.price if positive (accounts for half-portion or modifiers), or fallback to DB base price
         const itemPrice = Number(item.price) > 0 ? Number(item.price) : Number(dbItem.price || 0);
         const qty = Math.max(1, parseInt(item.quantity) || 1);
         serverVerifiedTotal += itemPrice * qty;
@@ -846,98 +1162,31 @@ router.post('/orders', async (req, res) => {
       }
     }
 
-    // Step 4: Authoritative Server-Side Geofence Distance Validation
-    const restoLat = Number(resto.latitude);
-    const restoLng = Number(resto.longitude);
-    const hasRestaurantLocation = Boolean(
-      resto.latitude != null && resto.longitude != null &&
-      !isNaN(restoLat) && !isNaN(restoLng) &&
-      restoLat !== 0 && restoLng !== 0
-    );
+    // Step 10: Idempotency & In-Flight Concurrency Mutex
+    const customIdempKey = req.headers['x-idempotency-key'] || idempotency_key;
+    const itemsSig = crypto.createHash('sha256').update(JSON.stringify(verifiedItems.map(i => ({ id: i.dish_id, q: i.quantity, p: i.price })))).digest('hex').substring(0, 16);
+    const idempKey = customIdempKey 
+      ? `${targetId}:${String(customIdempKey).trim().substring(0, 64)}` 
+      : `${targetId}:${cleanTable}:${itemsSig}`;
+    const idempTtl = customIdempKey ? 60000 : 3000;
 
-    let distanceMetersValue = distance_meters !== undefined && distance_meters !== null && !isNaN(Number(distance_meters)) ? Number(distance_meters) : null;
+    // Check idempotency cache (3s for debounce signature, 60s for explicit client idempotency key)
+    const cachedIdemp = orderIdempotencyCache.get(idempKey);
+    if (cachedIdemp && (Date.now() - cachedIdemp.timestamp < idempTtl)) {
+      return res.json({ ...cachedIdemp.response });
+    }
 
-    if (hasRestaurantLocation) {
-      let isVerified = false;
-      const cleanTable = String(table_number || '1').trim();
-      const normalizeSpace = (s) => String(s || '').replace(/^(table|cabin|room|vip|tbl|🍽️|🛋️|🏨|👑|\s)+/i, '').trim().toLowerCase();
-      const normOrderTable = normalizeSpace(cleanTable);
-      const jwtSecret = process.env.JWT_SECRET || 'touchqr_secure_location_secret_key_2026';
-      let extractedVToken = null;
-
-      // 1. Verify signed session JWT if present (Enforces exact restaurant_id AND table/space match)
-      if (req.body.location_token) {
-        try {
-          const decoded = jwt.verify(req.body.location_token, jwtSecret);
-          if (decoded && Number(decoded.restaurant_id) === Number(resto.id)) {
-            const tokenTable = String(decoded.table_number || '').trim().toLowerCase();
-            const orderTable = cleanTable.toLowerCase();
-            const normTokenTable = normalizeSpace(tokenTable);
-            if (normTokenTable && normOrderTable && normTokenTable !== normOrderTable && tokenTable !== orderTable) {
-              return res.status(403).json({
-                error: 'table_mismatch',
-                message: `📍 Location token was verified for a different space/table (${decoded.table_number}). Please verify location for Table ${cleanTable}.`
-              });
-            }
-            extractedVToken = decoded.vtoken;
-            isVerified = true;
-          }
-        } catch (tokErr) {
-          // Token expired or invalid signature - fall through to database lookup or reject
-        }
-      }
-
-      if (!isVerified && req.body.verification_token) {
-        extractedVToken = req.body.verification_token;
-      }
-
-      // 2. Authoritative check against server-side database verification records
-      if (extractedVToken) {
-        try {
-          const verRows = await query(
-            `SELECT id, distance_meters, expires_at, table_number FROM table_location_verifications 
-             WHERE restaurant_id = $1 AND verification_token = $2 
-             ORDER BY id DESC LIMIT 1`,
-            [resto.id, extractedVToken]
-          );
-          if (verRows && verRows.length > 0) {
-            const vRecord = verRows[0];
-            const vTable = String(vRecord.table_number || '').trim().toLowerCase();
-            const orderTable = cleanTable.toLowerCase();
-            const normVTable = normalizeSpace(vTable);
-            if (normVTable && normOrderTable && normVTable !== normOrderTable && vTable !== orderTable) {
-              return res.status(403).json({
-                error: 'table_mismatch',
-                message: `📍 Location token was verified for Table ${vRecord.table_number}. Please verify location for Table ${cleanTable}.`
-              });
-            }
-            const expTime = new Date(vRecord.expires_at).getTime();
-            // Allow 5-minute clock skew buffer
-            if (!isNaN(expTime) && expTime > (Date.now() - 5 * 60 * 1000)) {
-              isVerified = true;
-              if (vRecord.distance_meters != null && !isNaN(Number(vRecord.distance_meters))) {
-                distanceMetersValue = Number(vRecord.distance_meters);
-              }
-            }
-          }
-        } catch (vErr) {
-          console.warn('Notice checking verification table:', vErr.message);
-        }
-      }
-
-      // STRICT AUTHORIZATION: Raw coordinates alone MUST NEVER authorize an order.
-      // If verification token is missing, invalid, expired, or for a different table, block the order.
-      if (!isVerified) {
-        return res.status(403).json({
-          error: 'location_required',
-          message: '📍 Location verification is required to place table orders. Please verify your location on your device.'
-        });
+    // Check if an identical request is currently in-flight
+    if (orderInFlightMutex.has(idempKey)) {
+      try {
+        const inFlightResult = await orderInFlightMutex.get(idempKey);
+        return res.json({ ...inFlightResult });
+      } catch (e) {
+        // If prior in-flight failed, proceed to fresh attempt
       }
     }
 
-    // Step 5: Multi-Round Table Session Detection
-    const cleanTable = String(table_number || '1').trim();
-
+    // Step 11: Multi-Round Table Session Detection
     // 🛡️ Rapid Multi-Tap / Duplicate Submission Guard (3-Second Window)
     try {
       const recentOrder = await query(`
@@ -950,169 +1199,260 @@ router.post('/orders', async (req, res) => {
       if (recentOrder && recentOrder.length > 0) {
         const prev = recentOrder[0];
         if (Number(prev.total_amount) === serverVerifiedTotal) {
-          console.log(`🛡️ [DEBOUNCE GUARD] Prevented duplicate order creation from rapid multi-tap for Table ${cleanTable} (Order #${prev.id})`);
-          return res.json({
+          const debounceResp = {
             success: true,
             order_id: prev.id,
             total_amount: prev.total_amount,
             session_id: prev.session_id,
             round_number: prev.round_number,
             status: 'pending'
-          });
+          };
+          orderIdempotencyCache.set(idempKey, { timestamp: Date.now(), response: debounceResp });
+          return res.json(debounceResp);
         }
       }
     } catch (e) {}
 
-    let openOrders = [];
-    try {
-      const twelveHoursAgo = new Date(Date.now() - 12 * 60 * 60 * 1000).toISOString();
-      openOrders = await query(`
-        SELECT id, session_id, round_number, customer_name, customer_phone, items, total_amount, status
-        FROM orders
-        WHERE restaurant_id = $1 AND table_number = $2 
-          AND status IN ('pending', 'preparing', 'kitchen', 'accepted', 'served') 
-          AND (is_settled = 0 OR is_settled IS NULL)
-          AND created_at >= $3
-        ORDER BY id ASC
-      `, [targetId, cleanTable, twelveHoursAgo]);
-    } catch (openErr) {
-      console.warn('Auto-healing session columns on open orders check:', openErr.message);
-      try { await query('ALTER TABLE orders ADD COLUMN IF NOT EXISTS session_id VARCHAR(100)'); } catch (e) {}
-      try { await query('ALTER TABLE orders ADD COLUMN IF NOT EXISTS round_number INT DEFAULT 1'); } catch (e) {}
-      try { await query('ALTER TABLE orders ADD COLUMN IF NOT EXISTS parent_order_id INT'); } catch (e) {}
-      try { await query('ALTER TABLE orders ADD COLUMN IF NOT EXISTS is_settled INT DEFAULT 0'); } catch (e) {}
-      const twelveHoursAgo = new Date(Date.now() - 12 * 60 * 60 * 1000).toISOString();
-      openOrders = await query(`
-        SELECT id, session_id, round_number, customer_name, customer_phone, items, total_amount, status
-        FROM orders
-        WHERE restaurant_id = $1 AND table_number = $2 
-          AND status IN ('pending', 'preparing', 'kitchen', 'accepted', 'served') 
-          AND (is_settled = 0 OR is_settled IS NULL)
-          AND created_at >= $3
-        ORDER BY id ASC
-      `, [targetId, cleanTable, twelveHoursAgo]);
-    }
-
-    let sessionId = null;
-    let roundNumber = 1;
-    let parentOrderId = null;
-    let customerName = customer_name || 'Dine-In Customer';
-    let customerPhone = customer_phone || '';
-    const isAddonOrder = openOrders.length > 0;
-
-    if (isAddonOrder) {
-      const primaryOrder = openOrders[0];
-      sessionId = primaryOrder.session_id || `sess_${targetId}_${cleanTable}_${primaryOrder.id}`;
-      parentOrderId = primaryOrder.id;
-      customerName = primaryOrder.customer_name || customerName;
-      customerPhone = primaryOrder.customer_phone || customerPhone;
-
-      // Determine next round number in this table session
-      const maxRound = openOrders.reduce((max, o) => Math.max(max, Number(o.round_number) || 1), 1);
-      roundNumber = maxRound + 1;
-
-      // Backfill session_id on primary order if needed
-      if (!primaryOrder.session_id) {
-        try {
-          await query('UPDATE orders SET session_id = $1 WHERE id = $2', [sessionId, primaryOrder.id]);
-        } catch (e) {}
-      }
-    } else {
-      sessionId = `sess_${targetId}_${cleanTable}_${Date.now()}`;
-      roundNumber = 1;
-      parentOrderId = null;
-    }
-
-    // Tag each verified item with this specific cooking round
-    const taggedItems = verifiedItems.map(item => ({
-      ...item,
-      round: roundNumber,
-      ordered_at: new Date().toISOString()
-    }));
-
-    const itemsJson = JSON.stringify(taggedItems);
-    const createdAt = new Date().toISOString();
-    const finalTotal = serverVerifiedTotal > 0 ? serverVerifiedTotal : (Number(total_amount) || 0);
-
-    let result = null;
-    try {
-      result = await query(`
-        INSERT INTO orders (
-          restaurant_id, table_number, customer_name, customer_phone, items, total_amount, status, sent_to_kds, created_at,
-          customer_latitude, customer_longitude, customer_accuracy, distance_meters,
-          session_id, round_number, parent_order_id, is_settled
-        ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17) RETURNING id
-      `, [
-        targetId,
-        cleanTable,
-        customerName,
-        customerPhone,
-        itemsJson,
-        finalTotal,
-        'pending',
-        0,
-        createdAt,
-        customer_latitude !== undefined && customer_latitude !== null ? Number(customer_latitude) : null,
-        customer_longitude !== undefined && customer_longitude !== null ? Number(customer_longitude) : null,
-        customer_accuracy !== undefined && customer_accuracy !== null ? Number(customer_accuracy) : null,
-        distanceMetersValue !== null && !isNaN(Number(distanceMetersValue)) ? Number(distanceMetersValue) : null,
-        sessionId,
-        roundNumber,
-        parentOrderId,
-        0
-      ]);
-    } catch (insertErr) {
-      console.warn('Auto-healing columns on order insertion:', insertErr.message);
-      try { await query('ALTER TABLE orders ADD COLUMN IF NOT EXISTS session_id VARCHAR(100)'); } catch (e) {}
-      try { await query('ALTER TABLE orders ADD COLUMN IF NOT EXISTS round_number INT DEFAULT 1'); } catch (e) {}
-      try { await query('ALTER TABLE orders ADD COLUMN IF NOT EXISTS parent_order_id INT'); } catch (e) {}
-      try { await query('ALTER TABLE orders ADD COLUMN IF NOT EXISTS is_settled INT DEFAULT 0'); } catch (e) {}
-      try { await query('ALTER TABLE orders ADD COLUMN IF NOT EXISTS sent_to_kds INT DEFAULT 0'); } catch (e) {}
-      try { await query('ALTER TABLE orders ADD COLUMN IF NOT EXISTS kitchen_prepared INT DEFAULT 0'); } catch (e) {}
-      try { await query('ALTER TABLE orders ADD COLUMN IF NOT EXISTS customer_latitude DECIMAL(10, 8)'); } catch (e) {}
-      try { await query('ALTER TABLE orders ADD COLUMN IF NOT EXISTS customer_longitude DECIMAL(11, 8)'); } catch (e) {}
-      try { await query('ALTER TABLE orders ADD COLUMN IF NOT EXISTS customer_accuracy INT'); } catch (e) {}
-      try { await query('ALTER TABLE orders ADD COLUMN IF NOT EXISTS distance_meters INT'); } catch (e) {}
-
-      result = await query(`
-        INSERT INTO orders (
-          restaurant_id, table_number, customer_name, customer_phone, items, total_amount, status, sent_to_kds, created_at,
-          session_id, round_number, parent_order_id, is_settled
-        ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13) RETURNING id
-      `, [
-        targetId,
-        cleanTable,
-        customerName,
-        customerPhone,
-        itemsJson,
-        finalTotal,
-        'pending',
-        0,
-        createdAt,
-        sessionId,
-        roundNumber,
-        parentOrderId,
-        0
-      ]);
-    }
-
-    const orderId = result[0]?.id || result.lastInsertRowid;
-
-    res.json({
-      success: true,
-      order_id: orderId,
-      primary_order_id: parentOrderId || orderId,
-      session_id: sessionId,
-      round_number: roundNumber,
-      is_addon: isAddonOrder,
-      status: 'pending',
-      table_number: cleanTable,
-      total_amount: finalTotal,
-      distance_meters: distanceMetersValue,
-      message: isAddonOrder
-        ? `🎉 Round ${roundNumber} (Add-on Order #${orderId}) placed for Table #${cleanTable}!`
-        : `🎉 Order #${orderId} placed successfully for Table #${cleanTable}!`
+    // Create deferred execution promise for in-flight mutex lock
+    let executionResolve, executionReject;
+    const executionPromise = new Promise((resolve, reject) => {
+      executionResolve = resolve;
+      executionReject = reject;
     });
+    orderInFlightMutex.set(idempKey, executionPromise);
+
+    try {
+      const responsePayload = await withTransaction(async (txQuery) => {
+        // 🛡️ Step A: Distributed Advisory Lock in PostgreSQL (Scoped to exact restaurant + table)
+        if (getDbType() === 'postgres') {
+          await txQuery('SELECT pg_advisory_xact_lock(hashtext($1))', [`order_lock_${targetId}_${cleanTable}`]);
+        }
+
+        // 🛡️ Step B: Durable Idempotency Check by customIdempKey (if supplied by client)
+        if (customIdempKey) {
+          const storedKey = String(customIdempKey).trim().substring(0, 100);
+          const existingByKey = await txQuery(`
+            SELECT id, session_id, round_number, parent_order_id, status, total_amount, distance_meters 
+            FROM orders 
+            WHERE restaurant_id = $1 AND idempotency_key = $2 
+            ORDER BY id DESC LIMIT 1
+          `, [targetId, storedKey]);
+
+          if (existingByKey && existingByKey.length > 0) {
+            const ex = existingByKey[0];
+            const isAddon = (Number(ex.round_number) || 1) > 1;
+            return {
+              success: true,
+              order_id: ex.id,
+              primary_order_id: ex.parent_order_id || ex.id,
+              session_id: ex.session_id,
+              round_number: Number(ex.round_number) || 1,
+              is_addon: isAddon,
+              status: ex.status,
+              table_number: cleanTable,
+              total_amount: Number(ex.total_amount),
+              distance_meters: ex.distance_meters,
+              message: isAddon
+                ? `🎉 Round ${ex.round_number} (Add-on Order #${ex.id}) placed for Table #${cleanTable}!`
+                : `🎉 Order #${ex.id} placed successfully for Table #${cleanTable}!`
+            };
+          }
+        }
+
+        // 🛡️ Step C: Distributed Rapid Multi-Tap / Duplicate Submission Guard (3-Second Window inside Lock)
+        const threeSecAgo = new Date(Date.now() - 3000).toISOString();
+        const recentOrder = await txQuery(`
+          SELECT id, total_amount, created_at, session_id, round_number, parent_order_id, status, distance_meters
+          FROM orders
+          WHERE restaurant_id = $1 AND table_number = $2 AND created_at >= $3
+          ORDER BY id DESC LIMIT 1
+        `, [targetId, cleanTable, threeSecAgo]);
+
+        if (recentOrder && recentOrder.length > 0) {
+          const prev = recentOrder[0];
+          if (Number(prev.total_amount) === serverVerifiedTotal) {
+            const isAddon = (Number(prev.round_number) || 1) > 1;
+            return {
+              success: true,
+              order_id: prev.id,
+              primary_order_id: prev.parent_order_id || prev.id,
+              session_id: prev.session_id,
+              round_number: Number(prev.round_number) || 1,
+              is_addon: isAddon,
+              status: prev.status || 'pending',
+              table_number: cleanTable,
+              total_amount: Number(prev.total_amount),
+              distance_meters: prev.distance_meters,
+              message: isAddon
+                ? `🎉 Round ${prev.round_number} (Add-on Order #${prev.id}) placed for Table #${cleanTable}!`
+                : `🎉 Order #${prev.id} placed successfully for Table #${cleanTable}!`
+            };
+          }
+        }
+
+        // Step D: Open Orders Detection (Atomically under Lock)
+        const twelveHoursAgo = new Date(Date.now() - 12 * 60 * 60 * 1000).toISOString();
+        let openOrders = [];
+        try {
+          openOrders = await txQuery(`
+            SELECT id, session_id, round_number, customer_name, customer_phone, items, total_amount, status
+            FROM orders
+            WHERE restaurant_id = $1 AND table_number = $2 
+              AND status IN ('pending', 'preparing', 'kitchen', 'accepted', 'served') 
+              AND (is_settled = 0 OR is_settled IS NULL)
+              AND created_at >= $3
+            ORDER BY id ASC
+          `, [targetId, cleanTable, twelveHoursAgo]);
+        } catch (openErr) {
+          try { await txQuery('ALTER TABLE orders ADD COLUMN IF NOT EXISTS session_id VARCHAR(100)'); } catch (e) {}
+          try { await txQuery('ALTER TABLE orders ADD COLUMN IF NOT EXISTS round_number INT DEFAULT 1'); } catch (e) {}
+          try { await txQuery('ALTER TABLE orders ADD COLUMN IF NOT EXISTS parent_order_id INT'); } catch (e) {}
+          try { await txQuery('ALTER TABLE orders ADD COLUMN IF NOT EXISTS is_settled INT DEFAULT 0'); } catch (e) {}
+          openOrders = await txQuery(`
+            SELECT id, session_id, round_number, customer_name, customer_phone, items, total_amount, status
+            FROM orders
+            WHERE restaurant_id = $1 AND table_number = $2 
+              AND status IN ('pending', 'preparing', 'kitchen', 'accepted', 'served') 
+              AND (is_settled = 0 OR is_settled IS NULL)
+              AND created_at >= $3
+            ORDER BY id ASC
+          `, [targetId, cleanTable, twelveHoursAgo]);
+        }
+
+        let sessionId = null;
+        let roundNumber = 1;
+        let parentOrderId = null;
+        let customerName = String(customer_name || 'Dine-In Customer').trim().substring(0, 100);
+        let customerPhone = String(customer_phone || '').trim().substring(0, 30);
+        const isAddonOrder = openOrders.length > 0;
+
+        if (isAddonOrder) {
+          const primaryOrder = openOrders[0];
+          sessionId = primaryOrder.session_id || `sess_${targetId}_${cleanTable}_${primaryOrder.id}`;
+          parentOrderId = primaryOrder.id;
+          customerName = primaryOrder.customer_name || customerName;
+          customerPhone = primaryOrder.customer_phone || customerPhone;
+
+          const maxRound = openOrders.reduce((max, o) => Math.max(max, Number(o.round_number) || 1), 1);
+          roundNumber = maxRound + 1;
+
+          if (!primaryOrder.session_id) {
+            try {
+              await txQuery('UPDATE orders SET session_id = $1 WHERE id = $2', [sessionId, primaryOrder.id]);
+            } catch (e) {}
+          }
+        } else {
+          sessionId = `sess_${targetId}_${cleanTable}_${Date.now()}`;
+          roundNumber = 1;
+          parentOrderId = null;
+        }
+
+        // Tag each verified item with this specific cooking round
+        const taggedItems = verifiedItems.map(item => ({
+          ...item,
+          round: roundNumber,
+          ordered_at: new Date().toISOString()
+        }));
+
+        const itemsJson = JSON.stringify(taggedItems);
+        const createdAt = new Date().toISOString();
+        const finalTotal = serverVerifiedTotal > 0 ? serverVerifiedTotal : (Number(total_amount) || 0);
+        const storedIdempKey = customIdempKey ? String(customIdempKey).trim().substring(0, 100) : null;
+
+        let result = null;
+        try {
+          result = await txQuery(`
+            INSERT INTO orders (
+              restaurant_id, table_number, customer_name, customer_phone, items, total_amount, status, sent_to_kds, created_at,
+              customer_latitude, customer_longitude, customer_accuracy, distance_meters,
+              session_id, round_number, parent_order_id, is_settled, idempotency_key
+            ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18) RETURNING id
+          `, [
+            targetId,
+            cleanTable,
+            customerName,
+            customerPhone,
+            itemsJson,
+            finalTotal,
+            'pending',
+            0,
+            createdAt,
+            customer_latitude !== undefined && customer_latitude !== null ? Number(customer_latitude) : null,
+            customer_longitude !== undefined && customer_longitude !== null ? Number(customer_longitude) : null,
+            customer_accuracy !== undefined && customer_accuracy !== null ? Number(customer_accuracy) : null,
+            distanceMetersValue !== null && !isNaN(Number(distanceMetersValue)) ? Number(distanceMetersValue) : null,
+            sessionId,
+            roundNumber,
+            parentOrderId,
+            0,
+            storedIdempKey
+          ]);
+        } catch (insertErr) {
+          console.warn('Auto-healing columns on order insertion:', insertErr.message);
+          try { await txQuery('ALTER TABLE orders ADD COLUMN IF NOT EXISTS session_id VARCHAR(100)'); } catch (e) {}
+          try { await txQuery('ALTER TABLE orders ADD COLUMN IF NOT EXISTS round_number INT DEFAULT 1'); } catch (e) {}
+          try { await txQuery('ALTER TABLE orders ADD COLUMN IF NOT EXISTS parent_order_id INT'); } catch (e) {}
+          try { await txQuery('ALTER TABLE orders ADD COLUMN IF NOT EXISTS is_settled INT DEFAULT 0'); } catch (e) {}
+          try { await txQuery('ALTER TABLE orders ADD COLUMN IF NOT EXISTS sent_to_kds INT DEFAULT 0'); } catch (e) {}
+          try { await txQuery('ALTER TABLE orders ADD COLUMN IF NOT EXISTS kitchen_prepared INT DEFAULT 0'); } catch (e) {}
+          try { await txQuery('ALTER TABLE orders ADD COLUMN IF NOT EXISTS customer_latitude DECIMAL(10, 8)'); } catch (e) {}
+          try { await txQuery('ALTER TABLE orders ADD COLUMN IF NOT EXISTS customer_longitude DECIMAL(11, 8)'); } catch (e) {}
+          try { await txQuery('ALTER TABLE orders ADD COLUMN IF NOT EXISTS customer_accuracy INT'); } catch (e) {}
+          try { await txQuery('ALTER TABLE orders ADD COLUMN IF NOT EXISTS distance_meters INT'); } catch (e) {}
+          try { await txQuery('ALTER TABLE orders ADD COLUMN IF NOT EXISTS idempotency_key VARCHAR(128)'); } catch (e) {}
+
+          result = await txQuery(`
+            INSERT INTO orders (
+              restaurant_id, table_number, customer_name, customer_phone, items, total_amount, status, sent_to_kds, created_at,
+              session_id, round_number, parent_order_id, is_settled, idempotency_key
+            ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14) RETURNING id
+          `, [
+            targetId,
+            cleanTable,
+            customerName,
+            customerPhone,
+            itemsJson,
+            finalTotal,
+            'pending',
+            0,
+            createdAt,
+            sessionId,
+            roundNumber,
+            parentOrderId,
+            0,
+            storedIdempKey
+          ]);
+        }
+
+        const orderId = result[0]?.id || result.lastInsertRowid;
+
+        return {
+          success: true,
+          order_id: orderId,
+          primary_order_id: parentOrderId || orderId,
+          session_id: sessionId,
+          round_number: roundNumber,
+          is_addon: isAddonOrder,
+          status: 'pending',
+          table_number: cleanTable,
+          total_amount: finalTotal,
+          distance_meters: distanceMetersValue,
+          message: isAddonOrder
+            ? `🎉 Round ${roundNumber} (Add-on Order #${orderId}) placed for Table #${cleanTable}!`
+            : `🎉 Order #${orderId} placed successfully for Table #${cleanTable}!`
+        };
+      });
+
+      orderIdempotencyCache.set(idempKey, { timestamp: Date.now(), response: responsePayload });
+      executionResolve(responsePayload);
+      orderInFlightMutex.delete(idempKey);
+
+      res.json(responsePayload);
+    } catch (innerErr) {
+      orderInFlightMutex.delete(idempKey);
+      executionReject(innerErr);
+      throw innerErr;
+    }
   } catch (err) {
     console.error('Create order error:', err);
     res.status(500).json({ error: 'Failed to place order' });
@@ -1219,7 +1559,7 @@ router.get('/orders/active-table', async (req, res) => {
 });
 
 // POST Create Waiter Call / Service Request
-router.post('/service-requests', async (req, res) => {
+router.post('/service-requests', serviceRequestRateLimiter, async (req, res) => {
   try {
     const { slug, table_number, request_type, note } = req.body;
     const resto = await resolveRestaurant(req, slug);
@@ -1227,21 +1567,25 @@ router.post('/service-requests', async (req, res) => {
       return res.status(404).json({ error: 'Restaurant not found' });
     }
 
-    if (!table_number || !request_type) {
-      return res.status(400).json({ error: 'Table number and request type are required' });
+    const cleanTable = String(table_number || '').trim();
+    const cleanType = String(request_type || '').trim();
+    const cleanNote = String(note || '').trim().substring(0, 255);
+
+    if (!cleanTable || !cleanType || cleanTable.length > 20 || cleanType.length > 50) {
+      return res.status(400).json({ error: 'Table number and request type are required and must be valid' });
     }
 
     const result = await query(`
       INSERT INTO service_requests (restaurant_id, table_number, request_type, note, status)
       VALUES ($1, $2, $3, $4, 'pending') RETURNING id
-    `, [resto.id, String(table_number), request_type, note || '']);
+    `, [resto.id, cleanTable, cleanType, cleanNote]);
 
     const requestId = result[0]?.id || result.lastInsertRowid;
 
     res.json({
       success: true,
       request_id: requestId,
-      message: `🛎️ Staff notified for Table ${table_number}! A waiter will attend shortly.`
+      message: `🛎️ Staff notified for Table ${cleanTable}! A waiter will attend shortly.`
     });
   } catch (err) {
     console.error('Create service request error:', err);
