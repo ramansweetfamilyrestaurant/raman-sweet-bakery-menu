@@ -655,15 +655,17 @@ export default function App() {
     try {
       // 📍 GPS Geo-Fencing Radius Check
       let customerGeo = {};
-      if (info && info.latitude && info.longitude && info.location_initialized) {
+      const restoLat = Number(info?.latitude);
+      const restoLng = Number(info?.longitude);
+      if (info && !isNaN(restoLat) && !isNaN(restoLng) && restoLat !== 0 && restoLng !== 0) {
         const geoCheck = await verifyCustomerLocation(
-          info.latitude,
-          info.longitude,
-          info.max_distance_meters || 500
+          restoLat,
+          restoLng,
+          info.max_distance_meters || 100
         );
 
         if (!geoCheck.allowed) {
-          alert(`📍 ${geoCheck.message || 'Location verification failed.'}`);
+          alert(geoCheck.message || '📍 Location verification failed. You must be present inside the restaurant dining area to place orders.');
           setPlacingOrder(false);
           isPlacingOrderRef.current = false;
           return;

@@ -721,32 +721,42 @@ router.post('/orders', async (req, res) => {
     }
 
     // Step 4: Authoritative Server-Side Geofence Distance Validation
-    let calculatedDistance = null;
-    if (
-      resto.location_initialized &&
-      resto.latitude &&
-      resto.longitude &&
-      customer_latitude !== undefined &&
-      customer_longitude !== undefined &&
-      customer_latitude !== null &&
-      customer_longitude !== null
-    ) {
-      calculatedDistance = calculateHaversineDistance(
+    const restoLat = Number(resto.latitude);
+    const restoLng = Number(resto.longitude);
+    const hasRestaurantLocation = Boolean(
+      resto.latitude != null && resto.longitude != null &&
+      !isNaN(restoLat) && !isNaN(restoLng) &&
+      restoLat !== 0 && restoLng !== 0
+    );
+
+    if (hasRestaurantLocation) {
+      if (
+        customer_latitude === undefined || customer_longitude === undefined ||
+        customer_latitude === null || customer_longitude === null ||
+        isNaN(Number(customer_latitude)) || isNaN(Number(customer_longitude))
+      ) {
+        return res.status(403).json({
+          error: 'location_required',
+          message: '📍 Location Access Required: Please allow GPS / Location permissions in your browser to verify you are inside the restaurant.'
+        });
+      }
+
+      const calculatedDistance = calculateHaversineDistance(
         Number(customer_latitude),
         Number(customer_longitude),
-        Number(resto.latitude),
-        Number(resto.longitude)
+        restoLat,
+        restoLng
       );
 
-      const accBuffer = Math.min(Number(customer_accuracy) || 0, 150);
+      const accBuffer = Math.min((Number(customer_accuracy) || 0) * 0.3, 30);
       const effectiveDist = Math.max(0, calculatedDistance - accBuffer);
-      const allowedRadius = Number(resto.max_distance_meters) || 500;
+      const allowedRadius = Number(resto.max_distance_meters) || 100;
 
       if (effectiveDist > allowedRadius) {
         const displayDist = calculatedDistance > 1000 ? `${(calculatedDistance / 1000).toFixed(1)} km` : `${calculatedDistance} meters`;
         return res.status(403).json({
           error: 'outside_service_area',
-          message: `Order rejected: You are ${displayDist} away from this restaurant (Allowed radius: ${allowedRadius}m). Table orders must be placed within the dining area.`
+          message: `📍 Order Rejected: You are ${displayDist} away from this restaurant (Allowed radius: ${allowedRadius}m). Table orders must be placed within the dining area.`
         });
       }
     }

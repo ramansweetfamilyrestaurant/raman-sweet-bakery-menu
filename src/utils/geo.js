@@ -14,11 +14,19 @@ export function getDistanceMeters(lat1, lon1, lat2, lon2) {
 }
 
 // Request customer GPS location and verify if within restaurant radius
-export function verifyCustomerLocation(targetLat, targetLng, maxRadiusMeters = 500) {
+export function verifyCustomerLocation(targetLat, targetLng, maxRadiusMeters = 100) {
   return new Promise((resolve) => {
     // If target restaurant coordinates are not configured or invalid, default to allowed
-    if (!targetLat || !targetLng || isNaN(targetLat) || isNaN(targetLng) || !navigator.geolocation) {
+    if (!targetLat || !targetLng || isNaN(targetLat) || isNaN(targetLng) || Number(targetLat) === 0 || Number(targetLng) === 0) {
       return resolve({ allowed: true, distanceMeters: 0, accuracy: null });
+    }
+
+    if (!navigator.geolocation) {
+      return resolve({
+        allowed: false,
+        reason: 'no_geolocation',
+        message: '📍 Your browser does not support GPS location. Please use a modern mobile browser (Chrome/Safari) to place table orders.'
+      });
     }
 
     let resolved = false;
@@ -33,8 +41,11 @@ export function verifyCustomerLocation(targetLat, targetLng, maxRadiusMeters = 5
       }
 
       if (!reading || !reading.coords) {
-        // Fallback for indoor dining guests with zero GPS reception
-        return resolve({ allowed: true, distanceMeters: 0, accuracy: null });
+        return resolve({
+          allowed: false,
+          reason: 'location_unavailable',
+          message: '📍 Location Access Required: Please enable GPS / Location permissions in your browser to verify you are inside the restaurant.'
+        });
       }
 
       const userLat = reading.coords.latitude;
@@ -42,10 +53,10 @@ export function verifyCustomerLocation(targetLat, targetLng, maxRadiusMeters = 5
       const accuracy = Math.round(reading.coords.accuracy || 999);
       const rawDistance = getDistanceMeters(userLat, userLng, Number(targetLat), Number(targetLng));
 
-      // Accuracy tolerance buffer: allow up to min(accuracy, 150m) to prevent false-blocks from indoor GPS drift
-      const accuracyBuffer = Math.min(accuracy, 150);
+      // Tight buffer tolerance: max 30m to prevent false positives while allowing minor indoor drift
+      const accuracyBuffer = Math.min(accuracy * 0.3, 30);
       const effectiveDistance = Math.max(0, rawDistance - accuracyBuffer);
-      const radius = Number(maxRadiusMeters) || 500;
+      const radius = Number(maxRadiusMeters) || 100;
 
       if (effectiveDistance <= radius) {
         resolve({
@@ -65,17 +76,17 @@ export function verifyCustomerLocation(targetLat, targetLng, maxRadiusMeters = 5
           accuracy,
           customerLat: userLat,
           customerLng: userLng,
-          message: `Aap restaurant se ${displayDist} door hain (Allowed radius: ${radius}m). Table order sirf restaurant ke andar se ho sakta hai.`
+          message: `📍 Order Rejected: Aap restaurant se ${displayDist} door hain (Allowed radius: ${radius}m). Table order sirf restaurant ke dining area ke andar se ho sakta hai.`
         });
       }
     };
 
-    // Safety Timeout: Never block table order for more than 4.5 seconds
+    // Safety Timeout: 5 seconds max for GPS fix
     const timer = setTimeout(() => {
       finalize(bestReading);
-    }, 4500);
+    }, 5000);
 
-    // Progressive GPS fix
+    // Progressive High Accuracy GPS fix
     navigator.geolocation.getCurrentPosition(
       (pos) => {
         bestReading = pos;
@@ -111,8 +122,8 @@ export function verifyCustomerLocation(targetLat, targetLng, maxRadiusMeters = 5
       },
       {
         enableHighAccuracy: true,
-        timeout: 4000,
-        maximumAge: 5000
+        timeout: 4500,
+        maximumAge: 0
       }
     );
   });
