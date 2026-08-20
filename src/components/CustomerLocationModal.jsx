@@ -52,7 +52,7 @@ export default function CustomerLocationModal({
 
   if (!isOpen) return null;
 
-  const handleRequestLocation = async () => {
+  const handleRequestLocation = () => {
     if (isAcquiringRef.current) return; // Prevent duplicate rapid taps
     isAcquiringRef.current = true;
 
@@ -66,15 +66,6 @@ export default function CustomerLocationModal({
     setStatus('requesting_location');
     setErrorMsg('');
 
-    // Query Permissions API if supported
-    let permState = null;
-    if (navigator.permissions && navigator.permissions.query) {
-      try {
-        const p = await navigator.permissions.query({ name: 'geolocation' });
-        permState = p.state;
-      } catch {}
-    }
-
     const primaryOptions = {
       enableHighAccuracy: true,
       timeout: 20000,
@@ -83,7 +74,7 @@ export default function CustomerLocationModal({
 
     const fallbackOptions = {
       enableHighAccuracy: false,
-      timeout: 15000,
+      timeout: 10000,
       maximumAge: 30000
     };
 
@@ -161,34 +152,44 @@ export default function CustomerLocationModal({
 
       if (err.code === 1) {
         // PERMISSION_DENIED
-        if (permState === 'denied') {
-          setStatus('permission_permanently_blocked');
+        // Check permissions API asynchronously if available to distinguish permanent lock
+        if (navigator.permissions && navigator.permissions.query) {
+          navigator.permissions.query({ name: 'geolocation' })
+            .then(p => {
+              if (p.state === 'denied') {
+                setStatus('permission_permanently_blocked');
+              } else {
+                setStatus('permission_denied');
+              }
+            })
+            .catch(() => {
+              setStatus('permission_denied');
+            });
         } else {
           setStatus('permission_denied');
         }
       } else if (err.code === 2) {
-        // POSITION_UNAVAILABLE
-        // If browser permission is already granted, POSITION_UNAVAILABLE indicates device GPS is OFF
+        // POSITION_UNAVAILABLE (Device Location Services / GPS toggled off or unavailable)
         setStatus('location_services_off');
-        setErrorMsg('Location Services are currently turned off on your device. Please turn them on and then try again.');
+        setErrorMsg("Couldn't get your current location. Please make sure Location Services are turned on, then try again.");
       } else if (err.code === 3) {
         // TIMEOUT
         setStatus('location_timeout');
         setErrorMsg('Getting your location is taking longer than expected. Please check your connection and Location Services, then try again.');
       } else {
         setStatus('error');
-        setErrorMsg('We could not get your current location. Please make sure Location Services are turned on and try again.');
+        setErrorMsg("Couldn't get your current location. Please make sure Location Services are turned on, then try again.");
       }
     };
 
-    // Primary High Accuracy Attempt
+    // Synchronous primary High Accuracy Geolocation invocation directly in user gesture path
     navigator.geolocation.getCurrentPosition(
       (pos) => {
         processPosition(pos);
       },
       (err) => {
-        // If high-accuracy timed out or had hardware lag, attempt one network-based fallback before failing
-        if (err.code === 3 || (err.code === 2 && permState !== 'granted')) {
+        // If high-accuracy timed out, attempt one network-based fallback before failing
+        if (err.code === 3) {
           navigator.geolocation.getCurrentPosition(
             (fallbackPos) => {
               processPosition(fallbackPos);
@@ -500,11 +501,11 @@ export default function CustomerLocationModal({
             </div>
 
             <h3 style={{ fontSize: '1.15rem', fontWeight: 900, color: '#0F172A', margin: '0 0 6px 0' }}>
-              Turn on Location Services
+              Check Location Services
             </h3>
 
             <p style={{ fontSize: '0.84rem', color: '#475569', lineHeight: 1.5, margin: '0 0 14px 0' }}>
-              Location Services are currently turned off on your device. Please turn them on and then try again.
+              {errorMsg || "Couldn't get your current location. Please make sure Location Services are turned on, then try again."}
             </p>
 
             <div style={{

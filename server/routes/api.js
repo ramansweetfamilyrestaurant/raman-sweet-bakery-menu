@@ -863,16 +863,24 @@ router.post('/orders', async (req, res) => {
       const jwtSecret = process.env.JWT_SECRET || 'touchqr_secure_location_secret_key_2026';
       let extractedVToken = null;
 
-      // 1. Verify signed session JWT if present
+      // 1. Verify signed session JWT if present (Enforces exact restaurant_id AND table/space match)
       if (req.body.location_token) {
         try {
           const decoded = jwt.verify(req.body.location_token, jwtSecret);
           if (decoded && Number(decoded.restaurant_id) === Number(resto.id)) {
+            const tokenTable = String(decoded.table_number || '').trim().toLowerCase();
+            const orderTable = cleanTable.toLowerCase();
+            if (tokenTable && tokenTable !== orderTable) {
+              return res.status(403).json({
+                error: 'table_mismatch',
+                message: `📍 Location token was verified for a different space/table (${decoded.table_number}). Please verify location for Table ${cleanTable}.`
+              });
+            }
             extractedVToken = decoded.vtoken;
             isVerified = true;
           }
         } catch (tokErr) {
-          // Fall through to database or coordinate check
+          // Token expired or invalid signature - fall through to database lookup or reject
         }
       }
 
@@ -884,10 +892,10 @@ router.post('/orders', async (req, res) => {
       if (extractedVToken) {
         try {
           const verRows = await query(
-            `SELECT id, distance_meters, expires_at FROM table_location_verifications 
-             WHERE restaurant_id = $1 AND verification_token = $2 
+            `SELECT id, distance_meters, expires_at, table_number FROM table_location_verifications 
+             WHERE restaurant_id = $1 AND verification_token = $2 AND LOWER(TRIM(table_number)) = LOWER(TRIM($3))
              ORDER BY id DESC LIMIT 1`,
-            [resto.id, extractedVToken]
+            [resto.id, extractedVToken, cleanTable]
           );
           if (verRows && verRows.length > 0) {
             const vRecord = verRows[0];
@@ -899,40 +907,28 @@ router.post('/orders', async (req, res) => {
                 distanceMetersValue = Number(vRecord.distance_meters);
               }
             }
+          } else if (!isVerified) {
+            // Check if token exists but belongs to a different table/space
+            const otherTableRows = await query(
+              `SELECT id, table_number FROM table_location_verifications 
+               WHERE restaurant_id = $1 AND verification_token = $2 
+               ORDER BY id DESC LIMIT 1`,
+              [resto.id, extractedVToken]
+            );
+            if (otherTableRows && otherTableRows.length > 0) {
+              return res.status(403).json({
+                error: 'table_mismatch',
+                message: `📍 Location token was verified for Table ${otherTableRows[0].table_number}. Please verify location for Table ${cleanTable}.`
+              });
+            }
           }
         } catch (vErr) {
           console.warn('Notice checking verification table:', vErr.message);
         }
       }
 
-      // 3. Fallback: Direct coordinate calculation if provided
-      if (
-        customer_latitude !== undefined && customer_longitude !== undefined &&
-        customer_latitude !== null && customer_longitude !== null &&
-        !isNaN(Number(customer_latitude)) && !isNaN(Number(customer_longitude))
-      ) {
-        const calculatedDistance = calculateHaversineDistance(
-          Number(customer_latitude),
-          Number(customer_longitude),
-          restoLat,
-          restoLng
-        );
-        const accBuffer = Math.min((Number(customer_accuracy) || 0) * 0.25, 25);
-        const effectiveDist = Math.max(0, calculatedDistance - accBuffer);
-        const allowedRadius = Number(resto.max_distance_meters) || 100;
-
-        if (effectiveDist <= allowedRadius) {
-          isVerified = true;
-          distanceMetersValue = calculatedDistance;
-        } else if (!isVerified) {
-          const displayDist = calculatedDistance > 1000 ? `${(calculatedDistance / 1000).toFixed(1)} km` : `${calculatedDistance} meters`;
-          return res.status(403).json({
-            error: 'outside_service_area',
-            message: `📍 Order Rejected: You appear to be ${displayDist} away from this restaurant (Allowed radius: ${allowedRadius}m). Table orders must be placed within the dining area.`
-          });
-        }
-      }
-
+      // STRICT AUTHORIZATION: Raw coordinates alone MUST NEVER authorize an order.
+      // If verification token is missing, invalid, expired, or for a different table, block the order.
       if (!isVerified) {
         return res.status(403).json({
           error: 'location_required',

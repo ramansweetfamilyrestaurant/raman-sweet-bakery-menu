@@ -762,9 +762,14 @@ export default function App() {
       setOrderSuccessModal(res);
       setCartItems([]);
       setShowCartDrawer(false);
-    } catch (err) {
-      const errMsg = String(err.message || '');
-      if (errMsg.toLowerCase().includes('location') || errMsg.toLowerCase().includes('expired') || err.code === 'location_verification_expired') {
+      if (
+        errMsg.toLowerCase().includes('location') ||
+        errMsg.toLowerCase().includes('mismatch') ||
+        errMsg.toLowerCase().includes('expired') ||
+        err.code === 'location_verification_expired' ||
+        err.error === 'location_required' ||
+        err.error === 'table_mismatch'
+      ) {
         setLocationVerified(false);
         setLocationToken('');
         cachedCustomerGeoRef.current = null;
