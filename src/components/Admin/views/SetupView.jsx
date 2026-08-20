@@ -1082,72 +1082,120 @@ export default function SetupView({
         )}
       >
         <form onSubmit={handleFormSave} style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
-          <div>
-            <label style={{ fontSize: '0.74rem', fontWeight: 800, color: '#0F172A', display: 'block', marginBottom: '6px', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
-              Restaurant Type:
-            </label>
-            <select
-              value={settingsForm.resto_type || 'pure_veg'}
-              onChange={(e) => setSettingsForm({ ...settingsForm, resto_type: e.target.value })}
-              style={{ width: '100%', padding: '10px 14px', borderRadius: '10px', border: '1px solid #CBD5E1', fontSize: '0.9rem', fontWeight: 700, boxSizing: 'border-box' }}
-            >
-              <option value="pure_veg">🟢 Pure Veg Restaurant</option>
-              <option value="veg_nonveg">🔴 Veg & Non-Veg Restaurant</option>
-              <option value="bakery">🍰 Bakery & Confectionery</option>
-            </select>
+          {/* Card 1: Restaurant Type */}
+          <div style={{ padding: '16px 18px', background: '#FFFFFF', borderRadius: '16px', border: '1px solid #E2E8F0', boxShadow: '0 1px 3px rgba(0,0,0,0.04)' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '10px' }}>
+              <div style={{ width: '36px', height: '36px', borderRadius: '10px', background: '#DCFCE7', color: '#16A34A', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1.1rem', flexShrink: 0 }}>
+                🥗
+              </div>
+              <div>
+                <strong style={{ fontSize: '0.92rem', color: '#0F172A', fontWeight: 800, display: 'block' }}>Restaurant Dining Category</strong>
+                <span style={{ fontSize: '0.72rem', color: '#64748B' }}>Veg/Non-Veg badge rules and bakery menu layout</span>
+              </div>
+            </div>
+            <div style={{ paddingLeft: '46px' }}>
+              <select
+                value={settingsForm.resto_type || 'pure_veg'}
+                onChange={(e) => setSettingsForm({ ...settingsForm, resto_type: e.target.value })}
+                style={{ width: '100%', padding: '10px 14px', borderRadius: '10px', border: '1px solid #CBD5E1', fontSize: '0.88rem', fontWeight: 700, boxSizing: 'border-box', background: '#FFFFFF' }}
+              >
+                <option value="pure_veg">🟢 Pure Veg Restaurant</option>
+                <option value="veg_nonveg">🔴 Veg & Non-Veg Restaurant</option>
+                <option value="bakery">🍰 Bakery & Confectionery</option>
+              </select>
+            </div>
           </div>
 
-          <div>
-            <label style={{ fontSize: '0.74rem', fontWeight: 800, color: '#0F172A', display: 'block', marginBottom: '6px', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
-              Currency Symbol:
-            </label>
-            <select
-              value={settingsForm.currency_symbol != null ? settingsForm.currency_symbol : '₹'}
-              onChange={(e) => setSettingsForm({ ...settingsForm, currency_symbol: e.target.value })}
-              style={{ width: '100%', padding: '10px 14px', borderRadius: '10px', border: '1px solid #CBD5E1', fontSize: '0.9rem', fontWeight: 700, boxSizing: 'border-box' }}
-            >
-              <option value="₹">₹ — Indian Rupee (INR)</option>
-              <option value="$">$ — US Dollar (USD)</option>
-              <option value="€">€ — Euro (EUR)</option>
-              <option value="£">£ — British Pound (GBP)</option>
-              <option value="د.إ">د.إ — UAE Dirham (AED)</option>
-              <option value="﷼">﷼ — Saudi Riyal (SAR)</option>
-            </select>
+          {/* Card 2: Currency Symbol */}
+          <div style={{ padding: '16px 18px', background: '#FFFFFF', borderRadius: '16px', border: '1px solid #E2E8F0', boxShadow: '0 1px 3px rgba(0,0,0,0.04)' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '10px' }}>
+              <div style={{ width: '36px', height: '36px', borderRadius: '10px', background: '#FEF3C7', color: '#D97706', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1.1rem', flexShrink: 0 }}>
+                🪙
+              </div>
+              <div>
+                <strong style={{ fontSize: '0.92rem', color: '#0F172A', fontWeight: 800, display: 'block' }}>Currency & Pricing Symbol</strong>
+                <span style={{ fontSize: '0.72rem', color: '#64748B' }}>Shown on customer QR menu and printed receipts</span>
+              </div>
+            </div>
+            <div style={{ paddingLeft: '46px' }}>
+              <select
+                value={settingsForm.currency_symbol != null ? settingsForm.currency_symbol : '₹'}
+                onChange={(e) => setSettingsForm({ ...settingsForm, currency_symbol: e.target.value })}
+                style={{ width: '100%', padding: '10px 14px', borderRadius: '10px', border: '1px solid #CBD5E1', fontSize: '0.88rem', fontWeight: 700, boxSizing: 'border-box', background: '#FFFFFF' }}
+              >
+                <option value="₹">₹ — Indian Rupee (INR)</option>
+                <option value="$">$ — US Dollar (USD)</option>
+                <option value="€">€ — Euro (EUR)</option>
+                <option value="£">£ — British Pound (GBP)</option>
+                <option value="د.إ">د.إ — UAE Dirham (AED)</option>
+                <option value="﷼">﷼ — Saudi Riyal (SAR)</option>
+              </select>
+            </div>
           </div>
 
-          {/* GST Configuration */}
-          <div style={{ padding: '16px', background: '#FFFFFF', borderRadius: '14px', border: '1px solid #E2E8F0', boxShadow: '0 2px 8px rgba(0,0,0,0.02)' }}>
+          {/* Card 3: GST Configuration */}
+          <div style={{ padding: '16px 18px', background: '#FFFFFF', borderRadius: '16px', border: '1px solid #E2E8F0', boxShadow: '0 1px 3px rgba(0,0,0,0.04)' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: settingsForm.gst_enabled ? '10px' : '0' }}>
-              <strong style={{ fontSize: '0.90rem', color: '#0F172A', fontWeight: 800 }}>🏷️ Enable 5% GST Tax Billing</strong>
-              <input
-                type="checkbox"
-                checked={Boolean(settingsForm.gst_enabled)}
-                onChange={(e) => setSettingsForm({ ...settingsForm, gst_enabled: e.target.checked })}
-                style={{ width: '18px', height: '18px', cursor: 'pointer', accentColor: '#059669' }}
-              />
+              <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                <div style={{ width: '36px', height: '36px', borderRadius: '10px', background: '#E0F2FE', color: '#0284C7', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1.1rem', flexShrink: 0 }}>
+                  🏷️
+                </div>
+                <div>
+                  <strong style={{ fontSize: '0.92rem', color: '#0F172A', fontWeight: 800, display: 'block' }}>5% GST Tax Billing & Invoicing</strong>
+                  <span style={{ fontSize: '0.72rem', color: '#64748B' }}>Adds 5% GST tax automatically on customer orders</span>
+                </div>
+              </div>
+
+              {(settingsForm.gst_invoice_enabled !== false && settingsForm.gst_invoice_enabled !== 0) ? (
+                <input
+                  type="checkbox"
+                  checked={Boolean(settingsForm.gst_enabled)}
+                  onChange={(e) => setSettingsForm({ ...settingsForm, gst_enabled: e.target.checked })}
+                  style={{ width: '20px', height: '20px', cursor: 'pointer', accentColor: '#059669' }}
+                />
+              ) : (
+                <span style={{ fontSize: '0.72rem', fontWeight: 800, color: '#B45309', background: '#FEF3C7', border: '1px solid #F59E0B', padding: '3px 10px', borderRadius: '20px' }}>
+                  🔒 Pro Feature
+                </span>
+              )}
             </div>
 
             {settingsForm.gst_enabled && (
-              <div style={{ marginTop: '10px', paddingTop: '10px', borderTop: '1px solid #F1F5F9' }}>
-                <label style={{ fontSize: '0.74rem', fontWeight: 800, color: '#64748B', display: 'block', marginBottom: '4px' }}>GSTIN NUMBER:</label>
+              <div style={{ marginTop: '12px', paddingTop: '12px', borderTop: '1px solid #F1F5F9', paddingLeft: '46px' }}>
+                <label style={{ fontSize: '0.72rem', fontWeight: 800, color: '#0F172A', display: 'block', marginBottom: '6px', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
+                  GSTIN Number:
+                </label>
                 <input
                   type="text"
                   placeholder="e.g. 10AAAAA0000A1Z5"
                   value={settingsForm.gstin_number || ''}
                   onChange={(e) => setSettingsForm({ ...settingsForm, gstin_number: e.target.value })}
-                  style={{ width: '100%', padding: '8px 12px', borderRadius: '8px', border: '1px solid #CBD5E1', fontSize: '0.86rem', boxSizing: 'border-box' }}
+                  style={{ width: '100%', padding: '10px 14px', borderRadius: '10px', border: '1px solid #CBD5E1', fontSize: '0.86rem', boxSizing: 'border-box' }}
                 />
+                <span style={{ fontSize: '0.70rem', color: '#64748B', marginTop: '4px', display: 'block' }}>Printed on all customer receipt printouts and tax reports.</span>
               </div>
             )}
           </div>
 
-          {/* Dish Filter Visibility Toggles */}
-          <div style={{ padding: '16px', background: '#FFFFFF', borderRadius: '14px', border: '1px solid #E2E8F0', boxShadow: '0 2px 8px rgba(0,0,0,0.02)' }}>
-            <strong style={{ fontSize: '0.90rem', color: '#0F172A', display: 'block', marginBottom: '12px', fontWeight: 800 }}>👁️ Customer Menu Badge Visibility</strong>
+          {/* Card 4: Dish Filter Visibility Toggles */}
+          <div style={{ padding: '16px 18px', background: '#FFFFFF', borderRadius: '16px', border: '1px solid #E2E8F0', boxShadow: '0 1px 3px rgba(0,0,0,0.04)' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '12px' }}>
+              <div style={{ width: '36px', height: '36px', borderRadius: '10px', background: '#EDE9FE', color: '#7C3AED', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1.1rem', flexShrink: 0 }}>
+                👁️
+              </div>
+              <div>
+                <strong style={{ fontSize: '0.92rem', color: '#0F172A', fontWeight: 800, display: 'block' }}>Customer Menu Badges & Filters</strong>
+                <span style={{ fontSize: '0.72rem', color: '#64748B' }}>Toggle badge visibility pills in the customer QR menu</span>
+              </div>
+            </div>
 
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', fontSize: '0.84rem' }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                <span style={{ fontWeight: 600, color: '#334155' }}>⭐ Show "Must Try" Badge Filter</span>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', paddingLeft: '46px' }}>
+              {/* Filter 1 */}
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '10px 12px', background: '#F8FAFC', borderRadius: '12px', border: '1px solid #F1F5F9' }}>
+                <div>
+                  <strong style={{ fontSize: '0.84rem', color: '#1E293B', display: 'block' }}>⭐ "Must Try" Badge Filter</strong>
+                  <span style={{ fontSize: '0.70rem', color: '#64748B' }}>Highlights chef special recommended items</span>
+                </div>
                 <input
                   type="checkbox"
                   checked={settingsForm.filters_visibility?.must_try !== false}
@@ -1155,12 +1203,16 @@ export default function SetupView({
                     ...settingsForm,
                     filters_visibility: { ...settingsForm.filters_visibility, must_try: e.target.checked }
                   })}
-                  style={{ width: '16px', height: '16px', accentColor: '#059669', cursor: 'pointer' }}
+                  style={{ width: '18px', height: '18px', accentColor: '#059669', cursor: 'pointer' }}
                 />
               </div>
 
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                <span style={{ fontWeight: 600, color: '#334155' }}>✨ Show "Today Special" Badge Filter</span>
+              {/* Filter 2 */}
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '10px 12px', background: '#F8FAFC', borderRadius: '12px', border: '1px solid #F1F5F9' }}>
+                <div>
+                  <strong style={{ fontSize: '0.84rem', color: '#1E293B', display: 'block' }}>✨ "Today Special" Badge Filter</strong>
+                  <span style={{ fontSize: '0.70rem', color: '#64748B' }}>Highlights daily limited-time special dishes</span>
+                </div>
                 <input
                   type="checkbox"
                   checked={settingsForm.filters_visibility?.special !== false}
@@ -1168,12 +1220,16 @@ export default function SetupView({
                     ...settingsForm,
                     filters_visibility: { ...settingsForm.filters_visibility, special: e.target.checked }
                   })}
-                  style={{ width: '16px', height: '16px', accentColor: '#059669', cursor: 'pointer' }}
+                  style={{ width: '18px', height: '18px', accentColor: '#059669', cursor: 'pointer' }}
                 />
               </div>
 
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                <span style={{ fontWeight: 600, color: '#334155' }}>🍱 Show "Combos" Navigation Tab</span>
+              {/* Filter 3 */}
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '10px 12px', background: '#F8FAFC', borderRadius: '12px', border: '1px solid #F1F5F9' }}>
+                <div>
+                  <strong style={{ fontSize: '0.84rem', color: '#1E293B', display: 'block' }}>🍱 "Combos" Navigation Tab</strong>
+                  <span style={{ fontSize: '0.70rem', color: '#64748B' }}>Displays dedicated combos category tab</span>
+                </div>
                 <input
                   type="checkbox"
                   checked={settingsForm.filters_visibility?.combo !== false}
@@ -1181,7 +1237,7 @@ export default function SetupView({
                     ...settingsForm,
                     filters_visibility: { ...settingsForm.filters_visibility, combo: e.target.checked }
                   })}
-                  style={{ width: '16px', height: '16px', accentColor: '#059669', cursor: 'pointer' }}
+                  style={{ width: '18px', height: '18px', accentColor: '#059669', cursor: 'pointer' }}
                 />
               </div>
             </div>
