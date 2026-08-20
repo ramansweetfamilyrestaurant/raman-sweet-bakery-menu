@@ -523,7 +523,7 @@ export default function MenuView({
             </button>
           </div>
         ) : (
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: '10px' }}>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(240px, 1fr))', gap: '12px' }}>
           {safeCategories.map(cat => {
             const catImage = getCategoryImageUrl(cat.image || cat.image_url);
             const dishCount = safeDishes.filter(d => String(d.category_id) === String(cat.id)).length;
@@ -536,20 +536,19 @@ export default function MenuView({
                   background: '#FFFFFF',
                   border: '1px solid #E2E8F0',
                   borderRadius: '16px',
-                  padding: '12px 14px',
+                  padding: '14px',
                   display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'space-between',
+                  flexDirection: 'column',
                   gap: '12px',
                   opacity: isActive ? 1 : 0.65,
                   boxShadow: '0 2px 8px rgba(0,0,0,0.02)'
                 }}
               >
-                <div style={{ display: 'flex', alignItems: 'center', gap: '12px', minWidth: 0, flex: 1 }}>
-                  {/* Category Image (56px Square) */}
+                {/* Top Section: Category Image + Title + Dish Count */}
+                <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
                   <div style={{
-                    width: '56px',
-                    height: '56px',
+                    width: '48px',
+                    height: '48px',
                     borderRadius: '12px',
                     overflow: 'hidden',
                     flexShrink: 0,
@@ -569,12 +568,14 @@ export default function MenuView({
 
                   <div style={{ flex: 1, minWidth: 0 }}>
                     <strong style={{
-                      fontSize: '0.92rem',
+                      fontSize: '0.94rem',
                       color: '#0F172A',
                       display: 'block',
                       fontWeight: 800,
                       lineHeight: 1.25,
-                      wordBreak: 'break-word'
+                      whiteSpace: 'nowrap',
+                      overflow: 'hidden',
+                      textOverflow: 'ellipsis'
                     }}>
                       {cat.name}
                     </strong>
@@ -584,7 +585,8 @@ export default function MenuView({
                   </div>
                 </div>
 
-                <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flexShrink: 0 }}>
+                {/* Bottom Action Bar */}
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', paddingTop: '10px', borderTop: '1px solid #F1F5F9' }}>
                   <button
                     onClick={() => onToggleCategoryActive && onToggleCategoryActive(cat.id, cat.active !== false)}
                     style={{
@@ -596,44 +598,52 @@ export default function MenuView({
                       color: isActive ? '#15803D' : '#991B1B',
                       border: isActive ? '1px solid #86EFAC' : '1px solid #FCA5A5',
                       cursor: 'pointer',
-                      whiteSpace: 'nowrap',
                       boxShadow: isActive ? '0 1px 4px rgba(22, 163, 74, 0.15)' : 'none'
                     }}
                   >
                     {isActive ? '● Active' : '● Hidden'}
                   </button>
-                  <button
-                    onClick={() => onOpenEditCategory(cat)}
-                    style={{
-                      padding: '4px 8px',
-                      borderRadius: '8px',
-                      display: 'inline-flex',
-                      alignItems: 'center',
-                      background: '#F1F5F9',
-                      color: '#334155',
-                      border: '1px solid #E2E8F0',
-                      cursor: 'pointer'
-                    }}
-                    title="Edit Category"
-                  >
-                    <Edit size={13} />
-                  </button>
-                  <button
-                    onClick={() => onDeleteCategory(cat.id)}
-                    style={{
-                      padding: '4px 8px',
-                      borderRadius: '8px',
-                      display: 'inline-flex',
-                      alignItems: 'center',
-                      background: '#FEE2E2',
-                      color: '#DC2626',
-                      border: '1px solid #FECACA',
-                      cursor: 'pointer'
-                    }}
-                    title="Delete Category"
-                  >
-                    <Trash2 size={13} />
-                  </button>
+
+                  <div style={{ display: 'flex', gap: '6px' }}>
+                    <button
+                      onClick={() => onOpenEditCategory(cat)}
+                      style={{
+                        padding: '4px 10px',
+                        borderRadius: '8px',
+                        display: 'inline-flex',
+                        alignItems: 'center',
+                        gap: '4px',
+                        background: '#F1F5F9',
+                        color: '#334155',
+                        border: '1px solid #E2E8F0',
+                        fontWeight: 800,
+                        fontSize: '0.74rem',
+                        cursor: 'pointer'
+                      }}
+                      title="Edit Category"
+                    >
+                      <Edit size={13} /> Edit
+                    </button>
+                    <button
+                      onClick={() => onDeleteCategory(cat.id)}
+                      style={{
+                        padding: '4px 8px',
+                        borderRadius: '8px',
+                        display: 'inline-flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        background: '#FEE2E2',
+                        color: '#DC2626',
+                        border: '1px solid #FECACA',
+                        fontWeight: 800,
+                        fontSize: '0.74rem',
+                        cursor: 'pointer'
+                      }}
+                      title="Delete Category"
+                    >
+                      <Trash2 size={13} />
+                    </button>
+                  </div>
                 </div>
               </div>
             );
