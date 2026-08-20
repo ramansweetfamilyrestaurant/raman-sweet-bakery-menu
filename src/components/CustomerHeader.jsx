@@ -2,7 +2,7 @@ import React from 'react';
 import { ShieldCheck, Globe, Star, Info, Clock, Phone, MapPin } from 'lucide-react';
 import { getRestaurantLogoUrl } from '../utils/imageHelper';
 
-export default function CustomerHeader({ info, lang, tableNum, spaceLabel, onToggleLang, onOpenInfoModal, onOpenAdmin, onCallStaff, onOpenReviewModal }) {
+export default function CustomerHeader({ info, lang, tableNum, spaceLabel, onToggleLang, onOpenInfoModal, onOpenAdmin, onCallStaff, onOpenReviewModal, locationVerified, onOpenLocationModal }) {
   const getDisplayBadge = () => {
     if (!tableNum) return '';
     if (spaceLabel) return spaceLabel;
@@ -84,21 +84,27 @@ export default function CustomerHeader({ info, lang, tableNum, spaceLabel, onTog
           {/* Table Indicator / View-Only Badge */}
           {tableNum ? (
             <>
-              <span style={{
-                fontSize: '0.7rem',
-                fontWeight: 800,
-                color: '#4ADE80',
-                background: 'rgba(34, 197, 94, 0.18)',
-                border: '1px solid rgba(34, 197, 94, 0.4)',
-                padding: '3px 8px',
-                borderRadius: 'var(--radius-pill)',
-                display: 'inline-flex',
-                alignItems: 'center',
-                gap: '4px'
-              }}>
-                <span style={{ width: '5px', height: '5px', borderRadius: '50%', backgroundColor: '#4ADE80' }} />
+              <button
+                onClick={onOpenLocationModal}
+                style={{
+                  fontSize: '0.7rem',
+                  fontWeight: 800,
+                  color: locationVerified ? '#4ADE80' : '#FDE047',
+                  background: locationVerified ? 'rgba(34, 197, 94, 0.18)' : 'rgba(234, 179, 8, 0.22)',
+                  border: locationVerified ? '1px solid rgba(34, 197, 94, 0.4)' : '1px solid rgba(234, 179, 8, 0.5)',
+                  padding: '3px 8px',
+                  borderRadius: 'var(--radius-pill)',
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: '4px',
+                  cursor: 'pointer'
+                }}
+                title={locationVerified ? "Location Verified (Inside Restaurant)" : "Tap to verify table location"}
+              >
+                <span style={{ width: '6px', height: '6px', borderRadius: '50%', backgroundColor: locationVerified ? '#4ADE80' : '#FACC15' }} />
                 {getDisplayBadge()}
-              </span>
+                {locationVerified ? ' ✓' : ' 📍'}
+              </button>
 
               {onCallStaff && (
                 <button

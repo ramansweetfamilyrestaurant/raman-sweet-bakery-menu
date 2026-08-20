@@ -600,6 +600,103 @@ router.get('/combos', async (req, res) => {
   }
 });
 
+// POST Verify Customer Location against Restaurant Boundary
+router.post('/orders/verify-location', async (req, res) => {
+  try {
+    const { slug, table_number, latitude, longitude, accuracy } = req.body;
+
+    if (!slug) {
+      return res.status(400).json({ error: 'Missing restaurant slug' });
+    }
+
+    const resto = await resolveRestaurant(req, slug);
+    if (!resto) {
+      return res.status(404).json({ error: 'Restaurant not found' });
+    }
+
+    if (resto.active === 0 || resto.active === false || resto.active === 'false') {
+      return res.status(403).json({ error: 'Restaurant is currently inactive' });
+    }
+
+    const restoLat = Number(resto.latitude);
+    const restoLng = Number(resto.longitude);
+    const hasRestaurantLocation = Boolean(
+      resto.latitude != null && resto.longitude != null &&
+      !isNaN(restoLat) && !isNaN(restoLng) &&
+      restoLat !== 0 && restoLng !== 0
+    );
+
+    // If restaurant has not configured GPS coordinates, verification is not required
+    if (!hasRestaurantLocation) {
+      return res.json({
+        verified: true,
+        required: false,
+        message: 'Location verification not required for this restaurant'
+      });
+    }
+
+    const custLat = Number(latitude);
+    const custLng = Number(longitude);
+    const custAcc = Math.round(Number(accuracy) || 999);
+
+    if (isNaN(custLat) || isNaN(custLng) || custLat === 0 || custLng === 0) {
+      return res.status(400).json({
+        verified: false,
+        error: 'invalid_coordinates',
+        message: 'Valid GPS coordinates are required to verify location.'
+      });
+    }
+
+    // Authoritative Server-side geospatial calculation
+    const calculatedDistance = calculateHaversineDistance(custLat, custLng, restoLat, restoLng);
+    const accBuffer = Math.min(custAcc * 0.3, 30);
+    const effectiveDist = Math.max(0, calculatedDistance - accBuffer);
+    const allowedRadius = Number(resto.max_distance_meters) || 100;
+
+    if (effectiveDist > allowedRadius) {
+      const displayDist = calculatedDistance > 1000 ? `${(calculatedDistance / 1000).toFixed(1)} km` : `${calculatedDistance} meters`;
+      return res.status(403).json({
+        verified: false,
+        error: 'outside_boundary',
+        distance_meters: calculatedDistance,
+        allowed_radius: allowedRadius,
+        message: `You appear to be ${displayDist} away from ${resto.name || 'the restaurant'} (Allowed radius: ${allowedRadius}m). Table orders must be placed within the dining area.`
+      });
+    }
+
+    // Sign a secure short-lived location token (15-minute validity)
+    const jwtSecret = process.env.JWT_SECRET || 'touchqr_secure_location_secret_key_2026';
+    const locationToken = jwt.sign(
+      {
+        restaurant_id: resto.id,
+        slug: resto.slug,
+        table_number: String(table_number || '').trim(),
+        cust_lat: custLat,
+        cust_lng: custLng,
+        distance: calculatedDistance,
+        timestamp: Date.now()
+      },
+      jwtSecret,
+      { expiresIn: '15m' }
+    );
+
+    return res.json({
+      verified: true,
+      required: true,
+      location_token: locationToken,
+      distance_meters: calculatedDistance,
+      allowed_radius: allowedRadius,
+      accuracy: custAcc,
+      customer_lat: custLat,
+      customer_lng: custLng,
+      message: `✓ Location verified (${calculatedDistance}m from entrance)`
+    });
+  } catch (err) {
+    console.error('[LOCATION VERIFY ERROR]', err);
+    return res.status(500).json({ error: 'Failed to verify location', details: err.message });
+  }
+});
+
 // POST Create Direct Table Order (KOT Order)
 router.post('/orders', async (req, res) => {
   try {
@@ -730,34 +827,50 @@ router.post('/orders', async (req, res) => {
     );
 
     if (hasRestaurantLocation) {
-      if (
-        customer_latitude === undefined || customer_longitude === undefined ||
-        customer_latitude === null || customer_longitude === null ||
-        isNaN(Number(customer_latitude)) || isNaN(Number(customer_longitude))
-      ) {
-        return res.status(403).json({
-          error: 'location_required',
-          message: '📍 Location Access Required: Please allow GPS / Location permissions in your browser to verify you are inside the restaurant.'
-        });
+      let isTokenValid = false;
+      const jwtSecret = process.env.JWT_SECRET || 'touchqr_secure_location_secret_key_2026';
+
+      if (req.body.location_token) {
+        try {
+          const decoded = jwt.verify(req.body.location_token, jwtSecret);
+          if (decoded && Number(decoded.restaurant_id) === Number(resto.id)) {
+            isTokenValid = true;
+          }
+        } catch (tokErr) {
+          // Token expired or invalid signature, continue to raw coordinates validation
+        }
       }
 
-      const calculatedDistance = calculateHaversineDistance(
-        Number(customer_latitude),
-        Number(customer_longitude),
-        restoLat,
-        restoLng
-      );
+      if (!isTokenValid) {
+        if (
+          customer_latitude === undefined || customer_longitude === undefined ||
+          customer_latitude === null || customer_longitude === null ||
+          isNaN(Number(customer_latitude)) || isNaN(Number(customer_longitude))
+        ) {
+          return res.status(403).json({
+            error: 'location_required',
+            message: '📍 Location verification is required to place table orders. Please enable location permissions on your device.'
+          });
+        }
 
-      const accBuffer = Math.min((Number(customer_accuracy) || 0) * 0.3, 30);
-      const effectiveDist = Math.max(0, calculatedDistance - accBuffer);
-      const allowedRadius = Number(resto.max_distance_meters) || 100;
+        const calculatedDistance = calculateHaversineDistance(
+          Number(customer_latitude),
+          Number(customer_longitude),
+          restoLat,
+          restoLng
+        );
 
-      if (effectiveDist > allowedRadius) {
-        const displayDist = calculatedDistance > 1000 ? `${(calculatedDistance / 1000).toFixed(1)} km` : `${calculatedDistance} meters`;
-        return res.status(403).json({
-          error: 'outside_service_area',
-          message: `📍 Order Rejected: You are ${displayDist} away from this restaurant (Allowed radius: ${allowedRadius}m). Table orders must be placed within the dining area.`
-        });
+        const accBuffer = Math.min((Number(customer_accuracy) || 0) * 0.3, 30);
+        const effectiveDist = Math.max(0, calculatedDistance - accBuffer);
+        const allowedRadius = Number(resto.max_distance_meters) || 100;
+
+        if (effectiveDist > allowedRadius) {
+          const displayDist = calculatedDistance > 1000 ? `${(calculatedDistance / 1000).toFixed(1)} km` : `${calculatedDistance} meters`;
+          return res.status(403).json({
+            error: 'outside_service_area',
+            message: `📍 Order Rejected: You appear to be ${displayDist} away from this restaurant (Allowed radius: ${allowedRadius}m). Table orders must be placed within the dining area.`
+          });
+        }
       }
     }
 

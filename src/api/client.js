@@ -490,6 +490,15 @@ export async function fetchAuditLogs(token) {
   return handleResponse(res, 'Failed to fetch audit logs');
 }
 
+export async function verifyCustomerLocationApi(payload) {
+  const res = await fetch(`${API_BASE}/orders/verify-location`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload),
+  });
+  return handleResponse(res, 'Location verification failed');
+}
+
 export async function createDirectOrder(orderData) {
   const res = await fetch(`${API_BASE}/orders`, {
     method: 'POST',
