@@ -684,10 +684,12 @@ router.post('/orders/verify-location', async (req, res) => {
 
     // Save verification record in DB
     try {
+      const nowIso = new Date().toISOString();
+      const expiresIso = expiresAt.toISOString();
       await query(
         `INSERT INTO table_location_verifications (restaurant_id, table_number, verification_token, distance_meters, accuracy_meters, status, verified_at, expires_at)
-         VALUES ($1, $2, $3, $4, $5, 'verified', NOW(), $6)`,
-        [resto.id, cleanTable, verificationToken, calculatedDistance, custAcc, expiresAt]
+         VALUES ($1, $2, $3, $4, $5, 'verified', $6, $7)`,
+        [resto.id, cleanTable, verificationToken, calculatedDistance, custAcc, nowIso, expiresIso]
       );
     } catch (dbErr) {
       console.warn('Notice saving location verification record:', dbErr.message);

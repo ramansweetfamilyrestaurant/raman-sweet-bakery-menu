@@ -334,9 +334,9 @@ async function createTables() {
         distance_meters NUMERIC,
         accuracy_meters NUMERIC,
         status VARCHAR(50) DEFAULT 'verified',
-        verified_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-        expires_at TIMESTAMP NOT NULL,
-        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        verified_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+        expires_at TIMESTAMP WITH TIME ZONE NOT NULL,
+        created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
       );`
     ];
 
@@ -345,6 +345,8 @@ async function createTables() {
     }
 
     const pgAlters = [
+      `ALTER TABLE table_location_verifications ALTER COLUMN expires_at TYPE TIMESTAMP WITH TIME ZONE;`,
+      `ALTER TABLE table_location_verifications ALTER COLUMN verified_at TYPE TIMESTAMP WITH TIME ZONE;`,
       `ALTER TABLE pending_registrations ADD COLUMN IF NOT EXISTS name VARCHAR(255);`,
       `ALTER TABLE pending_registrations ADD COLUMN IF NOT EXISTS phone VARCHAR(50);`,
       `ALTER TABLE pending_registrations ADD COLUMN IF NOT EXISTS owner_username VARCHAR(100);`,
