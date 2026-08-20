@@ -1185,7 +1185,9 @@ const handleUpdateSettings = async (req, res) => {
       }
     }
 
-    const locBool = location_initialized !== undefined ? (location_initialized === true || location_initialized === 1 || location_initialized === 'true' ? true : false) : null;
+    const locBool = location_initialized !== undefined 
+      ? (location_initialized === true || location_initialized === 1 || location_initialized === 'true' ? true : false) 
+      : (latitude && longitude && Number(latitude) !== 0 && Number(longitude) !== 0 ? true : null);
 
     try {
       await query(`
