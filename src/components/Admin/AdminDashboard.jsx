@@ -504,16 +504,14 @@ export default function AdminDashboard({ token, username, slug: propSlug = '', o
         d = new Date(str.replace(' ', 'T'));
       }
       if (!isNaN(d.getTime())) {
-        const day = String(d.getDate()).padStart(2, '0');
-        const month = String(d.getMonth() + 1).padStart(2, '0');
-        const year = d.getFullYear();
+        const dateFormatted = d.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }).replace(/ /g, '-');
         let hours = d.getHours();
         const minutes = String(d.getMinutes()).padStart(2, '0');
         const ampm = hours >= 12 ? 'PM' : 'AM';
         hours = hours % 12;
         hours = hours ? hours : 12;
         const formattedHours = String(hours).padStart(2, '0');
-        return { date: `${day}/${month}/${year}`, time: `${formattedHours}:${minutes} ${ampm}` };
+        return { date: dateFormatted, time: `${formattedHours}:${minutes} ${ampm}` };
       }
       const parts = str.split(' ');
       if (parts.length >= 2) return { date: parts[0], time: parts[1] };
@@ -544,7 +542,7 @@ export default function AdminDashboard({ token, username, slug: propSlug = '', o
         `"${(order.customer_name || 'Guest').replace(/"/g, '""')}"`,
         parsedItems.reduce((acc, i) => acc + i.quantity, 0),
         `"${itemsListStr.replace(/"/g, '""')}"`,
-        `"${(order.status || 'PENDING').toUpperCase()}"`,
+        `"${(order.status || 'COMPLETED').toUpperCase()}"`,
         order.total_amount || 0
       ].join(',');
     });

@@ -69,7 +69,7 @@ export default function AnalyticsView({ analyticsData, onDownloadCSV, analyticsE
               <div key={idx} style={{ display: 'flex', justifyContent: 'space-between', padding: '10px 12px', background: 'var(--adm-surface-subtle)', borderRadius: 'var(--adm-radius-md)', fontSize: '0.84rem' }}>
                 <div>
                   <strong>{idx === 0 ? '🥇' : idx === 1 ? '🥈' : idx === 2 ? '🥉' : '🏅'} {dish.name}</strong>
-                  <span style={{ fontSize: '0.72rem', color: 'var(--adm-muted)', marginLeft: '8px' }}>({dish.sales_count || 0} orders)</span>
+                  <span style={{ fontSize: '0.72rem', color: 'var(--adm-muted)', marginLeft: '8px' }}>({dish.quantity ?? dish.sales_count ?? dish.count ?? 0} sold)</span>
                 </div>
                 <strong style={{ color: 'var(--adm-success)' }}>{currencySymbol}{dish.revenue || 0}</strong>
               </div>
