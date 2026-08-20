@@ -153,32 +153,20 @@ export default function SetupView({
         return;
       }
 
-      // Accuracy Validation Policy:
-      // <= 50m: Excellent / High Quality
-      // 50m - 100m: Acceptable with warning
-      // > 100m: REJECT reading (do NOT overwrite saved coordinates)
-      if (accuracy > 100) {
-        setGpsErrorState({
-          title: '⚠ Location accuracy is low',
-          msg: `Location accuracy is currently low (±${Math.round(accuracy)} meters). Please move outdoors or near a window and try again.`,
-          isDenied: false
-        });
-        return;
-      }
-
       // Preserve full float precision in state
       if (setSettingsForm) {
         setSettingsForm(prev => ({
           ...prev,
           latitude: lat,
-          longitude: lng
+          longitude: lng,
+          location_initialized: true
         }));
       }
 
       if (accuracy <= 50) {
-        setGpsSuccessMsg(`✓ Location detected (Accuracy: ±${Math.round(accuracy)}m)`);
+        setGpsSuccessMsg(`✓ GPS Location captured (Accuracy: ±${Math.round(accuracy)}m)`);
       } else {
-        setGpsSuccessMsg(`✓ Location detected (Accuracy: ±${Math.round(accuracy)}m — Move outdoors for better precision)`);
+        setGpsSuccessMsg(`✓ Location detected (Accuracy: ±${Math.round(accuracy)}m). Fine-tune pin on map if needed.`);
       }
 
       setTimeout(() => setGpsSuccessMsg(''), 7000);
