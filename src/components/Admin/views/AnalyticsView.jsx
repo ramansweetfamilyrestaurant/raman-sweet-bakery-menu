@@ -22,7 +22,7 @@ export default function AnalyticsView({
   const maxDishQty = Math.max(...topDishes.map(d => Number(d.quantity ?? d.sales_count ?? 1)), 1);
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: '20px', paddingBottom: '30px' }}>
+    <div style={{ display: 'flex', flexDirection: 'column', gap: '16px', paddingBottom: '30px', maxWidth: '1200px', margin: '0 auto', width: '100%' }}>
       
       {/* 🚀 Header & Export Actions */}
       <div style={{
@@ -30,48 +30,51 @@ export default function AnalyticsView({
         alignItems: 'center',
         justifyContent: 'space-between',
         flexWrap: 'wrap',
-        gap: '14px',
+        gap: '12px',
         background: '#FFFFFF',
-        padding: '18px 22px',
+        padding: '16px 18px',
         borderRadius: '16px',
         border: '1px solid #E2E8F0',
         boxShadow: '0 2px 8px rgba(0,0,0,0.02)'
       }}>
-        <div>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '4px' }}>
-            <h2 style={{ fontSize: '1.35rem', fontWeight: 900, color: '#0F172A', margin: 0, letterSpacing: '-0.02em' }}>
+        <div style={{ minWidth: '200px', flex: '1 1 auto' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '2px', flexWrap: 'wrap' }}>
+            <h2 style={{ fontSize: '1.25rem', fontWeight: 900, color: '#0F172A', margin: 0, letterSpacing: '-0.02em' }}>
               Sales Analytics & Reports
             </h2>
-            <span style={{ fontSize: '0.7rem', fontWeight: 800, background: '#DCFCE7', color: '#15803D', border: '1px solid #86EFAC', padding: '2px 8px', borderRadius: '12px', display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
+            <span style={{ fontSize: '0.68rem', fontWeight: 800, background: '#DCFCE7', color: '#15803D', border: '1px solid #86EFAC', padding: '2px 8px', borderRadius: '12px', display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
               ● LIVE
             </span>
           </div>
-          <span style={{ fontSize: '0.82rem', color: '#64748B', fontWeight: 500 }}>
-            Real-time business revenue metrics & auto-sized Excel (.xlsx) reports
+          <span style={{ fontSize: '0.78rem', color: '#64748B', fontWeight: 500 }}>
+            Real-time revenue metrics & Excel (.xlsx) sales reports
           </span>
         </div>
 
         {analyticsExportEnabled ? (
-          <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
+          <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', width: 'auto', flex: '1 1 auto', justifyContent: 'flex-end' }}>
             <button
               onClick={onDownloadTodayCSV}
               style={{
                 background: 'linear-gradient(135deg, #059669 0%, #10B981 100%)',
                 color: '#FFFFFF',
                 border: 'none',
-                padding: '9px 16px',
+                padding: '9px 14px',
                 borderRadius: '10px',
-                fontSize: '0.82rem',
+                fontSize: '0.8rem',
                 fontWeight: 800,
                 cursor: 'pointer',
                 display: 'inline-flex',
                 alignItems: 'center',
-                gap: '7px',
+                justifyContent: 'center',
+                gap: '6px',
+                minHeight: '40px',
                 boxShadow: '0 2px 6px rgba(16, 185, 129, 0.25)',
-                transition: 'all 0.2s ease'
+                transition: 'all 0.2s ease',
+                flex: '1 1 auto'
               }}
             >
-              <Download size={15} /> 📅 Export Daily Sales (.xlsx)
+              <Download size={14} /> 📅 Export Daily Sales (.xlsx)
             </button>
             <button
               onClick={onDownloadAllCSV}
@@ -80,20 +83,23 @@ export default function AnalyticsView({
                 background: '#1E293B',
                 color: '#FFFFFF',
                 border: 'none',
-                padding: '9px 16px',
+                padding: '9px 14px',
                 borderRadius: '10px',
-                fontSize: '0.82rem',
+                fontSize: '0.8rem',
                 fontWeight: 800,
                 cursor: exportingAll ? 'not-allowed' : 'pointer',
                 opacity: exportingAll ? 0.7 : 1,
                 display: 'inline-flex',
                 alignItems: 'center',
-                gap: '7px',
+                justifyContent: 'center',
+                gap: '6px',
+                minHeight: '40px',
                 boxShadow: '0 2px 6px rgba(30, 41, 59, 0.2)',
-                transition: 'all 0.2s ease'
+                transition: 'all 0.2s ease',
+                flex: '1 1 auto'
               }}
             >
-              <Download size={15} /> {exportingAll ? 'Generating...' : '📊 Export All-Time Sales (.xlsx)'}
+              <Download size={14} /> {exportingAll ? 'Generating...' : '📊 Export All-Time (.xlsx)'}
             </button>
           </div>
         ) : (
@@ -103,11 +109,11 @@ export default function AnalyticsView({
         )}
       </div>
 
-      {/* 💳 KPI Cards Grid */}
+      {/* 💳 KPI Cards Grid (Fluid Responsive: 2 cols on mobile, 4 cols on desktop) */}
       <div style={{
         display: 'grid',
-        gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))',
-        gap: '14px'
+        gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))',
+        gap: '12px'
       }}>
         {/* Today */}
         <div style={{
