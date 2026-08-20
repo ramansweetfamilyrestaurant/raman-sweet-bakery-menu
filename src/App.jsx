@@ -236,6 +236,8 @@ export default function App() {
     return `🍽️ Table ${effectiveTableNum}`;
   };
 
+  const isDirectOrderingActive = Boolean(info && (info.direct_ordering_enabled === true || info.direct_ordering_enabled === 1 || info.direct_ordering_enabled === '1' || info.direct_ordering_enabled !== false));
+
   // Language State ('en' or 'hi')
   const [lang, setLang] = useState('en');
 
@@ -696,8 +698,16 @@ export default function App() {
       const hasLocation = Boolean(info && !isNaN(restoLat) && !isNaN(restoLng) && restoLat !== 0 && restoLng !== 0);
 
       if (hasLocation) {
-        const cached = cachedCustomerGeoRef.current;
-        const isFresh = cached && (Date.now() - cached.timestamp < 15 * 60 * 1000) && cached.customerLat;
+        let cached = cachedCustomerGeoRef.current;
+        if (!cached && info?.id) {
+          try {
+            const raw = sessionStorage.getItem(`touchqr_geo_${info.id}`);
+            if (raw) cached = JSON.parse(raw);
+          } catch {}
+        }
+        const storedLocToken = (info?.id ? sessionStorage.getItem(`touchqr_location_token_${info.id}`) : '') || '';
+        const effectiveToken = locationToken || (cached && cached.locationToken) || storedLocToken;
+        const isFresh = Boolean(effectiveToken || (cached && cached.timestamp && (Date.now() - cached.timestamp < 20 * 60 * 1000)));
 
         if (!locationVerified && !isFresh) {
           // Open the mobile location verification screen and block submission
@@ -708,9 +718,8 @@ export default function App() {
         }
 
         const geoData = cached || {};
-        const storedLocToken = info?.id ? sessionStorage.getItem(`touchqr_location_token_${info.id}`) : '';
         customerGeo = {
-          location_token: locationToken || geoData.locationToken || storedLocToken || '',
+          location_token: effectiveToken || '',
           verification_token: geoData.verificationToken || '',
           customer_latitude: geoData.customerLat,
           customer_longitude: geoData.customerLng,
@@ -2285,7 +2294,7 @@ export default function App() {
                   const originalTotal = comboItems.reduce((s, i) => s + ((i.original_price || 0) * (i.qty || 1)), 0);
                   const savings = originalTotal - combo.price;
                   const itemsSummaryText = comboItems.map(i => `${i.qty > 1 ? i.qty + 'x ' : ''}${i.dish_name}`).join(' + ');
-                  const canOrder = Boolean(effectiveTableNum && (info?.direct_ordering_enabled === true || info?.direct_ordering_enabled === 1));
+                  const canOrder = isDirectOrderingActive;
 
                   return (
                     <div 
@@ -2447,7 +2456,7 @@ export default function App() {
                       lang={lang}
                       currencySymbol={info?.currency_symbol !== undefined ? info.currency_symbol : '₹'}
                       onClick={() => setSelectedDishModal(dish)}
-                      onAddToCart={(effectiveTableNum && (info?.direct_ordering_enabled === true || info?.direct_ordering_enabled === 1)) ? handleAddToCart : undefined}
+                      onAddToCart={isDirectOrderingActive ? handleAddToCart : undefined}
                     />
                   ))}
                 </div>
@@ -2464,7 +2473,7 @@ export default function App() {
                       lang={lang}
                       currencySymbol={info?.currency_symbol !== undefined ? info.currency_symbol : '₹'}
                       onClick={() => setSelectedDishModal(dish)}
-                      onAddToCart={(effectiveTableNum && (info?.direct_ordering_enabled === true || info?.direct_ordering_enabled === 1)) ? handleAddToCart : undefined}
+                      onAddToCart={isDirectOrderingActive ? handleAddToCart : undefined}
                     />
                   ))}
                 </div>
@@ -2736,7 +2745,7 @@ export default function App() {
                       </div>
                     )}
 
-                    {effectiveTableNum && info && info.direct_ordering_enabled !== false && (
+                    {isDirectOrderingActive && (
                       <button
                         onClick={handleSendDirectOrder}
                         disabled={placingOrder}
@@ -3023,7 +3032,7 @@ export default function App() {
           dish={selectedDishModal}
           lang={lang}
           currencySymbol={info?.currency_symbol !== undefined ? info.currency_symbol : '₹'}
-          onAddToCart={Boolean(effectiveTableNum && (info?.direct_ordering_enabled === true || info?.direct_ordering_enabled === 1)) ? handleAddToCart : undefined}
+          onAddToCart={isDirectOrderingActive ? handleAddToCart : undefined}
           onClose={() => setSelectedDishModal(null)}
         />
       )}
@@ -3034,7 +3043,7 @@ export default function App() {
           combo={selectedComboModal}
           onClose={() => setSelectedComboModal(null)}
           onAddToCart={handleAddComboToCart}
-          canOrder={Boolean(effectiveTableNum && (info?.direct_ordering_enabled === true || info?.direct_ordering_enabled === 1))}
+          canOrder={isDirectOrderingActive}
           currencySymbol={info?.currency_symbol !== undefined && info?.currency_symbol !== null ? info.currency_symbol : '₹'}
         />
       )}
