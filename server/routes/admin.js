@@ -1347,10 +1347,12 @@ router.get('/orders', authenticateToken, requireActiveSubscription, async (req, 
     const params = [targetId];
 
     if (scope !== 'all') {
-      // Default live operations: all active orders + completed orders from the last 24 hours
-      const twentyFourHoursAgo = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
+      // Default live operations: all active orders + completed orders from today (since 12:00 AM Midnight)
+      const now = new Date();
+      const istDateStr = new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Kolkata' }).format(now);
+      const midnightISO = new Date(`${istDateStr}T00:00:00+05:30`).toISOString();
       sql += " AND (status != 'completed' OR created_at >= $2)";
-      params.push(twentyFourHoursAgo);
+      params.push(midnightISO);
     }
 
     sql += " ORDER BY id DESC LIMIT 500";

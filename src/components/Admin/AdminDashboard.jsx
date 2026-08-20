@@ -566,18 +566,20 @@ export default function AdminDashboard({ token, username, slug: propSlug = '', o
     XLSX.writeFile(workbook, fileName);
   };
 
-  // 📅 Export Today's / Daily Sales (Last 24 Hours / Today)
+  // 📅 Export Today's / Daily Sales (Since 12:00 AM Midnight Today)
   const handleDownloadTodaySalesReport = () => {
-    const todayISO = new Date().toISOString().substring(0, 10);
+    const now = new Date();
+    const todayISO = new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Kolkata' }).format(now);
     const todayOrders = (orders || []).filter(o => {
       if (!o.created_at) return true;
-      return String(o.created_at).substring(0, 10) === todayISO || (Date.now() - new Date(o.created_at).getTime()) <= 24 * 3600 * 1000;
+      const orderDateStr = new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Kolkata' }).format(new Date(o.created_at));
+      return orderDateStr === todayISO;
     });
     if (todayOrders.length === 0) {
       alert("No sales orders recorded for today yet.");
       return;
     }
-    generateAndDownloadExcel(todayOrders, 'Daily_Sales_Report');
+    generateAndDownloadExcel(todayOrders, `Daily_Sales_Report_${todayISO}`);
   };
 
   // 📊 Export All-Time Sales (Complete History)
