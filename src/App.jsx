@@ -229,7 +229,18 @@ export default function App() {
     return `🍽️ Table ${effectiveTableNum}`;
   };
 
-  const isDirectOrderingActive = Boolean(info && (info.direct_ordering_enabled === true || info.direct_ordering_enabled === 1 || info.direct_ordering_enabled === '1' || info.direct_ordering_enabled !== false));
+  const isViewOnlyUrl = Boolean(
+    new URLSearchParams(window.location.search).get('view') === '1' ||
+    new URLSearchParams(window.location.search).get('view_only') === 'true' ||
+    new URLSearchParams(window.location.search).get('mode') === 'view'
+  );
+
+  const isDirectOrderingActive = Boolean(
+    !isViewOnlyUrl &&
+    info &&
+    (info.direct_ordering_enabled === true || info.direct_ordering_enabled === 1 || info.direct_ordering_enabled === '1') &&
+    (info.permissions?.direct_ordering_enabled !== false && info.permissions?.direct_ordering_enabled !== 0 && info.permissions?.direct_ordering_enabled !== 'false')
+  );
 
   // Language State ('en' or 'hi')
   const [lang, setLang] = useState('en');
@@ -3042,7 +3053,7 @@ export default function App() {
         <ComboModal
           combo={selectedComboModal}
           onClose={() => setSelectedComboModal(null)}
-          onAddToCart={handleAddComboToCart}
+          onAddToCart={isDirectOrderingActive ? handleAddComboToCart : undefined}
           canOrder={isDirectOrderingActive}
           currencySymbol={info?.currency_symbol !== undefined && info?.currency_symbol !== null ? info.currency_symbol : '₹'}
         />
