@@ -836,42 +836,53 @@ export default function SetupView({
         )}
       >
         <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
-          {/* Siren Audio Alert Box */}
-          <div style={{ padding: '16px', background: '#FFFFFF', borderRadius: '14px', border: '1px solid #E2E8F0', boxShadow: '0 2px 8px rgba(0,0,0,0.02)' }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '6px' }}>
-              <strong style={{ fontSize: '0.92rem', color: '#0F172A', fontWeight: 800 }}>🔊 Live Order Siren Ringtone</strong>
+          {/* Card 1: Siren Audio Alert Box */}
+          <div style={{ padding: '16px 18px', background: '#FFFFFF', borderRadius: '16px', border: '1px solid #E2E8F0', boxShadow: '0 1px 3px rgba(0,0,0,0.04)' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                <div style={{ width: '36px', height: '36px', borderRadius: '10px', background: '#FEF3C7', color: '#D97706', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1.1rem', flexShrink: 0 }}>
+                  🔊
+                </div>
+                <div>
+                  <strong style={{ fontSize: '0.92rem', color: '#0F172A', fontWeight: 800, display: 'block' }}>Live Order Siren Ringtone</strong>
+                  <span style={{ fontSize: '0.72rem', color: '#64748B' }}>Swiggy/Zomato style order alert sound</span>
+                </div>
+              </div>
               <input
                 type="checkbox"
                 checked={settingsForm.order_alarm_enabled !== false}
                 onChange={(e) => setSettingsForm({ ...settingsForm, order_alarm_enabled: e.target.checked })}
-                style={{ width: '18px', height: '18px', cursor: 'pointer', accentColor: '#059669' }}
+                style={{ width: '20px', height: '20px', cursor: 'pointer', accentColor: '#059669' }}
               />
             </div>
-            <p style={{ fontSize: '0.76rem', color: '#64748B', margin: '0 0 12px 0', lineHeight: 1.4 }}>
-              Plays a loud Swiggy/Zomato style siren ringtone whenever a new table order arrives.
+            <p style={{ fontSize: '0.76rem', color: '#64748B', margin: '0 0 12px 0', lineHeight: 1.45, paddingLeft: '46px' }}>
+              Plays a loud ringing alarm automatically whenever a new customer table order arrives.
             </p>
-            <div style={{ display: 'flex', gap: '8px' }}>
+            <div style={{ display: 'flex', gap: '10px', paddingLeft: '46px' }}>
               <button
+                type="button"
                 onClick={testAlarmSound}
                 style={{
                   flex: 1,
                   padding: '9px 12px',
                   borderRadius: '10px',
-                  background: '#F1F5F9',
-                  color: '#334155',
-                  border: '1px solid #CBD5E1',
+                  background: '#FFFBEB',
+                  color: '#B45309',
+                  border: '1px solid #FDE68A',
                   fontWeight: 800,
                   fontSize: '0.78rem',
                   cursor: 'pointer',
                   display: 'inline-flex',
                   alignItems: 'center',
                   justifyContent: 'center',
-                  gap: '6px'
+                  gap: '6px',
+                  transition: 'all 0.15s ease'
                 }}
               >
                 <Volume2 size={15} /> Test Siren Sound
               </button>
               <button
+                type="button"
                 onClick={requestPushPermission}
                 style={{
                   flex: 1,
@@ -886,7 +897,8 @@ export default function SetupView({
                   display: 'inline-flex',
                   alignItems: 'center',
                   justifyContent: 'center',
-                  gap: '6px'
+                  gap: '6px',
+                  transition: 'all 0.15s ease'
                 }}
               >
                 🔔 Push Notifications
@@ -894,7 +906,7 @@ export default function SetupView({
             </div>
           </div>
 
-          {/* Kitchen Display System (KDS) Screen Toggle */}
+          {/* Card 2: Kitchen Display System (KDS) Screen Toggle */}
           {(() => {
             const isKdsPlanAllowed = Boolean(
               settingsForm?.kds_enabled === 1 ||
@@ -906,48 +918,57 @@ export default function SetupView({
               restaurantInfo?.permissions?.kds_enabled === true
             );
 
-            if (!isKdsPlanAllowed) {
-              return (
-                <div style={{ padding: '14px 16px', background: '#F8FAFC', borderRadius: '14px', border: '1px solid #E2E8F0', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                  <div>
-                    <strong style={{ fontSize: '0.88rem', color: '#64748B', display: 'block' }}>🍳 Kitchen Display System (KDS)</strong>
-                    <span style={{ fontSize: '0.74rem', color: '#94A3B8' }}>Dedicated kitchen tablet screen for chefs</span>
-                  </div>
-                  <span style={{ fontSize: '0.72rem', fontWeight: 800, color: '#B45309', background: '#FEF3C7', border: '1px solid #F59E0B', padding: '3px 8px', borderRadius: '20px' }}>
-                    🔒 Enterprise Feature
-                  </span>
-                </div>
-              );
-            }
-
             return (
-              <div style={{ padding: '16px', background: '#FFFFFF', borderRadius: '14px', border: '1px solid #E2E8F0', boxShadow: '0 2px 8px rgba(0,0,0,0.02)' }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '4px' }}>
-                  <strong style={{ fontSize: '0.92rem', color: '#0F172A', fontWeight: 800 }}>🍳 Kitchen Display System (KDS) Access</strong>
-                  <input
-                    type="checkbox"
-                    checked={settingsForm.kds_screen_enabled !== false && settingsForm.kds_screen_enabled !== 0}
-                    onChange={(e) => setSettingsForm({ ...settingsForm, kds_screen_enabled: e.target.checked ? 1 : 0 })}
-                    style={{ width: '18px', height: '18px', cursor: 'pointer', accentColor: '#059669' }}
-                  />
+              <div style={{ padding: '16px 18px', background: '#FFFFFF', borderRadius: '16px', border: '1px solid #E2E8F0', boxShadow: '0 1px 3px rgba(0,0,0,0.04)' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '6px' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                    <div style={{ width: '36px', height: '36px', borderRadius: '10px', background: '#EDE9FE', color: '#7C3AED', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1.1rem', flexShrink: 0 }}>
+                      🍳
+                    </div>
+                    <div>
+                      <strong style={{ fontSize: '0.92rem', color: '#0F172A', fontWeight: 800, display: 'block' }}>Kitchen Display System (KDS)</strong>
+                      <span style={{ fontSize: '0.72rem', color: '#64748B' }}>Dedicated kitchen tablet screen for chef prep</span>
+                    </div>
+                  </div>
+                  {isKdsPlanAllowed ? (
+                    <input
+                      type="checkbox"
+                      checked={settingsForm.kds_screen_enabled !== false && settingsForm.kds_screen_enabled !== 0}
+                      onChange={(e) => setSettingsForm({ ...settingsForm, kds_screen_enabled: e.target.checked ? 1 : 0 })}
+                      style={{ width: '20px', height: '20px', cursor: 'pointer', accentColor: '#059669' }}
+                    />
+                  ) : (
+                    <span style={{ fontSize: '0.72rem', fontWeight: 800, color: '#B45309', background: '#FEF3C7', border: '1px solid #F59E0B', padding: '3px 10px', borderRadius: '20px', display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
+                      🔒 Enterprise Feature
+                    </span>
+                  )}
                 </div>
-                <p style={{ fontSize: '0.76rem', color: '#64748B', margin: 0, lineHeight: 1.4 }}>
-                  Enables the dedicated fullscreen Kitchen Display Screen tab for chef order preparation and instant completed alerts.
+                <p style={{ fontSize: '0.76rem', color: '#64748B', margin: 0, lineHeight: 1.45, paddingLeft: '46px' }}>
+                  {isKdsPlanAllowed 
+                    ? 'Enables the fullscreen Kitchen Display Screen tab for chef order preparation and instant completed alerts.' 
+                    : 'Kitchen Display screen access is restricted to the Enterprise Plan tier. Contact SuperAdmin to upgrade.'}
                 </p>
               </div>
             );
           })()}
 
-          {/* Printer Setup Box */}
-          <div style={{ padding: '16px', background: '#FFFFFF', borderRadius: '14px', border: '1px solid #E2E8F0', display: 'flex', flexDirection: 'column', gap: '12px', boxShadow: '0 2px 8px rgba(0,0,0,0.02)' }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-              <strong style={{ fontSize: '0.92rem', color: '#0F172A', fontWeight: 800 }}>🖨️ Thermal Receipt Printer & Routing</strong>
+          {/* Card 3: Printer Setup Box */}
+          <div style={{ padding: '16px 18px', background: '#FFFFFF', borderRadius: '16px', border: '1px solid #E2E8F0', display: 'flex', flexDirection: 'column', gap: '14px', boxShadow: '0 1px 3px rgba(0,0,0,0.04)' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+              <div style={{ width: '36px', height: '36px', borderRadius: '10px', background: '#E0F2FE', color: '#0284C7', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1.1rem', flexShrink: 0 }}>
+                🖨️
+              </div>
+              <div>
+                <strong style={{ fontSize: '0.92rem', color: '#0F172A', fontWeight: 800, display: 'block' }}>Thermal Receipt Printer & Routing</strong>
+                <span style={{ fontSize: '0.72rem', color: '#64748B' }}>58mm / 80mm Bluetooth, USB, RawBT printers</span>
+              </div>
             </div>
-            <p style={{ fontSize: '0.76rem', color: '#64748B', margin: 0, lineHeight: 1.4 }}>
-              Supports 58mm & 80mm ESC/POS Bluetooth, USB, and RawBT silent thermal printers for Kitchen KOT & Customer Receipts.
+            <p style={{ fontSize: '0.76rem', color: '#64748B', margin: '0 0 4px 0', lineHeight: 1.45, paddingLeft: '46px' }}>
+              Automatically prints Kitchen Order Tickets (KOT) and counter customer tax invoices.
             </p>
 
-            {(() => {
+            <div style={{ paddingLeft: '46px', display: 'flex', flexDirection: 'column', gap: '12px' }}>
+              {(() => {
               const isDualAllowed = Boolean(
                 settingsForm?.dual_printer_enabled === 1 ||
                 settingsForm?.dual_printer_enabled === true ||
@@ -1009,26 +1030,27 @@ export default function SetupView({
               );
             })()}
 
-            <button
-              onClick={() => { setOpenDrawer(null); setShowPrinterModal(true); }}
-              style={{
-                width: '100%',
-                padding: '10px 14px',
-                borderRadius: '10px',
-                background: '#F1F5F9',
-                color: '#334155',
-                border: '1px solid #CBD5E1',
-                fontWeight: 800,
-                fontSize: '0.80rem',
-                cursor: 'pointer',
-                display: 'inline-flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                gap: '6px'
-              }}
-            >
-              <Printer size={15} /> Open Printer Pairing Guide
-            </button>
+              <button
+                onClick={() => { setOpenDrawer(null); setShowPrinterModal(true); }}
+                style={{
+                  width: '100%',
+                  padding: '10px 14px',
+                  borderRadius: '10px',
+                  background: '#F1F5F9',
+                  color: '#334155',
+                  border: '1px solid #CBD5E1',
+                  fontWeight: 800,
+                  fontSize: '0.80rem',
+                  cursor: 'pointer',
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  gap: '6px'
+                }}
+              >
+                <Printer size={15} /> Open Printer Pairing Guide
+              </button>
+            </div>
           </div>
         </div>
       </AdminDrawer>
