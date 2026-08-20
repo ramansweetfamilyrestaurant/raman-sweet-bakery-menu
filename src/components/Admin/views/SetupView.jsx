@@ -910,20 +910,6 @@ export default function SetupView({
             </p>
           </div>
 
-          {/* Order Retention Period */}
-          <div style={{ padding: '16px', background: '#FFFFFF', borderRadius: '14px', border: '1px solid #E2E8F0', boxShadow: '0 2px 8px rgba(0,0,0,0.02)' }}>
-            <label style={{ fontSize: '0.74rem', fontWeight: 800, color: '#0F172A', display: 'block', marginBottom: '6px', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
-              Order History Retention (Days):
-            </label>
-            <input
-              type="number"
-              value={settingsForm.order_retention_days || 7}
-              onChange={(e) => setSettingsForm({ ...settingsForm, order_retention_days: parseInt(e.target.value) || 7 })}
-              style={{ width: '100%', padding: '10px 14px', borderRadius: '10px', border: '1px solid #CBD5E1', fontSize: '0.9rem', boxSizing: 'border-box' }}
-            />
-            <span style={{ fontSize: '0.72rem', color: '#64748B', marginTop: '4px', display: 'block' }}>Orders older than this period will be automatically archived.</span>
-          </div>
-
           {/* Printer Setup Box */}
           <div style={{ padding: '16px', background: '#FFFFFF', borderRadius: '14px', border: '1px solid #E2E8F0', display: 'flex', flexDirection: 'column', gap: '12px', boxShadow: '0 2px 8px rgba(0,0,0,0.02)' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>

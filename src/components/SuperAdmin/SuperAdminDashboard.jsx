@@ -1846,10 +1846,15 @@ export default function SuperAdminDashboard({ token, username, onLogout, onRetur
                   style={{ width: '100%', padding: '8px 12px', borderRadius: '8px', border: '1px solid #BFDBFE', fontSize: '0.84rem', fontWeight: 800, color: '#1E3A8A', background: '#FFFFFF' }}
                 >
                   <option value={1}>⚡ 24 Hours / 1 Day (Ultra Light - High Traffic)</option>
-                  <option value={7}>⚡ 7 Days (Recommended for Restaurants)</option>
+                  <option value={7}>⚡ 7 Days (Standard Light)</option>
                   <option value={30}>⚡ 30 Days (1 Month History)</option>
-                  <option value={90}>⚡ 90 Days (3 Months History)</option>
+                  <option value={90}>⚡ 90 Days (Quarterly / 3 Months History - Recommended)</option>
+                  <option value={180}>⚡ 180 Days (Half-Year / 6 Months History)</option>
+                  <option value={365}>⚡ 365 Days (Full 1 Year History)</option>
                 </select>
+                <span style={{ fontSize: '0.70rem', color: '#60A5FA', marginTop: '4px', display: 'block', fontWeight: 600 }}>
+                  Controls how long past orders & analytics are stored in database before auto-archiving.
+                </span>
               </div>
 
               <div>
