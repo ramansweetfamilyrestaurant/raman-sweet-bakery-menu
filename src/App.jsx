@@ -16,6 +16,7 @@ import { LayoutList, Grid, BookOpen, X, Sparkles, ShieldAlert, Phone, Plus, Edit
 import { verifyCustomerLocation } from './utils/geo';
 import ServiceRequestModal from './components/ServiceRequestModal';
 import CustomerReviewModal from './components/CustomerReviewModal';
+import CustomerLocationModal from './components/CustomerLocationModal';
 import { isValidQrTokenFormat, normalizeSpaceType, normalizeSpaceNumber } from './utils/qrSecurity';
 
 // Robust Lazy Loading with automatic retry on new production deploys
