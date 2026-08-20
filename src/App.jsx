@@ -761,17 +761,20 @@ export default function App() {
         const geoData = cached || {};
         customerGeo = {
           location_token: effectiveToken || (geoData && geoData.locationToken) || '',
-          verification_token: (geoData && (geoData.verificationToken || geoData.verification_token)) || '',
-          customer_latitude: geoData.customerLat,
-          customer_longitude: geoData.customerLng,
-          customer_accuracy: geoData.accuracy,
-          distance_meters: geoData.distanceMeters
+          verification_token: (overrideGeo && (overrideGeo.verificationToken || overrideGeo.verification_token)) || (geoData && (geoData.verificationToken || geoData.verification_token)) || '',
+          customer_latitude: (overrideGeo && overrideGeo.customerLat) || geoData.customerLat,
+          customer_longitude: (overrideGeo && overrideGeo.customerLng) || geoData.customerLng,
+          customer_accuracy: (overrideGeo && overrideGeo.accuracy) || geoData.accuracy,
+          distance_meters: (overrideGeo && overrideGeo.distanceMeters) || geoData.distanceMeters
         };
       }
 
       const currentSlug = getSlugFromUrl() || (info && info.slug) || '';
-      const targetTable = effectiveTableNum;
-      if (!targetTable || !initialSpaceInfo.isValidTokenShape) {
+      const effectiveQrToken = currentTableToken || initialSpaceInfo.token || (overrideGeo && overrideGeo.qrToken) || (new URLSearchParams(window.location.search).get('tkn') || '').trim();
+      const targetTable = effectiveTableNum || currentTableNum || initialSpaceInfo.num || (new URLSearchParams(window.location.search).get('table') || '').trim() || '1';
+      const targetSpaceType = currentSpaceType || initialSpaceInfo.type || (overrideGeo && overrideGeo.spaceType) || 'table';
+
+      if (!targetTable || !effectiveQrToken) {
         alert('Invalid or missing Table QR. Please scan the official QR code at your dining table to place an order.');
         setPlacingOrder(false);
         isPlacingOrderRef.current = false;
@@ -791,8 +794,8 @@ export default function App() {
       const res = await createDirectOrder({
         slug: currentSlug,
         table_number: targetTable,
-        space_type: currentSpaceType || 'table',
-        table_token: currentTableToken,
+        space_type: targetSpaceType,
+        table_token: effectiveQrToken,
         customer_name: customerNameInput || 'Dine-In Customer',
         customer_phone: customerPhoneInput || '',
         items: itemsPayload,
@@ -807,12 +810,15 @@ export default function App() {
         setActiveOrderId(String(res.order_id));
       }
 
+      setShowLocationModal(false);
       setOrderSuccessModal(res);
       setCartItems([]);
       setShowCartDrawer(false);
     } catch (err) {
       const errMsg = String(err.message || '');
       const errCode = err.error || err.code || '';
+      console.error('[ORDER SUBMISSION ERROR]', err);
+
       if (errCode === 'invalid_qr' || errMsg.toLowerCase().includes('qr')) {
         setLocationVerified(false);
         setLocationToken('');
@@ -821,15 +827,11 @@ export default function App() {
           sessionStorage.removeItem(`touchqr_location_token_${info?.id}`);
           sessionStorage.removeItem(`touchqr_geo_${info?.id}`);
         } catch {}
-        alert('Invalid or unverified Table QR code. Please scan the official QR code at your dining table.');
+        alert(errMsg || 'Invalid or unverified Table QR code. Please scan the official QR code at your dining table.');
       } else if (
-        errMsg.toLowerCase().includes('location') ||
-        errMsg.toLowerCase().includes('mismatch') ||
-        errMsg.toLowerCase().includes('expired') ||
-        errCode === 'location_verification_expired' ||
         errCode === 'location_required' ||
-        errCode === 'table_mismatch' ||
-        errCode === 'space_mismatch'
+        errCode === 'outside_boundary' ||
+        errCode === 'low_accuracy'
       ) {
         setLocationVerified(false);
         setLocationToken('');
@@ -838,9 +840,10 @@ export default function App() {
           sessionStorage.removeItem(`touchqr_location_token_${info?.id}`);
           sessionStorage.removeItem(`touchqr_geo_${info?.id}`);
         } catch {}
+        alert(errMsg || 'Location verification is required.');
         setShowLocationModal(true);
       } else {
-        alert(errMsg || 'Failed to place order.');
+        alert(errMsg || 'Failed to place order. Please try again.');
       }
     } finally {
       setPlacingOrder(false);
@@ -3162,15 +3165,16 @@ export default function App() {
             setLocationToken(verifiedData.locationToken);
             const verifiedPayload = {
               ...verifiedData,
-              tableNumber: effectiveTableNum,
-              spaceType: currentSpaceType,
-              qrToken: currentTableToken
+              tableNumber: effectiveTableNum || currentTableNum || (new URLSearchParams(window.location.search).get('table') || '').trim() || '1',
+              spaceType: currentSpaceType || 'table',
+              qrToken: currentTableToken || initialSpaceInfo.token || (new URLSearchParams(window.location.search).get('tkn') || '').trim()
             };
             cachedCustomerGeoRef.current = verifiedPayload;
             try {
-              sessionStorage.setItem(`touchqr_location_token_${info?.id}`, verifiedData.locationToken);
+              sessionStorage.setItem(`touchqr_location_token_${info?.id}`, verifiedData.locationToken || '');
               sessionStorage.setItem(`touchqr_geo_${info?.id}`, JSON.stringify(verifiedPayload));
             } catch {}
+            setShowLocationModal(false);
             if (cartItems.length > 0) {
               handleSendDirectOrder(verifiedPayload);
             }
