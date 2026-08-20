@@ -65,6 +65,8 @@ const PrivacyPolicy = lazyWithRetry(() => import('./components/Legal/PrivacyPoli
 const TermsOfService = lazyWithRetry(() => import('./components/Legal/TermsOfService'));
 const RefundPolicy = lazyWithRetry(() => import('./components/Legal/RefundPolicy'));
 const SecurityPolicy = lazyWithRetry(() => import('./components/Legal/SecurityPolicy'));
+const ContactSupport = lazyWithRetry(() => import('./components/Legal/ContactSupport'));
+const StandaloneKdsPage = lazyWithRetry(() => import('./components/Admin/views/StandaloneKdsPage'));
 // Pure URL helper functions declared at module level
 export const getSlugFromUrl = () => {
   const path = window.location.pathname;
