@@ -325,6 +325,18 @@ async function createTables() {
         expires_at TIMESTAMP WITH TIME ZONE NOT NULL,
         used BOOLEAN DEFAULT FALSE,
         created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+      );`,
+      `CREATE TABLE IF NOT EXISTS table_location_verifications (
+        id SERIAL PRIMARY KEY,
+        restaurant_id INT REFERENCES restaurants(id) ON DELETE CASCADE,
+        table_number VARCHAR(50) NOT NULL,
+        verification_token VARCHAR(255) UNIQUE NOT NULL,
+        distance_meters NUMERIC,
+        accuracy_meters NUMERIC,
+        status VARCHAR(50) DEFAULT 'verified',
+        verified_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        expires_at TIMESTAMP NOT NULL,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
       );`
     ];
 
@@ -792,6 +804,19 @@ async function createTables() {
         created_slug TEXT,
         created_jwt TEXT,
         created_user TEXT
+      );
+      CREATE TABLE IF NOT EXISTS table_location_verifications (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        restaurant_id INTEGER NOT NULL,
+        table_number TEXT NOT NULL,
+        verification_token TEXT UNIQUE NOT NULL,
+        distance_meters REAL,
+        accuracy_meters REAL,
+        status TEXT DEFAULT 'verified',
+        verified_at TEXT DEFAULT CURRENT_TIMESTAMP,
+        expires_at TEXT NOT NULL,
+        created_at TEXT DEFAULT CURRENT_TIMESTAMP,
+        FOREIGN KEY (restaurant_id) REFERENCES restaurants (id) ON DELETE CASCADE
       );
     `);
 

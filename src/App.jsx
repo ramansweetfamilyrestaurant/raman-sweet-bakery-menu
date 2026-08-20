@@ -752,7 +752,19 @@ export default function App() {
       setCartItems([]);
       setShowCartDrawer(false);
     } catch (err) {
-      alert(err.message || 'Failed to place order.');
+      const errMsg = String(err.message || '');
+      if (errMsg.toLowerCase().includes('location') || errMsg.toLowerCase().includes('expired') || err.code === 'location_verification_expired') {
+        setLocationVerified(false);
+        setLocationToken('');
+        cachedCustomerGeoRef.current = null;
+        try {
+          sessionStorage.removeItem(`touchqr_location_token_${info?.id}`);
+          sessionStorage.removeItem(`touchqr_geo_${info?.id}`);
+        } catch {}
+        setShowLocationModal(true);
+      } else {
+        alert(errMsg || 'Failed to place order.');
+      }
     } finally {
       setPlacingOrder(false);
       setTimeout(() => {

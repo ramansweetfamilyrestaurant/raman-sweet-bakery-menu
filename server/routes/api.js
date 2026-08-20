@@ -1,4 +1,5 @@
 import express from 'express';
+import crypto from 'crypto';
 import fs from 'fs';
 import path from 'path';
 import jwt from 'jsonwebtoken';
@@ -647,9 +648,20 @@ router.post('/orders/verify-location', async (req, res) => {
       });
     }
 
+    // Accuracy Policy: Reject excessively poor accuracy readings (> 500m)
+    if (custAcc > 500) {
+      return res.status(400).json({
+        verified: false,
+        error: 'low_accuracy',
+        accuracy: custAcc,
+        message: `GPS accuracy is too low (±${custAcc}m). Please ensure high-precision Location is enabled or move near a window.`
+      });
+    }
+
     // Authoritative Server-side geospatial calculation
     const calculatedDistance = calculateHaversineDistance(custLat, custLng, restoLat, restoLng);
-    const accBuffer = Math.min(custAcc * 0.3, 30);
+    // Capped tolerance: max 25m buffer
+    const accBuffer = Math.min(custAcc * 0.25, 25);
     const effectiveDist = Math.max(0, calculatedDistance - accBuffer);
     const allowedRadius = Number(resto.max_distance_meters) || 100;
 
@@ -664,31 +676,45 @@ router.post('/orders/verify-location', async (req, res) => {
       });
     }
 
-    // Sign a secure short-lived location token (15-minute validity)
+    // Generate opaque verification token (NO raw lat/lng client payload)
+    const verificationToken = 'tq_loc_' + crypto.randomBytes(24).toString('hex');
+    const cleanTable = String(table_number || '').trim();
+    const expiryMinutes = 20;
+    const expiresAt = new Date(Date.now() + expiryMinutes * 60 * 1000);
+
+    // Save verification record in DB
+    try {
+      await query(
+        `INSERT INTO table_location_verifications (restaurant_id, table_number, verification_token, distance_meters, accuracy_meters, status, verified_at, expires_at)
+         VALUES ($1, $2, $3, $4, $5, 'verified', NOW(), $6)`,
+        [resto.id, cleanTable, verificationToken, calculatedDistance, custAcc, expiresAt]
+      );
+    } catch (dbErr) {
+      console.warn('Notice saving location verification record:', dbErr.message);
+    }
+
+    // Sign a secure short-lived opaque session token containing ONLY references (zero lat/lng)
     const jwtSecret = process.env.JWT_SECRET || 'touchqr_secure_location_secret_key_2026';
-    const locationToken = jwt.sign(
+    const locationSessionToken = jwt.sign(
       {
+        vtoken: verificationToken,
         restaurant_id: resto.id,
         slug: resto.slug,
-        table_number: String(table_number || '').trim(),
-        cust_lat: custLat,
-        cust_lng: custLng,
-        distance: calculatedDistance,
-        timestamp: Date.now()
+        table_number: cleanTable
       },
       jwtSecret,
-      { expiresIn: '15m' }
+      { expiresIn: `${expiryMinutes}m` }
     );
 
     return res.json({
       verified: true,
       required: true,
-      location_token: locationToken,
+      verification_token: verificationToken,
+      location_token: locationSessionToken,
       distance_meters: calculatedDistance,
       allowed_radius: allowedRadius,
       accuracy: custAcc,
-      customer_lat: custLat,
-      customer_lng: custLng,
+      expires_at: expiresAt.toISOString(),
       message: `✓ Location verified (${calculatedDistance}m from entrance)`
     });
   } catch (err) {
@@ -827,50 +853,93 @@ router.post('/orders', async (req, res) => {
     );
 
     if (hasRestaurantLocation) {
-      let isTokenValid = false;
+      let isVerified = false;
+      const cleanTable = String(table_number || '1').trim();
       const jwtSecret = process.env.JWT_SECRET || 'touchqr_secure_location_secret_key_2026';
+      let extractedVToken = null;
 
+      // 1. Verify signed session JWT if present
       if (req.body.location_token) {
         try {
           const decoded = jwt.verify(req.body.location_token, jwtSecret);
           if (decoded && Number(decoded.restaurant_id) === Number(resto.id)) {
-            isTokenValid = true;
+            extractedVToken = decoded.vtoken;
+            isVerified = true;
           }
         } catch (tokErr) {
-          // Token expired or invalid signature, continue to raw coordinates validation
+          if (tokErr.name === 'TokenExpiredError') {
+            return res.status(403).json({
+              error: 'location_verification_expired',
+              message: 'Your table location verification has expired. Please tap verify to refresh your location.'
+            });
+          }
         }
       }
 
-      if (!isTokenValid) {
+      if (!isVerified && req.body.verification_token) {
+        extractedVToken = req.body.verification_token;
+      }
+
+      // 2. Authoritative check against server-side database verification records
+      if (extractedVToken) {
+        try {
+          const verRows = await query(
+            `SELECT id, expires_at FROM table_location_verifications 
+             WHERE restaurant_id = $1 AND verification_token = $2 
+             ORDER BY id DESC LIMIT 1`,
+            [resto.id, extractedVToken]
+          );
+          if (verRows && verRows.length > 0) {
+            const vRecord = verRows[0];
+            if (new Date(vRecord.expires_at).getTime() > Date.now()) {
+              isVerified = true;
+            } else {
+              return res.status(403).json({
+                error: 'location_verification_expired',
+                message: 'Your table location verification has expired. Please tap verify to refresh your location.'
+              });
+            }
+          }
+        } catch (vErr) {
+          console.warn('Notice checking verification table:', vErr.message);
+        }
+      }
+
+      // 3. Fallback: Direct coordinate calculation if provided
+      if (!isVerified) {
         if (
-          customer_latitude === undefined || customer_longitude === undefined ||
-          customer_latitude === null || customer_longitude === null ||
-          isNaN(Number(customer_latitude)) || isNaN(Number(customer_longitude))
+          customer_latitude !== undefined && customer_longitude !== undefined &&
+          customer_latitude !== null && customer_longitude !== null &&
+          !isNaN(Number(customer_latitude)) && !isNaN(Number(customer_longitude))
         ) {
-          return res.status(403).json({
-            error: 'location_required',
-            message: '📍 Location verification is required to place table orders. Please enable location permissions on your device.'
-          });
+          const calculatedDistance = calculateHaversineDistance(
+            Number(customer_latitude),
+            Number(customer_longitude),
+            restoLat,
+            restoLng
+          );
+
+          const accBuffer = Math.min((Number(customer_accuracy) || 0) * 0.25, 25);
+          const effectiveDist = Math.max(0, calculatedDistance - accBuffer);
+          const allowedRadius = Number(resto.max_distance_meters) || 100;
+
+          if (effectiveDist <= allowedRadius) {
+            isVerified = true;
+          } else {
+            const displayDist = calculatedDistance > 1000 ? `${(calculatedDistance / 1000).toFixed(1)} km` : `${calculatedDistance} meters`;
+            return res.status(403).json({
+              error: 'outside_service_area',
+              message: `📍 Order Rejected: You appear to be ${displayDist} away from this restaurant (Allowed radius: ${allowedRadius}m). Table orders must be placed within the dining area.`
+            });
+          }
         }
+      }
 
-        const calculatedDistance = calculateHaversineDistance(
-          Number(customer_latitude),
-          Number(customer_longitude),
-          restoLat,
-          restoLng
-        );
-
-        const accBuffer = Math.min((Number(customer_accuracy) || 0) * 0.3, 30);
-        const effectiveDist = Math.max(0, calculatedDistance - accBuffer);
-        const allowedRadius = Number(resto.max_distance_meters) || 100;
-
-        if (effectiveDist > allowedRadius) {
-          const displayDist = calculatedDistance > 1000 ? `${(calculatedDistance / 1000).toFixed(1)} km` : `${calculatedDistance} meters`;
-          return res.status(403).json({
-            error: 'outside_service_area',
-            message: `📍 Order Rejected: You appear to be ${displayDist} away from this restaurant (Allowed radius: ${allowedRadius}m). Table orders must be placed within the dining area.`
-          });
-        }
+      if (!isVerified) {
+        return res.status(403).json({
+          error: 'location_required',
+          message: '📍 Location verification is required to place table orders. Please verify your location on your device.'
+        });
       }
     }
 

@@ -1,8 +1,21 @@
-import React, { useState } from 'react';
-import { MapPin, Navigation, ShieldCheck, AlertCircle, RotateCcw, Lock, Radio, CheckCircle2, X } from 'lucide-react';
+import React, { useState, useEffect, useRef } from 'react';
+import {
+  MapPin,
+  Navigation,
+  ShieldCheck,
+  AlertCircle,
+  RotateCcw,
+  Lock,
+  Radio,
+  CheckCircle2,
+  X,
+  Compass,
+  Smartphone,
+  Info
+} from 'lucide-react';
 import { verifyCustomerLocationApi } from '../api/client';
 
-export default function LocationVerificationModal({
+export default function CustomerLocationModal({
   isOpen,
   onClose,
   restaurantInfo,
@@ -12,25 +25,56 @@ export default function LocationVerificationModal({
   onLocationVerified,
   allowDismiss = true
 }) {
-  const [status, setStatus] = useState('idle'); // 'idle' | 'verifying' | 'success' | 'outside_boundary' | 'permission_denied' | 'location_off' | 'timeout' | 'error'
+  // State Machine:
+  // 'idle' | 'requesting_location' | 'verifying_with_server' | 'verified' |
+  // 'outside_boundary' | 'permission_denied' | 'permission_permanently_blocked' |
+  // 'location_services_off' | 'location_timeout' | 'low_accuracy' | 'error'
+  const [status, setStatus] = useState('idle');
   const [errorMsg, setErrorMsg] = useState('');
   const [distanceInfo, setDistanceInfo] = useState(null);
+  const [accuracyVal, setAccuracyVal] = useState(null);
+  const isAcquiringRef = useRef(false);
+
+  useEffect(() => {
+    if (isOpen && status !== 'verified') {
+      // Check initial permissions state silently to optimize first button tap
+      if (navigator.permissions && navigator.permissions.query) {
+        navigator.permissions.query({ name: 'geolocation' })
+          .then(perm => {
+            if (perm.state === 'denied' && status === 'idle') {
+              setStatus('permission_permanently_blocked');
+            }
+          })
+          .catch(() => {});
+      }
+    }
+  }, [isOpen]);
 
   if (!isOpen) return null;
 
-  const handleRequestLocation = () => {
-    if (status === 'verifying') return; // Guard against double-tap
+  const handleRequestLocation = async () => {
+    if (isAcquiringRef.current) return; // Prevent duplicate rapid taps
+    isAcquiringRef.current = true;
 
     if (!navigator.geolocation) {
+      isAcquiringRef.current = false;
       setStatus('error');
-      setErrorMsg('Your mobile browser does not support GPS location. Please use Chrome or Safari.');
+      setErrorMsg('Your mobile browser does not support GPS location. Please use a modern browser (Chrome or Safari).');
       return;
     }
 
-    setStatus('verifying');
+    setStatus('requesting_location');
     setErrorMsg('');
 
-    // High accuracy GPS request with fallback
+    // Query Permissions API if supported
+    let permState = null;
+    if (navigator.permissions && navigator.permissions.query) {
+      try {
+        const p = await navigator.permissions.query({ name: 'geolocation' });
+        permState = p.state;
+      } catch {}
+    }
+
     const primaryOptions = {
       enableHighAccuracy: true,
       timeout: 20000,
@@ -45,9 +89,11 @@ export default function LocationVerificationModal({
 
     const processPosition = async (pos) => {
       try {
+        setStatus('verifying_with_server');
         const custLat = pos.coords.latitude;
         const custLng = pos.coords.longitude;
         const custAcc = Math.round(pos.coords.accuracy || 999);
+        setAccuracyVal(custAcc);
 
         const slug = restaurantInfo?.slug || '';
         const verifyRes = await verifyCustomerLocationApi({
@@ -64,9 +110,10 @@ export default function LocationVerificationModal({
             distance: verifyRes.distance_meters,
             radius: verifyRes.allowed_radius
           });
-          setStatus('success');
+          setStatus('verified');
 
           const verifiedPayload = {
+            verificationToken: verifyRes.verification_token,
             locationToken: verifyRes.location_token,
             customerLat: custLat,
             customerLng: custLng,
@@ -79,21 +126,26 @@ export default function LocationVerificationModal({
             onLocationVerified(verifiedPayload);
           }
 
-          // Auto-close success modal after 1.2s
           setTimeout(() => {
+            isAcquiringRef.current = false;
             if (onClose) onClose();
           }, 1200);
         } else {
+          isAcquiringRef.current = false;
           setDistanceInfo({
             distance: verifyRes.distance_meters,
             radius: verifyRes.allowed_radius
           });
           setStatus('outside_boundary');
-          setErrorMsg(verifyRes.message || 'You appear to be outside the restaurant ordering boundary.');
+          setErrorMsg(verifyRes.message || 'You appear to be outside the restaurant ordering area.');
         }
       } catch (apiErr) {
+        isAcquiringRef.current = false;
         const errMsg = String(apiErr.message || '');
-        if (errMsg.toLowerCase().includes('outside') || apiErr.status === 403) {
+        if (errMsg.toLowerCase().includes('accuracy') || apiErr.error === 'low_accuracy') {
+          setStatus('low_accuracy');
+          setErrorMsg(errMsg || 'GPS signal accuracy is too weak.');
+        } else if (errMsg.toLowerCase().includes('outside') || apiErr.status === 403 || apiErr.error === 'outside_boundary') {
           setStatus('outside_boundary');
           setErrorMsg(errMsg || 'You appear to be outside the restaurant dining area.');
         } else {
@@ -103,46 +155,58 @@ export default function LocationVerificationModal({
       }
     };
 
+    const handleGpsFailure = (err) => {
+      isAcquiringRef.current = false;
+      console.warn('Geolocation Error:', err);
+
+      if (err.code === 1) {
+        // PERMISSION_DENIED
+        if (permState === 'denied') {
+          setStatus('permission_permanently_blocked');
+        } else {
+          setStatus('permission_denied');
+        }
+      } else if (err.code === 2) {
+        // POSITION_UNAVAILABLE
+        // If browser permission is already granted, POSITION_UNAVAILABLE indicates device GPS is OFF
+        setStatus('location_services_off');
+        setErrorMsg('Location Services are currently turned off on your device. Please turn them on and then try again.');
+      } else if (err.code === 3) {
+        // TIMEOUT
+        setStatus('location_timeout');
+        setErrorMsg('Getting your location is taking longer than expected. Please check your connection and Location Services, then try again.');
+      } else {
+        setStatus('error');
+        setErrorMsg('We could not get your current location. Please make sure Location Services are turned on and try again.');
+      }
+    };
+
+    // Primary High Accuracy Attempt
     navigator.geolocation.getCurrentPosition(
       (pos) => {
         processPosition(pos);
       },
       (err) => {
-        console.warn('Primary GPS attempt error:', err);
-
-        if (err.code === 1) {
-          // PERMISSION_DENIED
-          setStatus('permission_denied');
-          setErrorMsg('Location permission is required to verify you are currently at this dining table.');
-          return;
+        // If high-accuracy timed out or had hardware lag, attempt one network-based fallback before failing
+        if (err.code === 3 || (err.code === 2 && permState !== 'granted')) {
+          navigator.geolocation.getCurrentPosition(
+            (fallbackPos) => {
+              processPosition(fallbackPos);
+            },
+            (fallbackErr) => {
+              handleGpsFailure(fallbackErr);
+            },
+            fallbackOptions
+          );
+        } else {
+          handleGpsFailure(err);
         }
-
-        // If high accuracy timed out (code 3) or position unavailable (code 2), attempt fallback network positioning
-        navigator.geolocation.getCurrentPosition(
-          (fallbackPos) => {
-            processPosition(fallbackPos);
-          },
-          (fallbackErr) => {
-            if (fallbackErr.code === 1) {
-              setStatus('permission_denied');
-              setErrorMsg('Location permission is required to verify you are currently at this dining table.');
-            } else if (fallbackErr.code === 2) {
-              setStatus('location_off');
-              setErrorMsg('Device location is turned OFF. Please enable Location/GPS in your phone settings.');
-            } else if (fallbackErr.code === 3) {
-              setStatus('timeout');
-              setErrorMsg('GPS verification timed out. Please check your signal and tap Try Again.');
-            } else {
-              setStatus('error');
-              setErrorMsg('Unable to acquire GPS signal. Please ensure location is enabled.');
-            }
-          },
-          fallbackOptions
-        );
       },
       primaryOptions
     );
   };
+
+  const isBusy = status === 'requesting_location' || status === 'verifying_with_server';
 
   return (
     <div style={{
@@ -153,28 +217,31 @@ export default function LocationVerificationModal({
       alignItems: 'center',
       justifyContent: 'center',
       padding: '16px',
-      background: 'rgba(15, 23, 42, 0.75)',
+      background: 'rgba(15, 23, 42, 0.78)',
       backdropFilter: 'blur(8px)',
+      WebkitBackdropFilter: 'blur(8px)',
       animation: 'fadeIn 0.2s ease-out'
     }}>
       <div style={{
         background: '#FFFFFF',
         width: '100%',
-        maxWidth: '420px',
+        maxWidth: '430px',
         borderRadius: '24px',
-        padding: '24px',
-        boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.25)',
+        padding: '26px 22px',
+        boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.28)',
         border: '1px solid #E2E8F0',
         display: 'flex',
         flexDirection: 'column',
         alignItems: 'center',
         textAlign: 'center',
-        position: 'relative'
+        position: 'relative',
+        boxSizing: 'border-box'
       }}>
-        {/* Optional Close / Browse Menu Button */}
-        {allowDismiss && status !== 'verifying' && status !== 'success' && (
+        {/* Optional Dismiss / Browse Menu Button */}
+        {allowDismiss && !isBusy && status !== 'verified' && (
           <button
             onClick={onClose}
+            aria-label="Close"
             style={{
               position: 'absolute',
               top: '16px',
@@ -195,7 +262,9 @@ export default function LocationVerificationModal({
           </button>
         )}
 
-        {/* State 1: Idle / Initial Prompt */}
+        {/* ---------------------------------------------------- */}
+        {/* STATE 1: IDLE / INITIAL PROMPT */}
+        {/* ---------------------------------------------------- */}
         {status === 'idle' && (
           <>
             <div style={{
@@ -239,6 +308,7 @@ export default function LocationVerificationModal({
 
             <button
               onClick={handleRequestLocation}
+              disabled={isBusy}
               style={{
                 width: '100%',
                 padding: '14px 20px',
@@ -248,13 +318,12 @@ export default function LocationVerificationModal({
                 color: '#FFFFFF',
                 fontWeight: 900,
                 fontSize: '0.94rem',
-                cursor: 'pointer',
+                cursor: isBusy ? 'not-allowed' : 'pointer',
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
                 gap: '8px',
-                boxShadow: '0 6px 20px rgba(5, 150, 105, 0.35)',
-                transition: 'transform 0.1s ease'
+                boxShadow: '0 6px 20px rgba(5, 150, 105, 0.35)'
               }}
             >
               <Navigation size={18} />
@@ -281,8 +350,10 @@ export default function LocationVerificationModal({
           </>
         )}
 
-        {/* State 2: Verifying in Progress */}
-        {status === 'verifying' && (
+        {/* ---------------------------------------------------- */}
+        {/* STATE 2: REQUESTING LOCATION / VERIFYING */}
+        {/* ---------------------------------------------------- */}
+        {isBusy && (
           <>
             <div style={{
               width: '64px',
@@ -293,18 +364,19 @@ export default function LocationVerificationModal({
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
-              marginBottom: '16px',
-              animation: 'pulse 1.5s infinite'
+              marginBottom: '16px'
             }}>
-              <Radio size={32} className="animate-spin" />
+              <Compass size={32} className="animate-spin" />
             </div>
 
             <h3 style={{ fontSize: '1.20rem', fontWeight: 900, color: '#0F172A', margin: '0 0 8px 0' }}>
-              Verifying your location...
+              {status === 'requesting_location' ? 'Acquiring GPS location...' : 'Verifying with restaurant...'}
             </h3>
 
-            <p style={{ fontSize: '0.84rem', color: '#64748B', lineHeight: 1.5, margin: '0 0 20px 0' }}>
-              Acquiring GPS signal & verifying table boundary. Please tap "Allow" if prompted by your browser.
+            <p style={{ fontSize: '0.84rem', color: '#64748B', lineHeight: 1.5, margin: '0 0 18px 0' }}>
+              {status === 'requesting_location'
+                ? 'Please tap "Allow" if your browser displays a permission prompt.'
+                : 'Validating dining table boundary with server...'}
             </p>
 
             <div style={{
@@ -315,15 +387,22 @@ export default function LocationVerificationModal({
               border: '1px solid #E2E8F0',
               fontSize: '0.80rem',
               color: '#0284C7',
-              fontWeight: 800
+              fontWeight: 800,
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              gap: '6px'
             }}>
-              📡 Contacting Satellites...
+              <Radio size={14} className="animate-pulse" />
+              <span>Checking Satellite & Network Signals...</span>
             </div>
           </>
         )}
 
-        {/* State 3: Success Verified */}
-        {status === 'success' && (
+        {/* ---------------------------------------------------- */}
+        {/* STATE 3: VERIFIED SUCCESS */}
+        {/* ---------------------------------------------------- */}
+        {status === 'verified' && (
           <>
             <div style={{
               width: '64px',
@@ -349,7 +428,9 @@ export default function LocationVerificationModal({
           </>
         )}
 
-        {/* State 4: Outside Ordering Boundary */}
+        {/* ---------------------------------------------------- */}
+        {/* STATE 4: OUTSIDE BOUNDARY */}
+        {/* ---------------------------------------------------- */}
         {status === 'outside_boundary' && (
           <>
             <div style={{
@@ -371,11 +452,12 @@ export default function LocationVerificationModal({
             </h3>
 
             <p style={{ fontSize: '0.82rem', color: '#64748B', lineHeight: 1.5, margin: '0 0 16px 0' }}>
-              {errorMsg || 'Table orders must be placed while physically present inside the dining area.'}
+              {errorMsg || 'Table orders can only be placed while physically seated inside the dining area.'}
             </p>
 
             <button
               onClick={handleRequestLocation}
+              disabled={isBusy}
               style={{
                 width: '100%',
                 padding: '13px 20px',
@@ -398,7 +480,80 @@ export default function LocationVerificationModal({
           </>
         )}
 
-        {/* State 5: Permission Denied */}
+        {/* ---------------------------------------------------- */}
+        {/* STATE 5: DEVICE LOCATION / GPS SERVICES ARE OFF */}
+        {/* ---------------------------------------------------- */}
+        {status === 'location_services_off' && (
+          <>
+            <div style={{
+              width: '64px',
+              height: '64px',
+              borderRadius: '20px',
+              background: '#FEF2F2',
+              color: '#DC2626',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              marginBottom: '16px'
+            }}>
+              <Smartphone size={32} />
+            </div>
+
+            <h3 style={{ fontSize: '1.15rem', fontWeight: 900, color: '#0F172A', margin: '0 0 6px 0' }}>
+              Turn on Location Services
+            </h3>
+
+            <p style={{ fontSize: '0.84rem', color: '#475569', lineHeight: 1.5, margin: '0 0 14px 0' }}>
+              Location Services are currently turned off on your device. Please turn them on and then try again.
+            </p>
+
+            <div style={{
+              background: '#F8FAFC',
+              border: '1px solid #E2E8F0',
+              borderRadius: '14px',
+              padding: '12px 14px',
+              fontSize: '0.78rem',
+              color: '#334155',
+              lineHeight: 1.5,
+              textAlign: 'left',
+              marginBottom: '16px',
+              width: '100%',
+              boxSizing: 'border-box'
+            }}>
+              <strong style={{ display: 'block', color: '#0F172A', marginBottom: '4px' }}>📱 How to turn on:</strong>
+              • <strong>Android:</strong> Swipe down notification bar from the top of your screen and tap the <strong>Location / GPS</strong> tile.<br />
+              • <strong>iPhone:</strong> Open <strong>Settings ➔ Privacy & Security ➔ Location Services</strong> and toggle <strong>ON</strong>.
+            </div>
+
+            <button
+              onClick={handleRequestLocation}
+              disabled={isBusy}
+              style={{
+                width: '100%',
+                padding: '13px 20px',
+                borderRadius: '14px',
+                border: 'none',
+                background: 'linear-gradient(135deg, #059669 0%, #10B981 100%)',
+                color: '#FFFFFF',
+                fontWeight: 900,
+                fontSize: '0.90rem',
+                cursor: 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                gap: '8px',
+                boxShadow: '0 4px 14px rgba(5, 150, 105, 0.3)'
+              }}
+            >
+              <RotateCcw size={16} />
+              Try Again
+            </button>
+          </>
+        )}
+
+        {/* ---------------------------------------------------- */}
+        {/* STATE 6: PERMISSION DENIED (TEMPORARY / PROMPT) */}
+        {/* ---------------------------------------------------- */}
         {status === 'permission_denied' && (
           <>
             <div style={{
@@ -416,13 +571,65 @@ export default function LocationVerificationModal({
             </div>
 
             <h3 style={{ fontSize: '1.15rem', fontWeight: 900, color: '#0F172A', margin: '0 0 8px 0' }}>
-              Location permission is required for table ordering.
+              Location permission is required for table ordering
+            </h3>
+
+            <p style={{ fontSize: '0.84rem', color: '#64748B', lineHeight: 1.5, margin: '0 0 16px 0' }}>
+              To place an order from this table, please grant location access when prompted by your browser.
+            </p>
+
+            <button
+              onClick={handleRequestLocation}
+              disabled={isBusy}
+              style={{
+                width: '100%',
+                padding: '13px 20px',
+                borderRadius: '14px',
+                border: 'none',
+                background: 'linear-gradient(135deg, #059669 0%, #10B981 100%)',
+                color: '#FFFFFF',
+                fontWeight: 900,
+                fontSize: '0.90rem',
+                cursor: 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                gap: '8px'
+              }}
+            >
+              <Navigation size={16} />
+              Enable Location & Continue
+            </button>
+          </>
+        )}
+
+        {/* ---------------------------------------------------- */}
+        {/* STATE 7: PERMISSION PERMANENTLY BLOCKED */}
+        {/* ---------------------------------------------------- */}
+        {status === 'permission_permanently_blocked' && (
+          <>
+            <div style={{
+              width: '64px',
+              height: '64px',
+              borderRadius: '20px',
+              background: '#FEF3C7',
+              color: '#D97706',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              marginBottom: '16px'
+            }}>
+              <Lock size={32} />
+            </div>
+
+            <h3 style={{ fontSize: '1.15rem', fontWeight: 900, color: '#0F172A', margin: '0 0 8px 0' }}>
+              Location permission is blocked
             </h3>
 
             <div style={{
               background: '#F8FAFC',
               border: '1px solid #E2E8F0',
-              borderRadius: '12px',
+              borderRadius: '14px',
               padding: '12px 14px',
               fontSize: '0.78rem',
               color: '#334155',
@@ -432,14 +639,15 @@ export default function LocationVerificationModal({
               width: '100%',
               boxSizing: 'border-box'
             }}>
-              <strong style={{ display: 'block', color: '#0F172A', marginBottom: '4px' }}>How to enable:</strong>
-              1. Tap the 🔒 <strong>Lock</strong> or ⓘ icon in your browser address bar.<br />
+              <strong style={{ display: 'block', color: '#0F172A', marginBottom: '4px' }}>🔒 How to unblock in browser:</strong>
+              1. Tap the 🔒 <strong>Lock</strong> or ⓘ icon in your browser address bar (top).<br />
               2. Tap <strong>Permissions ➔ Location</strong> and select <strong>Allow</strong>.<br />
               3. Tap <strong>Try Again</strong> below.
             </div>
 
             <button
               onClick={handleRequestLocation}
+              disabled={isBusy}
               style={{
                 width: '100%',
                 padding: '13px 20px',
@@ -462,57 +670,10 @@ export default function LocationVerificationModal({
           </>
         )}
 
-        {/* State 6: Location Services Turned OFF */}
-        {status === 'location_off' && (
-          <>
-            <div style={{
-              width: '64px',
-              height: '64px',
-              borderRadius: '20px',
-              background: '#FEF2F2',
-              color: '#DC2626',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              marginBottom: '16px'
-            }}>
-              <Radio size={32} />
-            </div>
-
-            <h3 style={{ fontSize: '1.15rem', fontWeight: 900, color: '#0F172A', margin: '0 0 8px 0' }}>
-              Device Location is Turned OFF
-            </h3>
-
-            <p style={{ fontSize: '0.82rem', color: '#64748B', lineHeight: 1.5, margin: '0 0 16px 0' }}>
-              Please turn ON Location / GPS from your phone's notification panel or settings, then tap Try Again.
-            </p>
-
-            <button
-              onClick={handleRequestLocation}
-              style={{
-                width: '100%',
-                padding: '13px 20px',
-                borderRadius: '14px',
-                border: 'none',
-                background: 'linear-gradient(135deg, #059669 0%, #10B981 100%)',
-                color: '#FFFFFF',
-                fontWeight: 900,
-                fontSize: '0.90rem',
-                cursor: 'pointer',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                gap: '8px'
-              }}
-            >
-              <RotateCcw size={16} />
-              Try Again
-            </button>
-          </>
-        )}
-
-        {/* State 7: Timeout or Generic Error */}
-        {(status === 'timeout' || status === 'error') && (
+        {/* ---------------------------------------------------- */}
+        {/* STATE 8: GPS TIMEOUT */}
+        {/* ---------------------------------------------------- */}
+        {status === 'location_timeout' && (
           <>
             <div style={{
               width: '64px',
@@ -529,15 +690,120 @@ export default function LocationVerificationModal({
             </div>
 
             <h3 style={{ fontSize: '1.15rem', fontWeight: 900, color: '#0F172A', margin: '0 0 8px 0' }}>
-              {status === 'timeout' ? 'GPS Signal Timeout' : 'Location Verification Error'}
+              Location verification timed out
             </h3>
 
             <p style={{ fontSize: '0.82rem', color: '#64748B', lineHeight: 1.5, margin: '0 0 16px 0' }}>
-              {errorMsg || 'Unable to get accurate GPS reading. Please check your signal and try again.'}
+              Getting your location is taking longer than expected. Please check your connection and Location Services, then try again.
             </p>
 
             <button
               onClick={handleRequestLocation}
+              disabled={isBusy}
+              style={{
+                width: '100%',
+                padding: '13px 20px',
+                borderRadius: '14px',
+                border: 'none',
+                background: '#0F172A',
+                color: '#FFFFFF',
+                fontWeight: 900,
+                fontSize: '0.90rem',
+                cursor: 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                gap: '8px'
+              }}
+            >
+              <RotateCcw size={16} />
+              Try Again
+            </button>
+          </>
+        )}
+
+        {/* ---------------------------------------------------- */}
+        {/* STATE 9: LOW ACCURACY */}
+        {/* ---------------------------------------------------- */}
+        {status === 'low_accuracy' && (
+          <>
+            <div style={{
+              width: '64px',
+              height: '64px',
+              borderRadius: '20px',
+              background: '#FEF3C7',
+              color: '#D97706',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              marginBottom: '16px'
+            }}>
+              <Compass size={32} />
+            </div>
+
+            <h3 style={{ fontSize: '1.15rem', fontWeight: 900, color: '#0F172A', margin: '0 0 8px 0' }}>
+              Low GPS Accuracy
+            </h3>
+
+            <p style={{ fontSize: '0.82rem', color: '#64748B', lineHeight: 1.5, margin: '0 0 16px 0' }}>
+              {errorMsg || `GPS signal accuracy is too weak${accuracyVal ? ` (±${accuracyVal}m)` : ''}. Please move closer to a window or ensure High Accuracy Location is enabled.`}
+            </p>
+
+            <button
+              onClick={handleRequestLocation}
+              disabled={isBusy}
+              style={{
+                width: '100%',
+                padding: '13px 20px',
+                borderRadius: '14px',
+                border: 'none',
+                background: 'linear-gradient(135deg, #059669 0%, #10B981 100%)',
+                color: '#FFFFFF',
+                fontWeight: 900,
+                fontSize: '0.90rem',
+                cursor: 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                gap: '8px'
+              }}
+            >
+              <RotateCcw size={16} />
+              Try Again
+            </button>
+          </>
+        )}
+
+        {/* ---------------------------------------------------- */}
+        {/* STATE 10: GENERIC FALLBACK ERROR */}
+        {/* ---------------------------------------------------- */}
+        {status === 'error' && (
+          <>
+            <div style={{
+              width: '64px',
+              height: '64px',
+              borderRadius: '20px',
+              background: '#FEF2F2',
+              color: '#DC2626',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              marginBottom: '16px'
+            }}>
+              <AlertCircle size={32} />
+            </div>
+
+            <h3 style={{ fontSize: '1.15rem', fontWeight: 900, color: '#0F172A', margin: '0 0 8px 0' }}>
+              Location Verification Error
+            </h3>
+
+            <p style={{ fontSize: '0.82rem', color: '#64748B', lineHeight: 1.5, margin: '0 0 16px 0' }}>
+              {errorMsg || "We couldn't get your current location. Please make sure Location Services are turned on and try again."}
+            </p>
+
+            <button
+              onClick={handleRequestLocation}
+              disabled={isBusy}
               style={{
                 width: '100%',
                 padding: '13px 20px',
