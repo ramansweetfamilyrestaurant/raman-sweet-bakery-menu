@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
+import * as XLSX from 'xlsx';
 import { fetchCategories, fetchDishes, toggleDishAvailability, toggleCategoryActive, deleteDish, deleteCategory, fetchRestaurantInfo, updateDishPrice, fetchAnnouncements, fetchAdminOrders, updateOrderStatus, uploadImage, fetchServiceRequests, resolveServiceRequest, fetchAdminAnalytics, fetchAdminCombos, createCombo, updateCombo, deleteCombo, toggleComboAvailability, optimizeDatabase, updateTenantSettings } from '../../api/client';
 import { getPlanDetails } from '../../config/plans';
 import { generateQrToken } from '../../utils/qrSecurity';
@@ -520,62 +521,49 @@ export default function AdminDashboard({ token, username, slug: propSlug = '', o
       return { date: str, time: 'N/A' };
     };
 
-    const headers = [
-      'Order ID',
-      'Date',
-      'Time',
-      'Table Number',
-      'Customer Name',
-      'Customer Phone',
-      'Items Count',
-      'Items List',
-      'Status',
-      'Amount (INR)'
-    ];
-
-    const rows = orders.map(order => {
+    const sheetData = orders.map(order => {
       const { date, time } = getDateParts(order.created_at);
       const parsedItems = safeParseItems(order.items);
       const itemsListStr = parsedItems.map(i => {
         const cleanName = (i.name || '').replace(/[\u{1F300}-\u{1F9FF}\u{2600}-\u{26FF}\u{2700}-\u{27BF}]/gu, '').trim();
         return `${cleanName || i.name} (x${i.quantity || 1})`;
-      }).join('; ');
+      }).join(', ');
 
-      const orderIdCol = `="#${order.id}"`;
-      const dateCol = date !== 'N/A' ? `="${date}"` : '"N/A"';
-      const timeCol = time !== 'N/A' ? `="${time}"` : '"N/A"';
-      const tableCol = `="${order.table_number || '1'}"`;
-      const nameCol = `"${(order.customer_name || 'Guest').replace(/"/g, '""')}"`;
-      const phoneCol = order.customer_phone ? `="${order.customer_phone}"` : '"N/A"';
-      const countCol = parsedItems.reduce((acc, i) => acc + (Number(i.quantity) || 1), 0);
-      const itemsCol = `"${itemsListStr.replace(/"/g, '""')}"`;
-      const statusCol = `"${(order.status || 'COMPLETED').toUpperCase()}"`;
-      const amountCol = Number(order.total_amount) || 0;
-
-      return [
-        orderIdCol,
-        dateCol,
-        timeCol,
-        tableCol,
-        nameCol,
-        phoneCol,
-        countCol,
-        itemsCol,
-        statusCol,
-        amountCol
-      ].join(',');
+      return {
+        'Order ID': `#${order.id}`,
+        'Date': date,
+        'Time': time,
+        'Table Number': String(order.table_number || '1'),
+        'Customer Name': order.customer_name || 'Dine-In Guest',
+        'Customer Phone': order.customer_phone ? String(order.customer_phone) : 'N/A',
+        'Items Count': parsedItems.reduce((acc, i) => acc + (Number(i.quantity) || 1), 0),
+        'Items List': itemsListStr,
+        'Status': (order.status || 'COMPLETED').toUpperCase(),
+        'Amount (INR)': Number(order.total_amount) || 0
+      };
     });
 
-    const csvData = '\uFEFF' + [headers.join(','), ...rows].join('\n');
-    const blob = new Blob([csvData], { type: 'text/csv;charset=utf-8;' });
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement('a');
-    link.setAttribute('href', url);
-    link.setAttribute('download', `Sales_Report_${new Date().toISOString().substring(0, 10)}.csv`);
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-    URL.revokeObjectURL(url);
+    const worksheet = XLSX.utils.json_to_sheet(sheetData);
+
+    // Auto-fit column widths so NOTHING is ever cut off in Excel!
+    worksheet['!cols'] = [
+      { wch: 12 }, // Order ID
+      { wch: 14 }, // Date
+      { wch: 14 }, // Time
+      { wch: 14 }, // Table Number
+      { wch: 22 }, // Customer Name
+      { wch: 18 }, // Customer Phone
+      { wch: 12 }, // Items Count
+      { wch: 45 }, // Items List
+      { wch: 14 }, // Status
+      { wch: 15 }  // Amount (INR)
+    ];
+
+    const workbook = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(workbook, worksheet, 'Sales Report');
+
+    const fileName = `Sales_Report_${new Date().toISOString().substring(0, 10)}.xlsx`;
+    XLSX.writeFile(workbook, fileName);
   };
 
   const handleResolveServiceRequest = async (id) => {

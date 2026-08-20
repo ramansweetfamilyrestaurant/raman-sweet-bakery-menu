@@ -17,17 +17,17 @@ export default function AnalyticsView({ analyticsData, onDownloadCSV, analyticsE
             Sales Analytics & Reports
           </h2>
           <span style={{ fontSize: '0.8rem', color: 'var(--adm-muted)', fontWeight: 600 }}>
-            Real-time revenue metrics & CSV sales export
+            Real-time revenue metrics & Excel (.xlsx) sales export
           </span>
         </div>
 
         {analyticsExportEnabled ? (
           <button onClick={onDownloadCSV} className="adm-btn adm-btn-secondary adm-btn-sm" style={{ fontWeight: 800 }}>
-            <Download size={14} /> Export CSV Sales Report
+            <Download size={14} /> 📊 Export Excel Report (.xlsx)
           </button>
         ) : (
           <span style={{ fontSize: '0.75rem', fontWeight: 800, color: '#B45309', background: '#FEF3C7', border: '1px solid #F59E0B', padding: '4px 10px', borderRadius: 'var(--radius-pill)' }}>
-            🔒 CSV Export (Pro Feature)
+            🔒 Excel Export (Pro Feature)
           </span>
         )}
       </div>
