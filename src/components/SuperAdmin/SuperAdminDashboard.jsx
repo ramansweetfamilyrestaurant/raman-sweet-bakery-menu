@@ -1835,28 +1835,6 @@ export default function SuperAdminDashboard({ token, username, onLogout, onRetur
                 </div>
               </div>
 
-              {/* ⚡ DATA RETENTION & COMPACTION POLICY */}
-              <div style={{ background: '#EFF6FF', border: '1.5px solid #93C5FD', borderRadius: '14px', padding: '14px 16px', marginTop: '6px' }}>
-                <strong style={{ fontSize: '0.82rem', color: '#1E40AF', display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '6px' }}>
-                  ⚡ DATA COMPACTION & ORDER RETENTION POLICY
-                </strong>
-                <select
-                  value={editModalData.order_retention_days || 90}
-                  onChange={(e) => setEditModalData({ ...editModalData, order_retention_days: Number(e.target.value) })}
-                  style={{ width: '100%', padding: '8px 12px', borderRadius: '8px', border: '1px solid #BFDBFE', fontSize: '0.84rem', fontWeight: 800, color: '#1E3A8A', background: '#FFFFFF' }}
-                >
-                  <option value={1}>⚡ 24 Hours / 1 Day (Ultra Light - High Traffic)</option>
-                  <option value={7}>⚡ 7 Days (Standard Light)</option>
-                  <option value={30}>⚡ 30 Days (1 Month History)</option>
-                  <option value={90}>⚡ 90 Days (Quarterly / 3 Months History - Recommended)</option>
-                  <option value={180}>⚡ 180 Days (Half-Year / 6 Months History)</option>
-                  <option value={365}>⚡ 365 Days (Full 1 Year History)</option>
-                </select>
-                <span style={{ fontSize: '0.70rem', color: '#60A5FA', marginTop: '4px', display: 'block', fontWeight: 600 }}>
-                  Controls how long past orders & analytics are stored in database before auto-archiving.
-                </span>
-              </div>
-
               <div>
                 <label style={{ fontSize: '0.78rem', fontWeight: 800, color: 'var(--text-dark)', marginBottom: '4px', display: 'block' }}>
                   FSSAI LICENSE NO
@@ -3072,6 +3050,28 @@ export default function SuperAdminDashboard({ token, username, onLogout, onRetur
                     />
                     <span style={{ fontSize: '0.82rem', fontWeight: 700, color: '#92400E' }}>Days Free Trial for New Registrations</span>
                   </div>
+                </div>
+
+                {/* ⚡ GLOBAL ORDER RETENTION & COMPACTION POLICY */}
+                <div style={{ background: '#F0FDF4', padding: '16px', borderRadius: '14px', border: '1.5px solid #86EFAC' }}>
+                  <strong style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.82rem', fontWeight: 900, color: '#166534', marginBottom: '4px' }}>
+                    ⚡ GLOBAL ORDER RETENTION & DATA COMPACTION (PLATFORM-WIDE):
+                  </strong>
+                  <p style={{ fontSize: '0.74rem', color: '#15803D', margin: '0 0 10px 0', lineHeight: 1.4 }}>
+                    Platform-wide data retention policy. Automatically applies to all restaurants without needing per-restaurant setup.
+                  </p>
+                  <select
+                    value={paymentKeys.global_order_retention_days || '90'}
+                    onChange={(e) => setPaymentKeys({ ...paymentKeys, global_order_retention_days: e.target.value })}
+                    style={{ width: '100%', padding: '10px 12px', borderRadius: '10px', border: '1.5px solid #86EFAC', fontSize: '0.88rem', fontWeight: 800, color: '#14532D', background: '#FFFFFF' }}
+                  >
+                    <option value="1">⚡ 24 Hours / 1 Day (Ultra Light - High Traffic)</option>
+                    <option value="7">⚡ 7 Days (Standard Light)</option>
+                    <option value="30">⚡ 30 Days (1 Month History)</option>
+                    <option value="90">⚡ 90 Days (Quarterly / 3 Months History - Recommended)</option>
+                    <option value="180">⚡ 180 Days (Half-Year / 6 Months History)</option>
+                    <option value="365">⚡ 365 Days (Full 1 Year History)</option>
+                  </select>
                 </div>
 
                 <div style={{ background: '#EFF6FF', padding: '14px', borderRadius: '14px', border: '1px solid #BFDBFE' }}>

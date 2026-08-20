@@ -395,20 +395,22 @@ async function startServer(portToTry = PORT) {
     }).catch(err => console.warn('Startup order purge notice:', err.message));
     
     // ⚡ 100% Hands-Free Automated Background Compaction Engine
-    // Runs automatically on server startup and every 24 hours in background (Purges raw order records > 24 hours into daily summaries)
-    runAutoDataSummarization(1).then(res => {
-      if (res && res.purged_orders > 0) {
-        console.log(`⚡ [AUTO COMPACTION] Automatically summarized ${res.summarized_days} days and purged ${res.purged_orders} old order records.`);
-      }
-    }).catch(err => console.warn('Auto summarization notice:', err.message));
-
-    setInterval(() => {
-      runAutoDataSummarization(1).then(res => {
+    // Runs automatically on server startup and every 24 hours in background based on SuperAdmin Global Order Retention Policy
+    const triggerGlobalCompaction = async () => {
+      try {
+        const sysRows = await query("SELECT value FROM system_settings WHERE key = 'global_order_retention_days'");
+        const retentionDays = sysRows && sysRows.length > 0 ? (parseInt(sysRows[0].value, 10) || 90) : 90;
+        const res = await runAutoDataSummarization(retentionDays);
         if (res && res.purged_orders > 0) {
-          console.log(`⚡ [AUTO COMPACTION NIGHTLY] Automatically summarized ${res.summarized_days} days and purged ${res.purged_orders} old order records.`);
+          console.log(`⚡ [GLOBAL AUTO COMPACTION] Automatically summarized ${res.summarized_days} days and purged ${res.purged_orders} old raw orders (Policy: ${retentionDays} Days).`);
         }
-      }).catch(err => console.warn('Nightly auto summarization notice:', err.message));
-    }, 24 * 60 * 60 * 1000);
+      } catch (err) {
+        console.warn('Auto summarization notice:', err.message);
+      }
+    };
+
+    triggerGlobalCompaction();
+    setInterval(triggerGlobalCompaction, 24 * 60 * 60 * 1000);
 
     // 🧹 Auto-Purge Cancelled/Rejected Orders Older Than 3 Minutes (180s)
     setInterval(() => {

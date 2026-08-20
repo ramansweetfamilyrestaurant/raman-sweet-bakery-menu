@@ -974,6 +974,7 @@ async function seedData() {
       if (dbType === 'postgres') {
         await query("INSERT INTO system_settings (key, value) VALUES ('default_trial_days', '16') ON CONFLICT (key) DO NOTHING");
         await query("INSERT INTO system_settings (key, value) VALUES ('support_whatsapp', '919876543210') ON CONFLICT (key) DO NOTHING");
+        await query("INSERT INTO system_settings (key, value) VALUES ('global_order_retention_days', '90') ON CONFLICT (key) DO NOTHING");
       }
     } catch {}
 
