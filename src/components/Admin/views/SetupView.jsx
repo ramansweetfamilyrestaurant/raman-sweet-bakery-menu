@@ -295,199 +295,309 @@ export default function SetupView({
   };
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: '18px' }}>
+    <div style={{ display: 'flex', flexDirection: 'column', gap: '20px', maxWidth: '1400px', margin: '0 auto', width: '100%', boxSizing: 'border-box' }}>
       {/* Header Title */}
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+      <div style={{
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'space-between',
+        flexWrap: 'wrap',
+        gap: '12px',
+        background: '#FFFFFF',
+        padding: '16px 20px',
+        borderRadius: '16px',
+        border: '1px solid #E2E8F0',
+        boxShadow: '0 2px 8px rgba(0,0,0,0.02)'
+      }}>
         <div>
-          <h2 style={{ fontSize: '1.25rem', fontWeight: 900, color: 'var(--adm-primary)', margin: '0 0 2px 0' }}>
-            Setup
+          <h2 style={{ fontSize: '1.3rem', fontWeight: 900, color: '#0F172A', margin: '0 0 2px 0', letterSpacing: '-0.02em' }}>
+            ⚙️ Setup & Configuration
           </h2>
-          <span style={{ fontSize: '0.8rem', color: 'var(--adm-muted)', fontWeight: 600 }}>
-            Restaurant configuration & settings
+          <span style={{ fontSize: '0.78rem', color: '#64748B', fontWeight: 500 }}>
+            Configure restaurant profile, sound alerts, menu settings, GPS geofence, and security
           </span>
         </div>
 
         {saveSuccessMsg && (
-          <span style={{ background: 'var(--adm-success-bg)', color: 'var(--adm-success)', padding: '6px 12px', borderRadius: 'var(--adm-radius-full)', fontSize: '0.78rem', fontWeight: 800 }}>
+          <span style={{ background: '#DCFCE7', color: '#15803D', border: '1px solid #86EFAC', padding: '6px 14px', borderRadius: '12px', fontSize: '0.8rem', fontWeight: 800 }}>
             {saveSuccessMsg}
           </span>
         )}
       </div>
 
       {/* Grouped Section Control Center */}
-      <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
         {/* OPERATIONS GROUP */}
         <div>
-          <div style={{ fontSize: '0.68rem', fontWeight: 800, color: 'var(--adm-muted)', letterSpacing: '0.06em', textTransform: 'uppercase', marginBottom: '6px', paddingLeft: '4px' }}>
-            OPERATIONS
+          <div style={{ fontSize: '0.72rem', fontWeight: 800, color: '#64748B', letterSpacing: '0.06em', textTransform: 'uppercase', marginBottom: '8px', paddingLeft: '4px' }}>
+            🚀 OPERATIONS
           </div>
-          <div className="adm-card" style={{ padding: 0, overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(320px, 1fr))', gap: '12px' }}>
             <div
               onClick={() => setOpenDrawer('devices')}
-              style={{ cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '14px 16px', minHeight: '68px', borderBottom: '1px solid var(--adm-border)' }}
+              style={{
+                cursor: 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                padding: '16px 18px',
+                background: '#FFFFFF',
+                borderRadius: '16px',
+                border: '1px solid #E2E8F0',
+                boxShadow: '0 2px 8px rgba(0,0,0,0.02)',
+                transition: 'all 0.15s ease'
+              }}
             >
-              <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                <div style={{ width: '38px', height: '38px', borderRadius: '10px', background: 'var(--adm-info-bg)', color: 'var(--adm-info)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                  <Bell size={18} />
+              <div style={{ display: 'flex', alignItems: 'center', gap: '14px', minWidth: 0 }}>
+                <div style={{ width: '44px', height: '44px', borderRadius: '12px', background: '#E0F2FE', color: '#0284C7', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                  <Bell size={20} />
                 </div>
-                <div>
-                  <strong style={{ fontSize: '0.9rem', color: 'var(--adm-text)', display: 'block' }}>Orders & Devices</strong>
-                  <span style={{ fontSize: '0.74rem', color: 'var(--adm-muted)' }}>Siren audio alert, push alerts, thermal printer</span>
+                <div style={{ minWidth: 0 }}>
+                  <strong style={{ fontSize: '0.94rem', color: '#0F172A', fontWeight: 800, display: 'block' }}>Orders & Devices</strong>
+                  <span style={{ fontSize: '0.75rem', color: '#64748B', fontWeight: 500 }}>Siren audio alert, push alerts, thermal printer</span>
                 </div>
               </div>
-              <ChevronRight size={16} color="var(--adm-muted)" />
+              <ChevronRight size={18} color="#94A3B8" style={{ flexShrink: 0 }} />
             </div>
 
             <div
               onClick={() => setOpenDrawer('menu')}
-              style={{ cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '14px 16px', minHeight: '68px', borderBottom: '1px solid var(--adm-border)' }}
+              style={{
+                cursor: 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                padding: '16px 18px',
+                background: '#FFFFFF',
+                borderRadius: '16px',
+                border: '1px solid #E2E8F0',
+                boxShadow: '0 2px 8px rgba(0,0,0,0.02)',
+                transition: 'all 0.15s ease'
+              }}
             >
-              <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                <div style={{ width: '38px', height: '38px', borderRadius: '10px', background: 'var(--adm-warning-bg)', color: 'var(--adm-warning)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                  <Utensils size={18} />
+              <div style={{ display: 'flex', alignItems: 'center', gap: '14px', minWidth: 0 }}>
+                <div style={{ width: '44px', height: '44px', borderRadius: '12px', background: '#FEF3C7', color: '#D97706', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                  <Utensils size={20} />
                 </div>
-                <div>
-                  <strong style={{ fontSize: '0.9rem', color: 'var(--adm-text)', display: 'block' }}>Menu & GST</strong>
-                  <span style={{ fontSize: '0.74rem', color: 'var(--adm-muted)' }}>5% GST tax billing, currency symbol, badge visibility</span>
+                <div style={{ minWidth: 0 }}>
+                  <strong style={{ fontSize: '0.94rem', color: '#0F172A', fontWeight: 800, display: 'block' }}>Menu & GST</strong>
+                  <span style={{ fontSize: '0.75rem', color: '#64748B', fontWeight: 500 }}>5% GST tax billing, currency symbol, badge visibility</span>
                 </div>
               </div>
-              <ChevronRight size={16} color="var(--adm-muted)" />
+              <ChevronRight size={18} color="#94A3B8" style={{ flexShrink: 0 }} />
             </div>
 
             <div
               onClick={() => setOpenDrawer('location')}
-              style={{ cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '14px 16px', minHeight: '68px' }}
+              style={{
+                cursor: 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                padding: '16px 18px',
+                background: '#FFFFFF',
+                borderRadius: '16px',
+                border: '1px solid #E2E8F0',
+                boxShadow: '0 2px 8px rgba(0,0,0,0.02)',
+                transition: 'all 0.15s ease'
+              }}
             >
-              <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                <div style={{ width: '38px', height: '38px', borderRadius: '10px', background: 'var(--adm-success-bg)', color: 'var(--adm-success)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                  <MapPin size={18} />
+              <div style={{ display: 'flex', alignItems: 'center', gap: '14px', minWidth: 0 }}>
+                <div style={{ width: '44px', height: '44px', borderRadius: '12px', background: '#DCFCE7', color: '#15803D', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                  <MapPin size={20} />
                 </div>
-                <div>
-                  <strong style={{ fontSize: '0.9rem', color: 'var(--adm-text)', display: 'block' }}>Location & Delivery</strong>
-                  <span style={{ fontSize: '0.74rem', color: 'var(--adm-muted)' }}>GPS coordinates, geofence radius</span>
+                <div style={{ minWidth: 0 }}>
+                  <strong style={{ fontSize: '0.94rem', color: '#0F172A', fontWeight: 800, display: 'block' }}>Location & Delivery</strong>
+                  <span style={{ fontSize: '0.75rem', color: '#64748B', fontWeight: 500 }}>GPS coordinates, geofence radius</span>
                 </div>
               </div>
-              <ChevronRight size={16} color="var(--adm-muted)" />
+              <ChevronRight size={18} color="#94A3B8" style={{ flexShrink: 0 }} />
             </div>
           </div>
         </div>
 
         {/* BUSINESS GROUP */}
         <div>
-          <div style={{ fontSize: '0.68rem', fontWeight: 800, color: 'var(--adm-muted)', letterSpacing: '0.06em', textTransform: 'uppercase', marginBottom: '6px', paddingLeft: '4px' }}>
-            BUSINESS
+          <div style={{ fontSize: '0.72rem', fontWeight: 800, color: '#64748B', letterSpacing: '0.06em', textTransform: 'uppercase', marginBottom: '8px', paddingLeft: '4px' }}>
+            🏢 BUSINESS
           </div>
-          <div className="adm-card" style={{ padding: 0, overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(320px, 1fr))', gap: '12px' }}>
             <div
               onClick={() => setOpenDrawer('profile')}
-              style={{ cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '14px 16px', minHeight: '68px', borderBottom: '1px solid var(--adm-border)' }}
+              style={{
+                cursor: 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                padding: '16px 18px',
+                background: '#FFFFFF',
+                borderRadius: '16px',
+                border: '1px solid #E2E8F0',
+                boxShadow: '0 2px 8px rgba(0,0,0,0.02)',
+                transition: 'all 0.15s ease'
+              }}
             >
-              <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                <div style={{ width: '38px', height: '38px', borderRadius: '10px', background: 'var(--adm-primary)', color: 'var(--adm-accent)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                  <Store size={18} />
+              <div style={{ display: 'flex', alignItems: 'center', gap: '14px', minWidth: 0 }}>
+                <div style={{ width: '44px', height: '44px', borderRadius: '12px', background: '#0F172A', color: '#F8FAFC', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                  <Store size={20} />
                 </div>
-                <div>
-                  <strong style={{ fontSize: '0.9rem', color: 'var(--adm-text)', display: 'block' }}>Restaurant Profile</strong>
-                  <span style={{ fontSize: '0.74rem', color: 'var(--adm-muted)' }}>Name, logo, phone, address, FSSAI, Maps</span>
+                <div style={{ minWidth: 0 }}>
+                  <strong style={{ fontSize: '0.94rem', color: '#0F172A', fontWeight: 800, display: 'block' }}>Restaurant Profile</strong>
+                  <span style={{ fontSize: '0.75rem', color: '#64748B', fontWeight: 500 }}>Name, logo, phone, address, FSSAI, Maps</span>
                 </div>
               </div>
-              <ChevronRight size={16} color="var(--adm-muted)" />
+              <ChevronRight size={18} color="#94A3B8" style={{ flexShrink: 0 }} />
             </div>
 
             <div
               onClick={() => setOpenDrawer('subscription')}
-              style={{ cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '14px 16px', minHeight: '68px' }}
+              style={{
+                cursor: 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                padding: '16px 18px',
+                background: '#FFFFFF',
+                borderRadius: '16px',
+                border: '1px solid #E2E8F0',
+                boxShadow: '0 2px 8px rgba(0,0,0,0.02)',
+                transition: 'all 0.15s ease'
+              }}
             >
-              <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                <div style={{ width: '38px', height: '38px', borderRadius: '10px', background: 'var(--adm-purple-bg)', color: 'var(--adm-purple)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                  <CreditCard size={18} />
+              <div style={{ display: 'flex', alignItems: 'center', gap: '14px', minWidth: 0 }}>
+                <div style={{ width: '44px', height: '44px', borderRadius: '12px', background: '#F3E8FF', color: '#7E22CE', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                  <CreditCard size={20} />
                 </div>
-                <div>
-                  <strong style={{ fontSize: '0.9rem', color: 'var(--adm-text)', display: 'block' }}>Subscription & Billing</strong>
-                  <span style={{ fontSize: '0.74rem', color: 'var(--adm-muted)' }}>Current plan, auto-renew status</span>
+                <div style={{ minWidth: 0 }}>
+                  <strong style={{ fontSize: '0.94rem', color: '#0F172A', fontWeight: 800, display: 'block' }}>Subscription & Billing</strong>
+                  <span style={{ fontSize: '0.75rem', color: '#64748B', fontWeight: 500 }}>Current plan, auto-renew status</span>
                 </div>
               </div>
-              <ChevronRight size={16} color="var(--adm-muted)" />
+              <ChevronRight size={18} color="#94A3B8" style={{ flexShrink: 0 }} />
             </div>
           </div>
         </div>
 
         {/* SECURITY GROUP */}
         <div>
-          <div style={{ fontSize: '0.68rem', fontWeight: 800, color: 'var(--adm-muted)', letterSpacing: '0.06em', textTransform: 'uppercase', marginBottom: '6px', paddingLeft: '4px' }}>
-            SECURITY
+          <div style={{ fontSize: '0.72rem', fontWeight: 800, color: '#64748B', letterSpacing: '0.06em', textTransform: 'uppercase', marginBottom: '8px', paddingLeft: '4px' }}>
+            🔒 SECURITY
           </div>
-          <div className="adm-card" style={{ padding: 0, overflow: 'hidden' }}>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(320px, 1fr))', gap: '12px' }}>
             <div
               onClick={() => setOpenDrawer('security')}
-              style={{ cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '14px 16px', minHeight: '68px' }}
+              style={{
+                cursor: 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                padding: '16px 18px',
+                background: '#FFFFFF',
+                borderRadius: '16px',
+                border: '1px solid #E2E8F0',
+                boxShadow: '0 2px 8px rgba(0,0,0,0.02)',
+                transition: 'all 0.15s ease'
+              }}
             >
-              <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                <div style={{ width: '38px', height: '38px', borderRadius: '10px', background: 'var(--adm-danger-bg)', color: 'var(--adm-danger)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                  <Lock size={18} />
+              <div style={{ display: 'flex', alignItems: 'center', gap: '14px', minWidth: 0 }}>
+                <div style={{ width: '44px', height: '44px', borderRadius: '12px', background: '#FEE2E2', color: '#DC2626', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                  <Lock size={20} />
                 </div>
-                <div>
-                  <strong style={{ fontSize: '0.9rem', color: 'var(--adm-text)', display: 'block' }}>Admin Security</strong>
-                  <span style={{ fontSize: '0.74rem', color: 'var(--adm-muted)' }}>Owner username and master login password</span>
+                <div style={{ minWidth: 0 }}>
+                  <strong style={{ fontSize: '0.94rem', color: '#0F172A', fontWeight: 800, display: 'block' }}>Admin Security</strong>
+                  <span style={{ fontSize: '0.75rem', color: '#64748B', fontWeight: 500 }}>Owner username and master login password</span>
                 </div>
               </div>
-              <ChevronRight size={16} color="var(--adm-muted)" />
+              <ChevronRight size={18} color="#94A3B8" style={{ flexShrink: 0 }} />
             </div>
           </div>
         </div>
 
         {/* ADVANCED GROUP */}
         <div>
-          <div style={{ fontSize: '0.68rem', fontWeight: 800, color: 'var(--adm-muted)', letterSpacing: '0.06em', textTransform: 'uppercase', marginBottom: '6px', paddingLeft: '4px' }}>
-            ADVANCED
+          <div style={{ fontSize: '0.72rem', fontWeight: 800, color: '#64748B', letterSpacing: '0.06em', textTransform: 'uppercase', marginBottom: '8px', paddingLeft: '4px' }}>
+            ⚡ ADVANCED
           </div>
-          <div className="adm-card" style={{ padding: 0, overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(320px, 1fr))', gap: '12px' }}>
             <div
               onClick={() => onNavigate && onNavigate('qr-generator')}
-              style={{ cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '14px 16px', minHeight: '68px', borderBottom: '1px solid var(--adm-border)' }}
+              style={{
+                cursor: 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                padding: '16px 18px',
+                background: '#FFFFFF',
+                borderRadius: '16px',
+                border: '1px solid #E2E8F0',
+                boxShadow: '0 2px 8px rgba(0,0,0,0.02)',
+                transition: 'all 0.15s ease'
+              }}
             >
-              <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                <div style={{ width: '38px', height: '38px', borderRadius: '10px', background: 'var(--adm-warning-bg)', color: 'var(--adm-warning)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                  <Printer size={18} />
+              <div style={{ display: 'flex', alignItems: 'center', gap: '14px', minWidth: 0 }}>
+                <div style={{ width: '44px', height: '44px', borderRadius: '12px', background: '#FEF3C7', color: '#D97706', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                  <Printer size={20} />
                 </div>
-                <div>
-                  <strong style={{ fontSize: '0.9rem', color: 'var(--adm-text)', display: 'block' }}>QR Standees & Table Stickers</strong>
-                  <span style={{ fontSize: '0.74rem', color: 'var(--adm-muted)' }}>Generate & print table QR standees & stickers</span>
+                <div style={{ minWidth: 0 }}>
+                  <strong style={{ fontSize: '0.94rem', color: '#0F172A', fontWeight: 800, display: 'block' }}>QR Standees & Table Stickers</strong>
+                  <span style={{ fontSize: '0.75rem', color: '#64748B', fontWeight: 500 }}>Generate & print table QR standees & stickers</span>
                 </div>
               </div>
-              <ChevronRight size={16} color="var(--adm-muted)" />
+              <ChevronRight size={18} color="#94A3B8" style={{ flexShrink: 0 }} />
             </div>
 
             <div
               onClick={() => onNavigate && onNavigate('review')}
-              style={{ cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '14px 16px', minHeight: '68px', borderBottom: '1px solid var(--adm-border)' }}
+              style={{
+                cursor: 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                padding: '16px 18px',
+                background: '#FFFFFF',
+                borderRadius: '16px',
+                border: '1px solid #E2E8F0',
+                boxShadow: '0 2px 8px rgba(0,0,0,0.02)',
+                transition: 'all 0.15s ease'
+              }}
             >
-              <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                <div style={{ width: '38px', height: '38px', borderRadius: '10px', background: 'var(--adm-purple-bg)', color: 'var(--adm-purple)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                  <ShieldCheck size={18} />
+              <div style={{ display: 'flex', alignItems: 'center', gap: '14px', minWidth: 0 }}>
+                <div style={{ width: '44px', height: '44px', borderRadius: '12px', background: '#F3E8FF', color: '#7E22CE', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                  <ShieldCheck size={20} />
                 </div>
-                <div>
-                  <strong style={{ fontSize: '0.9rem', color: 'var(--adm-text)', display: 'block' }}>Reviews & AI Auto-Reply</strong>
-                  <span style={{ fontSize: '0.74rem', color: 'var(--adm-muted)' }}>Google review link & instant AI review assistant</span>
+                <div style={{ minWidth: 0 }}>
+                  <strong style={{ fontSize: '0.94rem', color: '#0F172A', fontWeight: 800, display: 'block' }}>Reviews & AI Auto-Reply</strong>
+                  <span style={{ fontSize: '0.75rem', color: '#64748B', fontWeight: 500 }}>Google review link & instant AI review assistant</span>
                 </div>
               </div>
-              <ChevronRight size={16} color="var(--adm-muted)" />
+              <ChevronRight size={18} color="#94A3B8" style={{ flexShrink: 0 }} />
             </div>
 
             <div
               onClick={() => onOptimizeDatabase && onOptimizeDatabase()}
-              style={{ cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '14px 16px', minHeight: '68px' }}
+              style={{
+                cursor: 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                padding: '16px 18px',
+                background: '#FFFFFF',
+                borderRadius: '16px',
+                border: '1px solid #E2E8F0',
+                boxShadow: '0 2px 8px rgba(0,0,0,0.02)',
+                transition: 'all 0.15s ease'
+              }}
             >
-              <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                <div style={{ width: '38px', height: '38px', borderRadius: '10px', background: 'var(--adm-success-bg)', color: 'var(--adm-success)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                  <Upload size={18} />
+              <div style={{ display: 'flex', alignItems: 'center', gap: '14px', minWidth: 0 }}>
+                <div style={{ width: '44px', height: '44px', borderRadius: '12px', background: '#DCFCE7', color: '#15803D', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                  <Upload size={20} />
                 </div>
-                <div>
-                  <strong style={{ fontSize: '0.9rem', color: 'var(--adm-text)', display: 'block' }}>Database Tools</strong>
-                  <span style={{ fontSize: '0.74rem', color: 'var(--adm-muted)' }}>Purge temporary logs & optimize database engine</span>
+                <div style={{ minWidth: 0 }}>
+                  <strong style={{ fontSize: '0.94rem', color: '#0F172A', fontWeight: 800, display: 'block' }}>Database Tools</strong>
+                  <span style={{ fontSize: '0.75rem', color: '#64748B', fontWeight: 500 }}>Purge temporary logs & optimize database engine</span>
                 </div>
               </div>
-              <ChevronRight size={16} color="var(--adm-muted)" />
+              <ChevronRight size={18} color="#94A3B8" style={{ flexShrink: 0 }} />
             </div>
           </div>
         </div>
