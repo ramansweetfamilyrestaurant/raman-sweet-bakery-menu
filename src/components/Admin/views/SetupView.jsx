@@ -610,51 +610,71 @@ export default function SetupView({
         title="🏪 Restaurant Profile"
         subtitle="Public business identity and contact details"
         footer={(
-          <button onClick={handleFormSave} className="adm-btn adm-btn-primary" style={{ width: '100%', padding: '12px', fontWeight: 900 }}>
+          <button
+            onClick={handleFormSave}
+            style={{
+              width: '100%',
+              padding: '12px',
+              borderRadius: '12px',
+              border: 'none',
+              background: 'linear-gradient(135deg, #059669 0%, #10B981 100%)',
+              color: '#FFFFFF',
+              fontWeight: 900,
+              fontSize: '0.90rem',
+              cursor: 'pointer',
+              boxShadow: '0 4px 12px rgba(16, 185, 129, 0.25)'
+            }}
+          >
             Save Profile Changes
           </button>
         )}
       >
         <form onSubmit={handleFormSave} style={{ display: 'flex', flexDirection: 'column', gap: '14px', fontSize: '0.86rem' }}>
           {/* Logo Upload Box */}
-          <div style={{ display: 'flex', alignItems: 'center', gap: '14px', padding: '12px', background: 'var(--adm-surface-subtle)', borderRadius: 'var(--adm-radius-md)', border: '1px solid var(--adm-border)' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '14px', padding: '14px', background: '#F8FAFC', borderRadius: '14px', border: '1px solid #E2E8F0' }}>
             {settingsForm.logo ? (
-              <img src={settingsForm.logo} alt="Logo" style={{ width: '60px', height: '60px', borderRadius: '10px', objectFit: 'cover' }} />
+              <img src={settingsForm.logo} alt="Logo" style={{ width: '64px', height: '64px', borderRadius: '12px', objectFit: 'cover', border: '1px solid #CBD5E1' }} />
             ) : (
-              <div style={{ width: '60px', height: '60px', borderRadius: '10px', background: 'var(--adm-primary)', color: '#FFF', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 900 }}>LOGO</div>
+              <div style={{ width: '64px', height: '64px', borderRadius: '12px', background: '#0F172A', color: '#FFF', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 900, fontSize: '0.8rem' }}>LOGO</div>
             )}
             <div style={{ flex: 1 }}>
-              <label style={{ fontSize: '0.78rem', fontWeight: 800, color: 'var(--adm-primary)', display: 'block', marginBottom: '4px' }}>RESTAURANT LOGO:</label>
+              <label style={{ fontSize: '0.74rem', fontWeight: 800, color: '#0F172A', display: 'block', marginBottom: '6px', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
+                Restaurant Logo:
+              </label>
               <input type="file" accept="image/*" onChange={handleLogoUpload} disabled={uploadingLogo} style={{ fontSize: '0.78rem' }} />
-              {uploadingLogo && <span style={{ fontSize: '0.72rem', color: 'var(--adm-accent)', display: 'block', marginTop: '2px' }}>Uploading image to R2 cloud...</span>}
+              {uploadingLogo && <span style={{ fontSize: '0.72rem', color: '#059669', display: 'block', marginTop: '4px', fontWeight: 700 }}>Uploading logo image...</span>}
             </div>
           </div>
 
           <div>
-            <label style={{ fontSize: '0.76rem', fontWeight: 800, color: 'var(--adm-muted)', display: 'block', marginBottom: '4px' }}>RESTAURANT NAME:</label>
+            <label style={{ fontSize: '0.74rem', fontWeight: 800, color: '#0F172A', display: 'block', marginBottom: '6px', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
+              Restaurant Name:
+            </label>
             <input
               type="text"
               required
               value={settingsForm.name || ''}
               onChange={(e) => setSettingsForm({ ...settingsForm, name: e.target.value })}
-              style={{ width: '100%', padding: '10px 12px', borderRadius: 'var(--adm-radius-md)', border: '1px solid var(--adm-border)', fontSize: '0.9rem' }}
+              style={{ width: '100%', padding: '10px 14px', borderRadius: '10px', border: '1px solid #CBD5E1', fontSize: '0.9rem', boxSizing: 'border-box' }}
             />
           </div>
 
           <div>
-            <label style={{ fontSize: '0.76rem', fontWeight: 800, color: 'var(--adm-muted)', display: 'block', marginBottom: '4px' }}>TAGLINE / SLOGAN:</label>
+            <label style={{ fontSize: '0.74rem', fontWeight: 800, color: '#0F172A', display: 'block', marginBottom: '6px', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
+              Tagline / Slogan:
+            </label>
             <input
               type="text"
               placeholder="e.g. Pure Veg Family Restaurant & Bakery"
               value={settingsForm.tagline || ''}
               onChange={(e) => setSettingsForm({ ...settingsForm, tagline: e.target.value })}
-              style={{ width: '100%', padding: '10px 12px', borderRadius: 'var(--adm-radius-md)', border: '1px solid var(--adm-border)', fontSize: '0.9rem' }}
+              style={{ width: '100%', padding: '10px 14px', borderRadius: '10px', border: '1px solid #CBD5E1', fontSize: '0.9rem', boxSizing: 'border-box' }}
             />
           </div>
 
           <div>
-            <label style={{ fontSize: '0.76rem', fontWeight: 800, color: 'var(--adm-muted)', display: 'block', marginBottom: '8px' }}>
-              CUSTOMER MENU LUXURY THEME:
+            <label style={{ fontSize: '0.74rem', fontWeight: 800, color: '#0F172A', display: 'block', marginBottom: '8px', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
+              Customer Menu Luxury Theme:
             </label>
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '10px' }}>
               {[
@@ -671,19 +691,20 @@ export default function SetupView({
                     style={{
                       padding: '10px 12px',
                       borderRadius: '12px',
-                      border: isSelected ? '2px solid #D4AF37' : '1px solid var(--adm-border)',
-                      background: isSelected ? 'rgba(212, 175, 55, 0.1)' : 'var(--adm-surface-subtle)',
+                      border: isSelected ? '2px solid #059669' : '1px solid #E2E8F0',
+                      background: isSelected ? '#F0FDF4' : '#FFFFFF',
                       cursor: 'pointer',
                       display: 'flex',
                       alignItems: 'center',
                       gap: '10px',
-                      transition: 'all 0.2s ease'
+                      transition: 'all 0.15s ease',
+                      boxShadow: isSelected ? '0 2px 8px rgba(5, 150, 105, 0.15)' : 'none'
                     }}
                   >
                     <div style={{ width: '22px', height: '22px', borderRadius: '50%', background: t.color, border: `2px solid ${t.accent}`, flexShrink: 0 }} />
-                    <div>
-                      <div style={{ fontSize: '0.82rem', fontWeight: 800, color: isSelected ? '#D4AF37' : 'inherit' }}>{t.name}</div>
-                      <div style={{ fontSize: '0.7rem', color: 'var(--adm-muted)' }}>{t.desc}</div>
+                    <div style={{ minWidth: 0 }}>
+                      <div style={{ fontSize: '0.82rem', fontWeight: 800, color: isSelected ? '#059669' : '#0F172A', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{t.name}</div>
+                      <div style={{ fontSize: '0.7rem', color: '#64748B' }}>{t.desc}</div>
                     </div>
                   </div>
                 );
@@ -692,74 +713,86 @@ export default function SetupView({
           </div>
 
           <div>
-            <label style={{ fontSize: '0.76rem', fontWeight: 800, color: 'var(--adm-muted)', display: 'block', marginBottom: '4px' }}>CONTACT PHONE:</label>
+            <label style={{ fontSize: '0.74rem', fontWeight: 800, color: '#0F172A', display: 'block', marginBottom: '6px', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
+              Contact Phone:
+            </label>
             <input
               type="text"
               value={settingsForm.phone || ''}
               onChange={(e) => setSettingsForm({ ...settingsForm, phone: e.target.value })}
-              style={{ width: '100%', padding: '10px 12px', borderRadius: 'var(--adm-radius-md)', border: '1px solid var(--adm-border)', fontSize: '0.9rem' }}
+              style={{ width: '100%', padding: '10px 14px', borderRadius: '10px', border: '1px solid #CBD5E1', fontSize: '0.9rem', boxSizing: 'border-box' }}
             />
           </div>
 
           <div>
-            <label style={{ fontSize: '0.76rem', fontWeight: 800, color: 'var(--adm-muted)', display: 'block', marginBottom: '4px' }}>FSSAI LICENSE NUMBER:</label>
+            <label style={{ fontSize: '0.74rem', fontWeight: 800, color: '#0F172A', display: 'block', marginBottom: '6px', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
+              FSSAI License Number:
+            </label>
             <input
               type="text"
               placeholder="e.g. 12345678901234"
               value={settingsForm.fssai_lic_no || ''}
               onChange={(e) => setSettingsForm({ ...settingsForm, fssai_lic_no: e.target.value })}
-              style={{ width: '100%', padding: '10px 12px', borderRadius: 'var(--adm-radius-md)', border: '1px solid var(--adm-border)', fontSize: '0.9rem' }}
+              style={{ width: '100%', padding: '10px 14px', borderRadius: '10px', border: '1px solid #CBD5E1', fontSize: '0.9rem', boxSizing: 'border-box' }}
             />
           </div>
 
           <div>
-            <label style={{ fontSize: '0.76rem', fontWeight: 800, color: 'var(--adm-muted)', display: 'block', marginBottom: '4px' }}>OPENING HOURS:</label>
+            <label style={{ fontSize: '0.74rem', fontWeight: 800, color: '#0F172A', display: 'block', marginBottom: '6px', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
+              Opening Hours:
+            </label>
             <input
               type="text"
               placeholder="e.g. 10:00 AM - 11:00 PM Daily"
               value={settingsForm.openingHours || ''}
               onChange={(e) => setSettingsForm({ ...settingsForm, openingHours: e.target.value })}
-              style={{ width: '100%', padding: '10px 12px', borderRadius: 'var(--adm-radius-md)', border: '1px solid var(--adm-border)', fontSize: '0.9rem' }}
+              style={{ width: '100%', padding: '10px 14px', borderRadius: '10px', border: '1px solid #CBD5E1', fontSize: '0.9rem', boxSizing: 'border-box' }}
             />
           </div>
 
           <div>
-            <label style={{ fontSize: '0.76rem', fontWeight: 800, color: 'var(--adm-muted)', display: 'block', marginBottom: '4px' }}>GOOGLE MAPS LOCATION LINK:</label>
+            <label style={{ fontSize: '0.74rem', fontWeight: 800, color: '#0F172A', display: 'block', marginBottom: '6px', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
+              Google Maps Location Link:
+            </label>
             <input
               type="url"
               placeholder="https://maps.google.com/..."
               value={settingsForm.google_maps_url || ''}
               onChange={(e) => setSettingsForm({ ...settingsForm, google_maps_url: e.target.value })}
-              style={{ width: '100%', padding: '10px 12px', borderRadius: 'var(--adm-radius-md)', border: '1px solid var(--adm-border)', fontSize: '0.9rem' }}
+              style={{ width: '100%', padding: '10px 14px', borderRadius: '10px', border: '1px solid #CBD5E1', fontSize: '0.9rem', boxSizing: 'border-box' }}
             />
           </div>
 
           <div>
-            <label style={{ fontSize: '0.76rem', fontWeight: 800, color: 'var(--adm-muted)', display: 'block', marginBottom: '4px' }}>GOOGLE REVIEW PAGE LINK:</label>
+            <label style={{ fontSize: '0.74rem', fontWeight: 800, color: '#0F172A', display: 'block', marginBottom: '6px', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
+              Google Review Page Link:
+            </label>
             <input
               type="url"
               placeholder="https://g.page/r/..."
               value={settingsForm.google_review_url || ''}
               onChange={(e) => setSettingsForm({ ...settingsForm, google_review_url: e.target.value })}
-              style={{ width: '100%', padding: '10px 12px', borderRadius: 'var(--adm-radius-md)', border: '1px solid var(--adm-border)', fontSize: '0.9rem' }}
+              style={{ width: '100%', padding: '10px 14px', borderRadius: '10px', border: '1px solid #CBD5E1', fontSize: '0.9rem', boxSizing: 'border-box' }}
             />
           </div>
 
           <div>
-            <label style={{ fontSize: '0.76rem', fontWeight: 800, color: 'var(--adm-muted)', display: 'block', marginBottom: '4px' }}>ADDRESS:</label>
+            <label style={{ fontSize: '0.74rem', fontWeight: 800, color: '#0F172A', display: 'block', marginBottom: '6px', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
+              Address:
+            </label>
             <textarea
               rows={2}
               value={settingsForm.address || ''}
               onChange={(e) => setSettingsForm({ ...settingsForm, address: e.target.value })}
-              style={{ width: '100%', padding: '10px 12px', borderRadius: 'var(--adm-radius-md)', border: '1px solid var(--adm-border)', fontSize: '0.9rem' }}
+              style={{ width: '100%', padding: '10px 14px', borderRadius: '10px', border: '1px solid #CBD5E1', fontSize: '0.9rem', boxSizing: 'border-box', fontFamily: 'inherit' }}
             />
           </div>
 
           <div>
-            <label style={{ fontSize: '0.76rem', fontWeight: 800, color: 'var(--adm-muted)', display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '4px' }}>
-              🌐 CUSTOM MENU DOMAIN (CNAME):
-              <span style={{ fontSize: '0.65rem', padding: '2px 6px', borderRadius: '4px', background: 'rgba(52,211,153,0.15)', color: '#10B981', fontWeight: 800 }}>
-                ✅ ENABLED
+            <label style={{ fontSize: '0.74rem', fontWeight: 800, color: '#0F172A', display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '6px', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
+              🌐 Custom Menu Domain (CNAME):
+              <span style={{ fontSize: '0.65rem', padding: '2px 6px', borderRadius: '4px', background: '#DCFCE7', color: '#15803D', fontWeight: 800 }}>
+                ENABLED
               </span>
             </label>
             <input
@@ -767,10 +800,10 @@ export default function SetupView({
               placeholder="e.g. menu.yourrestaurant.com"
               value={settingsForm.custom_domain || ''}
               onChange={(e) => setSettingsForm({ ...settingsForm, custom_domain: e.target.value })}
-              style={{ width: '100%', padding: '10px 12px', borderRadius: 'var(--adm-radius-md)', border: '1px solid var(--adm-border)', fontSize: '0.9rem', background: 'white' }}
+              style={{ width: '100%', padding: '10px 14px', borderRadius: '10px', border: '1px solid #CBD5E1', fontSize: '0.9rem', boxSizing: 'border-box' }}
             />
-            <div style={{ fontSize: '0.68rem', color: '#6B7280', marginTop: '4px' }}>
-              Point CNAME record in GoDaddy to: <strong style={{ color: '#10B981' }}>cname.vercel-dns.com</strong>
+            <div style={{ fontSize: '0.70rem', color: '#64748B', marginTop: '4px' }}>
+              Point CNAME record in GoDaddy to: <strong style={{ color: '#059669' }}>cname.vercel-dns.com</strong>
             </div>
           </div>
         </form>
@@ -783,75 +816,120 @@ export default function SetupView({
         title="🔔 Orders & Devices"
         subtitle="Manage live order siren ringtones and thermal printer settings"
         footer={(
-          <button onClick={handleFormSave} className="adm-btn adm-btn-primary" style={{ width: '100%', padding: '12px', fontWeight: 900 }}>
+          <button
+            onClick={handleFormSave}
+            style={{
+              width: '100%',
+              padding: '12px',
+              borderRadius: '12px',
+              border: 'none',
+              background: 'linear-gradient(135deg, #059669 0%, #10B981 100%)',
+              color: '#FFFFFF',
+              fontWeight: 900,
+              fontSize: '0.90rem',
+              cursor: 'pointer',
+              boxShadow: '0 4px 12px rgba(16, 185, 129, 0.25)'
+            }}
+          >
             Save Device Settings
           </button>
         )}
       >
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
           {/* Siren Audio Alert Box */}
-          <div style={{ padding: '14px', background: 'var(--adm-surface-subtle)', borderRadius: 'var(--adm-radius-md)', border: '1px solid var(--adm-border)' }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
-              <strong style={{ fontSize: '0.9rem', color: 'var(--adm-primary)' }}>🔊 Live Order Siren Ringtone</strong>
+          <div style={{ padding: '16px', background: '#FFFFFF', borderRadius: '14px', border: '1px solid #E2E8F0', boxShadow: '0 2px 8px rgba(0,0,0,0.02)' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '6px' }}>
+              <strong style={{ fontSize: '0.92rem', color: '#0F172A', fontWeight: 800 }}>🔊 Live Order Siren Ringtone</strong>
               <input
                 type="checkbox"
                 checked={settingsForm.order_alarm_enabled !== false}
                 onChange={(e) => setSettingsForm({ ...settingsForm, order_alarm_enabled: e.target.checked })}
-                style={{ width: '18px', height: '18px', cursor: 'pointer' }}
+                style={{ width: '18px', height: '18px', cursor: 'pointer', accentColor: '#059669' }}
               />
             </div>
-            <p style={{ fontSize: '0.76rem', color: 'var(--adm-muted)', margin: '0 0 10px 0' }}>
+            <p style={{ fontSize: '0.76rem', color: '#64748B', margin: '0 0 12px 0', lineHeight: 1.4 }}>
               Plays a loud Swiggy/Zomato style siren ringtone whenever a new table order arrives.
             </p>
             <div style={{ display: 'flex', gap: '8px' }}>
-              <button onClick={testAlarmSound} className="adm-btn adm-btn-secondary adm-btn-sm" style={{ flex: 1 }}>
+              <button
+                onClick={testAlarmSound}
+                style={{
+                  flex: 1,
+                  padding: '9px 12px',
+                  borderRadius: '10px',
+                  background: '#F1F5F9',
+                  color: '#334155',
+                  border: '1px solid #CBD5E1',
+                  fontWeight: 800,
+                  fontSize: '0.78rem',
+                  cursor: 'pointer',
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  gap: '6px'
+                }}
+              >
                 <Volume2 size={15} /> Test Siren Sound
               </button>
-              <button onClick={requestPushPermission} className="adm-btn adm-btn-secondary adm-btn-sm" style={{ flex: 1 }}>
+              <button
+                onClick={requestPushPermission}
+                style={{
+                  flex: 1,
+                  padding: '9px 12px',
+                  borderRadius: '10px',
+                  background: '#F1F5F9',
+                  color: '#334155',
+                  border: '1px solid #CBD5E1',
+                  fontWeight: 800,
+                  fontSize: '0.78rem',
+                  cursor: 'pointer',
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  gap: '6px'
+                }}
+              >
                 🔔 Push Notifications
               </button>
             </div>
           </div>
 
           {/* Kitchen Display System (KDS) Screen Toggle */}
-          <div style={{ padding: '14px', background: 'var(--adm-surface-subtle)', borderRadius: 'var(--adm-radius-md)', border: '1px solid var(--adm-border)' }}>
+          <div style={{ padding: '16px', background: '#FFFFFF', borderRadius: '14px', border: '1px solid #E2E8F0', boxShadow: '0 2px 8px rgba(0,0,0,0.02)' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '4px' }}>
-              <strong style={{ fontSize: '0.9rem', color: 'var(--adm-primary)' }}>🍳 Kitchen Display System (KDS Screen) Access</strong>
+              <strong style={{ fontSize: '0.92rem', color: '#0F172A', fontWeight: 800 }}>🍳 Kitchen Display System (KDS) Access</strong>
               <input
                 type="checkbox"
                 checked={settingsForm.kds_screen_enabled !== false && settingsForm.kds_screen_enabled !== 0}
                 onChange={(e) => setSettingsForm({ ...settingsForm, kds_screen_enabled: e.target.checked ? 1 : 0 })}
-                style={{ width: '18px', height: '18px', cursor: 'pointer' }}
+                style={{ width: '18px', height: '18px', cursor: 'pointer', accentColor: '#059669' }}
               />
             </div>
-            <p style={{ fontSize: '0.76rem', color: 'var(--adm-muted)', margin: 0 }}>
+            <p style={{ fontSize: '0.76rem', color: '#64748B', margin: 0, lineHeight: 1.4 }}>
               Enables the dedicated fullscreen Kitchen Display Screen tab for chef order preparation and instant completed alerts.
             </p>
           </div>
 
           {/* Order Retention Period */}
-          <div style={{ padding: '14px', background: 'var(--adm-surface-subtle)', borderRadius: 'var(--adm-radius-md)', border: '1px solid var(--adm-border)' }}>
-            <label style={{ fontSize: '0.76rem', fontWeight: 800, color: 'var(--adm-primary)', display: 'block', marginBottom: '4px' }}>ORDER HISTORY RETENTION (DAYS):</label>
+          <div style={{ padding: '16px', background: '#FFFFFF', borderRadius: '14px', border: '1px solid #E2E8F0', boxShadow: '0 2px 8px rgba(0,0,0,0.02)' }}>
+            <label style={{ fontSize: '0.74rem', fontWeight: 800, color: '#0F172A', display: 'block', marginBottom: '6px', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
+              Order History Retention (Days):
+            </label>
             <input
               type="number"
               value={settingsForm.order_retention_days || 7}
               onChange={(e) => setSettingsForm({ ...settingsForm, order_retention_days: parseInt(e.target.value) || 7 })}
-              style={{ width: '100%', padding: '8px 10px', borderRadius: 'var(--adm-radius-md)', border: '1px solid var(--adm-border)', fontSize: '0.88rem' }}
+              style={{ width: '100%', padding: '10px 14px', borderRadius: '10px', border: '1px solid #CBD5E1', fontSize: '0.9rem', boxSizing: 'border-box' }}
             />
-            <span style={{ fontSize: '0.72rem', color: 'var(--adm-muted)', marginTop: '4px', display: 'block' }}>Orders older than this period will be automatically archived.</span>
+            <span style={{ fontSize: '0.72rem', color: '#64748B', marginTop: '4px', display: 'block' }}>Orders older than this period will be automatically archived.</span>
           </div>
 
           {/* Printer Setup Box */}
-          <div style={{ padding: '14px', background: 'var(--adm-surface-subtle)', borderRadius: 'var(--adm-radius-md)', border: '1px solid var(--adm-border)', display: 'flex', flexDirection: 'column', gap: '10px' }}>
+          <div style={{ padding: '16px', background: '#FFFFFF', borderRadius: '14px', border: '1px solid #E2E8F0', display: 'flex', flexDirection: 'column', gap: '12px', boxShadow: '0 2px 8px rgba(0,0,0,0.02)' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-              <strong style={{ fontSize: '0.9rem', color: 'var(--adm-primary)' }}>🖨️ Thermal Receipt Printer & Routing Mode</strong>
-              {!(settingsForm?.bluetooth_kot_enabled !== false && settingsForm?.bluetooth_kot_enabled !== 0) && (
-                <span style={{ fontSize: '0.7rem', fontWeight: 800, color: '#B45309', background: '#FEF3C7', border: '1px solid #F59E0B', padding: '2px 8px', borderRadius: 'var(--radius-pill)' }}>
-                  🔒 Pro Feature
-                </span>
-              )}
+              <strong style={{ fontSize: '0.92rem', color: '#0F172A', fontWeight: 800 }}>🖨️ Thermal Receipt Printer & Routing</strong>
             </div>
-            <p style={{ fontSize: '0.76rem', color: 'var(--adm-muted)', margin: 0 }}>
+            <p style={{ fontSize: '0.76rem', color: '#64748B', margin: 0, lineHeight: 1.4 }}>
               Supports 58mm & 80mm ESC/POS Bluetooth, USB, and RawBT silent thermal printers for Kitchen KOT & Customer Receipts.
             </p>
 
@@ -865,16 +943,9 @@ export default function SetupView({
               return (
                 <>
                   <div>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '4px' }}>
-                      <label style={{ fontSize: '0.74rem', fontWeight: 800, color: 'var(--adm-primary)', margin: 0 }}>
-                        PRINTER ROUTING MODE:
-                      </label>
-                      {!isDualAllowed && (
-                        <span style={{ fontSize: '0.68rem', fontWeight: 800, color: '#B45309', background: '#FEF3C7', border: '1px solid #F59E0B', padding: '1px 7px', borderRadius: 'var(--radius-pill)' }}>
-                          🔒 Enterprise Feature
-                        </span>
-                      )}
-                    </div>
+                    <label style={{ fontSize: '0.74rem', fontWeight: 800, color: '#0F172A', display: 'block', marginBottom: '6px', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
+                      Printer Routing Mode:
+                    </label>
 
                     <select
                       value={isDualAllowed ? (settingsForm.printer_mode || 'single') : 'single'}
@@ -883,7 +954,7 @@ export default function SetupView({
                         setSettingsForm({ ...settingsForm, printer_mode: e.target.value });
                       }}
                       disabled={!isDualAllowed}
-                      style={{ width: '100%', padding: '8px 10px', borderRadius: 'var(--adm-radius-md)', border: '1px solid var(--adm-border)', fontSize: '0.85rem', opacity: isDualAllowed ? 1 : 0.8 }}
+                      style={{ width: '100%', padding: '10px 14px', borderRadius: '10px', border: '1px solid #CBD5E1', fontSize: '0.88rem', fontWeight: 700, boxSizing: 'border-box' }}
                     >
                       <option value="single">🟢 Single Printer (Same Printer for KOT & Customer Bill)</option>
                       {isDualAllowed && (
@@ -892,16 +963,10 @@ export default function SetupView({
                     </select>
                   </div>
 
-                  {!isDualAllowed && (
-                    <div style={{ padding: '10px 12px', background: '#FEF3C7', borderRadius: 'var(--adm-radius-md)', border: '1px solid #F59E0B', fontSize: '0.74rem', color: '#92400E', display: 'flex', alignItems: 'center', gap: '8px' }}>
-                      <span>🔒 <strong>Dual Separate Printers (Kitchen KOT + Counter Bill)</strong> is disabled on your current plan. Upgrade to Enterprise Plan in SuperAdmin to unlock Dual Printer Routing.</span>
-                    </div>
-                  )}
-
                   {isDualAllowed && settingsForm.printer_mode === 'dual' && (
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', padding: '10px', background: 'var(--adm-surface)', borderRadius: 'var(--adm-radius-md)', border: '1px dashed var(--adm-accent)' }}>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', padding: '12px', background: '#F8FAFC', borderRadius: '12px', border: '1px dashed #CBD5E1' }}>
                       <div>
-                        <label style={{ fontSize: '0.72rem', fontWeight: 800, color: 'var(--adm-muted)', display: 'block', marginBottom: '2px' }}>
+                        <label style={{ fontSize: '0.72rem', fontWeight: 800, color: '#64748B', display: 'block', marginBottom: '2px' }}>
                           🍳 KITCHEN KOT PRINTER NAME / IP:
                         </label>
                         <input
@@ -909,11 +974,11 @@ export default function SetupView({
                           placeholder="e.g. Kitchen_KOT or 192.168.1.200"
                           value={settingsForm.kot_printer_target || ''}
                           onChange={(e) => setSettingsForm({ ...settingsForm, kot_printer_target: e.target.value })}
-                          style={{ width: '100%', padding: '6px 10px', borderRadius: 'var(--adm-radius-md)', border: '1px solid var(--adm-border)', fontSize: '0.82rem' }}
+                          style={{ width: '100%', padding: '8px 12px', borderRadius: '8px', border: '1px solid #CBD5E1', fontSize: '0.84rem', boxSizing: 'border-box' }}
                         />
                       </div>
                       <div>
-                        <label style={{ fontSize: '0.72rem', fontWeight: 800, color: 'var(--adm-muted)', display: 'block', marginBottom: '2px' }}>
+                        <label style={{ fontSize: '0.72rem', fontWeight: 800, color: '#64748B', display: 'block', marginBottom: '2px' }}>
                           🧾 COUNTER BILL PRINTER NAME / IP:
                         </label>
                         <input
@@ -921,7 +986,7 @@ export default function SetupView({
                           placeholder="e.g. Counter_Bill or 192.168.1.201"
                           value={settingsForm.bill_printer_target || ''}
                           onChange={(e) => setSettingsForm({ ...settingsForm, bill_printer_target: e.target.value })}
-                          style={{ width: '100%', padding: '6px 10px', borderRadius: 'var(--adm-radius-md)', border: '1px solid var(--adm-border)', fontSize: '0.82rem' }}
+                          style={{ width: '100%', padding: '8px 12px', borderRadius: '8px', border: '1px solid #CBD5E1', fontSize: '0.84rem', boxSizing: 'border-box' }}
                         />
                       </div>
                     </div>
@@ -930,8 +995,25 @@ export default function SetupView({
               );
             })()}
 
-            <button onClick={() => { setOpenDrawer(null); setShowPrinterModal(true); }} className="adm-btn adm-btn-secondary adm-btn-sm" style={{ width: '100%' }}>
-              <Printer size={15} /> Open Printer Pairing & Bluetooth Setup Guide
+            <button
+              onClick={() => { setOpenDrawer(null); setShowPrinterModal(true); }}
+              style={{
+                width: '100%',
+                padding: '10px 14px',
+                borderRadius: '10px',
+                background: '#F1F5F9',
+                color: '#334155',
+                border: '1px solid #CBD5E1',
+                fontWeight: 800,
+                fontSize: '0.80rem',
+                cursor: 'pointer',
+                display: 'inline-flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                gap: '6px'
+              }}
+            >
+              <Printer size={15} /> Open Printer Pairing Guide
             </button>
           </div>
         </div>
@@ -944,18 +1026,34 @@ export default function SetupView({
         title="🍽 Menu & GST Settings"
         subtitle="Configure cuisine type, tax rate, and dish badge visibility"
         footer={(
-          <button onClick={handleFormSave} className="adm-btn adm-btn-primary" style={{ width: '100%', padding: '12px', fontWeight: 900 }}>
+          <button
+            onClick={handleFormSave}
+            style={{
+              width: '100%',
+              padding: '12px',
+              borderRadius: '12px',
+              border: 'none',
+              background: 'linear-gradient(135deg, #059669 0%, #10B981 100%)',
+              color: '#FFFFFF',
+              fontWeight: 900,
+              fontSize: '0.90rem',
+              cursor: 'pointer',
+              boxShadow: '0 4px 12px rgba(16, 185, 129, 0.25)'
+            }}
+          >
             Save Menu & Tax Settings
           </button>
         )}
       >
         <form onSubmit={handleFormSave} style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
           <div>
-            <label style={{ fontSize: '0.76rem', fontWeight: 800, color: 'var(--adm-muted)', display: 'block', marginBottom: '4px' }}>RESTAURANT TYPE:</label>
+            <label style={{ fontSize: '0.74rem', fontWeight: 800, color: '#0F172A', display: 'block', marginBottom: '6px', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
+              Restaurant Type:
+            </label>
             <select
               value={settingsForm.resto_type || 'pure_veg'}
               onChange={(e) => setSettingsForm({ ...settingsForm, resto_type: e.target.value })}
-              style={{ width: '100%', padding: '10px 12px', borderRadius: 'var(--adm-radius-md)', border: '1px solid var(--adm-border)', fontSize: '0.9rem', fontWeight: 700 }}
+              style={{ width: '100%', padding: '10px 14px', borderRadius: '10px', border: '1px solid #CBD5E1', fontSize: '0.9rem', fontWeight: 700, boxSizing: 'border-box' }}
             >
               <option value="pure_veg">🟢 Pure Veg Restaurant</option>
               <option value="veg_nonveg">🔴 Veg & Non-Veg Restaurant</option>
@@ -964,85 +1062,56 @@ export default function SetupView({
           </div>
 
           <div>
-            <label style={{ fontSize: '0.76rem', fontWeight: 800, color: 'var(--adm-muted)', display: 'block', marginBottom: '4px' }}>CURRENCY SYMBOL:</label>
+            <label style={{ fontSize: '0.74rem', fontWeight: 800, color: '#0F172A', display: 'block', marginBottom: '6px', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
+              Currency Symbol:
+            </label>
             <select
               value={settingsForm.currency_symbol != null ? settingsForm.currency_symbol : '₹'}
               onChange={(e) => setSettingsForm({ ...settingsForm, currency_symbol: e.target.value })}
-              style={{ width: '100%', padding: '10px 12px', borderRadius: 'var(--adm-radius-md)', border: '1px solid var(--adm-border)', fontSize: '0.9rem', fontWeight: 700 }}
+              style={{ width: '100%', padding: '10px 14px', borderRadius: '10px', border: '1px solid #CBD5E1', fontSize: '0.9rem', fontWeight: 700, boxSizing: 'border-box' }}
             >
-              <option value="">❌ No Currency Symbol</option>
               <option value="₹">₹ — Indian Rupee (INR)</option>
               <option value="$">$ — US Dollar (USD)</option>
               <option value="€">€ — Euro (EUR)</option>
               <option value="£">£ — British Pound (GBP)</option>
-              <option value="¥">¥ — Japanese Yen / Chinese Yuan (JPY/CNY)</option>
-              <option value="₣">₣ — Swiss Franc (CHF)</option>
-              <option value="A$">A$ — Australian Dollar (AUD)</option>
-              <option value="C$">C$ — Canadian Dollar (CAD)</option>
               <option value="د.إ">د.إ — UAE Dirham (AED)</option>
               <option value="﷼">﷼ — Saudi Riyal (SAR)</option>
-              <option value="₨">₨ — Pakistani / Sri Lankan Rupee (PKR/LKR)</option>
-              <option value="৳">৳ — Bangladeshi Taka (BDT)</option>
-              <option value="රු">රු — Sri Lankan Rupee (LKR)</option>
-              <option value="RM">RM — Malaysian Ringgit (MYR)</option>
-              <option value="S$">S$ — Singapore Dollar (SGD)</option>
-              <option value="฿">฿ — Thai Baht (THB)</option>
-              <option value="₫">₫ — Vietnamese Dong (VND)</option>
-              <option value="₱">₱ — Philippine Peso (PHP)</option>
-              <option value="R">R — South African Rand (ZAR)</option>
-              <option value="₦">₦ — Nigerian Naira (NGN)</option>
-              <option value="KSh">KSh — Kenyan Shilling (KES)</option>
-              <option value="₩">₩ — South Korean Won (KRW)</option>
-              <option value="₺">₺ — Turkish Lira (TRY)</option>
-              <option value="R$">R$ — Brazilian Real (BRL)</option>
-              <option value="Mex$">Mex$ — Mexican Peso (MXN)</option>
             </select>
           </div>
 
-          {/* GST Configuration (Gated by Plan matrix: gst_invoice_enabled) */}
-          <div style={{ padding: '12px', background: 'var(--adm-surface-subtle)', borderRadius: 'var(--adm-radius-md)', border: '1px solid var(--adm-border)' }}>
-            {(settingsForm.gst_invoice_enabled !== false && settingsForm.gst_invoice_enabled !== 0) ? (
-              <>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
-                  <strong style={{ fontSize: '0.88rem', color: 'var(--adm-primary)' }}>🏷️ Enable 5% GST Tax Billing</strong>
-                  <input
-                    type="checkbox"
-                    checked={Boolean(settingsForm.gst_enabled)}
-                    onChange={(e) => setSettingsForm({ ...settingsForm, gst_enabled: e.target.checked })}
-                    style={{ width: '18px', height: '18px', cursor: 'pointer' }}
-                  />
-                </div>
+          {/* GST Configuration */}
+          <div style={{ padding: '16px', background: '#FFFFFF', borderRadius: '14px', border: '1px solid #E2E8F0', boxShadow: '0 2px 8px rgba(0,0,0,0.02)' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: settingsForm.gst_enabled ? '10px' : '0' }}>
+              <strong style={{ fontSize: '0.90rem', color: '#0F172A', fontWeight: 800 }}>🏷️ Enable 5% GST Tax Billing</strong>
+              <input
+                type="checkbox"
+                checked={Boolean(settingsForm.gst_enabled)}
+                onChange={(e) => setSettingsForm({ ...settingsForm, gst_enabled: e.target.checked })}
+                style={{ width: '18px', height: '18px', cursor: 'pointer', accentColor: '#059669' }}
+              />
+            </div>
 
-                {settingsForm.gst_enabled && (
-                  <div style={{ marginTop: '8px' }}>
-                    <label style={{ fontSize: '0.74rem', fontWeight: 800, color: 'var(--adm-muted)', display: 'block', marginBottom: '4px' }}>GSTIN NUMBER:</label>
-                    <input
-                      type="text"
-                      placeholder="e.g. 10AAAAA0000A1Z5"
-                      value={settingsForm.gstin_number || ''}
-                      onChange={(e) => setSettingsForm({ ...settingsForm, gstin_number: e.target.value })}
-                      style={{ width: '100%', padding: '8px 10px', borderRadius: 'var(--adm-radius-md)', border: '1px solid var(--adm-border)', fontSize: '0.86rem' }}
-                    />
-                  </div>
-                )}
-              </>
-            ) : (
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                <strong style={{ fontSize: '0.88rem', color: 'var(--adm-primary)' }}>🏷️ GST Invoice & Custom Tax Billing</strong>
-                <span style={{ fontSize: '0.72rem', fontWeight: 800, color: '#B45309', background: '#FEF3C7', border: '1px solid #F59E0B', padding: '3px 8px', borderRadius: 'var(--radius-pill)' }}>
-                  🔒 Pro Feature
-                </span>
+            {settingsForm.gst_enabled && (
+              <div style={{ marginTop: '10px', paddingTop: '10px', borderTop: '1px solid #F1F5F9' }}>
+                <label style={{ fontSize: '0.74rem', fontWeight: 800, color: '#64748B', display: 'block', marginBottom: '4px' }}>GSTIN NUMBER:</label>
+                <input
+                  type="text"
+                  placeholder="e.g. 10AAAAA0000A1Z5"
+                  value={settingsForm.gstin_number || ''}
+                  onChange={(e) => setSettingsForm({ ...settingsForm, gstin_number: e.target.value })}
+                  style={{ width: '100%', padding: '8px 12px', borderRadius: '8px', border: '1px solid #CBD5E1', fontSize: '0.86rem', boxSizing: 'border-box' }}
+                />
               </div>
             )}
           </div>
 
           {/* Dish Filter Visibility Toggles */}
-          <div style={{ padding: '12px', background: 'var(--adm-surface-subtle)', borderRadius: 'var(--adm-radius-md)', border: '1px solid var(--adm-border)' }}>
-            <strong style={{ fontSize: '0.88rem', color: 'var(--adm-primary)', display: 'block', marginBottom: '10px' }}>👁️ Customer Menu Badge Visibility</strong>
+          <div style={{ padding: '16px', background: '#FFFFFF', borderRadius: '14px', border: '1px solid #E2E8F0', boxShadow: '0 2px 8px rgba(0,0,0,0.02)' }}>
+            <strong style={{ fontSize: '0.90rem', color: '#0F172A', display: 'block', marginBottom: '12px', fontWeight: 800 }}>👁️ Customer Menu Badge Visibility</strong>
 
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', fontSize: '0.82rem' }}>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', fontSize: '0.84rem' }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                <span>⭐ Show "Must Try" Badge Filter</span>
+                <span style={{ fontWeight: 600, color: '#334155' }}>⭐ Show "Must Try" Badge Filter</span>
                 <input
                   type="checkbox"
                   checked={settingsForm.filters_visibility?.must_try !== false}
@@ -1050,11 +1119,12 @@ export default function SetupView({
                     ...settingsForm,
                     filters_visibility: { ...settingsForm.filters_visibility, must_try: e.target.checked }
                   })}
+                  style={{ width: '16px', height: '16px', accentColor: '#059669', cursor: 'pointer' }}
                 />
               </div>
 
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                <span>✨ Show "Today Special" Badge Filter</span>
+                <span style={{ fontWeight: 600, color: '#334155' }}>✨ Show "Today Special" Badge Filter</span>
                 <input
                   type="checkbox"
                   checked={settingsForm.filters_visibility?.special !== false}
@@ -1062,11 +1132,12 @@ export default function SetupView({
                     ...settingsForm,
                     filters_visibility: { ...settingsForm.filters_visibility, special: e.target.checked }
                   })}
+                  style={{ width: '16px', height: '16px', accentColor: '#059669', cursor: 'pointer' }}
                 />
               </div>
 
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                <span>🍱 Show "Combos" Navigation Tab</span>
+                <span style={{ fontWeight: 600, color: '#334155' }}>🍱 Show "Combos" Navigation Tab</span>
                 <input
                   type="checkbox"
                   checked={settingsForm.filters_visibility?.combo !== false}
@@ -1074,6 +1145,7 @@ export default function SetupView({
                     ...settingsForm,
                     filters_visibility: { ...settingsForm.filters_visibility, combo: e.target.checked }
                   })}
+                  style={{ width: '16px', height: '16px', accentColor: '#059669', cursor: 'pointer' }}
                 />
               </div>
             </div>
@@ -1088,7 +1160,21 @@ export default function SetupView({
         title="📍 Location & GPS Geofence"
         subtitle="Set coordinates to prevent fake orders from outside your restaurant"
         footer={(
-          <button onClick={handleFormSave} className="adm-btn adm-btn-primary" style={{ width: '100%', padding: '12px', fontWeight: 900 }}>
+          <button
+            onClick={handleFormSave}
+            style={{
+              width: '100%',
+              padding: '12px',
+              borderRadius: '12px',
+              border: 'none',
+              background: 'linear-gradient(135deg, #059669 0%, #10B981 100%)',
+              color: '#FFFFFF',
+              fontWeight: 900,
+              fontSize: '0.90rem',
+              cursor: 'pointer',
+              boxShadow: '0 4px 12px rgba(16, 185, 129, 0.25)'
+            }}
+          >
             Save Location & Geofence
           </button>
         )}
@@ -1099,8 +1185,21 @@ export default function SetupView({
               type="button"
               onClick={handleDetectGps}
               disabled={gpsLoading}
-              className="adm-btn adm-btn-accent"
-              style={{ flex: '1 1 150px', padding: '12px 14px', minHeight: '44px', fontWeight: 800, fontSize: '0.86rem', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}
+              style={{
+                flex: '1 1 150px',
+                padding: '12px 14px',
+                borderRadius: '12px',
+                border: 'none',
+                background: 'linear-gradient(135deg, #D97706 0%, #F59E0B 100%)',
+                color: '#FFFFFF',
+                fontWeight: 800,
+                fontSize: '0.84rem',
+                cursor: 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                gap: '8px'
+              }}
             >
               <MapPin size={16} />
               {gpsLoading ? 'Detecting GPS...' : gpsSuccessMsg ? '✓ GPS Captured' : '🎯 Auto Detect GPS'}
@@ -1109,83 +1208,75 @@ export default function SetupView({
             <button
               type="button"
               onClick={() => setShowMapModal(true)}
-              className="adm-btn adm-btn-primary"
-              style={{ flex: '1 1 150px', padding: '12px 14px', minHeight: '44px', fontWeight: 800, fontSize: '0.86rem', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}
+              style={{
+                flex: '1 1 150px',
+                padding: '12px 14px',
+                borderRadius: '12px',
+                border: 'none',
+                background: '#0F172A',
+                color: '#FFFFFF',
+                fontWeight: 800,
+                fontSize: '0.84rem',
+                cursor: 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                gap: '8px'
+              }}
             >
               <Map size={16} />
               🗺️ Interactive Map & Pinpoint
             </button>
           </div>
 
-          <span style={{ fontSize: '0.72rem', color: 'var(--adm-muted)', marginTop: '-4px', display: 'block', lineHeight: 1.4 }}>
+          <span style={{ fontSize: '0.74rem', color: '#64748B', marginTop: '-4px', display: 'block', lineHeight: 1.4 }}>
             Click Auto Detect or use the interactive map to drag your pin to the exact dining entrance.
           </span>
 
           {gpsSuccessMsg && (
-            <div style={{ background: 'var(--adm-success-bg)', color: 'var(--adm-success)', padding: '10px 14px', borderRadius: 'var(--adm-radius-md)', fontSize: '0.84rem', fontWeight: 800, border: '1px solid var(--adm-success-border)' }}>
+            <div style={{ background: '#DCFCE7', color: '#15803D', padding: '10px 14px', borderRadius: '10px', fontSize: '0.84rem', fontWeight: 800, border: '1px solid #86EFAC' }}>
               {gpsSuccessMsg}
-            </div>
-          )}
-
-          {gpsErrorState && (
-            <div style={{ background: 'var(--adm-danger-bg)', color: 'var(--adm-danger)', padding: '12px 14px', borderRadius: 'var(--adm-radius-md)', fontSize: '0.82rem', fontWeight: 700, border: '1px solid var(--adm-danger-border)', display: 'flex', flexDirection: 'column', gap: '10px' }}>
-              <strong style={{ fontSize: '0.88rem', display: 'block' }}>{gpsErrorState.title}</strong>
-              <div style={{ lineHeight: 1.4 }}>{gpsErrorState.msg}</div>
-              <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', marginTop: '4px' }}>
-                <button
-                  type="button"
-                  onClick={handleDetectGps}
-                  className="adm-btn adm-btn-primary adm-btn-sm"
-                  style={{ fontWeight: 800 }}
-                >
-                  Try Again
-                </button>
-                {gpsErrorState.isDenied && (
-                  <button
-                    type="button"
-                    onClick={() => alert('📱 How to Allow Location Access:\n\n1. Tap the 🔒 lock or ⓘ info icon in your browser address bar\n2. Tap "Site Settings" or "Permissions"\n3. Change "Location" from Blocked to Allow\n4. Refresh the page and click Detect Current Location again.')}
-                    className="adm-btn adm-btn-secondary adm-btn-sm"
-                    style={{ fontWeight: 800 }}
-                  >
-                    How to Allow
-                  </button>
-                )}
-              </div>
             </div>
           )}
 
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
             <div>
-              <label style={{ fontSize: '0.74rem', fontWeight: 800, color: 'var(--adm-muted)', display: 'block', marginBottom: '4px' }}>LATITUDE:</label>
+              <label style={{ fontSize: '0.74rem', fontWeight: 800, color: '#0F172A', display: 'block', marginBottom: '6px', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
+                Latitude:
+              </label>
               <input
                 type="number"
                 step="any"
                 value={settingsForm.latitude || ''}
                 onChange={(e) => setSettingsForm({ ...settingsForm, latitude: parseFloat(e.target.value) })}
-                style={{ width: '100%', padding: '10px', borderRadius: 'var(--adm-radius-md)', border: '1px solid var(--adm-border)' }}
+                style={{ width: '100%', padding: '10px 14px', borderRadius: '10px', border: '1px solid #CBD5E1', fontSize: '0.88rem', boxSizing: 'border-box' }}
               />
             </div>
             <div>
-              <label style={{ fontSize: '0.74rem', fontWeight: 800, color: 'var(--adm-muted)', display: 'block', marginBottom: '4px' }}>LONGITUDE:</label>
+              <label style={{ fontSize: '0.74rem', fontWeight: 800, color: '#0F172A', display: 'block', marginBottom: '6px', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
+                Longitude:
+              </label>
               <input
                 type="number"
                 step="any"
                 value={settingsForm.longitude || ''}
                 onChange={(e) => setSettingsForm({ ...settingsForm, longitude: parseFloat(e.target.value) })}
-                style={{ width: '100%', padding: '10px', borderRadius: 'var(--adm-radius-md)', border: '1px solid var(--adm-border)' }}
+                style={{ width: '100%', padding: '10px 14px', borderRadius: '10px', border: '1px solid #CBD5E1', fontSize: '0.88rem', boxSizing: 'border-box' }}
               />
             </div>
           </div>
 
           <div>
-            <label style={{ fontSize: '0.76rem', fontWeight: 800, color: 'var(--adm-muted)', display: 'block', marginBottom: '4px' }}>MAX ORDERING DISTANCE RADIUS (METERS):</label>
+            <label style={{ fontSize: '0.74rem', fontWeight: 800, color: '#0F172A', display: 'block', marginBottom: '6px', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
+              Max Ordering Distance Radius (Meters):
+            </label>
             <input
               type="number"
               value={settingsForm.max_distance_meters || 100}
               onChange={(e) => setSettingsForm({ ...settingsForm, max_distance_meters: parseInt(e.target.value) || 100 })}
-              style={{ width: '100%', padding: '10px 12px', borderRadius: 'var(--adm-radius-md)', border: '1px solid var(--adm-border)', fontSize: '0.9rem' }}
+              style={{ width: '100%', padding: '10px 14px', borderRadius: '10px', border: '1px solid #CBD5E1', fontSize: '0.9rem', boxSizing: 'border-box' }}
             />
-            <span style={{ fontSize: '0.72rem', color: 'var(--adm-muted)', marginTop: '2px', display: 'block' }}>Default: 100 meters (dining hall boundary)</span>
+            <span style={{ fontSize: '0.72rem', color: '#64748B', marginTop: '4px', display: 'block' }}>Default: 100 meters (dining hall boundary)</span>
           </div>
 
           <LocationPickerModal
@@ -1218,20 +1309,20 @@ export default function SetupView({
         subtitle="Manage plan tier and Cashfree auto-renew mandate"
       >
         <div style={{ display: 'flex', flexDirection: 'column', gap: '14px', fontSize: '0.85rem' }}>
-          <div style={{ background: 'var(--adm-surface-subtle)', padding: '14px', borderRadius: 'var(--adm-radius-md)', border: '1px solid var(--adm-border)' }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', padding: '6px 0', borderBottom: '1px solid var(--adm-border)' }}>
-              <span style={{ color: 'var(--adm-muted)' }}>Current Plan:</span>
-              <strong style={{ color: 'var(--adm-success)' }}>{(restaurantInfo?.plan_tier || 'pro').toUpperCase()}</strong>
+          <div style={{ background: '#FFFFFF', padding: '16px', borderRadius: '14px', border: '1px solid #E2E8F0', boxShadow: '0 2px 8px rgba(0,0,0,0.02)' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', padding: '8px 0', borderBottom: '1px solid #F1F5F9' }}>
+              <span style={{ color: '#64748B', fontWeight: 600 }}>Current Plan:</span>
+              <strong style={{ color: '#059669', fontWeight: 900 }}>{(restaurantInfo?.plan_tier || 'pro').toUpperCase()}</strong>
             </div>
-            <div style={{ display: 'flex', justifyContent: 'space-between', padding: '6px 0', borderBottom: '1px solid var(--adm-border)' }}>
-              <span style={{ color: 'var(--adm-muted)' }}>Subscription Type:</span>
-              <strong style={{ color: restaurantInfo?.subscription_type === 'ADMIN_GRANTED' ? 'var(--adm-purple)' : 'var(--adm-text)' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', padding: '8px 0', borderBottom: '1px solid #F1F5F9' }}>
+              <span style={{ color: '#64748B', fontWeight: 600 }}>Subscription Type:</span>
+              <strong style={{ color: restaurantInfo?.subscription_type === 'ADMIN_GRANTED' ? '#7E22CE' : '#0F172A', fontWeight: 800 }}>
                 {restaurantInfo?.subscription_type === 'ADMIN_GRANTED' ? '🎁 COMPLIMENTARY (FREE)' : 'PAID CASHFREE'}
               </strong>
             </div>
-            <div style={{ display: 'flex', justifyContent: 'space-between', padding: '6px 0' }}>
-              <span style={{ color: 'var(--adm-muted)' }}>Access Expiry:</span>
-              <strong>
+            <div style={{ display: 'flex', justifyContent: 'space-between', padding: '8px 0' }}>
+              <span style={{ color: '#64748B', fontWeight: 600 }}>Access Expiry:</span>
+              <strong style={{ color: '#0F172A', fontWeight: 800 }}>
                 {restaurantInfo?.subscription_type === 'ADMIN_GRANTED' || (restaurantInfo?.access_until && new Date(restaurantInfo.access_until).getFullYear() > 2030)
                   ? '♾️ Lifetime Access'
                   : restaurantInfo?.access_until ? new Date(restaurantInfo.access_until).toLocaleDateString('en-IN') : 'N/A'
@@ -1240,7 +1331,20 @@ export default function SetupView({
             </div>
           </div>
 
-          <button onClick={() => { setOpenDrawer(null); onOpenBillingModal(); }} className="adm-btn adm-btn-accent" style={{ width: '100%', padding: '12px', fontWeight: 900 }}>
+          <button
+            onClick={() => { setOpenDrawer(null); onOpenBillingModal(); }}
+            style={{
+              width: '100%',
+              padding: '12px',
+              borderRadius: '12px',
+              border: 'none',
+              background: '#0F172A',
+              color: '#FFFFFF',
+              fontWeight: 900,
+              fontSize: '0.88rem',
+              cursor: 'pointer'
+            }}
+          >
             Manage Billing & Plan Options ➔
           </button>
         </div>
@@ -1253,7 +1357,21 @@ export default function SetupView({
         title="🔐 Admin Master Credentials"
         subtitle="Update owner username and login password"
         footer={(
-          <button onClick={handleSecuritySave} className="adm-btn adm-btn-danger" style={{ width: '100%', padding: '12px', fontWeight: 900 }}>
+          <button
+            onClick={handleSecuritySave}
+            style={{
+              width: '100%',
+              padding: '12px',
+              borderRadius: '12px',
+              border: 'none',
+              background: '#DC2626',
+              color: '#FFFFFF',
+              fontWeight: 900,
+              fontSize: '0.90rem',
+              cursor: 'pointer',
+              boxShadow: '0 4px 12px rgba(220, 38, 38, 0.25)'
+            }}
+          >
             Update Security Credentials
           </button>
         )}
@@ -1261,56 +1379,64 @@ export default function SetupView({
         <form onSubmit={handleSecuritySave} style={{ display: 'flex', flexDirection: 'column', gap: '14px', fontSize: '0.84rem' }}>
           {credMsg?.text && (
             <div style={{
-              padding: '10px 14px', borderRadius: 'var(--adm-radius-md)', fontSize: '0.82rem', fontWeight: 800,
-              background: credMsg.type === 'error' ? 'var(--adm-danger-bg)' : 'var(--adm-success-bg)',
-              color: credMsg.type === 'error' ? 'var(--adm-danger)' : 'var(--adm-success)',
-              border: `1px solid ${credMsg.type === 'error' ? 'var(--adm-danger-border)' : 'var(--adm-success-border)'}`
+              padding: '10px 14px', borderRadius: '10px', fontSize: '0.82rem', fontWeight: 800,
+              background: credMsg.type === 'error' ? '#FEE2E2' : '#DCFCE7',
+              color: credMsg.type === 'error' ? '#DC2626' : '#15803D',
+              border: `1px solid ${credMsg.type === 'error' ? '#FECACA' : '#86EFAC'}`
             }}>
               {credMsg.text}
             </div>
           )}
 
           <div>
-            <label style={{ fontSize: '0.74rem', fontWeight: 800, color: 'var(--adm-muted)', display: 'block', marginBottom: '4px' }}>CURRENT PASSWORD (REQUIRED):</label>
+            <label style={{ fontSize: '0.74rem', fontWeight: 800, color: '#0F172A', display: 'block', marginBottom: '6px', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
+              Current Password (Required):
+            </label>
             <input
               type="password"
               required
               value={credForm.currentPassword || ''}
               onChange={(e) => setCredForm({ ...credForm, currentPassword: e.target.value })}
-              style={{ width: '100%', padding: '10px', borderRadius: 'var(--adm-radius-md)', border: '1px solid var(--adm-border)' }}
+              style={{ width: '100%', padding: '10px 14px', borderRadius: '10px', border: '1px solid #CBD5E1', fontSize: '0.9rem', boxSizing: 'border-box' }}
             />
           </div>
 
           <div>
-            <label style={{ fontSize: '0.74rem', fontWeight: 800, color: 'var(--adm-muted)', display: 'block', marginBottom: '4px' }}>NEW OWNER USERNAME:</label>
+            <label style={{ fontSize: '0.74rem', fontWeight: 800, color: '#0F172A', display: 'block', marginBottom: '6px', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
+              New Owner Username:
+            </label>
             <input
               type="text"
               placeholder="Leave blank to keep unchanged"
               value={credForm.newUsername || ''}
               onChange={(e) => setCredForm({ ...credForm, newUsername: e.target.value })}
-              style={{ width: '100%', padding: '10px', borderRadius: 'var(--adm-radius-md)', border: '1px solid var(--adm-border)' }}
+              style={{ width: '100%', padding: '10px 14px', borderRadius: '10px', border: '1px solid #CBD5E1', fontSize: '0.9rem', boxSizing: 'border-box' }}
             />
           </div>
 
           <div>
-            <label style={{ fontSize: '0.74rem', fontWeight: 800, color: 'var(--adm-muted)', display: 'block', marginBottom: '4px' }}>NEW PASSWORD:</label>
+            <label style={{ fontSize: '0.74rem', fontWeight: 800, color: '#0F172A', display: 'block', marginBottom: '6px', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
+              New Password:
+            </label>
             <input
               type="password"
               placeholder="Leave blank to keep unchanged"
               value={credForm.newPassword || ''}
               onChange={(e) => setCredForm({ ...credForm, newPassword: e.target.value })}
-              style={{ width: '100%', padding: '10px', borderRadius: 'var(--adm-radius-md)', border: '1px solid var(--adm-border)' }}
+              style={{ width: '100%', padding: '10px 14px', borderRadius: '10px', border: '1px solid #CBD5E1', fontSize: '0.9rem', boxSizing: 'border-box' }}
             />
           </div>
 
           <div>
-            <label style={{ fontSize: '0.74rem', fontWeight: 800, color: 'var(--adm-muted)', display: 'block', marginBottom: '4px' }}>CONFIRM NEW PASSWORD:</label>
+            <label style={{ fontSize: '0.74rem', fontWeight: 800, color: '#0F172A', display: 'block', marginBottom: '6px', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
+              Confirm New Password:
+            </label>
             <input
               type="password"
               placeholder="Re-enter new password"
               value={credForm.confirmPassword || ''}
               onChange={(e) => setCredForm({ ...credForm, confirmPassword: e.target.value })}
-              style={{ width: '100%', padding: '10px', borderRadius: 'var(--adm-radius-md)', border: '1px solid var(--adm-border)' }}
+              style={{ width: '100%', padding: '10px 14px', borderRadius: '10px', border: '1px solid #CBD5E1', fontSize: '0.9rem', boxSizing: 'border-box' }}
             />
           </div>
         </form>
