@@ -1272,103 +1272,223 @@ export default function SetupView({
         )}
       >
         <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
-          <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
-            <button
-              type="button"
-              onClick={handleDetectGps}
-              disabled={gpsLoading}
-              style={{
-                flex: '1 1 150px',
-                padding: '12px 14px',
-                borderRadius: '12px',
-                border: 'none',
-                background: 'linear-gradient(135deg, #D97706 0%, #F59E0B 100%)',
-                color: '#FFFFFF',
-                fontWeight: 800,
-                fontSize: '0.84rem',
-                cursor: 'pointer',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                gap: '8px'
-              }}
-            >
-              <MapPin size={16} />
-              {gpsLoading ? 'Detecting GPS...' : gpsSuccessMsg ? '✓ GPS Captured' : '🎯 Auto Detect GPS'}
-            </button>
+          {/* Card 1: GPS Capture & Map Tool */}
+          <div style={{ padding: '16px 18px', background: '#FFFFFF', borderRadius: '16px', border: '1px solid #E2E8F0', boxShadow: '0 1px 3px rgba(0,0,0,0.04)' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '8px' }}>
+              <div style={{ width: '36px', height: '36px', borderRadius: '10px', background: '#FFE4E6', color: '#E11D48', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1.1rem', flexShrink: 0 }}>
+                📍
+              </div>
+              <div>
+                <strong style={{ fontSize: '0.92rem', color: '#0F172A', fontWeight: 800, display: 'block' }}>GPS Coordinate Pinpoint</strong>
+                <span style={{ fontSize: '0.72rem', color: '#64748B' }}>Auto-detect or pin your exact restaurant entrance</span>
+              </div>
+            </div>
 
-            <button
-              type="button"
-              onClick={() => setShowMapModal(true)}
-              style={{
-                flex: '1 1 150px',
-                padding: '12px 14px',
-                borderRadius: '12px',
-                border: 'none',
-                background: '#0F172A',
-                color: '#FFFFFF',
-                fontWeight: 800,
-                fontSize: '0.84rem',
-                cursor: 'pointer',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                gap: '8px'
-              }}
-            >
-              <Map size={16} />
-              🗺️ Interactive Map & Pinpoint
-            </button>
+            <p style={{ fontSize: '0.76rem', color: '#64748B', margin: '0 0 12px 0', lineHeight: 1.45, paddingLeft: '46px' }}>
+              Customers must be physically present inside this radius to place live table orders.
+            </p>
+
+            <div style={{ display: 'flex', gap: '10px', paddingLeft: '46px', flexWrap: 'wrap' }}>
+              <button
+                type="button"
+                onClick={handleDetectGps}
+                disabled={gpsLoading}
+                style={{
+                  flex: '1 1 140px',
+                  padding: '11px 14px',
+                  borderRadius: '10px',
+                  border: 'none',
+                  background: 'linear-gradient(135deg, #D97706 0%, #F59E0B 100%)',
+                  color: '#FFFFFF',
+                  fontWeight: 800,
+                  fontSize: '0.82rem',
+                  cursor: 'pointer',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  gap: '6px',
+                  boxShadow: '0 2px 6px rgba(217, 119, 6, 0.25)',
+                  transition: 'all 0.15s ease'
+                }}
+              >
+                <MapPin size={15} />
+                {gpsLoading ? 'Detecting GPS...' : gpsSuccessMsg ? '✓ GPS Captured' : '🎯 Auto Detect GPS'}
+              </button>
+
+              <button
+                type="button"
+                onClick={() => setShowMapModal(true)}
+                style={{
+                  flex: '1 1 140px',
+                  padding: '11px 14px',
+                  borderRadius: '10px',
+                  border: 'none',
+                  background: '#0F172A',
+                  color: '#FFFFFF',
+                  fontWeight: 800,
+                  fontSize: '0.82rem',
+                  cursor: 'pointer',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  gap: '6px',
+                  boxShadow: '0 2px 6px rgba(15, 23, 42, 0.25)',
+                  transition: 'all 0.15s ease'
+                }}
+              >
+                <Map size={15} />
+                🗺️ Interactive Map
+              </button>
+            </div>
+
+            {gpsSuccessMsg && (
+              <div style={{ marginTop: '12px', marginLeft: '46px', background: '#DCFCE7', color: '#15803D', padding: '10px 14px', borderRadius: '10px', fontSize: '0.80rem', fontWeight: 800, border: '1px solid #86EFAC' }}>
+                {gpsSuccessMsg}
+              </div>
+            )}
+
+            {gpsErrorState && (
+              <div style={{ marginTop: '12px', marginLeft: '46px', background: '#FEF2F2', color: '#DC2626', padding: '12px 14px', borderRadius: '10px', fontSize: '0.80rem', fontWeight: 700, border: '1px solid #FECACA', display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                <strong style={{ fontSize: '0.86rem' }}>{gpsErrorState.title}</strong>
+                <div style={{ lineHeight: 1.4 }}>{gpsErrorState.msg}</div>
+                <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', marginTop: '4px' }}>
+                  <button
+                    type="button"
+                    onClick={handleDetectGps}
+                    style={{ padding: '6px 12px', borderRadius: '8px', background: '#DC2626', color: '#FFF', border: 'none', fontWeight: 800, fontSize: '0.74rem', cursor: 'pointer' }}
+                  >
+                    Try Again
+                  </button>
+                  {gpsErrorState.isDenied && (
+                    <button
+                      type="button"
+                      onClick={() => alert('📱 How to Allow Location Access:\n\n1. Tap the 🔒 lock or ⓘ info icon in your browser address bar\n2. Tap "Site Settings" or "Permissions"\n3. Change "Location" from Blocked to Allow\n4. Refresh the page and click Detect Current Location again.')}
+                      style={{ padding: '6px 12px', borderRadius: '8px', background: '#F1F5F9', color: '#334155', border: '1px solid #CBD5E1', fontWeight: 800, fontSize: '0.74rem', cursor: 'pointer' }}
+                    >
+                      How to Allow
+                    </button>
+                  )}
+                </div>
+              </div>
+            )}
           </div>
 
-          <span style={{ fontSize: '0.74rem', color: '#64748B', marginTop: '-4px', display: 'block', lineHeight: 1.4 }}>
-            Click Auto Detect or use the interactive map to drag your pin to the exact dining entrance.
-          </span>
-
-          {gpsSuccessMsg && (
-            <div style={{ background: '#DCFCE7', color: '#15803D', padding: '10px 14px', borderRadius: '10px', fontSize: '0.84rem', fontWeight: 800, border: '1px solid #86EFAC' }}>
-              {gpsSuccessMsg}
+          {/* Card 2: Current GPS Coordinates */}
+          <div style={{ padding: '16px 18px', background: '#FFFFFF', borderRadius: '16px', border: '1px solid #E2E8F0', boxShadow: '0 1px 3px rgba(0,0,0,0.04)' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '10px' }}>
+              <div style={{ width: '36px', height: '36px', borderRadius: '10px', background: '#DCFCE7', color: '#16A34A', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1.1rem', flexShrink: 0 }}>
+                🌐
+              </div>
+              <div>
+                <strong style={{ fontSize: '0.92rem', color: '#0F172A', fontWeight: 800, display: 'block' }}>Entrance Coordinates</strong>
+                <span style={{ fontSize: '0.72rem', color: '#64748B' }}>Sub-meter precision latitude and longitude</span>
+              </div>
             </div>
-          )}
 
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
-            <div>
-              <label style={{ fontSize: '0.74rem', fontWeight: 800, color: '#0F172A', display: 'block', marginBottom: '6px', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
-                Latitude:
-              </label>
-              <input
-                type="number"
-                step="any"
-                value={settingsForm.latitude || ''}
-                onChange={(e) => setSettingsForm({ ...settingsForm, latitude: parseFloat(e.target.value) })}
-                style={{ width: '100%', padding: '10px 14px', borderRadius: '10px', border: '1px solid #CBD5E1', fontSize: '0.88rem', boxSizing: 'border-box' }}
-              />
-            </div>
-            <div>
-              <label style={{ fontSize: '0.74rem', fontWeight: 800, color: '#0F172A', display: 'block', marginBottom: '6px', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
-                Longitude:
-              </label>
-              <input
-                type="number"
-                step="any"
-                value={settingsForm.longitude || ''}
-                onChange={(e) => setSettingsForm({ ...settingsForm, longitude: parseFloat(e.target.value) })}
-                style={{ width: '100%', padding: '10px 14px', borderRadius: '10px', border: '1px solid #CBD5E1', fontSize: '0.88rem', boxSizing: 'border-box' }}
-              />
+            <div style={{ paddingLeft: '46px', display: 'flex', flexDirection: 'column', gap: '10px' }}>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
+                <div>
+                  <label style={{ fontSize: '0.72rem', fontWeight: 800, color: '#0F172A', display: 'block', marginBottom: '4px', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
+                    Latitude:
+                  </label>
+                  <input
+                    type="number"
+                    step="any"
+                    placeholder="e.g. 26.0602"
+                    value={settingsForm.latitude || ''}
+                    onChange={(e) => setSettingsForm({ ...settingsForm, latitude: parseFloat(e.target.value) })}
+                    style={{ width: '100%', padding: '10px 12px', borderRadius: '10px', border: '1px solid #CBD5E1', fontSize: '0.88rem', fontWeight: 700, boxSizing: 'border-box', background: '#FFFFFF' }}
+                  />
+                </div>
+                <div>
+                  <label style={{ fontSize: '0.72rem', fontWeight: 800, color: '#0F172A', display: 'block', marginBottom: '4px', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
+                    Longitude:
+                  </label>
+                  <input
+                    type="number"
+                    step="any"
+                    placeholder="e.g. 85.1634"
+                    value={settingsForm.longitude || ''}
+                    onChange={(e) => setSettingsForm({ ...settingsForm, longitude: parseFloat(e.target.value) })}
+                    style={{ width: '100%', padding: '10px 12px', borderRadius: '10px', border: '1px solid #CBD5E1', fontSize: '0.88rem', fontWeight: 700, boxSizing: 'border-box', background: '#FFFFFF' }}
+                  />
+                </div>
+              </div>
+
+              {settingsForm.latitude && settingsForm.longitude && (
+                <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: '2px' }}>
+                  <a
+                    href={`https://www.google.com/maps?q=${settingsForm.latitude},${settingsForm.longitude}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    style={{ fontSize: '0.74rem', color: '#0284C7', fontWeight: 800, textDecoration: 'none', display: 'inline-flex', alignItems: 'center', gap: '4px' }}
+                  >
+                    Verify on Google Maps ↗
+                  </a>
+                </div>
+              )}
             </div>
           </div>
 
-          <div>
-            <label style={{ fontSize: '0.74rem', fontWeight: 800, color: '#0F172A', display: 'block', marginBottom: '6px', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
-              Max Ordering Distance Radius (Meters):
-            </label>
-            <input
-              type="number"
-              value={settingsForm.max_distance_meters || 100}
-              onChange={(e) => setSettingsForm({ ...settingsForm, max_distance_meters: parseInt(e.target.value) || 100 })}
-              style={{ width: '100%', padding: '10px 14px', borderRadius: '10px', border: '1px solid #CBD5E1', fontSize: '0.9rem', boxSizing: 'border-box' }}
-            />
-            <span style={{ fontSize: '0.72rem', color: '#64748B', marginTop: '4px', display: 'block' }}>Default: 100 meters (dining hall boundary)</span>
+          {/* Card 3: Geofence Ordering Radius */}
+          <div style={{ padding: '16px 18px', background: '#FFFFFF', borderRadius: '16px', border: '1px solid #E2E8F0', boxShadow: '0 1px 3px rgba(0,0,0,0.04)' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '8px' }}>
+              <div style={{ width: '36px', height: '36px', borderRadius: '10px', background: '#FEF3C7', color: '#D97706', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1.1rem', flexShrink: 0 }}>
+                🎯
+              </div>
+              <div>
+                <strong style={{ fontSize: '0.92rem', color: '#0F172A', fontWeight: 800, display: 'block' }}>Max Ordering Distance Boundary</strong>
+                <span style={{ fontSize: '0.72rem', color: '#64748B' }}>Geofence restriction radius in meters</span>
+              </div>
+            </div>
+
+            <div style={{ paddingLeft: '46px', display: 'flex', flexDirection: 'column', gap: '10px' }}>
+              <div style={{ position: 'relative' }}>
+                <input
+                  type="number"
+                  min="20"
+                  max="5000"
+                  value={settingsForm.max_distance_meters || 100}
+                  onChange={(e) => setSettingsForm({ ...settingsForm, max_distance_meters: parseInt(e.target.value) || 100 })}
+                  style={{ width: '100%', padding: '10px 80px 10px 14px', borderRadius: '10px', border: '1px solid #CBD5E1', fontSize: '0.9rem', fontWeight: 800, boxSizing: 'border-box' }}
+                />
+                <span style={{ position: 'absolute', right: '14px', top: '50%', transform: 'translateY(-50%)', fontSize: '0.76rem', fontWeight: 800, color: '#64748B' }}>
+                  meters
+                </span>
+              </div>
+
+              {/* Quick Preset Pills */}
+              <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap' }}>
+                {[
+                  { label: '50m (Dining Hall)', val: 50 },
+                  { label: '100m (Standard)', val: 100 },
+                  { label: '250m (Premises)', val: 250 },
+                  { label: '500m (Zone)', val: 500 },
+                ].map(p => {
+                  const isActive = (settingsForm.max_distance_meters || 100) === p.val;
+                  return (
+                    <button
+                      key={p.val}
+                      type="button"
+                      onClick={() => setSettingsForm({ ...settingsForm, max_distance_meters: p.val })}
+                      style={{
+                        padding: '5px 10px',
+                        borderRadius: '8px',
+                        fontSize: '0.72rem',
+                        fontWeight: 800,
+                        cursor: 'pointer',
+                        border: isActive ? '1.5px solid #059669' : '1px solid #E2E8F0',
+                        background: isActive ? '#DCFCE7' : '#F8FAFC',
+                        color: isActive ? '#15803D' : '#475569',
+                        transition: 'all 0.15s ease'
+                      }}
+                    >
+                      {p.label}
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
           </div>
 
           <LocationPickerModal
