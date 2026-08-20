@@ -223,7 +223,7 @@ export default function OrdersView({
                         )}
                       </strong>
                       <span style={{ fontSize: '0.74rem', color: 'var(--adm-muted)' }}>
-                        {order.customer_name || 'Dine-in Guest'} • {new Date(order.created_at || Date.now()).toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' })}
+                        {order.customer_name || 'Dine-in Guest'}{order.customer_phone ? ` (📞 ${order.customer_phone})` : ''} • {new Date(order.created_at || Date.now()).toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' })}
                       </span>
                     </div>
 
