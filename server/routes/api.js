@@ -737,7 +737,8 @@ router.post('/orders', async (req, res) => {
       total_amount,
       customer_latitude,
       customer_longitude,
-      customer_accuracy
+      customer_accuracy,
+      distance_meters
     } = req.body;
 
     // Step 1: Resolve Restaurant Context
@@ -854,6 +855,8 @@ router.post('/orders', async (req, res) => {
       restoLat !== 0 && restoLng !== 0
     );
 
+    let distanceMetersValue = distance_meters !== undefined && distance_meters !== null && !isNaN(Number(distance_meters)) ? Number(distance_meters) : null;
+
     if (hasRestaurantLocation) {
       let isVerified = false;
       const cleanTable = String(table_number || '1').trim();
@@ -886,7 +889,7 @@ router.post('/orders', async (req, res) => {
       if (extractedVToken) {
         try {
           const verRows = await query(
-            `SELECT id, expires_at FROM table_location_verifications 
+            `SELECT id, distance_meters, expires_at FROM table_location_verifications 
              WHERE restaurant_id = $1 AND verification_token = $2 
              ORDER BY id DESC LIMIT 1`,
             [resto.id, extractedVToken]
@@ -895,6 +898,9 @@ router.post('/orders', async (req, res) => {
             const vRecord = verRows[0];
             if (new Date(vRecord.expires_at).getTime() > Date.now()) {
               isVerified = true;
+              if (vRecord.distance_meters != null && !isNaN(Number(vRecord.distance_meters))) {
+                distanceMetersValue = Number(vRecord.distance_meters);
+              }
             } else {
               return res.status(403).json({
                 error: 'location_verification_expired',
@@ -920,6 +926,7 @@ router.post('/orders', async (req, res) => {
             restoLat,
             restoLng
           );
+          distanceMetersValue = calculatedDistance;
 
           const accBuffer = Math.min((Number(customer_accuracy) || 0) * 0.25, 25);
           const effectiveDist = Math.max(0, calculatedDistance - accBuffer);
@@ -996,7 +1003,7 @@ router.post('/orders', async (req, res) => {
         SELECT id, session_id, round_number, customer_name, customer_phone, items, total_amount, status
         FROM orders
         WHERE restaurant_id = $1 AND table_number = $2 
-          AND status IN ('pending', 'preparing', 'kitchen', 'accepted', 'served')
+          AND status IN ('pending', 'preparing', 'kitchen', 'accepted', 'served') 
           AND (is_settled = 0 OR is_settled IS NULL)
           AND created_at >= $3
         ORDER BY id ASC
@@ -1065,7 +1072,7 @@ router.post('/orders', async (req, res) => {
         customer_latitude !== undefined && customer_latitude !== null ? Number(customer_latitude) : null,
         customer_longitude !== undefined && customer_longitude !== null ? Number(customer_longitude) : null,
         customer_accuracy !== undefined && customer_accuracy !== null ? Number(customer_accuracy) : null,
-        calculatedDistance !== null ? Number(calculatedDistance) : null,
+        distanceMetersValue !== null && !isNaN(Number(distanceMetersValue)) ? Number(distanceMetersValue) : null,
         sessionId,
         roundNumber,
         parentOrderId,
@@ -1079,6 +1086,10 @@ router.post('/orders', async (req, res) => {
       try { await query('ALTER TABLE orders ADD COLUMN IF NOT EXISTS is_settled INT DEFAULT 0'); } catch (e) {}
       try { await query('ALTER TABLE orders ADD COLUMN IF NOT EXISTS sent_to_kds INT DEFAULT 0'); } catch (e) {}
       try { await query('ALTER TABLE orders ADD COLUMN IF NOT EXISTS kitchen_prepared INT DEFAULT 0'); } catch (e) {}
+      try { await query('ALTER TABLE orders ADD COLUMN IF NOT EXISTS customer_latitude DECIMAL(10, 8)'); } catch (e) {}
+      try { await query('ALTER TABLE orders ADD COLUMN IF NOT EXISTS customer_longitude DECIMAL(11, 8)'); } catch (e) {}
+      try { await query('ALTER TABLE orders ADD COLUMN IF NOT EXISTS customer_accuracy INT'); } catch (e) {}
+      try { await query('ALTER TABLE orders ADD COLUMN IF NOT EXISTS distance_meters INT'); } catch (e) {}
 
       result = await query(`
         INSERT INTO orders (
@@ -1114,7 +1125,7 @@ router.post('/orders', async (req, res) => {
       status: 'pending',
       table_number: cleanTable,
       total_amount: finalTotal,
-      distance_meters: calculatedDistance,
+      distance_meters: distanceMetersValue,
       message: isAddonOrder
         ? `🎉 Round ${roundNumber} (Add-on Order #${orderId}) placed for Table #${cleanTable}!`
         : `🎉 Order #${orderId} placed successfully for Table #${cleanTable}!`

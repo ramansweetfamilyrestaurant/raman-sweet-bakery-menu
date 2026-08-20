@@ -708,8 +708,10 @@ export default function App() {
         }
 
         const geoData = cached || {};
+        const storedLocToken = info?.id ? sessionStorage.getItem(`touchqr_location_token_${info.id}`) : '';
         customerGeo = {
-          location_token: locationToken || geoData.locationToken || '',
+          location_token: locationToken || geoData.locationToken || storedLocToken || '',
+          verification_token: geoData.verificationToken || '',
           customer_latitude: geoData.customerLat,
           customer_longitude: geoData.customerLng,
           customer_accuracy: geoData.accuracy,
