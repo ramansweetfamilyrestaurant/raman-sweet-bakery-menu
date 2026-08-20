@@ -346,7 +346,7 @@ router.get('/subscription-status', authenticateToken, async (req, res) => {
       direct_ordering_enabled: isValTrue(saasPlan.direct_ordering_enabled, tierKey === 'enterprise'),
       audio_alarm_enabled: isValTrue(saasPlan.audio_alarm_enabled, true),
       order_status_whatsapp_enabled: isValTrue(saasPlan.order_status_whatsapp_enabled, true),
-      kds_enabled: isValTrue(saasPlan.kds_enabled, true),
+      kds_enabled: isValTrue(saasPlan.kds_enabled, tierKey === 'enterprise' || tierKey === 'vip_ultra_plan'),
       bluetooth_kot_enabled: isValTrue(saasPlan.bluetooth_kot_enabled, true),
       google_reviews_enabled: isValTrue(saasPlan.google_reviews_enabled, tierKey !== 'basic'),
       ai_review_enabled: isValTrue(saasPlan.ai_review_enabled, true),

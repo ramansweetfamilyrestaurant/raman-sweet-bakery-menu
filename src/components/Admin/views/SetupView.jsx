@@ -895,20 +895,48 @@ export default function SetupView({
           </div>
 
           {/* Kitchen Display System (KDS) Screen Toggle */}
-          <div style={{ padding: '16px', background: '#FFFFFF', borderRadius: '14px', border: '1px solid #E2E8F0', boxShadow: '0 2px 8px rgba(0,0,0,0.02)' }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '4px' }}>
-              <strong style={{ fontSize: '0.92rem', color: '#0F172A', fontWeight: 800 }}>🍳 Kitchen Display System (KDS) Access</strong>
-              <input
-                type="checkbox"
-                checked={settingsForm.kds_screen_enabled !== false && settingsForm.kds_screen_enabled !== 0}
-                onChange={(e) => setSettingsForm({ ...settingsForm, kds_screen_enabled: e.target.checked ? 1 : 0 })}
-                style={{ width: '18px', height: '18px', cursor: 'pointer', accentColor: '#059669' }}
-              />
-            </div>
-            <p style={{ fontSize: '0.76rem', color: '#64748B', margin: 0, lineHeight: 1.4 }}>
-              Enables the dedicated fullscreen Kitchen Display Screen tab for chef order preparation and instant completed alerts.
-            </p>
-          </div>
+          {(() => {
+            const isKdsPlanAllowed = Boolean(
+              settingsForm?.kds_enabled === 1 ||
+              settingsForm?.kds_enabled === true ||
+              settingsForm?.kds_enabled === '1' ||
+              restaurantInfo?.kds_enabled === 1 ||
+              restaurantInfo?.kds_enabled === true ||
+              restaurantInfo?.kds_enabled === '1' ||
+              restaurantInfo?.permissions?.kds_enabled === true
+            );
+
+            if (!isKdsPlanAllowed) {
+              return (
+                <div style={{ padding: '14px 16px', background: '#F8FAFC', borderRadius: '14px', border: '1px solid #E2E8F0', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <div>
+                    <strong style={{ fontSize: '0.88rem', color: '#64748B', display: 'block' }}>🍳 Kitchen Display System (KDS)</strong>
+                    <span style={{ fontSize: '0.74rem', color: '#94A3B8' }}>Dedicated kitchen tablet screen for chefs</span>
+                  </div>
+                  <span style={{ fontSize: '0.72rem', fontWeight: 800, color: '#B45309', background: '#FEF3C7', border: '1px solid #F59E0B', padding: '3px 8px', borderRadius: '20px' }}>
+                    🔒 Enterprise Feature
+                  </span>
+                </div>
+              );
+            }
+
+            return (
+              <div style={{ padding: '16px', background: '#FFFFFF', borderRadius: '14px', border: '1px solid #E2E8F0', boxShadow: '0 2px 8px rgba(0,0,0,0.02)' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '4px' }}>
+                  <strong style={{ fontSize: '0.92rem', color: '#0F172A', fontWeight: 800 }}>🍳 Kitchen Display System (KDS) Access</strong>
+                  <input
+                    type="checkbox"
+                    checked={settingsForm.kds_screen_enabled !== false && settingsForm.kds_screen_enabled !== 0}
+                    onChange={(e) => setSettingsForm({ ...settingsForm, kds_screen_enabled: e.target.checked ? 1 : 0 })}
+                    style={{ width: '18px', height: '18px', cursor: 'pointer', accentColor: '#059669' }}
+                  />
+                </div>
+                <p style={{ fontSize: '0.76rem', color: '#64748B', margin: 0, lineHeight: 1.4 }}>
+                  Enables the dedicated fullscreen Kitchen Display Screen tab for chef order preparation and instant completed alerts.
+                </p>
+              </div>
+            );
+          })()}
 
           {/* Printer Setup Box */}
           <div style={{ padding: '16px', background: '#FFFFFF', borderRadius: '14px', border: '1px solid #E2E8F0', display: 'flex', flexDirection: 'column', gap: '12px', boxShadow: '0 2px 8px rgba(0,0,0,0.02)' }}>
