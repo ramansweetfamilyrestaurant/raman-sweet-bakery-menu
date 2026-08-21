@@ -1,5 +1,10 @@
 import React, { useState, useEffect } from 'react';
-import { Layers, Save, CheckCircle2, ShieldCheck, Sparkles, AlertCircle, RefreshCw, Plus, X } from 'lucide-react';
+import { Layers, Save, CheckCircle2, Sparkles, AlertCircle, RefreshCw, Plus, X } from 'lucide-react';
+
+const toBoolInt = (val) => {
+  if (val === undefined || val === null) return 1;
+  return (val === 1 || val === true || val === '1' || val === 'true') ? 1 : 0;
+};
 
 export default function SaaSPlansView({ token }) {
   const [plans, setPlans] = useState([]);
@@ -58,20 +63,28 @@ export default function SaaSPlansView({ token }) {
     setErrorMsg('');
     try {
       for (const p of plans) {
+        const directOrderingVal = toBoolInt(p.direct_ordering_enabled);
+        const payload = {
+          ...p,
+          direct_ordering_enabled: directOrderingVal,
+          presence_verification_enabled: directOrderingVal,
+          allowed_verification_modes: 'GPS_WITH_STAFF_FALLBACK'
+        };
+
         const res = await fetch(`/api/superadmin/plans/${p.key}`, {
           method: 'PUT',
           headers: {
             'Content-Type': 'application/json',
             Authorization: `Bearer ${token}`
           },
-          body: JSON.stringify(p)
+          body: JSON.stringify(payload)
         });
         if (!res.ok) {
           const errData = await res.json();
           throw new Error(errData.error || `Failed to update plan '${p.name}'`);
         }
       }
-      setMsg('⚡ All 24 Plan Permissions & Limits Saved Successfully!');
+      setMsg('⚡ All Plan Permissions & Limits Saved Successfully!');
       setTimeout(() => setMsg(''), 4000);
       await fetchPlans();
     } catch (err) {
@@ -85,15 +98,24 @@ export default function SaaSPlansView({ token }) {
   const handleCreatePlanSubmit = async (e) => {
     e.preventDefault();
     if (!createForm.name.trim()) return alert('Plan Name is required!');
+
     setCreating(true);
     try {
+      const directOrderingVal = toBoolInt(createForm.direct_ordering_enabled);
+      const payload = {
+        ...createForm,
+        direct_ordering_enabled: directOrderingVal,
+        presence_verification_enabled: directOrderingVal,
+        allowed_verification_modes: 'GPS_WITH_STAFF_FALLBACK'
+      };
+
       const res = await fetch('/api/superadmin/plans', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
           Authorization: `Bearer ${token}`
         },
-        body: JSON.stringify(createForm)
+        body: JSON.stringify(payload)
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || 'Failed to create plan');
@@ -105,14 +127,15 @@ export default function SaaSPlansView({ token }) {
         price: 1499,
         original_price: 2999,
         badge: '🚀 VIP',
-        description: '',
+        description: 'Custom VIP Plan with full features',
         whatsapp_enabled: 1,
         direct_ordering_enabled: 1,
         google_reviews_enabled: 1
       });
+      setTimeout(() => setMsg(''), 4000);
       await fetchPlans();
     } catch (err) {
-      alert(err.message || 'Failed to create plan');
+      alert(err.message || 'Error creating plan');
     } finally {
       setCreating(false);
     }
@@ -159,9 +182,9 @@ export default function SaaSPlansView({ token }) {
   ];
 
   const toggleFields = [
+    { key: 'direct_ordering_enabled', label: '📋 Customer QR Direct Ordering & Live Order Receive Page' },
     { key: 'modifiers_enabled', label: 'Advanced Modifiers & Half/Full Variants' },
     { key: 'whatsapp_ordering_enabled', label: 'WhatsApp Customer Ordering' },
-    { key: 'direct_ordering_enabled', label: '📋 Customer QR Direct Ordering & Live Order Receive Page' },
     { key: 'kds_enabled', label: '🍳 Dedicated Kitchen Display System (KDS Chef Screen)' },
     { key: 'bluetooth_kot_enabled', label: '🖨️ Thermal Receipt Printer & KOT Ticket Printing' },
     { key: 'dual_printer_enabled', label: '⚡ Dual Separate Printers (Kitchen KOT + Counter Bill Printers)' },
@@ -176,7 +199,6 @@ export default function SaaSPlansView({ token }) {
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
-      {/* Header Bar */}
       <div style={{
         display: 'flex', alignItems: 'center', justifyContent: 'space-between',
         flexWrap: 'wrap', gap: '16px', background: '#FFFFFF', padding: '20px 24px',
@@ -193,7 +215,7 @@ export default function SaaSPlansView({ token }) {
           </div>
           <div>
             <h2 style={{ fontSize: '1.2rem', fontWeight: 900, color: 'var(--sa-text-main)', margin: 0 }}>
-              Master 24-Point SaaS Plan Permission & Limit Matrix
+              Master SaaS Plan Permission & Limit Matrix
             </h2>
             <p style={{ fontSize: '0.82rem', color: 'var(--sa-text-muted)', margin: '2px 0 0 0' }}>
               Full GUI Control over prices, feature toggles, and numerical limits across all SaaS tiers.
@@ -245,7 +267,6 @@ export default function SaaSPlansView({ token }) {
         </div>
       )}
 
-      {/* Permission Matrix Table */}
       <div style={{
         background: '#FFFFFF', borderRadius: 'var(--sa-radius-lg)',
         border: '1px solid var(--sa-border)', overflowX: 'auto',
@@ -292,7 +313,6 @@ export default function SaaSPlansView({ token }) {
             </tr>
           </thead>
           <tbody>
-            {/* Numerical Limit Controls */}
             <tr style={{ background: '#F1F5F9' }}>
               <td colSpan={plans.length + 1} style={{ padding: '10px 20px', fontSize: '0.75rem', fontWeight: 900, color: '#0A2315', letterSpacing: '0.5px' }}>
                 📊 PRICING & NUMERICAL LIMIT CONTROLS
@@ -322,7 +342,6 @@ export default function SaaSPlansView({ token }) {
               </tr>
             ))}
 
-            {/* Feature Toggle Controls */}
             <tr style={{ background: '#F1F5F9' }}>
               <td colSpan={plans.length + 1} style={{ padding: '10px 20px', fontSize: '0.75rem', fontWeight: 900, color: '#0A2315', letterSpacing: '0.5px' }}>
                 ⚡ FEATURE TOGGLE PERMISSIONS (ON / OFF)
@@ -357,7 +376,6 @@ export default function SaaSPlansView({ token }) {
         </table>
       </div>
 
-      {/* CREATE NEW SAAS PLAN MODAL OVERLAY */}
       {showCreateModal && (
         <div style={{
           position: 'fixed', inset: 0, zIndex: 9999,
@@ -414,29 +432,6 @@ export default function SaaSPlansView({ token }) {
                     placeholder="1499"
                     value={createForm.price}
                     onChange={e => setCreateForm({ ...createForm, price: parseFloat(e.target.value) || 0 })}
-                    style={{ width: '100%', padding: '10px 12px', borderRadius: '10px', border: '1px solid var(--sa-border)', fontSize: '0.9rem', boxSizing: 'border-box' }}
-                  />
-                </div>
-              </div>
-
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
-                <div>
-                  <label style={{ fontSize: '0.78rem', fontWeight: 800, color: 'var(--sa-text-muted)', display: 'block', marginBottom: '4px' }}>BADGE / EMOJI</label>
-                  <input
-                    type="text"
-                    placeholder="e.g. 🚀 VIP"
-                    value={createForm.badge}
-                    onChange={e => setCreateForm({ ...createForm, badge: e.target.value })}
-                    style={{ width: '100%', padding: '10px 12px', borderRadius: '10px', border: '1px solid var(--sa-border)', fontSize: '0.9rem', boxSizing: 'border-box' }}
-                  />
-                </div>
-                <div>
-                  <label style={{ fontSize: '0.78rem', fontWeight: 800, color: 'var(--sa-text-muted)', display: 'block', marginBottom: '4px' }}>ORIGINAL STRIKETHROUGH (₹)</label>
-                  <input
-                    type="number"
-                    placeholder="2999"
-                    value={createForm.original_price}
-                    onChange={e => setCreateForm({ ...createForm, original_price: parseFloat(e.target.value) || 0 })}
                     style={{ width: '100%', padding: '10px 12px', borderRadius: '10px', border: '1px solid var(--sa-border)', fontSize: '0.9rem', boxSizing: 'border-box' }}
                   />
                 </div>

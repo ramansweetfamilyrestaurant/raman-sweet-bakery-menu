@@ -67,91 +67,69 @@ export function generateQrContextHash(slug, spaceType, spaceNumber, qrToken) {
 
 /**
  * Resolves the authoritative effective verification policy across SuperAdmin global controls,
- * SaaS plan entitlements, and restaurant-specific settings.
+/**
+ * Resolves the authoritative effective verification policy.
+ * Under the unified architecture, direct_ordering_enabled is the single master entitlement.
+ * When enabled, table presence verification is active under GPS_WITH_STAFF_FALLBACK mode.
  *
  * @param {Object} params
- * @param {Object} [params.systemPolicy] - Global system settings (e.g. system_settings table)
- * @param {Object} [params.planPermissions] - Tenant's assigned SaaS plan record or permissions object
- * @param {string} [params.restaurantMode] - Restaurant's configured table_verification_mode
- * @param {number} [params.staffTimeoutSeconds] - Restaurant's configured staff_verification_timeout_seconds
+ * @param {boolean} [params.directOrderingEnabled=true] - Authoritative resolved direct ordering capability
+ * @param {Object} [params.planPermissions] - SaaS plan permissions object
+ * @param {Object} [params.resto] - Restaurant object
+ * @param {number} [params.staffTimeoutSeconds=120] - Configured staff timeout seconds
  * @returns {Object} Effective structured policy
  */
 export function resolveEffectiveVerificationPolicy({
-  systemPolicy = {},
+  directOrderingEnabled,
   planPermissions = {},
-  restaurantMode = DEFAULT_VERIFICATION_MODE,
+  resto = {},
   staffTimeoutSeconds = 120
 } = {}) {
-  // 1. Resolve Global SuperAdmin Override (Highest Priority)
-  const globalSetting = systemPolicy?.global_table_verification_mode || systemPolicy?.verification_mode;
-  let globalMode = null;
-  if (globalSetting && isValidVerificationMode(globalSetting)) {
-    globalMode = normalizeVerificationMode(globalSetting);
+  let isEnabled = true;
+
+  if (typeof directOrderingEnabled === 'boolean') {
+    isEnabled = directOrderingEnabled;
+  } else {
+    const isPlanEnabled = planPermissions?.direct_ordering_enabled !== 0 &&
+      planPermissions?.direct_ordering_enabled !== false &&
+      planPermissions?.direct_ordering_enabled !== '0' &&
+      planPermissions?.direct_ordering_enabled !== 'false';
+
+    const isRestoEnabled = resto?.direct_ordering_enabled !== 0 &&
+      resto?.direct_ordering_enabled !== false &&
+      resto?.direct_ordering_enabled !== '0' &&
+      resto?.direct_ordering_enabled !== 'false';
+
+    isEnabled = Boolean(isPlanEnabled && isRestoEnabled);
   }
 
-  // 2. Resolve SaaS Plan Allowed Modes & Entitlements (Second Priority)
-  const isPlanPresenceEnabled = planPermissions?.presence_verification_enabled !== false &&
-    planPermissions?.presence_verification_enabled !== 0 &&
-    planPermissions?.presence_verification_enabled !== '0' &&
-    planPermissions?.presence_verification_enabled !== 'false';
-
-  let rawAllowedModes = planPermissions?.allowed_verification_modes || planPermissions?.allowedModes;
-  let planAllowedModes = [...ALL_VERIFICATION_MODES];
-
-  if (typeof rawAllowedModes === 'string' && rawAllowedModes.trim() !== '') {
-    const parsed = rawAllowedModes.split(',').map(m => m.trim().toUpperCase()).filter(isValidVerificationMode);
-    if (parsed.length > 0) {
-      planAllowedModes = parsed;
-    }
-  } else if (Array.isArray(rawAllowedModes) && rawAllowedModes.length > 0) {
-    const parsed = rawAllowedModes.map(m => String(m).trim().toUpperCase()).filter(isValidVerificationMode);
-    if (parsed.length > 0) {
-      planAllowedModes = parsed;
-    }
-  }
-
-  // If SaaS plan explicitly disables presence verification, downgrade strictly to QR_ONLY
-  if (!isPlanPresenceEnabled) {
-    planAllowedModes = [VERIFICATION_MODES.QR_ONLY];
-  }
-
-  // 3. Resolve Restaurant Setting (Tenant-level Preference)
-  const requestedRestaurantMode = normalizeVerificationMode(restaurantMode);
-
-  // 4. Compute Effective Mode:
-  let effectiveMode = requestedRestaurantMode;
-  let resolutionSource = 'restaurant';
-
-  if (globalMode) {
-    effectiveMode = globalMode;
-    resolutionSource = 'global_system_setting';
-  } else if (!isPlanPresenceEnabled) {
-    effectiveMode = VERIFICATION_MODES.QR_ONLY;
-    resolutionSource = 'saas_plan_disabled';
-  } else if (!planAllowedModes.includes(requestedRestaurantMode)) {
-    // If restaurant selected a mode not entitled in its plan, fallback to the safest allowed mode
-    if (planAllowedModes.includes(DEFAULT_VERIFICATION_MODE)) {
-      effectiveMode = DEFAULT_VERIFICATION_MODE;
-    } else {
-      effectiveMode = planAllowedModes[0] || VERIFICATION_MODES.QR_ONLY;
-    }
-    resolutionSource = 'saas_plan_entitlement_fallback';
-  }
-
-  const staffFallbackAllowed = [VERIFICATION_MODES.GPS_WITH_STAFF_FALLBACK, VERIFICATION_MODES.STAFF_ONLY].includes(effectiveMode);
   const boundedTimeout = Math.min(600, Math.max(30, parseInt(staffTimeoutSeconds, 10) || 120));
 
+  if (!isEnabled) {
+    return {
+      enabled: false,
+      mode: VERIFICATION_MODES.QR_ONLY,
+      allowedModes: [VERIFICATION_MODES.QR_ONLY],
+      allowedMethods: ['QR'],
+      staffFallbackAllowed: false,
+      staffTimeoutSeconds: boundedTimeout,
+      source: {
+        applied: 'direct_ordering_disabled',
+        directOrderingEnabled: false
+      }
+    };
+  }
+
   return {
-    enabled: effectiveMode !== VERIFICATION_MODES.QR_ONLY,
-    mode: effectiveMode,
-    allowedModes: planAllowedModes,
-    staffFallbackAllowed,
+    enabled: true,
+    mode: VERIFICATION_MODES.GPS_WITH_STAFF_FALLBACK,
+    allowedModes: [VERIFICATION_MODES.GPS_WITH_STAFF_FALLBACK],
+    allowedMethods: ['GPS', 'STAFF'],
+    staffFallbackAllowed: true,
     staffTimeoutSeconds: boundedTimeout,
     source: {
-      applied: resolutionSource,
-      restaurantRequested: requestedRestaurantMode,
-      globalSetting: globalMode || 'none',
-      planPresenceEnabled: isPlanPresenceEnabled
+      applied: 'direct_ordering_active',
+      directOrderingEnabled: true
     }
   };
 }

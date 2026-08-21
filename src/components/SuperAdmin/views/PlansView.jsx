@@ -48,10 +48,15 @@ export default function PlansView({ plansList, restaurants, onCreatePlan, onUpda
 
   const handleSubmit = (e) => {
     e.preventDefault();
+    const payload = {
+      ...form,
+      presence_verification_enabled: form.direct_ordering_enabled ? 1 : 0,
+      allowed_verification_modes: 'GPS_WITH_STAFF_FALLBACK'
+    };
     if (editingPlan) {
-      onUpdatePlan(editingPlan.key, form);
+      onUpdatePlan(editingPlan.key, payload);
     } else {
-      onCreatePlan(form);
+      onCreatePlan(payload);
     }
     setShowCreateDrawer(false);
   };
@@ -79,32 +84,29 @@ export default function PlansView({ plansList, restaurants, onCreatePlan, onUpda
           const subscriberCount = restaurants.filter(r => (r.plan_tier || 'pro').toLowerCase() === p.key.toLowerCase()).length;
 
           return (
-            <div
-              key={p.key}
-              style={{
-                background: 'var(--sa-surface)',
-                border: '1.5px solid var(--sa-border)',
-                borderRadius: 'var(--sa-radius-lg)',
-                padding: '24px',
-                boxShadow: 'var(--sa-shadow-sm)',
-                display: 'flex',
-                flexDirection: 'column',
-                justifyContent: 'space-between',
-                gap: '16px',
-                position: 'relative'
-              }}
-            >
+            <div key={p.key} className="sa-card" style={{ display: 'flex', flexDirection: 'column', justifyContent: 'space-between', border: '1px solid var(--sa-border)', padding: '24px', borderRadius: 'var(--sa-radius-lg)', background: 'var(--sa-surface)' }}>
               <div>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
-                  <span className="sa-badge sa-badge-purple">{p.badge || '👑 SAAS PLAN'}</span>
-                  <span style={{ fontSize: '0.75rem', fontWeight: 800, color: 'var(--sa-text-muted)' }}>
-                    {subscriberCount} Active Clients
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '12px' }}>
+                  <div>
+                    <span style={{ fontSize: '0.75rem', fontWeight: 800, color: 'var(--sa-primary)', background: '#E8F5E9', padding: '3px 8px', borderRadius: '6px' }}>
+                      {p.badge || '✨ TIER'}
+                    </span>
+                    <h3 style={{ fontSize: '1.2rem', fontWeight: 900, color: 'var(--sa-text-main)', marginTop: '8px', marginBottom: '4px' }}>
+                      {p.name}
+                    </h3>
+                    <span style={{ fontSize: '0.75rem', color: 'var(--sa-text-muted)', fontWeight: 600 }}>
+                      KEY: <code style={{ color: 'var(--sa-primary)', fontWeight: 800 }}>{p.key}</code>
+                    </span>
+                  </div>
+                  <span style={{ fontSize: '0.72rem', background: '#F1F5F9', padding: '4px 8px', borderRadius: '6px', fontWeight: 700 }}>
+                    {subscriberCount} Restos
                   </span>
                 </div>
 
-                <h3 style={{ fontSize: '1.25rem', fontWeight: 900, color: 'var(--sa-text-main)', margin: '0 0 4px 0' }}>
-                  {p.name}
-                </h3>
+                <p style={{ fontSize: '0.80rem', color: 'var(--sa-text-muted)', margin: '8px 0 16px 0', minHeight: '36px' }}>
+                  {p.description || 'All standard features included.'}
+                </p>
+
                 <div style={{ fontSize: '1.6rem', fontWeight: 900, color: 'var(--sa-primary)', marginBottom: '12px' }}>
                   ₹{p.price} <span style={{ fontSize: '0.8rem', color: 'var(--sa-text-muted)', fontWeight: 600 }}>/ month</span>
                 </div>
@@ -116,7 +118,7 @@ export default function PlansView({ plansList, restaurants, onCreatePlan, onUpda
                   </div>
                   <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
                     <CheckCircle2 size={15} color="var(--sa-success)" />
-                    <span>Direct Online Cart: <strong>{p.direct_ordering_enabled !== false ? 'Enabled' : 'Disabled'}</strong></span>
+                    <span>Direct QR Ordering: <strong>{p.direct_ordering_enabled !== false ? 'Enabled (GPS + Staff)' : 'Disabled'}</strong></span>
                   </div>
                   <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
                     <CheckCircle2 size={15} color="var(--sa-success)" />
@@ -125,7 +127,7 @@ export default function PlansView({ plansList, restaurants, onCreatePlan, onUpda
                 </div>
               </div>
 
-              <div style={{ display: 'flex', gap: '8px', borderTop: '1px solid var(--sa-border)', paddingTop: '14px' }}>
+              <div style={{ display: 'flex', gap: '8px', borderTop: '1px solid var(--sa-border)', paddingTop: '14px', marginTop: '16px' }}>
                 <button onClick={() => handleOpenEdit(p)} className="sa-btn sa-btn-secondary" style={{ flex: 1 }}>
                   <Edit3 size={14} /> Edit Tier
                 </button>
@@ -192,6 +194,18 @@ export default function PlansView({ plansList, restaurants, onCreatePlan, onUpda
               onChange={(e) => setForm({ ...form, price: parseFloat(e.target.value) || 0 })}
               style={{ width: '100%', padding: '10px', borderRadius: 'var(--sa-radius-md)', border: '1px solid var(--sa-border)' }}
             />
+          </div>
+
+          <div style={{ background: '#F8FAFC', padding: '12px', borderRadius: '8px', border: '1px solid var(--sa-border)' }}>
+            <label style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer' }}>
+              <input
+                type="checkbox"
+                checked={form.direct_ordering_enabled}
+                onChange={(e) => setForm({ ...form, direct_ordering_enabled: e.target.checked })}
+                style={{ width: '16px', height: '16px', accentColor: 'var(--sa-primary)' }}
+              />
+              <span style={{ fontWeight: 800 }}>📋 Customer QR Direct Ordering & Live Order Receive Page</span>
+            </label>
           </div>
         </form>
       </Drawer>

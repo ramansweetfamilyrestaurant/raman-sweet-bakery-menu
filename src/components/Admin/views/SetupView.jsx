@@ -1276,6 +1276,14 @@ export default function SetupView({
               Customers must be physically present inside this radius to place live table orders.
             </p>
 
+            {/* Informational Presence Verification Mode Banner */}
+            <div style={{ margin: '0 0 14px 46px', padding: '10px 14px', background: '#F0FDF4', borderRadius: '10px', border: '1px solid #BBF7D0', display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <ShieldCheck size={16} color="#166534" style={{ flexShrink: 0 }} />
+              <span style={{ fontSize: '0.76rem', color: '#166534', fontWeight: 700 }}>
+                Table Presence Verification: <strong>GPS + Staff Fallback</strong> (Active automatically with Direct QR Ordering)
+              </span>
+            </div>
+
             <div style={{ display: 'flex', gap: '10px', paddingLeft: '46px', flexWrap: 'wrap' }}>
               <button
                 type="button"

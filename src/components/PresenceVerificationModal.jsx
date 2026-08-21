@@ -31,12 +31,10 @@ export default function PresenceVerificationModal({
   onVerified,
   initialAction = 'auto' // 'auto' | 'gps' | 'staff'
 }) {
-  const mode = presencePolicy?.mode || 'GPS_WITH_STAFF_FALLBACK';
-  const allowedMethods = Array.isArray(presencePolicy?.allowed_methods)
-    ? presencePolicy.allowed_methods
-    : (mode === 'STAFF_ONLY' ? ['STAFF'] : (mode === 'GPS_ONLY' ? ['GPS'] : ['GPS', 'STAFF']));
-  const isStaffAllowed = allowedMethods.includes('STAFF');
-  const isGpsAllowed = allowedMethods.includes('GPS');
+  const mode = 'GPS_WITH_STAFF_FALLBACK';
+  const allowedMethods = ['GPS', 'STAFF'];
+  const isStaffAllowed = true;
+  const isGpsAllowed = true;
 
   // State Machine:
   // 'GPS_PROMPT' | 'GPS_ACQUIRING' | 'GPS_FAILED' | 'STAFF_REQUESTING' | 'STAFF_WAITING' | 'STAFF_REJECTED' | 'STAFF_EXPIRED' | 'VERIFIED'
@@ -63,13 +61,11 @@ export default function PresenceVerificationModal({
       setErrorMessage('');
       setRejectionReason('');
 
-      if (mode === 'STAFF_ONLY' || initialAction === 'staff') {
+      if (initialAction === 'staff') {
         handleRequestStaff();
-      } else if (initialAction === 'gps' || isGpsAllowed) {
+      } else {
         // Auto-start GPS acquisition on first presentation for seamless UX
         handleAcquireGps();
-      } else {
-        setViewState('GPS_PROMPT');
       }
     }
 
