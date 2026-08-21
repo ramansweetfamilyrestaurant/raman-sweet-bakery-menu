@@ -819,11 +819,14 @@ export default function App() {
         const locToken = resolvedAuth?.locationToken || resolvedAuth?.location_token;
         const isAuthFresh = Boolean(resolvedAuth && locToken && (!resolvedAuth.expiresAt || resolvedAuth.expiresAt > Date.now()));
 
-        console.log('[LOCATION_FLOW] order_auth_resolved', {
-          source: overrideGeo ? 'overrideGeo' : (locationAuth ? 'state' : 'storage'),
-          hasToken: Boolean(locToken),
-          isFresh: isAuthFresh,
-          slug
+        console.log("[LOCATION_FLOW] order_auth_resolved", {
+          source: overrideGeo ? "overrideGeo" :
+                  locationAuth ? "react_state" :
+                  getStoredLocationAuth(slug, info?.id) ? "storage" : "none",
+          has_location_token: Boolean(resolvedAuth?.location_token || resolvedAuth?.locationToken),
+          has_verification_token: Boolean(resolvedAuth?.verification_token || resolvedAuth?.verificationToken),
+          auth_keys: resolvedAuth ? Object.keys(resolvedAuth) : [],
+          expired: resolvedAuth ? Boolean(resolvedAuth.expiresAt && resolvedAuth.expiresAt <= Date.now()) : null
         });
 
         if (!isAuthFresh) {
@@ -848,16 +851,6 @@ export default function App() {
       const targetTable = effectiveTableNum || currentTableNum || initialSpaceInfo.num || (new URLSearchParams(window.location.search).get('table') || '').trim() || '1';
       const targetSpaceType = currentSpaceType || initialSpaceInfo.type || (overrideGeo && (overrideGeo.spaceType || overrideGeo.space_type)) || 'table';
 
-      console.log('[LOCATION_FLOW] order_payload_check', {
-        slug,
-        table_number: targetTable,
-        space_type: targetSpaceType,
-        hasQrToken: Boolean(effectiveQrToken),
-        hasLocationToken: Boolean(customerGeo.location_token),
-        hasVerificationToken: Boolean(customerGeo.verification_token),
-        itemsCount: cartItems.length
-      });
-
       if (!targetTable || !effectiveQrToken) {
         alert('Invalid or missing Table QR. Please scan the official QR code at your dining table to place an order.');
         setPlacingOrder(false);
@@ -875,7 +868,7 @@ export default function App() {
       }));
       const grandTotal = cartItems.reduce((sum, i) => sum + i.price * i.quantity, 0);
 
-      const res = await createDirectOrder({
+      const orderPayload = {
         slug,
         table_number: targetTable,
         space_type: targetSpaceType,
@@ -885,7 +878,21 @@ export default function App() {
         items: itemsPayload,
         total_amount: grandTotal,
         ...customerGeo
+      };
+
+      console.log("[LOCATION_FLOW] order_payload_check", {
+        payload_keys: Object.keys(orderPayload),
+        has_location_token: Boolean(orderPayload.location_token),
+        has_verification_token: Boolean(orderPayload.verification_token),
+        has_latitude: Boolean(
+          orderPayload.customer_latitude ?? orderPayload.latitude
+        ),
+        has_longitude: Boolean(
+          orderPayload.customer_longitude ?? orderPayload.longitude
+        )
       });
+
+      const res = await createDirectOrder(orderPayload);
 
       if (res && res.order_id) {
         const storageKey = `touchqr_active_order_id_table_${targetTable}`;

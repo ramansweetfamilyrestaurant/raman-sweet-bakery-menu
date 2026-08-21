@@ -1010,10 +1010,13 @@ router.post('/orders', orderCreationRateLimiter, async (req, res) => {
       const jwtSecret = process.env.JWT_SECRET || 'touchqr_secure_location_secret_key_2026';
       let extractedVToken = null;
 
+      const effectiveLocToken = String(location_token || req.body?.locationToken || req.headers['x-location-token'] || '').trim();
+      const effectiveVToken = String(verification_token || req.body?.verificationToken || req.headers['x-verification-token'] || '').trim();
+
       // 1. Verify signed session JWT if present (Enforces exact restaurant_id, space type & number)
-      if (location_token) {
+      if (effectiveLocToken) {
         try {
-          const decoded = jwt.verify(location_token, jwtSecret);
+          const decoded = jwt.verify(effectiveLocToken, jwtSecret);
           if (decoded && Number(decoded.restaurant_id) === Number(resto.id)) {
             // Verify restaurant slug consistency
             if (decoded.slug && decoded.slug.toLowerCase() !== resto.slug.toLowerCase()) {
@@ -1054,12 +1057,13 @@ router.post('/orders', orderCreationRateLimiter, async (req, res) => {
             isLocationValid = true;
           }
         } catch (tokErr) {
+          console.warn('[BACKEND_JWT_VERIFY_WARN]', tokErr.message);
           // Token expired or invalid signature - fall through to database lookup or reject
         }
       }
 
-      if (!isLocationValid && verification_token) {
-        extractedVToken = verification_token;
+      if (!isLocationValid && effectiveVToken) {
+        extractedVToken = effectiveVToken;
       }
 
       // 2. Authoritative check against server-side database verification records
@@ -1106,6 +1110,18 @@ router.post('/orders', orderCreationRateLimiter, async (req, res) => {
 
       // STRICT DUAL AUTHORIZATION: Both QR and Location proofs are mandatory
       if (!isLocationValid) {
+        console.log('[BACKEND_LOCATION_CHECK_FAILED]', {
+          restaurant_id: resto.id,
+          slug: resto.slug,
+          has_location_token: Boolean(effectiveLocToken),
+          has_verification_token: Boolean(effectiveVToken),
+          jwt_checked: Boolean(effectiveLocToken),
+          db_checked: Boolean(extractedVToken),
+          body_keys: Object.keys(req.body || {}),
+          cleanTable,
+          resolvedSpaceType,
+          resolvedSpaceNum
+        });
         return res.status(403).json({
           error: 'location_required',
           message: '📍 Location verification is required to place table orders. Please verify your location on your device.'
