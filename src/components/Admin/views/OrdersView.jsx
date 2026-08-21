@@ -1,5 +1,5 @@
-import React from 'react';
-import { Clock, Printer, MapPin, Bell, RefreshCw, CheckCircle2, QrCode, XCircle, UtensilsCrossed } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { Clock, Printer, MapPin, Bell, RefreshCw, CheckCircle2, QrCode, XCircle, UtensilsCrossed, Shield, ShieldCheck, ShieldAlert, Check, X, AlertTriangle } from 'lucide-react';
 import KdsDisplayView from './KdsDisplayView';
 
 export default function OrdersView({
@@ -13,6 +13,8 @@ export default function OrdersView({
   onOpenBillModal,
   serviceRequests = [],
   onResolveServiceRequest,
+  onApprovePresenceRequest,
+  onRejectPresenceRequest,
   restaurantInfo,
   onPrintQR,
   onDirectPrint,
@@ -53,6 +55,77 @@ export default function OrdersView({
 
   const validOrders = (Array.isArray(orders) ? orders : []).filter(o => o.status !== 'rejected' && o.status !== 'cancelled');
   const safeServiceRequests = Array.isArray(serviceRequests) ? serviceRequests : [];
+
+  const [processingReqState, setProcessingReqState] = useState({}); // { [id]: 'approving' | 'rejecting' }
+  const [rejectingModalReq, setRejectingModalReq] = useState(null);
+  const [selectedRejectReason, setSelectedRejectReason] = useState('Customer not visible at table');
+  const [customRejectReason, setCustomRejectReason] = useState('');
+  const [currentTime, setCurrentTime] = useState(Date.now());
+
+  useEffect(() => {
+    const timer = setInterval(() => setCurrentTime(Date.now()), 1000);
+    return () => clearInterval(timer);
+  }, []);
+
+  const handleApprove = async (sr) => {
+    if (processingReqState[sr.id]) return;
+    setProcessingReqState(prev => ({ ...prev, [sr.id]: 'approving' }));
+    try {
+      if (onApprovePresenceRequest) {
+        await onApprovePresenceRequest(sr.id);
+      } else {
+        await onResolveServiceRequest(sr.id);
+      }
+    } catch (err) {
+      console.error('Approve presence error:', err);
+    } finally {
+      setProcessingReqState(prev => {
+        const next = { ...prev };
+        delete next[sr.id];
+        return next;
+      });
+    }
+  };
+
+  const handleOpenRejectModal = (sr) => {
+    setRejectingModalReq(sr);
+    setSelectedRejectReason('Customer not visible at table');
+    setCustomRejectReason('');
+  };
+
+  const handleConfirmReject = async () => {
+    if (!rejectingModalReq) return;
+    const reqId = rejectingModalReq.id;
+    const finalReason = selectedRejectReason === 'Other' ? (customRejectReason.trim() || 'Rejected by staff') : selectedRejectReason;
+    
+    setProcessingReqState(prev => ({ ...prev, [reqId]: 'rejecting' }));
+    setRejectingModalReq(null);
+    try {
+      if (onRejectPresenceRequest) {
+        await onRejectPresenceRequest(reqId, finalReason);
+      } else {
+        await onResolveServiceRequest(reqId);
+      }
+    } catch (err) {
+      console.error('Reject presence error:', err);
+    } finally {
+      setProcessingReqState(prev => {
+        const next = { ...prev };
+        delete next[reqId];
+        return next;
+      });
+    }
+  };
+
+  const formatCleanTableLabel = (raw, spaceType) => {
+    if (!raw) return 'Table 1';
+    const str = String(raw).trim();
+    if (/^(table|room|cabin|vip|takeaway|parcel)/i.test(str) || /^[\p{Emoji}\u2000-\u3300]/u.test(str)) {
+      return str;
+    }
+    const prefix = (spaceType && spaceType !== 'table') ? (spaceType.charAt(0).toUpperCase() + spaceType.slice(1)) : 'Table';
+    return `${prefix} #${str}`;
+  };
 
   const pendingCount = validOrders.filter(o => o.status === 'pending').length;
   const kitchenCount = validOrders.filter(o => o.status === 'kitchen' || o.status === 'accepted').length;
@@ -108,15 +181,6 @@ export default function OrdersView({
   }
 
   const isPrep = (val) => val === 1 || val === '1' || val === true;
-
-  const formatCleanTableLabel = (raw) => {
-    if (!raw) return 'Table 1';
-    const str = String(raw).trim();
-    if (/^(table|room|cabin|vip|takeaway|parcel)/i.test(str) || /^[\p{Emoji}\u2000-\u3300]/u.test(str)) {
-      return str;
-    }
-    return `Table #${str}`;
-  };
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '16px', maxWidth: '1400px', margin: '0 auto', width: '100%', boxSizing: 'border-box' }}>
@@ -667,10 +731,21 @@ export default function OrdersView({
                   )}
 
                   {isService && t.serviceRequest && (
-                    <div style={{ fontSize: '0.80rem', background: '#FFFFFF', padding: '10px', borderRadius: '10px', border: '1px solid #FDE68A' }}>
-                      <strong style={{ color: '#B45309', display: 'block' }}>{t.serviceRequest.request_type}</strong>
-                      {t.serviceRequest.note && <span style={{ fontStyle: 'italic', color: '#64748B' }}>"{t.serviceRequest.note}"</span>}
-                    </div>
+                    t.serviceRequest.request_type === 'presence_verification' ? (
+                      <div style={{ fontSize: '0.80rem', background: '#F0FDF4', padding: '10px', borderRadius: '10px', border: '1px solid #BBF7D0' }}>
+                        <strong style={{ color: '#166534', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                          🛡️ Presence Verification
+                        </strong>
+                        <span style={{ fontSize: '0.74rem', color: '#15803D', display: 'block', marginTop: '2px' }}>
+                          Customer awaiting table authorization
+                        </span>
+                      </div>
+                    ) : (
+                      <div style={{ fontSize: '0.80rem', background: '#FFFFFF', padding: '10px', borderRadius: '10px', border: '1px solid #FDE68A' }}>
+                        <strong style={{ color: '#B45309', display: 'block' }}>{t.serviceRequest.request_type}</strong>
+                        {t.serviceRequest.note && <span style={{ fontStyle: 'italic', color: '#64748B' }}>"{t.serviceRequest.note}"</span>}
+                      </div>
+                    )
                   )}
 
                   {isFree && (
@@ -723,22 +798,70 @@ export default function OrdersView({
                   )}
 
                   {isService && t.serviceRequest && (
-                    <button
-                      onClick={() => onResolveServiceRequest(t.serviceRequest.id)}
-                      style={{
-                        width: '100%',
-                        padding: '8px',
-                        borderRadius: '8px',
-                        background: '#FEF3C7',
-                        color: '#B45309',
-                        border: '1px solid #FCD34D',
-                        fontSize: '0.78rem',
-                        fontWeight: 800,
-                        cursor: 'pointer'
-                      }}
-                    >
-                      ✓ Attend Call
-                    </button>
+                    t.serviceRequest.request_type === 'presence_verification' ? (
+                      <div style={{ display: 'flex', gap: '6px', width: '100%' }}>
+                        <button
+                          onClick={() => handleApprove(t.serviceRequest)}
+                          disabled={Boolean(processingReqState[t.serviceRequest.id])}
+                          style={{
+                            flex: 2,
+                            padding: '8px',
+                            borderRadius: '8px',
+                            background: 'linear-gradient(135deg, #10B981 0%, #059669 100%)',
+                            color: '#FFFFFF',
+                            border: 'none',
+                            fontSize: '0.78rem',
+                            fontWeight: 800,
+                            cursor: processingReqState[t.serviceRequest.id] ? 'not-allowed' : 'pointer',
+                            opacity: processingReqState[t.serviceRequest.id] ? 0.7 : 1,
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            gap: '4px'
+                          }}
+                        >
+                          {processingReqState[t.serviceRequest.id] === 'approving' ? 'Approving...' : '✓ Approve'}
+                        </button>
+                        <button
+                          onClick={() => handleOpenRejectModal(t.serviceRequest)}
+                          disabled={Boolean(processingReqState[t.serviceRequest.id])}
+                          style={{
+                            flex: 1,
+                            padding: '8px',
+                            borderRadius: '8px',
+                            background: '#FEF2F2',
+                            color: '#DC2626',
+                            border: '1px solid #FECACA',
+                            fontSize: '0.78rem',
+                            fontWeight: 800,
+                            cursor: processingReqState[t.serviceRequest.id] ? 'not-allowed' : 'pointer',
+                            opacity: processingReqState[t.serviceRequest.id] ? 0.7 : 1,
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center'
+                          }}
+                        >
+                          ✕ Reject
+                        </button>
+                      </div>
+                    ) : (
+                      <button
+                        onClick={() => onResolveServiceRequest(t.serviceRequest.id)}
+                        style={{
+                          width: '100%',
+                          padding: '8px',
+                          borderRadius: '8px',
+                          background: '#FEF3C7',
+                          color: '#B45309',
+                          border: '1px solid #FCD34D',
+                          fontSize: '0.78rem',
+                          fontWeight: 800,
+                          cursor: 'pointer'
+                        }}
+                      >
+                        ✓ Attend Call
+                      </button>
+                    )
                   )}
 
                   {isFree && onPrintQR && (
@@ -858,110 +981,467 @@ export default function OrdersView({
                 </p>
               </div>
             ) : (
-              safeServiceRequests.map(sr => (
-                <div
-                  key={sr.id}
-                  style={{
-                    background: '#FFFFFF',
-                    border: '1.5px solid #FCD34D',
-                    borderLeft: '6px solid #F59E0B',
-                    borderRadius: '18px',
-                    padding: '16px',
-                    display: 'flex',
-                    flexDirection: 'column',
-                    justifyContent: 'space-between',
-                    gap: '14px',
-                    boxShadow: '0 8px 24px rgba(245, 158, 11, 0.12)',
-                    transition: 'transform 0.15s ease, box-shadow 0.15s ease'
-                  }}
-                >
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
-                    {/* Header: Table badge & Urgent status */}
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                      <span style={{
-                        background: '#0F172A',
-                        color: '#FFFFFF',
-                        padding: '4px 10px',
-                        borderRadius: '8px',
-                        fontSize: '0.88rem',
-                        fontWeight: 900,
-                        letterSpacing: '0.2px',
-                        display: 'inline-flex',
-                        alignItems: 'center',
-                        gap: '6px'
-                      }}>
-                        🍽️ {formatCleanTableLabel(sr.table_number)}
-                      </span>
-                      <span style={{
-                        background: '#FEF3C7',
-                        color: '#B45309',
-                        border: '1px solid #FCD34D',
-                        padding: '2px 8px',
-                        borderRadius: '12px',
-                        fontSize: '0.7rem',
-                        fontWeight: 900,
-                        display: 'inline-flex',
-                        alignItems: 'center',
-                        gap: '4px'
-                      }}>
-                        <span style={{ width: '6px', height: '6px', borderRadius: '50%', background: '#F59E0B', display: 'inline-block' }}></span>
-                        PENDING
-                      </span>
-                    </div>
+              safeServiceRequests.map(sr => {
+                const isPresence = sr.request_type === 'presence_verification';
 
-                    {/* Request Type */}
-                    <div>
-                      <strong style={{ fontSize: '1.05rem', color: '#1E293B', display: 'block', fontWeight: 900 }}>
-                        {sr.request_type}
-                      </strong>
-                      {sr.note && (
-                        <div style={{
-                          background: '#F8FAFC',
-                          border: '1px dashed #CBD5E1',
-                          padding: '8px 10px',
-                          borderRadius: '8px',
-                          fontSize: '0.8rem',
-                          color: '#475569',
-                          fontStyle: 'italic',
-                          marginTop: '6px'
-                        }}>
-                          💬 "{sr.note}"
+                if (isPresence) {
+                  const isExpired = (sr.expires_at && new Date(sr.expires_at).getTime() <= currentTime) || sr.is_expired;
+                  const remainingMs = sr.expires_at ? Math.max(0, new Date(sr.expires_at).getTime() - currentTime) : 0;
+                  const remainingSecs = Math.floor(remainingMs / 1000);
+                  const mins = Math.floor(remainingSecs / 60);
+                  const secs = remainingSecs % 60;
+                  const countdownStr = `${String(mins).padStart(2, '0')}:${String(secs).padStart(2, '0')}`;
+                  const isApproving = processingReqState[sr.id] === 'approving';
+                  const isRejecting = processingReqState[sr.id] === 'rejecting';
+                  const isProcessing = isApproving || isRejecting;
+
+                  return (
+                    <div
+                      key={sr.id}
+                      style={{
+                        background: isExpired ? '#F8FAFC' : '#FFFFFF',
+                        border: isExpired ? '1.5px solid #CBD5E1' : '1.5px solid #10B981',
+                        borderLeft: isExpired ? '6px solid #94A3B8' : '6px solid #10B981',
+                        borderRadius: '18px',
+                        padding: '18px',
+                        display: 'flex',
+                        flexDirection: 'column',
+                        justifyContent: 'space-between',
+                        gap: '14px',
+                        boxShadow: isExpired ? '0 4px 12px rgba(0,0,0,0.03)' : '0 8px 24px rgba(16, 185, 129, 0.12)',
+                        transition: 'transform 0.15s ease, box-shadow 0.15s ease'
+                      }}
+                    >
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                        {/* Header: Table badge & Presence status */}
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '6px' }}>
+                          <span style={{
+                            background: '#0F172A',
+                            color: '#FFFFFF',
+                            padding: '4px 10px',
+                            borderRadius: '8px',
+                            fontSize: '0.88rem',
+                            fontWeight: 900,
+                            letterSpacing: '0.2px',
+                            display: 'inline-flex',
+                            alignItems: 'center',
+                            gap: '6px'
+                          }}>
+                            🛡️ {formatCleanTableLabel(sr.table_number, sr.space_type)}
+                          </span>
+                          <span style={{
+                            background: isExpired ? '#F1F5F9' : '#DCFCE7',
+                            color: isExpired ? '#64748B' : '#166534',
+                            border: isExpired ? '1px solid #CBD5E1' : '1px solid #86EFAC',
+                            padding: '2px 8px',
+                            borderRadius: '12px',
+                            fontSize: '0.7rem',
+                            fontWeight: 900,
+                            display: 'inline-flex',
+                            alignItems: 'center',
+                            gap: '4px'
+                          }}>
+                            <span style={{
+                              width: '6px',
+                              height: '6px',
+                              borderRadius: '50%',
+                              background: isExpired ? '#94A3B8' : '#10B981',
+                              display: 'inline-block'
+                            }} />
+                            {isExpired ? 'EXPIRED' : 'PRESENCE VERIFICATION'}
+                          </span>
+                        </div>
+
+                        {/* Request Information */}
+                        <div>
+                          <strong style={{ fontSize: '1.05rem', color: isExpired ? '#64748B' : '#0F172A', display: 'block', fontWeight: 900, marginBottom: '4px' }}>
+                            🛡️ Table Presence Verification
+                          </strong>
+                          <p style={{ fontSize: '0.82rem', color: '#64748B', margin: 0, lineHeight: 1.4 }}>
+                            Customer is at the table requesting staff authorization to place a table order.
+                          </p>
+                          <div style={{
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: '8px',
+                            marginTop: '8px',
+                            fontSize: '0.74rem',
+                            color: '#475569',
+                            background: '#F8FAFC',
+                            padding: '6px 10px',
+                            borderRadius: '8px',
+                            border: '1px solid #E2E8F0',
+                            flexWrap: 'wrap'
+                          }}>
+                            <span style={{ fontWeight: 800, color: '#0F172A' }}>Request #P-{sr.id}</span>
+                            <span>•</span>
+                            <span>⏱️ {new Date(sr.created_at || Date.now()).toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' })}</span>
+                            {sr.expires_at && (
+                              <>
+                                <span>•</span>
+                                <span style={{ fontWeight: 800, color: isExpired ? '#DC2626' : '#059669' }}>
+                                  {isExpired ? '⌛ Expired' : `⌛ Expires in ${countdownStr}`}
+                                </span>
+                              </>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Action Buttons */}
+                      {isExpired ? (
+                        <button
+                          onClick={() => onResolveServiceRequest(sr.id)}
+                          style={{
+                            width: '100%',
+                            background: '#F1F5F9',
+                            color: '#64748B',
+                            padding: '10px 14px',
+                            borderRadius: '10px',
+                            fontWeight: 800,
+                            fontSize: '0.84rem',
+                            border: '1px solid #CBD5E1',
+                            cursor: 'pointer',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            gap: '6px'
+                          }}
+                        >
+                          ✕ Dismiss Expired Request
+                        </button>
+                      ) : (
+                        <div style={{ display: 'flex', gap: '8px', width: '100%' }}>
+                          <button
+                            onClick={() => handleApprove(sr)}
+                            disabled={isProcessing}
+                            style={{
+                              flex: 2,
+                              background: 'linear-gradient(135deg, #10B981 0%, #059669 100%)',
+                              color: '#FFFFFF',
+                              padding: '10px 14px',
+                              borderRadius: '10px',
+                              fontWeight: 900,
+                              fontSize: '0.86rem',
+                              border: 'none',
+                              cursor: isProcessing ? 'not-allowed' : 'pointer',
+                              opacity: isProcessing ? 0.7 : 1,
+                              display: 'flex',
+                              alignItems: 'center',
+                              justifyContent: 'center',
+                              gap: '6px',
+                              boxShadow: '0 4px 14px rgba(16, 185, 129, 0.35)',
+                              transition: 'all 0.15s ease'
+                            }}
+                          >
+                            {isApproving ? 'Approving...' : '✓ Approve Presence'}
+                          </button>
+                          <button
+                            onClick={() => handleOpenRejectModal(sr)}
+                            disabled={isProcessing}
+                            style={{
+                              flex: 1,
+                              background: '#FFFFFF',
+                              color: '#DC2626',
+                              padding: '10px 12px',
+                              borderRadius: '10px',
+                              fontWeight: 800,
+                              fontSize: '0.84rem',
+                              border: '1.5px solid #FECACA',
+                              cursor: isProcessing ? 'not-allowed' : 'pointer',
+                              opacity: isProcessing ? 0.7 : 1,
+                              display: 'flex',
+                              alignItems: 'center',
+                              justifyContent: 'center',
+                              gap: '4px',
+                              transition: 'all 0.15s ease'
+                            }}
+                          >
+                            ✕ Reject
+                          </button>
                         </div>
                       )}
                     </div>
+                  );
+                }
 
-                    {/* Time Requested */}
-                    <span style={{ fontSize: '0.72rem', color: '#64748B', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '4px' }}>
-                      ⏱️ Requested at {new Date(sr.created_at || Date.now()).toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' })}
-                    </span>
-                  </div>
-
-                  {/* Action Button */}
-                  <button
-                    onClick={() => onResolveServiceRequest(sr.id)}
+                // Normal Waiter Request
+                return (
+                  <div
+                    key={sr.id}
                     style={{
-                      width: '100%',
-                      background: 'linear-gradient(135deg, #F59E0B 0%, #D97706 100%)',
-                      color: '#FFFFFF',
-                      padding: '10px 14px',
-                      borderRadius: '10px',
-                      fontWeight: 900,
-                      fontSize: '0.86rem',
-                      border: 'none',
-                      cursor: 'pointer',
+                      background: '#FFFFFF',
+                      border: '1.5px solid #FCD34D',
+                      borderLeft: '6px solid #F59E0B',
+                      borderRadius: '18px',
+                      padding: '16px',
+                      display: 'flex',
+                      flexDirection: 'column',
+                      justifyContent: 'space-between',
+                      gap: '14px',
+                      boxShadow: '0 8px 24px rgba(245, 158, 11, 0.12)',
+                      transition: 'transform 0.15s ease, box-shadow 0.15s ease'
+                    }}
+                  >
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                      {/* Header: Table badge & Urgent status */}
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                        <span style={{
+                          background: '#0F172A',
+                          color: '#FFFFFF',
+                          padding: '4px 10px',
+                          borderRadius: '8px',
+                          fontSize: '0.88rem',
+                          fontWeight: 900,
+                          letterSpacing: '0.2px',
+                          display: 'inline-flex',
+                          alignItems: 'center',
+                          gap: '6px'
+                        }}>
+                          🍽️ {formatCleanTableLabel(sr.table_number, sr.space_type)}
+                        </span>
+                        <span style={{
+                          background: '#FEF3C7',
+                          color: '#B45309',
+                          border: '1px solid #FCD34D',
+                          padding: '2px 8px',
+                          borderRadius: '12px',
+                          fontSize: '0.7rem',
+                          fontWeight: 900,
+                          display: 'inline-flex',
+                          alignItems: 'center',
+                          gap: '4px'
+                        }}>
+                          <span style={{ width: '6px', height: '6px', borderRadius: '50%', background: '#F59E0B', display: 'inline-block' }}></span>
+                          PENDING
+                        </span>
+                      </div>
+
+                      {/* Request Type */}
+                      <div>
+                        <strong style={{ fontSize: '1.05rem', color: '#1E293B', display: 'block', fontWeight: 900 }}>
+                          {sr.request_type}
+                        </strong>
+                        {sr.note && (
+                          <div style={{
+                            background: '#F8FAFC',
+                            border: '1px dashed #CBD5E1',
+                            padding: '8px 10px',
+                            borderRadius: '8px',
+                            fontSize: '0.8rem',
+                            color: '#475569',
+                            fontStyle: 'italic',
+                            marginTop: '6px'
+                          }}>
+                            💬 "{sr.note}"
+                          </div>
+                        )}
+                      </div>
+
+                      {/* Time Requested */}
+                      <span style={{ fontSize: '0.72rem', color: '#64748B', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '4px' }}>
+                        ⏱️ Requested at {new Date(sr.created_at || Date.now()).toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' })}
+                      </span>
+                    </div>
+
+                    {/* Action Button */}
+                    <button
+                      onClick={() => onResolveServiceRequest(sr.id)}
+                      style={{
+                        width: '100%',
+                        background: 'linear-gradient(135deg, #F59E0B 0%, #D97706 100%)',
+                        color: '#FFFFFF',
+                        padding: '10px 14px',
+                        borderRadius: '10px',
+                        fontWeight: 900,
+                        fontSize: '0.86rem',
+                        border: 'none',
+                        cursor: 'pointer',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        gap: '6px',
+                        boxShadow: '0 4px 14px rgba(245, 158, 11, 0.35)',
+                        transition: 'all 0.15s ease'
+                      }}
+                    >
+                      ✓ Mark Attended & Clear
+                    </button>
+                  </div>
+                );
+              })
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* REJECTION REASON MODAL */}
+      {rejectingModalReq && (
+        <div style={{
+          position: 'fixed',
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          background: 'rgba(15, 23, 42, 0.75)',
+          backdropFilter: 'blur(4px)',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          zIndex: 9999,
+          padding: '20px'
+        }}>
+          <div style={{
+            background: '#FFFFFF',
+            borderRadius: '24px',
+            maxWidth: '460px',
+            width: '100%',
+            padding: '24px',
+            boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.25)',
+            display: 'flex',
+            flexDirection: 'column',
+            gap: '18px'
+          }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                <div style={{
+                  width: '38px',
+                  height: '38px',
+                  borderRadius: '50%',
+                  background: '#FEE2E2',
+                  color: '#DC2626',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  fontSize: '1.1rem',
+                  fontWeight: 900
+                }}>
+                  ✕
+                </div>
+                <div>
+                  <h3 style={{ margin: 0, fontSize: '1.15rem', fontWeight: 900, color: '#0F172A' }}>
+                    Reject Presence Request
+                  </h3>
+                  <span style={{ fontSize: '0.78rem', color: '#64748B' }}>
+                    {formatCleanTableLabel(rejectingModalReq.table_number, rejectingModalReq.space_type)} • Request #P-{rejectingModalReq.id}
+                  </span>
+                </div>
+              </div>
+              <button
+                onClick={() => setRejectingModalReq(null)}
+                style={{
+                  background: '#F1F5F9',
+                  border: 'none',
+                  borderRadius: '50%',
+                  width: '32px',
+                  height: '32px',
+                  cursor: 'pointer',
+                  fontSize: '1rem',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  color: '#64748B'
+                }}
+              >
+                ✕
+              </button>
+            </div>
+
+            <div>
+              <label style={{ fontSize: '0.82rem', fontWeight: 800, color: '#334155', display: 'block', marginBottom: '8px' }}>
+                Select Reason for Rejection:
+              </label>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                {[
+                  'Customer not visible at table',
+                  'Wrong table / seat',
+                  'Unable to verify physical presence',
+                  'Other'
+                ].map(reason => (
+                  <label
+                    key={reason}
+                    onClick={() => setSelectedRejectReason(reason)}
+                    style={{
                       display: 'flex',
                       alignItems: 'center',
-                      justifyContent: 'center',
-                      gap: '6px',
-                      boxShadow: '0 4px 14px rgba(245, 158, 11, 0.35)',
+                      gap: '10px',
+                      padding: '10px 14px',
+                      borderRadius: '12px',
+                      border: selectedRejectReason === reason ? '2px solid #DC2626' : '1px solid #E2E8F0',
+                      background: selectedRejectReason === reason ? '#FEF2F2' : '#FFFFFF',
+                      cursor: 'pointer',
+                      fontSize: '0.86rem',
+                      fontWeight: selectedRejectReason === reason ? 800 : 500,
+                      color: selectedRejectReason === reason ? '#991B1B' : '#334155',
                       transition: 'all 0.15s ease'
                     }}
                   >
-                    ✓ Mark Attended & Clear
-                  </button>
-                </div>
-              ))
-            )}
+                    <input
+                      type="radio"
+                      name="reject_reason"
+                      checked={selectedRejectReason === reason}
+                      onChange={() => setSelectedRejectReason(reason)}
+                      style={{ accentColor: '#DC2626' }}
+                    />
+                    <span>{reason}</span>
+                  </label>
+                ))}
+              </div>
+
+              {selectedRejectReason === 'Other' && (
+                <input
+                  type="text"
+                  placeholder="Type reason for rejection..."
+                  value={customRejectReason}
+                  onChange={(e) => setCustomRejectReason(e.target.value)}
+                  style={{
+                    width: '100%',
+                    marginTop: '10px',
+                    padding: '10px 14px',
+                    borderRadius: '10px',
+                    border: '1px solid #CBD5E1',
+                    fontSize: '0.86rem',
+                    boxSizing: 'border-box'
+                  }}
+                />
+              )}
+            </div>
+
+            <div style={{ display: 'flex', gap: '10px', marginTop: '6px' }}>
+              <button
+                onClick={() => setRejectingModalReq(null)}
+                style={{
+                  flex: 1,
+                  padding: '12px',
+                  borderRadius: '12px',
+                  background: '#F1F5F9',
+                  color: '#475569',
+                  fontWeight: 800,
+                  border: 'none',
+                  fontSize: '0.88rem',
+                  cursor: 'pointer'
+                }}
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleConfirmReject}
+                style={{
+                  flex: 1.5,
+                  padding: '12px',
+                  borderRadius: '12px',
+                  background: '#DC2626',
+                  color: '#FFFFFF',
+                  fontWeight: 900,
+                  border: 'none',
+                  fontSize: '0.88rem',
+                  cursor: 'pointer',
+                  boxShadow: '0 4px 12px rgba(220, 38, 38, 0.35)'
+                }}
+              >
+                Confirm Rejection
+              </button>
+            </div>
           </div>
         </div>
       )}

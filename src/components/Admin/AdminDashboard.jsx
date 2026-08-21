@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import * as XLSX from 'xlsx';
-import { fetchCategories, fetchDishes, toggleDishAvailability, toggleCategoryActive, deleteDish, deleteCategory, fetchRestaurantInfo, updateDishPrice, fetchAnnouncements, fetchAdminOrders, updateOrderStatus, uploadImage, fetchServiceRequests, resolveServiceRequest, fetchAdminAnalytics, fetchAdminCombos, createCombo, updateCombo, deleteCombo, toggleComboAvailability, optimizeDatabase, updateTenantSettings } from '../../api/client';
+import { fetchCategories, fetchDishes, toggleDishAvailability, toggleCategoryActive, deleteDish, deleteCategory, fetchRestaurantInfo, updateDishPrice, fetchAnnouncements, fetchAdminOrders, updateOrderStatus, uploadImage, fetchServiceRequests, resolveServiceRequest, approvePresenceRequest, rejectPresenceRequest, fetchAdminAnalytics, fetchAdminCombos, createCombo, updateCombo, deleteCombo, toggleComboAvailability, optimizeDatabase, updateTenantSettings } from '../../api/client';
 import { getPlanDetails } from '../../config/plans';
 import { generateQrToken } from '../../utils/qrSecurity';
 import DishFormModal from './DishFormModal';
@@ -440,7 +440,11 @@ export default function AdminDashboard({ token, username, slug: propSlug = '', o
         const formattedTbl = (rawTbl.toLowerCase().includes('table') || rawTbl.toLowerCase().includes('cabin') || rawTbl.toLowerCase().includes('room') || rawTbl.toLowerCase().includes('vip'))
           ? rawTbl 
           : `Table #${rawTbl}`;
-        setToastMessage(`🛎️ ${formattedTbl} Calling Waiter: "${latestCall.request_type}"!`);
+        if (latestCall.request_type === 'presence_verification') {
+          setToastMessage(`🛡️ ${formattedTbl}: Table Presence Verification Requested!`);
+        } else {
+          setToastMessage(`🛎️ ${formattedTbl} Calling Waiter: "${latestCall.request_type}"!`);
+        }
         setTimeout(() => setToastMessage(''), 7000);
       }
       prevServiceReqIdsRef.current = new Set(safeReqs.map(r => String(r.id)));
@@ -606,6 +610,32 @@ export default function AdminDashboard({ token, username, slug: propSlug = '', o
       setServiceRequests(prev => prev.filter(r => r.id !== id));
     } catch (err) {
       alert(err.message || 'Failed to resolve request');
+    }
+  };
+
+  const handleApprovePresenceRequest = async (id) => {
+    try {
+      const res = await approvePresenceRequest(id, token);
+      setServiceRequests(prev => prev.filter(r => r.id !== id));
+      setToastMessage(res.message || '✓ Table presence approved successfully');
+      setTimeout(() => setToastMessage(''), 4000);
+      return res;
+    } catch (err) {
+      alert(err.message || 'Failed to approve presence verification');
+      throw err;
+    }
+  };
+
+  const handleRejectPresenceRequest = async (id, reason) => {
+    try {
+      const res = await rejectPresenceRequest(id, token, reason);
+      setServiceRequests(prev => prev.filter(r => r.id !== id));
+      setToastMessage(res.message || 'Presence verification rejected');
+      setTimeout(() => setToastMessage(''), 4000);
+      return res;
+    } catch (err) {
+      alert(err.message || 'Failed to reject presence verification');
+      throw err;
     }
   };
 
@@ -2395,6 +2425,8 @@ export default function AdminDashboard({ token, username, slug: propSlug = '', o
                 onPrintBill={(order) => handlePrintCustomerBill(order, 'CASH')}
                 serviceRequests={serviceRequests}
                 onResolveServiceRequest={handleResolveServiceRequest}
+                onApprovePresenceRequest={handleApprovePresenceRequest}
+                onRejectPresenceRequest={handleRejectPresenceRequest}
                 restaurantInfo={restaurantInfo}
                 onPrintQR={handlePrintQR}
                 onDirectPrint={handleDirectBluetoothPrint}

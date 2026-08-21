@@ -587,6 +587,29 @@ export async function resolveServiceRequest(id, token) {
   return handleResponse(res, 'Failed to resolve service request');
 }
 
+export async function approvePresenceRequest(id, token) {
+  const res = await fetch(`${API_BASE}/admin/service-requests/${id}/approve-presence`, {
+    method: 'PATCH',
+    headers: {
+      'Content-Type': 'application/json',
+      Authorization: `Bearer ${token}`
+    }
+  });
+  return handleResponse(res, 'Failed to approve presence verification');
+}
+
+export async function rejectPresenceRequest(id, token, reason = 'Rejected by staff') {
+  const res = await fetch(`${API_BASE}/admin/service-requests/${id}/reject-presence`, {
+    method: 'PATCH',
+    headers: {
+      'Content-Type': 'application/json',
+      Authorization: `Bearer ${token}`
+    },
+    body: JSON.stringify({ rejection_reason: reason })
+  });
+  return handleResponse(res, 'Failed to reject presence verification');
+}
+
 export async function fetchAdminAnalytics(token) {
   const res = await fetch(`${API_BASE}/admin/analytics`, {
     headers: { Authorization: `Bearer ${token}` }
