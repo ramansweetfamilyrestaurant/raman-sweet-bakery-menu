@@ -502,6 +502,28 @@ export async function verifyCustomerLocationApi(payload) {
   return handleResponse(res, 'Location verification failed');
 }
 
+export async function requestStaffPresenceVerification(payload) {
+  const res = await fetch(`${API_BASE}/orders/presence/request-staff`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload),
+  });
+  return handleResponse(res, 'Failed to request staff verification');
+}
+
+export async function fetchPresenceStatus(verificationToken) {
+  const res = await fetch(`${API_BASE}/orders/presence-status/${encodeURIComponent(verificationToken)}`, {
+    cache: 'no-store'
+  });
+  return handleResponse(res, 'Failed to fetch verification status');
+}
+
+export async function fetchPresencePolicy(slug = '') {
+  const url = slug ? `${API_BASE}/orders/presence-policy?slug=${encodeURIComponent(slug)}` : `${API_BASE}/orders/presence-policy`;
+  const res = await fetch(url, { cache: 'no-store' });
+  return handleResponse(res, 'Failed to fetch presence policy');
+}
+
 export async function createDirectOrder(orderData) {
   const res = await fetch(`${API_BASE}/orders`, {
     method: 'POST',

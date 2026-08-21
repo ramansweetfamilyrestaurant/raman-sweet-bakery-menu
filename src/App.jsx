@@ -15,6 +15,7 @@ import { fetchRestaurantInfo, fetchCategories, fetchDishes, toggleDishAvailabili
 import { LayoutList, Grid, BookOpen, X, Sparkles, ShieldAlert, Phone, Plus, Edit3, Trash2, LogOut, Settings, Crown, CheckCircle, MessageSquare, XCircle } from 'lucide-react';
 import ServiceRequestModal from './components/ServiceRequestModal';
 import CustomerReviewModal from './components/CustomerReviewModal';
+import PresenceVerificationModal from './components/PresenceVerificationModal';
 import { isValidQrTokenFormat, normalizeSpaceType, normalizeSpaceNumber } from './utils/qrSecurity';
 
 // Robust Lazy Loading with automatic retry on new production deploys
@@ -534,6 +535,21 @@ export default function App() {
   const [placingOrder, setPlacingOrder] = useState(false);
   const isPlacingOrderRef = useRef(false);
 
+  // Table Presence Verification State & Refs
+  const [presenceToken, setPresenceToken] = useState(null);
+  const presenceTokenRef = useRef(null);
+  const [presenceModalOpen, setPresenceModalOpen] = useState(false);
+  const [presencePolicy, setPresencePolicy] = useState(null);
+  const pendingOrderPayloadRef = useRef(null);
+
+  // Invalidate presence token when physical table or restaurant context changes
+  useEffect(() => {
+    setPresenceToken(null);
+    presenceTokenRef.current = null;
+    pendingOrderPayloadRef.current = null;
+    setPresenceModalOpen(false);
+  }, [currentTableNum, currentSpaceType, currentTableToken, info?.slug]);
+
   // FIX: Table-specific localStorage key (Only for scanned table QR or active table number)
   const getOrderStorageKey = (tbl) => {
     const t = tbl || effectiveTableNum || orderTableInput;
@@ -685,39 +701,41 @@ export default function App() {
     isPlacingOrderRef.current = true;
     setPlacingOrder(true);
 
+    const effectiveQrToken = currentTableToken || initialSpaceInfo.token || (new URLSearchParams(window.location.search).get('tkn') || '').trim();
+    const targetTable = effectiveTableNum || currentTableNum || initialSpaceInfo.num || (new URLSearchParams(window.location.search).get('table') || '').trim() || '1';
+    const targetSpaceType = currentSpaceType || initialSpaceInfo.type || 'table';
+
+    if (!targetTable || !effectiveQrToken) {
+      alert('Invalid or missing Table QR. Please scan the official QR code at your dining table to place an order.');
+      setPlacingOrder(false);
+      isPlacingOrderRef.current = false;
+      return;
+    }
+
+    const itemsPayload = cartItems.map(item => ({
+      dish_id: item.isCombo ? item.dish.id : item.dish.id,
+      name: item.dish.name,
+      portion: item.portion || '',
+      modifiers: item.modifiers || [],
+      price: item.price,
+      quantity: item.quantity,
+      ...(item.isCombo ? { type: 'combo', includes: item.comboIncludes || '' } : {})
+    }));
+    const grandTotal = cartItems.reduce((sum, i) => sum + i.price * i.quantity, 0);
+
+    const orderPayload = {
+      slug,
+      table_number: targetTable,
+      space_type: targetSpaceType,
+      table_token: effectiveQrToken,
+      customer_name: customerNameInput || 'Dine-In Customer',
+      customer_phone: customerPhoneInput || '',
+      items: itemsPayload,
+      total_amount: grandTotal,
+      ...(presenceTokenRef.current ? { presence_token: presenceTokenRef.current } : {})
+    };
+
     try {
-      const effectiveQrToken = currentTableToken || initialSpaceInfo.token || (new URLSearchParams(window.location.search).get('tkn') || '').trim();
-      const targetTable = effectiveTableNum || currentTableNum || initialSpaceInfo.num || (new URLSearchParams(window.location.search).get('table') || '').trim() || '1';
-      const targetSpaceType = currentSpaceType || initialSpaceInfo.type || 'table';
-
-      if (!targetTable || !effectiveQrToken) {
-        alert('Invalid or missing Table QR. Please scan the official QR code at your dining table to place an order.');
-        setPlacingOrder(false);
-        isPlacingOrderRef.current = false;
-        return;
-      }
-      const itemsPayload = cartItems.map(item => ({
-        dish_id: item.isCombo ? item.dish.id : item.dish.id,
-        name: item.dish.name,
-        portion: item.portion || '',
-        modifiers: item.modifiers || [],
-        price: item.price,
-        quantity: item.quantity,
-        ...(item.isCombo ? { type: 'combo', includes: item.comboIncludes || '' } : {})
-      }));
-      const grandTotal = cartItems.reduce((sum, i) => sum + i.price * i.quantity, 0);
-
-      const orderPayload = {
-        slug,
-        table_number: targetTable,
-        space_type: targetSpaceType,
-        table_token: effectiveQrToken,
-        customer_name: customerNameInput || 'Dine-In Customer',
-        customer_phone: customerPhoneInput || '',
-        items: itemsPayload,
-        total_amount: grandTotal
-      };
-
       const res = await createDirectOrder(orderPayload);
 
       if (res && res.order_id) {
@@ -730,15 +748,111 @@ export default function App() {
       setOrderSuccessModal(res);
       setCartItems([]);
       setShowCartDrawer(false);
+      pendingOrderPayloadRef.current = null;
     } catch (err) {
       const errMsg = String(err.message || '');
       const errCode = err.error || err.code || '';
       console.error('[ORDER SUBMISSION ERROR]', err);
 
+      if (errCode === 'presence_required' || errCode === 'presence_expired') {
+        // Save snapshot of order payload for controlled single retry once verified
+        pendingOrderPayloadRef.current = {
+          slug,
+          table_number: targetTable,
+          space_type: targetSpaceType,
+          table_token: effectiveQrToken,
+          customer_name: customerNameInput || 'Dine-In Customer',
+          customer_phone: customerPhoneInput || '',
+          items: itemsPayload,
+          total_amount: grandTotal
+        };
+        setPresenceToken(null);
+        presenceTokenRef.current = null;
+        setPresencePolicy(err.data || { mode: 'GPS_WITH_STAFF_FALLBACK', allowed_methods: ['GPS', 'STAFF'] });
+        setPresenceModalOpen(true);
+        return;
+      }
+
+      if (errCode === 'invalid_presence') {
+        setPresenceToken(null);
+        presenceTokenRef.current = null;
+        pendingOrderPayloadRef.current = {
+          slug,
+          table_number: targetTable,
+          space_type: targetSpaceType,
+          table_token: effectiveQrToken,
+          customer_name: customerNameInput || 'Dine-In Customer',
+          customer_phone: customerPhoneInput || '',
+          items: itemsPayload,
+          total_amount: grandTotal
+        };
+        setPresenceModalOpen(true);
+        return;
+      }
+
       if (errCode === 'invalid_qr' || errMsg.toLowerCase().includes('qr')) {
         alert(errMsg || 'Invalid or unverified Table QR code. Please scan the official QR code at your dining table.');
       } else {
         alert(errMsg || 'Failed to place order. Please try again.');
+      }
+    } finally {
+      setPlacingOrder(false);
+      setTimeout(() => {
+        isPlacingOrderRef.current = false;
+      }, 300);
+    }
+  };
+
+  // Called when customer table presence is verified (via GPS or Staff)
+  const handlePresenceVerified = (verifiedToken, method) => {
+    setPresenceToken(verifiedToken);
+    presenceTokenRef.current = verifiedToken;
+    setPresenceModalOpen(false);
+
+    if (pendingOrderPayloadRef.current) {
+      executePendingOrderRetry(verifiedToken);
+    }
+  };
+
+  // Dedicated single-shot retry with verified presence token
+  const executePendingOrderRetry = async (verifiedToken) => {
+    const payload = pendingOrderPayloadRef.current;
+    if (!payload) return;
+    pendingOrderPayloadRef.current = null;
+
+    if (isPlacingOrderRef.current || placingOrder) return;
+    isPlacingOrderRef.current = true;
+    setPlacingOrder(true);
+
+    try {
+      const orderPayloadWithToken = {
+        ...payload,
+        presence_token: verifiedToken
+      };
+
+      const res = await createDirectOrder(orderPayloadWithToken);
+
+      if (res && res.order_id) {
+        const storageKey = `touchqr_active_order_id_table_${payload.table_number}`;
+        localStorage.setItem(storageKey, String(res.order_id));
+        localStorage.removeItem(`touchqr_table_scan_time_${payload.table_number}`);
+        setActiveOrderId(String(res.order_id));
+      }
+
+      setOrderSuccessModal(res);
+      setCartItems([]);
+      setShowCartDrawer(false);
+    } catch (err) {
+      console.error('[PRESENCE RETRY ORDER ERROR]', err);
+      const errMsg = String(err.message || '');
+      const errCode = err.error || err.code || '';
+      if (errCode === 'presence_expired' || errCode === 'invalid_presence') {
+        setPresenceToken(null);
+        presenceTokenRef.current = null;
+        alert('Table presence verification expired. Please verify again to place your order.');
+        setPresenceModalOpen(true);
+      } else {
+        alert(errMsg || 'Failed to place order after verification. Please try again.');
       }
     } finally {
       setPlacingOrder(false);
@@ -2519,6 +2633,24 @@ export default function App() {
         <CustomerReviewModal
           info={info}
           onClose={() => setShowReviewModal(false)}
+        />
+      )}
+
+      {/* 📍 Table Presence Verification Modal */}
+      {presenceModalOpen && isDirectOrderingActive && (
+        <PresenceVerificationModal
+          isOpen={presenceModalOpen}
+          onClose={() => {
+            setPresenceModalOpen(false);
+            pendingOrderPayloadRef.current = null;
+          }}
+          restaurantInfo={info}
+          tableNumber={effectiveTableNum || currentTableNum || '1'}
+          spaceType={currentSpaceType || 'table'}
+          tableToken={currentTableToken || initialSpaceInfo.token || ''}
+          tableLabel={getDynamicSpaceLabel()}
+          presencePolicy={presencePolicy}
+          onVerified={handlePresenceVerified}
         />
       )}
 
