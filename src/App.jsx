@@ -28,26 +28,13 @@ const lazyWithRetry = (componentImport) =>
       console.warn('Chunk loading failed, checking for updated deploy...', error);
       const isChunkError = error?.message && (
         error.message.includes('dynamically imported module') ||
-        error.message.includes('Loading chunk') ||
-        error.message.includes('Failed to fetch')
+        error.message.includes('Failed to fetch dynamically imported module') ||
+        error.message.includes('error loading dynamically imported module') ||
+        error.message.includes('Importing a module script failed')
       );
-
-      const retryKey = 'chunk_retry_timestamp';
-      const lastRetry = Number(sessionStorage.getItem(retryKey)) || 0;
-      const now = Date.now();
-
-      // If chunk failed and we haven't auto-reloaded in the last 10 seconds
-      if (isChunkError && (now - lastRetry > 10000)) {
-        sessionStorage.setItem(retryKey, String(now));
-        if ('caches' in window) {
-          try {
-            const names = await caches.keys();
-            await Promise.all(names.map(name => caches.delete(name)));
-          } catch {}
-        }
-        // Force reload from server to get fresh HTML & chunks
+      if (isChunkError && !sessionStorage.getItem('retry-chunk-refresh')) {
+        sessionStorage.setItem('retry-chunk-refresh', 'true');
         window.location.reload();
-        return new Promise(() => {});
       }
       throw error;
     }
@@ -67,6 +54,7 @@ const RefundPolicy = lazyWithRetry(() => import('./components/Legal/RefundPolicy
 const SecurityPolicy = lazyWithRetry(() => import('./components/Legal/SecurityPolicy'));
 const ContactSupport = lazyWithRetry(() => import('./components/Legal/ContactSupport'));
 const StandaloneKdsPage = lazyWithRetry(() => import('./components/Admin/views/StandaloneKdsPage'));
+
 // Pure URL helper functions declared at module level
 export const getSlugFromUrl = () => {
   const path = window.location.pathname;
@@ -102,6 +90,52 @@ export const isSlugKitchenPath = (rawPath) => {
     return true;
   }
   return false;
+};
+
+// Canonical Location Authorization Storage Helpers
+export const getStoredLocationAuth = (slug, restaurantId) => {
+  try {
+    const key = `touchqr_loc_auth_${slug || restaurantId || 'active'}`;
+    const raw = sessionStorage.getItem(key);
+    if (!raw) return null;
+    const data = JSON.parse(raw);
+    if (!data || !data.locationToken) return null;
+    const now = Date.now();
+    const expiresAt = Number(data.expiresAt) || (Number(data.timestamp) ? Number(data.timestamp) + 20 * 60 * 1000 : 0);
+    if (expiresAt > now) {
+      return data;
+    }
+    sessionStorage.removeItem(key);
+    return null;
+  } catch (e) {
+    return null;
+  }
+};
+
+export const saveLocationAuth = (slug, restaurantId, authData) => {
+  try {
+    const key = `touchqr_loc_auth_${slug || restaurantId || 'active'}`;
+    const payload = {
+      ...authData,
+      timestamp: Date.now(),
+      expiresAt: Date.now() + 20 * 60 * 1000
+    };
+    sessionStorage.setItem(key, JSON.stringify(payload));
+    return payload;
+  } catch (e) {
+    return authData;
+  }
+};
+
+export const clearLocationAuth = (slug, restaurantId) => {
+  try {
+    const key = `touchqr_loc_auth_${slug || restaurantId || 'active'}`;
+    sessionStorage.removeItem(key);
+    if (restaurantId) {
+      sessionStorage.removeItem(`touchqr_location_token_${restaurantId}`);
+      sessionStorage.removeItem(`touchqr_geo_${restaurantId}`);
+    }
+  } catch (e) {}
 };
 
 export default function App() {
@@ -163,11 +197,12 @@ export default function App() {
 
   // Menu Data State (Declared at top of component to avoid TDZ access)
   const [info, setInfo] = useState(null);
-  const cachedCustomerGeoRef = useRef(null);
   const [showLocationModal, setShowLocationModal] = useState(false);
-  const [locationVerified, setLocationVerified] = useState(false);
-  const [locationToken, setLocationToken] = useState('');
-  const locationPromptShownRef = useRef(false);
+  const [locationAuth, setLocationAuth] = useState(() => {
+    const initialSlug = getSlugFromUrl();
+    return getStoredLocationAuth(initialSlug);
+  });
+  const locationVerified = Boolean(locationAuth && locationAuth.locationToken);
 
   const initialSpaceInfo = getSpaceInfoFromUrl();
   const initialTableNum = initialSpaceInfo.num;
@@ -177,34 +212,15 @@ export default function App() {
   const [sessionExpired, setSessionExpired] = useState(false);
   const [autoKillSeconds, setAutoKillSeconds] = useState(null);
 
-  // Read previously verified location from session (< 15 mins) and clear if space/token changed
+  // Sync canonical location authorization when restaurant info loads or space changes
   useEffect(() => {
-    if (!info?.id) return;
-    try {
-      const stored = sessionStorage.getItem(`touchqr_geo_${info.id}`);
-      const storedToken = sessionStorage.getItem(`touchqr_location_token_${info.id}`);
-      if (stored) {
-        const parsed = JSON.parse(stored);
-        const isSameTable = String(parsed.tableNumber || '').trim() === String(currentTableNum).trim();
-        const isSameType = String(parsed.spaceType || 'table').toLowerCase() === String(currentSpaceType || 'table').toLowerCase();
-        const isSameToken = String(parsed.qrToken || '').trim() === String(currentTableToken).trim();
-        const isFresh = parsed.timestamp && (Date.now() - parsed.timestamp < 15 * 60 * 1000);
-
-        if (isSameTable && isSameType && isSameToken && isFresh && initialSpaceInfo.isValidTokenShape && parsed.customerLat) {
-          cachedCustomerGeoRef.current = parsed;
-          setLocationVerified(true);
-          setLocationToken(storedToken || parsed.locationToken || '');
-        } else {
-          // Clear stale transient location data from previous table/token
-          cachedCustomerGeoRef.current = null;
-          setLocationVerified(false);
-          setLocationToken('');
-          sessionStorage.removeItem(`touchqr_geo_${info.id}`);
-          sessionStorage.removeItem(`touchqr_location_token_${info.id}`);
-        }
-      }
-    } catch {}
-  }, [info?.id, currentSpaceType, currentTableNum, currentTableToken]);
+    const currentSlug = getSlugFromUrl() || (info && info.slug) || '';
+    const stored = getStoredLocationAuth(currentSlug, info?.id);
+    if (stored) {
+      console.log('[LOCATION_FLOW] token_loaded_for_order', { slug: currentSlug, distanceMeters: stored.distanceMeters });
+      setLocationAuth(stored);
+    }
+  }, [info?.slug, info?.id, currentTableNum, currentTableToken]);
 
   // Validate if the table/space number exists within the restaurant's configured capacity & has valid token shape
   const isSpaceNumberValid = () => {
@@ -728,48 +744,42 @@ export default function App() {
   }, [activeOrderId, effectiveTableNum, info, sessionExpired]);
 
   const handleSendDirectOrder = async (overrideGeo = null) => {
-    if (cartItems.length === 0 || isPlacingOrderRef.current || placingOrder) return;
+    if (cartItems.length === 0) return;
+    if (!overrideGeo && (isPlacingOrderRef.current || placingOrder)) return;
     isPlacingOrderRef.current = true;
     setPlacingOrder(true);
+
     try {
       // 📍 Authoritative GPS Geo-Fencing & Verified Session Token Validation
       let customerGeo = {};
       const restoLat = Number(info?.latitude);
       const restoLng = Number(info?.longitude);
       const hasLocation = Boolean(info && !isNaN(restoLat) && !isNaN(restoLng) && restoLat !== 0 && restoLng !== 0);
+      const currentSlug = getSlugFromUrl() || (info && info.slug) || '';
 
       if (hasLocation) {
-        let cached = overrideGeo || cachedCustomerGeoRef.current;
-        if (!cached && info?.id) {
-          try {
-            const raw = sessionStorage.getItem(`touchqr_geo_${info.id}`);
-            if (raw) cached = JSON.parse(raw);
-          } catch {}
-        }
-        const storedLocToken = (info?.id ? sessionStorage.getItem(`touchqr_location_token_${info.id}`) : '') || '';
-        const effectiveToken = (overrideGeo && overrideGeo.locationToken) || locationToken || (cached && cached.locationToken) || storedLocToken;
-        const isFresh = Boolean(effectiveToken || (cached && cached.timestamp && (Date.now() - cached.timestamp < 20 * 60 * 1000)));
+        const activeAuth = overrideGeo || locationAuth || getStoredLocationAuth(currentSlug, info?.id);
+        const isAuthFresh = Boolean(activeAuth && activeAuth.locationToken && (!activeAuth.expiresAt || activeAuth.expiresAt > Date.now()));
 
-        if (!overrideGeo && !locationVerified && !isFresh) {
-          // Open the mobile location verification screen and block submission
-          setShowLocationModal(true);
+        if (!isAuthFresh) {
+          console.log('[LOCATION_FLOW] token_expired', { slug: currentSlug });
           setPlacingOrder(false);
           isPlacingOrderRef.current = false;
+          setShowLocationModal(true);
           return;
         }
 
-        const geoData = cached || {};
+        console.log('[LOCATION_FLOW] order_allowed', { distanceMeters: activeAuth.distanceMeters });
         customerGeo = {
-          location_token: effectiveToken || (geoData && geoData.locationToken) || '',
-          verification_token: (overrideGeo && (overrideGeo.verificationToken || overrideGeo.verification_token)) || (geoData && (geoData.verificationToken || geoData.verification_token)) || '',
-          customer_latitude: (overrideGeo && overrideGeo.customerLat) || geoData.customerLat,
-          customer_longitude: (overrideGeo && overrideGeo.customerLng) || geoData.customerLng,
-          customer_accuracy: (overrideGeo && overrideGeo.accuracy) || geoData.accuracy,
-          distance_meters: (overrideGeo && overrideGeo.distanceMeters) || geoData.distanceMeters
+          location_token: activeAuth.locationToken,
+          verification_token: activeAuth.verificationToken || '',
+          customer_latitude: activeAuth.customerLat,
+          customer_longitude: activeAuth.customerLng,
+          customer_accuracy: activeAuth.accuracy,
+          distance_meters: activeAuth.distanceMeters
         };
       }
 
-      const currentSlug = getSlugFromUrl() || (info && info.slug) || '';
       const effectiveQrToken = currentTableToken || initialSpaceInfo.token || (overrideGeo && overrideGeo.qrToken) || (new URLSearchParams(window.location.search).get('tkn') || '').trim();
       const targetTable = effectiveTableNum || currentTableNum || initialSpaceInfo.num || (new URLSearchParams(window.location.search).get('table') || '').trim() || '1';
       const targetSpaceType = currentSpaceType || initialSpaceInfo.type || (overrideGeo && overrideGeo.spaceType) || 'table';
@@ -820,27 +830,16 @@ export default function App() {
       console.error('[ORDER SUBMISSION ERROR]', err);
 
       if (errCode === 'invalid_qr' || errMsg.toLowerCase().includes('qr')) {
-        setLocationVerified(false);
-        setLocationToken('');
-        cachedCustomerGeoRef.current = null;
-        try {
-          sessionStorage.removeItem(`touchqr_location_token_${info?.id}`);
-          sessionStorage.removeItem(`touchqr_geo_${info?.id}`);
-        } catch {}
+        clearLocationAuth(currentSlug, info?.id);
+        setLocationAuth(null);
         alert(errMsg || 'Invalid or unverified Table QR code. Please scan the official QR code at your dining table.');
       } else if (
         errCode === 'location_required' ||
         errCode === 'outside_boundary' ||
         errCode === 'low_accuracy'
       ) {
-        setLocationVerified(false);
-        setLocationToken('');
-        cachedCustomerGeoRef.current = null;
-        try {
-          sessionStorage.removeItem(`touchqr_location_token_${info?.id}`);
-          sessionStorage.removeItem(`touchqr_geo_${info?.id}`);
-        } catch {}
-        alert(errMsg || 'Location verification is required.');
+        clearLocationAuth(currentSlug, info?.id);
+        setLocationAuth(null);
         setShowLocationModal(true);
       } else {
         alert(errMsg || 'Failed to place order. Please try again.');
@@ -849,7 +848,7 @@ export default function App() {
       setPlacingOrder(false);
       setTimeout(() => {
         isPlacingOrderRef.current = false;
-      }, 1500);
+      }, 1000);
     }
   };
 
@@ -3161,22 +3160,22 @@ export default function App() {
           tableLabel={getDynamicSpaceLabel()}
           allowDismiss={true}
           onLocationVerified={(verifiedData) => {
-            setLocationVerified(true);
-            setLocationToken(verifiedData.locationToken);
-            const verifiedPayload = {
+            const currentSlug = getSlugFromUrl() || (info && info.slug) || '';
+            const targetTable = effectiveTableNum || currentTableNum || (new URLSearchParams(window.location.search).get('table') || '').trim() || '1';
+            const targetSpace = currentSpaceType || initialSpaceInfo.type || 'table';
+            const targetToken = currentTableToken || initialSpaceInfo.token || (new URLSearchParams(window.location.search).get('tkn') || '').trim();
+
+            const saved = saveLocationAuth(currentSlug, info?.id, {
               ...verifiedData,
-              tableNumber: effectiveTableNum || currentTableNum || (new URLSearchParams(window.location.search).get('table') || '').trim() || '1',
-              spaceType: currentSpaceType || 'table',
-              qrToken: currentTableToken || initialSpaceInfo.token || (new URLSearchParams(window.location.search).get('tkn') || '').trim()
-            };
-            cachedCustomerGeoRef.current = verifiedPayload;
-            try {
-              sessionStorage.setItem(`touchqr_location_token_${info?.id}`, verifiedData.locationToken || '');
-              sessionStorage.setItem(`touchqr_geo_${info?.id}`, JSON.stringify(verifiedPayload));
-            } catch {}
+              tableNumber: targetTable,
+              spaceType: targetSpace,
+              qrToken: targetToken
+            });
+            console.log('[LOCATION_FLOW] token_saved', { distanceMeters: verifiedData.distanceMeters });
+            setLocationAuth(saved);
             setShowLocationModal(false);
             if (cartItems.length > 0) {
-              handleSendDirectOrder(verifiedPayload);
+              handleSendDirectOrder(saved);
             }
           }}
         />

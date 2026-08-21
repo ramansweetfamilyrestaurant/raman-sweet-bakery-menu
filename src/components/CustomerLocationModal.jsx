@@ -58,8 +58,15 @@ export default function CustomerLocationModal({
     if (isAcquiringRef.current) return; // Prevent duplicate rapid taps
     isAcquiringRef.current = true;
 
-    // Fast-Fail on Missing / Malformed QR Token before requesting GPS permission
     const cleanToken = String(tableToken || '').trim();
+    console.log('[LOCATION_FLOW] button_clicked', {
+      slug: restaurantInfo?.slug,
+      tableNumber,
+      spaceType,
+      hasQrToken: Boolean(cleanToken)
+    });
+
+    // Fast-Fail on Missing / Malformed QR Token before requesting GPS permission
     if (!cleanToken || !isValidQrTokenFormat(cleanToken)) {
       isAcquiringRef.current = false;
       setStatus('invalid_qr');
@@ -97,7 +104,20 @@ export default function CustomerLocationModal({
         const custAcc = Math.round(pos.coords.accuracy || 999);
         setAccuracyVal(custAcc);
 
+        console.log('[LOCATION_FLOW] coordinates_received', {
+          lat: custLat,
+          lng: custLng,
+          accuracy: custAcc
+        });
+
         const slug = restaurantInfo?.slug || '';
+        console.log('[LOCATION_FLOW] verify_api_request', {
+          slug,
+          table_number: tableNumber || '1',
+          space_type: spaceType || 'table',
+          accuracy: custAcc
+        });
+
         const verifyRes = await verifyCustomerLocationApi({
           slug,
           table_number: tableNumber || '1',
@@ -106,6 +126,13 @@ export default function CustomerLocationModal({
           latitude: custLat,
           longitude: custLng,
           accuracy: custAcc
+        });
+
+        console.log('[LOCATION_FLOW] verify_api_response', {
+          verified: verifyRes.verified,
+          distance_meters: verifyRes.distance_meters,
+          allowed_radius: verifyRes.allowed_radius,
+          hasToken: Boolean(verifyRes.location_token)
         });
 
         if (verifyRes.verified) {
@@ -128,14 +155,14 @@ export default function CustomerLocationModal({
             timestamp: Date.now()
           };
 
+          isAcquiringRef.current = false;
           if (onLocationVerified) {
             onLocationVerified(verifiedPayload);
           }
 
           setTimeout(() => {
-            isAcquiringRef.current = false;
             if (onClose) onClose();
-          }, 1200);
+          }, 600);
         } else {
           isAcquiringRef.current = false;
           setDistanceInfo({
@@ -170,7 +197,7 @@ export default function CustomerLocationModal({
 
     const handleGpsFailure = (err) => {
       isAcquiringRef.current = false;
-      console.warn('Geolocation Error:', err);
+      console.log('[LOCATION_FLOW] permission_result', { error: err.message, code: err.code });
 
       if (err.code === 1) {
         // PERMISSION_DENIED
