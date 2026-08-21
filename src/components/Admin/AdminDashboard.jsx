@@ -123,27 +123,33 @@ export default function AdminDashboard({ token, username, slug: propSlug = '', o
       }
     }
 
-    // 🔊 3. Unlock Web Audio Context on first user interaction gesture
-    const unlockAudioOnTouch = () => {
+    // 🔊 3. Unlock Web Audio Context on user interaction gesture
+    const unlockAudioOnGesture = () => {
       try {
-        const AudioCtx = window.AudioContext || window.webkitAudioContext;
-        if (AudioCtx) {
-          const ctx = new AudioCtx();
+        const ctx = getSharedAudioContext();
+        if (ctx) {
           if (ctx.state === 'suspended') {
-            ctx.resume();
+            ctx.resume().then(() => {
+              isAudioUnlockedRef.current = true;
+              console.log('[NOTIFICATION_SOUND] user_interaction_unlocked');
+            }).catch(e => {
+              console.warn('[NOTIFICATION_SOUND] autoplay_blocked', e);
+            });
+          } else if (ctx.state === 'running') {
+            isAudioUnlockedRef.current = true;
+            console.log('[NOTIFICATION_SOUND] user_interaction_unlocked');
           }
         }
-      } catch (e) {}
-      window.removeEventListener('click', unlockAudioOnTouch);
-      window.removeEventListener('touchstart', unlockAudioOnTouch);
+      } catch (e) {
+        console.warn('[NOTIFICATION_SOUND] unlock error:', e);
+      }
     };
 
-    window.addEventListener('click', unlockAudioOnTouch);
-    window.addEventListener('touchstart', unlockAudioOnTouch);
+    const gestureEvents = ['click', 'pointerdown', 'touchstart', 'keydown', 'mousedown'];
+    gestureEvents.forEach(evt => window.addEventListener(evt, unlockAudioOnGesture, { passive: true }));
 
     return () => {
-      window.removeEventListener('click', unlockAudioOnTouch);
-      window.removeEventListener('touchstart', unlockAudioOnTouch);
+      gestureEvents.forEach(evt => window.removeEventListener(evt, unlockAudioOnGesture));
     };
   }, [token]);
 
@@ -216,7 +222,41 @@ export default function AdminDashboard({ token, username, slug: propSlug = '', o
 
   const pendingLoopRef = useRef(null);
   const activeAudioCtxRef = useRef(null);
+  const sharedAudioCtxRef = useRef(null);
+  const isAudioUnlockedRef = useRef(false);
+  const activePresenceAlertIntervalRef = useRef(null);
+  const activeWaiterBellIntervalRef = useRef(null);
   const pendingUpdatesRef = useRef(new Map());
+
+  const getSharedAudioContext = () => {
+    try {
+      const AudioCtx = window.AudioContext || window.webkitAudioContext;
+      if (!AudioCtx) return null;
+      if (!sharedAudioCtxRef.current || sharedAudioCtxRef.current.state === 'closed') {
+        sharedAudioCtxRef.current = new AudioCtx();
+        console.log('[NOTIFICATION_SOUND] initialized');
+      }
+      return sharedAudioCtxRef.current;
+    } catch (e) {
+      console.warn('[NOTIFICATION_SOUND] getSharedAudioContext error:', e);
+      return null;
+    }
+  };
+
+  const ensureAudioRunning = async () => {
+    const ctx = getSharedAudioContext();
+    if (!ctx) return null;
+    if (ctx.state === 'suspended') {
+      try {
+        await ctx.resume();
+        isAudioUnlockedRef.current = true;
+      } catch (err) {
+        console.warn('[NOTIFICATION_SOUND] autoplay_blocked');
+        return null;
+      }
+    }
+    return ctx;
+  };
 
   const stopPendingAlarm = () => {
     if (pendingLoopRef.current) {
@@ -239,7 +279,7 @@ export default function AdminDashboard({ token, username, slug: propSlug = '', o
       const ctx = new AudioCtx();
       activeAudioCtxRef.current = ctx;
       if (ctx.state === 'suspended') {
-        ctx.resume();
+        ctx.resume().catch(() => {});
       }
 
       // 🚨 Super Loud Zomato/Swiggy Style 8-Cycle Emergency Order Siren Ringtone 🚨
@@ -312,15 +352,72 @@ export default function AdminDashboard({ token, username, slug: propSlug = '', o
     };
   }, [orders]);
 
-  const playWaiterBellChime = () => {
+  const playSinglePresenceTone = (ctx) => {
+    if (!ctx) return;
     try {
-      const AudioCtx = window.AudioContext || window.webkitAudioContext;
-      if (!AudioCtx) return;
-      const ctx = new AudioCtx();
-      if (ctx.state === 'suspended') {
-        ctx.resume();
+      // 🛡️ High Attention Ascending 4-Tone Shield Sequence (C5 -> E5 -> G5 -> C6 with harmonic chime)
+      const tones = [
+        { freq: 523.25, start: 0.00, duration: 0.22, wave: 'sine', gain: 0.8 },
+        { freq: 659.25, start: 0.14, duration: 0.22, wave: 'sine', gain: 0.85 },
+        { freq: 783.99, start: 0.28, duration: 0.25, wave: 'triangle', gain: 0.9 },
+        { freq: 1046.50, start: 0.42, duration: 0.45, wave: 'sine', gain: 1.0 },
+        { freq: 2093.00, start: 0.42, duration: 0.35, wave: 'sine', gain: 0.4 } // Sparkling shimmer
+      ];
+
+      tones.forEach(t => {
+        const osc = ctx.createOscillator();
+        const gain = ctx.createGain();
+        osc.type = t.wave;
+        osc.frequency.setValueAtTime(t.freq, ctx.currentTime + t.start);
+        gain.gain.setValueAtTime(t.gain, ctx.currentTime + t.start);
+        gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + t.start + t.duration);
+        osc.connect(gain);
+        gain.connect(ctx.destination);
+        osc.start(ctx.currentTime + t.start);
+        osc.stop(ctx.currentTime + t.start + t.duration);
+      });
+    } catch (err) {
+      console.warn('[NOTIFICATION_SOUND] play_failed:', err);
+    }
+  };
+
+  const playPresenceVerificationAlert = () => {
+    try {
+      console.log('[NOTIFICATION_SOUND] play_started', { type: 'presence_verification' });
+      if (activePresenceAlertIntervalRef.current) {
+        clearInterval(activePresenceAlertIntervalRef.current);
+        activePresenceAlertIntervalRef.current = null;
       }
 
+      ensureAudioRunning().then(ctx => {
+        if (!ctx) return;
+        const startTime = Date.now();
+        playSinglePresenceTone(ctx);
+
+        activePresenceAlertIntervalRef.current = setInterval(() => {
+          if (Date.now() - startTime >= 4500) {
+            clearInterval(activePresenceAlertIntervalRef.current);
+            activePresenceAlertIntervalRef.current = null;
+            console.log('[NOTIFICATION_SOUND] play_completed', { type: 'presence_verification' });
+          } else {
+            playSinglePresenceTone(ctx);
+          }
+        }, 1200);
+      }).catch(err => {
+        console.warn('[NOTIFICATION_SOUND] play_failed:', err);
+      });
+
+      if ('vibrate' in navigator) {
+        navigator.vibrate([400, 150, 400, 150, 400]);
+      }
+    } catch (e) {
+      console.warn('[NOTIFICATION_SOUND] play_failed:', e);
+    }
+  };
+
+  const playSingleWaiterBellTone = (ctx) => {
+    if (!ctx) return;
+    try {
       // 🛎️ Loud 3-Cycle Reception Bell Chime (880Hz -> 1320Hz -> 1760Hz)
       const tones = [
         { freq: 880, start: 0.0, duration: 0.30 },
@@ -340,24 +437,62 @@ export default function AdminDashboard({ token, username, slug: propSlug = '', o
         osc.start(ctx.currentTime + t.start);
         osc.stop(ctx.currentTime + t.start + t.duration);
       });
-    } catch (e) {
-      console.warn('Waiter Bell Chime error:', e);
+    } catch (err) {
+      console.warn('[NOTIFICATION_SOUND] play_failed:', err);
     }
   };
 
   const playWaiterBellFor6Seconds = () => {
     try {
-      const startTime = Date.now();
-      playWaiterBellChime();
-      const bellInterval = setInterval(() => {
-        if (Date.now() - startTime >= 6000) {
-          clearInterval(bellInterval);
-        } else {
-          playWaiterBellChime();
-        }
-      }, 1200);
+      console.log('[NOTIFICATION_SOUND] play_started', { type: 'waiter_bell' });
+      if (activeWaiterBellIntervalRef.current) {
+        clearInterval(activeWaiterBellIntervalRef.current);
+        activeWaiterBellIntervalRef.current = null;
+      }
+
+      ensureAudioRunning().then(ctx => {
+        if (!ctx) return;
+        const startTime = Date.now();
+        playSingleWaiterBellTone(ctx);
+
+        activeWaiterBellIntervalRef.current = setInterval(() => {
+          if (Date.now() - startTime >= 6000) {
+            clearInterval(activeWaiterBellIntervalRef.current);
+            activeWaiterBellIntervalRef.current = null;
+            console.log('[NOTIFICATION_SOUND] play_completed', { type: 'waiter_bell' });
+          } else {
+            playSingleWaiterBellTone(ctx);
+          }
+        }, 1200);
+      }).catch(err => {
+        console.warn('[NOTIFICATION_SOUND] play_failed:', err);
+      });
     } catch (e) {
-      console.warn('6-second Waiter Bell error:', e);
+      console.warn('[NOTIFICATION_SOUND] play_failed:', e);
+    }
+  };
+
+  const triggerPresenceVerificationNotification = (tableLabel, requestId) => {
+    try {
+      if ('Notification' in window && Notification.permission === 'granted') {
+        const notif = new Notification(`🛡️ ${tableLabel}: PRESENCE VERIFICATION!`, {
+          body: `Customer is requesting table presence verification to place order (Request #P-${requestId}). Click to approve.`,
+          icon: '/favicon.svg',
+          badge: '/favicon.svg',
+          tag: `presence-${requestId}`,
+          requireInteraction: true,
+          vibrate: [400, 150, 400, 150, 400]
+        });
+        notif.onclick = () => {
+          window.focus();
+          notif.close();
+        };
+      }
+      if ('vibrate' in navigator) {
+        navigator.vibrate([400, 150, 400, 150, 400]);
+      }
+    } catch (e) {
+      console.warn('[NOTIFICATION_SOUND] Background notification error:', e);
     }
   };
 
@@ -434,23 +569,35 @@ export default function AdminDashboard({ token, username, slug: propSlug = '', o
       // 🛎️ Dedicated Waiter Call / Service Request Alert Trigger
       const newServiceCalls = safeReqs.filter(r => !prevServiceReqIdsRef.current.has(String(r.id)));
       if (newServiceCalls.length > 0 && prevServiceReqIdsRef.current.size > 0) {
-        playWaiterBellFor6Seconds();
-        const latestCall = newServiceCalls[0];
-        const rawTbl = String(latestCall.table_number || '1');
-        const formattedTbl = (rawTbl.toLowerCase().includes('table') || rawTbl.toLowerCase().includes('cabin') || rawTbl.toLowerCase().includes('room') || rawTbl.toLowerCase().includes('vip'))
-          ? rawTbl 
-          : `Table #${rawTbl}`;
-        if (latestCall.request_type === 'presence_verification') {
+        const presenceCalls = newServiceCalls.filter(r => r.request_type === 'presence_verification');
+        const waiterCalls = newServiceCalls.filter(r => r.request_type !== 'presence_verification');
+
+        if (presenceCalls.length > 0) {
+          const latestCall = presenceCalls[0];
+          const rawTbl = String(latestCall.table_number || '1');
+          const formattedTbl = (rawTbl.toLowerCase().includes('table') || rawTbl.toLowerCase().includes('cabin') || rawTbl.toLowerCase().includes('room') || rawTbl.toLowerCase().includes('vip'))
+            ? rawTbl 
+            : `Table #${rawTbl}`;
+          console.log('[NOTIFICATION_SOUND] new_presence_request', { id: latestCall.id, table: formattedTbl });
+          playPresenceVerificationAlert();
+          triggerPresenceVerificationNotification(formattedTbl, latestCall.id);
           setToastMessage(`🛡️ ${formattedTbl}: Table Presence Verification Requested!`);
-        } else {
+        } else if (waiterCalls.length > 0) {
+          const latestCall = waiterCalls[0];
+          const rawTbl = String(latestCall.table_number || '1');
+          const formattedTbl = (rawTbl.toLowerCase().includes('table') || rawTbl.toLowerCase().includes('cabin') || rawTbl.toLowerCase().includes('room') || rawTbl.toLowerCase().includes('vip'))
+            ? rawTbl 
+            : `Table #${rawTbl}`;
+          console.log('[NOTIFICATION_SOUND] new_waiter_request', { id: latestCall.id, type: latestCall.request_type, table: formattedTbl });
+          playWaiterBellFor6Seconds();
           setToastMessage(`🛎️ ${formattedTbl} Calling Waiter: "${latestCall.request_type}"!`);
         }
         setTimeout(() => setToastMessage(''), 7000);
       }
       prevServiceReqIdsRef.current = new Set(safeReqs.map(r => String(r.id)));
 
-      // Total active live orders (pending + kitchen + accepted) + waiter calls
-      const activeOrderCount = safeData.filter(o => ['pending', 'kitchen', 'accepted', 'preparing'].includes(o.status)).length + safeReqs.length;
+      // Total active live orders (pending + kitchen + accepted)
+      const activeOrderCount = safeData.filter(o => ['pending', 'kitchen', 'accepted', 'preparing'].includes(o.status)).length;
       if (activeOrderCount > prevPendingCount) {
         playKitchenChime();
         triggerBackgroundNotification(activeOrderCount);
