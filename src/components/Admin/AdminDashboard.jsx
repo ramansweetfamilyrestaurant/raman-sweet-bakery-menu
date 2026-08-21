@@ -420,7 +420,7 @@ export default function AdminDashboard({ token, username, slug: propSlug = '', o
           const formattedTbl = (rawTbl.toLowerCase().includes('table') || rawTbl.toLowerCase().includes('cabin') || rawTbl.toLowerCase().includes('room') || rawTbl.toLowerCase().includes('vip'))
             ? rawTbl 
             : `Table #${rawTbl}`;
-          console.log('[SOUND] presence_request_detected', { id: latestCall.id, table: formattedTbl });
+          console.log('[SOUND_DEBUG] presence_request_detected', { id: latestCall.id, table: formattedTbl });
           playPresenceAlert();
           triggerPresenceVerificationNotification(formattedTbl, latestCall.id);
           setToastMessage(`🛡️ ${formattedTbl}: Table Presence Verification Requested!`);
@@ -430,7 +430,7 @@ export default function AdminDashboard({ token, username, slug: propSlug = '', o
           const formattedTbl = (rawTbl.toLowerCase().includes('table') || rawTbl.toLowerCase().includes('cabin') || rawTbl.toLowerCase().includes('room') || rawTbl.toLowerCase().includes('vip'))
             ? rawTbl 
             : `Table #${rawTbl}`;
-          console.log('[SOUND] waiter_request_detected', { id: latestCall.id, type: latestCall.request_type, table: formattedTbl });
+          console.log('[SOUND_DEBUG] waiter_request_detected', { id: latestCall.id, type: latestCall.request_type, table: formattedTbl });
           playWaiterAlert();
           setToastMessage(`🛎️ ${formattedTbl} Calling Waiter: "${latestCall.request_type}"!`);
         }

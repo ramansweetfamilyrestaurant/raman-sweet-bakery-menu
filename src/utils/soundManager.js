@@ -8,6 +8,10 @@ class NotificationSoundService {
     this.presenceInterval = null;
     this.waiterInterval = null;
     this.listeners = new Set();
+
+    if (typeof window !== 'undefined') {
+      window.testNotificationSound = (type = 'presence') => this.testNotificationSound(type);
+    }
   }
 
   /**
@@ -20,11 +24,11 @@ class NotificationSoundService {
       if (!AudioCtx) return null;
       if (!this.audioCtx || this.audioCtx.state === 'closed') {
         this.audioCtx = new AudioCtx();
-        console.log('[SOUND] state:', this.audioCtx.state);
+        console.log('[SOUND_DEBUG] audio_context_state', this.audioCtx.state);
       }
       return this.audioCtx;
     } catch (e) {
-      console.warn('[SOUND] getAudioContext failed:', e);
+      console.warn('[SOUND_DEBUG] playback_error', e?.message || e);
       return null;
     }
   }
@@ -60,33 +64,47 @@ class NotificationSoundService {
    */
   unlockNotificationSound() {
     if (typeof window === 'undefined') return Promise.resolve(false);
-    console.log('[SOUND] unlock_attempt');
+    console.log('[SOUND_DEBUG] unlock_attempt');
     try {
       const ctx = this.getAudioContext();
       if (!ctx) {
-        console.warn('[SOUND] unlock_failed: AudioContext not supported');
+        console.warn('[SOUND_DEBUG] unlock_failed: AudioContext not supported');
         return Promise.resolve(false);
       }
 
       if (ctx.state === 'suspended') {
         return ctx.resume().then(() => {
-          console.log('[SOUND] unlock_success');
+          console.log('[SOUND_DEBUG] unlock_success', ctx.state);
           this._notifyListeners();
           return true;
         }).catch(err => {
-          console.warn('[SOUND] unlock_failed:', err);
+          console.warn('[SOUND_DEBUG] unlock_failed', err?.message || err);
           return false;
         });
       } else if (ctx.state === 'running') {
-        console.log('[SOUND] unlock_success (already running)');
+        console.log('[SOUND_DEBUG] unlock_success (already running)');
         this._notifyListeners();
         return Promise.resolve(true);
       }
       return Promise.resolve(false);
     } catch (e) {
-      console.warn('[SOUND] unlock_failed:', e);
+      console.warn('[SOUND_DEBUG] unlock_failed', e?.message || e);
       return Promise.resolve(false);
     }
+  }
+
+  async _ensureContextRunning() {
+    const ctx = this.getAudioContext();
+    if (!ctx) return null;
+    if (ctx.state === 'suspended') {
+      try {
+        await ctx.resume();
+        this._notifyListeners();
+      } catch (err) {
+        console.warn('[SOUND_DEBUG] playback_error', err?.message || err);
+      }
+    }
+    return ctx;
   }
 
   /**
@@ -96,6 +114,7 @@ class NotificationSoundService {
   _synthesizePresenceChime(ctx) {
     if (!ctx) return;
     try {
+      const now = ctx.currentTime;
       const tones = [
         { freq: 523.25, start: 0.00, dur: 0.22, wave: 'sine', gain: 0.8 },
         { freq: 659.25, start: 0.14, dur: 0.22, wave: 'sine', gain: 0.85 },
@@ -108,35 +127,36 @@ class NotificationSoundService {
         const osc = ctx.createOscillator();
         const gain = ctx.createGain();
         osc.type = t.wave;
-        osc.frequency.setValueAtTime(t.freq, ctx.currentTime + t.start);
-        gain.gain.setValueAtTime(t.gain, ctx.currentTime + t.start);
-        gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + t.start + t.dur);
+        osc.frequency.setValueAtTime(t.freq, now + t.start);
+        gain.gain.setValueAtTime(0.0001, now + t.start);
+        gain.gain.linearRampToValueAtTime(t.gain, now + t.start + 0.01);
+        gain.gain.exponentialRampToValueAtTime(0.0001, now + t.start + t.dur);
         osc.connect(gain);
         gain.connect(ctx.destination);
-        osc.start(ctx.currentTime + t.start);
-        osc.stop(ctx.currentTime + t.start + t.dur);
+        osc.start(now + t.start);
+        osc.stop(now + t.start + t.dur + 0.05);
       });
     } catch (e) {
-      console.warn('[SOUND] play_failed:', e);
+      console.warn('[SOUND_DEBUG] playback_error', e?.message || e);
     }
   }
 
   /**
    * Play presence verification attention sound alert (3 cycles over ~4.5s)
    */
-  playPresenceAlert() {
-    console.log('[SOUND] play_started', { type: 'presence_verification' });
+  async playPresenceAlert() {
+    console.log('[SOUND_DEBUG] presence_sound_function_called');
     this.stopPresenceAlert();
 
-    const ctx = this.getAudioContext();
+    const ctx = await this._ensureContextRunning();
     if (!ctx) {
-      console.warn('[SOUND] play_failed: No AudioContext');
+      console.warn('[SOUND_DEBUG] playback_failed: No AudioContext');
       return;
     }
 
-    if (ctx.state === 'suspended') {
-      ctx.resume().catch(() => {});
-    }
+    console.log('[SOUND_DEBUG] audio_ready', this.isNotificationSoundReady());
+    console.log('[SOUND_DEBUG] audio_context_state', ctx.state);
+    console.log('[SOUND_DEBUG] playback_started', { type: 'presence_verification' });
 
     const startTime = Date.now();
     this._synthesizePresenceChime(ctx);
@@ -144,6 +164,7 @@ class NotificationSoundService {
     this.presenceInterval = setInterval(() => {
       if (Date.now() - startTime >= 4500) {
         this.stopPresenceAlert();
+        console.log('[SOUND_DEBUG] playback_completed', { type: 'presence_verification' });
       } else {
         this._synthesizePresenceChime(ctx);
       }
@@ -170,6 +191,7 @@ class NotificationSoundService {
   _synthesizeWaiterBell(ctx) {
     if (!ctx) return;
     try {
+      const now = ctx.currentTime;
       const tones = [
         { freq: 880, start: 0.00, dur: 0.30 },
         { freq: 1320, start: 0.18, dur: 0.35 },
@@ -180,35 +202,36 @@ class NotificationSoundService {
         const osc = ctx.createOscillator();
         const gain = ctx.createGain();
         osc.type = 'sine';
-        osc.frequency.setValueAtTime(t.freq, ctx.currentTime + t.start);
-        gain.gain.setValueAtTime(1.0, ctx.currentTime + t.start);
-        gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + t.start + t.dur);
+        osc.frequency.setValueAtTime(t.freq, now + t.start);
+        gain.gain.setValueAtTime(0.0001, now + t.start);
+        gain.gain.linearRampToValueAtTime(1.0, now + t.start + 0.01);
+        gain.gain.exponentialRampToValueAtTime(0.0001, now + t.start + t.dur);
         osc.connect(gain);
         gain.connect(ctx.destination);
-        osc.start(ctx.currentTime + t.start);
-        osc.stop(ctx.currentTime + t.start + t.dur);
+        osc.start(now + t.start);
+        osc.stop(now + t.start + t.dur + 0.05);
       });
     } catch (e) {
-      console.warn('[SOUND] play_failed:', e);
+      console.warn('[SOUND_DEBUG] playback_error', e?.message || e);
     }
   }
 
   /**
    * Play waiter call sound alert (over 6.0 seconds)
    */
-  playWaiterAlert() {
-    console.log('[SOUND] play_started', { type: 'waiter_bell' });
+  async playWaiterAlert() {
+    console.log('[SOUND_DEBUG] waiter_sound_function_called');
     this.stopWaiterAlert();
 
-    const ctx = this.getAudioContext();
+    const ctx = await this._ensureContextRunning();
     if (!ctx) {
-      console.warn('[SOUND] play_failed: No AudioContext');
+      console.warn('[SOUND_DEBUG] playback_failed: No AudioContext');
       return;
     }
 
-    if (ctx.state === 'suspended') {
-      ctx.resume().catch(() => {});
-    }
+    console.log('[SOUND_DEBUG] audio_ready', this.isNotificationSoundReady());
+    console.log('[SOUND_DEBUG] audio_context_state', ctx.state);
+    console.log('[SOUND_DEBUG] playback_started', { type: 'waiter_bell' });
 
     const startTime = Date.now();
     this._synthesizeWaiterBell(ctx);
@@ -216,6 +239,7 @@ class NotificationSoundService {
     this.waiterInterval = setInterval(() => {
       if (Date.now() - startTime >= 6000) {
         this.stopWaiterAlert();
+        console.log('[SOUND_DEBUG] playback_completed', { type: 'waiter_bell' });
       } else {
         this._synthesizeWaiterBell(ctx);
       }
@@ -228,6 +252,17 @@ class NotificationSoundService {
       this.waiterInterval = null;
     }
   }
+
+  /**
+   * Development & verification manual test helper
+   */
+  testNotificationSound(type = 'presence') {
+    console.log('[SOUND_DEBUG] test_sound_started', { type });
+    if (type === 'waiter') {
+      return this.playWaiterAlert();
+    }
+    return this.playPresenceAlert();
+  }
 }
 
 export const soundManager = new NotificationSoundService();
@@ -236,3 +271,4 @@ export const playPresenceAlert = () => soundManager.playPresenceAlert();
 export const playWaiterAlert = () => soundManager.playWaiterAlert();
 export const isNotificationSoundReady = () => soundManager.isNotificationSoundReady();
 export const subscribeAudioState = (cb) => soundManager.subscribeAudioState(cb);
+export const testNotificationSound = (type) => soundManager.testNotificationSound(type);
