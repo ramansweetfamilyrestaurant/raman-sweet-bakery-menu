@@ -703,7 +703,11 @@ export default function AdminDashboard({ token, username, slug: propSlug = '', o
 
       if (extraParams.kitchen_prepared === 1 || extraParams.kitchen_prepared === '1' || extraParams.kitchen_prepared === true) {
         if (!extraParams.silent) {
-          playWaiterBellFor6Seconds();
+          try {
+            playWaiterAlert();
+          } catch (soundErr) {
+            console.warn('[SOUND] Kitchen prepared notification sound failed:', soundErr);
+          }
         }
         const targetOrder = orders.find(o => String(o.id) === key);
         const tblNum = targetOrder?.table_number ? `Table #${targetOrder.table_number}` : `Order #${orderId}`;
@@ -711,7 +715,11 @@ export default function AdminDashboard({ token, username, slug: propSlug = '', o
         setTimeout(() => setToastMessage(''), 5000);
       } else if (newStatus === 'served' || newStatus === 'completed') {
         if (!extraParams.silent) {
-          playWaiterBellChime();
+          try {
+            playWaiterAlert();
+          } catch (soundErr) {
+            console.warn('[SOUND] Order completion notification sound failed:', soundErr);
+          }
         }
         const targetOrder = orders.find(o => String(o.id) === key);
         const tblNum = targetOrder?.table_number ? `Table #${targetOrder.table_number}` : `Order #${orderId}`;
