@@ -10,6 +10,7 @@ import { authenticateToken, requireActiveSubscription, checkSubscriptionStatus }
 import { JWT_SECRET } from '../config/jwt.js';
 import { adminLoginRateLimiter } from '../middleware/rateLimiters.js';
 import { clearRestoResolveCache } from './api.js';
+import { normalizeVerificationMode } from '../utils/presenceVerification.js';
 
 let sharpModule = null;
 async function getSharp() {
@@ -1155,7 +1156,7 @@ const handleUpdateSettings = async (req, res) => {
       return res.status(401).json({ error: 'Restaurant identity is missing from authentication context' });
     }
 
-    const { name, tagline, logo, phone, address, openingHours, google_review_url, google_reviews_enabled, filters_visibility, currency_symbol, fssai_lic_no, resto_type, whatsapp_number, whatsapp_enabled, theme_color, latitude, longitude, max_distance_meters, gst_enabled, gstin_number, total_tables, total_cabins, total_rooms, total_vip, table_prefix, order_retention_days, custom_domain, location_initialized, owner_name, city, state, pincode } = req.body;
+    const { name, tagline, logo, phone, address, openingHours, google_review_url, google_reviews_enabled, filters_visibility, currency_symbol, fssai_lic_no, resto_type, whatsapp_number, whatsapp_enabled, theme_color, latitude, longitude, max_distance_meters, gst_enabled, gstin_number, total_tables, total_cabins, total_rooms, total_vip, table_prefix, order_retention_days, custom_domain, location_initialized, owner_name, city, state, pincode, table_verification_mode, staff_verification_timeout_seconds } = req.body;
 
     let cleanDomain = null;
     if (custom_domain !== undefined) {
@@ -1189,11 +1190,16 @@ const handleUpdateSettings = async (req, res) => {
       ? (location_initialized === true || location_initialized === 1 || location_initialized === 'true' ? true : false) 
       : (latitude && longitude && Number(latitude) !== 0 && Number(longitude) !== 0 ? true : null);
 
+    const cleanVerifMode = table_verification_mode !== undefined ? normalizeVerificationMode(table_verification_mode) : null;
+    const cleanStaffTimeout = staff_verification_timeout_seconds !== undefined
+      ? Math.min(600, Math.max(30, parseInt(staff_verification_timeout_seconds, 10) || 120))
+      : null;
+
     try {
       await query(`
         UPDATE restaurants 
-        SET name = COALESCE($1, name), tagline = COALESCE($2, tagline), logo = CASE WHEN $3::text IS NOT NULL THEN $3 ELSE logo END, phone = COALESCE($4, phone), address = COALESCE($5, address), opening_hours = COALESCE($6, opening_hours), google_review_url = COALESCE($7, google_review_url), filters_visibility = COALESCE($8, filters_visibility), currency_symbol = COALESCE($9, currency_symbol), fssai_lic_no = COALESCE($10, fssai_lic_no), resto_type = COALESCE($11, resto_type), whatsapp_number = COALESCE($12, whatsapp_number), whatsapp_enabled = COALESCE($13, whatsapp_enabled), theme_color = COALESCE($14, theme_color), latitude = COALESCE($15, latitude), longitude = COALESCE($16, longitude), max_distance_meters = COALESCE($17, max_distance_meters), gst_enabled = COALESCE($18, gst_enabled), gstin_number = COALESCE($19, gstin_number), total_tables = COALESCE($20, total_tables), total_cabins = COALESCE($21, total_cabins), total_rooms = COALESCE($22, total_rooms), total_vip = COALESCE($23, total_vip), table_prefix = COALESCE($24, table_prefix), order_retention_days = COALESCE($25, order_retention_days), google_reviews_enabled = COALESCE($26, google_reviews_enabled), custom_domain = CASE WHEN $27::text IS NOT NULL THEN $27 ELSE custom_domain END, location_initialized = COALESCE($28, location_initialized), owner_name = COALESCE($29, owner_name), city = COALESCE($30, city), state = COALESCE($31, state), pincode = COALESCE($32, pincode)
-        WHERE id = $33
+        SET name = COALESCE($1, name), tagline = COALESCE($2, tagline), logo = CASE WHEN $3::text IS NOT NULL THEN $3 ELSE logo END, phone = COALESCE($4, phone), address = COALESCE($5, address), opening_hours = COALESCE($6, opening_hours), google_review_url = COALESCE($7, google_review_url), filters_visibility = COALESCE($8, filters_visibility), currency_symbol = COALESCE($9, currency_symbol), fssai_lic_no = COALESCE($10, fssai_lic_no), resto_type = COALESCE($11, resto_type), whatsapp_number = COALESCE($12, whatsapp_number), whatsapp_enabled = COALESCE($13, whatsapp_enabled), theme_color = COALESCE($14, theme_color), latitude = COALESCE($15, latitude), longitude = COALESCE($16, longitude), max_distance_meters = COALESCE($17, max_distance_meters), gst_enabled = COALESCE($18, gst_enabled), gstin_number = COALESCE($19, gstin_number), total_tables = COALESCE($20, total_tables), total_cabins = COALESCE($21, total_cabins), total_rooms = COALESCE($22, total_rooms), total_vip = COALESCE($23, total_vip), table_prefix = COALESCE($24, table_prefix), order_retention_days = COALESCE($25, order_retention_days), google_reviews_enabled = COALESCE($26, google_reviews_enabled), custom_domain = CASE WHEN $27::text IS NOT NULL THEN $27 ELSE custom_domain END, location_initialized = COALESCE($28, location_initialized), owner_name = COALESCE($29, owner_name), city = COALESCE($30, city), state = COALESCE($31, state), pincode = COALESCE($32, pincode), table_verification_mode = COALESCE($33, table_verification_mode), staff_verification_timeout_seconds = COALESCE($34, staff_verification_timeout_seconds)
+        WHERE id = $35
       `, [
         name !== undefined ? name : null,
         tagline !== undefined ? tagline : null,
@@ -1227,19 +1233,23 @@ const handleUpdateSettings = async (req, res) => {
         city !== undefined ? city : null,
         state !== undefined ? state : null,
         pincode !== undefined ? pincode : null,
+        cleanVerifMode,
+        cleanStaffTimeout,
         targetId
       ]);
     } catch (sqlErr) {
-      if (sqlErr.message && (sqlErr.message.includes('total_') || sqlErr.message.includes('table_prefix') || sqlErr.message.includes('column'))) {
+      if (sqlErr.message && (sqlErr.message.includes('total_') || sqlErr.message.includes('table_prefix') || sqlErr.message.includes('column') || sqlErr.message.includes('verification'))) {
         try {
           await query("ALTER TABLE restaurants ADD COLUMN IF NOT EXISTS total_cabins INT DEFAULT 0");
           await query("ALTER TABLE restaurants ADD COLUMN IF NOT EXISTS total_rooms INT DEFAULT 0");
           await query("ALTER TABLE restaurants ADD COLUMN IF NOT EXISTS total_vip INT DEFAULT 0");
           await query("ALTER TABLE restaurants ADD COLUMN IF NOT EXISTS table_prefix VARCHAR(50) DEFAULT 'table'");
+          await query("ALTER TABLE restaurants ADD COLUMN IF NOT EXISTS table_verification_mode VARCHAR(50) DEFAULT 'GPS_WITH_STAFF_FALLBACK'");
+          await query("ALTER TABLE restaurants ADD COLUMN IF NOT EXISTS staff_verification_timeout_seconds INT DEFAULT 120");
           await query(`
             UPDATE restaurants 
-            SET name = COALESCE($1, name), tagline = COALESCE($2, tagline), logo = CASE WHEN $3::text IS NOT NULL THEN $3 ELSE logo END, phone = COALESCE($4, phone), address = COALESCE($5, address), opening_hours = COALESCE($6, opening_hours), google_review_url = COALESCE($7, google_review_url), filters_visibility = COALESCE($8, filters_visibility), currency_symbol = COALESCE($9, currency_symbol), fssai_lic_no = COALESCE($10, fssai_lic_no), resto_type = COALESCE($11, resto_type), whatsapp_number = COALESCE($12, whatsapp_number), whatsapp_enabled = COALESCE($13, whatsapp_enabled), theme_color = COALESCE($14, theme_color), latitude = COALESCE($15, latitude), longitude = COALESCE($16, longitude), max_distance_meters = COALESCE($17, max_distance_meters), gst_enabled = COALESCE($18, gst_enabled), gstin_number = COALESCE($19, gstin_number), total_tables = COALESCE($20, total_tables), total_cabins = COALESCE($21, total_cabins), total_rooms = COALESCE($22, total_rooms), total_vip = COALESCE($23, total_vip), table_prefix = COALESCE($24, table_prefix), order_retention_days = COALESCE($25, order_retention_days), google_reviews_enabled = COALESCE($26, google_reviews_enabled), custom_domain = CASE WHEN $27::text IS NOT NULL THEN $27 ELSE custom_domain END, location_initialized = COALESCE($28, location_initialized), owner_name = COALESCE($29, owner_name), city = COALESCE($30, city), state = COALESCE($31, state), pincode = COALESCE($32, pincode)
-            WHERE id = $33
+            SET name = COALESCE($1, name), tagline = COALESCE($2, tagline), logo = CASE WHEN $3::text IS NOT NULL THEN $3 ELSE logo END, phone = COALESCE($4, phone), address = COALESCE($5, address), opening_hours = COALESCE($6, opening_hours), google_review_url = COALESCE($7, google_review_url), filters_visibility = COALESCE($8, filters_visibility), currency_symbol = COALESCE($9, currency_symbol), fssai_lic_no = COALESCE($10, fssai_lic_no), resto_type = COALESCE($11, resto_type), whatsapp_number = COALESCE($12, whatsapp_number), whatsapp_enabled = COALESCE($13, whatsapp_enabled), theme_color = COALESCE($14, theme_color), latitude = COALESCE($15, latitude), longitude = COALESCE($16, longitude), max_distance_meters = COALESCE($17, max_distance_meters), gst_enabled = COALESCE($18, gst_enabled), gstin_number = COALESCE($19, gstin_number), total_tables = COALESCE($20, total_tables), total_cabins = COALESCE($21, total_cabins), total_rooms = COALESCE($22, total_rooms), total_vip = COALESCE($23, total_vip), table_prefix = COALESCE($24, table_prefix), order_retention_days = COALESCE($25, order_retention_days), google_reviews_enabled = COALESCE($26, google_reviews_enabled), custom_domain = CASE WHEN $27::text IS NOT NULL THEN $27 ELSE custom_domain END, location_initialized = COALESCE($28, location_initialized), owner_name = COALESCE($29, owner_name), city = COALESCE($30, city), state = COALESCE($31, state), pincode = COALESCE($32, pincode), table_verification_mode = COALESCE($33, table_verification_mode), staff_verification_timeout_seconds = COALESCE($34, staff_verification_timeout_seconds)
+            WHERE id = $35
           `, [
             name !== undefined ? name : null,
             tagline !== undefined ? tagline : null,
@@ -1273,10 +1283,12 @@ const handleUpdateSettings = async (req, res) => {
             city !== undefined ? city : null,
             state !== undefined ? state : null,
             pincode !== undefined ? pincode : null,
+            cleanVerifMode,
+            cleanStaffTimeout,
             targetId
           ]);
         } catch (innerErr) {
-          console.error('Failed auto-adding space columns:', innerErr);
+          console.error('Failed auto-adding presence columns:', innerErr);
         }
       } else {
         throw sqlErr;
@@ -1495,6 +1507,178 @@ router.patch('/service-requests/:id/resolve', authenticateToken, requireActiveSu
   } catch (err) {
     console.error('Resolve service request error:', err);
     res.status(500).json({ error: 'Failed to resolve service request' });
+  }
+});
+
+// PATCH Approve Table Presence Verification Request (TENANT-ISOLATED)
+router.patch('/service-requests/:id/approve-presence', authenticateToken, requireActiveSubscription, async (req, res) => {
+  try {
+    const targetId = req.user?.restaurant_id;
+    if (!targetId) {
+      return res.status(401).json({ error: 'Restaurant identity is missing from authentication context' });
+    }
+    const { id } = req.params;
+
+    // 1. Fetch Service Request scoped to tenant
+    const srRows = await query(
+      "SELECT * FROM service_requests WHERE id = $1 AND restaurant_id = $2 AND request_type = 'presence_verification'",
+      [id, targetId]
+    );
+    if (!srRows || srRows.length === 0) {
+      return res.status(404).json({ error: 'service_request_not_found', message: 'Presence verification service request not found' });
+    }
+    const sr = srRows[0];
+
+    // 2. Extract verification token from note (or fallback to space/table search)
+    let tokenMatch = sr.note ? sr.note.match(/tq_staff_[a-f0-9]+/i) : null;
+    let vToken = tokenMatch ? tokenMatch[0] : null;
+
+    let verifQuery = vToken
+      ? 'SELECT * FROM table_location_verifications WHERE verification_token = $1 AND restaurant_id = $2'
+      : 'SELECT * FROM table_location_verifications WHERE restaurant_id = $1 AND table_number = $2 AND verification_method = \'STAFF\' AND status = \'pending\' ORDER BY id DESC LIMIT 1';
+    let verifParams = vToken ? [vToken, targetId] : [targetId, sr.table_number];
+
+    const verifRows = await query(verifQuery, verifParams);
+    if (!verifRows || verifRows.length === 0) {
+      return res.status(404).json({ error: 'verification_record_not_found', message: 'Linked presence verification record not found' });
+    }
+    const verifRecord = verifRows[0];
+
+    // 3. Check expiration
+    if (new Date(verifRecord.expires_at).getTime() <= Date.now()) {
+      await query("UPDATE table_location_verifications SET status = 'expired' WHERE id = $1", [verifRecord.id]);
+      await query("UPDATE service_requests SET status = 'resolved' WHERE id = $1 AND restaurant_id = $2", [id, targetId]);
+      return res.status(400).json({ error: 'request_expired', message: 'This presence verification request has already expired.' });
+    }
+
+    // 4. Atomically approve
+    const nowIso = new Date().toISOString();
+    await query(
+      `UPDATE table_location_verifications 
+       SET status = 'verified', verification_method = 'STAFF', approved_by_admin_id = $1, verified_at = $2
+       WHERE id = $3 AND restaurant_id = $4`,
+      [req.user.id || null, nowIso, verifRecord.id, targetId]
+    );
+
+    // 5. Resolve service request
+    await query("UPDATE service_requests SET status = 'resolved' WHERE id = $1 AND restaurant_id = $2", [id, targetId]);
+
+    return res.json({
+      success: true,
+      id,
+      verification_token: verifRecord.verification_token,
+      status: 'verified',
+      table_number: verifRecord.table_number,
+      message: `✓ Table ${verifRecord.table_number} presence approved successfully.`
+    });
+  } catch (err) {
+    console.error('Approve presence verification error:', err);
+    res.status(500).json({ error: 'Failed to approve presence verification' });
+  }
+});
+
+// PATCH Reject Table Presence Verification Request (TENANT-ISOLATED)
+router.patch('/service-requests/:id/reject-presence', authenticateToken, requireActiveSubscription, async (req, res) => {
+  try {
+    const targetId = req.user?.restaurant_id;
+    if (!targetId) {
+      return res.status(401).json({ error: 'Restaurant identity is missing from authentication context' });
+    }
+    const { id } = req.params;
+    const { rejection_reason } = req.body || {};
+
+    const srRows = await query(
+      "SELECT * FROM service_requests WHERE id = $1 AND restaurant_id = $2 AND request_type = 'presence_verification'",
+      [id, targetId]
+    );
+    if (!srRows || srRows.length === 0) {
+      return res.status(404).json({ error: 'service_request_not_found', message: 'Presence verification service request not found' });
+    }
+    const sr = srRows[0];
+
+    let tokenMatch = sr.note ? sr.note.match(/tq_staff_[a-f0-9]+/i) : null;
+    let vToken = tokenMatch ? tokenMatch[0] : null;
+
+    let verifQuery = vToken
+      ? 'SELECT * FROM table_location_verifications WHERE verification_token = $1 AND restaurant_id = $2'
+      : 'SELECT * FROM table_location_verifications WHERE restaurant_id = $1 AND table_number = $2 AND verification_method = \'STAFF\' AND status = \'pending\' ORDER BY id DESC LIMIT 1';
+    let verifParams = vToken ? [vToken, targetId] : [targetId, sr.table_number];
+
+    const verifRows = await query(verifQuery, verifParams);
+    if (verifRows && verifRows.length > 0) {
+      const verifRecord = verifRows[0];
+      await query(
+        `UPDATE table_location_verifications 
+         SET status = 'rejected', rejection_reason = $1, approved_by_admin_id = $2
+         WHERE id = $3 AND restaurant_id = $4`,
+        [rejection_reason || 'Rejected by staff', req.user.id || null, verifRecord.id, targetId]
+      );
+    }
+
+    await query("UPDATE service_requests SET status = 'resolved' WHERE id = $1 AND restaurant_id = $2", [id, targetId]);
+
+    return res.json({
+      success: true,
+      id,
+      status: 'rejected',
+      message: `Presence verification rejected for Table ${sr.table_number}.`
+    });
+  } catch (err) {
+    console.error('Reject presence verification error:', err);
+    res.status(500).json({ error: 'Failed to reject presence verification' });
+  }
+});
+
+// PATCH Direct Token Approve (TENANT-ISOLATED)
+router.patch('/presence-verifications/:token/approve', authenticateToken, requireActiveSubscription, async (req, res) => {
+  try {
+    const targetId = req.user?.restaurant_id;
+    if (!targetId) return res.status(401).json({ error: 'Unauthorized' });
+    const { token } = req.params;
+
+    const rows = await query('SELECT * FROM table_location_verifications WHERE verification_token = $1 AND restaurant_id = $2', [token, targetId]);
+    if (!rows || rows.length === 0) return res.status(404).json({ error: 'verification_not_found' });
+    const record = rows[0];
+
+    if (new Date(record.expires_at).getTime() <= Date.now()) {
+      await query("UPDATE table_location_verifications SET status = 'expired' WHERE id = $1", [record.id]);
+      return res.status(400).json({ error: 'request_expired', message: 'Verification request has expired.' });
+    }
+
+    const nowIso = new Date().toISOString();
+    await query(
+      "UPDATE table_location_verifications SET status = 'verified', verification_method = 'STAFF', approved_by_admin_id = $1, verified_at = $2 WHERE id = $3 AND restaurant_id = $4",
+      [req.user.id || null, nowIso, record.id, targetId]
+    );
+    await query("UPDATE service_requests SET status = 'resolved' WHERE note LIKE $1 AND restaurant_id = $2", [`%${token}%`, targetId]);
+
+    res.json({ success: true, verification_token: token, status: 'verified', message: 'Approved successfully' });
+  } catch (err) {
+    res.status(500).json({ error: 'Failed to approve verification' });
+  }
+});
+
+// PATCH Direct Token Reject (TENANT-ISOLATED)
+router.patch('/presence-verifications/:token/reject', authenticateToken, requireActiveSubscription, async (req, res) => {
+  try {
+    const targetId = req.user?.restaurant_id;
+    if (!targetId) return res.status(401).json({ error: 'Unauthorized' });
+    const { token } = req.params;
+    const { rejection_reason } = req.body || {};
+
+    const rows = await query('SELECT * FROM table_location_verifications WHERE verification_token = $1 AND restaurant_id = $2', [token, targetId]);
+    if (!rows || rows.length === 0) return res.status(404).json({ error: 'verification_not_found' });
+    const record = rows[0];
+
+    await query(
+      "UPDATE table_location_verifications SET status = 'rejected', rejection_reason = $1, approved_by_admin_id = $2 WHERE id = $3 AND restaurant_id = $4",
+      [rejection_reason || 'Rejected by staff', req.user.id || null, record.id, targetId]
+    );
+    await query("UPDATE service_requests SET status = 'resolved' WHERE note LIKE $1 AND restaurant_id = $2", [`%${token}%`, targetId]);
+
+    res.json({ success: true, verification_token: token, status: 'rejected', message: 'Rejected successfully' });
+  } catch (err) {
+    res.status(500).json({ error: 'Failed to reject verification' });
   }
 });
 

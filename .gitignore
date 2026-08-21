@@ -36,7 +36,5 @@ server/testSaaSLocal.js
 server/testSecurityLocal.js
 server/enable_kds_enterprise.cjs
 
-# Server migration scripts (keep in repo but optionally ignore)
-# server/migrate*.js
-# server/populateNeon.js
-# server/resetMenuData.js
+# Uploads & Cache
+public/uploads/

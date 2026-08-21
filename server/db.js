@@ -508,12 +508,40 @@ async function createTables() {
       `ALTER TABLE restaurants ADD COLUMN IF NOT EXISTS owner_name VARCHAR(255);`,
       `ALTER TABLE restaurants ADD COLUMN IF NOT EXISTS city VARCHAR(100);`,
       `ALTER TABLE restaurants ADD COLUMN IF NOT EXISTS state VARCHAR(100);`,
-      `ALTER TABLE restaurants ADD COLUMN IF NOT EXISTS pincode VARCHAR(20);`
+      `ALTER TABLE restaurants ADD COLUMN IF NOT EXISTS pincode VARCHAR(20);`,
+      // Step 2.1 Table Presence Verification Foundation
+      `ALTER TABLE restaurants ADD COLUMN IF NOT EXISTS table_verification_mode VARCHAR(50) DEFAULT 'GPS_WITH_STAFF_FALLBACK';`,
+      `ALTER TABLE restaurants ADD COLUMN IF NOT EXISTS staff_verification_timeout_seconds INT DEFAULT 120;`,
+      `ALTER TABLE saas_plans ADD COLUMN IF NOT EXISTS presence_verification_enabled INT DEFAULT 1;`,
+      `ALTER TABLE saas_plans ADD COLUMN IF NOT EXISTS allowed_verification_modes VARCHAR(255) DEFAULT 'QR_ONLY,GPS_ONLY,GPS_WITH_STAFF_FALLBACK,STAFF_ONLY';`,
+      `ALTER TABLE table_location_verifications ADD COLUMN IF NOT EXISTS space_type VARCHAR(50) DEFAULT 'table';`,
+      `ALTER TABLE table_location_verifications ADD COLUMN IF NOT EXISTS space_number VARCHAR(100);`,
+      `ALTER TABLE table_location_verifications ADD COLUMN IF NOT EXISTS verification_method VARCHAR(20) DEFAULT 'GPS';`,
+      `ALTER TABLE table_location_verifications ADD COLUMN IF NOT EXISTS session_id VARCHAR(100);`,
+      `ALTER TABLE table_location_verifications ADD COLUMN IF NOT EXISTS qr_context_hash VARCHAR(128);`,
+      `ALTER TABLE table_location_verifications ADD COLUMN IF NOT EXISTS requested_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP;`,
+      `ALTER TABLE table_location_verifications ADD COLUMN IF NOT EXISTS approved_by_admin_id INT;`,
+      `ALTER TABLE table_location_verifications ADD COLUMN IF NOT EXISTS rejection_reason TEXT;`,
+      `CREATE INDEX IF NOT EXISTS idx_presence_lookup ON table_location_verifications (restaurant_id, space_type, space_number, status);`,
+      `CREATE INDEX IF NOT EXISTS idx_presence_token ON table_location_verifications (verification_token);`,
+      `CREATE INDEX IF NOT EXISTS idx_presence_session ON table_location_verifications (session_id);`,
+      `CREATE INDEX IF NOT EXISTS idx_presence_expires ON table_location_verifications (expires_at);`
     ];
 
     for (const alt of pgAlters) {
       try { await pgPool.query(alt); } catch (e) { console.warn('Postgres alter query notice:', e.message); }
     }
+
+    try {
+      await pgPool.query(`
+        UPDATE table_location_verifications SET space_type = 'table' WHERE space_type IS NULL;
+        UPDATE table_location_verifications SET space_number = table_number WHERE space_number IS NULL AND table_number IS NOT NULL;
+        UPDATE restaurants SET table_verification_mode = 'GPS_WITH_STAFF_FALLBACK' WHERE table_verification_mode IS NULL;
+        UPDATE restaurants SET staff_verification_timeout_seconds = 120 WHERE staff_verification_timeout_seconds IS NULL;
+        UPDATE saas_plans SET presence_verification_enabled = 1 WHERE presence_verification_enabled IS NULL;
+        UPDATE saas_plans SET allowed_verification_modes = 'QR_ONLY,GPS_ONLY,GPS_WITH_STAFF_FALLBACK,STAFF_ONLY' WHERE allowed_verification_modes IS NULL;
+      `);
+    } catch (e) { console.warn('Postgres presence migration backfill notice:', e.message); }
 
     try {
       await pgPool.query(`
@@ -924,6 +952,29 @@ async function createTables() {
       if (!orderCols.some(c => c.name === 'idempotency_key')) sqliteDb.exec("ALTER TABLE orders ADD COLUMN idempotency_key TEXT");
 
       if (!restoCols.some(c => c.name === 'kds_screen_enabled')) sqliteDb.exec("ALTER TABLE restaurants ADD COLUMN kds_screen_enabled INTEGER DEFAULT 1");
+      if (!restoCols.some(c => c.name === 'table_verification_mode')) sqliteDb.exec("ALTER TABLE restaurants ADD COLUMN table_verification_mode TEXT DEFAULT 'GPS_WITH_STAFF_FALLBACK'");
+      if (!restoCols.some(c => c.name === 'staff_verification_timeout_seconds')) sqliteDb.exec("ALTER TABLE restaurants ADD COLUMN staff_verification_timeout_seconds INTEGER DEFAULT 120");
+
+      if (!planCols.some(c => c.name === 'presence_verification_enabled')) sqliteDb.exec("ALTER TABLE saas_plans ADD COLUMN presence_verification_enabled INTEGER DEFAULT 1");
+      if (!planCols.some(c => c.name === 'allowed_verification_modes')) sqliteDb.exec("ALTER TABLE saas_plans ADD COLUMN allowed_verification_modes TEXT DEFAULT 'QR_ONLY,GPS_ONLY,GPS_WITH_STAFF_FALLBACK,STAFF_ONLY'");
+
+      const locCols = sqliteDb.pragma("table_info(table_location_verifications)");
+      if (!locCols.some(c => c.name === 'space_type')) sqliteDb.exec("ALTER TABLE table_location_verifications ADD COLUMN space_type TEXT DEFAULT 'table'");
+      if (!locCols.some(c => c.name === 'space_number')) sqliteDb.exec("ALTER TABLE table_location_verifications ADD COLUMN space_number TEXT");
+      if (!locCols.some(c => c.name === 'verification_method')) sqliteDb.exec("ALTER TABLE table_location_verifications ADD COLUMN verification_method TEXT DEFAULT 'GPS'");
+      if (!locCols.some(c => c.name === 'session_id')) sqliteDb.exec("ALTER TABLE table_location_verifications ADD COLUMN session_id TEXT");
+      if (!locCols.some(c => c.name === 'qr_context_hash')) sqliteDb.exec("ALTER TABLE table_location_verifications ADD COLUMN qr_context_hash TEXT");
+      if (!locCols.some(c => c.name === 'requested_at')) sqliteDb.exec("ALTER TABLE table_location_verifications ADD COLUMN requested_at TEXT DEFAULT CURRENT_TIMESTAMP");
+      if (!locCols.some(c => c.name === 'approved_by_admin_id')) sqliteDb.exec("ALTER TABLE table_location_verifications ADD COLUMN approved_by_admin_id INTEGER");
+      if (!locCols.some(c => c.name === 'rejection_reason')) sqliteDb.exec("ALTER TABLE table_location_verifications ADD COLUMN rejection_reason TEXT");
+
+      sqliteDb.exec("UPDATE table_location_verifications SET space_type = 'table' WHERE space_type IS NULL");
+      sqliteDb.exec("UPDATE table_location_verifications SET space_number = table_number WHERE space_number IS NULL AND table_number IS NOT NULL");
+
+      sqliteDb.exec("CREATE INDEX IF NOT EXISTS idx_presence_lookup ON table_location_verifications(restaurant_id, space_type, space_number, status)");
+      sqliteDb.exec("CREATE INDEX IF NOT EXISTS idx_presence_token ON table_location_verifications(verification_token)");
+      sqliteDb.exec("CREATE INDEX IF NOT EXISTS idx_presence_session ON table_location_verifications(session_id)");
+      sqliteDb.exec("CREATE INDEX IF NOT EXISTS idx_presence_expires ON table_location_verifications(expires_at)");
 
       sqliteDb.exec("CREATE INDEX IF NOT EXISTS idx_restaurants_active_expires ON restaurants(active, plan_expires_at)");
       sqliteDb.exec("CREATE INDEX IF NOT EXISTS idx_subscriptions_restaurant ON subscriptions(restaurant_id)");

@@ -16,6 +16,17 @@ import {
 import { exchangeAuthCode } from '../services/authCodeService.js';
 import { checkExpiredSubscriptions } from '../subscriptionCron.js';
 import { verifyQrToken, normalizeSpaceType, normalizeSpaceNumber } from '../utils/qrSecurity.js';
+import { 
+  resolveEffectiveVerificationPolicy, 
+  generatePresenceToken, 
+  verifyPresenceToken, 
+  generateQrContextHash, 
+  normalizeVerificationMode, 
+  isValidVerificationMode,
+  VERIFICATION_MODES,
+  GPS_TOLERANCE,
+  calculateEffectiveGpsTolerance
+} from '../utils/presenceVerification.js';
 
 const router = express.Router();
 
@@ -621,6 +632,130 @@ router.get('/combos', async (req, res) => {
   }
 });
 
+// GET Effective Table Presence Verification Policy for Customer Ordering
+router.get('/orders/presence-policy', async (req, res) => {
+  try {
+    const slug = String(req.query.slug || '').trim();
+    if (!slug) {
+      return res.status(400).json({ error: 'missing_slug', message: 'Restaurant slug is required' });
+    }
+
+    const resto = await resolveRestaurant(req, slug);
+    if (!resto) {
+      return res.status(404).json({ error: 'restaurant_not_found', message: 'Restaurant not found' });
+    }
+
+    if (resto.active === 0 || resto.active === false || resto.active === 'false') {
+      return res.status(403).json({ error: 'restaurant_inactive', message: 'Restaurant is currently inactive' });
+    }
+
+    // 1. Fetch SaaS plan permissions
+    let planPermissions = {};
+    try {
+      const planRows = await query('SELECT * FROM saas_plans WHERE key = $1', [resto.plan_tier || 'pro']);
+      if (planRows && planRows.length > 0) {
+        planPermissions = planRows[0];
+      }
+    } catch (planErr) {
+      console.warn('Notice resolving SaaS plan for presence policy:', planErr.message);
+    }
+
+    // 2. Fetch global system settings (if any)
+    let systemPolicy = {};
+    try {
+      const sysRows = await query("SELECT key, value FROM system_settings WHERE key LIKE '%verification%'");
+      if (sysRows && sysRows.length > 0) {
+        sysRows.forEach(r => { systemPolicy[r.key] = r.value; });
+      }
+    } catch (sysErr) {
+      // Table or key might not exist yet
+    }
+
+    // 3. Resolve effective structured policy
+    const policy = resolveEffectiveVerificationPolicy({
+      systemPolicy,
+      planPermissions,
+      restaurantMode: resto.table_verification_mode,
+      staffTimeoutSeconds: resto.staff_verification_timeout_seconds
+    });
+
+    return res.json({
+      success: true,
+      verification_enabled: policy.enabled,
+      mode: policy.mode,
+      allowed_modes: policy.allowedModes,
+      staff_fallback_allowed: policy.staffFallbackAllowed,
+      staff_timeout_seconds: policy.staffTimeoutSeconds
+    });
+  } catch (err) {
+    console.error('Error resolving presence policy:', err);
+    return res.status(500).json({ error: 'Failed to resolve presence verification policy' });
+  }
+});
+
+// GET Presence Verification Status for Customer Polling / Waiting Flow
+router.get('/orders/presence-status/:verificationToken', async (req, res) => {
+  try {
+    const rawToken = String(req.params.verificationToken || '').trim();
+    if (!rawToken) {
+      return res.status(400).json({ error: 'missing_token', message: 'Verification token is required' });
+    }
+
+    const rows = await query(
+      'SELECT v.*, r.slug, r.qr_secret FROM table_location_verifications v JOIN restaurants r ON v.restaurant_id = r.id WHERE v.verification_token = $1',
+      [rawToken]
+    );
+
+    if (!rows || rows.length === 0) {
+      return res.status(404).json({ error: 'verification_not_found', message: 'Verification record not found' });
+    }
+
+    const record = rows[0];
+    let currentStatus = record.status || 'pending';
+
+    // Check expiration if still pending
+    if (currentStatus === 'pending' && record.expires_at) {
+      const expiryMs = new Date(record.expires_at).getTime();
+      if (expiryMs <= Date.now()) {
+        currentStatus = 'expired';
+        try {
+          await query('UPDATE table_location_verifications SET status = $1 WHERE id = $2', ['expired', record.id]);
+        } catch (e) { /* ignore */ }
+      }
+    }
+
+    let presenceToken = null;
+    if (currentStatus === 'verified') {
+      const spaceType = record.space_type || 'table';
+      const spaceNum = record.space_number || record.table_number;
+      presenceToken = generatePresenceToken({
+        verificationToken: record.verification_token,
+        restaurantId: record.restaurant_id,
+        slug: record.slug,
+        spaceType,
+        spaceNumber: spaceNum,
+        verificationMethod: record.verification_method || 'GPS',
+        qrContextHash: record.qr_context_hash || '',
+        sessionId: record.session_id || null
+      });
+    }
+
+    return res.json({
+      success: true,
+      status: currentStatus,
+      method: record.verification_method || 'GPS',
+      space_type: record.space_type || 'table',
+      space_number: record.space_number || record.table_number,
+      expires_at: record.expires_at,
+      presence_token: presenceToken,
+      rejection_reason: currentStatus === 'rejected' ? (record.rejection_reason || 'Rejected by staff') : null
+    });
+  } catch (err) {
+    console.error('Error fetching presence status:', err);
+    return res.status(500).json({ error: 'Failed to fetch presence status' });
+  }
+});
+
 // POST Verify Customer Location against Restaurant Boundary with Authoritative Server QR Validation
 router.post('/orders/verify-location', locationVerifyRateLimiter, async (req, res) => {
   try {
@@ -734,6 +869,8 @@ router.post('/orders/verify-location', locationVerifyRateLimiter, async (req, re
       });
     }
 
+    const qrContextHash = generateQrContextHash(resto.slug, resolvedSpaceType, resolvedSpaceNum, receivedQrToken);
+
     // Step 8: Authoritative Server-Side Geofence Validation (AFTER QR Verification)
     const restoLat = Number(resto.latitude);
     const restoLng = Number(resto.longitude);
@@ -748,24 +885,25 @@ router.post('/orders/verify-location', locationVerifyRateLimiter, async (req, re
       const verificationToken = 'tq_loc_' + crypto.randomBytes(24).toString('hex');
       const expiryMinutes = 20;
       const expiresAt = new Date(Date.now() + expiryMinutes * 60 * 1000);
-      const jwtSecret = process.env.JWT_SECRET || 'touchqr_secure_location_secret_key_2026';
-      const locationSessionToken = jwt.sign(
-        {
-          vtoken: verificationToken,
-          restaurant_id: resto.id,
-          slug: resto.slug,
-          table_number: cleanTable,
-          space_type: resolvedSpaceType,
-          table_token: receivedQrToken
-        },
-        jwtSecret,
-        { expiresIn: `${expiryMinutes}m` }
-      );
+      const presenceToken = generatePresenceToken({
+        verificationToken,
+        restaurantId: resto.id,
+        slug: resto.slug,
+        spaceType: resolvedSpaceType,
+        spaceNumber: resolvedSpaceNum,
+        verificationMethod: 'QR',
+        qrContextHash,
+        expiryMinutes
+      });
+
       return res.json({
+        success: true,
         verified: true,
         required: false,
         verification_token: verificationToken,
-        location_token: locationSessionToken,
+        presence_token: presenceToken,
+        location_token: presenceToken,
+        method: 'QR',
         message: 'Location verification not required for this restaurant'
       });
     }
@@ -776,15 +914,17 @@ router.post('/orders/verify-location', locationVerifyRateLimiter, async (req, re
 
     if (isNaN(custLat) || isNaN(custLng) || custLat === 0 || custLng === 0) {
       return res.status(400).json({
+        success: false,
         verified: false,
         error: 'invalid_coordinates',
         message: 'Valid GPS coordinates are required to verify location.'
       });
     }
 
-    // Accuracy Policy: Reject excessively poor accuracy readings (> 500m)
-    if (custAcc > 500) {
+    // Accuracy Policy: Reject excessively poor accuracy readings (> MAX_REJECT_ACCURACY_METERS)
+    if (custAcc > GPS_TOLERANCE.MAX_REJECT_ACCURACY_METERS) {
       return res.status(400).json({
+        success: false,
         verified: false,
         error: 'low_accuracy',
         accuracy: custAcc,
@@ -794,14 +934,15 @@ router.post('/orders/verify-location', locationVerifyRateLimiter, async (req, re
 
     // Authoritative Server-side geospatial calculation
     const calculatedDistance = calculateHaversineDistance(custLat, custLng, restoLat, restoLng);
-    // Capped tolerance: max 25m buffer
-    const accBuffer = Math.min(custAcc * 0.25, 25);
+    // Configurable bounded accuracy tolerance
+    const accBuffer = calculateEffectiveGpsTolerance(custAcc);
     const effectiveDist = Math.max(0, calculatedDistance - accBuffer);
     const allowedRadius = Number(resto.max_distance_meters) || 100;
 
     if (effectiveDist > allowedRadius) {
       const displayDist = calculatedDistance > 1000 ? `${(calculatedDistance / 1000).toFixed(1)} km` : `${calculatedDistance} meters`;
       return res.status(403).json({
+        success: false,
         verified: false,
         error: 'outside_boundary',
         distance_meters: calculatedDistance,
@@ -814,40 +955,54 @@ router.post('/orders/verify-location', locationVerifyRateLimiter, async (req, re
     const verificationToken = 'tq_loc_' + crypto.randomBytes(24).toString('hex');
     const expiryMinutes = 20;
     const expiresAt = new Date(Date.now() + expiryMinutes * 60 * 1000);
+    const nowIso = new Date().toISOString();
+    const expiresIso = expiresAt.toISOString();
 
     // Save verification record in DB
     try {
-      const nowIso = new Date().toISOString();
-      const expiresIso = expiresAt.toISOString();
       await query(
-        `INSERT INTO table_location_verifications (restaurant_id, table_number, verification_token, distance_meters, accuracy_meters, status, verified_at, expires_at)
-         VALUES ($1, $2, $3, $4, $5, 'verified', $6, $7)`,
-        [resto.id, cleanTable, verificationToken, calculatedDistance, custAcc, nowIso, expiresIso]
+        `INSERT INTO table_location_verifications (
+           restaurant_id, table_number, space_type, space_number, verification_token,
+           distance_meters, accuracy_meters, verification_method, status, qr_context_hash,
+           requested_at, verified_at, expires_at
+         ) VALUES ($1, $2, $3, $4, $5, $6, $7, 'GPS', 'verified', $8, $9, $9, $10)`,
+        [
+          resto.id,
+          cleanTable,
+          resolvedSpaceType,
+          resolvedSpaceNum,
+          verificationToken,
+          calculatedDistance,
+          custAcc,
+          qrContextHash,
+          nowIso,
+          expiresIso
+        ]
       );
     } catch (dbErr) {
       console.warn('Notice saving location verification record:', dbErr.message);
     }
 
     // Sign a secure short-lived opaque session token containing ONLY references (zero lat/lng)
-    const jwtSecret = process.env.JWT_SECRET || 'touchqr_secure_location_secret_key_2026';
-    const locationSessionToken = jwt.sign(
-      {
-        vtoken: verificationToken,
-        restaurant_id: resto.id,
-        slug: resto.slug,
-        table_number: cleanTable,
-        space_type: resolvedSpaceType,
-        table_token: receivedQrToken
-      },
-      jwtSecret,
-      { expiresIn: `${expiryMinutes}m` }
-    );
+    const presenceToken = generatePresenceToken({
+      verificationToken,
+      restaurantId: resto.id,
+      slug: resto.slug,
+      spaceType: resolvedSpaceType,
+      spaceNumber: resolvedSpaceNum,
+      verificationMethod: 'GPS',
+      qrContextHash,
+      expiryMinutes
+    });
 
     return res.json({
+      success: true,
       verified: true,
       required: true,
       verification_token: verificationToken,
-      location_token: locationSessionToken,
+      presence_token: presenceToken,
+      location_token: presenceToken,
+      method: 'GPS',
       distance_meters: calculatedDistance,
       allowed_radius: allowedRadius,
       accuracy: custAcc,
@@ -857,6 +1012,219 @@ router.post('/orders/verify-location', locationVerifyRateLimiter, async (req, re
   } catch (err) {
     console.error('[LOCATION VERIFY ERROR]', err);
     return res.status(500).json({ error: 'Failed to verify location' });
+  }
+});
+
+// POST Customer Request for Staff Presence Verification (Fallback / Staff-Only)
+router.post('/orders/presence/request-staff', locationVerifyRateLimiter, async (req, res) => {
+  try {
+    const {
+      slug,
+      table_number,
+      space_number,
+      space_type,
+      table_token,
+      tkn,
+      token
+    } = req.body;
+
+    if (!slug || typeof slug !== 'string' || slug.trim() === '' || slug.length > 100) {
+      return res.status(400).json({ error: 'missing_slug', message: 'Valid restaurant slug is required' });
+    }
+
+    // 1. Resolve Restaurant Context
+    const resto = await resolveRestaurant(req, slug);
+    if (!resto) {
+      return res.status(404).json({ error: 'restaurant_not_found', message: 'Restaurant not found' });
+    }
+
+    // 2. Validate Restaurant is Active
+    if (resto.active === 0 || resto.active === false || resto.active === 'false') {
+      return res.status(403).json({ error: 'restaurant_inactive', message: 'Restaurant is currently inactive' });
+    }
+
+    // 3. Validate Direct Table Ordering is Enabled
+    if (resto.direct_ordering_enabled === 0 || resto.direct_ordering_enabled === false || resto.direct_ordering_enabled === 'false') {
+      return res.status(403).json({ error: 'ordering_disabled', message: 'Direct table ordering is currently paused by the restaurant.' });
+    }
+
+    // 4. Resolve Canonical Space Type & Number
+    const rawTable = String(space_number || table_number || '').trim();
+    if (!rawTable) {
+      return res.status(400).json({ error: 'invalid_table_number', message: 'Table or space number is required' });
+    }
+    const resolvedSpaceType = normalizeSpaceType(space_type || rawTable || resto.table_prefix || 'table');
+    const resolvedSpaceNum = normalizeSpaceNumber(rawTable);
+    const cleanTable = rawTable;
+
+    // 5. Validate Space Capacity
+    let maxAllowed = 0;
+    if (resolvedSpaceType === 'cabin') {
+      maxAllowed = Number(resto.total_cabins) || Number(resto.total_tables) || 0;
+    } else if (resolvedSpaceType === 'room') {
+      maxAllowed = Number(resto.total_rooms) || Number(resto.total_tables) || 0;
+    } else if (resolvedSpaceType === 'vip') {
+      maxAllowed = Number(resto.total_vip) || Number(resto.total_tables) || 0;
+    } else {
+      maxAllowed = Number(resto.total_tables) || 0;
+    }
+
+    const parsedSpaceNum = parseInt(resolvedSpaceNum, 10);
+    if (maxAllowed > 0 && parsedSpaceNum > maxAllowed) {
+      return res.status(400).json({
+        error: 'invalid_table_number',
+        message: `${resolvedSpaceType} #${resolvedSpaceNum} is not registered for this restaurant.`
+      });
+    }
+
+    // 6. Cryptographic QR Verification
+    const receivedQrToken = String(table_token || tkn || token || '').trim();
+    if (!receivedQrToken) {
+      return res.status(403).json({
+        error: 'invalid_qr',
+        reason: 'missing_token',
+        message: 'A valid Table QR scan token is required to request staff verification.'
+      });
+    }
+
+    const secret = resto.qr_secret || (`${resto.id}_${resto.slug}_tq`);
+    const qrResult = verifyQrToken(
+      resto.slug,
+      resolvedSpaceType,
+      resolvedSpaceNum,
+      secret,
+      receivedQrToken
+    );
+
+    if (!qrResult || !qrResult.valid) {
+      return res.status(403).json({
+        error: 'invalid_qr',
+        reason: qrResult?.reason || 'invalid_token',
+        message: 'QR token verification failed. Please scan the official QR code at your seat.'
+      });
+    }
+
+    const qrContextHash = generateQrContextHash(resto.slug, resolvedSpaceType, resolvedSpaceNum, receivedQrToken);
+
+    // 7. Resolve Effective Verification Policy
+    let planPermissions = {};
+    try {
+      const planRows = await query('SELECT * FROM saas_plans WHERE key = $1', [resto.plan_tier || 'pro']);
+      if (planRows && planRows.length > 0) planPermissions = planRows[0];
+    } catch (planErr) {}
+
+    let systemPolicy = {};
+    try {
+      const sysRows = await query("SELECT key, value FROM system_settings WHERE key LIKE '%verification%'");
+      if (sysRows && sysRows.length > 0) {
+        sysRows.forEach(r => { systemPolicy[r.key] = r.value; });
+      }
+    } catch (sysErr) {}
+
+    const effectivePolicy = resolveEffectiveVerificationPolicy({
+      systemPolicy,
+      planPermissions,
+      restaurantMode: resto.table_verification_mode,
+      staffTimeoutSeconds: resto.staff_verification_timeout_seconds
+    });
+
+    // 8. Policy Check: Is Staff Verification Allowed?
+    if (!effectivePolicy.enabled || effectivePolicy.mode === VERIFICATION_MODES.QR_ONLY) {
+      return res.status(400).json({
+        success: false,
+        error: 'staff_verification_not_allowed',
+        mode: 'QR_ONLY',
+        message: 'Table presence verification is not required for this restaurant. Orders can be placed directly.'
+      });
+    }
+
+    if (effectivePolicy.mode === VERIFICATION_MODES.GPS_ONLY) {
+      return res.status(403).json({
+        success: false,
+        error: 'staff_verification_not_allowed',
+        mode: 'GPS_ONLY',
+        message: 'Staff verification fallback is not enabled for this restaurant. Please use GPS location verification.'
+      });
+    }
+
+    // 9. Prevent Duplicate Pending Requests for Same Table & QR Context
+    const existingPending = await query(
+      `SELECT * FROM table_location_verifications 
+       WHERE restaurant_id = $1 AND space_type = $2 AND space_number = $3 
+         AND qr_context_hash = $4 AND verification_method = 'STAFF' 
+         AND status = 'pending' AND expires_at > CURRENT_TIMESTAMP
+       ORDER BY id DESC LIMIT 1`,
+      [resto.id, resolvedSpaceType, resolvedSpaceNum, qrContextHash]
+    );
+
+    if (existingPending && existingPending.length > 0) {
+      const pendingRecord = existingPending[0];
+      return res.json({
+        success: true,
+        status: 'pending',
+        is_duplicate: true,
+        verification_token: pendingRecord.verification_token,
+        expires_at: pendingRecord.expires_at,
+        poll_after_ms: 2000,
+        message: 'Staff verification request is already pending approval from restaurant staff.'
+      });
+    }
+
+    // 10. Generate Opaque Verification Token & Request Record
+    const verificationToken = 'tq_staff_' + crypto.randomBytes(24).toString('hex');
+    const timeoutSeconds = effectivePolicy.staffTimeoutSeconds || 120;
+    const requestedAt = new Date();
+    const expiresAt = new Date(requestedAt.getTime() + timeoutSeconds * 1000);
+    const requestedIso = requestedAt.toISOString();
+    const expiresIso = expiresAt.toISOString();
+
+    // Insert into table_location_verifications
+    await query(
+      `INSERT INTO table_location_verifications (
+         restaurant_id, table_number, space_type, space_number, verification_token,
+         verification_method, status, qr_context_hash, requested_at, expires_at
+       ) VALUES ($1, $2, $3, $4, $5, 'STAFF', 'pending', $6, $7, $8)`,
+      [
+        resto.id,
+        cleanTable,
+        resolvedSpaceType,
+        resolvedSpaceNum,
+        verificationToken,
+        qrContextHash,
+        requestedIso,
+        expiresIso
+      ]
+    );
+
+    // Insert into service_requests for restaurant admin real-time notification
+    try {
+      await query(
+        `INSERT INTO service_requests (
+           restaurant_id, table_number, request_type, note, status, created_at
+         ) VALUES ($1, $2, 'presence_verification', $3, 'pending', $4)`,
+        [
+          resto.id,
+          cleanTable,
+          `Verification Token: ${verificationToken}`,
+          requestedIso
+        ]
+      );
+    } catch (sErr) {
+      console.warn('Notice creating service_request notification:', sErr.message);
+    }
+
+    return res.json({
+      success: true,
+      status: 'pending',
+      verification_token: verificationToken,
+      expires_at: expiresIso,
+      timeout_seconds: timeoutSeconds,
+      poll_after_ms: 2000,
+      message: `Staff verification request sent to restaurant staff. A waiter will confirm your presence at ${resolvedSpaceType} #${resolvedSpaceNum}.`
+    });
+  } catch (err) {
+    console.error('Error creating staff verification request:', err);
+    return res.status(500).json({ error: 'Failed to request staff verification' });
   }
 });
 
@@ -870,6 +1238,7 @@ router.post('/orders', orderCreationRateLimiter, async (req, res) => {
       table_token,
       tkn,
       token,
+      presence_token,
       location_token,
       verification_token,
       customer_name,
@@ -994,10 +1363,93 @@ router.post('/orders', orderCreationRateLimiter, async (req, res) => {
       });
     }
 
-    // Step 8: Optional distance/location metadata (Non-blocking)
+    // Step 8: Authoritative Table Presence Verification Enforcement
+    let planPermissions = {};
+    try {
+      const planRows = await query('SELECT * FROM saas_plans WHERE key = $1', [resto.plan_tier || 'pro']);
+      if (planRows && planRows.length > 0) planPermissions = planRows[0];
+    } catch (planErr) {}
+
+    let systemPolicy = {};
+    try {
+      const sysRows = await query("SELECT key, value FROM system_settings WHERE key LIKE '%verification%'");
+      if (sysRows && sysRows.length > 0) {
+        sysRows.forEach(r => { systemPolicy[r.key] = r.value; });
+      }
+    } catch (sysErr) {}
+
+    const effectivePolicy = resolveEffectiveVerificationPolicy({
+      systemPolicy,
+      planPermissions,
+      restaurantMode: resto.table_verification_mode,
+      staffTimeoutSeconds: resto.staff_verification_timeout_seconds
+    });
+
+    if (effectivePolicy.enabled && effectivePolicy.mode !== VERIFICATION_MODES.QR_ONLY) {
+      const suppliedPresenceToken = String(presence_token || location_token || '').trim();
+
+      let allowedMethods = ['GPS'];
+      if (effectivePolicy.mode === VERIFICATION_MODES.GPS_WITH_STAFF_FALLBACK) {
+        allowedMethods = ['GPS', 'STAFF'];
+      } else if (effectivePolicy.mode === VERIFICATION_MODES.STAFF_ONLY) {
+        allowedMethods = ['STAFF'];
+      }
+
+      if (!suppliedPresenceToken) {
+        return res.status(403).json({
+          success: false,
+          error: 'presence_required',
+          mode: effectivePolicy.mode,
+          allowed_methods: allowedMethods,
+          staff_fallback_allowed: effectivePolicy.staffFallbackAllowed,
+          staff_timeout_seconds: effectivePolicy.staffTimeoutSeconds,
+          message: 'Table presence verification is required to place table orders.'
+        });
+      }
+
+      const verifCheck = verifyPresenceToken({
+        presenceToken: suppliedPresenceToken,
+        restaurantId: targetId,
+        slug: resto.slug,
+        spaceType: resolvedSpaceType,
+        spaceNumber: resolvedSpaceNum,
+        qrToken: receivedQrToken,
+        allowedMethods
+      });
+
+      if (!verifCheck.valid) {
+        if (verifCheck.reason === 'presence_token_expired') {
+          return res.status(403).json({
+            success: false,
+            error: 'presence_expired',
+            mode: effectivePolicy.mode,
+            allowed_methods: allowedMethods,
+            message: 'Your table presence authorization has expired. Please re-verify to place an order.'
+          });
+        }
+        if (verifCheck.reason === 'method_not_allowed') {
+          return res.status(403).json({
+            success: false,
+            error: 'presence_required',
+            mode: effectivePolicy.mode,
+            allowed_methods: allowedMethods,
+            message: `Verification method '${verifCheck.method}' is not permitted under mode ${effectivePolicy.mode}.`
+          });
+        }
+        return res.status(403).json({
+          success: false,
+          error: 'invalid_presence',
+          reason: verifCheck.reason,
+          mode: effectivePolicy.mode,
+          message: 'Invalid table presence authorization. Please scan the official QR code at your seat and verify your presence.'
+        });
+      }
+    }
+
+    // Step 9: Optional distance/location metadata (Non-blocking)
     let distanceMetersValue = distance_meters !== undefined && distance_meters !== null && !isNaN(Number(distance_meters)) ? Number(distance_meters) : null;
 
-    // Step 9: Check cart + price + availability on SERVER (Only after authorization passes)
+    // Step 10: Check cart + price + availability on SERVER (Only after authorization passes)
     const dbDishes = await query('SELECT id, name, price, price_half, available FROM dishes WHERE restaurant_id = $1', [targetId]);
     const dbCombos = await query('SELECT id, name, price, available FROM combos WHERE restaurant_id = $1', [targetId]);
     const dishMap = new Map((dbDishes || []).map(d => [String(d.id), d]));

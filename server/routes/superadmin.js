@@ -619,6 +619,8 @@ router.get('/plans', authenticateToken, requireSuperAdmin, async (req, res) => {
       watermark_removal_enabled: isTrue(p.watermark_removal_enabled, true),
       custom_domain_enabled: isTrue(p.custom_domain_enabled, true),
       dual_printer_enabled: isTrue(p.dual_printer_enabled, false),
+      presence_verification_enabled: isTrue(p.presence_verification_enabled, true),
+      allowed_verification_modes: p.allowed_verification_modes || 'QR_ONLY,GPS_ONLY,GPS_WITH_STAFF_FALLBACK,STAFF_ONLY',
       enrolled_count: countMap[p.key] || 0
     }));
     res.json(result);
@@ -631,7 +633,7 @@ router.get('/plans', authenticateToken, requireSuperAdmin, async (req, res) => {
 // POST Create New Custom SaaS Plan
 router.post('/plans', authenticateToken, requireSuperAdmin, async (req, res) => {
   try {
-    const { key, name, price, original_price, badge, description, whatsapp_enabled, direct_ordering_enabled, google_reviews_enabled } = req.body;
+    const { key, name, price, original_price, badge, description, whatsapp_enabled, direct_ordering_enabled, google_reviews_enabled, presence_verification_enabled, allowed_verification_modes } = req.body;
     if (!name || !name.trim()) return res.status(400).json({ error: 'Plan name is required' });
 
     const cleanKey = (key || name.toLowerCase().replace(/[^a-z0-9]/g, '_')).trim();
@@ -640,8 +642,8 @@ router.post('/plans', authenticateToken, requireSuperAdmin, async (req, res) => 
     const wVal = toBoolInt(whatsapp_enabled);
 
     await query(`
-      INSERT INTO saas_plans (key, name, price, original_price, badge, description, whatsapp_enabled, whatsapp_ordering_enabled, direct_ordering_enabled, google_reviews_enabled)
-      VALUES ($1, $2, $3, $4, $5, $6, $7, $7, $8, $9)
+      INSERT INTO saas_plans (key, name, price, original_price, badge, description, whatsapp_enabled, whatsapp_ordering_enabled, direct_ordering_enabled, google_reviews_enabled, presence_verification_enabled, allowed_verification_modes)
+      VALUES ($1, $2, $3, $4, $5, $6, $7, $7, $8, $9, $10, $11)
     `, [
       cleanKey,
       name.trim(),
@@ -651,7 +653,9 @@ router.post('/plans', authenticateToken, requireSuperAdmin, async (req, res) => 
       description || '',
       wVal,
       toBoolInt(direct_ordering_enabled),
-      toBoolInt(google_reviews_enabled)
+      toBoolInt(google_reviews_enabled),
+      presence_verification_enabled !== undefined ? toBoolInt(presence_verification_enabled) : 1,
+      allowed_verification_modes || 'QR_ONLY,GPS_ONLY,GPS_WITH_STAFF_FALLBACK,STAFF_ONLY'
     ]);
 
     await logAudit(null, 'superadmin', 'Create SaaS Plan', `Created plan '${name}' (${cleanKey})`);
@@ -672,7 +676,8 @@ router.put('/plans/:key', authenticateToken, requireSuperAdmin, async (req, res)
       modifiers_enabled, staff_roles_enabled, whatsapp_ordering_enabled, direct_ordering_enabled,
       audio_alarm_enabled, order_status_whatsapp_enabled, kds_enabled, bluetooth_kot_enabled,
       google_reviews_enabled, ai_review_enabled, stories_enabled, gst_invoice_enabled,
-      analytics_export_enabled, multi_language_enabled, watermark_removal_enabled, custom_domain_enabled, dual_printer_enabled
+      analytics_export_enabled, multi_language_enabled, watermark_removal_enabled, custom_domain_enabled, dual_printer_enabled,
+      presence_verification_enabled, allowed_verification_modes
     } = req.body;
 
     const toBoolInt = (val) => (val === 1 || val === true || val === '1' || val === 'true') ? 1 : 0;
@@ -705,6 +710,8 @@ router.put('/plans/:key', authenticateToken, requireSuperAdmin, async (req, res)
       toBoolInt(watermark_removal_enabled),
       toBoolInt(custom_domain_enabled),
       toBoolInt(dual_printer_enabled),
+      presence_verification_enabled !== undefined ? toBoolInt(presence_verification_enabled) : 1,
+      allowed_verification_modes !== undefined ? String(allowed_verification_modes) : 'QR_ONLY,GPS_ONLY,GPS_WITH_STAFF_FALLBACK,STAFF_ONLY',
       key
     ];
 
@@ -717,8 +724,8 @@ router.put('/plans/:key', authenticateToken, requireSuperAdmin, async (req, res)
             audio_alarm_enabled = $15, order_status_whatsapp_enabled = $16, kds_enabled = $17, bluetooth_kot_enabled = $18,
             google_reviews_enabled = $19, ai_review_enabled = $20, stories_enabled = $21, gst_invoice_enabled = $22,
             analytics_export_enabled = $23, multi_language_enabled = $24, watermark_removal_enabled = $25, custom_domain_enabled = $26,
-            dual_printer_enabled = $27
-        WHERE key = $28
+            dual_printer_enabled = $27, presence_verification_enabled = $28, allowed_verification_modes = $29
+        WHERE key = $30
       `, queryParams);
     } catch (dbErr) {
       console.warn('[SAAS PLAN MATRIX] Auto-healing table schema for missing columns...', dbErr.message);
@@ -727,6 +734,8 @@ router.put('/plans/:key', authenticateToken, requireSuperAdmin, async (req, res)
       await query('ALTER TABLE saas_plans ADD COLUMN IF NOT EXISTS gst_invoice_enabled INT DEFAULT 1;').catch(() => {});
       await query('ALTER TABLE saas_plans ADD COLUMN IF NOT EXISTS ai_review_enabled INT DEFAULT 1;').catch(() => {});
       await query('ALTER TABLE saas_plans ADD COLUMN IF NOT EXISTS google_reviews_enabled INT DEFAULT 1;').catch(() => {});
+      await query('ALTER TABLE saas_plans ADD COLUMN IF NOT EXISTS presence_verification_enabled INT DEFAULT 1;').catch(() => {});
+      await query("ALTER TABLE saas_plans ADD COLUMN IF NOT EXISTS allowed_verification_modes VARCHAR(255) DEFAULT 'QR_ONLY,GPS_ONLY,GPS_WITH_STAFF_FALLBACK,STAFF_ONLY';").catch(() => {});
       
       await query(`
         UPDATE saas_plans
@@ -736,8 +745,8 @@ router.put('/plans/:key', authenticateToken, requireSuperAdmin, async (req, res)
             audio_alarm_enabled = $15, order_status_whatsapp_enabled = $16, kds_enabled = $17, bluetooth_kot_enabled = $18,
             google_reviews_enabled = $19, ai_review_enabled = $20, stories_enabled = $21, gst_invoice_enabled = $22,
             analytics_export_enabled = $23, multi_language_enabled = $24, watermark_removal_enabled = $25, custom_domain_enabled = $26,
-            dual_printer_enabled = $27
-        WHERE key = $28
+            dual_printer_enabled = $27, presence_verification_enabled = $28, allowed_verification_modes = $29
+        WHERE key = $30
       `, queryParams);
     }
 
