@@ -36,6 +36,7 @@ export default function CustomerLocationModal({
   const [distanceInfo, setDistanceInfo] = useState(null);
   const [accuracyVal, setAccuracyVal] = useState(null);
   const isAcquiringRef = useRef(false);
+  const watchdogTimerRef = useRef(null);
 
   useEffect(() => {
     if (isOpen && status !== 'verified') {
@@ -43,6 +44,7 @@ export default function CustomerLocationModal({
       if (navigator.permissions && navigator.permissions.query) {
         navigator.permissions.query({ name: 'geolocation' })
           .then(perm => {
+            console.log('[LOCATION_FLOW] permission_state', { state: perm.state });
             if (perm.state === 'denied' && status === 'idle') {
               setStatus('permission_permanently_blocked');
             }
@@ -50,6 +52,13 @@ export default function CustomerLocationModal({
           .catch(() => {});
       }
     }
+    return () => {
+      if (watchdogTimerRef.current) {
+        clearTimeout(watchdogTimerRef.current);
+        watchdogTimerRef.current = null;
+      }
+      isAcquiringRef.current = false;
+    };
   }, [isOpen]);
 
   if (!isOpen) return null;
@@ -58,8 +67,13 @@ export default function CustomerLocationModal({
     if (isAcquiringRef.current) return; // Prevent duplicate rapid taps
     isAcquiringRef.current = true;
 
+    if (watchdogTimerRef.current) {
+      clearTimeout(watchdogTimerRef.current);
+      watchdogTimerRef.current = null;
+    }
+
     const cleanToken = String(tableToken || '').trim();
-    console.log('[LOCATION_FLOW] button_clicked', {
+    console.log('[LOCATION_FLOW] geolocation_request_started', {
       slug: restaurantInfo?.slug,
       tableNumber,
       spaceType,
@@ -84,19 +98,33 @@ export default function CustomerLocationModal({
     setStatus('requesting_location');
     setErrorMsg('');
 
-    const primaryOptions = {
+    let hasTerminated = false;
+
+    // Guaranteed outer watchdog timeout (10 seconds total)
+    watchdogTimerRef.current = setTimeout(() => {
+      if (!hasTerminated) {
+        hasTerminated = true;
+        isAcquiringRef.current = false;
+        console.log('[LOCATION_FLOW] geolocation_timeout', { timeoutMs: 10000 });
+        setStatus('location_timeout');
+        setErrorMsg('Getting your GPS signal took too long. Please ensure Location is turned on and tap retry.');
+      }
+    }, 10000);
+
+    const geoOptions = {
       enableHighAccuracy: true,
-      timeout: 10000,
+      timeout: 8000,
       maximumAge: 30000
     };
 
-    const fallbackOptions = {
-      enableHighAccuracy: false,
-      timeout: 10000,
-      maximumAge: 60000
-    };
-
     const processPosition = async (pos) => {
+      if (hasTerminated) return;
+      hasTerminated = true;
+      if (watchdogTimerRef.current) {
+        clearTimeout(watchdogTimerRef.current);
+        watchdogTimerRef.current = null;
+      }
+
       try {
         setStatus('verifying_with_server');
         const custLat = pos.coords.latitude;
@@ -111,7 +139,7 @@ export default function CustomerLocationModal({
         });
 
         const slug = restaurantInfo?.slug || '';
-        console.log('[LOCATION_FLOW] verify_api_request', {
+        console.log('[LOCATION_FLOW] verify_request_started', {
           slug,
           table_number: tableNumber || '1',
           space_type: spaceType || 'table',
@@ -128,7 +156,7 @@ export default function CustomerLocationModal({
           accuracy: custAcc
         });
 
-        console.log('[LOCATION_FLOW] verify_api_response', {
+        console.log('[LOCATION_FLOW] verification_success', {
           verified: verifyRes.verified,
           distance_meters: verifyRes.distance_meters,
           allowed_radius: verifyRes.allowed_radius,
@@ -144,11 +172,17 @@ export default function CustomerLocationModal({
 
           const verifiedPayload = {
             verificationToken: verifyRes.verification_token,
+            verification_token: verifyRes.verification_token,
             locationToken: verifyRes.location_token,
+            location_token: verifyRes.location_token,
             customerLat: custLat,
+            customer_latitude: custLat,
             customerLng: custLng,
+            customer_longitude: custLng,
             accuracy: custAcc,
+            customer_accuracy: custAcc,
             distanceMeters: verifyRes.distance_meters,
+            distance_meters: verifyRes.distance_meters,
             spaceType: spaceType || 'table',
             tableNumber: tableNumber || '1',
             qrToken: cleanToken,
@@ -162,7 +196,7 @@ export default function CustomerLocationModal({
 
           setTimeout(() => {
             if (onClose) onClose();
-          }, 600);
+          }, 400);
         } else {
           isAcquiringRef.current = false;
           setDistanceInfo({
@@ -176,6 +210,8 @@ export default function CustomerLocationModal({
         isAcquiringRef.current = false;
         const errMsg = String(apiErr.message || '');
         const errCode = apiErr.error || apiErr.code || '';
+        console.log('[LOCATION_FLOW] geolocation_error', { apiError: errMsg, errCode });
+
         if (errCode === 'invalid_qr' || errMsg.toLowerCase().includes('qr')) {
           setStatus('invalid_qr');
           setErrorMsg('Invalid or unverified Table QR code. Please scan the QR code printed on your table again.');
@@ -196,33 +232,25 @@ export default function CustomerLocationModal({
     };
 
     const handleGpsFailure = (err) => {
+      if (hasTerminated) return;
+      hasTerminated = true;
+      if (watchdogTimerRef.current) {
+        clearTimeout(watchdogTimerRef.current);
+        watchdogTimerRef.current = null;
+      }
       isAcquiringRef.current = false;
-      console.log('[LOCATION_FLOW] permission_result', { error: err.message, code: err.code });
+      console.log('[LOCATION_FLOW] geolocation_error', { error: err.message, code: err.code });
 
       if (err.code === 1) {
-        // PERMISSION_DENIED
-        // Check permissions API asynchronously if available to distinguish permanent lock
-        if (navigator.permissions && navigator.permissions.query) {
-          navigator.permissions.query({ name: 'geolocation' })
-            .then(p => {
-              if (p.state === 'denied') {
-                setStatus('permission_permanently_blocked');
-              } else {
-                setStatus('permission_denied');
-              }
-            })
-            .catch(() => {
-              setStatus('permission_denied');
-            });
-        } else {
-          setStatus('permission_denied');
-        }
+        // GeolocationPositionError.PERMISSION_DENIED
+        setStatus('permission_denied');
+        setErrorMsg('Location access was denied. Please allow location permissions to order from this table.');
       } else if (err.code === 2) {
-        // POSITION_UNAVAILABLE (Device Location Services / GPS toggled off or unavailable)
+        // GeolocationPositionError.POSITION_UNAVAILABLE
         setStatus('location_services_off');
         setErrorMsg("Couldn't get your current location. Please make sure Location Services are turned on, then try again.");
       } else if (err.code === 3) {
-        // TIMEOUT
+        // GeolocationPositionError.TIMEOUT
         setStatus('location_timeout');
         setErrorMsg('Getting your location is taking longer than expected. Please check your connection and Location Services, then try again.');
       } else {
@@ -231,28 +259,14 @@ export default function CustomerLocationModal({
       }
     };
 
-    // Synchronous primary High Accuracy Geolocation invocation directly in user gesture path
     navigator.geolocation.getCurrentPosition(
       (pos) => {
         processPosition(pos);
       },
       (err) => {
-        // If high-accuracy timed out, attempt one network-based fallback before failing
-        if (err.code === 3) {
-          navigator.geolocation.getCurrentPosition(
-            (fallbackPos) => {
-              processPosition(fallbackPos);
-            },
-            (fallbackErr) => {
-              handleGpsFailure(fallbackErr);
-            },
-            fallbackOptions
-          );
-        } else {
-          handleGpsFailure(err);
-        }
+        handleGpsFailure(err);
       },
-      primaryOptions
+      geoOptions
     );
   };
 
