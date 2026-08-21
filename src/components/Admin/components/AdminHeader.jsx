@@ -13,7 +13,9 @@ export default function AdminHeader({
   setActiveTab,
   pendingOrdersCount = 0,
   analyticsEnabled = true,
-  ordersEnabled = true
+  ordersEnabled = true,
+  audioUnlocked = true,
+  onTestSound
 }) {
   const [showMoreMenu, setShowMoreMenu] = useState(false);
   const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
@@ -119,6 +121,33 @@ export default function AdminHeader({
 
       {/* RIGHT: [ 🍽 Menu ] Button & [⋮] More Options */}
       <div className="adm-header-right" style={{ position: 'relative', display: 'flex', alignItems: 'center', gap: '8px' }}>
+        {/* SOUND ALERTS BUTTON */}
+        <button
+          onClick={() => {
+            if (onTestSound) onTestSound();
+          }}
+          style={{
+            height: '42px',
+            padding: '0 12px',
+            borderRadius: '21px',
+            background: audioUnlocked ? 'rgba(34, 197, 94, 0.18)' : 'rgba(234, 179, 8, 0.28)',
+            border: audioUnlocked ? '1px solid rgba(34, 197, 94, 0.5)' : '1.5px solid rgba(234, 179, 8, 0.8)',
+            color: '#FFFFFF',
+            fontSize: '0.80rem',
+            fontWeight: 800,
+            display: 'inline-flex',
+            alignItems: 'center',
+            gap: '5px',
+            cursor: 'pointer',
+            whiteSpace: 'nowrap',
+            boxSizing: 'border-box'
+          }}
+          title={audioUnlocked ? "Sound alerts active. Click to test sound." : "Browser blocked audio. Click to enable sound alerts."}
+        >
+          <span>{audioUnlocked ? '🔊' : '🔔'}</span>
+          <span className="adm-header-sound-label">{audioUnlocked ? 'Sound ON' : 'Enable Sound'}</span>
+        </button>
+
         {/* COMPACT MENU BUTTON (Pill shape, 70-80px wide, 40-44px high) */}
         <button
           onClick={() => {

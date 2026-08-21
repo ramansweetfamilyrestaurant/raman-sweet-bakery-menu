@@ -3,6 +3,7 @@ import * as XLSX from 'xlsx';
 import { fetchCategories, fetchDishes, toggleDishAvailability, toggleCategoryActive, deleteDish, deleteCategory, fetchRestaurantInfo, updateDishPrice, fetchAnnouncements, fetchAdminOrders, updateOrderStatus, uploadImage, fetchServiceRequests, resolveServiceRequest, approvePresenceRequest, rejectPresenceRequest, fetchAdminAnalytics, fetchAdminCombos, createCombo, updateCombo, deleteCombo, toggleComboAvailability, optimizeDatabase, updateTenantSettings } from '../../api/client';
 import { getPlanDetails } from '../../config/plans';
 import { generateQrToken } from '../../utils/qrSecurity';
+import { soundManager } from '../../utils/soundManager';
 import DishFormModal from './DishFormModal';
 import CategoryFormModal from './CategoryFormModal';
 import ComboFormModal from './ComboFormModal';
@@ -106,6 +107,7 @@ export default function AdminDashboard({ token, username, slug: propSlug = '', o
     return diffDays;
   };
 
+  const [audioUnlocked, setAudioUnlocked] = useState(false);
   const daysLeft = getDaysRemaining(restaurantInfo?.plan_expires_at);
   const isExpired = (daysLeft !== null && daysLeft <= 0) || (restaurantInfo?.active === false || restaurantInfo?.active === 0);
 
@@ -123,9 +125,16 @@ export default function AdminDashboard({ token, username, slug: propSlug = '', o
       }
     }
 
-    // 🔊 3. Unlock Web Audio Context on user interaction gesture
+    // 🔊 2. Pre-initialize sound manager
+    try {
+      soundManager.init();
+    } catch (e) {}
+
+    // 🔊 3. Unlock Web Audio Context & HTML5 Audio on user interaction gesture
     const unlockAudioOnGesture = () => {
       try {
+        soundManager.unlock();
+        setAudioUnlocked(true);
         const ctx = getSharedAudioContext();
         if (ctx) {
           if (ctx.state === 'suspended') {
@@ -383,92 +392,29 @@ export default function AdminDashboard({ token, username, slug: propSlug = '', o
 
   const playPresenceVerificationAlert = () => {
     try {
-      console.log('[NOTIFICATION_SOUND] play_started', { type: 'presence_verification' });
-      if (activePresenceAlertIntervalRef.current) {
-        clearInterval(activePresenceAlertIntervalRef.current);
-        activePresenceAlertIntervalRef.current = null;
-      }
-
-      ensureAudioRunning().then(ctx => {
-        if (!ctx) return;
-        const startTime = Date.now();
-        playSinglePresenceTone(ctx);
-
-        activePresenceAlertIntervalRef.current = setInterval(() => {
-          if (Date.now() - startTime >= 4500) {
-            clearInterval(activePresenceAlertIntervalRef.current);
-            activePresenceAlertIntervalRef.current = null;
-            console.log('[NOTIFICATION_SOUND] play_completed', { type: 'presence_verification' });
-          } else {
-            playSinglePresenceTone(ctx);
-          }
-        }, 1200);
-      }).catch(err => {
-        console.warn('[NOTIFICATION_SOUND] play_failed:', err);
-      });
-
-      if ('vibrate' in navigator) {
-        navigator.vibrate([400, 150, 400, 150, 400]);
-      }
+      soundManager.playPresenceAlert();
     } catch (e) {
       console.warn('[NOTIFICATION_SOUND] play_failed:', e);
-    }
-  };
-
-  const playSingleWaiterBellTone = (ctx) => {
-    if (!ctx) return;
-    try {
-      // 🛎️ Loud 3-Cycle Reception Bell Chime (880Hz -> 1320Hz -> 1760Hz)
-      const tones = [
-        { freq: 880, start: 0.0, duration: 0.30 },
-        { freq: 1320, start: 0.18, duration: 0.35 },
-        { freq: 1760, start: 0.36, duration: 0.50 }
-      ];
-
-      tones.forEach(t => {
-        const osc = ctx.createOscillator();
-        const gain = ctx.createGain();
-        osc.type = 'sine';
-        osc.frequency.setValueAtTime(t.freq, ctx.currentTime + t.start);
-        gain.gain.setValueAtTime(1.0, ctx.currentTime + t.start);
-        gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + t.start + t.duration);
-        osc.connect(gain);
-        gain.connect(ctx.destination);
-        osc.start(ctx.currentTime + t.start);
-        osc.stop(ctx.currentTime + t.start + t.duration);
-      });
-    } catch (err) {
-      console.warn('[NOTIFICATION_SOUND] play_failed:', err);
     }
   };
 
   const playWaiterBellFor6Seconds = () => {
     try {
-      console.log('[NOTIFICATION_SOUND] play_started', { type: 'waiter_bell' });
-      if (activeWaiterBellIntervalRef.current) {
-        clearInterval(activeWaiterBellIntervalRef.current);
-        activeWaiterBellIntervalRef.current = null;
-      }
-
-      ensureAudioRunning().then(ctx => {
-        if (!ctx) return;
-        const startTime = Date.now();
-        playSingleWaiterBellTone(ctx);
-
-        activeWaiterBellIntervalRef.current = setInterval(() => {
-          if (Date.now() - startTime >= 6000) {
-            clearInterval(activeWaiterBellIntervalRef.current);
-            activeWaiterBellIntervalRef.current = null;
-            console.log('[NOTIFICATION_SOUND] play_completed', { type: 'waiter_bell' });
-          } else {
-            playSingleWaiterBellTone(ctx);
-          }
-        }, 1200);
-      }).catch(err => {
-        console.warn('[NOTIFICATION_SOUND] play_failed:', err);
-      });
+      soundManager.playWaiterBell();
     } catch (e) {
       console.warn('[NOTIFICATION_SOUND] play_failed:', e);
+    }
+  };
+
+  const handleTestSound = () => {
+    try {
+      soundManager.unlock();
+      setAudioUnlocked(true);
+      soundManager.playPresenceAlert();
+      setToastMessage('🔊 Sound Alerts Tested & Active!');
+      setTimeout(() => setToastMessage(''), 4000);
+    } catch (e) {
+      console.warn('Test sound error:', e);
     }
   };
 
@@ -2547,6 +2493,8 @@ export default function AdminDashboard({ token, username, slug: propSlug = '', o
           pendingOrdersCount={orders.filter(o => o.status === 'pending').length}
           analyticsEnabled={isAnalyticsEnabled}
           ordersEnabled={isDirectOrderingEnabled}
+          audioUnlocked={audioUnlocked}
+          onTestSound={handleTestSound}
         />
 
         <main className="adm-main-canvas">
