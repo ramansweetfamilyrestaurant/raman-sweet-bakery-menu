@@ -13,10 +13,8 @@ import DishFormModal from './components/Admin/DishFormModal';
 import CategoryFormModal from './components/Admin/CategoryFormModal';
 import { fetchRestaurantInfo, fetchCategories, fetchDishes, toggleDishAvailability, deleteDish, createDirectOrder, trackOrderStatus, fetchActiveTableOrder, fetchCombos } from './api/client';
 import { LayoutList, Grid, BookOpen, X, Sparkles, ShieldAlert, Phone, Plus, Edit3, Trash2, LogOut, Settings, Crown, CheckCircle, MessageSquare, XCircle } from 'lucide-react';
-import { verifyCustomerLocation } from './utils/geo';
 import ServiceRequestModal from './components/ServiceRequestModal';
 import CustomerReviewModal from './components/CustomerReviewModal';
-import CustomerLocationModal from './components/CustomerLocationModal';
 import { isValidQrTokenFormat, normalizeSpaceType, normalizeSpaceNumber } from './utils/qrSecurity';
 
 // Robust Lazy Loading with automatic retry on new production deploys
@@ -92,97 +90,6 @@ export const isSlugKitchenPath = (rawPath) => {
   return false;
 };
 
-// Canonical Location Authorization Storage Helpers
-export const getStoredLocationAuth = (slug, restaurantId) => {
-  try {
-    let raw = null;
-    if (slug) raw = sessionStorage.getItem(`touchqr_loc_auth_${slug}`);
-    if (!raw && restaurantId) raw = sessionStorage.getItem(`touchqr_loc_auth_${restaurantId}`);
-    if (!raw) raw = sessionStorage.getItem('touchqr_loc_auth_active');
-    if (!raw) return null;
-
-    const data = JSON.parse(raw);
-    const locToken = data?.location_token || data?.locationToken;
-    if (!data || !locToken) return null;
-
-    const now = Date.now();
-    const expiresAt = Number(data.expiresAt) || (Number(data.timestamp) ? Number(data.timestamp) + 20 * 60 * 1000 : 0);
-    if (expiresAt > now) {
-      return {
-        ...data,
-        location_token: locToken,
-        locationToken: locToken,
-        verification_token: data.verification_token || data.verificationToken || '',
-        verificationToken: data.verificationToken || data.verification_token || '',
-        customer_latitude: data.customer_latitude ?? data.customerLat ?? data.latitude,
-        customerLat: data.customerLat ?? data.customer_latitude ?? data.latitude,
-        customer_longitude: data.customer_longitude ?? data.customerLng ?? data.longitude,
-        customerLng: data.customerLng ?? data.customer_longitude ?? data.longitude,
-        customer_accuracy: data.customer_accuracy ?? data.accuracy,
-        accuracy: data.accuracy ?? data.customer_accuracy,
-        distance_meters: data.distance_meters ?? data.distanceMeters,
-        distanceMeters: data.distanceMeters ?? data.distance_meters,
-        expiresAt
-      };
-    }
-    // Expired - clean up
-    if (slug) sessionStorage.removeItem(`touchqr_loc_auth_${slug}`);
-    if (restaurantId) sessionStorage.removeItem(`touchqr_loc_auth_${restaurantId}`);
-    sessionStorage.removeItem('touchqr_loc_auth_active');
-    return null;
-  } catch (e) {
-    return null;
-  }
-};
-
-export const saveLocationAuth = (slug, restaurantId, authData) => {
-  try {
-    const locToken = authData?.location_token || authData?.locationToken || '';
-    const verToken = authData?.verification_token || authData?.verificationToken || '';
-    const lat = authData?.customer_latitude ?? authData?.customerLat ?? authData?.latitude;
-    const lng = authData?.customer_longitude ?? authData?.customerLng ?? authData?.longitude;
-    const acc = authData?.customer_accuracy ?? authData?.accuracy;
-    const dist = authData?.distance_meters ?? authData?.distanceMeters;
-
-    const payload = {
-      ...authData,
-      location_token: locToken,
-      locationToken: locToken,
-      verification_token: verToken,
-      verificationToken: verToken,
-      customer_latitude: lat,
-      customerLat: lat,
-      customer_longitude: lng,
-      customerLng: lng,
-      customer_accuracy: acc,
-      accuracy: acc,
-      distance_meters: dist,
-      distanceMeters: dist,
-      timestamp: Date.now(),
-      expiresAt: Date.now() + 20 * 60 * 1000
-    };
-
-    if (slug) sessionStorage.setItem(`touchqr_loc_auth_${slug}`, JSON.stringify(payload));
-    if (restaurantId) sessionStorage.setItem(`touchqr_loc_auth_${restaurantId}`, JSON.stringify(payload));
-    sessionStorage.setItem('touchqr_loc_auth_active', JSON.stringify(payload));
-    return payload;
-  } catch (e) {
-    return authData;
-  }
-};
-
-export const clearLocationAuth = (slug, restaurantId) => {
-  try {
-    if (slug) sessionStorage.removeItem(`touchqr_loc_auth_${slug}`);
-    if (restaurantId) sessionStorage.removeItem(`touchqr_loc_auth_${restaurantId}`);
-    sessionStorage.removeItem('touchqr_loc_auth_active');
-    if (restaurantId) {
-      sessionStorage.removeItem(`touchqr_location_token_${restaurantId}`);
-      sessionStorage.removeItem(`touchqr_geo_${restaurantId}`);
-    }
-  } catch (e) {}
-};
-
 export default function App() {
   // 1. Canonical Scanned QR Identity from URL
   const getSpaceInfoFromUrl = () => {
@@ -242,13 +149,6 @@ export default function App() {
 
   // Menu Data State (Declared at top of component to avoid TDZ access)
   const [info, setInfo] = useState(null);
-  const [showLocationModal, setShowLocationModal] = useState(false);
-  const [locationAuth, setLocationAuth] = useState(() => {
-    const initialSlug = getSlugFromUrl();
-    return getStoredLocationAuth(initialSlug);
-  });
-  const locationVerified = Boolean(locationAuth && locationAuth.locationToken);
-
   const initialSpaceInfo = getSpaceInfoFromUrl();
   const initialTableNum = initialSpaceInfo.num;
   const [currentTableNum, setCurrentTableNum] = useState(initialSpaceInfo.num);
@@ -256,16 +156,6 @@ export default function App() {
   const [currentTableToken, setCurrentTableToken] = useState(initialSpaceInfo.token);
   const [sessionExpired, setSessionExpired] = useState(false);
   const [autoKillSeconds, setAutoKillSeconds] = useState(null);
-
-  // Sync canonical location authorization when restaurant info loads or space changes
-  useEffect(() => {
-    const currentSlug = getSlugFromUrl() || (info && info.slug) || '';
-    const stored = getStoredLocationAuth(currentSlug, info?.id);
-    if (stored) {
-      console.log('[LOCATION_FLOW] token_loaded_for_order', { slug: currentSlug, distanceMeters: stored.distanceMeters });
-      setLocationAuth(stored);
-    }
-  }, [info?.slug, info?.id, currentTableNum, currentTableToken]);
 
   // Validate if the table/space number exists within the restaurant's configured capacity & has valid token shape
   const isSpaceNumberValid = () => {
@@ -788,68 +678,17 @@ export default function App() {
     return () => clearInterval(interval);
   }, [activeOrderId, effectiveTableNum, info, sessionExpired]);
 
-  const handleSendDirectOrder = async (overrideGeo = null) => {
+  const handleSendDirectOrder = async () => {
     const slug = getSlugFromUrl() || (info && info.slug) || '';
     if (cartItems.length === 0) return;
-    if (!overrideGeo && (isPlacingOrderRef.current || placingOrder)) return;
+    if (isPlacingOrderRef.current || placingOrder) return;
     isPlacingOrderRef.current = true;
     setPlacingOrder(true);
 
     try {
-      // 📍 Authoritative GPS Geo-Fencing & Verified Session Token Validation
-      let customerGeo = {};
-      const restoLat = Number(info?.latitude);
-      const restoLng = Number(info?.longitude);
-      const hasLocation = Boolean(info && !isNaN(restoLat) && !isNaN(restoLng) && restoLat !== 0 && restoLng !== 0);
-
-      if (hasLocation) {
-        // Strict resolution order (Requirement D):
-        // 1. overrideGeo passed directly from successful verification callback
-        // 2. current valid canonical locationAuth React state
-        // 3. current valid canonical stored location auth
-        let resolvedAuth = null;
-        if (overrideGeo && (overrideGeo.locationToken || overrideGeo.location_token)) {
-          resolvedAuth = overrideGeo;
-        } else if (locationAuth && (locationAuth.locationToken || locationAuth.location_token)) {
-          resolvedAuth = locationAuth;
-        } else {
-          resolvedAuth = getStoredLocationAuth(slug, info?.id);
-        }
-
-        const locToken = resolvedAuth?.locationToken || resolvedAuth?.location_token;
-        const isAuthFresh = Boolean(resolvedAuth && locToken && (!resolvedAuth.expiresAt || resolvedAuth.expiresAt > Date.now()));
-
-        console.log("[LOCATION_FLOW] order_auth_resolved", {
-          source: overrideGeo ? "overrideGeo" :
-                  locationAuth ? "react_state" :
-                  getStoredLocationAuth(slug, info?.id) ? "storage" : "none",
-          has_location_token: Boolean(resolvedAuth?.location_token || resolvedAuth?.locationToken),
-          has_verification_token: Boolean(resolvedAuth?.verification_token || resolvedAuth?.verificationToken),
-          auth_keys: resolvedAuth ? Object.keys(resolvedAuth) : [],
-          expired: resolvedAuth ? Boolean(resolvedAuth.expiresAt && resolvedAuth.expiresAt <= Date.now()) : null
-        });
-
-        if (!isAuthFresh) {
-          console.log('[LOCATION_FLOW] token_expired', { slug });
-          setPlacingOrder(false);
-          isPlacingOrderRef.current = false;
-          setShowLocationModal(true);
-          return;
-        }
-
-        customerGeo = {
-          location_token: locToken,
-          verification_token: resolvedAuth.verificationToken || resolvedAuth.verification_token || '',
-          customer_latitude: resolvedAuth.customerLat ?? resolvedAuth.customer_latitude ?? resolvedAuth.latitude,
-          customer_longitude: resolvedAuth.customerLng ?? resolvedAuth.customer_longitude ?? resolvedAuth.longitude,
-          customer_accuracy: resolvedAuth.accuracy ?? resolvedAuth.customer_accuracy,
-          distance_meters: resolvedAuth.distanceMeters ?? resolvedAuth.distance_meters
-        };
-      }
-
-      const effectiveQrToken = currentTableToken || initialSpaceInfo.token || (overrideGeo && (overrideGeo.qrToken || overrideGeo.table_token)) || (new URLSearchParams(window.location.search).get('tkn') || '').trim();
+      const effectiveQrToken = currentTableToken || initialSpaceInfo.token || (new URLSearchParams(window.location.search).get('tkn') || '').trim();
       const targetTable = effectiveTableNum || currentTableNum || initialSpaceInfo.num || (new URLSearchParams(window.location.search).get('table') || '').trim() || '1';
-      const targetSpaceType = currentSpaceType || initialSpaceInfo.type || (overrideGeo && (overrideGeo.spaceType || overrideGeo.space_type)) || 'table';
+      const targetSpaceType = currentSpaceType || initialSpaceInfo.type || 'table';
 
       if (!targetTable || !effectiveQrToken) {
         alert('Invalid or missing Table QR. Please scan the official QR code at your dining table to place an order.');
@@ -876,21 +715,8 @@ export default function App() {
         customer_name: customerNameInput || 'Dine-In Customer',
         customer_phone: customerPhoneInput || '',
         items: itemsPayload,
-        total_amount: grandTotal,
-        ...customerGeo
+        total_amount: grandTotal
       };
-
-      console.log("[LOCATION_FLOW] order_payload_check", {
-        payload_keys: Object.keys(orderPayload),
-        has_location_token: Boolean(orderPayload.location_token),
-        has_verification_token: Boolean(orderPayload.verification_token),
-        has_latitude: Boolean(
-          orderPayload.customer_latitude ?? orderPayload.latitude
-        ),
-        has_longitude: Boolean(
-          orderPayload.customer_longitude ?? orderPayload.longitude
-        )
-      });
 
       const res = await createDirectOrder(orderPayload);
 
@@ -901,7 +727,6 @@ export default function App() {
         setActiveOrderId(String(res.order_id));
       }
 
-      setShowLocationModal(false);
       setOrderSuccessModal(res);
       setCartItems([]);
       setShowCartDrawer(false);
@@ -909,22 +734,9 @@ export default function App() {
       const errMsg = String(err.message || '');
       const errCode = err.error || err.code || '';
       console.error('[ORDER SUBMISSION ERROR]', err);
-      console.log('[LOCATION_FLOW] order_403_received', { error: errCode, message: errMsg });
 
       if (errCode === 'invalid_qr' || errMsg.toLowerCase().includes('qr')) {
-        clearLocationAuth(slug, info?.id);
-        setLocationAuth(null);
         alert(errMsg || 'Invalid or unverified Table QR code. Please scan the official QR code at your dining table.');
-      } else if (
-        errCode === 'location_required' ||
-        errCode === 'outside_boundary' ||
-        errCode === 'low_accuracy' ||
-        errMsg.toLowerCase().includes('location')
-      ) {
-        console.log('[LOCATION_FLOW] location_recovery', { slug, action: 'reopen_modal' });
-        clearLocationAuth(slug, info?.id);
-        setLocationAuth(null);
-        setShowLocationModal(true);
       } else {
         alert(errMsg || 'Failed to place order. Please try again.');
       }
@@ -932,7 +744,7 @@ export default function App() {
       setPlacingOrder(false);
       setTimeout(() => {
         isPlacingOrderRef.current = false;
-      }, 500);
+      }, 300);
     }
   };
 
@@ -2076,8 +1888,6 @@ export default function App() {
         onOpenInfoModal={() => setShowInfoModal(true)}
         onCallStaff={() => setShowServiceModal(true)}
         onOpenReviewModal={handleRateUsClick}
-        locationVerified={locationVerified}
-        onOpenLocationModal={() => setShowLocationModal(true)}
         onOpenAdmin={() => {
           const targetSlug = getSlugFromUrl() || (info && info.slug) || localStorage.getItem('touchqr_admin_slug') || '';
           const targetUrl = (targetSlug && targetSlug !== 'undefined' && targetSlug !== 'null') ? `/${targetSlug}/admin` : '/admin';
@@ -3229,39 +3039,6 @@ export default function App() {
           token={adminToken}
           onSave={handleSaveInlineCategory}
           onClose={() => setOwnerCatModalData(null)}
-        />
-      )}
-
-      {/* Customer Location & Geofence Verification Modal */}
-      {showLocationModal && (
-        <CustomerLocationModal
-          isOpen={showLocationModal}
-          onClose={() => setShowLocationModal(false)}
-          restaurantInfo={info}
-          tableNumber={effectiveTableNum}
-          spaceType={currentSpaceType || 'table'}
-          tableToken={currentTableToken}
-          tableLabel={getDynamicSpaceLabel()}
-          allowDismiss={true}
-          onLocationVerified={(verifiedData) => {
-            const currentSlug = getSlugFromUrl() || (info && info.slug) || '';
-            const targetTable = effectiveTableNum || currentTableNum || (new URLSearchParams(window.location.search).get('table') || '').trim() || '1';
-            const targetSpace = currentSpaceType || initialSpaceInfo.type || 'table';
-            const targetToken = currentTableToken || initialSpaceInfo.token || (new URLSearchParams(window.location.search).get('tkn') || '').trim();
-
-            const saved = saveLocationAuth(currentSlug, info?.id, {
-              ...verifiedData,
-              tableNumber: targetTable,
-              spaceType: targetSpace,
-              qrToken: targetToken
-            });
-            console.log('[LOCATION_FLOW] token_saved', { distanceMeters: verifiedData.distanceMeters });
-            setLocationAuth(saved);
-            setShowLocationModal(false);
-            if (cartItems.length > 0) {
-              handleSendDirectOrder(saved);
-            }
-          }}
         />
       )}
 

@@ -503,16 +503,9 @@ export async function verifyCustomerLocationApi(payload) {
 }
 
 export async function createDirectOrder(orderData) {
-  const headers = { 'Content-Type': 'application/json' };
-  if (orderData?.location_token) {
-    headers['x-location-token'] = orderData.location_token;
-  }
-  if (orderData?.verification_token) {
-    headers['x-verification-token'] = orderData.verification_token;
-  }
   const res = await fetch(`${API_BASE}/orders`, {
     method: 'POST',
-    headers,
+    headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(orderData),
   });
   return handleResponse(res, 'Failed to place order');

@@ -84,27 +84,23 @@ export default function CustomerHeader({ info, lang, tableNum, spaceLabel, onTog
           {/* Table Indicator / View-Only Badge */}
           {tableNum ? (
             <>
-              <button
-                onClick={onOpenLocationModal}
+              <span
                 style={{
                   fontSize: '0.7rem',
                   fontWeight: 800,
-                  color: locationVerified ? '#4ADE80' : '#FDE047',
-                  background: locationVerified ? 'rgba(34, 197, 94, 0.18)' : 'rgba(234, 179, 8, 0.22)',
-                  border: locationVerified ? '1px solid rgba(34, 197, 94, 0.4)' : '1px solid rgba(234, 179, 8, 0.5)',
+                  color: '#4ADE80',
+                  background: 'rgba(34, 197, 94, 0.18)',
+                  border: '1px solid rgba(34, 197, 94, 0.4)',
                   padding: '3px 8px',
                   borderRadius: 'var(--radius-pill)',
                   display: 'inline-flex',
                   alignItems: 'center',
-                  gap: '4px',
-                  cursor: 'pointer'
+                  gap: '4px'
                 }}
-                title={locationVerified ? "Location Verified (Inside Restaurant)" : "Tap to verify table location"}
               >
-                <span style={{ width: '6px', height: '6px', borderRadius: '50%', backgroundColor: locationVerified ? '#4ADE80' : '#FACC15' }} />
+                <span style={{ width: '6px', height: '6px', borderRadius: '50%', backgroundColor: '#4ADE80' }} />
                 {getDisplayBadge()}
-                {locationVerified ? ' ✓' : ' 📍'}
-              </button>
+              </span>
 
               {onCallStaff && (
                 <button
