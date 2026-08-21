@@ -387,6 +387,7 @@ export default function AdminDashboard({ token, username, slug: propSlug = '', o
   };
 
   const prevServiceReqIdsRef = useRef(new Set());
+  const isInitialServiceReqFetchRef = useRef(true);
 
   const loadOrders = async () => {
     if (!token) return;
@@ -410,7 +411,7 @@ export default function AdminDashboard({ token, username, slug: propSlug = '', o
 
       // 🛎️ Dedicated Waiter Call / Service Request Alert Trigger
       const newServiceCalls = safeReqs.filter(r => !prevServiceReqIdsRef.current.has(String(r.id)));
-      if (newServiceCalls.length > 0 && prevServiceReqIdsRef.current.size > 0) {
+      if (newServiceCalls.length > 0 && !isInitialServiceReqFetchRef.current) {
         const presenceCalls = newServiceCalls.filter(r => r.request_type === 'presence_verification');
         const waiterCalls = newServiceCalls.filter(r => r.request_type !== 'presence_verification');
 
@@ -436,6 +437,7 @@ export default function AdminDashboard({ token, username, slug: propSlug = '', o
         }
         setTimeout(() => setToastMessage(''), 7000);
       }
+      isInitialServiceReqFetchRef.current = false;
       prevServiceReqIdsRef.current = new Set(safeReqs.map(r => String(r.id)));
 
       // Total active live orders (pending + kitchen + accepted)
