@@ -3,7 +3,7 @@ import * as XLSX from 'xlsx';
 import { fetchCategories, fetchDishes, toggleDishAvailability, toggleCategoryActive, deleteDish, deleteCategory, fetchRestaurantInfo, updateDishPrice, fetchAnnouncements, fetchAdminOrders, updateOrderStatus, uploadImage, fetchServiceRequests, resolveServiceRequest, approvePresenceRequest, rejectPresenceRequest, fetchAdminAnalytics, fetchAdminCombos, createCombo, updateCombo, deleteCombo, toggleComboAvailability, optimizeDatabase, updateTenantSettings } from '../../api/client';
 import { getPlanDetails } from '../../config/plans';
 import { generateQrToken } from '../../utils/qrSecurity';
-import { soundManager } from '../../utils/soundManager';
+import { soundManager, unlockNotificationSound, playPresenceAlert, playWaiterAlert, subscribeAudioState } from '../../utils/soundManager';
 import DishFormModal from './DishFormModal';
 import CategoryFormModal from './CategoryFormModal';
 import ComboFormModal from './ComboFormModal';
@@ -107,7 +107,8 @@ export default function AdminDashboard({ token, username, slug: propSlug = '', o
     return diffDays;
   };
 
-  const [audioUnlocked, setAudioUnlocked] = useState(false);
+  const [isAudioReady, setIsAudioReady] = useState(false);
+  const [audioBannerDismissed, setAudioBannerDismissed] = useState(false);
   const daysLeft = getDaysRemaining(restaurantInfo?.plan_expires_at);
   const isExpired = (daysLeft !== null && daysLeft <= 0) || (restaurantInfo?.active === false || restaurantInfo?.active === 0);
 
@@ -125,40 +126,26 @@ export default function AdminDashboard({ token, username, slug: propSlug = '', o
       }
     }
 
-    // 🔊 2. Pre-initialize sound manager
-    try {
-      soundManager.init();
-    } catch (e) {}
+    // 🔊 2. Subscribe to central audio service readiness state
+    const unsubscribeAudio = subscribeAudioState((ready) => {
+      setIsAudioReady(ready);
+    });
 
-    // 🔊 3. Unlock Web Audio Context & HTML5 Audio on user interaction gesture
-    const unlockAudioOnGesture = () => {
-      try {
-        soundManager.unlock();
-        setAudioUnlocked(true);
-        const ctx = getSharedAudioContext();
-        if (ctx) {
-          if (ctx.state === 'suspended') {
-            ctx.resume().then(() => {
-              isAudioUnlockedRef.current = true;
-              console.log('[NOTIFICATION_SOUND] user_interaction_unlocked');
-            }).catch(e => {
-              console.warn('[NOTIFICATION_SOUND] autoplay_blocked', e);
-            });
-          } else if (ctx.state === 'running') {
-            isAudioUnlockedRef.current = true;
-            console.log('[NOTIFICATION_SOUND] user_interaction_unlocked');
-          }
+    // 🔊 3. Unlock notification audio on first user gesture
+    const handleUserGestureUnlock = () => {
+      unlockNotificationSound().then((success) => {
+        if (success) {
+          setIsAudioReady(true);
         }
-      } catch (e) {
-        console.warn('[NOTIFICATION_SOUND] unlock error:', e);
-      }
+      });
     };
 
     const gestureEvents = ['click', 'pointerdown', 'touchstart', 'keydown', 'mousedown'];
-    gestureEvents.forEach(evt => window.addEventListener(evt, unlockAudioOnGesture, { passive: true }));
+    gestureEvents.forEach(evt => window.addEventListener(evt, handleUserGestureUnlock, { passive: true }));
 
     return () => {
-      gestureEvents.forEach(evt => window.removeEventListener(evt, unlockAudioOnGesture));
+      unsubscribeAudio();
+      gestureEvents.forEach(evt => window.removeEventListener(evt, handleUserGestureUnlock));
     };
   }, [token]);
 
@@ -231,41 +218,7 @@ export default function AdminDashboard({ token, username, slug: propSlug = '', o
 
   const pendingLoopRef = useRef(null);
   const activeAudioCtxRef = useRef(null);
-  const sharedAudioCtxRef = useRef(null);
-  const isAudioUnlockedRef = useRef(false);
-  const activePresenceAlertIntervalRef = useRef(null);
-  const activeWaiterBellIntervalRef = useRef(null);
   const pendingUpdatesRef = useRef(new Map());
-
-  const getSharedAudioContext = () => {
-    try {
-      const AudioCtx = window.AudioContext || window.webkitAudioContext;
-      if (!AudioCtx) return null;
-      if (!sharedAudioCtxRef.current || sharedAudioCtxRef.current.state === 'closed') {
-        sharedAudioCtxRef.current = new AudioCtx();
-        console.log('[NOTIFICATION_SOUND] initialized');
-      }
-      return sharedAudioCtxRef.current;
-    } catch (e) {
-      console.warn('[NOTIFICATION_SOUND] getSharedAudioContext error:', e);
-      return null;
-    }
-  };
-
-  const ensureAudioRunning = async () => {
-    const ctx = getSharedAudioContext();
-    if (!ctx) return null;
-    if (ctx.state === 'suspended') {
-      try {
-        await ctx.resume();
-        isAudioUnlockedRef.current = true;
-      } catch (err) {
-        console.warn('[NOTIFICATION_SOUND] autoplay_blocked');
-        return null;
-      }
-    }
-    return ctx;
-  };
 
   const stopPendingAlarm = () => {
     if (pendingLoopRef.current) {
@@ -360,63 +313,6 @@ export default function AdminDashboard({ token, username, slug: propSlug = '', o
       stopPendingAlarm();
     };
   }, [orders]);
-
-  const playSinglePresenceTone = (ctx) => {
-    if (!ctx) return;
-    try {
-      // 🛡️ High Attention Ascending 4-Tone Shield Sequence (C5 -> E5 -> G5 -> C6 with harmonic chime)
-      const tones = [
-        { freq: 523.25, start: 0.00, duration: 0.22, wave: 'sine', gain: 0.8 },
-        { freq: 659.25, start: 0.14, duration: 0.22, wave: 'sine', gain: 0.85 },
-        { freq: 783.99, start: 0.28, duration: 0.25, wave: 'triangle', gain: 0.9 },
-        { freq: 1046.50, start: 0.42, duration: 0.45, wave: 'sine', gain: 1.0 },
-        { freq: 2093.00, start: 0.42, duration: 0.35, wave: 'sine', gain: 0.4 } // Sparkling shimmer
-      ];
-
-      tones.forEach(t => {
-        const osc = ctx.createOscillator();
-        const gain = ctx.createGain();
-        osc.type = t.wave;
-        osc.frequency.setValueAtTime(t.freq, ctx.currentTime + t.start);
-        gain.gain.setValueAtTime(t.gain, ctx.currentTime + t.start);
-        gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + t.start + t.duration);
-        osc.connect(gain);
-        gain.connect(ctx.destination);
-        osc.start(ctx.currentTime + t.start);
-        osc.stop(ctx.currentTime + t.start + t.duration);
-      });
-    } catch (err) {
-      console.warn('[NOTIFICATION_SOUND] play_failed:', err);
-    }
-  };
-
-  const playPresenceVerificationAlert = () => {
-    try {
-      soundManager.playPresenceAlert();
-    } catch (e) {
-      console.warn('[NOTIFICATION_SOUND] play_failed:', e);
-    }
-  };
-
-  const playWaiterBellFor6Seconds = () => {
-    try {
-      soundManager.playWaiterBell();
-    } catch (e) {
-      console.warn('[NOTIFICATION_SOUND] play_failed:', e);
-    }
-  };
-
-  const handleTestSound = () => {
-    try {
-      soundManager.unlock();
-      setAudioUnlocked(true);
-      soundManager.playPresenceAlert();
-      setToastMessage('🔊 Sound Alerts Tested & Active!');
-      setTimeout(() => setToastMessage(''), 4000);
-    } catch (e) {
-      console.warn('Test sound error:', e);
-    }
-  };
 
   const triggerPresenceVerificationNotification = (tableLabel, requestId) => {
     try {
@@ -524,8 +420,8 @@ export default function AdminDashboard({ token, username, slug: propSlug = '', o
           const formattedTbl = (rawTbl.toLowerCase().includes('table') || rawTbl.toLowerCase().includes('cabin') || rawTbl.toLowerCase().includes('room') || rawTbl.toLowerCase().includes('vip'))
             ? rawTbl 
             : `Table #${rawTbl}`;
-          console.log('[NOTIFICATION_SOUND] new_presence_request', { id: latestCall.id, table: formattedTbl });
-          playPresenceVerificationAlert();
+          console.log('[SOUND] presence_request_detected', { id: latestCall.id, table: formattedTbl });
+          playPresenceAlert();
           triggerPresenceVerificationNotification(formattedTbl, latestCall.id);
           setToastMessage(`🛡️ ${formattedTbl}: Table Presence Verification Requested!`);
         } else if (waiterCalls.length > 0) {
@@ -534,8 +430,8 @@ export default function AdminDashboard({ token, username, slug: propSlug = '', o
           const formattedTbl = (rawTbl.toLowerCase().includes('table') || rawTbl.toLowerCase().includes('cabin') || rawTbl.toLowerCase().includes('room') || rawTbl.toLowerCase().includes('vip'))
             ? rawTbl 
             : `Table #${rawTbl}`;
-          console.log('[NOTIFICATION_SOUND] new_waiter_request', { id: latestCall.id, type: latestCall.request_type, table: formattedTbl });
-          playWaiterBellFor6Seconds();
+          console.log('[SOUND] waiter_request_detected', { id: latestCall.id, type: latestCall.request_type, table: formattedTbl });
+          playWaiterAlert();
           setToastMessage(`🛎️ ${formattedTbl} Calling Waiter: "${latestCall.request_type}"!`);
         }
         setTimeout(() => setToastMessage(''), 7000);
@@ -570,7 +466,7 @@ export default function AdminDashboard({ token, username, slug: propSlug = '', o
           });
 
           if (newlyPrepared) {
-            playWaiterBellFor6Seconds();
+            playWaiterAlert();
             const tblNum = newlyPrepared.table_number ? `Table #${newlyPrepared.table_number}` : `Order #${newlyPrepared.id}`;
             triggerFoodPreparedNotification(tblNum);
             setToastMessage(`🛎️ ${tblNum} Food is PREPARED in Kitchen! Ready to Serve.`);
@@ -2493,9 +2389,64 @@ export default function AdminDashboard({ token, username, slug: propSlug = '', o
           pendingOrdersCount={orders.filter(o => o.status === 'pending').length}
           analyticsEnabled={isAnalyticsEnabled}
           ordersEnabled={isDirectOrderingEnabled}
-          audioUnlocked={audioUnlocked}
-          onTestSound={handleTestSound}
         />
+
+        {/* Subtle temporary audio unlock banner - ONLY shown if browser audio is locked */}
+        {!isAudioReady && !audioBannerDismissed && (
+          <div style={{
+            position: 'fixed',
+            top: '72px',
+            right: '16px',
+            zIndex: 9999,
+            background: 'linear-gradient(135deg, #1E293B, #0F172A)',
+            color: '#FFFFFF',
+            padding: '8px 14px',
+            borderRadius: '24px',
+            border: '1px solid rgba(234, 179, 8, 0.4)',
+            boxShadow: '0 8px 24px rgba(0,0,0,0.3)',
+            display: 'flex',
+            alignItems: 'center',
+            gap: '10px',
+            fontSize: '0.82rem',
+            fontWeight: 600
+          }}>
+            <span>🔔 Enable notification sounds</span>
+            <button
+              onClick={() => {
+                unlockNotificationSound().then(() => {
+                  setIsAudioReady(true);
+                  setAudioBannerDismissed(true);
+                });
+              }}
+              style={{
+                background: 'linear-gradient(135deg, #F59E0B, #D97706)',
+                border: 'none',
+                color: '#FFFFFF',
+                padding: '4px 12px',
+                borderRadius: '14px',
+                fontWeight: 700,
+                fontSize: '0.76rem',
+                cursor: 'pointer'
+              }}
+            >
+              Enable
+            </button>
+            <button
+              onClick={() => setAudioBannerDismissed(true)}
+              style={{
+                background: 'none',
+                border: 'none',
+                color: '#94A3B8',
+                cursor: 'pointer',
+                fontSize: '0.9rem',
+                padding: '0 2px'
+              }}
+              title="Dismiss"
+            >
+              ✕
+            </button>
+          </div>
+        )}
 
         <main className="adm-main-canvas">
           <div className="adm-content-body">

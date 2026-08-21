@@ -1,155 +1,18 @@
-// Self-contained sound alert engine for TouchQR Admin Dashboard
-// Generates PCM WAV Data URIs and controls Web Audio synthesizer
+// Central authoritative notification sound service for TouchQR Admin Dashboard
+// Uses a single persistent Web Audio API AudioContext for reliable low-latency chimes.
 
-/**
- * Creates a clean PCM 16-bit Mono WAV Data URI from an array of Float32 audio samples
- */
-function createWavDataUri(samples, sampleRate = 22050) {
-  const buffer = new ArrayBuffer(44 + samples.length * 2);
-  const view = new DataView(buffer);
-
-  // RIFF chunk descriptor
-  writeString(view, 0, 'RIFF');
-  view.setUint32(4, 36 + samples.length * 2, true);
-  writeString(view, 8, 'WAVE');
-
-  // fmt sub-chunk
-  writeString(view, 12, 'fmt ');
-  view.setUint32(16, 16, true); // SubChunk1Size (16 for PCM)
-  view.setUint16(20, 1, true);  // AudioFormat (1 for PCM)
-  view.setUint16(22, 1, true);  // NumChannels (1 = Mono)
-  view.setUint32(24, sampleRate, true); // SampleRate
-  view.setUint32(28, sampleRate * 2, true); // ByteRate
-  view.setUint16(32, 2, true);  // BlockAlign
-  view.setUint16(34, 16, true); // BitsPerSample (16-bit)
-
-  // data sub-chunk
-  writeString(view, 36, 'data');
-  view.setUint32(40, samples.length * 2, true);
-
-  // Write PCM samples
-  let offset = 44;
-  for (let i = 0; i < samples.length; i++, offset += 2) {
-    const s = Math.max(-1, Math.min(1, samples[i]));
-    view.setInt16(offset, s < 0 ? s * 0x8000 : s * 0x7FFF, true);
-  }
-
-  // Convert buffer to base64
-  let binary = '';
-  const bytes = new Uint8Array(buffer);
-  for (let i = 0; i < bytes.byteLength; i++) {
-    binary += String.fromCharCode(bytes[i]);
-  }
-  return 'data:audio/wav;base64,' + btoa(binary);
-}
-
-function writeString(view, offset, string) {
-  for (let i = 0; i < string.length; i++) {
-    view.setUint8(offset + i, string.charCodeAt(i));
-  }
-}
-
-/**
- * Generate Presence Verification Chime (Ascending 4-Tone Shield: C5 -> E5 -> G5 -> C6 with harmonic shimmer)
- */
-export function generatePresenceChimeWav() {
-  const sampleRate = 22050;
-  const duration = 2.4; // 2.4 seconds per loop
-  const totalSamples = Math.floor(sampleRate * duration);
-  const samples = new Float32Array(totalSamples);
-
-  const notes = [
-    { freq: 523.25, start: 0.00, dur: 0.35, gain: 0.8 },  // C5
-    { freq: 659.25, start: 0.22, dur: 0.35, gain: 0.85 }, // E5
-    { freq: 783.99, start: 0.44, dur: 0.40, gain: 0.9 },  // G5
-    { freq: 1046.50, start: 0.66, dur: 1.40, gain: 1.0 }, // C6
-    { freq: 2093.00, start: 0.66, dur: 0.80, gain: 0.35 } // Sparkle
-  ];
-
-  for (let i = 0; i < totalSamples; i++) {
-    const t = i / sampleRate;
-    let sampleVal = 0;
-
-    for (const note of notes) {
-      if (t >= note.start && t < note.start + note.dur) {
-        const noteT = t - note.start;
-        const env = Math.exp(-noteT * 3.5); // Exponential decay
-        const wave = Math.sin(2 * Math.PI * note.freq * noteT) + 
-                     0.25 * Math.sin(2 * Math.PI * note.freq * 2 * noteT); // Harmonic
-        sampleVal += wave * note.gain * env;
-      }
-    }
-    samples[i] = sampleVal * 0.7;
-  }
-
-  return createWavDataUri(samples, sampleRate);
-}
-
-/**
- * Generate Waiter Bell Chime (3-Tone Reception Desk Bell: 880Hz -> 1320Hz -> 1760Hz)
- */
-export function generateWaiterBellWav() {
-  const sampleRate = 22050;
-  const duration = 2.0;
-  const totalSamples = Math.floor(sampleRate * duration);
-  const samples = new Float32Array(totalSamples);
-
-  const tones = [
-    { freq: 880, start: 0.00, dur: 0.45, gain: 0.9 },
-    { freq: 1320, start: 0.25, dur: 0.50, gain: 0.95 },
-    { freq: 1760, start: 0.50, dur: 1.20, gain: 1.0 }
-  ];
-
-  for (let i = 0; i < totalSamples; i++) {
-    const t = i / sampleRate;
-    let sampleVal = 0;
-
-    for (const tone of tones) {
-      if (t >= tone.start && t < tone.start + tone.dur) {
-        const noteT = t - tone.start;
-        const env = Math.exp(-noteT * 3.2);
-        const wave = Math.sin(2 * Math.PI * tone.freq * noteT);
-        sampleVal += wave * tone.gain * env;
-      }
-    }
-    samples[i] = sampleVal * 0.75;
-  }
-
-  return createWavDataUri(samples, sampleRate);
-}
-
-/**
- * Singleton Audio Player with dual Web Audio API & HTML5 Audio fallback
- */
-class SoundNotificationManager {
+class NotificationSoundService {
   constructor() {
     this.audioCtx = null;
-    this.presenceAudio = null;
-    this.waiterAudio = null;
-    this.isUnlocked = false;
+    this.isReady = false;
     this.presenceInterval = null;
     this.waiterInterval = null;
+    this.listeners = new Set();
   }
 
-  init() {
-    if (typeof window === 'undefined') return;
-    try {
-      if (!this.presenceAudio) {
-        const presenceUri = generatePresenceChimeWav();
-        this.presenceAudio = new Audio(presenceUri);
-        this.presenceAudio.preload = 'auto';
-      }
-      if (!this.waiterAudio) {
-        const waiterUri = generateWaiterBellWav();
-        this.waiterAudio = new Audio(waiterUri);
-        this.waiterAudio.preload = 'auto';
-      }
-      console.log('[NOTIFICATION_SOUND] initialized');
-    } catch (e) {
-      console.warn('[NOTIFICATION_SOUND] init error:', e);
-    }
-  }
-
+  /**
+   * Get or initialize the persistent singleton AudioContext
+   */
   getAudioContext() {
     if (typeof window === 'undefined') return null;
     try {
@@ -157,83 +20,139 @@ class SoundNotificationManager {
       if (!AudioCtx) return null;
       if (!this.audioCtx || this.audioCtx.state === 'closed') {
         this.audioCtx = new AudioCtx();
+        console.log('[SOUND] state:', this.audioCtx.state);
       }
       return this.audioCtx;
     } catch (e) {
-      console.warn('[NOTIFICATION_SOUND] getAudioContext error:', e);
+      console.warn('[SOUND] getAudioContext failed:', e);
       return null;
     }
   }
 
-  unlock() {
-    if (typeof window === 'undefined') return;
+  /**
+   * Check if the notification audio engine is unlocked and ready for playback
+   */
+  isNotificationSoundReady() {
+    if (!this.audioCtx) return false;
+    return this.audioCtx.state === 'running';
+  }
+
+  /**
+   * Subscribe to audio readiness state changes
+   */
+  subscribeAudioState(callback) {
+    if (typeof callback !== 'function') return () => {};
+    this.listeners.add(callback);
+    callback(this.isNotificationSoundReady());
+    return () => this.listeners.delete(callback);
+  }
+
+  _notifyListeners() {
+    const ready = this.isNotificationSoundReady();
+    this.isReady = ready;
+    this.listeners.forEach(cb => {
+      try { cb(ready); } catch (e) {}
+    });
+  }
+
+  /**
+   * Unlock Web Audio Context on user gesture
+   */
+  unlockNotificationSound() {
+    if (typeof window === 'undefined') return Promise.resolve(false);
+    console.log('[SOUND] unlock_attempt');
     try {
       const ctx = this.getAudioContext();
-      if (ctx && ctx.state === 'suspended') {
-        ctx.resume().then(() => {
-          this.isUnlocked = true;
-          console.log('[NOTIFICATION_SOUND] user_interaction_unlocked (Web Audio)');
-        }).catch(err => {
-          console.warn('[NOTIFICATION_SOUND] autoplay_blocked (Web Audio):', err);
-        });
-      } else if (ctx && ctx.state === 'running') {
-        this.isUnlocked = true;
+      if (!ctx) {
+        console.warn('[SOUND] unlock_failed: AudioContext not supported');
+        return Promise.resolve(false);
       }
 
-      // Warm up HTML5 Audio
-      this.init();
-      if (this.presenceAudio) {
-        this.presenceAudio.play().then(() => {
-          this.presenceAudio.pause();
-          this.presenceAudio.currentTime = 0;
-          this.isUnlocked = true;
-          console.log('[NOTIFICATION_SOUND] user_interaction_unlocked (HTML5 Audio)');
-        }).catch(e => {});
+      if (ctx.state === 'suspended') {
+        return ctx.resume().then(() => {
+          console.log('[SOUND] unlock_success');
+          this._notifyListeners();
+          return true;
+        }).catch(err => {
+          console.warn('[SOUND] unlock_failed:', err);
+          return false;
+        });
+      } else if (ctx.state === 'running') {
+        console.log('[SOUND] unlock_success (already running)');
+        this._notifyListeners();
+        return Promise.resolve(true);
       }
+      return Promise.resolve(false);
     } catch (e) {
-      console.warn('[NOTIFICATION_SOUND] unlock error:', e);
+      console.warn('[SOUND] unlock_failed:', e);
+      return Promise.resolve(false);
     }
   }
 
+  /**
+   * Play single synthesized 4-Tone Shield sequence for Table Presence Verification
+   * C5 (523.25Hz) -> E5 (659.25Hz) -> G5 (783.99Hz) -> C6 (1046.50Hz) + sparkle harmonic
+   */
+  _synthesizePresenceChime(ctx) {
+    if (!ctx) return;
+    try {
+      const tones = [
+        { freq: 523.25, start: 0.00, dur: 0.22, wave: 'sine', gain: 0.8 },
+        { freq: 659.25, start: 0.14, dur: 0.22, wave: 'sine', gain: 0.85 },
+        { freq: 783.99, start: 0.28, dur: 0.25, wave: 'triangle', gain: 0.9 },
+        { freq: 1046.50, start: 0.42, dur: 0.45, wave: 'sine', gain: 1.0 },
+        { freq: 2093.00, start: 0.42, dur: 0.35, wave: 'sine', gain: 0.35 }
+      ];
+
+      tones.forEach(t => {
+        const osc = ctx.createOscillator();
+        const gain = ctx.createGain();
+        osc.type = t.wave;
+        osc.frequency.setValueAtTime(t.freq, ctx.currentTime + t.start);
+        gain.gain.setValueAtTime(t.gain, ctx.currentTime + t.start);
+        gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + t.start + t.dur);
+        osc.connect(gain);
+        gain.connect(ctx.destination);
+        osc.start(ctx.currentTime + t.start);
+        osc.stop(ctx.currentTime + t.start + t.dur);
+      });
+    } catch (e) {
+      console.warn('[SOUND] play_failed:', e);
+    }
+  }
+
+  /**
+   * Play presence verification attention sound alert (3 cycles over ~4.5s)
+   */
   playPresenceAlert() {
-    console.log('[NOTIFICATION_SOUND] play_started', { type: 'presence_verification' });
+    console.log('[SOUND] play_started', { type: 'presence_verification' });
     this.stopPresenceAlert();
 
-    const playOnce = () => {
-      // 1. Try HTML5 Audio
-      try {
-        if (!this.presenceAudio) this.init();
-        if (this.presenceAudio) {
-          this.presenceAudio.currentTime = 0;
-          const p = this.presenceAudio.play();
-          if (p && typeof p.then === 'function') {
-            p.catch(err => {
-              console.warn('[NOTIFICATION_SOUND] HTML5 Audio play blocked:', err);
-              this.playWebAudioPresence();
-            });
-          }
-        } else {
-          this.playWebAudioPresence();
-        }
-      } catch (err) {
-        console.warn('[NOTIFICATION_SOUND] HTML5 Audio play error:', err);
-        this.playWebAudioPresence();
-      }
-    };
+    const ctx = this.getAudioContext();
+    if (!ctx) {
+      console.warn('[SOUND] play_failed: No AudioContext');
+      return;
+    }
 
-    playOnce();
+    if (ctx.state === 'suspended') {
+      ctx.resume().catch(() => {});
+    }
+
     const startTime = Date.now();
+    this._synthesizePresenceChime(ctx);
+
     this.presenceInterval = setInterval(() => {
-      if (Date.now() - startTime >= 4800) {
+      if (Date.now() - startTime >= 4500) {
         this.stopPresenceAlert();
-        console.log('[NOTIFICATION_SOUND] play_completed', { type: 'presence_verification' });
       } else {
-        playOnce();
+        this._synthesizePresenceChime(ctx);
       }
-    }, 1500);
+    }, 1200);
 
     if (typeof navigator !== 'undefined' && 'vibrate' in navigator) {
-      navigator.vibrate([400, 150, 400, 150, 400]);
+      try {
+        navigator.vibrate([400, 150, 400, 150, 400]);
+      } catch (e) {}
     }
   }
 
@@ -244,25 +163,25 @@ class SoundNotificationManager {
     }
   }
 
-  playWebAudioPresence() {
+  /**
+   * Play single synthesized 3-Tone Reception Bell sequence for Waiter Calls
+   * A5 (880Hz) -> E6 (1320Hz) -> A6 (1760Hz)
+   */
+  _synthesizeWaiterBell(ctx) {
+    if (!ctx) return;
     try {
-      const ctx = this.getAudioContext();
-      if (!ctx) return;
-      if (ctx.state === 'suspended') {
-        ctx.resume().catch(() => {});
-      }
       const tones = [
-        { freq: 523.25, start: 0.00, dur: 0.25, gain: 0.8 },
-        { freq: 659.25, start: 0.16, dur: 0.25, gain: 0.85 },
-        { freq: 783.99, start: 0.32, dur: 0.30, gain: 0.9 },
-        { freq: 1046.50, start: 0.48, dur: 0.60, gain: 1.0 }
+        { freq: 880, start: 0.00, dur: 0.30 },
+        { freq: 1320, start: 0.18, dur: 0.35 },
+        { freq: 1760, start: 0.36, dur: 0.50 }
       ];
+
       tones.forEach(t => {
         const osc = ctx.createOscillator();
         const gain = ctx.createGain();
         osc.type = 'sine';
         osc.frequency.setValueAtTime(t.freq, ctx.currentTime + t.start);
-        gain.gain.setValueAtTime(t.gain, ctx.currentTime + t.start);
+        gain.gain.setValueAtTime(1.0, ctx.currentTime + t.start);
         gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + t.start + t.dur);
         osc.connect(gain);
         gain.connect(ctx.destination);
@@ -270,81 +189,50 @@ class SoundNotificationManager {
         osc.stop(ctx.currentTime + t.start + t.dur);
       });
     } catch (e) {
-      console.warn('[NOTIFICATION_SOUND] Web Audio fallback error:', e);
+      console.warn('[SOUND] play_failed:', e);
     }
   }
 
-  playWaiterBell() {
-    console.log('[NOTIFICATION_SOUND] play_started', { type: 'waiter_bell' });
-    this.stopWaiterBell();
+  /**
+   * Play waiter call sound alert (over 6.0 seconds)
+   */
+  playWaiterAlert() {
+    console.log('[SOUND] play_started', { type: 'waiter_bell' });
+    this.stopWaiterAlert();
 
-    const playOnce = () => {
-      try {
-        if (!this.waiterAudio) this.init();
-        if (this.waiterAudio) {
-          this.waiterAudio.currentTime = 0;
-          const p = this.waiterAudio.play();
-          if (p && typeof p.then === 'function') {
-            p.catch(err => {
-              console.warn('[NOTIFICATION_SOUND] Waiter HTML5 audio blocked:', err);
-              this.playWebAudioWaiter();
-            });
-          }
-        } else {
-          this.playWebAudioWaiter();
-        }
-      } catch (err) {
-        this.playWebAudioWaiter();
-      }
-    };
+    const ctx = this.getAudioContext();
+    if (!ctx) {
+      console.warn('[SOUND] play_failed: No AudioContext');
+      return;
+    }
 
-    playOnce();
+    if (ctx.state === 'suspended') {
+      ctx.resume().catch(() => {});
+    }
+
     const startTime = Date.now();
+    this._synthesizeWaiterBell(ctx);
+
     this.waiterInterval = setInterval(() => {
       if (Date.now() - startTime >= 6000) {
-        this.stopWaiterBell();
-        console.log('[NOTIFICATION_SOUND] play_completed', { type: 'waiter_bell' });
+        this.stopWaiterAlert();
       } else {
-        playOnce();
+        this._synthesizeWaiterBell(ctx);
       }
-    }, 1400);
+    }, 1200);
   }
 
-  stopWaiterBell() {
+  stopWaiterAlert() {
     if (this.waiterInterval) {
       clearInterval(this.waiterInterval);
       this.waiterInterval = null;
     }
   }
-
-  playWebAudioWaiter() {
-    try {
-      const ctx = this.getAudioContext();
-      if (!ctx) return;
-      if (ctx.state === 'suspended') {
-        ctx.resume().catch(() => {});
-      }
-      const tones = [
-        { freq: 880, start: 0.00, dur: 0.35, gain: 0.9 },
-        { freq: 1320, start: 0.20, dur: 0.40, gain: 0.95 },
-        { freq: 1760, start: 0.40, dur: 0.65, gain: 1.0 }
-      ];
-      tones.forEach(t => {
-        const osc = ctx.createOscillator();
-        const gain = ctx.createGain();
-        osc.type = 'sine';
-        osc.frequency.setValueAtTime(t.freq, ctx.currentTime + t.start);
-        gain.gain.setValueAtTime(t.gain, ctx.currentTime + t.start);
-        gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + t.start + t.dur);
-        osc.connect(gain);
-        gain.connect(ctx.destination);
-        osc.start(ctx.currentTime + t.start);
-        osc.stop(ctx.currentTime + t.start + t.dur);
-      });
-    } catch (e) {
-      console.warn('[NOTIFICATION_SOUND] Web Audio waiter error:', e);
-    }
-  }
 }
 
-export const soundManager = new SoundNotificationManager();
+export const soundManager = new NotificationSoundService();
+export const unlockNotificationSound = () => soundManager.unlockNotificationSound();
+export const playPresenceAlert = () => soundManager.playPresenceAlert();
+export const playWaiterAlert = () => soundManager.playWaiterAlert();
+export const isNotificationSoundReady = () => soundManager.isNotificationSoundReady();
+export const subscribeAudioState = (cb) => soundManager.subscribeAudioState(cb);
