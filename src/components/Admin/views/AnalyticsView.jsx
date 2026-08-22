@@ -96,6 +96,8 @@ export default function AnalyticsView({
             <span>Real-time revenue metrics & CSV sales reports</span>
             <span>•</span>
             <span style={{ color: '#059669', fontWeight: 700 }}>Auto-refreshes every 10s</span>
+            <span>•</span>
+            <span>Includes individual recent orders and historical daily summaries</span>
             {formattedLastUpdated && (
               <>
                 <span>•</span>
@@ -342,7 +344,7 @@ export default function AnalyticsView({
             {currencySymbol}{Number(allTimeRevenue).toLocaleString('en-IN')}
           </div>
           <span style={{ fontSize: '0.7rem', color: '#94A3B8', marginTop: '6px', fontWeight: 500 }}>
-            {totalOrders > 0 ? `${totalOrders} total orders placed` : 'Lifetime restaurant gross'}
+            {totalOrders > 0 ? `${totalOrders} total orders (live + historical rollups)` : 'Lifetime restaurant gross'}
           </span>
         </div>
       </div>

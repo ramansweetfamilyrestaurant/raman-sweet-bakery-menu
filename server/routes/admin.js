@@ -2293,19 +2293,33 @@ router.get('/analytics/export/csv', authenticateToken, requireActiveSubscription
       'Order / Summary ID',
       'Date (IST)',
       'Time (IST)',
-      'Table Number',
+      'Order Count',
+      'Table / Space',
       'Customer Name',
       'Customer Phone',
       'Items Count',
       'Items Detail',
-      'Status',
       'Payment Method',
-      'Amount (INR)'
+      'Cash Amount (INR)',
+      'UPI Amount (INR)',
+      'Card Amount (INR)',
+      'Other Amount (INR)',
+      'Amount (INR)',
+      'Status'
     ];
 
     const csvRows = [];
+    let grandTotalRepresentedOrders = 0;
+    let liveOrderRowCount = 0;
+    let rollupRowCount = 0;
+    let grandTotalItemsCount = 0;
+    let grandTotalCash = 0;
+    let grandTotalUPI = 0;
+    let grandTotalCard = 0;
+    let grandTotalOther = 0;
+    let grandTotalRevenue = 0;
 
-    // Add raw orders
+    // 1. Process Live Orders
     orders.forEach(o => {
       const d = parseSafeDate(o.created_at) || new Date();
       const dStr = getFormattedLocalDate(d);
@@ -2324,27 +2338,67 @@ router.get('/analytics/export/csv', authenticateToken, requireActiveSubscription
       const totalItemCount = itemsList.reduce((acc, i) => acc + (Number(i.quantity || i.qty) || 1), 0);
       const itemsDetailStr = itemsList.map(i => `${i.name || i.title || 'Item'} (x${i.quantity || i.qty || 1})`).join(', ');
 
+      const amt = Number(o.total_amount) || 0;
+      const pMethod = String(o.payment_method || 'cash').toLowerCase();
+
+      let cashAmt = 0;
+      let upiAmt = 0;
+      let cardAmt = 0;
+      let otherAmt = 0;
+      let pMethodDisplay = 'CASH';
+
+      if (pMethod.includes('upi') || pMethod.includes('online') || pMethod.includes('paytm') || pMethod.includes('gpay') || pMethod.includes('phonepe')) {
+        upiAmt = amt;
+        pMethodDisplay = 'UPI';
+      } else if (pMethod.includes('card')) {
+        cardAmt = amt;
+        pMethodDisplay = 'CARD';
+      } else if (pMethod.includes('cash')) {
+        cashAmt = amt;
+        pMethodDisplay = 'CASH';
+      } else {
+        otherAmt = amt;
+        pMethodDisplay = 'OTHER';
+      }
+
+      grandTotalRepresentedOrders += 1;
+      liveOrderRowCount += 1;
+      grandTotalItemsCount += totalItemCount;
+      grandTotalCash += cashAmt;
+      grandTotalUPI += upiAmt;
+      grandTotalCard += cardAmt;
+      grandTotalOther += otherAmt;
+      grandTotalRevenue += amt;
+
       csvRows.push([
         'LIVE_ORDER',
         `#${o.id}`,
         dStr,
         timeStr,
+        1,
         String(o.table_number || '1'),
         o.customer_name || 'Dine-In Guest',
         o.customer_phone || 'N/A',
         totalItemCount,
         itemsDetailStr,
-        String(o.status || 'COMPLETED').toUpperCase(),
-        String(o.payment_method || 'CASH').toUpperCase(),
-        Number(o.total_amount) || 0
+        pMethodDisplay,
+        cashAmt,
+        upiAmt,
+        cardAmt,
+        otherAmt,
+        amt,
+        String(o.status || 'COMPLETED').toUpperCase()
       ]);
     });
 
-    // Add historical summaries
+    // 2. Process Historical Summaries (DAILY_ROLLUP)
     summaries.forEach(s => {
       const dDate = parseSafeDate(s.summary_date) || new Date(s.summary_date);
       const sDateStr = getFormattedLocalDate(dDate) || s.summary_date;
       if (!isDateInPeriod(sDateStr)) return;
+
+      const orderCount = Number(s.total_orders) || 1;
+      const amt = Number(s.total_sales) || 0;
 
       let itemsList = [];
       try {
@@ -2355,24 +2409,92 @@ router.get('/analytics/export/csv', authenticateToken, requireActiveSubscription
         }
       } catch (e) {}
 
-      const totalItemCount = Array.isArray(itemsList) ? itemsList.reduce((acc, i) => acc + (Number(i.quantity || i.qty) || 1), 0) : 0;
-      const itemsDetailStr = Array.isArray(itemsList) ? itemsList.map(i => `${i.name} (x${i.quantity || i.qty || 1})`).join(', ') : 'Daily Summary';
+      const totalItemCount = Array.isArray(itemsList) ? itemsList.reduce((acc, i) => acc + (Number(i.quantity ?? i.qty) || 1), 0) : 0;
+      const itemsDetailStr = Array.isArray(itemsList) && itemsList.length > 0
+        ? itemsList.map(i => `${i.name} (x${i.quantity ?? i.qty ?? 1})`).join(', ')
+        : 'Daily Summary';
+
+      let pMethodsSummary = null;
+      try {
+        if (s.payment_methods_summary) {
+          pMethodsSummary = typeof s.payment_methods_summary === 'string' ? JSON.parse(s.payment_methods_summary) : s.payment_methods_summary;
+        }
+      } catch (e) {}
+
+      let cashAmt = 0;
+      let upiAmt = 0;
+      let cardAmt = 0;
+      let otherAmt = 0;
+
+      if (pMethodsSummary) {
+        cashAmt = Number(pMethodsSummary.cash || pMethodsSummary.cash?.amount || 0);
+        upiAmt = Number(pMethodsSummary.upi || pMethodsSummary.upi?.amount || 0);
+        cardAmt = Number(pMethodsSummary.card || pMethodsSummary.card?.amount || 0);
+        otherAmt = Number(pMethodsSummary.other || pMethodsSummary.other?.amount || 0);
+      } else {
+        cashAmt = amt;
+      }
+
+      let pMethodDisplay = 'MIXED';
+      if (cashAmt > 0 && upiAmt === 0 && cardAmt === 0 && otherAmt === 0) pMethodDisplay = 'CASH';
+      else if (upiAmt > 0 && cashAmt === 0 && cardAmt === 0 && otherAmt === 0) pMethodDisplay = 'UPI';
+      else if (cardAmt > 0 && cashAmt === 0 && upiAmt === 0 && otherAmt === 0) pMethodDisplay = 'CARD';
+
+      grandTotalRepresentedOrders += orderCount;
+      rollupRowCount += 1;
+      grandTotalItemsCount += totalItemCount;
+      grandTotalCash += cashAmt;
+      grandTotalUPI += upiAmt;
+      grandTotalCard += cardAmt;
+      grandTotalOther += otherAmt;
+      grandTotalRevenue += amt;
 
       csvRows.push([
         'DAILY_ROLLUP',
         `SUMMARY-${sDateStr}`,
         sDateStr,
         'Full Day Aggregate',
+        orderCount,
         'Multiple Tables',
         'Daily Compaction',
         'N/A',
         totalItemCount,
         itemsDetailStr,
-        'COMPLETED (ARCHIVE)',
-        'MIXED',
-        Number(s.total_sales) || 0
+        pMethodDisplay,
+        cashAmt,
+        upiAmt,
+        cardAmt,
+        otherAmt,
+        amt,
+        'COMPLETED (ARCHIVE)'
       ]);
     });
+
+    // 3. Add Summary Footer Section (Tabular alignment for Excel & Google Sheets)
+    if (csvRows.length > 0) {
+      csvRows.push([
+        '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', ''
+      ]);
+      csvRows.push([
+        'REPORT_SUMMARY',
+        'ALL_RECORDS',
+        `Period: ${selectedPeriod}`,
+        `Live Rows: ${liveOrderRowCount} | Rollup Rows: ${rollupRowCount}`,
+        grandTotalRepresentedOrders,
+        'Multiple Tables',
+        'Summary Totals',
+        'N/A',
+        grandTotalItemsCount,
+        `Total Represented Orders: ${grandTotalRepresentedOrders} across ${liveOrderRowCount + rollupRowCount} physical records`,
+        'ALL_METHODS',
+        grandTotalCash,
+        grandTotalUPI,
+        grandTotalCard,
+        grandTotalOther,
+        grandTotalRevenue,
+        'VERIFIED_SUMMARY'
+      ]);
+    }
 
     const csvContent = '\uFEFF' + [
       headers.map(escapeCSV).join(','),
