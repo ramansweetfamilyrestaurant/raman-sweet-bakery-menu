@@ -610,15 +610,44 @@ export async function rejectPresenceRequest(id, token, reason = 'Rejected by sta
   return handleResponse(res, 'Failed to reject presence verification');
 }
 
-export async function fetchAdminAnalytics(token, year = null, month = null) {
+export async function fetchAdminAnalytics(token, period = 'all', year = null, month = null) {
   let url = `${API_BASE}/admin/analytics`;
+  const params = new URLSearchParams();
   if (year && month) {
-    url += `?year=${year}&month=${month}`;
+    params.append('year', year);
+    params.append('month', month);
+  } else if (period && period !== 'all') {
+    params.append('period', period);
   }
+  const qs = params.toString();
+  if (qs) url += `?${qs}`;
+
   const res = await fetch(url, {
     headers: { Authorization: `Bearer ${token}` }
   });
   return handleResponse(res, 'Failed to fetch analytics');
+}
+
+export async function exportAdminAnalyticsCSV(token, period = 'all', year = null, month = null) {
+  let url = `${API_BASE}/admin/analytics/export/csv`;
+  const params = new URLSearchParams();
+  if (year && month) {
+    params.append('year', year);
+    params.append('month', month);
+  } else if (period && period !== 'all') {
+    params.append('period', period);
+  }
+  const qs = params.toString();
+  if (qs) url += `?${qs}`;
+
+  const res = await fetch(url, {
+    headers: { Authorization: `Bearer ${token}` }
+  });
+  if (!res.ok) {
+    const errData = await res.json().catch(() => ({}));
+    throw new Error(errData.error || `Export failed with HTTP ${res.status}`);
+  }
+  return await res.blob();
 }
 
 // ========== COMBO / THALI DEALS ==========

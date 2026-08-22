@@ -1,5 +1,5 @@
-import React, { useState, useEffect, useRef } from 'react';
-import { fetchCategories, fetchDishes, toggleDishAvailability, toggleCategoryActive, deleteDish, deleteCategory, fetchRestaurantInfo, updateDishPrice, fetchAnnouncements, fetchAdminOrders, updateOrderStatus, uploadImage, fetchServiceRequests, resolveServiceRequest, approvePresenceRequest, rejectPresenceRequest, fetchAdminAnalytics, fetchAdminCombos, createCombo, updateCombo, deleteCombo, toggleComboAvailability, optimizeDatabase, updateTenantSettings } from '../../api/client';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
+import { fetchCategories, fetchDishes, toggleDishAvailability, toggleCategoryActive, deleteDish, deleteCategory, fetchRestaurantInfo, updateDishPrice, fetchAnnouncements, fetchAdminOrders, updateOrderStatus, uploadImage, fetchServiceRequests, resolveServiceRequest, approvePresenceRequest, rejectPresenceRequest, fetchAdminAnalytics, exportAdminAnalyticsCSV, fetchAdminCombos, createCombo, updateCombo, deleteCombo, toggleComboAvailability, optimizeDatabase, updateTenantSettings } from '../../api/client';
 import { getPlanDetails } from '../../config/plans';
 import { generateQrToken } from '../../utils/qrSecurity';
 import { soundManager, unlockNotificationSound, playPresenceAlert, playWaiterAlert, subscribeAudioState } from '../../utils/soundManager';
@@ -584,34 +584,44 @@ export default function AdminDashboard({ token, username, slug: propSlug = '', o
   };
 
   // 📅 Export Today's / Daily Sales (Since 12:00 AM Midnight Today)
-  const handleDownloadTodaySalesReport = () => {
-    const now = new Date();
-    const todayISO = new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Kolkata' }).format(now);
-    const todayOrders = (orders || []).filter(o => {
-      if (!o.created_at) return true;
-      const orderDateStr = new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Kolkata' }).format(new Date(o.created_at));
-      return orderDateStr === todayISO;
-    });
-    if (todayOrders.length === 0) {
-      alert("No sales orders recorded for today yet.");
-      return;
-    }
-    generateAndDownloadCSV(todayOrders, `Daily_Sales_Report_${todayISO}`);
-  };
-
-  // 📊 Export All-Time Sales (Complete History)
-  const [exportingAll, setExportingAll] = useState(false);
-  const handleDownloadAllSalesReport = async () => {
+  const handleDownloadTodaySalesReport = async () => {
     setExportingAll(true);
     try {
-      const allOrders = await fetchAdminOrders(token, 'all');
-      if (!allOrders || allOrders.length === 0) {
-        alert('No historical sales data found.');
-        return;
-      }
-      generateAndDownloadCSV(allOrders, 'All_Time_Sales_Report');
+      const blob = await exportAdminAnalyticsCSV(token, 'today');
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      const todayISO = new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Kolkata' }).format(new Date());
+      link.download = `Daily_Sales_Report_${todayISO}.csv`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      URL.revokeObjectURL(url);
     } catch (err) {
-      alert(err.message || 'Failed to export all-time sales report');
+      alert(err.message || 'Failed to export daily sales report');
+    } finally {
+      setExportingAll(false);
+    }
+  };
+
+  // 📊 Export Sales (Selected Period / Complete History)
+  const [exportingAll, setExportingAll] = useState(false);
+  const handleDownloadAllSalesReport = async (period = 'all', year = null, month = null) => {
+    setExportingAll(true);
+    try {
+      const blob = await exportAdminAnalyticsCSV(token, period, year, month);
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      const todayISO = new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Kolkata' }).format(new Date());
+      const prefix = period === 'all' ? 'All_Time_Sales_Report' : `Sales_Report_${period}`;
+      link.download = `${prefix}_${todayISO}.csv`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      URL.revokeObjectURL(url);
+    } catch (err) {
+      alert(err.message || 'Failed to export sales report');
     } finally {
       setExportingAll(false);
     }
@@ -1268,18 +1278,38 @@ export default function AdminDashboard({ token, username, slug: propSlug = '', o
     return () => clearInterval(interval);
   }, [token]);
 
-  useEffect(() => {
-    if (activeTab === 'analytics' && token) {
-      fetchAdminAnalytics(token)
-        .then(data => { if (data) setAnalyticsData(data); })
-        .catch(() => {});
-    }
-  }, [activeTab, token]);
+  const [analyticsFilterState, setAnalyticsFilterState] = useState({ period: 'all', year: null, month: null });
+  const analyticsFetchRef = useRef(false);
 
-  const handleFilterAnalytics = async (year, month) => {
+  useEffect(() => {
+    let interval = null;
+    if (activeTab === 'analytics' && token) {
+      const fetchAnalyticsNow = async () => {
+        if (analyticsFetchRef.current) return;
+        analyticsFetchRef.current = true;
+        try {
+          const data = await fetchAdminAnalytics(token, analyticsFilterState.period, analyticsFilterState.year, analyticsFilterState.month);
+          if (data) setAnalyticsData(data);
+        } catch (err) {
+          console.warn('Analytics polling notice:', err);
+        } finally {
+          analyticsFetchRef.current = false;
+        }
+      };
+
+      fetchAnalyticsNow();
+      interval = setInterval(fetchAnalyticsNow, 10000); // 10s auto-refresh when tab is active
+    }
+    return () => {
+      if (interval) clearInterval(interval);
+    };
+  }, [activeTab, token, analyticsFilterState]);
+
+  const handleFilterAnalytics = async (period = 'all', year = null, month = null) => {
+    setAnalyticsFilterState({ period, year, month });
     if (!token) return;
     try {
-      const data = await fetchAdminAnalytics(token, year, month);
+      const data = await fetchAdminAnalytics(token, period, year, month);
       if (data) setAnalyticsData(data);
     } catch (err) {
       console.warn('Filter analytics error:', err);

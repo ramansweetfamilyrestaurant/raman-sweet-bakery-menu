@@ -445,8 +445,10 @@ async function createTables() {
       `ALTER TABLE coupons ADD COLUMN IF NOT EXISTS max_uses_per_restaurant INT DEFAULT 1;`,
       `ALTER TABLE coupons ADD COLUMN IF NOT EXISTS first_payment_only BOOLEAN DEFAULT TRUE;`,
       `ALTER TABLE coupons ADD COLUMN IF NOT EXISTS minimum_plan_amount DECIMAL(10, 2) DEFAULT 0;`,
-      `ALTER TABLE coupons ADD COLUMN IF NOT EXISTS is_active BOOLEAN DEFAULT TRUE;`,
-      `ALTER TABLE coupons ADD COLUMN IF NOT EXISTS used_count INT DEFAULT 0;`,
+      `ALTER TABLE daily_sales_summaries ADD COLUMN IF NOT EXISTS items_summary TEXT;`,
+      `ALTER TABLE daily_sales_summaries ADD COLUMN IF NOT EXISTS payment_methods_summary TEXT;`,
+      `CREATE INDEX IF NOT EXISTS idx_orders_resto_created_status ON orders(restaurant_id, created_at, status);`,
+      `CREATE INDEX IF NOT EXISTS idx_daily_sales_summaries_resto_date ON daily_sales_summaries(restaurant_id, summary_date);`,
       `CREATE INDEX IF NOT EXISTS idx_restaurants_active_expires ON restaurants(active, plan_expires_at);`,
       `CREATE INDEX IF NOT EXISTS idx_subscriptions_restaurant ON subscriptions(restaurant_id);`,
       `CREATE INDEX IF NOT EXISTS idx_subscriptions_status ON subscriptions(status);`,
@@ -492,6 +494,7 @@ async function createTables() {
       `ALTER TABLE saas_plans ADD COLUMN IF NOT EXISTS watermark_removal_enabled INT DEFAULT 1;`,
       `ALTER TABLE saas_plans ADD COLUMN IF NOT EXISTS custom_domain_enabled INT DEFAULT 1;`,
       `ALTER TABLE orders ADD COLUMN IF NOT EXISTS customer_phone VARCHAR(50);`,
+      `ALTER TABLE orders ADD COLUMN IF NOT EXISTS payment_method VARCHAR(50) DEFAULT 'cash';`,
       `ALTER TABLE orders ADD COLUMN IF NOT EXISTS sent_to_kds INT DEFAULT 0;`,
       `ALTER TABLE orders ADD COLUMN IF NOT EXISTS kitchen_prepared INT DEFAULT 0;`,
       `ALTER TABLE orders ADD COLUMN IF NOT EXISTS customer_latitude NUMERIC;`,
@@ -726,10 +729,16 @@ async function createTables() {
         total_sales REAL DEFAULT 0,
         total_orders INTEGER DEFAULT 0,
         top_dishes_summary TEXT,
+        items_summary TEXT,
+        payment_methods_summary TEXT,
         created_at TEXT DEFAULT CURRENT_TIMESTAMP,
         UNIQUE (restaurant_id, summary_date),
         FOREIGN KEY (restaurant_id) REFERENCES restaurants (id) ON DELETE CASCADE
       );
+      try { sqliteDb.exec("ALTER TABLE daily_sales_summaries ADD COLUMN items_summary TEXT"); } catch (e) {}
+      try { sqliteDb.exec("ALTER TABLE daily_sales_summaries ADD COLUMN payment_methods_summary TEXT"); } catch (e) {}
+      try { sqliteDb.exec("CREATE INDEX IF NOT EXISTS idx_orders_resto_created_status ON orders(restaurant_id, created_at, status)"); } catch (e) {}
+      try { sqliteDb.exec("CREATE INDEX IF NOT EXISTS idx_daily_sales_summaries_resto_date ON daily_sales_summaries(restaurant_id, summary_date)"); } catch (e) {}
 
       CREATE TABLE IF NOT EXISTS subscriptions (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -939,6 +948,7 @@ async function createTables() {
       if (!planCols.some(c => c.name === 'dual_printer_enabled')) sqliteDb.exec("ALTER TABLE saas_plans ADD COLUMN dual_printer_enabled INTEGER DEFAULT 0");
 
       const orderCols = sqliteDb.pragma("table_info(orders)");
+      if (!orderCols.some(c => c.name === 'payment_method')) sqliteDb.exec("ALTER TABLE orders ADD COLUMN payment_method TEXT DEFAULT 'cash'");
       if (!orderCols.some(c => c.name === 'sent_to_kds')) sqliteDb.exec("ALTER TABLE orders ADD COLUMN sent_to_kds INTEGER DEFAULT 0");
       if (!orderCols.some(c => c.name === 'kitchen_prepared')) sqliteDb.exec("ALTER TABLE orders ADD COLUMN kitchen_prepared INTEGER DEFAULT 0");
       if (!orderCols.some(c => c.name === 'customer_latitude')) sqliteDb.exec("ALTER TABLE orders ADD COLUMN customer_latitude REAL");
@@ -1305,49 +1315,74 @@ async function logAudit(restaurantId, actorRole, action, details) {
   }
 }
 
+const compactionLocks = new Set();
+
 async function runAutoDataSummarization(daysOld = 30, targetRestaurantId = null) {
+  const lockKey = targetRestaurantId ? `resto_${targetRestaurantId}` : 'global';
+  if (compactionLocks.has(lockKey)) {
+    return { summarized_days: 0, purged_orders: 0, message: 'Compaction already in progress for this tenant' };
+  }
+  compactionLocks.add(lockKey);
   try {
+    const parseSafeDate = (dateVal) => {
+      if (!dateVal) return null;
+      if (dateVal instanceof Date) return isNaN(dateVal.getTime()) ? null : dateVal;
+      let str = String(dateVal).trim();
+      if (str.includes(' ') && !str.includes('T')) {
+        str = str.replace(' ', 'T');
+      }
+      const d = new Date(str);
+      return isNaN(d.getTime()) ? null : d;
+    };
+
+    const getFormattedLocalDate = (dateObj) => {
+      const d = parseSafeDate(dateObj);
+      if (!d) return '';
+      try {
+        return new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Kolkata' }).format(d);
+      } catch (e) {
+        const year = d.getFullYear();
+        const month = String(d.getMonth() + 1).padStart(2, '0');
+        const day = String(d.getDate()).padStart(2, '0');
+        return `${year}-${month}-${day}`;
+      }
+    };
+
     const cutoffDate = new Date();
     cutoffDate.setDate(cutoffDate.getDate() - daysOld);
-    const cutoffISO = cutoffDate.toISOString().split('T')[0] + ' 23:59:59';
+    const cutoffDateStr = getFormattedLocalDate(cutoffDate);
 
-    let sql = 'SELECT * FROM orders WHERE created_at <= $1';
-    const params = [cutoffISO];
+    let sql = 'SELECT * FROM orders WHERE 1=1';
+    const params = [];
     if (targetRestaurantId) {
-      sql += ' AND restaurant_id = $2';
+      sql += ' AND restaurant_id = $1';
       params.push(targetRestaurantId);
     }
     sql += ' ORDER BY created_at ASC';
 
-    const oldOrders = await query(sql, params);
-    if (!oldOrders || oldOrders.length === 0) {
-      return { summarized_days: 0, purged_orders: 0, message: 'No orders older than ' + daysOld + ' days found to summarize' };
+    const allOrders = await query(sql, params);
+    if (!allOrders || allOrders.length === 0) {
+      return { summarized_days: 0, purged_orders: 0, message: 'No orders found to summarize' };
     }
 
     const grouped = {};
-    for (const o of oldOrders) {
+    const invalidOrderIds = [];
+
+    for (const o of allOrders) {
       if (!o.restaurant_id) continue;
       const restoId = o.restaurant_id;
-      let dStr = '';
-      if (o.created_at) {
-        if (o.created_at instanceof Date) {
-          const yr = o.created_at.getFullYear();
-          const mo = String(o.created_at.getMonth() + 1).padStart(2, '0');
-          const dy = String(o.created_at.getDate()).padStart(2, '0');
-          dStr = `${yr}-${mo}-${dy}`;
-        } else {
-          const parsedD = new Date(o.created_at);
-          if (!isNaN(parsedD.getTime())) {
-            const yr = parsedD.getFullYear();
-            const mo = String(parsedD.getMonth() + 1).padStart(2, '0');
-            const dy = String(parsedD.getDate()).padStart(2, '0');
-            dStr = `${yr}-${mo}-${dy}`;
-          } else {
-            dStr = String(o.created_at).substring(0, 10);
-          }
-        }
+
+      const dStr = getFormattedLocalDate(o.created_at);
+      if (!dStr || dStr > cutoffDateStr) {
+        continue; // Only process orders on or before the cutoff date
       }
-      if (!dStr || dStr.length < 10) continue;
+
+      // Exclude cancelled and rejected orders from sales summaries (they will still be purged)
+      const st = String(o.status || '').toLowerCase();
+      if (st === 'rejected' || st === 'cancelled') {
+        invalidOrderIds.push(o.id);
+        continue;
+      }
 
       const key = `${restoId}_${dStr}`;
       if (!grouped[key]) {
@@ -1357,13 +1392,27 @@ async function runAutoDataSummarization(daysOld = 30, targetRestaurantId = null)
           total_sales: 0,
           total_orders: 0,
           itemsMap: {},
+          paymentMethods: { upi: 0, cash: 0, card: 0, other: 0 },
           orderIds: []
         };
       }
 
-      grouped[key].total_sales += Number(o.total_amount) || 0;
+      const orderAmt = Number(o.total_amount) || 0;
+      grouped[key].total_sales += orderAmt;
       grouped[key].total_orders += 1;
       grouped[key].orderIds.push(o.id);
+
+      // Payment method
+      const pMethod = String(o.payment_method || 'cash').toLowerCase();
+      if (pMethod.includes('upi') || pMethod.includes('online') || pMethod.includes('paytm') || pMethod.includes('gpay') || pMethod.includes('phonepe')) {
+        grouped[key].paymentMethods.upi += orderAmt;
+      } else if (pMethod.includes('card')) {
+        grouped[key].paymentMethods.card += orderAmt;
+      } else if (pMethod.includes('cash')) {
+        grouped[key].paymentMethods.cash += orderAmt;
+      } else {
+        grouped[key].paymentMethods.other += orderAmt;
+      }
 
       let itemsList = [];
       try {
@@ -1372,9 +1421,17 @@ async function runAutoDataSummarization(daysOld = 30, targetRestaurantId = null)
 
       if (Array.isArray(itemsList)) {
         for (const item of itemsList) {
-          const name = item.name || item.dish_name || 'Item';
+          const name = item.name || item.dish_name || item.title || 'Item';
           const qty = Number(item.quantity || item.qty || 1);
-          grouped[key].itemsMap[name] = (grouped[key].itemsMap[name] || 0) + qty;
+          const price = Number(item.price) || 0;
+          const lineTotal = price * qty;
+          const dishId = item.id || item.dish_id || null;
+
+          if (!grouped[key].itemsMap[name]) {
+            grouped[key].itemsMap[name] = { dish_id: dishId, name, quantity: 0, revenue: 0 };
+          }
+          grouped[key].itemsMap[name].quantity += qty;
+          grouped[key].itemsMap[name].revenue += lineTotal;
         }
       }
     }
@@ -1384,44 +1441,105 @@ async function runAutoDataSummarization(daysOld = 30, targetRestaurantId = null)
 
     for (const key in grouped) {
       const summary = grouped[key];
-      const topDishes = Object.entries(summary.itemsMap)
-        .map(([name, qty]) => ({ name, qty }))
-        .sort((a, b) => b.qty - a.qty)
-        .slice(0, 5);
 
-      const topDishesJson = JSON.stringify(topDishes);
+      // Fetch existing summary for this date if any
+      const existingRows = await query(
+        'SELECT * FROM daily_sales_summaries WHERE restaurant_id = $1 AND summary_date = $2',
+        [summary.restaurant_id, summary.summary_date]
+      );
+
+      let finalSales = summary.total_sales;
+      let finalOrders = summary.total_orders;
+      let finalItemsMap = { ...summary.itemsMap };
+      let finalPaymentMethods = { ...summary.paymentMethods };
+
+      if (existingRows && existingRows.length > 0) {
+        const exist = existingRows[0];
+        finalSales += Number(exist.total_sales) || 0;
+        finalOrders += Number(exist.total_orders) || 0;
+
+        // Merge existing items_summary or top_dishes_summary
+        let existingItems = [];
+        try {
+          if (exist.items_summary) {
+            existingItems = typeof exist.items_summary === 'string' ? JSON.parse(exist.items_summary) : exist.items_summary;
+          } else if (exist.top_dishes_summary) {
+            existingItems = typeof exist.top_dishes_summary === 'string' ? JSON.parse(exist.top_dishes_summary) : exist.top_dishes_summary;
+          }
+        } catch (e) {}
+
+        if (Array.isArray(existingItems)) {
+          for (const ei of existingItems) {
+            const eName = ei.name || 'Dish';
+            const eQty = Number(ei.quantity || ei.qty || 0);
+            const eRev = Number(ei.revenue || 0);
+            if (!finalItemsMap[eName]) {
+              finalItemsMap[eName] = { dish_id: ei.dish_id || null, name: eName, quantity: 0, revenue: 0 };
+            }
+            finalItemsMap[eName].quantity += eQty;
+            finalItemsMap[eName].revenue += eRev;
+          }
+        }
+
+        // Merge existing payment_methods_summary
+        let existPayments = {};
+        try {
+          if (exist.payment_methods_summary) {
+            existPayments = typeof exist.payment_methods_summary === 'string' ? JSON.parse(exist.payment_methods_summary) : exist.payment_methods_summary;
+          }
+        } catch (e) {}
+
+        finalPaymentMethods.upi += Number(existPayments.upi || existPayments.upi?.amount || 0);
+        finalPaymentMethods.cash += Number(existPayments.cash || existPayments.cash?.amount || 0);
+        finalPaymentMethods.card += Number(existPayments.card || existPayments.card?.amount || 0);
+        finalPaymentMethods.other += Number(existPayments.other || existPayments.other?.amount || 0);
+      }
+
+      const allItemsList = Object.values(finalItemsMap);
+      const topDishesList = [...allItemsList].sort((a, b) => b.quantity - a.quantity).slice(0, 10).map(d => ({ name: d.name, qty: d.quantity, revenue: d.revenue }));
+      const itemsSummaryJson = JSON.stringify(allItemsList);
+      const topDishesJson = JSON.stringify(topDishesList);
+      const paymentMethodsJson = JSON.stringify(finalPaymentMethods);
 
       if (dbType === 'postgres') {
         await query(`
-          INSERT INTO daily_sales_summaries (restaurant_id, summary_date, total_sales, total_orders, top_dishes_summary)
-          VALUES ($1, $2, $3, $4, $5)
+          INSERT INTO daily_sales_summaries (restaurant_id, summary_date, total_sales, total_orders, top_dishes_summary, items_summary, payment_methods_summary)
+          VALUES ($1, $2, $3, $4, $5, $6, $7)
           ON CONFLICT (restaurant_id, summary_date)
-          DO UPDATE SET total_sales = daily_sales_summaries.total_sales + EXCLUDED.total_sales,
-                        total_orders = daily_sales_summaries.total_orders + EXCLUDED.total_orders,
-                        top_dishes_summary = EXCLUDED.top_dishes_summary
-        `, [summary.restaurant_id, summary.summary_date, summary.total_sales, summary.total_orders, topDishesJson]);
+          DO UPDATE SET total_sales = EXCLUDED.total_sales,
+                        total_orders = EXCLUDED.total_orders,
+                        top_dishes_summary = EXCLUDED.top_dishes_summary,
+                        items_summary = EXCLUDED.items_summary,
+                        payment_methods_summary = EXCLUDED.payment_methods_summary
+        `, [summary.restaurant_id, summary.summary_date, finalSales, finalOrders, topDishesJson, itemsSummaryJson, paymentMethodsJson]);
       } else {
-        const existing = await query('SELECT * FROM daily_sales_summaries WHERE restaurant_id = $1 AND summary_date = $2', [summary.restaurant_id, summary.summary_date]);
-        if (existing && existing.length > 0) {
+        if (existingRows && existingRows.length > 0) {
           await query(`
             UPDATE daily_sales_summaries
-            SET total_sales = total_sales + $1, total_orders = total_orders + $2, top_dishes_summary = $3
-            WHERE restaurant_id = $4 AND summary_date = $5
-          `, [summary.total_sales, summary.total_orders, topDishesJson, summary.restaurant_id, summary.summary_date]);
+            SET total_sales = $1, total_orders = $2, top_dishes_summary = $3, items_summary = $4, payment_methods_summary = $5
+            WHERE restaurant_id = $6 AND summary_date = $7
+          `, [finalSales, finalOrders, topDishesJson, itemsSummaryJson, paymentMethodsJson, summary.restaurant_id, summary.summary_date]);
         } else {
           await query(`
-            INSERT INTO daily_sales_summaries (restaurant_id, summary_date, total_sales, total_orders, top_dishes_summary)
-            VALUES ($1, $2, $3, $4, $5)
-          `, [summary.restaurant_id, summary.summary_date, summary.total_sales, summary.total_orders, topDishesJson]);
+            INSERT INTO daily_sales_summaries (restaurant_id, summary_date, total_sales, total_orders, top_dishes_summary, items_summary, payment_methods_summary)
+            VALUES ($1, $2, $3, $4, $5, $6, $7)
+          `, [summary.restaurant_id, summary.summary_date, finalSales, finalOrders, topDishesJson, itemsSummaryJson, paymentMethodsJson]);
         }
       }
 
+      // Purge only after summary is successfully saved
       for (const orderId of summary.orderIds) {
         await query('DELETE FROM orders WHERE id = $1', [orderId]);
         purgedOrdersCount++;
       }
 
       summarizedDaysCount++;
+    }
+
+    // Purge any old cancelled/rejected orders
+    for (const invId of invalidOrderIds) {
+      await query('DELETE FROM orders WHERE id = $1', [invId]);
+      purgedOrdersCount++;
     }
 
     if (targetRestaurantId) {
@@ -1436,6 +1554,8 @@ async function runAutoDataSummarization(daysOld = 30, targetRestaurantId = null)
   } catch (err) {
     console.error('Data Summarization Engine Error:', err);
     throw err;
+  } finally {
+    compactionLocks.delete(lockKey);
   }
 }
 

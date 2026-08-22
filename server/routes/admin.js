@@ -1819,14 +1819,10 @@ router.get('/analytics', authenticateToken, requireActiveSubscription, async (re
       return res.status(401).json({ error: 'Restaurant identity is missing from authentication context' });
     }
 
-    const { year: qYear, month: qMonth } = req.query;
+    const { period: qPeriod, year: qYear, month: qMonth } = req.query;
+    const selectedPeriod = qPeriod || (qYear && qMonth ? `month:${qYear}-${String(qMonth).padStart(2, '0')}` : 'all');
     const selectedYear = qYear ? parseInt(qYear, 10) : null;
     const selectedMonth = qMonth ? parseInt(qMonth, 10) : null;
-
-    const orders = await query(
-      "SELECT id, total_amount, status, items, created_at FROM orders WHERE restaurant_id = $1 AND status NOT IN ('rejected', 'cancelled') ORDER BY id DESC",
-      [targetId]
-    );
 
     const parseSafeDate = (dateVal) => {
       if (!dateVal) return null;
@@ -1855,14 +1851,73 @@ router.get('/analytics', authenticateToken, requireActiveSubscription, async (re
     const now = new Date();
     const todayStr = getFormattedLocalDate(now);
 
-    const sevenDaysAgo = new Date();
-    sevenDaysAgo.setDate(now.getDate() - 7);
+    // Calculate IST Date boundaries
+    const getISTDateOffset = (daysBack) => {
+      const d = new Date();
+      d.setDate(d.getDate() - daysBack);
+      return getFormattedLocalDate(d);
+    };
 
-    const thirtyDaysAgo = new Date();
-    thirtyDaysAgo.setDate(now.getDate() - 30);
+    const sevenDaysAgoStr = getISTDateOffset(6); // Today + 6 previous days = 7 days
+    const thirtyDaysAgoStr = getISTDateOffset(29); // Today + 29 previous days = 30 days
+    const sixtyDaysAgoStr = getISTDateOffset(59);
+    const sixMonthsAgoStr = getISTDateOffset(180);
 
-    const sixtyDaysAgo = new Date();
-    sixtyDaysAgo.setDate(now.getDate() - 60);
+    // Initialize daily chart keys based on selected filter
+    const dailySalesMap = {};
+    let periodStartDate = null;
+    let periodEndDate = null;
+
+    if (selectedYear && selectedMonth) {
+      const daysInMonth = new Date(selectedYear, selectedMonth, 0).getDate();
+      const monthPrefix = `${selectedYear}-${String(selectedMonth).padStart(2, '0')}`;
+      periodStartDate = `${monthPrefix}-01`;
+      periodEndDate = `${monthPrefix}-${String(daysInMonth).padStart(2, '0')}`;
+      for (let day = 1; day <= daysInMonth; day++) {
+        const dayStr = `${monthPrefix}-${String(day).padStart(2, '0')}`;
+        dailySalesMap[dayStr] = 0;
+      }
+    } else if (selectedPeriod === 'today') {
+      periodStartDate = todayStr;
+      periodEndDate = todayStr;
+      dailySalesMap[todayStr] = 0;
+    } else if (selectedPeriod === '7d') {
+      periodStartDate = sevenDaysAgoStr;
+      periodEndDate = todayStr;
+      for (let i = 6; i >= 0; i--) {
+        dailySalesMap[getISTDateOffset(i)] = 0;
+      }
+    } else if (selectedPeriod === '30d') {
+      periodStartDate = thirtyDaysAgoStr;
+      periodEndDate = todayStr;
+      for (let i = 29; i >= 0; i--) {
+        dailySalesMap[getISTDateOffset(i)] = 0;
+      }
+    } else if (selectedPeriod === '6m') {
+      periodStartDate = sixMonthsAgoStr;
+      periodEndDate = todayStr;
+      for (let i = 180; i >= 0; i -= 5) {
+        dailySalesMap[getISTDateOffset(i)] = 0;
+      }
+      dailySalesMap[todayStr] = 0;
+    } else {
+      // 'all' -> default last 7 days in chart trend
+      for (let i = 6; i >= 0; i--) {
+        dailySalesMap[getISTDateOffset(i)] = 0;
+      }
+    }
+
+    // Query active non-cancelled orders for tenant
+    const orders = await query(
+      "SELECT id, total_amount, status, payment_method, items, created_at FROM orders WHERE restaurant_id = $1 AND status NOT IN ('rejected', 'cancelled') ORDER BY id DESC",
+      [targetId]
+    );
+
+    // Query historical summaries for tenant
+    const summaries = await query(
+      'SELECT summary_date, total_sales, total_orders, top_dishes_summary, items_summary, payment_methods_summary FROM daily_sales_summaries WHERE restaurant_id = $1 ORDER BY summary_date ASC',
+      [targetId]
+    );
 
     let todaySales = 0;
     let todayOrders = 0;
@@ -1870,42 +1925,37 @@ router.get('/analytics', authenticateToken, requireActiveSubscription, async (re
     let monthlySales = 0;
     let prevMonthSales = 0;
     let totalSales = 0;
+    let totalOrdersCount = 0;
 
-    const dishSalesMap = {};
-    const dailySalesMap = {};
+    let periodSales = 0;
+    let periodOrdersCount = 0;
+
+    const allTimeDishSalesMap = {};
+    const periodDishSalesMap = {};
     const availableMonthsMap = {};
 
-    const paymentMethods = {
-      upi: { count: 0, amount: 0 },
-      cash: { count: 0, amount: 0 },
-      card: { count: 0, amount: 0 },
-      other: { count: 0, amount: 0 }
+    const allTimePaymentMethods = { upi: { count: 0, amount: 0 }, cash: { count: 0, amount: 0 }, card: { count: 0, amount: 0 }, other: { count: 0, amount: 0 } };
+    const periodPaymentMethods = { upi: { count: 0, amount: 0 }, cash: { count: 0, amount: 0 }, card: { count: 0, amount: 0 }, other: { count: 0, amount: 0 } };
+
+    const isDateInPeriod = (dStr) => {
+      if (!dStr) return false;
+      if (selectedPeriod === 'all') return true;
+      if (periodStartDate && periodEndDate) {
+        return dStr >= periodStartDate && dStr <= periodEndDate;
+      }
+      return true;
     };
 
-    // Initialize daily chart map
-    if (selectedYear && selectedMonth) {
-      const daysInMonth = new Date(selectedYear, selectedMonth, 0).getDate();
-      for (let day = 1; day <= daysInMonth; day++) {
-        const dayStr = `${selectedYear}-${String(selectedMonth).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
-        dailySalesMap[dayStr] = 0;
-      }
-    } else {
-      for (let i = 6; i >= 0; i--) {
-        const d = new Date();
-        d.setDate(now.getDate() - i);
-        const ds = getFormattedLocalDate(d);
-        dailySalesMap[ds] = 0;
-      }
-    }
-
+    // 1. Process Live Orders
     orders.forEach(o => {
       const amt = Number(o.total_amount) || 0;
       totalSales += amt;
+      totalOrdersCount += 1;
 
       const createdAtDate = parseSafeDate(o.created_at) || new Date();
       const dateStr = getFormattedLocalDate(createdAtDate);
 
-      // Populate available month selector
+      // Available months discovery
       if (dateStr && dateStr.length >= 7) {
         const mKey = dateStr.substring(0, 7);
         const mYear = parseInt(dateStr.substring(0, 4), 10);
@@ -1917,31 +1967,40 @@ router.get('/analytics', authenticateToken, requireActiveSubscription, async (re
       }
 
       // Payment method breakdown
-      const pMethod = (o.payment_method || 'cash').toLowerCase();
+      const pMethod = String(o.payment_method || 'cash').toLowerCase();
+      let pCategory = 'cash';
       if (pMethod.includes('upi') || pMethod.includes('online') || pMethod.includes('paytm') || pMethod.includes('gpay') || pMethod.includes('phonepe')) {
-        paymentMethods.upi.count++;
-        paymentMethods.upi.amount += amt;
+        pCategory = 'upi';
       } else if (pMethod.includes('card')) {
-        paymentMethods.card.count++;
-        paymentMethods.card.amount += amt;
+        pCategory = 'card';
+      } else if (pMethod.includes('cash')) {
+        pCategory = 'cash';
       } else {
-        paymentMethods.cash.count++;
-        paymentMethods.cash.amount += amt;
+        pCategory = 'other';
       }
+
+      allTimePaymentMethods[pCategory].count += 1;
+      allTimePaymentMethods[pCategory].amount += amt;
 
       if (dateStr === todayStr) {
         todaySales += amt;
         todayOrders += 1;
       }
-
-      if (createdAtDate >= sevenDaysAgo) {
+      if (dateStr >= sevenDaysAgoStr) {
         weeklySales += amt;
       }
-
-      if (createdAtDate >= thirtyDaysAgo) {
+      if (dateStr >= thirtyDaysAgoStr) {
         monthlySales += amt;
-      } else if (createdAtDate >= sixtyDaysAgo) {
+      } else if (dateStr >= sixtyDaysAgoStr) {
         prevMonthSales += amt;
+      }
+
+      const inPeriod = isDateInPeriod(dateStr);
+      if (inPeriod) {
+        periodSales += amt;
+        periodOrdersCount += 1;
+        periodPaymentMethods[pCategory].count += 1;
+        periodPaymentMethods[pCategory].amount += amt;
       }
 
       if (dateStr && dailySalesMap[dateStr] !== undefined) {
@@ -1954,37 +2013,38 @@ router.get('/analytics', authenticateToken, requireActiveSubscription, async (re
       } catch (e) {}
 
       itemsList.forEach(item => {
-        const dishName = item.name || item.title || 'Unknown Dish';
+        const dishName = item.name || item.title || item.dish_name || 'Unknown Dish';
         const qty = Number(item.quantity || item.qty || 1);
         const price = Number(item.price) || 0;
         const lineTotal = price * qty;
+        const dishId = item.id || item.dish_id || null;
 
-        if (!dishSalesMap[dishName]) {
-          dishSalesMap[dishName] = { name: dishName, quantity: 0, revenue: 0 };
+        if (!allTimeDishSalesMap[dishName]) {
+          allTimeDishSalesMap[dishName] = { dish_id: dishId, name: dishName, quantity: 0, revenue: 0 };
         }
-        dishSalesMap[dishName].quantity += qty;
-        dishSalesMap[dishName].revenue += lineTotal;
+        allTimeDishSalesMap[dishName].quantity += qty;
+        allTimeDishSalesMap[dishName].revenue += lineTotal;
+
+        if (inPeriod) {
+          if (!periodDishSalesMap[dishName]) {
+            periodDishSalesMap[dishName] = { dish_id: dishId, name: dishName, quantity: 0, revenue: 0 };
+          }
+          periodDishSalesMap[dishName].quantity += qty;
+          periodDishSalesMap[dishName].revenue += lineTotal;
+        }
       });
     });
 
-    const summaries = await query(
-      'SELECT summary_date, total_sales, total_orders, top_dishes_summary FROM daily_sales_summaries WHERE restaurant_id = $1',
-      [targetId]
-    );
-
+    // 2. Process Historical Summaries (Zero Double Counting)
     summaries.forEach(s => {
       const amt = Number(s.total_sales) || 0;
+      const orderCnt = Number(s.total_orders) || 0;
       totalSales += amt;
+      totalOrdersCount += orderCnt;
 
-      const dDate = new Date(s.summary_date);
-      if (dDate >= sevenDaysAgo) weeklySales += amt;
-      if (dDate >= thirtyDaysAgo) {
-        monthlySales += amt;
-      } else if (dDate >= sixtyDaysAgo) {
-        prevMonthSales += amt;
-      }
+      const dDate = parseSafeDate(s.summary_date) || new Date(s.summary_date);
+      const summaryDateStr = getFormattedLocalDate(dDate) || s.summary_date;
 
-      const summaryDateStr = getFormattedLocalDate(dDate);
       if (summaryDateStr && summaryDateStr.length >= 7) {
         const mKey = summaryDateStr.substring(0, 7);
         const mYear = parseInt(summaryDateStr.substring(0, 4), 10);
@@ -1995,43 +2055,108 @@ router.get('/analytics', authenticateToken, requireActiveSubscription, async (re
         }
       }
 
+      if (summaryDateStr >= sevenDaysAgoStr) weeklySales += amt;
+      if (summaryDateStr >= thirtyDaysAgoStr) {
+        monthlySales += amt;
+      } else if (summaryDateStr >= sixtyDaysAgoStr) {
+        prevMonthSales += amt;
+      }
+
+      const inPeriod = isDateInPeriod(summaryDateStr);
+      if (inPeriod) {
+        periodSales += amt;
+        periodOrdersCount += orderCnt;
+      }
+
       if (summaryDateStr && dailySalesMap[summaryDateStr] !== undefined) {
         dailySalesMap[summaryDateStr] += amt;
       }
 
-      // Merge compressed top dishes into true all-time top dishes
+      // Process payment methods summary
+      let pMethodsSummary = null;
       try {
-        const topArr = typeof s.top_dishes_summary === 'string' ? JSON.parse(s.top_dishes_summary) : (s.top_dishes_summary || []);
-        if (Array.isArray(topArr)) {
-          topArr.forEach(td => {
-            const dName = td.name || 'Dish';
-            const dQty = Number(td.qty || td.quantity || 1);
-            if (!dishSalesMap[dName]) {
-              dishSalesMap[dName] = { name: dName, quantity: 0, revenue: 0 };
-            }
-            dishSalesMap[dName].quantity += dQty;
-          });
+        if (s.payment_methods_summary) {
+          pMethodsSummary = typeof s.payment_methods_summary === 'string' ? JSON.parse(s.payment_methods_summary) : s.payment_methods_summary;
         }
       } catch (e) {}
+
+      if (pMethodsSummary) {
+        ['upi', 'cash', 'card', 'other'].forEach(pm => {
+          const val = Number(pMethodsSummary[pm] || pMethodsSummary[pm]?.amount || 0);
+          const cnt = Number(pMethodsSummary[pm]?.count || (val > 0 ? 1 : 0));
+          allTimePaymentMethods[pm].amount += val;
+          allTimePaymentMethods[pm].count += cnt;
+          if (inPeriod) {
+            periodPaymentMethods[pm].amount += val;
+            periodPaymentMethods[pm].count += cnt;
+          }
+        });
+      } else {
+        // Legacy summary default fallback to cash
+        allTimePaymentMethods.cash.amount += amt;
+        allTimePaymentMethods.cash.count += orderCnt;
+        if (inPeriod) {
+          periodPaymentMethods.cash.amount += amt;
+          periodPaymentMethods.cash.count += orderCnt;
+        }
+      }
+
+      // Process items summary
+      let itemsList = [];
+      try {
+        if (s.items_summary) {
+          itemsList = typeof s.items_summary === 'string' ? JSON.parse(s.items_summary) : s.items_summary;
+        } else if (s.top_dishes_summary) {
+          itemsList = typeof s.top_dishes_summary === 'string' ? JSON.parse(s.top_dishes_summary) : s.top_dishes_summary;
+        }
+      } catch (e) {}
+
+      if (Array.isArray(itemsList)) {
+        itemsList.forEach(td => {
+          const dName = td.name || 'Dish';
+          const dQty = Number(td.quantity ?? td.qty ?? 1);
+          const dRev = Number(td.revenue || 0);
+          const dishId = td.dish_id || td.id || null;
+
+          if (!allTimeDishSalesMap[dName]) {
+            allTimeDishSalesMap[dName] = { dish_id: dishId, name: dName, quantity: 0, revenue: 0 };
+          }
+          allTimeDishSalesMap[dName].quantity += dQty;
+          allTimeDishSalesMap[dName].revenue += dRev;
+
+          if (inPeriod) {
+            if (!periodDishSalesMap[dName]) {
+              periodDishSalesMap[dName] = { dish_id: dishId, name: dName, quantity: 0, revenue: 0 };
+            }
+            periodDishSalesMap[dName].quantity += dQty;
+            periodDishSalesMap[dName].revenue += dRev;
+          }
+        });
+      }
     });
 
-    const totalOrdersCount = orders.length + summaries.reduce((acc, s) => acc + (Number(s.total_orders) || 0), 0);
     const averageOrderValue = totalOrdersCount > 0 ? Math.round(totalSales / totalOrdersCount) : 0;
+    const periodAov = periodOrdersCount > 0 ? Math.round(periodSales / periodOrdersCount) : 0;
     const growthPercentage = prevMonthSales > 0 ? parseFloat((((monthlySales - prevMonthSales) / prevMonthSales) * 100).toFixed(1)) : 0;
 
-    const topDishes = Object.values(dishSalesMap)
+    const activeDishMap = selectedPeriod === 'all' ? allTimeDishSalesMap : periodDishSalesMap;
+    const topDishes = Object.values(activeDishMap)
       .sort((a, b) => b.quantity - a.quantity)
-      .slice(0, 6);
+      .slice(0, 10);
 
-    const dailyChartData = Object.keys(dailySalesMap).map(dateKey => ({
+    const dailyChartData = Object.keys(dailySalesMap).sort().map(dateKey => ({
       date: dateKey,
-      displayDate: new Date(dateKey).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
+      displayDate: new Date(dateKey + 'T12:00:00Z').toLocaleDateString('en-US', { month: 'short', day: 'numeric', timeZone: 'Asia/Kolkata' }),
       sales: dailySalesMap[dateKey]
     }));
 
     const availableMonths = Object.values(availableMonthsMap).sort((a, b) => b.key.localeCompare(a.key));
 
     res.json({
+      period_sales: periodSales,
+      period_orders: periodOrdersCount,
+      period_aov: periodAov,
+      period_payment_methods: selectedPeriod === 'all' ? allTimePaymentMethods : periodPaymentMethods,
       today_sales: todaySales,
       today_revenue: todaySales,
       today_orders: todayOrders,
@@ -2044,17 +2169,223 @@ router.get('/analytics', authenticateToken, requireActiveSubscription, async (re
       total_orders: totalOrdersCount,
       average_order_value: averageOrderValue,
       growth_percentage: growthPercentage,
-      payment_methods: paymentMethods,
+      payment_methods: selectedPeriod === 'all' ? allTimePaymentMethods : periodPaymentMethods,
       available_months: availableMonths,
-      selected_period: selectedYear && selectedMonth ? `${selectedYear}-${String(selectedMonth).padStart(2, '0')}` : 'all',
+      selected_period: selectedPeriod,
       top_dishes: topDishes,
       daily_chart: dailyChartData,
       summarized_days_count: summaries.length,
+      last_updated: new Date().toISOString(),
       status: 'success'
     });
   } catch (err) {
     console.error('Fetch analytics error:', err);
     res.status(500).json({ error: 'Failed to fetch analytics' });
+  }
+});
+
+// GET /api/admin/analytics/export/csv — Server-side RFC 4180 CSV export with Plan Entitlement Check
+router.get('/analytics/export/csv', authenticateToken, requireActiveSubscription, async (req, res) => {
+  try {
+    const targetId = req.user?.restaurant_id;
+    if (!targetId) {
+      return res.status(401).json({ error: 'Restaurant identity is missing' });
+    }
+
+    // Check SaaS plan entitlement for analytics_export_enabled
+    const restoRows = await query('SELECT plan_tier, name FROM restaurants WHERE id = $1', [targetId]);
+    const planTier = restoRows[0]?.plan_tier || 'pro';
+    const restoName = restoRows[0]?.name || 'Restaurant';
+
+    const planRows = await query('SELECT analytics_export_enabled FROM saas_plans WHERE key = $1', [planTier]);
+    const exportEnabled = planRows.length > 0
+      ? (planRows[0].analytics_export_enabled === 1 || planRows[0].analytics_export_enabled === true || planRows[0].analytics_export_enabled === '1')
+      : true;
+
+    if (!exportEnabled) {
+      return res.status(403).json({
+        error: 'CSV Sales Export is not enabled on your current subscription plan tier.',
+        feature: 'analytics_export_enabled'
+      });
+    }
+
+    const { period: qPeriod, year: qYear, month: qMonth } = req.query;
+    const selectedPeriod = qPeriod || (qYear && qMonth ? `month:${qYear}-${String(qMonth).padStart(2, '0')}` : 'all');
+
+    const parseSafeDate = (dateVal) => {
+      if (!dateVal) return null;
+      if (dateVal instanceof Date) return isNaN(dateVal.getTime()) ? null : dateVal;
+      let str = String(dateVal).trim();
+      if (str.includes(' ') && !str.includes('T')) {
+        str = str.replace(' ', 'T');
+      }
+      const d = new Date(str);
+      return isNaN(d.getTime()) ? null : d;
+    };
+
+    const getFormattedLocalDate = (dateObj) => {
+      const d = parseSafeDate(dateObj);
+      if (!d) return '';
+      try {
+        return new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Kolkata' }).format(d);
+      } catch (e) {
+        return d.toISOString().split('T')[0];
+      }
+    };
+
+    const now = new Date();
+    const todayStr = getFormattedLocalDate(now);
+    const getISTDateOffset = (daysBack) => {
+      const d = new Date();
+      d.setDate(d.getDate() - daysBack);
+      return getFormattedLocalDate(d);
+    };
+
+    let periodStartDate = null;
+    let periodEndDate = null;
+
+    if (qYear && qMonth) {
+      const daysInMonth = new Date(parseInt(qYear, 10), parseInt(qMonth, 10), 0).getDate();
+      const monthPrefix = `${qYear}-${String(qMonth).padStart(2, '0')}`;
+      periodStartDate = `${monthPrefix}-01`;
+      periodEndDate = `${monthPrefix}-${String(daysInMonth).padStart(2, '0')}`;
+    } else if (selectedPeriod === 'today') {
+      periodStartDate = todayStr;
+      periodEndDate = todayStr;
+    } else if (selectedPeriod === '7d') {
+      periodStartDate = getISTDateOffset(6);
+      periodEndDate = todayStr;
+    } else if (selectedPeriod === '30d') {
+      periodStartDate = getISTDateOffset(29);
+      periodEndDate = todayStr;
+    } else if (selectedPeriod === '6m') {
+      periodStartDate = getISTDateOffset(180);
+      periodEndDate = todayStr;
+    }
+
+    const isDateInPeriod = (dStr) => {
+      if (!dStr) return false;
+      if (selectedPeriod === 'all') return true;
+      if (periodStartDate && periodEndDate) {
+        return dStr >= periodStartDate && dStr <= periodEndDate;
+      }
+      return true;
+    };
+
+    const orders = await query(
+      "SELECT id, total_amount, status, payment_method, table_number, customer_name, customer_phone, items, created_at FROM orders WHERE restaurant_id = $1 AND status NOT IN ('rejected', 'cancelled') ORDER BY id ASC",
+      [targetId]
+    );
+
+    const summaries = await query(
+      'SELECT summary_date, total_sales, total_orders, top_dishes_summary, items_summary, payment_methods_summary FROM daily_sales_summaries WHERE restaurant_id = $1 ORDER BY summary_date ASC',
+      [targetId]
+    );
+
+    const escapeCSV = (val) => {
+      if (val === null || val === undefined) return '""';
+      const str = String(val).replace(/"/g, '""');
+      return `"${str}"`;
+    };
+
+    const headers = [
+      'Record Type',
+      'Order / Summary ID',
+      'Date (IST)',
+      'Time (IST)',
+      'Table Number',
+      'Customer Name',
+      'Customer Phone',
+      'Items Count',
+      'Items Detail',
+      'Status',
+      'Payment Method',
+      'Amount (INR)'
+    ];
+
+    const csvRows = [];
+
+    // Add raw orders
+    orders.forEach(o => {
+      const d = parseSafeDate(o.created_at) || new Date();
+      const dStr = getFormattedLocalDate(d);
+      if (!isDateInPeriod(dStr)) return;
+
+      let timeStr = 'N/A';
+      try {
+        timeStr = new Intl.DateTimeFormat('en-IN', { timeZone: 'Asia/Kolkata', hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: true }).format(d);
+      } catch (e) {}
+
+      let itemsList = [];
+      try {
+        itemsList = typeof o.items === 'string' ? JSON.parse(o.items) : (Array.isArray(o.items) ? o.items : []);
+      } catch (e) {}
+
+      const totalItemCount = itemsList.reduce((acc, i) => acc + (Number(i.quantity || i.qty) || 1), 0);
+      const itemsDetailStr = itemsList.map(i => `${i.name || i.title || 'Item'} (x${i.quantity || i.qty || 1})`).join(', ');
+
+      csvRows.push([
+        'LIVE_ORDER',
+        `#${o.id}`,
+        dStr,
+        timeStr,
+        String(o.table_number || '1'),
+        o.customer_name || 'Dine-In Guest',
+        o.customer_phone || 'N/A',
+        totalItemCount,
+        itemsDetailStr,
+        String(o.status || 'COMPLETED').toUpperCase(),
+        String(o.payment_method || 'CASH').toUpperCase(),
+        Number(o.total_amount) || 0
+      ]);
+    });
+
+    // Add historical summaries
+    summaries.forEach(s => {
+      const dDate = parseSafeDate(s.summary_date) || new Date(s.summary_date);
+      const sDateStr = getFormattedLocalDate(dDate) || s.summary_date;
+      if (!isDateInPeriod(sDateStr)) return;
+
+      let itemsList = [];
+      try {
+        if (s.items_summary) {
+          itemsList = typeof s.items_summary === 'string' ? JSON.parse(s.items_summary) : s.items_summary;
+        } else if (s.top_dishes_summary) {
+          itemsList = typeof s.top_dishes_summary === 'string' ? JSON.parse(s.top_dishes_summary) : s.top_dishes_summary;
+        }
+      } catch (e) {}
+
+      const totalItemCount = Array.isArray(itemsList) ? itemsList.reduce((acc, i) => acc + (Number(i.quantity || i.qty) || 1), 0) : 0;
+      const itemsDetailStr = Array.isArray(itemsList) ? itemsList.map(i => `${i.name} (x${i.quantity || i.qty || 1})`).join(', ') : 'Daily Summary';
+
+      csvRows.push([
+        'DAILY_ROLLUP',
+        `SUMMARY-${sDateStr}`,
+        sDateStr,
+        'Full Day Aggregate',
+        'Multiple Tables',
+        'Daily Compaction',
+        'N/A',
+        totalItemCount,
+        itemsDetailStr,
+        'COMPLETED (ARCHIVE)',
+        'MIXED',
+        Number(s.total_sales) || 0
+      ]);
+    });
+
+    const csvContent = '\uFEFF' + [
+      headers.map(escapeCSV).join(','),
+      ...csvRows.map(row => row.map(escapeCSV).join(','))
+    ].join('\r\n');
+
+    const filename = `Sales_Report_${selectedPeriod}_${todayStr}.csv`;
+    res.setHeader('Content-Type', 'text/csv; charset=utf-8');
+    res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
+    return res.status(200).send(csvContent);
+  } catch (err) {
+    console.error('Export analytics CSV error:', err);
+    res.status(500).json({ error: 'Failed to export sales CSV' });
   }
 });
 

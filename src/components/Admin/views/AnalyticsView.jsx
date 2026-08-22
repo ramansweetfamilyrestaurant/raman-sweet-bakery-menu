@@ -23,7 +23,15 @@ export default function AnalyticsView({
   const topDishes = analyticsData?.top_dishes || [];
   const dailyChart = analyticsData?.daily_chart || [];
   const availableMonths = (analyticsData?.available_months || []).filter(m => Number(m.year) >= 2020);
-  const paymentMethods = analyticsData?.payment_methods || { upi: { count: 0, amount: 0 }, cash: { count: 0, amount: 0 }, card: { count: 0, amount: 0 } };
+  const paymentMethods = analyticsData?.payment_methods || analyticsData?.period_payment_methods || { upi: { count: 0, amount: 0 }, cash: { count: 0, amount: 0 }, card: { count: 0, amount: 0 } };
+  const lastUpdated = analyticsData?.last_updated ? new Date(analyticsData.last_updated) : new Date();
+
+  let formattedLastUpdated = '';
+  try {
+    formattedLastUpdated = new Intl.DateTimeFormat('en-IN', { timeZone: 'Asia/Kolkata', hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: true }).format(lastUpdated);
+  } catch (e) {
+    formattedLastUpdated = lastUpdated.toLocaleTimeString();
+  }
 
   const totalPaymentAmt = (paymentMethods.upi?.amount || 0) + (paymentMethods.cash?.amount || 0) + (paymentMethods.card?.amount || 0);
   const upiPercent = totalPaymentAmt > 0 ? Math.round(((paymentMethods.upi?.amount || 0) / totalPaymentAmt) * 100) : 0;
@@ -40,9 +48,22 @@ export default function AnalyticsView({
       const parts = val.replace('month:', '').split('-');
       const year = parseInt(parts[0], 10);
       const month = parseInt(parts[1], 10);
-      if (onFilterPeriod) onFilterPeriod(year, month);
+      if (onFilterPeriod) onFilterPeriod(val, year, month);
     } else {
-      if (onFilterPeriod) onFilterPeriod(null, null);
+      if (onFilterPeriod) onFilterPeriod(val, null, null);
+    }
+  };
+
+  const handleDownloadSelectedCSV = () => {
+    if (onDownloadAllCSV) {
+      if (activeFilter.startsWith('month:')) {
+        const parts = activeFilter.replace('month:', '').split('-');
+        const year = parseInt(parts[0], 10);
+        const month = parseInt(parts[1], 10);
+        onDownloadAllCSV(activeFilter, year, month);
+      } else {
+        onDownloadAllCSV(activeFilter, null, null);
+      }
     }
   };
 
@@ -62,8 +83,8 @@ export default function AnalyticsView({
         border: '1px solid #E2E8F0',
         boxShadow: '0 2px 8px rgba(0,0,0,0.02)'
       }}>
-        <div style={{ minWidth: '200px', flex: '1 1 auto' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '2px', flexWrap: 'wrap' }}>
+        <div style={{ minWidth: '220px', flex: '1 1 auto' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '4px', flexWrap: 'wrap' }}>
             <h2 style={{ fontSize: '1.25rem', fontWeight: 900, color: '#0F172A', margin: 0, letterSpacing: '-0.02em' }}>
               Sales Analytics & Lifetime Reports
             </h2>
@@ -71,14 +92,22 @@ export default function AnalyticsView({
               ● LIVE
             </span>
           </div>
-          <span style={{ fontSize: '0.78rem', color: '#64748B', fontWeight: 500 }}>
-            Real-time revenue metrics, average ticket size & CSV sales reports
-          </span>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap', fontSize: '0.74rem', color: '#64748B', fontWeight: 500 }}>
+            <span>Real-time revenue metrics & CSV sales reports</span>
+            <span>•</span>
+            <span style={{ color: '#059669', fontWeight: 700 }}>Auto-refreshes every 10s</span>
+            {formattedLastUpdated && (
+              <>
+                <span>•</span>
+                <span>Updated: {formattedLastUpdated}</span>
+              </>
+            )}
+          </div>
         </div>
 
         {/* Period Selector Dropdown & Export Buttons */}
         <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap', width: '100%', justifyContent: 'space-between' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '6px', background: '#F8FAFC', padding: '6px 12px', borderRadius: '10px', border: '1.5px solid #0284C7', flex: '1 1 auto', minWidth: '200px' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '6px', background: '#F8FAFC', padding: '6px 12px', borderRadius: '10px', border: '1.5px solid #0284C7', flex: '1 1 auto', minWidth: '220px' }}>
             <Calendar size={16} color="#0284C7" />
             <select
               value={activeFilter}
@@ -96,10 +125,11 @@ export default function AnalyticsView({
             >
               <option value="all">📊 All-Time Overview (Complete History)</option>
               <option value="today">🟢 Today's Realtime (Since Midnight)</option>
-              <option value="week">🔵 Last 7 Days (Past Week)</option>
-              <option value="month">🟣 Last 30 Days (Past Month)</option>
+              <option value="7d">🔵 Last 7 Days (Past Week)</option>
+              <option value="30d">🟣 Last 30 Days (Past Month)</option>
+              <option value="6m">🗓️ Last 6 Months (Half-Year History)</option>
               {availableMonths.map(m => (
-                <option key={m.key} value={`month:${m.key}`}>📅 Monthly: {m.label}</option>
+                <option key={m.key} value={`month:${m.key}`}>📅 Monthly Archive: {m.label}</option>
               ))}
             </select>
           </div>
@@ -130,7 +160,7 @@ export default function AnalyticsView({
                 <Download size={14} /> 📅 Daily (.csv)
               </button>
               <button
-                onClick={onDownloadAllCSV}
+                onClick={handleDownloadSelectedCSV}
                 disabled={exportingAll}
                 style={{
                   background: '#1E293B',
@@ -152,7 +182,7 @@ export default function AnalyticsView({
                   flex: '1 1 auto'
                 }}
               >
-                <Download size={14} /> {exportingAll ? 'Generating...' : '📊 All-Time (.csv)'}
+                <Download size={14} /> {exportingAll ? 'Exporting...' : `📊 ${activeFilter === 'all' ? 'All-Time (.csv)' : 'Selected Range (.csv)'}`}
               </button>
             </div>
           ) : (
