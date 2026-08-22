@@ -650,6 +650,36 @@ export async function exportAdminAnalyticsCSV(token, period = 'all', year = null
   return await res.blob();
 }
 
+export async function exportAdminAnalyticsXLSX(token, period = 'all', year = null, month = null) {
+  let url = `${API_BASE}/admin/analytics/export/xlsx`;
+  const params = new URLSearchParams();
+  if (year && month) {
+    params.append('year', year);
+    params.append('month', month);
+  } else if (period && period !== 'all') {
+    params.append('period', period);
+  }
+  const qs = params.toString();
+  if (qs) url += `?${qs}`;
+
+  const res = await fetch(url, {
+    headers: { Authorization: `Bearer ${token}` }
+  });
+  if (!res.ok) {
+    const errData = await res.json().catch(() => ({}));
+    const err = new Error(errData.error || `Export failed with HTTP ${res.status}`);
+    err.status = res.status;
+    err.feature = errData.feature;
+    throw err;
+  }
+  const blob = await res.blob();
+  const contentDisposition = res.headers.get('Content-Disposition') || '';
+  let filename = 'Sales_Report.xlsx';
+  const match = contentDisposition.match(/filename="?([^"]+)"?/);
+  if (match && match[1]) filename = match[1];
+  return { blob, filename };
+}
+
 // ========== COMBO / THALI DEALS ==========
 
 export async function fetchCombos(slug = '') {

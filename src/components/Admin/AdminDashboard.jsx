@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
-import { fetchCategories, fetchDishes, toggleDishAvailability, toggleCategoryActive, deleteDish, deleteCategory, fetchRestaurantInfo, updateDishPrice, fetchAnnouncements, fetchAdminOrders, updateOrderStatus, uploadImage, fetchServiceRequests, resolveServiceRequest, approvePresenceRequest, rejectPresenceRequest, fetchAdminAnalytics, exportAdminAnalyticsCSV, fetchAdminCombos, createCombo, updateCombo, deleteCombo, toggleComboAvailability, optimizeDatabase, updateTenantSettings } from '../../api/client';
+import { fetchCategories, fetchDishes, toggleDishAvailability, toggleCategoryActive, deleteDish, deleteCategory, fetchRestaurantInfo, updateDishPrice, fetchAnnouncements, fetchAdminOrders, updateOrderStatus, uploadImage, fetchServiceRequests, resolveServiceRequest, approvePresenceRequest, rejectPresenceRequest, fetchAdminAnalytics, exportAdminAnalyticsCSV, exportAdminAnalyticsXLSX, fetchAdminCombos, createCombo, updateCombo, deleteCombo, toggleComboAvailability, optimizeDatabase, updateTenantSettings } from '../../api/client';
 import { getPlanDetails } from '../../config/plans';
 import { generateQrToken } from '../../utils/qrSecurity';
 import { soundManager, unlockNotificationSound, playPresenceAlert, playWaiterAlert, subscribeAudioState } from '../../utils/soundManager';
@@ -604,27 +604,36 @@ export default function AdminDashboard({ token, username, slug: propSlug = '', o
     }
   };
 
-  // 📊 Export Sales (Selected Period / Complete History)
-  const [exportingAll, setExportingAll] = useState(false);
-  const handleDownloadAllSalesReport = async (period = 'all', year = null, month = null) => {
-    setExportingAll(true);
+  // 📊 Unified 1-Click Professional Sales Report Export (Step 3.16C)
+  const [exportingReport, setExportingReport] = useState(false);
+  const handleExportSalesReport = async (period = 'all', year = null, month = null) => {
+    if (exportingReport) return;
+    setExportingReport(true);
     try {
-      const blob = await exportAdminAnalyticsCSV(token, period, year, month);
+      const { blob, filename } = await exportAdminAnalyticsXLSX(token, period, year, month);
       const url = URL.createObjectURL(blob);
       const link = document.createElement('a');
       link.href = url;
-      const todayISO = new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Kolkata' }).format(new Date());
-      const prefix = period === 'all' ? 'All_Time_Sales_Report' : `Sales_Report_${period}`;
-      link.download = `${prefix}_${todayISO}.csv`;
+      link.download = filename || 'Sales_Report.xlsx';
       document.body.appendChild(link);
       link.click();
       document.body.removeChild(link);
       URL.revokeObjectURL(url);
     } catch (err) {
-      alert(err.message || 'Failed to export sales report');
+      if (err.status === 403 || err.feature === 'analytics_export_enabled') {
+        alert('Sales Report Export is not enabled on your current subscription plan tier.');
+      } else {
+        alert('Unable to generate sales report. Please try again.');
+      }
     } finally {
-      setExportingAll(false);
+      setExportingReport(false);
     }
+  };
+
+  // 📊 Backward compatibility fallback handlers
+  const [exportingAll, setExportingAll] = useState(false);
+  const handleDownloadAllSalesReport = async (period = 'all', year = null, month = null) => {
+    return handleExportSalesReport(period, year, month);
   };
 
   const handleResolveServiceRequest = async (id) => {
@@ -2560,10 +2569,11 @@ export default function AdminDashboard({ token, username, slug: propSlug = '', o
             {activeTab === 'analytics' && isAnalyticsEnabled && (
               <AnalyticsView
                 analyticsData={analyticsData}
-                onDownloadTodayCSV={handleDownloadTodaySalesReport}
+                onExportReport={handleExportSalesReport}
                 onDownloadAllCSV={handleDownloadAllSalesReport}
                 onFilterPeriod={handleFilterAnalytics}
-                exportingAll={exportingAll}
+                exporting={exportingReport}
+                exportingAll={exportingReport}
                 analyticsExportEnabled={isAnalyticsEnabled}
                 currencySymbol={settingsForm.currency_symbol !== undefined && settingsForm.currency_symbol !== null ? settingsForm.currency_symbol : '₹'}
               />

@@ -3,14 +3,16 @@ import { BarChart2, Download, TrendingUp, TrendingDown, Calendar, DollarSign, Aw
 
 export default function AnalyticsView({
   analyticsData,
-  onDownloadTodayCSV,
-  onDownloadAllCSV,
+  onExportReport,
+  onDownloadAllCSV, // backward compatibility
   onFilterPeriod,
-  exportingAll = false,
+  exporting = false,
+  exportingAll = false, // backward compatibility
   analyticsExportEnabled = true,
   currencySymbol = '₹'
 }) {
   const [activeFilter, setActiveFilter] = useState('all');
+  const isExporting = exporting || exportingAll;
 
   const todayRevenue = analyticsData?.today_sales ?? analyticsData?.today_revenue ?? 0;
   const todayOrders = analyticsData?.today_orders ?? 0;
@@ -54,15 +56,17 @@ export default function AnalyticsView({
     }
   };
 
-  const handleDownloadSelectedCSV = () => {
-    if (onDownloadAllCSV) {
+  const handleExportClick = () => {
+    if (isExporting) return;
+    const exportFn = onExportReport || onDownloadAllCSV;
+    if (exportFn) {
       if (activeFilter.startsWith('month:')) {
         const parts = activeFilter.replace('month:', '').split('-');
         const year = parseInt(parts[0], 10);
         const month = parseInt(parts[1], 10);
-        onDownloadAllCSV(activeFilter, year, month);
+        exportFn(activeFilter, year, month);
       } else {
-        onDownloadAllCSV(activeFilter, null, null);
+        exportFn(activeFilter, null, null);
       }
     }
   };
@@ -70,7 +74,7 @@ export default function AnalyticsView({
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '16px', paddingBottom: '90px', maxWidth: '1200px', margin: '0 auto', width: '100%' }}>
       
-      {/* 🚀 Header, Filter Dropdown & Export Actions */}
+      {/* 🚀 Header, Filter Dropdown & Unified Single Export Action */}
       <div style={{
         display: 'flex',
         alignItems: 'center',
@@ -93,7 +97,7 @@ export default function AnalyticsView({
             </span>
           </div>
           <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap', fontSize: '0.74rem', color: '#64748B', fontWeight: 500 }}>
-            <span>Real-time revenue metrics & CSV sales reports</span>
+            <span>Real-time revenue metrics & professional sales reports</span>
             <span>•</span>
             <span style={{ color: '#059669', fontWeight: 700 }}>Auto-refreshes every 10s</span>
             <span>•</span>
@@ -107,7 +111,7 @@ export default function AnalyticsView({
           </div>
         </div>
 
-        {/* Period Selector Dropdown & Export Buttons */}
+        {/* Period Selector Dropdown & Single Unified Professional Export Button */}
         <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap', width: '100%', justifyContent: 'space-between' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '6px', background: '#F8FAFC', padding: '6px 12px', borderRadius: '10px', border: '1.5px solid #0284C7', flex: '1 1 auto', minWidth: '220px' }}>
             <Calendar size={16} color="#0284C7" />
@@ -136,61 +140,56 @@ export default function AnalyticsView({
             </select>
           </div>
 
+          {/* Unified Single One-Click Professional Export Action */}
           {analyticsExportEnabled ? (
-            <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', flex: '1 1 auto', justifyContent: 'flex-end' }}>
-              <button
-                onClick={onDownloadTodayCSV}
-                style={{
-                  background: 'linear-gradient(135deg, #059669 0%, #10B981 100%)',
-                  color: '#FFFFFF',
-                  border: 'none',
-                  padding: '9px 14px',
-                  borderRadius: '10px',
-                  fontSize: '0.8rem',
-                  fontWeight: 800,
-                  cursor: 'pointer',
-                  display: 'inline-flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  gap: '6px',
-                  minHeight: '40px',
-                  boxShadow: '0 2px 6px rgba(16, 185, 129, 0.25)',
-                  transition: 'all 0.2s ease',
-                  flex: '1 1 auto'
-                }}
-              >
-                <Download size={14} /> 📅 Daily (.csv)
-              </button>
-              <button
-                onClick={handleDownloadSelectedCSV}
-                disabled={exportingAll}
-                style={{
-                  background: '#1E293B',
-                  color: '#FFFFFF',
-                  border: 'none',
-                  padding: '9px 14px',
-                  borderRadius: '10px',
-                  fontSize: '0.8rem',
-                  fontWeight: 800,
-                  cursor: exportingAll ? 'not-allowed' : 'pointer',
-                  opacity: exportingAll ? 0.7 : 1,
-                  display: 'inline-flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  gap: '6px',
-                  minHeight: '40px',
-                  boxShadow: '0 2px 6px rgba(30, 41, 59, 0.2)',
-                  transition: 'all 0.2s ease',
-                  flex: '1 1 auto'
-                }}
-              >
-                <Download size={14} /> {exportingAll ? 'Exporting...' : `📊 ${activeFilter === 'all' ? 'All-Time (.csv)' : 'Selected Range (.csv)'}`}
-              </button>
-            </div>
+            <button
+              onClick={handleExportClick}
+              disabled={isExporting}
+              style={{
+                background: isExporting
+                  ? '#64748B'
+                  : 'linear-gradient(135deg, #0284C7 0%, #0369A1 100%)',
+                color: '#FFFFFF',
+                border: 'none',
+                padding: '9px 18px',
+                borderRadius: '10px',
+                fontSize: '0.82rem',
+                fontWeight: 800,
+                cursor: isExporting ? 'not-allowed' : 'pointer',
+                opacity: isExporting ? 0.75 : 1,
+                display: 'inline-flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                gap: '8px',
+                minHeight: '40px',
+                boxShadow: '0 2px 8px rgba(2, 132, 199, 0.3)',
+                transition: 'all 0.2s ease',
+                flex: '1 1 auto',
+                minWidth: '200px'
+              }}
+            >
+              <Download size={16} />
+              <span>{isExporting ? '⏳ Preparing Report...' : '📊 Export Sales Report'}</span>
+            </button>
           ) : (
-            <span style={{ fontSize: '0.78rem', fontWeight: 800, color: '#B45309', background: '#FEF3C7', border: '1px solid #F59E0B', padding: '6px 12px', borderRadius: '10px' }}>
-              🔒 CSV Export (Pro Feature)
-            </span>
+            <div
+              style={{
+                fontSize: '0.78rem',
+                fontWeight: 800,
+                color: '#B45309',
+                background: '#FEF3C7',
+                border: '1px solid #F59E0B',
+                padding: '8px 14px',
+                borderRadius: '10px',
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '6px',
+                flex: '1 1 auto',
+                justifyContent: 'center'
+              }}
+            >
+              <span>🔒 Export Sales Report (Pro Plan)</span>
+            </div>
           )}
         </div>
       </div>

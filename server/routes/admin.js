@@ -1,6 +1,7 @@
 import express from 'express';
 import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
+import ExcelJS from 'exceljs';
 import multer from 'multer';
 import path from 'path';
 import fs from 'fs';
@@ -2508,6 +2509,671 @@ router.get('/analytics/export/csv', authenticateToken, requireActiveSubscription
   } catch (err) {
     console.error('Export analytics CSV error:', err);
     res.status(500).json({ error: 'Failed to export sales CSV' });
+  }
+});
+
+// GET /api/admin/analytics/export/xlsx — Unified Server-side 3-Sheet Professional XLSX export with ExcelJS & Plan Entitlement
+router.get('/analytics/export/xlsx', authenticateToken, requireActiveSubscription, async (req, res) => {
+  try {
+    const targetId = req.user?.restaurant_id;
+    if (!targetId) {
+      return res.status(401).json({ error: 'Restaurant identity is missing' });
+    }
+
+    // 1. Check SaaS plan entitlement for analytics_export_enabled
+    const restoRows = await query('SELECT plan_tier, name FROM restaurants WHERE id = $1', [targetId]);
+    const planTier = restoRows[0]?.plan_tier || 'pro';
+    const restoName = restoRows[0]?.name || 'Restaurant';
+
+    const planRows = await query('SELECT analytics_export_enabled FROM saas_plans WHERE key = $1', [planTier]);
+    const exportEnabled = planRows.length > 0
+      ? (planRows[0].analytics_export_enabled === 1 || planRows[0].analytics_export_enabled === true || planRows[0].analytics_export_enabled === '1')
+      : true;
+
+    if (!exportEnabled) {
+      return res.status(403).json({
+        error: 'Sales Report Export is not enabled on your current subscription plan tier.',
+        feature: 'analytics_export_enabled'
+      });
+    }
+
+    const { period: qPeriod, year: qYear, month: qMonth } = req.query;
+    const selectedPeriod = qPeriod || (qYear && qMonth ? `month:${qYear}-${String(qMonth).padStart(2, '0')}` : 'all');
+
+    const parseSafeDate = (dateVal) => {
+      if (!dateVal) return null;
+      if (dateVal instanceof Date) return isNaN(dateVal.getTime()) ? null : dateVal;
+      let str = String(dateVal).trim();
+      if (str.includes(' ') && !str.includes('T')) {
+        str = str.replace(' ', 'T');
+      }
+      const d = new Date(str);
+      return isNaN(d.getTime()) ? null : d;
+    };
+
+    const getFormattedLocalDate = (dateObj) => {
+      const d = parseSafeDate(dateObj);
+      if (!d) return '';
+      try {
+        return new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Kolkata' }).format(d);
+      } catch (e) {
+        return d.toISOString().split('T')[0];
+      }
+    };
+
+    const now = new Date();
+    const todayStr = getFormattedLocalDate(now);
+    const getISTDateOffset = (daysBack) => {
+      const d = new Date();
+      d.setDate(d.getDate() - daysBack);
+      return getFormattedLocalDate(d);
+    };
+
+    let periodStartDate = null;
+    let periodEndDate = null;
+    let periodLabel = 'All-Time';
+    let filePeriodSlug = 'All_Time';
+
+    if (qYear && qMonth) {
+      const daysInMonth = new Date(parseInt(qYear, 10), parseInt(qMonth, 10), 0).getDate();
+      const monthPrefix = `${qYear}-${String(qMonth).padStart(2, '0')}`;
+      periodStartDate = `${monthPrefix}-01`;
+      periodEndDate = `${monthPrefix}-${String(daysInMonth).padStart(2, '0')}`;
+      periodLabel = `Month ${monthPrefix}`;
+      filePeriodSlug = `Month_${monthPrefix}`;
+    } else if (selectedPeriod === 'today') {
+      periodStartDate = todayStr;
+      periodEndDate = todayStr;
+      periodLabel = `Today (${todayStr})`;
+      filePeriodSlug = 'Today';
+    } else if (selectedPeriod === '7d') {
+      periodStartDate = getISTDateOffset(6);
+      periodEndDate = todayStr;
+      periodLabel = `Last 7 Days (${periodStartDate} to ${periodEndDate})`;
+      filePeriodSlug = 'Last_7_Days';
+    } else if (selectedPeriod === '30d') {
+      periodStartDate = getISTDateOffset(29);
+      periodEndDate = todayStr;
+      periodLabel = `Last 30 Days (${periodStartDate} to ${periodEndDate})`;
+      filePeriodSlug = 'Last_30_Days';
+    } else if (selectedPeriod === '6m') {
+      periodStartDate = getISTDateOffset(180);
+      periodEndDate = todayStr;
+      periodLabel = `Last 6 Months (${periodStartDate} to ${periodEndDate})`;
+      filePeriodSlug = 'Last_6_Months';
+    } else if (selectedPeriod.startsWith('month:')) {
+      const monthPrefix = selectedPeriod.replace('month:', '');
+      const parts = monthPrefix.split('-');
+      const y = parseInt(parts[0], 10);
+      const m = parseInt(parts[1], 10);
+      const daysInMonth = new Date(y, m, 0).getDate();
+      periodStartDate = `${monthPrefix}-01`;
+      periodEndDate = `${monthPrefix}-${String(daysInMonth).padStart(2, '0')}`;
+      periodLabel = `Month ${monthPrefix}`;
+      filePeriodSlug = `Month_${monthPrefix}`;
+    }
+
+    const isDateInPeriod = (dStr) => {
+      if (!dStr) return false;
+      if (selectedPeriod === 'all') return true;
+      if (periodStartDate && periodEndDate) {
+        return dStr >= periodStartDate && dStr <= periodEndDate;
+      }
+      return true;
+    };
+
+    let generatedAtIST = 'N/A';
+    try {
+      generatedAtIST = new Intl.DateTimeFormat('en-IN', {
+        timeZone: 'Asia/Kolkata',
+        dateStyle: 'medium',
+        timeStyle: 'medium'
+      }).format(now);
+    } catch (e) {
+      generatedAtIST = now.toISOString();
+    }
+
+    // Fetch live orders & historical summaries
+    const orders = await query(
+      "SELECT id, total_amount, status, payment_method, table_number, customer_name, customer_phone, items, created_at FROM orders WHERE restaurant_id = $1 AND status NOT IN ('rejected', 'cancelled') ORDER BY id ASC",
+      [targetId]
+    );
+
+    const summaries = await query(
+      'SELECT summary_date, total_sales, total_orders, top_dishes_summary, items_summary, payment_methods_summary FROM daily_sales_summaries WHERE restaurant_id = $1 ORDER BY summary_date ASC',
+      [targetId]
+    );
+
+    // Initialize Workbook
+    const workbook = new ExcelJS.Workbook();
+    workbook.creator = 'TouchQR Suite';
+    workbook.lastModifiedBy = restoName;
+    workbook.created = now;
+    workbook.modified = now;
+
+    // Data structures for aggregation
+    let grandTotalRepresentedOrders = 0;
+    let liveOrderRowCount = 0;
+    let rollupRowCount = 0;
+    let grandTotalItemsCount = 0;
+    let grandTotalCash = 0;
+    let grandTotalUPI = 0;
+    let grandTotalCard = 0;
+    let grandTotalOther = 0;
+    let grandTotalRevenue = 0;
+
+    const dishSalesMap = new Map(); // dish_id -> { dish_id, name, quantity, revenue }
+    const dailyTrendMap = new Map(); // date -> { date, orders, revenue }
+
+    const reportRows = [];
+
+    // 1. Process Live Orders
+    orders.forEach(o => {
+      const d = parseSafeDate(o.created_at) || new Date();
+      const dStr = getFormattedLocalDate(d);
+      if (!isDateInPeriod(dStr)) return;
+
+      let timeStr = 'N/A';
+      try {
+        timeStr = new Intl.DateTimeFormat('en-IN', { timeZone: 'Asia/Kolkata', hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: true }).format(d);
+      } catch (e) {}
+
+      let itemsList = [];
+      try {
+        itemsList = typeof o.items === 'string' ? JSON.parse(o.items) : (Array.isArray(o.items) ? o.items : []);
+      } catch (e) {}
+
+      const totalItemCount = itemsList.reduce((acc, i) => acc + (Number(i.quantity || i.qty) || 1), 0);
+      const itemsDetailStr = itemsList.map(i => `${i.name || i.title || 'Item'} (x${i.quantity || i.qty || 1})`).join(', ');
+
+      const amt = Number(o.total_amount) || 0;
+      const pMethod = String(o.payment_method || 'cash').toLowerCase();
+
+      let cashAmt = 0;
+      let upiAmt = 0;
+      let cardAmt = 0;
+      let otherAmt = 0;
+      let pMethodDisplay = 'CASH';
+
+      if (pMethod.includes('upi') || pMethod.includes('online') || pMethod.includes('paytm') || pMethod.includes('gpay') || pMethod.includes('phonepe')) {
+        upiAmt = amt;
+        pMethodDisplay = 'UPI';
+      } else if (pMethod.includes('card')) {
+        cardAmt = amt;
+        pMethodDisplay = 'CARD';
+      } else if (pMethod.includes('cash')) {
+        cashAmt = amt;
+        pMethodDisplay = 'CASH';
+      } else {
+        otherAmt = amt;
+        pMethodDisplay = 'OTHER';
+      }
+
+      grandTotalRepresentedOrders += 1;
+      liveOrderRowCount += 1;
+      grandTotalItemsCount += totalItemCount;
+      grandTotalCash += cashAmt;
+      grandTotalUPI += upiAmt;
+      grandTotalCard += cardAmt;
+      grandTotalOther += otherAmt;
+      grandTotalRevenue += amt;
+
+      // Track Trend
+      const trend = dailyTrendMap.get(dStr) || { date: dStr, orders: 0, revenue: 0 };
+      trend.orders += 1;
+      trend.revenue += amt;
+      dailyTrendMap.set(dStr, trend);
+
+      // Track Dish Sales
+      itemsList.forEach(item => {
+        const dId = String(item.dish_id || item.id || item.name || 'dish_unknown');
+        const dName = item.name || item.title || 'Unknown Dish';
+        const dQty = Number(item.quantity || item.qty || 1);
+        const dRev = (Number(item.price) || 0) * dQty || (totalItemCount > 0 ? (amt / totalItemCount) * dQty : amt);
+
+        const exist = dishSalesMap.get(dId) || { dish_id: dId, name: dName, quantity: 0, revenue: 0 };
+        exist.quantity += dQty;
+        exist.revenue += dRev;
+        dishSalesMap.set(dId, exist);
+      });
+
+      reportRows.push({
+        record_type: 'LIVE_ORDER',
+        id: `#${o.id}`,
+        date: dStr,
+        time: timeStr,
+        order_count: 1,
+        table: String(o.table_number || '1'),
+        customer_name: o.customer_name || 'Dine-In Guest',
+        customer_phone: String(o.customer_phone || 'N/A'),
+        items_count: totalItemCount,
+        items_detail: itemsDetailStr,
+        payment_method: pMethodDisplay,
+        cash_amt: cashAmt,
+        upi_amt: upiAmt,
+        card_amt: cardAmt,
+        other_amt: otherAmt,
+        amount: amt,
+        status: String(o.status || 'COMPLETED').toUpperCase()
+      });
+    });
+
+    // 2. Process Historical Summaries (DAILY_ROLLUP)
+    summaries.forEach(s => {
+      const dDate = parseSafeDate(s.summary_date) || new Date(s.summary_date);
+      const sDateStr = getFormattedLocalDate(dDate) || s.summary_date;
+      if (!isDateInPeriod(sDateStr)) return;
+
+      const orderCount = Number(s.total_orders) || 1;
+      const amt = Number(s.total_sales) || 0;
+
+      let itemsList = [];
+      try {
+        if (s.items_summary) {
+          itemsList = typeof s.items_summary === 'string' ? JSON.parse(s.items_summary) : s.items_summary;
+        } else if (s.top_dishes_summary) {
+          itemsList = typeof s.top_dishes_summary === 'string' ? JSON.parse(s.top_dishes_summary) : s.top_dishes_summary;
+        }
+      } catch (e) {}
+
+      const totalItemCount = Array.isArray(itemsList) ? itemsList.reduce((acc, i) => acc + (Number(i.quantity ?? i.qty) || 1), 0) : 0;
+      const itemsDetailStr = Array.isArray(itemsList) && itemsList.length > 0
+        ? itemsList.map(i => `${i.name} (x${i.quantity ?? i.qty ?? 1})`).join(', ')
+        : 'Daily Summary';
+
+      let pMethodsSummary = null;
+      try {
+        if (s.payment_methods_summary) {
+          pMethodsSummary = typeof s.payment_methods_summary === 'string' ? JSON.parse(s.payment_methods_summary) : s.payment_methods_summary;
+        }
+      } catch (e) {}
+
+      let cashAmt = 0;
+      let upiAmt = 0;
+      let cardAmt = 0;
+      let otherAmt = 0;
+
+      if (pMethodsSummary) {
+        cashAmt = Number(pMethodsSummary.cash || pMethodsSummary.cash?.amount || 0);
+        upiAmt = Number(pMethodsSummary.upi || pMethodsSummary.upi?.amount || 0);
+        cardAmt = Number(pMethodsSummary.card || pMethodsSummary.card?.amount || 0);
+        otherAmt = Number(pMethodsSummary.other || pMethodsSummary.other?.amount || 0);
+      } else {
+        cashAmt = amt;
+      }
+
+      let pMethodDisplay = 'MIXED';
+      if (cashAmt > 0 && upiAmt === 0 && cardAmt === 0 && otherAmt === 0) pMethodDisplay = 'CASH';
+      else if (upiAmt > 0 && cashAmt === 0 && cardAmt === 0 && otherAmt === 0) pMethodDisplay = 'UPI';
+      else if (cardAmt > 0 && cashAmt === 0 && upiAmt === 0 && otherAmt === 0) pMethodDisplay = 'CARD';
+
+      grandTotalRepresentedOrders += orderCount;
+      rollupRowCount += 1;
+      grandTotalItemsCount += totalItemCount;
+      grandTotalCash += cashAmt;
+      grandTotalUPI += upiAmt;
+      grandTotalCard += cardAmt;
+      grandTotalOther += otherAmt;
+      grandTotalRevenue += amt;
+
+      // Track Trend
+      const trend = dailyTrendMap.get(sDateStr) || { date: sDateStr, orders: 0, revenue: 0 };
+      trend.orders += orderCount;
+      trend.revenue += amt;
+      dailyTrendMap.set(sDateStr, trend);
+
+      // Track Dish Sales
+      if (Array.isArray(itemsList)) {
+        itemsList.forEach(item => {
+          const dId = String(item.dish_id || item.id || item.name || 'dish_unknown');
+          const dName = item.name || 'Unknown Dish';
+          const dQty = Number(item.quantity ?? item.qty ?? item.count ?? 1);
+          const dRev = Number(item.revenue || 0) || (Number(item.price) || 0) * dQty;
+
+          const exist = dishSalesMap.get(dId) || { dish_id: dId, name: dName, quantity: 0, revenue: 0 };
+          exist.quantity += dQty;
+          exist.revenue += dRev;
+          dishSalesMap.set(dId, exist);
+        });
+      }
+
+      reportRows.push({
+        record_type: 'DAILY_ROLLUP',
+        id: `SUMMARY-${sDateStr}`,
+        date: sDateStr,
+        time: 'Full Day Aggregate',
+        order_count: orderCount,
+        table: 'Multiple Tables',
+        customer_name: 'Daily Compaction',
+        customer_phone: 'N/A',
+        items_count: totalItemCount,
+        items_detail: itemsDetailStr,
+        payment_method: pMethodDisplay,
+        cash_amt: cashAmt,
+        upi_amt: upiAmt,
+        card_amt: cardAmt,
+        other_amt: otherAmt,
+        amount: amt,
+        status: 'COMPLETED (ARCHIVE)'
+      });
+    });
+
+    const averageOrderValue = grandTotalRepresentedOrders > 0
+      ? Math.round(grandTotalRevenue / grandTotalRepresentedOrders)
+      : 0;
+
+    // ==========================================
+    // SHEET 1: Sales Report
+    // ==========================================
+    const sheet1 = workbook.addWorksheet('Sales Report');
+
+    // Setup sheet properties & freeze
+    sheet1.views = [{ state: 'frozen', ySplit: 6 }];
+
+    // Column widths
+    sheet1.columns = [
+      { key: 'record_type', width: 16 },
+      { key: 'id', width: 20 },
+      { key: 'date', width: 14 },
+      { key: 'time', width: 16 },
+      { key: 'order_count', width: 13 },
+      { key: 'table', width: 15 },
+      { key: 'customer_name', width: 24 },
+      { key: 'customer_phone', width: 18 },
+      { key: 'items_count', width: 13 },
+      { key: 'items_detail', width: 55 },
+      { key: 'payment_method', width: 18 },
+      { key: 'cash_amt', width: 18 },
+      { key: 'upi_amt', width: 18 },
+      { key: 'card_amt', width: 18 },
+      { key: 'other_amt', width: 18 },
+      { key: 'amount', width: 18 },
+      { key: 'status', width: 16 }
+    ];
+
+    // Meta Header Rows
+    sheet1.addRow(['TOUCHQR — SALES REPORT']);
+    sheet1.getRow(1).font = { name: 'Calibri', size: 14, bold: true, color: { argb: 'FF0F172A' } };
+
+    sheet1.addRow([`Restaurant Name: ${restoName}`]);
+    sheet1.getRow(2).font = { name: 'Calibri', size: 10, color: { argb: 'FF475569' } };
+
+    sheet1.addRow([`Report Period: ${periodLabel}`]);
+    sheet1.getRow(3).font = { name: 'Calibri', size: 10, color: { argb: 'FF475569' } };
+
+    sheet1.addRow([`Generated At (IST): ${generatedAtIST}`]);
+    sheet1.getRow(4).font = { name: 'Calibri', size: 10, color: { argb: 'FF475569' } };
+
+    sheet1.addRow([]); // Blank Row 5
+
+    // Table Header Row 6
+    const headerRow = sheet1.addRow([
+      'Record Type',
+      'Order / Summary ID',
+      'Date (IST)',
+      'Time (IST)',
+      'Order Count',
+      'Table / Space',
+      'Customer Name',
+      'Customer Phone',
+      'Items Count',
+      'Items Detail',
+      'Payment Method',
+      'Cash Amount (INR)',
+      'UPI Amount (INR)',
+      'Card Amount (INR)',
+      'Other Amount (INR)',
+      'Amount (INR)',
+      'Status'
+    ]);
+
+    headerRow.eachCell((cell) => {
+      cell.font = { name: 'Calibri', size: 11, bold: true, color: { argb: 'FFFFFFFF' } };
+      cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF0F172A' } };
+      cell.alignment = { vertical: 'middle', horizontal: 'center' };
+    });
+    headerRow.height = 26;
+
+    sheet1.autoFilter = { from: 'A6', to: 'Q6' };
+
+    // Add Data Rows
+    reportRows.forEach(r => {
+      const row = sheet1.addRow([
+        r.record_type,
+        r.id,
+        r.date,
+        r.time,
+        r.order_count,
+        r.table,
+        r.customer_name,
+        r.customer_phone,
+        r.items_count,
+        r.items_detail,
+        r.payment_method,
+        r.cash_amt,
+        r.upi_amt,
+        r.card_amt,
+        r.other_amt,
+        r.amount,
+        r.status
+      ]);
+
+      row.getCell(3).alignment = { horizontal: 'center' };
+      row.getCell(4).alignment = { horizontal: 'center' };
+      row.getCell(5).numFmt = '#,##0';
+      row.getCell(7).alignment = { wrapText: true };
+      row.getCell(8).numFmt = '@'; // Force text format for phone numbers
+      row.getCell(9).numFmt = '#,##0';
+      row.getCell(10).alignment = { wrapText: true };
+      row.getCell(12).numFmt = '"₹"#,##0.00';
+      row.getCell(13).numFmt = '"₹"#,##0.00';
+      row.getCell(14).numFmt = '"₹"#,##0.00';
+      row.getCell(15).numFmt = '"₹"#,##0.00';
+      row.getCell(16).numFmt = '"₹"#,##0.00';
+      row.getCell(17).alignment = { horizontal: 'center' };
+    });
+
+    // Summary Footer Row
+    if (reportRows.length > 0) {
+      sheet1.addRow([]); // Blank spacer row
+
+      const footerRow = sheet1.addRow([
+        'REPORT_SUMMARY',
+        'ALL_RECORDS',
+        `Period: ${selectedPeriod}`,
+        `Live: ${liveOrderRowCount} | Rollup: ${rollupRowCount}`,
+        grandTotalRepresentedOrders,
+        'Multiple Tables',
+        'Summary Totals',
+        'N/A',
+        grandTotalItemsCount,
+        `Total Represented Orders: ${grandTotalRepresentedOrders} across ${liveOrderRowCount + rollupRowCount} physical records`,
+        'ALL_METHODS',
+        grandTotalCash,
+        grandTotalUPI,
+        grandTotalCard,
+        grandTotalOther,
+        grandTotalRevenue,
+        'VERIFIED_SUMMARY'
+      ]);
+
+      footerRow.eachCell((cell) => {
+        cell.font = { name: 'Calibri', size: 11, bold: true, color: { argb: 'FF0F172A' } };
+        cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFE2E8F0' } };
+      });
+      footerRow.getCell(5).numFmt = '#,##0';
+      footerRow.getCell(9).numFmt = '#,##0';
+      footerRow.getCell(12).numFmt = '"₹"#,##0.00';
+      footerRow.getCell(13).numFmt = '"₹"#,##0.00';
+      footerRow.getCell(14).numFmt = '"₹"#,##0.00';
+      footerRow.getCell(15).numFmt = '"₹"#,##0.00';
+      footerRow.getCell(16).numFmt = '"₹"#,##0.00';
+      footerRow.height = 24;
+    }
+
+    // ==========================================
+    // SHEET 2: Summary
+    // ==========================================
+    const sheet2 = workbook.addWorksheet('Summary');
+    sheet2.columns = [
+      { width: 28 },
+      { width: 24 },
+      { width: 20 },
+      { width: 22 }
+    ];
+
+    sheet2.addRow(['TOUCHQR — SALES SUMMARY']);
+    sheet2.getRow(1).font = { name: 'Calibri', size: 14, bold: true, color: { argb: 'FF0F172A' } };
+
+    sheet2.addRow([`Restaurant Name: ${restoName}`]);
+    sheet2.getRow(2).font = { name: 'Calibri', size: 10, color: { argb: 'FF475569' } };
+
+    sheet2.addRow([`Report Period: ${periodLabel}`]);
+    sheet2.getRow(3).font = { name: 'Calibri', size: 10, color: { argb: 'FF475569' } };
+
+    sheet2.addRow([`Generated At (IST): ${generatedAtIST}`]);
+    sheet2.getRow(4).font = { name: 'Calibri', size: 10, color: { argb: 'FF475569' } };
+
+    sheet2.addRow([]); // Blank Row 5
+
+    // Section 1: Executive KPI Metrics
+    const kpiHeader = sheet2.addRow(['METRIC', 'VALUE', 'DESCRIPTION', '']);
+    kpiHeader.eachCell((cell) => {
+      cell.font = { name: 'Calibri', size: 11, bold: true, color: { argb: 'FFFFFFFF' } };
+      cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF0284C7' } };
+    });
+
+    const kpi1 = sheet2.addRow(['Total Revenue (INR)', grandTotalRevenue, 'Gross sales for selected period', '']);
+    kpi1.getCell(2).numFmt = '"₹"#,##0.00';
+    kpi1.getCell(2).font = { bold: true };
+
+    const kpi2 = sheet2.addRow(['Total Represented Orders', grandTotalRepresentedOrders, `Across ${liveOrderRowCount + rollupRowCount} physical records`, '']);
+    kpi2.getCell(2).numFmt = '#,##0';
+    kpi2.getCell(2).font = { bold: true };
+
+    const kpi3 = sheet2.addRow(['Average Order Value (AOV)', averageOrderValue, 'Average ticket size per order', '']);
+    kpi3.getCell(2).numFmt = '"₹"#,##0.00';
+    kpi3.getCell(2).font = { bold: true };
+
+    const kpi4 = sheet2.addRow(['Total Items Sold', grandTotalItemsCount, 'Cumulative dish count sold', '']);
+    kpi4.getCell(2).numFmt = '#,##0';
+    kpi4.getCell(2).font = { bold: true };
+
+    sheet2.addRow([]); // Spacer
+
+    // Section 2: Payment Collection Breakdown
+    const payHeader = sheet2.addRow(['PAYMENT METHOD', 'AMOUNT (INR)', 'SHARE (%)', '']);
+    payHeader.eachCell((cell) => {
+      cell.font = { name: 'Calibri', size: 11, bold: true, color: { argb: 'FFFFFFFF' } };
+      cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF059669' } };
+    });
+
+    const pRows = [
+      { name: 'Cash Collection', amount: grandTotalCash },
+      { name: 'UPI / Online Collection', amount: grandTotalUPI },
+      { name: 'Card Collection', amount: grandTotalCard },
+      { name: 'Other Payment Collection', amount: grandTotalOther }
+    ];
+
+    pRows.forEach(p => {
+      const share = grandTotalRevenue > 0 ? (p.amount / grandTotalRevenue) : 0;
+      const row = sheet2.addRow([p.name, p.amount, share, '']);
+      row.getCell(2).numFmt = '"₹"#,##0.00';
+      row.getCell(3).numFmt = '0.0%';
+    });
+
+    sheet2.addRow([]); // Spacer
+
+    // Section 3: Daily Sales Trend
+    const trendHeader = sheet2.addRow(['DATE (IST)', 'ORDERS COUNT', 'REVENUE (INR)', '']);
+    trendHeader.eachCell((cell) => {
+      cell.font = { name: 'Calibri', size: 11, bold: true, color: { argb: 'FFFFFFFF' } };
+      cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF6366F1' } };
+    });
+
+    const sortedTrend = Array.from(dailyTrendMap.values()).sort((a, b) => a.date.localeCompare(b.date));
+    sortedTrend.forEach(t => {
+      const row = sheet2.addRow([t.date, t.orders, t.revenue, '']);
+      row.getCell(1).alignment = { horizontal: 'center' };
+      row.getCell(2).numFmt = '#,##0';
+      row.getCell(3).numFmt = '"₹"#,##0.00';
+    });
+
+    sheet2.addRow([]); // Spacer
+
+    // Section 4: Top Selling Dishes Preview
+    const topDishesHeader = sheet2.addRow(['RANK', 'DISH NAME', 'QUANTITY SOLD', 'REVENUE (INR)']);
+    topDishesHeader.eachCell((cell) => {
+      cell.font = { name: 'Calibri', size: 11, bold: true, color: { argb: 'FFFFFFFF' } };
+      cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFD97706' } };
+    });
+
+    const sortedDishes = Array.from(dishSalesMap.values()).sort((a, b) => b.quantity - a.quantity || b.revenue - a.revenue);
+    sortedDishes.slice(0, 10).forEach((d, idx) => {
+      const row = sheet2.addRow([idx + 1, d.name, d.quantity, d.revenue]);
+      row.getCell(1).alignment = { horizontal: 'center' };
+      row.getCell(3).numFmt = '#,##0';
+      row.getCell(4).numFmt = '"₹"#,##0.00';
+    });
+
+    // ==========================================
+    // SHEET 3: Item Sales
+    // ==========================================
+    const sheet3 = workbook.addWorksheet('Item Sales');
+    sheet3.views = [{ state: 'frozen', ySplit: 5 }];
+
+    sheet3.columns = [
+      { key: 'rank', width: 10 },
+      { key: 'dish_id', width: 16 },
+      { key: 'dish_name', width: 36 },
+      { key: 'quantity_sold', width: 18 },
+      { key: 'revenue', width: 22 }
+    ];
+
+    sheet3.addRow(['TOUCHQR — DISH LEVEL SALES REPORT']);
+    sheet3.getRow(1).font = { name: 'Calibri', size: 14, bold: true, color: { argb: 'FF0F172A' } };
+
+    sheet3.addRow([`Restaurant: ${restoName} | Period: ${periodLabel}`]);
+    sheet3.getRow(2).font = { name: 'Calibri', size: 10, color: { argb: 'FF475569' } };
+
+    sheet3.addRow([`Generated At: ${generatedAtIST}`]);
+    sheet3.getRow(3).font = { name: 'Calibri', size: 10, color: { argb: 'FF475569' } };
+
+    sheet3.addRow([]); // Blank Row 4
+
+    const itemHeader = sheet3.addRow(['Rank', 'Dish ID', 'Dish Name', 'Quantity Sold', 'Revenue (INR)']);
+    itemHeader.eachCell((cell) => {
+      cell.font = { name: 'Calibri', size: 11, bold: true, color: { argb: 'FFFFFFFF' } };
+      cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF0F172A' } };
+      cell.alignment = { vertical: 'middle', horizontal: 'center' };
+    });
+    itemHeader.height = 24;
+
+    sheet3.autoFilter = { from: 'A5', to: 'E5' };
+
+    sortedDishes.forEach((d, idx) => {
+      const row = sheet3.addRow([
+        idx + 1,
+        d.dish_id,
+        d.name,
+        d.quantity,
+        d.revenue
+      ]);
+      row.getCell(1).alignment = { horizontal: 'center' };
+      row.getCell(2).numFmt = '@';
+      row.getCell(4).numFmt = '#,##0';
+      row.getCell(5).numFmt = '"₹"#,##0.00';
+    });
+
+    const filename = `Sales_Report_${filePeriodSlug}_${todayStr}.xlsx`;
+    res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+    res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
+
+    await workbook.xlsx.write(res);
+    return res.end();
+  } catch (err) {
+    console.error('Export analytics XLSX error:', err);
+    res.status(500).json({ error: 'Failed to export sales report XLSX' });
   }
 });
 
