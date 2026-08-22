@@ -362,7 +362,7 @@ export default function AnalyticsView({
         }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '18px' }}>
             <h3 style={{ fontSize: '0.98rem', fontWeight: 900, color: '#0F172A', margin: 0, display: 'flex', alignItems: 'center', gap: '8px' }}>
-              <BarChart2 size={18} color="#0284C7" /> {selectedMonthKey === 'all' ? '7-Day Sales Trend' : 'Daily Sales Trend (Selected Month)'}
+              <BarChart2 size={18} color="#0284C7" /> {!activeFilter.startsWith('month:') ? 'Sales Trend' : 'Daily Sales Trend (Selected Month)'}
             </h3>
             <span style={{ fontSize: '0.74rem', color: '#64748B', fontWeight: 600 }}>Daily Gross (INR)</span>
           </div>
