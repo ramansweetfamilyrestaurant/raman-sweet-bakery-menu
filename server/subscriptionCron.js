@@ -63,7 +63,7 @@ export async function checkExpiredSubscriptions() {
     const expiredRestos = await query(`
       SELECT r.id, r.name, r.slug, r.plan_expires_at, r.trial_ends_at
       FROM restaurants r
-      WHERE (r.active IS TRUE OR r.active = TRUE OR r.active = 1)
+      WHERE r.active IS TRUE
         AND (r.mandate_status IS NULL OR r.mandate_status != 'admin_granted')
         AND (r.subscription_type IS NULL OR r.subscription_type != 'ADMIN_GRANTED')
         AND (r.trial_ends_at IS NULL OR r.trial_ends_at < $1)

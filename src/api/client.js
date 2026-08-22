@@ -610,8 +610,12 @@ export async function rejectPresenceRequest(id, token, reason = 'Rejected by sta
   return handleResponse(res, 'Failed to reject presence verification');
 }
 
-export async function fetchAdminAnalytics(token) {
-  const res = await fetch(`${API_BASE}/admin/analytics`, {
+export async function fetchAdminAnalytics(token, year = null, month = null) {
+  let url = `${API_BASE}/admin/analytics`;
+  if (year && month) {
+    url += `?year=${year}&month=${month}`;
+  }
+  const res = await fetch(url, {
     headers: { Authorization: `Bearer ${token}` }
   });
   return handleResponse(res, 'Failed to fetch analytics');

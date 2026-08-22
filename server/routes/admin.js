@@ -1238,6 +1238,55 @@ const handleUpdateSettings = async (req, res) => {
       ? Math.min(600, Math.max(30, parseInt(staff_verification_timeout_seconds, 10) || 120))
       : null;
 
+    // 🛡️ AUTHORITATIVE SAAS PLAN MAX_TABLES / SPACES ENFORCEMENT
+    const isSpaceUpdate = total_tables !== undefined || total_cabins !== undefined || total_rooms !== undefined || total_vip !== undefined;
+    if (isSpaceUpdate) {
+      const restoRows = await query('SELECT plan_tier, total_tables, total_cabins, total_rooms, total_vip FROM restaurants WHERE id = $1', [targetId]);
+      if (!restoRows || restoRows.length === 0) {
+        return res.status(404).json({ error: 'Restaurant not found' });
+      }
+      const currentResto = restoRows[0];
+      const planTier = (currentResto.plan_tier || 'basic').toLowerCase();
+
+      const planRows = await query('SELECT max_tables FROM saas_plans WHERE LOWER(key) = $1', [planTier]);
+      const rawMaxTables = planRows && planRows.length > 0 ? planRows[0].max_tables : 9999;
+      const maxTablesAllowed = rawMaxTables !== null && rawMaxTables !== undefined ? Number(rawMaxTables) : 9999;
+
+      const parseSpaceInput = (val, existingVal, fieldName) => {
+        if (val === undefined || val === null) return Number(existingVal) || 0;
+        const num = Number(val);
+        if (isNaN(num) || num < 0 || !Number.isInteger(num)) {
+          throw new Error(`${fieldName} count must be a non-negative integer`);
+        }
+        return num;
+      };
+
+      let reqTables, reqCabins, reqRooms, reqVip;
+      try {
+        reqTables = parseSpaceInput(total_tables, currentResto.total_tables, 'total_tables');
+        reqCabins = parseSpaceInput(total_cabins, currentResto.total_cabins, 'total_cabins');
+        reqRooms = parseSpaceInput(total_rooms, currentResto.total_rooms, 'total_rooms');
+        reqVip = parseSpaceInput(total_vip, currentResto.total_vip, 'total_vip');
+      } catch (valErr) {
+        return res.status(400).json({ error: 'invalid_space_count', message: valErr.message });
+      }
+
+      const existingTotalSpaces = (Number(currentResto.total_tables) || 0) + (Number(currentResto.total_cabins) || 0) + (Number(currentResto.total_rooms) || 0) + (Number(currentResto.total_vip) || 0);
+      const requestedTotalSpaces = reqTables + reqCabins + reqRooms + reqVip;
+
+      // Block if requested total exceeds quota AND is an increase beyond existing grandfathered count
+      if (requestedTotalSpaces > maxTablesAllowed && requestedTotalSpaces > existingTotalSpaces) {
+        return res.status(403).json({
+          success: false,
+          error: 'plan_limit_reached',
+          resource: 'tables',
+          limit: maxTablesAllowed,
+          current_count: requestedTotalSpaces,
+          message: `Your current SaaS plan allows a maximum of ${maxTablesAllowed} total customer-orderable spaces (tables, cabins, rooms, VIP lounges). Requested total: ${requestedTotalSpaces}. Please upgrade your plan to configure more spaces.`
+        });
+      }
+    }
+
     try {
       await query(`
         UPDATE restaurants 
@@ -1770,6 +1819,10 @@ router.get('/analytics', authenticateToken, requireActiveSubscription, async (re
       return res.status(401).json({ error: 'Restaurant identity is missing from authentication context' });
     }
 
+    const { year: qYear, month: qMonth } = req.query;
+    const selectedYear = qYear ? parseInt(qYear, 10) : null;
+    const selectedMonth = qMonth ? parseInt(qMonth, 10) : null;
+
     const orders = await query(
       "SELECT id, total_amount, status, items, created_at FROM orders WHERE restaurant_id = $1 AND status NOT IN ('rejected', 'cancelled') ORDER BY id DESC",
       [targetId]
@@ -1808,20 +1861,41 @@ router.get('/analytics', authenticateToken, requireActiveSubscription, async (re
     const thirtyDaysAgo = new Date();
     thirtyDaysAgo.setDate(now.getDate() - 30);
 
+    const sixtyDaysAgo = new Date();
+    sixtyDaysAgo.setDate(now.getDate() - 60);
+
     let todaySales = 0;
     let todayOrders = 0;
     let weeklySales = 0;
     let monthlySales = 0;
+    let prevMonthSales = 0;
     let totalSales = 0;
 
     const dishSalesMap = {};
     const dailySalesMap = {};
+    const availableMonthsMap = {};
 
-    for (let i = 6; i >= 0; i--) {
-      const d = new Date();
-      d.setDate(now.getDate() - i);
-      const ds = getFormattedLocalDate(d);
-      dailySalesMap[ds] = 0;
+    const paymentMethods = {
+      upi: { count: 0, amount: 0 },
+      cash: { count: 0, amount: 0 },
+      card: { count: 0, amount: 0 },
+      other: { count: 0, amount: 0 }
+    };
+
+    // Initialize daily chart map
+    if (selectedYear && selectedMonth) {
+      const daysInMonth = new Date(selectedYear, selectedMonth, 0).getDate();
+      for (let day = 1; day <= daysInMonth; day++) {
+        const dayStr = `${selectedYear}-${String(selectedMonth).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+        dailySalesMap[dayStr] = 0;
+      }
+    } else {
+      for (let i = 6; i >= 0; i--) {
+        const d = new Date();
+        d.setDate(now.getDate() - i);
+        const ds = getFormattedLocalDate(d);
+        dailySalesMap[ds] = 0;
+      }
     }
 
     orders.forEach(o => {
@@ -1830,6 +1904,30 @@ router.get('/analytics', authenticateToken, requireActiveSubscription, async (re
 
       const createdAtDate = parseSafeDate(o.created_at) || new Date();
       const dateStr = getFormattedLocalDate(createdAtDate);
+
+      // Populate available month selector
+      if (dateStr && dateStr.length >= 7) {
+        const mKey = dateStr.substring(0, 7);
+        const mYear = parseInt(dateStr.substring(0, 4), 10);
+        const mMonth = parseInt(dateStr.substring(5, 7), 10);
+        if (!availableMonthsMap[mKey]) {
+          const monthLabel = createdAtDate.toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
+          availableMonthsMap[mKey] = { key: mKey, label: monthLabel, year: mYear, month: mMonth };
+        }
+      }
+
+      // Payment method breakdown
+      const pMethod = (o.payment_method || 'cash').toLowerCase();
+      if (pMethod.includes('upi') || pMethod.includes('online') || pMethod.includes('paytm') || pMethod.includes('gpay') || pMethod.includes('phonepe')) {
+        paymentMethods.upi.count++;
+        paymentMethods.upi.amount += amt;
+      } else if (pMethod.includes('card')) {
+        paymentMethods.card.count++;
+        paymentMethods.card.amount += amt;
+      } else {
+        paymentMethods.cash.count++;
+        paymentMethods.cash.amount += amt;
+      }
 
       if (dateStr === todayStr) {
         todaySales += amt;
@@ -1842,6 +1940,8 @@ router.get('/analytics', authenticateToken, requireActiveSubscription, async (re
 
       if (createdAtDate >= thirtyDaysAgo) {
         monthlySales += amt;
+      } else if (createdAtDate >= sixtyDaysAgo) {
+        prevMonthSales += amt;
       }
 
       if (dateStr && dailySalesMap[dateStr] !== undefined) {
@@ -1855,7 +1955,7 @@ router.get('/analytics', authenticateToken, requireActiveSubscription, async (re
 
       itemsList.forEach(item => {
         const dishName = item.name || item.title || 'Unknown Dish';
-        const qty = Number(item.quantity) || 1;
+        const qty = Number(item.quantity || item.qty || 1);
         const price = Number(item.price) || 0;
         const lineTotal = price * qty;
 
@@ -1878,23 +1978,58 @@ router.get('/analytics', authenticateToken, requireActiveSubscription, async (re
 
       const dDate = new Date(s.summary_date);
       if (dDate >= sevenDaysAgo) weeklySales += amt;
-      if (dDate >= thirtyDaysAgo) monthlySales += amt;
-      if (s.summary_date && dailySalesMap[s.summary_date] !== undefined) {
-        dailySalesMap[s.summary_date] += amt;
+      if (dDate >= thirtyDaysAgo) {
+        monthlySales += amt;
+      } else if (dDate >= sixtyDaysAgo) {
+        prevMonthSales += amt;
       }
+
+      const summaryDateStr = getFormattedLocalDate(dDate);
+      if (summaryDateStr && summaryDateStr.length >= 7) {
+        const mKey = summaryDateStr.substring(0, 7);
+        const mYear = parseInt(summaryDateStr.substring(0, 4), 10);
+        const mMonth = parseInt(summaryDateStr.substring(5, 7), 10);
+        if (!availableMonthsMap[mKey]) {
+          const monthLabel = dDate.toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
+          availableMonthsMap[mKey] = { key: mKey, label: monthLabel, year: mYear, month: mMonth };
+        }
+      }
+
+      if (summaryDateStr && dailySalesMap[summaryDateStr] !== undefined) {
+        dailySalesMap[summaryDateStr] += amt;
+      }
+
+      // Merge compressed top dishes into true all-time top dishes
+      try {
+        const topArr = typeof s.top_dishes_summary === 'string' ? JSON.parse(s.top_dishes_summary) : (s.top_dishes_summary || []);
+        if (Array.isArray(topArr)) {
+          topArr.forEach(td => {
+            const dName = td.name || 'Dish';
+            const dQty = Number(td.qty || td.quantity || 1);
+            if (!dishSalesMap[dName]) {
+              dishSalesMap[dName] = { name: dName, quantity: 0, revenue: 0 };
+            }
+            dishSalesMap[dName].quantity += dQty;
+          });
+        }
+      } catch (e) {}
     });
 
     const totalOrdersCount = orders.length + summaries.reduce((acc, s) => acc + (Number(s.total_orders) || 0), 0);
+    const averageOrderValue = totalOrdersCount > 0 ? Math.round(totalSales / totalOrdersCount) : 0;
+    const growthPercentage = prevMonthSales > 0 ? parseFloat((((monthlySales - prevMonthSales) / prevMonthSales) * 100).toFixed(1)) : 0;
 
     const topDishes = Object.values(dishSalesMap)
       .sort((a, b) => b.quantity - a.quantity)
-      .slice(0, 5);
+      .slice(0, 6);
 
     const dailyChartData = Object.keys(dailySalesMap).map(dateKey => ({
       date: dateKey,
       displayDate: new Date(dateKey).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
       sales: dailySalesMap[dateKey]
     }));
+
+    const availableMonths = Object.values(availableMonthsMap).sort((a, b) => b.key.localeCompare(a.key));
 
     res.json({
       today_sales: todaySales,
@@ -1907,9 +2042,15 @@ router.get('/analytics', authenticateToken, requireActiveSubscription, async (re
       total_sales: totalSales,
       total_revenue: totalSales,
       total_orders: totalOrdersCount,
+      average_order_value: averageOrderValue,
+      growth_percentage: growthPercentage,
+      payment_methods: paymentMethods,
+      available_months: availableMonths,
+      selected_period: selectedYear && selectedMonth ? `${selectedYear}-${String(selectedMonth).padStart(2, '0')}` : 'all',
       top_dishes: topDishes,
       daily_chart: dailyChartData,
-      summarized_days_count: summaries.length
+      summarized_days_count: summaries.length,
+      status: 'success'
     });
   } catch (err) {
     console.error('Fetch analytics error:', err);

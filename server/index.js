@@ -439,17 +439,41 @@ async function startServer(portToTry = PORT) {
     }).catch(err => console.warn('Startup order purge notice:', err.message));
     
     // ⚡ 100% Hands-Free Automated Background Compaction Engine
-    // Runs automatically on server startup and every 24 hours in background based on SuperAdmin Global Order Retention Policy
+    // Runs automatically on server startup and every 24 hours in background based on per-tenant SaaS Plan Order Retention Policy
     const triggerGlobalCompaction = async () => {
       try {
-        const sysRows = await query("SELECT value FROM system_settings WHERE key = 'global_order_retention_days'");
-        const retentionDays = sysRows && sysRows.length > 0 ? (parseInt(sysRows[0].value, 10) || 90) : 90;
-        const res = await runAutoDataSummarization(retentionDays);
-        if (res && res.purged_orders > 0) {
-          console.log(`⚡ [GLOBAL AUTO COMPACTION] Automatically summarized ${res.summarized_days} days and purged ${res.purged_orders} old raw orders (Policy: ${retentionDays} Days).`);
+        const activeRestos = await query(`
+          SELECT r.id, r.name, r.plan_tier, 
+                 COALESCE(r.order_retention_days, p.order_retention_days, 90) AS retention_days
+          FROM restaurants r
+          LEFT JOIN saas_plans p ON LOWER(p.key) = LOWER(r.plan_tier)
+          WHERE r.active = true
+        `);
+
+        if (!activeRestos || activeRestos.length === 0) return;
+
+        let totalSummarizedDays = 0;
+        let totalPurgedOrders = 0;
+
+        for (const resto of activeRestos) {
+          try {
+            const retentionDays = Math.max(1, parseInt(resto.retention_days, 10) || 90);
+            const res = await runAutoDataSummarization(retentionDays, resto.id);
+            if (res && res.purged_orders > 0) {
+              totalSummarizedDays += res.summarized_days || 0;
+              totalPurgedOrders += res.purged_orders || 0;
+              console.log(`⚡ [TENANT AUTO COMPACTION] Restaurant [ID ${resto.id}] "${resto.name}" (Plan: ${resto.plan_tier || 'basic'}) compacted ${res.summarized_days} days, purged ${res.purged_orders} raw orders (Policy: ${retentionDays} Days).`);
+            }
+          } catch (tenantErr) {
+            console.warn(`[AUTO COMPACTION] Warning processing restaurant ID ${resto.id}:`, tenantErr.message);
+          }
+        }
+
+        if (totalPurgedOrders > 0) {
+          console.log(`⚡ [GLOBAL AUTO COMPACTION COMPLETE] Total ${totalSummarizedDays} days summarized and ${totalPurgedOrders} old raw orders purged across active fleet.`);
         }
       } catch (err) {
-        console.warn('Auto summarization notice:', err.message);
+        console.warn('Auto summarization engine notice:', err.message);
       }
     };
 

@@ -1276,6 +1276,16 @@ export default function AdminDashboard({ token, username, slug: propSlug = '', o
     }
   }, [activeTab, token]);
 
+  const handleFilterAnalytics = async (year, month) => {
+    if (!token) return;
+    try {
+      const data = await fetchAdminAnalytics(token, year, month);
+      if (data) setAnalyticsData(data);
+    } catch (err) {
+      console.warn('Filter analytics error:', err);
+    }
+  };
+
   // Settings State
   const [settingsForm, setSettingsForm] = useState(() => {
     const infoData = getInitialAdminState('info', null);
@@ -2522,6 +2532,7 @@ export default function AdminDashboard({ token, username, slug: propSlug = '', o
                 analyticsData={analyticsData}
                 onDownloadTodayCSV={handleDownloadTodaySalesReport}
                 onDownloadAllCSV={handleDownloadAllSalesReport}
+                onFilterPeriod={handleFilterAnalytics}
                 exportingAll={exportingAll}
                 analyticsExportEnabled={isAnalyticsEnabled}
                 currencySymbol={settingsForm.currency_symbol !== undefined && settingsForm.currency_symbol !== null ? settingsForm.currency_symbol : '₹'}
