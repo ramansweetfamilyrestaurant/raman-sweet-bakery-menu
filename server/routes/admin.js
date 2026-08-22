@@ -471,7 +471,7 @@ router.get('/stats', authenticateToken, requireActiveSubscription, async (req, r
     const [catRes, dishRes, activeRes] = await Promise.all([
       query('SELECT COUNT(*) as count FROM categories WHERE restaurant_id = $1', [targetId]),
       query('SELECT COUNT(*) as count FROM dishes WHERE restaurant_id = $1', [targetId]),
-      query("SELECT COUNT(*) as count FROM dishes WHERE restaurant_id = $1 AND (available = 1 OR available IS TRUE OR available::text = '1')", [targetId])
+      query("SELECT COUNT(*) as count FROM dishes WHERE restaurant_id = $1 AND (available IS TRUE OR available::text IN ('1', 'true', 't'))", [targetId])
     ]);
 
     res.json({
@@ -897,6 +897,28 @@ router.post('/categories', authenticateToken, requireActiveSubscription, async (
     if (!name) {
       return res.status(400).json({ error: 'Category name is required' });
     }
+
+    // Authoritative SaaS Plan Quota Check (Categories)
+    const restoRows = await query('SELECT plan_tier FROM restaurants WHERE id = $1', [targetId]);
+    const planTier = (restoRows[0]?.plan_tier || 'pro').toLowerCase();
+    const planRows = await query('SELECT max_categories FROM saas_plans WHERE LOWER(key) = $1', [planTier]);
+    const rawMaxCategories = planRows[0]?.max_categories;
+    const maxCategories = (rawMaxCategories !== undefined && rawMaxCategories !== null && Number(rawMaxCategories) > 0) ? Number(rawMaxCategories) : 9999;
+
+    const countRows = await query('SELECT COUNT(*)::int as count FROM categories WHERE restaurant_id = $1', [targetId]);
+    const currentCount = parseInt(countRows[0]?.count || 0, 10);
+
+    if (currentCount >= maxCategories) {
+      return res.status(403).json({
+        success: false,
+        error: 'plan_limit_reached',
+        resource: 'categories',
+        limit: maxCategories,
+        current_count: currentCount,
+        message: `Category limit reached! Your ${planTier.toUpperCase()} plan allows a maximum of ${maxCategories} categories. Please upgrade your SaaS plan to add more.`
+      });
+    }
+
     const processedImage = await processExternalImageUrl(image, targetId, 'categories');
     const order = sort_order || 0;
     const result = await query(
@@ -1010,6 +1032,27 @@ router.post('/dishes', authenticateToken, requireActiveSubscription, async (req,
 
     if (!name || !price || !category_id) {
       return res.status(400).json({ error: 'Category, name, and price are required' });
+    }
+
+    // Authoritative SaaS Plan Quota Check (Dishes)
+    const restoRows = await query('SELECT plan_tier FROM restaurants WHERE id = $1', [targetId]);
+    const planTier = (restoRows[0]?.plan_tier || 'pro').toLowerCase();
+    const planRows = await query('SELECT max_dishes FROM saas_plans WHERE LOWER(key) = $1', [planTier]);
+    const rawMaxDishes = planRows[0]?.max_dishes;
+    const maxDishes = (rawMaxDishes !== undefined && rawMaxDishes !== null && Number(rawMaxDishes) > 0) ? Number(rawMaxDishes) : 9999;
+
+    const countRows = await query('SELECT COUNT(*)::int as count FROM dishes WHERE restaurant_id = $1', [targetId]);
+    const currentCount = parseInt(countRows[0]?.count || 0, 10);
+
+    if (currentCount >= maxDishes) {
+      return res.status(403).json({
+        success: false,
+        error: 'plan_limit_reached',
+        resource: 'dishes',
+        limit: maxDishes,
+        current_count: currentCount,
+        message: `Dish limit reached! Your ${planTier.toUpperCase()} plan allows a maximum of ${maxDishes} dishes. Please upgrade your SaaS plan to add more.`
+      });
     }
 
     // Verify category belongs strictly to this tenant restaurant
@@ -1700,7 +1743,8 @@ router.patch('/presence-verifications/:token/reject', authenticateToken, require
     const targetId = req.user?.restaurant_id;
     if (!targetId) return res.status(401).json({ error: 'Unauthorized' });
     const { token } = req.params;
-    const { rejection_reason } = req.body || {};
+    const { rejection_reason, reason } = req.body || {};
+    const finalReason = String(rejection_reason || reason || 'Rejected by staff').trim();
 
     const rows = await query('SELECT * FROM table_location_verifications WHERE verification_token = $1 AND restaurant_id = $2', [token, targetId]);
     if (!rows || rows.length === 0) return res.status(404).json({ error: 'verification_not_found' });
@@ -1708,7 +1752,7 @@ router.patch('/presence-verifications/:token/reject', authenticateToken, require
 
     await query(
       "UPDATE table_location_verifications SET status = 'rejected', rejection_reason = $1, approved_by_admin_id = $2 WHERE id = $3 AND restaurant_id = $4",
-      [rejection_reason || 'Rejected by staff', req.user.id || null, record.id, targetId]
+      [finalReason, req.user.id || null, record.id, targetId]
     );
     await query("UPDATE service_requests SET status = 'resolved' WHERE note LIKE $1 AND restaurant_id = $2", [`%${token}%`, targetId]);
 
@@ -1934,7 +1978,12 @@ router.post('/combos', authenticateToken, requireActiveSubscription, async (req,
 
     if (currentCount >= maxCombos) {
       return res.status(403).json({
-        error: `Combo limit reached! Your ${planTier.toUpperCase()} plan allows a maximum of ${maxCombos} combos. Please upgrade your SaaS plan to add more.`,
+        success: false,
+        error: 'plan_limit_reached',
+        resource: 'combos',
+        limit: maxCombos,
+        current_count: currentCount,
+        message: `Combo limit reached! Your ${planTier.toUpperCase()} plan allows a maximum of ${maxCombos} combos. Please upgrade your SaaS plan to add more.`,
         limit_reached: true,
         max_combos: maxCombos
       });

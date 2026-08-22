@@ -1186,14 +1186,6 @@ router.post('/orders/presence/request-staff', locationVerifyRateLimiter, async (
 
 // POST Authoritative Order Placement Endpoint
 router.post('/orders', orderCreationRateLimiter, async (req, res) => {
-  const idempotencyKey = req.headers['x-idempotency-key'] || req.body.idempotency_key;
-  if (idempotencyKey) {
-    const existing = await getCachedIdempotentResponse(idempotencyKey);
-    if (existing) {
-      return res.status(existing.status).json(existing.body);
-    }
-  }
-
   try {
     const {
       slug,

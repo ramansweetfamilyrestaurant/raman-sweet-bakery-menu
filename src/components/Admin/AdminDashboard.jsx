@@ -1,5 +1,4 @@
 import React, { useState, useEffect, useRef } from 'react';
-import * as XLSX from 'xlsx';
 import { fetchCategories, fetchDishes, toggleDishAvailability, toggleCategoryActive, deleteDish, deleteCategory, fetchRestaurantInfo, updateDishPrice, fetchAnnouncements, fetchAdminOrders, updateOrderStatus, uploadImage, fetchServiceRequests, resolveServiceRequest, approvePresenceRequest, rejectPresenceRequest, fetchAdminAnalytics, fetchAdminCombos, createCombo, updateCombo, deleteCombo, toggleComboAvailability, optimizeDatabase, updateTenantSettings } from '../../api/client';
 import { getPlanDetails } from '../../config/plans';
 import { generateQrToken } from '../../utils/qrSecurity';
@@ -486,79 +485,102 @@ export default function AdminDashboard({ token, username, slug: propSlug = '', o
     }
   };
 
-  const generateAndDownloadExcel = (orderList, titlePrefix = 'Sales_Report') => {
-    if (!orderList || orderList.length === 0) {
-      alert('No sales data available to export');
-      return;
+  // Centralized RFC 4180 safe CSV escaping
+  const escapeCSVCell = (val) => {
+    if (val === null || val === undefined) return '';
+    const str = String(val);
+    if (/[",\r\n]/.test(str)) {
+      return `"${str.replace(/"/g, '""')}"`;
     }
+    return str;
+  };
 
-    const getDateParts = (dateStr) => {
-      if (!dateStr) return { date: 'N/A', time: 'N/A' };
-      const str = String(dateStr).trim();
-      let d = new Date(str);
-      if (isNaN(d.getTime())) {
-        d = new Date(str.replace(' ', 'T'));
+  const generateAndDownloadCSV = (orderList, titlePrefix = 'Sales_Report') => {
+    try {
+      if (!orderList || orderList.length === 0) {
+        alert('No sales data available to export');
+        return;
       }
-      if (!isNaN(d.getTime())) {
-        const day = String(d.getDate()).padStart(2, '0');
-        const month = String(d.getMonth() + 1).padStart(2, '0');
-        const year = d.getFullYear();
-        let hours = d.getHours();
-        const minutes = String(d.getMinutes()).padStart(2, '0');
-        const ampm = hours >= 12 ? 'PM' : 'AM';
-        hours = hours % 12;
-        hours = hours ? hours : 12;
-        const formattedHours = String(hours).padStart(2, '0');
-        return { date: `${day}-${month}-${year}`, time: `${formattedHours}:${minutes} ${ampm}` };
-      }
-      const parts = str.split(' ');
-      if (parts.length >= 2) return { date: parts[0], time: parts[1] };
-      return { date: str, time: 'N/A' };
-    };
 
-    const sheetData = orderList.map(order => {
-      const { date, time } = getDateParts(order.created_at);
-      const parsedItems = safeParseItems(order.items);
-      const itemsListStr = parsedItems.map(i => {
-        const cleanName = (i.name || '').replace(/[\u{1F300}-\u{1F9FF}\u{2600}-\u{26FF}\u{2700}-\u{27BF}]/gu, '').trim();
-        return `${cleanName || i.name} (x${i.quantity || 1})`;
-      }).join(', ');
-
-      return {
-        'Order ID': `#${order.id}`,
-        'Date': date,
-        'Time': time,
-        'Table Number': String(order.table_number || '1'),
-        'Customer Name': order.customer_name || 'Dine-In Guest',
-        'Customer Phone': order.customer_phone ? String(order.customer_phone) : 'N/A',
-        'Items Count': parsedItems.reduce((acc, i) => acc + (Number(i.quantity) || 1), 0),
-        'Items List': itemsListStr,
-        'Status': (order.status || 'COMPLETED').toUpperCase(),
-        'Amount (INR)': Number(order.total_amount) || 0
+      const getDateParts = (dateStr) => {
+        if (!dateStr) return { date: 'N/A', time: 'N/A' };
+        const str = String(dateStr).trim();
+        let d = new Date(str);
+        if (isNaN(d.getTime())) {
+          d = new Date(str.replace(' ', 'T'));
+        }
+        if (!isNaN(d.getTime())) {
+          const day = String(d.getDate()).padStart(2, '0');
+          const month = String(d.getMonth() + 1).padStart(2, '0');
+          const year = d.getFullYear();
+          let hours = d.getHours();
+          const minutes = String(d.getMinutes()).padStart(2, '0');
+          const ampm = hours >= 12 ? 'PM' : 'AM';
+          hours = hours % 12;
+          hours = hours ? hours : 12;
+          const formattedHours = String(hours).padStart(2, '0');
+          return { date: `${day}-${month}-${year}`, time: `${formattedHours}:${minutes} ${ampm}` };
+        }
+        const parts = str.split(' ');
+        if (parts.length >= 2) return { date: parts[0], time: parts[1] };
+        return { date: str, time: 'N/A' };
       };
-    });
 
-    const worksheet = XLSX.utils.json_to_sheet(sheetData);
+      const headers = [
+        'Order ID',
+        'Date',
+        'Time',
+        'Table Number',
+        'Customer Name',
+        'Customer Phone',
+        'Items Count',
+        'Items List',
+        'Status',
+        'Amount (INR)'
+      ];
 
-    // Auto-fit column widths so NOTHING is ever cut off in Excel!
-    worksheet['!cols'] = [
-      { wch: 12 }, // Order ID
-      { wch: 14 }, // Date
-      { wch: 14 }, // Time
-      { wch: 14 }, // Table Number
-      { wch: 22 }, // Customer Name
-      { wch: 18 }, // Customer Phone
-      { wch: 12 }, // Items Count
-      { wch: 45 }, // Items List
-      { wch: 14 }, // Status
-      { wch: 15 }  // Amount (INR)
-    ];
+      const rows = orderList.map(order => {
+        const { date, time } = getDateParts(order.created_at);
+        const parsedItems = safeParseItems(order.items);
+        const itemsListStr = parsedItems.map(i => {
+          const cleanName = (i.name || '').replace(/[\u{1F300}-\u{1F9FF}\u{2600}-\u{26FF}\u{2700}-\u{27BF}]/gu, '').trim();
+          return `${cleanName || i.name} (x${i.quantity || 1})`;
+        }).join(', ');
 
-    const workbook = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(workbook, worksheet, 'Sales Report');
+        return [
+          `#${order.id}`,
+          date,
+          time,
+          String(order.table_number || '1'),
+          order.customer_name || 'Dine-In Guest',
+          order.customer_phone ? String(order.customer_phone) : 'N/A',
+          parsedItems.reduce((acc, i) => acc + (Number(i.quantity) || 1), 0),
+          itemsListStr,
+          (order.status || 'COMPLETED').toUpperCase(),
+          Number(order.total_amount) || 0
+        ];
+      });
 
-    const fileName = `${titlePrefix}_${new Date().toISOString().substring(0, 10)}.xlsx`;
-    XLSX.writeFile(workbook, fileName);
+      // Construct RFC 4180 CSV with UTF-8 BOM (\uFEFF) for seamless Microsoft Excel & multi-language support
+      const csvContent = '\uFEFF' + [
+        headers.map(escapeCSVCell).join(','),
+        ...rows.map(row => row.map(escapeCSVCell).join(','))
+      ].join('\r\n');
+
+      const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.setAttribute('href', url);
+      const fileName = `${titlePrefix}_${new Date().toISOString().substring(0, 10)}.csv`;
+      link.setAttribute('download', fileName);
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      URL.revokeObjectURL(url);
+    } catch (err) {
+      console.error('[CSV EXPORT ERROR]', err);
+      alert('Failed to generate CSV sales report. Please try again.');
+    }
   };
 
   // 📅 Export Today's / Daily Sales (Since 12:00 AM Midnight Today)
@@ -574,7 +596,7 @@ export default function AdminDashboard({ token, username, slug: propSlug = '', o
       alert("No sales orders recorded for today yet.");
       return;
     }
-    generateAndDownloadExcel(todayOrders, `Daily_Sales_Report_${todayISO}`);
+    generateAndDownloadCSV(todayOrders, `Daily_Sales_Report_${todayISO}`);
   };
 
   // 📊 Export All-Time Sales (Complete History)
@@ -587,7 +609,7 @@ export default function AdminDashboard({ token, username, slug: propSlug = '', o
         alert('No historical sales data found.');
         return;
       }
-      generateAndDownloadExcel(allOrders, 'All_Time_Sales_Report');
+      generateAndDownloadCSV(allOrders, 'All_Time_Sales_Report');
     } catch (err) {
       alert(err.message || 'Failed to export all-time sales report');
     } finally {

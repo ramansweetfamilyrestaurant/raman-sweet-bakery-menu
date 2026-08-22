@@ -8,9 +8,22 @@ on:
 jobs:
   subscription-check:
     runs-on: ubuntu-latest
+
     steps:
-      - name: Trigger Subscription Check Endpoint
+      - name: Validate CRON_SECRET
+        env:
+          CRON_SECRET: ${{ secrets.CRON_SECRET }}
         run: |
-          curl -s -S -X GET "${{ secrets.PRODUCTION_URL || 'https://raman-sweet-bakery-menu.vercel.app' }}/api/cron/subscription-check" \
-            -H "Authorization: Bearer ${{ secrets.CRON_SECRET }}" \
+          if [ -z "$CRON_SECRET" ]; then
+            echo "ERROR: CRON_SECRET GitHub Actions repository secret is not configured."
+            exit 1
+          fi
+
+      - name: Trigger Subscription Check Endpoint
+        env:
+          CRON_SECRET: ${{ secrets.CRON_SECRET }}
+        run: |
+          curl -f -sS -X GET "https://touchqr.in/api/cron/subscription-check" \
+            -H "Authorization: Bearer $CRON_SECRET" \
             -H "Content-Type: application/json"
+

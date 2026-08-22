@@ -47,7 +47,7 @@ export default function AnalyticsView({
             </span>
           </div>
           <span style={{ fontSize: '0.78rem', color: '#64748B', fontWeight: 500 }}>
-            Real-time revenue metrics & Excel (.xlsx) sales reports
+            Real-time revenue metrics & CSV sales reports
           </span>
         </div>
 
@@ -74,7 +74,7 @@ export default function AnalyticsView({
                 flex: '1 1 auto'
               }}
             >
-              <Download size={14} /> 📅 Export Daily Sales (.xlsx)
+              <Download size={14} /> 📅 Export Daily Sales (.csv)
             </button>
             <button
               onClick={onDownloadAllCSV}
@@ -99,12 +99,12 @@ export default function AnalyticsView({
                 flex: '1 1 auto'
               }}
             >
-              <Download size={14} /> {exportingAll ? 'Generating...' : '📊 Export All-Time (.xlsx)'}
+              <Download size={14} /> {exportingAll ? 'Generating...' : '📊 Export All-Time (.csv)'}
             </button>
           </div>
         ) : (
           <span style={{ fontSize: '0.78rem', fontWeight: 800, color: '#B45309', background: '#FEF3C7', border: '1px solid #F59E0B', padding: '6px 12px', borderRadius: '10px' }}>
-            🔒 Excel Export (Pro Feature)
+            🔒 CSV Export (Pro Feature)
           </span>
         )}
       </div>
