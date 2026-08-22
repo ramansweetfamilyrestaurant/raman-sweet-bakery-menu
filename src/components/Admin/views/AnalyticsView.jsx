@@ -10,7 +10,7 @@ export default function AnalyticsView({
   analyticsExportEnabled = true,
   currencySymbol = '₹'
 }) {
-  const [selectedMonthKey, setSelectedMonthKey] = useState('all');
+  const [activeFilter, setActiveFilter] = useState('all');
 
   const todayRevenue = analyticsData?.today_sales ?? analyticsData?.today_revenue ?? 0;
   const todayOrders = analyticsData?.today_orders ?? 0;
@@ -33,23 +33,23 @@ export default function AnalyticsView({
   const maxDailySales = Math.max(...dailyChart.map(d => Number(d.sales) || 0), 1);
   const maxDishQty = Math.max(...topDishes.map(d => Number(d.quantity ?? d.sales_count ?? 1)), 1);
 
-  const handleMonthChange = (e) => {
+  const handleFilterChange = (e) => {
     const val = e.target.value;
-    setSelectedMonthKey(val);
-    if (val === 'all') {
-      if (onFilterPeriod) onFilterPeriod(null, null);
+    setActiveFilter(val);
+    if (val.startsWith('month:')) {
+      const parts = val.replace('month:', '').split('-');
+      const year = parseInt(parts[0], 10);
+      const month = parseInt(parts[1], 10);
+      if (onFilterPeriod) onFilterPeriod(year, month);
     } else {
-      const found = availableMonths.find(m => m.key === val);
-      if (found && onFilterPeriod) {
-        onFilterPeriod(found.year, found.month);
-      }
+      if (onFilterPeriod) onFilterPeriod(null, null);
     }
   };
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: '16px', paddingBottom: '30px', maxWidth: '1200px', margin: '0 auto', width: '100%' }}>
+    <div style={{ display: 'flex', flexDirection: 'column', gap: '16px', paddingBottom: '90px', maxWidth: '1200px', margin: '0 auto', width: '100%' }}>
       
-      {/* 🚀 Header, Month Filter & Export Actions */}
+      {/* 🚀 Header, Filter Dropdown & Export Actions */}
       <div style={{
         display: 'flex',
         alignItems: 'center',
@@ -76,34 +76,36 @@ export default function AnalyticsView({
           </span>
         </div>
 
-        {/* Month Selector Filter & Export Buttons */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap', flex: '1 1 auto', justifyContent: 'flex-end' }}>
-          {availableMonths.length > 0 && (
-            <div style={{ display: 'flex', alignItems: 'center', gap: '6px', background: '#F8FAFC', padding: '4px 10px', borderRadius: '10px', border: '1px solid #CBD5E1' }}>
-              <Calendar size={14} color="#64748B" />
-              <select
-                value={selectedMonthKey}
-                onChange={handleMonthChange}
-                style={{
-                  background: 'transparent',
-                  border: 'none',
-                  fontSize: '0.82rem',
-                  fontWeight: 700,
-                  color: '#0F172A',
-                  cursor: 'pointer',
-                  outline: 'none'
-                }}
-              >
-                <option value="all">📊 All-Time Overview</option>
-                {availableMonths.map(m => (
-                  <option key={m.key} value={m.key}>📅 {m.label}</option>
-                ))}
-              </select>
-            </div>
-          )}
+        {/* Period Selector Dropdown & Export Buttons */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap', width: '100%', justifyContent: 'space-between' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '6px', background: '#F8FAFC', padding: '6px 12px', borderRadius: '10px', border: '1px solid #CBD5E1', flex: '1 1 auto', minWidth: '200px' }}>
+            <Calendar size={16} color="#0284C7" />
+            <select
+              value={activeFilter}
+              onChange={handleFilterChange}
+              style={{
+                background: 'transparent',
+                border: 'none',
+                fontSize: '0.84rem',
+                fontWeight: 800,
+                color: '#0F172A',
+                cursor: 'pointer',
+                outline: 'none',
+                width: '100%'
+              }}
+            >
+              <option value="all">📊 All-Time Overview (Complete History)</option>
+              <option value="today">🟢 Today's Realtime (Since Midnight)</option>
+              <option value="week">🔵 Last 7 Days (Past Week)</option>
+              <option value="month">🟣 Last 30 Days (Past Month)</option>
+              {availableMonths.map(m => (
+                <option key={m.key} value={`month:${m.key}`}>📅 Monthly: {m.label}</option>
+              ))}
+            </select>
+          </div>
 
           {analyticsExportEnabled ? (
-            <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+            <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', flex: '1 1 auto', justifyContent: 'flex-end' }}>
               <button
                 onClick={onDownloadTodayCSV}
                 style={{
@@ -121,7 +123,8 @@ export default function AnalyticsView({
                   gap: '6px',
                   minHeight: '40px',
                   boxShadow: '0 2px 6px rgba(16, 185, 129, 0.25)',
-                  transition: 'all 0.2s ease'
+                  transition: 'all 0.2s ease',
+                  flex: '1 1 auto'
                 }}
               >
                 <Download size={14} /> 📅 Daily (.csv)
@@ -145,7 +148,8 @@ export default function AnalyticsView({
                   gap: '6px',
                   minHeight: '40px',
                   boxShadow: '0 2px 6px rgba(30, 41, 59, 0.2)',
-                  transition: 'all 0.2s ease'
+                  transition: 'all 0.2s ease',
+                  flex: '1 1 auto'
                 }}
               >
                 <Download size={14} /> {exportingAll ? 'Generating...' : '📊 All-Time (.csv)'}
@@ -159,10 +163,10 @@ export default function AnalyticsView({
         </div>
       </div>
 
-      {/* 💳 KPI Cards Grid (5 Fluid Responsive Cards) */}
+      {/* 💳 KPI Cards Grid (Compact 2-Columns on Mobile, 4-5 on Desktop) */}
       <div style={{
         display: 'grid',
-        gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))',
+        gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))',
         gap: '12px'
       }}>
         {/* Today */}
