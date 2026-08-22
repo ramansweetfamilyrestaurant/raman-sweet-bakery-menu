@@ -1910,7 +1910,7 @@ router.get('/analytics', authenticateToken, requireActiveSubscription, async (re
         const mKey = dateStr.substring(0, 7);
         const mYear = parseInt(dateStr.substring(0, 4), 10);
         const mMonth = parseInt(dateStr.substring(5, 7), 10);
-        if (!availableMonthsMap[mKey]) {
+        if (mYear >= 2020 && !availableMonthsMap[mKey]) {
           const monthLabel = createdAtDate.toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
           availableMonthsMap[mKey] = { key: mKey, label: monthLabel, year: mYear, month: mMonth };
         }
@@ -1989,7 +1989,7 @@ router.get('/analytics', authenticateToken, requireActiveSubscription, async (re
         const mKey = summaryDateStr.substring(0, 7);
         const mYear = parseInt(summaryDateStr.substring(0, 4), 10);
         const mMonth = parseInt(summaryDateStr.substring(5, 7), 10);
-        if (!availableMonthsMap[mKey]) {
+        if (mYear >= 2020 && !availableMonthsMap[mKey]) {
           const monthLabel = dDate.toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
           availableMonthsMap[mKey] = { key: mKey, label: monthLabel, year: mYear, month: mMonth };
         }

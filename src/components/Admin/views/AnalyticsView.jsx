@@ -22,7 +22,7 @@ export default function AnalyticsView({
   const growthPct = analyticsData?.growth_percentage ?? 0;
   const topDishes = analyticsData?.top_dishes || [];
   const dailyChart = analyticsData?.daily_chart || [];
-  const availableMonths = analyticsData?.available_months || [];
+  const availableMonths = (analyticsData?.available_months || []).filter(m => Number(m.year) >= 2020);
   const paymentMethods = analyticsData?.payment_methods || { upi: { count: 0, amount: 0 }, cash: { count: 0, amount: 0 }, card: { count: 0, amount: 0 } };
 
   const totalPaymentAmt = (paymentMethods.upi?.amount || 0) + (paymentMethods.cash?.amount || 0) + (paymentMethods.card?.amount || 0);
@@ -78,7 +78,7 @@ export default function AnalyticsView({
 
         {/* Period Selector Dropdown & Export Buttons */}
         <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap', width: '100%', justifyContent: 'space-between' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '6px', background: '#F8FAFC', padding: '6px 12px', borderRadius: '10px', border: '1px solid #CBD5E1', flex: '1 1 auto', minWidth: '200px' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '6px', background: '#F8FAFC', padding: '6px 12px', borderRadius: '10px', border: '1.5px solid #0284C7', flex: '1 1 auto', minWidth: '200px' }}>
             <Calendar size={16} color="#0284C7" />
             <select
               value={activeFilter}
@@ -172,10 +172,10 @@ export default function AnalyticsView({
         {/* Today */}
         <div style={{
           background: '#FFFFFF',
-          padding: '18px 20px',
+          padding: '16px 18px',
           borderRadius: '16px',
-          border: '1px solid #E2E8F0',
-          boxShadow: '0 2px 8px rgba(0,0,0,0.02)',
+          border: activeFilter === 'today' ? '2px solid #10B981' : '1px solid #E2E8F0',
+          boxShadow: activeFilter === 'today' ? '0 4px 12px rgba(16,185,129,0.15)' : '0 2px 8px rgba(0,0,0,0.02)',
           display: 'flex',
           flexDirection: 'column',
           justifyContent: 'space-between',
@@ -184,15 +184,15 @@ export default function AnalyticsView({
         }}>
           <div style={{ position: 'absolute', top: 0, left: 0, width: '4px', height: '100%', background: '#10B981' }} />
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
-            <span style={{ fontSize: '0.74rem', fontWeight: 800, color: '#64748B', letterSpacing: '0.04em' }}>TODAY'S REVENUE</span>
-            <span style={{ fontSize: '0.7rem', fontWeight: 800, background: '#DCFCE7', color: '#15803D', padding: '2px 7px', borderRadius: '8px' }}>
+            <span style={{ fontSize: '0.72rem', fontWeight: 800, color: '#64748B', letterSpacing: '0.04em' }}>TODAY'S REVENUE</span>
+            <span style={{ fontSize: '0.68rem', fontWeight: 800, background: '#DCFCE7', color: '#15803D', padding: '2px 6px', borderRadius: '8px' }}>
               {todayOrders} orders
             </span>
           </div>
-          <div style={{ fontSize: '1.65rem', fontWeight: 900, color: '#059669', letterSpacing: '-0.02em' }}>
+          <div style={{ fontSize: '1.5rem', fontWeight: 900, color: '#059669', letterSpacing: '-0.02em' }}>
             {currencySymbol}{Number(todayRevenue).toLocaleString('en-IN')}
           </div>
-          <span style={{ fontSize: '0.72rem', color: '#94A3B8', marginTop: '6px', fontWeight: 500 }}>
+          <span style={{ fontSize: '0.7rem', color: '#94A3B8', marginTop: '6px', fontWeight: 500 }}>
             Since 12:00 AM Midnight
           </span>
         </div>
@@ -200,10 +200,10 @@ export default function AnalyticsView({
         {/* 7 Days */}
         <div style={{
           background: '#FFFFFF',
-          padding: '18px 20px',
+          padding: '16px 18px',
           borderRadius: '16px',
-          border: '1px solid #E2E8F0',
-          boxShadow: '0 2px 8px rgba(0,0,0,0.02)',
+          border: activeFilter === 'week' ? '2px solid #0284C7' : '1px solid #E2E8F0',
+          boxShadow: activeFilter === 'week' ? '0 4px 12px rgba(2,132,199,0.15)' : '0 2px 8px rgba(0,0,0,0.02)',
           display: 'flex',
           flexDirection: 'column',
           justifyContent: 'space-between',
@@ -212,13 +212,13 @@ export default function AnalyticsView({
         }}>
           <div style={{ position: 'absolute', top: 0, left: 0, width: '4px', height: '100%', background: '#0284C7' }} />
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
-            <span style={{ fontSize: '0.74rem', fontWeight: 800, color: '#64748B', letterSpacing: '0.04em' }}>7 DAYS REVENUE</span>
+            <span style={{ fontSize: '0.72rem', fontWeight: 800, color: '#64748B', letterSpacing: '0.04em' }}>7 DAYS REVENUE</span>
             <TrendingUp size={16} color="#0284C7" />
           </div>
-          <div style={{ fontSize: '1.65rem', fontWeight: 900, color: '#0F172A', letterSpacing: '-0.02em' }}>
+          <div style={{ fontSize: '1.5rem', fontWeight: 900, color: '#0F172A', letterSpacing: '-0.02em' }}>
             {currencySymbol}{Number(days7Revenue).toLocaleString('en-IN')}
           </div>
-          <span style={{ fontSize: '0.72rem', color: '#94A3B8', marginTop: '6px', fontWeight: 500 }}>
+          <span style={{ fontSize: '0.7rem', color: '#94A3B8', marginTop: '6px', fontWeight: 500 }}>
             Past 1 week performance
           </span>
         </div>
@@ -226,10 +226,10 @@ export default function AnalyticsView({
         {/* 30 Days + Growth % */}
         <div style={{
           background: '#FFFFFF',
-          padding: '18px 20px',
+          padding: '16px 18px',
           borderRadius: '16px',
-          border: '1px solid #E2E8F0',
-          boxShadow: '0 2px 8px rgba(0,0,0,0.02)',
+          border: activeFilter === 'month' ? '2px solid #6366F1' : '1px solid #E2E8F0',
+          boxShadow: activeFilter === 'month' ? '0 4px 12px rgba(99,102,241,0.15)' : '0 2px 8px rgba(0,0,0,0.02)',
           display: 'flex',
           flexDirection: 'column',
           justifyContent: 'space-between',
@@ -238,28 +238,28 @@ export default function AnalyticsView({
         }}>
           <div style={{ position: 'absolute', top: 0, left: 0, width: '4px', height: '100%', background: '#6366F1' }} />
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
-            <span style={{ fontSize: '0.74rem', fontWeight: 800, color: '#64748B', letterSpacing: '0.04em' }}>30 DAYS REVENUE</span>
+            <span style={{ fontSize: '0.72rem', fontWeight: 800, color: '#64748B', letterSpacing: '0.04em' }}>30 DAYS REVENUE</span>
             {growthPct !== 0 && (
               <span style={{
-                fontSize: '0.68rem',
+                fontSize: '0.66rem',
                 fontWeight: 800,
                 background: growthPct >= 0 ? '#DCFCE7' : '#FEE2E2',
                 color: growthPct >= 0 ? '#15803D' : '#B91C1C',
-                padding: '2px 6px',
+                padding: '2px 5px',
                 borderRadius: '6px',
                 display: 'inline-flex',
                 alignItems: 'center',
                 gap: '2px'
               }}>
-                {growthPct >= 0 ? <TrendingUp size={12} /> : <TrendingDown size={12} />}
+                {growthPct >= 0 ? <TrendingUp size={11} /> : <TrendingDown size={11} />}
                 {growthPct >= 0 ? `+${growthPct}%` : `${growthPct}%`}
               </span>
             )}
           </div>
-          <div style={{ fontSize: '1.65rem', fontWeight: 900, color: '#0F172A', letterSpacing: '-0.02em' }}>
+          <div style={{ fontSize: '1.5rem', fontWeight: 900, color: '#0F172A', letterSpacing: '-0.02em' }}>
             {currencySymbol}{Number(days30Revenue).toLocaleString('en-IN')}
           </div>
-          <span style={{ fontSize: '0.72rem', color: '#94A3B8', marginTop: '6px', fontWeight: 500 }}>
+          <span style={{ fontSize: '0.7rem', color: '#94A3B8', marginTop: '6px', fontWeight: 500 }}>
             Monthly sales volume
           </span>
         </div>
@@ -267,7 +267,7 @@ export default function AnalyticsView({
         {/* Average Order Value (AOV) */}
         <div style={{
           background: '#FFFFFF',
-          padding: '18px 20px',
+          padding: '16px 18px',
           borderRadius: '16px',
           border: '1px solid #E2E8F0',
           boxShadow: '0 2px 8px rgba(0,0,0,0.02)',
@@ -279,13 +279,13 @@ export default function AnalyticsView({
         }}>
           <div style={{ position: 'absolute', top: 0, left: 0, width: '4px', height: '100%', background: '#EC4899' }} />
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
-            <span style={{ fontSize: '0.74rem', fontWeight: 800, color: '#64748B', letterSpacing: '0.04em' }}>AVG TICKET (AOV)</span>
+            <span style={{ fontSize: '0.72rem', fontWeight: 800, color: '#64748B', letterSpacing: '0.04em' }}>AVG TICKET (AOV)</span>
             <ShoppingBag size={16} color="#EC4899" />
           </div>
-          <div style={{ fontSize: '1.65rem', fontWeight: 900, color: '#BE185D', letterSpacing: '-0.02em' }}>
+          <div style={{ fontSize: '1.5rem', fontWeight: 900, color: '#BE185D', letterSpacing: '-0.02em' }}>
             {currencySymbol}{Number(aov).toLocaleString('en-IN')}
           </div>
-          <span style={{ fontSize: '0.72rem', color: '#94A3B8', marginTop: '6px', fontWeight: 500 }}>
+          <span style={{ fontSize: '0.7rem', color: '#94A3B8', marginTop: '6px', fontWeight: 500 }}>
             Average bill per table
           </span>
         </div>
@@ -293,10 +293,10 @@ export default function AnalyticsView({
         {/* All-Time Sales */}
         <div style={{
           background: '#FFFFFF',
-          padding: '18px 20px',
+          padding: '16px 18px',
           borderRadius: '16px',
-          border: '1px solid #E2E8F0',
-          boxShadow: '0 2px 8px rgba(0,0,0,0.02)',
+          border: activeFilter === 'all' ? '2px solid #D97706' : '1px solid #E2E8F0',
+          boxShadow: activeFilter === 'all' ? '0 4px 12px rgba(217,119,6,0.15)' : '0 2px 8px rgba(0,0,0,0.02)',
           display: 'flex',
           flexDirection: 'column',
           justifyContent: 'space-between',
@@ -305,13 +305,13 @@ export default function AnalyticsView({
         }}>
           <div style={{ position: 'absolute', top: 0, left: 0, width: '4px', height: '100%', background: '#D97706' }} />
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
-            <span style={{ fontSize: '0.74rem', fontWeight: 800, color: '#64748B', letterSpacing: '0.04em' }}>ALL-TIME SALES</span>
+            <span style={{ fontSize: '0.72rem', fontWeight: 800, color: '#64748B', letterSpacing: '0.04em' }}>ALL-TIME SALES</span>
             <Award size={16} color="#D97706" />
           </div>
-          <div style={{ fontSize: '1.65rem', fontWeight: 900, color: '#B45309', letterSpacing: '-0.02em' }}>
+          <div style={{ fontSize: '1.5rem', fontWeight: 900, color: '#B45309', letterSpacing: '-0.02em' }}>
             {currencySymbol}{Number(allTimeRevenue).toLocaleString('en-IN')}
           </div>
-          <span style={{ fontSize: '0.72rem', color: '#94A3B8', marginTop: '6px', fontWeight: 500 }}>
+          <span style={{ fontSize: '0.7rem', color: '#94A3B8', marginTop: '6px', fontWeight: 500 }}>
             {totalOrders > 0 ? `${totalOrders} total orders placed` : 'Lifetime restaurant gross'}
           </span>
         </div>

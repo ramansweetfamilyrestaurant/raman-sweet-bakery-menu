@@ -1330,7 +1330,22 @@ async function runAutoDataSummarization(daysOld = 30, targetRestaurantId = null)
       const restoId = o.restaurant_id;
       let dStr = '';
       if (o.created_at) {
-        dStr = String(o.created_at).substring(0, 10);
+        if (o.created_at instanceof Date) {
+          const yr = o.created_at.getFullYear();
+          const mo = String(o.created_at.getMonth() + 1).padStart(2, '0');
+          const dy = String(o.created_at.getDate()).padStart(2, '0');
+          dStr = `${yr}-${mo}-${dy}`;
+        } else {
+          const parsedD = new Date(o.created_at);
+          if (!isNaN(parsedD.getTime())) {
+            const yr = parsedD.getFullYear();
+            const mo = String(parsedD.getMonth() + 1).padStart(2, '0');
+            const dy = String(parsedD.getDate()).padStart(2, '0');
+            dStr = `${yr}-${mo}-${dy}`;
+          } else {
+            dStr = String(o.created_at).substring(0, 10);
+          }
+        }
       }
       if (!dStr || dStr.length < 10) continue;
 
