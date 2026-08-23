@@ -1,5 +1,5 @@
-import React, { useState } from 'react';
-import { Store, Bell, Utensils, MapPin, CreditCard, Lock, ChevronRight, Upload, Volume2, ShieldCheck, Printer, Map } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { Store, Bell, Utensils, MapPin, CreditCard, Lock, ChevronRight, Upload, Volume2, ShieldCheck, Printer, Map, Plus, Trash2, Edit, Check, X, AlertTriangle, Film, Armchair } from 'lucide-react';
 import AdminDrawer from '../components/AdminDrawer';
 import LocationPickerModal from '../../Common/LocationPickerModal';
 import {
@@ -12,6 +12,15 @@ import {
   resolveBusinessProfile,
   resolveServiceModelForBusinessType
 } from '../../../utils/businessTaxonomy';
+import {
+  fetchCinemaScreens,
+  createCinemaScreen,
+  updateCinemaScreen,
+  deleteCinemaScreen,
+  fetchCinemaSeats,
+  batchCreateCinemaSeats,
+  deleteCinemaSeat
+} from '../../../api/client';
 
 export default function SetupView({
   settingsForm = {},
@@ -37,6 +46,164 @@ export default function SetupView({
   const [saveSuccessMsg, setSaveSuccessMsg] = useState('');
   const [showMapModal, setShowMapModal] = useState(false);
   const [savingForm, setSavingForm] = useState(false);
+
+  // Cinema Management State
+  const profile = resolveBusinessProfile(settingsForm.business_type, settingsForm.service_model);
+  const isCinema = profile.businessType === 'cinema_theatre' && profile.serviceModel === 'seat_service';
+
+  const [cinemaScreens, setCinemaScreens] = useState([]);
+  const [cinemaSeats, setCinemaSeats] = useState([]);
+  const [loadingCinema, setLoadingCinema] = useState(false);
+  const [cinemaMsg, setCinemaMsg] = useState(null); // { type: 'success'|'error', text: '' }
+  const [showScreenModal, setShowScreenModal] = useState(false);
+  const [editingScreen, setEditingScreen] = useState(null);
+  const [screenForm, setScreenForm] = useState({ screen_number: '', name: '', active: true });
+  const [savingScreen, setSavingScreen] = useState(false);
+  const [selectedScreenForSeats, setSelectedScreenForSeats] = useState(null);
+  const [bulkSeatForm, setBulkSeatForm] = useState({ row_label: 'A', seat_start: 1, seat_end: 20 });
+  const [savingSeats, setSavingSeats] = useState(false);
+
+  const loadCinemaData = async () => {
+    if (!token || !isCinema) return;
+    setLoadingCinema(true);
+    try {
+      const [screensRes, seatsRes] = await Promise.all([
+        fetchCinemaScreens(token).catch(() => ({ success: false, screens: [] })),
+        fetchCinemaSeats(token).catch(() => ({ success: false, seats: [] }))
+      ]);
+      setCinemaScreens(screensRes?.screens || []);
+      setCinemaSeats(seatsRes?.seats || []);
+    } catch (err) {
+      console.error('Error loading cinema data:', err);
+    } finally {
+      setLoadingCinema(false);
+    }
+  };
+
+  useEffect(() => {
+    if (isCinema && token) {
+      loadCinemaData();
+    }
+  }, [isCinema, token]);
+
+  const handleOpenAddScreen = () => {
+    const nextNum = cinemaScreens.length > 0
+      ? Math.max(...cinemaScreens.map(s => Number(s.screen_number) || 0)) + 1
+      : 1;
+    setEditingScreen(null);
+    setScreenForm({ screen_number: String(nextNum), name: `Screen ${nextNum}`, active: true });
+    setShowScreenModal(true);
+    setCinemaMsg(null);
+  };
+
+  const handleOpenEditScreen = (screen) => {
+    setEditingScreen(screen);
+    setScreenForm({ screen_number: String(screen.screen_number), name: screen.name || `Screen ${screen.screen_number}`, active: screen.active !== false });
+    setShowScreenModal(true);
+    setCinemaMsg(null);
+  };
+
+  const handleSaveScreen = async (e) => {
+    if (e) e.preventDefault();
+    if (savingScreen) return;
+    const num = parseInt(screenForm.screen_number, 10);
+    if (!editingScreen && (isNaN(num) || num <= 0)) {
+      setCinemaMsg({ type: 'error', text: 'Please enter a valid positive screen number.' });
+      return;
+    }
+    if (!screenForm.name || !screenForm.name.trim()) {
+      setCinemaMsg({ type: 'error', text: 'Please enter a screen name.' });
+      return;
+    }
+
+    setSavingScreen(true);
+    setCinemaMsg(null);
+    try {
+      if (editingScreen) {
+        await updateCinemaScreen(token, editingScreen.id, {
+          name: screenForm.name.trim(),
+          active: Boolean(screenForm.active)
+        });
+        setCinemaMsg({ type: 'success', text: `Screen ${editingScreen.screen_number} updated successfully.` });
+      } else {
+        await createCinemaScreen(token, {
+          screen_number: num,
+          name: screenForm.name.trim()
+        });
+        setCinemaMsg({ type: 'success', text: `Screen ${num} created successfully.` });
+      }
+      setShowScreenModal(false);
+      await loadCinemaData();
+    } catch (err) {
+      const errMsg = err?.message || 'Failed to save cinema screen';
+      setCinemaMsg({ type: 'error', text: errMsg });
+    } finally {
+      setSavingScreen(false);
+    }
+  };
+
+  const handleDeleteScreen = async (screen) => {
+    if (!window.confirm(`Delete Screen ${screen.screen_number} (${screen.name})?\n\nAll seats configured under this screen will also be removed.`)) {
+      return;
+    }
+    try {
+      await deleteCinemaScreen(token, screen.id);
+      if (selectedScreenForSeats && selectedScreenForSeats.id === screen.id) {
+        setSelectedScreenForSeats(null);
+      }
+      setCinemaMsg({ type: 'success', text: `Screen ${screen.screen_number} and all its seats deleted.` });
+      await loadCinemaData();
+    } catch (err) {
+      setCinemaMsg({ type: 'error', text: err?.message || 'Failed to delete screen' });
+    }
+  };
+
+  const handleBatchCreateSeats = async (e) => {
+    if (e) e.preventDefault();
+    if (savingSeats || !selectedScreenForSeats) return;
+    const row = String(bulkSeatForm.row_label || '').trim().toUpperCase();
+    const start = parseInt(bulkSeatForm.seat_start, 10);
+    const end = parseInt(bulkSeatForm.seat_end, 10);
+
+    if (!row || !/^[A-Z]{1,2}$/.test(row)) {
+      setCinemaMsg({ type: 'error', text: 'Row label must be a letter (e.g. A, B, AA).' });
+      return;
+    }
+    if (isNaN(start) || isNaN(end) || start < 1 || end < start || end > 100) {
+      setCinemaMsg({ type: 'error', text: 'Valid seat range is 1 to 100.' });
+      return;
+    }
+
+    setSavingSeats(true);
+    setCinemaMsg(null);
+    try {
+      const res = await batchCreateCinemaSeats(token, {
+        screen_id: selectedScreenForSeats.id,
+        row_label: row,
+        seat_start: start,
+        seat_end: end
+      });
+      setCinemaMsg({ type: 'success', text: res?.message || `Configured Row ${row} seats ${start} to ${end}.` });
+      await loadCinemaData();
+    } catch (err) {
+      setCinemaMsg({ type: 'error', text: err?.message || 'Failed to configure seats' });
+    } finally {
+      setSavingSeats(false);
+    }
+  };
+
+  const handleDeleteSeat = async (seat) => {
+    if (!window.confirm(`Delete Seat ${seat.seat_code}?\n\nExisting printed QR standees for this seat will no longer be valid for ordering.`)) {
+      return;
+    }
+    try {
+      await deleteCinemaSeat(token, seat.id);
+      setCinemaMsg({ type: 'success', text: `Seat ${seat.seat_code} deleted.` });
+      await loadCinemaData();
+    } catch (err) {
+      setCinemaMsg({ type: 'error', text: err?.message || 'Failed to delete seat' });
+    }
+  };
 
   const handleFormSave = async (e) => {
     if (e) e.preventDefault();
@@ -1361,23 +1528,521 @@ export default function SetupView({
             );
           })()}
 
-          {/* Cinema Card (Active when business_type === 'cinema_theatre') */}
-          {(settingsForm.business_type === 'cinema_theatre') && (
-            <div style={{ padding: '16px 18px', background: '#F8FAFC', borderRadius: '16px', border: '1.5px solid #0284C7', boxShadow: '0 1px 3px rgba(0,0,0,0.04)' }}>
-              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '8px' }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                  <div style={{ width: '36px', height: '36px', borderRadius: '10px', background: '#E0F2FE', color: '#0284C7', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1.2rem', flexShrink: 0 }}>
+          {/* Cinema Screens & Seat Management (Active when business_type === 'cinema_theatre' && service_model === 'seat_service') */}
+          {isCinema && (
+            <div style={{ padding: '18px 20px', background: '#F8FAFC', borderRadius: '16px', border: '1.5px solid #0284C7', boxShadow: '0 1px 3px rgba(0,0,0,0.04)', display: 'flex', flexDirection: 'column', gap: '16px' }}>
+              {/* Header */}
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '10px' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                  <div style={{ width: '40px', height: '40px', borderRadius: '12px', background: '#E0F2FE', color: '#0284C7', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1.3rem', flexShrink: 0 }}>
                     🎬
                   </div>
                   <div>
-                    <strong style={{ fontSize: '0.92rem', color: '#0F172A', fontWeight: 800, display: 'block' }}>Cinema Screens & Seat Management</strong>
-                    <span style={{ fontSize: '0.72rem', color: '#64748B' }}>Configure auditorium screens, rows (A–Z), and seat numbers</span>
+                    <strong style={{ fontSize: '1rem', color: '#0F172A', fontWeight: 900, display: 'block' }}>
+                      Cinema Screens & Seat Management
+                    </strong>
+                    <span style={{ fontSize: '0.76rem', color: '#64748B', fontWeight: 600 }}>
+                      Configure auditorium screens, rows and seats for cinema seat QR ordering.
+                    </span>
                   </div>
                 </div>
+
+                {!selectedScreenForSeats && (
+                  <button
+                    type="button"
+                    onClick={handleOpenAddScreen}
+                    className="adm-btn adm-btn-primary adm-btn-sm"
+                    style={{ fontWeight: 800 }}
+                  >
+                    <Plus size={15} /> Add Screen
+                  </button>
+                )}
               </div>
-              <div style={{ paddingLeft: '46px', fontSize: '0.78rem', color: '#334155' }}>
-                Cinema QR ordering is active for this account. Generate screen, row, and seat-bound QR codes directly from the <strong>📱 QR Standee Generator</strong>.
-              </div>
+
+              {/* Feedback Message Banner */}
+              {cinemaMsg && (
+                <div style={{
+                  padding: '10px 14px',
+                  borderRadius: '10px',
+                  fontSize: '0.82rem',
+                  fontWeight: 700,
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'space-between',
+                  gap: '8px',
+                  background: cinemaMsg.type === 'success' ? '#F0FDF4' : '#FEF2F2',
+                  border: `1px solid ${cinemaMsg.type === 'success' ? '#BBF7D0' : '#FECACA'}`,
+                  color: cinemaMsg.type === 'success' ? '#166534' : '#991B1B'
+                }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    {cinemaMsg.type === 'success' ? <Check size={16} /> : <AlertTriangle size={16} />}
+                    <span>{cinemaMsg.text}</span>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => setCinemaMsg(null)}
+                    style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'inherit', padding: '2px' }}
+                  >
+                    <X size={14} />
+                  </button>
+                </div>
+              )}
+
+              {/* Loading State */}
+              {loadingCinema && (
+                <div style={{ padding: '16px', textAlign: 'center', color: '#64748B', fontSize: '0.82rem', fontWeight: 700 }}>
+                  ⏳ Loading configured auditorium screens & seats...
+                </div>
+              )}
+
+              {/* VIEW A: SCREENS LIST (Default View) */}
+              {!selectedScreenForSeats && !loadingCinema && (
+                <div>
+                  {cinemaScreens.length === 0 ? (
+                    <div style={{
+                      padding: '24px 20px',
+                      background: '#FFFFFF',
+                      borderRadius: '12px',
+                      border: '1.5px dashed #CBD5E1',
+                      textAlign: 'center',
+                      display: 'flex',
+                      flexDirection: 'column',
+                      alignItems: 'center',
+                      gap: '8px'
+                    }}>
+                      <div style={{ fontSize: '2rem' }}>🎬</div>
+                      <strong style={{ fontSize: '0.95rem', color: '#0F172A' }}>No Cinema Screens Configured</strong>
+                      <p style={{ fontSize: '0.78rem', color: '#64748B', margin: 0, maxWidth: '340px' }}>
+                        Create your first cinema screen and add rows/seats to generate secure seat QR codes.
+                      </p>
+                      <button
+                        type="button"
+                        onClick={handleOpenAddScreen}
+                        className="adm-btn adm-btn-primary adm-btn-sm"
+                        style={{ marginTop: '6px', fontWeight: 800 }}
+                      >
+                        <Plus size={15} /> Add Screen
+                      </button>
+                    </div>
+                  ) : (
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                      {cinemaScreens.map(screen => {
+                        const screenSeats = cinemaSeats.filter(st => String(st.screen_id) === String(screen.id) && st.active !== false);
+                        const seatCount = screenSeats.length;
+                        return (
+                          <div
+                            key={screen.id}
+                            style={{
+                              padding: '14px 16px',
+                              background: '#FFFFFF',
+                              borderRadius: '12px',
+                              border: '1px solid #E2E8F0',
+                              display: 'flex',
+                              alignItems: 'center',
+                              justifyContent: 'space-between',
+                              flexWrap: 'wrap',
+                              gap: '10px'
+                            }}
+                          >
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                              <div style={{
+                                width: '36px',
+                                height: '36px',
+                                borderRadius: '8px',
+                                background: screen.active !== false ? '#F1F5F9' : '#FEE2E2',
+                                color: screen.active !== false ? '#0F172A' : '#EF4444',
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                                fontWeight: 900,
+                                fontSize: '0.9rem'
+                              }}>
+                                S{screen.screen_number}
+                              </div>
+                              <div>
+                                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                  <strong style={{ fontSize: '0.92rem', color: '#0F172A', fontWeight: 800 }}>
+                                    {screen.name || `Screen ${screen.screen_number}`}
+                                  </strong>
+                                  <span style={{
+                                    fontSize: '0.7rem',
+                                    fontWeight: 800,
+                                    padding: '1px 6px',
+                                    borderRadius: '10px',
+                                    background: screen.active !== false ? '#DCFCE7' : '#F3F4F6',
+                                    color: screen.active !== false ? '#15803D' : '#6B7280'
+                                  }}>
+                                    {screen.active !== false ? 'Active' : 'Inactive'}
+                                  </span>
+                                </div>
+                                <span style={{ fontSize: '0.74rem', color: '#64748B', fontWeight: 600 }}>
+                                  {seatCount} {seatCount === 1 ? 'Seat' : 'Seats'} Configured
+                                </span>
+                              </div>
+                            </div>
+
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  setSelectedScreenForSeats(screen);
+                                  setBulkSeatForm({ row_label: 'A', seat_start: 1, seat_end: 20 });
+                                  setCinemaMsg(null);
+                                }}
+                                className="adm-btn adm-btn-primary adm-btn-sm"
+                                style={{ fontWeight: 800, padding: '6px 12px', fontSize: '0.78rem' }}
+                              >
+                                💺 Manage Seats
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => handleOpenEditScreen(screen)}
+                                className="adm-btn adm-btn-secondary adm-btn-sm"
+                                style={{ padding: '6px 10px', fontSize: '0.78rem' }}
+                                title="Edit Screen"
+                              >
+                                <Edit size={14} />
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => handleDeleteScreen(screen)}
+                                className="adm-btn adm-btn-danger adm-btn-sm"
+                                style={{ padding: '6px 10px', fontSize: '0.78rem' }}
+                                title="Delete Screen"
+                              >
+                                <Trash2 size={14} />
+                              </button>
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {/* VIEW B: SEAT MANAGEMENT FOR SELECTED SCREEN */}
+              {selectedScreenForSeats && (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
+                  {/* Top Bar with Back Button */}
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '8px', borderBottom: '1px solid #E2E8F0', paddingBottom: '12px' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                      <button
+                        type="button"
+                        onClick={() => setSelectedScreenForSeats(null)}
+                        className="adm-btn adm-btn-secondary adm-btn-sm"
+                        style={{ fontWeight: 800 }}
+                      >
+                        ← Back to Screens
+                      </button>
+                      <div>
+                        <strong style={{ fontSize: '0.95rem', color: '#0F172A' }}>
+                          Screen {selectedScreenForSeats.screen_number}: {selectedScreenForSeats.name}
+                        </strong>
+                        <span style={{ fontSize: '0.72rem', color: '#64748B', display: 'block' }}>
+                          Configure seat layout and manage row ranges
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Bulk Add Row / Seats Form */}
+                  <div style={{ padding: '14px 16px', background: '#FFFFFF', borderRadius: '12px', border: '1px solid #CBD5E1', display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                    <strong style={{ fontSize: '0.84rem', color: '#0F172A', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
+                      ➕ Add / Configure Seats by Row
+                    </strong>
+                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(110px, 1fr))', gap: '10px' }}>
+                      <div>
+                        <label style={{ fontSize: '0.72rem', fontWeight: 800, color: '#475569', display: 'block', marginBottom: '4px' }}>
+                          ROW LETTER:
+                        </label>
+                        <input
+                          type="text"
+                          maxLength={2}
+                          placeholder="e.g. A"
+                          value={bulkSeatForm.row_label}
+                          onChange={(e) => setBulkSeatForm({ ...bulkSeatForm, row_label: e.target.value.toUpperCase() })}
+                          style={{ width: '100%', padding: '8px 10px', borderRadius: '8px', border: '1px solid #CBD5E1', fontWeight: 800, fontSize: '0.86rem', textTransform: 'uppercase' }}
+                        />
+                      </div>
+
+                      <div>
+                        <label style={{ fontSize: '0.72rem', fontWeight: 800, color: '#475569', display: 'block', marginBottom: '4px' }}>
+                          START SEAT:
+                        </label>
+                        <input
+                          type="number"
+                          min={1}
+                          max={100}
+                          value={bulkSeatForm.seat_start}
+                          onChange={(e) => setBulkSeatForm({ ...bulkSeatForm, seat_start: parseInt(e.target.value, 10) || 1 })}
+                          style={{ width: '100%', padding: '8px 10px', borderRadius: '8px', border: '1px solid #CBD5E1', fontWeight: 800, fontSize: '0.86rem' }}
+                        />
+                      </div>
+
+                      <div>
+                        <label style={{ fontSize: '0.72rem', fontWeight: 800, color: '#475569', display: 'block', marginBottom: '4px' }}>
+                          END SEAT:
+                        </label>
+                        <input
+                          type="number"
+                          min={bulkSeatForm.seat_start || 1}
+                          max={100}
+                          value={bulkSeatForm.seat_end}
+                          onChange={(e) => setBulkSeatForm({ ...bulkSeatForm, seat_end: parseInt(e.target.value, 10) || 1 })}
+                          style={{ width: '100%', padding: '8px 10px', borderRadius: '8px', border: '1px solid #CBD5E1', fontWeight: 800, fontSize: '0.86rem' }}
+                        />
+                      </div>
+
+                      <div style={{ display: 'flex', alignItems: 'flex-end' }}>
+                        <button
+                          type="button"
+                          onClick={handleBatchCreateSeats}
+                          disabled={savingSeats}
+                          className="adm-btn adm-btn-primary"
+                          style={{ width: '100%', padding: '8px 14px', fontWeight: 800, fontSize: '0.82rem' }}
+                        >
+                          {savingSeats ? 'Creating...' : '+ Create Seats'}
+                        </button>
+                      </div>
+                    </div>
+
+                    {bulkSeatForm.row_label && (
+                      <div style={{ fontSize: '0.74rem', color: '#64748B', fontWeight: 600 }}>
+                        Preview: <strong>Row {bulkSeatForm.row_label.toUpperCase()}</strong> • Seats {bulkSeatForm.seat_start}–{bulkSeatForm.seat_end} ({Math.max(0, bulkSeatForm.seat_end - bulkSeatForm.seat_start + 1)} seats)
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Configured Seats Grid Grouped by Row */}
+                  <div>
+                    <strong style={{ fontSize: '0.82rem', color: '#475569', textTransform: 'uppercase', display: 'block', marginBottom: '8px' }}>
+                      Configured Seats for Screen {selectedScreenForSeats.screen_number}:
+                    </strong>
+
+                    {(() => {
+                      const screenSeats = cinemaSeats.filter(st => String(st.screen_id) === String(selectedScreenForSeats.id) && st.active !== false);
+                      if (screenSeats.length === 0) {
+                        return (
+                          <div style={{ padding: '18px', background: '#FFFFFF', borderRadius: '10px', border: '1px dashed #CBD5E1', textAlign: 'center', fontSize: '0.8rem', color: '#64748B' }}>
+                            No seats configured yet for this screen. Use the builder above to add your first row of seats.
+                          </div>
+                        );
+                      }
+
+                      // Group by row_label
+                      const rowMap = {};
+                      screenSeats.forEach(st => {
+                        const r = st.row_label || 'A';
+                        if (!rowMap[r]) rowMap[r] = [];
+                        rowMap[r].push(st);
+                      });
+
+                      const sortedRows = Object.keys(rowMap).sort();
+
+                      return (
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                          {sortedRows.map(rowLetter => {
+                            const rowSeats = rowMap[rowLetter].sort((a, b) => Number(a.seat_number) - Number(b.seat_number));
+                            return (
+                              <div
+                                key={rowLetter}
+                                style={{
+                                  padding: '10px 14px',
+                                  background: '#FFFFFF',
+                                  borderRadius: '10px',
+                                  border: '1px solid #E2E8F0',
+                                  display: 'flex',
+                                  alignItems: 'center',
+                                  gap: '12px',
+                                  flexWrap: 'wrap'
+                                }}
+                              >
+                                <div style={{
+                                  width: '32px',
+                                  height: '32px',
+                                  borderRadius: '6px',
+                                  background: '#0A2315',
+                                  color: '#D4AF37',
+                                  fontWeight: 900,
+                                  fontSize: '0.88rem',
+                                  display: 'flex',
+                                  alignItems: 'center',
+                                  justifyContent: 'center',
+                                  flexShrink: 0
+                                }}>
+                                  {rowLetter}
+                                </div>
+
+                                <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px', flex: 1 }}>
+                                  {rowSeats.map(seat => (
+                                    <span
+                                      key={seat.id}
+                                      style={{
+                                        display: 'inline-flex',
+                                        alignItems: 'center',
+                                        gap: '4px',
+                                        padding: '3px 8px',
+                                        borderRadius: '6px',
+                                        background: '#F1F5F9',
+                                        border: '1px solid #CBD5E1',
+                                        fontSize: '0.74rem',
+                                        fontWeight: 800,
+                                        color: '#0F172A'
+                                      }}
+                                    >
+                                      <span>{seat.row_label}{seat.seat_number}</span>
+                                      <button
+                                        type="button"
+                                        onClick={() => handleDeleteSeat(seat)}
+                                        title={`Delete Seat ${seat.seat_code}`}
+                                        style={{
+                                          background: 'none',
+                                          border: 'none',
+                                          color: '#94A3B8',
+                                          cursor: 'pointer',
+                                          padding: 0,
+                                          display: 'flex',
+                                          alignItems: 'center',
+                                          justifyContent: 'center',
+                                          marginLeft: '2px'
+                                        }}
+                                        onMouseEnter={(e) => { e.currentTarget.style.color = '#EF4444'; }}
+                                        onMouseLeave={(e) => { e.currentTarget.style.color = '#94A3B8'; }}
+                                      >
+                                        <X size={12} />
+                                      </button>
+                                    </span>
+                                  ))}
+                                </div>
+                              </div>
+                            );
+                          })}
+                        </div>
+                      );
+                    })()}
+                  </div>
+                </div>
+              )}
+
+              {/* ADD / EDIT SCREEN MODAL */}
+              {showScreenModal && (
+                <div style={{
+                  position: 'fixed',
+                  top: 0,
+                  left: 0,
+                  right: 0,
+                  bottom: 0,
+                  background: 'rgba(0,0,0,0.5)',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  zIndex: 9999,
+                  padding: '16px'
+                }}>
+                  <div style={{
+                    background: '#FFFFFF',
+                    borderRadius: '16px',
+                    width: '100%',
+                    maxWidth: '420px',
+                    padding: '24px',
+                    boxShadow: '0 20px 25px -5px rgba(0,0,0,0.1)',
+                    display: 'flex',
+                    flexDirection: 'column',
+                    gap: '16px'
+                  }}>
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                      <strong style={{ fontSize: '1.05rem', color: '#0F172A' }}>
+                        {editingScreen ? '✏️ Edit Cinema Screen' : '🎬 Add Cinema Screen'}
+                      </strong>
+                      <button
+                        type="button"
+                        onClick={() => setShowScreenModal(false)}
+                        style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#64748B' }}
+                      >
+                        <X size={18} />
+                      </button>
+                    </div>
+
+                    <form onSubmit={handleSaveScreen} style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                      <div>
+                        <label style={{ fontSize: '0.76rem', fontWeight: 800, color: '#475569', display: 'block', marginBottom: '4px' }}>
+                          SCREEN NUMBER:
+                        </label>
+                        <input
+                          type="number"
+                          min={1}
+                          max={99}
+                          disabled={Boolean(editingScreen)}
+                          value={screenForm.screen_number}
+                          onChange={(e) => setScreenForm({ ...screenForm, screen_number: e.target.value })}
+                          style={{
+                            width: '100%',
+                            padding: '10px 12px',
+                            borderRadius: '8px',
+                            border: '1px solid #CBD5E1',
+                            fontWeight: 800,
+                            background: editingScreen ? '#F1F5F9' : '#FFFFFF'
+                          }}
+                          placeholder="e.g. 1"
+                        />
+                        {editingScreen && (
+                          <span style={{ fontSize: '0.7rem', color: '#64748B', marginTop: '2px', display: 'block' }}>
+                            Screen number cannot be changed after creation.
+                          </span>
+                        )}
+                      </div>
+
+                      <div>
+                        <label style={{ fontSize: '0.76rem', fontWeight: 800, color: '#475569', display: 'block', marginBottom: '4px' }}>
+                          SCREEN NAME:
+                        </label>
+                        <input
+                          type="text"
+                          maxLength={100}
+                          value={screenForm.name}
+                          onChange={(e) => setScreenForm({ ...screenForm, name: e.target.value })}
+                          style={{ width: '100%', padding: '10px 12px', borderRadius: '8px', border: '1px solid #CBD5E1', fontWeight: 800 }}
+                          placeholder="e.g. Audi 1 - Dolby Atmos"
+                        />
+                      </div>
+
+                      {editingScreen && (
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginTop: '4px' }}>
+                          <input
+                            type="checkbox"
+                            id="screenActiveCheckbox"
+                            checked={screenForm.active}
+                            onChange={(e) => setScreenForm({ ...screenForm, active: e.target.checked })}
+                          />
+                          <label htmlFor="screenActiveCheckbox" style={{ fontSize: '0.82rem', fontWeight: 700, color: '#0F172A', cursor: 'pointer' }}>
+                            Screen is active and accepting QR orders
+                          </label>
+                        </div>
+                      )}
+
+                      <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '8px', marginTop: '8px' }}>
+                        <button
+                          type="button"
+                          onClick={() => setShowScreenModal(false)}
+                          className="adm-btn adm-btn-secondary"
+                          style={{ fontWeight: 800 }}
+                        >
+                          Cancel
+                        </button>
+                        <button
+                          type="submit"
+                          disabled={savingScreen}
+                          className="adm-btn adm-btn-primary"
+                          style={{ fontWeight: 800 }}
+                        >
+                          {savingScreen ? 'Saving...' : (editingScreen ? 'Save Changes' : 'Create Screen')}
+                        </button>
+                      </div>
+                    </form>
+                  </div>
+                </div>
+              )}
             </div>
           )}
 

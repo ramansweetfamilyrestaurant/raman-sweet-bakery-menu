@@ -841,6 +841,38 @@ export async function fetchCinemaScreens(token) {
   return handleResponse(res, 'Failed to fetch cinema screens');
 }
 
+export async function createCinemaScreen(token, data) {
+  const res = await fetch(`${API_BASE}/admin/cinema/screens`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      Authorization: `Bearer ${token}`
+    },
+    body: JSON.stringify(data)
+  });
+  return handleResponse(res, 'Failed to create cinema screen');
+}
+
+export async function updateCinemaScreen(token, screenId, data) {
+  const res = await fetch(`${API_BASE}/admin/cinema/screens/${encodeURIComponent(screenId)}`, {
+    method: 'PUT',
+    headers: {
+      'Content-Type': 'application/json',
+      Authorization: `Bearer ${token}`
+    },
+    body: JSON.stringify(data)
+  });
+  return handleResponse(res, 'Failed to update cinema screen');
+}
+
+export async function deleteCinemaScreen(token, screenId) {
+  const res = await fetch(`${API_BASE}/admin/cinema/screens/${encodeURIComponent(screenId)}`, {
+    method: 'DELETE',
+    headers: { Authorization: `Bearer ${token}` }
+  });
+  return handleResponse(res, 'Failed to delete cinema screen');
+}
+
 export async function fetchCinemaSeats(token, screenId = null) {
   let url = `${API_BASE}/admin/cinema/seats`;
   if (screenId) url += `?screen_id=${encodeURIComponent(screenId)}`;
@@ -848,6 +880,26 @@ export async function fetchCinemaSeats(token, screenId = null) {
     headers: { Authorization: `Bearer ${token}` }
   });
   return handleResponse(res, 'Failed to fetch cinema seats');
+}
+
+export async function batchCreateCinemaSeats(token, data) {
+  const res = await fetch(`${API_BASE}/admin/cinema/seats/batch`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      Authorization: `Bearer ${token}`
+    },
+    body: JSON.stringify(data)
+  });
+  return handleResponse(res, 'Failed to configure cinema seats');
+}
+
+export async function deleteCinemaSeat(token, seatId) {
+  const res = await fetch(`${API_BASE}/admin/cinema/seats/${encodeURIComponent(seatId)}`, {
+    method: 'DELETE',
+    headers: { Authorization: `Bearer ${token}` }
+  });
+  return handleResponse(res, 'Failed to delete cinema seat');
 }
 
 
