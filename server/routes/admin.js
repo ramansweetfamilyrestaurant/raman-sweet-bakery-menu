@@ -19,9 +19,13 @@ import {
   BUSINESS_TYPE_ALIASES,
   FOOD_TYPE_ALIASES,
   SERVICE_MODEL_ALIASES,
+  BUSINESS_TYPE_DEFAULT_SERVICE_MODEL,
+  BUSINESS_TYPE_ALLOWED_SERVICE_MODELS,
   isValidBusinessType,
   isValidFoodType,
   isValidServiceModel,
+  isServiceModelValidForBusinessType,
+  resolveServiceModelForBusinessType,
   resolveBusinessProfile,
   resolveBannerBadge
 } from '../config/businessTaxonomy.js';
@@ -1286,6 +1290,26 @@ const handleUpdateSettings = async (req, res) => {
       } else {
         return res.status(400).json({ error: `Invalid service_model '${service_model}'. Allowed values: ${SERVICE_MODELS.join(', ')}` });
       }
+    }
+
+    // 🛡️ AUTHORITATIVE BUSINESS TYPE -> SERVICE MODEL DEPENDENCY VALIDATION
+    let effectiveBizType = cleanBusinessType;
+    if (!effectiveBizType) {
+      const currentRestoForBiz = await query('SELECT business_type FROM restaurants WHERE id = $1', [targetId]);
+      effectiveBizType = currentRestoForBiz && currentRestoForBiz.length > 0 ? (currentRestoForBiz[0].business_type || 'restaurant') : 'restaurant';
+    }
+
+    if (cleanServiceModel) {
+      if (!isServiceModelValidForBusinessType(effectiveBizType, cleanServiceModel)) {
+        return res.status(400).json({
+          error: 'invalid_service_model_for_business_type',
+          message: `Service model '${cleanServiceModel}' is invalid for business type '${effectiveBizType}'`,
+          business_type: effectiveBizType,
+          service_model: cleanServiceModel
+        });
+      }
+    } else if (cleanBusinessType && (service_model === undefined || service_model === null)) {
+      cleanServiceModel = resolveServiceModelForBusinessType(cleanBusinessType);
     }
 
     // 🛡️ AUTHORITATIVE SAAS PLAN MAX_TABLES / SPACES ENFORCEMENT

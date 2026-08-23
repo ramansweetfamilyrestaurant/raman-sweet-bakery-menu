@@ -9,7 +9,8 @@ import {
   BUSINESS_TYPE_METADATA,
   FOOD_TYPE_METADATA,
   SERVICE_MODEL_METADATA,
-  resolveBusinessProfile
+  resolveBusinessProfile,
+  resolveServiceModelForBusinessType
 } from '../../utils/businessTaxonomy';
 
 export default function OnboardingSetup({ token, restaurantInfo, setRestaurantInfo, onComplete }) {
@@ -842,9 +843,11 @@ export default function OnboardingSetup({ token, restaurantInfo, setRestaurantIn
                       onChange={(e) => {
                         const newBiz = e.target.value;
                         const safeResto = (formData.food_type === 'pure_veg' ? 'pure_veg' : formData.food_type === 'veg_nonveg' ? 'veg_nonveg' : (newBiz === 'bakery_confectionery' ? 'bakery' : 'pure_veg'));
+                        const autoService = resolveServiceModelForBusinessType(newBiz, formData.service_model);
                         setFormData(prev => ({
                           ...prev,
                           business_type: newBiz,
+                          service_model: autoService,
                           resto_type: safeResto
                         }));
                       }}
@@ -888,21 +891,19 @@ export default function OnboardingSetup({ token, restaurantInfo, setRestaurantIn
 
                 {/* Control 3: Service Model */}
                 <div>
-                  <label style={{ display: 'block', fontSize: '0.74rem', fontWeight: 800, color: '#E2E8F0', marginBottom: '4px' }}>
-                    Service Model
-                  </label>
-                  <select
-                    name="service_model"
-                    value={formData.service_model || 'dine_in_table'}
-                    onChange={handleChange}
-                    style={{ width: '100%', padding: '10px 12px', borderRadius: '10px', background: '#0A2315', border: '1px solid rgba(223, 186, 103, 0.4)', color: '#FFF', fontSize: '0.84rem', outline: 'none', boxSizing: 'border-box' }}
-                  >
-                    {SERVICE_MODELS.map(model => (
-                      <option key={model} value={model}>
-                        {SERVICE_MODEL_METADATA[model]?.label || model}
-                      </option>
-                    ))}
-                  </select>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '4px' }}>
+                    <label style={{ fontSize: '0.74rem', fontWeight: 800, color: '#E2E8F0', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                      <span>Service Model</span>
+                      <span style={{ fontSize: '0.70rem' }}>🔒</span>
+                    </label>
+                    <span style={{ fontSize: '0.66rem', fontWeight: 700, color: '#DFBA67', background: 'rgba(223, 186, 103, 0.15)', padding: '2px 6px', borderRadius: '8px' }}>
+                      Auto-selected
+                    </span>
+                  </div>
+                  <div style={{ width: '100%', padding: '10px 12px', borderRadius: '10px', background: '#0A2315', border: '1px solid rgba(223, 186, 103, 0.4)', color: '#FFF', fontSize: '0.84rem', boxSizing: 'border-box', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <span>{SERVICE_MODEL_METADATA[formData.service_model]?.label || formData.service_model}</span>
+                    <span style={{ fontSize: '0.70rem', color: '#94A3B8' }}>Determined by Business Type</span>
+                  </div>
                 </div>
 
                 {/* Live Preview */}

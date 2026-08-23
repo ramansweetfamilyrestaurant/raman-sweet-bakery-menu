@@ -123,6 +123,54 @@ export const SERVICE_MODEL_ALIASES = Object.freeze({
   'seat_delivery': 'seat_service'
 });
 
+export const BUSINESS_TYPE_DEFAULT_SERVICE_MODEL = Object.freeze({
+  restaurant: 'dine_in_table',
+  cafe: 'dine_in_table',
+  bakery_confectionery: 'dine_in_table',
+  sweet_shop: 'dine_in_table',
+  fast_food_qsr: 'dine_in_table',
+  dhaba: 'dine_in_table',
+  food_court: 'dine_in_table',
+  cloud_kitchen: 'dine_in_table',
+  canteen_cafeteria: 'dine_in_table',
+  hotel_resort: 'in_room_dining',
+  cinema_theatre: 'seat_service',
+  lounge: 'dine_in_table',
+  pub_bar: 'dine_in_table',
+  club: 'dine_in_table',
+  juice_beverage: 'dine_in_table',
+  ice_cream_dessert: 'dine_in_table',
+  food_truck: 'dine_in_table',
+  catering: 'dine_in_table',
+  institutional: 'dine_in_table',
+  entertainment_venue: 'dine_in_table',
+  other: 'dine_in_table'
+});
+
+export const BUSINESS_TYPE_ALLOWED_SERVICE_MODELS = Object.freeze({
+  restaurant: Object.freeze(['dine_in_table']),
+  cafe: Object.freeze(['dine_in_table']),
+  bakery_confectionery: Object.freeze(['dine_in_table']),
+  sweet_shop: Object.freeze(['dine_in_table']),
+  fast_food_qsr: Object.freeze(['dine_in_table']),
+  dhaba: Object.freeze(['dine_in_table']),
+  food_court: Object.freeze(['dine_in_table']),
+  cloud_kitchen: Object.freeze(['dine_in_table']),
+  canteen_cafeteria: Object.freeze(['dine_in_table']),
+  hotel_resort: Object.freeze(['in_room_dining']),
+  cinema_theatre: Object.freeze(['seat_service']),
+  lounge: Object.freeze(['dine_in_table']),
+  pub_bar: Object.freeze(['dine_in_table']),
+  club: Object.freeze(['dine_in_table']),
+  juice_beverage: Object.freeze(['dine_in_table']),
+  ice_cream_dessert: Object.freeze(['dine_in_table']),
+  food_truck: Object.freeze(['dine_in_table']),
+  catering: Object.freeze(['dine_in_table']),
+  institutional: Object.freeze(['dine_in_table']),
+  entertainment_venue: Object.freeze(['dine_in_table']),
+  other: Object.freeze(['dine_in_table'])
+});
+
 export function isValidBusinessType(value) {
   if (!value || typeof value !== 'string') return false;
   return BUSINESS_TYPES.includes(value.trim().toLowerCase());
@@ -136,6 +184,45 @@ export function isValidFoodType(value) {
 export function isValidServiceModel(value) {
   if (!value || typeof value !== 'string') return false;
   return SERVICE_MODELS.includes(value.trim().toLowerCase());
+}
+
+/**
+ * Validates whether a service model is allowed for the given business type.
+ * @param {string} businessType
+ * @param {string} serviceModel
+ * @returns {boolean}
+ */
+export function isServiceModelValidForBusinessType(businessType, serviceModel) {
+  if (!businessType || !serviceModel) return false;
+  const cleanBiz = String(businessType).trim().toLowerCase();
+  const canonicalBiz = BUSINESS_TYPE_ALIASES[cleanBiz] || (isValidBusinessType(cleanBiz) ? cleanBiz : 'restaurant');
+  const cleanService = String(serviceModel).trim().toLowerCase();
+  const canonicalService = SERVICE_MODEL_ALIASES[cleanService] || cleanService;
+
+  const allowed = BUSINESS_TYPE_ALLOWED_SERVICE_MODELS[canonicalBiz];
+  if (!allowed) return false;
+  return allowed.includes(canonicalService);
+}
+
+/**
+ * Resolves the authoritative service model for a business type, preserving valid selections or defaulting safely.
+ * @param {string} businessType
+ * @param {string|null} [currentServiceModel=null]
+ * @returns {string}
+ */
+export function resolveServiceModelForBusinessType(businessType, currentServiceModel = null) {
+  const cleanBiz = businessType ? String(businessType).trim().toLowerCase() : 'restaurant';
+  const canonicalBiz = BUSINESS_TYPE_ALIASES[cleanBiz] || (isValidBusinessType(cleanBiz) ? cleanBiz : 'restaurant');
+
+  if (currentServiceModel) {
+    const cleanService = String(currentServiceModel).trim().toLowerCase();
+    const canonicalService = SERVICE_MODEL_ALIASES[cleanService] || cleanService;
+    if (isServiceModelValidForBusinessType(canonicalBiz, canonicalService)) {
+      return canonicalService;
+    }
+  }
+
+  return BUSINESS_TYPE_DEFAULT_SERVICE_MODEL[canonicalBiz] || 'dine_in_table';
 }
 
 export function resolveBusinessProfile(restaurant = {}) {
@@ -164,6 +251,7 @@ export function resolveBusinessProfile(restaurant = {}) {
     business_type = 'restaurant';
   }
 
+  // Food Type is completely independent
   if (rawFood && isValidFoodType(rawFood)) {
     food_type = rawFood;
   } else if (rawFood && FOOD_TYPE_ALIASES[rawFood]) {
@@ -176,19 +264,15 @@ export function resolveBusinessProfile(restaurant = {}) {
     food_type = null;
   }
 
-  if (rawService && isValidServiceModel(rawService)) {
-    service_model = rawService;
-  } else if (rawService && SERVICE_MODEL_ALIASES[rawService]) {
+  // Service Model is determined by Business Type dependency
+  if (rawService && isServiceModelValidForBusinessType(business_type, rawService)) {
+    service_model = SERVICE_MODEL_ALIASES[rawService] || rawService;
+  } else if (rawService && SERVICE_MODEL_ALIASES[rawService] && isServiceModelValidForBusinessType(business_type, SERVICE_MODEL_ALIASES[rawService])) {
     service_model = SERVICE_MODEL_ALIASES[rawService];
   } else if (rawService) {
-    // Preserve stored legacy value for merchant review warning without crashing
-    service_model = rawService;
-  } else if (business_type === 'hotel_resort') {
-    service_model = 'in_room_dining';
-  } else if (business_type === 'cinema_theatre') {
-    service_model = 'seat_service';
+    service_model = resolveServiceModelForBusinessType(business_type, rawService);
   } else {
-    service_model = 'dine_in_table';
+    service_model = resolveServiceModelForBusinessType(business_type);
   }
 
   const is_pure_veg = food_type === 'pure_veg' || food_type === 'vegan' || (food_type === null && legacyResto === 'pure_veg');
@@ -237,9 +321,13 @@ export default {
   BUSINESS_TYPE_ALIASES,
   FOOD_TYPE_ALIASES,
   SERVICE_MODEL_ALIASES,
+  BUSINESS_TYPE_DEFAULT_SERVICE_MODEL,
+  BUSINESS_TYPE_ALLOWED_SERVICE_MODELS,
   isValidBusinessType,
   isValidFoodType,
   isValidServiceModel,
+  isServiceModelValidForBusinessType,
+  resolveServiceModelForBusinessType,
   resolveBusinessProfile,
   resolveBannerBadge
 };

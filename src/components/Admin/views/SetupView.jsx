@@ -9,7 +9,8 @@ import {
   BUSINESS_TYPE_METADATA,
   FOOD_TYPE_METADATA,
   SERVICE_MODEL_METADATA,
-  resolveBusinessProfile
+  resolveBusinessProfile,
+  resolveServiceModelForBusinessType
 } from '../../../utils/businessTaxonomy';
 
 export default function SetupView({
@@ -1251,9 +1252,11 @@ export default function SetupView({
                       onChange={(e) => {
                         const newBiz = e.target.value;
                         const safeResto = (currentFoodType === 'pure_veg' ? 'pure_veg' : currentFoodType === 'veg_nonveg' ? 'veg_nonveg' : (newBiz === 'bakery_confectionery' ? 'bakery' : 'pure_veg'));
+                        const autoService = resolveServiceModelForBusinessType(newBiz, settingsForm.service_model);
                         setSettingsForm({
                           ...settingsForm,
                           business_type: newBiz,
+                          service_model: autoService,
                           resto_type: safeResto
                         });
                       }}
@@ -1307,40 +1310,33 @@ export default function SetupView({
                   {/* Control C: Service Model */}
                   <div style={{ background: '#F8FAFC', padding: '10px 12px', borderRadius: '12px', border: '1px solid #E2E8F0' }}>
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '4px' }}>
-                      <label htmlFor="admin-service-model" style={{ fontSize: '0.80rem', fontWeight: 800, color: '#1E293B' }}>
-                        Service Model
+                      <label htmlFor="admin-service-model" style={{ fontSize: '0.80rem', fontWeight: 800, color: '#1E293B', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                        <span>Service Model</span>
+                        <span style={{ fontSize: '0.70rem' }}>🔒</span>
                       </label>
-                      {isLegacyService && (
-                        <span style={{ fontSize: '0.66rem', fontWeight: 700, color: '#64748B', background: '#E2E8F0', padding: '2px 6px', borderRadius: '8px' }}>
-                          Using legacy setting
-                        </span>
-                      )}
+                      <span style={{ fontSize: '0.66rem', fontWeight: 700, color: '#0369A1', background: '#E0F2FE', padding: '2px 6px', borderRadius: '8px' }}>
+                        Auto-selected
+                      </span>
                     </div>
-                    <span style={{ fontSize: '0.68rem', color: '#64748B', display: 'block', marginBottom: '6px' }}>
-                      How orders are fulfilled and served to customers.
+                    <div style={{
+                      width: '100%',
+                      padding: '8px 12px',
+                      borderRadius: '8px',
+                      border: '1px solid #CBD5E1',
+                      fontSize: '0.84rem',
+                      fontWeight: 800,
+                      background: '#F1F5F9',
+                      color: '#0F172A',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'space-between'
+                    }}>
+                      <span>{SERVICE_MODEL_METADATA[currentServiceModel]?.label || currentServiceModel}</span>
+                      <span style={{ fontSize: '0.70rem', color: '#64748B', fontWeight: 600 }}>Determined by Business Type</span>
+                    </div>
+                    <span style={{ fontSize: '0.68rem', color: '#64748B', display: 'block', marginTop: '4px' }}>
+                      Service model is determined by your business type.
                     </span>
-                    <select
-                      id="admin-service-model"
-                      value={currentServiceModel || 'dine_in_table'}
-                      onChange={(e) => {
-                        setSettingsForm({
-                          ...settingsForm,
-                          service_model: e.target.value
-                        });
-                      }}
-                      style={{ width: '100%', padding: '8px 12px', borderRadius: '8px', border: '1px solid #CBD5E1', fontSize: '0.84rem', fontWeight: 700, background: '#FFFFFF', color: '#0F172A' }}
-                    >
-                      {!SERVICE_MODELS.includes(currentServiceModel) && currentServiceModel && (
-                        <option value={currentServiceModel}>
-                          ⚠️ Legacy service model ({currentServiceModel}) — review recommended
-                        </option>
-                      )}
-                      {SERVICE_MODELS.map(model => (
-                        <option key={model} value={model}>
-                          {SERVICE_MODEL_METADATA[model]?.label || model}
-                        </option>
-                      ))}
-                    </select>
                   </div>
 
                   {/* Preview Box */}
