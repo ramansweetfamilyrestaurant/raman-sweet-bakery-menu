@@ -36,8 +36,9 @@ export default function PresenceVerificationModal({
   const isStaffAllowed = true;
   const isGpsAllowed = true;
 
-  const isCin = (restaurantInfo?.business_type === 'cinema_theatre' && restaurantInfo?.service_model === 'seat_service') || spaceType === 'cinema_seat' || spaceType === 'cinema' || String(restaurantInfo?.table_prefix || '').toLowerCase() === 'cinema_seat' || String(tableNumber || '').toLowerCase().includes('screen') || String(tableNumber || '').toLowerCase().includes('seat');
-  const isHot = (restaurantInfo?.business_type === 'hotel_resort' && restaurantInfo?.service_model === 'in_room_dining') || spaceType === 'room' || String(restaurantInfo?.table_prefix || '').toLowerCase() === 'room' || String(tableNumber || '').toLowerCase().includes('room');
+  const activeSpace = (spaceType || String(restaurantInfo?.table_prefix || 'table')).toLowerCase();
+  const isCin = activeSpace === 'cinema_seat' || activeSpace === 'cinema' || String(tableNumber || '').toLowerCase().includes('screen') || String(tableNumber || '').toLowerCase().includes('seat');
+  const isHot = activeSpace === 'room' || String(tableNumber || '').toLowerCase().includes('room');
 
   const modalTitle = isCin
     ? 'Cinema Seat Verification'

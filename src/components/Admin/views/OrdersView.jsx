@@ -158,7 +158,7 @@ export default function OrdersView({
   };
 
   const formatCleanTableLabel = (raw, spaceType) => {
-    if (!raw) return isCinema ? 'Screen 1 • Seat 1' : isHotel ? 'Room 101' : 'Table 1';
+    if (!raw) return isCinema ? 'Screen 1 • Seat 1' : (spaceType === 'room' || (isHotel && prefix === 'room')) ? 'Room 101' : 'Table 1';
     const str = String(raw).trim();
     
     // Cinema matching
@@ -170,31 +170,33 @@ export default function OrdersView({
     if (str.toLowerCase().startsWith('screen')) {
       return `🎬 ${str}`;
     }
-    if (isCinema && !str.toLowerCase().includes('table')) {
+    if ((spaceType === 'cinema_seat' || isCinema) && !str.toLowerCase().includes('table')) {
       return `🎬 Seat ${str}`;
     }
 
-    // Hotel Room matching
-    if (/^room\s*#?\d+/i.test(str)) {
-      return `🏨 ${str.charAt(0).toUpperCase() + str.slice(1)}`;
+    // Explicit spaceType matching
+    if (spaceType === 'table') {
+      return `🍽️ Table ${str.replace(/^table\s*#?/i, '')}`;
     }
-    if (isHotel && /^\d+$/.test(str)) {
-      return `🏨 Room ${str}`;
+    if (spaceType === 'room' || /^room\s*#?\d+/i.test(str)) {
+      return `🏨 ${str.toLowerCase().startsWith('room') ? (str.charAt(0).toUpperCase() + str.slice(1)) : `Room ${str}`}`;
+    }
+    if (spaceType === 'cabin' || /^cabin\s*#?\d+/i.test(str)) {
+      return `🛋️ ${str.toLowerCase().startsWith('cabin') ? (str.charAt(0).toUpperCase() + str.slice(1)) : `Cabin ${str}`}`;
+    }
+    if (spaceType === 'vip' || /^vip\s*#?\d+/i.test(str)) {
+      return `👑 ${str.toUpperCase()}`;
     }
 
-    // Cabin & VIP matching
-    if (/^cabin\s*#?\d+/i.test(str)) {
-      return `🛋️ ${str.charAt(0).toUpperCase() + str.slice(1)}`;
-    }
-    if (/^vip\s*#?\d+/i.test(str)) {
-      return `👑 ${str.toUpperCase()}`;
+    // Safe fallback based on active prefix
+    if (prefix === 'room' && /^\d+$/.test(str)) {
+      return `🏨 Room ${str}`;
     }
 
     if (/^(table|room|cabin|vip|takeaway|parcel)/i.test(str) || /^[\p{Extended_Pictographic}\u2000-\u3300]/u.test(str)) {
       return str;
     }
-    const prefix = (spaceType && spaceType !== 'table') ? (spaceType.charAt(0).toUpperCase() + spaceType.slice(1)) : 'Table';
-    return `${prefix} #${str}`;
+    return `Table #${str}`;
   };
 
   const pendingCount = validOrders.filter(o => o.status === 'pending').length;
@@ -500,14 +502,14 @@ export default function OrdersView({
                             fontWeight: 900,
                             fontSize: '0.85rem'
                           }}>
-                            {formatCleanTableLabel(order.table_number)}
+                            {formatCleanTableLabel(order.table_number, order.space_type)}
                           </span>
                           <span style={{ fontSize: '0.85rem', fontWeight: 800, color: '#64748B' }}>
                             #{order.id}
                           </span>
                           {Number(order.round_number) > 1 && (
                             <span style={{ background: '#FEF3C7', color: '#B45309', border: '1px solid #FCD34D', padding: '2px 8px', borderRadius: '8px', fontSize: '0.72rem', fontWeight: 800 }}>
-                              🔄 Round {order.round_number} (Add-on{isCinema ? ' Seat Order' : isHotel ? ' Room Order' : ''})
+                              🔄 Round {order.round_number} (Add-on{isCinema ? ' Seat Order' : (order.space_type === 'room' || (isHotel && prefix === 'room')) ? ' Room Order' : ''})
                             </span>
                           )}
                         </div>

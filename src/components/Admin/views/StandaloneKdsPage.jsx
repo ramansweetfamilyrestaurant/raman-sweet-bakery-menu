@@ -213,7 +213,23 @@ export default function StandaloneKdsPage({ slug = '' }) {
     return Math.max(0, Math.floor((now - orderTime) / 60000));
   };
 
-  const formatKdsLocation = (raw) => {
+  const safeParseItems = (rawItems) => {
+    if (!rawItems) return [];
+    if (Array.isArray(rawItems)) return rawItems;
+    if (typeof rawItems === 'string') {
+      try {
+        const parsed = JSON.parse(rawItems);
+        return Array.isArray(parsed) ? parsed : [];
+      } catch (e) {
+        return [];
+      }
+    }
+    return [];
+  };
+
+  const parseItems = safeParseItems;
+
+  const formatKdsLocation = (raw, spaceType) => {
     if (!raw) return 'TAKEAWAY';
     const str = String(raw).trim();
     const cMatch = str.match(/^S?(\d+)[- •]+(?:Row[- ]*)?([A-Za-z]+)[- •]+(?:Seat[- ]*)?(\d+)$/i) ||
@@ -224,13 +240,16 @@ export default function StandaloneKdsPage({ slug = '' }) {
     if (str.toLowerCase().startsWith('screen')) {
       return `🎬 ${str.toUpperCase()}`;
     }
-    if (/^room\s*#?\d+/i.test(str)) {
-      return `🏨 ${str.toUpperCase()}`;
+    if (spaceType === 'cinema_seat') {
+      return `🎬 SEAT ${str.toUpperCase()}`;
     }
-    if (/^cabin\s*#?\d+/i.test(str)) {
-      return `🛋️ ${str.toUpperCase()}`;
+    if (/^room\s*#?\d+/i.test(str) || spaceType === 'room') {
+      return `🏨 ${str.toLowerCase().startsWith('room') ? str.toUpperCase() : `ROOM #${str}`}`;
     }
-    if (/^vip\s*#?\d+/i.test(str)) {
+    if (/^cabin\s*#?\d+/i.test(str) || spaceType === 'cabin') {
+      return `🛋️ ${str.toLowerCase().startsWith('cabin') ? str.toUpperCase() : `CABIN #${str}`}`;
+    }
+    if (/^vip\s*#?\d+/i.test(str) || spaceType === 'vip') {
       return `👑 ${str.toUpperCase()}`;
     }
     if (/^(table|room|cabin|vip|takeaway|parcel)/i.test(str) || /^[\p{Extended_Pictographic}\u2000-\u3300]/u.test(str)) {
@@ -434,7 +453,7 @@ export default function StandaloneKdsPage({ slug = '' }) {
                 <div style={{ background: isDelayed ? '#7F1D1D' : '#1E3A8A', padding: '12px 16px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                   <div>
                     <strong style={{ fontSize: '1.3rem', color: '#FFF', fontWeight: 900, display: 'block' }}>
-                      {formatKdsLocation(order.table_number)}
+                      {formatKdsLocation(order.table_number, order.space_type)}
                     </strong>
                     <span style={{ fontSize: '0.75rem', color: '#93C5FD', fontWeight: 700 }}>
                       Order #{order.id} • {order.customer_name || 'Dine-in'}
