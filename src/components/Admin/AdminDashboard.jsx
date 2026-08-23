@@ -819,7 +819,6 @@ export default function AdminDashboard({ token, username, slug: propSlug = '', o
       }
       text += "================================" + "\n";
       text += `KOT No: #${order.id}\n`;
-      text += `Table: TABLE #${order.table_number || '1'}\n`;
       text += `Time: ${new Date(order.created_at || Date.now()).toLocaleTimeString('en-IN')}\n`;
       text += `Waiter/Guest: ${order.customer_name || 'Dine-In'}\n`;
       text += "--------------------------------" + "\n";
@@ -855,7 +854,6 @@ export default function AdminDashboard({ token, username, slug: propSlug = '', o
       }
       text += "================================" + "\n";
       text += `Bill No: INV-${order.id}\n`;
-      text += `Table: TABLE #${order.table_number || '1'}\n`;
       text += `Date: ${new Date(order.created_at || Date.now()).toLocaleString('en-IN')}\n`;
       text += `Customer: ${order.customer_name || 'Dine-In Guest'}\n`;
       text += "--------------------------------" + "\n";
@@ -1002,7 +1000,7 @@ export default function AdminDashboard({ token, username, slug: propSlug = '', o
       <html>
         <head>
           <meta charset="utf-8" />
-          <title>KOT - Table #${order.table_number || '1'} (KOT #${order.id})</title>
+          <title>KOT #${order.id}</title>
           <style>
             @page { margin: 0; size: ${selectedWidth} auto; }
             body {
@@ -1056,7 +1054,7 @@ export default function AdminDashboard({ token, username, slug: propSlug = '', o
           ${isReprint ? `<div class="reprint-banner">*** [ REPRINT ] ***</div>` : ''}
           <div class="header">
             <h2>KITCHEN ORDER TICKET</h2>
-            <div class="table-badge">TABLE #${order.table_number || '1'} &bull; KOT #${order.id}</div>
+            <div class="table-badge">KOT #${order.id}</div>
             ${isRoundAddon
               ? `<div class="round-badge">🔄 ROUND ${order.round_number} (ADD-ON ORDER)</div>`
               : `<div style="font-weight:900;font-size:12px;margin-top:2px;">ROUND 1 (NEW ORDER)</div>`
@@ -1181,7 +1179,7 @@ export default function AdminDashboard({ token, username, slug: propSlug = '', o
       <html>
         <head>
           <meta charset="utf-8" />
-          <title>Customer Bill - Table #${order.table_number}</title>
+          <title>Customer Bill #${order.id}</title>
           <style>
             @page { margin: 0; size: ${selectedWidth} auto; }
             body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; width: ${bodyWidth}; margin: 0 auto; padding: 10px; color: #000; }
@@ -1218,8 +1216,8 @@ export default function AdminDashboard({ token, username, slug: propSlug = '', o
           </div>
 
           <div class="meta">
-            <div style="display:flex;justify-content:space-between;">
-              <strong>TABLE #${order.table_number || '1'}</strong>
+            <div style="display:flex;justify-content:space-between;align-items:center;">
+              <strong>INVOICE #${order.id}</strong>
               <span class="badge">${paymentMode}</span>
             </div>
             <div><strong>Date:</strong> ${formatDateTimeString(order.created_at)}</div>
@@ -3182,7 +3180,7 @@ export default function AdminDashboard({ token, username, slug: propSlug = '', o
               🧾 Print Final Customer Bill
             </h3>
             <span style={{ fontSize: '0.78rem', color: '#6B7280', display: 'block', marginBottom: '16px' }}>
-              Table #{billOrderModal.table_number || '1'} • Total: ₹{billOrderModal.total_amount}
+              Order #{billOrderModal.id} • Total: {restaurantInfo?.currency_symbol || settingsForm.currency_symbol || '₹'}{billOrderModal.total_amount}
             </span>
 
             <p style={{ fontSize: '0.84rem', fontWeight: 800, color: '#374151', marginBottom: '12px' }}>
