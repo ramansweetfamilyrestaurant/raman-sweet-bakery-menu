@@ -7,6 +7,13 @@ export default function ServiceRequestModal({ tableNum, slug, onClose, onSuccess
   const [customNote, setCustomNote] = useState('');
   const [submitting, setSubmitting] = useState(false);
 
+  const isCinema = Boolean(tableNum && (tableNum.includes('Screen') || tableNum.includes('Seat') || tableNum.includes('🎬')));
+
+  // Cinema is a pure seat-ordering flow with NO customer staff-call modal
+  if (isCinema) {
+    return null;
+  }
+
   const requestOptions = [
     { id: 'water', label: 'Drinking Water 💧', icon: <Droplets size={20} color="#0284C7" />, desc: 'Bring fresh drinking water' },
     { id: 'bill', label: 'Request Final Bill 🧾', icon: <Receipt size={20} color="#D97706" />, desc: 'Send printed bill to table' },
@@ -18,7 +25,7 @@ export default function ServiceRequestModal({ tableNum, slug, onClose, onSuccess
     setSubmitting(true);
     try {
       const selectedObj = requestOptions.find(o => o.id === selectedType);
-      const reqLabel = selectedObj ? selectedObj.label : 'Call Waiter';
+      const reqLabel = selectedObj ? selectedObj.label : (isCinema ? 'Staff Assistance' : isHotel ? 'Room Service' : 'Call Waiter');
       const res = await createServiceRequest({
         slug: slug || '',
         table_number: tableNum || '1',
@@ -27,7 +34,7 @@ export default function ServiceRequestModal({ tableNum, slug, onClose, onSuccess
       });
 
       if (onSuccess) {
-        onSuccess(res?.message || `🛎️ Staff notified for Table ${tableNum || '1'}!`);
+        onSuccess(res?.message || `🛎️ Staff notified for ${tableNum || 'Table 1'}!`);
       }
       onClose();
     } catch (err) {
@@ -65,8 +72,12 @@ export default function ServiceRequestModal({ tableNum, slug, onClose, onSuccess
               <Bell size={20} />
             </div>
             <div>
-              <strong style={{ fontSize: '1.05rem', color: '#0A2315', display: 'block' }}>Call Table Staff / Waiter</strong>
-              <span style={{ fontSize: '0.74rem', color: '#059669', fontWeight: 800 }}>Table {tableNum || '1'}</span>
+              <strong style={{ fontSize: '1.05rem', color: '#0A2315', display: 'block' }}>
+                Call Table Staff / Waiter
+              </strong>
+              <span style={{ fontSize: '0.74rem', color: '#059669', fontWeight: 800 }}>
+                {tableNum || 'Table 1'}
+              </span>
             </div>
           </div>
           <button onClick={onClose} style={{ background: '#F1F5F9', border: 'none', width: '32px', height: '32px', borderRadius: '50%', cursor: 'pointer', fontWeight: 900 }}>✕</button>

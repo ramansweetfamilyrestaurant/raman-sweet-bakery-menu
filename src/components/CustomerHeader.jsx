@@ -6,12 +6,26 @@ export default function CustomerHeader({ info, lang, tableNum, spaceLabel, onTog
   const getDisplayBadge = () => {
     if (!tableNum) return '';
     if (spaceLabel) return spaceLabel;
+    const str = String(tableNum).trim();
+    const cMatch = str.match(/^S?(\d+)[- •]+(?:Row[- ]*)?([A-Za-z]+)[- •]+(?:Seat[- ]*)?(\d+)$/i) ||
+                   str.match(/Screen\s*(\d+)\s*[-•]\s*Row\s*([A-Za-z]+)\s*[-•]\s*Seat\s*(\d+)/i);
+    if (cMatch) {
+      return `🎬 Screen ${cMatch[1]} • Row ${cMatch[2].toUpperCase()} • Seat ${cMatch[3]}`;
+    }
     const prefix = String(info?.table_prefix || 'table').toLowerCase();
-    if (prefix === 'cinema_seat' || prefix === 'cinema' || prefix === 'seat') return `🎬 ${tableNum}`;
-    if (prefix === 'cabin') return `🛋️ Cabin ${tableNum}`;
-    if (prefix === 'room') return `🏨 Room ${tableNum}`;
-    if (prefix === 'vip') return `👑 VIP ${tableNum}`;
-    return `🍽️ Table ${tableNum}`;
+    if (prefix === 'cinema_seat' || prefix === 'cinema' || prefix === 'seat') {
+      return str.toLowerCase().startsWith('screen') ? `🎬 ${str}` : `🎬 Seat ${str}`;
+    }
+    if (prefix === 'cabin' || /^cabin\s*#?\d+/i.test(str)) {
+      return `🛋️ ${str.toLowerCase().startsWith('cabin') ? str : `Cabin ${str}`}`;
+    }
+    if (prefix === 'room' || /^room\s*#?\d+/i.test(str)) {
+      return `🏨 ${str.toLowerCase().startsWith('room') ? str : `Room ${str}`}`;
+    }
+    if (prefix === 'vip' || /^vip\s*#?\d+/i.test(str)) {
+      return `👑 ${str.toUpperCase()}`;
+    }
+    return `🍽️ Table ${str.replace(/^table\s*#?/i, '')}`;
   };
   return (
     <header style={{
@@ -103,7 +117,7 @@ export default function CustomerHeader({ info, lang, tableNum, spaceLabel, onTog
                 {getDisplayBadge()}
               </span>
 
-              {onCallStaff && (
+              {onCallStaff && !((info?.business_type === 'cinema_theatre' && info?.service_model === 'seat_service') || String(info?.table_prefix || '').toLowerCase() === 'cinema_seat' || String(tableNum || '').toLowerCase().includes('screen') || String(tableNum || '').toLowerCase().includes('seat')) && (
                 <button
                   onClick={onCallStaff}
                   style={{

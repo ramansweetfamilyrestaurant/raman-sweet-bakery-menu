@@ -227,24 +227,38 @@ export default function App() {
   // Effective Table Number (Empty if session expired or scanned QR identity is unverified/invalid/out-of-range)
   const effectiveTableNum = (sessionExpired || !isTableValid) ? '' : currentTableNum;
 
-  const getDynamicSpaceLabel = () => {
-    if (!effectiveTableNum) return '';
+  const formatCustomerLocation = (raw) => {
+    const target = raw !== undefined && raw !== null ? String(raw).trim() : String(effectiveTableNum || '').trim();
+    if (!target) return '';
     const activeType = currentSpaceType || String(info?.table_prefix || 'table').toLowerCase();
-    if (activeType === 'cinema_seat' || activeType === 'cinema') {
-      const cMatch = String(effectiveTableNum).match(/^(?:screen\s*(\d+)[\s\-_•|]+row\s*([a-zA-Z]+)[\s\-_•|]+seat\s*(\d+)|s?(\d+)[\-_:]([a-zA-Z]+)[\-_:](\d+))/i);
-      if (cMatch) {
-        const sc = cMatch[1] || cMatch[4];
-        const rw = (cMatch[2] || cMatch[5]).toUpperCase();
-        const st = cMatch[3] || cMatch[6];
-        return `🎬 Screen ${sc} • Row ${rw} • Seat ${st}`;
-      }
-      return `🎬 Seat ${effectiveTableNum}`;
+    const isCinema = info?.business_type === 'cinema_theatre' || activeType === 'cinema_seat' || activeType === 'cinema' || target.toLowerCase().includes('screen') || target.toLowerCase().includes('seat');
+    const isHotel = info?.business_type === 'hotel_resort' || activeType === 'room' || target.toLowerCase().includes('room');
+
+    const cMatch = target.match(/^S?(\d+)[- •]+(?:Row[- ]*)?([A-Za-z]+)[- •]+(?:Seat[- ]*)?(\d+)$/i) ||
+                   target.match(/Screen\s*(\d+)\s*[-•]\s*Row\s*([A-Za-z]+)\s*[-•]\s*Seat\s*(\d+)/i);
+    if (cMatch) {
+      return `🎬 Screen ${cMatch[1]} • Row ${cMatch[2].toUpperCase()} • Seat ${cMatch[3]}`;
     }
-    if (activeType === 'cabin') return `🛋️ Cabin ${effectiveTableNum}`;
-    if (activeType === 'room') return `🏨 Room ${effectiveTableNum}`;
-    if (activeType === 'vip') return `👑 VIP ${effectiveTableNum}`;
-    return `🍽️ Table ${effectiveTableNum}`;
+    if (isCinema) {
+      if (target.toLowerCase().startsWith('screen')) return `🎬 ${target}`;
+      return `🎬 Seat ${target.replace(/^seat\s*#?/i, '')}`;
+    }
+    if (/^cabin\s*#?\d+/i.test(target) || activeType === 'cabin') {
+      return `🛋️ ${target.toLowerCase().startsWith('cabin') ? target : `Cabin ${target}`}`;
+    }
+    if (/^room\s*#?\d+/i.test(target) || isHotel) {
+      return `🏨 ${target.toLowerCase().startsWith('room') ? target : `Room ${target}`}`;
+    }
+    if (/^vip\s*#?\d+/i.test(target) || activeType === 'vip') {
+      return `👑 ${target.toUpperCase()}`;
+    }
+    if (/^[\p{Extended_Pictographic}\u2000-\u3300]/u.test(target)) {
+      return target;
+    }
+    return `🍽️ Table ${target.replace(/^table\s*#?/i, '')}`;
   };
+
+  const getDynamicSpaceLabel = (raw) => formatCustomerLocation(raw);
 
   const hasScannedSpace = Boolean(
     currentTableNum &&
@@ -546,7 +560,7 @@ export default function App() {
       alert('WhatsApp number is not configured for this restaurant yet.');
       return;
     }
-    let msg = `👋 Hello *${info.name}*!\nI would like to place an order from ${getDynamicSpaceLabel() || 'Table ' + (effectiveTableNum || '1')}:\n\n`;
+    let msg = `👋 Hello *${info.name}*!\nI would like to place an order from ${getDynamicSpaceLabel() || formatCustomerLocation(effectiveTableNum || '1')}:\n\n`;
     let grandTotal = 0;
     const sym = (info?.currency_symbol !== undefined && info?.currency_symbol !== null) ? info.currency_symbol : '₹';
     cartItems.forEach(item => {
@@ -2042,7 +2056,7 @@ export default function App() {
         spaceLabel={getDynamicSpaceLabel()}
         onToggleLang={() => setLang(lang === 'en' ? 'hi' : 'en')}
         onOpenInfoModal={() => setShowInfoModal(true)}
-        onCallStaff={() => setShowServiceModal(true)}
+        onCallStaff={((info?.business_type === 'cinema_theatre' && info?.service_model === 'seat_service') || currentSpaceType === 'cinema_seat' || currentSpaceType === 'cinema' || String(info?.table_prefix || '').toLowerCase() === 'cinema_seat') ? null : () => setShowServiceModal(true)}
         onOpenReviewModal={handleRateUsClick}
         onOpenAdmin={() => {
           const targetSlug = getSlugFromUrl() || (info && info.slug) || localStorage.getItem('touchqr_admin_slug') || '';
@@ -2073,14 +2087,26 @@ export default function App() {
             <span style={{ fontSize: '1.2rem' }}>🛎️</span>
             <div>
               <strong style={{ fontSize: '0.86rem', color: 'var(--gold-bright)', display: 'block' }}>
-                Order #{activeOrderTrack.id} • Table {activeOrderTrack.table_number || '1'}
+                Order #{activeOrderTrack.id} • {formatCustomerLocation(activeOrderTrack.table_number)}
               </strong>
               <span style={{ fontSize: '0.76rem', color: '#E5E7EB', fontWeight: 700 }}>
                 Status: {
                   activeOrderTrack.status === 'completed' ? `Order Completed & Paid 🏁${autoKillSeconds ? ` (Session closes in ${autoKillSeconds >= 60 ? `${Math.floor(autoKillSeconds / 60)}m ${autoKillSeconds % 60}s` : `${autoKillSeconds}s`})` : ''}` :
                   activeOrderTrack.status === 'cancelled' || activeOrderTrack.status === 'rejected' ? `Order Cancelled 🔴${autoKillSeconds ? ` (Session closes in ${autoKillSeconds >= 60 ? `${Math.floor(autoKillSeconds / 60)}m ${autoKillSeconds % 60}s` : `${autoKillSeconds}s`})` : ''}` :
-                  activeOrderTrack.status === 'served' ? 'Food Served to Table 🍽️ Enjoy your meal!' :
-                  (activeOrderTrack.kitchen_prepared === 1 || activeOrderTrack.kitchen_prepared === '1' || activeOrderTrack.kitchen_prepared === true) ? '🎉 Food Prepared! Waiter bringing to table 🛎️' :
+                  activeOrderTrack.status === 'served' ? (
+                    (info?.business_type === 'cinema_theatre' || String(activeOrderTrack.table_number).toLowerCase().includes('screen') || String(activeOrderTrack.table_number).toLowerCase().includes('seat'))
+                      ? 'Food Served to Seat 🎬 Enjoy your movie!'
+                      : (info?.business_type === 'hotel_resort' || String(activeOrderTrack.table_number).toLowerCase().includes('room'))
+                        ? 'Food Delivered to Room 🏨 Enjoy your meal!'
+                        : 'Food Served to Table 🍽️ Enjoy your meal!'
+                  ) :
+                  (activeOrderTrack.kitchen_prepared === 1 || activeOrderTrack.kitchen_prepared === '1' || activeOrderTrack.kitchen_prepared === true) ? (
+                    (info?.business_type === 'cinema_theatre' || String(activeOrderTrack.table_number).toLowerCase().includes('screen') || String(activeOrderTrack.table_number).toLowerCase().includes('seat'))
+                      ? '🎉 Food Prepared! Staff bringing to seat 🎬'
+                      : (info?.business_type === 'hotel_resort' || String(activeOrderTrack.table_number).toLowerCase().includes('room'))
+                        ? '🎉 Food Prepared! Staff delivering to room 🏨'
+                        : '🎉 Food Prepared! Waiter bringing to table 🛎️'
+                  ) :
                   (activeOrderTrack.status === 'accepted' || activeOrderTrack.status === 'kitchen' || activeOrderTrack.status === 'preparing') ? 'Order Accepted - Chef Preparing 👨‍🍳' :
                   activeOrderTrack.status === 'pending' ? 'Pending Kitchen Acceptance 🟡' :
                   'Order Received 🟢'
@@ -2138,7 +2164,16 @@ export default function App() {
         }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
             <span style={{ fontSize: '1.2rem' }}>📱</span>
-            <span><strong>Session Expired (Read-Only Menu):</strong> Table session ended. Naya order place karne ke liye table QR code dubara scan karein!</span>
+            <span>
+              <strong>Session Expired (Read-Only Menu):</strong>{' '}
+              {(() => {
+                const isCin = (info?.business_type === 'cinema_theatre' && info?.service_model === 'seat_service') || currentSpaceType === 'cinema_seat' || currentSpaceType === 'cinema' || String(info?.table_prefix || '').toLowerCase() === 'cinema_seat' || String(currentTableNum || '').toLowerCase().includes('screen') || String(currentTableNum || '').toLowerCase().includes('seat');
+                const isHot = (info?.business_type === 'hotel_resort' && info?.service_model === 'in_room_dining') || currentSpaceType === 'room' || String(info?.table_prefix || '').toLowerCase() === 'room' || String(currentTableNum || '').toLowerCase().includes('room');
+                if (isCin) return 'Seat session ended. Naya order place karne ke liye seat QR code dubara scan karein!';
+                if (isHot) return 'Room session ended. Naya order place karne ke liye room QR code dubara scan karein!';
+                return 'Table session ended. Naya order place karne ke liye table QR code dubara scan karein!';
+              })()}
+            </span>
           </div>
           <button
             onClick={() => setSessionExpired(false)}
@@ -2166,7 +2201,23 @@ export default function App() {
           <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
             <span style={{ fontSize: '1.2rem' }}>⚠️</span>
             <span>
-              <strong>Invalid Table QR:</strong> {!initialSpaceInfo.isValidTokenShape ? 'This QR code is incomplete or modified. Please scan the official QR code at your dining table to order.' : `Table #${currentTableNum} is not registered. Please scan the official QR code at your seat.`} (Menu in View-Only mode).
+              {(() => {
+                const isCin = (info?.business_type === 'cinema_theatre' && info?.service_model === 'seat_service') || currentSpaceType === 'cinema_seat' || currentSpaceType === 'cinema' || String(info?.table_prefix || '').toLowerCase() === 'cinema_seat' || String(currentTableNum || '').toLowerCase().includes('screen') || String(currentTableNum || '').toLowerCase().includes('seat');
+                const isHot = (info?.business_type === 'hotel_resort' && info?.service_model === 'in_room_dining') || currentSpaceType === 'room' || String(info?.table_prefix || '').toLowerCase() === 'room' || String(currentTableNum || '').toLowerCase().includes('room');
+                const spaceTitle = isCin ? 'Invalid Seat QR:' : isHot ? 'Invalid Room QR:' : 'Invalid Table QR:';
+                const scanPrompt = isCin
+                  ? 'Please scan the official QR code at your cinema seat to order.'
+                  : isHot
+                    ? 'Please scan the official QR code in your room to order.'
+                    : 'Please scan the official QR code at your dining table to order.';
+                const locationDisplay = formatCustomerLocation(currentTableNum);
+
+                return (
+                  <>
+                    <strong>{spaceTitle}</strong> {!initialSpaceInfo.isValidTokenShape ? `This QR code is incomplete or modified. ${scanPrompt}` : `${locationDisplay} is not registered. ${scanPrompt}`} (Menu in View-Only mode).
+                  </>
+                );
+              })()}
             </span>
           </div>
           <button
@@ -2613,7 +2664,7 @@ export default function App() {
       )}
 
       {/* 🛎️ Service Request Modal & Toast */}
-      {showServiceModal && (
+      {showServiceModal && !((info?.business_type === 'cinema_theatre' && info?.service_model === 'seat_service') || currentSpaceType === 'cinema_seat' || currentSpaceType === 'cinema' || String(info?.table_prefix || '').toLowerCase() === 'cinema_seat') && (
         <ServiceRequestModal
           tableNum={getDynamicSpaceLabel() || (effectiveTableNum ? `Table ${effectiveTableNum}` : 'Table 1')}
           slug={getSlugFromUrl() || (info && info.slug)}
@@ -2725,7 +2776,15 @@ export default function App() {
                 {isAddon && (
                   <div style={{ background: '#ECFDF5', border: '1px solid #A7F3D0', padding: '8px 12px', borderRadius: '12px', marginBottom: '12px', fontSize: '0.78rem', color: '#065F46', fontWeight: 700, display: 'flex', alignItems: 'center', gap: '6px' }}>
                     <span>🔄</span>
-                    <span>These new items will be sent as <strong>Round {nextRound} KOT</strong> and merged with your running table bill.</span>
+                    <span>
+                      {(() => {
+                        const isCin = info?.business_type === 'cinema_theatre' || currentSpaceType === 'cinema_seat' || currentSpaceType === 'cinema' || String(effectiveTableNum).toLowerCase().includes('screen') || String(effectiveTableNum).toLowerCase().includes('seat');
+                        const isHot = info?.business_type === 'hotel_resort' || currentSpaceType === 'room' || String(effectiveTableNum).toLowerCase().includes('room');
+                        if (isCin) return <>These new items will be sent as <strong>Round {nextRound} KOT</strong> and merged with your running seat order/bill.</>;
+                        if (isHot) return <>These new items will be sent as <strong>Round {nextRound} KOT</strong> and merged with your running room order/bill.</>;
+                        return <>These new items will be sent as <strong>Round {nextRound} KOT</strong> and merged with your running table bill.</>;
+                      })()}
+                    </span>
                   </div>
                 )}
 
@@ -2787,7 +2846,17 @@ export default function App() {
                         <div style={{ display: 'flex', gap: '8px' }}>
                           <div style={{ flex: 1 }}>
                             <label style={{ fontSize: '0.72rem', fontWeight: 800, color: 'var(--text-muted)', display: 'block', marginBottom: '2px' }}>
-                              {getDynamicSpaceLabel() ? 'SCANNED TABLE/SPACE 🔒' : 'TABLE #'}
+                              {(() => {
+                                const isCin = (info?.business_type === 'cinema_theatre' && info?.service_model === 'seat_service') || currentSpaceType === 'cinema_seat' || currentSpaceType === 'cinema' || String(info?.table_prefix || '').toLowerCase() === 'cinema_seat' || String(effectiveTableNum || '').toLowerCase().includes('screen') || String(effectiveTableNum || '').toLowerCase().includes('seat');
+                                const isHot = (info?.business_type === 'hotel_resort' && info?.service_model === 'in_room_dining') || currentSpaceType === 'room' || String(info?.table_prefix || '').toLowerCase() === 'room' || String(effectiveTableNum || '').toLowerCase().includes('room');
+                                if (isCin) {
+                                  return getDynamicSpaceLabel() ? 'SCANNED SEAT 🔒' : 'SEAT #';
+                                }
+                                if (isHot) {
+                                  return getDynamicSpaceLabel() ? 'SCANNED ROOM 🔒' : 'ROOM #';
+                                }
+                                return getDynamicSpaceLabel() ? 'SCANNED TABLE 🔒' : 'TABLE #';
+                              })()}
                             </label>
                             <input
                               type="text"
@@ -2990,7 +3059,7 @@ export default function App() {
 
             <div style={{ background: 'rgba(255,255,255,0.08)', borderRadius: '16px', padding: '16px', margin: '16px 0', border: '1px solid rgba(255,255,255,0.15)' }}>
               <p style={{ fontSize: '1.1rem', fontWeight: 900, color: '#34D399', margin: '0 0 4px 0' }}>
-                Order #{orderSuccessModal.order_id} • Table {orderSuccessModal.table_number}
+                Order #{orderSuccessModal.order_id} • {formatCustomerLocation(orderSuccessModal.table_number)}
               </p>
               <p style={{ fontSize: '0.82rem', color: '#D1D5DB', margin: 0 }}>
                 Status: <strong style={{ color: '#FBBF24' }}>Pending Kitchen Acceptance 🟡</strong>
@@ -2998,7 +3067,13 @@ export default function App() {
             </div>
 
             <p style={{ fontSize: '0.86rem', color: '#E5E7EB', lineHeight: 1.5, marginBottom: '20px' }}>
-              Your order has been sent directly to the kitchen terminal! Our staff will prepare and serve it to your table shortly.
+              {(() => {
+                const isCin = info?.business_type === 'cinema_theatre' || String(orderSuccessModal.table_number).toLowerCase().includes('screen') || String(orderSuccessModal.table_number).toLowerCase().includes('seat');
+                const isHot = info?.business_type === 'hotel_resort' || String(orderSuccessModal.table_number).toLowerCase().includes('room');
+                if (isCin) return 'Your order has been sent directly to the kitchen terminal! Our staff will prepare and bring it to your seat shortly.';
+                if (isHot) return 'Your order has been sent directly to the kitchen terminal! Our staff will prepare and deliver it to your room shortly.';
+                return 'Your order has been sent directly to the kitchen terminal! Our staff will prepare and serve it to your table shortly.';
+              })()}
             </p>
 
             <button

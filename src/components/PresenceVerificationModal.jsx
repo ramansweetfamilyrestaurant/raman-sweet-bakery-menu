@@ -36,6 +36,27 @@ export default function PresenceVerificationModal({
   const isStaffAllowed = true;
   const isGpsAllowed = true;
 
+  const isCin = (restaurantInfo?.business_type === 'cinema_theatre' && restaurantInfo?.service_model === 'seat_service') || spaceType === 'cinema_seat' || spaceType === 'cinema' || String(restaurantInfo?.table_prefix || '').toLowerCase() === 'cinema_seat' || String(tableNumber || '').toLowerCase().includes('screen') || String(tableNumber || '').toLowerCase().includes('seat');
+  const isHot = (restaurantInfo?.business_type === 'hotel_resort' && restaurantInfo?.service_model === 'in_room_dining') || spaceType === 'room' || String(restaurantInfo?.table_prefix || '').toLowerCase() === 'room' || String(tableNumber || '').toLowerCase().includes('room');
+
+  const modalTitle = isCin
+    ? 'Cinema Seat Verification'
+    : isHot
+      ? 'Room Presence Verification'
+      : 'Table Presence Verification';
+
+  const confirmSubtitle = isCin
+    ? 'Confirm your presence at your seat'
+    : isHot
+      ? 'Confirm your presence in the room'
+      : 'Confirm your table presence';
+
+  const orderPlacingText = isCin
+    ? 'Placing your seat order now...'
+    : isHot
+      ? 'Placing your room order now...'
+      : 'Placing your table order now...';
+
   // State Machine:
   // 'GPS_PROMPT' | 'GPS_ACQUIRING' | 'GPS_FAILED' | 'STAFF_REQUESTING' | 'STAFF_WAITING' | 'STAFF_REJECTED' | 'STAFF_EXPIRED' | 'VERIFIED'
   const [viewState, setViewState] = useState('GPS_PROMPT');
@@ -106,7 +127,7 @@ export default function PresenceVerificationModal({
     if (!cleanToken || !isValidQrTokenFormat(cleanToken)) {
       isAcquiringGpsRef.current = false;
       setViewState('GPS_FAILED');
-      setErrorMessage('Invalid or unverified Table QR. Please scan the official QR code at your dining table.');
+      setErrorMessage(isCin ? 'Invalid or unverified Seat QR. Please scan the official QR code at your cinema seat.' : isHot ? 'Invalid or unverified Room QR. Please scan the official QR code in your room.' : 'Invalid or unverified Table QR. Please scan the official QR code at your dining table.');
       return;
     }
 
@@ -216,7 +237,7 @@ export default function PresenceVerificationModal({
     if (!cleanToken) {
       isRequestingStaffRef.current = false;
       setViewState('GPS_FAILED');
-      setErrorMessage('A valid Table QR code is required to request staff verification.');
+      setErrorMessage(isCin ? 'A valid Seat QR code is required to request staff verification.' : isHot ? 'A valid Room QR code is required to request staff verification.' : 'A valid Table QR code is required to request staff verification.');
       return;
     }
 
@@ -380,7 +401,7 @@ export default function PresenceVerificationModal({
             </div>
             <div>
               <strong style={{ fontSize: '1.02rem', color: '#0F172A', display: 'block' }}>
-                Table Presence Verification
+                {modalTitle}
               </strong>
               <span style={{ fontSize: '0.76rem', color: '#059669', fontWeight: 800 }}>
                 {currentLabel} • {restaurantInfo?.name || 'TouchQR'}
@@ -426,10 +447,10 @@ export default function PresenceVerificationModal({
               <MapPin size={32} />
             </div>
             <h3 style={{ fontSize: '1.15rem', fontWeight: 800, color: '#0F172A', marginBottom: '8px' }}>
-              Confirm your table presence
+              {confirmSubtitle}
             </h3>
             <p style={{ fontSize: '0.86rem', color: '#64748B', lineHeight: 1.5, marginBottom: '20px' }}>
-              To ensure orders are delivered to the correct seat, please confirm you are dining at <strong>{currentLabel}</strong>.
+              To ensure orders are delivered to the correct location, please confirm you are present at <strong>{currentLabel}</strong>.
             </p>
 
             <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
@@ -759,7 +780,7 @@ export default function PresenceVerificationModal({
               Verification Not Approved
             </h3>
             <p style={{ fontSize: '0.84rem', color: '#64748B', lineHeight: 1.5, marginBottom: '18px' }}>
-              {rejectionReason || 'The staff could not confirm presence for this table request.'}
+              {rejectionReason || (isCin ? 'The staff could not confirm presence for this seat request.' : isHot ? 'The staff could not confirm presence for this room request.' : 'The staff could not confirm presence for this table request.')}
             </p>
 
             <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
@@ -926,7 +947,7 @@ export default function PresenceVerificationModal({
               color: '#64748B'
             }}>
               <Sparkles size={14} color="#EAB308" />
-              <span>Placing your table order now...</span>
+              <span>{orderPlacingText}</span>
             </div>
           </div>
         )}

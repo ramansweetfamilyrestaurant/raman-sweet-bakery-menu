@@ -38,7 +38,13 @@ export default function PhysicalMenuHeader({ info, categories, selectedCategory,
             borderRadius: 'var(--radius-pill)',
             fontWeight: 700
           }}>
-            🟢 TABLE QR MENU CARD
+            {(() => {
+              const isCin = (info?.business_type === 'cinema_theatre' && info?.service_model === 'seat_service') || String(info?.table_prefix || '').toLowerCase() === 'cinema_seat';
+              const isHot = (info?.business_type === 'hotel_resort' && info?.service_model === 'in_room_dining') || String(info?.table_prefix || '').toLowerCase() === 'room';
+              if (isCin) return '🟢 CINEMA SEAT MENU CARD';
+              if (isHot) return '🟢 ROOM SERVICE MENU CARD';
+              return '🟢 TABLE QR MENU CARD';
+            })()}
           </span>
 
           <button 
