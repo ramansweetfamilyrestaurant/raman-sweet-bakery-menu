@@ -213,17 +213,21 @@ export default function OrdersView({
     return true;
   });
 
-  const prefix = String(restaurantInfo?.table_prefix || settingsForm?.table_prefix || 'table').toLowerCase();
+  const prefix = isCinema
+    ? 'cinema_seat'
+    : isHotel
+      ? 'room'
+      : String(restaurantInfo?.table_prefix || settingsForm?.table_prefix || 'table').toLowerCase();
   const spaceLabel = prefix === 'cabin' ? 'Cabin' : prefix === 'room' ? 'Room' : prefix === 'vip' ? 'VIP Lounge' : 'Table';
   const spacePlural = prefix === 'cabin' ? 'Cabins' : prefix === 'room' ? 'Rooms' : prefix === 'vip' ? 'VIP Lounges' : 'Tables';
   const spaceField = prefix === 'cabin' ? 'total_cabins' : prefix === 'room' ? 'total_rooms' : prefix === 'vip' ? 'total_vip' : 'total_tables';
 
   const currentSpaceCount = (() => {
+    if (isHotel || prefix === 'room') {
+      return Number(restaurantInfo?.total_rooms ?? settingsForm?.total_rooms) || 0;
+    }
     if (prefix === 'cabin') {
       return Number(restaurantInfo?.total_cabins ?? settingsForm?.total_cabins) || 0;
-    }
-    if (prefix === 'room') {
-      return Number(restaurantInfo?.total_rooms ?? settingsForm?.total_rooms) || 0;
     }
     if (prefix === 'vip') {
       return Number(restaurantInfo?.total_vip ?? settingsForm?.total_vip) || 0;
@@ -358,15 +362,7 @@ export default function OrdersView({
           {isCinema
             ? `💺 Cinema Seats (${cinemaSeats.length})`
             : isHotel
-              ? (prefix === 'room'
-                  ? `🏨 Room Status (${currentSpaceCount} Rooms)`
-                  : prefix === 'table'
-                    ? `🍽️ Dining Tables (${currentSpaceCount} Tables)`
-                    : prefix === 'cabin'
-                      ? `🛋️ Private Cabins (${currentSpaceCount} Cabins)`
-                      : prefix === 'vip'
-                        ? `👑 VIP Lounges (${currentSpaceCount} VIP Lounges)`
-                        : `🏨 Room Status (${currentSpaceCount} Rooms)`)
+              ? `🏨 Room Status (${currentSpaceCount} Rooms)`
               : (prefix === 'cabin'
                   ? `🛋️ Private Cabins (${currentSpaceCount} Cabins)`
                   : prefix === 'room'

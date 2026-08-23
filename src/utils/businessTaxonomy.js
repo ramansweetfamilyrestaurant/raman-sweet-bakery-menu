@@ -329,19 +329,9 @@ export function getAvailableSpaceTypesForBusiness(businessType, serviceModel, op
   }
 
   if (canonicalBiz === 'hotel_resort' || canonicalService === 'in_room_dining') {
-    const list = [
+    return [
       { id: 'room', label: '🏨 Hotel Room', singular: 'Room', plural: 'Rooms', badge: 'ROOM NO.', param: 'room' }
     ];
-    if (Number(options?.total_tables) > 0) {
-      list.push({ id: 'table', label: '🍽️ Dining Table', singular: 'Table', plural: 'Tables', badge: 'TABLE NO.', param: 'table' });
-    }
-    if (Number(options?.total_cabins) > 0) {
-      list.push({ id: 'cabin', label: '🛋️ Private Cabin', singular: 'Cabin', plural: 'Cabins', badge: 'CABIN NO.', param: 'cabin' });
-    }
-    if (Number(options?.total_vip) > 0) {
-      list.push({ id: 'vip', label: '👑 VIP Lounge', singular: 'VIP Lounge', plural: 'VIP Lounges', badge: 'VIP LOUNGE', param: 'vip' });
-    }
-    return list;
   }
 
   // All other dining / food service models (dine_in_table)
