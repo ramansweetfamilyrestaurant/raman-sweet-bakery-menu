@@ -899,7 +899,7 @@ export default function OnboardingSetup({ token, restaurantInfo, setRestaurantIn
                   >
                     {SERVICE_MODELS.map(model => (
                       <option key={model} value={model}>
-                        {SERVICE_MODEL_METADATA[model]?.icon || '🛎️'} {SERVICE_MODEL_METADATA[model]?.label || model}
+                        {SERVICE_MODEL_METADATA[model]?.label || model}
                       </option>
                     ))}
                   </select>
@@ -916,7 +916,7 @@ export default function OnboardingSetup({ token, restaurantInfo, setRestaurantIn
                   </span>
                   <span style={{ color: 'rgba(255,255,255,0.3)' }}>•</span>
                   <span style={{ fontSize: '0.72rem', fontWeight: 700, color: '#93C5FD' }}>
-                    {SERVICE_MODEL_METADATA[formData.service_model]?.icon || '🪑'} {SERVICE_MODEL_METADATA[formData.service_model]?.label || formData.service_model}
+                    {SERVICE_MODEL_METADATA[formData.service_model]?.label || formData.service_model}
                   </span>
                 </div>
               </div>

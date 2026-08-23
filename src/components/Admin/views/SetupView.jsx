@@ -1337,7 +1337,7 @@ export default function SetupView({
                       )}
                       {SERVICE_MODELS.map(model => (
                         <option key={model} value={model}>
-                          {SERVICE_MODEL_METADATA[model]?.icon || '🛎️'} {SERVICE_MODEL_METADATA[model]?.label || model}
+                          {SERVICE_MODEL_METADATA[model]?.label || model}
                         </option>
                       ))}
                     </select>
@@ -1356,7 +1356,7 @@ export default function SetupView({
                         {FOOD_TYPE_METADATA[currentFoodType]?.icon || '🟢'} Food: {FOOD_TYPE_METADATA[currentFoodType]?.label || currentFoodType}
                       </span>
                       <span style={{ fontSize: '0.74rem', fontWeight: 700, background: '#FFFFFF', padding: '3px 8px', borderRadius: '6px', border: '1px solid #E2E8F0', color: '#1E293B', display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
-                        {SERVICE_MODEL_METADATA[currentServiceModel]?.icon || '🪑'} Service: {SERVICE_MODEL_METADATA[currentServiceModel]?.label || currentServiceModel}
+                        Service: {SERVICE_MODEL_METADATA[currentServiceModel]?.label || currentServiceModel}
                       </span>
                     </div>
                   </div>
