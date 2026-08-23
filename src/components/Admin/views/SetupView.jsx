@@ -413,8 +413,8 @@ export default function SetupView({
                   <MapPin size={20} />
                 </div>
                 <div style={{ minWidth: 0 }}>
-                  <strong style={{ fontSize: '0.94rem', color: '#0F172A', fontWeight: 800, display: 'block' }}>Location & Delivery</strong>
-                  <span style={{ fontSize: '0.75rem', color: '#64748B', fontWeight: 500 }}>GPS coordinates, geofence radius</span>
+                  <strong style={{ fontSize: '0.94rem', color: '#0F172A', fontWeight: 800, display: 'block' }}>Location & GPS Geofence</strong>
+                  <span style={{ fontSize: '0.75rem', color: '#64748B', fontWeight: 500 }}>Configure on-premise customer presence verification and geofence settings</span>
                 </div>
               </div>
               <ChevronRight size={18} color="#94A3B8" style={{ flexShrink: 0 }} />
@@ -1499,7 +1499,7 @@ export default function SetupView({
         </form>
       </AdminDrawer>
 
-      {/* Drawer 4: Location & Delivery */}
+      {/* Drawer 4: Location & GPS Geofence */}
       <AdminDrawer
         isOpen={openDrawer === 'location'}
         onClose={() => setOpenDrawer(null)}

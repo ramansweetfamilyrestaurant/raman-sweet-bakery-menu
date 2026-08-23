@@ -27,7 +27,7 @@ export const HIGHLIGHT_CHIPS = {
   fast_food: [
     { id: 'crispy_bites', label: '🍟 Crispy & Fresh' },
     { id: 'awesome_shakes', label: '🥤 Awesome Shakes' },
-    { id: 'quick_delivery', label: '⚡ Lightning Fast' },
+    { id: 'quick_service', label: '⚡ Lightning Fast' },
     { id: 'great_vibe', label: '🎵 Cool Vibe' },
     { id: 'good_value', label: '💰 Reasonable Price' }
   ],
@@ -80,11 +80,11 @@ const TEMPLATE_MATRIX = {
       "Best hangout spot! {name} serves fresh, mouth-watering fast food at reasonable prices. Super fast service and polite staff!"
     ],
     4: [
-      "Really tasty fast food at {name}. Quick delivery and good quality snacks.",
+      "Really tasty fast food at {name}. Quick service and good quality snacks.",
       "Good quick bites and refreshing drinks. Fast service and clean counter."
     ],
     3: [
-      "Okay experience at {name}. Food was average, delivery took a little time."
+      "Okay experience at {name}. Food was average, service took a little time."
     ]
   },
   pure_veg: {
@@ -102,7 +102,7 @@ const TEMPLATE_MATRIX = {
   },
   biryani: {
     5: [
-      "Unmatched flavor at {name}! Perfectly cooked, aromatic biryani with rich spices and generous portions. Fast delivery & clean hygiene!",
+      "Unmatched flavor at {name}! Perfectly cooked, aromatic biryani with rich spices and generous portions. Fast service & clean hygiene!",
       "Best biryani & non-veg specialities! {name} serves succulent, flavor-packed dishes. Highly recommended for food lovers!"
     ],
     4: [

@@ -243,7 +243,7 @@ export default function ReviewView({ settingsForm, setSettingsForm, handleSaveSe
               </label>
               <textarea
                 rows="3"
-                placeholder="Paste customer Google review text here (e.g. 'Loved the Paneer Tikka! Great service and quick delivery.')"
+                placeholder="Paste customer Google review text here (e.g. 'Loved the Paneer Tikka! Great service and quick preparation.')"
                 value={customerReview}
                 onChange={(e) => setCustomerReview(e.target.value)}
                 style={{ width: '100%', padding: '10px 14px', borderRadius: 'var(--adm-radius-md)', border: '1px solid var(--adm-border)', fontSize: '0.86rem' }}
