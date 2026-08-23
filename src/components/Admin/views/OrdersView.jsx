@@ -1,6 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { Clock, Printer, MapPin, Bell, RefreshCw, CheckCircle2, QrCode, XCircle, UtensilsCrossed, Shield, ShieldCheck, ShieldAlert, Check, X, AlertTriangle } from 'lucide-react';
 import KdsDisplayView from './KdsDisplayView';
+import { resolveBusinessProfile } from '../../../utils/businessTaxonomy';
+import { fetchCinemaScreens, fetchCinemaSeats } from '../../../api/client';
 
 export default function OrdersView({
   orders = [],
@@ -23,7 +25,10 @@ export default function OrdersView({
   printingOrderId,
   printingType,
   currencySymbol = '₹',
-  ordersEnabled = true
+  ordersEnabled = true,
+  settingsForm = {},
+  token = null,
+  onNavigateToSetup = null
 }) {
   const safeParseItems = (rawItems) => {
     if (!rawItems) return [];
@@ -52,6 +57,41 @@ export default function OrdersView({
     }
     return [];
   };
+
+  const profile = resolveBusinessProfile(restaurantInfo || settingsForm || {});
+  const isCinema = (profile?.business_type || settingsForm?.business_type || restaurantInfo?.business_type) === 'cinema_theatre' && 
+                   (profile?.service_model || settingsForm?.service_model || restaurantInfo?.service_model) === 'seat_service';
+  const isHotel = (profile?.business_type || settingsForm?.business_type || restaurantInfo?.business_type) === 'hotel_resort' && 
+                  (profile?.service_model || settingsForm?.service_model || restaurantInfo?.service_model) === 'in_room_dining';
+  const isDining = !isCinema && !isHotel;
+
+  const [cinemaScreens, setCinemaScreens] = useState([]);
+  const [cinemaSeats, setCinemaSeats] = useState([]);
+  const [loadingCinema, setLoadingCinema] = useState(false);
+
+  useEffect(() => {
+    if (!isCinema || !token) return;
+    let isMounted = true;
+    const loadCinemaInventory = async () => {
+      setLoadingCinema(true);
+      try {
+        const [screensRes, seatsRes] = await Promise.all([
+          fetchCinemaScreens(token),
+          fetchCinemaSeats(token)
+        ]);
+        if (isMounted) {
+          if (screensRes && screensRes.screens) setCinemaScreens(screensRes.screens);
+          if (seatsRes && seatsRes.seats) setCinemaSeats(seatsRes.seats);
+        }
+      } catch (err) {
+        console.warn('Could not load cinema inventory for orders view:', err);
+      } finally {
+        if (isMounted) setLoadingCinema(false);
+      }
+    };
+    loadCinemaInventory();
+    return () => { isMounted = false; };
+  }, [isCinema, token]);
 
   const validOrders = (Array.isArray(orders) ? orders : []).filter(o => o.status !== 'rejected' && o.status !== 'cancelled');
   const safeServiceRequests = Array.isArray(serviceRequests) ? serviceRequests : [];
@@ -118,9 +158,39 @@ export default function OrdersView({
   };
 
   const formatCleanTableLabel = (raw, spaceType) => {
-    if (!raw) return 'Table 1';
+    if (!raw) return isCinema ? 'Screen 1 • Seat 1' : isHotel ? 'Room 101' : 'Table 1';
     const str = String(raw).trim();
-    if (/^(table|room|cabin|vip|takeaway|parcel)/i.test(str) || /^[\p{Emoji}\u2000-\u3300]/u.test(str)) {
+    
+    // Cinema matching
+    const cMatch = str.match(/^S?(\d+)[- •]+(?:Row[- ]*)?([A-Za-z]+)[- •]+(?:Seat[- ]*)?(\d+)$/i) ||
+                   str.match(/Screen\s*(\d+)\s*[-•]\s*Row\s*([A-Za-z]+)\s*[-•]\s*Seat\s*(\d+)/i);
+    if (cMatch) {
+      return `🎬 Screen ${cMatch[1]} • Row ${cMatch[2].toUpperCase()} • Seat ${cMatch[3]}`;
+    }
+    if (str.toLowerCase().startsWith('screen')) {
+      return `🎬 ${str}`;
+    }
+    if (isCinema && !str.toLowerCase().includes('table')) {
+      return `🎬 Seat ${str}`;
+    }
+
+    // Hotel Room matching
+    if (/^room\s*#?\d+/i.test(str)) {
+      return `🏨 ${str.charAt(0).toUpperCase() + str.slice(1)}`;
+    }
+    if (isHotel && /^\d+$/.test(str)) {
+      return `🏨 Room ${str}`;
+    }
+
+    // Cabin & VIP matching
+    if (/^cabin\s*#?\d+/i.test(str)) {
+      return `🛋️ ${str.charAt(0).toUpperCase() + str.slice(1)}`;
+    }
+    if (/^vip\s*#?\d+/i.test(str)) {
+      return `👑 ${str.toUpperCase()}`;
+    }
+
+    if (/^(table|room|cabin|vip|takeaway|parcel)/i.test(str) || /^[\p{Extended_Pictographic}\u2000-\u3300]/u.test(str)) {
       return str;
     }
     const prefix = (spaceType && spaceType !== 'table') ? (spaceType.charAt(0).toUpperCase() + spaceType.slice(1)) : 'Table';
@@ -200,14 +270,22 @@ export default function OrdersView({
         <div>
           <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '2px', flexWrap: 'wrap' }}>
             <h2 style={{ fontSize: '1.3rem', fontWeight: 900, color: '#0F172A', margin: 0, letterSpacing: '-0.02em' }}>
-              {kdsEnabled ? 'Orders & Kitchen Operations' : 'Live Table Orders & Operations'}
+              {isCinema
+                ? (kdsEnabled ? 'Cinema Orders & Kitchen Operations' : 'Live Cinema Seat Orders & Operations')
+                : isHotel
+                  ? (kdsEnabled ? 'Room Orders & Kitchen Operations' : 'Live Room Orders & Operations')
+                  : (kdsEnabled ? 'Orders & Kitchen Operations' : 'Live Table Orders & Operations')}
             </h2>
             <span style={{ fontSize: '0.68rem', fontWeight: 800, background: '#DCFCE7', color: '#15803D', border: '1px solid #86EFAC', padding: '2px 8px', borderRadius: '12px', display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
               ● LIVE
             </span>
           </div>
           <span style={{ fontSize: '0.78rem', color: '#64748B', fontWeight: 500 }}>
-            {kdsEnabled ? 'Live table orders, floor map & kitchen display screen' : 'Live table orders, floor map & waiter calls'}
+            {isCinema
+              ? (kdsEnabled ? 'Live auditorium seat orders & kitchen display screen' : 'Live auditorium seat orders & operations')
+              : isHotel
+                ? (kdsEnabled ? 'Live in-room guest dining orders & kitchen screen' : 'Live in-room guest dining orders & operations')
+                : (kdsEnabled ? 'Live table orders, floor map & kitchen display screen' : 'Live table orders, floor map & waiter calls')}
           </span>
         </div>
 
@@ -243,7 +321,7 @@ export default function OrdersView({
             transition: 'all 0.15s ease'
           }}
         >
-          📋 Live Orders ({validOrders.length})
+          {isCinema ? `🎬 Seat Orders (${validOrders.length})` : isHotel ? `🏨 Room Orders (${validOrders.length})` : `📋 Live Orders (${validOrders.length})`}
         </button>
         <button
           onClick={() => setActiveSubTab('floor-map')}
@@ -259,24 +337,26 @@ export default function OrdersView({
             transition: 'all 0.15s ease'
           }}
         >
-          🗺️ Floor Map ({totalTables} Tables)
+          {isCinema ? `💺 Cinema Seats (${cinemaSeats.length})` : isHotel ? `🏨 Room Status (${totalTables} Rooms)` : `🗺️ Floor Map (${totalTables} Tables)`}
         </button>
-        <button
-          onClick={() => setActiveSubTab('service-requests')}
-          style={{
-            padding: '7px 16px',
-            borderRadius: '9px',
-            fontSize: '0.82rem',
-            fontWeight: 800,
-            border: 'none',
-            cursor: 'pointer',
-            background: activeSubTab === 'service-requests' ? '#0F172A' : 'transparent',
-            color: activeSubTab === 'service-requests' ? '#FFFFFF' : '#64748B',
-            transition: 'all 0.15s ease'
-          }}
-        >
-          🛎️ Waiter Calls ({safeServiceRequests.length})
-        </button>
+        {!isCinema && (
+          <button
+            onClick={() => setActiveSubTab('service-requests')}
+            style={{
+              padding: '7px 16px',
+              borderRadius: '9px',
+              fontSize: '0.82rem',
+              fontWeight: 800,
+              border: 'none',
+              cursor: 'pointer',
+              background: activeSubTab === 'service-requests' ? '#0F172A' : 'transparent',
+              color: activeSubTab === 'service-requests' ? '#FFFFFF' : '#64748B',
+              transition: 'all 0.15s ease'
+            }}
+          >
+            {isHotel ? `🛎️ Guest Requests (${safeServiceRequests.length})` : `🛎️ Waiter Calls (${safeServiceRequests.length})`}
+          </button>
+        )}
         {kdsEnabled && (
           <a
             href={`/${localStorage.getItem('touchqr_admin_slug') || restaurantInfo?.slug || ''}/kitchen`}
@@ -344,8 +424,14 @@ export default function OrdersView({
             {filteredOrders.length === 0 ? (
               <div style={{ padding: '40px 20px', textAlign: 'center', background: '#FFFFFF', borderRadius: '16px', border: '1px solid #E2E8F0' }}>
                 <Clock size={36} color="#94A3B8" style={{ marginBottom: '8px' }} />
-                <h4 style={{ fontSize: '1rem', fontWeight: 800, color: '#0F172A', margin: '0 0 4px 0' }}>No active orders in this view</h4>
-                <p style={{ fontSize: '0.8rem', color: '#64748B', margin: 0 }}>New orders placed via QR will ring and appear here live.</p>
+                <h4 style={{ fontSize: '1rem', fontWeight: 800, color: '#0F172A', margin: '0 0 4px 0' }}>
+                  {isCinema ? '🎬 No Active Seat Orders' : 'No active orders in this view'}
+                </h4>
+                <p style={{ fontSize: '0.8rem', color: '#64748B', margin: 0 }}>
+                  {isCinema
+                    ? 'When guests scan their cinema seat QR codes, active orders will appear here live.'
+                    : 'New orders placed via QR will ring and appear here live.'}
+                </p>
               </div>
             ) : (
               filteredOrders.map(order => {
@@ -387,7 +473,7 @@ export default function OrdersView({
                           </span>
                           {Number(order.round_number) > 1 && (
                             <span style={{ background: '#FEF3C7', color: '#B45309', border: '1px solid #FCD34D', padding: '2px 8px', borderRadius: '8px', fontSize: '0.72rem', fontWeight: 800 }}>
-                              🔄 Round {order.round_number} (Add-on)
+                              🔄 Round {order.round_number} (Add-on{isCinema ? ' Seat Order' : isHotel ? ' Room Order' : ''})
                             </span>
                           )}
                         </div>
@@ -676,98 +762,362 @@ export default function OrdersView({
         </div>
       )}
 
-      {/* FLOOR MAP SUBTAB */}
+      {/* FLOOR MAP / CINEMA SEATS SUBTAB */}
       {activeSubTab === 'floor-map' && (
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(220px, 1fr))', gap: '12px' }}>
-          {tableGrid.map(t => {
-            const isOccupied = t.status === 'occupied';
-            const isService = t.status === 'service_needed';
-            const isFree = t.status === 'available';
+        isCinema ? (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+            {loadingCinema ? (
+              <div style={{ padding: '40px 20px', textAlign: 'center', background: '#FFFFFF', borderRadius: '16px', border: '1px solid #E2E8F0', color: 'var(--adm-muted)' }}>
+                ⏳ Loading auditorium screens and seat inventory...
+              </div>
+            ) : cinemaScreens.length === 0 ? (
+              <div style={{ padding: '40px 20px', textAlign: 'center', background: '#FFFFFF', borderRadius: '16px', border: '1px solid #E2E8F0' }}>
+                <div style={{ fontSize: '2.5rem', marginBottom: '8px' }}>🎬</div>
+                <h4 style={{ fontSize: '1.05rem', fontWeight: 800, color: '#0F172A', margin: '0 0 6px 0' }}>
+                  No Cinema Seats Configured
+                </h4>
+                <p style={{ fontSize: '0.84rem', color: '#64748B', maxWidth: '440px', margin: '0 auto 16px auto' }}>
+                  Please configure auditorium screens, rows, and seats in Cinema Management to view live seat order status.
+                </p>
+                {onNavigateToSetup && (
+                  <button
+                    onClick={() => onNavigateToSetup('cinema')}
+                    className="adm-btn adm-btn-primary"
+                    style={{ fontWeight: 800 }}
+                  >
+                    Go to Cinema Management ➔
+                  </button>
+                )}
+              </div>
+            ) : (
+              cinemaScreens.map(scr => {
+                const scrSeats = cinemaSeats.filter(st => Number(st.screen_id) === Number(scr.id));
+                const rows = {};
+                scrSeats.forEach(st => {
+                  const r = (st.row_label || 'A').toUpperCase();
+                  if (!rows[r]) rows[r] = [];
+                  rows[r].push(st);
+                });
+                const rowLabels = Object.keys(rows).sort();
 
-            return (
-              <div
-                key={t.tableNumber}
-                style={{
-                  background: isOccupied ? '#FEF2F2' : isService ? '#FFFBEB' : '#FFFFFF',
-                  border: '1px solid',
-                  borderColor: isOccupied ? '#FECACA' : isService ? '#FDE68A' : '#E2E8F0',
-                  borderRadius: '16px',
-                  padding: '16px',
-                  display: 'flex',
-                  flexDirection: 'column',
-                  justifyContent: 'space-between',
-                  gap: '12px',
-                  boxShadow: '0 2px 8px rgba(0,0,0,0.02)'
-                }}
-              >
-                <div>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
-                    <strong style={{ fontSize: '1.05rem', color: '#0F172A', fontWeight: 900 }}>
-                      {spaceLabel.toUpperCase()} {t.tableNumber}
-                    </strong>
-                    <span style={{
-                      padding: '3px 8px',
-                      borderRadius: '8px',
-                      fontSize: '0.70rem',
-                      fontWeight: 800,
-                      background: isOccupied ? '#FEE2E2' : isService ? '#FEF3C7' : '#DCFCE7',
-                      color: isOccupied ? '#DC2626' : isService ? '#B45309' : '#15803D',
-                      border: isOccupied ? '1px solid #FCA5A5' : isService ? '1px solid #FCD34D' : '1px solid #86EFAC'
-                    }}>
-                      {isOccupied ? '🔴 SEATED' : isService ? '🟡 CALL' : '🟢 FREE'}
-                    </span>
-                  </div>
-
-                  {isOccupied && t.activeOrder && (
-                    <div style={{ fontSize: '0.80rem', background: '#FFFFFF', padding: '10px', borderRadius: '10px', border: '1px solid #E2E8F0' }}>
-                      <div style={{ display: 'flex', justifyContent: 'space-between', fontWeight: 800 }}>
-                        <span>Order #{t.activeOrder.id}</span>
-                        <span style={{ color: '#DC2626' }}>{currencySymbol}{t.activeOrder.total_amount}</span>
-                      </div>
-                      <div style={{ color: '#64748B', marginTop: '3px' }}>
-                        {t.activeOrder.customer_name || 'Guest'} • {safeParseItems(t.activeOrder.items).length} items
-                      </div>
-                    </div>
-                  )}
-
-                  {isService && t.serviceRequest && (
-                    t.serviceRequest.request_type === 'presence_verification' ? (
-                      <div style={{ fontSize: '0.80rem', background: '#F0FDF4', padding: '10px', borderRadius: '10px', border: '1px solid #BBF7D0' }}>
-                        <strong style={{ color: '#166534', display: 'flex', alignItems: 'center', gap: '4px' }}>
-                          🛡️ Presence Verification
+                return (
+                  <div
+                    key={scr.id}
+                    style={{
+                      background: '#FFFFFF',
+                      borderRadius: '16px',
+                      border: '1px solid #E2E8F0',
+                      padding: '18px 20px',
+                      boxShadow: '0 2px 8px rgba(0,0,0,0.02)',
+                      display: 'flex',
+                      flexDirection: 'column',
+                      gap: '14px'
+                    }}
+                  >
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '8px', borderBottom: '1px solid #F1F5F9', paddingBottom: '12px' }}>
+                      <div>
+                        <strong style={{ fontSize: '1.1rem', color: '#0F172A', fontWeight: 900 }}>
+                          🎬 Screen {scr.screen_number}: {scr.name}
                         </strong>
-                        <span style={{ fontSize: '0.74rem', color: '#15803D', display: 'block', marginTop: '2px' }}>
-                          Customer awaiting table authorization
+                        <span style={{ fontSize: '0.78rem', color: '#64748B', marginLeft: '8px', fontWeight: 600 }}>
+                          ({scrSeats.length} configured seats)
                         </span>
                       </div>
-                    ) : (
-                      <div style={{ fontSize: '0.80rem', background: '#FFFFFF', padding: '10px', borderRadius: '10px', border: '1px solid #FDE68A' }}>
-                        <strong style={{ color: '#B45309', display: 'block' }}>{t.serviceRequest.request_type}</strong>
-                        {t.serviceRequest.note && <span style={{ fontStyle: 'italic', color: '#64748B' }}>"{t.serviceRequest.note}"</span>}
+                    </div>
+
+                    {rowLabels.length === 0 ? (
+                      <div style={{ fontSize: '0.82rem', color: '#94A3B8', fontStyle: 'italic', padding: '10px 0' }}>
+                        No rows or seats configured for this screen yet.
                       </div>
-                    )
-                  )}
+                    ) : (
+                      rowLabels.map(rLabel => (
+                        <div key={rLabel} style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                          <div style={{ fontSize: '0.78rem', fontWeight: 800, color: '#475569', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                            <span style={{ background: '#F1F5F9', padding: '2px 8px', borderRadius: '6px', border: '1px solid #E2E8F0' }}>
+                              ROW {rLabel}
+                            </span>
+                          </div>
 
-                  {isFree && (
-                    <span style={{ fontSize: '0.78rem', color: '#15803D', fontWeight: 600, display: 'block', margin: '6px 0' }}>
-                      Ready for guests ✨
-                    </span>
-                  )}
-                </div>
+                          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(180px, 1fr))', gap: '8px' }}>
+                            {rows[rLabel]
+                              .sort((a, b) => Number(a.seat_number) - Number(b.seat_number))
+                              .map(seat => {
+                                const seatKey1 = `Screen ${scr.screen_number} - Row ${rLabel} - Seat ${seat.seat_number}`.toLowerCase();
+                                const seatKey2 = `S${scr.screen_number}-${rLabel}-${seat.seat_number}`.toLowerCase();
+                                const seatKey3 = `${seat.seat_code || ''}`.toLowerCase();
 
-                <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap' }}>
-                  {isOccupied && t.activeOrder && (
-                    <>
+                                const activeOrder = validOrders.find(o => {
+                                  if (o.status === 'completed' || o.status === 'rejected' || o.status === 'cancelled') return false;
+                                  const tStr = String(o.table_number || '').toLowerCase();
+                                  return tStr === seatKey1 || tStr === seatKey2 || (seatKey3 && tStr === seatKey3);
+                                });
+
+                                const isOccupied = Boolean(activeOrder);
+
+                                return (
+                                  <div
+                                    key={seat.id}
+                                    style={{
+                                      background: isOccupied ? '#FEF2F2' : '#F8FAFC',
+                                      border: '1px solid',
+                                      borderColor: isOccupied ? '#FECACA' : '#E2E8F0',
+                                      borderRadius: '12px',
+                                      padding: '10px 12px',
+                                      display: 'flex',
+                                      flexDirection: 'column',
+                                      justifyContent: 'space-between',
+                                      gap: '6px'
+                                    }}
+                                  >
+                                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                                      <strong style={{ fontSize: '0.86rem', color: isOccupied ? '#991B1B' : '#0F172A', fontWeight: 800 }}>
+                                        💺 {rLabel}{seat.seat_number}
+                                      </strong>
+                                      <span style={{
+                                        fontSize: '0.66rem',
+                                        fontWeight: 800,
+                                        padding: '2px 6px',
+                                        borderRadius: '6px',
+                                        background: isOccupied ? '#FEE2E2' : '#DCFCE7',
+                                        color: isOccupied ? '#DC2626' : '#15803D',
+                                        border: isOccupied ? '1px solid #FCA5A5' : '1px solid #86EFAC'
+                                      }}>
+                                        {isOccupied ? '🔴 ORDER' : '🟢 FREE'}
+                                      </span>
+                                    </div>
+
+                                    {isOccupied && activeOrder && (
+                                      <div style={{ fontSize: '0.74rem', background: '#FFFFFF', padding: '6px 8px', borderRadius: '8px', border: '1px solid #FECACA' }}>
+                                        <div style={{ display: 'flex', justifyContent: 'space-between', fontWeight: 800 }}>
+                                          <span>#{activeOrder.id}</span>
+                                          <span style={{ color: '#DC2626' }}>{currencySymbol}{activeOrder.total_amount}</span>
+                                        </div>
+                                        <div style={{ display: 'flex', gap: '4px', marginTop: '6px' }}>
+                                          <button
+                                            onClick={() => onOpenBillModal ? onOpenBillModal(activeOrder) : (onPrintBill && onPrintBill(activeOrder))}
+                                            style={{ flex: 1, padding: '4px', fontSize: '0.70rem', fontWeight: 800, borderRadius: '6px', background: '#F1F5F9', border: '1px solid #E2E8F0', cursor: 'pointer' }}
+                                          >
+                                            Bill
+                                          </button>
+                                          <button
+                                            onClick={() => onUpdateStatus(activeOrder.id, 'completed')}
+                                            style={{ flex: 1, padding: '4px', fontSize: '0.70rem', fontWeight: 800, borderRadius: '6px', background: '#0F172A', color: '#FFF', border: 'none', cursor: 'pointer' }}
+                                          >
+                                            Settle
+                                          </button>
+                                        </div>
+                                      </div>
+                                    )}
+                                  </div>
+                                );
+                              })}
+                          </div>
+                        </div>
+                      ))
+                    )}
+                  </div>
+                );
+              })
+            )}
+          </div>
+        ) : (
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(220px, 1fr))', gap: '12px' }}>
+            {tableGrid.map(t => {
+              const isOccupied = t.status === 'occupied';
+              const isService = t.status === 'service_needed';
+              const isFree = t.status === 'available';
+
+              return (
+                <div
+                  key={t.tableNumber}
+                  style={{
+                    background: isOccupied ? '#FEF2F2' : isService ? '#FFFBEB' : '#FFFFFF',
+                    border: '1px solid',
+                    borderColor: isOccupied ? '#FECACA' : isService ? '#FDE68A' : '#E2E8F0',
+                    borderRadius: '16px',
+                    padding: '16px',
+                    display: 'flex',
+                    flexDirection: 'column',
+                    justifyContent: 'space-between',
+                    gap: '12px',
+                    boxShadow: '0 2px 8px rgba(0,0,0,0.02)'
+                  }}
+                >
+                  <div>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
+                      <strong style={{ fontSize: '1.05rem', color: '#0F172A', fontWeight: 900 }}>
+                        {spaceLabel.toUpperCase()} {t.tableNumber}
+                      </strong>
+                      <span style={{
+                        padding: '3px 8px',
+                        borderRadius: '8px',
+                        fontSize: '0.70rem',
+                        fontWeight: 800,
+                        background: isOccupied ? '#FEE2E2' : isService ? '#FEF3C7' : '#DCFCE7',
+                        color: isOccupied ? '#DC2626' : isService ? '#B45309' : '#15803D',
+                        border: isOccupied ? '1px solid #FCA5A5' : isService ? '1px solid #FCD34D' : '1px solid #86EFAC'
+                      }}>
+                        {isOccupied ? '🔴 SEATED' : isService ? '🟡 CALL' : '🟢 FREE'}
+                      </span>
+                    </div>
+
+                    {isOccupied && t.activeOrder && (
+                      <div style={{ fontSize: '0.80rem', background: '#FFFFFF', padding: '10px', borderRadius: '10px', border: '1px solid #E2E8F0' }}>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', fontWeight: 800 }}>
+                          <span>Order #{t.activeOrder.id}</span>
+                          <span style={{ color: '#DC2626' }}>{currencySymbol}{t.activeOrder.total_amount}</span>
+                        </div>
+                        <div style={{ color: '#64748B', marginTop: '3px' }}>
+                          {t.activeOrder.customer_name || 'Guest'} • {safeParseItems(t.activeOrder.items).length} items
+                        </div>
+                      </div>
+                    )}
+
+                    {isService && t.serviceRequest && (
+                      t.serviceRequest.request_type === 'presence_verification' ? (
+                        <div style={{ fontSize: '0.80rem', background: '#F0FDF4', padding: '10px', borderRadius: '10px', border: '1px solid #BBF7D0' }}>
+                          <strong style={{ color: '#166534', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                            🛡️ Presence Verification
+                          </strong>
+                          <span style={{ fontSize: '0.74rem', color: '#15803D', display: 'block', marginTop: '2px' }}>
+                            Customer awaiting table authorization
+                          </span>
+                        </div>
+                      ) : (
+                        <div style={{ fontSize: '0.80rem', background: '#FFFFFF', padding: '10px', borderRadius: '10px', border: '1px solid #FDE68A' }}>
+                          <strong style={{ color: '#B45309', display: 'block' }}>{t.serviceRequest.request_type}</strong>
+                          {t.serviceRequest.note && <span style={{ fontStyle: 'italic', color: '#64748B' }}>"{t.serviceRequest.note}"</span>}
+                        </div>
+                      )
+                    )}
+
+                    {isFree && (
+                      <span style={{ fontSize: '0.78rem', color: '#15803D', fontWeight: 600, display: 'block', margin: '6px 0' }}>
+                        Ready for guests ✨
+                      </span>
+                    )}
+                  </div>
+
+                  <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap' }}>
+                    {isOccupied && t.activeOrder && (
+                      <>
+                        <button
+                          onClick={() => onOpenBillModal(t.activeOrder)}
+                          style={{
+                            flex: 1,
+                            padding: '8px',
+                            borderRadius: '8px',
+                            background: '#F1F5F9',
+                            color: '#334155',
+                            border: '1px solid #E2E8F0',
+                            fontSize: '0.78rem',
+                            fontWeight: 800,
+                            cursor: 'pointer',
+                            display: 'inline-flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            gap: '4px'
+                          }}
+                        >
+                          <Printer size={12} /> Bill
+                        </button>
+                        <button
+                          onClick={() => onUpdateStatus(t.activeOrder.id, 'completed')}
+                          style={{
+                            flex: 1,
+                            padding: '8px',
+                            borderRadius: '8px',
+                            background: '#0F172A',
+                            color: '#FFFFFF',
+                            border: 'none',
+                            fontSize: '0.78rem',
+                            fontWeight: 800,
+                            cursor: 'pointer'
+                          }}
+                        >
+                          Clear
+                        </button>
+                      </>
+                    )}
+
+                    {isService && t.serviceRequest && (
+                      t.serviceRequest.request_type === 'presence_verification' ? (
+                        <div style={{ display: 'flex', gap: '6px', width: '100%' }}>
+                          <button
+                            onClick={() => handleApprove(t.serviceRequest)}
+                            disabled={Boolean(processingReqState[t.serviceRequest.id])}
+                            style={{
+                              flex: 2,
+                              padding: '8px',
+                              borderRadius: '8px',
+                              background: 'linear-gradient(135deg, #10B981 0%, #059669 100%)',
+                              color: '#FFFFFF',
+                              border: 'none',
+                              fontSize: '0.78rem',
+                              fontWeight: 800,
+                              cursor: processingReqState[t.serviceRequest.id] ? 'not-allowed' : 'pointer',
+                              opacity: processingReqState[t.serviceRequest.id] ? 0.7 : 1,
+                              display: 'flex',
+                              alignItems: 'center',
+                              justifyContent: 'center',
+                              gap: '4px'
+                            }}
+                          >
+                            {processingReqState[t.serviceRequest.id] === 'approving' ? 'Approving...' : '✓ Approve'}
+                          </button>
+                          <button
+                            onClick={() => handleOpenRejectModal(t.serviceRequest)}
+                            disabled={Boolean(processingReqState[t.serviceRequest.id])}
+                            style={{
+                              flex: 1,
+                              padding: '8px',
+                              borderRadius: '8px',
+                              background: '#FEF2F2',
+                              color: '#DC2626',
+                              border: '1px solid #FECACA',
+                              fontSize: '0.78rem',
+                              fontWeight: 800,
+                              cursor: processingReqState[t.serviceRequest.id] ? 'not-allowed' : 'pointer',
+                              opacity: processingReqState[t.serviceRequest.id] ? 0.7 : 1,
+                              display: 'flex',
+                              alignItems: 'center',
+                              justifyContent: 'center'
+                            }}
+                          >
+                            ✕ Reject
+                          </button>
+                        </div>
+                      ) : (
+                        <button
+                          onClick={() => onResolveServiceRequest(t.serviceRequest.id)}
+                          style={{
+                            width: '100%',
+                            padding: '8px',
+                            borderRadius: '8px',
+                            background: '#FEF3C7',
+                            color: '#B45309',
+                            border: '1px solid #FCD34D',
+                            fontSize: '0.78rem',
+                            fontWeight: 800,
+                            cursor: 'pointer'
+                          }}
+                        >
+                          ✓ Attend Call
+                        </button>
+                      )
+                    )}
+
+                    {isFree && onPrintQR && (
                       <button
-                        onClick={() => onOpenBillModal(t.activeOrder)}
+                        onClick={() => onPrintQR(t.tableNumber)}
                         style={{
-                          flex: 1,
+                          width: '100%',
                           padding: '8px',
                           borderRadius: '8px',
-                          background: '#F1F5F9',
-                          color: '#334155',
+                          background: '#F8FAFC',
+                          color: '#475569',
                           border: '1px solid #E2E8F0',
-                          fontSize: '0.78rem',
+                          fontSize: '0.76rem',
                           fontWeight: 800,
                           cursor: 'pointer',
                           display: 'inline-flex',
@@ -776,121 +1126,15 @@ export default function OrdersView({
                           gap: '4px'
                         }}
                       >
-                        <Printer size={12} /> Bill
+                        <QrCode size={12} /> Print Table Standee
                       </button>
-                      <button
-                        onClick={() => onUpdateStatus(t.activeOrder.id, 'completed')}
-                        style={{
-                          flex: 1,
-                          padding: '8px',
-                          borderRadius: '8px',
-                          background: '#0F172A',
-                          color: '#FFFFFF',
-                          border: 'none',
-                          fontSize: '0.78rem',
-                          fontWeight: 800,
-                          cursor: 'pointer'
-                        }}
-                      >
-                        Clear
-                      </button>
-                    </>
-                  )}
-
-                  {isService && t.serviceRequest && (
-                    t.serviceRequest.request_type === 'presence_verification' ? (
-                      <div style={{ display: 'flex', gap: '6px', width: '100%' }}>
-                        <button
-                          onClick={() => handleApprove(t.serviceRequest)}
-                          disabled={Boolean(processingReqState[t.serviceRequest.id])}
-                          style={{
-                            flex: 2,
-                            padding: '8px',
-                            borderRadius: '8px',
-                            background: 'linear-gradient(135deg, #10B981 0%, #059669 100%)',
-                            color: '#FFFFFF',
-                            border: 'none',
-                            fontSize: '0.78rem',
-                            fontWeight: 800,
-                            cursor: processingReqState[t.serviceRequest.id] ? 'not-allowed' : 'pointer',
-                            opacity: processingReqState[t.serviceRequest.id] ? 0.7 : 1,
-                            display: 'flex',
-                            alignItems: 'center',
-                            justifyContent: 'center',
-                            gap: '4px'
-                          }}
-                        >
-                          {processingReqState[t.serviceRequest.id] === 'approving' ? 'Approving...' : '✓ Approve'}
-                        </button>
-                        <button
-                          onClick={() => handleOpenRejectModal(t.serviceRequest)}
-                          disabled={Boolean(processingReqState[t.serviceRequest.id])}
-                          style={{
-                            flex: 1,
-                            padding: '8px',
-                            borderRadius: '8px',
-                            background: '#FEF2F2',
-                            color: '#DC2626',
-                            border: '1px solid #FECACA',
-                            fontSize: '0.78rem',
-                            fontWeight: 800,
-                            cursor: processingReqState[t.serviceRequest.id] ? 'not-allowed' : 'pointer',
-                            opacity: processingReqState[t.serviceRequest.id] ? 0.7 : 1,
-                            display: 'flex',
-                            alignItems: 'center',
-                            justifyContent: 'center'
-                          }}
-                        >
-                          ✕ Reject
-                        </button>
-                      </div>
-                    ) : (
-                      <button
-                        onClick={() => onResolveServiceRequest(t.serviceRequest.id)}
-                        style={{
-                          width: '100%',
-                          padding: '8px',
-                          borderRadius: '8px',
-                          background: '#FEF3C7',
-                          color: '#B45309',
-                          border: '1px solid #FCD34D',
-                          fontSize: '0.78rem',
-                          fontWeight: 800,
-                          cursor: 'pointer'
-                        }}
-                      >
-                        ✓ Attend Call
-                      </button>
-                    )
-                  )}
-
-                  {isFree && onPrintQR && (
-                    <button
-                      onClick={() => onPrintQR(t.tableNumber)}
-                      style={{
-                        width: '100%',
-                        padding: '8px',
-                        borderRadius: '8px',
-                        background: '#F8FAFC',
-                        color: '#475569',
-                        border: '1px solid #E2E8F0',
-                        fontSize: '0.76rem',
-                        fontWeight: 800,
-                        cursor: 'pointer',
-                        display: 'inline-flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        gap: '4px'
-                      }}
-                    >
-                      <QrCode size={12} /> Print Table Standee
-                    </button>
-                  )}
+                    )}
+                  </div>
                 </div>
-              </div>
-            );
-          })}
-        </div>
+              );
+            })}
+          </div>
+        )
       )}
 
       {/* WAITER CALLS SUBTAB */}

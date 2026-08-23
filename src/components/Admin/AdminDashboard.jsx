@@ -2821,6 +2821,12 @@ export default function AdminDashboard({ token, username, slug: propSlug = '', o
                 printingOrderId={printingOrderId}
                 printingType={printingType}
                 currencySymbol={settingsForm.currency_symbol !== undefined && settingsForm.currency_symbol !== null ? settingsForm.currency_symbol : '₹'}
+                settingsForm={settingsForm}
+                token={token}
+                onNavigateToSetup={(drawer = null) => {
+                  setInitialSetupDrawer(drawer);
+                  setActiveTab('settings');
+                }}
                 ordersEnabled={isDirectOrderingEnabled}
               />
             )}

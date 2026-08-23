@@ -213,16 +213,30 @@ export default function StandaloneKdsPage({ slug = '' }) {
     return Math.max(0, Math.floor((now - orderTime) / 60000));
   };
 
-  const parseItems = (raw) => {
-    if (!raw) return [];
-    if (Array.isArray(raw)) return raw;
-    if (typeof raw === 'string') {
-      try {
-        const parsed = JSON.parse(raw);
-        return Array.isArray(parsed) ? parsed : [];
-      } catch (e) { return []; }
+  const formatKdsLocation = (raw) => {
+    if (!raw) return 'TAKEAWAY';
+    const str = String(raw).trim();
+    const cMatch = str.match(/^S?(\d+)[- •]+(?:Row[- ]*)?([A-Za-z]+)[- •]+(?:Seat[- ]*)?(\d+)$/i) ||
+                   str.match(/Screen\s*(\d+)\s*[-•]\s*Row\s*([A-Za-z]+)\s*[-•]\s*Seat\s*(\d+)/i);
+    if (cMatch) {
+      return `🎬 SCREEN ${cMatch[1]} • ROW ${cMatch[2].toUpperCase()} • SEAT ${cMatch[3]}`;
     }
-    return [];
+    if (str.toLowerCase().startsWith('screen')) {
+      return `🎬 ${str.toUpperCase()}`;
+    }
+    if (/^room\s*#?\d+/i.test(str)) {
+      return `🏨 ${str.toUpperCase()}`;
+    }
+    if (/^cabin\s*#?\d+/i.test(str)) {
+      return `🛋️ ${str.toUpperCase()}`;
+    }
+    if (/^vip\s*#?\d+/i.test(str)) {
+      return `👑 ${str.toUpperCase()}`;
+    }
+    if (/^(table|room|cabin|vip|takeaway|parcel)/i.test(str) || /^[\p{Extended_Pictographic}\u2000-\u3300]/u.test(str)) {
+      return str.toUpperCase();
+    }
+    return `TABLE #${str}`;
   };
 
   if (loading) {
@@ -420,7 +434,7 @@ export default function StandaloneKdsPage({ slug = '' }) {
                 <div style={{ background: isDelayed ? '#7F1D1D' : '#1E3A8A', padding: '12px 16px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                   <div>
                     <strong style={{ fontSize: '1.3rem', color: '#FFF', fontWeight: 900, display: 'block' }}>
-                      TABLE #{order.table_number || 'Takeaway'}
+                      {formatKdsLocation(order.table_number)}
                     </strong>
                     <span style={{ fontSize: '0.75rem', color: '#93C5FD', fontWeight: 700 }}>
                       Order #{order.id} • {order.customer_name || 'Dine-in'}

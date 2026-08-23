@@ -42,6 +42,32 @@ export default function KdsDisplayView({
     return Math.max(0, Math.floor(diffMs / 60000));
   };
 
+  const formatKdsLocation = (raw) => {
+    if (!raw) return 'TAKEAWAY';
+    const str = String(raw).trim();
+    const cMatch = str.match(/^S?(\d+)[- •]+(?:Row[- ]*)?([A-Za-z]+)[- •]+(?:Seat[- ]*)?(\d+)$/i) ||
+                   str.match(/Screen\s*(\d+)\s*[-•]\s*Row\s*([A-Za-z]+)\s*[-•]\s*Seat\s*(\d+)/i);
+    if (cMatch) {
+      return `🎬 SCREEN ${cMatch[1]} • ROW ${cMatch[2].toUpperCase()} • SEAT ${cMatch[3]}`;
+    }
+    if (str.toLowerCase().startsWith('screen')) {
+      return `🎬 ${str.toUpperCase()}`;
+    }
+    if (/^room\s*#?\d+/i.test(str)) {
+      return `🏨 ${str.toUpperCase()}`;
+    }
+    if (/^cabin\s*#?\d+/i.test(str)) {
+      return `🛋️ ${str.toUpperCase()}`;
+    }
+    if (/^vip\s*#?\d+/i.test(str)) {
+      return `👑 ${str.toUpperCase()}`;
+    }
+    if (/^(table|room|cabin|vip|takeaway|parcel)/i.test(str) || /^[\p{Extended_Pictographic}\u2000-\u3300]/u.test(str)) {
+      return str.toUpperCase();
+    }
+    return `TABLE #${str}`;
+  };
+
   if (!kdsEnabled) {
     return (
       <div style={{ padding: '40px 20px', textAlign: 'center', background: '#FFF', borderRadius: 'var(--adm-radius-lg)', border: '1px solid var(--adm-border)' }}>
@@ -138,7 +164,7 @@ export default function KdsDisplayView({
                 <div style={{ background: isDelayed ? '#7F1D1D' : '#1E3A8A', padding: '12px 16px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                   <div>
                     <strong style={{ fontSize: '1.3rem', color: '#FFF', fontWeight: 900, display: 'block' }}>
-                      TABLE #{order.table_number || 'Takeaway'}
+                      {formatKdsLocation(order.table_number)}
                     </strong>
                     <span style={{ fontSize: '0.75rem', color: '#93C5FD', fontWeight: 700 }}>
                       Order #{order.id} • {order.customer_name || 'Dine-in'}
