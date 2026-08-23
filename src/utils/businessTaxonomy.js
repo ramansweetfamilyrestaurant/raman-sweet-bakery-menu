@@ -309,6 +309,49 @@ export function resolveBannerBadge(restaurant = {}) {
   return 'Veg & Non-Veg';
 }
 
+/**
+ * Returns the list of valid physical space types for a given business type and service model.
+ * @param {string} businessType
+ * @param {string} serviceModel
+ * @param {object} [options={}] - { total_tables, total_cabins, total_rooms, total_vip }
+ * @returns {Array<{ id: string, label: string, singular: string, plural: string, badge: string, param: string }>}
+ */
+export function getAvailableSpaceTypesForBusiness(businessType, serviceModel, options = {}) {
+  const cleanBiz = businessType ? String(businessType).trim().toLowerCase() : 'restaurant';
+  const canonicalBiz = BUSINESS_TYPE_ALIASES[cleanBiz] || (isValidBusinessType(cleanBiz) ? cleanBiz : 'restaurant');
+  const cleanService = serviceModel ? String(serviceModel).trim().toLowerCase() : resolveServiceModelForBusinessType(canonicalBiz);
+  const canonicalService = SERVICE_MODEL_ALIASES[cleanService] || cleanService;
+
+  if (canonicalBiz === 'cinema_theatre' || canonicalService === 'seat_service') {
+    return [
+      { id: 'cinema_seat', label: '🎬 Cinema Seat', singular: 'Cinema Seat', plural: 'Cinema Seats', badge: 'CINEMA SEAT', param: 'cinema' }
+    ];
+  }
+
+  if (canonicalBiz === 'hotel_resort' || canonicalService === 'in_room_dining') {
+    const list = [
+      { id: 'room', label: '🏨 Hotel Room', singular: 'Room', plural: 'Rooms', badge: 'ROOM NO.', param: 'room' }
+    ];
+    if (Number(options?.total_tables) > 0) {
+      list.push({ id: 'table', label: '🍽️ Dining Table', singular: 'Table', plural: 'Tables', badge: 'TABLE NO.', param: 'table' });
+    }
+    if (Number(options?.total_cabins) > 0) {
+      list.push({ id: 'cabin', label: '🛋️ Private Cabin', singular: 'Cabin', plural: 'Cabins', badge: 'CABIN NO.', param: 'cabin' });
+    }
+    if (Number(options?.total_vip) > 0) {
+      list.push({ id: 'vip', label: '👑 VIP Lounge', singular: 'VIP Lounge', plural: 'VIP Lounges', badge: 'VIP LOUNGE', param: 'vip' });
+    }
+    return list;
+  }
+
+  // All other dining / food service models (dine_in_table)
+  return [
+    { id: 'table', label: '🍽️ Dining Table', singular: 'Table', plural: 'Tables', badge: 'TABLE NO.', param: 'table' },
+    { id: 'cabin', label: '🛋️ Private Cabin', singular: 'Cabin', plural: 'Cabins', badge: 'CABIN NO.', param: 'cabin' },
+    { id: 'vip', label: '👑 VIP Lounge', singular: 'VIP Lounge', plural: 'VIP Lounges', badge: 'VIP LOUNGE', param: 'vip' }
+  ];
+}
+
 export default {
   BUSINESS_TYPES,
   FOOD_TYPES,
@@ -327,5 +370,6 @@ export default {
   isServiceModelValidForBusinessType,
   resolveServiceModelForBusinessType,
   resolveBusinessProfile,
-  resolveBannerBadge
+  resolveBannerBadge,
+  getAvailableSpaceTypesForBusiness
 };

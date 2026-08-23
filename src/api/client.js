@@ -832,4 +832,23 @@ export async function changePlan(planKey, token) {
   return handleResponse(res, 'Failed to change plan');
 }
 
+// ========== CINEMA SCREENS & SEATS ==========
+
+export async function fetchCinemaScreens(token) {
+  const res = await fetch(`${API_BASE}/admin/cinema/screens`, {
+    headers: { Authorization: `Bearer ${token}` }
+  });
+  return handleResponse(res, 'Failed to fetch cinema screens');
+}
+
+export async function fetchCinemaSeats(token, screenId = null) {
+  let url = `${API_BASE}/admin/cinema/seats`;
+  if (screenId) url += `?screen_id=${encodeURIComponent(screenId)}`;
+  const res = await fetch(url, {
+    headers: { Authorization: `Bearer ${token}` }
+  });
+  return handleResponse(res, 'Failed to fetch cinema seats');
+}
+
+
 

@@ -1,6 +1,8 @@
-import React from 'react';
-import { QrCode, Printer, Plus, Trash2, ExternalLink, Copy, Check, ArrowLeft, ShieldCheck } from 'lucide-react';
+import React, { useState, useEffect, useMemo } from 'react';
+import { QrCode, Printer, Plus, Trash2, ExternalLink, Copy, Check, ArrowLeft, ShieldCheck, Film, AlertTriangle } from 'lucide-react';
 import { generateQrToken } from '../../../utils/qrSecurity';
+import { getAvailableSpaceTypesForBusiness } from '../../../utils/businessTaxonomy';
+import { fetchCinemaScreens, fetchCinemaSeats } from '../../../api/client';
 
 export default function QrGeneratorView({
   tableNumber,
@@ -11,48 +13,158 @@ export default function QrGeneratorView({
   onPrintQR,
   onPrintAllQRs,
   settingsForm,
+  token,
   onReturnToMenu,
   onBackToSetup,
   onUpdateSpaceType
 }) {
-  const [copied, setCopied] = React.useState(false);
-  const [cinemaScreen, setCinemaScreen] = React.useState('1');
-  const [cinemaRow, setCinemaRow] = React.useState('A');
-  const [cinemaSeatNum, setCinemaSeatNum] = React.useState('1');
-
+  const [copied, setCopied] = useState(false);
   const liveOrigin = window.location.origin;
   const activeSlug = settingsForm?.slug || '';
-  const currentPrefix = (
+
+  // 1. Authoritative available physical space types for this business
+  const availableSpaceTypes = useMemo(() => {
+    return getAvailableSpaceTypesForBusiness(
+      settingsForm?.business_type,
+      settingsForm?.service_model,
+      settingsForm
+    );
+  }, [
+    settingsForm?.business_type,
+    settingsForm?.service_model,
+    settingsForm?.total_tables,
+    settingsForm?.total_cabins,
+    settingsForm?.total_rooms,
+    settingsForm?.total_vip
+  ]);
+
+  const validPrefixIds = useMemo(() => availableSpaceTypes.map(s => s.id), [availableSpaceTypes]);
+
+  // 2. Resolve current space prefix, ensuring it is valid for this business
+  const rawPrefix = (
     settingsForm?.table_prefix || 
     (activeSlug ? localStorage.getItem(`touchqr_table_prefix_${activeSlug}`) : null) || 
+    validPrefixIds[0] || 
     'table'
   ).toLowerCase();
 
+  const currentPrefix = validPrefixIds.includes(rawPrefix) ? rawPrefix : (validPrefixIds[0] || 'table');
   const isCinema = currentPrefix === 'cinema_seat' || currentPrefix === 'cinema';
 
-  const getSpaceConfig = (type) => {
-    const t = String(type || 'table').toLowerCase();
-    if (t === 'cabin') return { singular: 'Cabin', plural: 'Cabins', badge: 'CABIN NO.', param: 'cabin' };
-    if (t === 'room') return { singular: 'Room', plural: 'Rooms', badge: 'ROOM NO.', param: 'room' };
-    if (t === 'vip') return { singular: 'VIP Lounge', plural: 'VIP Lounges', badge: 'VIP LOUNGE', param: 'vip' };
-    if (t === 'cinema_seat' || t === 'cinema') return { singular: 'Cinema Seat', plural: 'Cinema Seats', badge: 'CINEMA SEAT', param: 'cinema' };
+  const spaceConfig = useMemo(() => {
+    const found = availableSpaceTypes.find(s => s.id === currentPrefix);
+    if (found) return found;
+    if (isCinema) return { singular: 'Cinema Seat', plural: 'Cinema Seats', badge: 'CINEMA SEAT', param: 'cinema' };
+    if (currentPrefix === 'cabin') return { singular: 'Cabin', plural: 'Cabins', badge: 'CABIN NO.', param: 'cabin' };
+    if (currentPrefix === 'room') return { singular: 'Room', plural: 'Rooms', badge: 'ROOM NO.', param: 'room' };
+    if (currentPrefix === 'vip') return { singular: 'VIP Lounge', plural: 'VIP Lounges', badge: 'VIP LOUNGE', param: 'vip' };
     return { singular: 'Table', plural: 'Tables', badge: 'TABLE NO.', param: 'table' };
+  }, [availableSpaceTypes, currentPrefix, isCinema]);
+
+  // 3. Database-driven Cinema Inventory State
+  const [cinemaScreens, setCinemaScreens] = useState([]);
+  const [cinemaSeats, setCinemaSeats] = useState([]);
+  const [loadingCinema, setLoadingCinema] = useState(false);
+  const [selectedScreenId, setSelectedScreenId] = useState('');
+  const [selectedRowLabel, setSelectedRowLabel] = useState('');
+  const [selectedSeatNum, setSelectedSeatNum] = useState('');
+
+  useEffect(() => {
+    if (isCinema && token) {
+      setLoadingCinema(true);
+      Promise.all([
+        fetchCinemaScreens(token).catch(() => ({ success: false, screens: [] })),
+        fetchCinemaSeats(token).catch(() => ({ success: false, seats: [] }))
+      ]).then(([screensRes, seatsRes]) => {
+        const screensList = (screensRes && screensRes.screens) ? screensRes.screens.filter(s => s.active !== false) : [];
+        const seatsList = (seatsRes && seatsRes.seats) ? seatsRes.seats.filter(st => st.active !== false) : [];
+        setCinemaScreens(screensList);
+        setCinemaSeats(seatsList);
+
+        if (screensList.length > 0) {
+          const firstScreen = screensList[0];
+          setSelectedScreenId(String(firstScreen.id));
+
+          const screenSeats = seatsList.filter(st => String(st.screen_id) === String(firstScreen.id));
+          const rows = [...new Set(screenSeats.map(st => st.row_label).filter(Boolean))].sort();
+          if (rows.length > 0) {
+            setSelectedRowLabel(rows[0]);
+            const rowSeats = screenSeats.filter(st => st.row_label === rows[0]).map(st => String(st.seat_number));
+            setSelectedSeatNum(rowSeats[0] || '');
+          } else {
+            setSelectedRowLabel('');
+            setSelectedSeatNum('');
+          }
+        }
+      }).finally(() => {
+        setLoadingCinema(false);
+      });
+    }
+  }, [isCinema, token, activeSlug]);
+
+  const handleScreenChange = (screenId) => {
+    setSelectedScreenId(screenId);
+    const screenSeats = cinemaSeats.filter(st => String(st.screen_id) === String(screenId));
+    const rows = [...new Set(screenSeats.map(st => st.row_label).filter(Boolean))].sort();
+    if (rows.length > 0) {
+      setSelectedRowLabel(rows[0]);
+      const rowSeats = screenSeats.filter(st => st.row_label === rows[0]).map(st => String(st.seat_number));
+      setSelectedSeatNum(rowSeats[0] || '');
+    } else {
+      setSelectedRowLabel('');
+      setSelectedSeatNum('');
+    }
   };
 
-  const spaceConfig = getSpaceConfig(currentPrefix);
+  const handleRowChange = (rowLabel) => {
+    setSelectedRowLabel(rowLabel);
+    const rowSeats = cinemaSeats
+      .filter(st => String(st.screen_id) === String(selectedScreenId) && st.row_label === rowLabel)
+      .map(st => String(st.seat_number));
+    setSelectedSeatNum(rowSeats[0] || '');
+  };
 
+  const currentScreenObj = cinemaScreens.find(s => String(s.id) === String(selectedScreenId)) || cinemaScreens[0];
+  const screenNum = currentScreenObj ? String(currentScreenObj.screen_number) : '1';
+
+  const availableRows = useMemo(() => {
+    if (!selectedScreenId) return [];
+    const screenSeats = cinemaSeats.filter(st => String(st.screen_id) === String(selectedScreenId));
+    return [...new Set(screenSeats.map(st => st.row_label).filter(Boolean))].sort();
+  }, [cinemaSeats, selectedScreenId]);
+
+  const availableSeatsForRow = useMemo(() => {
+    if (!selectedScreenId || !selectedRowLabel) return [];
+    return cinemaSeats
+      .filter(st => String(st.screen_id) === String(selectedScreenId) && st.row_label === selectedRowLabel)
+      .map(st => String(st.seat_number))
+      .sort((a, b) => Number(a) - Number(b));
+  }, [cinemaSeats, selectedScreenId, selectedRowLabel]);
+
+  // Validate that the selected cinema seat physically exists in DB
+  const matchingSeatInDb = cinemaSeats.find(st => 
+    String(st.screen_id) === String(selectedScreenId) && 
+    st.row_label === selectedRowLabel && 
+    String(st.seat_number) === String(selectedSeatNum)
+  );
+
+  const isCinemaSeatValid = isCinema ? (Boolean(matchingSeatInDb) && Boolean(currentScreenObj)) : false;
+  const totalCinemaSeatsCount = cinemaSeats.filter(st => st.active !== false).length;
+
+  // 4. Counts per Space Type
   const spaceCounts = {
     table: Number(settingsForm?.total_tables) || 0,
     cabin: Number(settingsForm?.total_cabins) || 0,
     room: Number(settingsForm?.total_rooms) || 0,
     vip: Number(settingsForm?.total_vip) || 0,
-    cinema_seat: isCinema ? 1 : 0
+    cinema_seat: totalCinemaSeatsCount
   };
 
-  const currentCount = isCinema ? 1 : (spaceCounts[currentPrefix] !== undefined ? spaceCounts[currentPrefix] : (totalTablesCount || 0));
-  const hasTables = isCinema ? true : currentCount > 0;
+  const currentCount = isCinema ? totalCinemaSeatsCount : (spaceCounts[currentPrefix] !== undefined ? spaceCounts[currentPrefix] : (totalTablesCount || 0));
+  const hasTables = isCinema ? isCinemaSeatValid : currentCount > 0;
+
   const activeTableNum = isCinema 
-    ? `S${cinemaScreen}-${cinemaRow}-${cinemaSeatNum}`
+    ? (isCinemaSeatValid ? `S${screenNum}-${selectedRowLabel}-${selectedSeatNum}` : '')
     : (hasTables ? (tableNumber || '1') : '');
 
   const secretKey = settingsForm?.qr_secret || `${settingsForm?.id || 1}_${activeSlug}_tq`;
@@ -60,7 +172,7 @@ export default function QrGeneratorView({
 
   const targetUrl = hasTables 
     ? (isCinema 
-        ? `${liveOrigin}/${activeSlug}?cinema=S${cinemaScreen}-${cinemaRow}-${cinemaSeatNum}&tkn=${qrSig}`
+        ? `${liveOrigin}/${activeSlug}?cinema=${encodeURIComponent(activeTableNum)}&tkn=${qrSig}`
         : `${liveOrigin}/${activeSlug}?${spaceConfig.param}=${activeTableNum}&tkn=${qrSig}`)
     : `${liveOrigin}/${activeSlug}`;
   const qrImgUrl = `https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=${encodeURIComponent(targetUrl)}`;
@@ -80,6 +192,8 @@ export default function QrGeneratorView({
     setTimeout(() => setCopied(false), 2000);
   };
 
+  const isBulkPrintDisabled = isCinema ? totalCinemaSeatsCount === 0 : currentCount === 0;
+
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '18px' }}>
       {/* Header */}
@@ -92,38 +206,32 @@ export default function QrGeneratorView({
           )}
           <div>
             <h2 style={{ fontSize: '1.25rem', fontWeight: 900, color: 'var(--adm-primary)', margin: '0 0 2px 0' }}>
-              📱 QR Standee & Table Sticker Generator
+              📱 QR Standee & Space QR Generator
             </h2>
             <span style={{ fontSize: '0.8rem', color: 'var(--adm-muted)', fontWeight: 600 }}>
-              Generate gold-framed QR standees for Tables, Private Cabins, and Hotel Rooms.
+              Generate secure QR codes for your configured physical spaces.
             </span>
           </div>
         </div>
 
         <button
-          onClick={() => onPrintAllQRs && onPrintAllQRs(currentPrefix)}
-          disabled={!hasTables}
+          onClick={() => onPrintAllQRs && onPrintAllQRs(currentPrefix, isCinema ? cinemaSeats : null)}
+          disabled={isBulkPrintDisabled}
           className="adm-btn adm-btn-accent"
-          style={{ fontWeight: 800, opacity: !hasTables ? 0.5 : 1, cursor: !hasTables ? 'not-allowed' : 'pointer' }}
+          style={{ fontWeight: 800, opacity: isBulkPrintDisabled ? 0.5 : 1, cursor: isBulkPrintDisabled ? 'not-allowed' : 'pointer' }}
         >
-          <Printer size={16} /> Print All {spaceConfig.plural} ({currentCount} Standees)
+          <Printer size={16} /> Print All {spaceConfig.plural} ({isCinema ? totalCinemaSeatsCount : currentCount} Standees)
         </button>
       </div>
 
-      {/* Space Type Selector Strip */}
+      {/* Space Type Selector Strip (Strictly Filtered by Business Type + Service Model) */}
       <div className="adm-card" style={{ padding: '16px', display: 'flex', flexDirection: 'column', gap: '14px' }}>
         <div>
           <label style={{ fontSize: '0.74rem', fontWeight: 800, color: 'var(--adm-muted)', textTransform: 'uppercase', display: 'block', marginBottom: '8px' }}>
             SELECT DINING / SERVICE SPACE TYPE:
           </label>
           <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
-            {[
-              { id: 'table', label: '🍽️ Dining Table' },
-              { id: 'cabin', label: '🛋️ Private Cabin' },
-              { id: 'room', label: '🏨 Hotel Room' },
-              { id: 'vip', label: '👑 VIP Lounge' },
-              { id: 'cinema_seat', label: '🎬 Cinema Seat' }
-            ].map(item => {
+            {availableSpaceTypes.map(item => {
               const isActive = currentPrefix === item.id;
               const count = spaceCounts[item.id] || 0;
               return (
@@ -148,25 +256,23 @@ export default function QrGeneratorView({
                   }}
                 >
                   <span>{item.label}</span>
-                  {item.id !== 'cinema_seat' && (
-                    <span style={{
-                      fontSize: '0.72rem',
-                      padding: '1px 6px',
-                      borderRadius: '10px',
-                      background: isActive ? 'rgba(255,255,255,0.25)' : 'var(--adm-surface-subtle)',
-                      color: isActive ? '#FFFFFF' : 'var(--adm-muted)',
-                      fontWeight: 900
-                    }}>
-                      {count}
-                    </span>
-                  )}
+                  <span style={{
+                    fontSize: '0.72rem',
+                    padding: '1px 6px',
+                    borderRadius: '10px',
+                    background: isActive ? 'rgba(255,255,255,0.25)' : 'var(--adm-surface-subtle)',
+                    color: isActive ? '#FFFFFF' : 'var(--adm-muted)',
+                    fontWeight: 900
+                  }}>
+                    {count}
+                  </span>
                 </button>
               );
             })}
           </div>
         </div>
 
-        {/* Capacity Stepper Strip (Hidden for Cinema as cinema uses screen/row/seat configuration) */}
+        {/* Capacity Stepper Strip (Hidden for Cinema) */}
         {!isCinema && (
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '12px', borderTop: '1px solid var(--adm-border)', paddingTop: '14px' }}>
             <div>
@@ -205,7 +311,7 @@ export default function QrGeneratorView({
           </div>
         )}
 
-        {/* Quick Batch Presets */}
+        {/* Quick Batch Presets (Hidden for Cinema) */}
         {!isCinema && (
           <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flexWrap: 'wrap', borderTop: '1px solid var(--adm-border)', paddingTop: '10px' }}>
             <span style={{ fontSize: '0.72rem', fontWeight: 800, color: 'var(--adm-muted)', textTransform: 'uppercase', marginRight: '4px' }}>
@@ -231,53 +337,97 @@ export default function QrGeneratorView({
         {/* Left Column: Space Selector & URL Controls */}
         <div className="adm-card" style={{ padding: '18px', display: 'flex', flexDirection: 'column', gap: '14px' }}>
           <h3 style={{ fontSize: '1rem', fontWeight: 800, color: 'var(--adm-primary)', margin: 0 }}>
-            {spaceConfig.singular} Standee Selection
+            {spaceConfig.singular} QR Selection
           </h3>
 
           {isCinema ? (
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '8px' }}>
-              <div>
-                <label style={{ fontSize: '0.74rem', fontWeight: 800, color: 'var(--adm-muted)', display: 'block', marginBottom: '4px' }}>
-                  SCREEN:
-                </label>
-                <select
-                  value={cinemaScreen}
-                  onChange={(e) => setCinemaScreen(e.target.value)}
-                  style={{ width: '100%', padding: '8px', borderRadius: '8px', border: '1px solid var(--adm-border)', fontWeight: 800 }}
-                >
-                  {['1', '2', '3', '4', '5', '6'].map(s => (
-                    <option key={s} value={s}>Screen {s}</option>
-                  ))}
-                </select>
-              </div>
-              <div>
-                <label style={{ fontSize: '0.74rem', fontWeight: 800, color: 'var(--adm-muted)', display: 'block', marginBottom: '4px' }}>
-                  ROW:
-                </label>
-                <select
-                  value={cinemaRow}
-                  onChange={(e) => setCinemaRow(e.target.value)}
-                  style={{ width: '100%', padding: '8px', borderRadius: '8px', border: '1px solid var(--adm-border)', fontWeight: 800 }}
-                >
-                  {['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'J', 'K', 'L', 'M', 'N', 'P', 'Q', 'R', 'S', 'T'].map(r => (
-                    <option key={r} value={r}>Row {r}</option>
-                  ))}
-                </select>
-              </div>
-              <div>
-                <label style={{ fontSize: '0.74rem', fontWeight: 800, color: 'var(--adm-muted)', display: 'block', marginBottom: '4px' }}>
-                  SEAT:
-                </label>
-                <select
-                  value={cinemaSeatNum}
-                  onChange={(e) => setCinemaSeatNum(e.target.value)}
-                  style={{ width: '100%', padding: '8px', borderRadius: '8px', border: '1px solid var(--adm-border)', fontWeight: 800 }}
-                >
-                  {Array.from({ length: 30 }, (_, i) => String(i + 1)).map(sn => (
-                    <option key={sn} value={sn}>Seat {sn}</option>
-                  ))}
-                </select>
-              </div>
+            <div>
+              {loadingCinema ? (
+                <div style={{ padding: '20px', textAlign: 'center', color: 'var(--adm-muted)', fontSize: '0.85rem' }}>
+                  ⏳ Loading configured auditorium screens and seats from database...
+                </div>
+              ) : cinemaScreens.length === 0 ? (
+                <div style={{ padding: '16px', background: '#FEF2F2', border: '1px solid #FECACA', borderRadius: '12px', textAlign: 'center' }}>
+                  <div style={{ fontSize: '1.5rem', marginBottom: '6px' }}>🎬</div>
+                  <strong style={{ display: 'block', color: '#991B1B', fontSize: '0.9rem', marginBottom: '4px' }}>
+                    No Cinema Screens Configured Yet
+                  </strong>
+                  <span style={{ fontSize: '0.78rem', color: '#B91C1C', display: 'block', marginBottom: '12px' }}>
+                    Please add screens and seats in Cinema Management before generating seat QR codes.
+                  </span>
+                  {onBackToSetup && (
+                    <button onClick={onBackToSetup} className="adm-btn adm-btn-primary adm-btn-sm" style={{ fontWeight: 800 }}>
+                      Go to Setup & Cinema Management ➔
+                    </button>
+                  )}
+                </div>
+              ) : (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '8px' }}>
+                    <div>
+                      <label style={{ fontSize: '0.74rem', fontWeight: 800, color: 'var(--adm-muted)', display: 'block', marginBottom: '4px' }}>
+                        SCREEN:
+                      </label>
+                      <select
+                        value={selectedScreenId}
+                        onChange={(e) => handleScreenChange(e.target.value)}
+                        style={{ width: '100%', padding: '8px', borderRadius: '8px', border: '1px solid var(--adm-border)', fontWeight: 800 }}
+                      >
+                        {cinemaScreens.map(s => (
+                          <option key={s.id} value={s.id}>Screen {s.screen_number} {s.name ? `(${s.name})` : ''}</option>
+                        ))}
+                      </select>
+                    </div>
+
+                    <div>
+                      <label style={{ fontSize: '0.74rem', fontWeight: 800, color: 'var(--adm-muted)', display: 'block', marginBottom: '4px' }}>
+                        ROW:
+                      </label>
+                      <select
+                        value={selectedRowLabel}
+                        onChange={(e) => handleRowChange(e.target.value)}
+                        disabled={availableRows.length === 0}
+                        style={{ width: '100%', padding: '8px', borderRadius: '8px', border: '1px solid var(--adm-border)', fontWeight: 800 }}
+                      >
+                        {availableRows.length > 0 ? (
+                          availableRows.map(r => (
+                            <option key={r} value={r}>Row {r}</option>
+                          ))
+                        ) : (
+                          <option value="">No rows</option>
+                        )}
+                      </select>
+                    </div>
+
+                    <div>
+                      <label style={{ fontSize: '0.74rem', fontWeight: 800, color: 'var(--adm-muted)', display: 'block', marginBottom: '4px' }}>
+                        SEAT:
+                      </label>
+                      <select
+                        value={selectedSeatNum}
+                        onChange={(e) => setSelectedSeatNum(e.target.value)}
+                        disabled={availableSeatsForRow.length === 0}
+                        style={{ width: '100%', padding: '8px', borderRadius: '8px', border: '1px solid var(--adm-border)', fontWeight: 800 }}
+                      >
+                        {availableSeatsForRow.length > 0 ? (
+                          availableSeatsForRow.map(sn => (
+                            <option key={sn} value={sn}>Seat {sn}</option>
+                          ))
+                        ) : (
+                          <option value="">No seats</option>
+                        )}
+                      </select>
+                    </div>
+                  </div>
+
+                  {!isCinemaSeatValid && (
+                    <div style={{ padding: '8px 12px', background: '#FFFBEB', border: '1px solid #FDE68A', borderRadius: '8px', fontSize: '0.78rem', color: '#92400E', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                      <AlertTriangle size={15} color="#D97706" />
+                      <span>This cinema seat is not configured in the database inventory.</span>
+                    </div>
+                  )}
+                </div>
+              )}
             </div>
           ) : (
             <div>
@@ -330,7 +480,7 @@ export default function QrGeneratorView({
 
           <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', marginTop: '10px' }}>
             <button
-              onClick={() => onPrintQR(activeTableNum)}
+              onClick={() => onPrintQR(activeTableNum, currentPrefix)}
               disabled={!hasTables}
               className="adm-btn adm-btn-primary"
               style={{ padding: '12px', fontWeight: 800, opacity: !hasTables ? 0.5 : 1, cursor: !hasTables ? 'not-allowed' : 'pointer' }}
@@ -365,11 +515,11 @@ export default function QrGeneratorView({
                 fontSize: isCinema ? '0.82rem' : '0.95rem',
                 fontWeight: 800,
                 border: '1.5px solid #D4AF37',
-                letterSpacing: '1px',
+                letterSpacing: isCinema ? '0.5px' : '1px',
                 marginBottom: '12px'
               }}>
                 {isCinema 
-                  ? `🎬 SCREEN ${cinemaScreen} • ROW ${cinemaRow} • SEAT ${cinemaSeatNum}`
+                  ? `🎬 SCREEN ${screenNum} • ROW ${selectedRowLabel} • SEAT ${selectedSeatNum}`
                   : `${spaceConfig.badge} ${activeTableNum}`}
               </div>
 
@@ -377,7 +527,7 @@ export default function QrGeneratorView({
                 {settingsForm?.name || 'Digital Menu'}
               </h3>
               <span style={{ fontSize: '0.74rem', fontWeight: 700, color: '#16A34A', display: 'block', marginBottom: '12px' }}>
-                {settingsForm?.tagline || 'Scan QR Code for Digital Menu'}
+                {settingsForm?.tagline || (isCinema ? 'In-Seat Food Ordering' : 'Scan QR Code for Digital Menu')}
               </span>
 
               <div style={{ background: '#FFF', padding: '12px', borderRadius: '14px', border: '1px solid #E2E8E3', display: 'inline-block', marginBottom: '12px' }}>
@@ -385,10 +535,10 @@ export default function QrGeneratorView({
               </div>
 
               <div style={{ fontSize: '0.84rem', fontWeight: 800, color: '#0A2315', marginBottom: '2px' }}>
-                📱 SCAN FOR DIGITAL MENU & ORDER
+                {isCinema ? '📱 SCAN FOR IN-SEAT FOOD ORDERING' : '📱 SCAN FOR DIGITAL MENU & ORDER'}
               </div>
               <div style={{ fontSize: '0.78rem', color: '#68756D', fontWeight: 600, marginBottom: '6px' }}>
-                स्कैन करें और डिजिटल मेन्यू देखें
+                {isCinema ? 'स्कैन करें और सीट पर खाना मंगाएं' : 'स्कैन करें और डिजिटल मेन्यू देखें'}
               </div>
               {(settingsForm?.address || settingsForm?.phone) && (
                 <div style={{ fontSize: '0.68rem', color: '#64748B', borderTop: '1px solid #E2E8F0', paddingTop: '6px', marginTop: '4px' }}>
@@ -428,21 +578,34 @@ export default function QrGeneratorView({
                 fontSize: '2rem',
                 border: '1.5px solid var(--adm-border)'
               }}>
-                🍽️
+                {isCinema ? '🎬' : '🍽️'}
               </div>
               <h4 style={{ margin: 0, fontSize: '1.1rem', fontWeight: 900, color: 'var(--adm-primary)' }}>
                 No {spaceConfig.plural} Configured
               </h4>
               <p style={{ margin: 0, fontSize: '0.82rem', color: 'var(--adm-muted)', lineHeight: 1.5, maxWidth: '240px' }}>
-                You currently have <strong>0 {spaceConfig.plural.toLowerCase()}</strong>. Click <strong>+ Add {spaceConfig.singular}</strong> to generate your first custom QR standee!
+                {isCinema 
+                  ? 'You currently have 0 active cinema seats. Please configure auditorium screens and seats in Cinema Management.'
+                  : `You currently have 0 ${spaceConfig.plural.toLowerCase()}. Click + Add ${spaceConfig.singular} to generate your first custom QR standee!`}
               </p>
-              <button
-                onClick={() => onAddTable && onAddTable(1)}
-                className="adm-btn adm-btn-primary"
-                style={{ marginTop: '8px', padding: '10px 18px', fontWeight: 800 }}
-              >
-                <Plus size={16} /> Add {spaceConfig.singular} 1 Now
-              </button>
+              {!isCinema && (
+                <button
+                  onClick={() => onAddTable && onAddTable(1, currentPrefix)}
+                  className="adm-btn adm-btn-primary"
+                  style={{ marginTop: '8px', padding: '10px 18px', fontWeight: 800 }}
+                >
+                  <Plus size={16} /> Add {spaceConfig.singular} 1 Now
+                </button>
+              )}
+              {isCinema && onBackToSetup && (
+                <button
+                  onClick={onBackToSetup}
+                  className="adm-btn adm-btn-primary"
+                  style={{ marginTop: '8px', padding: '10px 18px', fontWeight: 800 }}
+                >
+                  Go to Cinema Setup ➔
+                </button>
+              )}
             </div>
           )}
         </div>
@@ -450,3 +613,4 @@ export default function QrGeneratorView({
     </div>
   );
 }
+

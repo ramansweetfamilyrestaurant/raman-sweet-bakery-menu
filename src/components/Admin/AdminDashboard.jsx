@@ -1833,14 +1833,6 @@ export default function AdminDashboard({ token, username, slug: propSlug = '', o
     }
   };
 
-  const getSpaceConfig = (type) => {
-    const t = String(type || 'table').toLowerCase();
-    if (t === 'cabin') return { singular: 'Cabin', badge: 'CABIN NO.' };
-    if (t === 'room') return { singular: 'Room', badge: 'ROOM NO.' };
-    if (t === 'vip') return { singular: 'VIP Lounge', badge: 'VIP LOUNGE' };
-    return { singular: 'Table', badge: 'TABLE NO.' };
-  };
-
   const handleUpdateSpaceType = async (newType) => {
     const currentSlug = propSlug || localStorage.getItem('touchqr_admin_slug') || (restaurantInfo && restaurantInfo.slug) || '';
     if (currentSlug) {
@@ -1877,19 +1869,35 @@ export default function AdminDashboard({ token, username, slug: propSlug = '', o
 
   const handlePrintQR = (overrideNum, targetPrefix = null) => {
     const activeTableNum = overrideNum || tableNumber || '1';
-    ensureTableCreated(activeTableNum);
-
     const prefix = targetPrefix || settingsForm.table_prefix || restaurantInfo?.table_prefix || 'table';
+    const isCinema = prefix === 'cinema_seat' || prefix === 'cinema';
+
+    if (!isCinema) {
+      ensureTableCreated(activeTableNum);
+    }
+
     const spaceConfig = getSpaceConfig(prefix);
-    const paramName = prefix === 'cabin' ? 'cabin' : prefix === 'room' ? 'room' : prefix === 'vip' ? 'vip' : 'table';
+    const paramName = isCinema ? 'cinema' : (prefix === 'cabin' ? 'cabin' : prefix === 'room' ? 'room' : prefix === 'vip' ? 'vip' : 'table');
     const liveOrigin = window.location.origin;
     const activeSlug = settingsForm.slug || restaurantInfo?.slug || '';
     const secretKey = settingsForm.qr_secret || restaurantInfo?.qr_secret || `${restaurantInfo?.id || 1}_${activeSlug}_tq`;
-    const qrSig = generateQrToken(activeSlug, paramName, activeTableNum, secretKey);
-    const targetUrl = `${liveOrigin}/${activeSlug}?${paramName}=${activeTableNum}&tkn=${qrSig}`;
+    const qrSig = generateQrToken(activeSlug, isCinema ? 'cinema_seat' : paramName, activeTableNum, secretKey);
+    const targetUrl = isCinema
+      ? `${liveOrigin}/${activeSlug}?cinema=${encodeURIComponent(activeTableNum)}&tkn=${qrSig}`
+      : `${liveOrigin}/${activeSlug}?${paramName}=${activeTableNum}&tkn=${qrSig}`;
     const qrImgUrl = `https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=${encodeURIComponent(targetUrl)}`;
     const currentName = settingsForm.name || 'Digital Menu';
-    const currentTagline = settingsForm.tagline || 'Scan QR Code for Digital Menu';
+    const currentTagline = settingsForm.tagline || (isCinema ? 'In-Seat Food Ordering' : 'Scan QR Code for Digital Menu');
+
+    let badgeText = `${spaceConfig.badge} ${activeTableNum}`;
+    if (isCinema) {
+      const match = String(activeTableNum).match(/^S(\d+)-([A-Za-z]+)-(\d+)$/i);
+      if (match) {
+        badgeText = `🎬 SCREEN ${match[1]} • ROW ${match[2].toUpperCase()} • SEAT ${match[3]}`;
+      } else {
+        badgeText = `🎬 CINEMA SEAT ${activeTableNum}`;
+      }
+    }
 
     const printWindow = window.open('', '_blank', 'width=800,height=900');
     if (!printWindow) {
@@ -1958,63 +1966,207 @@ export default function AdminDashboard({ token, username, slug: propSlug = '', o
               margin-bottom: 20px;
             }
             .qr-box img {
-              width: 200px;
-              height: 200px;
+              width: 220px;
+              height: 220px;
               display: block;
             }
             .instruction-en {
-              font-size: 0.88rem;
+              font-size: 0.95rem;
               font-weight: 800;
               color: #0A2315;
+              letter-spacing: 0.5px;
               margin-bottom: 4px;
             }
             .instruction-hi {
-              font-size: 0.82rem;
-              color: #64748B;
+              font-size: 0.85rem;
               font-weight: 600;
+              color: #64748B;
+              margin-bottom: 16px;
             }
             .footer-info {
-              margin-top: 16px;
-              padding-top: 12px;
-              border-top: 1px solid #E2E8F0;
               font-size: 0.72rem;
-              color: #64748B;
+              color: #94A3B8;
+              border-top: 1px solid #F1F5F9;
+              padding-top: 12px;
+            }
+            @media print {
+              body { padding: 0; background: none; }
+              .standee-card { box-shadow: none; border-color: #000; }
             }
           </style>
         </head>
         <body>
           <div class="standee-card">
-            <div class="table-badge">${spaceConfig.badge} ${activeTableNum}</div>
-            <h2 class="logo-title">${currentName}</h2>
+            <div class="table-badge">${badgeText}</div>
+            <h1 class="logo-title">${currentName}</h1>
             <div class="subtitle">${currentTagline}</div>
-
             <div class="qr-box">
               <img src="${qrImgUrl}" alt="${spaceConfig.singular} ${activeTableNum} QR Code" />
             </div>
-
-            <div class="instruction-en">📱 SCAN FOR DIGITAL MENU & ORDER</div>
-            <div class="instruction-hi">स्कैन करें और डिजिटल मेन्यू देखें</div>
-
+            <div class="instruction-en">${isCinema ? '📱 SCAN FOR IN-SEAT FOOD ORDERING' : '📱 SCAN FOR DIGITAL MENU & ORDER'}</div>
+            <div class="instruction-hi">${isCinema ? 'स्कैन करें और सीट पर खाना मंगाएं' : 'स्कैन करें और डिजिटल मेन्यू देखें'}</div>
             <div class="footer-info">
               ${settingsForm.address || ''}${settingsForm.phone ? ' • Phone: ' + settingsForm.phone : ''}
               ${!settingsForm.watermark_removal_enabled ? '<div style="margin-top: 4px; font-size: 0.65rem; color: #15803D; font-weight: 800;">⚡ Powered by TouchQR</div>' : ''}
             </div>
           </div>
-          <script>
-            window.onload = function() {
-              setTimeout(function() {
-                window.print();
-              }, 500);
-            };
-          </script>
         </body>
       </html>
     `);
     printWindow.document.close();
   };
 
-  const handlePrintAllQRs = (targetPrefix = null) => {
+  const handlePrintAllQRs = (targetPrefix = null, cinemaSeatsList = null) => {
     const prefix = targetPrefix || settingsForm.table_prefix || restaurantInfo?.table_prefix || 'table';
+    const isCinema = prefix === 'cinema_seat' || prefix === 'cinema';
+
+    const liveOrigin = window.location.origin;
+    const currentName = settingsForm.name || 'Digital Menu';
+    const currentTagline = settingsForm.tagline || (isCinema ? 'In-Seat Food Ordering' : 'Scan QR Code for Digital Menu');
+    const activeSlug = settingsForm.slug || restaurantInfo?.slug || '';
+    const secretKey = settingsForm.qr_secret || restaurantInfo?.qr_secret || `${restaurantInfo?.id || 1}_${activeSlug}_tq`;
+
+    if (isCinema) {
+      const activeSeats = Array.isArray(cinemaSeatsList) ? cinemaSeatsList.filter(s => s.active !== false) : [];
+      if (activeSeats.length === 0) {
+        alert('No configured active cinema seats found to print! Please configure cinema seats first.');
+        return;
+      }
+
+      const printWindow = window.open('', '_blank', 'width=950,height=900');
+      if (!printWindow) {
+        alert('Please allow popups for this site to print all Cinema Seats QR Standees.');
+        return;
+      }
+
+      let cardsHtml = '';
+      for (const seat of activeSeats) {
+        const sNum = seat.screen_number || '1';
+        const rLabel = seat.row_label || 'A';
+        const stNum = seat.seat_number || '1';
+        const seatCode = `S${sNum}-${rLabel}-${stNum}`;
+        const qrSig = generateQrToken(activeSlug, 'cinema_seat', seatCode, secretKey);
+        const targetUrl = `${liveOrigin}/${activeSlug}?cinema=${encodeURIComponent(seatCode)}&tkn=${qrSig}`;
+        const qrImgUrl = `https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=${encodeURIComponent(targetUrl)}`;
+
+        cardsHtml += `
+          <div class="standee-card">
+            <div class="table-badge">🎬 SCREEN ${sNum} • ROW ${rLabel} • SEAT ${stNum}</div>
+            <h2 class="logo-title">${currentName}</h2>
+            <div class="subtitle">${currentTagline}</div>
+            <div class="qr-box">
+              <img src="${qrImgUrl}" alt="Cinema Seat ${seatCode} QR Code" />
+            </div>
+            <div class="instruction-en">📱 SCAN FOR IN-SEAT FOOD ORDERING</div>
+            <div class="instruction-hi">स्कैन करें और सीट पर खाना मंगाएं</div>
+            <div class="footer-info">
+              ${settingsForm.address || ''}${settingsForm.phone ? ' • Phone: ' + settingsForm.phone : ''}
+              ${!settingsForm.watermark_removal_enabled ? '<div style="margin-top: 4px; font-size: 0.65rem; color: #15803D; font-weight: 800;">⚡ Powered by TouchQR</div>' : ''}
+            </div>
+          </div>
+        `;
+      }
+
+      printWindow.document.write(`
+        <!DOCTYPE html>
+        <html>
+          <head>
+            <title>All Cinema Seats QR Standees - ${currentName}</title>
+            <style>
+              @import url('https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700;800;900&family=Plus+Jakarta+Sans:wght@600;700;800&display=swap');
+              body {
+                margin: 0;
+                padding: 30px;
+                background-color: #FFFFFF;
+                font-family: 'Plus Jakarta Sans', sans-serif;
+                display: flex;
+                flex-wrap: wrap;
+                gap: 24px;
+                justify-content: center;
+              }
+              .standee-card {
+                width: 320px;
+                padding: 28px 20px;
+                border: 3px double #C5A059;
+                border-radius: 20px;
+                background: linear-gradient(180deg, #FFFFFF 0%, #FAF8F5 100%);
+                text-align: center;
+                box-shadow: 0 6px 20px rgba(10, 35, 21, 0.08);
+                page-break-inside: avoid;
+                margin-bottom: 20px;
+              }
+              .table-badge {
+                display: inline-block;
+                background: #0A2315;
+                color: #DFBA67;
+                padding: 5px 18px;
+                border-radius: 9999px;
+                font-size: 0.85rem;
+                font-weight: 800;
+                border: 1px solid #DFBA67;
+                letter-spacing: 0.5px;
+                margin-bottom: 12px;
+              }
+              .logo-title {
+                font-family: 'Playfair Display', serif;
+                font-size: 1.35rem;
+                font-weight: 900;
+                color: #0A2315;
+                margin: 0 0 4px 0;
+              }
+              .subtitle {
+                font-size: 0.76rem;
+                font-weight: 700;
+                color: #15803D;
+                margin-bottom: 16px;
+              }
+              .qr-box {
+                background: #FFFFFF;
+                padding: 14px;
+                border-radius: 16px;
+                border: 1px solid #E5E7EB;
+                display: inline-block;
+                margin-bottom: 14px;
+              }
+              .qr-box img {
+                width: 170px;
+                height: 170px;
+                display: block;
+              }
+              .instruction-en {
+                font-size: 0.85rem;
+                font-weight: 800;
+                color: #0A2315;
+                margin-bottom: 2px;
+              }
+              .instruction-hi {
+                font-size: 0.78rem;
+                color: #64748B;
+                font-weight: 600;
+                margin-bottom: 10px;
+              }
+              .footer-info {
+                font-size: 0.68rem;
+                color: #64748B;
+                border-top: 1px solid #E2E8F0;
+                padding-top: 8px;
+                margin-top: 4px;
+              }
+              @media print {
+                body { padding: 0; background: none; }
+                .standee-card { box-shadow: none; margin-bottom: 0; }
+              }
+            </style>
+          </head>
+          <body>
+            ${cardsHtml}
+          </body>
+        </html>
+      `);
+      printWindow.document.close();
+      return;
+    }
+
     const field = getSpaceField(prefix);
     const spaceConfig = getSpaceConfig(prefix);
     const paramName = prefix === 'cabin' ? 'cabin' : prefix === 'room' ? 'room' : prefix === 'vip' ? 'vip' : 'table';
@@ -2023,11 +2175,6 @@ export default function AdminDashboard({ token, username, slug: propSlug = '', o
       alert(`No ${spaceConfig.plural.toLowerCase()} added yet! Click "+ Add ${spaceConfig.singular}" to create QR standees.`);
       return;
     }
-    const liveOrigin = window.location.origin;
-    const currentName = settingsForm.name || 'Digital Menu';
-    const currentTagline = settingsForm.tagline || 'Scan QR Code for Digital Menu';
-    const activeSlug = settingsForm.slug || restaurantInfo?.slug || '';
-    const secretKey = settingsForm.qr_secret || restaurantInfo?.qr_secret || `${restaurantInfo?.id || 1}_${activeSlug}_tq`;
 
     const printWindow = window.open('', '_blank', 'width=950,height=900');
     if (!printWindow) {
@@ -2732,6 +2879,7 @@ export default function AdminDashboard({ token, username, slug: propSlug = '', o
                 onPrintQR={handlePrintQR}
                 onPrintAllQRs={handlePrintAllQRs}
                 settingsForm={settingsForm}
+                token={token}
                 onReturnToMenu={onReturnToMenu}
                 onBackToSetup={() => setActiveTab('settings')}
                 onUpdateSpaceType={handleUpdateSpaceType}
