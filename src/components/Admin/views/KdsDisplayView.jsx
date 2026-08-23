@@ -42,9 +42,11 @@ export default function KdsDisplayView({
     return Math.max(0, Math.floor(diffMs / 60000));
   };
 
-  const formatKdsLocation = (raw) => {
+  const formatKdsLocation = (raw, spaceType, fallbackPrefix = null) => {
     if (!raw) return 'TAKEAWAY';
     const str = String(raw).trim();
+
+    // 1. Cinema Pattern Matching
     const cMatch = str.match(/^S?(\d+)[- •]+(?:Row[- ]*)?([A-Za-z]+)[- •]+(?:Seat[- ]*)?(\d+)$/i) ||
                    str.match(/Screen\s*(\d+)\s*[-•]\s*Row\s*([A-Za-z]+)\s*[-•]\s*Seat\s*(\d+)/i);
     if (cMatch) {
@@ -53,18 +55,58 @@ export default function KdsDisplayView({
     if (str.toLowerCase().startsWith('screen')) {
       return `🎬 ${str.toUpperCase()}`;
     }
+
+    // 2. Explicit order.space_type has priority #1
+    const cleanSpaceType = spaceType ? String(spaceType).trim().toLowerCase() : null;
+
+    if (cleanSpaceType === 'cinema_seat' || cleanSpaceType === 'cinema') {
+      return `🎬 SEAT ${str.toUpperCase()}`;
+    }
+    if (cleanSpaceType === 'room') {
+      const numOnly = str.replace(/^room\s*#?/i, '');
+      return `🏨 ROOM #${numOnly}`;
+    }
+    if (cleanSpaceType === 'cabin') {
+      const numOnly = str.replace(/^cabin\s*#?/i, '');
+      return `🛋️ CABIN #${numOnly}`;
+    }
+    if (cleanSpaceType === 'vip') {
+      const numOnly = str.replace(/^vip\s*#?/i, '');
+      return `👑 VIP #${numOnly}`;
+    }
+    if (cleanSpaceType === 'table') {
+      const numOnly = str.replace(/^table\s*#?/i, '');
+      return `TABLE #${numOnly}`;
+    }
+
+    // 3. Safe legacy string inference from raw value
     if (/^room\s*#?\d+/i.test(str)) {
-      return `🏨 ${str.toUpperCase()}`;
+      const numOnly = str.replace(/^room\s*#?/i, '');
+      return `🏨 ROOM #${numOnly}`;
     }
     if (/^cabin\s*#?\d+/i.test(str)) {
-      return `🛋️ ${str.toUpperCase()}`;
+      const numOnly = str.replace(/^cabin\s*#?/i, '');
+      return `🛋️ CABIN #${numOnly}`;
     }
     if (/^vip\s*#?\d+/i.test(str)) {
-      return `👑 ${str.toUpperCase()}`;
+      const numOnly = str.replace(/^vip\s*#?/i, '');
+      return `👑 VIP #${numOnly}`;
     }
-    if (/^(table|room|cabin|vip|takeaway|parcel)/i.test(str) || /^[\p{Extended_Pictographic}\u2000-\u3300]/u.test(str)) {
+
+    // 4. If already prefixed / pictographic
+    if (/^(takeaway|parcel)/i.test(str) || /^[\p{Extended_Pictographic}\u2000-\u3300]/u.test(str)) {
       return str.toUpperCase();
     }
+
+    // 5. Fallback prefix if provided
+    if (fallbackPrefix) {
+      const cleanFallback = String(fallbackPrefix).trim().toLowerCase();
+      if (cleanFallback === 'room') return `🏨 ROOM #${str}`;
+      if (cleanFallback === 'cabin') return `🛋️ CABIN #${str}`;
+      if (cleanFallback === 'vip') return `👑 VIP #${str}`;
+      if (cleanFallback === 'cinema_seat' || cleanFallback === 'cinema') return `🎬 SEAT ${str.toUpperCase()}`;
+    }
+
     return `TABLE #${str}`;
   };
 
@@ -164,7 +206,7 @@ export default function KdsDisplayView({
                 <div style={{ background: isDelayed ? '#7F1D1D' : '#1E3A8A', padding: '12px 16px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                   <div>
                     <strong style={{ fontSize: '1.3rem', color: '#FFF', fontWeight: 900, display: 'block' }}>
-                      {formatKdsLocation(order.table_number)}
+                      {formatKdsLocation(order.table_number, order.space_type, restaurantInfo?.business_type === 'hotel_resort' ? 'room' : restaurantInfo?.table_prefix)}
                     </strong>
                     <span style={{ fontSize: '0.75rem', color: '#93C5FD', fontWeight: 700 }}>
                       Order #{order.id} • {order.customer_name || 'Dine-in'}
