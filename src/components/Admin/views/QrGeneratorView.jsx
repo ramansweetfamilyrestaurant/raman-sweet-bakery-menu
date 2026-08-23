@@ -200,7 +200,7 @@ export default function QrGeneratorView({
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '10px' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
           {onBackToSetup && (
-            <button onClick={onBackToSetup} className="adm-btn adm-btn-secondary adm-btn-sm" style={{ fontWeight: 800 }}>
+            <button onClick={() => onBackToSetup(isCinema ? 'cinema' : null)} className="adm-btn adm-btn-secondary adm-btn-sm" style={{ fontWeight: 800 }}>
               <ArrowLeft size={16} /> Back
             </button>
           )}
@@ -356,8 +356,8 @@ export default function QrGeneratorView({
                     Please add screens and seats in Cinema Management before generating seat QR codes.
                   </span>
                   {onBackToSetup && (
-                    <button onClick={onBackToSetup} className="adm-btn adm-btn-primary adm-btn-sm" style={{ fontWeight: 800 }}>
-                      Go to Setup & Cinema Management ➔
+                    <button onClick={() => onBackToSetup('cinema')} className="adm-btn adm-btn-primary adm-btn-sm" style={{ fontWeight: 800 }}>
+                      Go to Cinema Management ➔
                     </button>
                   )}
                 </div>
@@ -599,11 +599,11 @@ export default function QrGeneratorView({
               )}
               {isCinema && onBackToSetup && (
                 <button
-                  onClick={onBackToSetup}
+                  onClick={() => onBackToSetup('cinema')}
                   className="adm-btn adm-btn-primary"
                   style={{ marginTop: '8px', padding: '10px 18px', fontWeight: 800 }}
                 >
-                  Go to Cinema Setup ➔
+                  Go to Cinema Management ➔
                 </button>
               )}
             </div>

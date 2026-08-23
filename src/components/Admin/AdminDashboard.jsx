@@ -35,6 +35,7 @@ export default function AdminDashboard({ token, username, slug: propSlug = '', o
 
   const [showPaymentModal, setShowPaymentModal] = useState(false);
   const [activeTab, setActiveTab] = useState('dishes'); // 'dishes', 'categories', 'qr-generator', 'settings'
+  const [initialSetupDrawer, setInitialSetupDrawer] = useState(null);
   const [categories, setCategories] = useState(() => getInitialAdminState('categories', []));
   const [dishes, setDishes] = useState(() => getInitialAdminState('dishes', []));
   const [announcements, setAnnouncements] = useState([]);
@@ -2881,7 +2882,10 @@ export default function AdminDashboard({ token, username, slug: propSlug = '', o
                 settingsForm={settingsForm}
                 token={token}
                 onReturnToMenu={onReturnToMenu}
-                onBackToSetup={() => setActiveTab('settings')}
+                onBackToSetup={(drawer = null) => {
+                  setInitialSetupDrawer(drawer);
+                  setActiveTab('settings');
+                }}
                 onUpdateSpaceType={handleUpdateSpaceType}
               />
             )}
@@ -2893,13 +2897,17 @@ export default function AdminDashboard({ token, username, slug: propSlug = '', o
                 setSettingsForm={setSettingsForm}
                 handleSaveSettings={handleSaveSettings}
                 token={token}
-                onBackToSetup={() => setActiveTab('settings')}
+                onBackToSetup={(drawer = null) => {
+                  setInitialSetupDrawer(drawer);
+                  setActiveTab('settings');
+                }}
               />
             )}
 
             {/* SETUP VIEW */}
             {activeTab === 'settings' && (
               <SetupView
+                initialDrawer={initialSetupDrawer}
                 restaurantInfo={restaurantInfo}
                 settingsForm={settingsForm}
                 setSettingsForm={setSettingsForm}
@@ -2922,7 +2930,10 @@ export default function AdminDashboard({ token, username, slug: propSlug = '', o
                     alert('Optimization failed: ' + (e.message || 'Server error'));
                   }
                 }}
-                onNavigate={(tab) => setActiveTab(tab)}
+                onNavigate={(tab) => {
+                  setInitialSetupDrawer(null);
+                  setActiveTab(tab);
+                }}
               />
             )}
           </div>
