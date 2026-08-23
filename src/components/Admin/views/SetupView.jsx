@@ -1330,6 +1330,11 @@ export default function SetupView({
                       }}
                       style={{ width: '100%', padding: '8px 12px', borderRadius: '8px', border: '1px solid #CBD5E1', fontSize: '0.84rem', fontWeight: 700, background: '#FFFFFF', color: '#0F172A' }}
                     >
+                      {!SERVICE_MODELS.includes(currentServiceModel) && currentServiceModel && (
+                        <option value={currentServiceModel}>
+                          ⚠️ Legacy service model ({currentServiceModel}) — review recommended
+                        </option>
+                      )}
                       {SERVICE_MODELS.map(model => (
                         <option key={model} value={model}>
                           {SERVICE_MODEL_METADATA[model]?.icon || '🛎️'} {SERVICE_MODEL_METADATA[model]?.label || model}

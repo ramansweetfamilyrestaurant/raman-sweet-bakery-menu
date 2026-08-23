@@ -43,12 +43,11 @@ export const FOOD_TYPES = Object.freeze([
 
 export const SERVICE_MODELS = Object.freeze([
   'dine_in_table',
-  'counter_pickup',
+  'counter_order',
   'self_service',
-  'seat_delivery',
+  'seat_service',
   'in_room_dining',
   'takeaway',
-  'delivery',
   'table_and_counter',
   'mixed'
 ]);
@@ -86,12 +85,18 @@ export const FOOD_TYPE_ALIASES = Object.freeze({
 export const SERVICE_MODEL_ALIASES = Object.freeze({
   'table': 'dine_in_table',
   'dine_in': 'dine_in_table',
-  'counter': 'counter_pickup',
-  'pickup': 'counter_pickup',
+  'counter': 'counter_order',
+  'counter_order': 'counter_order',
+  'counter_pickup': 'counter_order',
+  'pickup': 'counter_order',
   'room': 'in_room_dining',
   'room_service': 'in_room_dining',
-  'seat': 'seat_delivery',
-  'hybrid': 'table_and_counter'
+  'seat': 'seat_service',
+  'seat_service': 'seat_service',
+  'seat_delivery': 'seat_service',
+  'hybrid': 'table_and_counter',
+  'parcel': 'takeaway',
+  'takeaway': 'takeaway'
 });
 
 /**
@@ -179,11 +184,11 @@ export function resolveBusinessProfile(restaurant = {}) {
   } else if (business_type === 'hotel_resort') {
     service_model = 'in_room_dining';
   } else if (business_type === 'cinema_theatre') {
-    service_model = 'seat_delivery';
+    service_model = 'seat_service';
   } else if (business_type === 'cloud_kitchen') {
     service_model = 'takeaway';
   } else if (business_type === 'bakery_confectionery' || legacyResto === 'bakery') {
-    service_model = 'counter_pickup';
+    service_model = 'counter_order';
   } else {
     service_model = 'dine_in_table';
   }

@@ -40,12 +40,11 @@ export const FOOD_TYPES = Object.freeze([
 
 export const SERVICE_MODELS = Object.freeze([
   'dine_in_table',
-  'counter_pickup',
+  'counter_order',
   'self_service',
-  'seat_delivery',
+  'seat_service',
   'in_room_dining',
   'takeaway',
-  'delivery',
   'table_and_counter',
   'mixed'
 ]);
@@ -58,7 +57,7 @@ export const BUSINESS_TYPE_METADATA = Object.freeze({
   fast_food_qsr: { label: 'Fast Food / QSR', icon: '🍔', desc: 'Quick-service burgers, rolls, pizzas, and chaat' },
   dhaba: { label: 'Dhaba / Highway Eatery', icon: '🥘', desc: 'Authentic local cuisine and highway dining' },
   food_court: { label: 'Food Court / Multi-Vendor Hub', icon: '🏬', desc: 'Mall or collective multi-brand food court' },
-  cloud_kitchen: { label: 'Cloud Kitchen / Takeaway', icon: '🛵', desc: 'Delivery-first kitchen with counter takeaway' },
+  cloud_kitchen: { label: 'Cloud Kitchen / Takeaway', icon: '🏪', desc: 'Commercial kitchen with counter takeaway & parcel' },
   canteen_cafeteria: { label: 'Canteen / Cafeteria', icon: '🏢', desc: 'Corporate, office, or campus food facility' },
   hotel_resort: { label: 'Hotel & Resort Dining', icon: '🏨', desc: 'In-room guest dining and resort dining rooms' },
   cinema_theatre: { label: 'Cinema & Theatre Dining', icon: '🎬', desc: 'Multiplex seat food ordering and concessions' },
@@ -85,14 +84,13 @@ export const FOOD_TYPE_METADATA = Object.freeze({
 
 export const SERVICE_MODEL_METADATA = Object.freeze({
   dine_in_table: { label: 'Dine-In Table Service 🍽️', icon: '🍽️', desc: 'Guests order from tables with waiter service' },
-  counter_pickup: { label: 'Counter Pickup / Token 🧾', icon: '🧾', desc: 'Guests order and collect from fulfillment counter' },
-  self_service: { label: 'Self Service / Buffet 🛎️', icon: '🛎️', desc: 'Self-service buffet or self-service dining hall' },
-  seat_delivery: { label: 'Seat Delivery 💺', icon: '💺', desc: 'Delivered directly to cinema or theatre seats' },
-  in_room_dining: { label: 'In-Room Dining 🏨', icon: '🏨', desc: 'Delivered directly to hotel or resort rooms' },
-  takeaway: { label: 'Takeaway / Parcel 📦', icon: '📦', desc: 'Packed takeaway for takeaway customers' },
-  delivery: { label: 'Doorstep Delivery 🛵', icon: '🛵', desc: 'Dispatched to customer delivery addresses' },
-  table_and_counter: { label: 'Hybrid (Table + Counter) 🔄', icon: '🔄', desc: 'Both table dine-in and front counter pickup' },
-  mixed: { label: 'Multi-Model Mixed 🌐', icon: '🌐', desc: 'Combines multiple flexible service workflows' }
+  counter_order: { label: 'Counter Ordering / Token 🛎️', icon: '🛎️', desc: 'Guests order and collect from fulfillment counter' },
+  self_service: { label: 'Self Service / Buffet 🍱', icon: '🍱', desc: 'Self-service buffet or self-service dining hall' },
+  seat_service: { label: 'Seat Service 💺', icon: '💺', desc: 'Food served directly to numbered cinema or theatre seats' },
+  in_room_dining: { label: 'In-Room Dining 🏨', icon: '🏨', desc: 'Food served directly to hotel or resort guest rooms' },
+  takeaway: { label: 'Takeaway / Parcel 🛍️', icon: '🛍️', desc: 'On-premise orders packed for takeaway' },
+  table_and_counter: { label: 'Hybrid (Table + Counter) 🔄', icon: '🔄', desc: 'Both table dine-in and front counter ordering' },
+  mixed: { label: 'Multi-Model Mixed 🌐', icon: '🌐', desc: 'Combines multiple flexible on-premise service workflows' }
 });
 
 export const BUSINESS_TYPE_ALIASES = Object.freeze({
@@ -128,12 +126,18 @@ export const FOOD_TYPE_ALIASES = Object.freeze({
 export const SERVICE_MODEL_ALIASES = Object.freeze({
   'table': 'dine_in_table',
   'dine_in': 'dine_in_table',
-  'counter': 'counter_pickup',
-  'pickup': 'counter_pickup',
+  'counter': 'counter_order',
+  'counter_order': 'counter_order',
+  'counter_pickup': 'counter_order',
+  'pickup': 'counter_order',
   'room': 'in_room_dining',
   'room_service': 'in_room_dining',
-  'seat': 'seat_delivery',
-  'hybrid': 'table_and_counter'
+  'seat': 'seat_service',
+  'seat_service': 'seat_service',
+  'seat_delivery': 'seat_service',
+  'hybrid': 'table_and_counter',
+  'parcel': 'takeaway',
+  'takeaway': 'takeaway'
 });
 
 export function isValidBusinessType(value) {
@@ -196,11 +200,11 @@ export function resolveBusinessProfile(restaurant = {}) {
   } else if (business_type === 'hotel_resort') {
     service_model = 'in_room_dining';
   } else if (business_type === 'cinema_theatre') {
-    service_model = 'seat_delivery';
+    service_model = 'seat_service';
   } else if (business_type === 'cloud_kitchen') {
     service_model = 'takeaway';
   } else if (business_type === 'bakery_confectionery' || legacyResto === 'bakery') {
-    service_model = 'counter_pickup';
+    service_model = 'counter_order';
   } else {
     service_model = 'dine_in_table';
   }
