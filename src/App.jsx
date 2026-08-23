@@ -2153,7 +2153,7 @@ export default function App() {
         lang={lang}
         selectedCategory={selectedCategory}
         onSelectCategory={(catId) => setSelectedCategory(catId)}
-        hasCombos={combos.length > 0}
+        hasCombos={combos.length > 0 && info?.filters_visibility?.combo !== false}
       />
 
       {/* Toolbar: View Switcher */}
@@ -2337,7 +2337,7 @@ export default function App() {
         ) : (
           <>
           {/* 🛒 COMBO DEALS SECTION - ULTRA SLIM & MOBILE-NATIVE */}
-          {combos.length > 0 && !searchQuery && (
+          {combos.length > 0 && !searchQuery && info?.filters_visibility?.combo !== false && (
             <section id="combos-section" style={{ marginBottom: '12px', scrollMarginTop: '110px' }}>
               <div style={{
                 display: 'flex', alignItems: 'center', justifyContent: 'space-between',
@@ -2369,9 +2369,7 @@ export default function App() {
                   let comboItems = [];
                   try { comboItems = typeof combo.items === 'string' ? JSON.parse(combo.items) : (combo.items || []); } catch { comboItems = []; }
                   const originalTotal = comboItems.reduce((s, i) => s + ((i.original_price || 0) * (i.qty || 1)), 0);
-                  const savings = originalTotal - combo.price;
                   const itemsSummaryText = comboItems.map(i => `${i.qty > 1 ? i.qty + 'x ' : ''}${i.dish_name}`).join(' + ');
-                  const canOrder = isDirectOrderingActive;
 
                   return (
                     <div 
@@ -2388,88 +2386,38 @@ export default function App() {
                       <div style={{
                         width: '52px', height: '52px', borderRadius: '8px', overflow: 'hidden',
                         background: '#F9FAFB', border: '1px solid var(--gold-border)', flexShrink: 0,
-                        position: 'relative', display: 'flex', alignItems: 'center', justifyContent: 'center'
+                        position: 'relative'
                       }}>
-                        {combo.image && combo.image !== '/uploads/logo.jpg' ? (
-                          <img 
-                            src={combo.image} 
-                            alt={combo.name} 
-                            style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }} 
-                            onError={(e) => { e.target.style.display = 'none'; }} 
-                          />
-                        ) : (
-                          <span style={{ fontSize: '1.4rem' }}>🍱</span>
-                        )}
+                        <img 
+                          src={combo.image || '/images/default-category.webp'} 
+                          alt={combo.name}
+                          style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                          onError={(e) => { e.target.src = '/images/default-category.webp'; }}
+                        />
                       </div>
 
-                      {/* Details Content */}
+                      {/* Info & Price */}
                       <div style={{ flex: 1, minWidth: 0 }}>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '4px', marginBottom: '2px' }}>
-                          <h3 style={{
-                            fontWeight: 800, fontSize: '0.82rem', color: 'var(--text-dark)',
-                            margin: 0, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis'
-                          }}>
-                            {combo.name}
-                          </h3>
-                        </div>
-
+                        <h4 style={{ 
+                          margin: 0, fontSize: '0.8rem', fontWeight: 800, color: 'var(--text-dark)',
+                          whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' 
+                        }}>
+                          {combo.name}
+                        </h4>
                         <p style={{
-                          color: '#6B7280', fontSize: '0.68rem', margin: '0 0 3px 0',
+                          margin: '2px 0 4px', fontSize: '0.66rem', color: 'var(--text-muted)',
                           whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis'
                         }}>
-                          {itemsSummaryText || combo.description || 'Special Meal Deal'}
+                          {itemsSummaryText || combo.description || 'Special combo deal'}
                         </p>
-
-                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: '4px' }}>
-                          <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                            {/* Price Pill matching regular dish cards */}
-                            <div style={{
-                              fontSize: '0.86rem',
-                              fontWeight: 900,
-                              padding: '3px 12px',
-                              borderRadius: 'var(--radius-pill)',
-                              background: '#FFFFFF',
-                              color: 'var(--text-dark)',
-                              border: '1.5px solid var(--border-light)',
-                              whiteSpace: 'nowrap',
-                              lineHeight: 1.2,
-                              boxShadow: '0 1px 4px rgba(0,0,0,0.06)',
-                              display: 'inline-flex',
-                              alignItems: 'center'
-                            }}>
-                              {(info?.currency_symbol !== undefined && info?.currency_symbol !== null) ? info.currency_symbol : '₹'}{Math.round(Number(combo.price))}
-                            </div>
-
-                            {savings > 0 && (
-                              <span style={{ fontSize: '0.62rem', color: '#059669', fontWeight: 800, background: '#D1FAE5', padding: '2px 6px', borderRadius: 'var(--radius-pill)', border: '1px solid #A7F3D0' }}>
-                                -{(info?.currency_symbol !== undefined && info?.currency_symbol !== null) ? info.currency_symbol : '₹'}{Math.round(savings)} OFF
-                              </span>
-                            )}
-                          </div>
-
-                          {canOrder && (
-                            <button
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                handleAddComboToCart(combo);
-                              }}
-                              style={{
-                                background: 'linear-gradient(135deg, #10B981 0%, #059669 100%)',
-                                color: '#FFFFFF',
-                                border: 'none',
-                                padding: '3px 9px',
-                                borderRadius: 'var(--radius-pill)',
-                                fontWeight: 800,
-                                fontSize: '0.66rem',
-                                cursor: 'pointer',
-                                display: 'inline-flex',
-                                alignItems: 'center',
-                                gap: '2px',
-                                boxShadow: '0 2px 6px rgba(16, 185, 129, 0.3)'
-                              }}
-                            >
-                              <Plus size={11} /> Add
-                            </button>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                          <span style={{ fontSize: '0.84rem', fontWeight: 900, color: '#059669' }}>
+                            {(info?.currency_symbol !== undefined && info?.currency_symbol !== null) ? info.currency_symbol : '₹'}{combo.price}
+                          </span>
+                          {originalTotal > combo.price && (
+                            <span style={{ fontSize: '0.68rem', color: '#94A3B8', textDecoration: 'line-through' }}>
+                              {(info?.currency_symbol !== undefined && info?.currency_symbol !== null) ? info.currency_symbol : '₹'}{originalTotal}
+                            </span>
                           )}
                         </div>
                       </div>
@@ -2480,43 +2428,47 @@ export default function App() {
             </section>
           )}
 
-          {groupedDishes.map((group, gIdx) => (
-            <section key={gIdx} id={`cat-sec-${group.category.id}`} style={{ marginBottom: '28px', scrollMarginTop: '110px' }}>
-              {/* Category Section Header */}
+          {groupedDishes.map((group) => (
+            <section
+              key={group.category.id}
+              id={`cat-sec-${group.category.id}`}
+              style={{
+                marginBottom: '28px',
+                scrollMarginTop: '110px'
+              }}
+            >
+              {/* Category Header */}
               <div style={{
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'space-between',
                 marginBottom: '12px',
-                paddingBottom: '6px',
-                borderBottom: '2px solid var(--gold-border)'
+                borderBottom: '2px solid var(--border-light)',
+                paddingBottom: '6px'
               }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                  <CategoryImage
-                    image={group.category.image}
-                    name={group.category.name}
-                    size={26}
-                  />
                   <h3 style={{
                     fontSize: '1.1rem',
                     fontWeight: 800,
-                    color: 'var(--primary-emerald)'
+                    color: 'var(--primary-emerald)',
+                    margin: 0
                   }}>
                     {(lang === 'hi' && group.category.name_hi) ? group.category.name_hi : group.category.name}
                   </h3>
-                </div>
-
-                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                  {/* Category Dish Count */}
-                  <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)', fontWeight: 600 }}>
-                    {group.items.length} {lang === 'hi' ? 'आइटम' : 'items'}
+                  <span style={{
+                    fontSize: '0.72rem',
+                    background: 'var(--bg-secondary)',
+                    color: 'var(--text-muted)',
+                    padding: '2px 8px',
+                    borderRadius: 'var(--radius-pill)',
+                    fontWeight: 700
+                  }}>
+                    {group.items.length}
                   </span>
-
-
                 </div>
               </div>
 
-              {/* Items List or Grid Display */}
+              {/* Dishes Grid/List based on layout switcher */}
               {layoutMode === 'list' ? (
                 <div className="dish-list-grid">
                   {group.items.map((dish) => (
@@ -2525,6 +2477,7 @@ export default function App() {
                       dish={dish}
                       lang={lang}
                       currencySymbol={info?.currency_symbol !== undefined ? info.currency_symbol : '₹'}
+                      filtersVisibility={info?.filters_visibility}
                       onClick={() => setSelectedDishModal(dish)}
                       onAddToCart={isDirectOrderingActive ? handleAddToCart : undefined}
                     />
@@ -2542,6 +2495,7 @@ export default function App() {
                       dish={dish}
                       lang={lang}
                       currencySymbol={info?.currency_symbol !== undefined ? info.currency_symbol : '₹'}
+                      filtersVisibility={info?.filters_visibility}
                       onClick={() => setSelectedDishModal(dish)}
                       onAddToCart={isDirectOrderingActive ? handleAddToCart : undefined}
                     />
@@ -2599,7 +2553,13 @@ export default function App() {
 
                 <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
                   <span style={{ fontSize: '1rem', fontWeight: 900, color: '#FFFFFF' }}>
-                    {(info?.currency_symbol !== undefined && info?.currency_symbol !== null) ? info.currency_symbol : '₹'}{cartItems.reduce((sum, item) => sum + (item.price * item.quantity), 0)}
+                    {(() => {
+                      const sym = (info?.currency_symbol !== undefined && info?.currency_symbol !== null) ? info.currency_symbol : '₹';
+                      const subtotal = cartItems.reduce((sum, item) => sum + (item.price * item.quantity), 0);
+                      const isGst = Boolean(info?.gst_enabled);
+                      const grandTotal = isGst ? Math.round(subtotal * 1.05 * 100) / 100 : subtotal;
+                      return `${sym}${grandTotal.toFixed(2)}`;
+                    })()}
                   </span>
                   <span>→</span>
                 </div>
@@ -2833,6 +2793,45 @@ export default function App() {
                       </div>
                     )}
 
+                    {/* 🏷️ Authoritative Bill & GST Summary */}
+                    {isGst && (
+                      <div style={{
+                        background: '#F8FAFC',
+                        borderRadius: '12px',
+                        padding: '10px 14px',
+                        border: '1px solid #E2E8F0',
+                        display: 'flex',
+                        flexDirection: 'column',
+                        gap: '4px',
+                        fontSize: '0.8rem'
+                      }}>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', color: '#64748B' }}>
+                          <span>Items Subtotal</span>
+                          <span>{sym}{subtotal.toFixed(2)}</span>
+                        </div>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', color: '#64748B' }}>
+                          <span>CGST (2.5%)</span>
+                          <span>{sym}{cgst.toFixed(2)}</span>
+                        </div>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', color: '#64748B' }}>
+                          <span>SGST (2.5%)</span>
+                          <span>{sym}{sgst.toFixed(2)}</span>
+                        </div>
+                        <div style={{
+                          display: 'flex',
+                          justifyContent: 'space-between',
+                          fontWeight: 800,
+                          color: '#0F172A',
+                          borderTop: '1px dashed #CBD5E1',
+                          paddingTop: '4px',
+                          marginTop: '2px'
+                        }}>
+                          <span>Grand Total (Inc. 5% GST)</span>
+                          <span>{sym}{grandTotal.toFixed(2)}</span>
+                        </div>
+                      </div>
+                    )}
+
                     {isDirectOrderingActive && (
                       <button
                         onClick={handleSendDirectOrder}
@@ -2862,8 +2861,8 @@ export default function App() {
                           {placingOrder
                             ? 'Placing Order...'
                             : isAddon
-                              ? `⚡ Confirm & Place Round ${nextRound} Order (${sym}${cartTotal})`
-                              : `⚡ Confirm & Place Order (${sym}${cartTotal})`}
+                              ? `⚡ Confirm & Place Round ${nextRound} Order (${sym}${isGst ? grandTotal.toFixed(2) : subtotal})`
+                              : `⚡ Confirm & Place Order (${sym}${isGst ? grandTotal.toFixed(2) : subtotal})`}
                         </span>
                       </button>
                     )}

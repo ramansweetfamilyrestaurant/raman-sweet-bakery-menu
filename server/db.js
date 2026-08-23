@@ -506,6 +506,12 @@ async function createTables() {
       `ALTER TABLE orders ADD COLUMN IF NOT EXISTS parent_order_id INT;`,
       `ALTER TABLE orders ADD COLUMN IF NOT EXISTS is_settled INT DEFAULT 0;`,
       `ALTER TABLE orders ADD COLUMN IF NOT EXISTS idempotency_key VARCHAR(128);`,
+      `ALTER TABLE orders ADD COLUMN IF NOT EXISTS subtotal_amount NUMERIC(10, 2) DEFAULT 0;`,
+      `ALTER TABLE orders ADD COLUMN IF NOT EXISTS cgst_amount NUMERIC(10, 2) DEFAULT 0;`,
+      `ALTER TABLE orders ADD COLUMN IF NOT EXISTS sgst_amount NUMERIC(10, 2) DEFAULT 0;`,
+      `ALTER TABLE orders ADD COLUMN IF NOT EXISTS tax_amount NUMERIC(10, 2) DEFAULT 0;`,
+      `ALTER TABLE orders ADD COLUMN IF NOT EXISTS grand_total_amount NUMERIC(10, 2) DEFAULT 0;`,
+      `ALTER TABLE orders ADD COLUMN IF NOT EXISTS gst_rate NUMERIC(5, 2) DEFAULT 0;`,
       `CREATE INDEX IF NOT EXISTS idx_orders_resto_idemp ON orders (restaurant_id, idempotency_key);`,
       `ALTER TABLE restaurants ADD COLUMN IF NOT EXISTS kds_screen_enabled INT DEFAULT 1;`,
       `ALTER TABLE restaurants ADD COLUMN IF NOT EXISTS owner_name VARCHAR(255);`,
@@ -528,7 +534,44 @@ async function createTables() {
       `CREATE INDEX IF NOT EXISTS idx_presence_lookup ON table_location_verifications (restaurant_id, space_type, space_number, status);`,
       `CREATE INDEX IF NOT EXISTS idx_presence_token ON table_location_verifications (verification_token);`,
       `CREATE INDEX IF NOT EXISTS idx_presence_session ON table_location_verifications (session_id);`,
-      `CREATE INDEX IF NOT EXISTS idx_presence_expires ON table_location_verifications (expires_at);`
+      `CREATE INDEX IF NOT EXISTS idx_presence_expires ON table_location_verifications (expires_at);`,
+      // Step 3.21 Thermal Printer System Schema & Migration
+      `ALTER TABLE restaurants ADD COLUMN IF NOT EXISTS printer_mode VARCHAR(20) DEFAULT 'single';`,
+      `ALTER TABLE restaurants ADD COLUMN IF NOT EXISTS auto_print_kot INT DEFAULT 0;`,
+      `ALTER TABLE restaurants ADD COLUMN IF NOT EXISTS auto_print_bill INT DEFAULT 0;`,
+      `ALTER TABLE restaurants ADD COLUMN IF NOT EXISTS printer_paper_width VARCHAR(10) DEFAULT '80mm';`,
+      `CREATE TABLE IF NOT EXISTS restaurant_printers (
+        id SERIAL PRIMARY KEY,
+        restaurant_id INT NOT NULL REFERENCES restaurants(id) ON DELETE CASCADE,
+        role VARCHAR(20) NOT NULL,
+        name VARCHAR(100) NOT NULL DEFAULT 'Main Receipt Printer',
+        connection_type VARCHAR(50) NOT NULL DEFAULT 'browser_dialog',
+        target_address VARCHAR(255) DEFAULT NULL,
+        paper_width VARCHAR(10) NOT NULL DEFAULT '80mm',
+        auto_print_kot INT NOT NULL DEFAULT 0,
+        auto_print_bill INT NOT NULL DEFAULT 0,
+        active INT NOT NULL DEFAULT 1,
+        created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+        updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+        CONSTRAINT uq_restaurant_printer_role UNIQUE(restaurant_id, role)
+      );`,
+      `CREATE INDEX IF NOT EXISTS idx_restaurant_printers_resto ON restaurant_printers(restaurant_id);`,
+      `CREATE TABLE IF NOT EXISTS print_jobs (
+        id BIGSERIAL PRIMARY KEY,
+        restaurant_id INT NOT NULL REFERENCES restaurants(id) ON DELETE CASCADE,
+        printer_id INT REFERENCES restaurant_printers(id) ON DELETE SET NULL,
+        printer_role VARCHAR(20) NOT NULL,
+        order_id INT REFERENCES orders(id) ON DELETE CASCADE,
+        session_id VARCHAR(100) DEFAULT NULL,
+        round_number INT DEFAULT 1,
+        print_type VARCHAR(20) NOT NULL,
+        is_reprint INT NOT NULL DEFAULT 0,
+        status VARCHAR(20) NOT NULL DEFAULT 'printed',
+        error_message TEXT DEFAULT NULL,
+        created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+        printed_at TIMESTAMP WITH TIME ZONE DEFAULT NULL
+      );`,
+      `CREATE INDEX IF NOT EXISTS idx_print_jobs_resto_order ON print_jobs(restaurant_id, order_id, print_type);`
     ];
 
     for (const alt of pgAlters) {
@@ -960,6 +1003,12 @@ async function createTables() {
       if (!orderCols.some(c => c.name === 'parent_order_id')) sqliteDb.exec("ALTER TABLE orders ADD COLUMN parent_order_id INTEGER");
       if (!orderCols.some(c => c.name === 'is_settled')) sqliteDb.exec("ALTER TABLE orders ADD COLUMN is_settled INTEGER DEFAULT 0");
       if (!orderCols.some(c => c.name === 'idempotency_key')) sqliteDb.exec("ALTER TABLE orders ADD COLUMN idempotency_key TEXT");
+      if (!orderCols.some(c => c.name === 'subtotal_amount')) sqliteDb.exec("ALTER TABLE orders ADD COLUMN subtotal_amount REAL DEFAULT 0");
+      if (!orderCols.some(c => c.name === 'cgst_amount')) sqliteDb.exec("ALTER TABLE orders ADD COLUMN cgst_amount REAL DEFAULT 0");
+      if (!orderCols.some(c => c.name === 'sgst_amount')) sqliteDb.exec("ALTER TABLE orders ADD COLUMN sgst_amount REAL DEFAULT 0");
+      if (!orderCols.some(c => c.name === 'tax_amount')) sqliteDb.exec("ALTER TABLE orders ADD COLUMN tax_amount REAL DEFAULT 0");
+      if (!orderCols.some(c => c.name === 'grand_total_amount')) sqliteDb.exec("ALTER TABLE orders ADD COLUMN grand_total_amount REAL DEFAULT 0");
+      if (!orderCols.some(c => c.name === 'gst_rate')) sqliteDb.exec("ALTER TABLE orders ADD COLUMN gst_rate REAL DEFAULT 0");
 
       if (!restoCols.some(c => c.name === 'kds_screen_enabled')) sqliteDb.exec("ALTER TABLE restaurants ADD COLUMN kds_screen_enabled INTEGER DEFAULT 1");
       if (!restoCols.some(c => c.name === 'table_verification_mode')) sqliteDb.exec("ALTER TABLE restaurants ADD COLUMN table_verification_mode TEXT DEFAULT 'GPS_WITH_STAFF_FALLBACK'");
@@ -980,6 +1029,48 @@ async function createTables() {
 
       sqliteDb.exec("UPDATE table_location_verifications SET space_type = 'table' WHERE space_type IS NULL");
       sqliteDb.exec("UPDATE table_location_verifications SET space_number = table_number WHERE space_number IS NULL AND table_number IS NOT NULL");
+
+      // Step 3.21 Thermal Printer System SQLite Fallback
+      if (!restoCols.some(c => c.name === 'printer_mode')) sqliteDb.exec("ALTER TABLE restaurants ADD COLUMN printer_mode TEXT DEFAULT 'single'");
+      if (!restoCols.some(c => c.name === 'auto_print_kot')) sqliteDb.exec("ALTER TABLE restaurants ADD COLUMN auto_print_kot INTEGER DEFAULT 0");
+      if (!restoCols.some(c => c.name === 'auto_print_bill')) sqliteDb.exec("ALTER TABLE restaurants ADD COLUMN auto_print_bill INTEGER DEFAULT 0");
+      if (!restoCols.some(c => c.name === 'printer_paper_width')) sqliteDb.exec("ALTER TABLE restaurants ADD COLUMN printer_paper_width TEXT DEFAULT '80mm'");
+
+      sqliteDb.exec(`
+        CREATE TABLE IF NOT EXISTS restaurant_printers (
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          restaurant_id INTEGER NOT NULL REFERENCES restaurants(id) ON DELETE CASCADE,
+          role TEXT NOT NULL,
+          name TEXT NOT NULL DEFAULT 'Main Receipt Printer',
+          connection_type TEXT NOT NULL DEFAULT 'browser_dialog',
+          target_address TEXT DEFAULT NULL,
+          paper_width TEXT NOT NULL DEFAULT '80mm',
+          auto_print_kot INTEGER NOT NULL DEFAULT 0,
+          auto_print_bill INTEGER NOT NULL DEFAULT 0,
+          active INTEGER NOT NULL DEFAULT 1,
+          created_at TEXT DEFAULT CURRENT_TIMESTAMP,
+          updated_at TEXT DEFAULT CURRENT_TIMESTAMP,
+          UNIQUE(restaurant_id, role)
+        );
+      `);
+
+      sqliteDb.exec(`
+        CREATE TABLE IF NOT EXISTS print_jobs (
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          restaurant_id INTEGER NOT NULL REFERENCES restaurants(id) ON DELETE CASCADE,
+          printer_id INTEGER REFERENCES restaurant_printers(id) ON DELETE SET NULL,
+          printer_role TEXT NOT NULL,
+          order_id INTEGER REFERENCES orders(id) ON DELETE CASCADE,
+          session_id TEXT DEFAULT NULL,
+          round_number INTEGER DEFAULT 1,
+          print_type TEXT NOT NULL,
+          is_reprint INTEGER NOT NULL DEFAULT 0,
+          status TEXT NOT NULL DEFAULT 'printed',
+          error_message TEXT DEFAULT NULL,
+          created_at TEXT DEFAULT CURRENT_TIMESTAMP,
+          printed_at TEXT DEFAULT NULL
+        );
+      `);
 
       sqliteDb.exec("CREATE INDEX IF NOT EXISTS idx_presence_lookup ON table_location_verifications(restaurant_id, space_type, space_number, status)");
       sqliteDb.exec("CREATE INDEX IF NOT EXISTS idx_presence_token ON table_location_verifications(verification_token)");

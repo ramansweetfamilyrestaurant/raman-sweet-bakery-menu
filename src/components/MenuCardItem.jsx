@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { getDishImageUrl } from '../utils/imageHelper';
 
-export default function MenuCardItem({ dish, lang, onClick, onAddToCart, currencySymbol }) {
+export default function MenuCardItem({ dish, lang, onClick, onAddToCart, currencySymbol, filtersVisibility }) {
   const symbol = currencySymbol !== undefined ? currencySymbol : '₹';
   const isAvailable = dish.available !== false;
   const hasHalfPrice = dish.price_half !== null && dish.price_half !== undefined && Number(dish.price_half) > 0;
@@ -134,16 +134,19 @@ export default function MenuCardItem({ dish, lang, onClick, onAddToCart, currenc
                 border = '1px solid #F59E0B';
                 icon = '🔥';
               } else if (lower.includes('must try') || lower.includes('musttry')) {
+                if (filtersVisibility?.must_try === false) return null;
                 bg = 'linear-gradient(135deg, #FEF2F2 0%, #FEE2E2 100%)';
                 color = '#B91C1C';
                 border = '1px solid #EF4444';
                 icon = '⭐';
               } else if (lower.includes('special')) {
+                if (filtersVisibility?.special === false) return null;
                 bg = 'linear-gradient(135deg, #EEF2FF 0%, #E0E7FF 100%)';
                 color = '#4338CA';
                 border = '1px solid #6366F1';
                 icon = '✨';
               } else if (lower.includes('combo')) {
+                if (filtersVisibility?.combo === false) return null;
                 bg = 'linear-gradient(135deg, #F3E8FF 0%, #E9D5FF 100%)';
                 color = '#6B21A8';
                 border = '1px solid #A855F7';

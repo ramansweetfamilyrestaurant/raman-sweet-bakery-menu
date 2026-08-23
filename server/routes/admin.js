@@ -10,7 +10,7 @@ import { isR2Active, uploadImageToR2, deleteImageFromR2, getR2Diagnostics, purge
 import { authenticateToken, requireActiveSubscription, checkSubscriptionStatus } from '../middleware/auth.js';
 import { JWT_SECRET } from '../config/jwt.js';
 import { adminLoginRateLimiter } from '../middleware/rateLimiters.js';
-import { clearRestoResolveCache } from './api.js';
+import { clearRestoResolveCache, clearMenuBundleCache } from './api.js';
 import { normalizeVerificationMode } from '../utils/presenceVerification.js';
 
 let sharpModule = null;
@@ -1288,11 +1288,47 @@ const handleUpdateSettings = async (req, res) => {
       }
     }
 
+    // 🖨️ AUTHORITATIVE SAAS PLAN DUAL PRINTER ENFORCEMENT
+    const { printer_mode, auto_print_kot, auto_print_bill, printer_paper_width } = req.body;
+    if (printer_mode === 'dual') {
+      const restoRows = await query('SELECT plan_tier FROM restaurants WHERE id = $1', [targetId]);
+      const currentPlanTier = (restoRows[0]?.plan_tier || 'basic').toLowerCase();
+      const planRows = await query('SELECT dual_printer_enabled FROM saas_plans WHERE LOWER(key) = $1', [currentPlanTier]);
+      const isDualAllowed = planRows && planRows.length > 0
+        ? (planRows[0].dual_printer_enabled === 1 || planRows[0].dual_printer_enabled === true || planRows[0].dual_printer_enabled === '1')
+        : false;
+      if (!isDualAllowed) {
+        return res.status(403).json({
+          error: 'feature_locked',
+          feature: 'dual_printer_enabled',
+          message: 'Dual separate printer routing is not included in your current SaaS plan. Please upgrade to VIP Ultra Plan to enable separate Kitchen and Billing printers.'
+        });
+      }
+    }
+
+    // 🏷️ AUTHORITATIVE SAAS PLAN GST INVOICING ENFORCEMENT
+    if (gst_enabled === true || gst_enabled === 1 || gst_enabled === 'true' || gst_enabled === '1') {
+      const restoRows = await query('SELECT plan_tier FROM restaurants WHERE id = $1', [targetId]);
+      const currentPlanTier = (restoRows[0]?.plan_tier || 'basic').toLowerCase();
+      const planRows = await query('SELECT gst_invoice_enabled FROM saas_plans WHERE LOWER(key) = $1', [currentPlanTier]);
+      const isGstAllowed = planRows && planRows.length > 0
+        ? (planRows[0].gst_invoice_enabled === 1 || planRows[0].gst_invoice_enabled === true || planRows[0].gst_invoice_enabled === '1')
+        : false;
+      if (!isGstAllowed) {
+        return res.status(403).json({
+          error: 'feature_locked',
+          feature: 'gst_invoice_enabled',
+          message: '5% GST Tax Invoicing is not included in your current SaaS plan. Please upgrade your plan to enable GST billing.'
+        });
+      }
+    }
+
     try {
       await query(`
         UPDATE restaurants 
-        SET name = COALESCE($1, name), tagline = COALESCE($2, tagline), logo = CASE WHEN $3::text IS NOT NULL THEN $3 ELSE logo END, phone = COALESCE($4, phone), address = COALESCE($5, address), opening_hours = COALESCE($6, opening_hours), google_review_url = COALESCE($7, google_review_url), filters_visibility = COALESCE($8, filters_visibility), currency_symbol = COALESCE($9, currency_symbol), fssai_lic_no = COALESCE($10, fssai_lic_no), resto_type = COALESCE($11, resto_type), whatsapp_number = COALESCE($12, whatsapp_number), whatsapp_enabled = COALESCE($13, whatsapp_enabled), theme_color = COALESCE($14, theme_color), latitude = COALESCE($15, latitude), longitude = COALESCE($16, longitude), max_distance_meters = COALESCE($17, max_distance_meters), gst_enabled = COALESCE($18, gst_enabled), gstin_number = COALESCE($19, gstin_number), total_tables = COALESCE($20, total_tables), total_cabins = COALESCE($21, total_cabins), total_rooms = COALESCE($22, total_rooms), total_vip = COALESCE($23, total_vip), table_prefix = COALESCE($24, table_prefix), order_retention_days = COALESCE($25, order_retention_days), google_reviews_enabled = COALESCE($26, google_reviews_enabled), custom_domain = CASE WHEN $27::text IS NOT NULL THEN $27 ELSE custom_domain END, location_initialized = COALESCE($28, location_initialized), owner_name = COALESCE($29, owner_name), city = COALESCE($30, city), state = COALESCE($31, state), pincode = COALESCE($32, pincode), table_verification_mode = COALESCE($33, table_verification_mode), staff_verification_timeout_seconds = COALESCE($34, staff_verification_timeout_seconds)
-        WHERE id = $35
+        SET name = COALESCE($1, name), tagline = COALESCE($2, tagline), logo = CASE WHEN $3::text IS NOT NULL THEN $3 ELSE logo END, phone = COALESCE($4, phone), address = COALESCE($5, address), opening_hours = COALESCE($6, opening_hours), google_review_url = COALESCE($7, google_review_url), filters_visibility = COALESCE($8, filters_visibility), currency_symbol = COALESCE($9, currency_symbol), fssai_lic_no = COALESCE($10, fssai_lic_no), resto_type = COALESCE($11, resto_type), whatsapp_number = COALESCE($12, whatsapp_number), whatsapp_enabled = COALESCE($13, whatsapp_enabled), theme_color = COALESCE($14, theme_color), latitude = COALESCE($15, latitude), longitude = COALESCE($16, longitude), max_distance_meters = COALESCE($17, max_distance_meters), gst_enabled = COALESCE($18, gst_enabled), gstin_number = COALESCE($19, gstin_number), total_tables = COALESCE($20, total_tables), total_cabins = COALESCE($21, total_cabins), total_rooms = COALESCE($22, total_rooms), total_vip = COALESCE($23, total_vip), table_prefix = COALESCE($24, table_prefix), order_retention_days = COALESCE($25, order_retention_days), google_reviews_enabled = COALESCE($26, google_reviews_enabled), custom_domain = CASE WHEN $27::text IS NOT NULL THEN $27 ELSE custom_domain END, location_initialized = COALESCE($28, location_initialized), owner_name = COALESCE($29, owner_name), city = COALESCE($30, city), state = COALESCE($31, state), pincode = COALESCE($32, pincode), table_verification_mode = COALESCE($33, table_verification_mode), staff_verification_timeout_seconds = COALESCE($34, staff_verification_timeout_seconds),
+            printer_mode = COALESCE($35, printer_mode), auto_print_kot = COALESCE($36, auto_print_kot), auto_print_bill = COALESCE($37, auto_print_bill), printer_paper_width = COALESCE($38, printer_paper_width)
+        WHERE id = $39
       `, [
         name !== undefined ? name : null,
         tagline !== undefined ? tagline : null,
@@ -1328,10 +1364,14 @@ const handleUpdateSettings = async (req, res) => {
         pincode !== undefined ? pincode : null,
         cleanVerifMode,
         cleanStaffTimeout,
+        printer_mode !== undefined ? (printer_mode === 'dual' ? 'dual' : 'single') : null,
+        auto_print_kot !== undefined ? (auto_print_kot ? 1 : 0) : null,
+        auto_print_bill !== undefined ? (auto_print_bill ? 1 : 0) : null,
+        printer_paper_width !== undefined ? (printer_paper_width === '58mm' ? '58mm' : '80mm') : null,
         targetId
       ]);
     } catch (sqlErr) {
-      if (sqlErr.message && (sqlErr.message.includes('total_') || sqlErr.message.includes('table_prefix') || sqlErr.message.includes('column') || sqlErr.message.includes('verification'))) {
+      if (sqlErr.message && (sqlErr.message.includes('total_') || sqlErr.message.includes('table_prefix') || sqlErr.message.includes('column') || sqlErr.message.includes('verification') || sqlErr.message.includes('print'))) {
         try {
           await query("ALTER TABLE restaurants ADD COLUMN IF NOT EXISTS total_cabins INT DEFAULT 0");
           await query("ALTER TABLE restaurants ADD COLUMN IF NOT EXISTS total_rooms INT DEFAULT 0");
@@ -1339,10 +1379,15 @@ const handleUpdateSettings = async (req, res) => {
           await query("ALTER TABLE restaurants ADD COLUMN IF NOT EXISTS table_prefix VARCHAR(50) DEFAULT 'table'");
           await query("ALTER TABLE restaurants ADD COLUMN IF NOT EXISTS table_verification_mode VARCHAR(50) DEFAULT 'GPS_WITH_STAFF_FALLBACK'");
           await query("ALTER TABLE restaurants ADD COLUMN IF NOT EXISTS staff_verification_timeout_seconds INT DEFAULT 120");
+          await query("ALTER TABLE restaurants ADD COLUMN IF NOT EXISTS printer_mode VARCHAR(20) DEFAULT 'single'");
+          await query("ALTER TABLE restaurants ADD COLUMN IF NOT EXISTS auto_print_kot INT DEFAULT 0");
+          await query("ALTER TABLE restaurants ADD COLUMN IF NOT EXISTS auto_print_bill INT DEFAULT 0");
+          await query("ALTER TABLE restaurants ADD COLUMN IF NOT EXISTS printer_paper_width VARCHAR(10) DEFAULT '80mm'");
           await query(`
             UPDATE restaurants 
-            SET name = COALESCE($1, name), tagline = COALESCE($2, tagline), logo = CASE WHEN $3::text IS NOT NULL THEN $3 ELSE logo END, phone = COALESCE($4, phone), address = COALESCE($5, address), opening_hours = COALESCE($6, opening_hours), google_review_url = COALESCE($7, google_review_url), filters_visibility = COALESCE($8, filters_visibility), currency_symbol = COALESCE($9, currency_symbol), fssai_lic_no = COALESCE($10, fssai_lic_no), resto_type = COALESCE($11, resto_type), whatsapp_number = COALESCE($12, whatsapp_number), whatsapp_enabled = COALESCE($13, whatsapp_enabled), theme_color = COALESCE($14, theme_color), latitude = COALESCE($15, latitude), longitude = COALESCE($16, longitude), max_distance_meters = COALESCE($17, max_distance_meters), gst_enabled = COALESCE($18, gst_enabled), gstin_number = COALESCE($19, gstin_number), total_tables = COALESCE($20, total_tables), total_cabins = COALESCE($21, total_cabins), total_rooms = COALESCE($22, total_rooms), total_vip = COALESCE($23, total_vip), table_prefix = COALESCE($24, table_prefix), order_retention_days = COALESCE($25, order_retention_days), google_reviews_enabled = COALESCE($26, google_reviews_enabled), custom_domain = CASE WHEN $27::text IS NOT NULL THEN $27 ELSE custom_domain END, location_initialized = COALESCE($28, location_initialized), owner_name = COALESCE($29, owner_name), city = COALESCE($30, city), state = COALESCE($31, state), pincode = COALESCE($32, pincode), table_verification_mode = COALESCE($33, table_verification_mode), staff_verification_timeout_seconds = COALESCE($34, staff_verification_timeout_seconds)
-            WHERE id = $35
+            SET name = COALESCE($1, name), tagline = COALESCE($2, tagline), logo = CASE WHEN $3::text IS NOT NULL THEN $3 ELSE logo END, phone = COALESCE($4, phone), address = COALESCE($5, address), opening_hours = COALESCE($6, opening_hours), google_review_url = COALESCE($7, google_review_url), filters_visibility = COALESCE($8, filters_visibility), currency_symbol = COALESCE($9, currency_symbol), fssai_lic_no = COALESCE($10, fssai_lic_no), resto_type = COALESCE($11, resto_type), whatsapp_number = COALESCE($12, whatsapp_number), whatsapp_enabled = COALESCE($13, whatsapp_enabled), theme_color = COALESCE($14, theme_color), latitude = COALESCE($15, latitude), longitude = COALESCE($16, longitude), max_distance_meters = COALESCE($17, max_distance_meters), gst_enabled = COALESCE($18, gst_enabled), gstin_number = COALESCE($19, gstin_number), total_tables = COALESCE($20, total_tables), total_cabins = COALESCE($21, total_cabins), total_rooms = COALESCE($22, total_rooms), total_vip = COALESCE($23, total_vip), table_prefix = COALESCE($24, table_prefix), order_retention_days = COALESCE($25, order_retention_days), google_reviews_enabled = COALESCE($26, google_reviews_enabled), custom_domain = CASE WHEN $27::text IS NOT NULL THEN $27 ELSE custom_domain END, location_initialized = COALESCE($28, location_initialized), owner_name = COALESCE($29, owner_name), city = COALESCE($30, city), state = COALESCE($31, state), pincode = COALESCE($32, pincode), table_verification_mode = COALESCE($33, table_verification_mode), staff_verification_timeout_seconds = COALESCE($34, staff_verification_timeout_seconds),
+                printer_mode = COALESCE($35, printer_mode), auto_print_kot = COALESCE($36, auto_print_kot), auto_print_bill = COALESCE($37, auto_print_bill), printer_paper_width = COALESCE($38, printer_paper_width)
+            WHERE id = $39
           `, [
             name !== undefined ? name : null,
             tagline !== undefined ? tagline : null,
@@ -1378,10 +1423,14 @@ const handleUpdateSettings = async (req, res) => {
             pincode !== undefined ? pincode : null,
             cleanVerifMode,
             cleanStaffTimeout,
+            printer_mode !== undefined ? (printer_mode === 'dual' ? 'dual' : 'single') : null,
+            auto_print_kot !== undefined ? (auto_print_kot ? 1 : 0) : null,
+            auto_print_bill !== undefined ? (auto_print_bill ? 1 : 0) : null,
+            printer_paper_width !== undefined ? (printer_paper_width === '58mm' ? '58mm' : '80mm') : null,
             targetId
           ]);
         } catch (innerErr) {
-          console.error('Failed auto-adding presence columns:', innerErr);
+          console.error('Failed auto-adding presence/printer columns:', innerErr);
         }
       } else {
         throw sqlErr;
@@ -1389,6 +1438,12 @@ const handleUpdateSettings = async (req, res) => {
     }
 
     clearRestoResolveCache();
+    try {
+      const slugRows = await query('SELECT slug FROM restaurants WHERE id = $1', [targetId]);
+      if (slugRows && slugRows.length > 0 && slugRows[0].slug) {
+        clearMenuBundleCache(slugRows[0].slug);
+      }
+    } catch (cErr) {}
 
     res.json({ success: true, message: 'Restaurant settings updated successfully!' });
   } catch (err) {
@@ -1400,6 +1455,276 @@ const handleUpdateSettings = async (req, res) => {
 router.put('/settings', authenticateToken, requireActiveSubscription, handleUpdateSettings);
 router.post('/settings', authenticateToken, requireActiveSubscription, handleUpdateSettings);
 router.post('/info', authenticateToken, requireActiveSubscription, handleUpdateSettings);
+
+// ======================================================================
+// 🖨️ STEP 3.21: THERMAL PRINTER SYSTEM & ROUTING API ENDPOINTS
+// ======================================================================
+
+// GET /api/admin/printers - Retrieve printer configuration and plan permissions
+router.get('/printers', authenticateToken, requireActiveSubscription, async (req, res) => {
+  try {
+    const targetId = req.user?.restaurant_id;
+    if (!targetId) {
+      return res.status(401).json({ error: 'Restaurant identity is missing from authentication context' });
+    }
+
+    const [restoRows, printerRows] = await Promise.all([
+      query('SELECT id, name, plan_tier, printer_mode, auto_print_kot, auto_print_bill, printer_paper_width FROM restaurants WHERE id = $1', [targetId]),
+      query('SELECT id, role, name, connection_type, target_address, paper_width, auto_print_kot, auto_print_bill, active FROM restaurant_printers WHERE restaurant_id = $1 ORDER BY id ASC', [targetId])
+    ]);
+
+    if (!restoRows || restoRows.length === 0) {
+      return res.status(404).json({ error: 'Restaurant not found' });
+    }
+
+    const resto = restoRows[0];
+    const planTier = (resto.plan_tier || 'basic').toLowerCase();
+    const planRows = await query('SELECT dual_printer_enabled FROM saas_plans WHERE LOWER(key) = $1', [planTier]);
+    const isDualAllowed = planRows && planRows.length > 0
+      ? (planRows[0].dual_printer_enabled === 1 || planRows[0].dual_printer_enabled === true || planRows[0].dual_printer_enabled === '1')
+      : false;
+
+    let printers = printerRows || [];
+    if (printers.length === 0) {
+      printers = [
+        {
+          id: null,
+          role: 'single',
+          name: `${resto.name || 'Main'} Receipt Printer`,
+          connection_type: 'browser_dialog',
+          target_address: '',
+          paper_width: resto.printer_paper_width || '80mm',
+          auto_print_kot: Number(resto.auto_print_kot) || 0,
+          auto_print_bill: Number(resto.auto_print_bill) || 0,
+          active: 1
+        }
+      ];
+    }
+
+    res.json({
+      success: true,
+      restaurant_id: targetId,
+      plan_tier: planTier,
+      dual_printer_allowed: Boolean(isDualAllowed),
+      printer_mode: isDualAllowed ? (resto.printer_mode || 'single') : 'single',
+      auto_print_kot: Number(resto.auto_print_kot) || 0,
+      auto_print_bill: Number(resto.auto_print_bill) || 0,
+      printer_paper_width: resto.printer_paper_width || '80mm',
+      printers
+    });
+  } catch (err) {
+    console.error('Fetch printers error:', err);
+    res.status(500).json({ error: 'Failed to fetch printer settings' });
+  }
+});
+
+// POST /api/admin/printers - Save or update printer configuration
+const handleSavePrinters = async (req, res) => {
+  try {
+    const targetId = req.user?.restaurant_id;
+    if (!targetId) {
+      return res.status(401).json({ error: 'Restaurant identity is missing from authentication context' });
+    }
+
+    const { printer_mode, auto_print_kot, auto_print_bill, printer_paper_width, printers } = req.body;
+
+    const restoRows = await query('SELECT id, plan_tier FROM restaurants WHERE id = $1', [targetId]);
+    if (!restoRows || restoRows.length === 0) {
+      return res.status(404).json({ error: 'Restaurant not found' });
+    }
+
+    const planTier = (restoRows[0].plan_tier || 'basic').toLowerCase();
+    const planRows = await query('SELECT dual_printer_enabled FROM saas_plans WHERE LOWER(key) = $1', [planTier]);
+    const isDualAllowed = planRows && planRows.length > 0
+      ? (planRows[0].dual_printer_enabled === 1 || planRows[0].dual_printer_enabled === true || planRows[0].dual_printer_enabled === '1')
+      : false;
+
+    // Strict SaaS plan enforcement: Block dual mode if not allowed
+    if (printer_mode === 'dual' && !isDualAllowed) {
+      return res.status(403).json({
+        error: 'feature_locked',
+        feature: 'dual_printer_enabled',
+        message: 'Dual separate printer routing is not included in your current SaaS plan. Please upgrade to VIP Ultra Plan to enable separate Kitchen and Billing printers.'
+      });
+    }
+
+    const effectiveMode = (printer_mode === 'dual' && isDualAllowed) ? 'dual' : 'single';
+    const cleanAutoKot = auto_print_kot !== undefined ? (auto_print_kot ? 1 : 0) : 0;
+    const cleanAutoBill = auto_print_bill !== undefined ? (auto_print_bill ? 1 : 0) : 0;
+    const cleanPaperWidth = printer_paper_width === '58mm' ? '58mm' : '80mm';
+
+    await query(`
+      UPDATE restaurants 
+      SET printer_mode = $1, auto_print_kot = $2, auto_print_bill = $3, printer_paper_width = $4
+      WHERE id = $5
+    `, [effectiveMode, cleanAutoKot, cleanAutoBill, cleanPaperWidth, targetId]);
+
+    // Upsert individual printer roles if provided
+    if (Array.isArray(printers)) {
+      for (const p of printers) {
+        if (!p.role) continue;
+        const pRole = String(p.role).toLowerCase();
+        const pName = p.name ? String(p.name).trim() : (pRole === 'kitchen' ? 'Kitchen KOT Printer' : pRole === 'billing' ? 'Counter Billing Printer' : 'Main Receipt Printer');
+        const pConn = p.connection_type || 'browser_dialog';
+        const pTarget = p.target_address || '';
+        const pWidth = p.paper_width === '58mm' ? '58mm' : '80mm';
+        const pAutoKot = p.auto_print_kot !== undefined ? (p.auto_print_kot ? 1 : 0) : 0;
+        const pAutoBill = p.auto_print_bill !== undefined ? (p.auto_print_bill ? 1 : 0) : 0;
+        const pActive = p.active !== undefined ? (p.active ? 1 : 0) : 1;
+
+        try {
+          await query(`
+            INSERT INTO restaurant_printers (restaurant_id, role, name, connection_type, target_address, paper_width, auto_print_kot, auto_print_bill, active, updated_at)
+            VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, CURRENT_TIMESTAMP)
+            ON CONFLICT (restaurant_id, role) DO UPDATE SET
+              name = EXCLUDED.name,
+              connection_type = EXCLUDED.connection_type,
+              target_address = EXCLUDED.target_address,
+              paper_width = EXCLUDED.paper_width,
+              auto_print_kot = EXCLUDED.auto_print_kot,
+              auto_print_bill = EXCLUDED.auto_print_bill,
+              active = EXCLUDED.active,
+              updated_at = CURRENT_TIMESTAMP
+          `, [targetId, pRole, pName, pConn, pTarget, pWidth, pAutoKot, pAutoBill, pActive]);
+        } catch (upsertErr) {
+          // SQLite fallback if ON CONFLICT syntax differs
+          await query('DELETE FROM restaurant_printers WHERE restaurant_id = $1 AND role = $2', [targetId, pRole]).catch(() => {});
+          await query(`
+            INSERT INTO restaurant_printers (restaurant_id, role, name, connection_type, target_address, paper_width, auto_print_kot, auto_print_bill, active)
+            VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
+          `, [targetId, pRole, pName, pConn, pTarget, pWidth, pAutoKot, pAutoBill, pActive]);
+        }
+      }
+    }
+
+    clearRestoResolveCache();
+
+    res.json({
+      success: true,
+      message: 'Printer configuration saved successfully!',
+      printer_mode: effectiveMode
+    });
+  } catch (err) {
+    console.error('Save printers error:', err);
+    res.status(500).json({ error: 'Failed to save printer settings' });
+  }
+};
+
+router.post('/printers', authenticateToken, requireActiveSubscription, handleSavePrinters);
+router.put('/printers', authenticateToken, requireActiveSubscription, handleSavePrinters);
+
+// POST /api/admin/print/log - Record a print job attempt and resolve reprint status
+router.post('/print/log', authenticateToken, requireActiveSubscription, async (req, res) => {
+  try {
+    const targetId = req.user?.restaurant_id;
+    if (!targetId) {
+      return res.status(401).json({ error: 'Restaurant identity is missing from authentication context' });
+    }
+
+    const { order_id, session_id, round_number, print_type, printer_role, status, error_message } = req.body;
+    if (!order_id || !print_type) {
+      return res.status(400).json({ error: 'order_id and print_type are required' });
+    }
+
+    const cleanType = String(print_type).toLowerCase(); // 'kot', 'bill', 'test'
+    const cleanRole = printer_role ? String(printer_role).toLowerCase() : 'single';
+    const cleanStatus = status ? String(status).toLowerCase() : 'printed';
+    const cleanRound = Number(round_number) || 1;
+
+    // Check if this order + type was previously printed successfully
+    const prevPrints = await query(`
+      SELECT COUNT(*) as count 
+      FROM print_jobs 
+      WHERE restaurant_id = $1 AND order_id = $2 AND print_type = $3 AND status = 'printed'
+    `, [targetId, order_id, cleanType]);
+
+    const printCount = parseInt(prevPrints[0]?.count || 0, 10);
+    const isReprint = printCount > 0 ? 1 : 0;
+
+    const insertRes = await query(`
+      INSERT INTO print_jobs (restaurant_id, printer_role, order_id, session_id, round_number, print_type, is_reprint, status, error_message, printed_at)
+      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, CASE WHEN $8 = 'printed' THEN CURRENT_TIMESTAMP ELSE NULL END)
+      RETURNING id, is_reprint
+    `, [targetId, cleanRole, order_id, session_id || null, cleanRound, cleanType, isReprint, cleanStatus, error_message || null]);
+
+    res.json({
+      success: true,
+      job_id: insertRes[0]?.id || null,
+      is_reprint: isReprint,
+      print_count: printCount + (cleanStatus === 'printed' ? 1 : 0)
+    });
+  } catch (err) {
+    console.error('Print job log error:', err);
+    // Print failure must never crash or block order flows
+    res.json({ success: false, error: err.message, is_reprint: 0 });
+  }
+});
+
+// GET /api/admin/print/status/:orderId - Check print status of an order
+router.get('/print/status/:orderId', authenticateToken, requireActiveSubscription, async (req, res) => {
+  try {
+    const targetId = req.user?.restaurant_id;
+    const { orderId } = req.params;
+
+    const jobs = await query(`
+      SELECT print_type, is_reprint, status, COUNT(*) as count
+      FROM print_jobs
+      WHERE restaurant_id = $1 AND order_id = $2 AND status = 'printed'
+      GROUP BY print_type, is_reprint, status
+    `, [targetId, orderId]);
+
+    let kotPrintedCount = 0;
+    let billPrintedCount = 0;
+
+    (jobs || []).forEach(j => {
+      if (j.print_type === 'kot') kotPrintedCount += parseInt(j.count, 10);
+      if (j.print_type === 'bill') billPrintedCount += parseInt(j.count, 10);
+    });
+
+    res.json({
+      success: true,
+      order_id: Number(orderId),
+      kot_printed: kotPrintedCount > 0,
+      kot_print_count: kotPrintedCount,
+      bill_printed: billPrintedCount > 0,
+      bill_print_count: billPrintedCount
+    });
+  } catch (err) {
+    console.error('Fetch print status error:', err);
+    res.status(500).json({ error: 'Failed to fetch print status' });
+  }
+});
+
+// POST /api/admin/printers/test - Test printer route
+router.post('/printers/test', authenticateToken, requireActiveSubscription, async (req, res) => {
+  try {
+    const targetId = req.user?.restaurant_id;
+    const { role, paper_width } = req.body;
+    const cleanRole = (role || 'single').toLowerCase();
+    const cleanWidth = paper_width === '58mm' ? '58mm' : '80mm';
+
+    const restoRows = await query('SELECT name, address, phone, gstin_number, fssai_lic_no, currency_symbol FROM restaurants WHERE id = $1', [targetId]);
+    const resto = restoRows[0] || {};
+
+    const testPayload = {
+      test: true,
+      role: cleanRole,
+      paper_width: cleanWidth,
+      restaurant_name: resto.name || 'Sample Restaurant',
+      ticket_type: cleanRole === 'kitchen' ? 'KOT' : 'BILL',
+      timestamp: new Date().toISOString()
+    };
+
+    res.json({
+      success: true,
+      message: `Test print generated for ${cleanRole.toUpperCase()} printer (${cleanWidth})`,
+      payload: testPayload
+    });
+  } catch (err) {
+    console.error('Test print error:', err);
+    res.status(500).json({ error: 'Failed to generate test print' });
+  }
+});
 
 // Change Admin Password
 router.post('/change-password', authenticateToken, async (req, res) => {
@@ -2521,9 +2846,12 @@ router.get('/analytics/export/xlsx', authenticateToken, requireActiveSubscriptio
     }
 
     // 1. Check SaaS plan entitlement for analytics_export_enabled
-    const restoRows = await query('SELECT plan_tier, name FROM restaurants WHERE id = $1', [targetId]);
+    const restoRows = await query('SELECT plan_tier, name, currency_symbol FROM restaurants WHERE id = $1', [targetId]);
     const planTier = restoRows[0]?.plan_tier || 'pro';
     const restoName = restoRows[0]?.name || 'Restaurant';
+    const currencySym = (restoRows[0]?.currency_symbol !== null && restoRows[0]?.currency_symbol !== undefined) ? restoRows[0].currency_symbol : '₹';
+    const safeCurrency = String(currencySym).replace(/"/g, '""');
+    const excelCurrencyFmt = `"${safeCurrency}"#,##0.00`;
 
     const planRows = await query('SELECT analytics_export_enabled FROM saas_plans WHERE key = $1', [planTier]);
     const exportEnabled = planRows.length > 0
@@ -2919,11 +3247,11 @@ router.get('/analytics/export/xlsx', authenticateToken, requireActiveSubscriptio
       'Items Count',
       'Items Detail',
       'Payment Method',
-      'Cash Amount (INR)',
-      'UPI Amount (INR)',
-      'Card Amount (INR)',
-      'Other Amount (INR)',
-      'Amount (INR)',
+      `Cash Amount (${currencySym})`,
+      `UPI Amount (${currencySym})`,
+      `Card Amount (${currencySym})`,
+      `Other Amount (${currencySym})`,
+      `Amount (${currencySym})`,
       'Status'
     ]);
 
@@ -2965,11 +3293,11 @@ router.get('/analytics/export/xlsx', authenticateToken, requireActiveSubscriptio
       row.getCell(8).numFmt = '@'; // Force text format for phone numbers
       row.getCell(9).numFmt = '#,##0';
       row.getCell(10).alignment = { wrapText: true };
-      row.getCell(12).numFmt = '"₹"#,##0.00';
-      row.getCell(13).numFmt = '"₹"#,##0.00';
-      row.getCell(14).numFmt = '"₹"#,##0.00';
-      row.getCell(15).numFmt = '"₹"#,##0.00';
-      row.getCell(16).numFmt = '"₹"#,##0.00';
+      row.getCell(12).numFmt = excelCurrencyFmt;
+      row.getCell(13).numFmt = excelCurrencyFmt;
+      row.getCell(14).numFmt = excelCurrencyFmt;
+      row.getCell(15).numFmt = excelCurrencyFmt;
+      row.getCell(16).numFmt = excelCurrencyFmt;
       row.getCell(17).alignment = { horizontal: 'center' };
     });
 
@@ -3003,11 +3331,11 @@ router.get('/analytics/export/xlsx', authenticateToken, requireActiveSubscriptio
       });
       footerRow.getCell(5).numFmt = '#,##0';
       footerRow.getCell(9).numFmt = '#,##0';
-      footerRow.getCell(12).numFmt = '"₹"#,##0.00';
-      footerRow.getCell(13).numFmt = '"₹"#,##0.00';
-      footerRow.getCell(14).numFmt = '"₹"#,##0.00';
-      footerRow.getCell(15).numFmt = '"₹"#,##0.00';
-      footerRow.getCell(16).numFmt = '"₹"#,##0.00';
+      footerRow.getCell(12).numFmt = excelCurrencyFmt;
+      footerRow.getCell(13).numFmt = excelCurrencyFmt;
+      footerRow.getCell(14).numFmt = excelCurrencyFmt;
+      footerRow.getCell(15).numFmt = excelCurrencyFmt;
+      footerRow.getCell(16).numFmt = excelCurrencyFmt;
       footerRow.height = 24;
     }
 
@@ -3043,16 +3371,16 @@ router.get('/analytics/export/xlsx', authenticateToken, requireActiveSubscriptio
       cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF0284C7' } };
     });
 
-    const kpi1 = sheet2.addRow(['Total Revenue (INR)', grandTotalRevenue, 'Gross sales for selected period', '']);
-    kpi1.getCell(2).numFmt = '"₹"#,##0.00';
+    const kpi1 = sheet2.addRow([`Total Revenue (${currencySym})`, grandTotalRevenue, 'Gross sales for selected period', '']);
+    kpi1.getCell(2).numFmt = excelCurrencyFmt;
     kpi1.getCell(2).font = { bold: true };
 
     const kpi2 = sheet2.addRow(['Total Represented Orders', grandTotalRepresentedOrders, `Across ${liveOrderRowCount + rollupRowCount} physical records`, '']);
     kpi2.getCell(2).numFmt = '#,##0';
     kpi2.getCell(2).font = { bold: true };
 
-    const kpi3 = sheet2.addRow(['Average Order Value (AOV)', averageOrderValue, 'Average ticket size per order', '']);
-    kpi3.getCell(2).numFmt = '"₹"#,##0.00';
+    const kpi3 = sheet2.addRow([`Average Order Value (AOV)`, averageOrderValue, 'Average ticket size per order', '']);
+    kpi3.getCell(2).numFmt = excelCurrencyFmt;
     kpi3.getCell(2).font = { bold: true };
 
     const kpi4 = sheet2.addRow(['Total Items Sold', grandTotalItemsCount, 'Cumulative dish count sold', '']);
@@ -3062,7 +3390,7 @@ router.get('/analytics/export/xlsx', authenticateToken, requireActiveSubscriptio
     sheet2.addRow([]); // Spacer
 
     // Section 2: Payment Collection Breakdown
-    const payHeader = sheet2.addRow(['PAYMENT METHOD', 'AMOUNT (INR)', 'SHARE (%)', '']);
+    const payHeader = sheet2.addRow(['PAYMENT METHOD', `AMOUNT (${currencySym})`, 'SHARE (%)', '']);
     payHeader.eachCell((cell) => {
       cell.font = { name: 'Calibri', size: 11, bold: true, color: { argb: 'FFFFFFFF' } };
       cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF059669' } };
@@ -3078,14 +3406,14 @@ router.get('/analytics/export/xlsx', authenticateToken, requireActiveSubscriptio
     pRows.forEach(p => {
       const share = grandTotalRevenue > 0 ? (p.amount / grandTotalRevenue) : 0;
       const row = sheet2.addRow([p.name, p.amount, share, '']);
-      row.getCell(2).numFmt = '"₹"#,##0.00';
+      row.getCell(2).numFmt = excelCurrencyFmt;
       row.getCell(3).numFmt = '0.0%';
     });
 
     sheet2.addRow([]); // Spacer
 
     // Section 3: Daily Sales Trend
-    const trendHeader = sheet2.addRow(['DATE (IST)', 'ORDERS COUNT', 'REVENUE (INR)', '']);
+    const trendHeader = sheet2.addRow(['DATE (IST)', 'ORDERS COUNT', `REVENUE (${currencySym})`, '']);
     trendHeader.eachCell((cell) => {
       cell.font = { name: 'Calibri', size: 11, bold: true, color: { argb: 'FFFFFFFF' } };
       cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF6366F1' } };
@@ -3096,13 +3424,13 @@ router.get('/analytics/export/xlsx', authenticateToken, requireActiveSubscriptio
       const row = sheet2.addRow([t.date, t.orders, t.revenue, '']);
       row.getCell(1).alignment = { horizontal: 'center' };
       row.getCell(2).numFmt = '#,##0';
-      row.getCell(3).numFmt = '"₹"#,##0.00';
+      row.getCell(3).numFmt = excelCurrencyFmt;
     });
 
     sheet2.addRow([]); // Spacer
 
     // Section 4: Top Selling Dishes Preview
-    const topDishesHeader = sheet2.addRow(['RANK', 'DISH NAME', 'QUANTITY SOLD', 'REVENUE (INR)']);
+    const topDishesHeader = sheet2.addRow(['RANK', 'DISH NAME', 'QUANTITY SOLD', `REVENUE (${currencySym})`]);
     topDishesHeader.eachCell((cell) => {
       cell.font = { name: 'Calibri', size: 11, bold: true, color: { argb: 'FFFFFFFF' } };
       cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFD97706' } };
@@ -3113,7 +3441,7 @@ router.get('/analytics/export/xlsx', authenticateToken, requireActiveSubscriptio
       const row = sheet2.addRow([idx + 1, d.name, d.quantity, d.revenue]);
       row.getCell(1).alignment = { horizontal: 'center' };
       row.getCell(3).numFmt = '#,##0';
-      row.getCell(4).numFmt = '"₹"#,##0.00';
+      row.getCell(4).numFmt = excelCurrencyFmt;
     });
 
     // ==========================================
@@ -3141,7 +3469,7 @@ router.get('/analytics/export/xlsx', authenticateToken, requireActiveSubscriptio
 
     sheet3.addRow([]); // Blank Row 4
 
-    const itemHeader = sheet3.addRow(['Rank', 'Dish ID', 'Dish Name', 'Quantity Sold', 'Revenue (INR)']);
+    const itemHeader = sheet3.addRow(['Rank', 'Dish ID', 'Dish Name', 'Quantity Sold', `Revenue (${currencySym})`]);
     itemHeader.eachCell((cell) => {
       cell.font = { name: 'Calibri', size: 11, bold: true, color: { argb: 'FFFFFFFF' } };
       cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF0F172A' } };
@@ -3162,7 +3490,7 @@ router.get('/analytics/export/xlsx', authenticateToken, requireActiveSubscriptio
       row.getCell(1).alignment = { horizontal: 'center' };
       row.getCell(2).numFmt = '@';
       row.getCell(4).numFmt = '#,##0';
-      row.getCell(5).numFmt = '"₹"#,##0.00';
+      row.getCell(5).numFmt = excelCurrencyFmt;
     });
 
     const filename = `Sales_Report_${filePeriodSlug}_${todayStr}.xlsx`;

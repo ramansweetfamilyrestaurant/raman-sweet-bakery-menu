@@ -26,13 +26,22 @@ export default function SetupView({
   const [gpsLoading, setGpsLoading] = useState(false);
   const [saveSuccessMsg, setSaveSuccessMsg] = useState('');
   const [showMapModal, setShowMapModal] = useState(false);
+  const [savingForm, setSavingForm] = useState(false);
 
   const handleFormSave = async (e) => {
     if (e) e.preventDefault();
-    await handleSaveSettings();
-    setSaveSuccessMsg('✅ Settings saved successfully!');
-    setTimeout(() => setSaveSuccessMsg(''), 3000);
-    setOpenDrawer(null);
+    if (savingForm) return;
+    setSavingForm(true);
+    try {
+      await handleSaveSettings();
+      setSaveSuccessMsg('✅ Settings saved successfully!');
+      setTimeout(() => setSaveSuccessMsg(''), 3000);
+      setOpenDrawer(null);
+    } catch (err) {
+      // Alert already triggered by handleSaveSettings
+    } finally {
+      setSavingForm(false);
+    }
   };
 
   const handleSecuritySave = async (e) => {
@@ -942,81 +951,199 @@ export default function SetupView({
 
           {/* Card 3: Printer Setup Box */}
           <div style={{ padding: '16px 18px', background: '#FFFFFF', borderRadius: '16px', border: '1px solid #E2E8F0', display: 'flex', flexDirection: 'column', gap: '14px', boxShadow: '0 1px 3px rgba(0,0,0,0.04)' }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-              <div style={{ width: '36px', height: '36px', borderRadius: '10px', background: '#E0F2FE', color: '#0284C7', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1.1rem', flexShrink: 0 }}>
-                🖨️
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '8px' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                <div style={{ width: '36px', height: '36px', borderRadius: '10px', background: '#E0F2FE', color: '#0284C7', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1.1rem', flexShrink: 0 }}>
+                  🖨️
+                </div>
+                <div>
+                  <strong style={{ fontSize: '0.92rem', color: '#0F172A', fontWeight: 800, display: 'block' }}>Thermal Receipt Printer & Routing</strong>
+                  <span style={{ fontSize: '0.72rem', color: '#64748B' }}>58mm / 80mm ESC/POS, Bluetooth, USB & RawBT</span>
+                </div>
               </div>
-              <div>
-                <strong style={{ fontSize: '0.92rem', color: '#0F172A', fontWeight: 800, display: 'block' }}>Thermal Receipt Printer & Routing</strong>
-                <span style={{ fontSize: '0.72rem', color: '#64748B' }}>58mm / 80mm Bluetooth, USB, RawBT printers</span>
-              </div>
+              {(() => {
+                const isDualAllowed = Boolean(
+                  settingsForm?.dual_printer_enabled === 1 ||
+                  settingsForm?.dual_printer_enabled === true ||
+                  settingsForm?.dual_printer_enabled === '1'
+                );
+                return (
+                  <span style={{
+                    padding: '4px 10px',
+                    borderRadius: '20px',
+                    fontSize: '0.70rem',
+                    fontWeight: 900,
+                    background: isDualAllowed ? '#DCFCE7' : '#F1F5F9',
+                    color: isDualAllowed ? '#15803D' : '#64748B',
+                    border: `1px solid ${isDualAllowed ? '#86EFAC' : '#CBD5E1'}`
+                  }}>
+                    {isDualAllowed ? '⚡ DUAL PRINTER READY (VIP ULTRA)' : '🔒 SINGLE PRINTER MODE'}
+                  </span>
+                );
+              })()}
             </div>
-            <p style={{ fontSize: '0.76rem', color: '#64748B', margin: '0 0 4px 0', lineHeight: 1.45, paddingLeft: '46px' }}>
-              Automatically prints Kitchen Order Tickets (KOT) and counter customer tax invoices.
+            <p style={{ fontSize: '0.76rem', color: '#64748B', margin: '0', lineHeight: 1.45, paddingLeft: '46px' }}>
+              Configure Kitchen Order Ticket (KOT) and Counter Customer Bill thermal printing.
             </p>
 
-            <div style={{ paddingLeft: '46px', display: 'flex', flexDirection: 'column', gap: '12px' }}>
+            <div style={{ paddingLeft: '46px', display: 'flex', flexDirection: 'column', gap: '14px' }}>
               {(() => {
-              const isDualAllowed = Boolean(
-                settingsForm?.dual_printer_enabled === 1 ||
-                settingsForm?.dual_printer_enabled === true ||
-                settingsForm?.dual_printer_enabled === '1'
-              );
+                const isDualAllowed = Boolean(
+                  settingsForm?.dual_printer_enabled === 1 ||
+                  settingsForm?.dual_printer_enabled === true ||
+                  settingsForm?.dual_printer_enabled === '1'
+                );
 
-              return (
-                <>
-                  <div>
-                    <label style={{ fontSize: '0.74rem', fontWeight: 800, color: '#0F172A', display: 'block', marginBottom: '6px', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
-                      Printer Routing Mode:
-                    </label>
+                return (
+                  <>
+                    <div>
+                      <label style={{ fontSize: '0.74rem', fontWeight: 800, color: '#0F172A', display: 'block', marginBottom: '6px', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
+                        Printer Routing Mode:
+                      </label>
 
-                    <select
-                      value={isDualAllowed ? (settingsForm.printer_mode || 'single') : 'single'}
-                      onChange={(e) => {
-                        if (!isDualAllowed) return;
-                        setSettingsForm({ ...settingsForm, printer_mode: e.target.value });
-                      }}
-                      disabled={!isDualAllowed}
-                      style={{ width: '100%', padding: '10px 14px', borderRadius: '10px', border: '1px solid #CBD5E1', fontSize: '0.88rem', fontWeight: 700, boxSizing: 'border-box' }}
-                    >
-                      <option value="single">🟢 Single Printer (Same Printer for KOT & Customer Bill)</option>
-                      {isDualAllowed && (
-                        <option value="dual">⚡ Dual Separate Printers (Kitchen KOT + Counter Bill Printers)</option>
-                      )}
-                    </select>
-                  </div>
-
-                  {isDualAllowed && settingsForm.printer_mode === 'dual' && (
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', padding: '12px', background: '#F8FAFC', borderRadius: '12px', border: '1px dashed #CBD5E1' }}>
-                      <div>
-                        <label style={{ fontSize: '0.72rem', fontWeight: 800, color: '#64748B', display: 'block', marginBottom: '2px' }}>
-                          🍳 KITCHEN KOT PRINTER NAME / IP:
-                        </label>
-                        <input
-                          type="text"
-                          placeholder="e.g. Kitchen_KOT or 192.168.1.200"
-                          value={settingsForm.kot_printer_target || ''}
-                          onChange={(e) => setSettingsForm({ ...settingsForm, kot_printer_target: e.target.value })}
-                          style={{ width: '100%', padding: '8px 12px', borderRadius: '8px', border: '1px solid #CBD5E1', fontSize: '0.84rem', boxSizing: 'border-box' }}
-                        />
-                      </div>
-                      <div>
-                        <label style={{ fontSize: '0.72rem', fontWeight: 800, color: '#64748B', display: 'block', marginBottom: '2px' }}>
-                          🧾 COUNTER BILL PRINTER NAME / IP:
-                        </label>
-                        <input
-                          type="text"
-                          placeholder="e.g. Counter_Bill or 192.168.1.201"
-                          value={settingsForm.bill_printer_target || ''}
-                          onChange={(e) => setSettingsForm({ ...settingsForm, bill_printer_target: e.target.value })}
-                          style={{ width: '100%', padding: '8px 12px', borderRadius: '8px', border: '1px solid #CBD5E1', fontSize: '0.84rem', boxSizing: 'border-box' }}
-                        />
-                      </div>
+                      <select
+                        value={isDualAllowed ? (settingsForm.printer_mode || 'single') : 'single'}
+                        onChange={(e) => {
+                          if (!isDualAllowed) return;
+                          setSettingsForm({ ...settingsForm, printer_mode: e.target.value });
+                        }}
+                        disabled={!isDualAllowed}
+                        style={{ width: '100%', padding: '10px 14px', borderRadius: '10px', border: '1px solid #CBD5E1', fontSize: '0.88rem', fontWeight: 700, boxSizing: 'border-box' }}
+                      >
+                        <option value="single">🟢 Single Printer (Same Printer for KOT & Customer Bill)</option>
+                        {isDualAllowed && (
+                          <option value="dual">⚡ Dual Separate Printers (Kitchen KOT + Counter Bill)</option>
+                        )}
+                      </select>
                     </div>
-                  )}
-                </>
-              );
-            })()}
+
+                    {/* Single Mode Card */}
+                    {(!isDualAllowed || settingsForm.printer_mode !== 'dual') && (
+                      <div style={{ padding: '14px', background: '#F8FAFC', borderRadius: '12px', border: '1px solid #E2E8F0', display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                        <strong style={{ fontSize: '0.84rem', color: '#0F172A', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                          🖨️ Main Receipt Printer (KOT & Billing)
+                        </strong>
+                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px' }}>
+                          <div>
+                            <label style={{ fontSize: '0.70rem', fontWeight: 800, color: '#64748B', display: 'block', marginBottom: '3px' }}>
+                              PAPER WIDTH:
+                            </label>
+                            <select
+                              value={settingsForm.printer_paper_width || '80mm'}
+                              onChange={(e) => setSettingsForm({ ...settingsForm, printer_paper_width: e.target.value })}
+                              style={{ width: '100%', padding: '8px 10px', borderRadius: '8px', border: '1px solid #CBD5E1', fontSize: '0.82rem', fontWeight: 700, boxSizing: 'border-box' }}
+                            >
+                              <option value="80mm">80mm (Standard 3-Inch)</option>
+                              <option value="58mm">58mm (Compact 2-Inch)</option>
+                            </select>
+                          </div>
+                          <div>
+                            <label style={{ fontSize: '0.70rem', fontWeight: 800, color: '#64748B', display: 'block', marginBottom: '3px' }}>
+                              CONNECTION:
+                            </label>
+                            <select
+                              value={settingsForm.connection_type || 'browser_dialog'}
+                              onChange={(e) => setSettingsForm({ ...settingsForm, connection_type: e.target.value })}
+                              style={{ width: '100%', padding: '8px 10px', borderRadius: '8px', border: '1px solid #CBD5E1', fontSize: '0.82rem', fontWeight: 700, boxSizing: 'border-box' }}
+                            >
+                              <option value="browser_dialog">Default OS / Browser Dialog</option>
+                              <option value="rawbt">Android RawBT Direct App</option>
+                            </select>
+                          </div>
+                        </div>
+
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', marginTop: '4px' }}>
+                          <label style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '0.78rem', color: '#334155', cursor: 'pointer' }}>
+                            <input
+                              type="checkbox"
+                              checked={settingsForm.auto_print_kot === 1 || settingsForm.auto_print_kot === true}
+                              onChange={(e) => setSettingsForm({ ...settingsForm, auto_print_kot: e.target.checked ? 1 : 0 })}
+                            />
+                            <span>Auto-prompt KOT print on new live orders</span>
+                          </label>
+                          <label style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '0.78rem', color: '#334155', cursor: 'pointer' }}>
+                            <input
+                              type="checkbox"
+                              checked={settingsForm.auto_print_bill === 1 || settingsForm.auto_print_bill === true}
+                              onChange={(e) => setSettingsForm({ ...settingsForm, auto_print_bill: e.target.checked ? 1 : 0 })}
+                            />
+                            <span>Auto-prompt Bill print on table settlement</span>
+                          </label>
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Dual Mode Cards */}
+                    {isDualAllowed && settingsForm.printer_mode === 'dual' && (
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                        {/* Kitchen Printer Card */}
+                        <div style={{ padding: '14px', background: '#FEF3C7', borderRadius: '12px', border: '1px solid #FCD34D', display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                            <strong style={{ fontSize: '0.86rem', color: '#92400E', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                              🍳 KITCHEN PRINTER (KOT Receipts Only)
+                            </strong>
+                            <span style={{ fontSize: '0.70rem', background: '#F59E0B', color: '#FFF', padding: '2px 8px', borderRadius: '6px', fontWeight: 800 }}>KITCHEN</span>
+                          </div>
+                          <div>
+                            <label style={{ fontSize: '0.70rem', fontWeight: 800, color: '#78350F', display: 'block', marginBottom: '2px' }}>
+                              PRINTER NAME / TARGET:
+                            </label>
+                            <input
+                              type="text"
+                              placeholder="e.g. Kitchen_Thermal_KOT or 192.168.1.200"
+                              value={settingsForm.kot_printer_target || ''}
+                              onChange={(e) => setSettingsForm({ ...settingsForm, kot_printer_target: e.target.value })}
+                              style={{ width: '100%', padding: '8px 12px', borderRadius: '8px', border: '1px solid #FDE68A', fontSize: '0.84rem', boxSizing: 'border-box' }}
+                            />
+                          </div>
+                          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                            <label style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.76rem', color: '#78350F', cursor: 'pointer' }}>
+                              <input
+                                type="checkbox"
+                                checked={settingsForm.auto_print_kot === 1 || settingsForm.auto_print_kot === true}
+                                onChange={(e) => setSettingsForm({ ...settingsForm, auto_print_kot: e.target.checked ? 1 : 0 })}
+                              />
+                              <span>Auto-print KOT on new round</span>
+                            </label>
+                          </div>
+                        </div>
+
+                        {/* Counter Billing Printer Card */}
+                        <div style={{ padding: '14px', background: '#E0F2FE', borderRadius: '12px', border: '1px solid #BAE6FD', display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                            <strong style={{ fontSize: '0.86rem', color: '#0369A1', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                              🧾 COUNTER BILLING PRINTER (Customer Invoices Only)
+                            </strong>
+                            <span style={{ fontSize: '0.70rem', background: '#0284C7', color: '#FFF', padding: '2px 8px', borderRadius: '6px', fontWeight: 800 }}>COUNTER</span>
+                          </div>
+                          <div>
+                            <label style={{ fontSize: '0.70rem', fontWeight: 800, color: '#075985', display: 'block', marginBottom: '2px' }}>
+                              PRINTER NAME / TARGET:
+                            </label>
+                            <input
+                              type="text"
+                              placeholder="e.g. Counter_Bill_Thermal or 192.168.1.201"
+                              value={settingsForm.bill_printer_target || ''}
+                              onChange={(e) => setSettingsForm({ ...settingsForm, bill_printer_target: e.target.value })}
+                              style={{ width: '100%', padding: '8px 12px', borderRadius: '8px', border: '1px solid #BAE6FD', fontSize: '0.84rem', boxSizing: 'border-box' }}
+                            />
+                          </div>
+                          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                            <label style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.76rem', color: '#075985', cursor: 'pointer' }}>
+                              <input
+                                type="checkbox"
+                                checked={settingsForm.auto_print_bill === 1 || settingsForm.auto_print_bill === true}
+                                onChange={(e) => setSettingsForm({ ...settingsForm, auto_print_bill: e.target.checked ? 1 : 0 })}
+                              />
+                              <span>Auto-print Bill on settlement</span>
+                            </label>
+                          </div>
+                        </div>
+                      </div>
+                    )}
+                  </>
+                );
+              })()}
 
               <button
                 onClick={() => { setOpenDrawer(null); setShowPrinterModal(true); }}
@@ -1036,7 +1163,7 @@ export default function SetupView({
                   gap: '6px'
                 }}
               >
-                <Printer size={15} /> Open Printer Pairing Guide
+                <Printer size={15} /> Open Printer Pairing Guide & Test Suite
               </button>
             </div>
           </div>

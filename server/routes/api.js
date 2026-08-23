@@ -238,6 +238,33 @@ export function clearMenuBundleCache(targetSlug) {
   }
 }
 
+// 🏷️ Authoritative GST & Financial Calculation Utility (5% Total = 2.5% CGST + 2.5% SGST)
+export function calculateOrderTax(subtotal, gstEnabled) {
+  const rawSubtotal = Math.round(Number(subtotal || 0) * 100) / 100;
+  if (!gstEnabled) {
+    return {
+      subtotal: rawSubtotal,
+      cgst: 0,
+      sgst: 0,
+      tax_total: 0,
+      grand_total: rawSubtotal,
+      gst_rate: 0
+    };
+  }
+  const cgst = Math.round(rawSubtotal * 0.025 * 100) / 100;
+  const sgst = Math.round(rawSubtotal * 0.025 * 100) / 100;
+  const tax_total = Math.round((cgst + sgst) * 100) / 100;
+  const grand_total = Math.round((rawSubtotal + tax_total) * 100) / 100;
+  return {
+    subtotal: rawSubtotal,
+    cgst,
+    sgst,
+    tax_total,
+    grand_total,
+    gst_rate: 5.0
+  };
+}
+
 // GET Combined Menu Bundle (Blazing-Fast Edge-Cached Payload)
 router.get('/menu-bundle', async (req, res) => {
   res.setHeader('Cache-Control', 'public, max-age=10, stale-while-revalidate=30');
@@ -324,12 +351,17 @@ router.get('/menu-bundle', async (req, res) => {
     const bluetoothKotEnabled = isFieldTrue(saasP.bluetooth_kot_enabled, true);
     const dualPrinterEnabled = isFieldTrue(saasP.dual_printer_enabled, planTierKey === 'enterprise' || planTierKey === 'vip_ultra_plan');
 
+    const effectiveGstActive = gstInvoiceEnabled && (resto.gst_enabled === 1 || resto.gst_enabled === true || resto.gst_enabled === '1' || resto.gst_enabled === 'true');
+    const badgeText = resto.resto_type === 'pure_veg' 
+      ? '100% Pure Veg' 
+      : (resto.resto_type === 'bakery' ? 'Bakery & Confectionery' : 'Veg & Non-Veg');
+
     const infoObj = {
       id: resto.id,
       name: resto.name,
       slug: resto.slug,
       tagline: resto.tagline || '',
-      badge: resto.resto_type === 'pure_veg' ? '100% Pure Veg' : 'Veg & Non-Veg',
+      badge: badgeText,
       resto_type: resto.resto_type || 'pure_veg',
       logo: resto.logo || '',
       openingHours: resto.opening_hours || '',
@@ -350,6 +382,9 @@ router.get('/menu-bundle', async (req, res) => {
       multi_language_enabled: multiLanguageEnabled,
       analytics_export_enabled: analyticsExportEnabled,
       gst_invoice_enabled: gstInvoiceEnabled,
+      gst_enabled: Boolean(effectiveGstActive),
+      gstin_number: resto.gstin_number || '',
+      gst_rate: effectiveGstActive ? 5.0 : 0.0,
       ai_review_enabled: aiReviewEnabled,
       google_reviews_enabled: googleReviewsEnabled,
       bluetooth_kot_enabled: bluetoothKotEnabled,
@@ -438,14 +473,17 @@ router.get('/info', async (req, res) => {
     const kdsEnabled = saasPlan.kds_enabled !== undefined ? (saasPlan.kds_enabled === 1 || saasPlan.kds_enabled === true || saasPlan.kds_enabled === '1') : (planTierKey === 'enterprise' || planTierKey === 'vip_ultra_plan');
     const bluetoothKotEnabled = saasPlan.bluetooth_kot_enabled !== undefined ? (saasPlan.bluetooth_kot_enabled === 1 || saasPlan.bluetooth_kot_enabled === true || saasPlan.bluetooth_kot_enabled === '1') : true;
     const dualPrinterEnabled = saasPlan.dual_printer_enabled !== undefined ? (saasPlan.dual_printer_enabled === 1 || saasPlan.dual_printer_enabled === true || saasPlan.dual_printer_enabled === '1') : (planTierKey === 'enterprise' || planTierKey === 'vip_ultra_plan');
-    const modifiersEnabled = saasPlan.modifiers_enabled !== undefined ? (saasPlan.modifiers_enabled === 1 || saasPlan.modifiers_enabled === true || saasPlan.modifiers_enabled === '1') : true;
+    const effectiveGstActive = (saasPlan.gst_invoice_enabled !== 0 && saasPlan.gst_invoice_enabled !== false && saasPlan.gst_invoice_enabled !== '0' && saasPlan.gst_invoice_enabled !== 'false') && (resto.gst_enabled === 1 || resto.gst_enabled === true || resto.gst_enabled === '1' || resto.gst_enabled === 'true');
+    const badgeText = resto.resto_type === 'pure_veg' 
+      ? '100% Pure Veg' 
+      : (resto.resto_type === 'bakery' ? 'Bakery & Confectionery' : 'Veg & Non-Veg');
 
     return res.json({
       id: resto.id,
       name: resto.name || 'Restaurant',
       slug: resto.slug || '',
       tagline: resto.tagline || '',
-      badge: resto.resto_type === 'pure_veg' ? '100% Pure Veg' : 'Veg & Non-Veg',
+      badge: badgeText,
       resto_type: resto.resto_type || 'pure_veg',
       logo: resto.logo || '',
       openingHours: resto.opening_hours || '',
@@ -483,8 +521,9 @@ router.get('/info', async (req, res) => {
       latitude: resto.latitude !== undefined && resto.latitude !== null ? Number(resto.latitude) : null,
       longitude: resto.longitude !== undefined && resto.longitude !== null ? Number(resto.longitude) : null,
       max_distance_meters: resto.max_distance_meters || 100,
-      gst_enabled: resto.gst_enabled === 1 || resto.gst_enabled === true,
+      gst_enabled: Boolean(effectiveGstActive),
       gstin_number: resto.gstin_number || '',
+      gst_rate: effectiveGstActive ? 5.0 : 0.0,
       total_tables: resto.total_tables !== undefined && resto.total_tables !== null ? Number(resto.total_tables) : 0,
       total_cabins: resto.total_cabins !== undefined && resto.total_cabins !== null ? Number(resto.total_cabins) : 0,
       total_rooms: resto.total_rooms !== undefined && resto.total_rooms !== null ? Number(resto.total_rooms) : 0,
@@ -1605,24 +1644,38 @@ router.post('/orders', orderCreationRateLimiter, async (req, res) => {
 
         const itemsJson = JSON.stringify(taggedItems);
         const createdAt = new Date().toISOString();
-        const finalTotal = serverVerifiedTotal > 0 ? serverVerifiedTotal : (Number(total_amount) || 0);
+        
+        // 🛡️ Server-Authoritative GST & Grand Total Calculation
+        const isEffectiveGst = Boolean(
+          (planPermissions?.gst_invoice_enabled !== 0 && planPermissions?.gst_invoice_enabled !== false && planPermissions?.gst_invoice_enabled !== '0' && planPermissions?.gst_invoice_enabled !== 'false') &&
+          (resto.gst_enabled === 1 || resto.gst_enabled === true || resto.gst_enabled === '1' || resto.gst_enabled === 'true')
+        );
+        const taxBreakdown = calculateOrderTax(serverVerifiedTotal, isEffectiveGst);
         const storedIdempKey = customIdempKey ? String(customIdempKey).trim().substring(0, 100) : null;
 
         let result = null;
         try {
           result = await txQuery(`
             INSERT INTO orders (
-              restaurant_id, table_number, customer_name, customer_phone, items, total_amount, status, sent_to_kds, created_at,
+              restaurant_id, table_number, customer_name, customer_phone, items, 
+              total_amount, subtotal_amount, cgst_amount, sgst_amount, tax_amount, grand_total_amount, gst_rate,
+              status, sent_to_kds, created_at,
               customer_latitude, customer_longitude, customer_accuracy, distance_meters,
               session_id, round_number, parent_order_id, is_settled, idempotency_key
-            ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18) RETURNING id
+            ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21, $22, $23, $24) RETURNING id
           `, [
             targetId,
             cleanTable,
             customerName,
             customerPhone,
             itemsJson,
-            finalTotal,
+            taxBreakdown.grand_total,
+            taxBreakdown.subtotal,
+            taxBreakdown.cgst,
+            taxBreakdown.sgst,
+            taxBreakdown.tax_total,
+            taxBreakdown.grand_total,
+            taxBreakdown.gst_rate,
             'pending',
             0,
             createdAt,
@@ -1644,6 +1697,12 @@ router.post('/orders', orderCreationRateLimiter, async (req, res) => {
           try { await txQuery('ALTER TABLE orders ADD COLUMN IF NOT EXISTS is_settled INT DEFAULT 0'); } catch (e) {}
           try { await txQuery('ALTER TABLE orders ADD COLUMN IF NOT EXISTS sent_to_kds INT DEFAULT 0'); } catch (e) {}
           try { await txQuery('ALTER TABLE orders ADD COLUMN IF NOT EXISTS kitchen_prepared INT DEFAULT 0'); } catch (e) {}
+          try { await txQuery('ALTER TABLE orders ADD COLUMN IF NOT EXISTS subtotal_amount NUMERIC(10, 2) DEFAULT 0'); } catch (e) {}
+          try { await txQuery('ALTER TABLE orders ADD COLUMN IF NOT EXISTS cgst_amount NUMERIC(10, 2) DEFAULT 0'); } catch (e) {}
+          try { await txQuery('ALTER TABLE orders ADD COLUMN IF NOT EXISTS sgst_amount NUMERIC(10, 2) DEFAULT 0'); } catch (e) {}
+          try { await txQuery('ALTER TABLE orders ADD COLUMN IF NOT EXISTS tax_amount NUMERIC(10, 2) DEFAULT 0'); } catch (e) {}
+          try { await txQuery('ALTER TABLE orders ADD COLUMN IF NOT EXISTS grand_total_amount NUMERIC(10, 2) DEFAULT 0'); } catch (e) {}
+          try { await txQuery('ALTER TABLE orders ADD COLUMN IF NOT EXISTS gst_rate NUMERIC(5, 2) DEFAULT 0'); } catch (e) {}
           try { await txQuery('ALTER TABLE orders ADD COLUMN IF NOT EXISTS customer_latitude DECIMAL(10, 8)'); } catch (e) {}
           try { await txQuery('ALTER TABLE orders ADD COLUMN IF NOT EXISTS customer_longitude DECIMAL(11, 8)'); } catch (e) {}
           try { await txQuery('ALTER TABLE orders ADD COLUMN IF NOT EXISTS customer_accuracy INT'); } catch (e) {}
@@ -1652,16 +1711,24 @@ router.post('/orders', orderCreationRateLimiter, async (req, res) => {
 
           result = await txQuery(`
             INSERT INTO orders (
-              restaurant_id, table_number, customer_name, customer_phone, items, total_amount, status, sent_to_kds, created_at,
+              restaurant_id, table_number, customer_name, customer_phone, items, 
+              total_amount, subtotal_amount, cgst_amount, sgst_amount, tax_amount, grand_total_amount, gst_rate,
+              status, sent_to_kds, created_at,
               session_id, round_number, parent_order_id, is_settled, idempotency_key
-            ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14) RETURNING id
+            ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20) RETURNING id
           `, [
             targetId,
             cleanTable,
             customerName,
             customerPhone,
             itemsJson,
-            finalTotal,
+            taxBreakdown.grand_total,
+            taxBreakdown.subtotal,
+            taxBreakdown.cgst,
+            taxBreakdown.sgst,
+            taxBreakdown.tax_total,
+            taxBreakdown.grand_total,
+            taxBreakdown.gst_rate,
             'pending',
             0,
             createdAt,
@@ -1684,7 +1751,13 @@ router.post('/orders', orderCreationRateLimiter, async (req, res) => {
           is_addon: isAddonOrder,
           status: 'pending',
           table_number: cleanTable,
-          total_amount: finalTotal,
+          total_amount: taxBreakdown.grand_total,
+          subtotal_amount: taxBreakdown.subtotal,
+          cgst_amount: taxBreakdown.cgst,
+          sgst_amount: taxBreakdown.sgst,
+          tax_amount: taxBreakdown.tax_total,
+          grand_total_amount: taxBreakdown.grand_total,
+          gst_rate: taxBreakdown.gst_rate,
           distance_meters: distanceMetersValue,
           message: isAddonOrder
             ? `🎉 Round ${roundNumber} (Add-on Order #${orderId}) placed for Table #${cleanTable}!`
@@ -1712,7 +1785,7 @@ router.post('/orders', orderCreationRateLimiter, async (req, res) => {
 router.get('/orders/track/:id', async (req, res) => {
   try {
     const { id } = req.params;
-    const orders = await query('SELECT id, session_id, round_number, parent_order_id, table_number, customer_name, status, kitchen_prepared, sent_to_kds, total_amount, items, created_at FROM orders WHERE id = $1', [id]);
+    const orders = await query('SELECT id, session_id, round_number, parent_order_id, table_number, customer_name, status, kitchen_prepared, sent_to_kds, total_amount, subtotal_amount, cgst_amount, sgst_amount, tax_amount, grand_total_amount, gst_rate, items, created_at FROM orders WHERE id = $1', [id]);
     if (orders.length === 0) {
       return res.status(404).json({ error: 'Order not found' });
     }
@@ -1745,14 +1818,14 @@ router.get('/orders/active-table', async (req, res) => {
     let orders = [];
     try {
       orders = await query(`
-        SELECT id, session_id, round_number, parent_order_id, table_number, customer_name, status, kitchen_prepared, sent_to_kds, total_amount, items, created_at
+        SELECT id, session_id, round_number, parent_order_id, table_number, customer_name, status, kitchen_prepared, sent_to_kds, total_amount, subtotal_amount, cgst_amount, sgst_amount, tax_amount, grand_total_amount, gst_rate, items, created_at
         FROM orders
         WHERE restaurant_id = $1 AND table_number = $2 AND status IN ('pending', 'preparing', 'kitchen', 'accepted', 'served') AND (is_settled = 0 OR is_settled IS NULL)
         ORDER BY id ASC
       `, [targetId, String(table_number).trim()]);
     } catch (e) {
       orders = await query(`
-        SELECT id, table_number, customer_name, status, kitchen_prepared, sent_to_kds, total_amount, items, created_at
+        SELECT id, table_number, customer_name, status, kitchen_prepared, sent_to_kds, total_amount, subtotal_amount, cgst_amount, sgst_amount, tax_amount, grand_total_amount, gst_rate, items, created_at
         FROM orders
         WHERE restaurant_id = $1 AND table_number = $2 AND status IN ('pending', 'preparing', 'kitchen', 'accepted', 'served')
         ORDER BY id ASC
@@ -1765,6 +1838,10 @@ router.get('/orders/active-table', async (req, res) => {
     const latestOrder = orders[orders.length - 1];
 
     let allItemsAcrossRounds = [];
+    let runningSubtotal = 0;
+    let runningCgst = 0;
+    let runningSgst = 0;
+    let runningTax = 0;
     let runningGrandTotal = 0;
 
     const rounds = orders.map(o => {
@@ -1774,7 +1851,19 @@ router.get('/orders/active-table', async (req, res) => {
       } else if (Array.isArray(o.items)) {
         rItems = o.items;
       }
-      runningGrandTotal += Number(o.total_amount) || 0;
+
+      const rSub = Number(o.subtotal_amount) > 0 ? Number(o.subtotal_amount) : (Number(o.total_amount) || 0);
+      const rCgst = Number(o.cgst_amount) || 0;
+      const rSgst = Number(o.sgst_amount) || 0;
+      const rTax = Number(o.tax_amount) || 0;
+      const rGrand = Number(o.grand_total_amount) > 0 ? Number(o.grand_total_amount) : (Number(o.total_amount) || 0);
+
+      runningSubtotal += rSub;
+      runningCgst += rCgst;
+      runningSgst += rSgst;
+      runningTax += rTax;
+      runningGrandTotal += rGrand;
+
       allItemsAcrossRounds.push(...rItems);
 
       return {
@@ -1783,7 +1872,13 @@ router.get('/orders/active-table', async (req, res) => {
         status: o.status,
         kitchen_prepared: o.kitchen_prepared,
         sent_to_kds: o.sent_to_kds,
-        total_amount: o.total_amount,
+        total_amount: rGrand,
+        subtotal_amount: rSub,
+        cgst_amount: rCgst,
+        sgst_amount: rSgst,
+        tax_amount: rTax,
+        grand_total_amount: rGrand,
+        gst_rate: Number(o.gst_rate) || 0,
         items: rItems,
         created_at: o.created_at
       };
@@ -1798,6 +1893,14 @@ router.get('/orders/active-table', async (req, res) => {
       status: latestOrder.status,
       current_round: Number(latestOrder.round_number) || 1,
       total_amount: runningGrandTotal,
+      subtotal_amount: runningSubtotal,
+      cgst_amount: runningCgst,
+      sgst_amount: runningSgst,
+      tax_amount: runningTax,
+      grand_total_amount: runningGrandTotal,
+      gst_enabled: Boolean(resto.gst_enabled),
+      gstin_number: resto.gstin_number || '',
+      currency_symbol: resto.currency_symbol || '₹',
       items: allItemsAcrossRounds,
       rounds
     });
