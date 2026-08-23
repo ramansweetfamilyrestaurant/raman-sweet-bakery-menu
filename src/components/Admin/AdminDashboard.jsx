@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { fetchCategories, fetchDishes, toggleDishAvailability, toggleCategoryActive, deleteDish, deleteCategory, fetchRestaurantInfo, updateDishPrice, fetchAnnouncements, fetchAdminOrders, updateOrderStatus, uploadImage, fetchServiceRequests, resolveServiceRequest, approvePresenceRequest, rejectPresenceRequest, fetchAdminAnalytics, exportAdminAnalyticsCSV, exportAdminAnalyticsXLSX, fetchAdminCombos, createCombo, updateCombo, deleteCombo, toggleComboAvailability, optimizeDatabase, updateTenantSettings } from '../../api/client';
 import { getPlanDetails } from '../../config/plans';
 import { generateQrToken } from '../../utils/qrSecurity';
+import { getSpaceConfig } from '../../utils/businessTaxonomy';
 import { soundManager, unlockNotificationSound, playPresenceAlert, playWaiterAlert, subscribeAudioState } from '../../utils/soundManager';
 import DishFormModal from './DishFormModal';
 import CategoryFormModal from './CategoryFormModal';
