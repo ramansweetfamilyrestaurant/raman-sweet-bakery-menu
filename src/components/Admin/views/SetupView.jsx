@@ -55,8 +55,9 @@ export default function SetupView({
   }, [initialDrawer]);
 
   // Cinema Management State
-  const profile = resolveBusinessProfile(settingsForm.business_type, settingsForm.service_model);
-  const isCinema = profile.businessType === 'cinema_theatre' && profile.serviceModel === 'seat_service';
+  const profile = resolveBusinessProfile(settingsForm || {});
+  const isCinema = (profile?.business_type || settingsForm?.business_type) === 'cinema_theatre' && 
+                   (profile?.service_model || settingsForm?.service_model) === 'seat_service';
 
   const [cinemaScreens, setCinemaScreens] = useState([]);
   const [cinemaSeats, setCinemaSeats] = useState([]);
