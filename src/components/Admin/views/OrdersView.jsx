@@ -211,13 +211,29 @@ export default function OrdersView({
     return true;
   });
 
-  const prefix = String(restaurantInfo?.table_prefix || 'table').toLowerCase();
+  const prefix = String(restaurantInfo?.table_prefix || settingsForm?.table_prefix || 'table').toLowerCase();
   const spaceLabel = prefix === 'cabin' ? 'Cabin' : prefix === 'room' ? 'Room' : prefix === 'vip' ? 'VIP Lounge' : 'Table';
   const spacePlural = prefix === 'cabin' ? 'Cabins' : prefix === 'room' ? 'Rooms' : prefix === 'vip' ? 'VIP Lounges' : 'Tables';
   const spaceField = prefix === 'cabin' ? 'total_cabins' : prefix === 'room' ? 'total_rooms' : prefix === 'vip' ? 'total_vip' : 'total_tables';
 
-  const totalTables = Number(restaurantInfo?.[spaceField]) || Number(restaurantInfo?.total_tables) || 10;
-  const tableGrid = Array.from({ length: totalTables }, (_, i) => {
+  const currentSpaceCount = (() => {
+    if (prefix === 'cabin') {
+      return Number(restaurantInfo?.total_cabins ?? settingsForm?.total_cabins) || 0;
+    }
+    if (prefix === 'room') {
+      return Number(restaurantInfo?.total_rooms ?? settingsForm?.total_rooms) || 0;
+    }
+    if (prefix === 'vip') {
+      return Number(restaurantInfo?.total_vip ?? settingsForm?.total_vip) || 0;
+    }
+    const tableVal = restaurantInfo?.total_tables ?? settingsForm?.total_tables;
+    if (tableVal !== undefined && tableVal !== null) {
+      return Number(tableVal) || 0;
+    }
+    return (!isHotel && !isCinema) ? 10 : 0;
+  })();
+
+  const tableGrid = Array.from({ length: currentSpaceCount }, (_, i) => {
     const tableNum = String(i + 1);
     const activeOrder = validOrders.find(o => (String(o.table_number) === tableNum || String(o.table_number).toLowerCase().includes(tableNum)) && o.status !== 'completed' && o.status !== 'rejected' && o.status !== 'cancelled');
     const serviceReq = safeServiceRequests.find(s => String(s.table_number) === tableNum || String(s.table_number).toLowerCase().includes(tableNum));
@@ -337,7 +353,25 @@ export default function OrdersView({
             transition: 'all 0.15s ease'
           }}
         >
-          {isCinema ? `💺 Cinema Seats (${cinemaSeats.length})` : isHotel ? `🏨 Room Status (${totalTables} Rooms)` : `🗺️ Floor Map (${totalTables} Tables)`}
+          {isCinema
+            ? `💺 Cinema Seats (${cinemaSeats.length})`
+            : isHotel
+              ? (prefix === 'room'
+                  ? `🏨 Room Status (${currentSpaceCount} Rooms)`
+                  : prefix === 'table'
+                    ? `🍽️ Dining Tables (${currentSpaceCount} Tables)`
+                    : prefix === 'cabin'
+                      ? `🛋️ Private Cabins (${currentSpaceCount} Cabins)`
+                      : prefix === 'vip'
+                        ? `👑 VIP Lounges (${currentSpaceCount} VIP Lounges)`
+                        : `🏨 Room Status (${currentSpaceCount} Rooms)`)
+              : (prefix === 'cabin'
+                  ? `🛋️ Private Cabins (${currentSpaceCount} Cabins)`
+                  : prefix === 'room'
+                    ? `🏨 Rooms (${currentSpaceCount} Rooms)`
+                    : prefix === 'vip'
+                      ? `👑 VIP Lounges (${currentSpaceCount} VIP Lounges)`
+                      : `🗺️ Floor Map (${currentSpaceCount} Tables)`)}
         </button>
         {!isCinema && (
           <button
@@ -922,32 +956,56 @@ export default function OrdersView({
           </div>
         ) : (
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(220px, 1fr))', gap: '12px' }}>
-            {tableGrid.map(t => {
-              const isOccupied = t.status === 'occupied';
-              const isService = t.status === 'service_needed';
-              const isFree = t.status === 'available';
+            {tableGrid.length === 0 ? (
+              <div style={{
+                gridColumn: '1 / -1',
+                padding: '48px 24px',
+                textAlign: 'center',
+                background: '#FFFFFF',
+                borderRadius: '16px',
+                border: '1px dashed #CBD5E1'
+              }}>
+                <div style={{ fontSize: '2rem', marginBottom: '12px' }}>
+                  {isHotel ? '🏨' : '🍽️'}
+                </div>
+                <h3 style={{ fontSize: '1.1rem', fontWeight: 900, color: '#0F172A', margin: '0 0 6px 0' }}>
+                  {isHotel && prefix === 'room'
+                    ? 'No Hotel Rooms Configured Yet'
+                    : `No ${spacePlural} Configured Yet`}
+                </h3>
+                <p style={{ fontSize: '0.84rem', color: '#64748B', maxWidth: '420px', margin: '0 auto' }}>
+                  {isHotel && prefix === 'room'
+                    ? 'Add guest rooms in the QR Standee & Space QR Generator to view live room statuses and orders.'
+                    : `Add ${spacePlural.toLowerCase()} in the QR Generator to monitor live status.`}
+                </p>
+              </div>
+            ) : (
+              tableGrid.map(t => {
+                const isOccupied = t.status === 'occupied';
+                const isService = t.status === 'service_needed';
+                const isFree = t.status === 'available';
 
-              return (
-                <div
-                  key={t.tableNumber}
-                  style={{
-                    background: isOccupied ? '#FEF2F2' : isService ? '#FFFBEB' : '#FFFFFF',
-                    border: '1px solid',
-                    borderColor: isOccupied ? '#FECACA' : isService ? '#FDE68A' : '#E2E8F0',
-                    borderRadius: '16px',
-                    padding: '16px',
-                    display: 'flex',
-                    flexDirection: 'column',
-                    justifyContent: 'space-between',
-                    gap: '12px',
-                    boxShadow: '0 2px 8px rgba(0,0,0,0.02)'
-                  }}
-                >
-                  <div>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
-                      <strong style={{ fontSize: '1.05rem', color: '#0F172A', fontWeight: 900 }}>
-                        {spaceLabel.toUpperCase()} {t.tableNumber}
-                      </strong>
+                return (
+                  <div
+                    key={t.tableNumber}
+                    style={{
+                      background: isOccupied ? '#FEF2F2' : isService ? '#FFFBEB' : '#FFFFFF',
+                      border: '1px solid',
+                      borderColor: isOccupied ? '#FECACA' : isService ? '#FDE68A' : '#E2E8F0',
+                      borderRadius: '16px',
+                      padding: '16px',
+                      display: 'flex',
+                      flexDirection: 'column',
+                      justifyContent: 'space-between',
+                      gap: '12px',
+                      boxShadow: '0 2px 8px rgba(0,0,0,0.02)'
+                    }}
+                  >
+                    <div>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
+                        <strong style={{ fontSize: '1.05rem', color: '#0F172A', fontWeight: 900 }}>
+                          {prefix === 'room' ? '🏨 ROOM' : prefix === 'cabin' ? '🛋️ CABIN' : prefix === 'vip' ? '👑 VIP' : 'TABLE'} {t.tableNumber}
+                        </strong>
                       <span style={{
                         padding: '3px 8px',
                         borderRadius: '8px',
@@ -1109,7 +1167,7 @@ export default function OrdersView({
 
                     {isFree && onPrintQR && (
                       <button
-                        onClick={() => onPrintQR(t.tableNumber)}
+                        onClick={() => onPrintQR(t.tableNumber, prefix)}
                         style={{
                           width: '100%',
                           padding: '8px',
@@ -1126,13 +1184,13 @@ export default function OrdersView({
                           gap: '4px'
                         }}
                       >
-                        <QrCode size={12} /> Print Table Standee
+                        <QrCode size={12} /> Print {spaceLabel} Standee
                       </button>
                     )}
                   </div>
                 </div>
               );
-            })}
+            }))}
           </div>
         )
       )}

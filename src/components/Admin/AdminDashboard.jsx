@@ -1874,7 +1874,7 @@ export default function AdminDashboard({ token, username, slug: propSlug = '', o
     const prefix = targetPrefix || settingsForm.table_prefix || restaurantInfo?.table_prefix || 'table';
     const isCinema = prefix === 'cinema_seat' || prefix === 'cinema';
 
-    if (!isCinema) {
+    if (!isCinema && prefix === 'table') {
       ensureTableCreated(activeTableNum);
     }
 
