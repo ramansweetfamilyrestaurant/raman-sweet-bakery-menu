@@ -115,8 +115,32 @@ const TEMPLATE_MATRIX = {
   }
 };
 
-export function generateSmartReview({ restoName = 'Restaurant', restoType = 'multi_cuisine', rating = 5, selectedChips = [], customNote = '' }) {
-  const typeKey = TEMPLATE_MATRIX[restoType] ? restoType : 'multi_cuisine';
+const TYPE_KEY_ALIASES = {
+  bakery_confectionery: 'sweet_bakery',
+  sweet_shop: 'sweet_bakery',
+  bakery: 'sweet_bakery',
+  fast_food_qsr: 'fast_food',
+  cafe: 'fast_food',
+  restaurant: 'multi_cuisine',
+  hotel_resort: 'multi_cuisine',
+  cinema_theatre: 'fast_food',
+  dhaba: 'multi_cuisine',
+  canteen_cafeteria: 'multi_cuisine',
+  veg_nonveg: 'multi_cuisine',
+  non_veg: 'multi_cuisine'
+};
+
+export function getEffectiveReviewType(type) {
+  if (!type) return 'multi_cuisine';
+  const clean = String(type).trim().toLowerCase();
+  if (TEMPLATE_MATRIX[clean]) return clean;
+  if (TYPE_KEY_ALIASES[clean]) return TYPE_KEY_ALIASES[clean];
+  return 'multi_cuisine';
+}
+
+export function generateSmartReview({ restoName = 'Restaurant', restoType = 'multi_cuisine', businessType = null, rating = 5, selectedChips = [], customNote = '' }) {
+  const rawKey = businessType || restoType;
+  const typeKey = getEffectiveReviewType(rawKey);
   const ratingKey = rating >= 4 ? rating : 3;
   const pool = TEMPLATE_MATRIX[typeKey][ratingKey] || TEMPLATE_MATRIX[typeKey][5];
   

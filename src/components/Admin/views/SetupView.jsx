@@ -2,6 +2,15 @@ import React, { useState } from 'react';
 import { Store, Bell, Utensils, MapPin, CreditCard, Lock, ChevronRight, Upload, Volume2, ShieldCheck, Printer, Map } from 'lucide-react';
 import AdminDrawer from '../components/AdminDrawer';
 import LocationPickerModal from '../../Common/LocationPickerModal';
+import {
+  BUSINESS_TYPES,
+  FOOD_TYPES,
+  SERVICE_MODELS,
+  BUSINESS_TYPE_METADATA,
+  FOOD_TYPE_METADATA,
+  SERVICE_MODEL_METADATA,
+  resolveBusinessProfile
+} from '../../../utils/businessTaxonomy';
 
 export default function SetupView({
   settingsForm = {},
@@ -1197,29 +1206,159 @@ export default function SetupView({
         )}
       >
         <form onSubmit={handleFormSave} style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
-          {/* Card 1: Restaurant Type */}
-          <div style={{ padding: '16px 18px', background: '#FFFFFF', borderRadius: '16px', border: '1px solid #E2E8F0', boxShadow: '0 1px 3px rgba(0,0,0,0.04)' }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '10px' }}>
-              <div style={{ width: '36px', height: '36px', borderRadius: '10px', background: '#DCFCE7', color: '#16A34A', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1.1rem', flexShrink: 0 }}>
-                🥗
+          {/* Card 1: Business Profile */}
+          {(() => {
+            const resolvedProfile = resolveBusinessProfile(settingsForm);
+            const currentBusinessType = settingsForm.business_type || resolvedProfile.business_type;
+            const currentFoodType = settingsForm.food_type || resolvedProfile.food_type;
+            const currentServiceModel = settingsForm.service_model || resolvedProfile.service_model;
+
+            const isLegacyBiz = settingsForm.business_type == null;
+            const isLegacyFood = settingsForm.food_type == null;
+            const isLegacyService = settingsForm.service_model == null;
+
+            return (
+              <div style={{ padding: '16px 18px', background: '#FFFFFF', borderRadius: '16px', border: '1px solid #E2E8F0', boxShadow: '0 1px 3px rgba(0,0,0,0.04)' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '12px' }}>
+                  <div style={{ width: '36px', height: '36px', borderRadius: '10px', background: '#DCFCE7', color: '#16A34A', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1.1rem', flexShrink: 0 }}>
+                    🏢
+                  </div>
+                  <div>
+                    <strong style={{ fontSize: '0.92rem', color: '#0F172A', fontWeight: 800, display: 'block' }}>Business Profile</strong>
+                    <span style={{ fontSize: '0.72rem', color: '#64748B' }}>Configure business venue type, customer dietary profile, and service model</span>
+                  </div>
+                </div>
+
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', paddingLeft: '46px' }}>
+                  {/* Control A: Business Type */}
+                  <div style={{ background: '#F8FAFC', padding: '10px 12px', borderRadius: '12px', border: '1px solid #E2E8F0' }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '4px' }}>
+                      <label htmlFor="admin-business-type" style={{ fontSize: '0.80rem', fontWeight: 800, color: '#1E293B' }}>
+                        Business Type
+                      </label>
+                      {isLegacyBiz && (
+                        <span style={{ fontSize: '0.66rem', fontWeight: 700, color: '#64748B', background: '#E2E8F0', padding: '2px 6px', borderRadius: '8px' }}>
+                          Using legacy setting
+                        </span>
+                      )}
+                    </div>
+                    <span style={{ fontSize: '0.68rem', color: '#64748B', display: 'block', marginBottom: '6px' }}>
+                      Select the type of business or venue that operates this TouchQR account.
+                    </span>
+                    <select
+                      id="admin-business-type"
+                      value={currentBusinessType || 'restaurant'}
+                      onChange={(e) => {
+                        const newBiz = e.target.value;
+                        const safeResto = (currentFoodType === 'pure_veg' ? 'pure_veg' : currentFoodType === 'veg_nonveg' ? 'veg_nonveg' : (newBiz === 'bakery_confectionery' ? 'bakery' : 'pure_veg'));
+                        setSettingsForm({
+                          ...settingsForm,
+                          business_type: newBiz,
+                          resto_type: safeResto
+                        });
+                      }}
+                      style={{ width: '100%', padding: '8px 12px', borderRadius: '8px', border: '1px solid #CBD5E1', fontSize: '0.84rem', fontWeight: 700, background: '#FFFFFF', color: '#0F172A' }}
+                    >
+                      {BUSINESS_TYPES.map(type => (
+                        <option key={type} value={type}>
+                          {BUSINESS_TYPE_METADATA[type]?.icon || '🏢'} {BUSINESS_TYPE_METADATA[type]?.label || type}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+
+                  {/* Control B: Food Type */}
+                  <div style={{ background: '#F8FAFC', padding: '10px 12px', borderRadius: '12px', border: '1px solid #E2E8F0' }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '4px' }}>
+                      <label htmlFor="admin-food-type" style={{ fontSize: '0.80rem', fontWeight: 800, color: '#1E293B' }}>
+                        Food Type
+                      </label>
+                      {isLegacyFood && (
+                        <span style={{ fontSize: '0.66rem', fontWeight: 700, color: '#64748B', background: '#E2E8F0', padding: '2px 6px', borderRadius: '8px' }}>
+                          Using legacy setting
+                        </span>
+                      )}
+                    </div>
+                    <span style={{ fontSize: '0.68rem', color: '#64748B', display: 'block', marginBottom: '6px' }}>
+                      Tell customers what dietary profile applies to this menu.
+                    </span>
+                    <select
+                      id="admin-food-type"
+                      value={currentFoodType || 'pure_veg'}
+                      onChange={(e) => {
+                        const newFood = e.target.value;
+                        const safeResto = (newFood === 'pure_veg' ? 'pure_veg' : newFood === 'veg_nonveg' ? 'veg_nonveg' : (currentBusinessType === 'bakery_confectionery' ? 'bakery' : 'pure_veg'));
+                        setSettingsForm({
+                          ...settingsForm,
+                          food_type: newFood,
+                          resto_type: safeResto
+                        });
+                      }}
+                      style={{ width: '100%', padding: '8px 12px', borderRadius: '8px', border: '1px solid #CBD5E1', fontSize: '0.84rem', fontWeight: 700, background: '#FFFFFF', color: '#0F172A' }}
+                    >
+                      {FOOD_TYPES.map(type => (
+                        <option key={type} value={type}>
+                          {FOOD_TYPE_METADATA[type]?.icon || '🥗'} {FOOD_TYPE_METADATA[type]?.label || type}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+
+                  {/* Control C: Service Model */}
+                  <div style={{ background: '#F8FAFC', padding: '10px 12px', borderRadius: '12px', border: '1px solid #E2E8F0' }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '4px' }}>
+                      <label htmlFor="admin-service-model" style={{ fontSize: '0.80rem', fontWeight: 800, color: '#1E293B' }}>
+                        Service Model
+                      </label>
+                      {isLegacyService && (
+                        <span style={{ fontSize: '0.66rem', fontWeight: 700, color: '#64748B', background: '#E2E8F0', padding: '2px 6px', borderRadius: '8px' }}>
+                          Using legacy setting
+                        </span>
+                      )}
+                    </div>
+                    <span style={{ fontSize: '0.68rem', color: '#64748B', display: 'block', marginBottom: '6px' }}>
+                      How orders are fulfilled and served to customers.
+                    </span>
+                    <select
+                      id="admin-service-model"
+                      value={currentServiceModel || 'dine_in_table'}
+                      onChange={(e) => {
+                        setSettingsForm({
+                          ...settingsForm,
+                          service_model: e.target.value
+                        });
+                      }}
+                      style={{ width: '100%', padding: '8px 12px', borderRadius: '8px', border: '1px solid #CBD5E1', fontSize: '0.84rem', fontWeight: 700, background: '#FFFFFF', color: '#0F172A' }}
+                    >
+                      {SERVICE_MODELS.map(model => (
+                        <option key={model} value={model}>
+                          {SERVICE_MODEL_METADATA[model]?.icon || '🛎️'} {SERVICE_MODEL_METADATA[model]?.label || model}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+
+                  {/* Preview Box */}
+                  <div style={{ padding: '10px 12px', background: '#F1F5F9', borderRadius: '10px', border: '1px dashed #CBD5E1' }}>
+                    <div style={{ fontSize: '0.68rem', fontWeight: 800, color: '#475569', textTransform: 'uppercase', letterSpacing: '0.04em', marginBottom: '6px' }}>
+                      ✨ Business Profile Preview
+                    </div>
+                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px' }}>
+                      <span style={{ fontSize: '0.74rem', fontWeight: 700, background: '#FFFFFF', padding: '3px 8px', borderRadius: '6px', border: '1px solid #E2E8F0', color: '#1E293B', display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
+                        {BUSINESS_TYPE_METADATA[currentBusinessType]?.icon || '🍽️'} Business: {BUSINESS_TYPE_METADATA[currentBusinessType]?.label?.replace(/\s*\(.*\)/, '') || currentBusinessType}
+                      </span>
+                      <span style={{ fontSize: '0.74rem', fontWeight: 700, background: '#FFFFFF', padding: '3px 8px', borderRadius: '6px', border: '1px solid #E2E8F0', color: '#1E293B', display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
+                        {FOOD_TYPE_METADATA[currentFoodType]?.icon || '🟢'} Food: {FOOD_TYPE_METADATA[currentFoodType]?.label || currentFoodType}
+                      </span>
+                      <span style={{ fontSize: '0.74rem', fontWeight: 700, background: '#FFFFFF', padding: '3px 8px', borderRadius: '6px', border: '1px solid #E2E8F0', color: '#1E293B', display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
+                        {SERVICE_MODEL_METADATA[currentServiceModel]?.icon || '🪑'} Service: {SERVICE_MODEL_METADATA[currentServiceModel]?.label || currentServiceModel}
+                      </span>
+                    </div>
+                  </div>
+                </div>
               </div>
-              <div>
-                <strong style={{ fontSize: '0.92rem', color: '#0F172A', fontWeight: 800, display: 'block' }}>Restaurant Dining Category</strong>
-                <span style={{ fontSize: '0.72rem', color: '#64748B' }}>Veg/Non-Veg badge rules and bakery menu layout</span>
-              </div>
-            </div>
-            <div style={{ paddingLeft: '46px' }}>
-              <select
-                value={settingsForm.resto_type || 'pure_veg'}
-                onChange={(e) => setSettingsForm({ ...settingsForm, resto_type: e.target.value })}
-                style={{ width: '100%', padding: '10px 14px', borderRadius: '10px', border: '1px solid #CBD5E1', fontSize: '0.88rem', fontWeight: 700, boxSizing: 'border-box', background: '#FFFFFF' }}
-              >
-                <option value="pure_veg">🟢 Pure Veg Restaurant</option>
-                <option value="veg_nonveg">🔴 Veg & Non-Veg Restaurant</option>
-                <option value="bakery">🍰 Bakery & Confectionery</option>
-              </select>
-            </div>
-          </div>
+            );
+          })()}
 
           {/* Card 2: Currency Symbol */}
           <div style={{ padding: '16px 18px', background: '#FFFFFF', borderRadius: '16px', border: '1px solid #E2E8F0', boxShadow: '0 1px 3px rgba(0,0,0,0.04)' }}>

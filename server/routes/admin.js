@@ -12,6 +12,19 @@ import { JWT_SECRET } from '../config/jwt.js';
 import { adminLoginRateLimiter } from '../middleware/rateLimiters.js';
 import { clearRestoResolveCache, clearMenuBundleCache } from './api.js';
 import { normalizeVerificationMode } from '../utils/presenceVerification.js';
+import {
+  BUSINESS_TYPES,
+  FOOD_TYPES,
+  SERVICE_MODELS,
+  BUSINESS_TYPE_ALIASES,
+  FOOD_TYPE_ALIASES,
+  SERVICE_MODEL_ALIASES,
+  isValidBusinessType,
+  isValidFoodType,
+  isValidServiceModel,
+  resolveBusinessProfile,
+  resolveBannerBadge
+} from '../config/businessTaxonomy.js';
 
 let sharpModule = null;
 async function getSharp() {
@@ -1200,7 +1213,7 @@ const handleUpdateSettings = async (req, res) => {
       return res.status(401).json({ error: 'Restaurant identity is missing from authentication context' });
     }
 
-    const { name, tagline, logo, phone, address, openingHours, google_review_url, google_reviews_enabled, filters_visibility, currency_symbol, fssai_lic_no, resto_type, whatsapp_number, whatsapp_enabled, theme_color, latitude, longitude, max_distance_meters, gst_enabled, gstin_number, total_tables, total_cabins, total_rooms, total_vip, table_prefix, order_retention_days, custom_domain, location_initialized, owner_name, city, state, pincode, table_verification_mode, staff_verification_timeout_seconds } = req.body;
+    const { name, tagline, logo, phone, address, openingHours, google_review_url, google_reviews_enabled, filters_visibility, currency_symbol, fssai_lic_no, resto_type, business_type, food_type, service_model, whatsapp_number, whatsapp_enabled, theme_color, latitude, longitude, max_distance_meters, gst_enabled, gstin_number, total_tables, total_cabins, total_rooms, total_vip, table_prefix, order_retention_days, custom_domain, location_initialized, owner_name, city, state, pincode, table_verification_mode, staff_verification_timeout_seconds } = req.body;
 
     let cleanDomain = null;
     if (custom_domain !== undefined) {
@@ -1238,6 +1251,42 @@ const handleUpdateSettings = async (req, res) => {
     const cleanStaffTimeout = staff_verification_timeout_seconds !== undefined
       ? Math.min(600, Math.max(30, parseInt(staff_verification_timeout_seconds, 10) || 120))
       : null;
+
+    let cleanBusinessType = null;
+    if (business_type !== undefined && business_type !== null && String(business_type).trim() !== '') {
+      const norm = String(business_type).trim().toLowerCase();
+      if (isValidBusinessType(norm)) {
+        cleanBusinessType = norm;
+      } else if (BUSINESS_TYPE_ALIASES[norm]) {
+        cleanBusinessType = BUSINESS_TYPE_ALIASES[norm];
+      } else {
+        return res.status(400).json({ error: `Invalid business_type '${business_type}'. Allowed values: ${BUSINESS_TYPES.join(', ')}` });
+      }
+    }
+
+    let cleanFoodType = null;
+    if (food_type !== undefined && food_type !== null && String(food_type).trim() !== '') {
+      const norm = String(food_type).trim().toLowerCase();
+      if (isValidFoodType(norm)) {
+        cleanFoodType = norm;
+      } else if (FOOD_TYPE_ALIASES[norm]) {
+        cleanFoodType = FOOD_TYPE_ALIASES[norm];
+      } else {
+        return res.status(400).json({ error: `Invalid food_type '${food_type}'. Allowed values: ${FOOD_TYPES.join(', ')}` });
+      }
+    }
+
+    let cleanServiceModel = null;
+    if (service_model !== undefined && service_model !== null && String(service_model).trim() !== '') {
+      const norm = String(service_model).trim().toLowerCase();
+      if (isValidServiceModel(norm)) {
+        cleanServiceModel = norm;
+      } else if (SERVICE_MODEL_ALIASES[norm]) {
+        cleanServiceModel = SERVICE_MODEL_ALIASES[norm];
+      } else {
+        return res.status(400).json({ error: `Invalid service_model '${service_model}'. Allowed values: ${SERVICE_MODELS.join(', ')}` });
+      }
+    }
 
     // 🛡️ AUTHORITATIVE SAAS PLAN MAX_TABLES / SPACES ENFORCEMENT
     const isSpaceUpdate = total_tables !== undefined || total_cabins !== undefined || total_rooms !== undefined || total_vip !== undefined;
@@ -1327,8 +1376,9 @@ const handleUpdateSettings = async (req, res) => {
       await query(`
         UPDATE restaurants 
         SET name = COALESCE($1, name), tagline = COALESCE($2, tagline), logo = CASE WHEN $3::text IS NOT NULL THEN $3 ELSE logo END, phone = COALESCE($4, phone), address = COALESCE($5, address), opening_hours = COALESCE($6, opening_hours), google_review_url = COALESCE($7, google_review_url), filters_visibility = COALESCE($8, filters_visibility), currency_symbol = COALESCE($9, currency_symbol), fssai_lic_no = COALESCE($10, fssai_lic_no), resto_type = COALESCE($11, resto_type), whatsapp_number = COALESCE($12, whatsapp_number), whatsapp_enabled = COALESCE($13, whatsapp_enabled), theme_color = COALESCE($14, theme_color), latitude = COALESCE($15, latitude), longitude = COALESCE($16, longitude), max_distance_meters = COALESCE($17, max_distance_meters), gst_enabled = COALESCE($18, gst_enabled), gstin_number = COALESCE($19, gstin_number), total_tables = COALESCE($20, total_tables), total_cabins = COALESCE($21, total_cabins), total_rooms = COALESCE($22, total_rooms), total_vip = COALESCE($23, total_vip), table_prefix = COALESCE($24, table_prefix), order_retention_days = COALESCE($25, order_retention_days), google_reviews_enabled = COALESCE($26, google_reviews_enabled), custom_domain = CASE WHEN $27::text IS NOT NULL THEN $27 ELSE custom_domain END, location_initialized = COALESCE($28, location_initialized), owner_name = COALESCE($29, owner_name), city = COALESCE($30, city), state = COALESCE($31, state), pincode = COALESCE($32, pincode), table_verification_mode = COALESCE($33, table_verification_mode), staff_verification_timeout_seconds = COALESCE($34, staff_verification_timeout_seconds),
-            printer_mode = COALESCE($35, printer_mode), auto_print_kot = COALESCE($36, auto_print_kot), auto_print_bill = COALESCE($37, auto_print_bill), printer_paper_width = COALESCE($38, printer_paper_width)
-        WHERE id = $39
+            printer_mode = COALESCE($35, printer_mode), auto_print_kot = COALESCE($36, auto_print_kot), auto_print_bill = COALESCE($37, auto_print_bill), printer_paper_width = COALESCE($38, printer_paper_width),
+            business_type = COALESCE($39, business_type), food_type = COALESCE($40, food_type), service_model = COALESCE($41, service_model)
+        WHERE id = $42
       `, [
         name !== undefined ? name : null,
         tagline !== undefined ? tagline : null,
@@ -1368,10 +1418,13 @@ const handleUpdateSettings = async (req, res) => {
         auto_print_kot !== undefined ? (auto_print_kot ? 1 : 0) : null,
         auto_print_bill !== undefined ? (auto_print_bill ? 1 : 0) : null,
         printer_paper_width !== undefined ? (printer_paper_width === '58mm' ? '58mm' : '80mm') : null,
+        cleanBusinessType,
+        cleanFoodType,
+        cleanServiceModel,
         targetId
       ]);
     } catch (sqlErr) {
-      if (sqlErr.message && (sqlErr.message.includes('total_') || sqlErr.message.includes('table_prefix') || sqlErr.message.includes('column') || sqlErr.message.includes('verification') || sqlErr.message.includes('print'))) {
+      if (sqlErr.message && (sqlErr.message.includes('total_') || sqlErr.message.includes('table_prefix') || sqlErr.message.includes('column') || sqlErr.message.includes('verification') || sqlErr.message.includes('print') || sqlErr.message.includes('business_type') || sqlErr.message.includes('food_type') || sqlErr.message.includes('service_model'))) {
         try {
           await query("ALTER TABLE restaurants ADD COLUMN IF NOT EXISTS total_cabins INT DEFAULT 0");
           await query("ALTER TABLE restaurants ADD COLUMN IF NOT EXISTS total_rooms INT DEFAULT 0");
@@ -1383,11 +1436,15 @@ const handleUpdateSettings = async (req, res) => {
           await query("ALTER TABLE restaurants ADD COLUMN IF NOT EXISTS auto_print_kot INT DEFAULT 0");
           await query("ALTER TABLE restaurants ADD COLUMN IF NOT EXISTS auto_print_bill INT DEFAULT 0");
           await query("ALTER TABLE restaurants ADD COLUMN IF NOT EXISTS printer_paper_width VARCHAR(10) DEFAULT '80mm'");
+          await query("ALTER TABLE restaurants ADD COLUMN IF NOT EXISTS business_type VARCHAR(50)");
+          await query("ALTER TABLE restaurants ADD COLUMN IF NOT EXISTS food_type VARCHAR(50)");
+          await query("ALTER TABLE restaurants ADD COLUMN IF NOT EXISTS service_model VARCHAR(50)");
           await query(`
             UPDATE restaurants 
             SET name = COALESCE($1, name), tagline = COALESCE($2, tagline), logo = CASE WHEN $3::text IS NOT NULL THEN $3 ELSE logo END, phone = COALESCE($4, phone), address = COALESCE($5, address), opening_hours = COALESCE($6, opening_hours), google_review_url = COALESCE($7, google_review_url), filters_visibility = COALESCE($8, filters_visibility), currency_symbol = COALESCE($9, currency_symbol), fssai_lic_no = COALESCE($10, fssai_lic_no), resto_type = COALESCE($11, resto_type), whatsapp_number = COALESCE($12, whatsapp_number), whatsapp_enabled = COALESCE($13, whatsapp_enabled), theme_color = COALESCE($14, theme_color), latitude = COALESCE($15, latitude), longitude = COALESCE($16, longitude), max_distance_meters = COALESCE($17, max_distance_meters), gst_enabled = COALESCE($18, gst_enabled), gstin_number = COALESCE($19, gstin_number), total_tables = COALESCE($20, total_tables), total_cabins = COALESCE($21, total_cabins), total_rooms = COALESCE($22, total_rooms), total_vip = COALESCE($23, total_vip), table_prefix = COALESCE($24, table_prefix), order_retention_days = COALESCE($25, order_retention_days), google_reviews_enabled = COALESCE($26, google_reviews_enabled), custom_domain = CASE WHEN $27::text IS NOT NULL THEN $27 ELSE custom_domain END, location_initialized = COALESCE($28, location_initialized), owner_name = COALESCE($29, owner_name), city = COALESCE($30, city), state = COALESCE($31, state), pincode = COALESCE($32, pincode), table_verification_mode = COALESCE($33, table_verification_mode), staff_verification_timeout_seconds = COALESCE($34, staff_verification_timeout_seconds),
-                printer_mode = COALESCE($35, printer_mode), auto_print_kot = COALESCE($36, auto_print_kot), auto_print_bill = COALESCE($37, auto_print_bill), printer_paper_width = COALESCE($38, printer_paper_width)
-            WHERE id = $39
+                printer_mode = COALESCE($35, printer_mode), auto_print_kot = COALESCE($36, auto_print_kot), auto_print_bill = COALESCE($37, auto_print_bill), printer_paper_width = COALESCE($38, printer_paper_width),
+                business_type = COALESCE($39, business_type), food_type = COALESCE($40, food_type), service_model = COALESCE($41, service_model)
+            WHERE id = $42
           `, [
             name !== undefined ? name : null,
             tagline !== undefined ? tagline : null,
@@ -1427,6 +1484,9 @@ const handleUpdateSettings = async (req, res) => {
             auto_print_kot !== undefined ? (auto_print_kot ? 1 : 0) : null,
             auto_print_bill !== undefined ? (auto_print_bill ? 1 : 0) : null,
             printer_paper_width !== undefined ? (printer_paper_width === '58mm' ? '58mm' : '80mm') : null,
+            cleanBusinessType,
+            cleanFoodType,
+            cleanServiceModel,
             targetId
           ]);
         } catch (innerErr) {

@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { X, Star, Sparkles, Copy, CheckCircle2, ArrowRight } from 'lucide-react';
-import { generateSmartReview, HIGHLIGHT_CHIPS } from '../utils/aiReviewGenerator';
+import { generateSmartReview, HIGHLIGHT_CHIPS, getEffectiveReviewType } from '../utils/aiReviewGenerator';
 
 export default function CustomerReviewModal({ info, onClose }) {
   const [rating, setRating] = useState(5);
@@ -10,20 +10,21 @@ export default function CustomerReviewModal({ info, onClose }) {
   const [copiedToast, setCopiedToast] = useState(false);
 
   const restoName = info?.name || 'Restaurant';
-  const restoType = info?.resto_type || 'multi_cuisine';
-  const availableChips = HIGHLIGHT_CHIPS[restoType] || HIGHLIGHT_CHIPS.multi_cuisine;
+  const effectiveReviewType = getEffectiveReviewType(info?.business_type || info?.resto_type);
+  const availableChips = HIGHLIGHT_CHIPS[effectiveReviewType] || HIGHLIGHT_CHIPS.multi_cuisine;
 
   // Re-generate AI review on any input change
   useEffect(() => {
     const reviewText = generateSmartReview({
       restoName,
-      restoType,
+      restoType: info?.resto_type,
+      businessType: info?.business_type,
       rating,
       selectedChips,
       customNote
     });
     setGeneratedReview(reviewText);
-  }, [restoName, restoType, rating, selectedChips, customNote]);
+  }, [restoName, info?.resto_type, info?.business_type, rating, selectedChips, customNote]);
 
   const toggleChip = (chipLabel) => {
     if (selectedChips.includes(chipLabel)) {

@@ -403,6 +403,9 @@ async function createTables() {
       `ALTER TABLE restaurants ADD COLUMN IF NOT EXISTS currency_symbol VARCHAR(10) DEFAULT '₹';`,
       `ALTER TABLE restaurants ADD COLUMN IF NOT EXISTS fssai_lic_no VARCHAR(100) DEFAULT '';`,
       `ALTER TABLE restaurants ADD COLUMN IF NOT EXISTS resto_type VARCHAR(50) DEFAULT 'pure_veg';`,
+      `ALTER TABLE restaurants ADD COLUMN IF NOT EXISTS business_type VARCHAR(50);`,
+      `ALTER TABLE restaurants ADD COLUMN IF NOT EXISTS food_type VARCHAR(50);`,
+      `ALTER TABLE restaurants ADD COLUMN IF NOT EXISTS service_model VARCHAR(50);`,
       `ALTER TABLE restaurants ADD COLUMN IF NOT EXISTS plan_tier VARCHAR(50) DEFAULT 'pro';`,
       `ALTER TABLE restaurants ADD COLUMN IF NOT EXISTS plan_price NUMERIC DEFAULT 999;`,
       `ALTER TABLE restaurants ADD COLUMN IF NOT EXISTS plan_expires_at VARCHAR(100);`,
@@ -618,6 +621,9 @@ async function createTables() {
         currency_symbol TEXT DEFAULT '₹',
         fssai_lic_no TEXT DEFAULT '',
         resto_type TEXT DEFAULT 'pure_veg',
+        business_type TEXT,
+        food_type TEXT,
+        service_model TEXT,
         plan_tier TEXT DEFAULT 'pro',
         plan_price REAL DEFAULT 999,
         plan_expires_at TEXT,
@@ -934,6 +940,9 @@ async function createTables() {
       if (!restoCols.some(c => c.name === 'currency_symbol')) sqliteDb.exec("ALTER TABLE restaurants ADD COLUMN currency_symbol TEXT DEFAULT '₹'");
       if (!restoCols.some(c => c.name === 'fssai_lic_no')) sqliteDb.exec("ALTER TABLE restaurants ADD COLUMN fssai_lic_no TEXT DEFAULT ''");
       if (!restoCols.some(c => c.name === 'resto_type')) sqliteDb.exec("ALTER TABLE restaurants ADD COLUMN resto_type TEXT DEFAULT 'pure_veg'");
+      if (!restoCols.some(c => c.name === 'business_type')) sqliteDb.exec("ALTER TABLE restaurants ADD COLUMN business_type TEXT");
+      if (!restoCols.some(c => c.name === 'food_type')) sqliteDb.exec("ALTER TABLE restaurants ADD COLUMN food_type TEXT");
+      if (!restoCols.some(c => c.name === 'service_model')) sqliteDb.exec("ALTER TABLE restaurants ADD COLUMN service_model TEXT");
       if (!restoCols.some(c => c.name === 'plan_tier')) sqliteDb.exec("ALTER TABLE restaurants ADD COLUMN plan_tier TEXT DEFAULT 'pro'");
       if (!restoCols.some(c => c.name === 'plan_price')) sqliteDb.exec("ALTER TABLE restaurants ADD COLUMN plan_price REAL DEFAULT 999");
       if (!restoCols.some(c => c.name === 'plan_expires_at')) sqliteDb.exec("ALTER TABLE restaurants ADD COLUMN plan_expires_at TEXT");

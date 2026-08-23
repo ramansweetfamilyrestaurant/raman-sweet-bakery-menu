@@ -27,6 +27,10 @@ import {
   GPS_TOLERANCE,
   calculateEffectiveGpsTolerance
 } from '../utils/presenceVerification.js';
+import { 
+  resolveBusinessProfile, 
+  resolveBannerBadge 
+} from '../config/businessTaxonomy.js';
 
 const router = express.Router();
 
@@ -352,9 +356,8 @@ router.get('/menu-bundle', async (req, res) => {
     const dualPrinterEnabled = isFieldTrue(saasP.dual_printer_enabled, planTierKey === 'enterprise' || planTierKey === 'vip_ultra_plan');
 
     const effectiveGstActive = gstInvoiceEnabled && (resto.gst_enabled === 1 || resto.gst_enabled === true || resto.gst_enabled === '1' || resto.gst_enabled === 'true');
-    const badgeText = resto.resto_type === 'pure_veg' 
-      ? '100% Pure Veg' 
-      : (resto.resto_type === 'bakery' ? 'Bakery & Confectionery' : 'Veg & Non-Veg');
+    const businessProfile = resolveBusinessProfile(resto);
+    const badgeText = resolveBannerBadge(resto);
 
     const infoObj = {
       id: resto.id,
@@ -362,7 +365,11 @@ router.get('/menu-bundle', async (req, res) => {
       slug: resto.slug,
       tagline: resto.tagline || '',
       badge: badgeText,
-      resto_type: resto.resto_type || 'pure_veg',
+      resto_type: businessProfile.legacy_resto_type,
+      business_type: businessProfile.business_type,
+      food_type: businessProfile.food_type,
+      service_model: businessProfile.service_model,
+      is_pure_veg: businessProfile.is_pure_veg,
       logo: resto.logo || '',
       openingHours: resto.opening_hours || '',
       phone: resto.phone || '',
@@ -473,10 +480,10 @@ router.get('/info', async (req, res) => {
     const kdsEnabled = saasPlan.kds_enabled !== undefined ? (saasPlan.kds_enabled === 1 || saasPlan.kds_enabled === true || saasPlan.kds_enabled === '1') : (planTierKey === 'enterprise' || planTierKey === 'vip_ultra_plan');
     const bluetoothKotEnabled = saasPlan.bluetooth_kot_enabled !== undefined ? (saasPlan.bluetooth_kot_enabled === 1 || saasPlan.bluetooth_kot_enabled === true || saasPlan.bluetooth_kot_enabled === '1') : true;
     const dualPrinterEnabled = saasPlan.dual_printer_enabled !== undefined ? (saasPlan.dual_printer_enabled === 1 || saasPlan.dual_printer_enabled === true || saasPlan.dual_printer_enabled === '1') : (planTierKey === 'enterprise' || planTierKey === 'vip_ultra_plan');
+    const modifiersEnabled = saasPlan.modifiers_enabled !== undefined ? (saasPlan.modifiers_enabled === 1 || saasPlan.modifiers_enabled === true || saasPlan.modifiers_enabled === '1') : true;
     const effectiveGstActive = (saasPlan.gst_invoice_enabled !== 0 && saasPlan.gst_invoice_enabled !== false && saasPlan.gst_invoice_enabled !== '0' && saasPlan.gst_invoice_enabled !== 'false') && (resto.gst_enabled === 1 || resto.gst_enabled === true || resto.gst_enabled === '1' || resto.gst_enabled === 'true');
-    const badgeText = resto.resto_type === 'pure_veg' 
-      ? '100% Pure Veg' 
-      : (resto.resto_type === 'bakery' ? 'Bakery & Confectionery' : 'Veg & Non-Veg');
+    const businessProfile = resolveBusinessProfile(resto);
+    const badgeText = resolveBannerBadge(resto);
 
     return res.json({
       id: resto.id,
@@ -484,7 +491,11 @@ router.get('/info', async (req, res) => {
       slug: resto.slug || '',
       tagline: resto.tagline || '',
       badge: badgeText,
-      resto_type: resto.resto_type || 'pure_veg',
+      resto_type: businessProfile.legacy_resto_type,
+      business_type: businessProfile.business_type,
+      food_type: businessProfile.food_type,
+      service_model: businessProfile.service_model,
+      is_pure_veg: businessProfile.is_pure_veg,
       logo: resto.logo || '',
       openingHours: resto.opening_hours || '',
       phone: resto.phone || '',

@@ -2145,6 +2145,8 @@ export default function App() {
         onQuickFilter={(filterVal) => setSearchQuery(filterVal)}
         filtersVisibility={info?.filters_visibility}
         restoType={info?.resto_type}
+        foodType={info?.food_type}
+        isPureVeg={info?.is_pure_veg}
       />
 
       {/* Sticky Category Quick Jump Rail */}

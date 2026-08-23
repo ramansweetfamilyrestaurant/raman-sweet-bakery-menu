@@ -1,8 +1,10 @@
 import React from 'react';
 import { Search, X } from 'lucide-react';
 
-export default function SearchBar({ value, onChange, onClear, onQuickFilter, filtersVisibility, restoType }) {
-  const isPureVeg = restoType === 'pure_veg';
+export default function SearchBar({ value, onChange, onClear, onQuickFilter, filtersVisibility, restoType, foodType, isPureVeg: isPureVegProp }) {
+  const isPureVeg = typeof isPureVegProp === 'boolean'
+    ? isPureVegProp
+    : (foodType ? (foodType === 'pure_veg' || foodType === 'vegan') : (restoType === 'pure_veg'));
 
   const vis = {
     must_try: true,

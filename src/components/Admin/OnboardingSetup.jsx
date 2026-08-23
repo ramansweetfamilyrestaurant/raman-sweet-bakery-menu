@@ -2,6 +2,15 @@ import React, { useState, useEffect } from 'react';
 import { MapPin, Navigation, Store, CheckCircle2, ArrowRight, ArrowLeft, Upload, Loader2, AlertCircle, Sparkles, Search, ExternalLink, Compass, Map } from 'lucide-react';
 import { uploadImage, updateTenantSettings, completeOnboarding } from '../../api/client';
 import LocationPickerModal from '../Common/LocationPickerModal';
+import {
+  BUSINESS_TYPES,
+  FOOD_TYPES,
+  SERVICE_MODELS,
+  BUSINESS_TYPE_METADATA,
+  FOOD_TYPE_METADATA,
+  SERVICE_MODEL_METADATA,
+  resolveBusinessProfile
+} from '../../utils/businessTaxonomy';
 
 export default function OnboardingSetup({ token, restaurantInfo, setRestaurantInfo, onComplete }) {
   const [currentStep, setCurrentStep] = useState(1);
@@ -11,23 +20,29 @@ export default function OnboardingSetup({ token, restaurantInfo, setRestaurantIn
   const [showMapPicker, setShowMapPicker] = useState(false);
 
   // Form State initialized from prop or loaded data
-  const [formData, setFormData] = useState({
-    name: restaurantInfo?.name || '',
-    owner_name: restaurantInfo?.owner_name || '',
-    tagline: restaurantInfo?.tagline || '100% Quality Food & Service',
-    phone: restaurantInfo?.phone || '',
-    whatsapp_number: restaurantInfo?.whatsapp_number || restaurantInfo?.phone || '',
-    address: restaurantInfo?.address || '',
-    city: restaurantInfo?.city || '',
-    state: restaurantInfo?.state || '',
-    pincode: restaurantInfo?.pincode || '',
-    latitude: restaurantInfo?.latitude !== undefined && restaurantInfo?.latitude !== null ? restaurantInfo.latitude : 26.6500,
-    longitude: restaurantInfo?.longitude !== undefined && restaurantInfo?.longitude !== null ? restaurantInfo.longitude : 84.9167,
-    location_initialized: restaurantInfo?.location_initialized || false,
-    logo: restaurantInfo?.logo || '',
-    openingHours: restaurantInfo?.openingHours || restaurantInfo?.opening_hours || '8:00 AM - 10:30 PM',
-    resto_type: restaurantInfo?.resto_type || 'pure_veg',
-    theme_color: restaurantInfo?.theme_color || 'gold'
+  const [formData, setFormData] = useState(() => {
+    const profile = resolveBusinessProfile(restaurantInfo || {});
+    return {
+      name: restaurantInfo?.name || '',
+      owner_name: restaurantInfo?.owner_name || '',
+      tagline: restaurantInfo?.tagline || '100% Quality Food & Service',
+      phone: restaurantInfo?.phone || '',
+      whatsapp_number: restaurantInfo?.whatsapp_number || restaurantInfo?.phone || '',
+      address: restaurantInfo?.address || '',
+      city: restaurantInfo?.city || '',
+      state: restaurantInfo?.state || '',
+      pincode: restaurantInfo?.pincode || '',
+      latitude: restaurantInfo?.latitude !== undefined && restaurantInfo?.latitude !== null ? restaurantInfo.latitude : 26.6500,
+      longitude: restaurantInfo?.longitude !== undefined && restaurantInfo?.longitude !== null ? restaurantInfo.longitude : 84.9167,
+      location_initialized: restaurantInfo?.location_initialized || false,
+      logo: restaurantInfo?.logo || '',
+      openingHours: restaurantInfo?.openingHours || restaurantInfo?.opening_hours || '8:00 AM - 10:30 PM',
+      resto_type: restaurantInfo?.resto_type || 'pure_veg',
+      business_type: restaurantInfo?.business_type || profile.business_type || 'restaurant',
+      food_type: restaurantInfo?.food_type || profile.food_type || 'pure_veg',
+      service_model: restaurantInfo?.service_model || profile.service_model || 'dine_in_table',
+      theme_color: restaurantInfo?.theme_color || 'gold'
+    };
   });
 
   const [fieldErrors, setFieldErrors] = useState({});
@@ -38,6 +53,7 @@ export default function OnboardingSetup({ token, restaurantInfo, setRestaurantIn
   // Sync state if restaurantInfo loads asynchronously
   useEffect(() => {
     if (restaurantInfo) {
+      const profile = resolveBusinessProfile(restaurantInfo);
       setFormData(prev => ({
         ...prev,
         name: prev.name || restaurantInfo.name || '',
@@ -55,6 +71,9 @@ export default function OnboardingSetup({ token, restaurantInfo, setRestaurantIn
         logo: prev.logo || restaurantInfo.logo || '',
         openingHours: prev.openingHours || restaurantInfo.openingHours || restaurantInfo.opening_hours || '8:00 AM - 10:30 PM',
         resto_type: prev.resto_type || restaurantInfo.resto_type || 'pure_veg',
+        business_type: prev.business_type || restaurantInfo.business_type || profile.business_type || 'restaurant',
+        food_type: prev.food_type || restaurantInfo.food_type || profile.food_type || 'pure_veg',
+        service_model: prev.service_model || restaurantInfo.service_model || profile.service_model || 'dine_in_table',
         theme_color: prev.theme_color || restaurantInfo.theme_color || 'gold'
       }));
     }
@@ -276,10 +295,14 @@ export default function OnboardingSetup({ token, restaurantInfo, setRestaurantIn
     setSaving(true);
     setErrorMsg('');
     try {
+      const safeResto = (formData.food_type === 'pure_veg' ? 'pure_veg' : formData.food_type === 'veg_nonveg' ? 'veg_nonveg' : (formData.business_type === 'bakery_confectionery' ? 'bakery' : (formData.resto_type || 'pure_veg')));
       await updateTenantSettings(token, {
         logo: formData.logo,
         openingHours: formData.openingHours,
-        resto_type: formData.resto_type,
+        business_type: formData.business_type,
+        food_type: formData.food_type,
+        service_model: formData.service_model,
+        resto_type: safeResto,
         theme_color: formData.theme_color,
         location_initialized: true
       });
@@ -789,32 +812,112 @@ export default function OnboardingSetup({ token, restaurantInfo, setRestaurantIn
                 </div>
               </div>
 
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '14px' }}>
-                <div>
-                  <label style={{ display: 'block', fontSize: '0.78rem', fontWeight: 800, color: '#E2E8F0', marginBottom: '6px' }}>Opening Hours</label>
-                  <input
-                    type="text"
-                    name="openingHours"
-                    value={formData.openingHours}
-                    onChange={handleChange}
-                    placeholder="e.g. 8:00 AM - 10:30 PM"
-                    style={{ width: '100%', padding: '12px 16px', borderRadius: '12px', background: '#071A0E', border: '1px solid rgba(255,255,255,0.15)', color: '#FFF', fontSize: '0.9rem', outline: 'none', boxSizing: 'border-box' }}
-                  />
+              <div>
+                <label style={{ display: 'block', fontSize: '0.78rem', fontWeight: 800, color: '#E2E8F0', marginBottom: '6px' }}>Opening Hours</label>
+                <input
+                  type="text"
+                  name="openingHours"
+                  value={formData.openingHours}
+                  onChange={handleChange}
+                  placeholder="e.g. 8:00 AM - 10:30 PM"
+                  style={{ width: '100%', padding: '12px 16px', borderRadius: '12px', background: '#071A0E', border: '1px solid rgba(255,255,255,0.15)', color: '#FFF', fontSize: '0.9rem', outline: 'none', boxSizing: 'border-box' }}
+                />
+              </div>
+
+              {/* 3-Tier Business Profile Controls */}
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '14px', background: '#071A0E', padding: '16px', borderRadius: '16px', border: '1px solid rgba(223, 186, 103, 0.3)' }}>
+                <strong style={{ fontSize: '0.86rem', color: '#DFBA67', fontWeight: 800, display: 'flex', alignItems: 'center', gap: '6px' }}>
+                  🏢 Business Profile Taxonomy
+                </strong>
+
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+                  {/* Control 1: Business Type */}
+                  <div>
+                    <label style={{ display: 'block', fontSize: '0.74rem', fontWeight: 800, color: '#E2E8F0', marginBottom: '4px' }}>
+                      Business Type
+                    </label>
+                    <select
+                      name="business_type"
+                      value={formData.business_type || 'restaurant'}
+                      onChange={(e) => {
+                        const newBiz = e.target.value;
+                        const safeResto = (formData.food_type === 'pure_veg' ? 'pure_veg' : formData.food_type === 'veg_nonveg' ? 'veg_nonveg' : (newBiz === 'bakery_confectionery' ? 'bakery' : 'pure_veg'));
+                        setFormData(prev => ({
+                          ...prev,
+                          business_type: newBiz,
+                          resto_type: safeResto
+                        }));
+                      }}
+                      style={{ width: '100%', padding: '10px 12px', borderRadius: '10px', background: '#0A2315', border: '1px solid rgba(223, 186, 103, 0.4)', color: '#FFF', fontSize: '0.84rem', outline: 'none', boxSizing: 'border-box' }}
+                    >
+                      {BUSINESS_TYPES.map(type => (
+                        <option key={type} value={type}>
+                          {BUSINESS_TYPE_METADATA[type]?.icon || '🏢'} {BUSINESS_TYPE_METADATA[type]?.label || type}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+
+                  {/* Control 2: Food Type */}
+                  <div>
+                    <label style={{ display: 'block', fontSize: '0.74rem', fontWeight: 800, color: '#E2E8F0', marginBottom: '4px' }}>
+                      Food Dietary Type
+                    </label>
+                    <select
+                      name="food_type"
+                      value={formData.food_type || 'pure_veg'}
+                      onChange={(e) => {
+                        const newFood = e.target.value;
+                        const safeResto = (newFood === 'pure_veg' ? 'pure_veg' : newFood === 'veg_nonveg' ? 'veg_nonveg' : (formData.business_type === 'bakery_confectionery' ? 'bakery' : 'pure_veg'));
+                        setFormData(prev => ({
+                          ...prev,
+                          food_type: newFood,
+                          resto_type: safeResto
+                        }));
+                      }}
+                      style={{ width: '100%', padding: '10px 12px', borderRadius: '10px', background: '#0A2315', border: '1px solid rgba(223, 186, 103, 0.4)', color: '#FFF', fontSize: '0.84rem', outline: 'none', boxSizing: 'border-box' }}
+                    >
+                      {FOOD_TYPES.map(type => (
+                        <option key={type} value={type}>
+                          {FOOD_TYPE_METADATA[type]?.icon || '🥗'} {FOOD_TYPE_METADATA[type]?.label || type}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
                 </div>
 
+                {/* Control 3: Service Model */}
                 <div>
-                  <label style={{ display: 'block', fontSize: '0.78rem', fontWeight: 800, color: '#E2E8F0', marginBottom: '6px' }}>Restaurant Type</label>
+                  <label style={{ display: 'block', fontSize: '0.74rem', fontWeight: 800, color: '#E2E8F0', marginBottom: '4px' }}>
+                    Service Model
+                  </label>
                   <select
-                    name="resto_type"
-                    value={formData.resto_type}
+                    name="service_model"
+                    value={formData.service_model || 'dine_in_table'}
                     onChange={handleChange}
-                    style={{ width: '100%', padding: '12px 16px', borderRadius: '12px', background: '#071A0E', border: '1px solid rgba(255,255,255,0.15)', color: '#FFF', fontSize: '0.9rem', outline: 'none', boxSizing: 'border-box' }}
+                    style={{ width: '100%', padding: '10px 12px', borderRadius: '10px', background: '#0A2315', border: '1px solid rgba(223, 186, 103, 0.4)', color: '#FFF', fontSize: '0.84rem', outline: 'none', boxSizing: 'border-box' }}
                   >
-                    <option value="pure_veg">Pure Veg 🟢</option>
-                    <option value="non_veg">Non-Veg / Both 🔴</option>
-                    <option value="cafe">Cafe / Bakery ☕</option>
-                    <option value="fast_food">Fast Food 🍔</option>
+                    {SERVICE_MODELS.map(model => (
+                      <option key={model} value={model}>
+                        {SERVICE_MODEL_METADATA[model]?.icon || '🛎️'} {SERVICE_MODEL_METADATA[model]?.label || model}
+                      </option>
+                    ))}
                   </select>
+                </div>
+
+                {/* Live Preview */}
+                <div style={{ padding: '8px 12px', background: 'rgba(223, 186, 103, 0.08)', borderRadius: '10px', border: '1px dashed rgba(223, 186, 103, 0.3)', display: 'flex', flexWrap: 'wrap', gap: '6px' }}>
+                  <span style={{ fontSize: '0.72rem', fontWeight: 700, color: '#DFBA67' }}>
+                    {BUSINESS_TYPE_METADATA[formData.business_type]?.icon || '🍽️'} {BUSINESS_TYPE_METADATA[formData.business_type]?.label?.replace(/\s*\(.*\)/, '') || formData.business_type}
+                  </span>
+                  <span style={{ color: 'rgba(255,255,255,0.3)' }}>•</span>
+                  <span style={{ fontSize: '0.72rem', fontWeight: 700, color: '#86EFAC' }}>
+                    {FOOD_TYPE_METADATA[formData.food_type]?.icon || '🟢'} {FOOD_TYPE_METADATA[formData.food_type]?.label || formData.food_type}
+                  </span>
+                  <span style={{ color: 'rgba(255,255,255,0.3)' }}>•</span>
+                  <span style={{ fontSize: '0.72rem', fontWeight: 700, color: '#93C5FD' }}>
+                    {SERVICE_MODEL_METADATA[formData.service_model]?.icon || '🪑'} {SERVICE_MODEL_METADATA[formData.service_model]?.label || formData.service_model}
+                  </span>
                 </div>
               </div>
 
