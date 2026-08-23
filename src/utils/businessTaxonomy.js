@@ -25,7 +25,6 @@ export const BUSINESS_TYPES = Object.freeze([
   'food_truck',
   'catering',
   'institutional',
-  'entertainment_venue',
   'other'
 ]);
 
@@ -64,7 +63,6 @@ export const BUSINESS_TYPE_METADATA = Object.freeze({
   food_truck: { label: 'Food Truck / Kiosk', icon: '🚚', desc: 'Mobile food truck or outdoor pop-up kiosk' },
   catering: { label: 'Catering Service', icon: '👨‍🍳', desc: 'Event catering and banquet food service' },
   institutional: { label: 'Institutional Cafeteria', icon: '🏥', desc: 'Hospital, university, or school cafeteria' },
-  entertainment_venue: { label: 'Entertainment Venue', icon: '🎳', desc: 'Bowling alleys, gaming arenas, and sports bars' },
   other: { label: 'Other Hospitality Venue', icon: '🏪', desc: 'General venue or custom food & beverage concept' }
 });
 
@@ -100,7 +98,9 @@ export const BUSINESS_TYPE_ALIASES = Object.freeze({
   'cafeteria': 'canteen_cafeteria',
   'ice_cream': 'ice_cream_dessert',
   'dessert': 'ice_cream_dessert',
-  'juice': 'juice_beverage'
+  'juice': 'juice_beverage',
+  'entertainment_venue': 'other',
+  'entertainment': 'other'
 });
 
 export const FOOD_TYPE_ALIASES = Object.freeze({
@@ -143,7 +143,6 @@ export const BUSINESS_TYPE_DEFAULT_SERVICE_MODEL = Object.freeze({
   food_truck: 'dine_in_table',
   catering: 'dine_in_table',
   institutional: 'dine_in_table',
-  entertainment_venue: 'dine_in_table',
   other: 'dine_in_table'
 });
 
@@ -167,7 +166,6 @@ export const BUSINESS_TYPE_ALLOWED_SERVICE_MODELS = Object.freeze({
   food_truck: Object.freeze(['dine_in_table']),
   catering: Object.freeze(['dine_in_table']),
   institutional: Object.freeze(['dine_in_table']),
-  entertainment_venue: Object.freeze(['dine_in_table']),
   other: Object.freeze(['dine_in_table'])
 });
 
