@@ -2690,6 +2690,11 @@ export default function App() {
             const nextRound = (Number(activeOrderTrack?.current_round) || Number(activeOrderTrack?.round_number) || 1) + 1;
             const sym = (info?.currency_symbol !== undefined && info?.currency_symbol !== null) ? info.currency_symbol : '₹';
             const cartTotal = cartItems.reduce((sum, item) => sum + (item.price * item.quantity), 0);
+            const subtotal = cartTotal;
+            const isGst = Boolean(info?.gst_enabled);
+            const cgst = isGst ? Math.round(subtotal * 0.025 * 100) / 100 : 0;
+            const sgst = isGst ? Math.round(subtotal * 0.025 * 100) / 100 : 0;
+            const grandTotal = isGst ? Math.round(subtotal * 1.05 * 100) / 100 : subtotal;
 
             return (
               <div style={{
