@@ -16,6 +16,7 @@ import { LayoutList, Grid, BookOpen, X, Sparkles, ShieldAlert, Phone, Plus, Edit
 import ServiceRequestModal from './components/ServiceRequestModal';
 import CustomerReviewModal from './components/CustomerReviewModal';
 import PresenceVerificationModal from './components/PresenceVerificationModal';
+import CategoryImage from './components/CategoryImage';
 import { isValidQrTokenFormat, normalizeSpaceType, normalizeSpaceNumber } from './utils/qrSecurity';
 
 // Robust Lazy Loading with automatic retry on new production deploys
@@ -2491,18 +2492,11 @@ export default function App() {
                 borderBottom: '2px solid var(--gold-border)'
               }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                  {group.category.image && (
-                    <img
-                      src={group.category.image}
-                      alt=""
-                      style={{
-                        width: '26px',
-                        height: '26px',
-                        borderRadius: '50%',
-                        objectFit: 'cover'
-                      }}
-                    />
-                  )}
+                  <CategoryImage
+                    image={group.category.image}
+                    name={group.category.name}
+                    size={26}
+                  />
                   <h3 style={{
                     fontSize: '1.1rem',
                     fontWeight: 800,
@@ -3103,9 +3097,11 @@ export default function App() {
                     }}
                   >
                     <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                      {cat.image && (
-                        <img src={cat.image} alt={catDisplayName} style={{ width: '28px', height: '28px', borderRadius: '50%', objectFit: 'cover' }} />
-                      )}
+                      <CategoryImage
+                        image={cat.image}
+                        name={cat.name}
+                        size={28}
+                      />
                       <span>{catDisplayName}</span>
                     </div>
 

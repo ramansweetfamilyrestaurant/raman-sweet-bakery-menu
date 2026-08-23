@@ -1,5 +1,6 @@
 import React from 'react';
 import { Layers } from 'lucide-react';
+import CategoryImage from './CategoryImage';
 
 export default function CategoryJumpRail({ categories, lang, selectedCategory, onSelectCategory, hasCombos = false }) {
   if (!categories || categories.length === 0) return null;
@@ -144,19 +145,12 @@ export default function CategoryJumpRail({ categories, lang, selectedCategory, o
                   flexShrink: 0
                 }}
               >
-                {cat.image ? (
-                  <img
-                    src={cat.image}
-                    alt=""
-                    style={{
-                      width: '18px',
-                      height: '18px',
-                      borderRadius: '50%',
-                      objectFit: 'cover',
-                      border: isSelected ? '1px solid #FFFFFF' : 'none'
-                    }}
-                  />
-                ) : null}
+                <CategoryImage
+                  image={cat.image}
+                  name={cat.name}
+                  size={18}
+                  isSelected={isSelected}
+                />
                 <span>{catName}</span>
               </button>
             );

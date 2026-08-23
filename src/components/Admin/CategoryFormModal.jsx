@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
-import { X, Upload } from 'lucide-react';
+import { X, Upload, Trash2 } from 'lucide-react';
 import { uploadImage } from '../../api/client';
-import { getCategoryImageUrl } from '../../utils/imageHelper';
+import { resolveImageUrl, getCategoryImageUrl, hasCustomCategoryImage } from '../../utils/imageHelper';
 
 export default function CategoryFormModal({ category, token, onSave, onClose }) {
   const [name, setName] = useState(category?.name || '');
@@ -154,18 +154,30 @@ export default function CategoryFormModal({ category, token, onSave, onClose }) 
               Category Image
             </label>
             <div style={{ display: 'flex', gap: '10px', alignItems: 'center', marginBottom: '8px' }}>
-              <img
-                src={getCategoryImageUrl(image)}
-                alt="Preview"
-                style={{
-                  width: '46px',
-                  height: '46px',
-                  borderRadius: '50%',
-                  objectFit: 'cover',
-                  border: '1px solid var(--accent-gold)'
-                }}
-                onError={(e) => { e.currentTarget.src = '/images/default-category.webp'; }}
-              />
+              <div style={{
+                width: '46px',
+                height: '46px',
+                borderRadius: '50%',
+                overflow: 'hidden',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                border: '1px solid var(--accent-gold)',
+                background: '#F8FAFC',
+                flexShrink: 0
+              }}>
+                <img
+                  src={getCategoryImageUrl(image)}
+                  alt="Preview"
+                  style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                  onError={(e) => {
+                    if (e.currentTarget.src !== '/images/default-category.webp') {
+                      e.currentTarget.src = '/images/default-category.webp';
+                    }
+                  }}
+                />
+              </div>
+
               <label style={{
                 cursor: 'pointer',
                 display: 'inline-flex',
@@ -187,13 +199,35 @@ export default function CategoryFormModal({ category, token, onSave, onClose }) 
                   style={{ display: 'none' }}
                 />
               </label>
+
+              {hasCustomCategoryImage(image) && (
+                <button
+                  type="button"
+                  onClick={() => setImage('')}
+                  style={{
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: '4px',
+                    background: '#FEE2E2',
+                    border: '1px solid #FCA5A5',
+                    color: '#991B1B',
+                    padding: '6px 12px',
+                    borderRadius: 'var(--radius-sm)',
+                    fontSize: '0.8rem',
+                    fontWeight: 600,
+                    cursor: 'pointer'
+                  }}
+                >
+                  <Trash2 size={13} /> Remove Photo
+                </button>
+              )}
             </div>
 
             <input
               type="text"
               value={image}
               onChange={(e) => setImage(e.target.value)}
-              placeholder="Or image URL"
+              placeholder="Or image URL (leave empty for default icon)"
               style={{
                 width: '100%',
                 padding: '8px',

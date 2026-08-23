@@ -68,6 +68,16 @@ export function getCategoryImageUrl(url) {
 }
 
 /**
+ * Category Custom Image Checker
+ */
+export function hasCustomCategoryImage(image) {
+  if (!image || typeof image !== 'string') return false;
+  const clean = image.trim();
+  if (!clean || clean === 'null' || clean === 'undefined' || clean === '/uploads/logo.jpg' || clean === '/images/default-category.webp') return false;
+  return true;
+}
+
+/**
  * Restaurant Custom Logo Checker
  */
 export function hasCustomRestaurantLogo(logo) {

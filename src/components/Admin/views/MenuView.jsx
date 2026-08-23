@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { Plus, Search, MoreVertical, Edit, Trash2, Star, Sparkles, DollarSign, Filter, X } from 'lucide-react';
 import AdminDrawer from '../components/AdminDrawer';
-import { resolveImageUrl, getDishImageUrl, getCategoryImageUrl } from '../../../utils/imageHelper';
+import { resolveImageUrl, getDishImageUrl, getCategoryImageUrl, hasCustomCategoryImage } from '../../../utils/imageHelper';
 
 export default function MenuView({
   dishes = [],
@@ -559,10 +559,15 @@ export default function MenuView({
                     border: '1px solid #E2E8F0'
                   }}>
                     <img
-                      src={catImage}
+                      src={getCategoryImageUrl(cat.image)}
                       alt={cat.name}
+                      loading="lazy"
                       style={{ width: '100%', height: '100%', objectFit: 'cover' }}
-                      onError={(e) => { e.currentTarget.src = '/images/default-category.webp'; }}
+                      onError={(e) => {
+                        if (e.currentTarget.src !== '/images/default-category.webp') {
+                          e.currentTarget.src = '/images/default-category.webp';
+                        }
+                      }}
                     />
                   </div>
 
@@ -579,9 +584,20 @@ export default function MenuView({
                     }}>
                       {cat.name}
                     </strong>
-                    <span style={{ fontSize: '0.74rem', color: '#64748B', fontWeight: 600, marginTop: '2px', display: 'inline-block' }}>
-                      🍲 {dishCount} {dishCount === 1 ? 'dish' : 'dishes'}
-                    </span>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginTop: '3px' }}>
+                      <span style={{ fontSize: '0.74rem', color: '#64748B', fontWeight: 600 }}>
+                        🍲 {dishCount} {dishCount === 1 ? 'dish' : 'dishes'}
+                      </span>
+                      {hasCustomCategoryImage(cat.image) ? (
+                        <span style={{ fontSize: '0.62rem', color: '#059669', background: '#D1FAE5', padding: '1px 5px', borderRadius: '4px', fontWeight: 700 }}>
+                          Custom Photo
+                        </span>
+                      ) : (
+                        <span style={{ fontSize: '0.62rem', color: '#64748B', background: '#F1F5F9', padding: '1px 5px', borderRadius: '4px', fontWeight: 600 }}>
+                          Default Image
+                        </span>
+                      )}
+                    </div>
                   </div>
                 </div>
 

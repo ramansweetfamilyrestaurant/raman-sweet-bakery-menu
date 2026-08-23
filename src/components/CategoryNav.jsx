@@ -1,5 +1,6 @@
 import React from 'react';
 import { Sparkles } from 'lucide-react';
+import CategoryImage from './CategoryImage';
 
 export default function CategoryNav({ categories, selectedCategory, onSelectCategory, lang }) {
   return (
@@ -73,18 +74,12 @@ export default function CategoryNav({ categories, selectedCategory, onSelectCate
                 boxShadow: 'var(--shadow-sm)'
               }}
             >
-              {cat.image && (
-                <img 
-                  src={cat.image} 
-                  alt={catDisplayName} 
-                  style={{
-                    width: '18px',
-                    height: '18px',
-                    borderRadius: '50%',
-                    objectFit: 'cover'
-                  }}
-                />
-              )}
+              <CategoryImage
+                image={cat.image}
+                name={cat.name}
+                size={18}
+                isSelected={isSelected}
+              />
               {catDisplayName}
             </button>
           );
