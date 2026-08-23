@@ -7,6 +7,7 @@ export default function CustomerHeader({ info, lang, tableNum, spaceLabel, onTog
     if (!tableNum) return '';
     if (spaceLabel) return spaceLabel;
     const prefix = String(info?.table_prefix || 'table').toLowerCase();
+    if (prefix === 'cinema_seat' || prefix === 'cinema' || prefix === 'seat') return `🎬 ${tableNum}`;
     if (prefix === 'cabin') return `🛋️ Cabin ${tableNum}`;
     if (prefix === 'room') return `🏨 Room ${tableNum}`;
     if (prefix === 'vip') return `👑 VIP ${tableNum}`;

@@ -1365,6 +1365,26 @@ export default function SetupView({
             );
           })()}
 
+          {/* Cinema Card (Active when business_type === 'cinema_theatre') */}
+          {(settingsForm.business_type === 'cinema_theatre') && (
+            <div style={{ padding: '16px 18px', background: '#F8FAFC', borderRadius: '16px', border: '1.5px solid #0284C7', boxShadow: '0 1px 3px rgba(0,0,0,0.04)' }}>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '8px' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                  <div style={{ width: '36px', height: '36px', borderRadius: '10px', background: '#E0F2FE', color: '#0284C7', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1.2rem', flexShrink: 0 }}>
+                    🎬
+                  </div>
+                  <div>
+                    <strong style={{ fontSize: '0.92rem', color: '#0F172A', fontWeight: 800, display: 'block' }}>Cinema Screens & Seat Management</strong>
+                    <span style={{ fontSize: '0.72rem', color: '#64748B' }}>Configure auditorium screens, rows (A–Z), and seat numbers</span>
+                  </div>
+                </div>
+              </div>
+              <div style={{ paddingLeft: '46px', fontSize: '0.78rem', color: '#334155' }}>
+                Cinema QR ordering is active for this account. Generate screen, row, and seat-bound QR codes directly from the <strong>📱 QR Standee Generator</strong>.
+              </div>
+            </div>
+          )}
+
           {/* Card 2: Currency Symbol */}
           <div style={{ padding: '16px 18px', background: '#FFFFFF', borderRadius: '16px', border: '1px solid #E2E8F0', boxShadow: '0 1px 3px rgba(0,0,0,0.04)' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '10px' }}>

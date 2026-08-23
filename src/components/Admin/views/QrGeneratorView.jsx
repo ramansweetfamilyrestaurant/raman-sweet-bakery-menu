@@ -16,6 +16,10 @@ export default function QrGeneratorView({
   onUpdateSpaceType
 }) {
   const [copied, setCopied] = React.useState(false);
+  const [cinemaScreen, setCinemaScreen] = React.useState('1');
+  const [cinemaRow, setCinemaRow] = React.useState('A');
+  const [cinemaSeatNum, setCinemaSeatNum] = React.useState('1');
+
   const liveOrigin = window.location.origin;
   const activeSlug = settingsForm?.slug || '';
   const currentPrefix = (
@@ -24,11 +28,14 @@ export default function QrGeneratorView({
     'table'
   ).toLowerCase();
 
+  const isCinema = currentPrefix === 'cinema_seat' || currentPrefix === 'cinema';
+
   const getSpaceConfig = (type) => {
     const t = String(type || 'table').toLowerCase();
     if (t === 'cabin') return { singular: 'Cabin', plural: 'Cabins', badge: 'CABIN NO.', param: 'cabin' };
     if (t === 'room') return { singular: 'Room', plural: 'Rooms', badge: 'ROOM NO.', param: 'room' };
     if (t === 'vip') return { singular: 'VIP Lounge', plural: 'VIP Lounges', badge: 'VIP LOUNGE', param: 'vip' };
+    if (t === 'cinema_seat' || t === 'cinema') return { singular: 'Cinema Seat', plural: 'Cinema Seats', badge: 'CINEMA SEAT', param: 'cinema' };
     return { singular: 'Table', plural: 'Tables', badge: 'TABLE NO.', param: 'table' };
   };
 
@@ -38,18 +45,23 @@ export default function QrGeneratorView({
     table: Number(settingsForm?.total_tables) || 0,
     cabin: Number(settingsForm?.total_cabins) || 0,
     room: Number(settingsForm?.total_rooms) || 0,
-    vip: Number(settingsForm?.total_vip) || 0
+    vip: Number(settingsForm?.total_vip) || 0,
+    cinema_seat: isCinema ? 1 : 0
   };
 
-  const currentCount = spaceCounts[currentPrefix] !== undefined ? spaceCounts[currentPrefix] : (totalTablesCount || 0);
-  const hasTables = currentCount > 0;
-  const activeTableNum = hasTables ? (tableNumber || '1') : '';
+  const currentCount = isCinema ? 1 : (spaceCounts[currentPrefix] !== undefined ? spaceCounts[currentPrefix] : (totalTablesCount || 0));
+  const hasTables = isCinema ? true : currentCount > 0;
+  const activeTableNum = isCinema 
+    ? `S${cinemaScreen}-${cinemaRow}-${cinemaSeatNum}`
+    : (hasTables ? (tableNumber || '1') : '');
 
   const secretKey = settingsForm?.qr_secret || `${settingsForm?.id || 1}_${activeSlug}_tq`;
-  const qrSig = hasTables ? generateQrToken(activeSlug, spaceConfig.param, activeTableNum, secretKey) : '';
+  const qrSig = hasTables ? generateQrToken(activeSlug, isCinema ? 'cinema_seat' : spaceConfig.param, activeTableNum, secretKey) : '';
 
   const targetUrl = hasTables 
-    ? `${liveOrigin}/${activeSlug}?${spaceConfig.param}=${activeTableNum}&tkn=${qrSig}`
+    ? (isCinema 
+        ? `${liveOrigin}/${activeSlug}?cinema=S${cinemaScreen}-${cinemaRow}-${cinemaSeatNum}&tkn=${qrSig}`
+        : `${liveOrigin}/${activeSlug}?${spaceConfig.param}=${activeTableNum}&tkn=${qrSig}`)
     : `${liveOrigin}/${activeSlug}`;
   const qrImgUrl = `https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=${encodeURIComponent(targetUrl)}`;
 
@@ -109,7 +121,8 @@ export default function QrGeneratorView({
               { id: 'table', label: '🍽️ Dining Table' },
               { id: 'cabin', label: '🛋️ Private Cabin' },
               { id: 'room', label: '🏨 Hotel Room' },
-              { id: 'vip', label: '👑 VIP Lounge' }
+              { id: 'vip', label: '👑 VIP Lounge' },
+              { id: 'cinema_seat', label: '🎬 Cinema Seat' }
             ].map(item => {
               const isActive = currentPrefix === item.id;
               const count = spaceCounts[item.id] || 0;
@@ -135,76 +148,82 @@ export default function QrGeneratorView({
                   }}
                 >
                   <span>{item.label}</span>
-                  <span style={{
-                    fontSize: '0.72rem',
-                    padding: '1px 6px',
-                    borderRadius: '10px',
-                    background: isActive ? 'rgba(255,255,255,0.25)' : 'var(--adm-surface-subtle)',
-                    color: isActive ? '#FFFFFF' : 'var(--adm-muted)',
-                    fontWeight: 900
-                  }}>
-                    {count}
-                  </span>
+                  {item.id !== 'cinema_seat' && (
+                    <span style={{
+                      fontSize: '0.72rem',
+                      padding: '1px 6px',
+                      borderRadius: '10px',
+                      background: isActive ? 'rgba(255,255,255,0.25)' : 'var(--adm-surface-subtle)',
+                      color: isActive ? '#FFFFFF' : 'var(--adm-muted)',
+                      fontWeight: 900
+                    }}>
+                      {count}
+                    </span>
+                  )}
                 </button>
               );
             })}
           </div>
         </div>
 
-        {/* Capacity Stepper Strip */}
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '12px', borderTop: '1px solid var(--adm-border)', paddingTop: '14px' }}>
-          <div>
-            <strong style={{ fontSize: '0.95rem', color: 'var(--adm-primary)', display: 'flex', alignItems: 'center', gap: '8px' }}>
-              <span>Total {spaceConfig.plural}:</span>
-              <span style={{ background: hasTables ? 'var(--adm-primary)' : '#9CA3AF', color: '#FFFFFF', padding: '2px 10px', borderRadius: 'var(--radius-pill)', fontSize: '0.82rem', fontWeight: 900 }}>
-                {currentCount} Total {currentCount === 1 ? spaceConfig.singular : spaceConfig.plural}
+        {/* Capacity Stepper Strip (Hidden for Cinema as cinema uses screen/row/seat configuration) */}
+        {!isCinema && (
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '12px', borderTop: '1px solid var(--adm-border)', paddingTop: '14px' }}>
+            <div>
+              <strong style={{ fontSize: '0.95rem', color: 'var(--adm-primary)', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <span>Total {spaceConfig.plural}:</span>
+                <span style={{ background: hasTables ? 'var(--adm-primary)' : '#9CA3AF', color: '#FFFFFF', padding: '2px 10px', borderRadius: 'var(--radius-pill)', fontSize: '0.82rem', fontWeight: 900 }}>
+                  {currentCount} Total {currentCount === 1 ? spaceConfig.singular : spaceConfig.plural}
+                </span>
+              </strong>
+              <span style={{ fontSize: '0.78rem', color: 'var(--adm-muted)' }}>
+                {hasTables 
+                  ? `Manage total ${spaceConfig.plural.toLowerCase()} or generate instant custom QR stickers.`
+                  : `Click "+ Add ${spaceConfig.singular}" below to configure your spaces.`}
               </span>
-            </strong>
-            <span style={{ fontSize: '0.78rem', color: 'var(--adm-muted)' }}>
-              {hasTables 
-                ? `Manage total ${spaceConfig.plural.toLowerCase()} or generate instant custom QR stickers.`
-                : `Click "+ Add ${spaceConfig.singular}" below to configure your spaces.`}
-            </span>
-          </div>
+            </div>
 
-          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
-            <button
-              onClick={() => onDeleteTable && onDeleteTable(tableNumber || currentCount, currentPrefix)}
-              disabled={!hasTables}
-              className="adm-btn adm-btn-danger adm-btn-sm"
-              title={`Remove ${spaceConfig.singular}`}
-              style={{ opacity: !hasTables ? 0.5 : 1, cursor: !hasTables ? 'not-allowed' : 'pointer' }}
-            >
-              <Trash2 size={15} /> Remove {spaceConfig.singular}
-            </button>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
+              <button
+                onClick={() => onDeleteTable && onDeleteTable(tableNumber || currentCount, currentPrefix)}
+                disabled={!hasTables}
+                className="adm-btn adm-btn-danger adm-btn-sm"
+                title={`Remove ${spaceConfig.singular}`}
+                style={{ opacity: !hasTables ? 0.5 : 1, cursor: !hasTables ? 'not-allowed' : 'pointer' }}
+              >
+                <Trash2 size={15} /> Remove {spaceConfig.singular}
+              </button>
 
-            <button
-              onClick={() => onAddTable && onAddTable(null, currentPrefix)}
-              className="adm-btn adm-btn-primary adm-btn-sm"
-              title={`Add Next ${spaceConfig.singular}`}
-            >
-              <Plus size={15} /> Add {spaceConfig.singular}
-            </button>
+              <button
+                onClick={() => onAddTable && onAddTable(null, currentPrefix)}
+                className="adm-btn adm-btn-primary adm-btn-sm"
+                title={`Add Next ${spaceConfig.singular}`}
+              >
+                <Plus size={15} /> Add {spaceConfig.singular}
+              </button>
+            </div>
           </div>
-        </div>
+        )}
 
         {/* Quick Batch Presets */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flexWrap: 'wrap', borderTop: '1px solid var(--adm-border)', paddingTop: '10px' }}>
-          <span style={{ fontSize: '0.72rem', fontWeight: 800, color: 'var(--adm-muted)', textTransform: 'uppercase', marginRight: '4px' }}>
-            Quick Set:
-          </span>
-          {[5, 10, 15, 20, 30].map(count => (
-            <button
-              key={count}
-              type="button"
-              onClick={() => onAddTable && onAddTable(count, currentPrefix)}
-              className="adm-btn adm-btn-secondary adm-btn-sm"
-              style={{ padding: '3px 10px', fontSize: '0.72rem', fontWeight: 800 }}
-            >
-              Set {count} {spaceConfig.plural}
-            </button>
-          ))}
-        </div>
+        {!isCinema && (
+          <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flexWrap: 'wrap', borderTop: '1px solid var(--adm-border)', paddingTop: '10px' }}>
+            <span style={{ fontSize: '0.72rem', fontWeight: 800, color: 'var(--adm-muted)', textTransform: 'uppercase', marginRight: '4px' }}>
+              Quick Set:
+            </span>
+            {[5, 10, 15, 20, 30].map(count => (
+              <button
+                key={count}
+                type="button"
+                onClick={() => onAddTable && onAddTable(count, currentPrefix)}
+                className="adm-btn adm-btn-secondary adm-btn-sm"
+                style={{ padding: '3px 10px', fontSize: '0.72rem', fontWeight: 800 }}
+              >
+                Set {count} {spaceConfig.plural}
+              </button>
+            ))}
+          </div>
+        )}
       </div>
 
       {/* Main Preview Container */}
@@ -215,35 +234,82 @@ export default function QrGeneratorView({
             {spaceConfig.singular} Standee Selection
           </h3>
 
-          <div>
-            <label style={{ fontSize: '0.76rem', fontWeight: 800, color: 'var(--adm-muted)', display: 'block', marginBottom: '6px' }}>
-              SELECT {spaceConfig.singular.toUpperCase()} FOR PREVIEW:
-            </label>
-            <select
-              value={tableNumber}
-              onChange={(e) => setTableNumber(e.target.value)}
-              disabled={!hasTables}
-              style={{
-                width: '100%',
-                padding: '10px 14px',
-                borderRadius: 'var(--adm-radius-md)',
-                border: '1px solid var(--adm-border)',
-                fontSize: '0.95rem',
-                fontWeight: 800,
-                color: 'var(--adm-primary)',
-                background: '#FFF',
-                opacity: !hasTables ? 0.6 : 1
-              }}
-            >
-              {hasTables ? (
-                Array.from({ length: currentCount }, (_, i) => String(i + 1)).map(tNum => (
-                  <option key={tNum} value={tNum}>{spaceConfig.singular} {tNum}</option>
-                ))
-              ) : (
-                <option value="">No {spaceConfig.plural.toLowerCase()} configured</option>
-              )}
-            </select>
-          </div>
+          {isCinema ? (
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '8px' }}>
+              <div>
+                <label style={{ fontSize: '0.74rem', fontWeight: 800, color: 'var(--adm-muted)', display: 'block', marginBottom: '4px' }}>
+                  SCREEN:
+                </label>
+                <select
+                  value={cinemaScreen}
+                  onChange={(e) => setCinemaScreen(e.target.value)}
+                  style={{ width: '100%', padding: '8px', borderRadius: '8px', border: '1px solid var(--adm-border)', fontWeight: 800 }}
+                >
+                  {['1', '2', '3', '4', '5', '6'].map(s => (
+                    <option key={s} value={s}>Screen {s}</option>
+                  ))}
+                </select>
+              </div>
+              <div>
+                <label style={{ fontSize: '0.74rem', fontWeight: 800, color: 'var(--adm-muted)', display: 'block', marginBottom: '4px' }}>
+                  ROW:
+                </label>
+                <select
+                  value={cinemaRow}
+                  onChange={(e) => setCinemaRow(e.target.value)}
+                  style={{ width: '100%', padding: '8px', borderRadius: '8px', border: '1px solid var(--adm-border)', fontWeight: 800 }}
+                >
+                  {['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'J', 'K', 'L', 'M', 'N', 'P', 'Q', 'R', 'S', 'T'].map(r => (
+                    <option key={r} value={r}>Row {r}</option>
+                  ))}
+                </select>
+              </div>
+              <div>
+                <label style={{ fontSize: '0.74rem', fontWeight: 800, color: 'var(--adm-muted)', display: 'block', marginBottom: '4px' }}>
+                  SEAT:
+                </label>
+                <select
+                  value={cinemaSeatNum}
+                  onChange={(e) => setCinemaSeatNum(e.target.value)}
+                  style={{ width: '100%', padding: '8px', borderRadius: '8px', border: '1px solid var(--adm-border)', fontWeight: 800 }}
+                >
+                  {Array.from({ length: 30 }, (_, i) => String(i + 1)).map(sn => (
+                    <option key={sn} value={sn}>Seat {sn}</option>
+                  ))}
+                </select>
+              </div>
+            </div>
+          ) : (
+            <div>
+              <label style={{ fontSize: '0.76rem', fontWeight: 800, color: 'var(--adm-muted)', display: 'block', marginBottom: '6px' }}>
+                SELECT {spaceConfig.singular.toUpperCase()} FOR PREVIEW:
+              </label>
+              <select
+                value={tableNumber}
+                onChange={(e) => setTableNumber(e.target.value)}
+                disabled={!hasTables}
+                style={{
+                  width: '100%',
+                  padding: '10px 14px',
+                  borderRadius: 'var(--adm-radius-md)',
+                  border: '1px solid var(--adm-border)',
+                  fontSize: '0.95rem',
+                  fontWeight: 800,
+                  color: 'var(--adm-primary)',
+                  background: '#FFF',
+                  opacity: !hasTables ? 0.6 : 1
+                }}
+              >
+                {hasTables ? (
+                  Array.from({ length: currentCount }, (_, i) => String(i + 1)).map(tNum => (
+                    <option key={tNum} value={tNum}>{spaceConfig.singular} {tNum}</option>
+                  ))
+                ) : (
+                  <option value="">No {spaceConfig.plural.toLowerCase()} configured</option>
+                )}
+              </select>
+            </div>
+          )}
 
           <div>
             <label style={{ fontSize: '0.76rem', fontWeight: 800, color: 'var(--adm-muted)', display: 'block', marginBottom: '6px' }}>
@@ -264,12 +330,12 @@ export default function QrGeneratorView({
 
           <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', marginTop: '10px' }}>
             <button
-              onClick={() => onPrintQR(tableNumber)}
+              onClick={() => onPrintQR(activeTableNum)}
               disabled={!hasTables}
               className="adm-btn adm-btn-primary"
               style={{ padding: '12px', fontWeight: 800, opacity: !hasTables ? 0.5 : 1, cursor: !hasTables ? 'not-allowed' : 'pointer' }}
             >
-              <Printer size={16} /> {hasTables ? `Print ${spaceConfig.singular} ${activeTableNum} QR Standee` : `No ${spaceConfig.plural} to Print`}
+              <Printer size={16} /> {hasTables ? `Print ${spaceConfig.singular} (${activeTableNum}) QR Standee` : `No ${spaceConfig.plural} to Print`}
             </button>
             <button onClick={() => onReturnToMenu && onReturnToMenu(settingsForm?.slug)} className="adm-btn adm-btn-secondary" style={{ padding: '10px', fontWeight: 700 }}>
               <ExternalLink size={15} /> Open Live Customer Menu Preview ➔
@@ -296,13 +362,15 @@ export default function QrGeneratorView({
                 color: '#D4AF37',
                 padding: '4px 18px',
                 borderRadius: '9999px',
-                fontSize: '0.95rem',
+                fontSize: isCinema ? '0.82rem' : '0.95rem',
                 fontWeight: 800,
                 border: '1.5px solid #D4AF37',
                 letterSpacing: '1px',
                 marginBottom: '12px'
               }}>
-                {spaceConfig.badge} {activeTableNum}
+                {isCinema 
+                  ? `🎬 SCREEN ${cinemaScreen} • ROW ${cinemaRow} • SEAT ${cinemaSeatNum}`
+                  : `${spaceConfig.badge} ${activeTableNum}`}
               </div>
 
               <h3 style={{ fontSize: '1.2rem', fontWeight: 900, color: '#0A2315', margin: '0 0 4px 0' }}>

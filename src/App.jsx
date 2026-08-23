@@ -100,7 +100,16 @@ export default function App() {
     let type = '';
     let num = '';
 
-    if (urlParams.get('cabin')) {
+    if (urlParams.get('cinema') || urlParams.get('seat')) {
+      type = 'cinema_seat';
+      num = (urlParams.get('cinema') || urlParams.get('seat')).trim();
+    } else if (urlParams.get('screen') && urlParams.get('row')) {
+      type = 'cinema_seat';
+      const screen = urlParams.get('screen').trim();
+      const row = urlParams.get('row').trim().toUpperCase();
+      const seat = (urlParams.get('seatno') || urlParams.get('seat_num') || '1').trim();
+      num = `S${screen}-${row}-${seat}`;
+    } else if (urlParams.get('cabin')) {
       type = 'cabin';
       num = urlParams.get('cabin').trim();
     } else if (urlParams.get('room')) {
@@ -117,7 +126,10 @@ export default function App() {
       if (parts.length >= 2) {
         const lastPart = parts[parts.length - 1];
         const prevPart = parts[parts.length - 2].toLowerCase();
-        if (/^\d+$/.test(lastPart)) {
+        if (prevPart === 'cinema' || prevPart === 'seat') {
+          type = 'cinema_seat';
+          num = lastPart;
+        } else if (/^\d+$/.test(lastPart)) {
           if (prevPart === 'cabin') { type = 'cabin'; num = lastPart; }
           else if (prevPart === 'room') { type = 'room'; num = lastPart; }
           else if (prevPart === 'vip') { type = 'vip'; num = lastPart; }
@@ -132,7 +144,20 @@ export default function App() {
     let label = '';
     let badge = '';
     if (isScanned) {
-      if (type === 'cabin') { label = `Cabin ${num}`; badge = `🛋️ Cabin ${num}`; }
+      if (type === 'cinema_seat') {
+        const cMatch = String(num).match(/^(?:screen\s*(\d+)[\s\-_•|]+row\s*([a-zA-Z]+)[\s\-_•|]+seat\s*(\d+)|s?(\d+)[\-_:]([a-zA-Z]+)[\-_:](\d+))/i);
+        if (cMatch) {
+          const sc = cMatch[1] || cMatch[4];
+          const rw = (cMatch[2] || cMatch[5]).toUpperCase();
+          const st = cMatch[3] || cMatch[6];
+          label = `Screen ${sc} • Row ${rw} • Seat ${st}`;
+          badge = `🎬 Screen ${sc} • Row ${rw} • Seat ${st}`;
+        } else {
+          label = `Seat ${num}`;
+          badge = `🎬 Seat ${num}`;
+        }
+      }
+      else if (type === 'cabin') { label = `Cabin ${num}`; badge = `🛋️ Cabin ${num}`; }
       else if (type === 'room') { label = `Room ${num}`; badge = `🏨 Room ${num}`; }
       else if (type === 'vip') { label = `VIP ${num}`; badge = `👑 VIP ${num}`; }
       else { label = `Table ${num}`; badge = `🍽️ Table ${num}`; }
@@ -162,13 +187,19 @@ export default function App() {
   // Validate if the table/space number exists within the restaurant's configured capacity & has valid token shape
   const isSpaceNumberValid = () => {
     if (!currentTableNum) return true;
-    const num = parseInt(currentTableNum, 10);
-    if (isNaN(num) || num <= 0) return false;
 
     // Strict requirement: A scanned space QR MUST have a token with valid shape (8 hex chars)
     if (!initialSpaceInfo.isValidTokenShape) {
       return false;
     }
+
+    if (currentSpaceType === 'cinema_seat' || initialSpaceInfo.type === 'cinema_seat') {
+      const cMatch = String(currentTableNum).match(/^(?:screen\s*(\d+)[\s\-_•|]+row\s*([a-zA-Z]+)[\s\-_•|]+seat\s*(\d+)|s?(\d+)[\-_:]([a-zA-Z]+)[\-_:](\d+))/i);
+      return Boolean(cMatch || String(currentTableNum).trim().length > 0);
+    }
+
+    const num = parseInt(currentTableNum, 10);
+    if (isNaN(num) || num <= 0) return false;
 
     if (!info) return true; // Still loading restaurant info
 
@@ -199,6 +230,16 @@ export default function App() {
   const getDynamicSpaceLabel = () => {
     if (!effectiveTableNum) return '';
     const activeType = currentSpaceType || String(info?.table_prefix || 'table').toLowerCase();
+    if (activeType === 'cinema_seat' || activeType === 'cinema') {
+      const cMatch = String(effectiveTableNum).match(/^(?:screen\s*(\d+)[\s\-_•|]+row\s*([a-zA-Z]+)[\s\-_•|]+seat\s*(\d+)|s?(\d+)[\-_:]([a-zA-Z]+)[\-_:](\d+))/i);
+      if (cMatch) {
+        const sc = cMatch[1] || cMatch[4];
+        const rw = (cMatch[2] || cMatch[5]).toUpperCase();
+        const st = cMatch[3] || cMatch[6];
+        return `🎬 Screen ${sc} • Row ${rw} • Seat ${st}`;
+      }
+      return `🎬 Seat ${effectiveTableNum}`;
+    }
     if (activeType === 'cabin') return `🛋️ Cabin ${effectiveTableNum}`;
     if (activeType === 'room') return `🏨 Room ${effectiveTableNum}`;
     if (activeType === 'vip') return `👑 VIP ${effectiveTableNum}`;

@@ -864,11 +864,44 @@ router.post('/orders/verify-location', locationVerifyRateLimiter, async (req, re
     }
     const resolvedSpaceType = normalizeSpaceType(space_type || rawTable || resto.table_prefix || 'table');
     const resolvedSpaceNum = normalizeSpaceNumber(rawTable);
-    const cleanTable = rawTable;
+    
+    let cleanTable = rawTable;
+    if (resolvedSpaceType === 'cinema_seat') {
+      const cMatch = String(resolvedSpaceNum).match(/^S?(\d+)-([A-Za-z]+)-(\d+)$/i);
+      cleanTable = cMatch ? `Screen ${cMatch[1]} - Row ${cMatch[2].toUpperCase()} - Seat ${cMatch[3]}` : rawTable;
+    }
 
     // Step 6: Validate Space Capacity
     let maxAllowed = 0;
-    if (resolvedSpaceType === 'cabin') {
+    if (resolvedSpaceType === 'cinema_seat') {
+      const cMatch = String(resolvedSpaceNum).match(/^S?(\d+)-([A-Za-z]+)-(\d+)$/i);
+      if (!cMatch) {
+        return res.status(400).json({
+          error: 'invalid_table_number',
+          message: `Cinema seat "${resolvedSpaceNum}" format is invalid. Expected format e.g. Screen 1, Row A, Seat 12.`
+        });
+      }
+      try {
+        const dbScreenNum = parseInt(cMatch[1], 10);
+        const dbRowLabel = cMatch[2].toUpperCase();
+        const dbSeatNum = parseInt(cMatch[3], 10);
+        const seatCheck = await query(`
+          SELECT s.id, s.active, sc.active as screen_active
+          FROM restaurant_cinema_seats s
+          JOIN restaurant_cinema_screens sc ON s.screen_id = sc.id
+          WHERE s.restaurant_id = $1 AND sc.screen_number = $2 AND UPPER(s.row_label) = $3 AND s.seat_number = $4
+        `, [resto.id, dbScreenNum, dbRowLabel, dbSeatNum]);
+
+        if (seatCheck && seatCheck.length > 0) {
+          if (!seatCheck[0].active || !seatCheck[0].screen_active) {
+            return res.status(400).json({
+              error: 'invalid_table_number',
+              message: `Cinema seat Screen ${dbScreenNum} Row ${dbRowLabel} Seat ${dbSeatNum} is currently inactive.`
+            });
+          }
+        }
+      } catch (dbErr) {}
+    } else if (resolvedSpaceType === 'cabin') {
       maxAllowed = Number(resto.total_cabins) || Number(resto.total_tables) || 0;
     } else if (resolvedSpaceType === 'room') {
       maxAllowed = Number(resto.total_rooms) || Number(resto.total_tables) || 0;
@@ -878,12 +911,14 @@ router.post('/orders/verify-location', locationVerifyRateLimiter, async (req, re
       maxAllowed = Number(resto.total_tables) || 0;
     }
 
-    const parsedSpaceNum = parseInt(resolvedSpaceNum, 10);
-    if (maxAllowed > 0 && parsedSpaceNum > maxAllowed) {
-      return res.status(400).json({
-        error: 'invalid_table_number',
-        message: `${resolvedSpaceType} #${resolvedSpaceNum} is not registered for this restaurant.`
-      });
+    if (resolvedSpaceType !== 'cinema_seat') {
+      const parsedSpaceNum = parseInt(resolvedSpaceNum, 10);
+      if (maxAllowed > 0 && parsedSpaceNum > maxAllowed) {
+        return res.status(400).json({
+          error: 'invalid_table_number',
+          message: `${resolvedSpaceType} #${resolvedSpaceNum} is not registered for this restaurant.`
+        });
+      }
     }
 
     // Step 7: REQUIRE & Verify QR Token Server-Side
@@ -1300,18 +1335,51 @@ router.post('/orders', orderCreationRateLimiter, async (req, res) => {
       });
     }
 
-    // Step 5: Resolve Canonical Exact Space Identity (Table, Cabin, Room, VIP)
+    // Step 5: Resolve Canonical Exact Space Identity (Table, Cabin, Room, VIP, Cinema Seat)
     const rawTable = String(table_number || '').trim();
-    if (!rawTable || rawTable.length > 20) {
+    if (!rawTable || rawTable.length > 60) {
       return res.status(400).json({ error: 'invalid_table_number', message: 'Table or space number is required and must be valid' });
     }
     const resolvedSpaceType = normalizeSpaceType(space_type || rawTable || resto.table_prefix || 'table');
     const resolvedSpaceNum = normalizeSpaceNumber(rawTable);
-    const cleanTable = rawTable;
+    
+    let cleanTable = rawTable;
+    if (resolvedSpaceType === 'cinema_seat') {
+      const cMatch = String(resolvedSpaceNum).match(/^S?(\d+)-([A-Za-z]+)-(\d+)$/i);
+      cleanTable = cMatch ? `Screen ${cMatch[1]} - Row ${cMatch[2].toUpperCase()} - Seat ${cMatch[3]}` : rawTable;
+    }
 
     // Step 6: Validate Space Capacity against Restaurant Configuration
     let maxAllowed = 0;
-    if (resolvedSpaceType === 'cabin') {
+    if (resolvedSpaceType === 'cinema_seat') {
+      const cMatch = String(resolvedSpaceNum).match(/^S?(\d+)-([A-Za-z]+)-(\d+)$/i);
+      if (!cMatch) {
+        return res.status(400).json({
+          error: 'invalid_table_number',
+          message: `Cinema seat "${resolvedSpaceNum}" format is invalid. Expected format e.g. Screen 1, Row A, Seat 12.`
+        });
+      }
+      try {
+        const dbScreenNum = parseInt(cMatch[1], 10);
+        const dbRowLabel = cMatch[2].toUpperCase();
+        const dbSeatNum = parseInt(cMatch[3], 10);
+        const seatCheck = await query(`
+          SELECT s.id, s.active, sc.active as screen_active
+          FROM restaurant_cinema_seats s
+          JOIN restaurant_cinema_screens sc ON s.screen_id = sc.id
+          WHERE s.restaurant_id = $1 AND sc.screen_number = $2 AND UPPER(s.row_label) = $3 AND s.seat_number = $4
+        `, [targetId, dbScreenNum, dbRowLabel, dbSeatNum]);
+
+        if (seatCheck && seatCheck.length > 0) {
+          if (!seatCheck[0].active || !seatCheck[0].screen_active) {
+            return res.status(400).json({
+              error: 'invalid_table_number',
+              message: `Cinema seat Screen ${dbScreenNum} Row ${dbRowLabel} Seat ${dbSeatNum} is currently inactive.`
+            });
+          }
+        }
+      } catch (dbErr) {}
+    } else if (resolvedSpaceType === 'cabin') {
       maxAllowed = Number(resto.total_cabins) || Number(resto.total_tables) || 0;
     } else if (resolvedSpaceType === 'room') {
       maxAllowed = Number(resto.total_rooms) || Number(resto.total_tables) || 0;
@@ -1321,12 +1389,14 @@ router.post('/orders', orderCreationRateLimiter, async (req, res) => {
       maxAllowed = Number(resto.total_tables) || 0;
     }
 
-    const spaceNum = parseInt(resolvedSpaceNum, 10);
-    if (maxAllowed > 0 && spaceNum > maxAllowed) {
-      return res.status(400).json({
-        error: 'invalid_table_number',
-        message: `${resolvedSpaceType} #${resolvedSpaceNum} is not registered. Please scan the official QR code at your seat.`
-      });
+    if (resolvedSpaceType !== 'cinema_seat') {
+      const spaceNum = parseInt(resolvedSpaceNum, 10);
+      if (maxAllowed > 0 && spaceNum > maxAllowed) {
+        return res.status(400).json({
+          error: 'invalid_table_number',
+          message: `${resolvedSpaceType} #${resolvedSpaceNum} is not registered. Please scan the official QR code at your seat.`
+        });
+      }
     }
 
     // Step 7: REQUIRE & Authoritatively Verify QR Token Server-Side
@@ -1826,21 +1896,36 @@ router.get('/orders/active-table', async (req, res) => {
     if (!resto) return res.status(404).json({ error: 'Restaurant not found' });
     const targetId = resto.id;
 
+    const rawTable = String(table_number).trim();
+    let queryTable = rawTable;
+    let queryAlt = rawTable;
+    const cMatch = rawTable.match(/^(?:screen\s*(\d+)[\s\-_•|]+row\s*([a-zA-Z]+)[\s\-_•|]+seat\s*(\d+)|s?(\d+)[\-_:]([a-zA-Z]+)[\-_:](\d+))/i);
+    if (cMatch) {
+      const screen = cMatch[1] || cMatch[4];
+      const row = (cMatch[2] || cMatch[5]).toUpperCase();
+      const seat = cMatch[3] || cMatch[6];
+      queryTable = `Screen ${screen} - Row ${row} - Seat ${seat}`;
+      queryAlt = `S${screen}-${row}-${seat}`;
+    }
+
     let orders = [];
     try {
       orders = await query(`
         SELECT id, session_id, round_number, parent_order_id, table_number, customer_name, status, kitchen_prepared, sent_to_kds, total_amount, subtotal_amount, cgst_amount, sgst_amount, tax_amount, grand_total_amount, gst_rate, items, created_at
         FROM orders
-        WHERE restaurant_id = $1 AND table_number = $2 AND status IN ('pending', 'preparing', 'kitchen', 'accepted', 'served') AND (is_settled = 0 OR is_settled IS NULL)
+        WHERE restaurant_id = $1 AND (table_number = $2 OR table_number = $3 OR table_number = $4) 
+          AND status IN ('pending', 'preparing', 'kitchen', 'accepted', 'served') 
+          AND (is_settled = 0 OR is_settled IS NULL)
         ORDER BY id ASC
-      `, [targetId, String(table_number).trim()]);
+      `, [targetId, rawTable, queryTable, queryAlt]);
     } catch (e) {
       orders = await query(`
         SELECT id, table_number, customer_name, status, kitchen_prepared, sent_to_kds, total_amount, subtotal_amount, cgst_amount, sgst_amount, tax_amount, grand_total_amount, gst_rate, items, created_at
         FROM orders
-        WHERE restaurant_id = $1 AND table_number = $2 AND status IN ('pending', 'preparing', 'kitchen', 'accepted', 'served')
+        WHERE restaurant_id = $1 AND (table_number = $2 OR table_number = $3 OR table_number = $4) 
+          AND status IN ('pending', 'preparing', 'kitchen', 'accepted', 'served')
         ORDER BY id ASC
-      `, [targetId, String(table_number).trim()]);
+      `, [targetId, rawTable, queryTable, queryAlt]);
     }
 
     if (orders.length === 0) return res.json(null);

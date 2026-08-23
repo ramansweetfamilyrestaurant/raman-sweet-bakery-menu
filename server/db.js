@@ -574,7 +574,33 @@ async function createTables() {
         created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
         printed_at TIMESTAMP WITH TIME ZONE DEFAULT NULL
       );`,
-      `CREATE INDEX IF NOT EXISTS idx_print_jobs_resto_order ON print_jobs(restaurant_id, order_id, print_type);`
+      `CREATE INDEX IF NOT EXISTS idx_print_jobs_resto_order ON print_jobs(restaurant_id, order_id, print_type);`,
+      // Step 3.32 Cinema & Theatre Seat QR Support Schema
+      `CREATE TABLE IF NOT EXISTS restaurant_cinema_screens (
+        id SERIAL PRIMARY KEY,
+        restaurant_id INT NOT NULL REFERENCES restaurants(id) ON DELETE CASCADE,
+        screen_number INT NOT NULL,
+        name VARCHAR(100) NOT NULL,
+        active BOOLEAN DEFAULT true,
+        created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+        updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+        CONSTRAINT uq_cinema_screen_per_resto UNIQUE (restaurant_id, screen_number)
+      );`,
+      `CREATE INDEX IF NOT EXISTS idx_cinema_screens_resto ON restaurant_cinema_screens(restaurant_id);`,
+      `CREATE TABLE IF NOT EXISTS restaurant_cinema_seats (
+        id SERIAL PRIMARY KEY,
+        restaurant_id INT NOT NULL REFERENCES restaurants(id) ON DELETE CASCADE,
+        screen_id INT NOT NULL REFERENCES restaurant_cinema_screens(id) ON DELETE CASCADE,
+        row_label VARCHAR(10) NOT NULL,
+        seat_number INT NOT NULL,
+        seat_code VARCHAR(50) NOT NULL,
+        active BOOLEAN DEFAULT true,
+        created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+        updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+        CONSTRAINT uq_cinema_seat_per_screen UNIQUE (restaurant_id, screen_id, row_label, seat_number)
+      );`,
+      `CREATE INDEX IF NOT EXISTS idx_cinema_seats_resto ON restaurant_cinema_seats(restaurant_id);`,
+      `CREATE INDEX IF NOT EXISTS idx_cinema_seats_screen ON restaurant_cinema_seats(screen_id);`
     ];
 
     for (const alt of pgAlters) {
@@ -1078,6 +1104,35 @@ async function createTables() {
           error_message TEXT DEFAULT NULL,
           created_at TEXT DEFAULT CURRENT_TIMESTAMP,
           printed_at TEXT DEFAULT NULL
+        );
+      `);
+
+      // Step 3.32 Cinema & Theatre Seat QR Support SQLite Fallback
+      sqliteDb.exec(`
+        CREATE TABLE IF NOT EXISTS restaurant_cinema_screens (
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          restaurant_id INTEGER NOT NULL REFERENCES restaurants(id) ON DELETE CASCADE,
+          screen_number INTEGER NOT NULL,
+          name TEXT NOT NULL,
+          active INTEGER DEFAULT 1,
+          created_at TEXT DEFAULT CURRENT_TIMESTAMP,
+          updated_at TEXT DEFAULT CURRENT_TIMESTAMP,
+          UNIQUE(restaurant_id, screen_number)
+        );
+      `);
+
+      sqliteDb.exec(`
+        CREATE TABLE IF NOT EXISTS restaurant_cinema_seats (
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          restaurant_id INTEGER NOT NULL REFERENCES restaurants(id) ON DELETE CASCADE,
+          screen_id INTEGER NOT NULL REFERENCES restaurant_cinema_screens(id) ON DELETE CASCADE,
+          row_label TEXT NOT NULL,
+          seat_number INTEGER NOT NULL,
+          seat_code TEXT NOT NULL,
+          active INTEGER DEFAULT 1,
+          created_at TEXT DEFAULT CURRENT_TIMESTAMP,
+          updated_at TEXT DEFAULT CURRENT_TIMESTAMP,
+          UNIQUE(restaurant_id, screen_id, row_label, seat_number)
         );
       `);
 

@@ -1517,6 +1517,210 @@ router.post('/settings', authenticateToken, requireActiveSubscription, handleUpd
 router.post('/info', authenticateToken, requireActiveSubscription, handleUpdateSettings);
 
 // ======================================================================
+// 🎬 STEP 3.32: CINEMA & THEATRE SEAT QR SUPPORT API ENDPOINTS
+// ======================================================================
+
+// GET /api/admin/cinema/screens - List all screens for tenant
+router.get('/cinema/screens', authenticateToken, requireActiveSubscription, async (req, res) => {
+  try {
+    const targetId = req.user?.restaurant_id;
+    if (!targetId) return res.status(401).json({ error: 'Restaurant identity is missing' });
+
+    const screens = await query(`
+      SELECT s.id, s.restaurant_id, s.screen_number, s.name, s.active, s.created_at,
+             COALESCE(COUNT(st.id), 0) as seat_count
+      FROM restaurant_cinema_screens s
+      LEFT JOIN restaurant_cinema_seats st ON st.screen_id = s.id AND st.restaurant_id = s.restaurant_id
+      WHERE s.restaurant_id = $1
+      GROUP BY s.id, s.restaurant_id, s.screen_number, s.name, s.active, s.created_at
+      ORDER BY s.screen_number ASC
+    `, [targetId]);
+
+    res.json({ success: true, screens: screens || [] });
+  } catch (err) {
+    console.error('Fetch cinema screens error:', err);
+    res.status(500).json({ error: 'Failed to fetch cinema screens' });
+  }
+});
+
+// POST /api/admin/cinema/screens - Create a new screen
+router.post('/cinema/screens', authenticateToken, requireActiveSubscription, async (req, res) => {
+  try {
+    const targetId = req.user?.restaurant_id;
+    if (!targetId) return res.status(401).json({ error: 'Restaurant identity is missing' });
+
+    const { screen_number, name } = req.body;
+    const num = parseInt(screen_number, 10);
+    if (isNaN(num) || num <= 0) {
+      return res.status(400).json({ error: 'invalid_screen_number', message: 'Screen number must be a positive integer' });
+    }
+    const cleanName = String(name || `Screen ${num}`).trim().substring(0, 100);
+
+    const existing = await query(
+      'SELECT id FROM restaurant_cinema_screens WHERE restaurant_id = $1 AND screen_number = $2',
+      [targetId, num]
+    );
+    if (existing && existing.length > 0) {
+      return res.status(400).json({ error: 'duplicate_screen', message: `Screen ${num} already exists for this cinema.` });
+    }
+
+    const result = await query(`
+      INSERT INTO restaurant_cinema_screens (restaurant_id, screen_number, name, active)
+      VALUES ($1, $2, $3, true)
+      RETURNING *
+    `, [targetId, num, cleanName]);
+
+    res.json({ success: true, screen: result[0] });
+  } catch (err) {
+    console.error('Create cinema screen error:', err);
+    res.status(500).json({ error: 'Failed to create cinema screen' });
+  }
+});
+
+// PUT /api/admin/cinema/screens/:id - Update screen
+router.put('/cinema/screens/:id', authenticateToken, requireActiveSubscription, async (req, res) => {
+  try {
+    const targetId = req.user?.restaurant_id;
+    const screenId = parseInt(req.params.id, 10);
+    const { name, active } = req.body;
+
+    const result = await query(`
+      UPDATE restaurant_cinema_screens
+      SET name = COALESCE($1, name),
+          active = CASE WHEN $2::boolean IS NOT NULL THEN $2 ELSE active END,
+          updated_at = NOW()
+      WHERE id = $3 AND restaurant_id = $4
+      RETURNING *
+    `, [name ? String(name).trim() : null, typeof active === 'boolean' ? active : null, screenId, targetId]);
+
+    if (!result || result.length === 0) {
+      return res.status(404).json({ error: 'Screen not found' });
+    }
+
+    res.json({ success: true, screen: result[0] });
+  } catch (err) {
+    console.error('Update cinema screen error:', err);
+    res.status(500).json({ error: 'Failed to update cinema screen' });
+  }
+});
+
+// DELETE /api/admin/cinema/screens/:id - Delete screen and cascading seats
+router.delete('/cinema/screens/:id', authenticateToken, requireActiveSubscription, async (req, res) => {
+  try {
+    const targetId = req.user?.restaurant_id;
+    const screenId = parseInt(req.params.id, 10);
+
+    const result = await query(
+      'DELETE FROM restaurant_cinema_screens WHERE id = $1 AND restaurant_id = $2 RETURNING id',
+      [screenId, targetId]
+    );
+
+    if (!result || result.length === 0) {
+      return res.status(404).json({ error: 'Screen not found' });
+    }
+
+    res.json({ success: true, message: 'Screen and seats deleted successfully' });
+  } catch (err) {
+    console.error('Delete cinema screen error:', err);
+    res.status(500).json({ error: 'Failed to delete cinema screen' });
+  }
+});
+
+// GET /api/admin/cinema/seats - List seats for a screen
+router.get('/cinema/seats', authenticateToken, requireActiveSubscription, async (req, res) => {
+  try {
+    const targetId = req.user?.restaurant_id;
+    const screenId = req.query.screen_id ? parseInt(req.query.screen_id, 10) : null;
+    if (!targetId) return res.status(401).json({ error: 'Restaurant identity is missing' });
+
+    let sql = `
+      SELECT st.id, st.restaurant_id, st.screen_id, st.row_label, st.seat_number, st.seat_code, st.active,
+             sc.screen_number, sc.name as screen_name
+      FROM restaurant_cinema_seats st
+      JOIN restaurant_cinema_screens sc ON st.screen_id = sc.id
+      WHERE st.restaurant_id = $1
+    `;
+    const params = [targetId];
+
+    if (screenId) {
+      sql += ' AND st.screen_id = $2';
+      params.push(screenId);
+    }
+    sql += ' ORDER BY sc.screen_number ASC, st.row_label ASC, st.seat_number ASC';
+
+    const seats = await query(sql, params);
+    res.json({ success: true, seats: seats || [] });
+  } catch (err) {
+    console.error('Fetch cinema seats error:', err);
+    res.status(500).json({ error: 'Failed to fetch cinema seats' });
+  }
+});
+
+// POST /api/admin/cinema/seats/batch - Batch add seats for a screen
+router.post('/cinema/seats/batch', authenticateToken, requireActiveSubscription, async (req, res) => {
+  try {
+    const targetId = req.user?.restaurant_id;
+    const { screen_id, row_label, seat_start = 1, seat_end = 10 } = req.body;
+    const sid = parseInt(screen_id, 10);
+    const row = String(row_label || '').trim().toUpperCase();
+    const start = parseInt(seat_start, 10);
+    const end = parseInt(seat_end, 10);
+
+    if (!sid || !row || isNaN(start) || isNaN(end) || start > end || start < 1 || end > 100) {
+      return res.status(400).json({ error: 'invalid_input', message: 'Valid screen, row label (e.g. A), and seat range (1 to 100) required.' });
+    }
+
+    const screenCheck = await query(
+      'SELECT id, screen_number FROM restaurant_cinema_screens WHERE id = $1 AND restaurant_id = $2',
+      [sid, targetId]
+    );
+    if (!screenCheck || screenCheck.length === 0) {
+      return res.status(404).json({ error: 'Screen not found' });
+    }
+    const screenNum = screenCheck[0].screen_number;
+
+    let addedCount = 0;
+    for (let s = start; s <= end; s++) {
+      const seatCode = `S${screenNum}-${row}-${s}`;
+      const ins = await query(`
+        INSERT INTO restaurant_cinema_seats (restaurant_id, screen_id, row_label, seat_number, seat_code, active)
+        VALUES ($1, $2, $3, $4, $5, true)
+        ON CONFLICT (restaurant_id, screen_id, row_label, seat_number) DO UPDATE SET active = true
+        RETURNING id
+      `, [targetId, sid, row, s, seatCode]);
+      if (ins && ins.length > 0) addedCount++;
+    }
+
+    res.json({ success: true, message: `Successfully configured ${addedCount} seats in Row ${row}.` });
+  } catch (err) {
+    console.error('Batch add cinema seats error:', err);
+    res.status(500).json({ error: 'Failed to configure cinema seats' });
+  }
+});
+
+// DELETE /api/admin/cinema/seats/:id - Delete individual seat
+router.delete('/cinema/seats/:id', authenticateToken, requireActiveSubscription, async (req, res) => {
+  try {
+    const targetId = req.user?.restaurant_id;
+    const seatId = parseInt(req.params.id, 10);
+
+    const result = await query(
+      'DELETE FROM restaurant_cinema_seats WHERE id = $1 AND restaurant_id = $2 RETURNING id',
+      [seatId, targetId]
+    );
+
+    if (!result || result.length === 0) {
+      return res.status(404).json({ error: 'Seat not found' });
+    }
+
+    res.json({ success: true, message: 'Seat deleted successfully' });
+  } catch (err) {
+    console.error('Delete cinema seat error:', err);
+    res.status(500).json({ error: 'Failed to delete cinema seat' });
+  }
+});
+
+// ======================================================================
 // 🖨️ STEP 3.21: THERMAL PRINTER SYSTEM & ROUTING API ENDPOINTS
 // ======================================================================
 

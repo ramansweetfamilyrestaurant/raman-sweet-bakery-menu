@@ -31,13 +31,14 @@ export function generateQrToken(slug, type, num, secret) {
 }
 
 /**
- * Normalizes space type representation ('table', 'cabin', 'room', 'vip').
+ * Normalizes space type representation ('table', 'cabin', 'room', 'vip', 'cinema_seat').
  *
  * @param {string} type
  * @returns {string}
  */
 export function normalizeSpaceType(type) {
   const t = String(type || '').trim().toLowerCase();
+  if (t.includes('cinema') || t.includes('seat')) return 'cinema_seat';
   if (t.includes('cabin')) return 'cabin';
   if (t.includes('room')) return 'room';
   if (t.includes('vip')) return 'vip';
@@ -45,14 +46,22 @@ export function normalizeSpaceType(type) {
 }
 
 /**
- * Normalizes space / table number (e.g. 'Table 1' -> '1', ' 2 ' -> '2').
+ * Normalizes space / table number (e.g. 'Table 1' -> '1', 'S1-A-12' -> 'S1-A-12').
  *
  * @param {string|number} num
  * @returns {string}
  */
 export function normalizeSpaceNumber(num) {
   const raw = String(num || '1').trim();
-  const cleaned = raw.replace(/^(table|cabin|room|vip|tbl|🍽️|🛋️|🏨|👑|\s)+/i, '').trim();
+  // Check if it matches cinema seat pattern e.g. "Screen 1 - Row A - Seat 12", "S1-A-12", "1-A-12"
+  const cinemaMatch = raw.match(/^(?:screen\s*(\d+)[\s\-_•|]+row\s*([a-zA-Z]+)[\s\-_•|]+seat\s*(\d+)|s?(\d+)[\-_:]([a-zA-Z]+)[\-_:](\d+))/i);
+  if (cinemaMatch) {
+    const screen = cinemaMatch[1] || cinemaMatch[4];
+    const row = (cinemaMatch[2] || cinemaMatch[5]).toUpperCase();
+    const seat = cinemaMatch[3] || cinemaMatch[6];
+    return `S${screen}-${row}-${seat}`;
+  }
+  const cleaned = raw.replace(/^(table|cabin|room|vip|tbl|🍽️|🛋️|🏨|👑|🎬|\s)+/i, '').trim();
   return cleaned || raw || '1';
 }
 
