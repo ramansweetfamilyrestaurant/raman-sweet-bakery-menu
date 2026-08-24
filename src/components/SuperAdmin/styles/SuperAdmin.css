@@ -2480,9 +2480,20 @@
   justify-content: center;
 }
 
-/* ========================================================================= */
-/* SUPER ADMIN 2.2 — MOBILE-FIRST REFINEMENTS & COMPACT ADAPTATIONS           */
-/* ========================================================================= */
+.sa-directory-controls {
+  background: var(--sa-surface);
+  border-radius: var(--sa-radius-lg);
+  padding: 12px 16px;
+  border: 1px solid var(--sa-border);
+  box-shadow: var(--sa-shadow-sm);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 12px;
+  width: 100%;
+  box-sizing: border-box;
+}
 
 .sa-desktop-only {
   display: flex !important;
@@ -2493,6 +2504,12 @@
 }
 
 @media (max-width: 767px) {
+  .sa-directory-controls {
+    flex-direction: column !important;
+    align-items: stretch !important;
+    padding: 10px 12px !important;
+    gap: 8px !important;
+  }
   .sa-desktop-only {
     display: none !important;
   }

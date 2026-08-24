@@ -1775,30 +1775,26 @@ export default function SuperAdminDashboard({ token, username, onLogout, onRetur
                 </div>
               </div>
 
-              {/* 🏷️ 4. TOOLBAR & FILTER PILLS STRIP (USING SHARED FilterPills) */}
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '12px' }}>
-                <FilterPills
-                  pills={getDirectoryFilterPills()}
-                  activeId={statusFilter}
-                  onChange={setStatusFilter}
-                />
-
+              {/* 🛠️ 4. BILLING TOOLBAR (SEARCH + ACTIVE SUMMARY) */}
+              <div className="sa-directory-controls">
                 {/* Search Bar */}
-                <div style={{ position: 'relative', width: '260px', maxWidth: '100%' }}>
+                <div style={{ position: 'relative', width: '320px', maxWidth: '100%', flex: '1 1 240px' }}>
                   <Search size={14} style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', color: 'var(--sa-text-muted)' }} />
                   <input
                     type="text"
                     placeholder="Search shop, owner, phone, email..."
                     value={searchQuery}
                     onChange={(e) => setSearchQuery(e.target.value)}
-                    className="sa-input"
+                    className="sa-input sa-search-input-field"
                     style={{
                       paddingLeft: '34px',
                       paddingRight: searchQuery ? '32px' : '12px',
                       height: '38px',
                       fontSize: '0.80rem',
                       borderRadius: 'var(--sa-radius-full)',
-                      background: 'var(--sa-surface-subtle)'
+                      background: 'var(--sa-surface-subtle)',
+                      width: '100%',
+                      boxSizing: 'border-box'
                     }}
                   />
                   {searchQuery && (
@@ -1811,6 +1807,21 @@ export default function SuperAdminDashboard({ token, username, onLogout, onRetur
                     </button>
                   )}
                 </div>
+
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexShrink: 0 }}>
+                  <span style={{ fontSize: '0.76rem', color: 'var(--sa-text-muted)', fontWeight: 700 }}>
+                    Showing <strong style={{ color: 'var(--sa-text-main)' }}>{filteredAndSortedRestaurants.length}</strong> of {restaurants.length} accounts
+                  </span>
+                </div>
+              </div>
+
+              {/* 🏷️ 5. FILTER PILLS STRIP (DEDICATED FULL-WIDTH SCROLLABLE ROW) */}
+              <div style={{ width: '100%', overflowX: 'auto', paddingBottom: '4px' }}>
+                <FilterPills
+                  pills={getDirectoryFilterPills()}
+                  activeId={statusFilter}
+                  onChange={setStatusFilter}
+                />
               </div>
 
               {/* 📋 5. SUBSCRIPTIONS TABLE (USING SHARED DataTable / Table) */}
