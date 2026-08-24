@@ -18,8 +18,7 @@ export default function PaymentModal({ restoInfo, planTier = 'pro', planPrice = 
         throw new Error('Admin session token missing. Please log in again.');
       }
 
-      const returnUrl = window.location.href;
-      const data = await createCashfreeSubscription(planTier, token, returnUrl);
+      const data = await createCashfreeSubscription(planTier, token);
 
       if (!data.configured) {
         setErrorMsg('⚠️ Cashfree Sandbox API keys are not configured in backend environment. Please set CASHFREE_CLIENT_ID and CASHFREE_CLIENT_SECRET in .env to test live Cashfree Sandbox checkout.');

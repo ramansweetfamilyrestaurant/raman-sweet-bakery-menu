@@ -631,9 +631,9 @@ const handleSubscriptionReturn = async (req, res) => {
       console.log('[Cashfree Return] ✅ Mandate authorized & activated for restaurant', restoId, 'slug:', restoSlug);
 
       if (restoSlug) {
-        return res.redirect(`${appBase}/${restoSlug}/admin`);
+        return res.redirect(303, `${appBase}/${restoSlug}/admin?verified=true`);
       }
-      return res.redirect(`${baseRedirectUrl}?verified=true&status=ACTIVE`);
+      return res.redirect(303, `${baseRedirectUrl}?verified=true&status=ACTIVE`);
     }
 
     // Mandate Authorization Failed, Pending, or Cancelled!
@@ -644,10 +644,10 @@ const handleSubscriptionReturn = async (req, res) => {
         [restoId]
       );
     }
-    return res.redirect(`${baseRedirectUrl}?verified=false&status=${encodeURIComponent(subStatus)}`);
+    return res.redirect(303, `${baseRedirectUrl}?verified=false&status=${encodeURIComponent(subStatus)}`);
   } catch (err) {
     console.error('[Cashfree Return] Error during return processing:', err.message);
-    return res.redirect(`${baseRedirectUrl}?verified=false&status=SERVER_ERROR`);
+    return res.redirect(303, `${baseRedirectUrl}?verified=false&status=SERVER_ERROR`);
   }
 };
 
