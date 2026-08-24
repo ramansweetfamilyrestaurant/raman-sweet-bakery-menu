@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Crown, Plus, LogOut, ExternalLink, Trash2, CheckCircle, Store, Utensils, DollarSign, Phone, MapPin, Copy, Check, Search, Edit3, Shield, ShieldCheck, RefreshCw, QrCode, Megaphone, FileText, Calendar, Palette, MessageSquare, Upload, X, XCircle, CreditCard, Lock, Sparkles, Eye, EyeOff, Key, Database, Sliders, Image, LayoutGrid, List, MoreHorizontal, ArrowUpDown, Clock, Radio, HardDrive, Settings, Users, UserCheck, Activity } from 'lucide-react';
+import { ChevronRight, Crown, Plus, LogOut, ExternalLink, Trash2, CheckCircle, Store, Utensils, DollarSign, Phone, MapPin, Copy, Check, Search, Edit3, Shield, ShieldCheck, RefreshCw, QrCode, Megaphone, FileText, Calendar, Palette, MessageSquare, Upload, X, XCircle, CreditCard, Lock, Sparkles, Eye, EyeOff, Key, Database, Sliders, Image, LayoutGrid, List, MoreHorizontal, ArrowUpDown, Clock, Radio, HardDrive, Settings, Users, UserCheck, Activity } from 'lucide-react';
 import { fetchSuperAdminRestaurants, createTenantRestaurant, toggleTenantRestaurantActive, deleteTenantRestaurant, impersonateTenantRestaurant, updateTenantRestaurant, createAnnouncement, fetchSuperAnnouncements, deleteAnnouncement, clearAllAnnouncements, fetchAuditLogs, uploadImage, fetchSaaSPlans, createSaaSPlan, updateSaaSPlan, deleteSaaSPlan, superAdminOptimizeDatabase, updateSuperAdminCredentials, grantFreeAccess, revokeFreeAccess } from '../../api/client';
 import { SAAS_PLANS, getPlanDetails } from '../../config/plans';
 import { resolveImageUrl, getRestaurantLogoUrl } from '../../utils/imageHelper';
@@ -2934,43 +2934,47 @@ export default function SuperAdminDashboard({ token, username, onLogout, onRetur
         />
       </div>
 
-      {/* 📱 SUPER ADMIN 2.2 LUXURY MOBILE NAVIGATION DRAWER */}
+      {/* 📱 SUPER ADMIN 2.2 ULTRA-LUXURY MOBILE NAVIGATION DRAWER */}
       <Drawer
         isOpen={showMobileMoreDrawer}
         onClose={() => setShowMobileMoreDrawer(false)}
         title="TouchQR Super Admin"
         subtitle="Platform Command Center v2.2"
       >
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '14px', paddingBottom: '16px' }}>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '16px', paddingBottom: '20px' }}>
           {/* Status Header Badge */}
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', background: '#0A2315', padding: '10px 14px', borderRadius: '12px', border: '1px solid rgba(212, 175, 55, 0.3)' }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-              <div style={{ width: '28px', height: '28px', borderRadius: '8px', background: 'rgba(212, 175, 55, 0.15)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#DFBA67' }}>
-                <Crown size={16} />
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', background: 'linear-gradient(135deg, #0A2315 0%, #163E26 100%)', padding: '12px 14px', borderRadius: '14px', border: '1px solid rgba(212, 175, 55, 0.35)', boxShadow: '0 4px 12px rgba(10, 35, 21, 0.15)' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+              <div style={{ width: '32px', height: '32px', borderRadius: '10px', background: 'rgba(212, 175, 55, 0.18)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#DFBA67', border: '1px solid rgba(212, 175, 55, 0.3)' }}>
+                <Crown size={17} />
               </div>
               <div>
-                <span style={{ fontSize: '0.80rem', fontWeight: 900, color: '#FFFFFF', display: 'block', lineHeight: 1.2 }}>Platform Command</span>
-                <span style={{ fontSize: '0.68rem', color: '#A7F3D0', fontWeight: 600 }}>All Systems Operational</span>
+                <span style={{ fontSize: '0.82rem', fontWeight: 900, color: '#FFFFFF', display: 'block', lineHeight: 1.2 }}>Platform Command</span>
+                <span style={{ fontSize: '0.68rem', color: '#A7F3D0', fontWeight: 700, display: 'flex', alignItems: 'center', gap: '4px' }}>
+                  <span style={{ width: '6px', height: '6px', borderRadius: '50%', background: '#4ADE80', display: 'inline-block' }} />
+                  All Systems Operational
+                </span>
               </div>
             </div>
-            <span style={{ fontSize: '0.66rem', fontWeight: 800, background: 'rgba(21, 128, 61, 0.4)', color: '#86EFAC', padding: '2px 8px', borderRadius: '10px', border: '1px solid rgba(134, 239, 172, 0.4)' }}>
+            <span style={{ fontSize: '0.66rem', fontWeight: 900, letterSpacing: '0.5px', background: 'rgba(21, 128, 61, 0.5)', color: '#86EFAC', padding: '3px 9px', borderRadius: '999px', border: '1px solid rgba(134, 239, 172, 0.4)' }}>
               LIVE
             </span>
           </div>
 
-          {/* Section 1: Main Command */}
+          {/* Section 1: Core Operations Grouped Card */}
           <div>
-            <span style={{ fontSize: '0.68rem', fontWeight: 900, color: 'var(--sa-text-muted)', textTransform: 'uppercase', letterSpacing: '0.5px', display: 'block', marginBottom: '6px', paddingLeft: '4px' }}>
+            <span style={{ fontSize: '0.65rem', fontWeight: 900, color: '#64748B', textTransform: 'uppercase', letterSpacing: '0.8px', display: 'block', marginBottom: '6px', paddingLeft: '6px' }}>
               Core Operations
             </span>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+            <div style={{ background: '#FFFFFF', borderRadius: '16px', border: '1px solid var(--sa-border)', overflow: 'hidden', boxShadow: '0 1px 4px rgba(0,0,0,0.03)' }}>
               {[
-                { id: 'overview', label: 'Overview & KPIs', desc: 'Real-time telemetry & stats', icon: LayoutGrid, count: null, color: '#3B82F6' },
-                { id: 'tenants', label: 'Shops Directory', desc: 'Manage client accounts & access', icon: Store, count: restaurants.length, color: '#10B981' },
-                { id: 'billing', label: 'Billing & Subscriptions', desc: 'Cashfree mandates & renewals', icon: CreditCard, count: restaurants.filter(r => getTenantStatus(r) === 'active').length, color: '#8B5CF6' },
-              ].map(item => {
+                { id: 'overview', label: 'Overview & KPIs', desc: 'Real-time telemetry & stats', icon: LayoutGrid, count: null, color: '#2563EB', bg: '#EFF6FF' },
+                { id: 'tenants', label: 'Shops Directory', desc: 'Manage client accounts & access', icon: Store, count: restaurants.length, color: '#059669', bg: '#ECFDF5' },
+                { id: 'billing', label: 'Billing & Subscriptions', desc: 'Cashfree mandates & renewals', icon: CreditCard, count: restaurants.filter(r => getTenantStatus(r) === 'active').length, color: '#7C3AED', bg: '#F5F3FF' },
+              ].map((item, idx, arr) => {
                 const isActive = activeView === item.id;
                 const Icon = item.icon;
+                const isLast = idx === arr.length - 1;
                 return (
                   <button
                     key={item.id}
@@ -2982,21 +2986,21 @@ export default function SuperAdminDashboard({ token, username, onLogout, onRetur
                       display: 'flex',
                       alignItems: 'center',
                       justifyContent: 'space-between',
-                      padding: '10px 12px',
-                      borderRadius: '12px',
-                      border: isActive ? '1.5px solid #D4AF37' : '1px solid var(--sa-border)',
-                      background: isActive ? '#0A2315' : '#FFFFFF',
+                      padding: '12px 14px',
+                      width: '100%',
+                      border: 'none',
+                      borderBottom: isLast ? 'none' : '1px solid #F1F5F9',
+                      background: isActive ? '#0A2315' : 'transparent',
                       color: isActive ? '#DFBA67' : 'var(--sa-text-main)',
                       cursor: 'pointer',
                       textAlign: 'left',
-                      boxShadow: isActive ? '0 2px 8px rgba(10, 35, 21, 0.2)' : 'none',
                       transition: 'all 0.15s ease'
                     }}
                   >
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '11px' }}>
                       <div style={{
-                        width: '32px', height: '32px', borderRadius: '8px',
-                        background: isActive ? 'rgba(212, 175, 55, 0.15)' : 'var(--sa-surface-subtle)',
+                        width: '32px', height: '32px', borderRadius: '10px',
+                        background: isActive ? 'rgba(212, 175, 55, 0.2)' : item.bg,
                         color: isActive ? '#DFBA67' : item.color,
                         display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0
                       }}>
@@ -3006,7 +3010,7 @@ export default function SuperAdminDashboard({ token, username, onLogout, onRetur
                         <strong style={{ display: 'block', fontSize: '0.84rem', color: isActive ? '#FFFFFF' : 'var(--sa-text-main)', lineHeight: 1.2 }}>
                           {item.label}
                         </strong>
-                        <span style={{ fontSize: '0.70rem', color: isActive ? '#A7F3D0' : 'var(--sa-text-muted)' }}>
+                        <span style={{ fontSize: '0.70rem', color: isActive ? '#A7F3D0' : '#64748B', fontWeight: 600 }}>
                           {item.desc}
                         </span>
                       </div>
@@ -3015,15 +3019,15 @@ export default function SuperAdminDashboard({ token, username, onLogout, onRetur
                     <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
                       {item.count !== null && (
                         <span style={{
-                          fontSize: '0.68rem', fontWeight: 900,
-                          padding: '2px 7px', borderRadius: '10px',
+                          fontSize: '0.70rem', fontWeight: 800,
+                          padding: '2px 8px', borderRadius: '999px',
                           background: isActive ? '#DFBA67' : '#F1F5F9',
                           color: isActive ? '#0A2315' : '#475569'
                         }}>
                           {item.count}
                         </span>
                       )}
-                      <span style={{ color: isActive ? '#DFBA67' : '#CBD5E1', fontSize: '0.85rem' }}>›</span>
+                      <ChevronRight size={15} color={isActive ? '#DFBA67' : '#94A3B8'} />
                     </div>
                   </button>
                 );
@@ -3031,21 +3035,22 @@ export default function SuperAdminDashboard({ token, username, onLogout, onRetur
             </div>
           </div>
 
-          {/* Section 2: Platform Management */}
+          {/* Section 2: Management & Controls Grouped Card */}
           <div>
-            <span style={{ fontSize: '0.68rem', fontWeight: 900, color: 'var(--sa-text-muted)', textTransform: 'uppercase', letterSpacing: '0.5px', display: 'block', marginBottom: '6px', paddingLeft: '4px' }}>
+            <span style={{ fontSize: '0.65rem', fontWeight: 900, color: '#64748B', textTransform: 'uppercase', letterSpacing: '0.8px', display: 'block', marginBottom: '6px', paddingLeft: '6px' }}>
               Management & Controls
             </span>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+            <div style={{ background: '#FFFFFF', borderRadius: '16px', border: '1px solid var(--sa-border)', overflow: 'hidden', boxShadow: '0 1px 4px rgba(0,0,0,0.03)' }}>
               {[
-                { id: 'plans', label: 'SaaS Plans & Pricing', desc: 'Pricing tiers & feature matrix', icon: Crown, count: null, color: '#F59E0B' },
-                { id: 'operations', label: 'DB Health & Operations', desc: 'Neon DB compaction & maintenance', icon: Activity, count: null, color: '#EC4899' },
-                { id: 'activity', label: 'Platform Audit Stream', desc: 'Real-time security event logs', icon: FileText, count: null, color: '#6366F1' },
-                { id: 'settings', label: 'System & Gateway Settings', desc: 'Cashfree keys, security & logo', icon: Settings, count: null, color: '#14B8A6' },
-                { id: 'communication', label: 'Broadcast Notices', desc: 'Flash banners to shop dashboards', icon: Megaphone, count: announcementsList.length > 0 ? announcementsList.length : null, color: '#F97316' },
-              ].map(item => {
+                { id: 'plans', label: 'SaaS Plans & Pricing', desc: 'Pricing tiers & feature matrix', icon: Crown, count: null, color: '#D97706', bg: '#FFFBEB' },
+                { id: 'operations', label: 'DB Health & Operations', desc: 'Neon DB compaction & maintenance', icon: Activity, count: null, color: '#DB2777', bg: '#FDF2F8' },
+                { id: 'activity', label: 'Platform Audit Stream', desc: 'Real-time security event logs', icon: FileText, count: null, color: '#4F46E5', bg: '#EEF2FF' },
+                { id: 'settings', label: 'System & Gateway Settings', desc: 'Cashfree keys, security & logo', icon: Settings, count: null, color: '#0D9488', bg: '#F0FDFA' },
+                { id: 'communication', label: 'Broadcast Notices', desc: 'Flash banners to shop dashboards', icon: Megaphone, count: announcementsList.length > 0 ? announcementsList.length : null, color: '#EA580C', bg: '#FFF7ED' },
+              ].map((item, idx, arr) => {
                 const isActive = activeView === item.id;
                 const Icon = item.icon;
+                const isLast = idx === arr.length - 1;
                 return (
                   <button
                     key={item.id}
@@ -3057,21 +3062,21 @@ export default function SuperAdminDashboard({ token, username, onLogout, onRetur
                       display: 'flex',
                       alignItems: 'center',
                       justifyContent: 'space-between',
-                      padding: '10px 12px',
-                      borderRadius: '12px',
-                      border: isActive ? '1.5px solid #D4AF37' : '1px solid var(--sa-border)',
-                      background: isActive ? '#0A2315' : '#FFFFFF',
+                      padding: '12px 14px',
+                      width: '100%',
+                      border: 'none',
+                      borderBottom: isLast ? 'none' : '1px solid #F1F5F9',
+                      background: isActive ? '#0A2315' : 'transparent',
                       color: isActive ? '#DFBA67' : 'var(--sa-text-main)',
                       cursor: 'pointer',
                       textAlign: 'left',
-                      boxShadow: isActive ? '0 2px 8px rgba(10, 35, 21, 0.2)' : 'none',
                       transition: 'all 0.15s ease'
                     }}
                   >
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '11px' }}>
                       <div style={{
-                        width: '32px', height: '32px', borderRadius: '8px',
-                        background: isActive ? 'rgba(212, 175, 55, 0.15)' : 'var(--sa-surface-subtle)',
+                        width: '32px', height: '32px', borderRadius: '10px',
+                        background: isActive ? 'rgba(212, 175, 55, 0.2)' : item.bg,
                         color: isActive ? '#DFBA67' : item.color,
                         display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0
                       }}>
@@ -3081,7 +3086,7 @@ export default function SuperAdminDashboard({ token, username, onLogout, onRetur
                         <strong style={{ display: 'block', fontSize: '0.84rem', color: isActive ? '#FFFFFF' : 'var(--sa-text-main)', lineHeight: 1.2 }}>
                           {item.label}
                         </strong>
-                        <span style={{ fontSize: '0.70rem', color: isActive ? '#A7F3D0' : 'var(--sa-text-muted)' }}>
+                        <span style={{ fontSize: '0.70rem', color: isActive ? '#A7F3D0' : '#64748B', fontWeight: 600 }}>
                           {item.desc}
                         </span>
                       </div>
@@ -3090,15 +3095,15 @@ export default function SuperAdminDashboard({ token, username, onLogout, onRetur
                     <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
                       {item.count !== null && (
                         <span style={{
-                          fontSize: '0.68rem', fontWeight: 900,
-                          padding: '2px 7px', borderRadius: '10px',
+                          fontSize: '0.70rem', fontWeight: 800,
+                          padding: '2px 8px', borderRadius: '999px',
                           background: isActive ? '#DFBA67' : '#EFF6FF',
                           color: isActive ? '#0A2315' : '#1D4ED8'
                         }}>
                           {item.count}
                         </span>
                       )}
-                      <span style={{ color: isActive ? '#DFBA67' : '#CBD5E1', fontSize: '0.85rem' }}>›</span>
+                      <ChevronRight size={15} color={isActive ? '#DFBA67' : '#94A3B8'} />
                     </div>
                   </button>
                 );
@@ -3108,50 +3113,51 @@ export default function SuperAdminDashboard({ token, username, onLogout, onRetur
 
           {/* Section 3: WhatsApp Support */}
           <div>
-            <span style={{ fontSize: '0.68rem', fontWeight: 900, color: 'var(--sa-text-muted)', textTransform: 'uppercase', letterSpacing: '0.5px', display: 'block', marginBottom: '6px', paddingLeft: '4px' }}>
+            <span style={{ fontSize: '0.65rem', fontWeight: 900, color: '#64748B', textTransform: 'uppercase', letterSpacing: '0.8px', display: 'block', marginBottom: '6px', paddingLeft: '6px' }}>
               Direct Assistance
             </span>
-            <button
-              onClick={() => {
-                setShowMobileMoreDrawer(false);
-                setShowWhatsappModal(true);
-              }}
-              style={{
-                width: '100%',
-                padding: '11px 12px',
-                borderRadius: '12px',
-                border: '1px solid #86EFAC',
-                background: '#F0FDF4',
-                color: '#15803D',
-                cursor: 'pointer',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'space-between',
-                boxSizing: 'border-box'
-              }}
-            >
-              <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                <div style={{ width: '32px', height: '32px', borderRadius: '8px', background: '#DCFCE7', color: '#15803D', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                  <MessageSquare size={16} />
+            <div style={{ background: '#FFFFFF', borderRadius: '16px', border: '1px solid #BBF7D0', overflow: 'hidden', boxShadow: '0 1px 4px rgba(0,0,0,0.02)' }}>
+              <button
+                onClick={() => {
+                  setShowMobileMoreDrawer(false);
+                  setShowWhatsappModal(true);
+                }}
+                style={{
+                  width: '100%',
+                  padding: '12px 14px',
+                  border: 'none',
+                  background: '#F0FDF4',
+                  color: '#15803D',
+                  cursor: 'pointer',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'space-between',
+                  boxSizing: 'border-box'
+                }}
+              >
+                <div style={{ display: 'flex', alignItems: 'center', gap: '11px' }}>
+                  <div style={{ width: '32px', height: '32px', borderRadius: '10px', background: '#DCFCE7', color: '#15803D', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                    <MessageSquare size={16} />
+                  </div>
+                  <div style={{ textAlign: 'left' }}>
+                    <strong style={{ display: 'block', fontSize: '0.84rem', color: '#15803D', lineHeight: 1.2 }}>WhatsApp Support Desk</strong>
+                    <span style={{ fontSize: '0.70rem', color: '#166534', fontWeight: 600 }}>Direct hotline & client helpdesk</span>
+                  </div>
                 </div>
-                <div style={{ textAlign: 'left' }}>
-                  <strong style={{ display: 'block', fontSize: '0.84rem', color: '#15803D' }}>WhatsApp Support Desk</strong>
-                  <span style={{ fontSize: '0.70rem', color: '#166534' }}>Direct hotline & client helpdesk</span>
-                </div>
-              </div>
-              <span style={{ color: '#15803D', fontWeight: 900 }}>›</span>
-            </button>
+                <ChevronRight size={15} color="#15803D" />
+              </button>
+            </div>
           </div>
 
           {/* Section 4: Master Account Profile & Logout Card */}
-          <div style={{ marginTop: '4px', background: '#F8FAFC', padding: '12px', borderRadius: '14px', border: '1px solid #E2E8F0', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+          <div style={{ marginTop: '2px', background: '#FFFFFF', padding: '12px 14px', borderRadius: '16px', border: '1px solid var(--sa-border)', display: 'flex', alignItems: 'center', justifyContent: 'space-between', boxShadow: '0 1px 4px rgba(0,0,0,0.03)' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-              <div style={{ width: '36px', height: '36px', borderRadius: '10px', background: '#0A2315', color: '#DFBA67', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 900, fontSize: '0.9rem', border: '1px solid rgba(212, 175, 55, 0.4)' }}>
+              <div style={{ width: '36px', height: '36px', borderRadius: '10px', background: 'linear-gradient(135deg, #0A2315 0%, #153B25 100%)', color: '#DFBA67', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 900, fontSize: '0.92rem', border: '1.5px solid rgba(212, 175, 55, 0.4)', flexShrink: 0 }}>
                 S
               </div>
               <div>
-                <strong style={{ display: 'block', fontSize: '0.82rem', color: 'var(--sa-text-main)', lineHeight: 1.2 }}>superadmin</strong>
-                <span style={{ fontSize: '0.68rem', color: 'var(--sa-text-muted)', fontWeight: 600 }}>Master Administrator</span>
+                <strong style={{ display: 'block', fontSize: '0.84rem', color: 'var(--sa-text-main)', lineHeight: 1.2 }}>superadmin</strong>
+                <span style={{ fontSize: '0.68rem', color: '#64748B', fontWeight: 600 }}>Master Administrator</span>
               </div>
             </div>
 
@@ -3161,14 +3167,15 @@ export default function SuperAdminDashboard({ token, username, onLogout, onRetur
                 padding: '7px 12px',
                 borderRadius: '8px',
                 border: '1px solid #FECACA',
-                background: '#FEE2E2',
+                background: '#FEF2F2',
                 color: '#DC2626',
                 fontWeight: 800,
                 fontSize: '0.74rem',
                 cursor: 'pointer',
                 display: 'flex',
                 alignItems: 'center',
-                gap: '5px'
+                gap: '5px',
+                transition: 'all 0.15s ease'
               }}
             >
               <LogOut size={13} />
