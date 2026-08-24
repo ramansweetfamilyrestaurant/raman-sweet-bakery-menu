@@ -1778,8 +1778,8 @@ export default function SuperAdminDashboard({ token, username, onLogout, onRetur
               {/* 🛠️ 4. BILLING TOOLBAR (SEARCH + ACTIVE SUMMARY) */}
               <div className="sa-directory-controls">
                 {/* Search Bar */}
-                <div style={{ position: 'relative', width: '320px', maxWidth: '100%', flex: '1 1 240px' }}>
-                  <Search size={14} style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', color: 'var(--sa-text-muted)' }} />
+                <div style={{ position: 'relative', width: '100%', maxWidth: '340px', height: '38px' }}>
+                  <Search size={14} style={{ position: 'absolute', left: '12px', top: '12px', color: 'var(--sa-text-muted)', pointerEvents: 'none' }} />
                   <input
                     type="text"
                     placeholder="Search shop, owner, phone, email..."
@@ -1801,7 +1801,7 @@ export default function SuperAdminDashboard({ token, username, onLogout, onRetur
                     <button
                       type="button"
                       onClick={() => setSearchQuery('')}
-                      style={{ position: 'absolute', right: '10px', top: '50%', transform: 'translateY(-50%)', background: 'none', border: 'none', cursor: 'pointer', color: 'var(--sa-text-muted)' }}
+                      style={{ position: 'absolute', right: '10px', top: '10px', background: 'none', border: 'none', cursor: 'pointer', color: 'var(--sa-text-muted)', padding: '2px' }}
                     >
                       <X size={14} />
                     </button>
