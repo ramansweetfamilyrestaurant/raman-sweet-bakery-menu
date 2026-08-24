@@ -152,9 +152,14 @@ export default function AdminDashboard({ token, username, slug: propSlug = '', o
 
   const requestAudioPermission = () => {
     try {
+      unlockNotificationSound().then((success) => {
+        if (success) {
+          setIsAudioReady(true);
+          setAudioBannerDismissed(true);
+        }
+      });
       playKitchenChime();
-      setPermissionsGranted(true);
-      setToastMessage('🔊 Order Siren Alarm Active & Ringtone Sound Unlocked!');
+      setToastMessage('🔊 Order Siren Alarm Active & Sound Unlocked!');
       setTimeout(() => setToastMessage(''), 4000);
     } catch (e) {
       console.warn('Audio test error:', e);
@@ -179,44 +184,6 @@ export default function AdminDashboard({ token, username, slug: propSlug = '', o
     }
   };
 
-  const requestGpsPermission = () => {
-    if (!('geolocation' in navigator)) {
-      setToastMessage('⚠️ GPS Geolocation not supported on this device.');
-      setTimeout(() => setToastMessage(''), 4000);
-      return;
-    }
-    setToastMessage('📍 Detecting GPS Location...');
-    navigator.geolocation.getCurrentPosition(
-      (pos) => {
-        const lat = pos.coords.latitude;
-        const lng = pos.coords.longitude;
-        setSettingsForm(prev => ({ ...prev, latitude: lat, longitude: lng }));
-        if (token) {
-          updateTenantSettings(token, { latitude: lat, longitude: lng }).then(() => {
-            setToastMessage(`✨ GPS Coordinates Captured & Auto-Saved! (${lat.toFixed(4)}, ${lng.toFixed(4)})`);
-            setTimeout(() => setToastMessage(''), 5000);
-          }).catch(() => {
-            setToastMessage(`📍 GPS Coordinates Captured! (${lat.toFixed(4)}, ${lng.toFixed(4)})`);
-            setTimeout(() => setToastMessage(''), 5000);
-          });
-        }
-      },
-      (err) => {
-        setToastMessage('⚠️ GPS Access Denied. Please enable Location in browser settings.');
-        setTimeout(() => setToastMessage(''), 5000);
-      },
-      { enableHighAccuracy: true, timeout: 8000 }
-    );
-  };
-
-  const requestDevicePermissions = async () => {
-    requestAudioPermission();
-    requestNotificationPermission();
-    if (!restaurantInfo?.location_initialized) {
-      requestGpsPermission();
-    }
-  };
-
   const pendingLoopRef = useRef(null);
   const activeAudioCtxRef = useRef(null);
   const pendingUpdatesRef = useRef(new Map());
@@ -237,10 +204,8 @@ export default function AdminDashboard({ token, username, slug: propSlug = '', o
   const playKitchenChime = () => {
     try {
       stopPendingAlarm();
-      const AudioCtx = window.AudioContext || window.webkitAudioContext;
-      if (!AudioCtx) return;
-      const ctx = new AudioCtx();
-      activeAudioCtxRef.current = ctx;
+      const ctx = soundManager.getAudioContext();
+      if (!ctx) return;
       if (ctx.state === 'suspended') {
         ctx.resume().catch(() => {});
       }
@@ -2537,13 +2502,13 @@ export default function AdminDashboard({ token, username, slug: propSlug = '', o
         </div>
       )}
 
-      {/* 🔔📍 Live Order Siren & GPS Location Unlock Banner */}
-      {!permissionsGranted && (
+      {/* 🔔 Admin Sound-Only Alert Unlock Banner */}
+      {!isAudioReady && !audioBannerDismissed && (
         <div style={{
           background: 'linear-gradient(135deg, #0F172A 0%, #1E293B 100%)',
           color: '#FFFFFF',
-          padding: '12px 16px',
-          borderBottom: '2px solid #38BDF8',
+          padding: '10px 16px',
+          borderBottom: '2px solid #F59E0B',
           display: 'flex',
           flexWrap: 'wrap',
           alignItems: 'center',
@@ -2552,35 +2517,66 @@ export default function AdminDashboard({ token, username, slug: propSlug = '', o
           boxShadow: '0 4px 12px rgba(0,0,0,0.3)'
         }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '10px', minWidth: '240px' }}>
-            <span style={{ fontSize: '1.5rem' }}>🔔📍</span>
+            <span style={{ fontSize: '1.4rem' }}>🔔</span>
             <div>
-              <strong style={{ fontSize: '0.88rem', color: '#38BDF8', display: 'block' }}>
-                Auto-Save GPS Location & Enable Live Order Siren Alarm
+              <strong style={{ fontSize: '0.88rem', color: '#FBBF24', display: 'block' }}>
+                Enable Alert Sounds
               </strong>
               <span style={{ fontSize: '0.76rem', color: '#94A3B8', fontWeight: 600 }}>
-                Automatic order ringtone & customer distance verification require browser permissions.
+                Enable sound alerts for orders, kitchen and waiter notifications.
               </span>
             </div>
           </div>
-          <button
-            onClick={() => requestDevicePermissions()}
-            style={{
-              background: 'linear-gradient(135deg, #0EA5E9 0%, #0284C7 100%)',
-              color: '#FFFFFF',
-              border: 'none',
-              padding: '8px 16px',
-              borderRadius: '9999px',
-              fontWeight: 900,
-              fontSize: '0.8rem',
-              cursor: 'pointer',
-              boxShadow: '0 4px 12px rgba(14,165,233,0.35)',
-              display: 'flex',
-              alignItems: 'center',
-              gap: '6px'
-            }}
-          >
-            ⚡ Enable Location & Loud Ringtone
-          </button>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+            <button
+              onClick={() => {
+                unlockNotificationSound().then((success) => {
+                  if (success) {
+                    setIsAudioReady(true);
+                    setAudioBannerDismissed(true);
+                    setToastMessage('🔊 Alert Sounds Unlocked & Active!');
+                    setTimeout(() => setToastMessage(''), 3000);
+                  } else {
+                    setToastMessage('⚠️ Sound could not be enabled. Tap Enable to try again.');
+                    setTimeout(() => setToastMessage(''), 4000);
+                  }
+                });
+                if ('Notification' in window && Notification.permission === 'default') {
+                  Notification.requestPermission().catch(() => {});
+                }
+              }}
+              style={{
+                background: 'linear-gradient(135deg, #F59E0B 0%, #D97706 100%)',
+                color: '#FFFFFF',
+                border: 'none',
+                padding: '7px 16px',
+                borderRadius: '9999px',
+                fontWeight: 800,
+                fontSize: '0.8rem',
+                cursor: 'pointer',
+                boxShadow: '0 4px 12px rgba(245,158,11,0.35)',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '6px'
+              }}
+            >
+              🔔 Enable
+            </button>
+            <button
+              onClick={() => setAudioBannerDismissed(true)}
+              style={{
+                background: 'none',
+                border: 'none',
+                color: '#64748B',
+                cursor: 'pointer',
+                fontSize: '1rem',
+                padding: '4px 8px'
+              }}
+              title="Dismiss"
+            >
+              ✕
+            </button>
+          </div>
         </div>
       )}
 
@@ -2730,63 +2726,6 @@ export default function AdminDashboard({ token, username, slug: propSlug = '', o
           analyticsEnabled={isAnalyticsEnabled}
           ordersEnabled={isDirectOrderingEnabled}
         />
-
-        {/* Subtle temporary audio unlock banner - ONLY shown if browser audio is locked */}
-        {!isAudioReady && !audioBannerDismissed && (
-          <div style={{
-            position: 'fixed',
-            top: '72px',
-            right: '16px',
-            zIndex: 9999,
-            background: 'linear-gradient(135deg, #1E293B, #0F172A)',
-            color: '#FFFFFF',
-            padding: '8px 14px',
-            borderRadius: '24px',
-            border: '1px solid rgba(234, 179, 8, 0.4)',
-            boxShadow: '0 8px 24px rgba(0,0,0,0.3)',
-            display: 'flex',
-            alignItems: 'center',
-            gap: '10px',
-            fontSize: '0.82rem',
-            fontWeight: 600
-          }}>
-            <span>🔔 Enable notification sounds</span>
-            <button
-              onClick={() => {
-                unlockNotificationSound().then(() => {
-                  setIsAudioReady(true);
-                  setAudioBannerDismissed(true);
-                });
-              }}
-              style={{
-                background: 'linear-gradient(135deg, #F59E0B, #D97706)',
-                border: 'none',
-                color: '#FFFFFF',
-                padding: '4px 12px',
-                borderRadius: '14px',
-                fontWeight: 700,
-                fontSize: '0.76rem',
-                cursor: 'pointer'
-              }}
-            >
-              Enable
-            </button>
-            <button
-              onClick={() => setAudioBannerDismissed(true)}
-              style={{
-                background: 'none',
-                border: 'none',
-                color: '#94A3B8',
-                cursor: 'pointer',
-                fontSize: '0.9rem',
-                padding: '0 2px'
-              }}
-              title="Dismiss"
-            >
-              ✕
-            </button>
-          </div>
-        )}
 
         <main className="adm-main-canvas">
           <div className="adm-content-body">
