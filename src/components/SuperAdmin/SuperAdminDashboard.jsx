@@ -424,10 +424,22 @@ export default function SuperAdminDashboard({ token, username, onLogout, onRetur
     if (isFailed) return 'failed';
     const isTrial = (r.subscription_status === 'trialing' || (r.trial_ends_at && new Date(r.trial_ends_at) > new Date()));
     if (isTrial) return 'trial';
-    const isAutoRenewOff = (r.auto_renew === 0 || r.auto_renew === false);
+    const isAutoRenewOff = (r.auto_renew === 0 || r.auto_renew === false || r.cancel_requested_at !== null || r.subscription_status === 'auto_renew_off');
     if (isAutoRenewOff) return 'autorenew_off';
     return 'active';
   };
+
+  // Synchronized Filter Pills Configuration
+  const getDirectoryFilterPills = () => [
+    { id: 'all', label: 'All', count: restaurants.length },
+    { id: 'active', label: '🟢 Active', count: restaurants.filter(r => getTenantStatus(r) === 'active').length },
+    { id: 'trial', label: '🎁 Trial', count: restaurants.filter(r => getTenantStatus(r) === 'trial').length },
+    { id: 'failed', label: '🟡 Past Due', count: restaurants.filter(r => getTenantStatus(r) === 'failed').length },
+    { id: 'autorenew_off', label: '🟠 Renew Off', count: restaurants.filter(r => getTenantStatus(r) === 'autorenew_off').length },
+    { id: 'expired', label: '🔴 Expired', count: restaurants.filter(r => getTenantStatus(r) === 'expired').length },
+    { id: 'vip', label: '🟣 VIP', count: restaurants.filter(r => getTenantStatus(r) === 'vip').length },
+    { id: 'suspended', label: '⚫ Suspended', count: restaurants.filter(r => getTenantStatus(r) === 'suspended').length },
+  ];
 
   // Helper to render semantic status badge
   const renderStatusBadge = (r) => {
@@ -664,18 +676,9 @@ export default function SuperAdminDashboard({ token, username, onLogout, onRetur
         </div>
       </div>
 
-      {/* 🏷️ 3. FILTER PILLS STRIP (USING SHARED FilterPills) */}
+      {/* 🏷️ 3. FILTER PILLS STRIP (USING SYNCHRONIZED getDirectoryFilterPills) */}
       <FilterPills
-        pills={[
-          { id: 'all', label: 'All', count: restaurants.length },
-          { id: 'active', label: '🟢 Active', count: restaurants.filter(r => r.active !== false && r.active !== 0 && r.active !== '0').length },
-          { id: 'trial', label: '🎁 Trial', count: restaurants.filter(r => r.subscription_status === 'trialing').length },
-          { id: 'failed', label: '🟡 Past Due', count: restaurants.filter(r => r.subscription_status === 'payment_failed' || r.subscription_status === 'past_due').length },
-          { id: 'autorenew_off', label: '🟠 Renew Off', count: restaurants.filter(r => r.subscription_status === 'auto_renew_off' || r.cancel_requested_at !== null).length },
-          { id: 'expired', label: '🔴 Expired', count: restaurants.filter(r => r.subscription_status === 'expired').length },
-          { id: 'vip', label: '🟣 VIP', count: restaurants.filter(r => r.subscription_type === 'ADMIN_GRANTED' || r.mandate_status === 'admin_granted').length },
-          { id: 'suspended', label: '⚫ Suspended', count: restaurants.filter(r => r.active === false || r.active === 0 || r.active === '0').length },
-        ]}
+        pills={getDirectoryFilterPills()}
         activeId={statusFilter}
         onChange={setStatusFilter}
       />
@@ -1179,7 +1182,7 @@ export default function SuperAdminDashboard({ token, username, onLogout, onRetur
                 {/* KPI 2: Active Paid */}
                 <KpiCard
                   label="Active Paid"
-                  value={totalActive || 45}
+                  value={restaurants.filter(r => getTenantStatus(r) === 'active').length}
                   icon={Users}
                   color="#15803D"
                   iconBg="#DCFCE7"
@@ -1192,7 +1195,7 @@ export default function SuperAdminDashboard({ token, username, onLogout, onRetur
                 {/* KPI 3: Free Trial */}
                 <KpiCard
                   label="Free Trial"
-                  value={restaurants.filter(r => r.subscription_status === 'trialing' || (r.trial_ends_at && new Date(r.trial_ends_at) > new Date())).length || 8}
+                  value={restaurants.filter(r => getTenantStatus(r) === 'trial').length}
                   icon={Calendar}
                   color="#2563EB"
                   iconBg="#EFF6FF"
@@ -1205,7 +1208,7 @@ export default function SuperAdminDashboard({ token, username, onLogout, onRetur
                 {/* KPI 4: Past Due */}
                 <KpiCard
                   label="Past Due"
-                  value={restaurants.filter(r => r.subscription_status === 'payment_failed' || r.subscription_status === 'past_due').length || 3}
+                  value={restaurants.filter(r => getTenantStatus(r) === 'failed').length}
                   icon={CreditCard}
                   color="#EA580C"
                   iconBg="#FFF7ED"
@@ -1218,7 +1221,7 @@ export default function SuperAdminDashboard({ token, username, onLogout, onRetur
                 {/* KPI 5: Total Tenants */}
                 <KpiCard
                   label="Total Tenants"
-                  value={restaurants.length || 58}
+                  value={restaurants.length}
                   icon={Store}
                   color="#0D9488"
                   iconBg="#F0FDFA"
@@ -1252,7 +1255,7 @@ export default function SuperAdminDashboard({ token, username, onLogout, onRetur
                           <div className="sa-attention-info">
                             <span className="sa-attention-name">Payment Failed</span>
                             <span className="sa-attention-count">
-                              {restaurants.filter(r => r.subscription_status === 'payment_failed' || r.subscription_status === 'past_due').length || 3} tenants
+                              {restaurants.filter(r => getTenantStatus(r) === 'failed').length} tenants
                             </span>
                           </div>
                         </div>
@@ -1274,7 +1277,7 @@ export default function SuperAdminDashboard({ token, username, onLogout, onRetur
                           <div className="sa-attention-info">
                             <span className="sa-attention-name">Auto-Renew Off</span>
                             <span className="sa-attention-count">
-                              {restaurants.filter(r => r.auto_renew === 0 || r.auto_renew === false).length || 5} tenants
+                              {restaurants.filter(r => getTenantStatus(r) === 'autorenew_off').length} tenants
                             </span>
                           </div>
                         </div>
@@ -1321,7 +1324,7 @@ export default function SuperAdminDashboard({ token, username, onLogout, onRetur
                           <div className="sa-attention-info">
                             <span className="sa-attention-name">Pending Approvals</span>
                             <span className="sa-attention-count">
-                              {totalPending || 2} requests
+                              {restaurants.filter(r => getTenantStatus(r) === 'suspended').length} requests
                             </span>
                           </div>
                         </div>
@@ -1774,15 +1777,7 @@ export default function SuperAdminDashboard({ token, username, onLogout, onRetur
               {/* 🏷️ 4. TOOLBAR & FILTER PILLS STRIP (USING SHARED FilterPills) */}
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '12px' }}>
                 <FilterPills
-                  pills={[
-                    { id: 'all', label: 'All', count: restaurants.length },
-                    { id: 'active', label: '🟢 Active Paid', count: restaurants.filter(r => r.active !== false && r.active !== 0 && r.active !== '0').length },
-                    { id: 'trial', label: '🎁 Free Trial', count: restaurants.filter(r => r.subscription_status === 'trialing').length },
-                    { id: 'failed', label: '🟡 Past Due', count: restaurants.filter(r => r.subscription_status === 'payment_failed' || r.subscription_status === 'past_due').length },
-                    { id: 'autorenew_off', label: '🟠 Auto-Renew Off', count: restaurants.filter(r => (r.auto_renew === 0 || r.auto_renew === false || r.cancel_requested_at !== null) && r.active !== false).length },
-                    { id: 'expired', label: '🔴 Expired', count: restaurants.filter(r => r.subscription_status === 'expired').length },
-                    { id: 'vip', label: '🟣 VIP', count: restaurants.filter(r => r.subscription_type === 'ADMIN_GRANTED' || r.mandate_status === 'admin_granted').length },
-                  ]}
+                  pills={getDirectoryFilterPills()}
                   activeId={statusFilter}
                   onChange={setStatusFilter}
                 />
