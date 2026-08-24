@@ -357,9 +357,36 @@ export default function App() {
   const [loginErrMessage, setLoginErrMessage] = useState('');
   const [landingSuccessMessage, setLandingSuccessMessage] = useState('');
   const [landingLoginLoading, setLandingLoginLoading] = useState(false);
-  const [masterSupportPhone, setMasterSupportPhone] = useState('919876543210');
-  const [trialDays, setTrialDays] = useState(null);
-  const [openFaqIndex, setOpenFaqIndex] = useState(null);
+  const [isImpersonating, setIsImpersonating] = useState(() => {
+    return localStorage.getItem('touchqr_superadmin_impersonating') === 'true';
+  });
+  const [impersonatedRestoName, setImpersonatedRestoName] = useState(() => {
+    return localStorage.getItem('touchqr_impersonated_resto_name') || '';
+  });
+
+  const handleExitImpersonation = () => {
+    const restoId = localStorage.getItem('touchqr_impersonated_resto_id');
+    const currentSuperToken = superToken || localStorage.getItem('touchqr_super_token');
+    if (restoId && currentSuperToken) {
+      fetch(`/api/superadmin/restaurants/${restoId}/exit-impersonation`, {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${currentSuperToken}` }
+      }).catch(() => {});
+    }
+    localStorage.removeItem('touchqr_superadmin_impersonating');
+    localStorage.removeItem('touchqr_impersonated_resto_name');
+    localStorage.removeItem('touchqr_impersonated_resto_id');
+    localStorage.removeItem('touchqr_admin_token');
+    localStorage.removeItem('touchqr_admin_user');
+    localStorage.removeItem('touchqr_admin_slug');
+    setIsImpersonating(false);
+    setImpersonatedRestoName('');
+    setAdminToken('');
+    setAdminUsername('');
+    setAdminSlug('');
+    setView('super-admin-dashboard');
+    window.history.pushState({}, '', '/superadmin');
+  };
 
   const trialText = trialDays ? `${trialDays}` : '';
   const trialLabel = trialDays ? `${trialDays}-Day` : 'Free';
@@ -1729,14 +1756,21 @@ export default function App() {
           token={superToken}
           username={superUsername}
           onLogout={handleSuperAdminLogout}
-          onImpersonate={(tenantToken, tenantUsername, tenantSlug) => {
+          onImpersonate={(tenantToken, tenantUsername, tenantSlug, tenantName, tenantId) => {
             const targetSlug = tenantSlug || (info && info.slug) || '';
+            const targetName = tenantName || targetSlug;
             localStorage.setItem('touchqr_admin_token', tenantToken);
             localStorage.setItem('touchqr_admin_user', tenantUsername);
             localStorage.setItem('touchqr_admin_slug', targetSlug);
+            localStorage.setItem('touchqr_superadmin_impersonating', 'true');
+            localStorage.setItem('touchqr_impersonated_resto_name', targetName);
+            if (tenantId) localStorage.setItem('touchqr_impersonated_resto_id', String(tenantId));
+
             setAdminToken(tenantToken);
             setAdminUsername(tenantUsername);
             setAdminSlug(targetSlug);
+            setIsImpersonating(true);
+            setImpersonatedRestoName(targetName);
             setView('admin-dashboard');
             window.history.pushState({}, '', `/${targetSlug}/admin`);
           }}
@@ -1953,6 +1987,9 @@ export default function App() {
           token={adminToken}
           username={adminUsername}
           slug={activeAdminSlug}
+          isImpersonating={isImpersonating}
+          impersonatedRestoName={impersonatedRestoName}
+          onExitImpersonation={handleExitImpersonation}
           onLogout={handleAdminLogout}
           onReturnToMenu={(tenantSlug) => {
             const targetSlug = tenantSlug || activeAdminSlug || (info && info.slug) || getSlugFromUrl() || '';

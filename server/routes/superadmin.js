@@ -293,24 +293,48 @@ router.post('/restaurants/:id/impersonate', authenticateToken, requireSuperAdmin
     const admins = await query('SELECT * FROM admins WHERE restaurant_id = $1 ORDER BY id ASC', [id]);
     const ownerAdmin = admins && admins.length > 0 ? admins[0] : { id: 1, username: 'admin' };
 
-    // Generate JWT token scoping to this tenant restaurant
+    // Generate JWT token scoping to this tenant restaurant with explicit impersonation claim
     const token = jwt.sign(
-      { id: ownerAdmin.id, username: ownerAdmin.username, role: 'restaurant_admin', restaurant_id: resto.id },
+      {
+        id: ownerAdmin.id,
+        username: ownerAdmin.username,
+        role: 'restaurant_admin',
+        restaurant_id: resto.id,
+        is_impersonated: true,
+        superadmin_username: req.user.username
+      },
       JWT_SECRET,
       { expiresIn: '1d' }
     );
 
-    await logAudit(resto.id, 'superadmin', 'Impersonation Login', `Super Admin impersonated tenant '${resto.name}'`);
+    await logAudit(resto.id, 'superadmin', 'IMPERSONATION_STARTED', `Super Admin '${req.user.username}' started impersonating tenant '${resto.name}'`);
 
     res.json({
       success: true,
       token,
       username: ownerAdmin.username,
-      restaurant: resto
+      restaurant: resto,
+      is_impersonated: true
     });
   } catch (err) {
     console.error('Impersonate tenant error:', err);
     res.status(500).json({ error: 'Failed to impersonate tenant' });
+  }
+});
+
+// POST Exit Impersonation (Audit Log IMPERSONATION_ENDED)
+router.post('/restaurants/:id/exit-impersonation', authenticateToken, requireSuperAdmin, async (req, res) => {
+  try {
+    const { id } = req.params;
+    const restos = await query('SELECT id, name FROM restaurants WHERE id = $1', [id]);
+    const restoName = (restos && restos.length > 0) ? restos[0].name : `Tenant ${id}`;
+
+    await logAudit(id, 'superadmin', 'IMPERSONATION_ENDED', `Super Admin '${req.user.username}' ended impersonation for tenant '${restoName}'`);
+
+    res.json({ success: true, message: 'Impersonation ended successfully' });
+  } catch (err) {
+    console.error('Exit impersonation error:', err);
+    res.status(500).json({ error: 'Failed to record exit impersonation' });
   }
 });
 

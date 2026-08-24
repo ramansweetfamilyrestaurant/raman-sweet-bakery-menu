@@ -22,7 +22,33 @@ import SetupView from './views/SetupView';
 import QrGeneratorView from './views/QrGeneratorView';
 import ReviewView from './views/ReviewView';
 
-export default function AdminDashboard({ token, username, slug: propSlug = '', onLogout, onReturnToMenu }) {
+export default function AdminDashboard({
+  token,
+  username,
+  slug: propSlug = '',
+  isImpersonating: propIsImpersonating = false,
+  impersonatedRestoName: propImpersonatedRestoName = '',
+  onExitImpersonation,
+  onLogout,
+  onReturnToMenu
+}) {
+  const isImpersonating = propIsImpersonating || localStorage.getItem('touchqr_superadmin_impersonating') === 'true';
+  const impersonatedRestoName = propImpersonatedRestoName || localStorage.getItem('touchqr_impersonated_resto_name') || '';
+
+  const handleExitImpersonation = () => {
+    if (onExitImpersonation) {
+      onExitImpersonation();
+    } else {
+      localStorage.removeItem('touchqr_superadmin_impersonating');
+      localStorage.removeItem('touchqr_impersonated_resto_name');
+      localStorage.removeItem('touchqr_impersonated_resto_id');
+      localStorage.removeItem('touchqr_admin_token');
+      localStorage.removeItem('touchqr_admin_user');
+      localStorage.removeItem('touchqr_admin_slug');
+      window.location.href = '/superadmin';
+    }
+  };
+
   const getInitialAdminState = (key, fallback) => {
     try {
       const currentSlug = propSlug || localStorage.getItem('touchqr_admin_slug') || '';
@@ -2773,6 +2799,63 @@ export default function AdminDashboard({ token, username, slug: propSlug = '', o
               </button>
             </div>
           </div>
+        </div>
+      )}
+
+      {/* ⚠️ Super Admin Impersonation Safety Banner */}
+      {isImpersonating && (
+        <div
+          data-testid="impersonation-safety-banner"
+          style={{
+            position: 'sticky',
+            top: 0,
+            zIndex: 999999,
+            background: 'linear-gradient(90deg, #78350F 0%, #92400E 100%)',
+            color: '#FEF3C7',
+            padding: '10px 20px',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            flexWrap: 'wrap',
+            gap: '12px',
+            boxShadow: '0 4px 20px rgba(0,0,0,0.35)',
+            borderBottom: '3px solid #F59E0B'
+          }}
+        >
+          <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+            <span style={{ fontSize: '1.4rem' }}>⚠️</span>
+            <div>
+              <div style={{ fontWeight: 900, fontSize: '0.95rem', color: '#FFFFFF', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                <span>You are impersonating:</span>
+                <span style={{ color: '#FDE68A', textDecoration: 'underline', fontWeight: 900 }}>
+                  {impersonatedRestoName || restaurantInfo?.name || 'Restaurant Tenant'}
+                </span>
+              </div>
+              <div style={{ fontSize: '0.78rem', color: '#FCD34D', fontWeight: 600 }}>
+                Super Admin access is active for this tenant.
+              </div>
+            </div>
+          </div>
+          <button
+            onClick={handleExitImpersonation}
+            style={{
+              background: '#F59E0B',
+              color: '#1E293B',
+              border: 'none',
+              borderRadius: '8px',
+              padding: '7px 16px',
+              fontWeight: 900,
+              fontSize: '0.84rem',
+              cursor: 'pointer',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '6px',
+              boxShadow: '0 2px 10px rgba(0,0,0,0.25)',
+              transition: 'all 0.15s ease'
+            }}
+          >
+            ↩️ Exit Impersonation
+          </button>
         </div>
       )}
 

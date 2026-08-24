@@ -313,7 +313,7 @@ export default function SuperAdminDashboard({ token, username, onLogout, onRetur
     try {
       const data = await impersonateTenantRestaurant(id, token);
       if (data && data.token && onImpersonate) {
-        onImpersonate(data.token, data.username, data.restaurant?.slug);
+        onImpersonate(data.token, data.username, data.restaurant?.slug, data.restaurant?.name || name, data.restaurant?.id || id);
       }
     } catch (err) {
       alert(err.message || 'Failed to switch into tenant admin');
