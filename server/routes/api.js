@@ -1996,7 +1996,7 @@ router.get('/orders/active-table', async (req, res) => {
       grand_total_amount: runningGrandTotal,
       gst_enabled: Boolean(resto.gst_enabled),
       gstin_number: resto.gstin_number || '',
-      currency_symbol: resto.currency_symbol || '₹',
+      currency_symbol: (resto.currency_symbol !== null && resto.currency_symbol !== undefined) ? resto.currency_symbol : '₹',
       items: allItemsAcrossRounds,
       rounds
     });

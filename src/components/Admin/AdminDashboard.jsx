@@ -809,7 +809,7 @@ export default function AdminDashboard({ token, username, slug: propSlug = '', o
   const generateRawBTText = (order, type = 'kot', restoInfo = {}, isReprint = false) => {
     let text = '';
     const orderItems = safeParseItems(order.items);
-    const currency = restoInfo?.currency_symbol || '₹';
+    const currency = (restoInfo?.currency_symbol !== undefined && restoInfo?.currency_symbol !== null) ? restoInfo.currency_symbol : '₹';
 
     if (type === 'kot') {
       text += "================================" + "\n";
@@ -3085,7 +3085,7 @@ export default function AdminDashboard({ token, username, slug: propSlug = '', o
                 Table {acceptRoutingModal.table_number || 'Takeaway'} • Order {acceptRoutingModal.id}
               </div>
               <div style={{ fontSize: '0.78rem', color: 'var(--adm-muted)', marginTop: '2px' }}>
-                Customer: {acceptRoutingModal.customer_name || 'Dine-In Guest'} • Total: {settingsForm.currency_symbol || '₹'}{acceptRoutingModal.total_amount}
+                Customer: {acceptRoutingModal.customer_name || 'Dine-In Guest'} • Total: {settingsForm.currency_symbol !== undefined && settingsForm.currency_symbol !== null ? settingsForm.currency_symbol : '₹'}{acceptRoutingModal.total_amount}
               </div>
             </div>
 
@@ -3180,7 +3180,7 @@ export default function AdminDashboard({ token, username, slug: propSlug = '', o
               🧾 Print Final Customer Bill
             </h3>
             <span style={{ fontSize: '0.78rem', color: '#6B7280', display: 'block', marginBottom: '16px' }}>
-              Order {billOrderModal.id} • Total: {restaurantInfo?.currency_symbol || settingsForm.currency_symbol || '₹'}{billOrderModal.total_amount}
+              Order {billOrderModal.id} • Total: {(restaurantInfo?.currency_symbol !== undefined && restaurantInfo?.currency_symbol !== null ? restaurantInfo.currency_symbol : (settingsForm.currency_symbol !== undefined && settingsForm.currency_symbol !== null ? settingsForm.currency_symbol : '₹'))}{billOrderModal.total_amount}
             </span>
 
             <p style={{ fontSize: '0.84rem', fontWeight: 800, color: '#374151', marginBottom: '12px' }}>

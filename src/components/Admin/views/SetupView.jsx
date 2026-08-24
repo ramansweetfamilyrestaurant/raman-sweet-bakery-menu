@@ -1595,8 +1595,7 @@ export default function SetupView({
                 <option value="$">$ — US Dollar (USD)</option>
                 <option value="€">€ — Euro (EUR)</option>
                 <option value="£">£ — British Pound (GBP)</option>
-                <option value="د.إ">د.إ — UAE Dirham (AED)</option>
-                <option value="﷼">﷼ — Saudi Riyal (SAR)</option>
+                <option value="">None — No Currency Symbol</option>
               </select>
             </div>
           </div>

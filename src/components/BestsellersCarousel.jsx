@@ -3,6 +3,7 @@ import { Flame } from 'lucide-react';
 import { getDishImageUrl } from '../utils/imageHelper';
 
 export default function BestsellersCarousel({ dishes = [], onSelectDish, currencySymbol = '₹', lang = 'en' }) {
+  const symbol = (currencySymbol !== undefined && currencySymbol !== null) ? currencySymbol : '₹';
   const bestsellers = dishes.filter(d => d.must_try || d.bestseller || d.is_must_try || d.is_bestseller).slice(0, 10);
 
   if (!bestsellers || bestsellers.length === 0) return null;
