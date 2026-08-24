@@ -69,6 +69,7 @@ export default function SubscriptionBillingPage({ restoInfo, token, onProceedToD
   const [authorizing, setAuthorizing] = useState(false);
   const [verifying, setVerifying] = useState(false);
   const [statusMsg, setStatusMsg] = useState('');
+  const [pendingMsg, setPendingMsg] = useState('');
   const [errorMsg, setErrorMsg] = useState('');
   const [mandateActive, setMandateActive] = useState(false);
 
@@ -181,9 +182,14 @@ export default function SubscriptionBillingPage({ restoInfo, token, onProceedToD
         });
         if (res.ok) {
           const data = await res.json();
-          if (data && data.mandate_status === 'active') {
+          if (data && (data.mandate_status === 'active' || data.status === 'trialing' || data.status === 'active')) {
             setMandateActive(true);
-            setStatusMsg('✅ Cashfree Mandate Authorized Successfully! Redirecting to Admin Dashboard...');
+            setErrorMsg('');
+            setPendingMsg('');
+            setStatusMsg('✅ Cashfree Mandate Authorized Successfully! Free Trial Active. Redirecting...');
+            try {
+              window.history.replaceState({}, document.title, window.location.pathname);
+            } catch (e) {}
             clearInterval(pollInterval);
             if (onProceedToDashboard) onProceedToDashboard();
           }
@@ -234,23 +240,36 @@ export default function SubscriptionBillingPage({ restoInfo, token, onProceedToD
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
     const verifiedParam = params.get('verified');
-    const statusParam = params.get('status');
+    const rawStatus = params.get('status') || '';
+    const statusParam = rawStatus.toUpperCase().trim();
     const subIdParam = params.get('subscription_id') || params.get('sub_id');
 
     if (verifiedParam === 'true') {
       setMandateActive(true);
+      setErrorMsg('');
+      setPendingMsg('');
       setStatusMsg(`✅ Cashfree Mandate Authorized Successfully! ${calcDays}-Day Free Trial Active. Redirecting...`);
       localStorage.removeItem('pending_subscription_id');
+      try {
+        window.history.replaceState({}, document.title, window.location.pathname);
+      } catch (e) {}
       const timer = setTimeout(() => {
         if (onProceedToDashboard) onProceedToDashboard();
       }, 1500);
       return () => clearTimeout(timer);
     } else if (verifiedParam === 'false') {
-      setErrorMsg(`⚠️ Subscription authorization pending or failed. Status: ${statusParam || 'PENDING'}`);
+      // Differentiate between PENDING/INITIALIZED (asynchronous in-progress) and actual FAILURE (CANCELLED/FAILED/REJECTED)
+      if (statusParam === 'PENDING' || statusParam === 'INITIALIZED' || statusParam === 'BANK_APPROVAL_PENDING' || !statusParam) {
+        setErrorMsg('');
+        setPendingMsg("🟡 Subscription authorization is being confirmed. Your UPI AutoPay authorization is still being processed. We'll update this page automatically.");
+      } else {
+        setPendingMsg('');
+        setErrorMsg(`⚠️ Subscription authorization failed or cancelled. Status: ${statusParam}`);
+      }
     } else if (subIdParam) {
       handleVerifySubscription(subIdParam);
     }
-  }, [calcDays]);
+  }, [calcDays, onProceedToDashboard]);
 
   // Initiate Cashfree Subscription Mandate Checkout
   const handleStartFreeTrialMandate = async () => {
@@ -630,6 +649,31 @@ export default function SubscriptionBillingPage({ restoInfo, token, onProceedToD
         </div>
 
         {/* Messages */}
+        {pendingMsg && (
+          <div style={{
+            background: 'rgba(234, 179, 8, 0.15)',
+            border: '1px solid #EAB308',
+            color: '#FDE047',
+            padding: '10px 14px',
+            borderRadius: '12px',
+            fontSize: '0.8rem',
+            fontWeight: 700,
+            marginBottom: '14px',
+            textAlign: 'left',
+            display: 'flex',
+            alignItems: 'center',
+            gap: '8px'
+          }}>
+            <Sparkles size={18} color="#EAB308" style={{ flexShrink: 0 }} />
+            <div>
+              <div style={{ fontWeight: 800, color: '#FACC15' }}>🟡 Subscription authorization is being confirmed</div>
+              <div style={{ fontSize: '0.75rem', color: '#FEF08A', marginTop: '2px', fontWeight: 500 }}>
+                Your UPI AutoPay authorization is still being processed. We'll update this page automatically.
+              </div>
+            </div>
+          </div>
+        )}
+
         {errorMsg && (
           <div style={{
             background: 'rgba(239, 68, 68, 0.15)',
