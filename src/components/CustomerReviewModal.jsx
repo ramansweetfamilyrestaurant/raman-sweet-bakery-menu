@@ -1,17 +1,17 @@
 import React, { useState, useEffect } from 'react';
 import { X, Star, Sparkles, Copy, CheckCircle2, ArrowRight } from 'lucide-react';
-import { generateSmartReview, HIGHLIGHT_CHIPS, getEffectiveReviewType } from '../utils/aiReviewGenerator';
+import { generateSmartReview, getCustomerReviewProfile } from '../utils/aiReviewGenerator';
 
 export default function CustomerReviewModal({ info, onClose }) {
+  const restoName = info?.name || 'Restaurant';
+  const profile = getCustomerReviewProfile(info?.business_type, info?.resto_type);
+  const availableChips = profile.highlights || [];
+
   const [rating, setRating] = useState(5);
-  const [selectedChips, setSelectedChips] = useState(['Delicious Food', 'Fast Service']);
+  const [selectedChips, setSelectedChips] = useState(profile.defaultChips || []);
   const [customNote, setCustomNote] = useState('');
   const [generatedReview, setGeneratedReview] = useState('');
   const [copiedToast, setCopiedToast] = useState(false);
-
-  const restoName = info?.name || 'Restaurant';
-  const effectiveReviewType = getEffectiveReviewType(info?.business_type || info?.resto_type);
-  const availableChips = HIGHLIGHT_CHIPS[effectiveReviewType] || HIGHLIGHT_CHIPS.multi_cuisine;
 
   // Re-generate AI review on any input change
   useEffect(() => {
@@ -147,7 +147,7 @@ export default function CustomerReviewModal({ info, onClose }) {
             marginBottom: '16px'
           }}>
             <div style={{ fontSize: '0.88rem', fontWeight: 800, color: '#0F172A', marginBottom: '10px' }}>
-              How was your dining experience today?
+              {profile.question}
             </div>
 
             <div style={{ display: 'flex', justifyContent: 'center', gap: '8px', marginBottom: '8px' }}>
@@ -218,7 +218,7 @@ export default function CustomerReviewModal({ info, onClose }) {
               type="text"
               value={customNote}
               onChange={(e) => setCustomNote(e.target.value)}
-              placeholder="Mention dish (e.g. Kaju Katli was awesome...)"
+              placeholder={profile.placeholder}
               style={{
                 width: '100%',
                 padding: '9px 12px',

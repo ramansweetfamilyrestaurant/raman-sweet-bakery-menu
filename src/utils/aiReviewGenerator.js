@@ -1,12 +1,14 @@
 // Smart NLP AI Review Generator Engine
-// Generates natural, high-converting 1-5 star Google reviews tailored to specific restaurant types without external API costs.
+// Generates natural, high-converting 1-5 star Google reviews tailored to specific venue and restaurant types without external API costs.
 
 export const RESTO_TYPES = [
   { id: 'sweet_bakery', label: '🧁 Sweet & Bakery', icon: '🧁' },
   { id: 'multi_cuisine', label: '🍲 Multi-Cuisine Restaurant', icon: '🍲' },
   { id: 'fast_food', label: '🍔 Fast Food & Cafe', icon: '🍔' },
   { id: 'pure_veg', label: '🌿 Pure Veg & South Indian', icon: '🌿' },
-  { id: 'biryani', label: '🍗 Biryani & Non-Veg Special', icon: '🍗' }
+  { id: 'biryani', label: '🍗 Biryani & Non-Veg Special', icon: '🍗' },
+  { id: 'hotel_resort', label: '🏨 Hotel & Resort', icon: '🏨' },
+  { id: 'cinema_theatre', label: '🎬 Cinema & Theatre', icon: '🎬' }
 ];
 
 export const HIGHLIGHT_CHIPS = {
@@ -44,6 +46,20 @@ export const HIGHLIGHT_CHIPS = {
     { id: 'fast_service', label: '⚡ Quick Service' },
     { id: 'generous_portion', label: '🍱 Generous Quantity' },
     { id: 'hygienic', label: '🧹 Clean & Hygienic' }
+  ],
+  hotel_resort: [
+    { id: 'comfortable_room', label: '🛏️ Comfortable Room' },
+    { id: 'clean_maintained', label: '🧼 Clean & Well Maintained' },
+    { id: 'great_hospitality', label: '🤝 Great Hospitality' },
+    { id: 'food_room_service', label: '🍽️ Food & Room Service' },
+    { id: 'ambience_facilities', label: '✨ Ambience & Facilities' }
+  ],
+  cinema_theatre: [
+    { id: 'great_movie', label: '🎬 Great Movie Experience' },
+    { id: 'comfortable_seats', label: '💺 Comfortable Seats' },
+    { id: 'sound_screen_quality', label: '🔊 Sound & Screen Quality' },
+    { id: 'food_beverages', label: '🍿 Food & Beverages' },
+    { id: 'clean_theatre', label: '🧼 Clean Theatre' }
   ]
 };
 
@@ -112,6 +128,32 @@ const TEMPLATE_MATRIX = {
     3: [
       "Decent biryani at {name}. Flavor was okay."
     ]
+  },
+  hotel_resort: {
+    5: [
+      "{name} provided an exceptional stay experience! The rooms were ultra-clean, comfortable, and well-maintained. Warm hospitality, polite staff, and excellent room service. Highly recommended!",
+      "Wonderful stay at {name}! Beautiful ambience, spotless rooms, and top-tier hospitality. The staff was courteous and attentive to every need. Will definitely stay here again!"
+    ],
+    4: [
+      "Very pleasant stay at {name}. Clean rooms, helpful staff, and good amenities. Overall a comfortable and relaxing experience.",
+      "Great hospitality and comfortable accommodation at {name}. Prompt room service and peaceful atmosphere. Good value for money."
+    ],
+    3: [
+      "Decent stay at {name}. Room was clean and location is good. Service and response time could be slightly improved."
+    ]
+  },
+  cinema_theatre: {
+    5: [
+      "Fantastic movie experience at {name}! Crystal clear screen, immersive sound quality, and super comfortable seating. Clean theatre and great snacks. 10/10 recommended!",
+      "Best cinema in town! {name} offers top-notch picture quality, amazing Dolby sound, and plush comfortable seats. Very clean hall and quick snack service!"
+    ],
+    4: [
+      "Enjoyed the show at {name}. Good screen and sound quality, comfortable seats, and clean premises. Nice food and beverage options.",
+      "Great theatre experience at {name}. Good projection, nice audio clarity, and polite staff."
+    ],
+    3: [
+      "Decent movie experience at {name}. Screen and sound were satisfactory. Seating and snack counter could be managed a bit better."
+    ]
   }
 };
 
@@ -122,27 +164,99 @@ const TYPE_KEY_ALIASES = {
   fast_food_qsr: 'fast_food',
   cafe: 'fast_food',
   restaurant: 'multi_cuisine',
-  hotel_resort: 'multi_cuisine',
-  cinema_theatre: 'fast_food',
+  hotel_resort: 'hotel_resort',
+  hotel: 'hotel_resort',
+  resort: 'hotel_resort',
+  cinema_theatre: 'cinema_theatre',
+  cinema: 'cinema_theatre',
+  theatre: 'cinema_theatre',
+  theater: 'cinema_theatre',
   dhaba: 'multi_cuisine',
   canteen_cafeteria: 'multi_cuisine',
   veg_nonveg: 'multi_cuisine',
   non_veg: 'multi_cuisine'
 };
 
-export function getEffectiveReviewType(type) {
-  if (!type) return 'multi_cuisine';
-  const clean = String(type).trim().toLowerCase();
+export function getEffectiveReviewType(type, businessType = null) {
+  const candidate = businessType || type;
+  if (!candidate) return 'multi_cuisine';
+  const clean = String(candidate).trim().toLowerCase();
   if (TEMPLATE_MATRIX[clean]) return clean;
   if (TYPE_KEY_ALIASES[clean]) return TYPE_KEY_ALIASES[clean];
   return 'multi_cuisine';
 }
 
-export function generateSmartReview({ restoName = 'Restaurant', restoType = 'multi_cuisine', businessType = null, rating = 5, selectedChips = [], customNote = '' }) {
-  const rawKey = businessType || restoType;
-  const typeKey = getEffectiveReviewType(rawKey);
+/**
+ * Resolves venue-aware review profile containing custom question, highlights, placeholder, and CTA text.
+ */
+export function getCustomerReviewProfile(businessType, restoType) {
+  const effectiveType = getEffectiveReviewType(restoType, businessType);
+
+  if (effectiveType === 'hotel_resort') {
+    return {
+      typeKey: 'hotel_resort',
+      title: 'Customer Rating & Google Review',
+      question: 'How was your stay with us?',
+      highlights: HIGHLIGHT_CHIPS.hotel_resort,
+      placeholder: 'Tell us what you enjoyed about your stay...',
+      ctaText: 'Rate Your Stay',
+      aiContext: 'hotel',
+      defaultChips: ['🛏️ Comfortable Room', '🧼 Clean & Well Maintained']
+    };
+  }
+
+  if (effectiveType === 'cinema_theatre') {
+    return {
+      typeKey: 'cinema_theatre',
+      title: 'Customer Rating & Google Review',
+      question: 'How was your movie experience?',
+      highlights: HIGHLIGHT_CHIPS.cinema_theatre,
+      placeholder: 'Tell us what you enjoyed about the movie experience...',
+      ctaText: 'Rate Your Movie Experience',
+      aiContext: 'cinema',
+      defaultChips: ['🎬 Great Movie Experience', '🔊 Sound & Screen Quality']
+    };
+  }
+
+  if (effectiveType === 'sweet_bakery') {
+    return {
+      typeKey: 'sweet_bakery',
+      title: 'Customer Rating & Google Review',
+      question: 'How was your dining experience today?',
+      highlights: HIGHLIGHT_CHIPS.sweet_bakery,
+      placeholder: 'Mention a sweet or snack (e.g. Kaju Katli was awesome...)',
+      ctaText: 'Rate Your Dining Experience',
+      aiContext: 'restaurant',
+      defaultChips: ['🍬 Fresh Sweets', '🧹 Clean & Hygienic']
+    };
+  }
+
+  // Default: Restaurant Profile
+  const chips = HIGHLIGHT_CHIPS[effectiveType] || HIGHLIGHT_CHIPS.multi_cuisine;
+  return {
+    typeKey: effectiveType,
+    title: 'Customer Rating & Google Review',
+    question: 'How was your dining experience today?',
+    highlights: chips,
+    placeholder: 'Mention a dish (e.g. Paneer Butter Masala was awesome...)',
+    ctaText: 'Rate Your Dining Experience',
+    aiContext: 'restaurant',
+    defaultChips: chips.slice(0, 2).map(c => c.label)
+  };
+}
+
+export function generateSmartReview({
+  restoName = 'Restaurant',
+  restoType = 'multi_cuisine',
+  businessType = null,
+  rating = 5,
+  selectedChips = [],
+  customNote = ''
+}) {
+  const profile = getCustomerReviewProfile(businessType, restoType);
+  const typeKey = profile.typeKey;
   const ratingKey = rating >= 4 ? rating : 3;
-  const pool = TEMPLATE_MATRIX[typeKey][ratingKey] || TEMPLATE_MATRIX[typeKey][5];
+  const pool = TEMPLATE_MATRIX[typeKey]?.[ratingKey] || TEMPLATE_MATRIX.multi_cuisine[ratingKey] || TEMPLATE_MATRIX.multi_cuisine[5];
   
   // Pick template based on restoName length hash for consistent variety
   const templateIdx = (restoName.length + (selectedChips.length * 3)) % pool.length;
