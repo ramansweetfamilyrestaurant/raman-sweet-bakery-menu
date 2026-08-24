@@ -556,13 +556,29 @@
     display: none;
   }
 
+  .sa-mobile-menu-btn {
+    display: flex !important;
+  }
+
+  .sa-desktop-breadcrumb {
+    display: none !important;
+  }
+
+  .sa-header-btn-label {
+    display: none;
+  }
+
+  .sa-profile-name {
+    display: none;
+  }
+
   .sa-header {
-    padding: 0 16px;
+    padding: 0 12px;
     height: 56px;
   }
 
   .sa-content-body {
-    padding: 16px;
+    padding: 14px 12px;
     padding-bottom: 80px; /* Space for bottom nav */
   }
 
@@ -635,6 +651,27 @@
 
   .sa-drawer {
     max-width: 100%;
+  }
+}
+
+@media (min-width: 768px) and (max-width: 1024px) {
+  .sa-sidebar {
+    width: 72px;
+  }
+  .sa-sidebar .sa-nav-item span,
+  .sa-sidebar .sa-brand div,
+  .sa-sidebar .sa-sidebar-footer span {
+    display: none;
+  }
+  .sa-sidebar .sa-sidebar-header {
+    justify-content: center;
+    padding: 16px 8px;
+  }
+  .sa-sidebar .sa-sidebar-header button {
+    display: none;
+  }
+  .sa-mobile-nav {
+    display: none !important;
   }
 }
 

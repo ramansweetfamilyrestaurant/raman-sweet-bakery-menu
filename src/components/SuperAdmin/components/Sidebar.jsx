@@ -1,8 +1,8 @@
 import React from 'react';
-import { LayoutDashboard, Store, CreditCard, Layers, History, Megaphone, Settings, LogOut, ChevronLeft, ChevronRight, Sparkles } from 'lucide-react';
+import { LayoutDashboard, Store, CreditCard, Layers, Database, History, Megaphone, Settings, MessageSquare, LogOut, ChevronLeft, ChevronRight } from 'lucide-react';
 import { resolveImageUrl } from '../../../utils/imageHelper';
 
-export default function Sidebar({ activeView, setActiveView, collapsed, setCollapsed, onLogout, logoUrl }) {
+export default function Sidebar({ activeView, setActiveView, collapsed, setCollapsed, onLogout, logoUrl, onOpenSupport, onOpenBroadcast }) {
   const [logoErr, setLogoErr] = React.useState(false);
 
   let cachedLogo = '';
@@ -17,10 +17,10 @@ export default function Sidebar({ activeView, setActiveView, collapsed, setColla
   const navItems = [
     { id: 'overview', label: 'Overview', icon: LayoutDashboard },
     { id: 'tenants', label: 'Tenants', icon: Store },
-    { id: 'subscriptions', label: 'Subscriptions', icon: CreditCard },
-    { id: 'plans', label: 'SaaS Plans', icon: Layers },
-    { id: 'audit', label: 'Audit Logs', icon: History },
-    { id: 'communication', label: 'Communication', icon: Megaphone },
+    { id: 'billing', label: 'Billing', icon: CreditCard },
+    { id: 'plans', label: 'Plans', icon: Layers },
+    { id: 'operations', label: 'Operations', icon: Database },
+    { id: 'activity', label: 'Activity', icon: History },
     { id: 'settings', label: 'Settings', icon: Settings },
   ];
 
@@ -93,15 +93,37 @@ export default function Sidebar({ activeView, setActiveView, collapsed, setColla
         </nav>
       </div>
 
-      {/* Footer Logout */}
-      <div className="sa-sidebar-footer">
+      {/* Footer Utility & Logout */}
+      <div className="sa-sidebar-footer" style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+        {onOpenBroadcast && (
+          <button
+            onClick={onOpenBroadcast}
+            className="sa-nav-item"
+            style={{ color: '#DFBA67' }}
+            title={collapsed ? 'Broadcast Notice' : undefined}
+          >
+            <Megaphone size={17} className="sa-nav-icon" />
+            {!collapsed && <span>Broadcast</span>}
+          </button>
+        )}
+        {onOpenSupport && (
+          <button
+            onClick={onOpenSupport}
+            className="sa-nav-item"
+            style={{ color: '#4ADE80' }}
+            title={collapsed ? 'WhatsApp Support' : undefined}
+          >
+            <MessageSquare size={17} className="sa-nav-icon" />
+            {!collapsed && <span>Support</span>}
+          </button>
+        )}
         <button
           onClick={onLogout}
           className="sa-nav-item"
           style={{ color: '#F87171' }}
           title={collapsed ? 'Logout' : undefined}
         >
-          <LogOut size={18} className="sa-nav-icon" />
+          <LogOut size={17} className="sa-nav-icon" />
           {!collapsed && <span>Logout</span>}
         </button>
       </div>

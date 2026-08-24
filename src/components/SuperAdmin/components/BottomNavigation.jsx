@@ -8,7 +8,7 @@ export default function BottomNavigation({ activeView, setActiveView, onOpenMore
         onClick={() => setActiveView('overview')}
         className={`sa-mobile-nav-item ${activeView === 'overview' ? 'active' : ''}`}
       >
-        <LayoutDashboard size={20} />
+        <LayoutDashboard size={19} />
         <span>Overview</span>
       </button>
 
@@ -16,23 +16,23 @@ export default function BottomNavigation({ activeView, setActiveView, onOpenMore
         onClick={() => setActiveView('tenants')}
         className={`sa-mobile-nav-item ${activeView === 'tenants' ? 'active' : ''}`}
       >
-        <Store size={20} />
+        <Store size={19} />
         <span>Tenants</span>
       </button>
 
       <button
-        onClick={() => setActiveView('subscriptions')}
-        className={`sa-mobile-nav-item ${activeView === 'subscriptions' ? 'active' : ''}`}
+        onClick={() => setActiveView('billing')}
+        className={`sa-mobile-nav-item ${activeView === 'billing' ? 'active' : ''}`}
       >
-        <CreditCard size={20} />
-        <span>Subscriptions</span>
+        <CreditCard size={19} />
+        <span>Billing</span>
       </button>
 
       <button
         onClick={onOpenMoreDrawer}
-        className={`sa-mobile-nav-item ${['plans', 'audit', 'communication', 'settings'].includes(activeView) ? 'active' : ''}`}
+        className={`sa-mobile-nav-item ${['plans', 'operations', 'activity', 'settings', 'communication'].includes(activeView) ? 'active' : ''}`}
       >
-        <Menu size={20} />
+        <Menu size={19} />
         <span>More</span>
       </button>
     </nav>
