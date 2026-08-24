@@ -6,6 +6,7 @@ import { resolveImageUrl, getRestaurantLogoUrl } from '../../utils/imageHelper';
 import GrantFreeAccessModal from './modals/GrantFreeAccessModal';
 import RevokeFreeAccessModal from './modals/RevokeFreeAccessModal';
 import SaaSPlansView from './views/SaaSPlansView';
+import TenantDetailsView from './views/TenantDetailsView';
 
 export default function SuperAdminDashboard({ token, username, onLogout, onReturnToMenu, onImpersonate }) {
   const [restaurants, setRestaurants] = useState([]);
@@ -16,6 +17,7 @@ export default function SuperAdminDashboard({ token, username, onLogout, onRetur
   const [copiedId, setCopiedId] = useState(null);
   const [grantModalResto, setGrantModalResto] = useState(null);
   const [revokeModalResto, setRevokeModalResto] = useState(null);
+  const [selectedTenant360, setSelectedTenant360] = useState(null);
 
   // Security & Portal Tab State & Eye Toggles
   const [secTab, setSecTab] = useState('security'); // 'security', 'gateway', 'branding', 'health'
@@ -1285,6 +1287,28 @@ export default function SuperAdminDashboard({ token, username, onLogout, onRetur
                         <CheckCircle size={16} /> 🟢 Unsuspend & Activate Restaurant
                       </button>
                     ) : null}
+
+                    <button
+                      onClick={() => setSelectedTenant360(r)}
+                      style={{
+                        background: 'linear-gradient(135deg, #1E293B 0%, #0F172A 100%)',
+                        color: '#FCD34D',
+                        padding: '8px 12px',
+                        borderRadius: 'var(--radius-pill)',
+                        fontSize: '0.78rem',
+                        fontWeight: 900,
+                        border: '1.5px solid #D4AF37',
+                        cursor: 'pointer',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        gap: '5px',
+                        boxShadow: '0 2px 8px rgba(0,0,0,0.15)'
+                      }}
+                      title="Open complete 360-degree Tenant Profile, Billing, Usage and Audit History"
+                    >
+                      🔍 360° Profile
+                    </button>
 
                     <button
                       onClick={() => handleImpersonate(r.id, r.name)}
@@ -3354,6 +3378,19 @@ export default function SuperAdminDashboard({ token, username, onLogout, onRetur
       />
 
       {/* ⚠️ Revoke Complimentary Access Modal */}
+      <TenantDetailsView
+        resto={selectedTenant360}
+        isOpen={Boolean(selectedTenant360)}
+        onClose={() => setSelectedTenant360(null)}
+        onImpersonate={handleImpersonate}
+        onEdit={(r) => setEditModalData(r)}
+        onGrantFree={(r) => setGrantModalResto(r)}
+        onRevokeFree={(r) => setRevokeModalResto(r)}
+        onToggleActive={handleToggleActive}
+        onDelete={handleDeleteRestaurant}
+        token={token}
+      />
+
       <RevokeFreeAccessModal
         resto={revokeModalResto}
         isOpen={!!revokeModalResto}

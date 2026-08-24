@@ -6,6 +6,7 @@ import { authenticateToken } from '../middleware/auth.js';
 import { isR2Active, uploadImageToR2, deleteImageFromR2 } from '../services/r2ImageService.js';
 import { JWT_SECRET } from '../config/jwt.js';
 import { superAdminLoginRateLimiter } from '../middleware/rateLimiters.js';
+import { resolveCanonicalSubscriptionState } from '../services/subscriptionState.js';
 
 let sharpModule = null;
 async function getSharp() {
@@ -190,6 +191,217 @@ router.get('/pending-registrations', authenticateToken, requireSuperAdmin, async
   } catch (err) {
     console.error('Fetch pending registrations error:', err);
     res.status(500).json({ error: 'Failed to fetch pending registrations' });
+  }
+});
+
+// GET /api/superadmin/restaurants/:id/360 — Complete Consolidated Tenant 360° Profile
+router.get('/restaurants/:id/360', authenticateToken, requireSuperAdmin, async (req, res) => {
+  try {
+    const { id } = req.params;
+    const restoId = parseInt(id, 10);
+    if (!restoId || isNaN(restoId)) {
+      return res.status(400).json({ error: 'Invalid tenant ID' });
+    }
+
+    // 1. Fetch Restaurant
+    const restoRows = await query('SELECT * FROM restaurants WHERE id = $1', [restoId]);
+    if (!restoRows || restoRows.length === 0) {
+      return res.status(404).json({ error: 'Tenant restaurant not found' });
+    }
+    const resto = restoRows[0];
+
+    // 2. Fetch Admin / Owner User (Excluding password_hash)
+    const adminRows = await query("SELECT id, username, role, created_at FROM admins WHERE restaurant_id = $1 AND role = 'restaurant_admin' ORDER BY id ASC LIMIT 1", [restoId]);
+    const adminUser = adminRows[0] || null;
+
+    // 3. Fetch Subscription & Canonical Status
+    const subRows = await query('SELECT * FROM subscriptions WHERE restaurant_id = $1 ORDER BY id DESC LIMIT 1', [restoId]);
+    const sub = subRows[0] || null;
+    const canonicalState = resolveCanonicalSubscriptionState({ resto, sub, now: new Date() });
+
+    // 4. Fetch Authoritative SaaS Plan for this tenant's tier
+    const planTierKey = (resto.plan_tier || 'pro').toLowerCase().trim();
+    const planRows = await query('SELECT * FROM saas_plans WHERE LOWER(key) = $1', [planTierKey]);
+    const saasPlan = planRows[0] || {
+      key: planTierKey,
+      name: `${planTierKey.toUpperCase()} Plan`,
+      price: resto.plan_price || 999,
+      dish_limit: 500,
+      category_limit: 50,
+      table_limit: 100
+    };
+
+    // 5. Fetch Usage Counts
+    const [dishCountRow, catCountRow, orderCountRow] = await Promise.all([
+      query('SELECT COUNT(*) as count FROM dishes WHERE restaurant_id = $1', [restoId]),
+      query('SELECT COUNT(*) as count FROM categories WHERE restaurant_id = $1', [restoId]),
+      query('SELECT COUNT(*) as count FROM orders WHERE restaurant_id = $1', [restoId])
+    ]);
+
+    const dishCount = parseInt(dishCountRow[0]?.count || 0, 10);
+    const categoryCount = parseInt(catCountRow[0]?.count || 0, 10);
+    const orderCount = parseInt(orderCountRow[0]?.count || 0, 10);
+
+    // 6. Fetch Payments & Billing Summary (Clean projection: zero secrets)
+    const paymentRows = await query(
+      `SELECT id, amount, currency, status, payment_type, gateway, paid_at, created_at 
+       FROM payments 
+       WHERE restaurant_id = $1 
+       ORDER BY created_at DESC, id DESC 
+       LIMIT 50`,
+      [restoId]
+    );
+
+    let totalSuccessfulAmount = 0;
+    let totalSuccessfulCount = 0;
+    let totalFailedCount = 0;
+    let latestPayment = null;
+
+    for (const p of paymentRows) {
+      if (p.status === 'SUCCESS' || p.status === 'COMPLETED' || p.status === 'PAID') {
+        totalSuccessfulCount++;
+        totalSuccessfulAmount += parseFloat(p.amount || 0);
+        if (!latestPayment) latestPayment = p;
+      } else if (p.status === 'FAILED' || p.status === 'ERROR' || p.status === 'CANCELLED') {
+        totalFailedCount++;
+      }
+    }
+
+    // 7. Fetch Activity Timeline / Audit Logs
+    const auditRows = await query(
+      `SELECT id, actor_role, action, details, created_at 
+       FROM audit_logs 
+       WHERE restaurant_id = $1 
+       ORDER BY created_at DESC, id DESC 
+       LIMIT 50`,
+      [restoId]
+    );
+
+    // Assembly of Safe Response Payload
+    res.json({
+      tenant: {
+        id: resto.id,
+        name: resto.name,
+        slug: resto.slug,
+        tagline: resto.tagline || '',
+        logo: resto.logo || '',
+        phone: resto.phone || '',
+        address: resto.address || '',
+        fssai_lic_no: resto.fssai_lic_no || '',
+        theme_color: resto.theme_color || 'gold',
+        business_type: resto.business_type || 'restaurant',
+        food_type: resto.food_type || 'both',
+        service_model: resto.service_model || 'dine_in',
+        active: resto.active !== false && resto.active !== 0 && resto.active !== '0',
+        created_at: resto.created_at || null,
+        onboarding_completed: resto.onboarding_completed !== false,
+        location_initialized: Boolean(resto.location_initialized),
+        custom_domain: resto.custom_domain || null,
+        scan_count: resto.scan_count || 0
+      },
+      owner: {
+        owner_name: resto.owner_name || null,
+        phone: resto.phone || null,
+        owner_email: resto.owner_email || null,
+        username: adminUser?.username || resto.owner_username || 'admin',
+        created_at: adminUser?.created_at || null
+      },
+      subscription: {
+        plan_tier: resto.plan_tier || 'pro',
+        plan_name: saasPlan.name || `${resto.plan_tier} Plan`,
+        plan_price: parseFloat(resto.plan_price || saasPlan.price || 999),
+        subscription_type: sub?.status === 'admin_granted' || resto.mandate_status === 'admin_granted' ? 'ADMIN_GRANTED' : (sub?.gateway === 'cashfree' ? 'CASHFREE_MANDATE' : (resto.subscription_type || 'PAID')),
+        status: canonicalState.status,
+        canonical_active: canonicalState.active,
+        is_complimentary: canonicalState.isComplimentary,
+        in_grace_period: canonicalState.inGracePeriod,
+        badge: canonicalState.badge,
+        trial_start: sub?.trial_start || resto.trial_started_at || null,
+        trial_end: sub?.trial_end || resto.trial_ends_at || null,
+        current_period_start: sub?.current_period_start || null,
+        current_period_end: sub?.current_period_end || resto.plan_expires_at || null,
+        access_until: canonicalState.accessUntil || resto.plan_expires_at || null,
+        auto_renew: sub?.auto_renew !== undefined ? (sub.auto_renew === 1 || sub.auto_renew === true || sub.auto_renew === '1') : (resto.auto_debit_enabled === 1),
+        mandate_status: resto.mandate_status || sub?.status || 'none',
+        cancel_requested_at: sub?.cancel_requested_at || null,
+        scheduled_plan_key: sub?.scheduled_plan_key || null,
+        previous_billing_snapshot: sub?.previous_billing_snapshot || null
+      },
+      billing: {
+        total_successful_payments: totalSuccessfulCount,
+        total_successful_amount: totalSuccessfulAmount,
+        total_failed_payments: totalFailedCount,
+        latest_payment: latestPayment ? {
+          amount: parseFloat(latestPayment.amount || 0),
+          currency: latestPayment.currency || 'INR',
+          status: latestPayment.status,
+          paid_at: latestPayment.paid_at || latestPayment.created_at,
+          payment_type: latestPayment.payment_type
+        } : null,
+        transactions: paymentRows.map(p => ({
+          id: p.id,
+          amount: parseFloat(p.amount || 0),
+          currency: p.currency || 'INR',
+          status: p.status,
+          payment_type: p.payment_type || 'subscription',
+          gateway: p.gateway || 'cashfree',
+          paid_at: p.paid_at || p.created_at
+        }))
+      },
+      usage: {
+        dishes: {
+          current: dishCount,
+          limit: saasPlan.max_dishes || saasPlan.dish_limit || 500,
+          percentage: (saasPlan.max_dishes || saasPlan.dish_limit) ? Math.min(100, Math.round((dishCount / (saasPlan.max_dishes || saasPlan.dish_limit)) * 100)) : 0
+        },
+        categories: {
+          current: categoryCount,
+          limit: saasPlan.max_categories || saasPlan.category_limit || 50,
+          percentage: (saasPlan.max_categories || saasPlan.category_limit) ? Math.min(100, Math.round((categoryCount / (saasPlan.max_categories || saasPlan.category_limit)) * 100)) : 0
+        },
+        tables: {
+          current: Number(resto.total_tables || 0),
+          limit: saasPlan.max_tables || saasPlan.table_limit || 100,
+          percentage: (saasPlan.max_tables || saasPlan.table_limit) ? Math.min(100, Math.round((Number(resto.total_tables || 0) / (saasPlan.max_tables || saasPlan.table_limit)) * 100)) : 0
+        },
+        cabins: Number(resto.total_cabins || 0),
+        rooms: Number(resto.total_rooms || 0),
+        vip_tables: Number(resto.total_vip || 0),
+        orders: orderCount,
+        scan_count: resto.scan_count || 0,
+        entitlements: {
+          kds_enabled: saasPlan.kds_enabled === 1 || saasPlan.kds_enabled === true || saasPlan.kds_enabled === '1',
+          whatsapp_ordering_enabled: saasPlan.whatsapp_ordering_enabled === 1 || saasPlan.whatsapp_ordering_enabled === true || saasPlan.whatsapp_ordering_enabled === '1',
+          direct_ordering_enabled: saasPlan.direct_ordering_enabled === 1 || saasPlan.direct_ordering_enabled === true || saasPlan.direct_ordering_enabled === '1',
+          google_reviews_enabled: saasPlan.google_reviews_enabled === 1 || saasPlan.google_reviews_enabled === true || saasPlan.google_reviews_enabled === '1',
+          custom_domain_enabled: saasPlan.custom_domain_enabled === 1 || saasPlan.custom_domain_enabled === true || saasPlan.custom_domain_enabled === '1',
+          gst_invoice_enabled: saasPlan.gst_invoice_enabled === 1 || saasPlan.gst_invoice_enabled === true || saasPlan.gst_invoice_enabled === '1',
+          dual_printer_enabled: saasPlan.dual_printer_enabled === 1 || saasPlan.dual_printer_enabled === true || saasPlan.dual_printer_enabled === '1',
+          watermark_removal_enabled: saasPlan.watermark_removal_enabled === 1 || saasPlan.watermark_removal_enabled === true || saasPlan.watermark_removal_enabled === '1',
+          analytics_export_enabled: saasPlan.analytics_export_enabled === 1 || saasPlan.analytics_export_enabled === true || saasPlan.analytics_export_enabled === '1'
+        }
+      },
+      activity: auditRows.map(a => ({
+        id: a.id,
+        action: a.action,
+        actor: a.actor_role || 'system',
+        details: a.details,
+        timestamp: a.created_at
+      })),
+      security: {
+        account_status: resto.active !== false && resto.active !== 0 && resto.active !== '0' ? 'ACTIVE' : 'SUSPENDED',
+        impersonation_allowed: true,
+        mandate_active: resto.mandate_status === 'active' || (sub && sub.status === 'active'),
+        auto_renew_enabled: sub?.auto_renew !== undefined ? (sub.auto_renew === 1 || sub.auto_renew === true || sub.auto_renew === '1') : (resto.auto_debit_enabled === 1),
+        last_impersonation: null
+      },
+      support: {
+        notes: "Internal tenant notes: not currently available."
+      }
+    });
+  } catch (err) {
+    console.error('Fetch Tenant 360 error:', err);
+    res.status(500).json({ error: 'Failed to fetch complete Tenant 360 data' });
   }
 });
 
