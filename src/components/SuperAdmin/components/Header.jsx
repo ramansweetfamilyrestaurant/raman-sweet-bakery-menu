@@ -126,8 +126,10 @@ export default function Header({
             )}
             <div className="sa-header-title-box">
               <span className="sa-desktop-breadcrumb">Super Admin /</span>
-              <h1 className="sa-header-title">
-                {currentTitle}
+              <h1 className="sa-header-title" style={{ display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
+                <span className="sa-mobile-only" style={{ color: 'var(--sa-text-main)', fontWeight: 900 }}>TouchQR</span>
+                <span className="sa-mobile-only" style={{ color: 'var(--sa-text-muted)', fontWeight: 700, fontSize: '0.84rem' }}>({currentTitle})</span>
+                <span className="sa-desktop-only">{currentTitle}</span>
               </h1>
             </div>
           </div>

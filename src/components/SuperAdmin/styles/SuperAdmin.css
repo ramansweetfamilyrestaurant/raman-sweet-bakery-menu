@@ -2507,8 +2507,8 @@
   }
 
   .sa-header-title {
-    font-size: 0.95rem !important;
-    max-width: 150px !important;
+    font-size: 0.92rem !important;
+    max-width: 190px !important;
     white-space: nowrap !important;
     overflow: hidden !important;
     text-overflow: ellipsis !important;
