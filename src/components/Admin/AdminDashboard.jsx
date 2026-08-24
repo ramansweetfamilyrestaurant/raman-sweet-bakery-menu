@@ -110,6 +110,15 @@ export default function AdminDashboard({ token, username, slug: propSlug = '', o
 
   const [isAudioReady, setIsAudioReady] = useState(false);
   const [audioBannerDismissed, setAudioBannerDismissed] = useState(false);
+  const [hasSoundSetupCompleted, setHasSoundSetupCompleted] = useState(() => {
+    if (typeof window === 'undefined') return false;
+    try {
+      return localStorage.getItem('touchqr_admin_sound_setup_v1') === 'enabled';
+    } catch (e) {
+      return false;
+    }
+  });
+
   const daysLeft = getDaysRemaining(restaurantInfo?.plan_expires_at);
   const isExpired = (daysLeft !== null && daysLeft <= 0) || (restaurantInfo?.active === false || restaurantInfo?.active === 0);
 
@@ -137,6 +146,10 @@ export default function AdminDashboard({ token, username, slug: propSlug = '', o
       unlockNotificationSound().then((success) => {
         if (success) {
           setIsAudioReady(true);
+          setHasSoundSetupCompleted(true);
+          try {
+            localStorage.setItem('touchqr_admin_sound_setup_v1', 'enabled');
+          } catch (e) {}
         }
       });
     };
@@ -150,17 +163,31 @@ export default function AdminDashboard({ token, username, slug: propSlug = '', o
     };
   }, [token]);
 
+  const handleEnableSound = () => {
+    unlockNotificationSound().then((success) => {
+      if (success) {
+        setIsAudioReady(true);
+        setAudioBannerDismissed(true);
+        setHasSoundSetupCompleted(true);
+        try {
+          localStorage.setItem('touchqr_admin_sound_setup_v1', 'enabled');
+        } catch (e) {}
+        setToastMessage('🔊 Alert Sounds Unlocked & Active!');
+        setTimeout(() => setToastMessage(''), 3000);
+      } else {
+        setToastMessage('⚠️ Sound could not be enabled. Tap Enable to try again.');
+        setTimeout(() => setToastMessage(''), 4000);
+      }
+    });
+    if ('Notification' in window && Notification.permission === 'default') {
+      Notification.requestPermission().catch(() => {});
+    }
+  };
+
   const requestAudioPermission = () => {
     try {
-      unlockNotificationSound().then((success) => {
-        if (success) {
-          setIsAudioReady(true);
-          setAudioBannerDismissed(true);
-        }
-      });
+      handleEnableSound();
       playKitchenChime();
-      setToastMessage('🔊 Order Siren Alarm Active & Sound Unlocked!');
-      setTimeout(() => setToastMessage(''), 4000);
     } catch (e) {
       console.warn('Audio test error:', e);
     }
@@ -2502,8 +2529,8 @@ export default function AdminDashboard({ token, username, slug: propSlug = '', o
         </div>
       )}
 
-      {/* 🔔 Admin Sound-Only Alert Unlock Banner */}
-      {!isAudioReady && !audioBannerDismissed && (
+      {/* 🔔 1. First-Time Full Width Sound Onboarding Banner */}
+      {!isAudioReady && !hasSoundSetupCompleted && !audioBannerDismissed && (
         <div style={{
           background: 'linear-gradient(135deg, #0F172A 0%, #1E293B 100%)',
           color: '#FFFFFF',
@@ -2529,22 +2556,7 @@ export default function AdminDashboard({ token, username, slug: propSlug = '', o
           </div>
           <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
             <button
-              onClick={() => {
-                unlockNotificationSound().then((success) => {
-                  if (success) {
-                    setIsAudioReady(true);
-                    setAudioBannerDismissed(true);
-                    setToastMessage('🔊 Alert Sounds Unlocked & Active!');
-                    setTimeout(() => setToastMessage(''), 3000);
-                  } else {
-                    setToastMessage('⚠️ Sound could not be enabled. Tap Enable to try again.');
-                    setTimeout(() => setToastMessage(''), 4000);
-                  }
-                });
-                if ('Notification' in window && Notification.permission === 'default') {
-                  Notification.requestPermission().catch(() => {});
-                }
-              }}
+              onClick={handleEnableSound}
               style={{
                 background: 'linear-gradient(135deg, #F59E0B 0%, #D97706 100%)',
                 color: '#FFFFFF',
@@ -2577,6 +2589,59 @@ export default function AdminDashboard({ token, username, slug: propSlug = '', o
               ✕
             </button>
           </div>
+        </div>
+      )}
+
+      {/* 🔔 2. Compact Post-Refresh Status Badge (Only shown if audio context is suspended after refresh before user gesture) */}
+      {!isAudioReady && hasSoundSetupCompleted && !audioBannerDismissed && (
+        <div style={{
+          position: 'fixed',
+          top: '72px',
+          right: '16px',
+          zIndex: 9999,
+          background: 'rgba(15, 23, 42, 0.92)',
+          backdropFilter: 'blur(8px)',
+          color: '#FFFFFF',
+          padding: '5px 12px',
+          borderRadius: '20px',
+          border: '1px solid rgba(245, 158, 11, 0.4)',
+          boxShadow: '0 4px 16px rgba(0,0,0,0.25)',
+          display: 'flex',
+          alignItems: 'center',
+          gap: '8px',
+          fontSize: '0.78rem',
+          fontWeight: 600
+        }}>
+          <span style={{ color: '#FBBF24' }}>🔔 Sound not active</span>
+          <button
+            onClick={handleEnableSound}
+            style={{
+              background: 'linear-gradient(135deg, #F59E0B, #D97706)',
+              border: 'none',
+              color: '#FFFFFF',
+              padding: '3px 10px',
+              borderRadius: '12px',
+              fontWeight: 700,
+              fontSize: '0.72rem',
+              cursor: 'pointer'
+            }}
+          >
+            Enable
+          </button>
+          <button
+            onClick={() => setAudioBannerDismissed(true)}
+            style={{
+              background: 'none',
+              border: 'none',
+              color: '#94A3B8',
+              cursor: 'pointer',
+              fontSize: '0.85rem',
+              padding: '0 2px'
+            }}
+            title="Dismiss"
+          >
+            ✕
+          </button>
         </div>
       )}
 
