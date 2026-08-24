@@ -20,27 +20,27 @@ export default function CommunicationView({ announcementsList, onSendAnnouncemen
   };
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
+    <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
       <div className="sa-section-header">
         <div>
           <h2 className="sa-section-title">
-            <Megaphone size={22} color="var(--sa-primary)" /> Broadcast Client Communication
+            <Megaphone size={20} color="var(--sa-primary)" /> Broadcast Client Communication
           </h2>
-          <span style={{ fontSize: '0.78rem', color: 'var(--sa-text-muted)', fontWeight: 600 }}>
+          <span style={{ fontSize: '0.74rem', color: 'var(--sa-text-muted)', fontWeight: 600 }}>
             Send real-time platform notification banners directly to tenant restaurant owner admin dashboards.
           </span>
         </div>
       </div>
 
       {/* Broadcast Sender Card */}
-      <div className="sa-table-container" style={{ padding: '24px' }}>
-        <h3 style={{ fontSize: '1.05rem', fontWeight: 900, color: 'var(--sa-text-main)', margin: '0 0 16px 0' }}>
+      <div className="sa-table-container" style={{ padding: '18px' }}>
+        <h3 style={{ fontSize: '0.98rem', fontWeight: 900, color: 'var(--sa-text-main)', margin: '0 0 12px 0' }}>
           📢 Broadcast New Banner Announcement
         </h3>
 
-        <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-          <div>
-            <label style={{ fontSize: '0.75rem', fontWeight: 800, color: 'var(--sa-text-muted)', display: 'block', marginBottom: '6px' }}>
+        <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+          <div className="sa-form-group" style={{ margin: 0 }}>
+            <label className="sa-label">
               ANNOUNCEMENT MESSAGE CONTENT:
             </label>
             <textarea
@@ -49,17 +49,17 @@ export default function CommunicationView({ announcementsList, onSendAnnouncemen
               placeholder="e.g. Scheduled system maintenance on Sunday from 2 AM to 4 AM IST. Menu service will remain 100% active."
               value={message}
               onChange={(e) => setMessage(e.target.value)}
-              style={{ width: '100%', padding: '12px', borderRadius: 'var(--sa-radius-md)', border: '1.5px solid var(--sa-border)', fontSize: '0.88rem', outline: 'none' }}
+              className="sa-textarea"
             />
           </div>
 
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '14px' }}>
-            <div>
-              <label style={{ fontSize: '0.75rem', fontWeight: 800, color: 'var(--sa-text-muted)', display: 'block', marginBottom: '6px' }}>NOTICE TYPE:</label>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '10px' }}>
+            <div className="sa-form-group" style={{ margin: 0 }}>
+              <label className="sa-label">NOTICE TYPE:</label>
               <select
                 value={type}
                 onChange={(e) => setType(e.target.value)}
-                style={{ width: '100%', padding: '10px', borderRadius: 'var(--sa-radius-md)', border: '1.5px solid var(--sa-border)', fontSize: '0.85rem', fontWeight: 700 }}
+                className="sa-select"
               >
                 <option value="info">ℹ️ Information (Blue Banner)</option>
                 <option value="success">🟢 System Announcement (Green Banner)</option>
@@ -68,12 +68,12 @@ export default function CommunicationView({ announcementsList, onSendAnnouncemen
               </select>
             </div>
 
-            <div>
-              <label style={{ fontSize: '0.75rem', fontWeight: 800, color: 'var(--sa-text-muted)', display: 'block', marginBottom: '6px' }}>TARGET AUDIENCE:</label>
+            <div className="sa-form-group" style={{ margin: 0 }}>
+              <label className="sa-label">TARGET AUDIENCE:</label>
               <select
                 value={targetAudience}
                 onChange={(e) => setTargetAudience(e.target.value)}
-                style={{ width: '100%', padding: '10px', borderRadius: 'var(--sa-radius-md)', border: '1.5px solid var(--sa-border)', fontSize: '0.85rem', fontWeight: 700 }}
+                className="sa-select"
               >
                 <option value="all">All Tenant Restaurants</option>
                 <option value="active">Active Paid Clients Only</option>
@@ -82,9 +82,9 @@ export default function CommunicationView({ announcementsList, onSendAnnouncemen
             </div>
           </div>
 
-          <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: '8px' }}>
+          <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: '4px' }}>
             <button type="submit" className="sa-btn sa-btn-accent" disabled={submitting}>
-              <Send size={16} /> {submitting ? 'Broadcasting...' : 'Broadcast Announcement Now'}
+              <Send size={15} /> {submitting ? 'Broadcasting...' : 'Broadcast Announcement Now'}
             </button>
           </div>
         </form>
