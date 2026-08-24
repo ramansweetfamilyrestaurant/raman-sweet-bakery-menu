@@ -7,6 +7,7 @@ import {
 } from 'lucide-react';
 import Drawer from '../components/Drawer';
 import StatusBadge from '../components/StatusBadge';
+import '../styles/SuperAdmin.css';
 
 export default function TenantDetailsView({ 
   resto, 
@@ -43,7 +44,7 @@ export default function TenantDetailsView({
     setLoading(true);
     setFetchErr('');
     try {
-      const authToken = token || localStorage.getItem('touchqr_superadmin_token') || sessionStorage.getItem('touchqr_superadmin_token');
+      const authToken = token || localStorage.getItem('saas_super_token') || localStorage.getItem('touchqr_superadmin_token') || sessionStorage.getItem('saas_super_token');
       const res = await fetch(`/api/superadmin/restaurants/${tenantId}/360`, {
         headers: {
           'Authorization': `Bearer ${authToken}`

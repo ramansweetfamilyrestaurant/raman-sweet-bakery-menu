@@ -1,7 +1,7 @@
 import React, { useEffect } from 'react';
 import { X } from 'lucide-react';
 
-export default function Drawer({ isOpen, onClose, title, subtitle, children, footer }) {
+export default function Drawer({ isOpen, onClose, title, subtitle, children, footer, width }) {
   useEffect(() => {
     const handleKeyDown = (e) => {
       if (e.key === 'Escape') onClose();
@@ -19,8 +19,12 @@ export default function Drawer({ isOpen, onClose, title, subtitle, children, foo
   if (!isOpen) return null;
 
   return (
-    <div className="sa-drawer-overlay" onClick={onClose}>
-      <div className="sa-drawer" onClick={(e) => e.stopPropagation()}>
+    <div className="sa-drawer-overlay" onClick={onClose} style={{ zIndex: 1200 }}>
+      <div 
+        className="sa-drawer" 
+        onClick={(e) => e.stopPropagation()}
+        style={width ? { maxWidth: width } : {}}
+      >
         <div className="sa-drawer-header">
           <div>
             <h3 style={{ fontSize: '1.1rem', fontWeight: 900, color: 'var(--sa-text-main)', margin: 0 }}>

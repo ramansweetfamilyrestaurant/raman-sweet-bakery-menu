@@ -7,6 +7,7 @@ import GrantFreeAccessModal from './modals/GrantFreeAccessModal';
 import RevokeFreeAccessModal from './modals/RevokeFreeAccessModal';
 import SaaSPlansView from './views/SaaSPlansView';
 import TenantDetailsView from './views/TenantDetailsView';
+import './styles/SuperAdmin.css';
 
 export default function SuperAdminDashboard({ token, username, onLogout, onReturnToMenu, onImpersonate }) {
   const [restaurants, setRestaurants] = useState([]);
@@ -1039,7 +1040,11 @@ export default function SuperAdminDashboard({ token, username, onLogout, onRetur
                   {/* Top Bar */}
                   <div>
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '12px' }}>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                      <div 
+                        onClick={() => setSelectedTenant360(r)}
+                        style={{ display: 'flex', alignItems: 'center', gap: '12px', cursor: 'pointer' }}
+                        title="Click to open Tenant 360° Profile"
+                      >
                         <img
                           src={getRestaurantLogoUrl(r.logo)}
                           alt={r.name}
