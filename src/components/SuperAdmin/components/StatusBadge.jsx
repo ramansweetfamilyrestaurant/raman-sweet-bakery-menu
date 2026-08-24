@@ -2,6 +2,7 @@ import React from 'react';
 
 export default function StatusBadge({ status, type }) {
   let badgeClass = 'sa-badge-info';
+  let dotType = 'active';
   let label = status || 'UNKNOWN';
 
   const s = String(status || '').toLowerCase();
@@ -9,26 +10,38 @@ export default function StatusBadge({ status, type }) {
 
   if (t === 'ADMIN_GRANTED' || s === 'admin_granted' || s === 'vip' || t === 'COMPLIMENTARY' || s === 'complimentary') {
     badgeClass = 'sa-badge-purple';
-    label = '🟣 VIP ACCESS';
+    dotType = 'vip';
+    label = 'VIP ACCESS';
   } else if (s === 'active' || status === true) {
     badgeClass = 'sa-badge-success';
-    label = '🟢 ACTIVE';
+    dotType = 'active';
+    label = 'ACTIVE';
   } else if (s === 'trialing' || s === 'trial') {
     badgeClass = 'sa-badge-info';
-    label = '🎁 FREE TRIAL';
+    dotType = 'active';
+    label = 'FREE TRIAL';
   } else if (s === 'payment_failed' || s === 'past_due' || s === 'failed') {
     badgeClass = 'sa-badge-warning';
-    label = '🟡 PAST DUE';
+    dotType = 'warning';
+    label = 'PAST DUE';
   } else if (s === 'auto_renew_off' || s === 'cancelled') {
     badgeClass = 'sa-badge-warning';
-    label = '🟠 RENEW OFF';
+    dotType = 'warning';
+    label = 'RENEW OFF';
   } else if (s === 'expired' || status === false) {
     badgeClass = 'sa-badge-danger';
-    label = '🔴 EXPIRED';
+    dotType = 'danger';
+    label = 'EXPIRED';
   } else if (s === 'suspended') {
     badgeClass = 'sa-badge-muted';
-    label = '⚫ SUSPENDED';
+    dotType = 'muted';
+    label = 'SUSPENDED';
   }
 
-  return <span className={`sa-badge ${badgeClass}`}>{label}</span>;
+  return (
+    <span className={`sa-badge ${badgeClass}`}>
+      <span className={`sa-live-dot ${dotType}`} />
+      {label}
+    </span>
+  );
 }
