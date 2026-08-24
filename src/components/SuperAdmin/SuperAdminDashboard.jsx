@@ -1077,115 +1077,339 @@ export default function SuperAdminDashboard({ token, username, onLogout, onRetur
           {/* ========================================================================= */}
           {activeView === 'overview' && (
             <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
-              {/* KPI Analytics Summary Cards Grid */}
+              {/* 👑 1. TOP 5 PRIMARY KPI HERO CARDS */}
               <div className="sa-stats-grid">
-                {/* Card 1: Registered Tenants */}
-                <div className="sa-stat-card hover-lift">
+                {/* KPI 1: MRR Revenue */}
+                <div
+                  onClick={() => setActiveView('billing')}
+                  className="sa-stat-card hover-lift"
+                  style={{ background: 'linear-gradient(135deg, #0A2315 0%, #164E2A 100%)', color: '#FFFFFF', border: '1.5px solid #DFBA67', cursor: 'pointer' }}
+                  title="Click to view Billing & Subscription Management"
+                >
                   <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                    <div style={{ width: '40px', height: '40px', borderRadius: '12px', background: 'linear-gradient(135deg, #DCFCE7 0%, #BBF7D0 100%)', color: '#15803D', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-                      <Store size={20} />
+                    <div style={{ width: '42px', height: '42px', borderRadius: '12px', background: 'linear-gradient(135deg, #DFBA67 0%, #C5A059 100%)', color: '#0A2315', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                      <DollarSign size={22} color="#0A2315" />
                     </div>
                     <div>
-                      <div className="sa-stat-value" style={{ color: 'var(--sa-primary)' }}>{restaurants.length}</div>
-                      <div className="sa-stat-label">Total Tenants</div>
+                      <div className="sa-stat-value" style={{ color: '#DFBA67', fontSize: '1.45rem', fontWeight: 900 }}>₹{estimatedRevenue.toLocaleString()}</div>
+                      <div className="sa-stat-label" style={{ color: 'rgba(255,255,255,0.9)' }}>MRR Revenue</div>
                     </div>
                   </div>
                 </div>
 
-                {/* Card 2: Active Subscriptions */}
-                <div className="sa-stat-card hover-lift">
+                {/* KPI 2: Active Paid Tenants */}
+                <div
+                  onClick={() => { setActiveView('tenants'); setStatusFilter('active'); }}
+                  className="sa-stat-card hover-lift"
+                  style={{ cursor: 'pointer' }}
+                  title="Click to filter Active Paid Tenants"
+                >
                   <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                    <div style={{ width: '40px', height: '40px', borderRadius: '12px', background: 'linear-gradient(135deg, #FEF3C7 0%, #FDE68A 100%)', color: '#B45309', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-                      <CheckCircle size={20} />
+                    <div style={{ width: '42px', height: '42px', borderRadius: '12px', background: '#DCFCE7', color: '#15803D', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                      <CheckCircle size={22} />
                     </div>
                     <div>
-                      <div className="sa-stat-value" style={{ color: '#B45309' }}>{totalActive}</div>
+                      <div className="sa-stat-value" style={{ color: '#15803D', fontSize: '1.45rem', fontWeight: 900 }}>{totalActive}</div>
                       <div className="sa-stat-label">Active Paid</div>
                     </div>
                   </div>
                 </div>
 
-                {/* Card 3: Total Dishes Hosted */}
-                <div className="sa-stat-card hover-lift">
+                {/* KPI 3: Free Trial Accounts */}
+                <div
+                  onClick={() => { setActiveView('tenants'); setStatusFilter('trial'); }}
+                  className="sa-stat-card hover-lift"
+                  style={{ cursor: 'pointer' }}
+                  title="Click to filter Free Trial Accounts"
+                >
                   <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                    <div style={{ width: '40px', height: '40px', borderRadius: '12px', background: 'linear-gradient(135deg, #EEF2FF 0%, #E0E7FF 100%)', color: '#4338CA', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-                      <Utensils size={20} />
+                    <div style={{ width: '42px', height: '42px', borderRadius: '12px', background: '#EFF6FF', color: '#1D4ED8', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                      <Calendar size={22} />
                     </div>
                     <div>
-                      <div className="sa-stat-value" style={{ color: '#4338CA' }}>{totalDishes}</div>
-                      <div className="sa-stat-label">Dishes Hosted</div>
+                      <div className="sa-stat-value" style={{ color: '#1D4ED8', fontSize: '1.45rem', fontWeight: 900 }}>
+                        {restaurants.filter(r => r.subscription_status === 'trialing' || (r.trial_ends_at && new Date(r.trial_ends_at) > new Date())).length}
+                      </div>
+                      <div className="sa-stat-label">Free Trial</div>
                     </div>
                   </div>
                 </div>
 
-                {/* Card 4: Total QR Code Scans */}
-                <div className="sa-stat-card hover-lift">
+                {/* KPI 4: Past Due / Payment Failed */}
+                <div
+                  onClick={() => { setActiveView('tenants'); setStatusFilter('failed'); }}
+                  className="sa-stat-card hover-lift"
+                  style={{ cursor: 'pointer' }}
+                  title="Click to view Payment Failed Accounts"
+                >
                   <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                    <div style={{ width: '40px', height: '40px', borderRadius: '12px', background: 'linear-gradient(135deg, #F3E8FF 0%, #E9D5FF 100%)', color: '#7E22CE', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-                      <QrCode size={20} />
+                    <div style={{ width: '42px', height: '42px', borderRadius: '12px', background: '#FEF3C7', color: '#B45309', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                      <CreditCard size={22} />
                     </div>
                     <div>
-                      <div className="sa-stat-value" style={{ color: '#7E22CE' }}>{totalScans}</div>
-                      <div className="sa-stat-label">QR Scans</div>
+                      <div className="sa-stat-value" style={{ color: '#B45309', fontSize: '1.45rem', fontWeight: 900 }}>
+                        {restaurants.filter(r => r.subscription_status === 'payment_failed' || r.subscription_status === 'past_due').length}
+                      </div>
+                      <div className="sa-stat-label">Past Due / Failed</div>
                     </div>
                   </div>
                 </div>
 
-                {/* Card 5: Est. Monthly SaaS Revenue */}
-                <div className="sa-stat-card hover-lift btn-pulse" style={{ background: 'linear-gradient(135deg, #0A2315 0%, #164E2A 100%)', color: '#FFFFFF', border: '1.5px solid #DFBA67' }}>
+                {/* KPI 5: Total Tenants */}
+                <div
+                  onClick={() => { setActiveView('tenants'); setStatusFilter('all'); }}
+                  className="sa-stat-card hover-lift"
+                  style={{ cursor: 'pointer' }}
+                  title="Click to view All Tenants Directory"
+                >
                   <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                    <div style={{ width: '40px', height: '40px', borderRadius: '12px', background: 'linear-gradient(135deg, #DFBA67 0%, #C5A059 100%)', color: '#0A2315', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-                      <DollarSign size={22} color="#0A2315" />
+                    <div style={{ width: '42px', height: '42px', borderRadius: '12px', background: '#F1F5F9', color: '#475569', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                      <Store size={22} />
                     </div>
                     <div>
-                      <div className="sa-stat-value" style={{ color: '#DFBA67' }}>₹{estimatedRevenue.toLocaleString()}</div>
-                      <div className="sa-stat-label" style={{ color: 'rgba(255,255,255,0.9)' }}>MRR Revenue</div>
+                      <div className="sa-stat-value" style={{ color: 'var(--sa-primary)', fontSize: '1.45rem', fontWeight: 900 }}>{restaurants.length}</div>
+                      <div className="sa-stat-label">Total Tenants</div>
                     </div>
                   </div>
                 </div>
               </div>
 
-              {/* Pending Approvals Alert Banner */}
-              {totalPending > 0 && (
-                <div style={{
-                  background: 'linear-gradient(135deg, #FEF3C7 0%, #FDE68A 100%)',
-                  border: '2px solid #F59E0B',
-                  borderRadius: '16px',
-                  padding: '14px 18px',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'space-between',
-                  flexWrap: 'wrap',
-                  gap: '12px',
-                  boxShadow: '0 4px 16px rgba(245,158,11,0.15)'
-                }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                    <div style={{ fontSize: '24px' }}>🔔</div>
-                    <div>
-                      <h3 style={{ fontSize: '0.95rem', fontWeight: 900, color: '#B45309', margin: 0 }}>
-                        {totalPending} New Registration{totalPending > 1 ? 's' : ''} Pending Approval!
-                      </h3>
-                      <p style={{ fontSize: '0.76rem', color: '#78350F', margin: '2px 0 0 0', fontWeight: 600 }}>
-                        New restaurant owners signed up and are waiting for your permission to start their trial.
-                      </p>
+              {/* ⚠️ 2. TWO-COLUMN OPERATIONAL HUBS: NEEDS ATTENTION & PLATFORM HEALTH */}
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))', gap: '18px' }}>
+                {/* LEFT: NEEDS ATTENTION HUB */}
+                <div className="sa-table-container" style={{ padding: '20px', background: '#FFFFFF', borderRadius: '16px', display: 'flex', flexDirection: 'column', gap: '14px' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                      <div style={{ width: '32px', height: '32px', borderRadius: '8px', background: '#FEF3C7', color: '#B45309', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                        <Shield size={18} />
+                      </div>
+                      <h3 style={{ margin: 0, fontSize: '1.05rem', fontWeight: 900, color: 'var(--sa-text-main)' }}>⚠️ Needs Attention</h3>
+                    </div>
+                    <span style={{ fontSize: '0.74rem', color: 'var(--sa-text-muted)', fontWeight: 700 }}>Operational Alerts</span>
+                  </div>
+
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                    {/* Row: Pending Approvals */}
+                    {totalPending > 0 && (
+                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '10px 14px', background: '#FFFBEB', borderRadius: '12px', border: '1px solid #FCD34D' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                          <span style={{ background: '#B45309', color: '#FFF', padding: '2px 6px', borderRadius: '4px', fontSize: '0.68rem', fontWeight: 900 }}>PENDING</span>
+                          <span style={{ fontSize: '0.82rem', fontWeight: 800, color: '#92400E' }}>{totalPending} Registration{totalPending > 1 ? 's' : ''} Pending Approval</span>
+                        </div>
+                        <button
+                          onClick={() => { setActiveView('tenants'); setStatusFilter('suspended'); }}
+                          className="sa-btn sa-btn-secondary sa-btn-sm"
+                          style={{ padding: '4px 10px', fontSize: '0.74rem', fontWeight: 800 }}
+                        >
+                          Review ➔
+                        </button>
+                      </div>
+                    )}
+
+                    {/* Row: Payment Failures */}
+                    {restaurants.filter(r => r.subscription_status === 'payment_failed' || r.subscription_status === 'past_due').length > 0 && (
+                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '10px 14px', background: '#FEF2F2', borderRadius: '12px', border: '1px solid #FCA5A5' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                          <span style={{ background: '#DC2626', color: '#FFF', padding: '2px 6px', borderRadius: '4px', fontSize: '0.68rem', fontWeight: 900 }}>CRITICAL</span>
+                          <span style={{ fontSize: '0.82rem', fontWeight: 800, color: '#991B1B' }}>
+                            {restaurants.filter(r => r.subscription_status === 'payment_failed' || r.subscription_status === 'past_due').length} Payment Failures
+                          </span>
+                        </div>
+                        <button
+                          onClick={() => { setActiveView('tenants'); setStatusFilter('failed'); }}
+                          className="sa-btn sa-btn-secondary sa-btn-sm"
+                          style={{ padding: '4px 10px', fontSize: '0.74rem', fontWeight: 800 }}
+                        >
+                          Resolve ➔
+                        </button>
+                      </div>
+                    )}
+
+                    {/* Row: Cancellations Requested */}
+                    {restaurants.filter(r => r.cancel_requested_at !== null).length > 0 && (
+                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '10px 14px', background: '#FEF3C7', borderRadius: '12px', border: '1px solid #FCD34D' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                          <span style={{ background: '#D97706', color: '#FFF', padding: '2px 6px', borderRadius: '4px', fontSize: '0.68rem', fontWeight: 900 }}>CANCELLATION</span>
+                          <span style={{ fontSize: '0.82rem', fontWeight: 800, color: '#B45309' }}>
+                            {restaurants.filter(r => r.cancel_requested_at !== null).length} Pending Cancellations
+                          </span>
+                        </div>
+                        <button
+                          onClick={() => setActiveView('billing')}
+                          className="sa-btn sa-btn-secondary sa-btn-sm"
+                          style={{ padding: '4px 10px', fontSize: '0.74rem', fontWeight: 800 }}
+                        >
+                          View ➔
+                        </button>
+                      </div>
+                    )}
+
+                    {/* Row: Expiring in <= 7 Days */}
+                    {restaurants.filter(r => {
+                      const d = getDaysRemaining(r.plan_expires_at);
+                      return d !== null && d > 0 && d <= 7 && r.subscription_type !== 'ADMIN_GRANTED';
+                    }).length > 0 && (
+                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '10px 14px', background: '#F8FAFC', borderRadius: '12px', border: '1px solid #E2E8F0' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                          <span style={{ background: '#64748B', color: '#FFF', padding: '2px 6px', borderRadius: '4px', fontSize: '0.68rem', fontWeight: 900 }}>EXPIRING</span>
+                          <span style={{ fontSize: '0.82rem', fontWeight: 800, color: '#334155' }}>
+                            {restaurants.filter(r => {
+                              const d = getDaysRemaining(r.plan_expires_at);
+                              return d !== null && d > 0 && d <= 7 && r.subscription_type !== 'ADMIN_GRANTED';
+                            }).length} Subscriptions Expiring Soon
+                          </span>
+                        </div>
+                        <button
+                          onClick={() => { setActiveView('tenants'); setStatusFilter('expired'); }}
+                          className="sa-btn sa-btn-secondary sa-btn-sm"
+                          style={{ padding: '4px 10px', fontSize: '0.74rem', fontWeight: 800 }}
+                        >
+                          View ➔
+                        </button>
+                      </div>
+                    )}
+
+                    {/* All Clear State if no issues */}
+                    {totalPending === 0 && restaurants.filter(r => r.subscription_status === 'payment_failed' || r.subscription_status === 'past_due').length === 0 && (
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '14px', background: '#F0FDF4', borderRadius: '12px', border: '1px solid #86EFAC' }}>
+                        <CheckCircle size={20} color="#16A34A" />
+                        <div>
+                          <strong style={{ fontSize: '0.84rem', color: '#15803D', display: 'block' }}>All Systems Operational</strong>
+                          <span style={{ fontSize: '0.74rem', color: '#166534' }}>Zero pending approvals or unresolved payment issues.</span>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                </div>
+
+                {/* RIGHT: PLATFORM HEALTH & ENGAGEMENT */}
+                <div className="sa-table-container" style={{ padding: '20px', background: '#FFFFFF', borderRadius: '16px', display: 'flex', flexDirection: 'column', gap: '14px' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                      <div style={{ width: '32px', height: '32px', borderRadius: '8px', background: '#EEF2FF', color: '#4338CA', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                        <Database size={18} />
+                      </div>
+                      <h3 style={{ margin: 0, fontSize: '1.05rem', fontWeight: 900, color: 'var(--sa-text-main)' }}>⚡ Platform Engagement & Health</h3>
+                    </div>
+                    <span style={{ fontSize: '0.74rem', color: 'var(--sa-text-muted)', fontWeight: 700 }}>Telemetry</span>
+                  </div>
+
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
+                    <div style={{ padding: '12px 14px', background: 'var(--sa-surface-subtle)', borderRadius: '12px', border: '1px solid var(--sa-border)' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '6px', color: '#7E22CE', marginBottom: '4px' }}>
+                        <QrCode size={16} />
+                        <span style={{ fontSize: '0.72rem', fontWeight: 800, color: 'var(--sa-text-muted)' }}>TOTAL QR SCANS</span>
+                      </div>
+                      <div style={{ fontSize: '1.25rem', fontWeight: 900, color: '#7E22CE' }}>{totalScans.toLocaleString()}</div>
+                    </div>
+
+                    <div style={{ padding: '12px 14px', background: 'var(--sa-surface-subtle)', borderRadius: '12px', border: '1px solid var(--sa-border)' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '6px', color: '#4338CA', marginBottom: '4px' }}>
+                        <Utensils size={16} />
+                        <span style={{ fontSize: '0.72rem', fontWeight: 800, color: 'var(--sa-text-muted)' }}>DISHES HOSTED</span>
+                      </div>
+                      <div style={{ fontSize: '1.25rem', fontWeight: 900, color: '#4338CA' }}>{totalDishes.toLocaleString()}</div>
                     </div>
                   </div>
 
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '10px 14px', background: '#F8FAFC', borderRadius: '12px', border: '1px solid var(--sa-border)' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                      <span className="sa-badge sa-badge-success">CONNECTED</span>
+                      <span style={{ fontSize: '0.8rem', fontWeight: 800, color: 'var(--sa-text-main)' }}>Neon DB Index & Storage</span>
+                    </div>
+                    <button
+                      onClick={() => setActiveView('operations')}
+                      className="sa-btn sa-btn-secondary sa-btn-sm"
+                      style={{ padding: '4px 10px', fontSize: '0.74rem', fontWeight: 800 }}
+                    >
+                      Optimize ➔
+                    </button>
+                  </div>
+                </div>
+              </div>
+
+              {/* 📋 3. RECENT TENANT SIGNUPS & ACTIVITY TABLE */}
+              <div className="sa-table-container" style={{ padding: '20px', background: '#FFFFFF', borderRadius: '16px' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '14px', flexWrap: 'wrap', gap: '10px' }}>
+                  <div>
+                    <h3 style={{ margin: 0, fontSize: '1.05rem', fontWeight: 900, color: 'var(--sa-text-main)' }}>
+                      📋 Recent Tenant Activity
+                    </h3>
+                    <span style={{ fontSize: '0.74rem', color: 'var(--sa-text-muted)', fontWeight: 600 }}>
+                      Latest onboarded restaurant accounts and status
+                    </span>
+                  </div>
+
                   <button
-                    onClick={() => setStatusFilter('pending')}
-                    style={{
-                      background: '#B45309', color: '#FFFFFF', padding: '8px 14px', borderRadius: '10px',
-                      border: 'none', fontWeight: 900, fontSize: '0.78rem', cursor: 'pointer',
-                      boxShadow: '0 3px 10px rgba(180,83,9,0.25)'
-                    }}
+                    onClick={() => setActiveView('tenants')}
+                    className="sa-btn sa-btn-accent sa-btn-sm"
+                    style={{ fontWeight: 900, fontSize: '0.78rem' }}
                   >
-                    View Pending ({totalPending}) ➔
+                    View All {restaurants.length} Tenants ➔
                   </button>
                 </div>
-              )}
 
-              {/* Directory Controls & Cards */}
-              {renderDirectorySection()}
+                <div className="sa-responsive-table">
+                  <table className="sa-table">
+                    <thead>
+                      <tr>
+                        <th>RESTAURANT</th>
+                        <th>OWNER / CONTACT</th>
+                        <th>PLAN</th>
+                        <th>STATUS</th>
+                        <th style={{ textAlign: 'right' }}>ACTION</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {[...restaurants].sort((a, b) => (b.id || 0) - (a.id || 0)).slice(0, 5).map(r => (
+                        <tr key={r.id}>
+                          <td>
+                            <div
+                              onClick={() => setSelectedTenant360(r)}
+                              style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer' }}
+                              title="Click to open Tenant 360° Profile"
+                            >
+                              <img
+                                src={getRestaurantLogoUrl(r.logo)}
+                                alt={r.name}
+                                onError={(e) => { e.currentTarget.src = '/images/default-logo.webp'; }}
+                                style={{ width: '32px', height: '32px', borderRadius: '50%', objectFit: 'cover', border: '1.5px solid #D4AF37' }}
+                              />
+                              <div>
+                                <strong style={{ display: 'block', fontSize: '0.86rem', color: 'var(--sa-text-main)' }}>{r.name}</strong>
+                                <span style={{ fontSize: '0.7rem', color: 'var(--sa-accent-hover, #B48F27)', fontWeight: 700 }}>/{r.slug}</span>
+                              </div>
+                            </div>
+                          </td>
+                          <td>
+                            <span style={{ fontFamily: 'monospace', fontWeight: 800, fontSize: '0.78rem', display: 'block', color: 'var(--sa-text-main)' }}>
+                              {r.owner_username || 'admin'}
+                            </span>
+                            <span style={{ fontSize: '0.7rem', color: 'var(--sa-text-muted)' }}>
+                              {r.phone || r.owner_email || 'No contact'}
+                            </span>
+                          </td>
+                          <td>
+                            <span style={{ fontWeight: 800, color: 'var(--sa-primary)', fontSize: '0.78rem' }}>{(r.plan_tier || 'pro').toUpperCase()}</span>
+                            <span style={{ fontSize: '0.68rem', color: 'var(--sa-text-muted)', display: 'block' }}>₹{r.plan_price || 999}/mo</span>
+                          </td>
+                          <td>{renderStatusBadge(r)}</td>
+                          <td style={{ textAlign: 'right' }}>
+                            <button
+                              onClick={() => setSelectedTenant360(r)}
+                              className="sa-btn sa-btn-secondary sa-btn-sm"
+                              style={{ padding: '4px 9px', fontSize: '0.72rem', fontWeight: 800 }}
+                              title="Open 360° Profile"
+                            >
+                              🔍 360°
+                            </button>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
             </div>
           )}
 
