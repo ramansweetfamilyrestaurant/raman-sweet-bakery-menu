@@ -2086,7 +2086,7 @@ export default function App() {
             <span style={{ fontSize: '1.2rem' }}>🛎️</span>
             <div>
               <strong style={{ fontSize: '0.86rem', color: 'var(--gold-bright)', display: 'block' }}>
-                Order #{activeOrderTrack.id} • {formatCustomerLocation(activeOrderTrack.table_number)}
+                Order {activeOrderTrack.id} • {formatCustomerLocation(activeOrderTrack.table_number)}
               </strong>
               <span style={{ fontSize: '0.76rem', color: '#E5E7EB', fontWeight: 700 }}>
                 Status: {
@@ -2767,7 +2767,7 @@ export default function App() {
                     </strong>
                     {isAddon && (
                       <span style={{ fontSize: '0.74rem', color: '#059669', fontWeight: 800 }}>
-                        Active Session: {getDynamicSpaceLabel() || `Table #${effectiveTableNum || '1'}`}
+                        Active Session: {getDynamicSpaceLabel() || `Table ${effectiveTableNum || '1'}`}
                       </span>
                     )}
                   </div>
@@ -2855,18 +2855,18 @@ export default function App() {
                                 const isCabin = activeType === 'cabin' || String(effectiveTableNum || '').toLowerCase().includes('cabin');
                                 const isVip = activeType === 'vip' || String(effectiveTableNum || '').toLowerCase().includes('vip');
                                 if (isCin) {
-                                  return getDynamicSpaceLabel() ? 'SCANNED SEAT 🔒' : 'SEAT #';
+                                  return getDynamicSpaceLabel() ? 'SCANNED SEAT 🔒' : 'SEAT';
                                 }
                                 if (isRoom) {
-                                  return getDynamicSpaceLabel() ? 'SCANNED ROOM 🔒' : 'ROOM #';
+                                  return getDynamicSpaceLabel() ? 'SCANNED ROOM 🔒' : 'ROOM';
                                 }
                                 if (isCabin) {
-                                  return getDynamicSpaceLabel() ? 'SCANNED CABIN 🔒' : 'CABIN #';
+                                  return getDynamicSpaceLabel() ? 'SCANNED CABIN 🔒' : 'CABIN';
                                 }
                                 if (isVip) {
-                                  return getDynamicSpaceLabel() ? 'SCANNED VIP LOUNGE 🔒' : 'VIP #';
+                                  return getDynamicSpaceLabel() ? 'SCANNED VIP LOUNGE 🔒' : 'VIP';
                                 }
-                                return getDynamicSpaceLabel() ? 'SCANNED TABLE 🔒' : 'TABLE #';
+                                return getDynamicSpaceLabel() ? 'SCANNED TABLE 🔒' : 'TABLE';
                               })()}
                             </label>
                             <input
@@ -3070,7 +3070,7 @@ export default function App() {
 
             <div style={{ background: 'rgba(255,255,255,0.08)', borderRadius: '16px', padding: '16px', margin: '16px 0', border: '1px solid rgba(255,255,255,0.15)' }}>
               <p style={{ fontSize: '1.1rem', fontWeight: 900, color: '#34D399', margin: '0 0 4px 0' }}>
-                Order #{orderSuccessModal.order_id} • {formatCustomerLocation(orderSuccessModal.table_number)}
+                Order {orderSuccessModal.order_id} • {formatCustomerLocation(orderSuccessModal.table_number)}
               </p>
               <p style={{ fontSize: '0.82rem', color: '#D1D5DB', margin: 0 }}>
                 Status: <strong style={{ color: '#FBBF24' }}>Pending Kitchen Acceptance 🟡</strong>

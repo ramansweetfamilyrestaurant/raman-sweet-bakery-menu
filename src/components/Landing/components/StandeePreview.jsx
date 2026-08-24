@@ -42,7 +42,7 @@ export default function StandeePreview() {
             <div className="km-standee-card">
               <div className="km-standee-header">
                 <QrCode size={16} color="#D4AF37" />
-                <span>TABLE #05 STANDEE</span>
+                <span>TABLE 05 STANDEE</span>
               </div>
               <div className="km-standee-qr-box">
                 <div className="km-standee-qr-frame">
@@ -73,7 +73,7 @@ export default function StandeePreview() {
               </div>
               <div className="km-receipt-body">
                 <div className="km-receipt-line">
-                  <span>KOT #104 • Table #5</span>
+                  <span>KOT 104 • Table 5</span>
                   <strong>10:42 AM</strong>
                 </div>
                 <div className="km-receipt-divider" />

@@ -11,7 +11,7 @@ export default function Hero({ trialDays = 16, onStartTrial, onLiveDemo }) {
           <div className="km-hero-content">
             <div className="km-badge">
               <Sparkles size={14} color="#D4AF37" />
-              <span>INDIAN RESTAURANTS & CAFES #1 DIGITAL SAAS</span>
+              <span>INDIAN RESTAURANTS & CAFES NO. 1 DIGITAL SAAS</span>
             </div>
 
             <h1 className="km-title-lg">
@@ -75,7 +75,7 @@ export default function Hero({ trialDays = 16, onStartTrial, onLiveDemo }) {
                       <Bell size={20} className="pulse" />
                     </div>
                     <div>
-                      <div style={{ fontSize: '0.9rem', fontWeight: 900, color: '#FFF' }}>Table #4 • Order #1042</div>
+                      <div style={{ fontSize: '0.9rem', fontWeight: 900, color: '#FFF' }}>Table 4 • Order 1042</div>
                       <div style={{ fontSize: '0.75rem', color: '#94A3B8' }}>Paneer Butter Masala (Full) x1, Naan x3</div>
                     </div>
                   </div>
@@ -99,7 +99,7 @@ export default function Hero({ trialDays = 16, onStartTrial, onLiveDemo }) {
 
                   <div style={{ textAlign: 'center', padding: '8px 0' }}>
                     <div style={{ fontSize: '0.85rem', fontWeight: 900, color: '#FFF' }}>Royal Spice Family Restaurant</div>
-                    <div style={{ fontSize: '0.7rem', color: '#94A3B8', margin: '2px 0 8px 0' }}>⚡ Scan to Order • Table #4</div>
+                    <div style={{ fontSize: '0.7rem', color: '#94A3B8', margin: '2px 0 8px 0' }}>⚡ Scan to Order • Table 4</div>
                     
                     <div style={{ background: '#1E293B', borderRadius: '8px', padding: '8px', textAlign: 'left', marginBottom: '8px' }}>
                       <div style={{ fontSize: '0.75rem', fontWeight: 800, color: '#FFF' }}>Butter Paneer Thali</div>

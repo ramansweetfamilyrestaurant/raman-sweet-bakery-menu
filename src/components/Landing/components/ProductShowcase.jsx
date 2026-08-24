@@ -79,7 +79,7 @@ export default function ProductShowcase() {
               <div style={{ background: '#0F172A', borderRadius: '16px', padding: '20px', color: '#FFF' }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', borderBottom: '1px solid rgba(255,255,255,0.1)', paddingBottom: '12px', marginBottom: '16px' }}>
                   <div>
-                    <div style={{ fontSize: '1rem', fontWeight: 900, color: '#D4AF37' }}>Table #7 • Dine-In</div>
+                    <div style={{ fontSize: '1rem', fontWeight: 900, color: '#D4AF37' }}>Table 7 • Dine-In</div>
                     <div style={{ fontSize: '0.75rem', color: '#94A3B8' }}>Customer Order Cart</div>
                   </div>
                   <span style={{ background: 'rgba(16,185,129,0.2)', color: '#34D399', fontSize: '0.72rem', fontWeight: 800, padding: '4px 10px', borderRadius: '50px' }}>
@@ -162,7 +162,7 @@ export default function ProductShowcase() {
                     <strong style={{ fontSize: '0.9rem', color: '#F59E0B' }}>🛎️ NEW ORDER SIREN ringing...</strong>
                     <span style={{ fontSize: '0.75rem', color: '#94A3B8' }}>Just now</span>
                   </div>
-                  <div style={{ fontSize: '0.82rem', color: '#CBD5E1' }}>Table #3 • Veg Hakka Noodles x2, Veg Manchurian x1</div>
+                  <div style={{ fontSize: '0.82rem', color: '#CBD5E1' }}>Table 3 • Veg Hakka Noodles x2, Veg Manchurian x1</div>
                 </div>
 
                 <div style={{ background: '#1E293B', padding: '14px', borderRadius: '12px', borderLeft: '4px solid #10B981', color: '#FFF' }}>
@@ -170,7 +170,7 @@ export default function ProductShowcase() {
                     <strong style={{ fontSize: '0.9rem', color: '#34D399' }}>✓ KOT Printed & Cooking</strong>
                     <span style={{ fontSize: '0.75rem', color: '#94A3B8' }}>3 mins ago</span>
                   </div>
-                  <div style={{ fontSize: '0.82rem', color: '#CBD5E1' }}>Table #12 • Special Veg Thali x4</div>
+                  <div style={{ fontSize: '0.82rem', color: '#CBD5E1' }}>Table 12 • Special Veg Thali x4</div>
                 </div>
               </div>
             </div>

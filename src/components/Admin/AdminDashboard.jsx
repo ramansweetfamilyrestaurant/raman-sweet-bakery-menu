@@ -319,7 +319,7 @@ export default function AdminDashboard({ token, username, slug: propSlug = '', o
     try {
       if ('Notification' in window && Notification.permission === 'granted') {
         const notif = new Notification(`🛡️ ${tableLabel}: PRESENCE VERIFICATION!`, {
-          body: `Customer is requesting table presence verification to place order (Request #P-${requestId}). Click to approve.`,
+          body: `Customer is requesting table presence verification to place order (Request P-${requestId}). Click to approve.`,
           icon: '/favicon.svg',
           badge: '/favicon.svg',
           tag: `presence-${requestId}`,
@@ -421,7 +421,7 @@ export default function AdminDashboard({ token, username, slug: propSlug = '', o
           const rawTbl = String(latestCall.table_number || '1');
           const formattedTbl = (rawTbl.toLowerCase().includes('table') || rawTbl.toLowerCase().includes('cabin') || rawTbl.toLowerCase().includes('room') || rawTbl.toLowerCase().includes('vip'))
             ? rawTbl 
-            : `Table #${rawTbl}`;
+            : `Table ${rawTbl}`;
           console.log('[SOUND_DEBUG] presence_request_detected', { id: latestCall.id, table: formattedTbl });
           playPresenceAlert();
           triggerPresenceVerificationNotification(formattedTbl, latestCall.id);
@@ -431,7 +431,7 @@ export default function AdminDashboard({ token, username, slug: propSlug = '', o
           const rawTbl = String(latestCall.table_number || '1');
           const formattedTbl = (rawTbl.toLowerCase().includes('table') || rawTbl.toLowerCase().includes('cabin') || rawTbl.toLowerCase().includes('room') || rawTbl.toLowerCase().includes('vip'))
             ? rawTbl 
-            : `Table #${rawTbl}`;
+            : `Table ${rawTbl}`;
           console.log('[SOUND_DEBUG] waiter_request_detected', { id: latestCall.id, type: latestCall.request_type, table: formattedTbl });
           playWaiterAlert();
           setToastMessage(`🛎️ ${formattedTbl} Calling Waiter: "${latestCall.request_type}"!`);
@@ -470,7 +470,7 @@ export default function AdminDashboard({ token, username, slug: propSlug = '', o
 
           if (newlyPrepared) {
             playWaiterAlert();
-            const tblNum = newlyPrepared.table_number ? `Table #${newlyPrepared.table_number}` : `Order #${newlyPrepared.id}`;
+            const tblNum = newlyPrepared.table_number ? `Table ${newlyPrepared.table_number}` : `Order ${newlyPrepared.id}`;
             triggerFoodPreparedNotification(tblNum);
             setToastMessage(`🛎️ ${tblNum} Food is PREPARED in Kitchen! Ready to Serve.`);
             setTimeout(() => setToastMessage(''), 7000);
@@ -753,7 +753,7 @@ export default function AdminDashboard({ token, username, slug: propSlug = '', o
           }
         }
         const targetOrder = orders.find(o => String(o.id) === key);
-        const tblNum = targetOrder?.table_number ? `Table #${targetOrder.table_number}` : `Order #${orderId}`;
+        const tblNum = targetOrder?.table_number ? `Table ${targetOrder.table_number}` : `Order ${orderId}`;
         setToastMessage(`🛎️ ${tblNum} Food is PREPARED in Kitchen! Ready to Serve.`);
         setTimeout(() => setToastMessage(''), 5000);
       } else if (newStatus === 'served' || newStatus === 'completed') {
@@ -765,7 +765,7 @@ export default function AdminDashboard({ token, username, slug: propSlug = '', o
           }
         }
         const targetOrder = orders.find(o => String(o.id) === key);
-        const tblNum = targetOrder?.table_number ? `Table #${targetOrder.table_number}` : `Order #${orderId}`;
+        const tblNum = targetOrder?.table_number ? `Table ${targetOrder.table_number}` : `Order ${orderId}`;
         const msg = newStatus === 'served' ? `📦 ${tblNum} Marked SERVED at Counter` : `💳 ${tblNum} Served & Bill Completed!`;
         setToastMessage(msg);
         setTimeout(() => setToastMessage(''), 4000);
@@ -818,7 +818,7 @@ export default function AdminDashboard({ token, username, slug: propSlug = '', o
         text += "      *** [ REPRINT ] ***       \n";
       }
       text += "================================" + "\n";
-      text += `KOT No: #${order.id}\n`;
+      text += `KOT No: ${order.id}\n`;
       text += `Time: ${new Date(order.created_at || Date.now()).toLocaleTimeString('en-IN')}\n`;
       text += `Waiter/Guest: ${order.customer_name || 'Dine-In'}\n`;
       text += "--------------------------------" + "\n";
@@ -1000,7 +1000,7 @@ export default function AdminDashboard({ token, username, slug: propSlug = '', o
       <html>
         <head>
           <meta charset="utf-8" />
-          <title>KOT #${order.id}</title>
+          <title>KOT ${order.id}</title>
           <style>
             @page { margin: 0; size: ${selectedWidth} auto; }
             body {
@@ -1054,7 +1054,7 @@ export default function AdminDashboard({ token, username, slug: propSlug = '', o
           ${isReprint ? `<div class="reprint-banner">*** [ REPRINT ] ***</div>` : ''}
           <div class="header">
             <h2>KITCHEN ORDER TICKET</h2>
-            <div class="table-badge">KOT #${order.id}</div>
+            <div class="table-badge">KOT ${order.id}</div>
             ${isRoundAddon
               ? `<div class="round-badge">🔄 ROUND ${order.round_number} (ADD-ON ORDER)</div>`
               : `<div style="font-weight:900;font-size:12px;margin-top:2px;">ROUND 1 (NEW ORDER)</div>`
@@ -1139,7 +1139,7 @@ export default function AdminDashboard({ token, username, slug: propSlug = '', o
         itemsHtml += `
           <tr style="background:#F1F5F9;">
             <td colspan="2" style="padding:4px 6px;font-weight:900;font-size:11px;color:#334155;border-top:1px solid #CBD5E1;">
-              ROUND ${ord.round_number || (oIdx + 1)} • KOT #${ord.id}
+              ROUND ${ord.round_number || (oIdx + 1)} • KOT ${ord.id}
             </td>
           </tr>
         `;
@@ -1179,7 +1179,7 @@ export default function AdminDashboard({ token, username, slug: propSlug = '', o
       <html>
         <head>
           <meta charset="utf-8" />
-          <title>Customer Bill #${order.id}</title>
+          <title>Customer Bill ${order.id}</title>
           <style>
             @page { margin: 0; size: ${selectedWidth} auto; }
             body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; width: ${bodyWidth}; margin: 0 auto; padding: 10px; color: #000; }
@@ -1217,7 +1217,7 @@ export default function AdminDashboard({ token, username, slug: propSlug = '', o
 
           <div class="meta">
             <div style="display:flex;justify-content:space-between;align-items:center;">
-              <strong>INVOICE #${order.id}</strong>
+              <strong>INVOICE ${order.id}</strong>
               <span class="badge">${paymentMode}</span>
             </div>
             <div><strong>Date:</strong> ${formatDateTimeString(order.created_at)}</div>
@@ -3082,7 +3082,7 @@ export default function AdminDashboard({ token, username, slug: propSlug = '', o
 
             <div style={{ background: 'var(--adm-surface-subtle)', padding: '12px 14px', borderRadius: '12px', border: '1px solid var(--adm-border)' }}>
               <div style={{ fontWeight: 800, fontSize: '0.95rem', color: 'var(--adm-primary)' }}>
-                Table #{acceptRoutingModal.table_number || 'Takeaway'} • Order #{acceptRoutingModal.id}
+                Table {acceptRoutingModal.table_number || 'Takeaway'} • Order {acceptRoutingModal.id}
               </div>
               <div style={{ fontSize: '0.78rem', color: 'var(--adm-muted)', marginTop: '2px' }}>
                 Customer: {acceptRoutingModal.customer_name || 'Dine-In Guest'} • Total: {settingsForm.currency_symbol || '₹'}{acceptRoutingModal.total_amount}
@@ -3180,7 +3180,7 @@ export default function AdminDashboard({ token, username, slug: propSlug = '', o
               🧾 Print Final Customer Bill
             </h3>
             <span style={{ fontSize: '0.78rem', color: '#6B7280', display: 'block', marginBottom: '16px' }}>
-              Order #{billOrderModal.id} • Total: {restaurantInfo?.currency_symbol || settingsForm.currency_symbol || '₹'}{billOrderModal.total_amount}
+              Order {billOrderModal.id} • Total: {restaurantInfo?.currency_symbol || settingsForm.currency_symbol || '₹'}{billOrderModal.total_amount}
             </span>
 
             <p style={{ fontSize: '0.84rem', fontWeight: 800, color: '#374151', marginBottom: '12px' }}>

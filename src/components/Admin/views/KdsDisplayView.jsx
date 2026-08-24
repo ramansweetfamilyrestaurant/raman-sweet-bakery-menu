@@ -64,33 +64,33 @@ export default function KdsDisplayView({
     }
     if (cleanSpaceType === 'room') {
       const numOnly = str.replace(/^room\s*#?/i, '');
-      return `🏨 ROOM #${numOnly}`;
+      return `🏨 ROOM ${numOnly}`;
     }
     if (cleanSpaceType === 'cabin') {
       const numOnly = str.replace(/^cabin\s*#?/i, '');
-      return `🛋️ CABIN #${numOnly}`;
+      return `🛋️ CABIN ${numOnly}`;
     }
     if (cleanSpaceType === 'vip') {
       const numOnly = str.replace(/^vip\s*#?/i, '');
-      return `👑 VIP #${numOnly}`;
+      return `👑 VIP ${numOnly}`;
     }
     if (cleanSpaceType === 'table') {
       const numOnly = str.replace(/^table\s*#?/i, '');
-      return `TABLE #${numOnly}`;
+      return `TABLE ${numOnly}`;
     }
 
     // 3. Safe legacy string inference from raw value
     if (/^room\s*#?\d+/i.test(str)) {
       const numOnly = str.replace(/^room\s*#?/i, '');
-      return `🏨 ROOM #${numOnly}`;
+      return `🏨 ROOM ${numOnly}`;
     }
     if (/^cabin\s*#?\d+/i.test(str)) {
       const numOnly = str.replace(/^cabin\s*#?/i, '');
-      return `🛋️ CABIN #${numOnly}`;
+      return `🛋️ CABIN ${numOnly}`;
     }
     if (/^vip\s*#?\d+/i.test(str)) {
       const numOnly = str.replace(/^vip\s*#?/i, '');
-      return `👑 VIP #${numOnly}`;
+      return `👑 VIP ${numOnly}`;
     }
 
     // 4. If already prefixed / pictographic
@@ -101,13 +101,13 @@ export default function KdsDisplayView({
     // 5. Fallback prefix if provided
     if (fallbackPrefix) {
       const cleanFallback = String(fallbackPrefix).trim().toLowerCase();
-      if (cleanFallback === 'room') return `🏨 ROOM #${str}`;
-      if (cleanFallback === 'cabin') return `🛋️ CABIN #${str}`;
-      if (cleanFallback === 'vip') return `👑 VIP #${str}`;
+      if (cleanFallback === 'room') return `🏨 ROOM ${str}`;
+      if (cleanFallback === 'cabin') return `🛋️ CABIN ${str}`;
+      if (cleanFallback === 'vip') return `👑 VIP ${str}`;
       if (cleanFallback === 'cinema_seat' || cleanFallback === 'cinema') return `🎬 SEAT ${str.toUpperCase()}`;
     }
 
-    return `TABLE #${str}`;
+    return `TABLE ${str}`;
   };
 
   if (!kdsEnabled) {
@@ -209,7 +209,7 @@ export default function KdsDisplayView({
                       {formatKdsLocation(order.table_number, order.space_type, restaurantInfo?.business_type === 'hotel_resort' ? 'room' : restaurantInfo?.table_prefix)}
                     </strong>
                     <span style={{ fontSize: '0.75rem', color: '#93C5FD', fontWeight: 700 }}>
-                      Order #{order.id} • {order.customer_name || 'Dine-in'}
+                      Order {order.id} • {order.customer_name || 'Dine-in'}
                     </span>
                   </div>
 

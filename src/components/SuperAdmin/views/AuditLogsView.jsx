@@ -56,7 +56,7 @@ export default function AuditLogsView({ auditLogs, loading, onRefresh }) {
                     <tr>
                       <td>
                         <strong style={{ fontSize: '0.85rem', color: 'var(--sa-primary)' }}>{log.role || 'superadmin'}</strong>
-                        <span style={{ fontSize: '0.7rem', color: 'var(--sa-text-muted)', display: 'block' }}>Resto ID #{log.restaurant_id || 'System'}</span>
+                        <span style={{ fontSize: '0.7rem', color: 'var(--sa-text-muted)', display: 'block' }}>Resto ID {log.restaurant_id || 'System'}</span>
                       </td>
                       <td>
                         <span className="sa-badge sa-badge-purple">{log.action || 'EVENT'}</span>

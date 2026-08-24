@@ -196,7 +196,7 @@ export default function OrdersView({
     if (/^(table|room|cabin|vip|takeaway|parcel)/i.test(str) || /^[\p{Extended_Pictographic}\u2000-\u3300]/u.test(str)) {
       return str;
     }
-    return `Table #${str}`;
+    return `Table ${str}`;
   };
 
   const pendingCount = validOrders.filter(o => o.status === 'pending').length;
@@ -501,7 +501,7 @@ export default function OrdersView({
                             {formatCleanTableLabel(order.table_number, order.space_type)}
                           </span>
                           <span style={{ fontSize: '0.85rem', fontWeight: 800, color: '#64748B' }}>
-                            #{order.id}
+                            Order {order.id}
                           </span>
                           {Number(order.round_number) > 1 && (
                             <span style={{ background: '#FEF3C7', color: '#B45309', border: '1px solid #FCD34D', padding: '2px 8px', borderRadius: '8px', fontSize: '0.72rem', fontWeight: 800 }}>
@@ -921,7 +921,7 @@ export default function OrdersView({
                                     {isOccupied && activeOrder && (
                                       <div style={{ fontSize: '0.74rem', background: '#FFFFFF', padding: '6px 8px', borderRadius: '8px', border: '1px solid #FECACA' }}>
                                         <div style={{ display: 'flex', justifyContent: 'space-between', fontWeight: 800 }}>
-                                          <span>#{activeOrder.id}</span>
+                                          <span>Order {activeOrder.id}</span>
                                           <span style={{ color: '#DC2626' }}>{currencySymbol}{activeOrder.total_amount}</span>
                                         </div>
                                         <div style={{ display: 'flex', gap: '4px', marginTop: '6px' }}>
@@ -1020,7 +1020,7 @@ export default function OrdersView({
                     {isOccupied && t.activeOrder && (
                       <div style={{ fontSize: '0.80rem', background: '#FFFFFF', padding: '10px', borderRadius: '10px', border: '1px solid #E2E8F0' }}>
                         <div style={{ display: 'flex', justifyContent: 'space-between', fontWeight: 800 }}>
-                          <span>Order #{t.activeOrder.id}</span>
+                          <span>Order {t.activeOrder.id}</span>
                           <span style={{ color: '#DC2626' }}>{currencySymbol}{t.activeOrder.total_amount}</span>
                         </div>
                         <div style={{ color: '#64748B', marginTop: '3px' }}>
@@ -1373,7 +1373,7 @@ export default function OrdersView({
                             border: '1px solid #E2E8F0',
                             flexWrap: 'wrap'
                           }}>
-                            <span style={{ fontWeight: 800, color: '#0F172A' }}>Request #P-{sr.id}</span>
+                            <span style={{ fontWeight: 800, color: '#0F172A' }}>Request P-{sr.id}</span>
                             <span>•</span>
                             <span>⏱️ {new Date(sr.created_at || Date.now()).toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' })}</span>
                             {sr.expires_at && (
@@ -1623,7 +1623,7 @@ export default function OrdersView({
                     Reject Presence Request
                   </h3>
                   <span style={{ fontSize: '0.78rem', color: '#64748B' }}>
-                    {formatCleanTableLabel(rejectingModalReq.table_number, rejectingModalReq.space_type)} • Request #P-{rejectingModalReq.id}
+                    {formatCleanTableLabel(rejectingModalReq.table_number, rejectingModalReq.space_type)} • Request P-{rejectingModalReq.id}
                   </span>
                 </div>
               </div>
