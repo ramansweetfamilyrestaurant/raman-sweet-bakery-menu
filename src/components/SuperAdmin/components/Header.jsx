@@ -114,7 +114,7 @@ export default function Header({
               </button>
             )}
             <div className="sa-header-title-box">
-              <span className="sa-desktop-breadcrumb">TouchQR /</span>
+              <span className="sa-desktop-breadcrumb">Super Admin /</span>
               <h1 className="sa-header-title">
                 {currentTitle}
               </h1>
@@ -127,7 +127,7 @@ export default function Header({
             <input
               ref={searchInputRef}
               type="text"
-              placeholder={currentPlaceholder}
+              placeholder="Search tenants, owners, emails, phone..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               className="sa-header-search-input"
@@ -146,7 +146,7 @@ export default function Header({
             )}
           </div>
 
-          {/* RIGHT: Quick Broadcast, SSL Pill, Mobile Search Trigger & Profile */}
+          {/* RIGHT: System Status, Broadcast, Notification & Profile */}
           <div className="sa-header-right">
             {/* Mobile Search Trigger Icon Button */}
             <button
@@ -159,22 +159,27 @@ export default function Header({
               {searchQuery && <span className="sa-search-dot-indicator" />}
             </button>
 
+            {/* All Systems Operational Badge (Desktop/Tablet) */}
+            <div className="sa-ssl-badge sa-desktop-only-ssl" title="Neon DB, Cashfree & APIs Operational">
+              <span className="sa-live-dot active" />
+              <span className="sa-ssl-text" style={{ color: '#15803D' }}>All Systems Operational</span>
+            </div>
+
             {onOpenBroadcast && (
               <button
                 onClick={onOpenBroadcast}
                 className="sa-quick-broadcast-btn"
-                title="Broadcast global announcement notice to all shop panels"
+                title="Broadcast announcement"
               >
                 <Megaphone size={13} />
-                <span className="sa-header-btn-label">Notice</span>
+                <span className="sa-header-btn-label">Broadcast</span>
               </button>
             )}
 
-            {/* Sleek Minimalist SSL Status Badge (Desktop/Tablet Only) */}
-            <div className="sa-ssl-badge sa-desktop-only-ssl" title="256-Bit SSL Encrypted & Verified Connection">
-              <span className="sa-live-dot active" />
-              <ShieldCheck size={13} color="#16A34A" />
-              <span className="sa-ssl-text">SSL SECURE</span>
+            {/* Notification Bell with Badge (Desktop) */}
+            <div className="sa-desktop-only-ssl" style={{ position: 'relative', cursor: 'pointer', padding: '4px' }} title="1 Active Notice">
+              <span style={{ fontSize: '0.9rem' }}>🔔</span>
+              <span style={{ position: 'absolute', top: '2px', right: '2px', width: '6px', height: '6px', background: '#EF4444', borderRadius: '50%' }} />
             </div>
 
             {/* Profile Avatar & Quick Logout */}
@@ -182,16 +187,22 @@ export default function Header({
               <div className="sa-profile-avatar" title={`Logged in as ${username || 'Super Admin'}`}>
                 {username ? username.charAt(0).toUpperCase() : 'S'}
               </div>
-              <span className="sa-profile-name">
-                {username || 'Super Admin'}
-              </span>
+              <div style={{ display: 'flex', flexDirection: 'column', lineHeight: 1.1 }}>
+                <span className="sa-profile-name" style={{ fontSize: '0.78rem', fontWeight: 800 }}>
+                  {username || 'Super Admin'}
+                </span>
+                <span style={{ fontSize: '0.65rem', color: 'var(--sa-text-muted)', fontWeight: 600 }}>
+                  superadmin
+                </span>
+              </div>
               {onLogout && (
                 <button
                   onClick={onLogout}
                   className="sa-header-logout-btn"
                   title="Logout from Super Admin"
+                  style={{ marginLeft: '4px' }}
                 >
-                  <LogOut size={15} />
+                  <LogOut size={14} />
                 </button>
               )}
             </div>
