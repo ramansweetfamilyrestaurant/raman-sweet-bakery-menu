@@ -243,7 +243,7 @@ export default function SaaSPlansView({ token, restaurants = [] }) {
       {/* 👑 1. HEADER (USING SHARED SectionHeader) */}
       <SectionHeader
         title="👑 SaaS Plans & Feature Matrix"
-        subtitle="Manage pricing, limits and feature access across all tenant subscription tiers."
+        subtitle="Manage pricing, limits and feature access across all shop subscription tiers."
         actions={
           <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
             <button
@@ -347,7 +347,7 @@ export default function SaaSPlansView({ token, restaurants = [] }) {
                       alignItems: 'center',
                       gap: '4px'
                     }}>
-                      <Users size={12} /> {subscriberCount} {subscriberCount === 1 ? 'Resto' : 'Restos'}
+                      <Users size={12} /> {subscriberCount} {subscriberCount === 1 ? 'Resto' : 'Shops'}
                     </span>
                   </div>
 
@@ -518,7 +518,7 @@ export default function SaaSPlansView({ token, restaurants = [] }) {
 
             <form onSubmit={handleSaveSinglePlan} style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
               <div style={{ padding: '10px 14px', background: '#FFFBEB', borderRadius: '10px', border: '1px solid #FCD34D', fontSize: '0.78rem', color: '#92400E', fontWeight: 700 }}>
-                ⚠️ Changes may affect tenants currently subscribed to this plan.
+                ⚠️ Changes may affect shops currently subscribed to this plan.
               </div>
 
               <div>

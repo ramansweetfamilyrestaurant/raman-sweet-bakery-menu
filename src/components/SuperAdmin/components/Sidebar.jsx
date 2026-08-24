@@ -16,7 +16,7 @@ export default function Sidebar({ activeView, setActiveView, collapsed, setColla
 
   const navItems = [
     { id: 'overview', label: 'Overview', icon: LayoutDashboard },
-    { id: 'tenants', label: 'Tenants', icon: Store },
+    { id: 'tenants', label: 'Shops', icon: Store },
     { id: 'billing', label: 'Billing', icon: CreditCard },
     { id: 'plans', label: 'Plans', icon: Layers },
     { id: 'operations', label: 'Operations', icon: Database },

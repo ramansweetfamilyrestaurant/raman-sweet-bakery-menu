@@ -27,7 +27,7 @@ export default function CommunicationView({ announcementsList, onSendAnnouncemen
             <Megaphone size={20} color="var(--sa-primary)" /> Broadcast Client Communication
           </h2>
           <span style={{ fontSize: '0.74rem', color: 'var(--sa-text-muted)', fontWeight: 600 }}>
-            Send real-time platform notification banners directly to tenant restaurant owner admin dashboards.
+            Send real-time platform notification banners directly to shop owner admin dashboards.
           </span>
         </div>
       </div>
@@ -75,7 +75,7 @@ export default function CommunicationView({ announcementsList, onSendAnnouncemen
                 onChange={(e) => setTargetAudience(e.target.value)}
                 className="sa-select"
               >
-                <option value="all">All Tenant Restaurants</option>
+                <option value="all">All Shops & Restaurants</option>
                 <option value="active">Active Paid Clients Only</option>
                 <option value="trial">Trial Users Only</option>
               </select>

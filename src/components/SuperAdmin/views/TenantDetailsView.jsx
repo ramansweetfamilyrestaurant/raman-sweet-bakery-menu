@@ -56,7 +56,7 @@ export default function TenantDetailsView({
       const data = await res.json();
       setT360Data(data);
     } catch (err) {
-      console.warn('Tenant 360 fetch warning, falling back to local props:', err.message);
+      console.warn('Shop 360 fetch warning, falling back to local props:', err.message);
       setFetchErr(err.message);
     } finally {
       setLoading(false);
@@ -114,7 +114,7 @@ export default function TenantDetailsView({
     auto_renew_enabled: sub.auto_renew
   };
   const support = t360Data?.support || {
-    notes: "Internal tenant notes: not currently available."
+    notes: "Internal shop notes: not currently available."
   };
 
   const isLifetime = sub.is_complimentary || sub.subscription_type === 'ADMIN_GRANTED' || (sub.access_until && new Date(sub.access_until).getFullYear() > 2030);
@@ -144,7 +144,7 @@ export default function TenantDetailsView({
       isOpen={isOpen}
       onClose={onClose}
       title={tenant.name}
-      subtitle={`Tenant ID #${tenant.id} • Slug: /${tenant.slug}`}
+      subtitle={`Shop ID #${tenant.id} • Slug: /${tenant.slug}`}
       width="680px"
     >
       {/* 🌟 STICKY STATUS & QUICK SUMMARY HEADER */}
@@ -264,7 +264,7 @@ export default function TenantDetailsView({
 
       {loading && (
         <div style={{ padding: '12px', textAlign: 'center', color: 'var(--sa-text-muted)', fontSize: '0.82rem' }}>
-          ⚡ Loading complete real-time Tenant 360 profile...
+          ⚡ Loading complete real-time Shop 360 profile...
         </div>
       )}
 
@@ -362,7 +362,7 @@ export default function TenantDetailsView({
 
           {/* Internal Notes Display */}
           <div style={{ fontSize: '0.78rem', background: '#F8FAFC', padding: '12px', borderRadius: 'var(--sa-radius-md)', border: '1px dashed #CBD5E1', color: '#64748B' }}>
-            <strong>📝 Internal Tenant Notes:</strong> {support.notes}
+            <strong>📝 Internal Shop Notes:</strong> {support.notes}
           </div>
         </div>
       )}
@@ -489,7 +489,7 @@ export default function TenantDetailsView({
           {/* Transaction Table */}
           {filteredTransactions.length === 0 ? (
             <div style={{ padding: '24px', textAlign: 'center', color: 'var(--sa-text-muted)', fontSize: '0.84rem', background: 'var(--sa-surface-subtle)', borderRadius: '12px' }}>
-              No payment transactions yet for this tenant.
+              No payment transactions yet for this shop.
             </div>
           ) : (
             <div style={{ overflowX: 'auto', border: '1px solid var(--sa-border)', borderRadius: '12px' }}>
@@ -725,7 +725,7 @@ export default function TenantDetailsView({
               {!tenant.active ? (
                 <><CheckCircle size={18} /> 🟢 Unsuspend & Activate Restaurant</>
               ) : (
-                <><XCircle size={18} /> 🔴 Suspend Tenant Access</>
+                <><XCircle size={18} /> 🔴 Suspend Shop Access</>
               )}
             </button>
 

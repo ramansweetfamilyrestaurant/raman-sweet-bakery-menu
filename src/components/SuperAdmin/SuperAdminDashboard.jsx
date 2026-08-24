@@ -179,7 +179,7 @@ export default function SuperAdminDashboard({ token, username, onLogout, onRetur
       const data = await fetchSuperAdminRestaurants(token);
       setRestaurants(Array.isArray(data) ? data : []);
     } catch (err) {
-      console.error('Error fetching tenant restaurants:', err);
+      console.error('Error fetching shop / restaurants:', err);
     } finally {
       setLoading(false);
     }
@@ -267,7 +267,7 @@ export default function SuperAdminDashboard({ token, username, onLogout, onRetur
   };
 
   const handleDeleteAnnouncement = async (id) => {
-    if (!window.confirm('Delete this broadcast announcement? It will be removed from all tenant dashboards immediately.')) return;
+    if (!window.confirm('Delete this broadcast announcement? It will be removed from all shop dashboards immediately.')) return;
     try {
       await deleteAnnouncement(id, token);
       loadSuperAnnouncements();
@@ -278,7 +278,7 @@ export default function SuperAdminDashboard({ token, username, onLogout, onRetur
   };
 
   const handleClearAllAnnouncements = async () => {
-    if (!window.confirm('Clear ALL active broadcast notices across all tenant dashboards?')) return;
+    if (!window.confirm('Clear ALL active broadcast notices across all shop dashboards?')) return;
     try {
       await clearAllAnnouncements(token);
       loadSuperAnnouncements();
@@ -294,7 +294,7 @@ export default function SuperAdminDashboard({ token, username, onLogout, onRetur
     setAnnounceSubmitting(true);
     try {
       await createAnnouncement(announceMsg.trim(), announceType, token);
-      alert('📢 Announcement broadcasted successfully to all tenant dashboards!');
+      alert('📢 Announcement broadcasted successfully to all shop dashboards!');
       setAnnounceMsg('');
       loadSuperAnnouncements();
     } catch (err) {
@@ -331,7 +331,7 @@ export default function SuperAdminDashboard({ token, username, onLogout, onRetur
         onImpersonate(data.token, data.username, data.restaurant?.slug, data.restaurant?.name || name, data.restaurant?.id || id);
       }
     } catch (err) {
-      alert(err.message || 'Failed to switch into tenant admin');
+      alert(err.message || 'Failed to switch into shop admin');
     }
   };
 
@@ -393,7 +393,7 @@ export default function SuperAdminDashboard({ token, username, onLogout, onRetur
         if (onLogout) onLogout();
         return;
       }
-      alert(err.message || 'Failed to update tenant info');
+      alert(err.message || 'Failed to update shop info');
     }
   };
 
@@ -524,8 +524,8 @@ export default function SuperAdminDashboard({ token, username, onLogout, onRetur
     <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }} onClick={() => setOpenMoreId(null)}>
       {/* 👑 1. DIRECTORY SECTION HEADER */}
       <SectionHeader
-        title="🏪 Tenant Directory"
-        subtitle={`Manage restaurants, subscriptions and tenant access (${filteredAndSortedRestaurants.length} of ${restaurants.length} accounts)`}
+        title="🏪 Shop Directory"
+        subtitle={`Manage shops, subscriptions and access (${filteredAndSortedRestaurants.length} of ${restaurants.length} accounts)`}
         actions={
           <div style={{ display: 'flex', gap: '8px' }}>
             <button
@@ -683,12 +683,12 @@ export default function SuperAdminDashboard({ token, username, onLogout, onRetur
       {/* 🔄 4. CONTENT DISPLAY (LOADING / EMPTY / TABLE / GRID) */}
       {loading ? (
         <div style={{ textAlign: 'center', padding: '60px', color: 'var(--sa-accent)', fontWeight: 800 }}>
-          👑 Loading Tenant Restaurants Directory...
+          👑 Loading Shops Directory...
         </div>
       ) : filteredAndSortedRestaurants.length === 0 ? (
         <EmptyState
           icon={Store}
-          title="No tenants match your criteria"
+          title="No shops match your criteria"
           description="Try clearing your search query or switching status filters."
           action={
             <button
@@ -706,7 +706,7 @@ export default function SuperAdminDashboard({ token, username, onLogout, onRetur
           <table className="sa-table">
             <thead>
               <tr>
-                <th>TENANT</th>
+                <th>SHOP / RESTAURANT</th>
                 <th>OWNER / CONTACT</th>
                 <th>PLAN</th>
                 <th>STATUS</th>
@@ -727,7 +727,7 @@ export default function SuperAdminDashboard({ token, username, onLogout, onRetur
                       <div 
                         onClick={() => setSelectedTenant360(r)}
                         style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer' }}
-                        title="Click to open Tenant 360° Profile"
+                        title="Click to open Shop 360° Profile"
                       >
                         <img
                           src={getRestaurantLogoUrl(r.logo)}
@@ -824,7 +824,7 @@ export default function SuperAdminDashboard({ token, username, onLogout, onRetur
                     <div 
                       onClick={() => setSelectedTenant360(r)}
                       style={{ display: 'flex', alignItems: 'center', gap: '10px', cursor: 'pointer', flex: 1, minWidth: 0 }}
-                      title="Click to open Tenant 360° Profile"
+                      title="Click to open Shop 360° Profile"
                     >
                       <img
                         src={getRestaurantLogoUrl(r.logo)}
@@ -933,7 +933,7 @@ export default function SuperAdminDashboard({ token, username, onLogout, onRetur
                     onClick={() => setSelectedTenant360(r)}
                     className="sa-btn sa-btn-secondary sa-btn-sm"
                     style={{ fontWeight: 800, fontSize: '0.75rem', padding: '7px 10px', flex: '1 1 auto', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '4px' }}
-                    title="Open complete 360-degree Tenant Profile"
+                    title="Open complete 360-degree Shop Profile"
                   >
                     <Search size={13} /> 360° Profile
                   </button>
@@ -1062,7 +1062,7 @@ export default function SuperAdminDashboard({ token, username, onLogout, onRetur
                           style={{ justifyContent: 'flex-start', width: '100%', border: 'none', background: 'transparent', padding: '7px 10px', fontSize: '0.76rem', fontWeight: 700, color: r.active === false ? '#15803D' : '#D97706' }}
                         >
                           {r.active === false ? <ShieldCheck size={13} /> : <Shield size={13} />}
-                          {r.active === false ? 'Reactivate Tenant' : 'Suspend Tenant'}
+                          {r.active === false ? 'Reactivate Shop' : 'Suspend Shop'}
                         </button>
 
                         <div style={{ height: '1px', background: 'var(--sa-border)', margin: '2px 0' }} />
@@ -1132,7 +1132,7 @@ export default function SuperAdminDashboard({ token, username, onLogout, onRetur
               {/* 👑 1. VIEW HEADER */}
               <SectionHeader
                 title="📊 Overview"
-                subtitle="Platform health, revenue and tenant activity at a glance."
+                subtitle="Platform health, revenue and shop activity at a glance."
                 actions={
                   <div style={{ display: 'flex', gap: '8px' }}>
                     <button
@@ -1195,9 +1195,9 @@ export default function SuperAdminDashboard({ token, username, onLogout, onRetur
                   subtitle="Needs Attention"
                 />
 
-                {/* KPI 5: Total Tenants */}
+                {/* KPI 5: Total Shops */}
                 <KpiCard
-                  label="Total Tenants"
+                  label="Total Shops"
                   value={restaurants.length}
                   icon={Store}
                   color="var(--sa-primary)"
@@ -1361,12 +1361,12 @@ export default function SuperAdminDashboard({ token, username, onLogout, onRetur
                 </div>
               </div>
 
-              {/* 📋 4. RECENT TENANT SIGNUPS & ACTIVITY TABLE */}
+              {/* 📋 4. RECENT SHOP SIGNUPS & ACTIVITY TABLE */}
               <div className="sa-table-container" style={{ padding: '20px' }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '14px', flexWrap: 'wrap', gap: '10px' }}>
                   <div>
                     <h3 style={{ margin: 0, fontSize: '1.05rem', fontWeight: 900, color: 'var(--sa-text-main)' }}>
-                      📋 Recent Tenant Activity
+                      📋 Recent Shop Activity
                     </h3>
                     <span style={{ fontSize: '0.74rem', color: 'var(--sa-text-muted)', fontWeight: 600 }}>
                       Latest onboarded restaurant accounts and status
@@ -1379,7 +1379,7 @@ export default function SuperAdminDashboard({ token, username, onLogout, onRetur
                     className="sa-btn sa-btn-accent sa-btn-sm"
                     style={{ fontWeight: 900, fontSize: '0.78rem' }}
                   >
-                    View All {restaurants.length} Tenants ➔
+                    View All {restaurants.length} Shops ➔
                   </button>
                 </div>
 
@@ -1401,7 +1401,7 @@ export default function SuperAdminDashboard({ token, username, onLogout, onRetur
                             <div
                               onClick={() => setSelectedTenant360(r)}
                               style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer' }}
-                              title="Click to open Tenant 360° Profile"
+                              title="Click to open Shop 360° Profile"
                             >
                               <img
                                 src={getRestaurantLogoUrl(r.logo)}
@@ -1666,7 +1666,7 @@ export default function SuperAdminDashboard({ token, username, onLogout, onRetur
                   <Search size={14} style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', color: 'var(--sa-text-muted)' }} />
                   <input
                     type="text"
-                    placeholder="Search tenant, owner, phone, email..."
+                    placeholder="Search shop, owner, phone, email..."
                     value={searchQuery}
                     onChange={(e) => setSearchQuery(e.target.value)}
                     className="sa-input"
@@ -1712,7 +1712,7 @@ export default function SuperAdminDashboard({ token, username, onLogout, onRetur
                   <table className="sa-table">
                     <thead>
                       <tr>
-                        <th>TENANT</th>
+                        <th>SHOP / RESTAURANT</th>
                         <th>OWNER / CONTACT</th>
                         <th>PLAN & BILLING</th>
                         <th>STATUS</th>
@@ -1734,7 +1734,7 @@ export default function SuperAdminDashboard({ token, username, onLogout, onRetur
                               <div
                                 onClick={() => setSelectedTenant360(r)}
                                 style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer' }}
-                                title="Click to open Tenant 360° Profile"
+                                title="Click to open Shop 360° Profile"
                               >
                                 <img
                                   src={getRestaurantLogoUrl(r.logo)}
@@ -1790,7 +1790,7 @@ export default function SuperAdminDashboard({ token, username, onLogout, onRetur
                                 onClick={() => setSelectedTenant360(r)}
                                 className="sa-btn sa-btn-secondary sa-btn-sm"
                                 style={{ padding: '4px 9px', fontSize: '0.72rem', fontWeight: 800 }}
-                                title="Open complete 360-degree Tenant Profile"
+                                title="Open complete 360-degree Shop Profile"
                               >
                                 🔍 360°
                               </button>
@@ -2075,7 +2075,7 @@ export default function SuperAdminDashboard({ token, username, onLogout, onRetur
                     <FileText size={22} color="var(--sa-primary)" /> 📜 Activity & Audit Log Trail
                   </h2>
                   <span style={{ fontSize: '0.76rem', color: 'var(--sa-text-muted)', fontWeight: 600 }}>
-                    Security events, tenant activity and platform operations. <span style={{ opacity: 0.8 }}>(Showing latest 50 events)</span>
+                    Security events, shop activity and platform operations. <span style={{ opacity: 0.8 }}>(Showing latest 50 events)</span>
                   </span>
                 </div>
                 <button
@@ -2095,7 +2095,7 @@ export default function SuperAdminDashboard({ token, username, onLogout, onRetur
                   {[
                     { id: 'all', label: `📜 All (${auditLogs.length})` },
                     { id: 'security', label: '🔑 Security' },
-                    { id: 'tenant', label: '🏢 Tenant' },
+                    { id: 'tenant', label: '🏪 Shop' },
                     { id: 'billing', label: '💳 Billing' },
                     { id: 'vip', label: '👑 VIP' },
                     { id: 'system', label: '⚙️ System' },
@@ -2184,7 +2184,7 @@ export default function SuperAdminDashboard({ token, username, onLogout, onRetur
                           if (act.includes('SECURITY') || act.includes('LOGIN') || act.includes('LOGOUT') || act.includes('CREDENTIAL') || act.includes('PASSWORD') || act.includes('IMPERSONAT')) {
                             cat = { id: 'security', label: 'Security', icon: '🔑' };
                           } else if (act.includes('TENANT') || act.includes('RESTAURANT') || act.includes('ACTIVAT') || act.includes('SUSPEND') || act.includes('DELETE') || act.includes('REGISTER')) {
-                            cat = { id: 'tenant', label: 'Tenant', icon: '🏢' };
+                            cat = { id: 'tenant', label: 'Shop', icon: '🏪' };
                           } else if (act.includes('CASHFREE') || act.includes('PAYMENT') || act.includes('SUB_') || act.includes('SUBSCRIPTION') || act.includes('PLAN') || act.includes('CANCEL') || act.includes('RENEW')) {
                             cat = { id: 'billing', label: 'Billing', icon: '💳' };
                           } else if (act.includes('VIP') || act.includes('COMPLIMENTARY') || act.includes('ADMIN_GRANTED')) {
@@ -2221,7 +2221,7 @@ export default function SuperAdminDashboard({ token, username, onLogout, onRetur
                                   <span
                                     onClick={() => setSelectedTenant360(targetTenant)}
                                     style={{ display: 'block', fontSize: '0.68rem', color: 'var(--sa-accent-hover, #B48F27)', fontWeight: 800, cursor: 'pointer' }}
-                                    title="Open Tenant 360° Profile"
+                                    title="Open Shop 360° Profile"
                                   >
                                     🏢 {targetTenant.name} (/{targetTenant.slug})
                                   </span>
@@ -2301,7 +2301,7 @@ export default function SuperAdminDashboard({ token, username, onLogout, onRetur
 
                       {selectedAuditLog.restaurant_id && (
                         <div style={{ background: '#FFFBEB', padding: '12px', borderRadius: '12px', border: '1px solid #FCD34D' }}>
-                          <span style={{ fontSize: '0.68rem', color: '#B45309', fontWeight: 800, display: 'block' }}>ATTACHED TENANT (ID: #{selectedAuditLog.restaurant_id})</span>
+                          <span style={{ fontSize: '0.68rem', color: '#B45309', fontWeight: 800, display: 'block' }}>ATTACHED SHOP (ID: #{selectedAuditLog.restaurant_id})</span>
                           {(() => {
                             const target = restaurants.find(r => r.id === selectedAuditLog.restaurant_id);
                             if (target) {
@@ -2319,7 +2319,7 @@ export default function SuperAdminDashboard({ token, username, onLogout, onRetur
                                 </div>
                               );
                             }
-                            return <span style={{ fontSize: '0.78rem', color: '#92400E' }}>Tenant #{selectedAuditLog.restaurant_id}</span>;
+                            return <span style={{ fontSize: '0.78rem', color: '#92400E' }}>Shop #{selectedAuditLog.restaurant_id}</span>;
                           })()}
                         </div>
                       )}
@@ -2600,7 +2600,7 @@ export default function SuperAdminDashboard({ token, username, onLogout, onRetur
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
                   <div style={{ background: '#F8FAFC', padding: '12px 14px', borderRadius: '12px', border: '1px solid #E2E8F0' }}>
                     <span style={{ fontSize: '0.75rem', color: 'var(--sa-text-muted)', fontWeight: 700 }}>
-                      ℹ️ Shown in platform support/customer touchpoints and tenant invoices.
+                      ℹ️ Shown in platform support/customer touchpoints and shop invoices.
                     </span>
                   </div>
 
@@ -2676,7 +2676,7 @@ export default function SuperAdminDashboard({ token, username, onLogout, onRetur
                 announcementsList={announcementsList}
                 onSendAnnouncement={async ({ message, type }) => {
                   await createAnnouncement(message.trim(), type, token);
-                  alert('📢 Announcement broadcasted successfully to all tenant dashboards!');
+                  alert('📢 Announcement broadcasted successfully to all shop dashboards!');
                   loadSuperAnnouncements();
                 }}
                 onDeleteAnnouncement={handleDeleteAnnouncement}
@@ -2707,7 +2707,7 @@ export default function SuperAdminDashboard({ token, username, onLogout, onRetur
         <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
           {[
             { id: 'overview', label: '📊 Overview & KPIs', desc: 'Platform summary & stats' },
-            { id: 'tenants', label: '🏪 Tenants Directory', desc: 'Manage client accounts' },
+            { id: 'tenants', label: '🏪 Shops Directory', desc: 'Manage client accounts' },
             { id: 'billing', label: '💳 Billing & Subscriptions', desc: 'Mandates & access expiry' },
             { id: 'plans', label: '👑 SaaS Plans & Pricing', desc: 'Feature matrix & tiers' },
             { id: 'operations', label: '⚡ DB Health & Operations', desc: 'Compaction & maintenance' },
@@ -2785,7 +2785,7 @@ export default function SuperAdminDashboard({ token, username, onLogout, onRetur
         </div>
       </Drawer>
 
-      {/* ➕ Modal: Add New Tenant Restaurant */}
+      {/* ➕ Modal: Add New Shop / Restaurant */}
       {showAddModal && (
         <div style={{
           position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
@@ -2814,7 +2814,7 @@ export default function SuperAdminDashboard({ token, username, onLogout, onRetur
               <div style={{ width: '36px', height: '36px', borderRadius: '10px', background: '#DCFCE7', color: '#15803D', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                 <Store size={20} />
               </div>
-              <h3 style={{ fontSize: '1.15rem', fontWeight: 900, color: 'var(--sa-text-main)', margin: 0 }}>Add New Restaurant Tenant</h3>
+              <h3 style={{ fontSize: '1.15rem', fontWeight: 900, color: 'var(--sa-text-main)', margin: 0 }}>Add New Shop / Restaurant</h3>
             </div>
 
             {formError && (
@@ -2925,7 +2925,7 @@ export default function SuperAdminDashboard({ token, username, onLogout, onRetur
         </div>
       )}
 
-      {/* ✏️ Modal: Edit Tenant Restaurant Info */}
+      {/* ✏️ Modal: Edit Shop / Restaurant Info */}
       {editModalData && (
         <div style={{
           position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
@@ -2942,7 +2942,7 @@ export default function SuperAdminDashboard({ token, username, onLogout, onRetur
                 <div style={{ width: '36px', height: '36px', borderRadius: '10px', background: '#FEF3C7', color: '#B45309', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                   <Edit3 size={20} />
                 </div>
-                <h3 style={{ fontSize: '1.2rem', fontWeight: 900, color: 'var(--primary-emerald)', margin: 0 }}>Edit Tenant: {editModalData.name}</h3>
+                <h3 style={{ fontSize: '1.2rem', fontWeight: 900, color: 'var(--primary-emerald)', margin: 0 }}>Edit Shop: {editModalData.name}</h3>
               </div>
               <button onClick={() => setEditModalData(null)} style={{ background: 'none', border: 'none', fontSize: '1.4rem', fontWeight: 700, cursor: 'pointer', color: 'var(--text-muted)' }}>✕</button>
             </div>
@@ -3076,7 +3076,7 @@ export default function SuperAdminDashboard({ token, username, onLogout, onRetur
         }}
       />
 
-      {/* 🔍 Tenant 360 Drawer */}
+      {/* 🔍 Shop 360 Drawer */}
       <TenantDetailsView
         resto={selectedTenant360}
         isOpen={Boolean(selectedTenant360)}
@@ -3122,14 +3122,14 @@ export default function SuperAdminDashboard({ token, username, onLogout, onRetur
               </div>
               <div>
                 <h3 style={{ margin: 0, fontSize: '1.15rem', fontWeight: 900, color: 'var(--sa-primary)' }}>📢 Global Broadcast Notices</h3>
-                <span style={{ fontSize: '0.74rem', color: 'var(--sa-text-muted)', fontWeight: 600 }}>Send real-time platform notification banners to all tenant restaurant admin dashboards</span>
+                <span style={{ fontSize: '0.74rem', color: 'var(--sa-text-muted)', fontWeight: 600 }}>Send real-time platform notification banners to all shop admin dashboards</span>
               </div>
             </div>
 
             <form onSubmit={handleCreateAnnouncementSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '14px', marginBottom: '24px' }}>
               <div>
                 <label style={{ fontSize: '0.78rem', fontWeight: 800, color: '#374151', marginBottom: '6px', display: 'block' }}>
-                  ANNOUNCEMENT MESSAGE FOR ALL TENANTS *
+                  ANNOUNCEMENT MESSAGE FOR ALL SHOPS *
                 </label>
                 <textarea
                   rows={3}

@@ -45,20 +45,20 @@ export default function OverviewView({ restaurants, pendingRegistrations = [], o
             Good morning, Super Admin 👑
           </h1>
           <p style={{ fontSize: '0.8rem', color: '#A7F3D0', margin: 0, fontWeight: 500 }}>
-            Monitor your SaaS platform and tenant activity.
+            Monitor your SaaS platform and shop activity.
           </p>
         </div>
         <button
           onClick={() => onNavigate('tenants')}
           className="sa-btn sa-btn-accent sa-btn-sm"
         >
-          <Store size={14} /> Manage Tenants ➔
+          <Store size={14} /> Manage Shops ➔
         </button>
       </div>
 
       {/* 2-Column Compact Equal KPI Grid */}
       <div className="sa-stats-grid">
-        <StatCard label="TOTAL TENANTS" value={totalTenants} subtitle="All clients" icon={Store} color="var(--sa-primary)" />
+        <StatCard label="TOTAL SHOPS" value={totalTenants} subtitle="All clients" icon={Store} color="var(--sa-primary)" />
         <StatCard label="ACTIVE" value={activeCount} subtitle="Paying & active" icon={CheckCircle} color="var(--sa-success)" />
         <StatCard label="TRIAL" value={trialCount} subtitle="In trial phase" icon={Clock} color="var(--sa-warning)" />
         <StatCard label="PAST DUE" value={pastDueCount} subtitle="Requires review" icon={AlertTriangle} color="var(--sa-danger)" />

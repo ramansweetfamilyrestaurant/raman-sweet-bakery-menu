@@ -12,7 +12,7 @@ export default function Header({
 }) {
   const shortTitles = {
     overview: 'Overview',
-    tenants: 'Tenants Directory',
+    tenants: 'Shops Directory',
     billing: 'Billing & Subscriptions',
     plans: 'SaaS Plans & Tiers',
     operations: 'System Operations & DB Health',
@@ -22,8 +22,8 @@ export default function Header({
   };
 
   const placeholders = {
-    overview: 'Search tenant or slug...',
-    tenants: 'Search restaurant, slug, phone...',
+    overview: 'Search shop or slug...',
+    tenants: 'Search shop, slug, phone...',
     billing: 'Search subscriptions...',
     plans: 'Search plan tier...',
     operations: 'Filter system operations...',
@@ -33,7 +33,7 @@ export default function Header({
   };
 
   const currentTitle = shortTitles[activeView] || 'Dashboard';
-  const currentPlaceholder = placeholders[activeView] || 'Search tenant...';
+  const currentPlaceholder = placeholders[activeView] || 'Search shop...';
 
   return (
     <header className="sa-header">
@@ -97,7 +97,7 @@ export default function Header({
           <button
             onClick={onOpenBroadcast}
             className="sa-quick-broadcast-btn"
-            title="Broadcast global announcement notice to all tenant panels"
+            title="Broadcast global announcement notice to all shop panels"
           >
             <Megaphone size={13} />
             <span className="sa-header-btn-label">Notice</span>

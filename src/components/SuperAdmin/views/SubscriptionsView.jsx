@@ -23,7 +23,7 @@ export default function SubscriptionsView({ restaurants, onSelectTenant }) {
             <CreditCard size={20} color="var(--sa-primary)" /> Subscription Management & Billing Lifecycle
           </h2>
           <span style={{ fontSize: '0.75rem', color: 'var(--sa-text-muted)', fontWeight: 600 }}>
-            Audit tenant Cashfree AutoPay mandates, renewals, and complimentary access.
+            Audit shop Cashfree AutoPay mandates, renewals, and complimentary access.
           </span>
         </div>
       </div>

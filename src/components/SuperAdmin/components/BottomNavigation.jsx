@@ -17,7 +17,7 @@ export default function BottomNavigation({ activeView, setActiveView, onOpenMore
         className={`sa-mobile-nav-item ${activeView === 'tenants' ? 'active' : ''}`}
       >
         <Store size={19} />
-        <span>Tenants</span>
+        <span>Shops</span>
       </button>
 
       <button
