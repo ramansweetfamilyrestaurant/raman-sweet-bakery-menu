@@ -1461,117 +1461,107 @@ export default function SuperAdminDashboard({ token, username, onLogout, onRetur
           {/* VIEW 3: BILLING & SUBSCRIPTIONS                                           */}
           {/* ========================================================================= */}
           {activeView === 'billing' && (
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '18px' }}>
-              {/* 💳 1. HEADER */}
-              <div className="sa-section-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '12px' }}>
-                <div>
-                  <h2 className="sa-section-title" style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '1.2rem', fontWeight: 900, color: 'var(--sa-primary)', margin: 0 }}>
-                    <CreditCard size={22} color="var(--sa-primary)" /> 💳 Billing & Subscription Center
-                  </h2>
-                  <span style={{ fontSize: '0.76rem', color: 'var(--sa-text-muted)', fontWeight: 600 }}>
-                    Monitor subscriptions, renewals, failed payments and cancellations.
-                  </span>
-                </div>
-              </div>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
+              {/* 💳 1. VIEW HEADER (USING SHARED SectionHeader) */}
+              <SectionHeader
+                title="💳 Billing & Subscription Center"
+                subtitle="Monitor subscriptions, renewals, failed payments and cancellations."
+                actions={
+                  <button
+                    type="button"
+                    onClick={loadData}
+                    className="sa-btn sa-btn-secondary sa-btn-sm"
+                    title="Refresh live metrics"
+                  >
+                    <RefreshCw size={14} className={loading ? 'spin' : ''} /> Refresh
+                  </button>
+                }
+              />
 
-              {/* 📊 2. FINANCIAL KPI HERO ROW (4 Primary + Optional VIP) */}
+              {/* 📊 2. FINANCIAL KPI HERO ROW (USING SHARED KpiCard) */}
               <div className="sa-stats-grid">
                 {/* KPI 1: MRR Revenue */}
-                <div
-                  className="sa-stat-card hover-lift"
-                  style={{ background: 'linear-gradient(135deg, #0A2315 0%, #164E2A 100%)', color: '#FFFFFF', border: '1.5px solid #DFBA67' }}
-                  title="Authoritative active Monthly Recurring Revenue"
-                >
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                    <div style={{ width: '40px', height: '40px', borderRadius: '12px', background: 'linear-gradient(135deg, #DFBA67 0%, #C5A059 100%)', color: '#0A2315', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-                      <DollarSign size={20} color="#0A2315" />
-                    </div>
-                    <div>
-                      <div className="sa-stat-value" style={{ color: '#DFBA67', fontSize: '1.35rem', fontWeight: 900 }}>₹{estimatedRevenue.toLocaleString()}</div>
-                      <div className="sa-stat-label" style={{ color: 'rgba(255,255,255,0.9)' }}>MRR Revenue</div>
-                    </div>
-                  </div>
-                </div>
+                <KpiCard
+                  label="MRR Revenue"
+                  value={`₹${estimatedRevenue.toLocaleString()}`}
+                  icon={DollarSign}
+                  color="var(--sa-accent)"
+                  badge="+ Active Subscriptions"
+                  subtitle="Authoritative MRR"
+                />
 
                 {/* KPI 2: Active Paid */}
-                <div onClick={() => setStatusFilter('active')} className="sa-stat-card hover-lift" style={{ cursor: 'pointer' }} title="Filter Active Paid Subscriptions">
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                    <div style={{ width: '40px', height: '40px', borderRadius: '12px', background: '#DCFCE7', color: '#15803D', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-                      <CheckCircle size={20} />
-                    </div>
-                    <div>
-                      <div className="sa-stat-value" style={{ color: '#15803D', fontSize: '1.35rem', fontWeight: 900 }}>{totalActive}</div>
-                      <div className="sa-stat-label">Active Paid</div>
-                    </div>
-                  </div>
-                </div>
+                <KpiCard
+                  label="Active Paid"
+                  value={totalActive}
+                  icon={CheckCircle}
+                  color="#15803D"
+                  onClick={() => setStatusFilter('active')}
+                  subtitle="Paid Accounts"
+                />
 
                 {/* KPI 3: Past Due / Failed */}
-                <div onClick={() => setStatusFilter('failed')} className="sa-stat-card hover-lift" style={{ cursor: 'pointer' }} title="Filter Payment Failed / Past Due Subscriptions">
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                    <div style={{ width: '40px', height: '40px', borderRadius: '12px', background: '#FEF3C7', color: '#B45309', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-                      <CreditCard size={20} />
-                    </div>
-                    <div>
-                      <div className="sa-stat-value" style={{ color: '#B45309', fontSize: '1.35rem', fontWeight: 900 }}>
-                        {restaurants.filter(r => r.subscription_status === 'payment_failed' || r.subscription_status === 'past_due').length}
-                      </div>
-                      <div className="sa-stat-label">Past Due / Failed</div>
-                    </div>
-                  </div>
-                </div>
+                <KpiCard
+                  label="Past Due / Failed"
+                  value={restaurants.filter(r => r.subscription_status === 'payment_failed' || r.subscription_status === 'past_due').length}
+                  icon={CreditCard}
+                  color="#B45309"
+                  onClick={() => setStatusFilter('failed')}
+                  subtitle="Needs Attention"
+                />
 
                 {/* KPI 4: Auto-Renew Off */}
-                <div onClick={() => setStatusFilter('autorenew_off')} className="sa-stat-card hover-lift" style={{ cursor: 'pointer' }} title="Filter Auto-Renew Off Subscriptions">
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                    <div style={{ width: '40px', height: '40px', borderRadius: '12px', background: '#FFEDD5', color: '#C2410C', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-                      <Clock size={20} />
-                    </div>
-                    <div>
-                      <div className="sa-stat-value" style={{ color: '#C2410C', fontSize: '1.35rem', fontWeight: 900 }}>
-                        {restaurants.filter(r => (r.auto_renew === 0 || r.auto_renew === false || r.cancel_requested_at !== null) && r.active !== false).length}
-                      </div>
-                      <div className="sa-stat-label">Auto-Renew Off</div>
-                    </div>
-                  </div>
-                </div>
+                <KpiCard
+                  label="Auto-Renew Off"
+                  value={restaurants.filter(r => (r.auto_renew === 0 || r.auto_renew === false || r.cancel_requested_at !== null) && r.active !== false).length}
+                  icon={Clock}
+                  color="#C2410C"
+                  onClick={() => setStatusFilter('autorenew_off')}
+                  subtitle="Churn Risk"
+                />
 
                 {/* KPI 5: Complimentary / VIP */}
-                <div onClick={() => setStatusFilter('vip')} className="sa-stat-card hover-lift" style={{ cursor: 'pointer' }} title="Filter Complimentary VIP Subscriptions">
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                    <div style={{ width: '40px', height: '40px', borderRadius: '12px', background: '#F3E8FF', color: '#7E22CE', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-                      <Sparkles size={20} />
-                    </div>
-                    <div>
-                      <div className="sa-stat-value" style={{ color: '#7E22CE', fontSize: '1.35rem', fontWeight: 900 }}>
-                        {restaurants.filter(r => r.subscription_type === 'ADMIN_GRANTED' || r.mandate_status === 'admin_granted').length}
-                      </div>
-                      <div className="sa-stat-label">Complimentary VIP</div>
-                    </div>
-                  </div>
-                </div>
+                <KpiCard
+                  label="Complimentary VIP"
+                  value={restaurants.filter(r => r.subscription_type === 'ADMIN_GRANTED' || r.mandate_status === 'admin_granted').length}
+                  icon={Sparkles}
+                  color="#7E22CE"
+                  onClick={() => setStatusFilter('vip')}
+                  subtitle="Lifetime Access"
+                />
               </div>
 
               {/* ⚠️ 3. BILLING ATTENTION HUB */}
-              <div className="sa-table-container" style={{ padding: '16px 20px', background: '#FFFFFF', borderRadius: '16px', display: 'flex', flexDirection: 'column', gap: '10px' }}>
+              <div className="sa-table-container" style={{ padding: '18px 20px', display: 'flex', flexDirection: 'column', gap: '12px' }}>
                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                  <h3 style={{ margin: 0, fontSize: '0.98rem', fontWeight: 900, color: 'var(--sa-text-main)', display: 'flex', alignItems: 'center', gap: '8px' }}>
-                    <Shield size={16} color="var(--sa-primary)" /> ⚠️ Billing Attention Required
-                  </h3>
-                  <span style={{ fontSize: '0.72rem', color: 'var(--sa-text-muted)', fontWeight: 600 }}>Actionable subscription events</span>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    <div style={{ width: '32px', height: '32px', borderRadius: '8px', background: '#FEF3C7', color: '#B45309', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                      <Shield size={18} />
+                    </div>
+                    <h3 style={{ margin: 0, fontSize: '1.05rem', fontWeight: 900, color: 'var(--sa-text-main)' }}>
+                      ⚠️ Billing Attention Required
+                    </h3>
+                  </div>
+                  <span style={{ fontSize: '0.74rem', color: 'var(--sa-text-muted)', fontWeight: 700 }}>
+                    Actionable subscription events
+                  </span>
                 </div>
 
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
                   {/* Row 1: Payment Failures */}
                   {restaurants.filter(r => r.subscription_status === 'payment_failed' || r.subscription_status === 'past_due').length > 0 && (
-                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '8px 12px', background: '#FEF2F2', borderRadius: '10px', border: '1px solid #FCA5A5' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '10px 14px', background: '#FEF2F2', borderRadius: '12px', border: '1px solid #FCA5A5' }}>
                       <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                        <span style={{ background: '#DC2626', color: '#FFF', padding: '2px 6px', borderRadius: '4px', fontSize: '0.66rem', fontWeight: 900 }}>FAILED</span>
-                        <span style={{ fontSize: '0.8rem', fontWeight: 800, color: '#991B1B' }}>
+                        <span style={{ background: '#DC2626', color: '#FFF', padding: '2px 6px', borderRadius: '4px', fontSize: '0.68rem', fontWeight: 900 }}>CRITICAL</span>
+                        <span style={{ fontSize: '0.82rem', fontWeight: 800, color: '#991B1B' }}>
                           {restaurants.filter(r => r.subscription_status === 'payment_failed' || r.subscription_status === 'past_due').length} Payment Failed / Past Due Accounts
                         </span>
                       </div>
-                      <button onClick={() => setStatusFilter('failed')} className="sa-btn sa-btn-secondary sa-btn-sm" style={{ padding: '3px 8px', fontSize: '0.72rem' }}>
+                      <button
+                        type="button"
+                        onClick={() => setStatusFilter('failed')}
+                        className="sa-btn sa-btn-secondary sa-btn-sm"
+                      >
                         Resolve ➔
                       </button>
                     </div>
@@ -1579,14 +1569,18 @@ export default function SuperAdminDashboard({ token, username, onLogout, onRetur
 
                   {/* Row 2: Auto-Renew Off */}
                   {restaurants.filter(r => (r.auto_renew === 0 || r.auto_renew === false || r.cancel_requested_at !== null) && r.active !== false).length > 0 && (
-                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '8px 12px', background: '#FFFBEB', borderRadius: '10px', border: '1px solid #FCD34D' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '10px 14px', background: '#FFFBEB', borderRadius: '12px', border: '1px solid #FCD34D' }}>
                       <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                        <span style={{ background: '#D97706', color: '#FFF', padding: '2px 6px', borderRadius: '4px', fontSize: '0.66rem', fontWeight: 900 }}>CANCEL PENDING</span>
-                        <span style={{ fontSize: '0.8rem', fontWeight: 800, color: '#92400E' }}>
+                        <span style={{ background: '#D97706', color: '#FFF', padding: '2px 6px', borderRadius: '4px', fontSize: '0.68rem', fontWeight: 900 }}>CANCEL PENDING</span>
+                        <span style={{ fontSize: '0.82rem', fontWeight: 800, color: '#92400E' }}>
                           {restaurants.filter(r => (r.auto_renew === 0 || r.auto_renew === false || r.cancel_requested_at !== null) && r.active !== false).length} Accounts with Auto-Renew Disabled
                         </span>
                       </div>
-                      <button onClick={() => setStatusFilter('autorenew_off')} className="sa-btn sa-btn-secondary sa-btn-sm" style={{ padding: '3px 8px', fontSize: '0.72rem' }}>
+                      <button
+                        type="button"
+                        onClick={() => setStatusFilter('autorenew_off')}
+                        className="sa-btn sa-btn-secondary sa-btn-sm"
+                      >
                         View ➔
                       </button>
                     </div>
@@ -1597,17 +1591,21 @@ export default function SuperAdminDashboard({ token, username, onLogout, onRetur
                     const d = getDaysRemaining(r.plan_expires_at);
                     return d !== null && d > 0 && d <= 7 && r.subscription_type !== 'ADMIN_GRANTED';
                   }).length > 0 && (
-                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '8px 12px', background: '#F8FAFC', borderRadius: '10px', border: '1px solid #E2E8F0' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '10px 14px', background: '#F8FAFC', borderRadius: '12px', border: '1px solid #E2E8F0' }}>
                       <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                        <span style={{ background: '#64748B', color: '#FFF', padding: '2px 6px', borderRadius: '4px', fontSize: '0.66rem', fontWeight: 900 }}>EXPIRING</span>
-                        <span style={{ fontSize: '0.8rem', fontWeight: 800, color: '#334155' }}>
+                        <span style={{ background: '#64748B', color: '#FFF', padding: '2px 6px', borderRadius: '4px', fontSize: '0.68rem', fontWeight: 900 }}>EXPIRING</span>
+                        <span style={{ fontSize: '0.82rem', fontWeight: 800, color: '#334155' }}>
                           {restaurants.filter(r => {
                             const d = getDaysRemaining(r.plan_expires_at);
                             return d !== null && d > 0 && d <= 7 && r.subscription_type !== 'ADMIN_GRANTED';
                           }).length} Subscriptions Expiring in &le; 7 Days
                         </span>
                       </div>
-                      <button onClick={() => setStatusFilter('expired')} className="sa-btn sa-btn-secondary sa-btn-sm" style={{ padding: '3px 8px', fontSize: '0.72rem' }}>
+                      <button
+                        type="button"
+                        onClick={() => setStatusFilter('expired')}
+                        className="sa-btn sa-btn-secondary sa-btn-sm"
+                      >
                         View ➔
                       </button>
                     </div>
@@ -1615,14 +1613,18 @@ export default function SuperAdminDashboard({ token, username, onLogout, onRetur
 
                   {/* Row 4: Scheduled Plan Changes */}
                   {restaurants.filter(r => r.scheduled_plan_key !== null).length > 0 && (
-                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '8px 12px', background: '#EFF6FF', borderRadius: '10px', border: '1px solid #BFDBFE' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '10px 14px', background: '#EFF6FF', borderRadius: '12px', border: '1px solid #BFDBFE' }}>
                       <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                        <span style={{ background: '#2563EB', color: '#FFF', padding: '2px 6px', borderRadius: '4px', fontSize: '0.66rem', fontWeight: 900 }}>PLAN SWITCH</span>
-                        <span style={{ fontSize: '0.8rem', fontWeight: 800, color: '#1E40AF' }}>
+                        <span style={{ background: '#2563EB', color: '#FFF', padding: '2px 6px', borderRadius: '4px', fontSize: '0.68rem', fontWeight: 900 }}>PLAN SWITCH</span>
+                        <span style={{ fontSize: '0.82rem', fontWeight: 800, color: '#1E40AF' }}>
                           {restaurants.filter(r => r.scheduled_plan_key !== null).length} Scheduled Plan Changes at Next Billing Boundary
                         </span>
                       </div>
-                      <button onClick={() => setActiveView('plans')} className="sa-btn sa-btn-secondary sa-btn-sm" style={{ padding: '3px 8px', fontSize: '0.72rem' }}>
+                      <button
+                        type="button"
+                        onClick={() => setActiveView('plans')}
+                        className="sa-btn sa-btn-secondary sa-btn-sm"
+                      >
                         View ➔
                       </button>
                     </div>
@@ -1631,82 +1633,95 @@ export default function SuperAdminDashboard({ token, username, onLogout, onRetur
                   {/* All Clear State */}
                   {restaurants.filter(r => r.subscription_status === 'payment_failed' || r.subscription_status === 'past_due').length === 0 &&
                    restaurants.filter(r => (r.auto_renew === 0 || r.auto_renew === false || r.cancel_requested_at !== null) && r.active !== false).length === 0 && (
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '10px 14px', background: '#F0FDF4', borderRadius: '10px', border: '1px solid #86EFAC' }}>
-                      <CheckCircle size={16} color="#16A34A" />
-                      <span style={{ fontSize: '0.78rem', color: '#15803D', fontWeight: 700 }}>🟢 No billing issues requiring attention</span>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '14px', background: '#F0FDF4', borderRadius: '12px', border: '1px solid #86EFAC' }}>
+                      <CheckCircle size={20} color="#16A34A" />
+                      <div>
+                        <strong style={{ fontSize: '0.84rem', color: '#15803D', display: 'block' }}>All Subscriptions Operational</strong>
+                        <span style={{ fontSize: '0.74rem', color: '#166534' }}>Zero payment failures or pending churn cancellations.</span>
+                      </div>
                     </div>
                   )}
                 </div>
               </div>
 
-              {/* 🏷️ 4. FILTER PILLS STRIP & SEARCH */}
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '10px' }}>
-                {/* Filter Pills */}
-                <div style={{ display: 'flex', gap: '5px', overflowX: 'auto', paddingBottom: '2px', flexWrap: 'wrap' }}>
-                  {[
-                    { id: 'all', label: `All (${restaurants.length})` },
-                    { id: 'active', label: '🟢 Active Paid' },
-                    { id: 'trial', label: '🎁 Free Trial' },
-                    { id: 'failed', label: '🟡 Payment Failed' },
-                    { id: 'autorenew_off', label: '🟠 Auto-Renew Off' },
-                    { id: 'expired', label: '🔴 Expired' },
-                    { id: 'vip', label: '🟣 VIP' },
-                  ].map(pill => (
-                    <button
-                      key={pill.id}
-                      onClick={() => setStatusFilter(pill.id)}
-                      className={`sa-btn sa-btn-sm ${statusFilter === pill.id ? 'sa-btn-primary' : 'sa-btn-secondary'}`}
-                      style={{ fontSize: '0.72rem', padding: '5px 10px', border: 'none' }}
-                    >
-                      {pill.label}
-                    </button>
-                  ))}
-                </div>
+              {/* 🏷️ 4. TOOLBAR & FILTER PILLS STRIP (USING SHARED FilterPills) */}
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '12px' }}>
+                <FilterPills
+                  pills={[
+                    { id: 'all', label: 'All', count: restaurants.length },
+                    { id: 'active', label: '🟢 Active Paid', count: restaurants.filter(r => r.active !== false && r.active !== 0 && r.active !== '0').length },
+                    { id: 'trial', label: '🎁 Free Trial', count: restaurants.filter(r => r.subscription_status === 'trialing').length },
+                    { id: 'failed', label: '🟡 Past Due', count: restaurants.filter(r => r.subscription_status === 'payment_failed' || r.subscription_status === 'past_due').length },
+                    { id: 'autorenew_off', label: '🟠 Auto-Renew Off', count: restaurants.filter(r => (r.auto_renew === 0 || r.auto_renew === false || r.cancel_requested_at !== null) && r.active !== false).length },
+                    { id: 'expired', label: '🔴 Expired', count: restaurants.filter(r => r.subscription_status === 'expired').length },
+                    { id: 'vip', label: '🟣 VIP', count: restaurants.filter(r => r.subscription_type === 'ADMIN_GRANTED' || r.mandate_status === 'admin_granted').length },
+                  ]}
+                  activeId={statusFilter}
+                  onChange={setStatusFilter}
+                />
 
-                {/* Search Input */}
-                <div style={{ position: 'relative', width: '220px' }}>
-                  <Search size={13} style={{ position: 'absolute', left: '10px', top: '50%', transform: 'translateY(-50%)', color: 'var(--sa-text-muted)' }} />
+                {/* Search Bar */}
+                <div style={{ position: 'relative', width: '260px', maxWidth: '100%' }}>
+                  <Search size={14} style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', color: 'var(--sa-text-muted)' }} />
                   <input
                     type="text"
                     placeholder="Search tenant, owner, phone, email..."
                     value={searchQuery}
                     onChange={(e) => setSearchQuery(e.target.value)}
+                    className="sa-input"
                     style={{
-                      width: '100%',
-                      padding: '6px 10px 6px 28px',
+                      paddingLeft: '34px',
+                      paddingRight: searchQuery ? '32px' : '12px',
+                      height: '38px',
+                      fontSize: '0.80rem',
                       borderRadius: 'var(--sa-radius-full)',
-                      border: '1px solid var(--sa-border)',
-                      fontSize: '0.76rem',
-                      outline: 'none',
-                      background: '#FFFFFF'
+                      background: 'var(--sa-surface-subtle)'
                     }}
                   />
+                  {searchQuery && (
+                    <button
+                      type="button"
+                      onClick={() => setSearchQuery('')}
+                      style={{ position: 'absolute', right: '10px', top: '50%', transform: 'translateY(-50%)', background: 'none', border: 'none', cursor: 'pointer', color: 'var(--sa-text-muted)' }}
+                    >
+                      <X size={14} />
+                    </button>
+                  )}
                 </div>
               </div>
 
-              {/* 📋 5. SUBSCRIPTIONS TABLE */}
-              <div className="sa-table-container sa-responsive-table" style={{ background: '#FFFFFF', borderRadius: '16px' }}>
-                <table className="sa-table">
-                  <thead>
-                    <tr>
-                      <th>TENANT</th>
-                      <th>OWNER / CONTACT</th>
-                      <th>PLAN & BILLING</th>
-                      <th>STATUS</th>
-                      <th>AUTO-RENEW</th>
-                      <th>ACCESS UNTIL / RENEWAL</th>
-                      <th style={{ textAlign: 'right' }}>ACTION</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {filteredAndSortedRestaurants.length === 0 ? (
+              {/* 📋 5. SUBSCRIPTIONS TABLE (USING SHARED DataTable / Table) */}
+              {filteredAndSortedRestaurants.length === 0 ? (
+                <EmptyState
+                  icon={CreditCard}
+                  title="No subscriptions match your criteria"
+                  description="Try clearing your search query or switching status filters."
+                  action={
+                    <button
+                      type="button"
+                      onClick={() => { setSearchQuery(''); setStatusFilter('all'); }}
+                      className="sa-btn sa-btn-secondary sa-btn-sm"
+                    >
+                      Clear Search & Filters
+                    </button>
+                  }
+                />
+              ) : (
+                <div className="sa-table-container sa-responsive-table" style={{ background: '#FFFFFF', borderRadius: 'var(--sa-radius-lg)' }}>
+                  <table className="sa-table">
+                    <thead>
                       <tr>
-                        <td colSpan={7} style={{ textAlign: 'center', padding: '36px', color: 'var(--sa-text-muted)' }}>
-                          No subscriptions matching your selected criteria.
-                        </td>
+                        <th>TENANT</th>
+                        <th>OWNER / CONTACT</th>
+                        <th>PLAN & BILLING</th>
+                        <th>STATUS</th>
+                        <th>AUTO-RENEW</th>
+                        <th>ACCESS UNTIL / RENEWAL</th>
+                        <th style={{ textAlign: 'right' }}>ACTION</th>
                       </tr>
-                    ) : (
-                      filteredAndSortedRestaurants.map(r => {
+                    </thead>
+                    <tbody>
+                      {filteredAndSortedRestaurants.map(r => {
                         const daysLeft = getDaysRemaining(r.plan_expires_at);
                         const isVip = (r.subscription_type === 'ADMIN_GRANTED' || r.mandate_status === 'admin_granted');
                         const isExpired = (!isVip && daysLeft !== null && daysLeft <= 0) || r.subscription_status === 'expired';
@@ -1753,10 +1768,12 @@ export default function SuperAdminDashboard({ token, username, onLogout, onRetur
                                 </span>
                               )}
                             </td>
-                            <td>{renderStatusBadge(r)}</td>
+                            <td>
+                              <StatusBadge status={r.subscription_status} type={r.subscription_type} />
+                            </td>
                             <td>
                               <span style={{
-                                padding: '2px 7px', borderRadius: 'var(--sa-radius-full)', fontSize: '0.68rem', fontWeight: 800,
+                                padding: '3px 8px', borderRadius: 'var(--sa-radius-full)', fontSize: '0.68rem', fontWeight: 800,
                                 background: isAutoRenewOff ? '#FEE2E2' : '#DCFCE7',
                                 color: isAutoRenewOff ? '#DC2626' : '#15803D'
                               }}>
@@ -1768,6 +1785,7 @@ export default function SuperAdminDashboard({ token, username, onLogout, onRetur
                             </td>
                             <td style={{ textAlign: 'right' }}>
                               <button
+                                type="button"
                                 onClick={() => setSelectedTenant360(r)}
                                 className="sa-btn sa-btn-secondary sa-btn-sm"
                                 style={{ padding: '4px 9px', fontSize: '0.72rem', fontWeight: 800 }}
@@ -1778,13 +1796,14 @@ export default function SuperAdminDashboard({ token, username, onLogout, onRetur
                             </td>
                           </tr>
                         );
-                      })
-                    )}
-                  </tbody>
-                </table>
-              </div>
+                      })}
+                    </tbody>
+                  </table>
+                </div>
+              )}
             </div>
           )}
+        
 
           {/* ========================================================================= */}
           {/* VIEW 4: SAAS PLANS & FEATURE MATRIX                                       */}
