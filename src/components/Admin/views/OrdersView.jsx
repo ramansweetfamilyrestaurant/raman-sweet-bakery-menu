@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { Clock, Printer, MapPin, Bell, RefreshCw, CheckCircle2, QrCode, XCircle, UtensilsCrossed, Shield, ShieldCheck, ShieldAlert, Check, X, AlertTriangle } from 'lucide-react';
 import KdsDisplayView from './KdsDisplayView';
 import { resolveBusinessProfile } from '../../../utils/businessTaxonomy';
