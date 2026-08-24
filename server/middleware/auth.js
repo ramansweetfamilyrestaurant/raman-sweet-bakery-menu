@@ -2,6 +2,7 @@ import jwt from 'jsonwebtoken';
 import dotenv from 'dotenv';
 import { query } from '../db.js';
 import { JWT_SECRET } from '../config/jwt.js';
+import { resolveCanonicalSubscriptionState } from '../services/subscriptionState.js';
 
 // Fast In-Memory Cache for Subscription Status (15s TTL)
 const subStatusCache = new Map();
@@ -36,73 +37,28 @@ export async function checkSubscriptionStatus(restaurantId) {
     // Explicit Super Admin Suspension check - MUST override all trial & granted access!
     const isExplicitlyActive = resto.active === 1 || resto.active === true || resto.active === '1' || resto.active === undefined || resto.active === null;
     if (!isExplicitlyActive || resto.active === false || resto.active === 0 || resto.active === 'false') {
-      return { status: 'suspended', active: false, resto, sub: null };
+      const res = { status: 'suspended', active: false, resto, sub: null };
+      subStatusCache.set(rId, { payload: res, timestamp: Date.now() });
+      return res;
     }
 
-    // Super Admin granted 100% complimentary VIP lifetime access
-    if (resto.mandate_status === 'admin_granted' || resto.subscription_type === 'ADMIN_GRANTED') {
-      return { status: 'active', active: true, resto, sub: null, isComplimentary: true };
-    }
-
-    const now = new Date();
-    
-    // 1. Check trial end date (trial_ends_at)
-    let isTrialing = false;
-    if (resto.trial_ends_at) {
-      const trialExp = new Date(String(resto.trial_ends_at).includes('T') ? resto.trial_ends_at : `${resto.trial_ends_at}T23:59:59Z`);
-      if (!isNaN(trialExp.getTime()) && trialExp >= now) {
-        isTrialing = true;
-      }
-    }
-
-    // 2. Check plan expiration date (plan_expires_at)
-    let isPlanActive = false;
-    if (resto.plan_expires_at) {
-      const planExp = new Date(String(resto.plan_expires_at).includes('T') ? resto.plan_expires_at : `${resto.plan_expires_at}T23:59:59Z`);
-      if (!isNaN(planExp.getTime()) && planExp >= now) {
-        isPlanActive = true;
-      }
-    }
-
-    // 3. Check subscriptions table for active paid subscription status
     const subRows = await query('SELECT * FROM subscriptions WHERE restaurant_id = $1 ORDER BY id DESC LIMIT 1', [restaurantId]);
-    const sub = subRows[0];
+    const sub = subRows[0] || null;
 
-    // Active paid subscription in subscriptions table
-    if (sub && sub.status === 'active') {
-      if (sub.cancel_requested_at && sub.current_period_end) {
-        const periodEnd = new Date(sub.current_period_end);
-        if (periodEnd >= now) {
-          return { status: 'active', active: true, resto, sub };
-        }
-      } else {
-        return { status: 'active', active: true, resto, sub };
-      }
-    }
+    const canonical = resolveCanonicalSubscriptionState({ resto, sub, now: new Date() });
+    const payload = {
+      status: canonical.status,
+      active: canonical.active,
+      resto,
+      sub,
+      isComplimentary: canonical.isComplimentary,
+      inGracePeriod: canonical.inGracePeriod,
+      accessUntil: canonical.accessUntil,
+      badge: canonical.badge
+    };
 
-    // Trialing subscription with cancel requested but trial not ended yet
-    if (sub && sub.cancel_requested_at && (sub.status === 'trialing' || sub.status === 'active')) {
-      if (isTrialing) {
-        return { status: 'trialing', active: true, resto, sub };
-      }
-      if (sub.current_period_end) {
-        const periodEnd = new Date(sub.current_period_end);
-        if (periodEnd >= now) {
-          return { status: 'active', active: true, resto, sub };
-        }
-      }
-    }
-
-    if (isPlanActive) {
-      return { status: 'active', active: true, resto, sub };
-    }
-
-    if (isTrialing) {
-      return { status: 'trialing', active: true, resto, sub };
-    }
-
-    // Expired fallback: If trial and plan dates have passed and no active subscription exists
-    return { status: 'expired', active: false, resto, sub };
+    subStatusCache.set(rId, { payload, timestamp: Date.now() });
+    return payload;
   } catch (err) {
     console.error('Subscription status check error:', err.message);
     return { status: 'unknown', active: true };
