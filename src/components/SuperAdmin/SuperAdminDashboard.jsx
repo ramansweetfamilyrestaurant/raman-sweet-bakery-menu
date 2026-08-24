@@ -12,7 +12,7 @@ import Drawer from './components/Drawer';
 import SaaSPlansView from './views/SaaSPlansView';
 import TenantDetailsView from './views/TenantDetailsView';
 import CommunicationView from './views/CommunicationView';
-import { KpiCard, SectionHeader, StatusBadge, EmptyState, DataTable } from './components';
+import { KpiCard, SectionHeader, StatusBadge, EmptyState, DataTable, FilterPills, SearchBar, TenantCard } from './components';
 import './styles/SuperAdmin.css';
 
 export default function SuperAdminDashboard({ token, username, onLogout, onReturnToMenu, onImpersonate }) {
@@ -520,12 +520,38 @@ export default function SuperAdminDashboard({ token, username, onLogout, onRetur
 
   // Render Directory Controls & Clean Tenant Cards Grid / Table
   const renderDirectorySection = () => (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }} onClick={() => setOpenMoreId(null)}>
-      {/* 🛠️ Compact Directory Controls Bar */}
+    <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }} onClick={() => setOpenMoreId(null)}>
+      {/* 👑 1. DIRECTORY SECTION HEADER */}
+      <SectionHeader
+        title="🏪 Tenant Directory"
+        subtitle={`Manage restaurants, subscriptions and tenant access (${filteredAndSortedRestaurants.length} of ${restaurants.length} accounts)`}
+        actions={
+          <div style={{ display: 'flex', gap: '8px' }}>
+            <button
+              type="button"
+              onClick={() => setShowAddModal(true)}
+              className="sa-btn sa-btn-accent sa-btn-sm"
+              style={{ fontWeight: 900 }}
+            >
+              <Plus size={15} /> Add Restaurant
+            </button>
+            <button
+              type="button"
+              onClick={loadData}
+              title="Refresh Directory"
+              className="sa-btn sa-btn-secondary sa-btn-sm"
+            >
+              <RefreshCw size={14} className={loading ? 'spin' : ''} />
+            </button>
+          </div>
+        }
+      />
+
+      {/* 🛠️ 2. TOOLBAR (SEARCH + SORT + GRID/TABLE TOGGLE) */}
       <div className="sa-directory-controls" style={{
-        background: '#FFFFFF',
-        borderRadius: '16px',
-        padding: '14px 18px',
+        background: 'var(--sa-surface)',
+        borderRadius: 'var(--sa-radius-lg)',
+        padding: '12px 16px',
         border: '1px solid var(--sa-border)',
         boxShadow: 'var(--sa-shadow-sm)',
         display: 'flex',
@@ -534,50 +560,50 @@ export default function SuperAdminDashboard({ token, username, onLogout, onRetur
         flexWrap: 'wrap',
         gap: '12px'
       }}>
-        <div>
-          <h2 style={{ fontSize: '1.05rem', fontWeight: 900, color: 'var(--sa-primary)', margin: 0 }}>
-            Tenant Restaurants Directory ({filteredAndSortedRestaurants.length})
-          </h2>
-          <p style={{ fontSize: '0.74rem', color: 'var(--sa-text-muted)', margin: '2px 0 0 0', fontWeight: 600 }}>
-            Monitor and manage all onboarded restaurant tenant accounts
-          </p>
+        {/* Search Bar */}
+        <div style={{ position: 'relative', width: '280px', maxWidth: '100%' }}>
+          <Search size={14} style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', color: 'var(--sa-text-muted)' }} />
+          <input
+            type="text"
+            placeholder="Search name, slug, owner, phone, email, ID..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            className="sa-input"
+            style={{
+              paddingLeft: '34px',
+              paddingRight: searchQuery ? '32px' : '12px',
+              height: '38px',
+              fontSize: '0.80rem',
+              borderRadius: 'var(--sa-radius-full)',
+              background: 'var(--sa-surface-subtle)'
+            }}
+          />
+          {searchQuery && (
+            <button
+              type="button"
+              onClick={() => setSearchQuery('')}
+              style={{ position: 'absolute', right: '10px', top: '50%', transform: 'translateY(-50%)', background: 'none', border: 'none', cursor: 'pointer', color: 'var(--sa-text-muted)' }}
+            >
+              <X size={14} />
+            </button>
+          )}
         </div>
 
         <div className="sa-controls-right" style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
-          {/* Search Input */}
-          <div className="sa-search-box" style={{ position: 'relative', width: '210px' }}>
-            <Search size={13} style={{ position: 'absolute', left: '10px', top: '50%', transform: 'translateY(-50%)', color: 'var(--sa-text-muted)' }} />
-            <input
-              type="text"
-              placeholder="Search name, slug, owner, email..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              style={{
-                width: '100%',
-                padding: '6px 10px 6px 28px',
-                borderRadius: 'var(--sa-radius-full)',
-                border: '1px solid var(--sa-border)',
-                fontSize: '0.76rem',
-                outline: 'none',
-                background: 'var(--sa-surface-subtle)'
-              }}
-            />
-          </div>
-
           {/* Sort Dropdown */}
           <div style={{ position: 'relative' }}>
             <select
               value={sortBy}
               onChange={(e) => setSortBy(e.target.value)}
+              className="sa-select"
               style={{
-                padding: '6px 10px',
+                padding: '6px 12px',
+                height: '38px',
                 borderRadius: 'var(--sa-radius-full)',
-                border: '1px solid var(--sa-border)',
-                fontSize: '0.76rem',
+                fontSize: '0.78rem',
                 fontWeight: 700,
                 color: 'var(--sa-text-main)',
                 background: 'var(--sa-surface-subtle)',
-                outline: 'none',
                 cursor: 'pointer'
               }}
             >
@@ -589,16 +615,17 @@ export default function SuperAdminDashboard({ token, username, onLogout, onRetur
             </select>
           </div>
 
-          {/* Grid / Table Toggle (Hidden on <= 767px via CSS) */}
+          {/* Grid / Table Toggle */}
           <div className="sa-view-toggle" style={{ display: 'flex', background: 'var(--sa-surface-subtle)', padding: '2px', borderRadius: 'var(--sa-radius-full)', border: '1px solid var(--sa-border)' }}>
             <button
+              type="button"
               onClick={() => setViewMode('grid')}
               style={{
                 background: viewMode === 'grid' ? '#FFFFFF' : 'transparent',
                 border: 'none',
                 borderRadius: 'var(--sa-radius-full)',
-                padding: '5px 9px',
-                fontSize: '0.74rem',
+                padding: '6px 12px',
+                fontSize: '0.76rem',
                 fontWeight: 800,
                 color: viewMode === 'grid' ? 'var(--sa-primary)' : 'var(--sa-text-muted)',
                 boxShadow: viewMode === 'grid' ? 'var(--sa-shadow-sm)' : 'none',
@@ -612,13 +639,14 @@ export default function SuperAdminDashboard({ token, username, onLogout, onRetur
               <LayoutGrid size={13} /> Grid
             </button>
             <button
+              type="button"
               onClick={() => setViewMode('table')}
               style={{
                 background: viewMode === 'table' ? '#FFFFFF' : 'transparent',
                 border: 'none',
                 borderRadius: 'var(--sa-radius-full)',
-                padding: '5px 9px',
-                fontSize: '0.74rem',
+                padding: '6px 12px',
+                fontSize: '0.76rem',
                 fontWeight: 800,
                 color: viewMode === 'table' ? 'var(--sa-primary)' : 'var(--sa-text-muted)',
                 boxShadow: viewMode === 'table' ? 'var(--sa-shadow-sm)' : 'none',
@@ -632,65 +660,48 @@ export default function SuperAdminDashboard({ token, username, onLogout, onRetur
               <List size={13} /> Table
             </button>
           </div>
-
-          <button
-            onClick={loadData}
-            title="Refresh Directory"
-            className="sa-btn sa-btn-secondary sa-btn-sm"
-          >
-            <RefreshCw size={13} className={loading ? 'spin' : ''} />
-          </button>
-
-          <button
-            onClick={() => setShowAddModal(true)}
-            className="sa-btn sa-btn-accent sa-btn-sm"
-            style={{ fontWeight: 900 }}
-          >
-            <Plus size={14} /> Add Restaurant
-          </button>
         </div>
       </div>
 
-      {/* 🏷️ Filter Pills Strip */}
-      <div style={{ display: 'flex', gap: '5px', overflowX: 'auto', paddingBottom: '2px', flexWrap: 'wrap' }}>
-        {[
-          { id: 'all', label: `All (${restaurants.length})` },
-          { id: 'active', label: '🟢 Active' },
-          { id: 'trial', label: '🎁 Trial' },
-          { id: 'failed', label: '🟡 Payment Failed' },
-          { id: 'autorenew_off', label: '🟠 Auto-Renew Off' },
-          { id: 'expired', label: '🔴 Expired' },
-          { id: 'vip', label: '🟣 VIP' },
-          { id: 'suspended', label: '⚫ Suspended' },
-        ].map(pill => {
-          const isActive = statusFilter === pill.id;
-          return (
-            <button
-              key={pill.id}
-              onClick={() => setStatusFilter(pill.id)}
-              className={`sa-btn sa-btn-sm ${isActive ? 'sa-btn-primary' : 'sa-btn-secondary'}`}
-              style={{ flexShrink: 0, fontSize: '0.72rem', padding: '5px 10px', border: 'none' }}
-            >
-              {pill.label}
-            </button>
-          );
-        })}
-      </div>
+      {/* 🏷️ 3. FILTER PILLS STRIP (USING SHARED FilterPills) */}
+      <FilterPills
+        pills={[
+          { id: 'all', label: 'All', count: restaurants.length },
+          { id: 'active', label: '🟢 Active', count: restaurants.filter(r => r.active !== false && r.active !== 0 && r.active !== '0').length },
+          { id: 'trial', label: '🎁 Trial', count: restaurants.filter(r => r.subscription_status === 'trialing').length },
+          { id: 'failed', label: '🟡 Past Due', count: restaurants.filter(r => r.subscription_status === 'payment_failed' || r.subscription_status === 'past_due').length },
+          { id: 'autorenew_off', label: '🟠 Renew Off', count: restaurants.filter(r => r.subscription_status === 'auto_renew_off' || r.cancel_requested_at !== null).length },
+          { id: 'expired', label: '🔴 Expired', count: restaurants.filter(r => r.subscription_status === 'expired').length },
+          { id: 'vip', label: '🟣 VIP', count: restaurants.filter(r => r.subscription_type === 'ADMIN_GRANTED' || r.mandate_status === 'admin_granted').length },
+          { id: 'suspended', label: '⚫ Suspended', count: restaurants.filter(r => r.active === false || r.active === 0 || r.active === '0').length },
+        ]}
+        activeId={statusFilter}
+        onChange={setStatusFilter}
+      />
 
-      {/* 🔄 Loading / Empty / Content Views */}
+      {/* 🔄 4. CONTENT DISPLAY (LOADING / EMPTY / TABLE / GRID) */}
       {loading ? (
         <div style={{ textAlign: 'center', padding: '60px', color: 'var(--sa-accent)', fontWeight: 800 }}>
           👑 Loading Tenant Restaurants Directory...
         </div>
       ) : filteredAndSortedRestaurants.length === 0 ? (
-        <div style={{ textAlign: 'center', padding: '60px', background: '#FFFFFF', borderRadius: '16px', border: '1px dashed var(--sa-border)' }}>
-          <Store size={44} color="var(--sa-text-muted)" style={{ marginBottom: '12px' }} />
-          <h3 style={{ fontSize: '1.05rem', fontWeight: 800, margin: '0 0 6px 0' }}>No tenants match your criteria</h3>
-          <p style={{ fontSize: '0.82rem', color: 'var(--sa-text-muted)', margin: 0 }}>Try clearing your search query or switching filters.</p>
-        </div>
+        <EmptyState
+          icon={Store}
+          title="No tenants match your criteria"
+          description="Try clearing your search query or switching status filters."
+          action={
+            <button
+              type="button"
+              onClick={() => { setSearchQuery(''); setStatusFilter('all'); }}
+              className="sa-btn sa-btn-secondary sa-btn-sm"
+            >
+              Clear Search & Filters
+            </button>
+          }
+        />
       ) : viewMode === 'table' ? (
         /* 📊 TABLE VIEW */
-        <div className="sa-table-container sa-responsive-table" style={{ background: '#FFFFFF', borderRadius: '16px' }}>
+        <div className="sa-table-container sa-responsive-table" style={{ background: '#FFFFFF', borderRadius: 'var(--sa-radius-lg)' }}>
           <table className="sa-table">
             <thead>
               <tr>
@@ -743,7 +754,9 @@ export default function SuperAdminDashboard({ token, username, onLogout, onRetur
                         {isVip ? '₹0/mo (VIP)' : `₹${r.plan_price || 999}/mo`}
                       </span>
                     </td>
-                    <td>{renderStatusBadge(r)}</td>
+                    <td>
+                      <StatusBadge status={r.subscription_status} type={r.subscription_type} />
+                    </td>
                     <td style={{ fontSize: '0.76rem', fontWeight: 700 }}>
                       {isVip ? '♾️ Lifetime' : daysLeft !== null ? (isExpired ? 'Expired' : `${daysLeft}d left`) : 'Active'}
                     </td>
@@ -753,6 +766,7 @@ export default function SuperAdminDashboard({ token, username, onLogout, onRetur
                     <td style={{ textAlign: 'right' }}>
                       <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '6px', alignItems: 'center' }}>
                         <button
+                          type="button"
                           onClick={() => setSelectedTenant360(r)}
                           className="sa-btn sa-btn-secondary sa-btn-sm"
                           style={{ padding: '4px 8px', fontSize: '0.72rem', fontWeight: 800 }}
@@ -761,6 +775,7 @@ export default function SuperAdminDashboard({ token, username, onLogout, onRetur
                           🔍 360°
                         </button>
                         <button
+                          type="button"
                           onClick={() => handleImpersonate(r.id, r.name)}
                           className="sa-btn sa-btn-sm"
                           style={{ padding: '4px 8px', fontSize: '0.72rem', background: '#0A2315', color: '#FFD700', border: '1px solid #D4AF37', fontWeight: 900 }}
@@ -791,12 +806,10 @@ export default function SuperAdminDashboard({ token, username, onLogout, onRetur
             return (
               <div
                 key={r.id}
+                className="sa-stat-card"
                 style={{
-                  background: '#FFFFFF',
-                  borderRadius: '16px',
                   padding: '16px',
                   border: r.active !== false ? '1px solid var(--sa-border)' : '1.5px solid #FCA5A5',
-                  boxShadow: 'var(--sa-shadow-sm)',
                   display: 'flex',
                   flexDirection: 'column',
                   justifyContent: 'space-between',
@@ -804,7 +817,7 @@ export default function SuperAdminDashboard({ token, username, onLogout, onRetur
                   position: 'relative'
                 }}
               >
-                {/* 1. Header: Avatar, Title, Slug & Semantic Status Badge */}
+                {/* 1. Header: Avatar, Title, Slug & StatusBadge */}
                 <div>
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: '8px', marginBottom: '8px' }}>
                     <div 
@@ -835,7 +848,7 @@ export default function SuperAdminDashboard({ token, username, onLogout, onRetur
                       </div>
                     </div>
                     <div style={{ flexShrink: 0 }}>
-                      {renderStatusBadge(r)}
+                      <StatusBadge status={r.subscription_status} type={r.subscription_type} />
                     </div>
                   </div>
 
@@ -857,7 +870,7 @@ export default function SuperAdminDashboard({ token, username, onLogout, onRetur
                   {/* 3. Owner Contact Compact Box */}
                   <div style={{
                     background: 'var(--sa-surface-subtle)',
-                    borderRadius: '12px',
+                    borderRadius: 'var(--sa-radius-md)',
                     padding: '8px 10px',
                     fontSize: '0.74rem',
                     display: 'flex',
@@ -870,6 +883,7 @@ export default function SuperAdminDashboard({ token, username, onLogout, onRetur
                       <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
                         <strong style={{ fontFamily: 'monospace', color: 'var(--sa-text-main)' }}>{r.owner_username || 'admin'}</strong>
                         <button
+                          type="button"
                           onClick={() => {
                             navigator.clipboard.writeText(r.owner_username || 'admin');
                             setCopiedId(r.id + '-user');
@@ -914,6 +928,7 @@ export default function SuperAdminDashboard({ token, username, onLogout, onRetur
                 {/* 4. Actions Footer: EXACTLY [ 🔍 360° Profile ] [ 👑 Manage Menu ] [ ••• More ] */}
                 <div style={{ display: 'flex', gap: '6px', borderTop: '1px solid var(--sa-border)', paddingTop: '10px', alignItems: 'center', position: 'relative' }}>
                   <button
+                    type="button"
                     onClick={() => setSelectedTenant360(r)}
                     className="sa-btn sa-btn-secondary sa-btn-sm"
                     style={{ fontWeight: 800, fontSize: '0.75rem', padding: '7px 10px', flex: '1 1 auto', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '4px' }}
@@ -923,6 +938,7 @@ export default function SuperAdminDashboard({ token, username, onLogout, onRetur
                   </button>
 
                   <button
+                    type="button"
                     onClick={() => handleImpersonate(r.id, r.name)}
                     className="sa-btn sa-btn-sm"
                     style={{ background: 'linear-gradient(135deg, #0A2315 0%, #164E2A 100%)', color: '#FFD700', border: '1px solid #D4AF37', fontWeight: 900, fontSize: '0.75rem', padding: '7px 12px', flex: '1.2 1 auto', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '4px' }}
@@ -934,6 +950,7 @@ export default function SuperAdminDashboard({ token, username, onLogout, onRetur
                   {/* ••• More Button & Dropdown */}
                   <div style={{ position: 'relative' }}>
                     <button
+                      type="button"
                       onClick={(e) => {
                         e.stopPropagation();
                         setOpenMoreId(openMoreId === r.id ? null : r.id);
@@ -955,81 +972,111 @@ export default function SuperAdminDashboard({ token, username, onLogout, onRetur
                           marginBottom: '6px',
                           background: '#FFFFFF',
                           borderRadius: '12px',
-                          border: '1px solid var(--sa-border)',
+                          border: '1.5px solid var(--sa-border-strong)',
                           boxShadow: 'var(--sa-shadow-lg)',
                           padding: '6px',
-                          minWidth: '180px',
-                          zIndex: 100,
+                          zIndex: 50,
                           display: 'flex',
                           flexDirection: 'column',
-                          gap: '2px'
+                          gap: '2px',
+                          minWidth: '190px'
                         }}
                       >
+                        {/* 1. Edit Details */}
                         <button
-                          onClick={() => { setOpenMoreId(null); setEditModalData(r); }}
-                          className="sa-dropdown-item"
-                          style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '8px 10px', border: 'none', background: 'transparent', width: '100%', textAlign: 'left', fontSize: '0.78rem', fontWeight: 700, cursor: 'pointer', borderRadius: '6px' }}
-                        >
-                          <Edit3 size={13} color="#64748B" /> Edit Tenant
-                        </button>
-
-                        <button
+                          type="button"
                           onClick={() => {
+                            setEditModalData(r);
                             setOpenMoreId(null);
-                            if (r.subscription_type === 'ADMIN_GRANTED' || r.mandate_status === 'admin_granted') {
-                              setRevokeModalResto(r);
-                            } else {
-                              setGrantModalResto(r);
-                            }
                           }}
-                          className="sa-dropdown-item"
-                          style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '8px 10px', border: 'none', background: 'transparent', width: '100%', textAlign: 'left', fontSize: '0.78rem', fontWeight: 700, cursor: 'pointer', borderRadius: '6px', color: '#7E22CE' }}
+                          className="sa-btn sa-btn-sm"
+                          style={{ justifyContent: 'flex-start', width: '100%', border: 'none', background: 'transparent', padding: '7px 10px', fontSize: '0.76rem', fontWeight: 700, color: '#374151' }}
                         >
-                          <Sparkles size={13} /> {r.subscription_type === 'ADMIN_GRANTED' || r.mandate_status === 'admin_granted' ? 'Revoke VIP Access' : 'Grant VIP Access'}
+                          <Edit3 size={13} /> Edit Restaurant
                         </button>
 
+                        {/* 2. Grant or Revoke Free Access */}
+                        {isVip ? (
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setRevokeModalResto(r);
+                              setOpenMoreId(null);
+                            }}
+                            className="sa-btn sa-btn-sm"
+                            style={{ justifyContent: 'flex-start', width: '100%', border: 'none', background: '#FEE2E2', padding: '7px 10px', fontSize: '0.76rem', fontWeight: 800, color: '#991B1B' }}
+                          >
+                            <Shield size={13} /> Revoke VIP Access
+                          </button>
+                        ) : (
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setGrantModalResto(r);
+                              setOpenMoreId(null);
+                            }}
+                            className="sa-btn sa-btn-sm"
+                            style={{ justifyContent: 'flex-start', width: '100%', border: 'none', background: '#F3E8FF', padding: '7px 10px', fontSize: '0.76rem', fontWeight: 800, color: '#6B21A8' }}
+                          >
+                            <Crown size={13} /> Grant VIP Access
+                          </button>
+                        )}
+
+                        {/* 3. Live Menu Preview Link */}
                         <a
-                          href={`/${r.slug}`}
+                          href={`/${r.subdomain || r.slug}`}
                           target="_blank"
                           rel="noopener noreferrer"
                           onClick={() => setOpenMoreId(null)}
-                          className="sa-dropdown-item"
-                          style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '8px 10px', border: 'none', background: 'transparent', width: '100%', textAlign: 'left', fontSize: '0.78rem', fontWeight: 700, cursor: 'pointer', borderRadius: '6px', textDecoration: 'none', color: 'var(--sa-text-main)' }}
+                          className="sa-btn sa-btn-sm"
+                          style={{ justifyContent: 'flex-start', width: '100%', border: 'none', background: 'transparent', padding: '7px 10px', fontSize: '0.76rem', fontWeight: 700, color: '#374151', textDecoration: 'none' }}
                         >
-                          <ExternalLink size={13} color="#64748B" /> Preview Public Menu
+                          <ExternalLink size={13} /> Live Customer Menu
                         </a>
 
+                        {/* 4. Copy URL Link */}
                         <button
+                          type="button"
                           onClick={() => {
+                            const url = `${window.location.origin}/${r.subdomain || r.slug}`;
+                            navigator.clipboard.writeText(url);
+                            setCopiedId(r.id + '-menu');
+                            setTimeout(() => setCopiedId(null), 2000);
                             setOpenMoreId(null);
-                            navigator.clipboard.writeText(r.slug);
-                            alert(`Copied slug: /${r.slug}`);
                           }}
-                          className="sa-dropdown-item"
-                          style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '8px 10px', border: 'none', background: 'transparent', width: '100%', textAlign: 'left', fontSize: '0.78rem', fontWeight: 700, cursor: 'pointer', borderRadius: '6px' }}
+                          className="sa-btn sa-btn-sm"
+                          style={{ justifyContent: 'flex-start', width: '100%', border: 'none', background: 'transparent', padding: '7px 10px', fontSize: '0.76rem', fontWeight: 700, color: '#374151' }}
                         >
-                          <Copy size={13} color="#64748B" /> Copy Slug
+                          {copiedId === r.id + '-menu' ? <Check size={11} color="#166534" /> : <Copy size={11} />} Copy Menu URL
                         </button>
 
+                        {/* 5. Toggle Active/Suspended */}
                         <button
+                          type="button"
                           onClick={() => {
-                            setOpenMoreId(null);
                             handleToggleActive(r.id, r.active);
+                            setOpenMoreId(null);
                           }}
-                          className="sa-dropdown-item"
-                          style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '8px 10px', border: 'none', background: 'transparent', width: '100%', textAlign: 'left', fontSize: '0.78rem', fontWeight: 700, cursor: 'pointer', borderRadius: '6px', color: r.active !== false ? '#D97706' : '#16A34A' }}
+                          className="sa-btn sa-btn-sm"
+                          style={{ justifyContent: 'flex-start', width: '100%', border: 'none', background: 'transparent', padding: '7px 10px', fontSize: '0.76rem', fontWeight: 700, color: r.active === false ? '#15803D' : '#D97706' }}
                         >
-                          {r.active !== false ? <XCircle size={13} /> : <CheckCircle size={13} />} {r.active !== false ? 'Suspend Account' : 'Reactivate Account'}
+                          {r.active === false ? <ShieldCheck size={13} /> : <Shield size={13} />}
+                          {r.active === false ? 'Reactivate Tenant' : 'Suspend Tenant'}
                         </button>
 
-                        <div style={{ height: '1px', background: 'var(--sa-border)', margin: '4px 0' }} />
+                        <div style={{ height: '1px', background: 'var(--sa-border)', margin: '2px 0' }} />
 
+                        {/* 6. Delete Restaurant (Protected Guard) */}
                         <button
-                          onClick={() => { setOpenMoreId(null); handleDeleteRestaurant(r.id, r.name); }}
-                          className="sa-dropdown-item"
-                          style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '8px 10px', border: 'none', background: 'transparent', width: '100%', textAlign: 'left', fontSize: '0.78rem', fontWeight: 900, cursor: 'pointer', borderRadius: '6px', color: '#DC2626' }}
+                          type="button"
+                          onClick={() => {
+                            handleDeleteRestaurant(r.id, r.name);
+                            setOpenMoreId(null);
+                          }}
+                          className="sa-btn sa-btn-sm"
+                          style={{ justifyContent: 'flex-start', width: '100%', border: 'none', background: 'transparent', padding: '7px 10px', fontSize: '0.76rem', fontWeight: 800, color: '#DC2626' }}
                         >
-                          <Trash2 size={13} color="#DC2626" /> Delete Restaurant
+                          <Trash2 size={13} /> Delete Restaurant
                         </button>
                       </div>
                     )}
@@ -1042,6 +1089,7 @@ export default function SuperAdminDashboard({ token, username, onLogout, onRetur
       )}
     </div>
   );
+
 
   return (
     <div className="sa-dashboard-container">
