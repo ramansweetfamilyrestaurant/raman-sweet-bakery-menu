@@ -4,24 +4,30 @@ export default function StatusBadge({ status, type }) {
   let badgeClass = 'sa-badge-info';
   let label = status || 'UNKNOWN';
 
-  if (type === 'ADMIN_GRANTED' || status === 'admin_granted' || status === 'COMPLIMENTARY') {
+  const s = String(status || '').toLowerCase();
+  const t = String(type || '').toUpperCase();
+
+  if (t === 'ADMIN_GRANTED' || s === 'admin_granted' || s === 'vip' || t === 'COMPLIMENTARY' || s === 'complimentary') {
     badgeClass = 'sa-badge-purple';
-    label = '🎁 COMPLIMENTARY';
-  } else if (status === 'active' || status === 'ACTIVE' || status === true) {
+    label = '🟣 VIP ACCESS';
+  } else if (s === 'active' || status === true) {
     badgeClass = 'sa-badge-success';
     label = '🟢 ACTIVE';
-  } else if (status === 'trialing' || status === 'TRIAL') {
+  } else if (s === 'trialing' || s === 'trial') {
+    badgeClass = 'sa-badge-info';
+    label = '🎁 FREE TRIAL';
+  } else if (s === 'payment_failed' || s === 'past_due' || s === 'failed') {
     badgeClass = 'sa-badge-warning';
-    label = '⏳ TRIAL';
-  } else if (status === 'cancelled' || status === 'CANCELLED') {
-    badgeClass = 'sa-badge-danger';
-    label = '⏸️ CANCELLED';
-  } else if (status === 'expired' || status === 'EXPIRED' || status === false) {
+    label = '🟡 PAST DUE';
+  } else if (s === 'auto_renew_off' || s === 'cancelled') {
+    badgeClass = 'sa-badge-warning';
+    label = '🟠 RENEW OFF';
+  } else if (s === 'expired' || status === false) {
     badgeClass = 'sa-badge-danger';
     label = '🔴 EXPIRED';
-  } else if (status === 'payment_failed' || status === 'PAST_DUE') {
-    badgeClass = 'sa-badge-danger';
-    label = '⚠️ PAYMENT FAILED';
+  } else if (s === 'suspended') {
+    badgeClass = 'sa-badge-muted';
+    label = '⚫ SUSPENDED';
   }
 
   return <span className={`sa-badge ${badgeClass}`}>{label}</span>;
