@@ -94,6 +94,7 @@ export default function SuperAdminDashboard({ token, username, onLogout, onRetur
   const [logoErr, setLogoErr] = useState(false);
   const [dbOptimizing, setDbOptimizing] = useState(false);
   const [dbOptimizeMsg, setDbOptimizeMsg] = useState('');
+  const [dbStats, setDbStats] = useState(null);
 
   const loadSystemSettings = async () => {
     try {
