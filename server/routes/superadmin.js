@@ -342,12 +342,33 @@ router.post('/restaurants/:id/exit-impersonation', authenticateToken, requireSup
 router.put('/restaurants/:id', authenticateToken, requireSuperAdmin, async (req, res) => {
   try {
     const { id } = req.params;
-    const { name, tagline, logo, phone, address, fssai_lic_no, owner_username, owner_password, plan_tier, plan_price, plan_expires_at, whatsapp_number, whatsapp_enabled, direct_ordering_enabled, google_reviews_enabled, theme_color, order_retention_days, custom_domain } = req.body;
+    const { name, tagline, logo, phone, address, fssai_lic_no, owner_username, owner_password, plan_tier, plan_price, plan_expires_at, whatsapp_number, whatsapp_enabled, direct_ordering_enabled, google_reviews_enabled, theme_color, order_retention_days, custom_domain, owner_name, owner_email } = req.body;
 
     let cleanDomain = null;
     if (custom_domain !== undefined) {
       cleanDomain = (custom_domain || '').toLowerCase().trim().replace(/^https?:\/\//, '').replace(/\/.*$/, '').replace(/^www\./, '');
     }
+
+    let cleanOwnerEmail = undefined;
+    if (owner_email !== undefined) {
+      if (owner_email === null || owner_email === '') {
+        cleanOwnerEmail = null;
+      } else if (typeof owner_email === 'string') {
+        const trimmed = owner_email.trim().toLowerCase();
+        if (trimmed.length > 255) {
+          return res.status(400).json({ error: 'Email address cannot exceed 255 characters!' });
+        }
+        const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+        if (!emailRegex.test(trimmed)) {
+          return res.status(400).json({ error: 'Please enter a valid email address (e.g. owner@example.com)!' });
+        }
+        cleanOwnerEmail = trimmed;
+      }
+    }
+
+    // Fetch existing restaurant for audit comparison
+    const existingRestoRows = await query('SELECT * FROM restaurants WHERE id = $1', [id]);
+    const currentResto = existingRestoRows[0] || {};
 
     // Update restaurant info & Feature Control Matrix & Logo
     await query(`
@@ -355,8 +376,10 @@ router.put('/restaurants/:id', authenticateToken, requireSuperAdmin, async (req,
       SET name = $1, tagline = $2, logo = $3, phone = $4, address = $5, fssai_lic_no = $6,
           plan_tier = $7, plan_price = $8, plan_expires_at = $9, whatsapp_number = $10,
           whatsapp_enabled = $11, direct_ordering_enabled = $12, google_reviews_enabled = $13, theme_color = $14,
-          order_retention_days = $15, custom_domain = $16
-      WHERE id = $17
+          order_retention_days = $15, custom_domain = $16,
+          owner_name = COALESCE($17, owner_name),
+          owner_email = CASE WHEN $18::boolean THEN $19 ELSE owner_email END
+      WHERE id = $20
     `, [
       name,
       tagline || '',
@@ -374,6 +397,9 @@ router.put('/restaurants/:id', authenticateToken, requireSuperAdmin, async (req,
       theme_color || 'gold',
       order_retention_days ? parseInt(order_retention_days, 10) : 90,
       cleanDomain !== null ? cleanDomain : (custom_domain !== undefined ? '' : null),
+      owner_name !== undefined ? owner_name : null,
+      cleanOwnerEmail !== undefined,
+      cleanOwnerEmail !== undefined ? cleanOwnerEmail : null,
       id
     ]);
 
@@ -397,7 +423,11 @@ router.put('/restaurants/:id', authenticateToken, requireSuperAdmin, async (req,
       }
     }
 
-    await logAudit(id, 'superadmin', 'Update Tenant', `Updated details for tenant ID ${id} (${name})`);
+    if (cleanOwnerEmail !== undefined && cleanOwnerEmail !== (currentResto.owner_email || null)) {
+      await logAudit(id, 'superadmin', 'OWNER_EMAIL_UPDATED', `Owner email updated from '${currentResto.owner_email || 'none'}' to '${cleanOwnerEmail || 'none'}' for tenant ID ${id}`);
+    } else {
+      await logAudit(id, 'superadmin', 'Update Tenant', `Updated details for tenant ID ${id} (${name})`);
+    }
 
     res.json({ success: true, message: 'Tenant restaurant details updated successfully' });
   } catch (err) {

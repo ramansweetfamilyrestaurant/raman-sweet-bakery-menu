@@ -1068,6 +1068,32 @@ export default function SetupView({
 
           <div>
             <label style={{ fontSize: '0.74rem', fontWeight: 800, color: '#0F172A', display: 'block', marginBottom: '6px', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
+              Owner Full Name (Optional):
+            </label>
+            <input
+              type="text"
+              placeholder="e.g. Raman Kumar"
+              value={settingsForm.owner_name || ''}
+              onChange={(e) => setSettingsForm({ ...settingsForm, owner_name: e.target.value })}
+              style={{ width: '100%', padding: '10px 14px', borderRadius: '10px', border: '1px solid #CBD5E1', fontSize: '0.9rem', boxSizing: 'border-box' }}
+            />
+          </div>
+
+          <div>
+            <label style={{ fontSize: '0.74rem', fontWeight: 800, color: '#0F172A', display: 'block', marginBottom: '6px', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
+              Owner Email Address (Optional):
+            </label>
+            <input
+              type="email"
+              placeholder="e.g. owner@example.com"
+              value={settingsForm.owner_email || ''}
+              onChange={(e) => setSettingsForm({ ...settingsForm, owner_email: e.target.value })}
+              style={{ width: '100%', padding: '10px 14px', borderRadius: '10px', border: '1px solid #CBD5E1', fontSize: '0.9rem', boxSizing: 'border-box' }}
+            />
+          </div>
+
+          <div>
+            <label style={{ fontSize: '0.74rem', fontWeight: 800, color: '#0F172A', display: 'block', marginBottom: '6px', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
               Contact Phone:
             </label>
             <input

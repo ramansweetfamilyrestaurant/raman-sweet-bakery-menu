@@ -1851,6 +1851,34 @@ export default function SuperAdminDashboard({ token, username, onLogout, onRetur
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
                 <div>
                   <label style={{ fontSize: '0.78rem', fontWeight: 800, color: 'var(--text-dark)', marginBottom: '4px', display: 'block' }}>
+                    OWNER FULL NAME
+                  </label>
+                  <input
+                    type="text"
+                    placeholder="e.g. Raman Kumar"
+                    value={editModalData.owner_name || ''}
+                    onChange={(e) => setEditModalData({ ...editModalData, owner_name: e.target.value })}
+                    style={{ width: '100%', padding: '11px 14px', borderRadius: '12px', border: '1.5px solid var(--border-light)', fontSize: '0.86rem', outline: 'none' }}
+                  />
+                </div>
+
+                <div>
+                  <label style={{ fontSize: '0.78rem', fontWeight: 800, color: 'var(--text-dark)', marginBottom: '4px', display: 'block' }}>
+                    OWNER EMAIL (OPTIONAL)
+                  </label>
+                  <input
+                    type="email"
+                    placeholder="owner@example.com"
+                    value={editModalData.owner_email || ''}
+                    onChange={(e) => setEditModalData({ ...editModalData, owner_email: e.target.value })}
+                    style={{ width: '100%', padding: '11px 14px', borderRadius: '12px', border: '1.5px solid var(--border-light)', fontSize: '0.86rem', outline: 'none' }}
+                  />
+                </div>
+              </div>
+
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+                <div>
+                  <label style={{ fontSize: '0.78rem', fontWeight: 800, color: 'var(--text-dark)', marginBottom: '4px', display: 'block' }}>
                     OWNER USERNAME
                   </label>
                   <input

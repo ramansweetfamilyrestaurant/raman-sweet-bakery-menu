@@ -432,6 +432,8 @@ async function createTables() {
       `ALTER TABLE restaurants ADD COLUMN IF NOT EXISTS trial_started_at VARCHAR(100);`,
       `ALTER TABLE restaurants ADD COLUMN IF NOT EXISTS onboarding_completed BOOLEAN NOT NULL DEFAULT TRUE;`,
       `ALTER TABLE restaurants ADD COLUMN IF NOT EXISTS location_initialized BOOLEAN NOT NULL DEFAULT FALSE;`,
+      `ALTER TABLE restaurants ADD COLUMN IF NOT EXISTS owner_email VARCHAR(255) DEFAULT NULL;`,
+      `ALTER TABLE pending_registrations ADD COLUMN IF NOT EXISTS owner_email VARCHAR(255) DEFAULT NULL;`,
       `ALTER TABLE payments ADD COLUMN IF NOT EXISTS restaurant_id INT;`,
       `ALTER TABLE payments ADD COLUMN IF NOT EXISTS subscription_id INT;`,
       `ALTER TABLE payments ADD COLUMN IF NOT EXISTS gateway VARCHAR(50) DEFAULT 'cashfree';`,

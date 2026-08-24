@@ -52,7 +52,7 @@ router.get('/config-status', async (req, res) => {
 // Validates registration form inputs and initiates Cashfree Subscription Checkout BEFORE creating any database record!
 router.post('/checkout-pre-register', registrationRateLimiter, async (req, res) => {
   try {
-    const { name, phone, owner_username, owner_password, plan_tier, owner_name } = req.body;
+    const { name, phone, owner_username, owner_password, plan_tier, owner_name, owner_email } = req.body;
 
     if (!name || !name.trim()) {
       return res.status(400).json({ error: 'Restaurant Name is required!' });
@@ -69,6 +69,21 @@ router.post('/checkout-pre-register', registrationRateLimiter, async (req, res) 
 
     if (!owner_password || owner_password.length < 4) {
       return res.status(400).json({ error: 'Password must be at least 4 characters long!' });
+    }
+
+    let cleanOwnerEmail = null;
+    if (owner_email && typeof owner_email === 'string') {
+      const trimmedEmail = owner_email.trim().toLowerCase();
+      if (trimmedEmail) {
+        if (trimmedEmail.length > 255) {
+          return res.status(400).json({ error: 'Email address cannot exceed 255 characters!' });
+        }
+        const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+        if (!emailRegex.test(trimmedEmail)) {
+          return res.status(400).json({ error: 'Please enter a valid email address (e.g. owner@example.com)!' });
+        }
+        cleanOwnerEmail = trimmedEmail;
+      }
     }
 
     // 1. Check if phone or owner username is ALREADY in the database
@@ -127,6 +142,7 @@ router.post('/checkout-pre-register', registrationRateLimiter, async (req, res) 
     const regPayload = {
       name: name.trim(),
       owner_name: (owner_name || '').trim(),
+      owner_email: cleanOwnerEmail,
       phone: cleanPhone,
       owner_username: owner_username.trim(),
       owner_password,
@@ -141,8 +157,8 @@ router.post('/checkout-pre-register', registrationRateLimiter, async (req, res) 
     const expiresAt = new Date(Date.now() + 24 * 3600 * 1000).toISOString();
     await query(
       `INSERT INTO pending_registrations (
-        id, payload, name, phone, owner_username, password_hash, plan_key, plan_price, trial_days, cashfree_subscription_id, cashfree_subscription_session_id, mandate_status, status, expires_at
-      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14)`,
+        id, payload, name, phone, owner_username, password_hash, plan_key, plan_price, trial_days, cashfree_subscription_id, cashfree_subscription_session_id, mandate_status, status, expires_at, owner_email
+      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15)`,
       [
         regId,
         JSON.stringify(regPayload),
@@ -157,7 +173,8 @@ router.post('/checkout-pre-register', registrationRateLimiter, async (req, res) 
         cfResult.subscription_session_id || cfResult.payment_session_id || null,
         'pending',
         'checkout_started',
-        expiresAt
+        expiresAt,
+        cleanOwnerEmail
       ]
     );
 
@@ -278,14 +295,15 @@ export async function finalizePendingRegistration(reg_id, inputSubId = null) {
 
     const restoRes = await txQuery(`
       INSERT INTO restaurants (
-        name, slug, tagline, logo, phone, address, opening_hours, plan_tier, plan_price, plan_expires_at, trial_started_at, trial_ends_at, whatsapp_number, theme_color, active, total_tables, mandate_status, mandate_id, auto_debit_enabled, onboarding_completed, location_initialized, owner_name
-      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21, $22) RETURNING id
+        name, slug, tagline, logo, phone, address, opening_hours, plan_tier, plan_price, plan_expires_at, trial_started_at, trial_ends_at, whatsapp_number, theme_color, active, total_tables, mandate_status, mandate_id, auto_debit_enabled, onboarding_completed, location_initialized, owner_name, owner_email
+      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21, $22, $23) RETURNING id
     `, [
       regData.name, cleanSlug, '100% Fresh & Authentic Food',
       '/images/default-logo.webp',
       regData.phone, '', '8:00 AM - 10:30 PM',
       dbPlan.key, dbPlan.price, expiryDateISO, nowISO, expiryDateISO, regData.phone, 'gold',
-      1, 0, 'active', targetSubId || null, 1, false, false, regData.owner_name || ''
+      1, 0, 'active', targetSubId || null, 1, false, false, regData.owner_name || '',
+      regData.owner_email || null
     ]);
 
     const newRestoId = restoRes[0]?.id || restoRes.lastInsertRowid;

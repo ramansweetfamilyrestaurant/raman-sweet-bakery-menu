@@ -1,11 +1,12 @@
 import React, { useState, useEffect } from 'react';
-import { Store, User, Lock, Phone, ArrowRight, CheckCircle2, ShieldCheck, Sparkles, AlertCircle } from 'lucide-react';
+import { Store, User, Lock, Phone, ArrowRight, CheckCircle2, ShieldCheck, Sparkles, AlertCircle, Mail } from 'lucide-react';
 
 export default function RegisterPage({ onRegisterSuccess }) {
   const [formData, setFormData] = useState({
     name: '',
     owner_name: '',
     phone: '',
+    owner_email: '',
     owner_username: '',
     owner_password: '',
     confirm_password: '',
@@ -116,6 +117,22 @@ export default function RegisterPage({ onRegisterSuccess }) {
       setError('Please enter a valid 10-digit Mobile Number (e.g. 9876543210)');
       return;
     }
+
+    let cleanOwnerEmail = null;
+    if (formData.owner_email && formData.owner_email.trim()) {
+      const trimmed = formData.owner_email.trim().toLowerCase();
+      if (trimmed.length > 255) {
+        setError('Email address cannot exceed 255 characters.');
+        return;
+      }
+      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+      if (!emailRegex.test(trimmed)) {
+        setError('Please enter a valid email address (e.g. owner@example.com) or leave it empty.');
+        return;
+      }
+      cleanOwnerEmail = trimmed;
+    }
+
     if (!formData.owner_username.trim()) {
       setError('Please enter an Owner Username for logging into Admin Panel');
       return;
@@ -148,6 +165,7 @@ export default function RegisterPage({ onRegisterSuccess }) {
           name: formData.name,
           owner_name: formData.owner_name,
           phone: formData.phone,
+          owner_email: cleanOwnerEmail,
           owner_username: formData.owner_username,
           owner_password: formData.owner_password,
           plan_tier: formData.plan_tier
@@ -470,6 +488,27 @@ export default function RegisterPage({ onRegisterSuccess }) {
                   placeholder="10-digit mobile (e.g. 9876543210)"
                   value={formData.phone}
                   onChange={e => setFormData({ ...formData, phone: e.target.value.replace(/[^0-9]/g, '') })}
+                  style={{
+                    width: '100%', padding: '11px 12px 11px 38px', borderRadius: '12px',
+                    border: '1px solid rgba(255,255,255,0.15)', background: '#1F2937',
+                    color: '#FFFFFF', fontSize: '0.85rem', outline: 'none'
+                  }}
+                />
+              </div>
+            </div>
+
+            {/* Owner Email Address (Optional) */}
+            <div>
+              <label style={{ display: 'block', fontSize: '0.74rem', fontWeight: 800, color: '#DFBA67', marginBottom: '4px' }}>
+                EMAIL ADDRESS <span style={{ color: '#9CA3AF', fontWeight: 600, fontSize: '0.7rem' }}>(OPTIONAL)</span>
+              </label>
+              <div style={{ position: 'relative' }}>
+                <Mail size={16} color="#9CA3AF" style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)' }} />
+                <input
+                  type="email"
+                  placeholder="e.g. owner@example.com"
+                  value={formData.owner_email || ''}
+                  onChange={e => setFormData({ ...formData, owner_email: e.target.value })}
                   style={{
                     width: '100%', padding: '11px 12px 11px 38px', borderRadius: '12px',
                     border: '1px solid rgba(255,255,255,0.15)', background: '#1F2937',

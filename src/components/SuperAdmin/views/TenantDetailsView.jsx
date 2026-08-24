@@ -65,18 +65,30 @@ export default function TenantDetailsView({ resto, isOpen, onClose, onImpersonat
 
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', fontSize: '0.84rem' }}>
             <div style={{ background: 'var(--sa-surface-subtle)', padding: '12px', borderRadius: 'var(--sa-radius-md)' }}>
+              <span style={{ fontSize: '0.72rem', color: 'var(--sa-text-muted)', fontWeight: 800, display: 'block' }}>OWNER FULL NAME</span>
+              <strong style={{ color: 'var(--sa-text-main)' }}>{resto.owner_name || resto.name || 'Not Provided'}</strong>
+            </div>
+
+            <div style={{ background: 'var(--sa-surface-subtle)', padding: '12px', borderRadius: 'var(--sa-radius-md)' }}>
               <span style={{ fontSize: '0.72rem', color: 'var(--sa-text-muted)', fontWeight: 800, display: 'block' }}>OWNER USERNAME</span>
               <strong style={{ color: 'var(--sa-text-main)' }}>{resto.owner_username || 'admin'}</strong>
             </div>
 
             <div style={{ background: 'var(--sa-surface-subtle)', padding: '12px', borderRadius: 'var(--sa-radius-md)' }}>
-              <span style={{ fontSize: '0.72rem', color: 'var(--sa-text-muted)', fontWeight: 800, display: 'block' }}>DISHES HOSTED</span>
-              <strong style={{ color: 'var(--sa-success)' }}>{resto.dish_count || 0} Items</strong>
+              <span style={{ fontSize: '0.72rem', color: 'var(--sa-text-muted)', fontWeight: 800, display: 'block' }}>CONTACT MOBILE</span>
+              <strong>{resto.phone || 'Not Provided'}</strong>
             </div>
 
             <div style={{ background: 'var(--sa-surface-subtle)', padding: '12px', borderRadius: 'var(--sa-radius-md)' }}>
-              <span style={{ fontSize: '0.72rem', color: 'var(--sa-text-muted)', fontWeight: 800, display: 'block' }}>CONTACT MOBILE</span>
-              <strong>{resto.phone || 'Not Provided'}</strong>
+              <span style={{ fontSize: '0.72rem', color: 'var(--sa-text-muted)', fontWeight: 800, display: 'block' }}>OWNER EMAIL</span>
+              <strong style={{ color: resto.owner_email ? 'var(--sa-text-main)' : 'var(--sa-text-muted)' }}>
+                {resto.owner_email ? `✉️ ${resto.owner_email}` : '✉️ Email not added'}
+              </strong>
+            </div>
+
+            <div style={{ background: 'var(--sa-surface-subtle)', padding: '12px', borderRadius: 'var(--sa-radius-md)' }}>
+              <span style={{ fontSize: '0.72rem', color: 'var(--sa-text-muted)', fontWeight: 800, display: 'block' }}>DISHES HOSTED</span>
+              <strong style={{ color: 'var(--sa-success)' }}>{resto.dish_count || 0} Items</strong>
             </div>
 
             <div style={{ background: 'var(--sa-surface-subtle)', padding: '12px', borderRadius: 'var(--sa-radius-md)' }}>

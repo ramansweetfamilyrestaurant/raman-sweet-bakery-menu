@@ -2197,7 +2197,7 @@ router.post('/register/pre-validate', async (req, res) => {
 // Hardened with Atomic Database Transaction & Backend Authoritative Plan Resolution
 router.post('/register', registrationRateLimiter, async (req, res) => {
   try {
-    const { name, phone, owner_username, owner_password, plan_tier, owner_name } = req.body;
+    const { name, phone, owner_username, owner_password, plan_tier, owner_name, owner_email } = req.body;
 
     if (!name || !phone || !owner_username || !owner_password) {
       return res.status(400).json({ error: 'Restaurant Name, Mobile Number, Username, and Password are required!' });
@@ -2210,6 +2210,21 @@ router.post('/register', registrationRateLimiter, async (req, res) => {
 
     if (owner_password.length < 4) {
       return res.status(400).json({ error: 'Password must be at least 4 characters long!' });
+    }
+
+    let cleanOwnerEmail = null;
+    if (owner_email && typeof owner_email === 'string') {
+      const trimmedEmail = owner_email.trim().toLowerCase();
+      if (trimmedEmail) {
+        if (trimmedEmail.length > 255) {
+          return res.status(400).json({ error: 'Email address cannot exceed 255 characters!' });
+        }
+        const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+        if (!emailRegex.test(trimmedEmail)) {
+          return res.status(400).json({ error: 'Please enter a valid email address (e.g. owner@example.com)!' });
+        }
+        cleanOwnerEmail = trimmedEmail;
+      }
     }
 
     // Generate clean slug from restaurant name
@@ -2276,8 +2291,8 @@ router.post('/register', registrationRateLimiter, async (req, res) => {
       // 1. Create Restaurant Record (mandate_status='pending', auto_debit_enabled=0, onboarding_completed=false)
       const restoRes = await txQuery(`
         INSERT INTO restaurants (
-          name, slug, tagline, logo, phone, address, opening_hours, plan_tier, plan_price, plan_expires_at, trial_started_at, trial_ends_at, whatsapp_number, theme_color, active, total_tables, mandate_status, auto_debit_enabled, onboarding_completed, location_initialized, owner_name
-        ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21) RETURNING id
+          name, slug, tagline, logo, phone, address, opening_hours, plan_tier, plan_price, plan_expires_at, trial_started_at, trial_ends_at, whatsapp_number, theme_color, active, total_tables, mandate_status, auto_debit_enabled, onboarding_completed, location_initialized, owner_name, owner_email
+        ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21, $22) RETURNING id
       `, [
         name.trim(),
         cleanSlug,
@@ -2299,7 +2314,8 @@ router.post('/register', registrationRateLimiter, async (req, res) => {
         0,
         false,
         false,
-        (owner_name || '').trim()
+        (owner_name || '').trim(),
+        cleanOwnerEmail
       ]);
 
       const newRestoId = restoRes[0]?.id || restoRes.lastInsertRowid;
