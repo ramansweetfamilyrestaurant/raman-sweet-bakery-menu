@@ -204,6 +204,7 @@ export default function SubscriptionBillingPage({ restoInfo, token, onProceedToD
 
   // Dynamic Trial Duration Calculation
   const activeResto = currentResto || restoInfo;
+  const isRenewalRequired = Boolean(activeResto?.mandate_status === 'cancelled' || (!activeResto?.active && activeResto?.subscription_type === 'PAID'));
   const now = new Date();
   
   // Calculate dynamic trial days: from DB trial dates if present, else dynamic trialSettingDays
@@ -482,12 +483,41 @@ export default function SubscriptionBillingPage({ restoInfo, token, onProceedToD
           )}
         </div>
 
-        <h1 style={{ fontSize: '1.45rem', fontWeight: 900, color: '#FFFFFF', margin: '0 0 4px 0', letterSpacing: '-0.3px' }}>
-          Activate {calcDays}-Day Free Trial 🚀
-        </h1>
-        <p style={{ fontSize: '0.84rem', color: '#A7F3D0', margin: '0 0 16px 0', lineHeight: 1.4 }}>
-          Account <strong>{activeResto?.name || localStorage.getItem('touchqr_admin_user') || 'Restaurant'}</strong> ready! Authorize UPI AutoPay to start.
-        </p>
+        {isRenewalRequired ? (
+          <>
+            <h1 style={{ fontSize: '1.45rem', fontWeight: 900, color: '#FFFFFF', margin: '0 0 4px 0', letterSpacing: '-0.3px' }}>
+              🎁 Complimentary VIP Access Has Ended
+            </h1>
+            <p style={{ fontSize: '0.84rem', color: '#A7F3D0', margin: '0 0 14px 0', lineHeight: 1.4 }}>
+              Your complimentary access has been removed. Your restaurant data is safe. Choose a plan below to continue.
+            </p>
+            <div style={{
+              background: 'rgba(16, 185, 129, 0.12)',
+              border: '1px solid #10B981',
+              borderRadius: '12px',
+              padding: '10px 14px',
+              marginBottom: '16px',
+              fontSize: '0.8rem',
+              color: '#D1FAE5',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '8px',
+              textAlign: 'left'
+            }}>
+              <span style={{ fontSize: '1.1rem' }}>🔒</span>
+              <span><strong>Data Safe:</strong> Your menu dishes, tables, QR codes, past orders, settings, and history are completely preserved.</span>
+            </div>
+          </>
+        ) : (
+          <>
+            <h1 style={{ fontSize: '1.45rem', fontWeight: 900, color: '#FFFFFF', margin: '0 0 4px 0', letterSpacing: '-0.3px' }}>
+              Activate {calcDays}-Day Free Trial 🚀
+            </h1>
+            <p style={{ fontSize: '0.84rem', color: '#A7F3D0', margin: '0 0 16px 0', lineHeight: 1.4 }}>
+              Account <strong>{activeResto?.name || localStorage.getItem('touchqr_admin_user') || 'Restaurant'}</strong> ready! Authorize UPI AutoPay to start.
+            </p>
+          </>
+        )}
 
         {/* Interactive SaaS Plan Selector Tabs */}
         <div style={{
@@ -825,7 +855,7 @@ export default function SubscriptionBillingPage({ restoInfo, token, onProceedToD
               }}
             >
               <ShieldCheck size={20} />
-              <span>{authorizing ? 'Opening Cashfree...' : `🚀 Authorize UPI AutoPay & Activate ${calcDays}-Day Trial`}</span>
+              <span>{authorizing ? 'Opening Cashfree...' : isRenewalRequired ? '🚀 Choose Plan & Continue' : `🚀 Authorize UPI AutoPay & Activate ${calcDays}-Day Trial`}</span>
             </button>
           </div>
         )}

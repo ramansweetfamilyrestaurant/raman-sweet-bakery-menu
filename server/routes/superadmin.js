@@ -441,8 +441,23 @@ router.post('/restaurants/:id/grant-free-access', authenticateToken, requireSupe
     const nowISO = new Date().toISOString();
 
     // Safely stop active Cashfree mandate if restaurant was on paid subscription
+    const restoRows = await query('SELECT * FROM restaurants WHERE id = $1', [id]);
+    const currentResto = restoRows[0];
     const currentSubRows = await query('SELECT * FROM subscriptions WHERE restaurant_id = $1 ORDER BY id DESC LIMIT 1', [id]);
     const currentSub = currentSubRows[0];
+
+    const previousSnapshot = {
+      previous_plan_tier: currentResto?.plan_tier || 'pro',
+      previous_plan_price: currentResto?.plan_price !== undefined ? Number(currentResto.plan_price) : 999,
+      previous_subscription_type: currentResto?.subscription_type || 'TRIAL',
+      previous_subscription_status: currentSub?.status || 'trialing',
+      previous_auto_renew: currentSub?.auto_renew || 0,
+      previous_plan_expires_at: currentResto?.plan_expires_at || null,
+      previous_trial_started_at: currentResto?.trial_started_at || null,
+      previous_trial_ends_at: currentResto?.trial_ends_at || null,
+      previous_current_period_end: currentSub?.current_period_end || null
+    };
+
     if (currentSub && currentSub.gateway_subscription_id && currentSub.status === 'active') {
       try {
         const cfConfig = await getCashfreeConfigAsync();
@@ -491,7 +506,12 @@ router.post('/restaurants/:id/grant-free-access', authenticateToken, requireSupe
       `, [id, targetPlan.id, nowISO, expiryDate, noteText]);
     }
 
-    await logAudit(id, 'superadmin', 'GRANT_ADMIN_ACCESS', `Granted free ${targetPlan.name} access until ${new Date(expiryDate).toLocaleDateString('en-IN')} (${noteText})`);
+    await logAudit(
+      id,
+      'superadmin',
+      'GRANT_ADMIN_ACCESS',
+      `Granted free ${targetPlan.name} access until ${new Date(expiryDate).toLocaleDateString('en-IN')} (${noteText}) | Snapshot: ${JSON.stringify(previousSnapshot)}`
+    );
 
     res.json({
       success: true,
@@ -516,11 +536,40 @@ router.post('/restaurants/:id/revoke-free-access', authenticateToken, requireSup
     const { id } = req.params;
     const nowISO = new Date().toISOString();
 
-    await query("UPDATE restaurants SET active = false, mandate_status = 'cancelled', subscription_type = 'PAID' WHERE id = $1", [id]);
+    const restoRows = await query('SELECT * FROM restaurants WHERE id = $1', [id]);
+    if (!restoRows || restoRows.length === 0) {
+      return res.status(404).json({ error: 'Restaurant tenant not found' });
+    }
+    const currentResto = restoRows[0];
+    const isAlreadyCancelled = currentResto.active === false && currentResto.mandate_status === 'cancelled';
+
+    await query("UPDATE restaurants SET active = false, mandate_status = 'cancelled', subscription_type = 'PAID', auto_debit_enabled = 0 WHERE id = $1", [id]);
     await query("UPDATE subscriptions SET status = 'cancelled', updated_at = $1 WHERE restaurant_id = $2 AND status = 'active'", [nowISO, id]);
 
-    await logAudit(id, 'superadmin', 'Revoke Free Access', `Revoked free access for restaurant #${id}`);
-    res.json({ success: true, message: `Revoked free access for restaurant #${id}` });
+    const revokeMetadata = {
+      previous_plan_tier: currentResto.plan_tier || 'pro',
+      previous_plan_price: Number(currentResto.plan_price || 0),
+      previous_subscription_status: currentResto.mandate_status || 'admin_granted',
+      previous_auto_renew: 0,
+      post_revoke_state: 'RENEWAL_REQUIRED',
+      data_preserved: true
+    };
+
+    if (!isAlreadyCancelled) {
+      await logAudit(
+        id,
+        'superadmin',
+        'VIP_ACCESS_REVOKED',
+        `Revoked complimentary VIP access for tenant #${id} (${currentResto.name}). Post-state: RENEWAL_REQUIRED | Metadata: ${JSON.stringify(revokeMetadata)}`
+      );
+    }
+
+    res.json({
+      success: true,
+      message: `Revoked free access for restaurant #${id}`,
+      post_revoke_state: 'RENEWAL_REQUIRED',
+      data_preserved: true
+    });
   } catch (err) {
     console.error('Revoke free access error:', err);
     res.status(500).json({ error: 'Failed to revoke free access' });
