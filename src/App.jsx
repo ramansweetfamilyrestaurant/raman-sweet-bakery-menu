@@ -22,8 +22,13 @@ import { isValidQrTokenFormat, normalizeSpaceType, normalizeSpaceNumber } from '
 // Robust Lazy Loading with automatic retry on new production deploys
 const lazyWithRetry = (componentImport) =>
   lazy(async () => {
+    const pageHasAlreadyBeenForceRefreshed = JSON.parse(
+      window.sessionStorage.getItem('retry-chunk-refresh') || 'false'
+    );
     try {
-      return await componentImport();
+      const component = await componentImport();
+      window.sessionStorage.setItem('retry-chunk-refresh', 'false');
+      return component;
     } catch (error) {
       console.warn('Chunk loading failed, checking for updated deploy...', error);
       const isChunkError = error?.message && (
@@ -32,9 +37,16 @@ const lazyWithRetry = (componentImport) =>
         error.message.includes('error loading dynamically imported module') ||
         error.message.includes('Importing a module script failed')
       );
-      if (isChunkError && !sessionStorage.getItem('retry-chunk-refresh')) {
-        sessionStorage.setItem('retry-chunk-refresh', 'true');
+      if (isChunkError && !pageHasAlreadyBeenForceRefreshed) {
+        window.sessionStorage.setItem('retry-chunk-refresh', 'true');
+        if ('caches' in window) {
+          try {
+            const keys = await caches.keys();
+            await Promise.all(keys.map(k => caches.delete(k)));
+          } catch {}
+        }
         window.location.reload();
+        return new Promise(() => {});
       }
       throw error;
     }
