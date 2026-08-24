@@ -611,26 +611,6 @@ export default function OrdersView({
                               ✓ Accept Order
                             </button>
                             <button
-                              onClick={() => onUpdateStatus(order.id, 'accepted', { sent_to_kds: 0, kitchen_prepared: 1 })}
-                              style={{
-                                background: 'linear-gradient(135deg, #2563EB 0%, #3B82F6 100%)',
-                                color: '#FFFFFF',
-                                border: 'none',
-                                padding: '8px 16px',
-                                borderRadius: '10px',
-                                fontSize: '0.8rem',
-                                fontWeight: 800,
-                                cursor: 'pointer',
-                                minHeight: '40px',
-                                boxShadow: '0 2px 6px rgba(37, 99, 235, 0.25)',
-                                display: 'inline-flex',
-                                alignItems: 'center',
-                                gap: '4px'
-                              }}
-                            >
-                              ⚡ Mark Ready
-                            </button>
-                            <button
                               onClick={() => onUpdateStatus(order.id, 'rejected')}
                               style={{
                                 background: '#FEE2E2',
@@ -653,44 +633,47 @@ export default function OrdersView({
                         )}
                         {order.status === 'accepted' && (
                           <>
-                            {kdsEnabled && (
-                              <button
-                                onClick={() => onUpdateStatus(order.id, 'kitchen', { sent_to_kds: 1 })}
-                                style={{
-                                  background: '#0F172A',
-                                  color: '#38BDF8',
-                                  border: '1px solid #38BDF8',
-                                  padding: '8px 14px',
-                                  borderRadius: '10px',
-                                  fontSize: '0.8rem',
-                                  fontWeight: 800,
-                                  cursor: 'pointer',
-                                  minHeight: '40px'
-                                }}
-                              >
-                                🍳 Send to Kitchen
-                              </button>
-                            )}
                             {order.kitchen_prepared !== 1 && order.kitchen_prepared !== true && order.kitchen_prepared !== '1' && (
-                              <button
-                                onClick={() => onUpdateStatus(order.id, 'accepted', { sent_to_kds: 0, kitchen_prepared: 1 })}
-                                style={{
-                                  background: 'linear-gradient(135deg, #2563EB 0%, #3B82F6 100%)',
-                                  color: '#FFFFFF',
-                                  border: 'none',
-                                  padding: '8px 14px',
-                                  borderRadius: '10px',
-                                  fontSize: '0.8rem',
-                                  fontWeight: 800,
-                                  cursor: 'pointer',
-                                  minHeight: '40px',
-                                  display: 'inline-flex',
-                                  alignItems: 'center',
-                                  gap: '4px'
-                                }}
-                              >
-                                ⚡ Mark Ready
-                              </button>
+                              <>
+                                <button
+                                  onClick={() => onUpdateStatus(order.id, 'accepted', { sent_to_kds: 0, kitchen_prepared: 1 })}
+                                  style={{
+                                    background: 'linear-gradient(135deg, #2563EB 0%, #3B82F6 100%)',
+                                    color: '#FFFFFF',
+                                    border: 'none',
+                                    padding: '8px 14px',
+                                    borderRadius: '10px',
+                                    fontSize: '0.8rem',
+                                    fontWeight: 800,
+                                    cursor: 'pointer',
+                                    minHeight: '40px',
+                                    display: 'inline-flex',
+                                    alignItems: 'center',
+                                    gap: '4px',
+                                    boxShadow: '0 2px 6px rgba(37, 99, 235, 0.25)'
+                                  }}
+                                >
+                                  ⚡ Mark Ready
+                                </button>
+                                {kdsEnabled && (
+                                  <button
+                                    onClick={() => onUpdateStatus(order.id, 'kitchen', { sent_to_kds: 1 })}
+                                    style={{
+                                      background: '#0F172A',
+                                      color: '#38BDF8',
+                                      border: '1px solid #38BDF8',
+                                      padding: '8px 14px',
+                                      borderRadius: '10px',
+                                      fontSize: '0.8rem',
+                                      fontWeight: 800,
+                                      cursor: 'pointer',
+                                      minHeight: '40px'
+                                    }}
+                                  >
+                                    🍳 Send to Kitchen
+                                  </button>
+                                )}
+                              </>
                             )}
                             <button
                               onClick={() => onUpdateStatus(order.id, 'served', { sent_to_kds: 0, kitchen_prepared: 1, silent: true })}
