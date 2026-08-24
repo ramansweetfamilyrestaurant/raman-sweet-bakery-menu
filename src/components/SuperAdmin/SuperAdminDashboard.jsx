@@ -12,6 +12,7 @@ import Drawer from './components/Drawer';
 import SaaSPlansView from './views/SaaSPlansView';
 import TenantDetailsView from './views/TenantDetailsView';
 import CommunicationView from './views/CommunicationView';
+import { KpiCard, SectionHeader, StatusBadge, EmptyState, DataTable } from './components';
 import './styles/SuperAdmin.css';
 
 export default function SuperAdminDashboard({ token, username, onLogout, onReturnToMenu, onImpersonate }) {
@@ -1078,108 +1079,88 @@ export default function SuperAdminDashboard({ token, username, onLogout, onRetur
           {/* VIEW 1: OVERVIEW (KPIs + PENDING APPROVALS + DIRECTORY)                   */}
           {/* ========================================================================= */}
           {activeView === 'overview' && (
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
-              {/* 👑 1. TOP 5 PRIMARY KPI HERO CARDS */}
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
+              {/* 👑 1. VIEW HEADER */}
+              <SectionHeader
+                title="📊 Overview"
+                subtitle="Platform health, revenue and tenant activity at a glance."
+                actions={
+                  <div style={{ display: 'flex', gap: '8px' }}>
+                    <button
+                      onClick={() => setShowAddModal(true)}
+                      className="sa-btn sa-btn-accent sa-btn-sm"
+                      style={{ fontWeight: 900 }}
+                    >
+                      <Plus size={15} /> Add Restaurant
+                    </button>
+                    <button
+                      onClick={loadData}
+                      className="sa-btn sa-btn-secondary sa-btn-sm"
+                      title="Refresh live metrics"
+                    >
+                      <RefreshCw size={14} className={loading ? 'spin' : ''} /> Refresh
+                    </button>
+                  </div>
+                }
+              />
+
+              {/* 👑 2. TOP 5 PRIMARY KPI HERO ROW (USING SHARED KpiCard) */}
               <div className="sa-stats-grid">
                 {/* KPI 1: MRR Revenue */}
-                <div
+                <KpiCard
+                  label="MRR Revenue"
+                  value={`₹${estimatedRevenue.toLocaleString()}`}
+                  icon={DollarSign}
+                  color="var(--sa-accent)"
                   onClick={() => setActiveView('billing')}
-                  className="sa-stat-card hover-lift"
-                  style={{ background: 'linear-gradient(135deg, #0A2315 0%, #164E2A 100%)', color: '#FFFFFF', border: '1.5px solid #DFBA67', cursor: 'pointer' }}
-                  title="Click to view Billing & Subscription Management"
-                >
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                    <div style={{ width: '42px', height: '42px', borderRadius: '12px', background: 'linear-gradient(135deg, #DFBA67 0%, #C5A059 100%)', color: '#0A2315', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-                      <DollarSign size={22} color="#0A2315" />
-                    </div>
-                    <div>
-                      <div className="sa-stat-value" style={{ color: '#DFBA67', fontSize: '1.45rem', fontWeight: 900 }}>₹{estimatedRevenue.toLocaleString()}</div>
-                      <div className="sa-stat-label" style={{ color: 'rgba(255,255,255,0.9)' }}>MRR Revenue</div>
-                    </div>
-                  </div>
-                </div>
+                  badge="+ Active Subscriptions"
+                />
 
-                {/* KPI 2: Active Paid Tenants */}
-                <div
+                {/* KPI 2: Active Paid */}
+                <KpiCard
+                  label="Active Paid"
+                  value={totalActive}
+                  icon={CheckCircle}
+                  color="#15803D"
                   onClick={() => { setActiveView('tenants'); setStatusFilter('active'); }}
-                  className="sa-stat-card hover-lift"
-                  style={{ cursor: 'pointer' }}
-                  title="Click to filter Active Paid Tenants"
-                >
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                    <div style={{ width: '42px', height: '42px', borderRadius: '12px', background: '#DCFCE7', color: '#15803D', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-                      <CheckCircle size={22} />
-                    </div>
-                    <div>
-                      <div className="sa-stat-value" style={{ color: '#15803D', fontSize: '1.45rem', fontWeight: 900 }}>{totalActive}</div>
-                      <div className="sa-stat-label">Active Paid</div>
-                    </div>
-                  </div>
-                </div>
+                  subtitle="Paid Accounts"
+                />
 
-                {/* KPI 3: Free Trial Accounts */}
-                <div
+                {/* KPI 3: Free Trial */}
+                <KpiCard
+                  label="Free Trial"
+                  value={restaurants.filter(r => r.subscription_status === 'trialing' || (r.trial_ends_at && new Date(r.trial_ends_at) > new Date())).length}
+                  icon={Calendar}
+                  color="#1D4ED8"
                   onClick={() => { setActiveView('tenants'); setStatusFilter('trial'); }}
-                  className="sa-stat-card hover-lift"
-                  style={{ cursor: 'pointer' }}
-                  title="Click to filter Free Trial Accounts"
-                >
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                    <div style={{ width: '42px', height: '42px', borderRadius: '12px', background: '#EFF6FF', color: '#1D4ED8', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-                      <Calendar size={22} />
-                    </div>
-                    <div>
-                      <div className="sa-stat-value" style={{ color: '#1D4ED8', fontSize: '1.45rem', fontWeight: 900 }}>
-                        {restaurants.filter(r => r.subscription_status === 'trialing' || (r.trial_ends_at && new Date(r.trial_ends_at) > new Date())).length}
-                      </div>
-                      <div className="sa-stat-label">Free Trial</div>
-                    </div>
-                  </div>
-                </div>
+                  subtitle="Trial Users"
+                />
 
-                {/* KPI 4: Past Due / Payment Failed */}
-                <div
+                {/* KPI 4: Past Due / Failed */}
+                <KpiCard
+                  label="Past Due / Failed"
+                  value={restaurants.filter(r => r.subscription_status === 'payment_failed' || r.subscription_status === 'past_due').length}
+                  icon={CreditCard}
+                  color="#B45309"
                   onClick={() => { setActiveView('tenants'); setStatusFilter('failed'); }}
-                  className="sa-stat-card hover-lift"
-                  style={{ cursor: 'pointer' }}
-                  title="Click to view Payment Failed Accounts"
-                >
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                    <div style={{ width: '42px', height: '42px', borderRadius: '12px', background: '#FEF3C7', color: '#B45309', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-                      <CreditCard size={22} />
-                    </div>
-                    <div>
-                      <div className="sa-stat-value" style={{ color: '#B45309', fontSize: '1.45rem', fontWeight: 900 }}>
-                        {restaurants.filter(r => r.subscription_status === 'payment_failed' || r.subscription_status === 'past_due').length}
-                      </div>
-                      <div className="sa-stat-label">Past Due / Failed</div>
-                    </div>
-                  </div>
-                </div>
+                  subtitle="Needs Attention"
+                />
 
                 {/* KPI 5: Total Tenants */}
-                <div
+                <KpiCard
+                  label="Total Tenants"
+                  value={restaurants.length}
+                  icon={Store}
+                  color="var(--sa-primary)"
                   onClick={() => { setActiveView('tenants'); setStatusFilter('all'); }}
-                  className="sa-stat-card hover-lift"
-                  style={{ cursor: 'pointer' }}
-                  title="Click to view All Tenants Directory"
-                >
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                    <div style={{ width: '42px', height: '42px', borderRadius: '12px', background: '#F1F5F9', color: '#475569', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-                      <Store size={22} />
-                    </div>
-                    <div>
-                      <div className="sa-stat-value" style={{ color: 'var(--sa-primary)', fontSize: '1.45rem', fontWeight: 900 }}>{restaurants.length}</div>
-                      <div className="sa-stat-label">Total Tenants</div>
-                    </div>
-                  </div>
-                </div>
+                  subtitle="Onboarded Restos"
+                />
               </div>
 
-              {/* ⚠️ 2. TWO-COLUMN OPERATIONAL HUBS: NEEDS ATTENTION & PLATFORM HEALTH */}
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))', gap: '18px' }}>
+              {/* ⚠️ 3. TWO-COLUMN OPERATIONAL HUBS: NEEDS ATTENTION & PLATFORM HEALTH */}
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))', gap: '20px' }}>
                 {/* LEFT: NEEDS ATTENTION HUB */}
-                <div className="sa-table-container" style={{ padding: '20px', background: '#FFFFFF', borderRadius: '16px', display: 'flex', flexDirection: 'column', gap: '14px' }}>
+                <div className="sa-table-container" style={{ padding: '20px', display: 'flex', flexDirection: 'column', gap: '14px' }}>
                   <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                       <div style={{ width: '32px', height: '32px', borderRadius: '8px', background: '#FEF3C7', color: '#B45309', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
@@ -1199,9 +1180,9 @@ export default function SuperAdminDashboard({ token, username, onLogout, onRetur
                           <span style={{ fontSize: '0.82rem', fontWeight: 800, color: '#92400E' }}>{totalPending} Registration{totalPending > 1 ? 's' : ''} Pending Approval</span>
                         </div>
                         <button
+                          type="button"
                           onClick={() => { setActiveView('tenants'); setStatusFilter('suspended'); }}
                           className="sa-btn sa-btn-secondary sa-btn-sm"
-                          style={{ padding: '4px 10px', fontSize: '0.74rem', fontWeight: 800 }}
                         >
                           Review ➔
                         </button>
@@ -1218,9 +1199,9 @@ export default function SuperAdminDashboard({ token, username, onLogout, onRetur
                           </span>
                         </div>
                         <button
+                          type="button"
                           onClick={() => { setActiveView('tenants'); setStatusFilter('failed'); }}
                           className="sa-btn sa-btn-secondary sa-btn-sm"
-                          style={{ padding: '4px 10px', fontSize: '0.74rem', fontWeight: 800 }}
                         >
                           Resolve ➔
                         </button>
@@ -1237,9 +1218,9 @@ export default function SuperAdminDashboard({ token, username, onLogout, onRetur
                           </span>
                         </div>
                         <button
+                          type="button"
                           onClick={() => setActiveView('billing')}
                           className="sa-btn sa-btn-secondary sa-btn-sm"
-                          style={{ padding: '4px 10px', fontSize: '0.74rem', fontWeight: 800 }}
                         >
                           View ➔
                         </button>
@@ -1262,9 +1243,9 @@ export default function SuperAdminDashboard({ token, username, onLogout, onRetur
                           </span>
                         </div>
                         <button
+                          type="button"
                           onClick={() => { setActiveView('tenants'); setStatusFilter('expired'); }}
                           className="sa-btn sa-btn-secondary sa-btn-sm"
-                          style={{ padding: '4px 10px', fontSize: '0.74rem', fontWeight: 800 }}
                         >
                           View ➔
                         </button>
@@ -1272,7 +1253,7 @@ export default function SuperAdminDashboard({ token, username, onLogout, onRetur
                     )}
 
                     {/* All Clear State if no issues */}
-                    {totalPending === 0 && restaurants.filter(r => r.subscription_status === 'payment_failed' || r.subscription_status === 'past_due').length === 0 && (
+                    {totalPending === 0 && restaurants.filter(r => r.subscription_status === 'payment_failed' || r.subscription_status === 'past_due' || (r.cancel_requested_at !== null)).length === 0 && (
                       <div style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '14px', background: '#F0FDF4', borderRadius: '12px', border: '1px solid #86EFAC' }}>
                         <CheckCircle size={20} color="#16A34A" />
                         <div>
@@ -1285,7 +1266,7 @@ export default function SuperAdminDashboard({ token, username, onLogout, onRetur
                 </div>
 
                 {/* RIGHT: PLATFORM HEALTH & ENGAGEMENT */}
-                <div className="sa-table-container" style={{ padding: '20px', background: '#FFFFFF', borderRadius: '16px', display: 'flex', flexDirection: 'column', gap: '14px' }}>
+                <div className="sa-table-container" style={{ padding: '20px', display: 'flex', flexDirection: 'column', gap: '14px' }}>
                   <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                       <div style={{ width: '32px', height: '32px', borderRadius: '8px', background: '#EEF2FF', color: '#4338CA', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
@@ -1320,6 +1301,7 @@ export default function SuperAdminDashboard({ token, username, onLogout, onRetur
                       <span style={{ fontSize: '0.8rem', fontWeight: 800, color: 'var(--sa-text-main)' }}>Neon DB Index & Storage</span>
                     </div>
                     <button
+                      type="button"
                       onClick={() => setActiveView('operations')}
                       className="sa-btn sa-btn-secondary sa-btn-sm"
                       style={{ padding: '4px 10px', fontSize: '0.74rem', fontWeight: 800 }}
@@ -1330,8 +1312,8 @@ export default function SuperAdminDashboard({ token, username, onLogout, onRetur
                 </div>
               </div>
 
-              {/* 📋 3. RECENT TENANT SIGNUPS & ACTIVITY TABLE */}
-              <div className="sa-table-container" style={{ padding: '20px', background: '#FFFFFF', borderRadius: '16px' }}>
+              {/* 📋 4. RECENT TENANT SIGNUPS & ACTIVITY TABLE */}
+              <div className="sa-table-container" style={{ padding: '20px' }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '14px', flexWrap: 'wrap', gap: '10px' }}>
                   <div>
                     <h3 style={{ margin: 0, fontSize: '1.05rem', fontWeight: 900, color: 'var(--sa-text-main)' }}>
@@ -1343,6 +1325,7 @@ export default function SuperAdminDashboard({ token, username, onLogout, onRetur
                   </div>
 
                   <button
+                    type="button"
                     onClick={() => setActiveView('tenants')}
                     className="sa-btn sa-btn-accent sa-btn-sm"
                     style={{ fontWeight: 900, fontSize: '0.78rem' }}
@@ -1395,15 +1378,18 @@ export default function SuperAdminDashboard({ token, username, onLogout, onRetur
                             <span style={{ fontWeight: 800, color: 'var(--sa-primary)', fontSize: '0.78rem' }}>{(r.plan_tier || 'pro').toUpperCase()}</span>
                             <span style={{ fontSize: '0.68rem', color: 'var(--sa-text-muted)', display: 'block' }}>₹{r.plan_price || 999}/mo</span>
                           </td>
-                          <td>{renderStatusBadge(r)}</td>
+                          <td>
+                            <StatusBadge status={r.subscription_status} type={r.subscription_type} />
+                          </td>
                           <td style={{ textAlign: 'right' }}>
                             <button
+                              type="button"
                               onClick={() => setSelectedTenant360(r)}
                               className="sa-btn sa-btn-secondary sa-btn-sm"
                               style={{ padding: '4px 9px', fontSize: '0.72rem', fontWeight: 800 }}
                               title="Open 360° Profile"
                             >
-                              🔍 360°
+                              <Eye size={13} /> 360°
                             </button>
                           </td>
                         </tr>
@@ -1414,8 +1400,7 @@ export default function SuperAdminDashboard({ token, username, onLogout, onRetur
               </div>
             </div>
           )}
-
-          {/* ========================================================================= */}
+        {/* ========================================================================= */}
           {/* VIEW 2: TENANTS DIRECTORY                                                 */}
           {/* ========================================================================= */}
           {activeView === 'tenants' && (
