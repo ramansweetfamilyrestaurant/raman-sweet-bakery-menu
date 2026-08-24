@@ -680,3 +680,14 @@
     display: none;
   }
 }
+
+/* Dropdown Item Hover */
+.sa-dropdown-item:hover {
+  background: var(--sa-surface-subtle) !important;
+}
+
+@media (max-width: 767px) {
+  .sa-view-toggle {
+    display: none !important;
+  }
+}

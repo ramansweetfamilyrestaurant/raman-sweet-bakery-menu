@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Crown, Plus, LogOut, ExternalLink, Trash2, CheckCircle, Store, Utensils, DollarSign, Phone, MapPin, Copy, Check, Search, Edit3, Shield, ShieldCheck, RefreshCw, QrCode, Megaphone, FileText, Calendar, Palette, MessageSquare, Upload, X, XCircle, CreditCard, Lock, Sparkles, Eye, EyeOff, Key, Database, Sliders, Image } from 'lucide-react';
+import { Crown, Plus, LogOut, ExternalLink, Trash2, CheckCircle, Store, Utensils, DollarSign, Phone, MapPin, Copy, Check, Search, Edit3, Shield, ShieldCheck, RefreshCw, QrCode, Megaphone, FileText, Calendar, Palette, MessageSquare, Upload, X, XCircle, CreditCard, Lock, Sparkles, Eye, EyeOff, Key, Database, Sliders, Image, LayoutGrid, List, MoreHorizontal, ArrowUpDown } from 'lucide-react';
 import { fetchSuperAdminRestaurants, createTenantRestaurant, toggleTenantRestaurantActive, deleteTenantRestaurant, impersonateTenantRestaurant, updateTenantRestaurant, createAnnouncement, fetchSuperAnnouncements, deleteAnnouncement, clearAllAnnouncements, fetchAuditLogs, uploadImage, fetchSaaSPlans, createSaaSPlan, updateSaaSPlan, deleteSaaSPlan, superAdminOptimizeDatabase, updateSuperAdminCredentials, grantFreeAccess, revokeFreeAccess } from '../../api/client';
 import { SAAS_PLANS, getPlanDetails } from '../../config/plans';
 import { resolveImageUrl, getRestaurantLogoUrl } from '../../utils/imageHelper';
@@ -402,18 +402,112 @@ export default function SuperAdminDashboard({ token, username, onLogout, onRetur
     return diffDays;
   };
 
-  const [statusFilter, setStatusFilter] = useState('all'); // 'all', 'active', 'suspended', 'pending'
+  const [statusFilter, setStatusFilter] = useState('all'); // 'all', 'active', 'trial', 'failed', 'autorenew_off', 'expired', 'vip', 'suspended'
+  const [sortBy, setSortBy] = useState('recent'); // 'recent', 'name_asc', 'plan', 'expiry', 'scans'
+  const [viewMode, setViewMode] = useState('grid'); // 'grid', 'table'
+  const [openMoreId, setOpenMoreId] = useState(null);
 
-  // Filtered restaurants by search query and status
-  const filteredRestaurants = restaurants.filter(r => {
-    const isPendingOrSuspended = (r.active === false || r.active === 0 || r.active === '0');
-    if (statusFilter === 'active' && isPendingOrSuspended) return false;
-    if (statusFilter === 'suspended' && !isPendingOrSuspended) return false;
-    if (statusFilter === 'pending' && !isPendingOrSuspended) return false;
-    if (!searchQuery.trim()) return true;
-    const q = searchQuery.toLowerCase();
-    return r.name.toLowerCase().includes(q) || r.slug.toLowerCase().includes(q) || (r.owner_username && r.owner_username.toLowerCase().includes(q)) || (r.phone && r.phone.includes(q));
-  });
+  // Helper to determine canonical tenant lifecycle status
+  const getTenantStatus = (r) => {
+    const isSuspended = (r.active === false || r.active === 0 || r.active === '0');
+    if (isSuspended) return 'suspended';
+    const isVip = (r.subscription_type === 'ADMIN_GRANTED' || r.mandate_status === 'admin_granted');
+    if (isVip) return 'vip';
+    const daysLeft = getDaysRemaining(r.plan_expires_at);
+    const isExpired = (!isVip && daysLeft !== null && daysLeft <= 0) || r.subscription_status === 'expired';
+    if (isExpired) return 'expired';
+    const isFailed = (r.subscription_status === 'payment_failed' || r.subscription_status === 'past_due');
+    if (isFailed) return 'failed';
+    const isTrial = (r.subscription_status === 'trialing' || (r.trial_ends_at && new Date(r.trial_ends_at) > new Date()));
+    if (isTrial) return 'trial';
+    const isAutoRenewOff = (r.auto_renew === 0 || r.auto_renew === false);
+    if (isAutoRenewOff) return 'autorenew_off';
+    return 'active';
+  };
+
+  // Helper to render semantic status badge
+  const renderStatusBadge = (r) => {
+    const status = getTenantStatus(r);
+    if (status === 'suspended') {
+      return (
+        <span style={{ background: '#FEE2E2', color: '#DC2626', border: '1px solid #FCA5A5', padding: '3px 8px', borderRadius: 'var(--sa-radius-full)', fontSize: '0.66rem', fontWeight: 900, display: 'inline-flex', alignItems: 'center', gap: '3px' }}>
+          ⚫ Suspended
+        </span>
+      );
+    }
+    if (status === 'vip') {
+      return (
+        <span style={{ background: 'linear-gradient(135deg, #7C3AED 0%, #6D28D9 100%)', color: '#FFFFFF', padding: '3px 8px', borderRadius: 'var(--sa-radius-full)', fontSize: '0.66rem', fontWeight: 900, display: 'inline-flex', alignItems: 'center', gap: '3px' }}>
+          🟣 VIP
+        </span>
+      );
+    }
+    if (status === 'failed') {
+      return (
+        <span style={{ background: '#FEF3C7', color: '#B45309', border: '1px solid #FCD34D', padding: '3px 8px', borderRadius: 'var(--sa-radius-full)', fontSize: '0.66rem', fontWeight: 900, display: 'inline-flex', alignItems: 'center', gap: '3px' }}>
+          🟡 Payment Failed
+        </span>
+      );
+    }
+    if (status === 'expired') {
+      return (
+        <span style={{ background: '#FEE2E2', color: '#B91C1C', border: '1px solid #FCA5A5', padding: '3px 8px', borderRadius: 'var(--sa-radius-full)', fontSize: '0.66rem', fontWeight: 900, display: 'inline-flex', alignItems: 'center', gap: '3px' }}>
+          🔴 Expired
+        </span>
+      );
+    }
+    if (status === 'trial') {
+      return (
+        <span style={{ background: '#EFF6FF', color: '#1D4ED8', border: '1px solid #BFDBFE', padding: '3px 8px', borderRadius: 'var(--sa-radius-full)', fontSize: '0.66rem', fontWeight: 900, display: 'inline-flex', alignItems: 'center', gap: '3px' }}>
+          🎁 Trial
+        </span>
+      );
+    }
+    if (status === 'autorenew_off') {
+      return (
+        <span style={{ background: '#FFEDD5', color: '#C2410C', border: '1px solid #FDBA74', padding: '3px 8px', borderRadius: 'var(--sa-radius-full)', fontSize: '0.66rem', fontWeight: 900, display: 'inline-flex', alignItems: 'center', gap: '3px' }}>
+          🟠 Auto-Renew Off
+        </span>
+      );
+    }
+    return (
+      <span style={{ background: '#DCFCE7', color: '#15803D', border: '1px solid #86EFAC', padding: '3px 8px', borderRadius: 'var(--sa-radius-full)', fontSize: '0.66rem', fontWeight: 900, display: 'inline-flex', alignItems: 'center', gap: '3px' }}>
+        🟢 Active
+      </span>
+    );
+  };
+
+  // Filtered and Sorted restaurants list
+  const filteredAndSortedRestaurants = restaurants
+    .filter(r => {
+      const status = getTenantStatus(r);
+      if (statusFilter !== 'all' && status !== statusFilter) return false;
+
+      // Extended Search (name, slug, owner_name, owner_username, phone, owner_email, id)
+      if (!searchQuery.trim()) return true;
+      const q = searchQuery.toLowerCase().trim();
+      const nameMatch = (r.name || '').toLowerCase().includes(q);
+      const slugMatch = (r.slug || '').toLowerCase().includes(q);
+      const ownerNameMatch = (r.owner_name || '').toLowerCase().includes(q);
+      const usernameMatch = (r.owner_username || '').toLowerCase().includes(q);
+      const phoneMatch = (r.phone || '').includes(q) || (r.whatsapp_number || '').includes(q);
+      const emailMatch = (r.owner_email || '').toLowerCase().includes(q);
+      const idMatch = String(r.id || '').includes(q);
+
+      return nameMatch || slugMatch || ownerNameMatch || usernameMatch || phoneMatch || emailMatch || idMatch;
+    })
+    .sort((a, b) => {
+      if (sortBy === 'name_asc') return (a.name || '').localeCompare(b.name || '');
+      if (sortBy === 'plan') return (parseFloat(b.plan_price) || 0) - (parseFloat(a.plan_price) || 0);
+      if (sortBy === 'expiry') {
+        const aExp = a.plan_expires_at ? new Date(a.plan_expires_at).getTime() : 0;
+        const bExp = b.plan_expires_at ? new Date(b.plan_expires_at).getTime() : 0;
+        return aExp - bExp;
+      }
+      if (sortBy === 'scans') return (b.scan_count || 0) - (a.scan_count || 0);
+      // Default: 'recent' (ID desc)
+      return (b.id || 0) - (a.id || 0);
+    });
 
   const totalPending = restaurants.filter(r => r.active === false || r.active === 0 || r.active === '0').length;
   const totalActive = restaurants.filter(r => r.active !== false && r.active !== 0 && r.active !== '0').length;
@@ -421,11 +515,10 @@ export default function SuperAdminDashboard({ token, username, onLogout, onRetur
   const totalScans = restaurants.reduce((acc, r) => acc + (r.scan_count || 0), 0);
   const estimatedRevenue = restaurants.filter(r => r.active !== false).reduce((acc, r) => acc + (parseFloat(r.plan_price) || 999), 0);
 
-
-  // Render Directory Controls & Tenant Cards Grid
+  // Render Directory Controls & Clean Tenant Cards Grid / Table
   const renderDirectorySection = () => (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: '18px' }}>
-      {/* Directory Controls Bar */}
+    <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }} onClick={() => setOpenMoreId(null)}>
+      {/* 🛠️ Compact Directory Controls Bar */}
       <div className="sa-directory-controls" style={{
         background: '#FFFFFF',
         borderRadius: '16px',
@@ -439,67 +532,102 @@ export default function SuperAdminDashboard({ token, username, onLogout, onRetur
         gap: '12px'
       }}>
         <div>
-          <h2 style={{ fontSize: '1.1rem', fontWeight: 900, color: 'var(--sa-primary)', margin: 0 }}>
-            Tenant Restaurants Directory ({filteredRestaurants.length})
+          <h2 style={{ fontSize: '1.05rem', fontWeight: 900, color: 'var(--sa-primary)', margin: 0 }}>
+            Tenant Restaurants Directory ({filteredAndSortedRestaurants.length})
           </h2>
-          <p style={{ fontSize: '0.76rem', color: 'var(--sa-text-muted)', margin: '2px 0 0 0', fontWeight: 600 }}>
-            Manage client subscriptions, plans, QR scans, credentials, and impersonate access
+          <p style={{ fontSize: '0.74rem', color: 'var(--sa-text-muted)', margin: '2px 0 0 0', fontWeight: 600 }}>
+            Monitor and manage all onboarded restaurant tenant accounts
           </p>
         </div>
 
-        <div className="sa-controls-right" style={{ display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap' }}>
-          {/* Status Filter Pills */}
-          <div className="sa-status-pills" style={{ display: 'flex', gap: '4px', background: 'var(--sa-surface-subtle)', padding: '3px', borderRadius: 'var(--sa-radius-full)', border: '1px solid var(--sa-border)' }}>
-            <button
-              onClick={() => setStatusFilter('all')}
-              className={`sa-btn sa-btn-sm ${statusFilter === 'all' ? 'sa-btn-primary' : 'sa-btn-secondary'}`}
-              style={{ border: 'none' }}
-            >
-              All ({restaurants.length})
-            </button>
-            <button
-              onClick={() => setStatusFilter('active')}
-              className={`sa-btn sa-btn-sm ${statusFilter === 'active' ? 'sa-btn-primary' : 'sa-btn-secondary'}`}
-              style={{ border: 'none' }}
-            >
-              🟢 Active ({totalActive})
-            </button>
-            <button
-              onClick={() => setStatusFilter('suspended')}
-              className={`sa-btn sa-btn-sm ${statusFilter === 'suspended' ? 'sa-btn-primary' : 'sa-btn-secondary'}`}
-              style={{ border: 'none' }}
-            >
-              🔴 Suspended ({restaurants.length - totalActive})
-            </button>
-            {totalPending > 0 && (
-              <button
-                onClick={() => setStatusFilter('pending')}
-                className={`sa-btn sa-btn-sm ${statusFilter === 'pending' ? 'sa-btn-primary' : 'sa-btn-secondary'}`}
-                style={{ border: 'none' }}
-              >
-                ⏳ Pending ({totalPending})
-              </button>
-            )}
-          </div>
-
+        <div className="sa-controls-right" style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
           {/* Search Input */}
-          <div className="sa-search-box" style={{ position: 'relative', width: '200px' }}>
-            <Search size={14} style={{ position: 'absolute', left: '10px', top: '50%', transform: 'translateY(-50%)', color: 'var(--sa-text-muted)' }} />
+          <div className="sa-search-box" style={{ position: 'relative', width: '210px' }}>
+            <Search size={13} style={{ position: 'absolute', left: '10px', top: '50%', transform: 'translateY(-50%)', color: 'var(--sa-text-muted)' }} />
             <input
               type="text"
-              placeholder="Search restaurant..."
+              placeholder="Search name, slug, owner, email..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               style={{
                 width: '100%',
-                padding: '6px 10px 6px 30px',
+                padding: '6px 10px 6px 28px',
                 borderRadius: 'var(--sa-radius-full)',
                 border: '1px solid var(--sa-border)',
-                fontSize: '0.78rem',
+                fontSize: '0.76rem',
                 outline: 'none',
                 background: 'var(--sa-surface-subtle)'
               }}
             />
+          </div>
+
+          {/* Sort Dropdown */}
+          <div style={{ position: 'relative' }}>
+            <select
+              value={sortBy}
+              onChange={(e) => setSortBy(e.target.value)}
+              style={{
+                padding: '6px 10px',
+                borderRadius: 'var(--sa-radius-full)',
+                border: '1px solid var(--sa-border)',
+                fontSize: '0.76rem',
+                fontWeight: 700,
+                color: 'var(--sa-text-main)',
+                background: 'var(--sa-surface-subtle)',
+                outline: 'none',
+                cursor: 'pointer'
+              }}
+            >
+              <option value="recent">⚡ Recent First</option>
+              <option value="name_asc">🔤 Name (A-Z)</option>
+              <option value="plan">👑 Plan Tier</option>
+              <option value="expiry">⏳ Expiry Date</option>
+              <option value="scans">📲 QR Scans</option>
+            </select>
+          </div>
+
+          {/* Grid / Table Toggle (Hidden on <= 767px via CSS) */}
+          <div className="sa-view-toggle" style={{ display: 'flex', background: 'var(--sa-surface-subtle)', padding: '2px', borderRadius: 'var(--sa-radius-full)', border: '1px solid var(--sa-border)' }}>
+            <button
+              onClick={() => setViewMode('grid')}
+              style={{
+                background: viewMode === 'grid' ? '#FFFFFF' : 'transparent',
+                border: 'none',
+                borderRadius: 'var(--sa-radius-full)',
+                padding: '5px 9px',
+                fontSize: '0.74rem',
+                fontWeight: 800,
+                color: viewMode === 'grid' ? 'var(--sa-primary)' : 'var(--sa-text-muted)',
+                boxShadow: viewMode === 'grid' ? 'var(--sa-shadow-sm)' : 'none',
+                cursor: 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '4px'
+              }}
+              title="Grid Card View"
+            >
+              <LayoutGrid size={13} /> Grid
+            </button>
+            <button
+              onClick={() => setViewMode('table')}
+              style={{
+                background: viewMode === 'table' ? '#FFFFFF' : 'transparent',
+                border: 'none',
+                borderRadius: 'var(--sa-radius-full)',
+                padding: '5px 9px',
+                fontSize: '0.74rem',
+                fontWeight: 800,
+                color: viewMode === 'table' ? 'var(--sa-primary)' : 'var(--sa-text-muted)',
+                boxShadow: viewMode === 'table' ? 'var(--sa-shadow-sm)' : 'none',
+                cursor: 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '4px'
+              }}
+              title="Spreadsheet Table View"
+            >
+              <List size={13} /> Table
+            </button>
           </div>
 
           <button
@@ -507,7 +635,7 @@ export default function SuperAdminDashboard({ token, username, onLogout, onRetur
             title="Refresh Directory"
             className="sa-btn sa-btn-secondary sa-btn-sm"
           >
-            <RefreshCw size={13} className={loading ? 'spin' : ''} /> Refresh
+            <RefreshCw size={13} className={loading ? 'spin' : ''} />
           </button>
 
           <button
@@ -515,73 +643,187 @@ export default function SuperAdminDashboard({ token, username, onLogout, onRetur
             className="sa-btn sa-btn-accent sa-btn-sm"
             style={{ fontWeight: 900 }}
           >
-            <Plus size={15} /> Add Restaurant
+            <Plus size={14} /> Add Restaurant
           </button>
         </div>
       </div>
 
-      {/* Directory Grid */}
+      {/* 🏷️ Filter Pills Strip */}
+      <div style={{ display: 'flex', gap: '5px', overflowX: 'auto', paddingBottom: '2px', flexWrap: 'wrap' }}>
+        {[
+          { id: 'all', label: `All (${restaurants.length})` },
+          { id: 'active', label: '🟢 Active' },
+          { id: 'trial', label: '🎁 Trial' },
+          { id: 'failed', label: '🟡 Payment Failed' },
+          { id: 'autorenew_off', label: '🟠 Auto-Renew Off' },
+          { id: 'expired', label: '🔴 Expired' },
+          { id: 'vip', label: '🟣 VIP' },
+          { id: 'suspended', label: '⚫ Suspended' },
+        ].map(pill => {
+          const isActive = statusFilter === pill.id;
+          return (
+            <button
+              key={pill.id}
+              onClick={() => setStatusFilter(pill.id)}
+              className={`sa-btn sa-btn-sm ${isActive ? 'sa-btn-primary' : 'sa-btn-secondary'}`}
+              style={{ flexShrink: 0, fontSize: '0.72rem', padding: '5px 10px', border: 'none' }}
+            >
+              {pill.label}
+            </button>
+          );
+        })}
+      </div>
+
+      {/* 🔄 Loading / Empty / Content Views */}
       {loading ? (
         <div style={{ textAlign: 'center', padding: '60px', color: 'var(--sa-accent)', fontWeight: 800 }}>
           👑 Loading Tenant Restaurants Directory...
         </div>
-      ) : filteredRestaurants.length === 0 ? (
+      ) : filteredAndSortedRestaurants.length === 0 ? (
         <div style={{ textAlign: 'center', padding: '60px', background: '#FFFFFF', borderRadius: '16px', border: '1px dashed var(--sa-border)' }}>
           <Store size={44} color="var(--sa-text-muted)" style={{ marginBottom: '12px' }} />
-          <h3 style={{ fontSize: '1.05rem', fontWeight: 800, margin: '0 0 6px 0' }}>No tenant restaurants found</h3>
-          <p style={{ fontSize: '0.82rem', color: 'var(--sa-text-muted)', margin: 0 }}>Try clearing your search query or onboard a new client.</p>
+          <h3 style={{ fontSize: '1.05rem', fontWeight: 800, margin: '0 0 6px 0' }}>No tenants match your criteria</h3>
+          <p style={{ fontSize: '0.82rem', color: 'var(--sa-text-muted)', margin: 0 }}>Try clearing your search query or switching filters.</p>
+        </div>
+      ) : viewMode === 'table' ? (
+        /* 📊 TABLE VIEW */
+        <div className="sa-table-container sa-responsive-table" style={{ background: '#FFFFFF', borderRadius: '16px' }}>
+          <table className="sa-table">
+            <thead>
+              <tr>
+                <th>TENANT</th>
+                <th>OWNER / CONTACT</th>
+                <th>PLAN</th>
+                <th>STATUS</th>
+                <th>RENEWAL / EXPIRY</th>
+                <th>SCANS</th>
+                <th style={{ textAlign: 'right' }}>ACTIONS</th>
+              </tr>
+            </thead>
+            <tbody>
+              {filteredAndSortedRestaurants.map(r => {
+                const daysLeft = getDaysRemaining(r.plan_expires_at);
+                const isVip = (r.subscription_type === 'ADMIN_GRANTED' || r.mandate_status === 'admin_granted');
+                const isExpired = (!isVip && daysLeft !== null && daysLeft <= 0) || r.subscription_status === 'expired';
+
+                return (
+                  <tr key={r.id}>
+                    <td>
+                      <div 
+                        onClick={() => setSelectedTenant360(r)}
+                        style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer' }}
+                        title="Click to open Tenant 360° Profile"
+                      >
+                        <img
+                          src={getRestaurantLogoUrl(r.logo)}
+                          alt={r.name}
+                          onError={(e) => { e.currentTarget.src = '/images/default-logo.webp'; }}
+                          style={{ width: '32px', height: '32px', borderRadius: '50%', objectFit: 'cover', border: '1.5px solid #D4AF37' }}
+                        />
+                        <div>
+                          <strong style={{ display: 'block', fontSize: '0.86rem', color: 'var(--sa-text-main)' }}>{r.name}</strong>
+                          <span style={{ fontSize: '0.7rem', color: 'var(--sa-accent-hover, #B48F27)', fontWeight: 700 }}>/{r.slug}</span>
+                        </div>
+                      </div>
+                    </td>
+                    <td>
+                      <span style={{ fontFamily: 'monospace', fontWeight: 800, fontSize: '0.78rem', display: 'block', color: 'var(--sa-text-main)' }}>
+                        {r.owner_username || 'admin'}
+                      </span>
+                      <span style={{ fontSize: '0.7rem', color: 'var(--sa-text-muted)', display: 'block' }}>
+                        {r.phone || (r.owner_email ? r.owner_email : 'No contact')}
+                      </span>
+                    </td>
+                    <td>
+                      <span style={{ fontWeight: 800, color: 'var(--sa-primary)', fontSize: '0.78rem' }}>{(r.plan_tier || 'pro').toUpperCase()}</span>
+                      <span style={{ fontSize: '0.68rem', color: 'var(--sa-text-muted)', display: 'block' }}>
+                        {isVip ? '₹0/mo (VIP)' : `₹${r.plan_price || 999}/mo`}
+                      </span>
+                    </td>
+                    <td>{renderStatusBadge(r)}</td>
+                    <td style={{ fontSize: '0.76rem', fontWeight: 700 }}>
+                      {isVip ? '♾️ Lifetime' : daysLeft !== null ? (isExpired ? 'Expired' : `${daysLeft}d left`) : 'Active'}
+                    </td>
+                    <td style={{ fontSize: '0.78rem', fontWeight: 800, color: '#7E22CE' }}>
+                      📲 {r.scan_count || 0}
+                    </td>
+                    <td style={{ textAlign: 'right' }}>
+                      <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '6px', alignItems: 'center' }}>
+                        <button
+                          onClick={() => setSelectedTenant360(r)}
+                          className="sa-btn sa-btn-secondary sa-btn-sm"
+                          style={{ padding: '4px 8px', fontSize: '0.72rem', fontWeight: 800 }}
+                          title="Open 360° Profile"
+                        >
+                          🔍 360°
+                        </button>
+                        <button
+                          onClick={() => handleImpersonate(r.id, r.name)}
+                          className="sa-btn sa-btn-sm"
+                          style={{ padding: '4px 8px', fontSize: '0.72rem', background: '#0A2315', color: '#FFD700', border: '1px solid #D4AF37', fontWeight: 900 }}
+                          title="1-Click Manage Menu"
+                        >
+                          👑 Manage
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
         </div>
       ) : (
+        /* 📱 CARD GRID VIEW (COMPACT & CLEAN) */
         <div className="sa-grid-container" style={{
           display: 'grid',
-          gridTemplateColumns: 'repeat(auto-fill, minmax(330px, 1fr))',
-          gap: '18px'
+          gridTemplateColumns: 'repeat(auto-fill, minmax(320px, 1fr))',
+          gap: '16px'
         }}>
-          {filteredRestaurants.map(r => {
+          {filteredAndSortedRestaurants.map(r => {
             const daysLeft = getDaysRemaining(r.plan_expires_at);
-            const isExpired = daysLeft !== null && daysLeft <= 0;
+            const isVip = (r.subscription_type === 'ADMIN_GRANTED' || r.mandate_status === 'admin_granted');
+            const isExpired = (!isVip && daysLeft !== null && daysLeft <= 0) || r.subscription_status === 'expired';
 
             return (
               <div
                 key={r.id}
                 style={{
                   background: '#FFFFFF',
-                  borderRadius: '20px',
-                  padding: '18px',
-                  border: r.active !== false ? '1.5px solid var(--sa-border)' : '1.5px solid #FCA5A5',
+                  borderRadius: '16px',
+                  padding: '16px',
+                  border: r.active !== false ? '1px solid var(--sa-border)' : '1.5px solid #FCA5A5',
                   boxShadow: 'var(--sa-shadow-sm)',
                   display: 'flex',
                   flexDirection: 'column',
                   justifyContent: 'space-between',
-                  gap: '14px',
+                  gap: '12px',
                   position: 'relative'
                 }}
               >
-                {/* Top Bar */}
+                {/* 1. Header: Avatar, Title, Slug & Semantic Status Badge */}
                 <div>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '10px' }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: '8px', marginBottom: '8px' }}>
                     <div 
                       onClick={() => setSelectedTenant360(r)}
-                      style={{ display: 'flex', alignItems: 'center', gap: '10px', cursor: 'pointer' }}
+                      style={{ display: 'flex', alignItems: 'center', gap: '10px', cursor: 'pointer', flex: 1, minWidth: 0 }}
                       title="Click to open Tenant 360° Profile"
                     >
                       <img
                         src={getRestaurantLogoUrl(r.logo)}
                         alt={r.name}
-                        onError={(e) => {
-                          e.currentTarget.src = '/images/default-logo.webp';
-                        }}
+                        onError={(e) => { e.currentTarget.src = '/images/default-logo.webp'; }}
                         style={{
-                          width: '42px',
-                          height: '42px',
+                          width: '40px',
+                          height: '40px',
                           borderRadius: '50%',
                           objectFit: 'cover',
                           border: '2px solid #D4AF37',
                           flexShrink: 0
                         }}
                       />
-                      <div>
-                        <h3 style={{ fontSize: '1rem', fontWeight: 900, margin: 0, color: 'var(--sa-text-main)', lineHeight: 1.2 }}>
+                      <div style={{ minWidth: 0 }}>
+                        <h3 style={{ fontSize: '0.96rem', fontWeight: 900, margin: 0, color: 'var(--sa-text-main)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
                           {r.name}
                         </h3>
                         <span style={{ fontSize: '0.72rem', color: 'var(--sa-accent-hover, #B48F27)', fontWeight: 800 }}>
@@ -589,107 +831,41 @@ export default function SuperAdminDashboard({ token, username, onLogout, onRetur
                         </span>
                       </div>
                     </div>
-
-                    {/* Active Status Badge */}
-                    <button
-                      onClick={() => handleToggleActive(r.id, r.active)}
-                      style={{
-                        background: r.active !== false ? '#DCFCE7' : '#FEE2E2',
-                        color: r.active !== false ? '#15803D' : '#DC2626',
-                        border: `1px solid ${r.active !== false ? '#86EFAC' : '#FCA5A5'}`,
-                        padding: '4px 9px',
-                        borderRadius: 'var(--radius-pill)',
-                        fontSize: '0.68rem',
-                        fontWeight: 900,
-                        cursor: 'pointer',
-                        display: 'flex',
-                        alignItems: 'center',
-                        gap: '4px'
-                      }}
-                      title="Click to Toggle Active / Suspended Subscription"
-                    >
-                      {r.active !== false ? <CheckCircle size={11} /> : <XCircle size={11} />}
-                      {r.active !== false ? 'Active' : 'Suspended'}
-                    </button>
+                    <div style={{ flexShrink: 0 }}>
+                      {renderStatusBadge(r)}
+                    </div>
                   </div>
 
-                  <p style={{ fontSize: '0.76rem', color: 'var(--sa-text-muted)', margin: '0 0 10px 0', lineHeight: 1.3 }}>
-                    {r.tagline || 'No tagline set'}
-                  </p>
-
-                  {/* SaaS Badges Row */}
-                  <div style={{ display: 'flex', gap: '5px', flexWrap: 'wrap', marginBottom: '10px' }}>
-                    <span style={{
-                      background: '#FEF3C7',
-                      color: '#B45309',
-                      padding: '2px 7px',
-                      borderRadius: '6px',
-                      fontSize: '0.66rem',
-                      fontWeight: 900,
-                      textTransform: 'uppercase',
-                      border: '1px solid #FCD34D'
-                    }}>
+                  {/* 2. SaaS Badges Row */}
+                  <div style={{ display: 'flex', gap: '5px', flexWrap: 'wrap', alignItems: 'center', marginBottom: '8px' }}>
+                    <span style={{ background: '#FEF3C7', color: '#B45309', padding: '2px 7px', borderRadius: '6px', fontSize: '0.66rem', fontWeight: 900 }}>
                       👑 {(r.plan_tier || 'pro').toUpperCase()} (₹{r.plan_price || 999}/mo)
                     </span>
 
-                    {daysLeft !== null && (
-                      <span style={{
-                        background: (r.mandate_status === 'admin_granted' || r.subscription_type === 'ADMIN_GRANTED' || daysLeft > 3650) ? '#F3E8FF' : isExpired ? '#FEE2E2' : daysLeft <= 7 ? '#FEF3C7' : '#DCFCE7',
-                        color: (r.mandate_status === 'admin_granted' || r.subscription_type === 'ADMIN_GRANTED' || daysLeft > 3650) ? '#7E22CE' : isExpired ? '#DC2626' : daysLeft <= 7 ? '#B45309' : '#15803D',
-                        padding: '2px 7px',
-                        borderRadius: '6px',
-                        fontSize: '0.66rem',
-                        fontWeight: 900,
-                        display: 'inline-flex',
-                        alignItems: 'center',
-                        gap: '3px'
-                      }}>
-                        <Calendar size={10} /> {(r.mandate_status === 'admin_granted' || r.subscription_type === 'ADMIN_GRANTED' || daysLeft > 3650) ? '♾️ Lifetime' : isExpired ? 'Expired' : `${daysLeft}d left`}
-                      </span>
-                    )}
+                    <span style={{ background: '#F1F5F9', color: '#475569', padding: '2px 7px', borderRadius: '6px', fontSize: '0.66rem', fontWeight: 800 }}>
+                      {isVip ? '♾️ Lifetime' : daysLeft !== null ? (isExpired ? 'Expired' : `${daysLeft}d left`) : 'Active'}
+                    </span>
 
-                    {r.mandate_status === 'admin_granted' || r.subscription_type === 'ADMIN_GRANTED' ? (
-                      <span style={{
-                        background: 'linear-gradient(135deg, #7C3AED 0%, #6D28D9 100%)',
-                        color: '#FFFFFF',
-                        padding: '2px 8px',
-                        borderRadius: '6px',
-                        fontSize: '0.66rem',
-                        fontWeight: 900
-                      }}>
-                        🎁 VIP
-                      </span>
-                    ) : null}
-
-                    <span style={{
-                      background: '#F3E8FF',
-                      color: '#7E22CE',
-                      padding: '2px 7px',
-                      borderRadius: '6px',
-                      fontSize: '0.66rem',
-                      fontWeight: 800
-                    }}>
+                    <span style={{ background: '#F3E8FF', color: '#7E22CE', padding: '2px 7px', borderRadius: '6px', fontSize: '0.66rem', fontWeight: 800 }}>
                       📲 {r.scan_count || 0} scans
                     </span>
                   </div>
 
-                  {/* Owner Contact Box */}
+                  {/* 3. Owner Contact Compact Box */}
                   <div style={{
                     background: 'var(--sa-surface-subtle)',
-                    borderRadius: '14px',
-                    padding: '10px 12px',
-                    fontSize: '0.78rem',
+                    borderRadius: '12px',
+                    padding: '8px 10px',
+                    fontSize: '0.74rem',
                     display: 'flex',
                     flexDirection: 'column',
-                    gap: '6px',
+                    gap: '4px',
                     border: '1px solid var(--sa-border)'
                   }}>
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                      <span style={{ color: 'var(--sa-text-muted)', fontWeight: 700 }}>Admin User:</span>
+                      <span style={{ color: 'var(--sa-text-muted)', fontWeight: 700 }}>👤 Owner:</span>
                       <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                        <strong style={{ fontFamily: 'monospace', fontSize: '0.84rem', color: 'var(--sa-text-main)', background: '#FFFFFF', padding: '1px 6px', borderRadius: '4px', border: '1px solid var(--sa-border)' }}>
-                          {r.owner_username || 'admin'}
-                        </strong>
+                        <strong style={{ fontFamily: 'monospace', color: 'var(--sa-text-main)' }}>{r.owner_username || 'admin'}</strong>
                         <button
                           onClick={() => {
                             navigator.clipboard.writeText(r.owner_username || 'admin');
@@ -699,31 +875,21 @@ export default function SuperAdminDashboard({ token, username, onLogout, onRetur
                           style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 0 }}
                           title="Copy Username"
                         >
-                          {copiedId === r.id + '-user' ? <Check size={12} color="#166534" /> : <Copy size={12} color="#64748B" />}
+                          {copiedId === r.id + '-user' ? <Check size={11} color="#166534" /> : <Copy size={11} color="#64748B" />}
                         </button>
                       </div>
                     </div>
 
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                      <span style={{ color: 'var(--sa-text-muted)', fontWeight: 700 }}>Phone / WA:</span>
+                      <span style={{ color: 'var(--sa-text-muted)', fontWeight: 700 }}>📞 Phone:</span>
                       {r.phone || r.whatsapp_number ? (
                         <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                          <strong style={{ color: 'var(--sa-text-main)', fontWeight: 800, fontSize: '0.78rem' }}>
-                            {r.phone || r.whatsapp_number}
-                          </strong>
+                          <strong style={{ color: 'var(--sa-text-main)', fontWeight: 800 }}>{r.phone || r.whatsapp_number}</strong>
                           <a
                             href={`https://wa.me/${(r.phone || r.whatsapp_number || '').replace(/[^0-9]/g, '')}`}
                             target="_blank"
                             rel="noopener noreferrer"
-                            style={{
-                              background: '#22C55E',
-                              color: '#FFFFFF',
-                              padding: '2px 6px',
-                              borderRadius: '4px',
-                              fontSize: '0.68rem',
-                              fontWeight: 900,
-                              textDecoration: 'none'
-                            }}
+                            style={{ background: '#22C55E', color: '#FFFFFF', padding: '1px 5px', borderRadius: '4px', fontSize: '0.65rem', fontWeight: 900, textDecoration: 'none' }}
                           >
                             💬 Chat
                           </a>
@@ -732,65 +898,139 @@ export default function SuperAdminDashboard({ token, username, onLogout, onRetur
                         <span style={{ color: 'var(--sa-text-muted)' }}>Not Provided</span>
                       )}
                     </div>
+
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                      <span style={{ color: 'var(--sa-text-muted)', fontWeight: 700 }}>✉️ Email:</span>
+                      <span style={{ color: r.owner_email ? 'var(--sa-text-main)' : 'var(--sa-text-muted)', fontSize: '0.72rem', maxWidth: '170px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                        {r.owner_email || 'Email not added'}
+                      </span>
+                    </div>
                   </div>
                 </div>
 
-                {/* Actions Footer */}
-                <div style={{ display: 'flex', gap: '5px', borderTop: '1px solid var(--sa-border)', paddingTop: '12px', flexWrap: 'wrap' }}>
+                {/* 4. Actions Footer: EXACTLY [ 🔍 360° Profile ] [ 👑 Manage Menu ] [ ••• More ] */}
+                <div style={{ display: 'flex', gap: '6px', borderTop: '1px solid var(--sa-border)', paddingTop: '10px', alignItems: 'center', position: 'relative' }}>
                   <button
                     onClick={() => setSelectedTenant360(r)}
-                    className="sa-btn sa-btn-primary sa-btn-sm"
-                    style={{ background: 'linear-gradient(135deg, #1E293B 0%, #0F172A 100%)', color: '#FCD34D', border: '1px solid #D4AF37', fontWeight: 900 }}
+                    className="sa-btn sa-btn-secondary sa-btn-sm"
+                    style={{ fontWeight: 800, fontSize: '0.75rem', padding: '7px 10px', flex: '1 1 auto', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '4px' }}
                     title="Open complete 360-degree Tenant Profile"
                   >
-                    🔍 360° Profile
+                    <Search size={13} /> 360° Profile
                   </button>
 
                   <button
                     onClick={() => handleImpersonate(r.id, r.name)}
                     className="sa-btn sa-btn-sm"
-                    style={{ flex: 1, minWidth: '110px', background: 'linear-gradient(135deg, #0A2315 0%, #164E2A 100%)', color: '#FFD700', border: '1px solid #D4AF37', fontWeight: 900 }}
+                    style={{ background: 'linear-gradient(135deg, #0A2315 0%, #164E2A 100%)', color: '#FFD700', border: '1px solid #D4AF37', fontWeight: 900, fontSize: '0.75rem', padding: '7px 12px', flex: '1.2 1 auto', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '4px' }}
                     title="1-Click Log In as Restaurant Owner"
                   >
                     <Crown size={13} color="#FFD700" /> Manage Menu
                   </button>
 
-                  <button
-                    onClick={() => setEditModalData(r)}
-                    className="sa-btn sa-btn-secondary sa-btn-sm"
-                    title="Edit Tenant Info"
-                  >
-                    <Edit3 size={12} /> Edit
-                  </button>
+                  {/* ••• More Button & Dropdown */}
+                  <div style={{ position: 'relative' }}>
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setOpenMoreId(openMoreId === r.id ? null : r.id);
+                      }}
+                      className="sa-btn sa-btn-secondary sa-btn-sm"
+                      style={{ padding: '7px 10px', fontWeight: 900, minWidth: '36px' }}
+                      title="More Actions"
+                    >
+                      •••
+                    </button>
 
-                  <a
-                    href={`/${r.slug}`}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="sa-btn sa-btn-secondary sa-btn-sm"
-                    style={{ textDecoration: 'none', display: 'flex', alignItems: 'center' }}
-                    title="Preview Public Customer Menu"
-                  >
-                    <ExternalLink size={12} />
-                  </a>
+                    {openMoreId === r.id && (
+                      <div
+                        onClick={(e) => e.stopPropagation()}
+                        style={{
+                          position: 'absolute',
+                          bottom: '100%',
+                          right: 0,
+                          marginBottom: '6px',
+                          background: '#FFFFFF',
+                          borderRadius: '12px',
+                          border: '1px solid var(--sa-border)',
+                          boxShadow: 'var(--sa-shadow-lg)',
+                          padding: '6px',
+                          minWidth: '180px',
+                          zIndex: 100,
+                          display: 'flex',
+                          flexDirection: 'column',
+                          gap: '2px'
+                        }}
+                      >
+                        <button
+                          onClick={() => { setOpenMoreId(null); setEditModalData(r); }}
+                          className="sa-dropdown-item"
+                          style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '8px 10px', border: 'none', background: 'transparent', width: '100%', textAlign: 'left', fontSize: '0.78rem', fontWeight: 700, cursor: 'pointer', borderRadius: '6px' }}
+                        >
+                          <Edit3 size={13} color="#64748B" /> Edit Tenant
+                        </button>
 
-                  <button
-                    onClick={() => handleDeleteRestaurant(r.id, r.name)}
-                    style={{
-                      background: '#FEE2E2',
-                      color: '#DC2626',
-                      padding: '6px',
-                      borderRadius: '50%',
-                      border: '1px solid #FCA5A5',
-                      cursor: 'pointer',
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center'
-                    }}
-                    title="Delete Tenant Restaurant"
-                  >
-                    <Trash2 size={13} />
-                  </button>
+                        <button
+                          onClick={() => {
+                            setOpenMoreId(null);
+                            if (r.subscription_type === 'ADMIN_GRANTED' || r.mandate_status === 'admin_granted') {
+                              setRevokeModalResto(r);
+                            } else {
+                              setGrantModalResto(r);
+                            }
+                          }}
+                          className="sa-dropdown-item"
+                          style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '8px 10px', border: 'none', background: 'transparent', width: '100%', textAlign: 'left', fontSize: '0.78rem', fontWeight: 700, cursor: 'pointer', borderRadius: '6px', color: '#7E22CE' }}
+                        >
+                          <Sparkles size={13} /> {r.subscription_type === 'ADMIN_GRANTED' || r.mandate_status === 'admin_granted' ? 'Revoke VIP Access' : 'Grant VIP Access'}
+                        </button>
+
+                        <a
+                          href={`/${r.slug}`}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          onClick={() => setOpenMoreId(null)}
+                          className="sa-dropdown-item"
+                          style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '8px 10px', border: 'none', background: 'transparent', width: '100%', textAlign: 'left', fontSize: '0.78rem', fontWeight: 700, cursor: 'pointer', borderRadius: '6px', textDecoration: 'none', color: 'var(--sa-text-main)' }}
+                        >
+                          <ExternalLink size={13} color="#64748B" /> Preview Public Menu
+                        </a>
+
+                        <button
+                          onClick={() => {
+                            setOpenMoreId(null);
+                            navigator.clipboard.writeText(r.slug);
+                            alert(`Copied slug: /${r.slug}`);
+                          }}
+                          className="sa-dropdown-item"
+                          style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '8px 10px', border: 'none', background: 'transparent', width: '100%', textAlign: 'left', fontSize: '0.78rem', fontWeight: 700, cursor: 'pointer', borderRadius: '6px' }}
+                        >
+                          <Copy size={13} color="#64748B" /> Copy Slug
+                        </button>
+
+                        <button
+                          onClick={() => {
+                            setOpenMoreId(null);
+                            handleToggleActive(r.id, r.active);
+                          }}
+                          className="sa-dropdown-item"
+                          style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '8px 10px', border: 'none', background: 'transparent', width: '100%', textAlign: 'left', fontSize: '0.78rem', fontWeight: 700, cursor: 'pointer', borderRadius: '6px', color: r.active !== false ? '#D97706' : '#16A34A' }}
+                        >
+                          {r.active !== false ? <XCircle size={13} /> : <CheckCircle size={13} />} {r.active !== false ? 'Suspend Account' : 'Reactivate Account'}
+                        </button>
+
+                        <div style={{ height: '1px', background: 'var(--sa-border)', margin: '4px 0' }} />
+
+                        <button
+                          onClick={() => { setOpenMoreId(null); handleDeleteRestaurant(r.id, r.name); }}
+                          className="sa-dropdown-item"
+                          style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '8px 10px', border: 'none', background: 'transparent', width: '100%', textAlign: 'left', fontSize: '0.78rem', fontWeight: 900, cursor: 'pointer', borderRadius: '6px', color: '#DC2626' }}
+                        >
+                          <Trash2 size={13} color="#DC2626" /> Delete Restaurant
+                        </button>
+                      </div>
+                    )}
+                  </div>
                 </div>
               </div>
             );
