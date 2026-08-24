@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Crown, Plus, LogOut, ExternalLink, Trash2, CheckCircle, Store, Utensils, DollarSign, Phone, MapPin, Copy, Check, Search, Edit3, Shield, ShieldCheck, RefreshCw, QrCode, Megaphone, FileText, Calendar, Palette, MessageSquare, Upload, X, XCircle, CreditCard, Lock, Sparkles, Eye, EyeOff, Key, Database, Sliders, Image, LayoutGrid, List, MoreHorizontal, ArrowUpDown } from 'lucide-react';
+import { Crown, Plus, LogOut, ExternalLink, Trash2, CheckCircle, Store, Utensils, DollarSign, Phone, MapPin, Copy, Check, Search, Edit3, Shield, ShieldCheck, RefreshCw, QrCode, Megaphone, FileText, Calendar, Palette, MessageSquare, Upload, X, XCircle, CreditCard, Lock, Sparkles, Eye, EyeOff, Key, Database, Sliders, Image, LayoutGrid, List, MoreHorizontal, ArrowUpDown, Clock, Radio, HardDrive, Settings } from 'lucide-react';
 import { fetchSuperAdminRestaurants, createTenantRestaurant, toggleTenantRestaurantActive, deleteTenantRestaurant, impersonateTenantRestaurant, updateTenantRestaurant, createAnnouncement, fetchSuperAnnouncements, deleteAnnouncement, clearAllAnnouncements, fetchAuditLogs, uploadImage, fetchSaaSPlans, createSaaSPlan, updateSaaSPlan, deleteSaaSPlan, superAdminOptimizeDatabase, updateSuperAdminCredentials, grantFreeAccess, revokeFreeAccess } from '../../api/client';
 import { SAAS_PLANS, getPlanDetails } from '../../config/plans';
 import { resolveImageUrl, getRestaurantLogoUrl } from '../../utils/imageHelper';
@@ -138,6 +138,7 @@ export default function SuperAdminDashboard({ token, username, onLogout, onRetur
   // Audit Log Drawer State
   const [showAuditModal, setShowAuditModal] = useState(false);
   const [auditLogs, setAuditLogs] = useState([]);
+  const [selectedAuditLog, setSelectedAuditLog] = useState(null);
   const [auditLoading, setAuditLoading] = useState(false);
   const [auditFilter, setAuditFilter] = useState('all'); // 'all', 'activations', 'suspensions', 'settings', 'security'
   const [auditSearch, setAuditSearch] = useState('');
@@ -1427,37 +1428,327 @@ export default function SuperAdminDashboard({ token, username, onLogout, onRetur
           {/* ========================================================================= */}
           {activeView === 'billing' && (
             <div style={{ display: 'flex', flexDirection: 'column', gap: '18px' }}>
-              <div className="sa-section-header">
+              {/* 💳 1. HEADER */}
+              <div className="sa-section-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '12px' }}>
                 <div>
-                  <h2 className="sa-section-title" style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '1.15rem' }}>
-                    <CreditCard size={20} color="var(--sa-primary)" /> Subscription Management & Billing Lifecycle
+                  <h2 className="sa-section-title" style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '1.2rem', fontWeight: 900, color: 'var(--sa-primary)', margin: 0 }}>
+                    <CreditCard size={22} color="var(--sa-primary)" /> 💳 Billing & Subscription Center
                   </h2>
                   <span style={{ fontSize: '0.76rem', color: 'var(--sa-text-muted)', fontWeight: 600 }}>
-                    Audit tenant Cashfree AutoPay mandates, renewals, complimentary VIP terms, and access expiry.
+                    Monitor subscriptions, renewals, failed payments and cancellations.
                   </span>
                 </div>
               </div>
 
-              {/* Subscription Status Filter Strip */}
-              <div style={{ display: 'flex', gap: '6px', overflowX: 'auto', paddingBottom: '4px', flexWrap: 'wrap' }}>
-                {[
-                  { id: 'all', label: 'All Subscriptions' },
-                  { id: 'active', label: '🟢 Active Paid' },
-                  { id: 'suspended', label: '🔴 Suspended' },
-                  { id: 'pending', label: '⏳ Pending Approvals' },
-                ].map(pill => (
-                  <button
-                    key={pill.id}
-                    onClick={() => setStatusFilter(pill.id)}
-                    className={`sa-btn sa-btn-sm ${statusFilter === pill.id ? 'sa-btn-primary' : 'sa-btn-secondary'}`}
-                    style={{ flexShrink: 0, border: 'none' }}
-                  >
-                    {pill.label}
-                  </button>
-                ))}
+              {/* 📊 2. FINANCIAL KPI HERO ROW (4 Primary + Optional VIP) */}
+              <div className="sa-stats-grid">
+                {/* KPI 1: MRR Revenue */}
+                <div
+                  className="sa-stat-card hover-lift"
+                  style={{ background: 'linear-gradient(135deg, #0A2315 0%, #164E2A 100%)', color: '#FFFFFF', border: '1.5px solid #DFBA67' }}
+                  title="Authoritative active Monthly Recurring Revenue"
+                >
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                    <div style={{ width: '40px', height: '40px', borderRadius: '12px', background: 'linear-gradient(135deg, #DFBA67 0%, #C5A059 100%)', color: '#0A2315', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                      <DollarSign size={20} color="#0A2315" />
+                    </div>
+                    <div>
+                      <div className="sa-stat-value" style={{ color: '#DFBA67', fontSize: '1.35rem', fontWeight: 900 }}>₹{estimatedRevenue.toLocaleString()}</div>
+                      <div className="sa-stat-label" style={{ color: 'rgba(255,255,255,0.9)' }}>MRR Revenue</div>
+                    </div>
+                  </div>
+                </div>
+
+                {/* KPI 2: Active Paid */}
+                <div onClick={() => setStatusFilter('active')} className="sa-stat-card hover-lift" style={{ cursor: 'pointer' }} title="Filter Active Paid Subscriptions">
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                    <div style={{ width: '40px', height: '40px', borderRadius: '12px', background: '#DCFCE7', color: '#15803D', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                      <CheckCircle size={20} />
+                    </div>
+                    <div>
+                      <div className="sa-stat-value" style={{ color: '#15803D', fontSize: '1.35rem', fontWeight: 900 }}>{totalActive}</div>
+                      <div className="sa-stat-label">Active Paid</div>
+                    </div>
+                  </div>
+                </div>
+
+                {/* KPI 3: Past Due / Failed */}
+                <div onClick={() => setStatusFilter('failed')} className="sa-stat-card hover-lift" style={{ cursor: 'pointer' }} title="Filter Payment Failed / Past Due Subscriptions">
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                    <div style={{ width: '40px', height: '40px', borderRadius: '12px', background: '#FEF3C7', color: '#B45309', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                      <CreditCard size={20} />
+                    </div>
+                    <div>
+                      <div className="sa-stat-value" style={{ color: '#B45309', fontSize: '1.35rem', fontWeight: 900 }}>
+                        {restaurants.filter(r => r.subscription_status === 'payment_failed' || r.subscription_status === 'past_due').length}
+                      </div>
+                      <div className="sa-stat-label">Past Due / Failed</div>
+                    </div>
+                  </div>
+                </div>
+
+                {/* KPI 4: Auto-Renew Off */}
+                <div onClick={() => setStatusFilter('autorenew_off')} className="sa-stat-card hover-lift" style={{ cursor: 'pointer' }} title="Filter Auto-Renew Off Subscriptions">
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                    <div style={{ width: '40px', height: '40px', borderRadius: '12px', background: '#FFEDD5', color: '#C2410C', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                      <Clock size={20} />
+                    </div>
+                    <div>
+                      <div className="sa-stat-value" style={{ color: '#C2410C', fontSize: '1.35rem', fontWeight: 900 }}>
+                        {restaurants.filter(r => (r.auto_renew === 0 || r.auto_renew === false || r.cancel_requested_at !== null) && r.active !== false).length}
+                      </div>
+                      <div className="sa-stat-label">Auto-Renew Off</div>
+                    </div>
+                  </div>
+                </div>
+
+                {/* KPI 5: Complimentary / VIP */}
+                <div onClick={() => setStatusFilter('vip')} className="sa-stat-card hover-lift" style={{ cursor: 'pointer' }} title="Filter Complimentary VIP Subscriptions">
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                    <div style={{ width: '40px', height: '40px', borderRadius: '12px', background: '#F3E8FF', color: '#7E22CE', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                      <Sparkles size={20} />
+                    </div>
+                    <div>
+                      <div className="sa-stat-value" style={{ color: '#7E22CE', fontSize: '1.35rem', fontWeight: 900 }}>
+                        {restaurants.filter(r => r.subscription_type === 'ADMIN_GRANTED' || r.mandate_status === 'admin_granted').length}
+                      </div>
+                      <div className="sa-stat-label">Complimentary VIP</div>
+                    </div>
+                  </div>
+                </div>
               </div>
 
-              {renderDirectorySection()}
+              {/* ⚠️ 3. BILLING ATTENTION HUB */}
+              <div className="sa-table-container" style={{ padding: '16px 20px', background: '#FFFFFF', borderRadius: '16px', display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                  <h3 style={{ margin: 0, fontSize: '0.98rem', fontWeight: 900, color: 'var(--sa-text-main)', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    <Shield size={16} color="var(--sa-primary)" /> ⚠️ Billing Attention Required
+                  </h3>
+                  <span style={{ fontSize: '0.72rem', color: 'var(--sa-text-muted)', fontWeight: 600 }}>Actionable subscription events</span>
+                </div>
+
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                  {/* Row 1: Payment Failures */}
+                  {restaurants.filter(r => r.subscription_status === 'payment_failed' || r.subscription_status === 'past_due').length > 0 && (
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '8px 12px', background: '#FEF2F2', borderRadius: '10px', border: '1px solid #FCA5A5' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                        <span style={{ background: '#DC2626', color: '#FFF', padding: '2px 6px', borderRadius: '4px', fontSize: '0.66rem', fontWeight: 900 }}>FAILED</span>
+                        <span style={{ fontSize: '0.8rem', fontWeight: 800, color: '#991B1B' }}>
+                          {restaurants.filter(r => r.subscription_status === 'payment_failed' || r.subscription_status === 'past_due').length} Payment Failed / Past Due Accounts
+                        </span>
+                      </div>
+                      <button onClick={() => setStatusFilter('failed')} className="sa-btn sa-btn-secondary sa-btn-sm" style={{ padding: '3px 8px', fontSize: '0.72rem' }}>
+                        Resolve ➔
+                      </button>
+                    </div>
+                  )}
+
+                  {/* Row 2: Auto-Renew Off */}
+                  {restaurants.filter(r => (r.auto_renew === 0 || r.auto_renew === false || r.cancel_requested_at !== null) && r.active !== false).length > 0 && (
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '8px 12px', background: '#FFFBEB', borderRadius: '10px', border: '1px solid #FCD34D' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                        <span style={{ background: '#D97706', color: '#FFF', padding: '2px 6px', borderRadius: '4px', fontSize: '0.66rem', fontWeight: 900 }}>CANCEL PENDING</span>
+                        <span style={{ fontSize: '0.8rem', fontWeight: 800, color: '#92400E' }}>
+                          {restaurants.filter(r => (r.auto_renew === 0 || r.auto_renew === false || r.cancel_requested_at !== null) && r.active !== false).length} Accounts with Auto-Renew Disabled
+                        </span>
+                      </div>
+                      <button onClick={() => setStatusFilter('autorenew_off')} className="sa-btn sa-btn-secondary sa-btn-sm" style={{ padding: '3px 8px', fontSize: '0.72rem' }}>
+                        View ➔
+                      </button>
+                    </div>
+                  )}
+
+                  {/* Row 3: Expiring Within 7 Days */}
+                  {restaurants.filter(r => {
+                    const d = getDaysRemaining(r.plan_expires_at);
+                    return d !== null && d > 0 && d <= 7 && r.subscription_type !== 'ADMIN_GRANTED';
+                  }).length > 0 && (
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '8px 12px', background: '#F8FAFC', borderRadius: '10px', border: '1px solid #E2E8F0' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                        <span style={{ background: '#64748B', color: '#FFF', padding: '2px 6px', borderRadius: '4px', fontSize: '0.66rem', fontWeight: 900 }}>EXPIRING</span>
+                        <span style={{ fontSize: '0.8rem', fontWeight: 800, color: '#334155' }}>
+                          {restaurants.filter(r => {
+                            const d = getDaysRemaining(r.plan_expires_at);
+                            return d !== null && d > 0 && d <= 7 && r.subscription_type !== 'ADMIN_GRANTED';
+                          }).length} Subscriptions Expiring in &le; 7 Days
+                        </span>
+                      </div>
+                      <button onClick={() => setStatusFilter('expired')} className="sa-btn sa-btn-secondary sa-btn-sm" style={{ padding: '3px 8px', fontSize: '0.72rem' }}>
+                        View ➔
+                      </button>
+                    </div>
+                  )}
+
+                  {/* Row 4: Scheduled Plan Changes */}
+                  {restaurants.filter(r => r.scheduled_plan_key !== null).length > 0 && (
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '8px 12px', background: '#EFF6FF', borderRadius: '10px', border: '1px solid #BFDBFE' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                        <span style={{ background: '#2563EB', color: '#FFF', padding: '2px 6px', borderRadius: '4px', fontSize: '0.66rem', fontWeight: 900 }}>PLAN SWITCH</span>
+                        <span style={{ fontSize: '0.8rem', fontWeight: 800, color: '#1E40AF' }}>
+                          {restaurants.filter(r => r.scheduled_plan_key !== null).length} Scheduled Plan Changes at Next Billing Boundary
+                        </span>
+                      </div>
+                      <button onClick={() => setActiveView('plans')} className="sa-btn sa-btn-secondary sa-btn-sm" style={{ padding: '3px 8px', fontSize: '0.72rem' }}>
+                        View ➔
+                      </button>
+                    </div>
+                  )}
+
+                  {/* All Clear State */}
+                  {restaurants.filter(r => r.subscription_status === 'payment_failed' || r.subscription_status === 'past_due').length === 0 &&
+                   restaurants.filter(r => (r.auto_renew === 0 || r.auto_renew === false || r.cancel_requested_at !== null) && r.active !== false).length === 0 && (
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '10px 14px', background: '#F0FDF4', borderRadius: '10px', border: '1px solid #86EFAC' }}>
+                      <CheckCircle size={16} color="#16A34A" />
+                      <span style={{ fontSize: '0.78rem', color: '#15803D', fontWeight: 700 }}>🟢 No billing issues requiring attention</span>
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              {/* 🏷️ 4. FILTER PILLS STRIP & SEARCH */}
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '10px' }}>
+                {/* Filter Pills */}
+                <div style={{ display: 'flex', gap: '5px', overflowX: 'auto', paddingBottom: '2px', flexWrap: 'wrap' }}>
+                  {[
+                    { id: 'all', label: `All (${restaurants.length})` },
+                    { id: 'active', label: '🟢 Active Paid' },
+                    { id: 'trial', label: '🎁 Free Trial' },
+                    { id: 'failed', label: '🟡 Payment Failed' },
+                    { id: 'autorenew_off', label: '🟠 Auto-Renew Off' },
+                    { id: 'expired', label: '🔴 Expired' },
+                    { id: 'vip', label: '🟣 VIP' },
+                  ].map(pill => (
+                    <button
+                      key={pill.id}
+                      onClick={() => setStatusFilter(pill.id)}
+                      className={`sa-btn sa-btn-sm ${statusFilter === pill.id ? 'sa-btn-primary' : 'sa-btn-secondary'}`}
+                      style={{ fontSize: '0.72rem', padding: '5px 10px', border: 'none' }}
+                    >
+                      {pill.label}
+                    </button>
+                  ))}
+                </div>
+
+                {/* Search Input */}
+                <div style={{ position: 'relative', width: '220px' }}>
+                  <Search size={13} style={{ position: 'absolute', left: '10px', top: '50%', transform: 'translateY(-50%)', color: 'var(--sa-text-muted)' }} />
+                  <input
+                    type="text"
+                    placeholder="Search tenant, owner, phone, email..."
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                    style={{
+                      width: '100%',
+                      padding: '6px 10px 6px 28px',
+                      borderRadius: 'var(--sa-radius-full)',
+                      border: '1px solid var(--sa-border)',
+                      fontSize: '0.76rem',
+                      outline: 'none',
+                      background: '#FFFFFF'
+                    }}
+                  />
+                </div>
+              </div>
+
+              {/* 📋 5. SUBSCRIPTIONS TABLE */}
+              <div className="sa-table-container sa-responsive-table" style={{ background: '#FFFFFF', borderRadius: '16px' }}>
+                <table className="sa-table">
+                  <thead>
+                    <tr>
+                      <th>TENANT</th>
+                      <th>OWNER / CONTACT</th>
+                      <th>PLAN & BILLING</th>
+                      <th>STATUS</th>
+                      <th>AUTO-RENEW</th>
+                      <th>ACCESS UNTIL / RENEWAL</th>
+                      <th style={{ textAlign: 'right' }}>ACTION</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {filteredAndSortedRestaurants.length === 0 ? (
+                      <tr>
+                        <td colSpan={7} style={{ textAlign: 'center', padding: '36px', color: 'var(--sa-text-muted)' }}>
+                          No subscriptions matching your selected criteria.
+                        </td>
+                      </tr>
+                    ) : (
+                      filteredAndSortedRestaurants.map(r => {
+                        const daysLeft = getDaysRemaining(r.plan_expires_at);
+                        const isVip = (r.subscription_type === 'ADMIN_GRANTED' || r.mandate_status === 'admin_granted');
+                        const isExpired = (!isVip && daysLeft !== null && daysLeft <= 0) || r.subscription_status === 'expired';
+                        const isAutoRenewOff = (r.auto_renew === 0 || r.auto_renew === false || r.cancel_requested_at !== null);
+
+                        return (
+                          <tr key={r.id}>
+                            <td>
+                              <div
+                                onClick={() => setSelectedTenant360(r)}
+                                style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer' }}
+                                title="Click to open Tenant 360° Profile"
+                              >
+                                <img
+                                  src={getRestaurantLogoUrl(r.logo)}
+                                  alt={r.name}
+                                  onError={(e) => { e.currentTarget.src = '/images/default-logo.webp'; }}
+                                  style={{ width: '32px', height: '32px', borderRadius: '50%', objectFit: 'cover', border: '1.5px solid #D4AF37' }}
+                                />
+                                <div>
+                                  <strong style={{ display: 'block', fontSize: '0.86rem', color: 'var(--sa-text-main)' }}>{r.name}</strong>
+                                  <span style={{ fontSize: '0.7rem', color: 'var(--sa-accent-hover, #B48F27)', fontWeight: 700 }}>/{r.slug}</span>
+                                </div>
+                              </div>
+                            </td>
+                            <td>
+                              <span style={{ fontFamily: 'monospace', fontWeight: 800, fontSize: '0.78rem', display: 'block', color: 'var(--sa-text-main)' }}>
+                                {r.owner_username || 'admin'}
+                              </span>
+                              <span style={{ fontSize: '0.7rem', color: 'var(--sa-text-muted)' }}>
+                                {r.phone || r.owner_email || 'No contact'}
+                              </span>
+                            </td>
+                            <td>
+                              <span style={{ fontWeight: 800, color: 'var(--sa-primary)', fontSize: '0.78rem' }}>
+                                {(r.plan_tier || 'pro').toUpperCase()}
+                              </span>
+                              <span style={{ fontSize: '0.68rem', color: 'var(--sa-text-muted)', display: 'block' }}>
+                                {isVip ? '₹0/mo (Free)' : `₹${r.plan_price || 999}/mo`}
+                              </span>
+                              {r.scheduled_plan_key && (
+                                <span style={{ background: '#EFF6FF', color: '#1E40AF', padding: '1px 5px', borderRadius: '4px', fontSize: '0.62rem', fontWeight: 800, display: 'inline-block', marginTop: '2px' }}>
+                                  📋 Scheduled: {r.scheduled_plan_key.toUpperCase()}
+                                </span>
+                              )}
+                            </td>
+                            <td>{renderStatusBadge(r)}</td>
+                            <td>
+                              <span style={{
+                                padding: '2px 7px', borderRadius: 'var(--sa-radius-full)', fontSize: '0.68rem', fontWeight: 800,
+                                background: isAutoRenewOff ? '#FEE2E2' : '#DCFCE7',
+                                color: isAutoRenewOff ? '#DC2626' : '#15803D'
+                              }}>
+                                {isAutoRenewOff ? '❌ OFF' : '✅ ON'}
+                              </span>
+                            </td>
+                            <td style={{ fontSize: '0.76rem', fontWeight: 700 }}>
+                              {isVip ? '♾️ Lifetime' : r.access_until ? new Date(r.access_until).toLocaleDateString('en-IN') : daysLeft !== null ? (isExpired ? 'Expired' : `${daysLeft}d left`) : 'Active'}
+                            </td>
+                            <td style={{ textAlign: 'right' }}>
+                              <button
+                                onClick={() => setSelectedTenant360(r)}
+                                className="sa-btn sa-btn-secondary sa-btn-sm"
+                                style={{ padding: '4px 9px', fontSize: '0.72rem', fontWeight: 800 }}
+                                title="Open complete 360-degree Tenant Profile"
+                              >
+                                🔍 360°
+                              </button>
+                            </td>
+                          </tr>
+                        );
+                      })
+                    )}
+                  </tbody>
+                </table>
+              </div>
             </div>
           )}
 
@@ -1466,7 +1757,7 @@ export default function SuperAdminDashboard({ token, username, onLogout, onRetur
           {/* ========================================================================= */}
           {activeView === 'plans' && (
             <div className="sa-table-container" style={{ padding: '24px', background: '#FFFFFF' }}>
-              <SaaSPlansView token={token} />
+              <SaaSPlansView token={token} restaurants={restaurants} />
             </div>
           )}
 
@@ -1474,113 +1765,249 @@ export default function SuperAdminDashboard({ token, username, onLogout, onRetur
           {/* VIEW 5: SYSTEM OPERATIONS & DB HEALTH                                     */}
           {/* ========================================================================= */}
           {activeView === 'operations' && (
-            <div className="sa-table-container" style={{ padding: '24px', maxWidth: '720px', display: 'flex', flexDirection: 'column', gap: '18px' }}>
-              <div>
-                <h3 style={{ fontSize: '1.15rem', fontWeight: 900, color: 'var(--sa-text-main)', margin: '0 0 4px 0', display: 'flex', alignItems: 'center', gap: '8px' }}>
-                  <Database size={20} color="var(--sa-primary)" /> System Operations & Neon DB Maintenance
-                </h3>
-                <span style={{ fontSize: '0.78rem', color: 'var(--sa-text-muted)', fontWeight: 600 }}>
-                  Manage platform-wide retention policies, automated trial terms, and disk space optimizations.
-                </span>
-              </div>
-
-              {/* Trial Duration Setting */}
-              <div style={{ background: '#FFFBEB', padding: '16px', borderRadius: '14px', border: '1px solid #FCD34D' }}>
-                <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: 800, color: '#B45309', marginBottom: '6px' }}>
-                  🎁 DEFAULT SAAS FREE TRIAL DURATION:
-                </label>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                  <input
-                    type="number"
-                    min="1"
-                    max="365"
-                    placeholder="16"
-                    value={paymentKeys.default_trial_days || ''}
-                    onChange={(e) => setPaymentKeys({ ...paymentKeys, default_trial_days: e.target.value })}
-                    style={{ width: '100px', padding: '10px 12px', borderRadius: '10px', border: '1.5px solid #CBD5E1', fontSize: '0.95rem', fontWeight: 900, color: '#0F172A' }}
-                  />
-                  <span style={{ fontSize: '0.82rem', fontWeight: 700, color: '#92400E' }}>Days Free Trial for New Registrations</span>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '18px' }}>
+              {/* ⚡ 1. HEADER */}
+              <div className="sa-section-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '12px' }}>
+                <div>
+                  <h2 className="sa-section-title" style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '1.2rem', fontWeight: 900, color: 'var(--sa-primary)', margin: 0 }}>
+                    <Database size={22} color="var(--sa-primary)" /> ⚡ Operations & System Health Center
+                  </h2>
+                  <span style={{ fontSize: '0.76rem', color: 'var(--sa-text-muted)', fontWeight: 600 }}>
+                    Monitor system health, background jobs and platform operations.
+                  </span>
                 </div>
               </div>
 
-              {/* Order Retention & Compaction Policy */}
-              <div style={{ background: '#F0FDF4', padding: '16px', borderRadius: '14px', border: '1.5px solid #86EFAC' }}>
-                <strong style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.82rem', fontWeight: 900, color: '#166534', marginBottom: '4px' }}>
-                  ⚡ GLOBAL ORDER RETENTION & DATA COMPACTION:
-                </strong>
-                <p style={{ fontSize: '0.74rem', color: '#15803D', margin: '0 0 10px 0', lineHeight: 1.4 }}>
-                  Platform-wide data retention policy applied automatically across all restaurants.
-                </p>
-                <select
-                  value={paymentKeys.global_order_retention_days || '90'}
-                  onChange={(e) => setPaymentKeys({ ...paymentKeys, global_order_retention_days: e.target.value })}
-                  style={{ width: '100%', padding: '10px 12px', borderRadius: '10px', border: '1.5px solid #86EFAC', fontSize: '0.88rem', fontWeight: 800, color: '#14532D', background: '#FFFFFF' }}
-                >
-                  <option value="1">⚡ 24 Hours / 1 Day (Ultra Light - High Traffic)</option>
-                  <option value="7">⚡ 7 Days (Standard Light)</option>
-                  <option value="30">⚡ 30 Days (1 Month History)</option>
-                  <option value="90">⚡ 90 Days (Quarterly / 3 Months History - Recommended)</option>
-                  <option value="180">⚡ 180 Days (Half-Year / 6 Months History)</option>
-                  <option value="365">⚡ 365 Days (Full 1 Year History)</option>
-                </select>
+              {/* 📊 2. SUBSYSTEM HEALTH HERO GRID */}
+              <div className="sa-stats-grid">
+                {/* 1. Neon PostgreSQL Database */}
+                <div className="sa-stat-card hover-lift" title="Neon PostgreSQL Database Connection">
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                    <div style={{ width: '40px', height: '40px', borderRadius: '12px', background: '#DCFCE7', color: '#15803D', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                      <Database size={20} />
+                    </div>
+                    <div>
+                      <div className="sa-stat-value" style={{ color: '#15803D', fontSize: '1.05rem', fontWeight: 900 }}>🟢 Connected</div>
+                      <div className="sa-stat-label">Neon PostgreSQL</div>
+                      <div style={{ fontSize: '0.68rem', color: 'var(--sa-text-muted)', marginTop: '2px' }}>Storage: {dbStats?.total_size_pretty || 'Serverless Pool'}</div>
+                    </div>
+                  </div>
+                </div>
+
+                {/* 2. Cashfree Payment Gateway */}
+                <div className="sa-stat-card hover-lift" title="Cashfree Gateway Configuration">
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                    <div style={{ width: '40px', height: '40px', borderRadius: '12px', background: paymentKeys.cashfree_app_id ? '#DCFCE7' : '#F1F5F9', color: paymentKeys.cashfree_app_id ? '#15803D' : '#64748B', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                      <CreditCard size={20} />
+                    </div>
+                    <div>
+                      <div className="sa-stat-value" style={{ color: paymentKeys.cashfree_app_id ? '#15803D' : '#64748B', fontSize: '1.05rem', fontWeight: 900 }}>
+                        {paymentKeys.cashfree_app_id ? '🟢 Configured' : '⚪ Not Configured'}
+                      </div>
+                      <div className="sa-stat-label">Cashfree Gateway</div>
+                      <div style={{ fontSize: '0.68rem', color: 'var(--sa-text-muted)', marginTop: '2px' }}>
+                        Mode: {(paymentKeys.cashfree_env || 'sandbox').toUpperCase()}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                {/* 3. Cashfree Webhooks */}
+                <div className="sa-stat-card hover-lift" title="Cashfree Webhook Ingestion Engine">
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                    <div style={{ width: '40px', height: '40px', borderRadius: '12px', background: '#DCFCE7', color: '#15803D', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                      <Radio size={20} />
+                    </div>
+                    <div>
+                      <div className="sa-stat-value" style={{ color: '#15803D', fontSize: '1.05rem', fontWeight: 900 }}>🟢 Active</div>
+                      <div className="sa-stat-label">Cashfree Webhooks</div>
+                      <div style={{ fontSize: '0.68rem', color: 'var(--sa-text-muted)', marginTop: '2px' }}>Idempotent Logging</div>
+                    </div>
+                  </div>
+                </div>
+
+                {/* 4. Subscription Cron */}
+                <div className="sa-stat-card hover-lift" title="Subscription Maintenance Cron Worker">
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                    <div style={{ width: '40px', height: '40px', borderRadius: '12px', background: '#DCFCE7', color: '#15803D', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                      <Clock size={20} />
+                    </div>
+                    <div>
+                      <div className="sa-stat-value" style={{ color: '#15803D', fontSize: '1.05rem', fontWeight: 900 }}>🟢 Scheduled</div>
+                      <div className="sa-stat-label">Subscription Cron</div>
+                      <div style={{ fontSize: '0.68rem', color: 'var(--sa-text-muted)', marginTop: '2px' }}>Every 60 Minutes</div>
+                    </div>
+                  </div>
+                </div>
+
+                {/* 5. Google Gemini AI Engine */}
+                <div className="sa-stat-card hover-lift" title="Google Gemini 1.5 Flash AI Engine">
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                    <div style={{ width: '40px', height: '40px', borderRadius: '12px', background: '#F3E8FF', color: '#7E22CE', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                      <Sparkles size={20} />
+                    </div>
+                    <div>
+                      <div className="sa-stat-value" style={{ color: '#7E22CE', fontSize: '1.05rem', fontWeight: 900 }}>🟢 Active</div>
+                      <div className="sa-stat-label">Gemini 1.5 Flash AI</div>
+                      <div style={{ fontSize: '0.68rem', color: 'var(--sa-text-muted)', marginTop: '2px' }}>Auto-Reply Assistant</div>
+                    </div>
+                  </div>
+                </div>
+
+                {/* 6. Media Storage Engine */}
+                <div className="sa-stat-card hover-lift" title="Cloudflare R2 Storage with DB Fallback">
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                    <div style={{ width: '40px', height: '40px', borderRadius: '12px', background: '#EFF6FF', color: '#1D4ED8', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                      <HardDrive size={20} />
+                    </div>
+                    <div>
+                      <div className="sa-stat-value" style={{ color: '#1D4ED8', fontSize: '1.05rem', fontWeight: 900 }}>🟢 Dual Engine</div>
+                      <div className="sa-stat-label">Storage (R2 + DB)</div>
+                      <div style={{ fontSize: '0.68rem', color: 'var(--sa-text-muted)', marginTop: '2px' }}>Cloudflare R2 + DB</div>
+                    </div>
+                  </div>
+                </div>
               </div>
 
-              {/* Vacuum Maintenance */}
-              <div style={{ background: '#EFF6FF', padding: '16px', borderRadius: '14px', border: '1px solid #BFDBFE' }}>
-                <strong style={{ fontSize: '0.84rem', color: '#1E40AF', display: 'block', marginBottom: '4px' }}>
-                  🧹 POSTGRESQL DATABASE MAINTENANCE & VACUUM:
-                </strong>
-                <span style={{ fontSize: '0.74rem', color: '#3B82F6', display: 'block', marginBottom: '12px' }}>
-                  Cleans dead tuples, optimizes index pointers, and reclaims disk space on Neon DB.
-                </span>
-                <button
-                  type="button"
-                  disabled={dbOptimizing}
-                  onClick={async () => {
-                    setDbOptimizing(true);
-                    setDbOptimizeMsg('');
-                    try {
-                      const data = await superAdminOptimizeDatabase(token);
-                      setDbOptimizeMsg(`✅ ${data.message || 'Database vacuumed & optimized successfully!'}`);
-                    } catch (err) {
-                      setDbOptimizeMsg(`⚠️ ${err.message || 'Optimization failed'}`);
-                    } finally {
-                      setDbOptimizing(false);
-                    }
-                  }}
-                  className="sa-btn sa-btn-primary"
-                  style={{ width: '100%', padding: '12px 14px' }}
-                >
-                  {dbOptimizing ? 'Optimizing Database Index...' : '⚡ Run Vacuum & Database Optimization'}
-                </button>
-                {dbOptimizeMsg && <span style={{ fontSize: '0.78rem', fontWeight: 800, color: '#1E40AF', display: 'block', marginTop: '8px' }}>{dbOptimizeMsg}</span>}
+              {/* ⚠️ 3. OPERATIONAL ATTENTION HUB */}
+              <div className="sa-table-container" style={{ padding: '16px 20px', background: '#FFFFFF', borderRadius: '16px', display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                  <h3 style={{ margin: 0, fontSize: '0.98rem', fontWeight: 900, color: 'var(--sa-text-main)', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    <Shield size={16} color="var(--sa-primary)" /> ⚠️ Operational Status & Alerts
+                  </h3>
+                  <span style={{ fontSize: '0.72rem', color: 'var(--sa-text-muted)', fontWeight: 600 }}>Real-time telemetry</span>
+                </div>
+
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '10px 14px', background: '#F0FDF4', borderRadius: '10px', border: '1px solid #86EFAC' }}>
+                  <CheckCircle size={16} color="#16A34A" />
+                  <span style={{ fontSize: '0.78rem', color: '#15803D', fontWeight: 700 }}>
+                    🟢 All monitored background subsystems, crons, and storage engines operational
+                  </span>
+                </div>
               </div>
 
-              <button
-                type="button"
-                disabled={keysSaving}
-                onClick={async () => {
-                  setKeysSaving(true);
-                  setKeysMsg('');
-                  try {
-                    const res = await fetch('/api/superadmin/settings', {
-                      method: 'POST',
-                      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
-                      body: JSON.stringify(paymentKeys)
-                    });
-                    const data = await res.json();
-                    if (res.ok) setKeysMsg(data.message || '✅ System settings saved!');
-                  } catch {
-                    setKeysMsg('⚠️ Failed to save system settings');
-                  } finally {
-                    setKeysSaving(false);
-                  }
-                }}
-                className="sa-btn sa-btn-accent"
-                style={{ width: '100%', padding: '14px' }}
-              >
-                {keysSaving ? 'Saving Settings...' : '💾 Save Operations & Trial Settings'}
-              </button>
+              {/* ⚙️ 4. MAINTENANCE & OPERATIONAL POLICIES */}
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))', gap: '16px' }}>
+                {/* Policy Controls Panel */}
+                <div className="sa-table-container" style={{ padding: '20px', background: '#FFFFFF', borderRadius: '16px', display: 'flex', flexDirection: 'column', gap: '14px' }}>
+                  <h3 style={{ margin: 0, fontSize: '1rem', fontWeight: 900, color: 'var(--sa-text-main)', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    <Settings size={18} color="var(--sa-primary)" /> Platform Operational Policies
+                  </h3>
+
+                  {/* Trial Duration Setting */}
+                  <div style={{ background: '#FFFBEB', padding: '14px', borderRadius: '12px', border: '1px solid #FCD34D' }}>
+                    <label style={{ display: 'block', fontSize: '0.78rem', fontWeight: 800, color: '#B45309', marginBottom: '6px' }}>
+                      🎁 DEFAULT SAAS FREE TRIAL DURATION:
+                    </label>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                      <input
+                        type="number"
+                        min="1"
+                        max="365"
+                        placeholder="16"
+                        value={paymentKeys.default_trial_days || ''}
+                        onChange={(e) => setPaymentKeys({ ...paymentKeys, default_trial_days: e.target.value })}
+                        style={{ width: '90px', padding: '8px 10px', borderRadius: '8px', border: '1.5px solid #CBD5E1', fontSize: '0.9rem', fontWeight: 900, color: '#0F172A' }}
+                      />
+                      <span style={{ fontSize: '0.78rem', fontWeight: 700, color: '#92400E' }}>Days Free Trial for New Signups</span>
+                    </div>
+                  </div>
+
+                  {/* Order Retention & Compaction Policy */}
+                  <div style={{ background: '#F0FDF4', padding: '14px', borderRadius: '12px', border: '1.5px solid #86EFAC' }}>
+                    <strong style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.78rem', fontWeight: 900, color: '#166534', marginBottom: '4px' }}>
+                      ⚡ GLOBAL ORDER RETENTION & DATA COMPACTION:
+                    </strong>
+                    <p style={{ fontSize: '0.72rem', color: '#15803D', margin: '0 0 8px 0', lineHeight: 1.3 }}>
+                      Platform-wide data retention policy applied automatically across all restaurants.
+                    </p>
+                    <select
+                      value={paymentKeys.global_order_retention_days || '90'}
+                      onChange={(e) => setPaymentKeys({ ...paymentKeys, global_order_retention_days: e.target.value })}
+                      style={{ width: '100%', padding: '8px 10px', borderRadius: '8px', border: '1.5px solid #86EFAC', fontSize: '0.82rem', fontWeight: 800, color: '#14532D', background: '#FFFFFF' }}
+                    >
+                      <option value="1">⚡ 24 Hours / 1 Day (Ultra Light - High Traffic)</option>
+                      <option value="7">⚡ 7 Days (Standard Light)</option>
+                      <option value="30">⚡ 30 Days (1 Month History)</option>
+                      <option value="90">⚡ 90 Days (Quarterly / 3 Months History - Recommended)</option>
+                      <option value="180">⚡ 180 Days (Half-Year / 6 Months History)</option>
+                      <option value="365">⚡ 365 Days (Full 1 Year History)</option>
+                    </select>
+                  </div>
+
+                  <button
+                    type="button"
+                    disabled={keysSaving}
+                    onClick={async () => {
+                      setKeysSaving(true);
+                      setKeysMsg('');
+                      try {
+                        const res = await fetch('/api/superadmin/settings', {
+                          method: 'POST',
+                          headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+                          body: JSON.stringify(paymentKeys)
+                        });
+                        const data = await res.json();
+                        if (res.ok) setKeysMsg(data.message || '✅ System settings saved!');
+                      } catch {
+                        setKeysMsg('⚠️ Failed to save system settings');
+                      } finally {
+                        setKeysSaving(false);
+                      }
+                    }}
+                    className="sa-btn sa-btn-accent"
+                    style={{ width: '100%', padding: '12px', fontWeight: 900 }}
+                  >
+                    {keysSaving ? 'Saving Settings...' : '💾 Save Operations & Trial Settings'}
+                  </button>
+                  {keysMsg && <span style={{ fontSize: '0.78rem', fontWeight: 800, color: 'var(--sa-primary)', textAlign: 'center' }}>{keysMsg}</span>}
+                </div>
+
+                {/* Database Maintenance Panel */}
+                <div className="sa-table-container" style={{ padding: '20px', background: '#FFFFFF', borderRadius: '16px', display: 'flex', flexDirection: 'column', justifyContent: 'space-between', gap: '14px' }}>
+                  <div>
+                    <h3 style={{ margin: 0, fontSize: '1rem', fontWeight: 900, color: 'var(--sa-text-main)', display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '8px' }}>
+                      <Database size={18} color="var(--sa-primary)" /> Neon DB Optimization & Vacuum
+                    </h3>
+                    <p style={{ fontSize: '0.76rem', color: 'var(--sa-text-muted)', lineHeight: 1.4, margin: '0 0 12px 0' }}>
+                      Performs live dead-tuple cleanup, optimizes PostgreSQL index pointers, compacts archived records, and reclaims storage on Neon DB.
+                    </p>
+
+                    <div style={{ background: '#EFF6FF', padding: '14px', borderRadius: '12px', border: '1px solid #BFDBFE', display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                      <span style={{ fontSize: '0.74rem', color: '#1E40AF', fontWeight: 800 }}>⚡ Maintenance Scope:</span>
+                      <ul style={{ margin: 0, paddingLeft: '18px', fontSize: '0.72rem', color: '#2563EB', lineHeight: 1.4 }}>
+                        <li>Non-blocking dead tuple vacuuming</li>
+                        <li>Auto-summarize orders older than retention threshold</li>
+                        <li>Reclaim Neon serverless disk quota</li>
+                      </ul>
+                    </div>
+                  </div>
+
+                  <div>
+                    <button
+                      type="button"
+                      disabled={dbOptimizing}
+                      onClick={async () => {
+                        setDbOptimizing(true);
+                        setDbOptimizeMsg('');
+                        try {
+                          const data = await superAdminOptimizeDatabase(token);
+                          setDbOptimizeMsg(`✅ ${data.message || 'Database vacuumed & optimized successfully!'}`);
+                        } catch (err) {
+                          setDbOptimizeMsg(`⚠️ ${err.message || 'Optimization failed'}`);
+                        } finally {
+                          setDbOptimizing(false);
+                        }
+                      }}
+                      className="sa-btn sa-btn-primary"
+                      style={{ width: '100%', padding: '12px', fontWeight: 900 }}
+                    >
+                      {dbOptimizing ? 'Optimizing Database Index...' : '⚡ Run Vacuum & Database Optimization'}
+                    </button>
+                    {dbOptimizeMsg && <span style={{ fontSize: '0.78rem', fontWeight: 800, color: '#1E40AF', display: 'block', marginTop: '8px', textAlign: 'center' }}>{dbOptimizeMsg}</span>}
+                  </div>
+                </div>
+              </div>
             </div>
           )}
 
@@ -1588,105 +2015,304 @@ export default function SuperAdminDashboard({ token, username, onLogout, onRetur
           {/* VIEW 6: PLATFORM AUDIT LOGS STREAM                                        */}
           {/* ========================================================================= */}
           {activeView === 'activity' && (
-            <div className="sa-table-container" style={{ padding: '24px' }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px', flexWrap: 'wrap', gap: '10px' }}>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '18px' }}>
+              {/* 📜 1. HEADER */}
+              <div className="sa-section-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '12px' }}>
                 <div>
-                  <h3 style={{ fontSize: '1.15rem', fontWeight: 900, color: 'var(--sa-text-main)', margin: '0 0 2px 0', display: 'flex', alignItems: 'center', gap: '8px' }}>
-                    <FileText size={20} color="var(--sa-primary)" /> Platform Audit Log Trail
-                  </h3>
+                  <h2 className="sa-section-title" style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '1.2rem', fontWeight: 900, color: 'var(--sa-primary)', margin: 0 }}>
+                    <FileText size={22} color="var(--sa-primary)" /> 📜 Activity & Audit Log Trail
+                  </h2>
                   <span style={{ fontSize: '0.76rem', color: 'var(--sa-text-muted)', fontWeight: 600 }}>
-                    Real-time security events, tenant activations, impersonations, and credential audits.
+                    Security events, tenant activity and platform operations. <span style={{ opacity: 0.8 }}>(Showing latest 50 events)</span>
                   </span>
                 </div>
                 <button
                   type="button"
                   onClick={loadAuditData}
                   className="sa-btn sa-btn-secondary sa-btn-sm"
+                  style={{ fontWeight: 800, display: 'flex', alignItems: 'center', gap: '6px' }}
                 >
-                  <RefreshCw size={13} className={auditLoading ? 'spin' : ''} /> Refresh Stream
+                  <RefreshCw size={14} className={auditLoading ? 'spin' : ''} /> 🔄 Refresh Stream
                 </button>
               </div>
 
-              {/* Filter Pills */}
-              <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px', alignItems: 'center', justifyContent: 'space-between', marginBottom: '16px', background: '#F8FAFC', padding: '10px 12px', borderRadius: '14px', border: '1px solid #E2E8F0' }}>
-                <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap' }}>
+              {/* 🏷️ 2. FILTER PILLS STRIP & SEARCH */}
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '10px' }}>
+                {/* Filter Pills */}
+                <div style={{ display: 'flex', gap: '5px', overflowX: 'auto', paddingBottom: '2px', flexWrap: 'wrap' }}>
                   {[
-                    { id: 'all', label: '📜 All Logs' },
-                    { id: 'activations', label: '🟢 Activations' },
-                    { id: 'suspensions', label: '🔴 Suspensions' },
-                    { id: 'settings', label: '⚙️ Settings' },
+                    { id: 'all', label: `📜 All (${auditLogs.length})` },
                     { id: 'security', label: '🔑 Security' },
-                  ].map(pill => {
-                    const isActive = auditFilter === pill.id;
-                    return (
-                      <button
-                        key={pill.id}
-                        type="button"
-                        onClick={() => setAuditFilter(pill.id)}
-                        className={`sa-btn sa-btn-sm ${isActive ? 'sa-btn-primary' : 'sa-btn-secondary'}`}
-                        style={{ border: 'none' }}
-                      >
-                        {pill.label}
-                      </button>
-                    );
-                  })}
+                    { id: 'tenant', label: '🏢 Tenant' },
+                    { id: 'billing', label: '💳 Billing' },
+                    { id: 'vip', label: '👑 VIP' },
+                    { id: 'system', label: '⚙️ System' },
+                  ].map(pill => (
+                    <button
+                      key={pill.id}
+                      type="button"
+                      onClick={() => setAuditFilter(pill.id)}
+                      className={`sa-btn sa-btn-sm ${auditFilter === pill.id ? 'sa-btn-primary' : 'sa-btn-secondary'}`}
+                      style={{ fontSize: '0.72rem', padding: '5px 10px', border: 'none' }}
+                    >
+                      {pill.label}
+                    </button>
+                  ))}
                 </div>
-                <div style={{ position: 'relative', width: '220px' }}>
+
+                {/* Search Input */}
+                <div style={{ position: 'relative', width: '240px' }}>
+                  <Search size={13} style={{ position: 'absolute', left: '10px', top: '50%', transform: 'translateY(-50%)', color: 'var(--sa-text-muted)' }} />
                   <input
                     type="text"
-                    placeholder="🔍 Search logs..."
+                    placeholder="Search action, details, actor..."
                     value={auditSearch}
                     onChange={(e) => setAuditSearch(e.target.value)}
-                    style={{ width: '100%', padding: '6px 12px', borderRadius: 'var(--sa-radius-full)', border: '1px solid #CBD5E1', fontSize: '0.78rem' }}
+                    style={{
+                      width: '100%',
+                      padding: '6px 10px 6px 28px',
+                      borderRadius: 'var(--sa-radius-full)',
+                      border: '1px solid var(--sa-border)',
+                      fontSize: '0.76rem',
+                      outline: 'none',
+                      background: '#FFFFFF'
+                    }}
                   />
                 </div>
               </div>
 
-              {/* Audit Stream List */}
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', maxHeight: '600px', overflowY: 'auto' }}>
-                {auditLoading ? (
-                  <div style={{ textAlign: 'center', padding: '40px', color: 'var(--sa-text-muted)' }}>⏳ Loading live audit logs...</div>
-                ) : auditLogs.length === 0 ? (
-                  <div style={{ textAlign: 'center', padding: '40px', color: 'var(--sa-text-muted)' }}>No audit log events found.</div>
-                ) : (
-                  auditLogs
-                    .filter(log => {
-                      if (auditFilter === 'activations') return (log.action || '').toUpperCase().includes('ACTIVAT');
-                      if (auditFilter === 'suspensions') return (log.action || '').toUpperCase().includes('SUSPEND');
-                      if (auditFilter === 'settings') return (log.action || '').toUpperCase().includes('SETTING') || (log.action || '').toUpperCase().includes('UPDATE');
-                      if (auditFilter === 'security') return (log.action || '').toUpperCase().includes('SECURITY') || (log.action || '').toUpperCase().includes('LOGIN') || (log.action || '').toUpperCase().includes('IMPERSONAT');
-                      return true;
-                    })
-                    .filter(log => {
-                      if (!auditSearch.trim()) return true;
-                      const q = auditSearch.toLowerCase();
-                      return (log.action || '').toLowerCase().includes(q) || (log.details || '').toLowerCase().includes(q) || (log.actor_role || '').toLowerCase().includes(q);
-                    })
-                    .map(log => (
-                      <div
-                        key={log.id}
-                        style={{
-                          display: 'flex',
-                          alignItems: 'center',
-                          justifyContent: 'space-between',
-                          padding: '12px 14px',
-                          background: '#FFFFFF',
-                          borderRadius: '12px',
-                          border: '1px solid var(--sa-border)',
-                          fontSize: '0.82rem'
-                        }}
-                      >
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                          <span className="sa-badge sa-badge-info">{log.action}</span>
-                          <span style={{ color: 'var(--sa-text-main)', fontWeight: 600 }}>{log.details}</span>
+              {/* 📋 3. AUDIT LOG STREAM TABLE */}
+              <div className="sa-table-container sa-responsive-table" style={{ background: '#FFFFFF', borderRadius: '16px' }}>
+                <table className="sa-table">
+                  <thead>
+                    <tr>
+                      <th>TIMESTAMP</th>
+                      <th>ACTOR & ROLE</th>
+                      <th>CATEGORY</th>
+                      <th>EVENT / ACTION</th>
+                      <th>DESCRIPTION</th>
+                      <th style={{ textAlign: 'right' }}>ACTION</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {auditLoading ? (
+                      <tr>
+                        <td colSpan={6} style={{ textAlign: 'center', padding: '36px', color: 'var(--sa-text-muted)' }}>
+                          ⏳ Loading live audit logs...
+                        </td>
+                      </tr>
+                    ) : auditLogs.length === 0 ? (
+                      <tr>
+                        <td colSpan={6} style={{ textAlign: 'center', padding: '36px', color: 'var(--sa-text-muted)' }}>
+                          📜 No activity recorded yet.
+                        </td>
+                      </tr>
+                    ) : (
+                      auditLogs
+                        .filter(log => {
+                          const act = (log.action || '').toUpperCase();
+                          if (auditFilter === 'security') return act.includes('SECURITY') || act.includes('LOGIN') || act.includes('LOGOUT') || act.includes('CREDENTIAL') || act.includes('PASSWORD') || act.includes('IMPERSONAT');
+                          if (auditFilter === 'tenant') return act.includes('TENANT') || act.includes('RESTAURANT') || act.includes('ACTIVAT') || act.includes('SUSPEND') || act.includes('DELETE') || act.includes('REGISTER');
+                          if (auditFilter === 'billing') return act.includes('CASHFREE') || act.includes('PAYMENT') || act.includes('SUB_') || act.includes('SUBSCRIPTION') || act.includes('PLAN') || act.includes('CANCEL') || act.includes('RENEW');
+                          if (auditFilter === 'vip') return act.includes('VIP') || act.includes('COMPLIMENTARY') || act.includes('ADMIN_GRANTED');
+                          if (auditFilter === 'system') return act.includes('SETTING') || act.includes('VACUUM') || act.includes('OPTIMIZ') || act.includes('MAINTENANCE') || act.includes('SYSTEM');
+                          return true;
+                        })
+                        .filter(log => {
+                          if (!auditSearch.trim()) return true;
+                          const q = auditSearch.toLowerCase();
+                          return (log.action || '').toLowerCase().includes(q) ||
+                            (log.details || '').toLowerCase().includes(q) ||
+                            (log.actor_role || '').toLowerCase().includes(q) ||
+                            String(log.restaurant_id || '').includes(q);
+                        })
+                        .map(log => {
+                          const act = (log.action || '').toUpperCase();
+                          let cat = { id: 'system', label: 'System', icon: '⚙️' };
+                          if (act.includes('SECURITY') || act.includes('LOGIN') || act.includes('LOGOUT') || act.includes('CREDENTIAL') || act.includes('PASSWORD') || act.includes('IMPERSONAT')) {
+                            cat = { id: 'security', label: 'Security', icon: '🔑' };
+                          } else if (act.includes('TENANT') || act.includes('RESTAURANT') || act.includes('ACTIVAT') || act.includes('SUSPEND') || act.includes('DELETE') || act.includes('REGISTER')) {
+                            cat = { id: 'tenant', label: 'Tenant', icon: '🏢' };
+                          } else if (act.includes('CASHFREE') || act.includes('PAYMENT') || act.includes('SUB_') || act.includes('SUBSCRIPTION') || act.includes('PLAN') || act.includes('CANCEL') || act.includes('RENEW')) {
+                            cat = { id: 'billing', label: 'Billing', icon: '💳' };
+                          } else if (act.includes('VIP') || act.includes('COMPLIMENTARY') || act.includes('ADMIN_GRANTED')) {
+                            cat = { id: 'vip', label: 'VIP', icon: '👑' };
+                          }
+
+                          let actorLabel = log.actor_role === 'superadmin' ? '👑 Super Admin' :
+                            log.actor_role === 'admin' ? '🏢 Resto Owner' :
+                            log.actor_role === 'payment_gateway' ? '💳 Cashfree Gateway' :
+                            log.actor_role === 'system' ? '⚙️ System' : (log.actor_role || 'System');
+
+                          const targetTenant = log.restaurant_id ? restaurants.find(r => r.id === log.restaurant_id) : null;
+
+                          return (
+                            <tr key={log.id}>
+                              <td style={{ fontSize: '0.74rem', fontWeight: 700, color: 'var(--sa-text-muted)', whiteSpace: 'nowrap' }}>
+                                {log.created_at ? new Date(log.created_at).toLocaleString('en-IN') : 'Just now'}
+                              </td>
+                              <td>
+                                <span style={{ fontSize: '0.76rem', fontWeight: 800, color: 'var(--sa-text-main)' }}>
+                                  {actorLabel}
+                                </span>
+                              </td>
+                              <td>
+                                <span className="sa-badge sa-badge-info" style={{ fontSize: '0.68rem', fontWeight: 800 }}>
+                                  {cat.icon} {cat.label}
+                                </span>
+                              </td>
+                              <td>
+                                <strong style={{ fontSize: '0.82rem', color: 'var(--sa-text-main)' }}>
+                                  {log.action}
+                                </strong>
+                                {targetTenant && (
+                                  <span
+                                    onClick={() => setSelectedTenant360(targetTenant)}
+                                    style={{ display: 'block', fontSize: '0.68rem', color: 'var(--sa-accent-hover, #B48F27)', fontWeight: 800, cursor: 'pointer' }}
+                                    title="Open Tenant 360° Profile"
+                                  >
+                                    🏢 {targetTenant.name} (/{targetTenant.slug})
+                                  </span>
+                                )}
+                              </td>
+                              <td style={{ fontSize: '0.78rem', color: '#475569', maxWidth: '300px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                                {log.details}
+                              </td>
+                              <td style={{ textAlign: 'right' }}>
+                                <button
+                                  type="button"
+                                  onClick={() => setSelectedAuditLog(log)}
+                                  className="sa-btn sa-btn-secondary sa-btn-sm"
+                                  style={{ padding: '4px 9px', fontSize: '0.72rem', fontWeight: 800 }}
+                                  title="View complete event details"
+                                >
+                                  🔍 View
+                                </button>
+                              </td>
+                            </tr>
+                          );
+                        })
+                    )}
+                  </tbody>
+                </table>
+              </div>
+
+              {/* 🔍 4. EVENT DETAIL MODAL */}
+              {selectedAuditLog && (
+                <div style={{
+                  position: 'fixed', inset: 0, zIndex: 9999,
+                  background: 'rgba(10,35,21,0.75)', backdropFilter: 'blur(6px)',
+                  display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '16px'
+                }}>
+                  <div style={{
+                    background: '#FFFFFF', width: '100%', maxWidth: '540px', borderRadius: '20px',
+                    boxShadow: '0 20px 40px rgba(0,0,0,0.3)', overflow: 'hidden', border: '1px solid var(--sa-border)'
+                  }}>
+                    <div style={{
+                      display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+                      padding: '18px 22px', background: '#0A2315', color: '#DFBA67'
+                    }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                        <FileText style={{ width: '20px', height: '20px' }} />
+                        <h3 style={{ margin: 0, fontSize: '1.05rem', fontWeight: 900 }}>Audit Event #{selectedAuditLog.id}</h3>
+                      </div>
+                      <button onClick={() => setSelectedAuditLog(null)} style={{ background: 'none', border: 'none', color: '#FFFFFF', cursor: 'pointer' }}>
+                        <X style={{ width: '20px', height: '20px' }} />
+                      </button>
+                    </div>
+
+                    <div style={{ padding: '20px 24px', display: 'flex', flexDirection: 'column', gap: '14px', maxHeight: '70vh', overflowY: 'auto' }}>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                        <div>
+                          <span style={{ fontSize: '0.72rem', color: 'var(--sa-text-muted)', fontWeight: 700 }}>EVENT ACTION:</span>
+                          <h4 style={{ margin: '2px 0 0 0', fontSize: '1.05rem', fontWeight: 900, color: 'var(--sa-text-main)' }}>{selectedAuditLog.action}</h4>
                         </div>
-                        <span style={{ fontSize: '0.72rem', color: 'var(--sa-text-muted)', whiteSpace: 'nowrap' }}>
-                          {log.created_at ? new Date(log.created_at).toLocaleString('en-IN') : 'Just now'}
+                        <span className="sa-badge sa-badge-info" style={{ fontSize: '0.75rem', fontWeight: 900 }}>
+                          {selectedAuditLog.actor_role || 'SYSTEM'}
                         </span>
                       </div>
-                    ))
-                )}
-              </div>
+
+                      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', background: '#F8FAFC', padding: '12px', borderRadius: '12px', border: '1px solid #E2E8F0' }}>
+                        <div>
+                          <span style={{ fontSize: '0.68rem', color: 'var(--sa-text-muted)', fontWeight: 800, display: 'block' }}>ACTOR / ROLE</span>
+                          <strong style={{ fontSize: '0.82rem', color: 'var(--sa-text-main)' }}>
+                            {selectedAuditLog.actor_role === 'superadmin' ? '👑 Super Admin' : selectedAuditLog.actor_role || 'System'}
+                          </strong>
+                        </div>
+                        <div>
+                          <span style={{ fontSize: '0.68rem', color: 'var(--sa-text-muted)', fontWeight: 800, display: 'block' }}>TIMESTAMP</span>
+                          <strong style={{ fontSize: '0.78rem', color: 'var(--sa-text-main)' }}>
+                            {selectedAuditLog.created_at ? new Date(selectedAuditLog.created_at).toLocaleString('en-IN') : 'Just now'}
+                          </strong>
+                        </div>
+                      </div>
+
+                      {selectedAuditLog.restaurant_id && (
+                        <div style={{ background: '#FFFBEB', padding: '12px', borderRadius: '12px', border: '1px solid #FCD34D' }}>
+                          <span style={{ fontSize: '0.68rem', color: '#B45309', fontWeight: 800, display: 'block' }}>ATTACHED TENANT (ID: #{selectedAuditLog.restaurant_id})</span>
+                          {(() => {
+                            const target = restaurants.find(r => r.id === selectedAuditLog.restaurant_id);
+                            if (target) {
+                              return (
+                                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: '4px' }}>
+                                  <strong style={{ fontSize: '0.86rem', color: '#92400E' }}>{target.name} (/{target.slug})</strong>
+                                  <button
+                                    type="button"
+                                    onClick={() => { setSelectedAuditLog(null); setSelectedTenant360(target); }}
+                                    className="sa-btn sa-btn-secondary sa-btn-sm"
+                                    style={{ padding: '3px 8px', fontSize: '0.72rem' }}
+                                  >
+                                    🔍 360° Profile
+                                  </button>
+                                </div>
+                              );
+                            }
+                            return <span style={{ fontSize: '0.78rem', color: '#92400E' }}>Tenant #{selectedAuditLog.restaurant_id}</span>;
+                          })()}
+                        </div>
+                      )}
+
+                      <div>
+                        <span style={{ fontSize: '0.72rem', color: 'var(--sa-text-muted)', fontWeight: 800, display: 'block', marginBottom: '4px' }}>EVENT DETAILS & PAYLOAD:</span>
+                        {(() => {
+                          try {
+                            const parsedJson = JSON.parse(selectedAuditLog.details);
+                            const clean = { ...parsedJson };
+                            const sensitiveKeys = ['password', 'password_hash', 'jwt', 'token', 'secret', 'api_key', 'client_secret', 'webhook_secret'];
+                            for (const key of Object.keys(clean)) {
+                              if (sensitiveKeys.some(s => key.toLowerCase().includes(s))) {
+                                clean[key] = '[REDACTED]';
+                              }
+                            }
+                            return (
+                              <pre style={{ margin: 0, padding: '12px', background: '#0A2315', color: '#DFBA67', borderRadius: '10px', fontSize: '0.75rem', fontFamily: 'monospace', overflowX: 'auto' }}>
+                                {JSON.stringify(clean, null, 2)}
+                              </pre>
+                            );
+                          } catch {
+                            return (
+                              <div style={{ padding: '12px', background: '#F8FAFC', borderRadius: '10px', border: '1px solid #E2E8F0', fontSize: '0.82rem', color: 'var(--sa-text-main)', lineHeight: 1.4 }}>
+                                {selectedAuditLog.details}
+                              </div>
+                            );
+                          }
+                        })()}
+                      </div>
+
+                      <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: '8px' }}>
+                        <button
+                          type="button"
+                          onClick={() => setSelectedAuditLog(null)}
+                          className="sa-btn sa-btn-primary"
+                          style={{ padding: '8px 18px', fontWeight: 800 }}
+                        >
+                          Close Detail
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              )}
             </div>
           )}
 
@@ -1694,18 +2320,26 @@ export default function SuperAdminDashboard({ token, username, onLogout, onRetur
           {/* VIEW 7: SYSTEM & GATEWAY SETTINGS                                         */}
           {/* ========================================================================= */}
           {activeView === 'settings' && (
-            <div className="sa-table-container" style={{ padding: '24px', maxWidth: '720px' }}>
-              <h3 style={{ fontSize: '1.15rem', fontWeight: 900, color: 'var(--sa-text-main)', margin: '0 0 16px 0', display: 'flex', alignItems: 'center', gap: '8px' }}>
-                <Settings size={20} color="var(--sa-primary)" /> System Configuration & Security
-              </h3>
+            <div className="sa-table-container" style={{ padding: '24px', maxWidth: '720px', margin: '0 auto', display: 'flex', flexDirection: 'column', gap: '18px' }}>
+              {/* ⚙️ 1. HEADER */}
+              <div className="sa-section-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '12px', margin: 0 }}>
+                <div>
+                  <h2 className="sa-section-title" style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '1.2rem', fontWeight: 900, color: 'var(--sa-primary)', margin: 0 }}>
+                    <Settings size={22} color="var(--sa-primary)" /> ⚙️ Configuration & Settings Center
+                  </h2>
+                  <span style={{ fontSize: '0.76rem', color: 'var(--sa-text-muted)', fontWeight: 600 }}>
+                    Manage security, payment gateway, branding and support.
+                  </span>
+                </div>
+              </div>
 
-              {/* 4-Tab Selector */}
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '6px', background: '#F1F5F9', padding: '5px', borderRadius: '14px', marginBottom: '20px', border: '1px solid #E2E8F0' }}>
+              {/* 📑 2. 4-TAB SEGMENTED CONTROLS */}
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '6px', background: '#F1F5F9', padding: '5px', borderRadius: '14px', border: '1px solid #E2E8F0' }}>
                 {[
                   { id: 'security', label: '🛡️ Security', icon: Lock },
                   { id: 'gateway', label: '💳 Gateway', icon: Key },
                   { id: 'branding', label: '🖼️ Branding', icon: Image },
-                  { id: 'health', label: '⚡ DB Health', icon: Database },
+                  { id: 'support', label: '📞 Support', icon: Phone },
                 ].map(tab => {
                   const isActive = secTab === tab.id;
                   return (
@@ -1714,7 +2348,7 @@ export default function SuperAdminDashboard({ token, username, onLogout, onRetur
                       type="button"
                       onClick={() => setSecTab(tab.id)}
                       className={`sa-btn sa-btn-sm ${isActive ? 'sa-btn-primary' : 'sa-btn-secondary'}`}
-                      style={{ border: 'none' }}
+                      style={{ border: 'none', padding: '8px 10px', fontSize: '0.78rem', fontWeight: 800 }}
                     >
                       {tab.label}
                     </button>
@@ -1722,13 +2356,19 @@ export default function SuperAdminDashboard({ token, username, onLogout, onRetur
                 })}
               </div>
 
-              {securityError && <div style={{ background: '#FEE2E2', color: '#B91C1C', padding: '10px 14px', borderRadius: '12px', fontSize: '0.8rem', fontWeight: 800, marginBottom: '14px' }}>⚠️ {securityError}</div>}
-              {securitySuccess && <div style={{ background: '#ECFDF5', color: '#047857', padding: '10px 14px', borderRadius: '12px', fontSize: '0.8rem', fontWeight: 800, marginBottom: '14px' }}>{securitySuccess}</div>}
-              {keysMsg && <div style={{ background: '#F0FDF4', color: '#15803D', padding: '10px 14px', borderRadius: '12px', fontSize: '0.8rem', fontWeight: 800, marginBottom: '14px' }}>{keysMsg}</div>}
+              {securityError && <div style={{ background: '#FEE2E2', color: '#B91C1C', padding: '10px 14px', borderRadius: '12px', fontSize: '0.8rem', fontWeight: 800 }}>⚠️ {securityError}</div>}
+              {securitySuccess && <div style={{ background: '#ECFDF5', color: '#047857', padding: '10px 14px', borderRadius: '12px', fontSize: '0.8rem', fontWeight: 800 }}>{securitySuccess}</div>}
+              {keysMsg && <div style={{ background: '#F0FDF4', color: '#15803D', padding: '10px 14px', borderRadius: '12px', fontSize: '0.8rem', fontWeight: 800 }}>{keysMsg}</div>}
 
-              {/* Settings Tab 1: Security */}
+              {/* 🛡️ TAB 1: MASTER SECURITY */}
               {secTab === 'security' && (
                 <form onSubmit={handleSecuritySubmit} style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
+                  <div style={{ background: '#F8FAFC', padding: '12px 14px', borderRadius: '12px', border: '1px solid #E2E8F0' }}>
+                    <span style={{ fontSize: '0.75rem', color: 'var(--sa-text-muted)', fontWeight: 700 }}>
+                      ℹ️ Current password is required to change Super Admin credentials.
+                    </span>
+                  </div>
+
                   <div>
                     <label style={{ display: 'block', fontSize: '0.78rem', fontWeight: 800, color: 'var(--text-dark)', marginBottom: '6px' }}>🔑 Current Password (Required) *</label>
                     <div style={{ position: 'relative' }}>
@@ -1770,15 +2410,35 @@ export default function SuperAdminDashboard({ token, username, onLogout, onRetur
                       </button>
                     </div>
                   </div>
-                  <button type="submit" disabled={securitySubmitting} className="sa-btn sa-btn-accent" style={{ padding: '14px', marginTop: '6px' }}>
+                  <button type="submit" disabled={securitySubmitting} className="sa-btn sa-btn-accent" style={{ padding: '14px', marginTop: '6px', fontWeight: 800 }}>
                     {securitySubmitting ? 'Updating Credentials...' : '💾 Save Master Credentials'}
                   </button>
                 </form>
               )}
 
-              {/* Settings Tab 2: Gateway */}
+              {/* 💳 TAB 2: CASHFREE GATEWAY */}
               {secTab === 'gateway' && (
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
+                  <div>
+                    <label style={{ display: 'block', fontSize: '0.78rem', fontWeight: 800, color: '#374151', marginBottom: '6px' }}>CASHFREE ENVIRONMENT</label>
+                    <select
+                      value={paymentKeys.cashfree_env || 'sandbox'}
+                      onChange={(e) => setPaymentKeys({ ...paymentKeys, cashfree_env: e.target.value })}
+                      style={{ width: '100%', padding: '11px 14px', borderRadius: '12px', border: '1.5px solid #CBD5E1', fontSize: '0.9rem', fontWeight: 700, outline: 'none', boxSizing: 'border-box', background: '#FFFFFF' }}
+                    >
+                      <option value="sandbox">🟢 SANDBOX (TEST MODE - SAFE)</option>
+                      <option value="production">⚡ PRODUCTION (LIVE TRANSACTIONS)</option>
+                    </select>
+                  </div>
+
+                  {paymentKeys.cashfree_env === 'production' && (
+                    <div style={{ background: '#FFFBEB', padding: '12px 14px', borderRadius: '12px', border: '1px solid #FCD34D' }}>
+                      <span style={{ fontSize: '0.76rem', color: '#B45309', fontWeight: 800 }}>
+                        ⚠️ Production gateway changes affect live payments and subscriptions.
+                      </span>
+                    </div>
+                  )}
+
                   <div>
                     <label style={{ display: 'block', fontSize: '0.78rem', fontWeight: 800, color: '#374151', marginBottom: '6px' }}>CASHFREE APP ID (CLIENT ID) *</label>
                     <input
@@ -1809,6 +2469,7 @@ export default function SuperAdminDashboard({ token, username, onLogout, onRetur
                     disabled={keysSaving}
                     onClick={async () => {
                       setKeysSaving(true);
+                      setKeysMsg('');
                       try {
                         const res = await fetch('/api/superadmin/settings', {
                           method: 'POST',
@@ -1816,24 +2477,30 @@ export default function SuperAdminDashboard({ token, username, onLogout, onRetur
                           body: JSON.stringify(paymentKeys)
                         });
                         const data = await res.json();
-                        if (res.ok) setKeysMsg(data.message || '✅ Gateway keys saved successfully!');
+                        if (res.ok) setKeysMsg(data.message || '✅ Gateway credentials saved successfully!');
                       } catch {
-                        setKeysMsg('⚠️ Failed to save gateway keys');
+                        setKeysMsg('⚠️ Failed to save gateway credentials');
                       } finally {
                         setKeysSaving(false);
                       }
                     }}
                     className="sa-btn sa-btn-primary"
-                    style={{ padding: '14px', marginTop: '6px' }}
+                    style={{ padding: '14px', marginTop: '6px', fontWeight: 800 }}
                   >
                     {keysSaving ? 'Saving Gateway Keys...' : '💾 Save Gateway Credentials'}
                   </button>
                 </div>
               )}
 
-              {/* Settings Tab 3: Branding */}
+              {/* 🖼️ TAB 3: BRANDING */}
               {secTab === 'branding' && (
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
+                  <div style={{ background: '#F8FAFC', padding: '12px 14px', borderRadius: '12px', border: '1px solid #E2E8F0' }}>
+                    <span style={{ fontSize: '0.75rem', color: 'var(--sa-text-muted)', fontWeight: 700 }}>
+                      🖼️ Platform logo is hosted on Cloudflare R2 with Neon DB mirror backup.
+                    </span>
+                  </div>
+
                   <div style={{ display: 'flex', alignItems: 'center', gap: '14px', background: '#F8FAFC', padding: '14px', borderRadius: '14px', border: '1px solid #E2E8F0' }}>
                     {logoPreview || (paymentKeys.platform_logo_url && !logoErr) ? (
                       <img
@@ -1876,37 +2543,73 @@ export default function SuperAdminDashboard({ token, username, onLogout, onRetur
                 </div>
               )}
 
-              {/* Settings Tab 4: DB Health */}
-              {secTab === 'health' && (
+              {/* 📞 TAB 4: SUPPORT CHANNELS */}
+              {secTab === 'support' && (
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
-                  <div style={{ background: '#EFF6FF', padding: '16px', borderRadius: '14px', border: '1px solid #BFDBFE' }}>
-                    <strong style={{ fontSize: '0.84rem', color: '#1E40AF', display: 'block', marginBottom: '4px' }}>
-                      🧹 POSTGRESQL DATABASE MAINTENANCE & VACUUM:
-                    </strong>
-                    <span style={{ fontSize: '0.74rem', color: '#3B82F6', display: 'block', marginBottom: '10px' }}>
-                      Cleans dead tuples, optimizes index pointers, and reclaims disk space on Neon DB.
+                  <div style={{ background: '#F8FAFC', padding: '12px 14px', borderRadius: '12px', border: '1px solid #E2E8F0' }}>
+                    <span style={{ fontSize: '0.75rem', color: 'var(--sa-text-muted)', fontWeight: 700 }}>
+                      ℹ️ Shown in platform support/customer touchpoints and tenant invoices.
                     </span>
-                    <button
-                      type="button"
-                      disabled={dbOptimizing}
-                      onClick={async () => {
-                        setDbOptimizing(true);
-                        try {
-                          const data = await superAdminOptimizeDatabase(token);
-                          setDbOptimizeMsg(`✅ ${data.message || 'Database optimized!'}`);
-                        } catch (err) {
-                          setDbOptimizeMsg(`⚠️ ${err.message || 'Optimization failed'}`);
-                        } finally {
-                          setDbOptimizing(false);
-                        }
-                      }}
-                      className="sa-btn sa-btn-primary"
-                      style={{ width: '100%', padding: '12px' }}
-                    >
-                      {dbOptimizing ? 'Optimizing...' : '⚡ Run Vacuum & Database Optimization'}
-                    </button>
-                    {dbOptimizeMsg && <span style={{ fontSize: '0.78rem', fontWeight: 800, color: '#1E40AF', display: 'block', marginTop: '8px' }}>{dbOptimizeMsg}</span>}
                   </div>
+
+                  <div>
+                    <label style={{ display: 'block', fontSize: '0.78rem', fontWeight: 800, color: '#374151', marginBottom: '6px' }}>SUPPORT WHATSAPP NUMBER</label>
+                    <input
+                      type="text"
+                      placeholder="e.g. 919876543210"
+                      value={paymentKeys.support_whatsapp || ''}
+                      onChange={(e) => setPaymentKeys({ ...paymentKeys, support_whatsapp: e.target.value })}
+                      style={{ width: '100%', padding: '11px 14px', borderRadius: '12px', border: '1.5px solid #CBD5E1', fontSize: '0.9rem', outline: 'none', boxSizing: 'border-box' }}
+                    />
+                  </div>
+
+                  <div>
+                    <label style={{ display: 'block', fontSize: '0.78rem', fontWeight: 800, color: '#374151', marginBottom: '6px' }}>SUPPORT PHONE NUMBER</label>
+                    <input
+                      type="text"
+                      placeholder="e.g. +91 98765 43210"
+                      value={paymentKeys.support_phone || ''}
+                      onChange={(e) => setPaymentKeys({ ...paymentKeys, support_phone: e.target.value })}
+                      style={{ width: '100%', padding: '11px 14px', borderRadius: '12px', border: '1.5px solid #CBD5E1', fontSize: '0.9rem', outline: 'none', boxSizing: 'border-box' }}
+                    />
+                  </div>
+
+                  <div>
+                    <label style={{ display: 'block', fontSize: '0.78rem', fontWeight: 800, color: '#374151', marginBottom: '6px' }}>SUPPORT EMAIL ADDRESS</label>
+                    <input
+                      type="email"
+                      placeholder="e.g. support@touchqr.in"
+                      value={paymentKeys.support_email || ''}
+                      onChange={(e) => setPaymentKeys({ ...paymentKeys, support_email: e.target.value })}
+                      style={{ width: '100%', padding: '11px 14px', borderRadius: '12px', border: '1.5px solid #CBD5E1', fontSize: '0.9rem', outline: 'none', boxSizing: 'border-box' }}
+                    />
+                  </div>
+
+                  <button
+                    type="button"
+                    disabled={keysSaving}
+                    onClick={async () => {
+                      setKeysSaving(true);
+                      setKeysMsg('');
+                      try {
+                        const res = await fetch('/api/superadmin/settings', {
+                          method: 'POST',
+                          headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+                          body: JSON.stringify(paymentKeys)
+                        });
+                        const data = await res.json();
+                        if (res.ok) setKeysMsg(data.message || '✅ Support channels saved successfully!');
+                      } catch {
+                        setKeysMsg('⚠️ Failed to save support channels');
+                      } finally {
+                        setKeysSaving(false);
+                      }
+                    }}
+                    className="sa-btn sa-btn-primary"
+                    style={{ padding: '14px', marginTop: '6px', fontWeight: 800 }}
+                  >
+                    {keysSaving ? 'Saving Support Channels...' : '💾 Save Support Channels'}
+                  </button>
                 </div>
               )}
             </div>
