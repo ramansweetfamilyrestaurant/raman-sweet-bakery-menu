@@ -832,6 +832,25 @@ export async function changePlan(planKey, token) {
   return handleResponse(res, 'Failed to change plan');
 }
 
+export async function fetchPaymentHistory(token) {
+  const res = await fetch(`${API_BASE}/payment/history`, {
+    headers: { Authorization: `Bearer ${token}` }
+  });
+  return handleResponse(res, 'Failed to fetch payment history');
+}
+
+export async function fetchSubscriptionStatus(token) {
+  const res = await fetch(`${API_BASE}/admin/subscription-status`, {
+    headers: { Authorization: `Bearer ${token}` }
+  });
+  return handleResponse(res, 'Failed to fetch subscription status');
+}
+
+export async function fetchPublicPlans() {
+  const res = await fetch(`${API_BASE}/plans`);
+  return handleResponse(res, 'Failed to fetch plans');
+}
+
 // ========== CINEMA SCREENS & SEATS ==========
 
 export async function fetchCinemaScreens(token) {

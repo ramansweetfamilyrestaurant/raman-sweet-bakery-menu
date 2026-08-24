@@ -2926,6 +2926,7 @@ export default function AdminDashboard({ token, username, slug: propSlug = '', o
                 setShowPrinterModal={setShowPrinterModal}
                 setShowHelpModal={setShowHelpModal}
                 onOpenBillingModal={() => setShowPaymentModal(true)}
+                onRefreshInfo={loadData}
                 supportPhone={masterSupportPhone}
                 onOptimizeDatabase={async () => {
                   try {

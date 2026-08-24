@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Store, Bell, Utensils, MapPin, CreditCard, Lock, ChevronRight, Upload, Volume2, ShieldCheck, Printer, Map, Plus, Trash2, Edit, Check, X, AlertTriangle, Film, Armchair } from 'lucide-react';
+import { Store, Bell, Utensils, MapPin, CreditCard, Lock, ChevronRight, Upload, Volume2, ShieldCheck, Printer, Map, Plus, Trash2, Edit, Check, X, AlertTriangle, Film, Armchair, Crown, RefreshCw, Zap, Clock, CheckCircle2, History, ArrowUpRight, ArrowDownRight, Info } from 'lucide-react';
 import AdminDrawer from '../components/AdminDrawer';
 import LocationPickerModal from '../../Common/LocationPickerModal';
 import {
@@ -19,7 +19,12 @@ import {
   deleteCinemaScreen,
   fetchCinemaSeats,
   batchCreateCinemaSeats,
-  deleteCinemaSeat
+  deleteCinemaSeat,
+  fetchPaymentHistory,
+  fetchSubscriptionStatus,
+  fetchPublicPlans,
+  cancelSubscription,
+  changePlan
 } from '../../../api/client';
 
 export default function SetupView({
@@ -35,6 +40,7 @@ export default function SetupView({
   setShowPrinterModal,
   setShowHelpModal,
   onOpenBillingModal,
+  onRefreshInfo,
   supportPhone,
   restaurantInfo,
   onNavigate,
@@ -47,6 +53,134 @@ export default function SetupView({
   const [saveSuccessMsg, setSaveSuccessMsg] = useState('');
   const [showMapModal, setShowMapModal] = useState(false);
   const [savingForm, setSavingForm] = useState(false);
+
+  // Subscription & Billing Management State
+  const [subTab, setSubTab] = useState('overview'); // 'overview' | 'plans' | 'history'
+  const [subData, setSubData] = useState(null);
+  const [loadingSub, setLoadingSub] = useState(false);
+  const [availablePlans, setAvailablePlans] = useState([]);
+  const [paymentHistory, setPaymentHistory] = useState({ loading: false, data: [], error: null });
+  const [showCancelModal, setShowCancelModal] = useState(false);
+  const [planToChange, setPlanToChange] = useState(null); // target plan object for confirmation modal
+  const [actionLoading, setActionLoading] = useState(false);
+  const [billingActionMsg, setBillingActionMsg] = useState(null); // { type: 'success' | 'error', text: '' }
+
+  const loadSubscriptionData = async () => {
+    if (!token) return;
+    setLoadingSub(true);
+    try {
+      const data = await fetchSubscriptionStatus(token);
+      if (data) {
+        setSubData(data);
+      }
+    } catch (err) {
+      console.warn('Error loading subscription status:', err);
+    } finally {
+      setLoadingSub(false);
+    }
+  };
+
+  const loadPlansData = async () => {
+    try {
+      const plans = await fetchPublicPlans();
+      if (Array.isArray(plans) && plans.length > 0) {
+        setAvailablePlans(plans);
+      }
+    } catch (err) {
+      console.warn('Error loading SaaS plans:', err);
+    }
+  };
+
+  const loadPaymentHistoryData = async () => {
+    if (!token) return;
+    setPaymentHistory(prev => ({ ...prev, loading: true, error: null }));
+    try {
+      const res = await fetchPaymentHistory(token);
+      setPaymentHistory({
+        loading: false,
+        data: Array.isArray(res?.payments) ? res.payments : [],
+        error: null
+      });
+    } catch (err) {
+      console.warn('Error loading payment history:', err);
+      setPaymentHistory({
+        loading: false,
+        data: [],
+        error: err.message || 'Unable to load payment history'
+      });
+    }
+  };
+
+  useEffect(() => {
+    if (openDrawer === 'subscription') {
+      loadSubscriptionData();
+      loadPlansData();
+      loadPaymentHistoryData();
+    }
+  }, [openDrawer]);
+
+  const handleCancelAutoRenew = async () => {
+    if (!token || actionLoading) return;
+    setActionLoading(true);
+    setBillingActionMsg(null);
+    try {
+      const res = await cancelSubscription(token, 'Owner requested cancellation from Admin Setup');
+      if (res && res.success) {
+        setBillingActionMsg({
+          type: 'success',
+          text: `✓ Automatic renewal turned off. Your current plan remains active until ${res.access_until ? new Date(res.access_until).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' }) : 'end of current period'}.`
+        });
+        setShowCancelModal(false);
+        await loadSubscriptionData();
+        if (onRefreshInfo) await onRefreshInfo();
+      } else {
+        setBillingActionMsg({
+          type: 'error',
+          text: res?.error || res?.message || 'Failed to turn off automatic renewal.'
+        });
+      }
+    } catch (err) {
+      setBillingActionMsg({
+        type: 'error',
+        text: err.message || 'Server error while processing cancellation.'
+      });
+    } finally {
+      setActionLoading(false);
+    }
+  };
+
+  const handleConfirmPlanChange = async () => {
+    if (!token || !planToChange || actionLoading) return;
+    setActionLoading(true);
+    setBillingActionMsg(null);
+    try {
+      const res = await changePlan(planToChange.key, token);
+      if (res && res.success) {
+        const isSched = res.effective === 'next_billing_cycle';
+        setBillingActionMsg({
+          type: 'success',
+          text: isSched
+            ? `✓ Plan change scheduled! ${planToChange.name} (₹${planToChange.price}/mo) will activate on ${res.effective_at ? new Date(res.effective_at).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' }) : 'your next billing cycle'}.`
+            : `✓ Plan changed immediately to ${planToChange.name}! Your trial continues unchanged.`
+        });
+        setPlanToChange(null);
+        await loadSubscriptionData();
+        if (onRefreshInfo) await onRefreshInfo();
+      } else {
+        setBillingActionMsg({
+          type: 'error',
+          text: res?.message || res?.error || 'Failed to change plan.'
+        });
+      }
+    } catch (err) {
+      setBillingActionMsg({
+        type: 'error',
+        text: err.message || 'Server error while requesting plan change.'
+      });
+    } finally {
+      setActionLoading(false);
+    }
+  };
 
   useEffect(() => {
     if (initialDrawer) {
@@ -2010,48 +2144,686 @@ export default function SetupView({
         isOpen={openDrawer === 'subscription'}
         onClose={() => setOpenDrawer(null)}
         title="💳 Subscription & Billing"
-        subtitle="Manage plan tier and Cashfree auto-renew mandate"
+        subtitle="Manage plan tier, auto-renew mandate, and payment records"
       >
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '14px', fontSize: '0.85rem' }}>
-          <div style={{ background: '#FFFFFF', padding: '16px', borderRadius: '14px', border: '1px solid #E2E8F0', boxShadow: '0 2px 8px rgba(0,0,0,0.02)' }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', padding: '8px 0', borderBottom: '1px solid #F1F5F9' }}>
-              <span style={{ color: '#64748B', fontWeight: 600 }}>Current Plan:</span>
-              <strong style={{ color: '#059669', fontWeight: 900 }}>{(restaurantInfo?.plan_tier || 'pro').toUpperCase()}</strong>
-            </div>
-            <div style={{ display: 'flex', justifyContent: 'space-between', padding: '8px 0', borderBottom: '1px solid #F1F5F9' }}>
-              <span style={{ color: '#64748B', fontWeight: 600 }}>Subscription Type:</span>
-              <strong style={{ color: restaurantInfo?.subscription_type === 'ADMIN_GRANTED' ? '#7E22CE' : '#0F172A', fontWeight: 800 }}>
-                {restaurantInfo?.subscription_type === 'ADMIN_GRANTED' ? '🎁 COMPLIMENTARY (FREE)' : 'PAID CASHFREE'}
-              </strong>
-            </div>
-            <div style={{ display: 'flex', justifyContent: 'space-between', padding: '8px 0' }}>
-              <span style={{ color: '#64748B', fontWeight: 600 }}>Access Expiry:</span>
-              <strong style={{ color: '#0F172A', fontWeight: 800 }}>
-                {restaurantInfo?.subscription_type === 'ADMIN_GRANTED' || (restaurantInfo?.access_until && new Date(restaurantInfo.access_until).getFullYear() > 2030)
-                  ? '♾️ Lifetime Access'
-                  : restaurantInfo?.access_until ? new Date(restaurantInfo.access_until).toLocaleDateString('en-IN') : 'N/A'
-                }
-              </strong>
-            </div>
-          </div>
+        {(() => {
+          const activePlanKey = (subData?.plan_tier || restaurantInfo?.plan_tier || settingsForm?.plan_tier || 'pro').toLowerCase();
+          const activePlanPrice = subData?.plan_price || restaurantInfo?.plan_price || 999;
+          const isComplimentary = subData?.mandate_status === 'admin_granted' || 
+                                  restaurantInfo?.subscription_type === 'ADMIN_GRANTED' || 
+                                  subData?.subscription_type === 'ADMIN_GRANTED';
 
-          <button
-            onClick={() => { setOpenDrawer(null); onOpenBillingModal(); }}
-            style={{
-              width: '100%',
-              padding: '12px',
-              borderRadius: '12px',
-              border: 'none',
-              background: '#0F172A',
-              color: '#FFFFFF',
-              fontWeight: 900,
-              fontSize: '0.88rem',
-              cursor: 'pointer'
-            }}
-          >
-            Manage Billing & Plan Options ➔
-          </button>
-        </div>
+          const rawExpiryDate = subData?.current_period_end || 
+                                subData?.subscription?.current_period_end || 
+                                subData?.subscription?.next_billing_at || 
+                                subData?.plan_expires_at || 
+                                subData?.trial_ends_at || 
+                                subData?.access_until || 
+                                restaurantInfo?.access_until || 
+                                restaurantInfo?.plan_expires_at || 
+                                restaurantInfo?.trial_ends_at;
+
+          const formatBillingDate = (dateVal) => {
+            if (!dateVal) return null;
+            try {
+              const d = new Date(dateVal);
+              if (isNaN(d.getTime())) return null;
+              return d.toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' });
+            } catch {
+              return null;
+            }
+          };
+
+          const formattedDate = formatBillingDate(rawExpiryDate);
+          const isLifetime = isComplimentary || (rawExpiryDate && new Date(rawExpiryDate).getFullYear() > 2030);
+
+          const autoRenewActive = !isComplimentary && (subData?.auto_renew === 1 || (subData?.auto_renew === undefined && subData?.mandate_status === 'active'));
+          const isCancelRequested = Boolean(subData?.cancel_requested_at || subData?.auto_renew === 0 || subData?.mandate_status === 'cancelled');
+
+          let renewalText = 'N/A';
+          if (isLifetime) {
+            renewalText = '♾️ Lifetime Access';
+          } else if (formattedDate) {
+            if (autoRenewActive) {
+              renewalText = `Renews on ${formattedDate}`;
+            } else if (isCancelRequested) {
+              renewalText = `Active until ${formattedDate}`;
+            } else {
+              renewalText = formattedDate;
+            }
+          }
+
+          const currentStatus = (subData?.status || restaurantInfo?.subscription_status || 'active').toLowerCase();
+          const getStatusBadge = () => {
+            if (isComplimentary) {
+              return { text: '🎁 Lifetime Granted', bg: '#F3E8FF', color: '#7E22CE', border: '#D8B4FE' };
+            }
+            if (currentStatus === 'trialing') {
+              return { text: '🔵 Free Trial Active', bg: '#EFF6FF', color: '#1D4ED8', border: '#BFDBFE' };
+            }
+            if (currentStatus === 'payment_failed') {
+              return { text: '🔴 Payment Failed (Grace Period)', bg: '#FEF2F2', color: '#DC2626', border: '#FECACA' };
+            }
+            if (currentStatus === 'cancelled' || isCancelRequested) {
+              return { text: `🟠 Cancelled (${formattedDate ? `Until ${formattedDate}` : 'Pending Expiry'})`, bg: '#FFF7ED', color: '#C2410C', border: '#FFEDD5' };
+            }
+            if (currentStatus === 'paused') {
+              return { text: '🟠 Paused', bg: '#FEF3C7', color: '#D97706', border: '#FDE68A' };
+            }
+            if (currentStatus === 'expired') {
+              return { text: '🔴 Expired', bg: '#FEE2E2', color: '#991B1B', border: '#FCA5A5' };
+            }
+            if (currentStatus === 'pending') {
+              return { text: '🟡 Subscription Pending', bg: '#FEF9C3', color: '#A16207', border: '#FEF08A' };
+            }
+            return { text: '🟢 Active', bg: '#ECFDF5', color: '#047857', border: '#A7F3D0' };
+          };
+
+          const fallbackPlans = [
+            {
+              key: 'basic',
+              name: 'Basic Starter Plan',
+              price: 499,
+              badge: '⚡ BASIC',
+              description: 'Essential digital menu & QR ordering for small food joints & cafes',
+              max_tables: 5,
+              max_dishes: 50,
+              max_categories: 10,
+              kds_enabled: false,
+              custom_domain_enabled: false,
+              gst_invoice_enabled: true,
+              dual_printer_enabled: false,
+              whatsapp_enabled: false,
+              direct_ordering_enabled: false
+            },
+            {
+              key: 'pro',
+              name: 'Pro Luxury Plan',
+              price: 999,
+              badge: '👑 PRO (MOST POPULAR)',
+              description: 'Full-featured ordering, WhatsApp direct orders & live analytics',
+              max_tables: 20,
+              max_dishes: 200,
+              max_categories: 30,
+              kds_enabled: false,
+              custom_domain_enabled: true,
+              gst_invoice_enabled: true,
+              dual_printer_enabled: false,
+              whatsapp_enabled: true,
+              direct_ordering_enabled: false
+            },
+            {
+              key: 'enterprise',
+              name: 'Enterprise VIP Plan',
+              price: 1999,
+              badge: '🚀 ENTERPRISE VIP',
+              description: 'High-volume dining, Kitchen Display System (KDS) & dual printers',
+              max_tables: 9999,
+              max_dishes: 9999,
+              max_categories: 9999,
+              kds_enabled: true,
+              custom_domain_enabled: true,
+              gst_invoice_enabled: true,
+              dual_printer_enabled: true,
+              whatsapp_enabled: true,
+              direct_ordering_enabled: true
+            },
+            {
+              key: 'vip_ultra_plan',
+              name: 'VIP Ultra Unlimited Plan',
+              price: 2999,
+              badge: '💎 VIP ULTRA',
+              description: 'Unlimited physical spaces, KDS, custom domains & multi-counter printers',
+              max_tables: 9999,
+              max_dishes: 9999,
+              max_categories: 9999,
+              kds_enabled: true,
+              custom_domain_enabled: true,
+              gst_invoice_enabled: true,
+              dual_printer_enabled: true,
+              whatsapp_enabled: true,
+              direct_ordering_enabled: true
+            }
+          ];
+
+          const displayPlans = (availablePlans && availablePlans.length > 0) ? availablePlans : fallbackPlans;
+
+          return (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '14px', fontSize: '0.85rem' }}>
+              
+              {/* Action Notification Alert */}
+              {billingActionMsg && (
+                <div style={{
+                  padding: '12px 14px',
+                  borderRadius: '12px',
+                  fontSize: '0.82rem',
+                  fontWeight: 700,
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'space-between',
+                  gap: '8px',
+                  background: billingActionMsg.type === 'error' ? '#FEE2E2' : '#ECFDF5',
+                  color: billingActionMsg.type === 'error' ? '#DC2626' : '#047857',
+                  border: `1px solid ${billingActionMsg.type === 'error' ? '#FECACA' : '#A7F3D0'}`
+                }}>
+                  <span>{billingActionMsg.text}</span>
+                  <button
+                    onClick={() => setBillingActionMsg(null)}
+                    style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'inherit', padding: 0 }}
+                  >
+                    <X size={16} />
+                  </button>
+                </div>
+              )}
+
+              {/* Scheduled Plan Change Banner */}
+              {subData?.scheduled_plan_key && (
+                <div style={{
+                  padding: '12px 14px',
+                  borderRadius: '12px',
+                  background: '#FFFBEB',
+                  border: '1.5px solid #FCD34D',
+                  color: '#92400E',
+                  fontSize: '0.82rem',
+                  fontWeight: 700,
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '10px'
+                }}>
+                  <Clock size={18} color="#D97706" style={{ flexShrink: 0 }} />
+                  <div>
+                    <strong>Scheduled Plan Change:</strong> Switching to <strong>{(subData.scheduled_plan_key).toUpperCase()}</strong> on {subData.plan_change_effective_at ? new Date(subData.plan_change_effective_at).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' }) : 'next billing cycle'}.
+                  </div>
+                </div>
+              )}
+
+              {/* Sub Tab Navigation */}
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '6px', background: '#F1F5F9', padding: '4px', borderRadius: '12px' }}>
+                <button
+                  onClick={() => setSubTab('overview')}
+                  style={{
+                    padding: '8px 10px',
+                    borderRadius: '8px',
+                    border: 'none',
+                    background: subTab === 'overview' ? '#FFFFFF' : 'transparent',
+                    color: subTab === 'overview' ? '#0F172A' : '#64748B',
+                    fontWeight: 800,
+                    fontSize: '0.78rem',
+                    cursor: 'pointer',
+                    boxShadow: subTab === 'overview' ? '0 1px 3px rgba(0,0,0,0.1)' : 'none',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    gap: '5px'
+                  }}
+                >
+                  <CreditCard size={14} />
+                  Overview
+                </button>
+                <button
+                  onClick={() => setSubTab('plans')}
+                  style={{
+                    padding: '8px 10px',
+                    borderRadius: '8px',
+                    border: 'none',
+                    background: subTab === 'plans' ? '#FFFFFF' : 'transparent',
+                    color: subTab === 'plans' ? '#0F172A' : '#64748B',
+                    fontWeight: 800,
+                    fontSize: '0.78rem',
+                    cursor: 'pointer',
+                    boxShadow: subTab === 'plans' ? '0 1px 3px rgba(0,0,0,0.1)' : 'none',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    gap: '5px'
+                  }}
+                >
+                  <Crown size={14} />
+                  Plans
+                </button>
+                <button
+                  onClick={() => setSubTab('history')}
+                  style={{
+                    padding: '8px 10px',
+                    borderRadius: '8px',
+                    border: 'none',
+                    background: subTab === 'history' ? '#FFFFFF' : 'transparent',
+                    color: subTab === 'history' ? '#0F172A' : '#64748B',
+                    fontWeight: 800,
+                    fontSize: '0.78rem',
+                    cursor: 'pointer',
+                    boxShadow: subTab === 'history' ? '0 1px 3px rgba(0,0,0,0.1)' : 'none',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    gap: '5px'
+                  }}
+                >
+                  <History size={14} />
+                  History
+                </button>
+              </div>
+
+              {/* TAB 1: OVERVIEW */}
+              {subTab === 'overview' && (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
+                  <div style={{ background: '#FFFFFF', padding: '18px', borderRadius: '16px', border: '1px solid #E2E8F0', boxShadow: '0 2px 8px rgba(0,0,0,0.02)' }}>
+                    
+                    {/* Plan Header */}
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', paddingBottom: '12px', borderBottom: '1px solid #F1F5F9' }}>
+                      <div>
+                        <span style={{ fontSize: '0.72rem', fontWeight: 800, color: '#64748B', textTransform: 'uppercase', letterSpacing: '0.04em' }}>Current Plan</span>
+                        <h3 style={{ margin: '2px 0 0', fontSize: '1.15rem', fontWeight: 900, color: '#0F172A' }}>
+                          {activePlanKey.toUpperCase()}
+                        </h3>
+                      </div>
+                      <div style={{ textAlign: 'right' }}>
+                        <span style={{ fontSize: '1.15rem', fontWeight: 900, color: '#059669' }}>
+                          {isComplimentary ? 'FREE' : `₹${activePlanPrice}`}
+                        </span>
+                        {!isComplimentary && <span style={{ fontSize: '0.72rem', color: '#64748B', display: 'block' }}>/ month</span>}
+                      </div>
+                    </div>
+
+                    {/* Status & Subscription Details */}
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', paddingTop: '12px' }}>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                        <span style={{ color: '#64748B', fontWeight: 600 }}>Status:</span>
+                        <span style={{
+                          padding: '4px 10px',
+                          borderRadius: '20px',
+                          fontSize: '0.74rem',
+                          fontWeight: 800,
+                          background: getStatusBadge().bg,
+                          color: getStatusBadge().color,
+                          border: `1px solid ${getStatusBadge().border}`
+                        }}>
+                          {getStatusBadge().text}
+                        </span>
+                      </div>
+
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                        <span style={{ color: '#64748B', fontWeight: 600 }}>Subscription Type:</span>
+                        <strong style={{ color: isComplimentary ? '#7E22CE' : '#0F172A', fontWeight: 800 }}>
+                          {isComplimentary ? '🎁 COMPLIMENTARY (FREE)' : 'PAID CASHFREE'}
+                        </strong>
+                      </div>
+
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                        <span style={{ color: '#64748B', fontWeight: 600 }}>Billing Cycle:</span>
+                        <strong style={{ color: '#0F172A', fontWeight: 800 }}>Monthly</strong>
+                      </div>
+
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                        <span style={{ color: '#64748B', fontWeight: 600 }}>Next Renewal:</span>
+                        <strong style={{ color: '#0F172A', fontWeight: 800 }}>{renewalText}</strong>
+                      </div>
+
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                        <span style={{ color: '#64748B', fontWeight: 600 }}>Auto-Renew:</span>
+                        <span style={{
+                          padding: '3px 8px',
+                          borderRadius: '12px',
+                          fontSize: '0.72rem',
+                          fontWeight: 800,
+                          background: autoRenewActive ? '#ECFDF5' : '#FFF7ED',
+                          color: autoRenewActive ? '#047857' : '#C2410C',
+                          border: `1px solid ${autoRenewActive ? '#A7F3D0' : '#FFEDD5'}`
+                        }}>
+                          {autoRenewActive ? '🟢 Auto-Renew ON' : '🟠 Auto-Renew OFF'}
+                        </span>
+                      </div>
+
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                        <span style={{ color: '#64748B', fontWeight: 600 }}>Payment Method:</span>
+                        <strong style={{ color: '#0F172A', fontWeight: 800 }}>Cashfree (AutoPay)</strong>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Action Buttons in Overview */}
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                    <button
+                      onClick={() => setSubTab('plans')}
+                      style={{
+                        width: '100%',
+                        padding: '12px',
+                        borderRadius: '12px',
+                        border: 'none',
+                        background: '#0F172A',
+                        color: '#FFFFFF',
+                        fontWeight: 900,
+                        fontSize: '0.88rem',
+                        cursor: 'pointer',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        gap: '8px'
+                      }}
+                    >
+                      <Crown size={16} />
+                      Change Plan ➔
+                    </button>
+
+                    <button
+                      onClick={() => setSubTab('history')}
+                      style={{
+                        width: '100%',
+                        padding: '11px',
+                        borderRadius: '12px',
+                        border: '1px solid #CBD5E1',
+                        background: '#FFFFFF',
+                        color: '#0F172A',
+                        fontWeight: 800,
+                        fontSize: '0.84rem',
+                        cursor: 'pointer',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        gap: '8px'
+                      }}
+                    >
+                      <History size={16} />
+                      View Payment History
+                    </button>
+
+                    {/* Auto-Renew Controls */}
+                    {!isComplimentary && autoRenewActive && (
+                      <button
+                        onClick={() => setShowCancelModal(true)}
+                        style={{
+                          width: '100%',
+                          padding: '11px',
+                          borderRadius: '12px',
+                          border: '1px solid #FECACA',
+                          background: '#FEF2F2',
+                          color: '#DC2626',
+                          fontWeight: 800,
+                          fontSize: '0.84rem',
+                          cursor: 'pointer',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          gap: '8px'
+                        }}
+                      >
+                        <X size={16} />
+                        Cancel Auto-Renew
+                      </button>
+                    )}
+
+                    {!isComplimentary && isCancelRequested && (
+                      <button
+                        onClick={() => { setOpenDrawer(null); onOpenBillingModal(); }}
+                        style={{
+                          width: '100%',
+                          padding: '11px',
+                          borderRadius: '12px',
+                          border: '1px solid #86EFAC',
+                          background: '#ECFDF5',
+                          color: '#047857',
+                          fontWeight: 800,
+                          fontSize: '0.84rem',
+                          cursor: 'pointer',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          gap: '8px'
+                        }}
+                      >
+                        <RefreshCw size={16} />
+                        Reactivate Auto-Renew
+                      </button>
+                    )}
+                  </div>
+                </div>
+              )}
+
+              {/* TAB 2: PLANS COMPARISON */}
+              {subTab === 'plans' && (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                  <span style={{ fontSize: '0.76rem', color: '#64748B', fontWeight: 600 }}>
+                    Select a plan to upgrade or downgrade. Changes to active paid subscriptions schedule seamlessly at your next billing cycle.
+                  </span>
+
+                  {displayPlans.map(p => {
+                    const isCurrent = p.key.toLowerCase() === activePlanKey;
+                    const isScheduled = subData?.scheduled_plan_key?.toLowerCase() === p.key.toLowerCase();
+                    const isUpgrade = Number(p.price) > Number(activePlanPrice);
+
+                    return (
+                      <div
+                        key={p.key}
+                        style={{
+                          background: '#FFFFFF',
+                          borderRadius: '14px',
+                          border: isCurrent ? '2px solid #059669' : isScheduled ? '2px solid #D97706' : '1px solid #E2E8F0',
+                          padding: '16px',
+                          position: 'relative',
+                          boxShadow: isCurrent ? '0 4px 14px rgba(5, 150, 105, 0.08)' : '0 2px 6px rgba(0,0,0,0.02)'
+                        }}
+                      >
+                        {isCurrent && (
+                          <span style={{
+                            position: 'absolute', top: '12px', right: '12px',
+                            background: '#ECFDF5', color: '#059669', border: '1px solid #A7F3D0',
+                            padding: '2px 8px', borderRadius: '10px', fontSize: '0.68rem', fontWeight: 900
+                          }}>
+                            ✓ CURRENT PLAN
+                          </span>
+                        )}
+
+                        {isScheduled && (
+                          <span style={{
+                            position: 'absolute', top: '12px', right: '12px',
+                            background: '#FFFBEB', color: '#D97706', border: '1px solid #FDE68A',
+                            padding: '2px 8px', borderRadius: '10px', fontSize: '0.68rem', fontWeight: 900
+                          }}>
+                            🕒 SCHEDULED NEXT CYCLE
+                          </span>
+                        )}
+
+                        <div>
+                          <h4 style={{ margin: 0, fontSize: '1.05rem', fontWeight: 900, color: '#0F172A' }}>{p.name}</h4>
+                          <div style={{ margin: '4px 0 10px', fontSize: '1.2rem', fontWeight: 900, color: '#059669' }}>
+                            ₹{p.price} <span style={{ fontSize: '0.74rem', color: '#64748B', fontWeight: 600 }}>/ {p.billing_interval || 'month'}</span>
+                          </div>
+                          <p style={{ margin: '0 0 12px', fontSize: '0.76rem', color: '#64748B', lineHeight: 1.4 }}>{p.description}</p>
+                        </div>
+
+                        {/* Entitlement Chips */}
+                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '6px', fontSize: '0.74rem', marginBottom: '14px' }}>
+                          <div style={{ background: '#F8FAFC', padding: '6px 8px', borderRadius: '8px', color: '#334155' }}>
+                            🍽️ Spaces: <strong>{p.max_tables >= 9999 ? 'Unlimited' : p.max_tables}</strong>
+                          </div>
+                          <div style={{ background: '#F8FAFC', padding: '6px 8px', borderRadius: '8px', color: '#334155' }}>
+                            🍛 Dishes: <strong>{p.max_dishes >= 9999 ? 'Unlimited' : p.max_dishes}</strong>
+                          </div>
+                          <div style={{ background: '#F8FAFC', padding: '6px 8px', borderRadius: '8px', color: '#334155' }}>
+                            🍳 KDS: <strong>{p.kds_enabled ? '✅ Yes' : '❌ No'}</strong>
+                          </div>
+                          <div style={{ background: '#F8FAFC', padding: '6px 8px', borderRadius: '8px', color: '#334155' }}>
+                            🌐 Domain: <strong>{p.custom_domain_enabled ? '✅ Yes' : '❌ No'}</strong>
+                          </div>
+                          <div style={{ background: '#F8FAFC', padding: '6px 8px', borderRadius: '8px', color: '#334155' }}>
+                            🧾 GST: <strong>{p.gst_invoice_enabled ? '✅ Yes' : '❌ No'}</strong>
+                          </div>
+                          <div style={{ background: '#F8FAFC', padding: '6px 8px', borderRadius: '8px', color: '#334155' }}>
+                            🖨️ Printer: <strong>{p.dual_printer_enabled ? '✅ Dual' : 'Single'}</strong>
+                          </div>
+                        </div>
+
+                        {/* Plan Action Button */}
+                        {isCurrent ? (
+                          <button
+                            disabled
+                            style={{
+                              width: '100%',
+                              padding: '10px',
+                              borderRadius: '10px',
+                              border: '1px solid #CBD5E1',
+                              background: '#F1F5F9',
+                              color: '#94A3B8',
+                              fontWeight: 800,
+                              fontSize: '0.82rem',
+                              cursor: 'not-allowed'
+                            }}
+                          >
+                            ✓ Current Plan Active
+                          </button>
+                        ) : isScheduled ? (
+                          <button
+                            disabled
+                            style={{
+                              width: '100%',
+                              padding: '10px',
+                              borderRadius: '10px',
+                              border: '1px solid #FCD34D',
+                              background: '#FFFBEB',
+                              color: '#D97706',
+                              fontWeight: 800,
+                              fontSize: '0.82rem',
+                              cursor: 'not-allowed'
+                            }}
+                          >
+                            🕒 Activation Scheduled
+                          </button>
+                        ) : (
+                          <button
+                            onClick={() => setPlanToChange(p)}
+                            style={{
+                              width: '100%',
+                              padding: '10px',
+                              borderRadius: '10px',
+                              border: 'none',
+                              background: isUpgrade ? '#059669' : '#0F172A',
+                              color: '#FFFFFF',
+                              fontWeight: 900,
+                              fontSize: '0.82rem',
+                              cursor: 'pointer',
+                              display: 'flex',
+                              alignItems: 'center',
+                              justifyContent: 'center',
+                              gap: '6px'
+                            }}
+                          >
+                            {isUpgrade ? <Zap size={14} /> : <ArrowDownRight size={14} />}
+                            {isUpgrade ? `Upgrade to ${p.name}` : `Downgrade to ${p.name}`}
+                          </button>
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+
+              {/* TAB 3: PAYMENT HISTORY */}
+              {subTab === 'history' && (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <span style={{ fontSize: '0.78rem', color: '#64748B', fontWeight: 600 }}>Billing & Transaction Records</span>
+                    <button
+                      onClick={loadPaymentHistoryData}
+                      style={{
+                        background: 'none',
+                        border: 'none',
+                        color: '#059669',
+                        fontWeight: 800,
+                        fontSize: '0.74rem',
+                        cursor: 'pointer',
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '4px'
+                      }}
+                    >
+                      <RefreshCw size={12} />
+                      Refresh
+                    </button>
+                  </div>
+
+                  {paymentHistory.loading ? (
+                    <div style={{ padding: '30px', textAlign: 'center', color: '#64748B', fontSize: '0.82rem' }}>
+                      ⏳ Loading payment history...
+                    </div>
+                  ) : paymentHistory.error ? (
+                    <div style={{ padding: '20px', textAlign: 'center', background: '#FEF2F2', border: '1px solid #FECACA', borderRadius: '12px', color: '#DC2626', fontSize: '0.82rem' }}>
+                      <p style={{ margin: '0 0 10px' }}>⚠️ Unable to load payment history.</p>
+                      <button
+                        onClick={loadPaymentHistoryData}
+                        style={{
+                          padding: '6px 14px',
+                          borderRadius: '8px',
+                          border: 'none',
+                          background: '#DC2626',
+                          color: '#FFF',
+                          fontWeight: 800,
+                          fontSize: '0.76rem',
+                          cursor: 'pointer'
+                        }}
+                      >
+                        Retry
+                      </button>
+                    </div>
+                  ) : paymentHistory.data.length === 0 ? (
+                    <div style={{ padding: '30px', textAlign: 'center', background: '#F8FAFC', borderRadius: '12px', border: '1px dashed #CBD5E1', color: '#64748B', fontSize: '0.82rem' }}>
+                      No payment history yet. Transactions will appear here once billing begins.
+                    </div>
+                  ) : (
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                      {paymentHistory.data.map((pay, idx) => {
+                        const isSuccess = (pay.status || '').toUpperCase() === 'SUCCESS';
+                        return (
+                          <div
+                            key={pay.id || idx}
+                            style={{
+                              background: '#FFFFFF',
+                              padding: '12px 14px',
+                              borderRadius: '12px',
+                              border: '1px solid #E2E8F0',
+                              display: 'flex',
+                              justifyContent: 'space-between',
+                              alignItems: 'center',
+                              gap: '8px'
+                            }}
+                          >
+                            <div>
+                              <div style={{ fontSize: '0.88rem', fontWeight: 800, color: '#0F172A' }}>
+                                ₹{pay.amount} <span style={{ fontSize: '0.72rem', color: '#64748B', fontWeight: 600 }}>{pay.currency || 'INR'}</span>
+                              </div>
+                              <span style={{ fontSize: '0.72rem', color: '#64748B', display: 'block', marginTop: '2px' }}>
+                                {pay.paid_at ? new Date(pay.paid_at).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' }) : (pay.created_at ? new Date(pay.created_at).toLocaleDateString('en-IN') : 'N/A')}
+                              </span>
+                              <span style={{ fontSize: '0.68rem', color: '#94A3B8', display: 'block', marginTop: '1px' }}>
+                                ID: {pay.gateway_payment_id || pay.id || 'N/A'} • {pay.gateway || 'cashfree'}
+                              </span>
+                            </div>
+
+                            <div style={{ textAlign: 'right' }}>
+                              <span style={{
+                                padding: '3px 8px',
+                                borderRadius: '10px',
+                                fontSize: '0.70rem',
+                                fontWeight: 900,
+                                background: isSuccess ? '#ECFDF5' : '#FEF2F2',
+                                color: isSuccess ? '#047857' : '#DC2626',
+                                border: `1px solid ${isSuccess ? '#A7F3D0' : '#FECACA'}`
+                              }}>
+                                {isSuccess ? '✅ SUCCESS' : '❌ FAILED'}
+                              </span>
+                              <span style={{ fontSize: '0.70rem', color: '#64748B', display: 'block', marginTop: '4px', textTransform: 'capitalize' }}>
+                                {pay.payment_type || 'recurring'}
+                              </span>
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
+          );
+        })()}
       </AdminDrawer>
 
       {/* Drawer 6: Admin Security */}
@@ -2668,6 +3440,178 @@ export default function SetupView({
             )}
           </div>
         </AdminDrawer>
+      )}
+
+      {/* Modal: Confirm Cancel Auto-Renew */}
+      {showCancelModal && (
+        <div style={{
+          position: 'fixed', inset: 0, zIndex: 11000,
+          background: 'rgba(0,0,0,0.65)', backdropFilter: 'blur(4px)',
+          display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '16px'
+        }}>
+          <div style={{
+            background: '#FFFFFF', borderRadius: '20px', maxWidth: '440px', width: '100%',
+            padding: '24px', boxShadow: '0 20px 40px rgba(0,0,0,0.25)', animation: 'fadeIn 0.2s ease-out'
+          }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '14px' }}>
+              <div style={{ width: '42px', height: '42px', borderRadius: '50%', background: '#FEF2F2', color: '#DC2626', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                <AlertTriangle size={22} />
+              </div>
+              <div>
+                <h3 style={{ margin: 0, fontSize: '1.1rem', fontWeight: 900, color: '#0F172A' }}>Turn off automatic renewal?</h3>
+                <span style={{ fontSize: '0.78rem', color: '#64748B' }}>Your current period remains active</span>
+              </div>
+            </div>
+
+            <p style={{ fontSize: '0.84rem', color: '#475569', lineHeight: 1.5, margin: '0 0 20px' }}>
+              Your current subscription will remain active until the end of your paid billing cycle. After this date, automatic renewal will not occur, and your restaurant will transition to inactive unless renewed.
+            </p>
+
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
+              <button
+                disabled={actionLoading}
+                onClick={() => setShowCancelModal(false)}
+                style={{
+                  padding: '12px',
+                  borderRadius: '10px',
+                  border: '1px solid #CBD5E1',
+                  background: '#FFFFFF',
+                  color: '#475569',
+                  fontWeight: 800,
+                  fontSize: '0.84rem',
+                  cursor: 'pointer'
+                }}
+              >
+                Keep Auto-Renew
+              </button>
+              <button
+                disabled={actionLoading}
+                onClick={handleCancelAutoRenew}
+                style={{
+                  padding: '12px',
+                  borderRadius: '10px',
+                  border: 'none',
+                  background: '#DC2626',
+                  color: '#FFFFFF',
+                  fontWeight: 900,
+                  fontSize: '0.84rem',
+                  cursor: actionLoading ? 'not-allowed' : 'pointer',
+                  opacity: actionLoading ? 0.7 : 1
+                }}
+              >
+                {actionLoading ? 'Cancelling...' : 'Turn Off Auto-Renew'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modal: Confirm Plan Change (Upgrade / Downgrade) */}
+      {planToChange && (
+        <div style={{
+          position: 'fixed', inset: 0, zIndex: 11000,
+          background: 'rgba(0,0,0,0.65)', backdropFilter: 'blur(4px)',
+          display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '16px'
+        }}>
+          <div style={{
+            background: '#FFFFFF', borderRadius: '20px', maxWidth: '460px', width: '100%',
+            padding: '24px', boxShadow: '0 20px 40px rgba(0,0,0,0.25)', animation: 'fadeIn 0.2s ease-out'
+          }}>
+            {(() => {
+              const currentPlanPrice = subData?.plan_price || restaurantInfo?.plan_price || 999;
+              const isUpgrade = Number(planToChange.price) > Number(currentPlanPrice);
+              const isTrial = (subData?.status || restaurantInfo?.subscription_status) === 'trialing';
+              const rawDate = subData?.current_period_end || subData?.trial_ends_at || restaurantInfo?.access_until;
+              const formattedDate = rawDate ? new Date(rawDate).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' }) : null;
+
+              return (
+                <div>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '14px' }}>
+                    <div style={{
+                      width: '42px', height: '42px', borderRadius: '50%',
+                      background: isUpgrade ? '#ECFDF5' : '#FFFBEB',
+                      color: isUpgrade ? '#059669' : '#D97706',
+                      display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0
+                    }}>
+                      {isUpgrade ? <Zap size={22} /> : <ArrowDownRight size={22} />}
+                    </div>
+                    <div>
+                      <h3 style={{ margin: 0, fontSize: '1.1rem', fontWeight: 900, color: '#0F172A' }}>
+                        Confirm {isUpgrade ? 'Upgrade' : 'Downgrade'}
+                      </h3>
+                      <span style={{ fontSize: '0.78rem', color: '#64748B' }}>
+                        Switching to {planToChange.name} (₹{planToChange.price}/mo)
+                      </span>
+                    </div>
+                  </div>
+
+                  <div style={{ background: '#F8FAFC', padding: '14px', borderRadius: '12px', border: '1px solid #E2E8F0', marginBottom: '14px', fontSize: '0.82rem', color: '#334155', lineHeight: 1.5 }}>
+                    {isTrial ? (
+                      <div>
+                        🚀 <strong>Immediate Trial Switch:</strong> Your trial continues unchanged until <strong>{formattedDate || 'trial end'}</strong>. Your new plan price of ₹{planToChange.price}/month will apply starting on your first billing cycle.
+                      </div>
+                    ) : (
+                      <div>
+                        🕒 <strong>Scheduled Plan Change:</strong> Your current plan continues until <strong>{formattedDate || 'your next billing date'}</strong>. <strong>{planToChange.name}</strong> (₹{planToChange.price}/month) will activate from your next billing cycle.
+                      </div>
+                    )}
+                  </div>
+
+                  {!isUpgrade && (
+                    <div style={{
+                      background: '#FFFBEB',
+                      border: '1px solid #FCD34D',
+                      borderRadius: '12px',
+                      padding: '12px 14px',
+                      marginBottom: '18px',
+                      fontSize: '0.78rem',
+                      color: '#92400E',
+                      lineHeight: 1.4
+                    }}>
+                      ⚠️ <strong>Data Safety:</strong> Lower limits will apply to future space and menu additions. Your existing tables, cabins, VIP lounges, dishes, categories, and custom domain configuration remain <strong>100% preserved</strong>.
+                    </div>
+                  )}
+
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
+                    <button
+                      disabled={actionLoading}
+                      onClick={() => setPlanToChange(null)}
+                      style={{
+                        padding: '12px',
+                        borderRadius: '10px',
+                        border: '1px solid #CBD5E1',
+                        background: '#FFFFFF',
+                        color: '#475569',
+                        fontWeight: 800,
+                        fontSize: '0.84rem',
+                        cursor: 'pointer'
+                      }}
+                    >
+                      Cancel
+                    </button>
+                    <button
+                      disabled={actionLoading}
+                      onClick={handleConfirmPlanChange}
+                      style={{
+                        padding: '12px',
+                        borderRadius: '10px',
+                        border: 'none',
+                        background: isUpgrade ? '#059669' : '#0F172A',
+                        color: '#FFFFFF',
+                        fontWeight: 900,
+                        fontSize: '0.84rem',
+                        cursor: actionLoading ? 'not-allowed' : 'pointer',
+                        opacity: actionLoading ? 0.7 : 1
+                      }}
+                    >
+                      {actionLoading ? 'Processing...' : `Confirm ${isUpgrade ? 'Upgrade' : 'Downgrade'}`}
+                    </button>
+                  </div>
+                </div>
+              );
+            })()}
+          </div>
+        </div>
       )}
     </div>
   );

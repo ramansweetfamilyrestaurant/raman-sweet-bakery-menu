@@ -133,17 +133,37 @@ router.get('/settings', async (req, res) => {
 router.get('/plans', async (req, res) => {
   try {
     const plans = await query('SELECT * FROM saas_plans ORDER BY price ASC');
+    const isValTrue = (val, def = true) => val !== undefined && val !== null ? (val === 1 || val === true || val === '1') : def;
     const result = (plans || []).map(p => ({
+      id: p.id,
       key: p.key,
       name: p.name,
       price: Number(p.price) || 0,
       original_price: Number(p.original_price) || (Number(p.price) ? Math.round(Number(p.price) * 2 - 1) : 999),
+      billing_interval: p.billing_interval || 'monthly',
       badge: p.badge || '👑 PLAN',
       description: p.description || '',
-      whatsapp_enabled: Boolean(p.whatsapp_enabled),
-      direct_ordering_enabled: Boolean(p.direct_ordering_enabled),
-      google_reviews_enabled: Boolean(p.google_reviews_enabled),
-      max_combos: Number(p.max_combos) || 10
+      max_tables: p.max_tables !== undefined && p.max_tables !== null ? Number(p.max_tables) : 9999,
+      max_dishes: p.max_dishes !== undefined && p.max_dishes !== null ? Number(p.max_dishes) : 9999,
+      max_categories: p.max_categories !== undefined && p.max_categories !== null ? Number(p.max_categories) : 9999,
+      max_combos: p.max_combos !== undefined && p.max_combos !== null ? Number(p.max_combos) : 10,
+      max_staff_accounts: p.max_staff_accounts !== undefined && p.max_staff_accounts !== null ? Number(p.max_staff_accounts) : 9999,
+      order_retention_days: p.order_retention_days !== undefined && p.order_retention_days !== null ? Number(p.order_retention_days) : 365,
+      whatsapp_enabled: isValTrue(p.whatsapp_ordering_enabled ?? p.whatsapp_enabled, true),
+      direct_ordering_enabled: isValTrue(p.direct_ordering_enabled, false),
+      google_reviews_enabled: isValTrue(p.google_reviews_enabled, true),
+      kds_enabled: isValTrue(p.kds_enabled, false),
+      custom_domain_enabled: isValTrue(p.custom_domain_enabled, false),
+      gst_invoice_enabled: isValTrue(p.gst_invoice_enabled, true),
+      dual_printer_enabled: isValTrue(p.dual_printer_enabled, false),
+      modifiers_enabled: isValTrue(p.modifiers_enabled, true),
+      staff_roles_enabled: isValTrue(p.staff_roles_enabled, true),
+      audio_alarm_enabled: isValTrue(p.audio_alarm_enabled, true),
+      bluetooth_kot_enabled: isValTrue(p.bluetooth_kot_enabled, true),
+      ai_review_enabled: isValTrue(p.ai_review_enabled, true),
+      multi_language_enabled: isValTrue(p.multi_language_enabled, true),
+      watermark_removal_enabled: isValTrue(p.watermark_removal_enabled, true),
+      analytics_export_enabled: isValTrue(p.analytics_export_enabled, true)
     }));
     res.json(result);
   } catch (err) {
