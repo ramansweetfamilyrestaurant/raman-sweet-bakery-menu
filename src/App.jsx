@@ -357,6 +357,9 @@ export default function App() {
   const [loginErrMessage, setLoginErrMessage] = useState('');
   const [landingSuccessMessage, setLandingSuccessMessage] = useState('');
   const [landingLoginLoading, setLandingLoginLoading] = useState(false);
+  const [masterSupportPhone, setMasterSupportPhone] = useState('919876543210');
+  const [trialDays, setTrialDays] = useState(null);
+  const [openFaqIndex, setOpenFaqIndex] = useState(null);
   const [isImpersonating, setIsImpersonating] = useState(() => {
     return localStorage.getItem('touchqr_superadmin_impersonating') === 'true';
   });
