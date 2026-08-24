@@ -39,11 +39,20 @@ app.use(helmet({
   crossOriginEmbedderPolicy: false
 }));
 
-// 🛡️ Production CORS Lockdown
+// 🛡️ Production CORS Lockdown with Gateway Callback Whitelist
 const defaultProductionOrigins = [
   'https://touchqr.in',
   'https://www.touchqr.in',
   'https://admin.touchqr.in'
+];
+
+// Cashfree Gateway Checkout & Sandbox Whitelisted Origins for Mandate Callbacks
+const cashfreeGatewayOrigins = [
+  'https://sandbox.cashfree.com',
+  'https://payments-test.cashfree.com',
+  'https://payments.cashfree.com',
+  'https://api.cashfree.com',
+  'https://checkout.cashfree.com'
 ];
 
 const allowedOriginsStr = (process.env.ALLOWED_ORIGINS || '').trim();
@@ -57,11 +66,15 @@ app.use(cors({
     if (!origin) {
       return callback(null, true);
     }
+    const normalizedOrigin = origin.toLowerCase().trim();
+    // Allow Cashfree checkout / gateway origins for payment returns & authorization
+    if (cashfreeGatewayOrigins.some(cgo => normalizedOrigin === cgo || normalizedOrigin.endsWith('.cashfree.com'))) {
+      return callback(null, true);
+    }
     // In non-production without explicit ALLOWED_ORIGINS: permit local origins
     if (!configuredAllowedOrigins || configuredAllowedOrigins.includes('*')) {
       return callback(null, true);
     }
-    const normalizedOrigin = origin.toLowerCase().trim();
     if (configuredAllowedOrigins.includes(normalizedOrigin)) {
       return callback(null, true);
     }

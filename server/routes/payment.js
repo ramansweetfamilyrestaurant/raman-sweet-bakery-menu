@@ -548,40 +548,44 @@ function addCalendarMonth(date = new Date()) {
  * NEVER trusts the frontend — always verifies server-side via GET /pg/subscriptions/{id}
  */
 const handleSubscriptionReturn = async (req, res) => {
-  console.log('[Cashfree Return] HTTP Method:', req.method);
-  console.log('[Cashfree Return] Query Params:', req.query);
-  console.log('[Cashfree Return] Body Fields:', req.body);
+  let appBase = 'https://touchqr.in';
+  let baseRedirectUrl = 'https://touchqr.in/billing';
 
-  // 1. Read subscriptionId from POST body fields OR query parameters
-  let subscriptionId =
-    (req.body && (req.body.subscriptionId || req.body.subscription_id || req.body.subId || req.body.cf_subscription_id || req.body.sub_id || req.body.order_id || req.body.orderId || req.body.referenceId || req.body.payment_id)) ||
-    req.query.subscription_id ||
-    req.query.subscriptionId ||
-    req.query.sub_id ||
-    req.query.subId ||
-    req.query.cf_subscription_id ||
-    req.query.order_id ||
-    req.query.orderId ||
-    null;
-
-  const appBase = getAppBaseUrl(req);
-  const baseRedirectUrl = `${appBase}/billing`;
-
-  // Fallback: If subscriptionId missing in request, lookup the most recent subscription in DB
-  let fallbackRestoId = null;
-  if (!subscriptionId) {
-    const recentSub = await query(
-      "SELECT gateway_subscription_id, restaurant_id FROM subscriptions ORDER BY id DESC LIMIT 1"
-    );
-    if (recentSub && recentSub.length > 0) {
-      subscriptionId = recentSub[0].gateway_subscription_id;
-      fallbackRestoId = recentSub[0].restaurant_id;
-      console.log('[Cashfree Return] Resolved subscriptionId from DB fallback:', subscriptionId, 'restoId:', fallbackRestoId);
-    }
-  }
-
-  console.log('[Cashfree Return] Processing return for subscription_id:', subscriptionId);
   try {
+    console.log('[Cashfree Return] HTTP Method:', req.method);
+    console.log('[Cashfree Return] Query Params:', req.query);
+    console.log('[Cashfree Return] Body Fields:', req.body);
+
+    appBase = getAppBaseUrl(req);
+    baseRedirectUrl = `${appBase}/billing`;
+
+    // 1. Read subscriptionId from POST body fields OR query parameters
+    let subscriptionId =
+      (req.body && (req.body.subscriptionId || req.body.subscription_id || req.body.subId || req.body.cf_subscription_id || req.body.sub_id || req.body.order_id || req.body.orderId || req.body.referenceId || req.body.payment_id)) ||
+      req.query.subscription_id ||
+      req.query.subscriptionId ||
+      req.query.sub_id ||
+      req.query.subId ||
+      req.query.cf_subscription_id ||
+      req.query.order_id ||
+      req.query.orderId ||
+      null;
+
+    // Fallback: If subscriptionId missing in request, lookup the most recent subscription in DB
+    let fallbackRestoId = null;
+    if (!subscriptionId) {
+      const recentSub = await query(
+        "SELECT gateway_subscription_id, restaurant_id FROM subscriptions ORDER BY id DESC LIMIT 1"
+      );
+      if (recentSub && recentSub.length > 0) {
+        subscriptionId = recentSub[0].gateway_subscription_id;
+        fallbackRestoId = recentSub[0].restaurant_id;
+        console.log('[Cashfree Return] Resolved subscriptionId from DB fallback:', subscriptionId, 'restoId:', fallbackRestoId);
+      }
+    }
+
+    console.log('[Cashfree Return] Processing return for subscription_id:', subscriptionId);
+
     // 2. Fetch Cashfree Subscription Status server-side
     let isAuthorized = false;
     let subStatus = 'PENDING';
