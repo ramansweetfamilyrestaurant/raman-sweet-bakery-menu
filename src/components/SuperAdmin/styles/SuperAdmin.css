@@ -2479,3 +2479,110 @@
   align-items: center;
   justify-content: center;
 }
+
+/* ========================================================================= */
+/* SUPER ADMIN 2.2 — MOBILE-FIRST REFINEMENTS & COMPACT ADAPTATIONS           */
+/* ========================================================================= */
+
+.sa-desktop-only {
+  display: flex !important;
+}
+
+.sa-mobile-only {
+  display: none !important;
+}
+
+@media (max-width: 767px) {
+  .sa-desktop-only {
+    display: none !important;
+  }
+
+  .sa-mobile-only {
+    display: flex !important;
+  }
+
+  /* Mobile Content Canvas */
+  .sa-main-canvas {
+    padding: 10px 12px 90px 12px !important;
+  }
+
+  .sa-header-title {
+    font-size: 0.95rem !important;
+    max-width: 150px !important;
+    white-space: nowrap !important;
+    overflow: hidden !important;
+    text-overflow: ellipsis !important;
+  }
+
+  /* Mobile Settings Tab Strip */
+  .sa-settings-mobile-tabs {
+    display: grid !important;
+    grid-template-columns: repeat(4, 1fr) !important;
+    gap: 4px !important;
+    background: #E2E8F0;
+    padding: 4px !important;
+    border-radius: var(--sa-radius-md);
+    width: 100%;
+    box-sizing: border-box;
+  }
+
+  .sa-settings-mobile-tab-btn {
+    padding: 7px 4px !important;
+    font-size: 0.72rem !important;
+    font-weight: 800 !important;
+    border-radius: 6px !important;
+    border: none !important;
+    background: transparent;
+    color: var(--sa-text-muted);
+    cursor: pointer;
+    text-align: center;
+    white-space: nowrap;
+    transition: all 0.15s ease;
+  }
+
+  .sa-settings-mobile-tab-btn.active {
+    background: #0A2315 !important;
+    color: #DFBA67 !important;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.15);
+  }
+
+  /* Mobile Cards Compact Padding */
+  .sa-settings-main-card,
+  .sa-hub-card,
+  .sa-recent-activity-card,
+  .sa-table-container {
+    padding: 14px 12px !important;
+    border-radius: 12px !important;
+    gap: 12px !important;
+  }
+
+  /* Full-width Form Buttons on Mobile */
+  .sa-settings-main-card button[type="submit"],
+  .sa-settings-main-card button.sa-btn-accent,
+  .sa-settings-main-card button.sa-btn-primary {
+    width: 100% !important;
+    text-align: center !important;
+    justify-content: center !important;
+  }
+
+  /* Filter Pills Horizontal Scrollable Touch Strip */
+  .sa-filter-pills-strip {
+    display: flex !important;
+    flex-wrap: nowrap !important;
+    overflow-x: auto !important;
+    -webkit-overflow-scrolling: touch !important;
+    scrollbar-width: none !important;
+    gap: 6px !important;
+    padding-bottom: 2px !important;
+  }
+
+  .sa-filter-pills-strip::-webkit-scrollbar {
+    display: none !important;
+  }
+
+  .sa-filter-pill-btn {
+    flex-shrink: 0 !important;
+    padding: 5px 9px !important;
+    font-size: 0.72rem !important;
+  }
+}

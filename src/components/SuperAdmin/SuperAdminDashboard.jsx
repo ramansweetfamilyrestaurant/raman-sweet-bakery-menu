@@ -2500,12 +2500,12 @@ export default function SuperAdminDashboard({ token, username, onLogout, onRetur
                 subtitle="Manage platform master security, Cashfree payment gateway, branding and support touchpoints."
               />
 
-              {/* ⚙️ 2. 2-COLUMN SETTINGS LAYOUT */}
+              {/* ⚙️ 2. RESPONSIVE SETTINGS LAYOUT */}
               <div className="sa-settings-layout">
-                {/* LEFT: Category Navigation & Diagnostics */}
+                {/* DESKTOP SIDEBAR / MOBILE HORIZONTAL PILL TABS */}
                 <div className="sa-settings-sidebar">
-                  {/* Category Nav List */}
-                  <div className="sa-settings-nav-list">
+                  {/* Desktop Category Nav List */}
+                  <div className="sa-settings-nav-list sa-desktop-only">
                     {[
                       { id: 'security', label: 'Master Security', sub: 'Admin credentials & auth', icon: Lock },
                       { id: 'gateway', label: 'Cashfree Gateway', sub: 'API keys & environment', icon: Key },
@@ -2533,8 +2533,30 @@ export default function SuperAdminDashboard({ token, username, onLogout, onRetur
                     })}
                   </div>
 
-                  {/* Diagnostics Status Card */}
-                  <div className="sa-settings-diagnostics-card">
+                  {/* Mobile Compact Horizontal Tab Bar */}
+                  <div className="sa-settings-mobile-tabs sa-mobile-only">
+                    {[
+                      { id: 'security', label: '🛡️ Security' },
+                      { id: 'gateway', label: '💳 Gateway' },
+                      { id: 'branding', label: '🖼️ Branding' },
+                      { id: 'support', label: '📞 Support' },
+                    ].map(tab => {
+                      const isActive = secTab === tab.id;
+                      return (
+                        <button
+                          key={tab.id}
+                          type="button"
+                          onClick={() => setSecTab(tab.id)}
+                          className={`sa-settings-mobile-tab-btn ${isActive ? 'active' : ''}`}
+                        >
+                          {tab.label}
+                        </button>
+                      );
+                    })}
+                  </div>
+
+                  {/* Diagnostics Status Card (Desktop Side) */}
+                  <div className="sa-settings-diagnostics-card sa-desktop-only">
                     <div className="sa-settings-diagnostics-header">
                       <ShieldCheck size={16} color="#15803D" />
                       <span>System Security Status</span>

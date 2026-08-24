@@ -35,13 +35,13 @@ export default function Header({
 
   const shortTitles = {
     overview: 'Overview',
-    tenants: 'Shops Directory',
-    billing: 'Billing & Subscriptions',
-    plans: 'SaaS Plans & Tiers',
-    operations: 'System Operations & DB Health',
-    activity: 'Platform Audit Logs',
-    settings: 'System Configuration',
-    communication: 'Broadcast Notices',
+    tenants: 'Shops',
+    billing: 'Billing',
+    plans: 'Plans',
+    operations: 'Operations',
+    activity: 'Activity',
+    settings: 'Settings',
+    communication: 'Broadcast',
   };
 
   const placeholders = {
