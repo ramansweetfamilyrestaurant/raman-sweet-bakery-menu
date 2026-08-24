@@ -48,10 +48,19 @@ export default function PaymentModal({ restoInfo, planTier = 'pro', planPrice = 
         if (window.Cashfree) {
           const cashfree = window.Cashfree({ mode: data.is_sandbox ? 'sandbox' : 'production' });
           // Launch Cashfree SDK subscription checkout
-          cashfree.checkout({
-            paymentSessionId: data.subscription_session_id,
-            redirectTarget: '_modal'
-          });
+          if (typeof cashfree.subscriptionsCheckout === 'function') {
+            cashfree.subscriptionsCheckout({
+              subsSessionId: data.subscription_session_id,
+              subscriptionSessionId: data.subscription_session_id,
+              redirectTarget: '_modal'
+            });
+          } else if (typeof cashfree.checkout === 'function') {
+            cashfree.checkout({
+              subsSessionId: data.subscription_session_id,
+              subscriptionSessionId: data.subscription_session_id,
+              redirectTarget: '_modal'
+            });
+          }
           setStatusMsg('🚀 Cashfree Sandbox Mandate Checkout launched! Please complete subscription authorization.');
           setLoading(false);
           return;
