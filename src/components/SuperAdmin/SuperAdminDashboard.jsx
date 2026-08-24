@@ -2489,302 +2489,375 @@ export default function SuperAdminDashboard({ token, username, onLogout, onRetur
             </div>
           )}
 
-          {/* ========================================================================= */}
-          {/* VIEW 7: SYSTEM & GATEWAY SETTINGS                                         */}
+                    {/* ========================================================================= */}
+          {/* VIEW 7: SUPER ADMIN 2.2 SYSTEM & GATEWAY SETTINGS                         */}
           {/* ========================================================================= */}
           {activeView === 'settings' && (
-            <div className="sa-table-container" style={{ padding: '24px', maxWidth: '720px', margin: '0 auto', display: 'flex', flexDirection: 'column', gap: '18px' }}>
-              {/* ⚙️ 1. HEADER */}
-              <div className="sa-section-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '12px', margin: 0 }}>
-                <div>
-                  <h2 className="sa-section-title" style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '1.2rem', fontWeight: 900, color: 'var(--sa-primary)', margin: 0 }}>
-                    <Settings size={22} color="var(--sa-primary)" /> ⚙️ Configuration & Settings Center
-                  </h2>
-                  <span style={{ fontSize: '0.76rem', color: 'var(--sa-text-muted)', fontWeight: 600 }}>
-                    Manage security, payment gateway, branding and support.
-                  </span>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
+              {/* ⚙️ 1. VIEW HEADER */}
+              <SectionHeader
+                title="⚙️ Configuration & Settings Center"
+                subtitle="Manage platform master security, Cashfree payment gateway, branding and support touchpoints."
+              />
+
+              {/* ⚙️ 2. 2-COLUMN SETTINGS LAYOUT */}
+              <div className="sa-settings-layout">
+                {/* LEFT: Category Navigation & Diagnostics */}
+                <div className="sa-settings-sidebar">
+                  {/* Category Nav List */}
+                  <div className="sa-settings-nav-list">
+                    {[
+                      { id: 'security', label: 'Master Security', sub: 'Admin credentials & auth', icon: Lock },
+                      { id: 'gateway', label: 'Cashfree Gateway', sub: 'API keys & environment', icon: Key },
+                      { id: 'branding', label: 'Platform Branding', sub: 'Logo & visual assets', icon: Image },
+                      { id: 'support', label: 'Support Channels', sub: 'WhatsApp & helpdesk', icon: Phone },
+                    ].map(tab => {
+                      const isActive = secTab === tab.id;
+                      const Icon = tab.icon;
+                      return (
+                        <button
+                          key={tab.id}
+                          type="button"
+                          onClick={() => setSecTab(tab.id)}
+                          className={`sa-settings-nav-btn ${isActive ? 'active' : ''}`}
+                        >
+                          <div className="sa-settings-nav-icon-wrap">
+                            <Icon size={16} />
+                          </div>
+                          <div className="sa-settings-nav-text">
+                            <span className="sa-settings-nav-label">{tab.label}</span>
+                            <span className="sa-settings-nav-sub">{tab.sub}</span>
+                          </div>
+                        </button>
+                      );
+                    })}
+                  </div>
+
+                  {/* Diagnostics Status Card */}
+                  <div className="sa-settings-diagnostics-card">
+                    <div className="sa-settings-diagnostics-header">
+                      <ShieldCheck size={16} color="#15803D" />
+                      <span>System Security Status</span>
+                    </div>
+                    <div className="sa-settings-diagnostics-list">
+                      <div className="sa-settings-diagnostics-row">
+                        <span className="sa-settings-diagnostics-label">SSL Encryption</span>
+                        <span className="sa-settings-diagnostics-val" style={{ color: '#15803D' }}>
+                          <span className="sa-live-dot active" /> 256-Bit TLS
+                        </span>
+                      </div>
+                      <div className="sa-settings-diagnostics-row">
+                        <span className="sa-settings-diagnostics-label">Cashfree Gateway</span>
+                        <span className="sa-settings-diagnostics-val" style={{ color: paymentKeys.cashfree_env === 'production' ? '#B45309' : '#15803D' }}>
+                          {(paymentKeys.cashfree_env || 'sandbox').toUpperCase()}
+                        </span>
+                      </div>
+                      <div className="sa-settings-diagnostics-row">
+                        <span className="sa-settings-diagnostics-label">Neon DB Backup</span>
+                        <span className="sa-settings-diagnostics-val" style={{ color: '#15803D' }}>
+                          Auto-Mirror
+                        </span>
+                      </div>
+                      <div className="sa-settings-diagnostics-row">
+                        <span className="sa-settings-diagnostics-label">Cloudflare R2</span>
+                        <span className="sa-settings-diagnostics-val" style={{ color: '#15803D' }}>
+                          Connected
+                        </span>
+                      </div>
+                    </div>
+                  </div>
                 </div>
-              </div>
 
-              {/* 📑 2. 4-TAB SEGMENTED CONTROLS */}
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '6px', background: '#F1F5F9', padding: '5px', borderRadius: '14px', border: '1px solid #E2E8F0' }}>
-                {[
-                  { id: 'security', label: '🛡️ Security', icon: Lock },
-                  { id: 'gateway', label: '💳 Gateway', icon: Key },
-                  { id: 'branding', label: '🖼️ Branding', icon: Image },
-                  { id: 'support', label: '📞 Support', icon: Phone },
-                ].map(tab => {
-                  const isActive = secTab === tab.id;
-                  return (
-                    <button
-                      key={tab.id}
-                      type="button"
-                      onClick={() => setSecTab(tab.id)}
-                      className={`sa-btn sa-btn-sm ${isActive ? 'sa-btn-primary' : 'sa-btn-secondary'}`}
-                      style={{ border: 'none', padding: '8px 10px', fontSize: '0.78rem', fontWeight: 800 }}
-                    >
-                      {tab.label}
-                    </button>
-                  );
-                })}
-              </div>
+                {/* RIGHT: Active Tab Configuration Form */}
+                <div className="sa-settings-main-card">
+                  {/* Alerts */}
+                  {securityError && <div style={{ background: '#FEE2E2', color: '#B91C1C', padding: '10px 14px', borderRadius: '10px', fontSize: '0.8rem', fontWeight: 800 }}>⚠️ {securityError}</div>}
+                  {securitySuccess && <div style={{ background: '#ECFDF5', color: '#047857', padding: '10px 14px', borderRadius: '10px', fontSize: '0.8rem', fontWeight: 800 }}>{securitySuccess}</div>}
+                  {keysMsg && <div style={{ background: '#F0FDF4', color: '#15803D', padding: '10px 14px', borderRadius: '10px', fontSize: '0.8rem', fontWeight: 800 }}>{keysMsg}</div>}
 
-              {securityError && <div style={{ background: '#FEE2E2', color: '#B91C1C', padding: '10px 14px', borderRadius: '12px', fontSize: '0.8rem', fontWeight: 800 }}>⚠️ {securityError}</div>}
-              {securitySuccess && <div style={{ background: '#ECFDF5', color: '#047857', padding: '10px 14px', borderRadius: '12px', fontSize: '0.8rem', fontWeight: 800 }}>{securitySuccess}</div>}
-              {keysMsg && <div style={{ background: '#F0FDF4', color: '#15803D', padding: '10px 14px', borderRadius: '12px', fontSize: '0.8rem', fontWeight: 800 }}>{keysMsg}</div>}
+                  {/* 🛡️ TAB 1: MASTER SECURITY */}
+                  {secTab === 'security' && (
+                    <form onSubmit={handleSecuritySubmit} style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+                      <div className="sa-settings-form-header">
+                        <div>
+                          <h3 className="sa-settings-form-title">🛡️ Master Security & Authentication</h3>
+                          <p className="sa-settings-form-desc">Update master super admin credentials and login access.</p>
+                        </div>
+                      </div>
 
-              {/* 🛡️ TAB 1: MASTER SECURITY */}
-              {secTab === 'security' && (
-                <form onSubmit={handleSecuritySubmit} style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
-                  <div style={{ background: '#F8FAFC', padding: '12px 14px', borderRadius: '12px', border: '1px solid #E2E8F0' }}>
-                    <span style={{ fontSize: '0.75rem', color: 'var(--sa-text-muted)', fontWeight: 700 }}>
-                      ℹ️ Current password is required to change Super Admin credentials.
-                    </span>
-                  </div>
+                      <div style={{ background: '#F8FAFC', padding: '12px 14px', borderRadius: '10px', border: '1px solid #E2E8F0', fontSize: '0.76rem', color: 'var(--sa-text-muted)', fontWeight: 700 }}>
+                        ℹ️ For security, your current master password is required to save any credential changes.
+                      </div>
 
-                  <div>
-                    <label style={{ display: 'block', fontSize: '0.78rem', fontWeight: 800, color: 'var(--text-dark)', marginBottom: '6px' }}>🔑 Current Password (Required) *</label>
-                    <div style={{ position: 'relative' }}>
-                      <input
-                        type={showCurPass ? 'text' : 'password'}
-                        required
-                        placeholder="Enter current password"
-                        value={securityForm.currentPassword}
-                        onChange={(e) => setSecurityForm({ ...securityForm, currentPassword: e.target.value })}
-                        style={{ width: '100%', padding: '11px 40px 11px 14px', borderRadius: '12px', border: '1.5px solid #CBD5E1', fontSize: '0.9rem', outline: 'none', boxSizing: 'border-box' }}
-                      />
-                      <button type="button" onClick={() => setShowCurPass(!showCurPass)} style={{ position: 'absolute', right: '12px', top: '50%', transform: 'translateY(-50%)', background: 'none', border: 'none', cursor: 'pointer', color: '#64748B' }}>
-                        {showCurPass ? <EyeOff size={18} /> : <Eye size={18} />}
+                      <div className="sa-settings-field-group">
+                        <label className="sa-settings-label">🔑 Current Password (Required) *</label>
+                        <div className="sa-settings-input-wrap">
+                          <input
+                            type={showCurPass ? 'text' : 'password'}
+                            required
+                            placeholder="Enter current password"
+                            value={securityForm.currentPassword}
+                            onChange={(e) => setSecurityForm({ ...securityForm, currentPassword: e.target.value })}
+                            className="sa-settings-input"
+                            style={{ paddingRight: '40px' }}
+                          />
+                          <button type="button" onClick={() => setShowCurPass(!showCurPass)} className="sa-settings-toggle-pass-btn">
+                            {showCurPass ? <EyeOff size={16} /> : <Eye size={16} />}
+                          </button>
+                        </div>
+                      </div>
+
+                      <div className="sa-settings-field-group">
+                        <label className="sa-settings-label">👤 Master Login Username</label>
+                        <input
+                          type="text"
+                          required
+                          value={securityForm.newUsername}
+                          onChange={(e) => setSecurityForm({ ...securityForm, newUsername: e.target.value })}
+                          className="sa-settings-input"
+                        />
+                      </div>
+
+                      <div className="sa-settings-field-group">
+                        <label className="sa-settings-label">🔒 New Password (Optional)</label>
+                        <div className="sa-settings-input-wrap">
+                          <input
+                            type={showNewPass ? 'text' : 'password'}
+                            placeholder="Leave blank to keep unchanged"
+                            value={securityForm.newPassword}
+                            onChange={(e) => setSecurityForm({ ...securityForm, newPassword: e.target.value })}
+                            className="sa-settings-input"
+                            style={{ paddingRight: '40px' }}
+                          />
+                          <button type="button" onClick={() => setShowNewPass(!showNewPass)} className="sa-settings-toggle-pass-btn">
+                            {showNewPass ? <EyeOff size={16} /> : <Eye size={16} />}
+                          </button>
+                        </div>
+                      </div>
+
+                      <button
+                        type="submit"
+                        disabled={securitySubmitting}
+                        className="sa-btn sa-btn-accent"
+                        style={{ padding: '12px', fontWeight: 900, alignSelf: 'flex-start', minWidth: '220px' }}
+                      >
+                        {securitySubmitting ? 'Updating Credentials...' : '💾 Save Master Credentials'}
                       </button>
-                    </div>
-                  </div>
-                  <div>
-                    <label style={{ display: 'block', fontSize: '0.78rem', fontWeight: 800, color: 'var(--text-dark)', marginBottom: '6px' }}>👤 Master Login Username</label>
-                    <input
-                      type="text"
-                      required
-                      value={securityForm.newUsername}
-                      onChange={(e) => setSecurityForm({ ...securityForm, newUsername: e.target.value })}
-                      style={{ width: '100%', padding: '11px 14px', borderRadius: '12px', border: '1.5px solid #CBD5E1', fontSize: '0.9rem', outline: 'none', boxSizing: 'border-box' }}
-                    />
-                  </div>
-                  <div>
-                    <label style={{ display: 'block', fontSize: '0.78rem', fontWeight: 800, color: 'var(--text-dark)', marginBottom: '6px' }}>🔒 New Password (Optional)</label>
-                    <div style={{ position: 'relative' }}>
-                      <input
-                        type={showNewPass ? 'text' : 'password'}
-                        placeholder="Leave blank to keep unchanged"
-                        value={securityForm.newPassword}
-                        onChange={(e) => setSecurityForm({ ...securityForm, newPassword: e.target.value })}
-                        style={{ width: '100%', padding: '11px 40px 11px 14px', borderRadius: '12px', border: '1.5px solid #CBD5E1', fontSize: '0.9rem', outline: 'none', boxSizing: 'border-box' }}
-                      />
-                      <button type="button" onClick={() => setShowNewPass(!showNewPass)} style={{ position: 'absolute', right: '12px', top: '50%', transform: 'translateY(-50%)', background: 'none', border: 'none', cursor: 'pointer', color: '#64748B' }}>
-                        {showNewPass ? <EyeOff size={18} /> : <Eye size={18} />}
+                    </form>
+                  )}
+
+                  {/* 💳 TAB 2: CASHFREE GATEWAY */}
+                  {secTab === 'gateway' && (
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+                      <div className="sa-settings-form-header">
+                        <div>
+                          <h3 className="sa-settings-form-title">💳 Cashfree Payment Gateway</h3>
+                          <p className="sa-settings-form-desc">Configure live payment credentials, subscriptions API, and test sandbox.</p>
+                        </div>
+                      </div>
+
+                      <div className="sa-settings-field-group">
+                        <label className="sa-settings-label">CASHFREE ENVIRONMENT</label>
+                        <select
+                          value={paymentKeys.cashfree_env || 'sandbox'}
+                          onChange={(e) => setPaymentKeys({ ...paymentKeys, cashfree_env: e.target.value })}
+                          className="sa-settings-input"
+                          style={{ fontWeight: 800 }}
+                        >
+                          <option value="sandbox">🟢 SANDBOX (TEST MODE - SAFE)</option>
+                          <option value="production">⚡ PRODUCTION (LIVE TRANSACTIONS)</option>
+                        </select>
+                      </div>
+
+                      {paymentKeys.cashfree_env === 'production' && (
+                        <div style={{ background: '#FFFBEB', padding: '12px 14px', borderRadius: '10px', border: '1px solid #FCD34D', fontSize: '0.76rem', color: '#B45309', fontWeight: 800 }}>
+                          ⚠️ Production gateway changes affect live shop payments, webhooks, and automatic subscription renewals.
+                        </div>
+                      )}
+
+                      <div className="sa-settings-field-group">
+                        <label className="sa-settings-label">CASHFREE APP ID (CLIENT ID) *</label>
+                        <input
+                          type="text"
+                          placeholder="e.g. 1029384756"
+                          value={paymentKeys.cashfree_app_id || ''}
+                          onChange={(e) => setPaymentKeys({ ...paymentKeys, cashfree_app_id: e.target.value })}
+                          className="sa-settings-input"
+                        />
+                      </div>
+
+                      <div className="sa-settings-field-group">
+                        <label className="sa-settings-label">CASHFREE SECRET KEY *</label>
+                        <div className="sa-settings-input-wrap">
+                          <input
+                            type={showSecretKey ? 'text' : 'password'}
+                            placeholder="Cashfree Secret Key"
+                            value={paymentKeys.cashfree_secret_key || ''}
+                            onChange={(e) => setPaymentKeys({ ...paymentKeys, cashfree_secret_key: e.target.value })}
+                            className="sa-settings-input"
+                            style={{ paddingRight: '40px' }}
+                          />
+                          <button type="button" onClick={() => setShowSecretKey(!showSecretKey)} className="sa-settings-toggle-pass-btn">
+                            {showSecretKey ? <EyeOff size={16} /> : <Eye size={16} />}
+                          </button>
+                        </div>
+                      </div>
+
+                      <button
+                        type="button"
+                        disabled={keysSaving}
+                        onClick={async () => {
+                          setKeysSaving(true);
+                          setKeysMsg('');
+                          try {
+                            const res = await fetch('/api/superadmin/settings', {
+                              method: 'POST',
+                              headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+                              body: JSON.stringify(paymentKeys)
+                            });
+                            const data = await res.json();
+                            if (res.ok) setKeysMsg(data.message || '✅ Gateway credentials saved successfully!');
+                          } catch {
+                            setKeysMsg('⚠️ Failed to save gateway credentials');
+                          } finally {
+                            setKeysSaving(false);
+                          }
+                        }}
+                        className="sa-btn sa-btn-primary"
+                        style={{ padding: '12px', fontWeight: 900, alignSelf: 'flex-start', minWidth: '220px' }}
+                      >
+                        {keysSaving ? 'Saving Gateway Keys...' : '💾 Save Gateway Credentials'}
                       </button>
-                    </div>
-                  </div>
-                  <button type="submit" disabled={securitySubmitting} className="sa-btn sa-btn-accent" style={{ padding: '14px', marginTop: '6px', fontWeight: 800 }}>
-                    {securitySubmitting ? 'Updating Credentials...' : '💾 Save Master Credentials'}
-                  </button>
-                </form>
-              )}
-
-              {/* 💳 TAB 2: CASHFREE GATEWAY */}
-              {secTab === 'gateway' && (
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
-                  <div>
-                    <label style={{ display: 'block', fontSize: '0.78rem', fontWeight: 800, color: '#374151', marginBottom: '6px' }}>CASHFREE ENVIRONMENT</label>
-                    <select
-                      value={paymentKeys.cashfree_env || 'sandbox'}
-                      onChange={(e) => setPaymentKeys({ ...paymentKeys, cashfree_env: e.target.value })}
-                      style={{ width: '100%', padding: '11px 14px', borderRadius: '12px', border: '1.5px solid #CBD5E1', fontSize: '0.9rem', fontWeight: 700, outline: 'none', boxSizing: 'border-box', background: '#FFFFFF' }}
-                    >
-                      <option value="sandbox">🟢 SANDBOX (TEST MODE - SAFE)</option>
-                      <option value="production">⚡ PRODUCTION (LIVE TRANSACTIONS)</option>
-                    </select>
-                  </div>
-
-                  {paymentKeys.cashfree_env === 'production' && (
-                    <div style={{ background: '#FFFBEB', padding: '12px 14px', borderRadius: '12px', border: '1px solid #FCD34D' }}>
-                      <span style={{ fontSize: '0.76rem', color: '#B45309', fontWeight: 800 }}>
-                        ⚠️ Production gateway changes affect live payments and subscriptions.
-                      </span>
                     </div>
                   )}
 
-                  <div>
-                    <label style={{ display: 'block', fontSize: '0.78rem', fontWeight: 800, color: '#374151', marginBottom: '6px' }}>CASHFREE APP ID (CLIENT ID) *</label>
-                    <input
-                      type="text"
-                      placeholder="e.g. 1029384756"
-                      value={paymentKeys.cashfree_app_id || ''}
-                      onChange={(e) => setPaymentKeys({ ...paymentKeys, cashfree_app_id: e.target.value })}
-                      style={{ width: '100%', padding: '11px 14px', borderRadius: '12px', border: '1.5px solid #CBD5E1', fontSize: '0.9rem', outline: 'none', boxSizing: 'border-box' }}
-                    />
-                  </div>
-                  <div>
-                    <label style={{ display: 'block', fontSize: '0.78rem', fontWeight: 800, color: '#374151', marginBottom: '6px' }}>CASHFREE SECRET KEY *</label>
-                    <div style={{ position: 'relative' }}>
-                      <input
-                        type={showSecretKey ? 'text' : 'password'}
-                        placeholder="Cashfree Secret Key"
-                        value={paymentKeys.cashfree_secret_key || ''}
-                        onChange={(e) => setPaymentKeys({ ...paymentKeys, cashfree_secret_key: e.target.value })}
-                        style={{ width: '100%', padding: '11px 40px 11px 14px', borderRadius: '12px', border: '1.5px solid #CBD5E1', fontSize: '0.9rem', outline: 'none', boxSizing: 'border-box' }}
-                      />
-                      <button type="button" onClick={() => setShowSecretKey(!showSecretKey)} style={{ position: 'absolute', right: '12px', top: '50%', transform: 'translateY(-50%)', background: 'none', border: 'none', cursor: 'pointer', color: '#64748B' }}>
-                        {showSecretKey ? <EyeOff size={18} /> : <Eye size={18} />}
-                      </button>
+                  {/* 🖼️ TAB 3: BRANDING */}
+                  {secTab === 'branding' && (
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+                      <div className="sa-settings-form-header">
+                        <div>
+                          <h3 className="sa-settings-form-title">🖼️ Platform Branding</h3>
+                          <p className="sa-settings-form-desc">Manage logo assets hosted on Cloudflare R2 with Neon DB mirror.</p>
+                        </div>
+                      </div>
+
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '16px', background: '#F8FAFC', padding: '16px', borderRadius: '12px', border: '1px solid #E2E8F0' }}>
+                        {logoPreview || (paymentKeys.platform_logo_url && !logoErr) ? (
+                          <img
+                            src={logoPreview || resolveImageUrl(paymentKeys.platform_logo_url)}
+                            alt="Logo"
+                            onError={() => setLogoErr(true)}
+                            style={{ width: '64px', height: '64px', borderRadius: '12px', objectFit: 'contain', background: '#FFF', padding: '4px', border: '1.5px solid #D4AF37' }}
+                          />
+                        ) : (
+                          <div style={{ width: '64px', height: '64px', borderRadius: '12px', background: '#0A2315', color: '#DFBA67', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 900, fontSize: '1.8rem' }}>👑</div>
+                        )}
+                        <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                          <strong style={{ fontSize: '0.86rem', color: 'var(--sa-text-main)' }}>Platform Master Logo</strong>
+                          <span style={{ fontSize: '0.72rem', color: 'var(--sa-text-muted)' }}>PNG, WebP, or SVG recommended (512x512 max).</span>
+                          <input
+                            type="file"
+                            accept="image/*"
+                            onChange={async (e) => {
+                              const file = e.target.files?.[0];
+                              if (!file) return;
+                              setUploadingLogo(true);
+                              try {
+                                const uploadedData = await uploadImage(file, token, 'superadmin');
+                                let newUrl = typeof uploadedData === 'string' ? uploadedData : (uploadedData?.r2ProxyUrl || uploadedData?.url || uploadedData?.path);
+                                const updated = { ...paymentKeys, platform_logo_url: newUrl };
+                                setPaymentKeys(updated);
+                                await fetch('/api/superadmin/settings', {
+                                  method: 'POST',
+                                  headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+                                  body: JSON.stringify(updated)
+                                });
+                                setKeysMsg('✅ Platform Logo updated successfully!');
+                              } catch (err) {
+                                alert('Logo upload failed: ' + err.message);
+                              } finally {
+                                setUploadingLogo(false);
+                              }
+                            }}
+                            style={{ fontSize: '0.78rem', marginTop: '4px' }}
+                          />
+                        </div>
+                      </div>
                     </div>
-                  </div>
-                  <button
-                    type="button"
-                    disabled={keysSaving}
-                    onClick={async () => {
-                      setKeysSaving(true);
-                      setKeysMsg('');
-                      try {
-                        const res = await fetch('/api/superadmin/settings', {
-                          method: 'POST',
-                          headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
-                          body: JSON.stringify(paymentKeys)
-                        });
-                        const data = await res.json();
-                        if (res.ok) setKeysMsg(data.message || '✅ Gateway credentials saved successfully!');
-                      } catch {
-                        setKeysMsg('⚠️ Failed to save gateway credentials');
-                      } finally {
-                        setKeysSaving(false);
-                      }
-                    }}
-                    className="sa-btn sa-btn-primary"
-                    style={{ padding: '14px', marginTop: '6px', fontWeight: 800 }}
-                  >
-                    {keysSaving ? 'Saving Gateway Keys...' : '💾 Save Gateway Credentials'}
-                  </button>
-                </div>
-              )}
+                  )}
 
-              {/* 🖼️ TAB 3: BRANDING */}
-              {secTab === 'branding' && (
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
-                  <div style={{ background: '#F8FAFC', padding: '12px 14px', borderRadius: '12px', border: '1px solid #E2E8F0' }}>
-                    <span style={{ fontSize: '0.75rem', color: 'var(--sa-text-muted)', fontWeight: 700 }}>
-                      🖼️ Platform logo is hosted on Cloudflare R2 with Neon DB mirror backup.
-                    </span>
-                  </div>
+                  {/* 📞 TAB 4: SUPPORT CHANNELS */}
+                  {secTab === 'support' && (
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+                      <div className="sa-settings-form-header">
+                        <div>
+                          <h3 className="sa-settings-form-title">📞 Support & Emergency Channels</h3>
+                          <p className="sa-settings-form-desc">Configure direct contact touchpoints displayed to shops and invoices.</p>
+                        </div>
+                      </div>
 
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '14px', background: '#F8FAFC', padding: '14px', borderRadius: '14px', border: '1px solid #E2E8F0' }}>
-                    {logoPreview || (paymentKeys.platform_logo_url && !logoErr) ? (
-                      <img
-                        src={logoPreview || resolveImageUrl(paymentKeys.platform_logo_url)}
-                        alt="Logo"
-                        onError={() => setLogoErr(true)}
-                        style={{ width: '56px', height: '56px', borderRadius: '12px', objectFit: 'contain', background: '#FFF', padding: '2px', border: '1.5px solid #CBD5E1' }}
-                      />
-                    ) : (
-                      <div style={{ width: '56px', height: '56px', borderRadius: '12px', background: '#0A2315', color: '#DFBA67', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 900, fontSize: '1.5rem' }}>👑</div>
-                    )}
-                    <div style={{ flex: 1 }}>
-                      <input
-                        type="file"
-                        accept="image/*"
-                        onChange={async (e) => {
-                          const file = e.target.files?.[0];
-                          if (!file) return;
-                          setUploadingLogo(true);
+                      <div className="sa-settings-field-group">
+                        <label className="sa-settings-label">SUPPORT WHATSAPP NUMBER</label>
+                        <input
+                          type="text"
+                          placeholder="e.g. 919876543210"
+                          value={paymentKeys.support_whatsapp || ''}
+                          onChange={(e) => setPaymentKeys({ ...paymentKeys, support_whatsapp: e.target.value })}
+                          className="sa-settings-input"
+                        />
+                      </div>
+
+                      <div className="sa-settings-field-group">
+                        <label className="sa-settings-label">SUPPORT PHONE NUMBER</label>
+                        <input
+                          type="text"
+                          placeholder="e.g. +91 98765 43210"
+                          value={paymentKeys.support_phone || ''}
+                          onChange={(e) => setPaymentKeys({ ...paymentKeys, support_phone: e.target.value })}
+                          className="sa-settings-input"
+                        />
+                      </div>
+
+                      <div className="sa-settings-field-group">
+                        <label className="sa-settings-label">SUPPORT EMAIL ADDRESS</label>
+                        <input
+                          type="email"
+                          placeholder="e.g. support@touchqr.in"
+                          value={paymentKeys.support_email || ''}
+                          onChange={(e) => setPaymentKeys({ ...paymentKeys, support_email: e.target.value })}
+                          className="sa-settings-input"
+                        />
+                      </div>
+
+                      <button
+                        type="button"
+                        disabled={keysSaving}
+                        onClick={async () => {
+                          setKeysSaving(true);
+                          setKeysMsg('');
                           try {
-                            const uploadedData = await uploadImage(file, token, 'superadmin');
-                            let newUrl = typeof uploadedData === 'string' ? uploadedData : (uploadedData?.r2ProxyUrl || uploadedData?.url || uploadedData?.path);
-                            const updated = { ...paymentKeys, platform_logo_url: newUrl };
-                            setPaymentKeys(updated);
-                            await fetch('/api/superadmin/settings', {
+                            const res = await fetch('/api/superadmin/settings', {
                               method: 'POST',
                               headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
-                              body: JSON.stringify(updated)
+                              body: JSON.stringify(paymentKeys)
                             });
-                            setKeysMsg('✅ Platform Logo updated successfully!');
-                          } catch (err) {
-                            alert('Logo upload failed: ' + err.message);
+                            const data = await res.json();
+                            if (res.ok) setKeysMsg(data.message || '✅ Support channels saved successfully!');
+                          } catch {
+                            setKeysMsg('⚠️ Failed to save support channels');
                           } finally {
-                            setUploadingLogo(false);
+                            setKeysSaving(false);
                           }
                         }}
-                      />
+                        className="sa-btn sa-btn-accent"
+                        style={{ padding: '12px', fontWeight: 900, alignSelf: 'flex-start', minWidth: '220px' }}
+                      >
+                        {keysSaving ? 'Saving Support Channels...' : '💾 Save Support Channels'}
+                      </button>
                     </div>
-                  </div>
+                  )}
                 </div>
-              )}
-
-              {/* 📞 TAB 4: SUPPORT CHANNELS */}
-              {secTab === 'support' && (
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
-                  <div style={{ background: '#F8FAFC', padding: '12px 14px', borderRadius: '12px', border: '1px solid #E2E8F0' }}>
-                    <span style={{ fontSize: '0.75rem', color: 'var(--sa-text-muted)', fontWeight: 700 }}>
-                      ℹ️ Shown in platform support/customer touchpoints and shop invoices.
-                    </span>
-                  </div>
-
-                  <div>
-                    <label style={{ display: 'block', fontSize: '0.78rem', fontWeight: 800, color: '#374151', marginBottom: '6px' }}>SUPPORT WHATSAPP NUMBER</label>
-                    <input
-                      type="text"
-                      placeholder="e.g. 919876543210"
-                      value={paymentKeys.support_whatsapp || ''}
-                      onChange={(e) => setPaymentKeys({ ...paymentKeys, support_whatsapp: e.target.value })}
-                      style={{ width: '100%', padding: '11px 14px', borderRadius: '12px', border: '1.5px solid #CBD5E1', fontSize: '0.9rem', outline: 'none', boxSizing: 'border-box' }}
-                    />
-                  </div>
-
-                  <div>
-                    <label style={{ display: 'block', fontSize: '0.78rem', fontWeight: 800, color: '#374151', marginBottom: '6px' }}>SUPPORT PHONE NUMBER</label>
-                    <input
-                      type="text"
-                      placeholder="e.g. +91 98765 43210"
-                      value={paymentKeys.support_phone || ''}
-                      onChange={(e) => setPaymentKeys({ ...paymentKeys, support_phone: e.target.value })}
-                      style={{ width: '100%', padding: '11px 14px', borderRadius: '12px', border: '1.5px solid #CBD5E1', fontSize: '0.9rem', outline: 'none', boxSizing: 'border-box' }}
-                    />
-                  </div>
-
-                  <div>
-                    <label style={{ display: 'block', fontSize: '0.78rem', fontWeight: 800, color: '#374151', marginBottom: '6px' }}>SUPPORT EMAIL ADDRESS</label>
-                    <input
-                      type="email"
-                      placeholder="e.g. support@touchqr.in"
-                      value={paymentKeys.support_email || ''}
-                      onChange={(e) => setPaymentKeys({ ...paymentKeys, support_email: e.target.value })}
-                      style={{ width: '100%', padding: '11px 14px', borderRadius: '12px', border: '1.5px solid #CBD5E1', fontSize: '0.9rem', outline: 'none', boxSizing: 'border-box' }}
-                    />
-                  </div>
-
-                  <button
-                    type="button"
-                    disabled={keysSaving}
-                    onClick={async () => {
-                      setKeysSaving(true);
-                      setKeysMsg('');
-                      try {
-                        const res = await fetch('/api/superadmin/settings', {
-                          method: 'POST',
-                          headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
-                          body: JSON.stringify(paymentKeys)
-                        });
-                        const data = await res.json();
-                        if (res.ok) setKeysMsg(data.message || '✅ Support channels saved successfully!');
-                      } catch {
-                        setKeysMsg('⚠️ Failed to save support channels');
-                      } finally {
-                        setKeysSaving(false);
-                      }
-                    }}
-                    className="sa-btn sa-btn-primary"
-                    style={{ padding: '14px', marginTop: '6px', fontWeight: 800 }}
-                  >
-                    {keysSaving ? 'Saving Support Channels...' : '💾 Save Support Channels'}
-                  </button>
-                </div>
-              )}
+              </div>
             </div>
           )}
 

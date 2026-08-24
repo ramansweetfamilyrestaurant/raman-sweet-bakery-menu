@@ -1977,3 +1977,505 @@
   color: var(--sa-text-muted);
   font-weight: 600;
 }
+
+/* ========================================================================= */
+/* SUPER ADMIN 2.2 — SETTINGS & CONFIGURATION SYSTEM                          */
+/* ========================================================================= */
+
+.sa-settings-layout {
+  display: grid;
+  grid-template-columns: 280px 1fr;
+  gap: 20px;
+  align-items: start;
+}
+
+@media (max-width: 960px) {
+  .sa-settings-layout {
+    grid-template-columns: 1fr;
+    gap: 16px;
+  }
+}
+
+.sa-settings-sidebar {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.sa-settings-nav-list {
+  background: #FFFFFF;
+  border: 1px solid var(--sa-border);
+  border-radius: var(--sa-radius-lg);
+  padding: 8px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
+}
+
+@media (max-width: 960px) {
+  .sa-settings-nav-list {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 6px;
+    padding: 6px;
+  }
+}
+
+@media (max-width: 640px) {
+  .sa-settings-nav-list {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+.sa-settings-nav-btn {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 14px;
+  border-radius: var(--sa-radius-md);
+  border: 1px solid transparent;
+  background: transparent;
+  color: var(--sa-text-muted);
+  cursor: pointer;
+  text-align: left;
+  transition: var(--sa-transition);
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.sa-settings-nav-btn:hover {
+  background: var(--sa-surface-subtle);
+  color: var(--sa-text-main);
+}
+
+.sa-settings-nav-btn.active {
+  background: #0A2315;
+  color: #DFBA67;
+  border-color: rgba(212, 175, 55, 0.4);
+  box-shadow: 0 2px 8px rgba(10, 35, 21, 0.2);
+}
+
+.sa-settings-nav-btn.active .sa-settings-nav-sub {
+  color: #A7F3D0;
+}
+
+.sa-settings-nav-icon-wrap {
+  width: 32px;
+  height: 32px;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--sa-surface-subtle);
+  color: var(--sa-text-main);
+  flex-shrink: 0;
+}
+
+.sa-settings-nav-btn.active .sa-settings-nav-icon-wrap {
+  background: rgba(223, 186, 103, 0.15);
+  color: #DFBA67;
+}
+
+.sa-settings-nav-text {
+  display: flex;
+  flex-direction: column;
+}
+
+.sa-settings-nav-label {
+  font-size: 0.84rem;
+  font-weight: 800;
+  line-height: 1.2;
+}
+
+.sa-settings-nav-sub {
+  font-size: 0.68rem;
+  color: var(--sa-text-muted);
+  font-weight: 600;
+}
+
+/* Diagnostics Mini Card */
+.sa-settings-diagnostics-card {
+  background: #FFFFFF;
+  border: 1px solid var(--sa-border);
+  border-radius: var(--sa-radius-lg);
+  padding: 16px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
+}
+
+.sa-settings-diagnostics-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 0.82rem;
+  font-weight: 900;
+  color: var(--sa-text-main);
+  margin-bottom: 12px;
+  padding-bottom: 8px;
+  border-bottom: 1px solid var(--sa-border);
+}
+
+.sa-settings-diagnostics-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.sa-settings-diagnostics-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-size: 0.72rem;
+}
+
+.sa-settings-diagnostics-label {
+  color: var(--sa-text-muted);
+  font-weight: 700;
+}
+
+.sa-settings-diagnostics-val {
+  color: var(--sa-text-main);
+  font-weight: 800;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+/* Main Settings Configuration Card */
+.sa-settings-main-card {
+  background: #FFFFFF;
+  border: 1px solid var(--sa-border);
+  border-radius: var(--sa-radius-lg);
+  padding: 24px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+}
+
+.sa-settings-form-header {
+  padding-bottom: 14px;
+  border-bottom: 1px solid var(--sa-border);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.sa-settings-form-title {
+  font-size: 1.1rem;
+  font-weight: 900;
+  color: var(--sa-text-main);
+  margin: 0 0 2px 0;
+}
+
+.sa-settings-form-desc {
+  font-size: 0.76rem;
+  color: var(--sa-text-muted);
+  font-weight: 600;
+  margin: 0;
+}
+
+.sa-settings-field-group {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.sa-settings-label {
+  font-size: 0.76rem;
+  font-weight: 800;
+  color: var(--sa-text-main);
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.sa-settings-input-wrap {
+  position: relative;
+  width: 100%;
+}
+
+.sa-settings-input {
+  width: 100%;
+  padding: 10px 14px;
+  border-radius: var(--sa-radius-md);
+  border: 1px solid var(--sa-border);
+  font-size: 0.86rem;
+  background: var(--sa-surface-subtle);
+  color: var(--sa-text-main);
+  box-sizing: border-box;
+  transition: var(--sa-transition);
+}
+
+.sa-settings-input:focus {
+  background: #FFFFFF;
+  border-color: var(--sa-accent);
+  outline: none;
+  box-shadow: 0 0 0 3px rgba(212, 175, 55, 0.15);
+}
+
+.sa-settings-toggle-pass-btn {
+  position: absolute;
+  right: 12px;
+  top: 50%;
+  transform: translateY(-50%);
+  background: none;
+  border: none;
+  cursor: pointer;
+  color: var(--sa-text-muted);
+  padding: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* ========================================================================= */
+/* SUPER ADMIN 2.2 — SETTINGS & CONFIGURATION SYSTEM                          */
+/* ========================================================================= */
+
+.sa-settings-layout {
+  display: grid;
+  grid-template-columns: 280px 1fr;
+  gap: 20px;
+  align-items: start;
+}
+
+@media (max-width: 960px) {
+  .sa-settings-layout {
+    grid-template-columns: 1fr;
+    gap: 16px;
+  }
+}
+
+.sa-settings-sidebar {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.sa-settings-nav-list {
+  background: #FFFFFF;
+  border: 1px solid var(--sa-border);
+  border-radius: var(--sa-radius-lg);
+  padding: 8px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
+}
+
+@media (max-width: 960px) {
+  .sa-settings-nav-list {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 6px;
+    padding: 6px;
+  }
+}
+
+@media (max-width: 640px) {
+  .sa-settings-nav-list {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+.sa-settings-nav-btn {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 14px;
+  border-radius: var(--sa-radius-md);
+  border: 1px solid transparent;
+  background: transparent;
+  color: var(--sa-text-muted);
+  cursor: pointer;
+  text-align: left;
+  transition: var(--sa-transition);
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.sa-settings-nav-btn:hover {
+  background: var(--sa-surface-subtle);
+  color: var(--sa-text-main);
+}
+
+.sa-settings-nav-btn.active {
+  background: #0A2315;
+  color: #DFBA67;
+  border-color: rgba(212, 175, 55, 0.4);
+  box-shadow: 0 2px 8px rgba(10, 35, 21, 0.2);
+}
+
+.sa-settings-nav-btn.active .sa-settings-nav-sub {
+  color: #A7F3D0;
+}
+
+.sa-settings-nav-icon-wrap {
+  width: 32px;
+  height: 32px;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--sa-surface-subtle);
+  color: var(--sa-text-main);
+  flex-shrink: 0;
+}
+
+.sa-settings-nav-btn.active .sa-settings-nav-icon-wrap {
+  background: rgba(223, 186, 103, 0.15);
+  color: #DFBA67;
+}
+
+.sa-settings-nav-text {
+  display: flex;
+  flex-direction: column;
+}
+
+.sa-settings-nav-label {
+  font-size: 0.84rem;
+  font-weight: 800;
+  line-height: 1.2;
+}
+
+.sa-settings-nav-sub {
+  font-size: 0.68rem;
+  color: var(--sa-text-muted);
+  font-weight: 600;
+}
+
+/* Diagnostics Mini Card */
+.sa-settings-diagnostics-card {
+  background: #FFFFFF;
+  border: 1px solid var(--sa-border);
+  border-radius: var(--sa-radius-lg);
+  padding: 16px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
+}
+
+.sa-settings-diagnostics-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 0.82rem;
+  font-weight: 900;
+  color: var(--sa-text-main);
+  margin-bottom: 12px;
+  padding-bottom: 8px;
+  border-bottom: 1px solid var(--sa-border);
+}
+
+.sa-settings-diagnostics-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.sa-settings-diagnostics-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-size: 0.72rem;
+}
+
+.sa-settings-diagnostics-label {
+  color: var(--sa-text-muted);
+  font-weight: 700;
+}
+
+.sa-settings-diagnostics-val {
+  color: var(--sa-text-main);
+  font-weight: 800;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+/* Main Settings Configuration Card */
+.sa-settings-main-card {
+  background: #FFFFFF;
+  border: 1px solid var(--sa-border);
+  border-radius: var(--sa-radius-lg);
+  padding: 24px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+}
+
+.sa-settings-form-header {
+  padding-bottom: 14px;
+  border-bottom: 1px solid var(--sa-border);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.sa-settings-form-title {
+  font-size: 1.1rem;
+  font-weight: 900;
+  color: var(--sa-text-main);
+  margin: 0 0 2px 0;
+}
+
+.sa-settings-form-desc {
+  font-size: 0.76rem;
+  color: var(--sa-text-muted);
+  font-weight: 600;
+  margin: 0;
+}
+
+.sa-settings-field-group {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.sa-settings-label {
+  font-size: 0.76rem;
+  font-weight: 800;
+  color: var(--sa-text-main);
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.sa-settings-input-wrap {
+  position: relative;
+  width: 100%;
+}
+
+.sa-settings-input {
+  width: 100%;
+  padding: 10px 14px;
+  border-radius: var(--sa-radius-md);
+  border: 1px solid var(--sa-border);
+  font-size: 0.86rem;
+  background: var(--sa-surface-subtle);
+  color: var(--sa-text-main);
+  box-sizing: border-box;
+  transition: var(--sa-transition);
+}
+
+.sa-settings-input:focus {
+  background: #FFFFFF;
+  border-color: var(--sa-accent);
+  outline: none;
+  box-shadow: 0 0 0 3px rgba(212, 175, 55, 0.15);
+}
+
+.sa-settings-toggle-pass-btn {
+  position: absolute;
+  right: 12px;
+  top: 50%;
+  transform: translateY(-50%);
+  background: none;
+  border: none;
+  cursor: pointer;
+  color: var(--sa-text-muted);
+  padding: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
