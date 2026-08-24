@@ -2755,7 +2755,7 @@ export default function SuperAdminDashboard({ token, username, onLogout, onRetur
 
                   {/* 🖼️ TAB 3: BRANDING */}
                   {secTab === 'branding' && (
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '16px', minWidth: 0, width: '100%', maxWidth: '100%', overflow: 'hidden' }}>
                       <div className="sa-settings-form-header">
                         <div>
                           <h3 className="sa-settings-form-title">🖼️ Platform Branding</h3>
@@ -2763,46 +2763,67 @@ export default function SuperAdminDashboard({ token, username, onLogout, onRetur
                         </div>
                       </div>
 
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '16px', background: '#F8FAFC', padding: '16px', borderRadius: '12px', border: '1px solid #E2E8F0' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '14px', background: '#F8FAFC', padding: '14px', borderRadius: '12px', border: '1px solid #E2E8F0', minWidth: 0, width: '100%', boxSizing: 'border-box', overflow: 'hidden' }}>
                         {logoPreview || (paymentKeys.platform_logo_url && !logoErr) ? (
                           <img
                             src={logoPreview || resolveImageUrl(paymentKeys.platform_logo_url)}
                             alt="Logo"
                             onError={() => setLogoErr(true)}
-                            style={{ width: '64px', height: '64px', borderRadius: '12px', objectFit: 'contain', background: '#FFF', padding: '4px', border: '1.5px solid #D4AF37' }}
+                            style={{ width: '56px', height: '56px', borderRadius: '12px', objectFit: 'contain', background: '#FFF', padding: '3px', border: '1.5px solid #D4AF37', flexShrink: 0 }}
                           />
                         ) : (
-                          <div style={{ width: '64px', height: '64px', borderRadius: '12px', background: '#0A2315', color: '#DFBA67', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 900, fontSize: '1.8rem' }}>👑</div>
+                          <div style={{ width: '56px', height: '56px', borderRadius: '12px', background: '#0A2315', color: '#DFBA67', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 900, fontSize: '1.6rem', flexShrink: 0 }}>👑</div>
                         )}
-                        <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '6px' }}>
-                          <strong style={{ fontSize: '0.86rem', color: 'var(--sa-text-main)' }}>Platform Master Logo</strong>
-                          <span style={{ fontSize: '0.72rem', color: 'var(--sa-text-muted)' }}>PNG, WebP, or SVG recommended (512x512 max).</span>
-                          <input
-                            type="file"
-                            accept="image/*"
-                            onChange={async (e) => {
-                              const file = e.target.files?.[0];
-                              if (!file) return;
-                              setUploadingLogo(true);
-                              try {
-                                const uploadedData = await uploadImage(file, token, 'superadmin');
-                                let newUrl = typeof uploadedData === 'string' ? uploadedData : (uploadedData?.r2ProxyUrl || uploadedData?.url || uploadedData?.path);
-                                const updated = { ...paymentKeys, platform_logo_url: newUrl };
-                                setPaymentKeys(updated);
-                                await fetch('/api/superadmin/settings', {
-                                  method: 'POST',
-                                  headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
-                                  body: JSON.stringify(updated)
-                                });
-                                setKeysMsg('✅ Platform Logo updated successfully!');
-                              } catch (err) {
-                                alert('Logo upload failed: ' + err.message);
-                              } finally {
-                                setUploadingLogo(false);
-                              }
+                        <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', gap: '4px', overflow: 'hidden' }}>
+                          <strong style={{ fontSize: '0.84rem', color: 'var(--sa-text-main)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>Platform Master Logo</strong>
+                          <span style={{ fontSize: '0.70rem', color: 'var(--sa-text-muted)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>PNG, WebP, or SVG (512x512 max)</span>
+                          
+                          <label 
+                            className="sa-btn sa-btn-secondary sa-btn-sm" 
+                            style={{ 
+                              cursor: 'pointer', 
+                              display: 'inline-flex', 
+                              alignItems: 'center', 
+                              gap: '6px', 
+                              width: 'fit-content', 
+                              padding: '6px 12px', 
+                              marginTop: '4px',
+                              fontSize: '0.74rem',
+                              fontWeight: 800,
+                              background: '#FFFFFF',
+                              border: '1px solid #CBD5E1',
+                              borderRadius: '8px'
                             }}
-                            style={{ fontSize: '0.78rem', marginTop: '4px' }}
-                          />
+                          >
+                            <Upload size={14} />
+                            <span>{uploadingLogo ? 'Uploading...' : 'Upload New Logo'}</span>
+                            <input
+                              type="file"
+                              accept="image/*"
+                              style={{ display: 'none' }}
+                              onChange={async (e) => {
+                                const file = e.target.files?.[0];
+                                if (!file) return;
+                                setUploadingLogo(true);
+                                try {
+                                  const uploadedData = await uploadImage(file, token, 'superadmin');
+                                  let newUrl = typeof uploadedData === 'string' ? uploadedData : (uploadedData?.r2ProxyUrl || uploadedData?.url || uploadedData?.path);
+                                  const updated = { ...paymentKeys, platform_logo_url: newUrl };
+                                  setPaymentKeys(updated);
+                                  await fetch('/api/superadmin/settings', {
+                                    method: 'POST',
+                                    headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+                                    body: JSON.stringify(updated)
+                                  });
+                                  setKeysMsg('✅ Platform Logo updated successfully!');
+                                } catch (err) {
+                                  alert('Logo upload failed: ' + err.message);
+                                } finally {
+                                  setUploadingLogo(false);
+                                }
+                              }}
+                            />
+                          </label>
                         </div>
                       </div>
                     </div>
