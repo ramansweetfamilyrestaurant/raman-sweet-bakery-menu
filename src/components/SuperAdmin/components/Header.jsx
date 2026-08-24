@@ -69,7 +69,7 @@ export default function Header({
 
       {/* CENTER: Flex Search Field */}
       <div className="sa-header-search-container">
-        <Search size={14} className="sa-header-search-icon" />
+        <Search size={13} className="sa-header-search-icon" />
         <input
           type="text"
           placeholder={currentPlaceholder}
@@ -77,6 +77,28 @@ export default function Header({
           onChange={(e) => setSearchQuery(e.target.value)}
           className="sa-header-search-input"
         />
+        {searchQuery && (
+          <button
+            type="button"
+            onClick={() => setSearchQuery('')}
+            style={{
+              position: 'absolute',
+              right: '8px',
+              top: '50%',
+              transform: 'translateY(-50%)',
+              background: 'none',
+              border: 'none',
+              cursor: 'pointer',
+              color: 'var(--sa-text-muted)',
+              padding: '2px',
+              display: 'flex',
+              alignItems: 'center'
+            }}
+            title="Clear search"
+          >
+            ✕
+          </button>
+        )}
       </div>
 
       {/* RIGHT: Quick Broadcast, SSL Pill & Profile Avatar */}
@@ -84,18 +106,20 @@ export default function Header({
         {onOpenBroadcast && (
           <button
             onClick={onOpenBroadcast}
+            className="sa-quick-broadcast-btn"
             style={{
               background: 'rgba(212, 175, 55, 0.12)',
               border: '1px solid rgba(212, 175, 55, 0.35)',
               color: 'var(--sa-accent-hover, #B48F27)',
-              padding: '5px 9px',
+              padding: '5px 10px',
               borderRadius: 'var(--sa-radius-full)',
               cursor: 'pointer',
               display: 'flex',
               alignItems: 'center',
               gap: '4px',
               fontSize: '0.72rem',
-              fontWeight: 800
+              fontWeight: 800,
+              transition: 'var(--sa-transition)'
             }}
             title="Broadcast global announcement notice to all tenant panels"
           >
@@ -118,7 +142,7 @@ export default function Header({
           <div className="sa-profile-avatar" title={`Logged in as ${username || 'Super Admin'}`}>
             {username ? username.charAt(0).toUpperCase() : 'S'}
           </div>
-          <span className="sa-profile-name" style={{ fontSize: '0.82rem', fontWeight: 800, color: 'var(--sa-text-main)' }}>
+          <span className="sa-profile-name" style={{ fontSize: '0.80rem', fontWeight: 800, color: 'var(--sa-text-main)' }}>
             {username || 'Super Admin'}
           </span>
           {onLogout && (
