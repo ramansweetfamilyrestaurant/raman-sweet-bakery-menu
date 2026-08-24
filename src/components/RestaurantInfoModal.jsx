@@ -80,27 +80,29 @@ export default function RestaurantInfoModal({ info, onClose, onOpenReviewModal }
 
         {/* Content Body */}
         <div style={{ padding: '20px', overflowY: 'auto' }}>
-          {/* FSSAI & Quality Seals */}
-          <div style={{
-            background: '#ECFDF5',
-            border: '1px solid #A7F3D0',
-            borderRadius: 'var(--radius-md)',
-            padding: '12px 14px',
-            marginBottom: '16px',
-            display: 'flex',
-            alignItems: 'center',
-            gap: '10px'
-          }}>
-            <ShieldCheck size={24} color="#16A34A" />
-            <div>
-              <h4 style={{ fontSize: '0.82rem', fontWeight: 800, color: '#16A34A' }}>
-                {info?.badge ? `FSSAI Certified ${info.badge}` : 'FSSAI Certified Restaurant'}
-              </h4>
-              <p style={{ fontSize: '0.74rem', color: '#15803D', margin: 0 }}>
-                {info?.fssai_lic_no ? `FSSAI Lic No: ${info.fssai_lic_no} • ` : ''}{info?.tagline || 'Quality Food & Service'}
-              </p>
+          {/* FSSAI & Quality Seals - ONLY rendered when FSSAI license number is configured */}
+          {Boolean(info?.fssai_lic_no && String(info.fssai_lic_no).trim()) && (
+            <div style={{
+              background: '#ECFDF5',
+              border: '1px solid #A7F3D0',
+              borderRadius: 'var(--radius-md)',
+              padding: '12px 14px',
+              marginBottom: '16px',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '10px'
+            }}>
+              <ShieldCheck size={24} color="#16A34A" />
+              <div>
+                <h4 style={{ fontSize: '0.82rem', fontWeight: 800, color: '#16A34A', margin: '0 0 2px 0' }}>
+                  {info?.badge ? `FSSAI Certified ${info.badge}` : 'FSSAI Certified'}
+                </h4>
+                <p style={{ fontSize: '0.74rem', color: '#15803D', margin: 0 }}>
+                  FSSAI Lic No: {String(info.fssai_lic_no).trim()}
+                </p>
+              </div>
             </div>
-          </div>
+          )}
 
           {/* Opening Hours */}
           {info?.openingHours && (
