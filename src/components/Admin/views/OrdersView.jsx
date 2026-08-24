@@ -635,6 +635,24 @@ export default function OrdersView({
                           <>
                             {order.kitchen_prepared !== 1 && order.kitchen_prepared !== true && order.kitchen_prepared !== '1' && (
                               <>
+                                {kdsEnabled && (
+                                  <button
+                                    onClick={() => onUpdateStatus(order.id, 'kitchen', { sent_to_kds: 1 })}
+                                    style={{
+                                      background: '#0F172A',
+                                      color: '#38BDF8',
+                                      border: '1px solid #38BDF8',
+                                      padding: '8px 14px',
+                                      borderRadius: '10px',
+                                      fontSize: '0.8rem',
+                                      fontWeight: 800,
+                                      cursor: 'pointer',
+                                      minHeight: '40px'
+                                    }}
+                                  >
+                                    🍳 Send to Kitchen
+                                  </button>
+                                )}
                                 <button
                                   onClick={() => onUpdateStatus(order.id, 'accepted', { sent_to_kds: 0, kitchen_prepared: 1 })}
                                   style={{
@@ -655,24 +673,6 @@ export default function OrdersView({
                                 >
                                   ⚡ Mark Ready
                                 </button>
-                                {kdsEnabled && (
-                                  <button
-                                    onClick={() => onUpdateStatus(order.id, 'kitchen', { sent_to_kds: 1 })}
-                                    style={{
-                                      background: '#0F172A',
-                                      color: '#38BDF8',
-                                      border: '1px solid #38BDF8',
-                                      padding: '8px 14px',
-                                      borderRadius: '10px',
-                                      fontSize: '0.8rem',
-                                      fontWeight: 800,
-                                      cursor: 'pointer',
-                                      minHeight: '40px'
-                                    }}
-                                  >
-                                    🍳 Send to Kitchen
-                                  </button>
-                                )}
                               </>
                             )}
                             <button
