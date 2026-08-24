@@ -1220,9 +1220,34 @@ const handleUpdateSettings = async (req, res) => {
     const { name, tagline, logo, phone, address, openingHours, google_review_url, google_reviews_enabled, filters_visibility, currency_symbol, fssai_lic_no, resto_type, business_type, food_type, service_model, whatsapp_number, whatsapp_enabled, theme_color, latitude, longitude, max_distance_meters, gst_enabled, gstin_number, total_tables, total_cabins, total_rooms, total_vip, table_prefix, order_retention_days, custom_domain, location_initialized, owner_name, city, state, pincode, table_verification_mode, staff_verification_timeout_seconds } = req.body;
 
     let cleanDomain = null;
+    let isCustomDomainAllowed = true;
     if (custom_domain !== undefined) {
       cleanDomain = (custom_domain || '').toLowerCase().trim().replace(/^https?:\/\//, '').replace(/\/.*$/, '').replace(/^www\./, '');
-      if (cleanDomain) {
+
+      // 🌐 AUTHORITATIVE SAAS PLAN CUSTOM DOMAIN ENFORCEMENT
+      const restoRows = await query('SELECT plan_tier, custom_domain FROM restaurants WHERE id = $1', [targetId]);
+      if (!restoRows || restoRows.length === 0) {
+        return res.status(404).json({ error: 'Restaurant not found' });
+      }
+      const currentPlanTier = (restoRows[0]?.plan_tier || 'basic').toLowerCase();
+      const planRows = await query('SELECT custom_domain_enabled FROM saas_plans WHERE LOWER(key) = $1', [currentPlanTier]);
+      isCustomDomainAllowed = planRows && planRows.length > 0
+        ? (planRows[0].custom_domain_enabled === 1 || planRows[0].custom_domain_enabled === true || planRows[0].custom_domain_enabled === '1')
+        : false;
+
+      if (cleanDomain && !isCustomDomainAllowed) {
+        return res.status(403).json({
+          success: false,
+          error: 'feature_locked',
+          feature: 'custom_domain_enabled',
+          message: 'Custom domain mapping is not included in your current SaaS plan. Please upgrade your plan to connect a custom domain.'
+        });
+      }
+
+      if (!isCustomDomainAllowed && !cleanDomain) {
+        // Plan is OFF: ignore empty domain mutations to preserve existing configured domain
+        cleanDomain = null;
+      } else if (cleanDomain) {
         const domainCheck = await query('SELECT id FROM restaurants WHERE (LOWER(custom_domain) = $1 OR LOWER(custom_domain) = $2) AND id != $3', [cleanDomain, `www.${cleanDomain}`, targetId]);
         if (domainCheck && domainCheck.length > 0) {
           return res.status(400).json({ error: `Domain '${cleanDomain}' is already mapped to another restaurant!` });
@@ -1430,7 +1455,7 @@ const handleUpdateSettings = async (req, res) => {
         table_prefix !== undefined ? table_prefix : null,
         order_retention_days !== undefined ? Number(order_retention_days) : null,
         google_reviews_enabled !== undefined ? (google_reviews_enabled !== false && google_reviews_enabled !== 0 ? 1 : 0) : null,
-        cleanDomain !== null ? cleanDomain : (custom_domain !== undefined ? '' : null),
+        cleanDomain !== null ? cleanDomain : (custom_domain !== undefined && isCustomDomainAllowed ? '' : null),
         locBool,
         owner_name !== undefined ? owner_name : null,
         city !== undefined ? city : null,
@@ -1496,7 +1521,7 @@ const handleUpdateSettings = async (req, res) => {
             table_prefix !== undefined ? table_prefix : null,
             order_retention_days !== undefined ? Number(order_retention_days) : null,
             google_reviews_enabled !== undefined ? (google_reviews_enabled !== false && google_reviews_enabled !== 0 ? 1 : 0) : null,
-            cleanDomain !== null ? cleanDomain : (custom_domain !== undefined ? '' : null),
+            cleanDomain !== null ? cleanDomain : (custom_domain !== undefined && isCustomDomainAllowed ? '' : null),
             locBool,
             owner_name !== undefined ? owner_name : null,
             city !== undefined ? city : null,

@@ -1008,24 +1008,41 @@ export default function SetupView({
             />
           </div>
 
-          <div>
-            <label style={{ fontSize: '0.74rem', fontWeight: 800, color: '#0F172A', display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '6px', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
-              🌐 Custom Menu Domain (CNAME):
-              <span style={{ fontSize: '0.65rem', padding: '2px 6px', borderRadius: '4px', background: '#DCFCE7', color: '#15803D', fontWeight: 800 }}>
-                ENABLED
-              </span>
-            </label>
-            <input
-              type="text"
-              placeholder="e.g. menu.yourrestaurant.com"
-              value={settingsForm.custom_domain || ''}
-              onChange={(e) => setSettingsForm({ ...settingsForm, custom_domain: e.target.value })}
-              style={{ width: '100%', padding: '10px 14px', borderRadius: '10px', border: '1px solid #CBD5E1', fontSize: '0.9rem', boxSizing: 'border-box' }}
-            />
-            <div style={{ fontSize: '0.70rem', color: '#64748B', marginTop: '4px' }}>
-              Point CNAME record in GoDaddy to: <strong style={{ color: '#059669' }}>cname.vercel-dns.com</strong>
-            </div>
-          </div>
+          {/* Custom Menu Domain (CNAME) - Only displayed if custom_domain_enabled on plan */}
+          {(() => {
+            const isCustomDomainPlanAllowed = Boolean(
+              settingsForm?.custom_domain_enabled === 1 ||
+              settingsForm?.custom_domain_enabled === true ||
+              settingsForm?.custom_domain_enabled === '1' ||
+              restaurantInfo?.custom_domain_enabled === 1 ||
+              restaurantInfo?.custom_domain_enabled === true ||
+              restaurantInfo?.custom_domain_enabled === '1' ||
+              restaurantInfo?.permissions?.custom_domain_enabled === true
+            );
+
+            if (!isCustomDomainPlanAllowed) return null;
+
+            return (
+              <div>
+                <label style={{ fontSize: '0.74rem', fontWeight: 800, color: '#0F172A', display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '6px', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
+                  🌐 Custom Menu Domain (CNAME):
+                  <span style={{ fontSize: '0.65rem', padding: '2px 6px', borderRadius: '4px', background: '#DCFCE7', color: '#15803D', fontWeight: 800 }}>
+                    INCLUDED IN PLAN
+                  </span>
+                </label>
+                <input
+                  type="text"
+                  placeholder="e.g. menu.yourrestaurant.com"
+                  value={settingsForm.custom_domain || ''}
+                  onChange={(e) => setSettingsForm({ ...settingsForm, custom_domain: e.target.value })}
+                  style={{ width: '100%', padding: '10px 14px', borderRadius: '10px', border: '1px solid #CBD5E1', fontSize: '0.9rem', boxSizing: 'border-box' }}
+                />
+                <div style={{ fontSize: '0.70rem', color: '#64748B', marginTop: '4px' }}>
+                  Point CNAME record in GoDaddy to: <strong style={{ color: '#059669' }}>cname.vercel-dns.com</strong>
+                </div>
+              </div>
+            );
+          })()}
         </form>
       </AdminDrawer>
 
