@@ -77,27 +77,17 @@ export default function Header({
           onChange={(e) => setSearchQuery(e.target.value)}
           className="sa-header-search-input"
         />
-        {searchQuery && (
+        {searchQuery ? (
           <button
             type="button"
             onClick={() => setSearchQuery('')}
-            style={{
-              position: 'absolute',
-              right: '8px',
-              top: '50%',
-              transform: 'translateY(-50%)',
-              background: 'none',
-              border: 'none',
-              cursor: 'pointer',
-              color: 'var(--sa-text-muted)',
-              padding: '2px',
-              display: 'flex',
-              alignItems: 'center'
-            }}
+            className="sa-header-search-clear"
             title="Clear search"
           >
             ✕
           </button>
+        ) : (
+          <span className="sa-search-shortcut-hint">Ctrl K</span>
         )}
       </div>
 
@@ -107,20 +97,6 @@ export default function Header({
           <button
             onClick={onOpenBroadcast}
             className="sa-quick-broadcast-btn"
-            style={{
-              background: 'rgba(212, 175, 55, 0.12)',
-              border: '1px solid rgba(212, 175, 55, 0.35)',
-              color: 'var(--sa-accent-hover, #B48F27)',
-              padding: '5px 10px',
-              borderRadius: 'var(--sa-radius-full)',
-              cursor: 'pointer',
-              display: 'flex',
-              alignItems: 'center',
-              gap: '4px',
-              fontSize: '0.72rem',
-              fontWeight: 800,
-              transition: 'var(--sa-transition)'
-            }}
             title="Broadcast global announcement notice to all tenant panels"
           >
             <Megaphone size={13} />
@@ -128,38 +104,28 @@ export default function Header({
           </button>
         )}
 
-        {/* Compact SSL Status Badge */}
-        <div className="sa-ssl-pill" title="256-Bit SSL Encrypted Connection">
-          <ShieldCheck size={14} className="sa-ssl-icon" />
-          <div className="sa-ssl-text-box">
-            <span className="sa-ssl-text-top">SSL</span>
-            <span className="sa-ssl-text-bottom">SECURE</span>
-          </div>
+        {/* Sleek Minimalist SSL Status Badge */}
+        <div className="sa-ssl-badge" title="256-Bit SSL Encrypted & Verified Connection">
+          <span className="sa-live-dot active" />
+          <ShieldCheck size={13} color="#16A34A" />
+          <span className="sa-ssl-text">SSL SECURE</span>
         </div>
 
         {/* Profile Avatar & Quick Logout */}
-        <div className="sa-header-profile" style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+        <div className="sa-header-profile">
           <div className="sa-profile-avatar" title={`Logged in as ${username || 'Super Admin'}`}>
             {username ? username.charAt(0).toUpperCase() : 'S'}
           </div>
-          <span className="sa-profile-name" style={{ fontSize: '0.80rem', fontWeight: 800, color: 'var(--sa-text-main)' }}>
+          <span className="sa-profile-name">
             {username || 'Super Admin'}
           </span>
           {onLogout && (
             <button
               onClick={onLogout}
-              style={{
-                background: 'none',
-                border: 'none',
-                color: '#EF4444',
-                cursor: 'pointer',
-                padding: '4px',
-                display: 'flex',
-                alignItems: 'center'
-              }}
+              className="sa-header-logout-btn"
               title="Logout from Super Admin"
             >
-              <LogOut size={16} />
+              <LogOut size={15} />
             </button>
           )}
         </div>
