@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { Layers, Save, CheckCircle2, Sparkles, AlertCircle, RefreshCw, Plus, X, Edit3, Trash2 } from 'lucide-react';
+import { Layers, Save, CheckCircle2, Sparkles, AlertCircle, RefreshCw, Plus, X, Edit3, Trash2, Crown, Users, Check } from 'lucide-react';
+import { SectionHeader, StatusBadge } from '../components';
 
 const toBoolInt = (val) => {
   if (val === undefined || val === null) return 1;
@@ -205,9 +206,9 @@ export default function SaaSPlansView({ token, restaurants = [] }) {
 
   if (loading) {
     return (
-      <div style={{ padding: '40px', textAlign: 'center', color: 'var(--sa-text-muted)' }}>
-        <RefreshCw className="animate-spin" style={{ width: '28px', height: '28px', margin: '0 auto 12px auto' }} />
-        <p style={{ fontWeight: 700 }}>Loading Master SaaS Plan Permission Matrix...</p>
+      <div style={{ padding: '60px', textAlign: 'center', color: 'var(--sa-text-muted)' }}>
+        <RefreshCw className="animate-spin" style={{ width: '32px', height: '32px', margin: '0 auto 14px auto', color: 'var(--sa-primary)' }} />
+        <p style={{ fontWeight: 800, fontSize: '0.95rem', color: 'var(--sa-text-main)' }}>Loading SaaS Plans & Feature Matrix...</p>
       </div>
     );
   }
@@ -238,54 +239,35 @@ export default function SaaSPlansView({ token, restaurants = [] }) {
   ];
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
-      {/* 👑 1. HEADER */}
-      <div style={{
-        display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-        flexWrap: 'wrap', gap: '16px', background: '#FFFFFF', padding: '18px 22px',
-        borderRadius: 'var(--sa-radius-lg)', border: '1px solid var(--sa-border)',
-        boxShadow: 'var(--sa-shadow-sm)'
-      }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-          <div style={{
-            width: '42px', height: '42px', borderRadius: '12px',
-            background: 'linear-gradient(135deg, #0A2315 0%, #164E2A 100%)',
-            color: '#D4AF37', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0
-          }}>
-            <Layers style={{ width: '22px', height: '22px' }} />
-          </div>
-          <div>
-            <h2 style={{ fontSize: '1.2rem', fontWeight: 900, color: 'var(--sa-text-main)', margin: 0 }}>
-              👑 SaaS Plans & Feature Matrix
-            </h2>
-            <p style={{ fontSize: '0.78rem', color: 'var(--sa-text-muted)', margin: '2px 0 0 0', fontWeight: 600 }}>
-              Manage pricing, limits and feature access across all tenant subscription tiers.
-            </p>
-          </div>
-        </div>
+    <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
+      {/* 👑 1. HEADER (USING SHARED SectionHeader) */}
+      <SectionHeader
+        title="👑 SaaS Plans & Feature Matrix"
+        subtitle="Manage pricing, limits and feature access across all tenant subscription tiers."
+        actions={
+          <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+            <button
+              type="button"
+              onClick={() => setShowCreateModal(true)}
+              className="sa-btn sa-btn-secondary sa-btn-sm"
+              style={{ fontWeight: 800 }}
+            >
+              <Plus size={14} /> Create Plan
+            </button>
 
-        <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap' }}>
-          <button
-            type="button"
-            onClick={() => setShowCreateModal(true)}
-            className="sa-btn sa-btn-secondary sa-btn-sm"
-            style={{ fontWeight: 900, display: 'flex', alignItems: 'center', gap: '6px' }}
-          >
-            <Plus size={14} /> + Create New Plan
-          </button>
-
-          <button
-            type="button"
-            onClick={handleSaveAllPlans}
-            disabled={saving}
-            className="sa-btn sa-btn-accent sa-btn-sm"
-            style={{ fontWeight: 900, display: 'flex', alignItems: 'center', gap: '6px' }}
-          >
-            <Save size={14} />
-            {saving ? 'Saving Matrix...' : 'Save All Plan Permissions'}
-          </button>
-        </div>
-      </div>
+            <button
+              type="button"
+              onClick={handleSaveAllPlans}
+              disabled={saving}
+              className="sa-btn sa-btn-accent sa-btn-sm"
+              style={{ fontWeight: 900 }}
+            >
+              <Save size={14} />
+              {saving ? 'Saving Matrix...' : 'Save All Plan Permissions'}
+            </button>
+          </div>
+        }
+      />
 
       {msg && (
         <div style={{ padding: '12px 16px', borderRadius: '12px', background: '#DCFCE7', color: '#15803D', fontWeight: 800, display: 'flex', alignItems: 'center', gap: '8px' }}>
@@ -299,95 +281,131 @@ export default function SaaSPlansView({ token, restaurants = [] }) {
         </div>
       )}
 
-      {/* 📦 2. PLAN SUMMARY CARDS ROW */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: '16px' }}>
-        {plans.map(p => {
-          const subscriberCount = (restaurants || []).filter(r => (r.plan_tier || 'pro').toLowerCase() === p.key.toLowerCase()).length;
-          const isCustom = !['basic', 'pro', 'enterprise'].includes(p.key.toLowerCase());
+      {/* 📦 2. PLAN SUMMARY CARDS ROW (4 PROMINENT CARDS AT THE TOP) */}
+      <div>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
+          <h3 style={{ fontSize: '1.05rem', fontWeight: 900, color: 'var(--sa-text-main)', margin: 0, display: 'flex', alignItems: 'center', gap: '6px' }}>
+            <Layers size={18} color="var(--sa-primary)" /> Available Subscription Tiers ({plans.length})
+          </h3>
+          <span style={{ fontSize: '0.74rem', color: 'var(--sa-text-muted)', fontWeight: 600 }}>Active Tier Overview</span>
+        </div>
 
-          return (
-            <div
-              key={p.key}
-              className="sa-card hover-lift"
-              style={{
-                background: '#FFFFFF',
-                border: '1px solid var(--sa-border)',
-                borderRadius: '16px',
-                padding: '18px',
-                display: 'flex',
-                flexDirection: 'column',
-                justifyContent: 'space-between',
-                gap: '12px',
-                boxShadow: 'var(--sa-shadow-sm)'
-              }}
-            >
-              <div>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '8px' }}>
-                  <div>
-                    <span style={{ fontSize: '0.72rem', fontWeight: 900, color: 'var(--sa-primary)', background: '#F1F5F9', padding: '2px 7px', borderRadius: '6px' }}>
-                      {p.badge || '✨ TIER'}
-                    </span>
-                    <h3 style={{ fontSize: '1.05rem', fontWeight: 900, margin: '6px 0 2px 0', color: 'var(--sa-text-main)' }}>
-                      {p.name}
-                    </h3>
-                    <span style={{ fontSize: '0.72rem', color: 'var(--sa-text-muted)', fontFamily: 'monospace' }}>
-                      {p.key}
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))', gap: '16px' }}>
+          {plans.map(p => {
+            const subscriberCount = (restaurants || []).filter(r => (r.plan_tier || 'pro').toLowerCase() === p.key.toLowerCase()).length;
+            const isCustom = !['basic', 'pro', 'enterprise'].includes(p.key.toLowerCase());
+            const isPopular = p.key.toLowerCase() === 'pro';
+
+            return (
+              <div
+                key={p.key}
+                className="sa-stat-card hover-lift"
+                style={{
+                  padding: '20px',
+                  border: isPopular ? '2px solid var(--sa-accent)' : '1px solid var(--sa-border)',
+                  borderRadius: 'var(--sa-radius-lg)',
+                  display: 'flex',
+                  flexDirection: 'column',
+                  justifyContent: 'space-between',
+                  gap: '14px',
+                  position: 'relative',
+                  background: 'var(--sa-surface)'
+                }}
+              >
+                <div>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '10px' }}>
+                    <div>
+                      <span style={{
+                        fontSize: '0.70rem',
+                        fontWeight: 900,
+                        color: isPopular ? '#0A2315' : 'var(--sa-text-main)',
+                        background: isPopular ? 'var(--sa-accent-light)' : 'var(--sa-surface-subtle)',
+                        border: isPopular ? '1px solid var(--sa-accent)' : '1px solid var(--sa-border)',
+                        padding: '2px 8px',
+                        borderRadius: 'var(--sa-radius-full)',
+                        textTransform: 'uppercase'
+                      }}>
+                        {p.badge || '✨ TIER'}
+                      </span>
+                      <h3 style={{ fontSize: '1.15rem', fontWeight: 900, margin: '8px 0 2px 0', color: 'var(--sa-text-main)' }}>
+                        {p.name}
+                      </h3>
+                      <span style={{ fontSize: '0.72rem', color: 'var(--sa-text-muted)', fontFamily: 'monospace' }}>
+                        ID: {p.key}
+                      </span>
+                    </div>
+
+                    <span style={{
+                      fontSize: '0.72rem',
+                      background: subscriberCount > 0 ? '#DCFCE7' : '#F1F5F9',
+                      color: subscriberCount > 0 ? '#15803D' : '#64748B',
+                      border: subscriberCount > 0 ? '1px solid #86EFAC' : '1px solid #E2E8F0',
+                      padding: '3px 9px',
+                      borderRadius: 'var(--sa-radius-full)',
+                      fontWeight: 800,
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '4px'
+                    }}>
+                      <Users size={12} /> {subscriberCount} {subscriberCount === 1 ? 'Resto' : 'Restos'}
                     </span>
                   </div>
-                  <span style={{ fontSize: '0.72rem', background: '#DCFCE7', color: '#15803D', padding: '3px 8px', borderRadius: 'var(--sa-radius-full)', fontWeight: 800 }}>
-                    👥 {subscriberCount} Tenant{subscriberCount === 1 ? '' : 's'}
-                  </span>
+
+                  <div style={{ fontSize: '1.45rem', fontWeight: 900, color: 'var(--sa-primary)', marginBottom: '6px' }}>
+                    ₹{p.price.toLocaleString()} <span style={{ fontSize: '0.78rem', color: 'var(--sa-text-muted)', fontWeight: 600 }}>/ month</span>
+                  </div>
+
+                  <p style={{ fontSize: '0.76rem', color: 'var(--sa-text-muted)', margin: '0 0 10px 0', minHeight: '32px', lineHeight: 1.4 }}>
+                    {p.description || 'Standard subscription plan features & entitlements'}
+                  </p>
                 </div>
 
-                <div style={{ fontSize: '1.35rem', fontWeight: 900, color: 'var(--sa-primary)', marginBottom: '4px' }}>
-                  ₹{p.price} <span style={{ fontSize: '0.75rem', color: 'var(--sa-text-muted)', fontWeight: 600 }}>/ month</span>
-                </div>
-
-                <p style={{ fontSize: '0.75rem', color: 'var(--sa-text-muted)', margin: '0 0 8px 0', minHeight: '28px', lineHeight: 1.3 }}>
-                  {p.description || 'Standard plan features'}
-                </p>
-              </div>
-
-              <div style={{ display: 'flex', gap: '6px', borderTop: '1px solid var(--sa-border)', paddingTop: '10px' }}>
-                <button
-                  type="button"
-                  onClick={() => setEditingPlan(p)}
-                  className="sa-btn sa-btn-secondary sa-btn-sm"
-                  style={{ flex: 1, fontSize: '0.75rem', fontWeight: 800, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '4px' }}
-                >
-                  <Edit3 size={13} /> Edit Tier
-                </button>
-                {isCustom && (
+                <div style={{ display: 'flex', gap: '8px', borderTop: '1px solid var(--sa-border)', paddingTop: '12px' }}>
                   <button
                     type="button"
-                    onClick={() => handleDeletePlan(p.key, p.name)}
-                    className="sa-btn sa-btn-danger sa-btn-sm"
-                    style={{ padding: '6px 10px' }}
-                    title="Delete Custom Plan"
+                    onClick={() => setEditingPlan(p)}
+                    className="sa-btn sa-btn-secondary sa-btn-sm"
+                    style={{ flex: 1, fontSize: '0.76rem', fontWeight: 800, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '4px' }}
                   >
-                    <Trash2 size={13} />
+                    <Edit3 size={13} /> Edit Tier
                   </button>
-                )}
+                  {isCustom && (
+                    <button
+                      type="button"
+                      onClick={() => handleDeletePlan(p.key, p.name)}
+                      className="sa-btn sa-btn-danger sa-btn-sm"
+                      style={{ padding: '6px 10px' }}
+                      title="Delete Custom Plan"
+                    >
+                      <Trash2 size={13} />
+                    </button>
+                  )}
+                </div>
               </div>
-            </div>
-          );
-        })}
+            );
+          })}
+        </div>
       </div>
 
-      {/* 📊 3. MASTER FEATURES & LIMITS MATRIX */}
-      <div className="sa-table-container sa-responsive-table" style={{
-        background: '#FFFFFF', borderRadius: 'var(--sa-radius-lg)',
-        border: '1px solid var(--sa-border)', overflowX: 'auto',
-        boxShadow: 'var(--sa-shadow-sm)'
-      }}>
-        <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left', minWidth: '750px' }}>
+      {/* 📊 3. MASTER FEATURES & LIMITS MATRIX (BELOW PLAN CARDS) */}
+      <div className="sa-table-container sa-responsive-table" style={{ background: '#FFFFFF', borderRadius: 'var(--sa-radius-lg)' }}>
+        <div style={{ padding: '16px 20px', borderBottom: '1px solid var(--sa-border)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+          <div>
+            <h3 style={{ margin: 0, fontSize: '1.05rem', fontWeight: 900, color: 'var(--sa-text-main)' }}>
+              ⚡ Plan Permissions & Limits Matrix
+            </h3>
+            <span style={{ fontSize: '0.74rem', color: 'var(--sa-text-muted)', fontWeight: 600 }}>
+              Toggle features ON/OFF and adjust quotas across all plans
+            </span>
+          </div>
+        </div>
+
+        <table className="sa-table" style={{ minWidth: '750px' }}>
           <thead>
-            <tr style={{ background: '#F8FAFC', borderBottom: '2px solid var(--sa-border)' }}>
-              <th style={{ padding: '16px 20px', fontSize: '0.85rem', fontWeight: 900, color: 'var(--sa-text-main)', width: '35%' }}>
-                FEATURE / PERMISSION CONTROL
-              </th>
+            <tr>
+              <th style={{ width: '38%' }}>FEATURE / PERMISSION CONTROL</th>
               {plans.map(p => (
-                <th key={p.key} style={{ padding: '16px 20px', fontSize: '0.88rem', fontWeight: 900, color: '#0A2315', textTransform: 'uppercase' }}>
+                <th key={p.key} style={{ color: 'var(--sa-primary)', fontWeight: 900 }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
                     <span>{p.badge || '👑'}</span>
                     <span>{p.name}</span>
@@ -398,35 +416,37 @@ export default function SaaSPlansView({ token, restaurants = [] }) {
           </thead>
           <tbody>
             {/* NUMERICAL LIMITS SECTION */}
-            <tr style={{ background: '#F1F5F9' }}>
-              <td colSpan={plans.length + 1} style={{ padding: '10px 20px', fontSize: '0.75rem', fontWeight: 900, color: '#0A2315', letterSpacing: '0.5px' }}>
+            <tr style={{ background: 'var(--sa-surface-subtle)' }}>
+              <td colSpan={plans.length + 1} style={{ padding: '8px 16px', fontSize: '0.74rem', fontWeight: 900, color: 'var(--sa-primary)', letterSpacing: '0.03em' }}>
                 📊 PRICING & NUMERICAL LIMIT CONTROLS
               </td>
             </tr>
             {numericFields.map(f => (
-              <tr key={f.key} style={{ borderBottom: '1px solid var(--sa-border)' }}>
-                <td style={{ padding: '14px 20px', fontSize: '0.86rem', fontWeight: 800, color: 'var(--sa-text-main)' }}>
+              <tr key={f.key}>
+                <td style={{ fontWeight: 800 }}>
                   {f.label}
                 </td>
                 {plans.map(p => {
                   const isUnlimited = p[f.key] === 9999;
                   return (
-                    <td key={p.key} style={{ padding: '12px 20px' }}>
+                    <td key={p.key}>
                       <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
                         <input
                           type="number"
                           value={p[f.key] !== undefined && p[f.key] !== null ? p[f.key] : ''}
                           onChange={(e) => handlePlanValueChange(p.key, f.key, parseInt(e.target.value, 10) || 0)}
                           placeholder={f.placeholder}
+                          className="sa-input"
                           style={{
-                            width: '100%', maxWidth: '120px', padding: '8px 10px',
-                            borderRadius: '8px', border: '1.5px solid var(--sa-border)',
-                            fontSize: '0.86rem', fontWeight: 800, color: 'var(--sa-text-main)',
-                            boxSizing: 'border-box'
+                            maxWidth: '110px',
+                            height: '34px',
+                            padding: '4px 8px',
+                            fontSize: '0.82rem',
+                            fontWeight: 800
                           }}
                         />
                         {isUnlimited && (
-                          <span style={{ fontSize: '0.72rem', color: '#16A34A', fontWeight: 900 }} title="9999 is treated as Unlimited">
+                          <span style={{ fontSize: '0.70rem', color: '#16A34A', fontWeight: 900 }} title="9999 is treated as Unlimited">
                             ♾️ Unlimited
                           </span>
                         )}
@@ -438,29 +458,29 @@ export default function SaaSPlansView({ token, restaurants = [] }) {
             ))}
 
             {/* BOOLEAN FEATURE PERMISSIONS SECTION */}
-            <tr style={{ background: '#F1F5F9' }}>
-              <td colSpan={plans.length + 1} style={{ padding: '10px 20px', fontSize: '0.75rem', fontWeight: 900, color: '#0A2315', letterSpacing: '0.5px' }}>
+            <tr style={{ background: 'var(--sa-surface-subtle)' }}>
+              <td colSpan={plans.length + 1} style={{ padding: '8px 16px', fontSize: '0.74rem', fontWeight: 900, color: 'var(--sa-primary)', letterSpacing: '0.03em' }}>
                 ⚡ FEATURE TOGGLE PERMISSIONS (ON / OFF)
               </td>
             </tr>
             {toggleFields.map(f => (
-              <tr key={f.key} style={{ borderBottom: '1px solid var(--sa-border)' }}>
-                <td style={{ padding: '12px 20px', fontSize: '0.86rem', fontWeight: 800, color: 'var(--sa-text-main)' }}>
+              <tr key={f.key}>
+                <td style={{ fontWeight: 800 }}>
                   {f.label}
                 </td>
                 {plans.map(p => {
                   const isChecked = Boolean(p[f.key] !== 0 && p[f.key] !== false && p[f.key] !== '0');
                   return (
-                    <td key={p.key} style={{ padding: '12px 20px' }}>
+                    <td key={p.key}>
                       <label style={{ display: 'inline-flex', alignItems: 'center', gap: '8px', cursor: 'pointer' }}>
                         <input
                           type="checkbox"
                           checked={isChecked}
                           onChange={(e) => handlePlanValueChange(p.key, f.key, e.target.checked ? 1 : 0)}
-                          style={{ width: '18px', height: '18px', cursor: 'pointer', accentColor: '#0A2315' }}
+                          style={{ width: '18px', height: '18px', cursor: 'pointer', accentColor: 'var(--sa-primary)' }}
                         />
                         <span style={{
-                          fontSize: '0.78rem', fontWeight: 900,
+                          fontSize: '0.76rem', fontWeight: 900,
                           color: isChecked ? '#15803D' : '#94A3B8'
                         }}>
                           {isChecked ? '✅ Included' : '❌ Not Included'}
@@ -477,31 +497,28 @@ export default function SaaSPlansView({ token, restaurants = [] }) {
 
       {/* ✏️ 4. EDIT PLAN MODAL */}
       {editingPlan && (
-        <div style={{
-          position: 'fixed', inset: 0, zIndex: 9999,
-          background: 'rgba(10,35,21,0.75)', backdropFilter: 'blur(6px)',
-          display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '16px'
-        }}>
-          <div style={{
-            background: '#FFFFFF', width: '100%', maxWidth: '520px', borderRadius: '20px',
-            boxShadow: '0 20px 40px rgba(0,0,0,0.3)', overflow: 'hidden', border: '1px solid var(--sa-border)'
-          }}>
+        <div className="sa-modal-overlay">
+          <div className="sa-modal-box" style={{ maxWidth: '520px' }}>
             <div style={{
               display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-              padding: '20px 24px', background: '#0A2315', color: '#DFBA67'
+              marginBottom: '16px', paddingBottom: '12px', borderBottom: '1px solid var(--sa-border)'
             }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                <Edit3 style={{ width: '20px', height: '20px' }} />
-                <h3 style={{ margin: 0, fontSize: '1.1rem', fontWeight: 900 }}>Edit Plan: {editingPlan.name}</h3>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <Edit3 size={20} color="var(--sa-primary)" />
+                <h3 style={{ margin: 0, fontSize: '1.1rem', fontWeight: 900, color: 'var(--sa-text-main)' }}>Edit Plan: {editingPlan.name}</h3>
               </div>
-              <button onClick={() => setEditingPlan(null)} style={{ background: 'none', border: 'none', color: '#FFFFFF', cursor: 'pointer' }}>
-                <X style={{ width: '20px', height: '20px' }} />
+              <button
+                type="button"
+                onClick={() => setEditingPlan(null)}
+                style={{ background: 'none', border: 'none', color: 'var(--sa-text-muted)', cursor: 'pointer' }}
+              >
+                <X size={20} />
               </button>
             </div>
 
-            <form onSubmit={handleSaveSinglePlan} style={{ padding: '24px', display: 'flex', flexDirection: 'column', gap: '14px' }}>
+            <form onSubmit={handleSaveSinglePlan} style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
               <div style={{ padding: '10px 14px', background: '#FFFBEB', borderRadius: '10px', border: '1px solid #FCD34D', fontSize: '0.78rem', color: '#92400E', fontWeight: 700 }}>
-                ⚠️ Changes may affect tenants currently using this plan.
+                ⚠️ Changes may affect tenants currently subscribed to this plan.
               </div>
 
               <div>
@@ -511,7 +528,7 @@ export default function SaaSPlansView({ token, restaurants = [] }) {
                   required
                   value={editingPlan.name}
                   onChange={e => setEditingPlan({ ...editingPlan, name: e.target.value })}
-                  style={{ width: '100%', padding: '10px 12px', borderRadius: '10px', border: '1px solid var(--sa-border)', fontSize: '0.88rem', boxSizing: 'border-box' }}
+                  className="sa-input"
                 />
               </div>
 
@@ -524,7 +541,7 @@ export default function SaaSPlansView({ token, restaurants = [] }) {
                     min="0"
                     value={editingPlan.price}
                     onChange={e => setEditingPlan({ ...editingPlan, price: parseFloat(e.target.value) || 0 })}
-                    style={{ width: '100%', padding: '10px 12px', borderRadius: '10px', border: '1px solid var(--sa-border)', fontSize: '0.88rem', boxSizing: 'border-box' }}
+                    className="sa-input"
                   />
                 </div>
                 <div>
@@ -533,7 +550,7 @@ export default function SaaSPlansView({ token, restaurants = [] }) {
                     type="text"
                     value={editingPlan.badge || ''}
                     onChange={e => setEditingPlan({ ...editingPlan, badge: e.target.value })}
-                    style={{ width: '100%', padding: '10px 12px', borderRadius: '10px', border: '1px solid var(--sa-border)', fontSize: '0.88rem', boxSizing: 'border-box' }}
+                    className="sa-input"
                   />
                 </div>
               </div>
@@ -544,7 +561,7 @@ export default function SaaSPlansView({ token, restaurants = [] }) {
                   type="text"
                   value={editingPlan.description || ''}
                   onChange={e => setEditingPlan({ ...editingPlan, description: e.target.value })}
-                  style={{ width: '100%', padding: '10px 12px', borderRadius: '10px', border: '1px solid var(--sa-border)', fontSize: '0.88rem', boxSizing: 'border-box' }}
+                  className="sa-input"
                 />
               </div>
 
@@ -573,29 +590,26 @@ export default function SaaSPlansView({ token, restaurants = [] }) {
 
       {/* ✨ 5. CREATE PLAN MODAL */}
       {showCreateModal && (
-        <div style={{
-          position: 'fixed', inset: 0, zIndex: 9999,
-          background: 'rgba(10,35,21,0.75)', backdropFilter: 'blur(6px)',
-          display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '16px'
-        }}>
-          <div style={{
-            background: '#FFFFFF', width: '100%', maxWidth: '520px', borderRadius: '20px',
-            boxShadow: '0 20px 40px rgba(0,0,0,0.3)', overflow: 'hidden', border: '1px solid var(--sa-border)'
-          }}>
+        <div className="sa-modal-overlay">
+          <div className="sa-modal-box" style={{ maxWidth: '520px' }}>
             <div style={{
               display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-              padding: '20px 24px', background: '#0A2315', color: '#DFBA67'
+              marginBottom: '16px', paddingBottom: '12px', borderBottom: '1px solid var(--sa-border)'
             }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                <Sparkles style={{ width: '22px', height: '22px' }} />
-                <h3 style={{ margin: 0, fontSize: '1.1rem', fontWeight: 900 }}>Create New Custom SaaS Plan</h3>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <Sparkles size={20} color="var(--sa-accent)" />
+                <h3 style={{ margin: 0, fontSize: '1.1rem', fontWeight: 900, color: 'var(--sa-text-main)' }}>Create New Custom SaaS Plan</h3>
               </div>
-              <button onClick={() => setShowCreateModal(false)} style={{ background: 'none', border: 'none', color: '#FFFFFF', cursor: 'pointer' }}>
-                <X style={{ width: '20px', height: '20px' }} />
+              <button
+                type="button"
+                onClick={() => setShowCreateModal(false)}
+                style={{ background: 'none', border: 'none', color: 'var(--sa-text-muted)', cursor: 'pointer' }}
+              >
+                <X size={20} />
               </button>
             </div>
 
-            <form onSubmit={handleCreatePlanSubmit} style={{ padding: '24px', display: 'flex', flexDirection: 'column', gap: '16px' }}>
+            <form onSubmit={handleCreatePlanSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
               <div>
                 <label style={{ fontSize: '0.78rem', fontWeight: 800, color: 'var(--sa-text-muted)', display: 'block', marginBottom: '4px' }}>PLAN NAME *</label>
                 <input
@@ -604,7 +618,7 @@ export default function SaaSPlansView({ token, restaurants = [] }) {
                   placeholder="e.g. VIP Ultra Plan"
                   value={createForm.name}
                   onChange={e => setCreateForm({ ...createForm, name: e.target.value, key: e.target.value.toLowerCase().replace(/[^a-z0-9]/g, '_') })}
-                  style={{ width: '100%', padding: '10px 12px', borderRadius: '10px', border: '1px solid var(--sa-border)', fontSize: '0.9rem', boxSizing: 'border-box' }}
+                  className="sa-input"
                 />
               </div>
 
@@ -617,7 +631,7 @@ export default function SaaSPlansView({ token, restaurants = [] }) {
                     placeholder="e.g. vip_ultra"
                     value={createForm.key}
                     onChange={e => setCreateForm({ ...createForm, key: e.target.value.toLowerCase().replace(/[^a-z0-9_]/g, '') })}
-                    style={{ width: '100%', padding: '10px 12px', borderRadius: '10px', border: '1px solid var(--sa-border)', fontSize: '0.9rem', boxSizing: 'border-box' }}
+                    className="sa-input"
                   />
                 </div>
                 <div>
@@ -628,7 +642,7 @@ export default function SaaSPlansView({ token, restaurants = [] }) {
                     placeholder="1499"
                     value={createForm.price}
                     onChange={e => setCreateForm({ ...createForm, price: parseFloat(e.target.value) || 0 })}
-                    style={{ width: '100%', padding: '10px 12px', borderRadius: '10px', border: '1px solid var(--sa-border)', fontSize: '0.9rem', boxSizing: 'border-box' }}
+                    className="sa-input"
                   />
                 </div>
               </div>
@@ -640,7 +654,7 @@ export default function SaaSPlansView({ token, restaurants = [] }) {
                   placeholder="Short marketing headline for this plan tier"
                   value={createForm.description}
                   onChange={e => setCreateForm({ ...createForm, description: e.target.value })}
-                  style={{ width: '100%', padding: '10px 12px', borderRadius: '10px', border: '1px solid var(--sa-border)', fontSize: '0.9rem', boxSizing: 'border-box' }}
+                  className="sa-input"
                 />
               </div>
 
@@ -648,14 +662,15 @@ export default function SaaSPlansView({ token, restaurants = [] }) {
                 <button
                   type="button"
                   onClick={() => setShowCreateModal(false)}
-                  style={{ padding: '10px 18px', borderRadius: '10px', border: '1px solid var(--sa-border)', background: '#FFFFFF', fontWeight: 800, cursor: 'pointer' }}
+                  className="sa-btn sa-btn-secondary"
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
                   disabled={creating}
-                  style={{ padding: '10px 24px', borderRadius: '10px', border: 'none', background: 'linear-gradient(135deg, #0A2315 0%, #164E2A 100%)', color: '#DFBA67', fontWeight: 900, cursor: 'pointer' }}
+                  className="sa-btn sa-btn-accent"
+                  style={{ fontWeight: 900 }}
                 >
                   {creating ? 'Creating Plan...' : '✨ Create SaaS Plan'}
                 </button>

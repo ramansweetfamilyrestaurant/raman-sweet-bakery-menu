@@ -1810,9 +1810,7 @@ export default function SuperAdminDashboard({ token, username, onLogout, onRetur
           {/* VIEW 4: SAAS PLANS & FEATURE MATRIX                                       */}
           {/* ========================================================================= */}
           {activeView === 'plans' && (
-            <div className="sa-table-container" style={{ padding: '24px', background: '#FFFFFF' }}>
-              <SaaSPlansView token={token} restaurants={restaurants} />
-            </div>
+            <SaaSPlansView token={token} restaurants={restaurants} />
           )}
 
           {/* ========================================================================= */}
