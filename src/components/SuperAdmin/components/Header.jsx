@@ -108,17 +108,8 @@ export default function Header({
         </div>
       ) : (
         <>
-          {/* LEFT: Mobile Toggle & Page Title with Brand Logo */}
+          {/* LEFT: Brand Logo Thumbnail & Page Title */}
           <div className="sa-header-left">
-            {onToggleMobileMenu && (
-              <button
-                onClick={onToggleMobileMenu}
-                className="sa-mobile-menu-btn"
-                title="Open Navigation Menu"
-              >
-                <Menu size={20} />
-              </button>
-            )}
             {/* Mobile / Tablet Logo Thumbnail */}
             {resolvedLogoUrl && !logoErr && (
               <img
@@ -127,7 +118,7 @@ export default function Header({
                 onError={() => setLogoErr(true)}
                 className="sa-mobile-only"
                 style={{
-                  width: '28px', height: '28px', borderRadius: '7px',
+                  width: '30px', height: '30px', borderRadius: '8px',
                   objectFit: 'contain', background: '#FFFFFF', padding: '1px',
                   border: '1px solid #D4AF37', flexShrink: 0
                 }}
