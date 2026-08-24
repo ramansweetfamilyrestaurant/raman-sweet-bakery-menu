@@ -10,7 +10,7 @@ export default function SearchBar({ value, onChange, onClear, placeholder = 'Sea
         placeholder={placeholder}
         value={value}
         onChange={onChange}
-        className="sa-input"
+        className="sa-input sa-search-input-field"
         style={{ 
           paddingLeft: '38px', 
           paddingRight: value ? '34px' : '14px',

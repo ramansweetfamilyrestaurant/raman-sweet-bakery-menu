@@ -1,3 +1,12 @@
+
+/* Global Protection for Search Inputs to Prevent Icon Overlap */
+.sa-search-input-field,
+.sa-header-search-input,
+.sa-mobile-search-input {
+  padding-left: 38px !important;
+  padding-right: 32px !important;
+}
+
 /* ==========================================================================
    TouchQR SaaS Super Admin 2.1 Luxury Design System (SuperAdmin.css)
    Inspired by Stripe, Linear, & Vercel design principles with Gold & Emerald
@@ -1300,11 +1309,24 @@
     margin-bottom: 2px !important;
   }
 
-  .sa-input, .sa-select, .sa-textarea, select, textarea, input[type="text"], input[type="password"], input[type="number"] {
+  .sa-input:not(.sa-search-input-field):not(.sa-header-search-input):not(.sa-mobile-search-input),
+  .sa-select, select, textarea,
+  input[type="text"]:not(.sa-search-input-field):not(.sa-header-search-input):not(.sa-mobile-search-input),
+  input[type="password"], input[type="number"] {
     padding: 5px 8px !important;
     font-size: 0.78rem !important;
     border-radius: 6px !important;
     height: 34px !important;
+    box-sizing: border-box !important;
+  }
+
+  .sa-search-input-field,
+  .sa-header-search-input,
+  .sa-mobile-search-input {
+    padding-left: 38px !important;
+    padding-right: 32px !important;
+    height: 38px !important;
+    font-size: 0.80rem !important;
     box-sizing: border-box !important;
   }
 

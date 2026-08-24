@@ -569,7 +569,7 @@ export default function SuperAdminDashboard({ token, username, onLogout, onRetur
             placeholder="Search name, slug, owner, phone, email, ID..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            className="sa-input"
+            className="sa-input sa-search-input-field"
             style={{
               paddingLeft: '34px',
               paddingRight: searchQuery ? '32px' : '12px',
