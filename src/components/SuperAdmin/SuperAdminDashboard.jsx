@@ -1123,6 +1123,7 @@ export default function SuperAdminDashboard({ token, username, onLogout, onRetur
           onToggleMobileMenu={() => setShowMobileMoreDrawer(true)}
           onOpenBroadcast={() => handleOpenBroadcastModal()}
           onLogout={onLogout}
+          logoUrl={paymentKeys.platform_logo_url}
         />
 
         {/* 📄 MAIN CONTENT BODY */}
@@ -2942,14 +2943,23 @@ export default function SuperAdminDashboard({ token, username, onLogout, onRetur
         subtitle="Platform Command Center v2.2"
       >
         <div style={{ display: 'flex', flexDirection: 'column', gap: '16px', paddingBottom: '20px' }}>
-          {/* Status Header Badge */}
+          {/* Status Header Badge with Master Logo */}
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', background: 'linear-gradient(135deg, #0A2315 0%, #163E26 100%)', padding: '12px 14px', borderRadius: '14px', border: '1px solid rgba(212, 175, 55, 0.35)', boxShadow: '0 4px 12px rgba(10, 35, 21, 0.15)' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-              <div style={{ width: '32px', height: '32px', borderRadius: '10px', background: 'rgba(212, 175, 55, 0.18)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#DFBA67', border: '1px solid rgba(212, 175, 55, 0.3)' }}>
-                <Crown size={17} />
-              </div>
+              {paymentKeys.platform_logo_url && !logoErr ? (
+                <img
+                  src={resolveImageUrl(paymentKeys.platform_logo_url || '/api/r2-proxy/superadmin/branding/logo.webp')}
+                  alt="Super Admin Logo"
+                  onError={() => setLogoErr(true)}
+                  style={{ width: '36px', height: '36px', borderRadius: '9px', objectFit: 'contain', background: '#FFFFFF', padding: '2px', border: '1.5px solid #DFBA67', flexShrink: 0 }}
+                />
+              ) : (
+                <div style={{ width: '36px', height: '36px', borderRadius: '9px', background: 'rgba(212, 175, 55, 0.18)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#DFBA67', border: '1px solid rgba(212, 175, 55, 0.3)', flexShrink: 0 }}>
+                  <Crown size={18} />
+                </div>
+              )}
               <div>
-                <span style={{ fontSize: '0.82rem', fontWeight: 900, color: '#FFFFFF', display: 'block', lineHeight: 1.2 }}>Platform Command</span>
+                <span style={{ fontSize: '0.84rem', fontWeight: 900, color: '#FFFFFF', display: 'block', lineHeight: 1.2 }}>TouchQR Command</span>
                 <span style={{ fontSize: '0.68rem', color: '#A7F3D0', fontWeight: 700, display: 'flex', alignItems: 'center', gap: '4px' }}>
                   <span style={{ width: '6px', height: '6px', borderRadius: '50%', background: '#4ADE80', display: 'inline-block' }} />
                   All Systems Operational

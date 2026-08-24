@@ -7,8 +7,8 @@ export default function Sidebar({ activeView, setActiveView, collapsed, setColla
 
   let cachedLogo = '';
   try { cachedLogo = localStorage.getItem('touchqr_platform_logo_url') || ''; } catch {}
-  const effectiveLogoUrl = logoUrl || cachedLogo;
-  const resolvedUrl = effectiveLogoUrl ? resolveImageUrl(effectiveLogoUrl) : '';
+  const effectiveLogoUrl = logoUrl || cachedLogo || '/api/r2-proxy/superadmin/branding/logo.webp';
+  const resolvedUrl = resolveImageUrl(effectiveLogoUrl);
 
   React.useEffect(() => {
     setLogoErr(false);

@@ -8,8 +8,14 @@ export default function Header({
   setSearchQuery, 
   onToggleMobileMenu,
   onOpenBroadcast,
-  onLogout 
+  onLogout,
+  logoUrl
 }) {
+  const [logoErr, setLogoErr] = useState(false);
+  let cachedLogo = '';
+  try { cachedLogo = localStorage.getItem('touchqr_platform_logo_url') || ''; } catch {}
+  const effectiveLogo = logoUrl || cachedLogo || '/api/r2-proxy/superadmin/branding/logo.webp';
+  const resolvedLogoUrl = effectiveLogo ? (effectiveLogo.startsWith('http') || effectiveLogo.startsWith('/') ? effectiveLogo : `/${effectiveLogo}`) : '';
   const [mobileSearchActive, setMobileSearchActive] = useState(false);
   const searchInputRef = useRef(null);
 
@@ -102,7 +108,7 @@ export default function Header({
         </div>
       ) : (
         <>
-          {/* LEFT: Mobile Toggle & Page Title */}
+          {/* LEFT: Mobile Toggle & Page Title with Brand Logo */}
           <div className="sa-header-left">
             {onToggleMobileMenu && (
               <button
@@ -112,6 +118,20 @@ export default function Header({
               >
                 <Menu size={20} />
               </button>
+            )}
+            {/* Mobile / Tablet Logo Thumbnail */}
+            {resolvedLogoUrl && !logoErr && (
+              <img
+                src={resolvedLogoUrl}
+                alt="TouchQR"
+                onError={() => setLogoErr(true)}
+                className="sa-mobile-only"
+                style={{
+                  width: '28px', height: '28px', borderRadius: '7px',
+                  objectFit: 'contain', background: '#FFFFFF', padding: '1px',
+                  border: '1px solid #D4AF37', flexShrink: 0
+                }}
+              />
             )}
             <div className="sa-header-title-box">
               <span className="sa-desktop-breadcrumb">Super Admin /</span>
