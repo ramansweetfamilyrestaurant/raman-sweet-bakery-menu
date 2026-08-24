@@ -122,7 +122,7 @@ export default function PaymentModal({ restoInfo, planTier = 'pro', planPrice = 
             <CreditCard size={24} />
           </div>
           <h3 style={{ margin: 0, fontSize: '1.2rem', fontWeight: 900, color: '#DFBA67' }}>
-            Cashfree Subscription Setup
+            Subscription & Billing
           </h3>
           <span style={{ fontSize: '0.78rem', color: '#E2E8F0' }}>
             {restoInfo?.name || 'Restaurant'} — {planTier.toUpperCase()} Plan
@@ -139,7 +139,7 @@ export default function PaymentModal({ restoInfo, planTier = 'pro', planPrice = 
             padding: '4px 10px', borderRadius: '20px', fontSize: '0.74rem', fontWeight: 800,
             marginBottom: '14px'
           }}>
-            <span>🧪 CASHFREE SANDBOX MODE (TEST ENVIRONMENT)</span>
+            <span>🔒 Secure AutoPay Billing Setup</span>
           </div>
 
           {statusMsg && (
@@ -181,7 +181,7 @@ export default function PaymentModal({ restoInfo, planTier = 'pro', planPrice = 
               fontSize: '0.78rem', fontWeight: 800, color: '#15803D'
             }}>
               <Sparkles size={16} />
-              <span>🎁 14-Day Free Trial Active — No money charged today. Cashfree mandate will authorize billing after trial expires.</span>
+              <span>🎁 Free trial period applies — no charges until your trial concludes. Auto-renew can be managed anytime from settings.</span>
             </div>
           </div>
 
@@ -189,6 +189,7 @@ export default function PaymentModal({ restoInfo, planTier = 'pro', planPrice = 
           <button
             onClick={handleSetupSubscription}
             disabled={loading}
+            aria-label="Continue to Payment Authorization"
             style={{
               width: '100%',
               background: 'linear-gradient(135deg, #10B981 0%, #059669 100%)',
@@ -207,7 +208,7 @@ export default function PaymentModal({ restoInfo, planTier = 'pro', planPrice = 
             }}
           >
             <CreditCard size={18} />
-            <span>{loading ? 'Initiating Cashfree Sandbox...' : 'Setup Cashfree Sandbox Subscription'}</span>
+            <span>{loading ? 'Processing...' : 'Continue to Payment'}</span>
             <ArrowRight size={18} />
           </button>
         </div>

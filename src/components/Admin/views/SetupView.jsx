@@ -2196,27 +2196,24 @@ export default function SetupView({
           const currentStatus = (subData?.status || restaurantInfo?.subscription_status || 'active').toLowerCase();
           const getStatusBadge = () => {
             if (isComplimentary) {
-              return { text: '🎁 Lifetime Granted', bg: '#F3E8FF', color: '#7E22CE', border: '#D8B4FE' };
+              return { text: '🎁 Lifetime Access', bg: '#F3E8FF', color: '#7E22CE', border: '#D8B4FE' };
             }
             if (currentStatus === 'trialing') {
-              return { text: '🔵 Free Trial Active', bg: '#EFF6FF', color: '#1D4ED8', border: '#BFDBFE' };
+              return { text: '🎁 Free Trial Active', bg: '#EFF6FF', color: '#1D4ED8', border: '#BFDBFE' };
             }
             if (currentStatus === 'payment_failed') {
-              return { text: '🔴 Payment Failed (Grace Period)', bg: '#FEF2F2', color: '#DC2626', border: '#FECACA' };
+              return { text: '🔴 Payment Failed', bg: '#FEF2F2', color: '#DC2626', border: '#FECACA' };
             }
             if (currentStatus === 'cancelled' || isCancelRequested) {
-              return { text: `🟠 Cancelled (${formattedDate ? `Until ${formattedDate}` : 'Pending Expiry'})`, bg: '#FFF7ED', color: '#C2410C', border: '#FFEDD5' };
-            }
-            if (currentStatus === 'paused') {
-              return { text: '🟠 Paused', bg: '#FEF3C7', color: '#D97706', border: '#FDE68A' };
+              return { text: '🟠 Auto-Renew Off', bg: '#FFF7ED', color: '#C2410C', border: '#FFEDD5' };
             }
             if (currentStatus === 'expired') {
-              return { text: '🔴 Expired', bg: '#FEE2E2', color: '#991B1B', border: '#FCA5A5' };
+              return { text: '🔴 Subscription Expired', bg: '#FEE2E2', color: '#991B1B', border: '#FCA5A5' };
             }
             if (currentStatus === 'pending') {
-              return { text: '🟡 Subscription Pending', bg: '#FEF9C3', color: '#A16207', border: '#FEF08A' };
+              return { text: '🟡 Processing', bg: '#FEF9C3', color: '#A16207', border: '#FEF08A' };
             }
-            return { text: '🟢 Active', bg: '#ECFDF5', color: '#047857', border: '#A7F3D0' };
+            return { text: '🟢 Subscription Active', bg: '#ECFDF5', color: '#047857', border: '#A7F3D0' };
           };
 
           const fallbackPlans = [
@@ -2309,6 +2306,7 @@ export default function SetupView({
                   <span>{billingActionMsg.text}</span>
                   <button
                     onClick={() => setBillingActionMsg(null)}
+                    aria-label="Dismiss notification"
                     style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'inherit', padding: 0 }}
                   >
                     <X size={16} />
@@ -2407,18 +2405,61 @@ export default function SetupView({
               {/* TAB 1: OVERVIEW */}
               {subTab === 'overview' && (
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
+                  
+                  {/* Status Banner For Warning / Expiry */}
+                  {currentStatus === 'expired' && (
+                    <div style={{ padding: '14px', borderRadius: '14px', background: '#FEF2F2', border: '1.5px solid #FECACA', color: '#991B1B' }}>
+                      <strong style={{ fontSize: '0.90rem', display: 'block', marginBottom: '4px' }}>🔴 Subscription Expired</strong>
+                      <p style={{ margin: '0 0 10px', fontSize: '0.80rem', lineHeight: 1.4 }}>
+                        Your subscription has expired. Renew to continue using your restaurant dashboard.
+                      </p>
+                      <button
+                        onClick={() => { setOpenDrawer(null); onOpenBillingModal(); }}
+                        style={{
+                          width: '100%', padding: '10px', borderRadius: '10px', border: 'none',
+                          background: '#DC2626', color: '#FFF', fontWeight: 800, fontSize: '0.82rem',
+                          cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px'
+                        }}
+                      >
+                        <RefreshCw size={14} />
+                        Renew Subscription
+                      </button>
+                    </div>
+                  )}
+
+                  {currentStatus === 'payment_failed' && (
+                    <div style={{ padding: '14px', borderRadius: '14px', background: '#FEF2F2', border: '1.5px solid #FECACA', color: '#991B1B' }}>
+                      <strong style={{ fontSize: '0.90rem', display: 'block', marginBottom: '4px' }}>🔴 Payment Failed</strong>
+                      <p style={{ margin: '0 0 10px', fontSize: '0.80rem', lineHeight: 1.4 }}>
+                        Your payment could not be completed.{formattedDate ? ` Your access is still active until ${formattedDate}.` : ''}
+                      </p>
+                      <button
+                        onClick={() => { setOpenDrawer(null); onOpenBillingModal(); }}
+                        style={{
+                          width: '100%', padding: '10px', borderRadius: '10px', border: 'none',
+                          background: '#DC2626', color: '#FFF', fontWeight: 800, fontSize: '0.82rem',
+                          cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px'
+                        }}
+                      >
+                        <RefreshCw size={14} />
+                        Retry Payment
+                      </button>
+                    </div>
+                  )}
+
+                  {/* Clean Plan Card */}
                   <div style={{ background: '#FFFFFF', padding: '18px', borderRadius: '16px', border: '1px solid #E2E8F0', boxShadow: '0 2px 8px rgba(0,0,0,0.02)' }}>
                     
                     {/* Plan Header */}
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', paddingBottom: '12px', borderBottom: '1px solid #F1F5F9' }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', paddingBottom: '14px', borderBottom: '1px solid #F1F5F9' }}>
                       <div>
-                        <span style={{ fontSize: '0.72rem', fontWeight: 800, color: '#64748B', textTransform: 'uppercase', letterSpacing: '0.04em' }}>Current Plan</span>
-                        <h3 style={{ margin: '2px 0 0', fontSize: '1.15rem', fontWeight: 900, color: '#0F172A' }}>
-                          {activePlanKey.toUpperCase()}
+                        <span style={{ fontSize: '0.70rem', fontWeight: 800, color: '#64748B', textTransform: 'uppercase', letterSpacing: '0.04em' }}>Current Plan</span>
+                        <h3 style={{ margin: '2px 0 0', fontSize: '1.2rem', fontWeight: 900, color: '#0F172A', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                          {activePlanKey === 'enterprise' ? '🚀' : activePlanKey === 'basic' ? '⚡' : '👑'} {activePlanKey.toUpperCase()}
                         </h3>
                       </div>
                       <div style={{ textAlign: 'right' }}>
-                        <span style={{ fontSize: '1.15rem', fontWeight: 900, color: '#059669' }}>
+                        <span style={{ fontSize: '1.25rem', fontWeight: 900, color: '#059669' }}>
                           {isComplimentary ? 'FREE' : `₹${activePlanPrice}`}
                         </span>
                         {!isComplimentary && <span style={{ fontSize: '0.72rem', color: '#64748B', display: 'block' }}>/ month</span>}
@@ -2426,9 +2467,11 @@ export default function SetupView({
                     </div>
 
                     {/* Status & Subscription Details */}
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', paddingTop: '12px' }}>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '11px', paddingTop: '14px' }}>
+                      
+                      {/* Subscription Status */}
                       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                        <span style={{ color: '#64748B', fontWeight: 600 }}>Status:</span>
+                        <span style={{ color: '#64748B', fontWeight: 600 }}>Status</span>
                         <span style={{
                           padding: '4px 10px',
                           borderRadius: '20px',
@@ -2442,104 +2485,66 @@ export default function SetupView({
                         </span>
                       </div>
 
-                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                        <span style={{ color: '#64748B', fontWeight: 600 }}>Subscription Type:</span>
-                        <strong style={{ color: isComplimentary ? '#7E22CE' : '#0F172A', fontWeight: 800 }}>
-                          {isComplimentary ? '🎁 COMPLIMENTARY (FREE)' : 'PAID CASHFREE'}
-                        </strong>
-                      </div>
+                      {/* Trial End or Next Renewal Date */}
+                      {currentStatus === 'trialing' && formattedDate && (
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                          <span style={{ color: '#64748B', fontWeight: 600 }}>Trial Ends</span>
+                          <strong style={{ color: '#0F172A', fontWeight: 800 }}>{formattedDate}</strong>
+                        </div>
+                      )}
 
-                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                        <span style={{ color: '#64748B', fontWeight: 600 }}>Billing Cycle:</span>
-                        <strong style={{ color: '#0F172A', fontWeight: 800 }}>Monthly</strong>
-                      </div>
+                      {currentStatus === 'trialing' && (
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                          <span style={{ color: '#64748B', fontWeight: 600 }}>First Payment</span>
+                          <strong style={{ color: '#059669', fontWeight: 800 }}>₹{activePlanPrice} / month</strong>
+                        </div>
+                      )}
 
-                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                        <span style={{ color: '#64748B', fontWeight: 600 }}>Next Renewal:</span>
-                        <strong style={{ color: '#0F172A', fontWeight: 800 }}>{renewalText}</strong>
-                      </div>
+                      {currentStatus !== 'trialing' && (
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                          <span style={{ color: '#64748B', fontWeight: 600 }}>
+                            {autoRenewActive ? 'Next Renewal' : isCancelRequested ? 'Access Until' : 'Billing Date'}
+                          </span>
+                          <strong style={{ color: '#0F172A', fontWeight: 800 }}>{renewalText}</strong>
+                        </div>
+                      )}
 
-                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                        <span style={{ color: '#64748B', fontWeight: 600 }}>Auto-Renew:</span>
-                        <span style={{
-                          padding: '3px 8px',
-                          borderRadius: '12px',
-                          fontSize: '0.72rem',
-                          fontWeight: 800,
-                          background: autoRenewActive ? '#ECFDF5' : '#FFF7ED',
-                          color: autoRenewActive ? '#047857' : '#C2410C',
-                          border: `1px solid ${autoRenewActive ? '#A7F3D0' : '#FFEDD5'}`
-                        }}>
-                          {autoRenewActive ? '🟢 Auto-Renew ON' : '🟠 Auto-Renew OFF'}
-                        </span>
-                      </div>
-
-                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                        <span style={{ color: '#64748B', fontWeight: 600 }}>Payment Method:</span>
-                        <strong style={{ color: '#0F172A', fontWeight: 800 }}>Cashfree (AutoPay)</strong>
-                      </div>
+                      {/* Auto-Renew Status */}
+                      {!isComplimentary && (
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                          <span style={{ color: '#64748B', fontWeight: 600 }}>Auto-Renew</span>
+                          <span style={{
+                            padding: '3px 8px',
+                            borderRadius: '12px',
+                            fontSize: '0.72rem',
+                            fontWeight: 800,
+                            background: autoRenewActive ? '#ECFDF5' : '#FFF7ED',
+                            color: autoRenewActive ? '#047857' : '#C2410C',
+                            border: `1px solid ${autoRenewActive ? '#A7F3D0' : '#FFEDD5'}`
+                          }}>
+                            {autoRenewActive ? '🟢 Auto-Renew ON' : '🟠 Auto-Renew OFF'}
+                          </span>
+                        </div>
+                      )}
                     </div>
                   </div>
 
-                  {/* Action Buttons in Overview */}
+                  {/* Primary & Secondary Actions */}
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                    <button
-                      onClick={() => setSubTab('plans')}
-                      style={{
-                        width: '100%',
-                        padding: '12px',
-                        borderRadius: '12px',
-                        border: 'none',
-                        background: '#0F172A',
-                        color: '#FFFFFF',
-                        fontWeight: 900,
-                        fontSize: '0.88rem',
-                        cursor: 'pointer',
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        gap: '8px'
-                      }}
-                    >
-                      <Crown size={16} />
-                      Change Plan ➔
-                    </button>
-
-                    <button
-                      onClick={() => setSubTab('history')}
-                      style={{
-                        width: '100%',
-                        padding: '11px',
-                        borderRadius: '12px',
-                        border: '1px solid #CBD5E1',
-                        background: '#FFFFFF',
-                        color: '#0F172A',
-                        fontWeight: 800,
-                        fontSize: '0.84rem',
-                        cursor: 'pointer',
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        gap: '8px'
-                      }}
-                    >
-                      <History size={16} />
-                      View Payment History
-                    </button>
-
-                    {/* Auto-Renew Controls */}
-                    {!isComplimentary && autoRenewActive && (
+                    
+                    {/* Primary Plan Action */}
+                    {currentStatus !== 'expired' && currentStatus !== 'payment_failed' && (
                       <button
-                        onClick={() => setShowCancelModal(true)}
+                        onClick={() => setSubTab('plans')}
                         style={{
                           width: '100%',
-                          padding: '11px',
+                          padding: '12px',
                           borderRadius: '12px',
-                          border: '1px solid #FECACA',
-                          background: '#FEF2F2',
-                          color: '#DC2626',
-                          fontWeight: 800,
-                          fontSize: '0.84rem',
+                          border: 'none',
+                          background: '#0F172A',
+                          color: '#FFFFFF',
+                          fontWeight: 900,
+                          fontSize: '0.88rem',
                           cursor: 'pointer',
                           display: 'flex',
                           alignItems: 'center',
@@ -2547,12 +2552,13 @@ export default function SetupView({
                           gap: '8px'
                         }}
                       >
-                        <X size={16} />
-                        Cancel Auto-Renew
+                        <Crown size={16} />
+                        Change Plan
                       </button>
                     )}
 
-                    {!isComplimentary && isCancelRequested && (
+                    {/* Reactivate Auto-Renew if Cancelled */}
+                    {!isComplimentary && isCancelRequested && currentStatus !== 'expired' && (
                       <button
                         onClick={() => { setOpenDrawer(null); onOpenBillingModal(); }}
                         style={{
@@ -2575,6 +2581,54 @@ export default function SetupView({
                         Reactivate Auto-Renew
                       </button>
                     )}
+
+                    {/* Turn Off Auto-Renew if Active */}
+                    {!isComplimentary && autoRenewActive && (
+                      <button
+                        onClick={() => setShowCancelModal(true)}
+                        style={{
+                          width: '100%',
+                          padding: '11px',
+                          borderRadius: '12px',
+                          border: '1px solid #FECACA',
+                          background: '#FEF2F2',
+                          color: '#DC2626',
+                          fontWeight: 800,
+                          fontSize: '0.84rem',
+                          cursor: 'pointer',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          gap: '8px'
+                        }}
+                      >
+                        <X size={16} />
+                        Turn Off Auto-Renew
+                      </button>
+                    )}
+
+                    {/* Secondary: View History */}
+                    <button
+                      onClick={() => setSubTab('history')}
+                      style={{
+                        width: '100%',
+                        padding: '11px',
+                        borderRadius: '12px',
+                        border: '1px solid #CBD5E1',
+                        background: '#FFFFFF',
+                        color: '#0F172A',
+                        fontWeight: 800,
+                        fontSize: '0.84rem',
+                        cursor: 'pointer',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        gap: '8px'
+                      }}
+                    >
+                      <History size={16} />
+                      View Payment History
+                    </button>
                   </div>
                 </div>
               )}
