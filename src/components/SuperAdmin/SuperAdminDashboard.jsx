@@ -13,6 +13,7 @@ import SaaSPlansView from './views/SaaSPlansView';
 import TenantDetailsView from './views/TenantDetailsView';
 import CommunicationView from './views/CommunicationView';
 import OperationsView from './views/OperationsView';
+import AuditLogsView from './views/AuditLogsView';
 import { KpiCard, SectionHeader, StatusBadge, EmptyState, DataTable, FilterPills, SearchBar, TenantCard } from './components';
 import './styles/SuperAdmin.css';
 
@@ -190,7 +191,14 @@ export default function SuperAdminDashboard({ token, username, onLogout, onRetur
     loadData();
     loadSaaSPlans();
     loadSystemSettings();
+    loadAuditData();
   }, [token]);
+
+  useEffect(() => {
+    if (activeView === 'activity') {
+      loadAuditData();
+    }
+  }, [activeView]);
 
   const loadAuditData = async () => {
     setAuditLoading(true);
@@ -1848,305 +1856,13 @@ export default function SuperAdminDashboard({ token, username, onLogout, onRetur
           {/* VIEW 6: PLATFORM AUDIT LOGS STREAM                                        */}
           {/* ========================================================================= */}
           {activeView === 'activity' && (
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '18px' }}>
-              {/* 📜 1. HEADER */}
-              <div className="sa-section-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '12px' }}>
-                <div>
-                  <h2 className="sa-section-title" style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '1.2rem', fontWeight: 900, color: 'var(--sa-primary)', margin: 0 }}>
-                    <FileText size={22} color="var(--sa-primary)" /> 📜 Activity & Audit Log Trail
-                  </h2>
-                  <span style={{ fontSize: '0.76rem', color: 'var(--sa-text-muted)', fontWeight: 600 }}>
-                    Security events, shop activity and platform operations. <span style={{ opacity: 0.8 }}>(Showing latest 50 events)</span>
-                  </span>
-                </div>
-                <button
-                  type="button"
-                  onClick={loadAuditData}
-                  className="sa-btn sa-btn-secondary sa-btn-sm"
-                  style={{ fontWeight: 800, display: 'flex', alignItems: 'center', gap: '6px' }}
-                >
-                  <RefreshCw size={14} className={auditLoading ? 'spin' : ''} /> 🔄 Refresh Stream
-                </button>
-              </div>
-
-              {/* 🏷️ 2. FILTER PILLS STRIP & SEARCH */}
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '10px' }}>
-                {/* Filter Pills */}
-                <div style={{ display: 'flex', gap: '5px', overflowX: 'auto', paddingBottom: '2px', flexWrap: 'wrap' }}>
-                  {[
-                    { id: 'all', label: `📜 All (${auditLogs.length})` },
-                    { id: 'security', label: '🔑 Security' },
-                    { id: 'tenant', label: '🏪 Shop' },
-                    { id: 'billing', label: '💳 Billing' },
-                    { id: 'vip', label: '👑 VIP' },
-                    { id: 'system', label: '⚙️ System' },
-                  ].map(pill => (
-                    <button
-                      key={pill.id}
-                      type="button"
-                      onClick={() => setAuditFilter(pill.id)}
-                      className={`sa-btn sa-btn-sm ${auditFilter === pill.id ? 'sa-btn-primary' : 'sa-btn-secondary'}`}
-                      style={{ fontSize: '0.72rem', padding: '5px 10px', border: 'none' }}
-                    >
-                      {pill.label}
-                    </button>
-                  ))}
-                </div>
-
-                {/* Search Input */}
-                <div style={{ position: 'relative', width: '240px' }}>
-                  <Search size={13} style={{ position: 'absolute', left: '10px', top: '50%', transform: 'translateY(-50%)', color: 'var(--sa-text-muted)' }} />
-                  <input
-                    type="text"
-                    placeholder="Search action, details, actor..."
-                    value={auditSearch}
-                    onChange={(e) => setAuditSearch(e.target.value)}
-                    style={{
-                      width: '100%',
-                      padding: '6px 10px 6px 28px',
-                      borderRadius: 'var(--sa-radius-full)',
-                      border: '1px solid var(--sa-border)',
-                      fontSize: '0.76rem',
-                      outline: 'none',
-                      background: '#FFFFFF'
-                    }}
-                  />
-                </div>
-              </div>
-
-              {/* 📋 3. AUDIT LOG STREAM TABLE */}
-              <div className="sa-table-container sa-responsive-table" style={{ background: '#FFFFFF', borderRadius: '16px' }}>
-                <table className="sa-table">
-                  <thead>
-                    <tr>
-                      <th>TIMESTAMP</th>
-                      <th>ACTOR & ROLE</th>
-                      <th>CATEGORY</th>
-                      <th>EVENT / ACTION</th>
-                      <th>DESCRIPTION</th>
-                      <th style={{ textAlign: 'right' }}>ACTION</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {auditLoading ? (
-                      <tr>
-                        <td colSpan={6} style={{ textAlign: 'center', padding: '36px', color: 'var(--sa-text-muted)' }}>
-                          ⏳ Loading live audit logs...
-                        </td>
-                      </tr>
-                    ) : auditLogs.length === 0 ? (
-                      <tr>
-                        <td colSpan={6} style={{ textAlign: 'center', padding: '36px', color: 'var(--sa-text-muted)' }}>
-                          📜 No activity recorded yet.
-                        </td>
-                      </tr>
-                    ) : (
-                      auditLogs
-                        .filter(log => {
-                          const act = (log.action || '').toUpperCase();
-                          if (auditFilter === 'security') return act.includes('SECURITY') || act.includes('LOGIN') || act.includes('LOGOUT') || act.includes('CREDENTIAL') || act.includes('PASSWORD') || act.includes('IMPERSONAT');
-                          if (auditFilter === 'tenant') return act.includes('TENANT') || act.includes('RESTAURANT') || act.includes('ACTIVAT') || act.includes('SUSPEND') || act.includes('DELETE') || act.includes('REGISTER');
-                          if (auditFilter === 'billing') return act.includes('CASHFREE') || act.includes('PAYMENT') || act.includes('SUB_') || act.includes('SUBSCRIPTION') || act.includes('PLAN') || act.includes('CANCEL') || act.includes('RENEW');
-                          if (auditFilter === 'vip') return act.includes('VIP') || act.includes('COMPLIMENTARY') || act.includes('ADMIN_GRANTED');
-                          if (auditFilter === 'system') return act.includes('SETTING') || act.includes('VACUUM') || act.includes('OPTIMIZ') || act.includes('MAINTENANCE') || act.includes('SYSTEM');
-                          return true;
-                        })
-                        .filter(log => {
-                          if (!auditSearch.trim()) return true;
-                          const q = auditSearch.toLowerCase();
-                          return (log.action || '').toLowerCase().includes(q) ||
-                            (log.details || '').toLowerCase().includes(q) ||
-                            (log.actor_role || '').toLowerCase().includes(q) ||
-                            String(log.restaurant_id || '').includes(q);
-                        })
-                        .map(log => {
-                          const act = (log.action || '').toUpperCase();
-                          let cat = { id: 'system', label: 'System', icon: '⚙️' };
-                          if (act.includes('SECURITY') || act.includes('LOGIN') || act.includes('LOGOUT') || act.includes('CREDENTIAL') || act.includes('PASSWORD') || act.includes('IMPERSONAT')) {
-                            cat = { id: 'security', label: 'Security', icon: '🔑' };
-                          } else if (act.includes('TENANT') || act.includes('RESTAURANT') || act.includes('ACTIVAT') || act.includes('SUSPEND') || act.includes('DELETE') || act.includes('REGISTER')) {
-                            cat = { id: 'tenant', label: 'Shop', icon: '🏪' };
-                          } else if (act.includes('CASHFREE') || act.includes('PAYMENT') || act.includes('SUB_') || act.includes('SUBSCRIPTION') || act.includes('PLAN') || act.includes('CANCEL') || act.includes('RENEW')) {
-                            cat = { id: 'billing', label: 'Billing', icon: '💳' };
-                          } else if (act.includes('VIP') || act.includes('COMPLIMENTARY') || act.includes('ADMIN_GRANTED')) {
-                            cat = { id: 'vip', label: 'VIP', icon: '👑' };
-                          }
-
-                          let actorLabel = log.actor_role === 'superadmin' ? '👑 Super Admin' :
-                            log.actor_role === 'admin' ? '🏢 Resto Owner' :
-                            log.actor_role === 'payment_gateway' ? '💳 Cashfree Gateway' :
-                            log.actor_role === 'system' ? '⚙️ System' : (log.actor_role || 'System');
-
-                          const targetTenant = log.restaurant_id ? restaurants.find(r => r.id === log.restaurant_id) : null;
-
-                          return (
-                            <tr key={log.id}>
-                              <td style={{ fontSize: '0.74rem', fontWeight: 700, color: 'var(--sa-text-muted)', whiteSpace: 'nowrap' }}>
-                                {log.created_at ? new Date(log.created_at).toLocaleString('en-IN') : 'Just now'}
-                              </td>
-                              <td>
-                                <span style={{ fontSize: '0.76rem', fontWeight: 800, color: 'var(--sa-text-main)' }}>
-                                  {actorLabel}
-                                </span>
-                              </td>
-                              <td>
-                                <span className="sa-badge sa-badge-info" style={{ fontSize: '0.68rem', fontWeight: 800 }}>
-                                  {cat.icon} {cat.label}
-                                </span>
-                              </td>
-                              <td>
-                                <strong style={{ fontSize: '0.82rem', color: 'var(--sa-text-main)' }}>
-                                  {log.action}
-                                </strong>
-                                {targetTenant && (
-                                  <span
-                                    onClick={() => setSelectedTenant360(targetTenant)}
-                                    style={{ display: 'block', fontSize: '0.68rem', color: 'var(--sa-accent-hover, #B48F27)', fontWeight: 800, cursor: 'pointer' }}
-                                    title="Open Shop 360° Profile"
-                                  >
-                                    🏢 {targetTenant.name} (/{targetTenant.slug})
-                                  </span>
-                                )}
-                              </td>
-                              <td style={{ fontSize: '0.78rem', color: '#475569', maxWidth: '300px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                                {log.details}
-                              </td>
-                              <td style={{ textAlign: 'right' }}>
-                                <button
-                                  type="button"
-                                  onClick={() => setSelectedAuditLog(log)}
-                                  className="sa-btn sa-btn-secondary sa-btn-sm"
-                                  style={{ padding: '4px 9px', fontSize: '0.72rem', fontWeight: 800 }}
-                                  title="View complete event details"
-                                >
-                                  🔍 View
-                                </button>
-                              </td>
-                            </tr>
-                          );
-                        })
-                    )}
-                  </tbody>
-                </table>
-              </div>
-
-              {/* 🔍 4. EVENT DETAIL MODAL */}
-              {selectedAuditLog && (
-                <div style={{
-                  position: 'fixed', inset: 0, zIndex: 9999,
-                  background: 'rgba(10,35,21,0.75)', backdropFilter: 'blur(6px)',
-                  display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '16px'
-                }}>
-                  <div style={{
-                    background: '#FFFFFF', width: '100%', maxWidth: '540px', borderRadius: '20px',
-                    boxShadow: '0 20px 40px rgba(0,0,0,0.3)', overflow: 'hidden', border: '1px solid var(--sa-border)'
-                  }}>
-                    <div style={{
-                      display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-                      padding: '18px 22px', background: '#0A2315', color: '#DFBA67'
-                    }}>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                        <FileText style={{ width: '20px', height: '20px' }} />
-                        <h3 style={{ margin: 0, fontSize: '1.05rem', fontWeight: 900 }}>Audit Event #{selectedAuditLog.id}</h3>
-                      </div>
-                      <button onClick={() => setSelectedAuditLog(null)} style={{ background: 'none', border: 'none', color: '#FFFFFF', cursor: 'pointer' }}>
-                        <X style={{ width: '20px', height: '20px' }} />
-                      </button>
-                    </div>
-
-                    <div style={{ padding: '20px 24px', display: 'flex', flexDirection: 'column', gap: '14px', maxHeight: '70vh', overflowY: 'auto' }}>
-                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                        <div>
-                          <span style={{ fontSize: '0.72rem', color: 'var(--sa-text-muted)', fontWeight: 700 }}>EVENT ACTION:</span>
-                          <h4 style={{ margin: '2px 0 0 0', fontSize: '1.05rem', fontWeight: 900, color: 'var(--sa-text-main)' }}>{selectedAuditLog.action}</h4>
-                        </div>
-                        <span className="sa-badge sa-badge-info" style={{ fontSize: '0.75rem', fontWeight: 900 }}>
-                          {selectedAuditLog.actor_role || 'SYSTEM'}
-                        </span>
-                      </div>
-
-                      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', background: '#F8FAFC', padding: '12px', borderRadius: '12px', border: '1px solid #E2E8F0' }}>
-                        <div>
-                          <span style={{ fontSize: '0.68rem', color: 'var(--sa-text-muted)', fontWeight: 800, display: 'block' }}>ACTOR / ROLE</span>
-                          <strong style={{ fontSize: '0.82rem', color: 'var(--sa-text-main)' }}>
-                            {selectedAuditLog.actor_role === 'superadmin' ? '👑 Super Admin' : selectedAuditLog.actor_role || 'System'}
-                          </strong>
-                        </div>
-                        <div>
-                          <span style={{ fontSize: '0.68rem', color: 'var(--sa-text-muted)', fontWeight: 800, display: 'block' }}>TIMESTAMP</span>
-                          <strong style={{ fontSize: '0.78rem', color: 'var(--sa-text-main)' }}>
-                            {selectedAuditLog.created_at ? new Date(selectedAuditLog.created_at).toLocaleString('en-IN') : 'Just now'}
-                          </strong>
-                        </div>
-                      </div>
-
-                      {selectedAuditLog.restaurant_id && (
-                        <div style={{ background: '#FFFBEB', padding: '12px', borderRadius: '12px', border: '1px solid #FCD34D' }}>
-                          <span style={{ fontSize: '0.68rem', color: '#B45309', fontWeight: 800, display: 'block' }}>ATTACHED SHOP (ID: #{selectedAuditLog.restaurant_id})</span>
-                          {(() => {
-                            const target = restaurants.find(r => r.id === selectedAuditLog.restaurant_id);
-                            if (target) {
-                              return (
-                                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: '4px' }}>
-                                  <strong style={{ fontSize: '0.86rem', color: '#92400E' }}>{target.name} (/{target.slug})</strong>
-                                  <button
-                                    type="button"
-                                    onClick={() => { setSelectedAuditLog(null); setSelectedTenant360(target); }}
-                                    className="sa-btn sa-btn-secondary sa-btn-sm"
-                                    style={{ padding: '3px 8px', fontSize: '0.72rem' }}
-                                  >
-                                    🔍 360° Profile
-                                  </button>
-                                </div>
-                              );
-                            }
-                            return <span style={{ fontSize: '0.78rem', color: '#92400E' }}>Shop #{selectedAuditLog.restaurant_id}</span>;
-                          })()}
-                        </div>
-                      )}
-
-                      <div>
-                        <span style={{ fontSize: '0.72rem', color: 'var(--sa-text-muted)', fontWeight: 800, display: 'block', marginBottom: '4px' }}>EVENT DETAILS & PAYLOAD:</span>
-                        {(() => {
-                          try {
-                            const parsedJson = JSON.parse(selectedAuditLog.details);
-                            const clean = { ...parsedJson };
-                            const sensitiveKeys = ['password', 'password_hash', 'jwt', 'token', 'secret', 'api_key', 'client_secret', 'webhook_secret'];
-                            for (const key of Object.keys(clean)) {
-                              if (sensitiveKeys.some(s => key.toLowerCase().includes(s))) {
-                                clean[key] = '[REDACTED]';
-                              }
-                            }
-                            return (
-                              <pre style={{ margin: 0, padding: '12px', background: '#0A2315', color: '#DFBA67', borderRadius: '10px', fontSize: '0.75rem', fontFamily: 'monospace', overflowX: 'auto' }}>
-                                {JSON.stringify(clean, null, 2)}
-                              </pre>
-                            );
-                          } catch {
-                            return (
-                              <div style={{ padding: '12px', background: '#F8FAFC', borderRadius: '10px', border: '1px solid #E2E8F0', fontSize: '0.82rem', color: 'var(--sa-text-main)', lineHeight: 1.4 }}>
-                                {selectedAuditLog.details}
-                              </div>
-                            );
-                          }
-                        })()}
-                      </div>
-
-                      <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: '8px' }}>
-                        <button
-                          type="button"
-                          onClick={() => setSelectedAuditLog(null)}
-                          className="sa-btn sa-btn-primary"
-                          style={{ padding: '8px 18px', fontWeight: 800 }}
-                        >
-                          Close Detail
-                        </button>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              )}
-            </div>
+            <AuditLogsView 
+              auditLogs={auditLogs} 
+              loading={auditLoading} 
+              onRefresh={loadAuditData} 
+              restaurants={restaurants} 
+              setSelectedTenant360={setSelectedTenant360} 
+            />
           )}
 
                     {/* ========================================================================= */}

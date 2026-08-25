@@ -1097,7 +1097,7 @@ router.delete('/plans/:key', authenticateToken, requireSuperAdmin, async (req, r
 // GET Platform Audit Logs
 router.get('/audit-logs', authenticateToken, requireSuperAdmin, async (req, res) => {
   try {
-    const logs = await query('SELECT * FROM audit_logs ORDER BY id DESC LIMIT 50');
+    const logs = await query('SELECT * FROM audit_logs ORDER BY id DESC LIMIT 150');
     res.json(logs);
   } catch (err) {
     console.error('Fetch audit logs error:', err);
