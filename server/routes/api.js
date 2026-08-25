@@ -119,12 +119,46 @@ router.get('/debug-db', async (req, res) => {
   }
 });
 
+// 🛡️ SENSITIVE SYSTEM SETTING KEY DETECTOR & REDACTOR
+// Robust, case-insensitive, punctuation-stripped pattern matcher to prevent credential leakage
+function isSensitiveSettingKey(key) {
+  if (!key || typeof key !== 'string') return true;
+  const normalized = key.toLowerCase().replace(/[-_\s.]/g, '');
+  const forbiddenPatterns = [
+    'secret',
+    'password',
+    'passphrase',
+    'token',
+    'jwt',
+    'apikey',
+    'privatekey',
+    'accesskey',
+    'clientsecret',
+    'webhooksecret',
+    'databaseurl',
+    'dbpass',
+    'cronsecret',
+    'gemini',
+    'cashfreesecret',
+    'cashfreeclientsecret',
+    'encryption'
+  ];
+  return forbiddenPatterns.some(pattern => {
+    const normPattern = pattern.replace(/[-_\s.]/g, '');
+    return normalized.includes(normPattern);
+  });
+}
+
 // GET public system settings (e.g. Master Super Admin WhatsApp Support Number)
 router.get('/settings', async (req, res) => {
   try {
     const rows = await query('SELECT * FROM system_settings');
     const settings = { support_whatsapp: '919876543210' };
-    (rows || []).forEach(r => { settings[r.key] = r.value; });
+    (rows || []).forEach(r => {
+      if (r && r.key && !isSensitiveSettingKey(r.key)) {
+        settings[r.key] = r.value;
+      }
+    });
     res.json(settings);
   } catch (err) {
     console.error('Fetch public settings error:', err);
