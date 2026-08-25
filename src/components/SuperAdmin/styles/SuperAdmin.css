@@ -249,26 +249,82 @@
   display: flex;
   align-items: center;
   flex-shrink: 0;
+  min-width: 0;
 }
 
-.sa-header-title-box {
+/* Signature TouchQR Header Brand Lockup Badge */
+.sa-header-brand-lockup {
   display: flex;
   align-items: center;
-  gap: 6px;
+  gap: 10px;
+  padding: 4px 12px 4px 5px;
+  background: linear-gradient(135deg, rgba(10, 35, 21, 0.04) 0%, rgba(212, 175, 55, 0.09) 100%);
+  border: 1.5px solid rgba(212, 175, 55, 0.35);
+  border-radius: 12px;
+  box-shadow: 0 2px 8px rgba(10, 35, 21, 0.04);
+  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+  user-select: none;
 }
 
-.sa-desktop-breadcrumb {
-  color: var(--sa-text-muted);
-  font-size: 0.80rem;
-  font-weight: 600;
+.sa-header-brand-lockup:hover {
+  border-color: rgba(212, 175, 55, 0.6);
+  box-shadow: 0 4px 14px rgba(212, 175, 55, 0.18);
+  transform: translateY(-1px);
 }
 
-.sa-header-title {
-  font-size: 0.96rem;
+.sa-header-logo-badge {
+  width: 32px;
+  height: 32px;
+  border-radius: 8px;
+  background: #FFFFFF;
+  border: 1.5px solid #D4AF37;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 2px 6px rgba(212, 175, 55, 0.25);
+  overflow: hidden;
+  flex-shrink: 0;
+}
+
+.sa-header-logo-img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  padding: 2px;
+  display: block;
+}
+
+.sa-header-logo-fallback {
+  font-size: 1.1rem;
+  line-height: 1;
+}
+
+.sa-header-brand-info {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  line-height: 1.15;
+}
+
+.sa-header-brand-title {
+  font-size: 0.94rem;
   font-weight: 900;
-  color: var(--sa-text-main);
-  margin: 0;
-  letter-spacing: -0.01em;
+  color: var(--sa-primary, #0A2315);
+  letter-spacing: -0.02em;
+}
+
+.sa-gold-text {
+  color: #D4AF37;
+  font-weight: 900;
+}
+
+.sa-header-brand-subtitle {
+  font-size: 0.62rem;
+  font-weight: 800;
+  color: #64748B;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  margin-top: 1px;
 }
 
 .sa-header-right {

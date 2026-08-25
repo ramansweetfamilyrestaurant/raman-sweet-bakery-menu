@@ -108,28 +108,35 @@ export default function Header({
         </div>
       ) : (
         <>
-          {/* LEFT: Brand Logo Thumbnail & Page Title */}
+          {/* LEFT: Unified Luxury TouchQR Brand Lockup */}
           <div className="sa-header-left">
-            {/* Mobile / Tablet Logo Thumbnail */}
-            {resolvedLogoUrl && !logoErr && (
-              <img
-                src={resolvedLogoUrl}
-                alt="TouchQR"
-                onError={() => setLogoErr(true)}
-                className="sa-mobile-only"
-                style={{
-                  width: '30px', height: '30px', borderRadius: '8px',
-                  objectFit: 'contain', background: '#FFFFFF', padding: '1px',
-                  border: '1px solid #D4AF37', flexShrink: 0
-                }}
-              />
-            )}
-            <div className="sa-header-title-box">
-              <span className="sa-desktop-breadcrumb">Super Admin /</span>
-              <h1 className="sa-header-title">
-                <span className="sa-mobile-only" style={{ color: 'var(--sa-text-main)', fontWeight: 900, fontSize: '0.96rem' }}>TouchQR</span>
-                <span className="sa-desktop-only">{currentTitle}</span>
-              </h1>
+            <div className="sa-header-brand-lockup">
+              {/* Logo Badge with Gold Accent */}
+              <div className="sa-header-logo-badge">
+                {resolvedLogoUrl && !logoErr ? (
+                  <img
+                    src={resolvedLogoUrl}
+                    alt="TouchQR"
+                    onError={() => setLogoErr(true)}
+                    className="sa-header-logo-img"
+                  />
+                ) : (
+                  <div className="sa-header-logo-fallback">
+                    👑
+                  </div>
+                )}
+              </div>
+
+              {/* Typography / Titles */}
+              <div className="sa-header-brand-info">
+                <div className="sa-header-brand-title">
+                  Touch<span className="sa-gold-text">QR</span>
+                </div>
+                <div className="sa-header-brand-subtitle">
+                  <span className="sa-mobile-only">SUPER ADMIN</span>
+                  <span className="sa-desktop-only">{currentTitle}</span>
+                </div>
+              </div>
             </div>
           </div>
 
