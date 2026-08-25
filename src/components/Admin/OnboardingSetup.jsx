@@ -303,6 +303,7 @@ export default function OnboardingSetup({ token, restaurantInfo, setRestaurantIn
         business_type: formData.business_type,
         food_type: formData.food_type,
         service_model: formData.service_model,
+        business_category: formData.business_category || 'dine_in',
         resto_type: safeResto,
         theme_color: formData.theme_color,
         location_initialized: true

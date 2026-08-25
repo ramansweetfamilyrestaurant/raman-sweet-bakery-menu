@@ -1224,7 +1224,7 @@ const handleUpdateSettings = async (req, res) => {
       return res.status(401).json({ error: 'Restaurant identity is missing from authentication context' });
     }
 
-    const { name, tagline, logo, phone, address, openingHours, google_review_url, google_reviews_enabled, filters_visibility, currency_symbol, fssai_lic_no, resto_type, business_type, food_type, service_model, whatsapp_number, whatsapp_enabled, theme_color, latitude, longitude, max_distance_meters, gst_enabled, gstin_number, total_tables, total_cabins, total_rooms, total_vip, table_prefix, order_retention_days, custom_domain, location_initialized, owner_name, owner_email, city, state, pincode, table_verification_mode, staff_verification_timeout_seconds } = req.body;
+    const { name, tagline, logo, phone, address, openingHours, google_review_url, google_reviews_enabled, filters_visibility, currency_symbol, fssai_lic_no, resto_type, business_type, food_type, service_model, business_category, whatsapp_number, whatsapp_enabled, theme_color, latitude, longitude, max_distance_meters, gst_enabled, gstin_number, total_tables, total_cabins, total_rooms, total_vip, table_prefix, order_retention_days, custom_domain, location_initialized, owner_name, owner_email, city, state, pincode, table_verification_mode, staff_verification_timeout_seconds } = req.body;
 
     let cleanOwnerEmail = undefined;
     if (owner_email !== undefined) {
@@ -1341,6 +1341,17 @@ const handleUpdateSettings = async (req, res) => {
       }
     }
 
+    let cleanBusinessCategory = null;
+    if (business_category !== undefined && business_category !== null && String(business_category).trim() !== '') {
+      const normCat = String(business_category).trim().toLowerCase();
+      const validCategories = ['dine_in', 'hotel', 'cinema'];
+      if (validCategories.includes(normCat)) {
+        cleanBusinessCategory = normCat;
+      } else {
+        return res.status(400).json({ error: `Invalid business_category '${business_category}'. Allowed values: ${validCategories.join(', ')}` });
+      }
+    }
+
     // 🛡️ AUTHORITATIVE BUSINESS TYPE -> SERVICE MODEL DEPENDENCY VALIDATION
     let effectiveBizType = cleanBusinessType;
     if (!effectiveBizType) {
@@ -1451,8 +1462,9 @@ const handleUpdateSettings = async (req, res) => {
         SET name = COALESCE($1, name), tagline = COALESCE($2, tagline), logo = CASE WHEN $3::text IS NOT NULL THEN $3 ELSE logo END, phone = COALESCE($4, phone), address = COALESCE($5, address), opening_hours = COALESCE($6, opening_hours), google_review_url = COALESCE($7, google_review_url), filters_visibility = COALESCE($8, filters_visibility), currency_symbol = COALESCE($9, currency_symbol), fssai_lic_no = COALESCE($10, fssai_lic_no), resto_type = COALESCE($11, resto_type), whatsapp_number = COALESCE($12, whatsapp_number), whatsapp_enabled = COALESCE($13, whatsapp_enabled), theme_color = COALESCE($14, theme_color), latitude = COALESCE($15, latitude), longitude = COALESCE($16, longitude), max_distance_meters = COALESCE($17, max_distance_meters), gst_enabled = COALESCE($18, gst_enabled), gstin_number = COALESCE($19, gstin_number), total_tables = COALESCE($20, total_tables), total_cabins = COALESCE($21, total_cabins), total_rooms = COALESCE($22, total_rooms), total_vip = COALESCE($23, total_vip), table_prefix = COALESCE($24, table_prefix), order_retention_days = COALESCE($25, order_retention_days), google_reviews_enabled = COALESCE($26, google_reviews_enabled), custom_domain = CASE WHEN $27::text IS NOT NULL THEN $27 ELSE custom_domain END, location_initialized = COALESCE($28, location_initialized), owner_name = COALESCE($29, owner_name), city = COALESCE($30, city), state = COALESCE($31, state), pincode = COALESCE($32, pincode), table_verification_mode = COALESCE($33, table_verification_mode), staff_verification_timeout_seconds = COALESCE($34, staff_verification_timeout_seconds),
             printer_mode = COALESCE($35, printer_mode), auto_print_kot = COALESCE($36, auto_print_kot), auto_print_bill = COALESCE($37, auto_print_bill), printer_paper_width = COALESCE($38, printer_paper_width),
             business_type = COALESCE($39, business_type), food_type = COALESCE($40, food_type), service_model = COALESCE($41, service_model),
-            owner_email = CASE WHEN $42::boolean THEN $43 ELSE owner_email END
-        WHERE id = $44
+            owner_email = CASE WHEN $42::boolean THEN $43 ELSE owner_email END,
+            business_category = COALESCE($44, business_category)
+        WHERE id = $45
       `, [
         name !== undefined ? name : null,
         tagline !== undefined ? tagline : null,
@@ -1497,10 +1509,11 @@ const handleUpdateSettings = async (req, res) => {
         cleanServiceModel,
         cleanOwnerEmail !== undefined,
         cleanOwnerEmail !== undefined ? cleanOwnerEmail : null,
+        cleanBusinessCategory,
         targetId
       ]);
     } catch (sqlErr) {
-      if (sqlErr.message && (sqlErr.message.includes('total_') || sqlErr.message.includes('table_prefix') || sqlErr.message.includes('column') || sqlErr.message.includes('verification') || sqlErr.message.includes('print') || sqlErr.message.includes('business_type') || sqlErr.message.includes('food_type') || sqlErr.message.includes('service_model') || sqlErr.message.includes('owner_email'))) {
+      if (sqlErr.message && (sqlErr.message.includes('total_') || sqlErr.message.includes('table_prefix') || sqlErr.message.includes('column') || sqlErr.message.includes('verification') || sqlErr.message.includes('print') || sqlErr.message.includes('business_type') || sqlErr.message.includes('food_type') || sqlErr.message.includes('service_model') || sqlErr.message.includes('owner_email') || sqlErr.message.includes('business_category'))) {
         try {
           await query("ALTER TABLE restaurants ADD COLUMN IF NOT EXISTS total_cabins INT DEFAULT 0");
           await query("ALTER TABLE restaurants ADD COLUMN IF NOT EXISTS total_rooms INT DEFAULT 0");
@@ -1516,13 +1529,15 @@ const handleUpdateSettings = async (req, res) => {
           await query("ALTER TABLE restaurants ADD COLUMN IF NOT EXISTS food_type VARCHAR(50)");
           await query("ALTER TABLE restaurants ADD COLUMN IF NOT EXISTS service_model VARCHAR(50)");
           await query("ALTER TABLE restaurants ADD COLUMN IF NOT EXISTS owner_email VARCHAR(255) DEFAULT NULL");
+          await query("ALTER TABLE restaurants ADD COLUMN IF NOT EXISTS business_category VARCHAR(50) DEFAULT 'dine_in'");
           await query(`
             UPDATE restaurants 
             SET name = COALESCE($1, name), tagline = COALESCE($2, tagline), logo = CASE WHEN $3::text IS NOT NULL THEN $3 ELSE logo END, phone = COALESCE($4, phone), address = COALESCE($5, address), opening_hours = COALESCE($6, opening_hours), google_review_url = COALESCE($7, google_review_url), filters_visibility = COALESCE($8, filters_visibility), currency_symbol = COALESCE($9, currency_symbol), fssai_lic_no = COALESCE($10, fssai_lic_no), resto_type = COALESCE($11, resto_type), whatsapp_number = COALESCE($12, whatsapp_number), whatsapp_enabled = COALESCE($13, whatsapp_enabled), theme_color = COALESCE($14, theme_color), latitude = COALESCE($15, latitude), longitude = COALESCE($16, longitude), max_distance_meters = COALESCE($17, max_distance_meters), gst_enabled = COALESCE($18, gst_enabled), gstin_number = COALESCE($19, gstin_number), total_tables = COALESCE($20, total_tables), total_cabins = COALESCE($21, total_cabins), total_rooms = COALESCE($22, total_rooms), total_vip = COALESCE($23, total_vip), table_prefix = COALESCE($24, table_prefix), order_retention_days = COALESCE($25, order_retention_days), google_reviews_enabled = COALESCE($26, google_reviews_enabled), custom_domain = CASE WHEN $27::text IS NOT NULL THEN $27 ELSE custom_domain END, location_initialized = COALESCE($28, location_initialized), owner_name = COALESCE($29, owner_name), city = COALESCE($30, city), state = COALESCE($31, state), pincode = COALESCE($32, pincode), table_verification_mode = COALESCE($33, table_verification_mode), staff_verification_timeout_seconds = COALESCE($34, staff_verification_timeout_seconds),
                 printer_mode = COALESCE($35, printer_mode), auto_print_kot = COALESCE($36, auto_print_kot), auto_print_bill = COALESCE($37, auto_print_bill), printer_paper_width = COALESCE($38, printer_paper_width),
                 business_type = COALESCE($39, business_type), food_type = COALESCE($40, food_type), service_model = COALESCE($41, service_model),
-                owner_email = CASE WHEN $42::boolean THEN $43 ELSE owner_email END
-            WHERE id = $44
+                owner_email = CASE WHEN $42::boolean THEN $43 ELSE owner_email END,
+                business_category = COALESCE($44, business_category)
+            WHERE id = $45
           `, [
             name !== undefined ? name : null,
             tagline !== undefined ? tagline : null,
@@ -1567,6 +1582,7 @@ const handleUpdateSettings = async (req, res) => {
             cleanServiceModel,
             cleanOwnerEmail !== undefined,
             cleanOwnerEmail !== undefined ? cleanOwnerEmail : null,
+            cleanBusinessCategory,
             targetId
           ]);
         } catch (innerErr) {

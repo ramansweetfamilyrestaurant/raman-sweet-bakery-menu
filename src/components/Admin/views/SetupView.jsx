@@ -26,6 +26,7 @@ import {
   cancelSubscription,
   changePlan
 } from '../../../api/client';
+import { BUSINESS_CATEGORY_LIST } from '../../../constants/businessCategories';
 import { CUSTOMER_MENU_THEMES, THEME_LIST, resolveTheme } from '../../../constants/themes';
 
 export default function SetupView({
@@ -1707,6 +1708,52 @@ export default function SetupView({
                 </div>
 
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', paddingLeft: '46px' }}>
+                  {/* Control 0: Business Category */}
+                  <div style={{ background: '#F8FAFC', padding: '10px 12px', borderRadius: '12px', border: '1px solid #E2E8F0' }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '4px' }}>
+                      <label style={{ fontSize: '0.80rem', fontWeight: 800, color: '#1E293B' }}>
+                        Business Category
+                      </label>
+                      <span style={{ fontSize: '0.66rem', fontWeight: 700, color: '#16A34A', background: '#DCFCE7', padding: '2px 6px', borderRadius: '8px' }}>
+                        Canonical
+                      </span>
+                    </div>
+                    <span style={{ fontSize: '0.68rem', color: '#64748B', display: 'block', marginBottom: '8px' }}>
+                      Select the primary industry category for this business account.
+                    </span>
+                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(110px, 1fr))', gap: '8px' }}>
+                      {BUSINESS_CATEGORY_LIST.map(cat => {
+                        const isSelected = (settingsForm.business_category || 'dine_in') === cat.value;
+                        return (
+                          <button
+                            key={cat.value}
+                            type="button"
+                            onClick={() => setSettingsForm({ ...settingsForm, business_category: cat.value })}
+                            style={{
+                              padding: '8px 10px',
+                              minHeight: '44px',
+                              borderRadius: '8px',
+                              border: isSelected ? '2px solid #16A34A' : '1px solid #CBD5E1',
+                              background: isSelected ? '#F0FDF4' : '#FFFFFF',
+                              cursor: 'pointer',
+                              display: 'flex',
+                              flexDirection: 'column',
+                              alignItems: 'center',
+                              justifyContent: 'center',
+                              gap: '2px',
+                              transition: 'all 0.15s ease'
+                            }}
+                          >
+                            <span style={{ fontSize: '1.05rem' }}>{cat.emoji}</span>
+                            <span style={{ fontSize: '0.76rem', fontWeight: 800, color: isSelected ? '#166534' : '#334155' }}>
+                              {cat.label}
+                            </span>
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
+
                   {/* Control A: Business Type */}
                   <div style={{ background: '#F8FAFC', padding: '10px 12px', borderRadius: '12px', border: '1px solid #E2E8F0' }}>
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '4px' }}>

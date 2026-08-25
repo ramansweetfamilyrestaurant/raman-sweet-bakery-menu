@@ -526,7 +526,6 @@ async function createTables() {
       `ALTER TABLE restaurants ADD COLUMN IF NOT EXISTS pincode VARCHAR(20);`,
       // Step 3.159 Business Category System
       `ALTER TABLE restaurants ADD COLUMN IF NOT EXISTS business_category VARCHAR(50) DEFAULT 'dine_in';`,
-      `UPDATE restaurants SET business_category = 'cinema' WHERE (slug = 'mahesh' OR id = 38) AND (business_category IS NULL OR business_category = '' OR business_category = 'dine_in');`,
       `UPDATE restaurants SET business_category = 'dine_in' WHERE business_category IS NULL OR business_category = '';`,
       // Step 2.1 Table Presence Verification Foundation
       `ALTER TABLE restaurants ADD COLUMN IF NOT EXISTS table_verification_mode VARCHAR(50) DEFAULT 'GPS_WITH_STAFF_FALLBACK';`,
@@ -1009,7 +1008,6 @@ async function createTables() {
       if (!restoCols.some(c => c.name === 'state')) sqliteDb.exec("ALTER TABLE restaurants ADD COLUMN state TEXT");
       if (!restoCols.some(c => c.name === 'pincode')) sqliteDb.exec("ALTER TABLE restaurants ADD COLUMN pincode TEXT");
       if (!restoCols.some(c => c.name === 'business_category')) sqliteDb.exec("ALTER TABLE restaurants ADD COLUMN business_category TEXT DEFAULT 'dine_in'");
-      sqliteDb.exec("UPDATE restaurants SET business_category = 'cinema' WHERE (slug = 'mahesh' OR id = 38) AND (business_category IS NULL OR business_category = '' OR business_category = 'dine_in')");
       sqliteDb.exec("UPDATE restaurants SET business_category = 'dine_in' WHERE business_category IS NULL OR business_category = ''");
 
       const planCols = sqliteDb.pragma('table_info(saas_plans)');
