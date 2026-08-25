@@ -379,12 +379,18 @@
   box-shadow: 0 2px 8px rgba(212, 175, 55, 0.2);
 }
 
-/* Sleek Minimalist SSL Badge */
+/* Sleek Minimalist SSL Badge with Live Pulse */
+@keyframes saLivePulse {
+  0% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(22, 163, 74, 0.5); }
+  70% { transform: scale(1); box-shadow: 0 0 0 5px rgba(22, 163, 74, 0); }
+  100% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(22, 163, 74, 0); }
+}
+
 .sa-ssl-badge {
   display: inline-flex;
   align-items: center;
-  gap: 5px;
-  padding: 4px 9px;
+  gap: 6px;
+  padding: 4px 10px;
   border-radius: var(--sa-radius-full);
   background: rgba(22, 163, 74, 0.08);
   border: 1px solid rgba(22, 163, 74, 0.22);
@@ -397,9 +403,15 @@
   transition: var(--sa-transition);
 }
 
+.sa-ssl-badge svg,
+.sa-ssl-badge::before {
+  animation: saLivePulse 2s infinite ease-in-out;
+}
+
 .sa-ssl-badge:hover {
   background: rgba(22, 163, 74, 0.14);
   border-color: rgba(22, 163, 74, 0.35);
+  box-shadow: 0 2px 8px rgba(22, 163, 74, 0.15);
 }
 
 .sa-ssl-text {
@@ -593,7 +605,7 @@
 }
 
 .sa-stat-card {
-  background: var(--sa-surface);
+  background: linear-gradient(180deg, #FFFFFF 0%, #FAFBFD 100%);
   border: 1px solid var(--sa-border);
   border-radius: var(--sa-radius-lg);
   padding: 18px 20px;
@@ -601,22 +613,37 @@
   flex-direction: column;
   gap: 8px;
   transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
-  box-shadow: var(--sa-shadow-sm);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04), 0 6px 16px -2px rgba(10, 35, 21, 0.03);
   min-height: 94px;
   box-sizing: border-box;
   position: relative;
   overflow: hidden;
 }
 
+.sa-stat-card::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 2px;
+  background: transparent;
+  transition: var(--sa-transition);
+}
+
 .sa-stat-card:hover {
-  transform: translateY(-2px);
-  box-shadow: var(--sa-shadow-md);
-  border-color: rgba(212, 175, 55, 0.4);
+  transform: translateY(-3px);
+  box-shadow: 0 12px 28px -4px rgba(10, 35, 21, 0.08), 0 0 0 1px rgba(212, 175, 55, 0.35);
+  border-color: rgba(212, 175, 55, 0.35);
+}
+
+.sa-stat-card:hover::before {
+  background: linear-gradient(90deg, #D4AF37 0%, #10B981 100%);
 }
 
 .sa-stat-icon-wrap {
-  width: 34px;
-  height: 34px;
+  width: 36px;
+  height: 36px;
   border-radius: var(--sa-radius-md);
   display: flex;
   align-items: center;
@@ -626,12 +653,12 @@
 }
 
 .sa-stat-card:hover .sa-stat-icon-wrap {
-  background: rgba(212, 175, 55, 0.15);
-  transform: scale(1.05);
+  background: rgba(212, 175, 55, 0.18);
+  transform: scale(1.08);
 }
 
 .sa-stat-label {
-  font-size: 0.74rem;
+  font-size: 0.72rem;
   font-weight: 800;
   color: var(--sa-text-muted);
   text-transform: uppercase;
@@ -639,11 +666,12 @@
 }
 
 .sa-stat-value {
-  font-size: 1.45rem;
+  font-size: 1.50rem;
   font-weight: 900;
   color: var(--sa-text-main);
   letter-spacing: -0.02em;
   line-height: 1.2;
+  font-variant-numeric: tabular-nums;
 }
 
 .sa-stat-subtitle {
