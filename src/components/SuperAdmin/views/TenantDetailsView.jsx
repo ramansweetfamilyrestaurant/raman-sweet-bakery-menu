@@ -8,6 +8,7 @@ import {
 } from 'lucide-react';
 import Drawer from '../components/Drawer';
 import StatusBadge from '../components/StatusBadge';
+import { getBusinessCategoryMeta, getBusinessCategoryLabel, getBusinessCategoryEmoji } from '../../../constants/businessCategories';
 import '../styles/SuperAdmin.css';
 
 const getRestaurantLogoUrl = (logo) => {
@@ -205,6 +206,13 @@ export default function TenantDetailsView({
                 }}>
                   {tenant.active !== false ? '🟢 ACTIVE' : '🔴 SUSPENDED'}
                 </span>
+                <span style={{
+                  padding: '3px 8px', borderRadius: '6px', fontSize: '0.68rem', fontWeight: 900,
+                  background: 'rgba(212, 175, 55, 0.15)', color: '#DFBA67', border: '1px solid rgba(212, 175, 55, 0.4)',
+                  display: 'inline-flex', alignItems: 'center', gap: '4px'
+                }}>
+                  {getBusinessCategoryEmoji(tenant.business_category)} {getBusinessCategoryLabel(tenant.business_category).toUpperCase()}
+                </span>
               </div>
               <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
                 <span style={{ fontSize: '0.80rem', color: '#DFBA67', fontWeight: 800 }}>
@@ -382,6 +390,22 @@ export default function TenantDetailsView({
 
           {/* Business & Owner Info Grid */}
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '12px', fontSize: '0.84rem' }}>
+            {/* Business Category */}
+            <div style={{ background: 'var(--sa-surface-subtle)', padding: '12px 14px', borderRadius: '12px', border: '1px solid var(--sa-border)' }}>
+              <span style={{ fontSize: '0.70rem', color: 'var(--sa-text-muted)', fontWeight: 800, display: 'block' }}>BUSINESS CATEGORY</span>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginTop: '4px' }}>
+                <span style={{ fontSize: '1.2rem' }}>{getBusinessCategoryEmoji(tenant.business_category)}</span>
+                <div>
+                  <strong style={{ color: 'var(--sa-text-main)', fontSize: '0.88rem', display: 'block' }}>
+                    {getBusinessCategoryLabel(tenant.business_category)}
+                  </strong>
+                  <span style={{ fontSize: '0.68rem', color: 'var(--sa-text-muted)', display: 'block' }}>
+                    {getBusinessCategoryMeta(tenant.business_category).description}
+                  </span>
+                </div>
+              </div>
+            </div>
+
             {/* Owner Name */}
             <div style={{ background: 'var(--sa-surface-subtle)', padding: '12px 14px', borderRadius: '12px', border: '1px solid var(--sa-border)' }}>
               <span style={{ fontSize: '0.70rem', color: 'var(--sa-text-muted)', fontWeight: 800, display: 'block' }}>OWNER FULL NAME</span>

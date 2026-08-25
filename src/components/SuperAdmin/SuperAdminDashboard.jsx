@@ -3,6 +3,7 @@ import { ChevronRight, Crown, Plus, LogOut, ExternalLink, Trash2, CheckCircle, S
 import { fetchSuperAdminRestaurants, createTenantRestaurant, toggleTenantRestaurantActive, deleteTenantRestaurant, impersonateTenantRestaurant, updateTenantRestaurant, createAnnouncement, fetchSuperAnnouncements, deleteAnnouncement, clearAllAnnouncements, fetchAuditLogs, uploadImage, fetchSaaSPlans, createSaaSPlan, updateSaaSPlan, deleteSaaSPlan, superAdminOptimizeDatabase, updateSuperAdminCredentials, grantFreeAccess, revokeFreeAccess } from '../../api/client';
 import { SAAS_PLANS, getPlanDetails } from '../../config/plans';
 import { resolveImageUrl, getRestaurantLogoUrl } from '../../utils/imageHelper';
+import { BUSINESS_CATEGORIES, BUSINESS_CATEGORY_LIST, resolveBusinessCategory, getBusinessCategoryMeta } from '../../constants/businessCategories';
 import GrantFreeAccessModal from './modals/GrantFreeAccessModal';
 import RevokeFreeAccessModal from './modals/RevokeFreeAccessModal';
 import Sidebar from './components/Sidebar';
@@ -31,6 +32,7 @@ export default function SuperAdminDashboard({ token, username, onLogout, onRetur
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [showMobileMoreDrawer, setShowMobileMoreDrawer] = useState(false);
   const [billingFilter, setBillingFilter] = useState('all');
+  const [categoryFilter, setCategoryFilter] = useState('all'); // 'all', 'dine_in', 'hotel', 'cinema'
 
   // Security & Portal Tab State & Eye Toggles
   const [secTab, setSecTab] = useState('security'); // 'security', 'gateway', 'branding', 'health'
@@ -161,7 +163,8 @@ export default function SuperAdminDashboard({ token, username, onLogout, onRetur
     plan_price: 999,
     plan_expires_at: '',
     whatsapp_number: '',
-    theme_color: 'gold'
+    theme_color: 'gold',
+    business_category: 'dine_in'
   });
   const [formError, setFormError] = useState('');
   const [formSubmitting, setFormSubmitting] = useState(false);
@@ -251,7 +254,8 @@ export default function SuperAdminDashboard({ token, username, onLogout, onRetur
         plan_price: 999,
         plan_expires_at: '',
         whatsapp_number: '',
-        theme_color: 'gold'
+        theme_color: 'gold',
+        business_category: 'dine_in'
       });
       loadData();
     } catch (err) {
@@ -509,7 +513,11 @@ export default function SuperAdminDashboard({ token, username, onLogout, onRetur
       const status = getTenantStatus(r);
       if (statusFilter !== 'all' && status !== statusFilter) return false;
 
-      // Extended Search (name, slug, owner_name, owner_username, phone, owner_email, id)
+      // Independent Business Category Dimension
+      const cat = r.business_category || 'dine_in';
+      if (categoryFilter !== 'all' && cat !== categoryFilter) return false;
+
+      // Extended Search (name, slug, owner_name, owner_username, phone, owner_email, id, category)
       if (!searchQuery.trim()) return true;
       const q = searchQuery.toLowerCase().trim();
       const nameMatch = (r.name || '').toLowerCase().includes(q);
@@ -519,8 +527,14 @@ export default function SuperAdminDashboard({ token, username, onLogout, onRetur
       const phoneMatch = (r.phone || '').includes(q) || (r.whatsapp_number || '').includes(q);
       const emailMatch = (r.owner_email || '').toLowerCase().includes(q);
       const idMatch = String(r.id || '').includes(q);
+      const categoryMatch = (
+        (q === 'hotel' && cat === 'hotel') ||
+        (q === 'cinema' && cat === 'cinema') ||
+        ((q === 'dine' || q === 'dine-in' || q === 'dine_in') && cat === 'dine_in') ||
+        cat.includes(q)
+      );
 
-      return nameMatch || slugMatch || ownerNameMatch || usernameMatch || phoneMatch || emailMatch || idMatch;
+      return nameMatch || slugMatch || ownerNameMatch || usernameMatch || phoneMatch || emailMatch || idMatch || categoryMatch;
     })
     .sort((a, b) => {
       if (sortBy === 'name_asc') return (a.name || '').localeCompare(b.name || '');
@@ -686,7 +700,39 @@ export default function SuperAdminDashboard({ token, username, onLogout, onRetur
         </div>
       </div>
 
-      {/* 🏷️ 3. FILTER PILLS STRIP (USING SYNCHRONIZED getDirectoryFilterPills) */}
+      {/* 🏷️ 3A. BUSINESS CATEGORY FILTER PILLS (INDEPENDENT) */}
+      <div style={{ display: 'flex', gap: '6px', alignItems: 'center', flexWrap: 'wrap' }}>
+        <span style={{ fontSize: '0.72rem', fontWeight: 800, color: 'var(--sa-text-muted)', textTransform: 'uppercase', marginRight: '4px' }}>
+          Category:
+        </span>
+        {[
+          { id: 'all', label: 'All Businesses', count: restaurants.length },
+          { id: 'dine_in', label: '🍽️ Dine-In', count: restaurants.filter(r => (r.business_category || 'dine_in') === 'dine_in').length },
+          { id: 'hotel', label: '🏨 Hotel', count: restaurants.filter(r => (r.business_category || 'dine_in') === 'hotel').length },
+          { id: 'cinema', label: '🎬 Cinema', count: restaurants.filter(r => (r.business_category || 'dine_in') === 'cinema').length },
+        ].map(cat => {
+          const isSelected = categoryFilter === cat.id;
+          return (
+            <button
+              key={cat.id}
+              type="button"
+              onClick={() => setCategoryFilter(cat.id)}
+              className={`sa-btn sa-btn-sm ${isSelected ? 'sa-btn-primary' : 'sa-btn-secondary'}`}
+              style={{
+                fontSize: '0.74rem',
+                padding: '4px 10px',
+                borderRadius: 'var(--sa-radius-full)',
+                border: isSelected ? '1.5px solid var(--sa-primary)' : '1px solid var(--sa-border)'
+              }}
+            >
+              <span>{cat.label}</span>
+              <span style={{ opacity: 0.8, fontSize: '0.68rem', marginLeft: '4px' }}>({cat.count})</span>
+            </button>
+          );
+        })}
+      </div>
+
+      {/* 🏷️ 3B. FILTER PILLS STRIP (USING SYNCHRONIZED getDirectoryFilterPills) */}
       <FilterPills
         pills={getDirectoryFilterPills()}
         activeId={statusFilter}
@@ -702,11 +748,11 @@ export default function SuperAdminDashboard({ token, username, onLogout, onRetur
         <EmptyState
           icon={Store}
           title="No shops match your criteria"
-          description="Try clearing your search query or switching status filters."
+          description="Try clearing your search query or switching status/category filters."
           action={
             <button
               type="button"
-              onClick={() => { setSearchQuery(''); setStatusFilter('all'); }}
+              onClick={() => { setSearchQuery(''); setStatusFilter('all'); setCategoryFilter('all'); }}
               className="sa-btn sa-btn-secondary sa-btn-sm"
             >
               Clear Search & Filters
@@ -720,6 +766,7 @@ export default function SuperAdminDashboard({ token, username, onLogout, onRetur
             <thead>
               <tr>
                 <th style={{ minWidth: '240px' }}>SHOP / RESTAURANT</th>
+                <th style={{ minWidth: '120px' }}>CATEGORY</th>
                 <th style={{ minWidth: '160px' }}>OWNER / CONTACT</th>
                 <th style={{ minWidth: '130px' }}>PLAN</th>
                 <th style={{ minWidth: '110px' }}>STATUS</th>
@@ -733,6 +780,7 @@ export default function SuperAdminDashboard({ token, username, onLogout, onRetur
                 const daysLeft = getDaysRemaining(r.plan_expires_at);
                 const isVip = (r.subscription_type === 'ADMIN_GRANTED' || r.mandate_status === 'admin_granted');
                 const isExpired = (!isVip && daysLeft !== null && daysLeft <= 0) || r.subscription_status === 'expired';
+                const catMeta = getBusinessCategoryMeta(r.business_category);
 
                 return (
                   <tr key={r.id}>
@@ -753,6 +801,24 @@ export default function SuperAdminDashboard({ token, username, onLogout, onRetur
                           <span style={{ fontSize: '0.7rem', color: 'var(--sa-accent-hover, #B48F27)', fontWeight: 700, display: 'block', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>/{r.slug}</span>
                         </div>
                       </div>
+                    </td>
+                    <td>
+                      <span style={{
+                        display: 'inline-flex',
+                        alignItems: 'center',
+                        gap: '4px',
+                        padding: '3px 8px',
+                        borderRadius: 'var(--sa-radius-pill, 9999px)',
+                        fontSize: '0.72rem',
+                        fontWeight: 800,
+                        background: 'var(--sa-surface-subtle, #F1F5F9)',
+                        color: 'var(--sa-text-main, #334155)',
+                        border: '1px solid var(--sa-border, #CBD5E1)',
+                        whiteSpace: 'nowrap'
+                      }}>
+                        <span>{catMeta.emoji}</span>
+                        <span>{catMeta.label.toUpperCase()}</span>
+                      </span>
                     </td>
                     <td style={{ minWidth: '160px', maxWidth: '190px' }}>
                       <div style={{ minWidth: 0, overflow: 'hidden' }}>
@@ -818,6 +884,7 @@ export default function SuperAdminDashboard({ token, username, onLogout, onRetur
             const daysLeft = getDaysRemaining(r.plan_expires_at);
             const isVip = (r.subscription_type === 'ADMIN_GRANTED' || r.mandate_status === 'admin_granted');
             const isExpired = (!isVip && daysLeft !== null && daysLeft <= 0) || r.subscription_status === 'expired';
+            const catMeta = getBusinessCategoryMeta(r.business_category);
 
             return (
               <div
@@ -872,6 +939,10 @@ export default function SuperAdminDashboard({ token, username, onLogout, onRetur
                   <div style={{ display: 'flex', gap: '5px', flexWrap: 'wrap', alignItems: 'center', marginBottom: '8px' }}>
                     <span style={{ background: '#FEF3C7', color: '#B45309', padding: '2px 7px', borderRadius: '6px', fontSize: '0.66rem', fontWeight: 900 }}>
                       👑 {(r.plan_tier || 'pro').toUpperCase()} (₹{r.plan_price || 999}/mo)
+                    </span>
+
+                    <span style={{ background: '#F1F5F9', color: '#334155', border: '1px solid #CBD5E1', padding: '2px 7px', borderRadius: '6px', fontSize: '0.66rem', fontWeight: 800, display: 'inline-flex', alignItems: 'center', gap: '3px' }}>
+                      <span>{catMeta.emoji}</span> {catMeta.label}
                     </span>
 
                     <span style={{ background: '#F1F5F9', color: '#475569', padding: '2px 7px', borderRadius: '6px', fontSize: '0.66rem', fontWeight: 800 }}>
@@ -1122,6 +1193,63 @@ export default function SuperAdminDashboard({ token, username, onLogout, onRetur
                   trendType="positive"
                   onClick={() => { setActiveView('tenants'); setStatusFilter('all'); }}
                 />
+              </div>
+
+              {/* 🏢 BUSINESS DISTRIBUTION METRIC SUMMARY */}
+              <div style={{
+                background: 'var(--sa-surface, #FFFFFF)',
+                borderRadius: 'var(--sa-radius-lg, 16px)',
+                padding: '16px 20px',
+                border: '1px solid var(--sa-border, #E2E8F0)',
+                boxShadow: 'var(--sa-shadow-sm, 0 1px 3px rgba(0,0,0,0.05))',
+                display: 'flex',
+                justifyContent: 'space-between',
+                alignItems: 'center',
+                flexWrap: 'wrap',
+                gap: '12px'
+              }}>
+                <div>
+                  <div style={{ fontSize: '0.72rem', fontWeight: 800, color: 'var(--sa-text-muted)', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+                    BUSINESS DISTRIBUTION
+                  </div>
+                  <div style={{ fontSize: '0.90rem', fontWeight: 900, color: 'var(--sa-text-main)', marginTop: '2px' }}>
+                    Tenant Industry Breakdown
+                  </div>
+                </div>
+
+                <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
+                  {[
+                    { id: 'dine_in', emoji: '🍽️', label: 'Dine-In', count: restaurants.filter(r => (r.business_category || 'dine_in') === 'dine_in').length },
+                    { id: 'hotel', emoji: '🏨', label: 'Hotel', count: restaurants.filter(r => (r.business_category || 'dine_in') === 'hotel').length },
+                    { id: 'cinema', emoji: '🎬', label: 'Cinema', count: restaurants.filter(r => (r.business_category || 'dine_in') === 'cinema').length },
+                  ].map(cat => (
+                    <div
+                      key={cat.id}
+                      onClick={() => {
+                        setCategoryFilter(cat.id);
+                        setActiveView('tenants');
+                      }}
+                      style={{
+                        background: 'var(--sa-surface-subtle, #F8FAFC)',
+                        border: '1px solid var(--sa-border, #E2E8F0)',
+                        borderRadius: '12px',
+                        padding: '8px 14px',
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '8px',
+                        cursor: 'pointer',
+                        transition: 'all 0.15s ease'
+                      }}
+                      title={`Filter by ${cat.label}`}
+                    >
+                      <span style={{ fontSize: '1.1rem' }}>{cat.emoji}</span>
+                      <div>
+                        <span style={{ fontSize: '0.72rem', fontWeight: 700, color: 'var(--sa-text-muted)', display: 'block' }}>{cat.label}</span>
+                        <strong style={{ fontSize: '0.95rem', fontWeight: 900, color: 'var(--sa-text-main)' }}>{cat.count}</strong>
+                      </div>
+                    </div>
+                  ))}
+                </div>
               </div>
 
               {/* ⚠️ 3. TWO-COLUMN OPERATIONAL HUBS: NEEDS ATTENTION & PLATFORM HEALTH */}
@@ -2812,6 +2940,44 @@ export default function SuperAdminDashboard({ token, username, onLogout, onRetur
               </div>
 
               <div>
+                <label style={{ fontSize: '0.78rem', fontWeight: 800, color: 'var(--text-dark)', marginBottom: '6px', display: 'block' }}>BUSINESS CATEGORY *</label>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))', gap: '8px' }}>
+                  {BUSINESS_CATEGORY_LIST.map((cat) => {
+                    const isSelected = (form.business_category || 'dine_in') === cat.value;
+                    return (
+                      <button
+                        type="button"
+                        key={cat.value}
+                        onClick={() => setForm({ ...form, business_category: cat.value })}
+                        style={{
+                          minHeight: '48px',
+                          padding: '8px 10px',
+                          borderRadius: '12px',
+                          border: isSelected ? '2px solid #D4AF37' : '1.5px solid var(--border-light)',
+                          background: isSelected ? '#FEFCE8' : '#FFFFFF',
+                          boxShadow: isSelected ? '0 2px 8px rgba(212, 175, 55, 0.2)' : 'none',
+                          cursor: 'pointer',
+                          display: 'flex',
+                          flexDirection: 'column',
+                          alignItems: 'flex-start',
+                          textAlign: 'left',
+                          transition: 'all 0.15s ease'
+                        }}
+                      >
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '6px', width: '100%' }}>
+                          <span style={{ fontSize: '1.1rem' }}>{cat.emoji}</span>
+                          <strong style={{ fontSize: '0.84rem', color: isSelected ? '#854D0E' : 'var(--text-dark)' }}>{cat.label}</strong>
+                        </div>
+                        <span style={{ fontSize: '0.68rem', color: isSelected ? '#A16207' : 'var(--text-muted)', marginTop: '2px', lineHeight: 1.2 }}>
+                          {cat.description}
+                        </span>
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+
+              <div>
                 <label style={{ fontSize: '0.78rem', fontWeight: 800, color: 'var(--text-dark)', marginBottom: '4px', display: 'block' }}>CUSTOM URL SLUG *</label>
                 <input
                   type="text"
@@ -2932,6 +3098,44 @@ export default function SuperAdminDashboard({ token, username, onLogout, onRetur
                   required
                   style={{ width: '100%', padding: '11px 14px', borderRadius: '12px', border: '1.5px solid var(--border-light)', fontSize: '0.9rem' }}
                 />
+              </div>
+
+              <div>
+                <label style={{ fontSize: '0.78rem', fontWeight: 800, color: 'var(--text-dark)', marginBottom: '6px', display: 'block' }}>BUSINESS CATEGORY</label>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))', gap: '8px' }}>
+                  {BUSINESS_CATEGORY_LIST.map((cat) => {
+                    const isSelected = (editModalData.business_category || 'dine_in') === cat.value;
+                    return (
+                      <button
+                        type="button"
+                        key={cat.value}
+                        onClick={() => setEditModalData({ ...editModalData, business_category: cat.value })}
+                        style={{
+                          minHeight: '48px',
+                          padding: '8px 10px',
+                          borderRadius: '12px',
+                          border: isSelected ? '2px solid #D4AF37' : '1.5px solid var(--border-light)',
+                          background: isSelected ? '#FEFCE8' : '#FFFFFF',
+                          boxShadow: isSelected ? '0 2px 8px rgba(212, 175, 55, 0.2)' : 'none',
+                          cursor: 'pointer',
+                          display: 'flex',
+                          flexDirection: 'column',
+                          alignItems: 'flex-start',
+                          textAlign: 'left',
+                          transition: 'all 0.15s ease'
+                        }}
+                      >
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '6px', width: '100%' }}>
+                          <span style={{ fontSize: '1.1rem' }}>{cat.emoji}</span>
+                          <strong style={{ fontSize: '0.84rem', color: isSelected ? '#854D0E' : 'var(--text-dark)' }}>{cat.label}</strong>
+                        </div>
+                        <span style={{ fontSize: '0.68rem', color: isSelected ? '#A16207' : 'var(--text-muted)', marginTop: '2px', lineHeight: 1.2 }}>
+                          {cat.description}
+                        </span>
+                      </button>
+                    );
+                  })}
+                </div>
               </div>
 
               <div>

@@ -297,6 +297,7 @@ router.get('/restaurants/:id/360', authenticateToken, requireSuperAdmin, async (
         onboarding_completed: resto.onboarding_completed !== false,
         location_initialized: Boolean(resto.location_initialized),
         custom_domain: resto.custom_domain || null,
+        business_category: resto.business_category || 'dine_in',
         scan_count: resto.scan_count || 0
       },
       owner: {
@@ -408,7 +409,7 @@ router.get('/restaurants/:id/360', authenticateToken, requireSuperAdmin, async (
 // POST Create New Tenant Restaurant
 router.post('/restaurants', authenticateToken, requireSuperAdmin, async (req, res) => {
   try {
-    const { name, slug, owner_username, owner_password, phone, address, tagline, plan_tier, plan_price, plan_expires_at, whatsapp_number, theme_color } = req.body;
+    const { name, slug, owner_username, owner_password, phone, address, tagline, plan_tier, plan_price, plan_expires_at, whatsapp_number, theme_color, business_category } = req.body;
 
     if (!name || !slug || !owner_username || !owner_password) {
       return res.status(400).json({ error: 'Restaurant Name, URL Slug, Owner Username and Password are required' });
@@ -416,6 +417,12 @@ router.post('/restaurants', authenticateToken, requireSuperAdmin, async (req, re
 
     // Clean & sanitize slug (lowercase, hyphenated)
     const cleanSlug = slug.toLowerCase().replace(/[^a-z0-9-]/g, '-').replace(/-+/g, '-').replace(/^-|-$/g, '');
+
+    // Validate canonical business category
+    const validCategories = ['dine_in', 'hotel', 'cinema'];
+    const cleanCategory = business_category && validCategories.includes(String(business_category).toLowerCase().trim())
+      ? String(business_category).toLowerCase().trim()
+      : 'dine_in';
 
     // Check if slug or username already exists
     const slugCheck = await query('SELECT * FROM restaurants WHERE slug = $1', [cleanSlug]);
@@ -433,8 +440,8 @@ router.post('/restaurants', authenticateToken, requireSuperAdmin, async (req, re
 
     const restoRes = await query(`
       INSERT INTO restaurants (
-        name, slug, tagline, logo, phone, address, opening_hours, plan_tier, plan_price, plan_expires_at, whatsapp_number, theme_color, active
-      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13) RETURNING id
+        name, slug, tagline, logo, phone, address, opening_hours, plan_tier, plan_price, plan_expires_at, whatsapp_number, theme_color, business_category, active
+      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14) RETURNING id
     `, [
       name,
       cleanSlug,
@@ -448,6 +455,7 @@ router.post('/restaurants', authenticateToken, requireSuperAdmin, async (req, re
       expiryDate,
       whatsapp_number || phone || '',
       theme_color || 'gold',
+      cleanCategory,
       true
     ]);
 
@@ -554,11 +562,18 @@ router.post('/restaurants/:id/exit-impersonation', authenticateToken, requireSup
 router.put('/restaurants/:id', authenticateToken, requireSuperAdmin, async (req, res) => {
   try {
     const { id } = req.params;
-    const { name, tagline, logo, phone, address, fssai_lic_no, owner_username, owner_password, plan_tier, plan_price, plan_expires_at, whatsapp_number, whatsapp_enabled, direct_ordering_enabled, google_reviews_enabled, theme_color, order_retention_days, custom_domain, owner_name, owner_email } = req.body;
+    const { name, tagline, logo, phone, address, fssai_lic_no, owner_username, owner_password, plan_tier, plan_price, plan_expires_at, whatsapp_number, whatsapp_enabled, direct_ordering_enabled, google_reviews_enabled, theme_color, order_retention_days, custom_domain, owner_name, owner_email, business_category } = req.body;
 
     let cleanDomain = null;
     if (custom_domain !== undefined) {
       cleanDomain = (custom_domain || '').toLowerCase().trim().replace(/^https?:\/\//, '').replace(/\/.*$/, '').replace(/^www\./, '');
+    }
+
+    let cleanCategory = undefined;
+    if (business_category !== undefined) {
+      const validCategories = ['dine_in', 'hotel', 'cinema'];
+      const normalized = String(business_category).toLowerCase().trim();
+      cleanCategory = validCategories.includes(normalized) ? normalized : 'dine_in';
     }
 
     let cleanOwnerEmail = undefined;
@@ -590,8 +605,9 @@ router.put('/restaurants/:id', authenticateToken, requireSuperAdmin, async (req,
           whatsapp_enabled = $11, direct_ordering_enabled = $12, google_reviews_enabled = $13, theme_color = $14,
           order_retention_days = $15, custom_domain = $16,
           owner_name = COALESCE($17, owner_name),
-          owner_email = CASE WHEN $18::boolean THEN $19 ELSE owner_email END
-      WHERE id = $20
+          owner_email = CASE WHEN $18::boolean THEN $19 ELSE owner_email END,
+          business_category = COALESCE($20, business_category)
+      WHERE id = $21
     `, [
       name,
       tagline || '',
@@ -612,6 +628,7 @@ router.put('/restaurants/:id', authenticateToken, requireSuperAdmin, async (req,
       owner_name !== undefined ? owner_name : null,
       cleanOwnerEmail !== undefined,
       cleanOwnerEmail !== undefined ? cleanOwnerEmail : null,
+      cleanCategory !== undefined ? cleanCategory : null,
       id
     ]);
 

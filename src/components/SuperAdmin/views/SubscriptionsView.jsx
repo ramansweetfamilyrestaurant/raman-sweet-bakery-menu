@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { CreditCard, ArrowDown } from 'lucide-react';
 import StatusBadge from '../components/StatusBadge';
+import { getBusinessCategoryMeta } from '../../../constants/businessCategories';
 
 export default function SubscriptionsView({ restaurants, onSelectTenant }) {
   const [filter, setFilter] = useState('all');
@@ -78,7 +79,25 @@ export default function SubscriptionsView({ restaurants, onSelectTenant }) {
                   <tr key={r.id}>
                     <td>
                       <strong style={{ fontSize: '0.88rem', color: 'var(--sa-text-main)', display: 'block' }}>{r.name}</strong>
-                      <span style={{ fontSize: '0.7rem', color: 'var(--sa-text-muted)' }}>/{r.slug}</span>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginTop: '2px' }}>
+                        <span style={{ fontSize: '0.7rem', color: 'var(--sa-text-muted)' }}>/{r.slug}</span>
+                        {(() => {
+                          const meta = getBusinessCategoryMeta(r.business_category);
+                          return (
+                            <span style={{
+                              fontSize: '0.66rem',
+                              fontWeight: 800,
+                              color: 'var(--sa-text-muted)',
+                              background: 'var(--sa-surface-subtle)',
+                              padding: '1px 5px',
+                              borderRadius: '4px',
+                              border: '1px solid var(--sa-border)'
+                            }}>
+                              {meta.emoji} {meta.label}
+                            </span>
+                          );
+                        })()}
+                      </div>
                     </td>
                     <td>
                       <span style={{ fontWeight: 800, color: 'var(--sa-success)' }}>{(r.plan_tier || 'pro').toUpperCase()}</span>
