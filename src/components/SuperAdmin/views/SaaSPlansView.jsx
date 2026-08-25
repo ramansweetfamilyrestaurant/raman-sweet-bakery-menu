@@ -1,8 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { 
   Layers, Save, CheckCircle2, Sparkles, AlertCircle, RefreshCw, 
-  Plus, X, Edit3, Trash2, Crown, Users, Check, Palette, Eye, 
-  ShieldCheck, Lock, Unlock
+  Plus, X, Edit3, Trash2, Users, Palette, Check
 } from 'lucide-react';
 import { SectionHeader, StatusBadge } from '../components';
 
@@ -11,15 +10,10 @@ const toBoolInt = (val) => {
   return (val === 1 || val === true || val === '1' || val === 'true') ? 1 : 0;
 };
 
-export const LUXURY_THEMES = [
-  { key: 'gold', name: 'Gold & Forest Green', primary: '#0A2315', accent: '#D4AF37', desc: 'Taj / Oberoi Heritage Luxury' },
-  { key: 'emerald', name: 'Emerald Mint & Teal', primary: '#064E3B', accent: '#34D399', desc: 'Fresh Eco Bistro & Vegan' },
-  { key: 'crimson', name: 'Crimson Ruby & Rose', primary: '#881337', accent: '#FB7185', desc: 'Royal Fine-Dine & Grill' },
-  { key: 'navy', name: 'Midnight Navy & Blue', primary: '#0F172A', accent: '#60A5FA', desc: 'Sleek Modern Lounge & Cafe' },
-  { key: 'amber', name: 'Royal Amber & Espresso', primary: '#451A03', accent: '#FBBF24', desc: 'Artisan Bakery & Cafe' },
-  { key: 'purple', name: 'Imperial Velvet & Violet', primary: '#3B0764', accent: '#C084FC', desc: 'VIP Lounge & Nightclub' },
-  { key: 'rose', name: 'Champagne & Rose Gold', primary: '#4C0519', accent: '#F472B6', desc: 'Chic Patisserie & Dessert' },
-  { key: 'dark', name: 'Obsidian Cyber & Neon', primary: '#020617', accent: '#22D3EE', desc: 'High-Tech GastroPub & Brew' },
+const THEME_ACCESS_OPTIONS = [
+  { value: 'ALL', label: '🌟 All 8 Luxury Themes Unlocked' },
+  { value: 'gold,emerald,crimson,navy', label: '💎 4 Popular Themes (Gold, Emerald, Crimson, Navy)' },
+  { value: 'gold', label: '👑 Standard Gold Theme Only' }
 ];
 
 export default function SaaSPlansView({ token, restaurants = [] }) {
@@ -28,7 +22,6 @@ export default function SaaSPlansView({ token, restaurants = [] }) {
   const [saving, setSaving] = useState(false);
   const [msg, setMsg] = useState('');
   const [errorMsg, setErrorMsg] = useState('');
-  const [activePreviewTheme, setActivePreviewTheme] = useState('gold');
 
   // Create Plan Modal State
   const [showCreateModal, setShowCreateModal] = useState(false);
@@ -79,32 +72,6 @@ export default function SaaSPlansView({ token, restaurants = [] }) {
     setPlans(prev => prev.map(p => p.key === planKey ? { ...p, [field]: val } : p));
   };
 
-  // Toggle theme permission for a specific plan
-  const handleTogglePlanTheme = (planKey, themeKey) => {
-    setPlans(prev => prev.map(p => {
-      if (p.key !== planKey) return p;
-      let current = (p.allowed_themes || 'ALL').trim();
-      if (current === 'ALL') {
-        current = LUXURY_THEMES.map(t => t.key).join(',');
-      }
-      let themesArr = current ? current.split(',').map(s => s.trim().toLowerCase()) : [];
-      if (themesArr.includes(themeKey.toLowerCase())) {
-        themesArr = themesArr.filter(t => t !== themeKey.toLowerCase());
-      } else {
-        themesArr.push(themeKey.toLowerCase());
-      }
-      const newAllowed = themesArr.length === LUXURY_THEMES.length ? 'ALL' : themesArr.join(',');
-      return { ...p, allowed_themes: newAllowed };
-    }));
-  };
-
-  const isThemeAllowedForPlan = (plan, themeKey) => {
-    const raw = (plan.allowed_themes || 'ALL').trim();
-    if (raw === 'ALL') return true;
-    const list = raw.split(',').map(s => s.trim().toLowerCase());
-    return list.includes(themeKey.toLowerCase());
-  };
-
   const handleSaveAllPlans = async () => {
     setSaving(true);
     setMsg('');
@@ -134,7 +101,7 @@ export default function SaaSPlansView({ token, restaurants = [] }) {
           throw new Error(errData.error || `Failed to update plan '${p.name}'`);
         }
       }
-      setMsg('⚡ All Plan Permissions, Themes & Limits Saved Successfully!');
+      setMsg('⚡ All Plan Permissions, Pricing & Theme Rules Saved Successfully!');
       setTimeout(() => setMsg(''), 4000);
       await fetchPlans();
     } catch (err) {
@@ -171,7 +138,7 @@ export default function SaaSPlansView({ token, restaurants = [] }) {
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || 'Failed to create plan');
-      setMsg(`✨ Custom SaaS Plan '${createForm.name}' created with theme support!`);
+      setMsg(`✨ SaaS Plan '${createForm.name}' created successfully!`);
       setShowCreateModal(false);
       setCreateForm({
         key: '',
@@ -223,7 +190,7 @@ export default function SaaSPlansView({ token, restaurants = [] }) {
         const errData = await res.json();
         throw new Error(errData.error || `Failed to update plan '${editingPlan.name}'`);
       }
-      setMsg(`⚡ Plan '${editingPlan.name}' & Theme Matrix updated successfully!`);
+      setMsg(`⚡ Plan '${editingPlan.name}' updated successfully!`);
       setEditingPlan(null);
       setTimeout(() => setMsg(''), 4000);
       await fetchPlans();
@@ -256,16 +223,11 @@ export default function SaaSPlansView({ token, restaurants = [] }) {
     }
   };
 
-  const handlePreviewTheme = (themeKey) => {
-    setActivePreviewTheme(themeKey);
-    document.documentElement.setAttribute('data-theme', themeKey);
-  };
-
   if (loading) {
     return (
       <div style={{ padding: '60px', textAlign: 'center', color: 'var(--sa-text-muted)' }}>
         <RefreshCw className="animate-spin" style={{ width: '32px', height: '32px', margin: '0 auto 14px auto', color: 'var(--sa-primary)' }} />
-        <p style={{ fontWeight: 800, fontSize: '0.95rem', color: 'var(--sa-text-main)' }}>Loading SaaS Plans & Luxury Theme Matrix...</p>
+        <p style={{ fontWeight: 800, fontSize: '0.95rem', color: 'var(--sa-text-main)' }}>Loading SaaS Plans & Feature Matrix...</p>
       </div>
     );
   }
@@ -295,12 +257,23 @@ export default function SaaSPlansView({ token, restaurants = [] }) {
     { key: 'custom_domain_enabled', label: '🌐 Custom Domain Mapping (menu.resto.com)' },
   ];
 
+  const getThemeSummaryBadge = (allowedThemes) => {
+    const raw = (allowedThemes || 'ALL').trim();
+    if (raw === 'ALL' || raw.split(',').length >= 8) {
+      return { text: '🎨 All 8 Luxury Themes', color: '#16A34A', bg: '#DCFCE7', border: '#86EFAC' };
+    }
+    if (raw.includes('crimson') || raw.split(',').length >= 4) {
+      return { text: '🎨 4 Themes Unlocked', color: '#2563EB', bg: '#DBEAFE', border: '#93C5FD' };
+    }
+    return { text: '🎨 Standard Gold Theme', color: '#B45309', bg: '#FEF3C7', border: '#FDE68A' };
+  };
+
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
       {/* 👑 1. HEADER */}
       <SectionHeader
-        title="👑 SaaS Plans & Luxury Theme Matrix"
-        subtitle="Manage pricing, allowed luxury brand themes, limits and feature access across all subscription tiers."
+        title="👑 SaaS Subscription Plans & Feature Matrix"
+        subtitle="Manage subscription tiers, monthly pricing, quota limits, and luxury brand theme permissions."
         actions={
           <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
             <button
@@ -320,7 +293,7 @@ export default function SaaSPlansView({ token, restaurants = [] }) {
               style={{ fontWeight: 900 }}
             >
               <Save size={14} />
-              {saving ? 'Saving Matrix...' : 'Save All Plan & Theme Matrix'}
+              {saving ? 'Saving...' : 'Save All Plan Permissions'}
             </button>
           </div>
         }
@@ -338,88 +311,13 @@ export default function SaaSPlansView({ token, restaurants = [] }) {
         </div>
       )}
 
-      {/* 🎨 2. LUXURY THEME ENGINE SHOWCASE & LIVE TESTER */}
-      <div style={{
-        background: 'linear-gradient(135deg, #0A2315 0%, #153B25 100%)',
-        color: '#FFFFFF',
-        borderRadius: '20px',
-        padding: '20px 22px',
-        border: '1.5px solid rgba(212, 175, 55, 0.45)',
-        boxShadow: '0 8px 24px rgba(10, 35, 21, 0.25)',
-        position: 'relative',
-        overflow: 'hidden'
-      }}>
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '12px', marginBottom: '16px' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-            <div style={{
-              width: '46px', height: '46px', borderRadius: '12px',
-              background: 'linear-gradient(135deg, #D4AF37 0%, #AA7C11 100%)',
-              display: 'flex', alignItems: 'center', justifyContent: 'center'
-            }}>
-              <Palette size={24} color="#0A2315" />
-            </div>
-            <div>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                <h3 style={{ margin: 0, fontSize: '1.15rem', fontWeight: 900, color: '#FFFFFF' }}>
-                  Luxury Multi-Tenant Theme Engine
-                </h3>
-                <span style={{ padding: '2px 8px', borderRadius: '6px', fontSize: '0.68rem', fontWeight: 900, background: '#10B981', color: '#FFFFFF' }}>
-                  8 ACTIVE PRESETS
-                </span>
-              </div>
-              <p style={{ margin: '2px 0 0 0', fontSize: '0.76rem', color: '#A7F3D0', fontWeight: 600 }}>
-                Selectively assign theme permissions to plans. Basic, Pro, & Enterprise plans can gate or unlock custom themes.
-              </p>
-            </div>
-          </div>
-        </div>
-
-        {/* 8 Theme Swatches Grid */}
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(135px, 1fr))', gap: '10px' }}>
-          {LUXURY_THEMES.map(t => {
-            const isSelected = activePreviewTheme === t.key;
-            return (
-              <div
-                key={t.key}
-                onClick={() => handlePreviewTheme(t.key)}
-                style={{
-                  padding: '10px 12px',
-                  borderRadius: '12px',
-                  background: isSelected ? 'rgba(212, 175, 55, 0.25)' : 'rgba(255,255,255,0.08)',
-                  border: isSelected ? '2px solid #D4AF37' : '1px solid rgba(255,255,255,0.12)',
-                  cursor: 'pointer',
-                  transition: 'all 0.2s ease',
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '8px'
-                }}
-              >
-                <div style={{
-                  width: '24px', height: '24px', borderRadius: '50%',
-                  background: t.primary, border: `2.5px solid ${t.accent}`,
-                  boxShadow: '0 2px 6px rgba(0,0,0,0.3)', flexShrink: 0
-                }} />
-                <div style={{ minWidth: 0 }}>
-                  <div style={{ fontSize: '0.78rem', fontWeight: 800, color: isSelected ? '#DFBA67' : '#FFFFFF', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                    {t.name.split('&')[0]}
-                  </div>
-                  <div style={{ fontSize: '0.65rem', color: '#94A3B8', textTransform: 'uppercase' }}>
-                    {t.key}
-                  </div>
-                </div>
-              </div>
-            );
-          })}
-        </div>
-      </div>
-
-      {/* 📦 3. PLAN SUMMARY CARDS ROW (WITH THEME ACCENTS & ALLOWED THEMES) */}
+      {/* 📦 2. PLAN SUMMARY CARDS ROW */}
       <div>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
           <h3 style={{ fontSize: '1.05rem', fontWeight: 900, color: 'var(--sa-text-main)', margin: 0, display: 'flex', alignItems: 'center', gap: '6px' }}>
-            <Layers size={18} color="var(--sa-primary)" /> Available Subscription Tiers ({plans.length})
+            <Layers size={18} color="var(--sa-primary)" /> Active Subscription Tiers ({plans.length})
           </h3>
-          <span style={{ fontSize: '0.74rem', color: 'var(--sa-text-muted)', fontWeight: 600 }}>Active Tier Overview & Theme Allotment</span>
+          <span style={{ fontSize: '0.74rem', color: 'var(--sa-text-muted)', fontWeight: 600 }}>Overview & Live Subscribers</span>
         </div>
 
         <div className="sa-plan-cards-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))', gap: '16px' }}>
@@ -427,11 +325,7 @@ export default function SaaSPlansView({ token, restaurants = [] }) {
             const subscriberCount = (restaurants || []).filter(r => (r.plan_tier || 'pro').toLowerCase() === p.key.toLowerCase()).length;
             const isCustom = !['basic', 'pro', 'enterprise'].includes(p.key.toLowerCase());
             const isPopular = p.key.toLowerCase() === 'pro';
-
-            // Calculate unlocked themes count
-            const allowedCount = (p.allowed_themes === 'ALL' || !p.allowed_themes) 
-              ? LUXURY_THEMES.length 
-              : p.allowed_themes.split(',').filter(Boolean).length;
+            const themeBadge = getThemeSummaryBadge(p.allowed_themes);
 
             return (
               <div
@@ -496,44 +390,20 @@ export default function SaaSPlansView({ token, restaurants = [] }) {
                     {p.description || 'Standard subscription plan features & entitlements'}
                   </p>
 
-                  {/* 🎨 Allowed Themes Summary Pill */}
+                  {/* Clean Theme Access Pill */}
                   <div style={{
-                    padding: '8px 10px',
-                    borderRadius: '10px',
-                    background: '#F8FAFC',
-                    border: '1px solid #E2E8F0',
-                    display: 'flex',
-                    flexDirection: 'column',
+                    padding: '6px 10px',
+                    borderRadius: '8px',
+                    background: themeBadge.bg,
+                    border: `1px solid ${themeBadge.border}`,
+                    color: themeBadge.color,
+                    fontSize: '0.72rem',
+                    fontWeight: 800,
+                    display: 'inline-flex',
+                    alignItems: 'center',
                     gap: '6px'
                   }}>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                      <span style={{ fontSize: '0.68rem', fontWeight: 800, color: '#475569', display: 'flex', alignItems: 'center', gap: '4px' }}>
-                        <Palette size={12} color="#D97706" /> ALLOWED THEMES ({allowedCount}/8)
-                      </span>
-                      <span style={{ fontSize: '0.68rem', fontWeight: 900, color: allowedCount === 8 ? '#16A34A' : '#2563EB' }}>
-                        {allowedCount === 8 ? '🌟 ALL UNLOCKED' : `${allowedCount} Allowed`}
-                      </span>
-                    </div>
-
-                    {/* Miniature Theme Swatches */}
-                    <div style={{ display: 'flex', gap: '4px', flexWrap: 'wrap' }}>
-                      {LUXURY_THEMES.map(t => {
-                        const isAllowed = isThemeAllowedForPlan(p, t.key);
-                        return (
-                          <div
-                            key={t.key}
-                            title={`${t.name} (${isAllowed ? 'Allowed' : 'Locked'})`}
-                            style={{
-                              width: '18px', height: '18px', borderRadius: '50%',
-                              background: t.primary, border: `2px solid ${t.accent}`,
-                              opacity: isAllowed ? 1 : 0.25,
-                              filter: isAllowed ? 'none' : 'grayscale(1)',
-                              display: 'inline-block'
-                            }}
-                          />
-                        );
-                      })}
-                    </div>
+                    {themeBadge.text}
                   </div>
                 </div>
 
@@ -544,7 +414,7 @@ export default function SaaSPlansView({ token, restaurants = [] }) {
                     className="sa-btn sa-btn-secondary sa-btn-sm"
                     style={{ flex: 1, fontSize: '0.76rem', fontWeight: 800, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '4px' }}
                   >
-                    <Edit3 size={13} /> Edit Tier & Themes
+                    <Edit3 size={13} /> Edit Tier
                   </button>
                   {isCustom && (
                     <button
@@ -564,15 +434,15 @@ export default function SaaSPlansView({ token, restaurants = [] }) {
         </div>
       </div>
 
-      {/* 📊 4. MASTER FEATURES & LUXURY THEME MATRIX TABLE */}
+      {/* 📊 3. MASTER FEATURES & THEMES MATRIX TABLE */}
       <div className="sa-table-container sa-responsive-table" style={{ background: '#FFFFFF', borderRadius: 'var(--sa-radius-lg)' }}>
         <div style={{ padding: '16px 20px', borderBottom: '1px solid var(--sa-border)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
           <div>
             <h3 style={{ margin: 0, fontSize: '1.05rem', fontWeight: 900, color: 'var(--sa-text-main)' }}>
-              ⚡ Plan Permissions, Limits & Theme Matrix
+              ⚡ Plan Permissions, Limits & Theme Access Matrix
             </h3>
             <span style={{ fontSize: '0.74rem', color: 'var(--sa-text-muted)', fontWeight: 600 }}>
-              Toggle luxury brand themes and feature access per tier with 1-click controls
+              Adjust limits and select theme availability across subscription tiers
             </span>
           </div>
         </div>
@@ -580,7 +450,7 @@ export default function SaaSPlansView({ token, restaurants = [] }) {
         <table className="sa-table" style={{ minWidth: '850px' }}>
           <thead>
             <tr>
-              <th style={{ width: '36%' }}>FEATURE / THEME PERMISSION</th>
+              <th style={{ width: '38%' }}>FEATURE / THEME PERMISSION</th>
               {plans.map(p => (
                 <th key={p.key} style={{ color: 'var(--sa-primary)', fontWeight: 900 }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
@@ -592,47 +462,50 @@ export default function SaaSPlansView({ token, restaurants = [] }) {
             </tr>
           </thead>
           <tbody>
-            
-            {/* 🎨 1. LUXURY THEMES PERMISSIONS SECTION */}
+            {/* THEME ACCESS SECTION */}
             <tr style={{ background: 'var(--sa-surface-subtle)' }}>
               <td colSpan={plans.length + 1} style={{ padding: '10px 16px', fontSize: '0.78rem', fontWeight: 900, color: 'var(--sa-primary)', letterSpacing: '0.03em' }}>
-                🎨 LUXURY BRAND THEMES ACCESS CONTROLS (8 PRESETS)
+                🎨 LUXURY BRAND THEMES ACCESS CONTROL
               </td>
             </tr>
-            {LUXURY_THEMES.map(theme => (
-              <tr key={theme.key}>
-                <td style={{ fontWeight: 800 }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                    <div style={{ width: '22px', height: '22px', borderRadius: '50%', background: theme.primary, border: `2px solid ${theme.accent}`, flexShrink: 0 }} />
-                    <div>
-                      <div style={{ fontSize: '0.82rem', color: 'var(--sa-text-main)' }}>{theme.name}</div>
-                      <div style={{ fontSize: '0.68rem', color: 'var(--sa-text-muted)', fontWeight: 600 }}>{theme.desc}</div>
-                    </div>
+            <tr>
+              <td style={{ fontWeight: 800 }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                  <Palette size={16} color="var(--sa-accent)" />
+                  <div>
+                    <div>Allowed Customer Brand Themes</div>
+                    <div style={{ fontSize: '0.70rem', color: 'var(--sa-text-muted)', fontWeight: 600 }}>Themes available for shops on this plan</div>
                   </div>
-                </td>
-                {plans.map(p => {
-                  const isAllowed = isThemeAllowedForPlan(p, theme.key);
-                  return (
-                    <td key={p.key}>
-                      <label style={{ display: 'inline-flex', alignItems: 'center', gap: '8px', cursor: 'pointer' }}>
-                        <input
-                          type="checkbox"
-                          checked={isAllowed}
-                          onChange={() => handleTogglePlanTheme(p.key, theme.key)}
-                          style={{ width: '18px', height: '18px', cursor: 'pointer', accentColor: 'var(--sa-primary)' }}
-                        />
-                        <span style={{
-                          fontSize: '0.76rem', fontWeight: 900,
-                          color: isAllowed ? '#15803D' : '#94A3B8'
-                        }}>
-                          {isAllowed ? '✅ Unlocked' : '🔒 Locked'}
-                        </span>
-                      </label>
-                    </td>
-                  );
-                })}
-              </tr>
-            ))}
+                </div>
+              </td>
+              {plans.map(p => {
+                const currentVal = (p.allowed_themes || 'ALL').trim();
+                let normalizedVal = 'ALL';
+                if (currentVal === 'gold') normalizedVal = 'gold';
+                else if (currentVal.includes('crimson') || currentVal.includes('emerald')) normalizedVal = 'gold,emerald,crimson,navy';
+
+                return (
+                  <td key={p.key}>
+                    <select
+                      value={normalizedVal}
+                      onChange={(e) => handlePlanValueChange(p.key, 'allowed_themes', e.target.value)}
+                      className="sa-input"
+                      style={{
+                        padding: '6px 10px',
+                        fontSize: '0.78rem',
+                        fontWeight: 800,
+                        borderRadius: '8px',
+                        cursor: 'pointer'
+                      }}
+                    >
+                      <option value="ALL">🌟 All 8 Themes (Unlocked)</option>
+                      <option value="gold,emerald,crimson,navy">💎 4 Popular Themes</option>
+                      <option value="gold">👑 Gold Theme Only</option>
+                    </select>
+                  </td>
+                );
+              })}
+            </tr>
 
             {/* NUMERICAL LIMITS SECTION */}
             <tr style={{ background: 'var(--sa-surface-subtle)' }}>
@@ -714,10 +587,10 @@ export default function SaaSPlansView({ token, restaurants = [] }) {
         </table>
       </div>
 
-      {/* ✏️ 5. EDIT PLAN & THEME MODAL */}
+      {/* ✏️ 4. EDIT PLAN MODAL */}
       {editingPlan && (
         <div className="sa-modal-overlay">
-          <div className="sa-modal-box" style={{ maxWidth: '540px' }}>
+          <div className="sa-modal-box" style={{ maxWidth: '520px' }}>
             <div style={{
               display: 'flex', alignItems: 'center', justifyContent: 'space-between',
               marginBottom: '16px', paddingBottom: '12px', borderBottom: '1px solid var(--sa-border)'
@@ -736,10 +609,6 @@ export default function SaaSPlansView({ token, restaurants = [] }) {
             </div>
 
             <form onSubmit={handleSaveSinglePlan} style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
-              <div style={{ padding: '10px 14px', background: '#FFFBEB', borderRadius: '10px', border: '1px solid #FCD34D', fontSize: '0.78rem', color: '#92400E', fontWeight: 700 }}>
-                ⚠️ Changes will update feature matrix and luxury theme access for this plan tier.
-              </div>
-
               <div>
                 <label style={{ fontSize: '0.76rem', fontWeight: 800, color: 'var(--sa-text-muted)', display: 'block', marginBottom: '4px' }}>DISPLAY NAME *</label>
                 <input
@@ -774,52 +643,21 @@ export default function SaaSPlansView({ token, restaurants = [] }) {
                 </div>
               </div>
 
-              {/* Theme Access Multi-Select */}
+              {/* Theme Access Dropdown */}
               <div>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '6px' }}>
-                  <label style={{ fontSize: '0.76rem', fontWeight: 800, color: 'var(--sa-text-muted)', margin: 0 }}>
-                    ALLOWED LUXURY BRAND THEMES
-                  </label>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      const allStr = editingPlan.allowed_themes === 'ALL' ? 'gold' : 'ALL';
-                      setEditingPlan({ ...editingPlan, allowed_themes: allStr });
-                    }}
-                    style={{ background: 'none', border: 'none', color: '#2563EB', fontSize: '0.72rem', fontWeight: 800, cursor: 'pointer' }}
-                  >
-                    {editingPlan.allowed_themes === 'ALL' ? 'Restrict Themes' : 'Unlock All 8 Themes'}
-                  </button>
-                </div>
-
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '8px', background: '#F8FAFC', padding: '10px', borderRadius: '10px', border: '1px solid #E2E8F0' }}>
-                  {LUXURY_THEMES.map(t => {
-                    const isChecked = isThemeAllowedForPlan(editingPlan, t.key);
-                    return (
-                      <label key={t.key} style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer', fontSize: '0.76rem', fontWeight: 700 }}>
-                        <input
-                          type="checkbox"
-                          checked={isChecked}
-                          onChange={() => {
-                            let raw = (editingPlan.allowed_themes || 'ALL').trim();
-                            if (raw === 'ALL') raw = LUXURY_THEMES.map(x => x.key).join(',');
-                            let list = raw.split(',').map(s => s.trim().toLowerCase());
-                            if (list.includes(t.key.toLowerCase())) {
-                              list = list.filter(k => k !== t.key.toLowerCase());
-                            } else {
-                              list.push(t.key.toLowerCase());
-                            }
-                            const updated = list.length === LUXURY_THEMES.length ? 'ALL' : list.join(',');
-                            setEditingPlan({ ...editingPlan, allowed_themes: updated });
-                          }}
-                          style={{ width: '16px', height: '16px', accentColor: 'var(--sa-primary)' }}
-                        />
-                        <div style={{ width: '14px', height: '14px', borderRadius: '50%', background: t.primary, border: `1.5px solid ${t.accent}`, flexShrink: 0 }} />
-                        <span style={{ color: isChecked ? 'var(--sa-text-main)' : 'var(--sa-text-muted)' }}>{t.name.split('&')[0]}</span>
-                      </label>
-                    );
-                  })}
-                </div>
+                <label style={{ fontSize: '0.76rem', fontWeight: 800, color: 'var(--sa-text-muted)', display: 'block', marginBottom: '4px' }}>
+                  THEME ACCESS LEVEL
+                </label>
+                <select
+                  value={editingPlan.allowed_themes || 'ALL'}
+                  onChange={e => setEditingPlan({ ...editingPlan, allowed_themes: e.target.value })}
+                  className="sa-input"
+                  style={{ width: '100%', fontWeight: 700 }}
+                >
+                  {THEME_ACCESS_OPTIONS.map(opt => (
+                    <option key={opt.value} value={opt.value}>{opt.label}</option>
+                  ))}
+                </select>
               </div>
 
               <div>
@@ -855,10 +693,10 @@ export default function SaaSPlansView({ token, restaurants = [] }) {
         </div>
       )}
 
-      {/* ✨ 6. CREATE PLAN & THEME MODAL */}
+      {/* ✨ 5. CREATE PLAN MODAL */}
       {showCreateModal && (
         <div className="sa-modal-overlay">
-          <div className="sa-modal-box" style={{ maxWidth: '540px' }}>
+          <div className="sa-modal-box" style={{ maxWidth: '520px' }}>
             <div style={{
               display: 'flex', alignItems: 'center', justifyContent: 'space-between',
               marginBottom: '16px', paddingBottom: '12px', borderBottom: '1px solid var(--sa-border)'
@@ -914,39 +752,21 @@ export default function SaaSPlansView({ token, restaurants = [] }) {
                 </div>
               </div>
 
-              {/* Theme Access Selection in Create Modal */}
+              {/* Theme Access Selection */}
               <div>
-                <label style={{ fontSize: '0.78rem', fontWeight: 800, color: 'var(--sa-text-muted)', display: 'block', marginBottom: '6px' }}>
-                  ALLOWED LUXURY BRAND THEMES
+                <label style={{ fontSize: '0.78rem', fontWeight: 800, color: 'var(--sa-text-muted)', display: 'block', marginBottom: '4px' }}>
+                  THEME ACCESS LEVEL
                 </label>
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '8px', background: '#F8FAFC', padding: '10px', borderRadius: '10px', border: '1px solid #E2E8F0' }}>
-                  {LUXURY_THEMES.map(t => {
-                    const isChecked = isThemeAllowedForPlan(createForm, t.key);
-                    return (
-                      <label key={t.key} style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer', fontSize: '0.76rem', fontWeight: 700 }}>
-                        <input
-                          type="checkbox"
-                          checked={isChecked}
-                          onChange={() => {
-                            let raw = (createForm.allowed_themes || 'ALL').trim();
-                            if (raw === 'ALL') raw = LUXURY_THEMES.map(x => x.key).join(',');
-                            let list = raw.split(',').map(s => s.trim().toLowerCase());
-                            if (list.includes(t.key.toLowerCase())) {
-                              list = list.filter(k => k !== t.key.toLowerCase());
-                            } else {
-                              list.push(t.key.toLowerCase());
-                            }
-                            const updated = list.length === LUXURY_THEMES.length ? 'ALL' : list.join(',');
-                            setCreateForm({ ...createForm, allowed_themes: updated });
-                          }}
-                          style={{ width: '16px', height: '16px', accentColor: 'var(--sa-primary)' }}
-                        />
-                        <div style={{ width: '14px', height: '14px', borderRadius: '50%', background: t.primary, border: `1.5px solid ${t.accent}`, flexShrink: 0 }} />
-                        <span style={{ color: isChecked ? 'var(--sa-text-main)' : 'var(--sa-text-muted)' }}>{t.name.split('&')[0]}</span>
-                      </label>
-                    );
-                  })}
-                </div>
+                <select
+                  value={createForm.allowed_themes || 'ALL'}
+                  onChange={e => setCreateForm({ ...createForm, allowed_themes: e.target.value })}
+                  className="sa-input"
+                  style={{ width: '100%', fontWeight: 700 }}
+                >
+                  {THEME_ACCESS_OPTIONS.map(opt => (
+                    <option key={opt.value} value={opt.value}>{opt.label}</option>
+                  ))}
+                </select>
               </div>
 
               <div>
