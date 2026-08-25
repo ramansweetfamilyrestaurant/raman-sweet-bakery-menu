@@ -1425,6 +1425,8 @@ const handleUpdateSettings = async (req, res) => {
           message: '5% GST Tax Invoicing is not included in your current SaaS plan. Please upgrade your plan to enable GST billing.'
         });
       }
+    }
+
     // 🛡️ KDS PIN Configuration & Invalidation Handler
     const { kds_pin } = req.body;
     if (kds_pin !== undefined) {
