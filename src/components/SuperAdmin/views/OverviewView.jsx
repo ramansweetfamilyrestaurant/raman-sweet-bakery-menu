@@ -11,8 +11,11 @@ export default function OverviewView({ restaurants, pendingRegistrations = [], o
   const trialCount = restaurants.filter(r => r.subscription_status === 'trialing' || (r.trial_ends_at && new Date(r.trial_ends_at) > new Date())).length;
   const pastDueCount = restaurants.filter(r => r.subscription_status === 'payment_failed' || r.subscription_status === 'past_due').length;
 
-  const estimatedRevenue = restaurants.reduce((sum, r) => {
-    if (r.active !== false && r.subscription_type !== 'ADMIN_GRANTED' && r.mandate_status !== 'admin_granted') {
+  const paidMrr = restaurants.reduce((sum, r) => {
+    const isSusp = (r.active === false || r.active === 0 || r.active === '0');
+    const isVip = (r.subscription_type === 'ADMIN_GRANTED' || r.mandate_status === 'admin_granted');
+    const isTrial = (r.subscription_status === 'trialing' || (r.trial_ends_at && new Date(r.trial_ends_at) > new Date()));
+    if (!isSusp && !isVip && !isTrial) {
       return sum + (parseFloat(r.plan_price) || 999);
     }
     return sum;
@@ -63,7 +66,7 @@ export default function OverviewView({ restaurants, pendingRegistrations = [], o
         <StatCard label="ACTIVE" value={activeCount} subtitle="Paying & active" icon={CheckCircle} color="var(--sa-success)" />
         <StatCard label="TRIAL" value={trialCount} subtitle="In trial phase" icon={Clock} color="var(--sa-warning)" />
         <StatCard label="PAST DUE" value={pastDueCount} subtitle="Requires review" icon={AlertTriangle} color="var(--sa-danger)" />
-        <StatCard label="REVENUE" value={`₹${estimatedRevenue.toLocaleString()}`} subtitle="Monthly recurring (MRR)" icon={DollarSign} color="var(--sa-accent)" />
+        <StatCard label="PAID MRR" value={`₹${paidMrr.toLocaleString()}`} subtitle="Active paid subscribers" icon={DollarSign} color="var(--sa-accent)" />
       </div>
 
       {/* Canonical Category Distribution */}

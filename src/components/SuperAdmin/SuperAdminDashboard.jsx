@@ -571,7 +571,9 @@ export default function SuperAdminDashboard({ token, username, onLogout, onRetur
   const totalActive = restaurants.filter(r => r.active !== false && r.active !== 0 && r.active !== '0').length;
   const totalDishes = restaurants.reduce((acc, r) => acc + (r.dish_count || 0), 0);
   const totalScans = restaurants.reduce((acc, r) => acc + (r.scan_count || 0), 0);
-  const estimatedRevenue = restaurants.filter(r => r.active !== false).reduce((acc, r) => acc + (parseFloat(r.plan_price) || 999), 0);
+  const paidTenants = restaurants.filter(r => getTenantStatus(r) === 'active');
+  const paidMrr = paidTenants.reduce((acc, r) => acc + (parseFloat(r.plan_price) || 999), 0);
+  const potentialMrr = restaurants.filter(r => r.active !== false).reduce((acc, r) => acc + (parseFloat(r.plan_price) || 999), 0);
 
   // Render Directory Controls & Clean Tenant Cards Grid / Table
   const renderDirectorySection = () => (
@@ -1115,31 +1117,27 @@ export default function SuperAdminDashboard({ token, username, onLogout, onRetur
 
               {/* 👑 2. TOP 5 PRIMARY KPI HERO ROW (WHITE CARDS WITH SEMANTIC ICONS & TRENDS) */}
               <div className="sa-stats-grid-5">
-                {/* KPI 1: MRR Revenue (Primary Visual Focal Point) */}
+                {/* KPI 1: Paid MRR (Authoritative Recurring Run-Rate) */}
                 <KpiCard
-                  label="MRR Revenue"
-                  value={`₹${estimatedRevenue.toLocaleString()}`}
+                  label="Paid MRR"
+                  value={`₹${paidMrr.toLocaleString()}`}
                   icon={DollarSign}
                   color="#D97706"
                   iconBg="#FEF3C7"
-                  subtitle="This Month"
-                  sparkline={true}
-                  sparklineColor="#F59E0B"
+                  subtitle={`${paidTenants.length} Paid Subscribers`}
                   isPrimary={true}
-                  badge="PRIMARY"
+                  badge="RUN-RATE"
                   onClick={() => setActiveView('billing')}
                 />
 
                 {/* KPI 2: Active Paid */}
                 <KpiCard
                   label="Active Paid"
-                  value={restaurants.filter(r => getTenantStatus(r) === 'active').length}
+                  value={paidTenants.length}
                   icon={Users}
                   color="#15803D"
                   iconBg="#DCFCE7"
                   subtitle="Tenants"
-                  trend="+5 this month"
-                  trendType="positive"
                   onClick={() => { setActiveView('tenants'); setStatusFilter('active'); }}
                 />
 
@@ -1151,8 +1149,6 @@ export default function SuperAdminDashboard({ token, username, onLogout, onRetur
                   color="#2563EB"
                   iconBg="#EFF6FF"
                   subtitle="Tenants"
-                  trend="-2 this month"
-                  trendType="info"
                   onClick={() => { setActiveView('tenants'); setStatusFilter('trial'); }}
                 />
 
@@ -1164,8 +1160,6 @@ export default function SuperAdminDashboard({ token, username, onLogout, onRetur
                   color="#EA580C"
                   iconBg="#FFF7ED"
                   subtitle="Tenants"
-                  trend="+1 this week"
-                  trendType="warning"
                   onClick={() => { setActiveView('tenants'); setStatusFilter('failed'); }}
                 />
 
@@ -1177,8 +1171,6 @@ export default function SuperAdminDashboard({ token, username, onLogout, onRetur
                   color="#0D9488"
                   iconBg="#F0FDFA"
                   subtitle="All Accounts"
-                  trend="+3 this month"
-                  trendType="positive"
                   onClick={() => { setActiveView('tenants'); setStatusFilter('all'); }}
                 />
               </div>
@@ -1725,14 +1717,14 @@ export default function SuperAdminDashboard({ token, username, onLogout, onRetur
 
               {/* 📊 2. FINANCIAL KPI HERO ROW (USING SHARED KpiCard) */}
               <div className="sa-stats-grid">
-                {/* KPI 1: MRR Revenue */}
+                {/* KPI 1: Paid MRR */}
                 <KpiCard
-                  label="MRR Revenue"
-                  value={`₹${estimatedRevenue.toLocaleString()}`}
+                  label="Paid MRR"
+                  value={`₹${paidMrr.toLocaleString()}`}
                   icon={DollarSign}
                   color="var(--sa-accent)"
-                  badge="+ Active Subscriptions"
-                  subtitle="Authoritative MRR"
+                  badge="ACTIVE PAID"
+                  subtitle={`${paidTenants.length} Paid Subscribers`}
                 />
 
                 {/* KPI 2: Active Paid */}
