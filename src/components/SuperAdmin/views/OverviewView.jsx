@@ -92,58 +92,29 @@ export default function OverviewView({ restaurants, pendingRegistrations = [], o
         ];
 
         return (
-          <div style={{
-            background: 'var(--sa-surface)',
-            border: '1px solid var(--sa-border)',
-            borderRadius: 'var(--sa-radius-lg)',
-            padding: '16px 20px',
-            boxShadow: 'var(--sa-shadow-sm)',
-            display: 'flex',
-            justifyContent: 'space-between',
-            alignItems: 'center',
-            flexWrap: 'wrap',
-            gap: '14px'
-          }}>
-            <div>
-              <div style={{ fontSize: '0.72rem', fontWeight: 800, color: 'var(--sa-text-muted)', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+          <div className="sa-category-mix-container">
+            <div className="sa-category-mix-header">
+              <div className="sa-category-mix-tag">
                 TENANT BUSINESS MIX
               </div>
-              <div style={{ fontSize: '0.90rem', fontWeight: 900, color: 'var(--sa-text-main)', marginTop: '2px' }}>
+              <div className="sa-category-mix-title">
                 Category Distribution
               </div>
             </div>
 
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(130px, 1fr))', gap: '10px', flex: '1', maxWidth: '520px' }}>
+            <div className="sa-category-mix-grid">
               {categories.map(cat => (
                 <div
                   key={cat.id}
                   onClick={() => onNavigate && onNavigate('tenants')}
-                  style={{
-                    background: 'var(--sa-surface-subtle)',
-                    border: '1px solid var(--sa-border)',
-                    borderRadius: 'var(--sa-radius-md)',
-                    padding: '10px 14px',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'space-between',
-                    cursor: 'pointer',
-                    transition: 'all 0.15s ease'
-                  }}
+                  className="sa-category-mix-card"
                   title={`View ${cat.label}s`}
                 >
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                    <span style={{ fontSize: '1.15rem' }}>{cat.emoji}</span>
-                    <span style={{ fontSize: '0.8rem', fontWeight: 800, color: 'var(--sa-text-main)' }}>{cat.label}</span>
+                  <div className="sa-category-mix-card-left">
+                    <span className="sa-category-mix-emoji">{cat.emoji}</span>
+                    <span className="sa-category-mix-label">{cat.label}</span>
                   </div>
-                  <span style={{
-                    fontSize: '0.95rem',
-                    fontWeight: 900,
-                    color: 'var(--sa-text-main)',
-                    background: '#FFFFFF',
-                    border: '1px solid var(--sa-border)',
-                    padding: '2px 8px',
-                    borderRadius: '12px'
-                  }}>
+                  <span className="sa-category-mix-count">
                     {cat.count}
                   </span>
                 </div>

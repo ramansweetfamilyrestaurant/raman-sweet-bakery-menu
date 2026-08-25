@@ -2770,3 +2770,157 @@
   from { transform: translateY(100%); }
   to { transform: translateY(0); }
 }
+
+/* ==========================================================================
+   TENANT BUSINESS MIX / CATEGORY DISTRIBUTION RESPONSIVE STYLES
+   ========================================================================== */
+.sa-category-mix-container {
+  background: var(--sa-surface, #FFFFFF);
+  border-radius: var(--sa-radius-lg, 16px);
+  padding: 16px 20px;
+  border: 1px solid var(--sa-border, #E2E8F0);
+  box-shadow: var(--sa-shadow-sm, 0 1px 3px rgba(0,0,0,0.05));
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 14px;
+  max-width: 100%;
+  box-sizing: border-box;
+}
+
+.sa-category-mix-header {
+  flex-shrink: 0;
+}
+
+.sa-category-mix-tag {
+  font-size: 0.72rem;
+  font-weight: 800;
+  color: var(--sa-text-muted, #64748B);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.sa-category-mix-title {
+  font-size: 0.90rem;
+  font-weight: 900;
+  color: var(--sa-text-main, #0F172A);
+  margin-top: 2px;
+}
+
+.sa-category-mix-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(130px, 1fr));
+  gap: 10px;
+  flex: 1;
+  max-width: 520px;
+  box-sizing: border-box;
+}
+
+.sa-category-mix-card {
+  background: var(--sa-surface-subtle, #F8FAFC);
+  border: 1px solid var(--sa-border, #E2E8F0);
+  border-radius: 12px;
+  padding: 10px 14px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  min-height: 44px;
+  box-sizing: border-box;
+}
+
+.sa-category-mix-card:hover {
+  border-color: rgba(212, 175, 55, 0.4);
+  background: #FFFFFF;
+  transform: translateY(-1px);
+}
+
+.sa-category-mix-card-left {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+}
+
+.sa-category-mix-emoji {
+  font-size: 1.15rem;
+  flex-shrink: 0;
+}
+
+.sa-category-mix-label {
+  font-size: 0.80rem;
+  font-weight: 800;
+  color: var(--sa-text-main, #0F172A);
+  white-space: nowrap;
+}
+
+.sa-category-mix-count {
+  font-size: 0.95rem;
+  font-weight: 900;
+  color: var(--sa-text-main, #0F172A);
+  background: #FFFFFF;
+  border: 1px solid var(--sa-border, #E2E8F0);
+  padding: 2px 8px;
+  border-radius: 12px;
+  flex-shrink: 0;
+  margin-left: 6px;
+}
+
+/* Tablet (768px - 1023px) */
+@media (min-width: 768px) and (max-width: 1023px) {
+  .sa-category-mix-container {
+    padding: 14px 16px;
+    gap: 12px;
+  }
+  .sa-category-mix-grid {
+    grid-template-columns: repeat(3, minmax(110px, 1fr));
+    gap: 8px;
+    max-width: 100%;
+  }
+  .sa-category-mix-card {
+    padding: 8px 10px;
+  }
+  .sa-category-mix-label {
+    font-size: 0.78rem;
+  }
+}
+
+/* Mobile (<= 767px): Clean horizontally scrollable category strip */
+@media (max-width: 767px) {
+  .sa-category-mix-container {
+    flex-direction: column;
+    align-items: stretch;
+    padding: 12px 14px;
+    gap: 10px;
+    overflow: hidden;
+  }
+  .sa-category-mix-header {
+    margin-bottom: 2px;
+  }
+  .sa-category-mix-grid {
+    display: flex;
+    overflow-x: auto;
+    overflow-y: hidden;
+    flex-wrap: nowrap;
+    gap: 8px;
+    padding-bottom: 4px;
+    padding-top: 2px;
+    margin: 0 -4px;
+    padding-left: 4px;
+    padding-right: 4px;
+    max-width: 100%;
+    scrollbar-width: none;
+    -ms-overflow-style: none;
+    -webkit-overflow-scrolling: touch;
+  }
+  .sa-category-mix-grid::-webkit-scrollbar {
+    display: none;
+  }
+  .sa-category-mix-card {
+    flex: 0 0 auto;
+    min-width: 128px;
+    padding: 8px 12px;
+  }
+}
