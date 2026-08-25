@@ -1,16 +1,37 @@
 import React from 'react';
 import StatusBadge from './StatusBadge';
 import { Eye, Edit3, Trash2, ExternalLink } from 'lucide-react';
+import { getBusinessCategoryMeta } from '../../../constants/businessCategories';
 
 export default function TenantCard({ resto, onOpen360, onEdit, onDelete, onImpersonate }) {
+  const catMeta = getBusinessCategoryMeta(resto.business_category);
+
   return (
     <div className="sa-stat-card" style={{ padding: '20px', display: 'flex', flexDirection: 'column', gap: '14px' }}>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: '10px' }}>
         <div>
           <h3 style={{ margin: 0, fontSize: '1.05rem', fontWeight: 900, color: 'var(--sa-text-main)' }}>{resto.name}</h3>
-          <span style={{ fontSize: '0.74rem', color: 'var(--sa-text-muted)' }}>/{resto.subdomain}</span>
+          <span style={{ fontSize: '0.74rem', color: 'var(--sa-text-muted)' }}>/{resto.slug || resto.subdomain}</span>
         </div>
         <StatusBadge status={resto.subscription_status} type={resto.subscription_type} />
+      </div>
+
+      <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
+        <span style={{
+          display: 'inline-flex',
+          alignItems: 'center',
+          gap: '5px',
+          padding: '2px 8px',
+          borderRadius: 'var(--sa-radius-sm)',
+          fontSize: '0.72rem',
+          fontWeight: 800,
+          background: 'var(--sa-surface-subtle)',
+          border: '1px solid var(--sa-border)',
+          color: 'var(--sa-text-main)'
+        }}>
+          <span>{catMeta.emoji}</span>
+          <span>{catMeta.label}</span>
+        </span>
       </div>
 
       <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', fontSize: '0.78rem', color: 'var(--sa-text-muted)' }}>

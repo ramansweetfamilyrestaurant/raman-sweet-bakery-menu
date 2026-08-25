@@ -65,6 +65,66 @@ export default function OverviewView({ restaurants, pendingRegistrations = [], o
         <StatCard label="REVENUE" value={`₹${estimatedRevenue.toLocaleString()}`} subtitle="Monthly recurring (MRR)" icon={DollarSign} color="var(--sa-accent)" />
       </div>
 
+      {/* Business Distribution by Category */}
+      <div style={{
+        background: 'var(--sa-surface)',
+        border: '1px solid var(--sa-border)',
+        borderRadius: 'var(--sa-radius-lg)',
+        padding: '16px 20px',
+        boxShadow: 'var(--sa-shadow-sm)'
+      }}>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '12px' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+            <span style={{ fontSize: '1rem' }}>📊</span>
+            <span style={{ fontSize: '0.82rem', fontWeight: 900, color: 'var(--sa-text-main)', letterSpacing: '0.5px', textTransform: 'uppercase' }}>
+              Business Distribution
+            </span>
+          </div>
+          <span style={{ fontSize: '0.74rem', color: 'var(--sa-text-muted)', fontWeight: 600 }}>
+            Active Industry Segments
+          </span>
+        </div>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(130px, 1fr))', gap: '10px' }}>
+          {[
+            { id: 'dine_in', emoji: '🍽️', label: 'Dine-In', count: restaurants.filter(r => (r.business_category || 'dine_in') === 'dine_in').length },
+            { id: 'hotel', emoji: '🏨', label: 'Hotel', count: restaurants.filter(r => (r.business_category || 'dine_in') === 'hotel').length },
+            { id: 'cinema', emoji: '🎬', label: 'Cinema', count: restaurants.filter(r => (r.business_category || 'dine_in') === 'cinema').length }
+          ].map(cat => (
+            <div
+              key={cat.id}
+              onClick={() => onNavigate && onNavigate('tenants')}
+              style={{
+                background: 'var(--sa-surface-subtle)',
+                border: '1px solid var(--sa-border)',
+                borderRadius: 'var(--sa-radius-md)',
+                padding: '10px 14px',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                cursor: 'pointer',
+                transition: 'all 0.15s ease'
+              }}
+            >
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <span style={{ fontSize: '1.15rem' }}>{cat.emoji}</span>
+                <span style={{ fontSize: '0.8rem', fontWeight: 800, color: 'var(--sa-text-main)' }}>{cat.label}</span>
+              </div>
+              <span style={{
+                fontSize: '0.85rem',
+                fontWeight: 900,
+                color: cat.count > 0 ? 'var(--sa-text-main)' : 'var(--sa-text-muted)',
+                background: cat.count > 0 ? '#FFFFFF' : 'transparent',
+                border: cat.count > 0 ? '1px solid var(--sa-border)' : 'none',
+                padding: '2px 8px',
+                borderRadius: 'var(--sa-radius-full)'
+              }}>
+                {cat.count}
+              </span>
+            </div>
+          ))}
+        </div>
+      </div>
+
       {/* Compact Operational Hub: Attention Required */}
       <div className="sa-table-container" style={{ padding: '18px' }}>
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '14px' }}>
