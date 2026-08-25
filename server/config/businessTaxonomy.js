@@ -320,13 +320,13 @@ export function getAvailableSpaceTypesForBusiness(businessType, serviceModel, op
   const cleanService = serviceModel ? String(serviceModel).trim().toLowerCase() : resolveServiceModelForBusinessType(canonicalBiz);
   const canonicalService = SERVICE_MODEL_ALIASES[cleanService] || cleanService;
 
-  if (canonicalBiz === 'cinema_theatre' || canonicalService === 'seat_service') {
+  if (canonicalBiz === 'cinema_theatre' || canonicalService === 'cinema') {
     return [
       { id: 'cinema_seat', label: '🎬 Cinema Seat', singular: 'Cinema Seat', plural: 'Cinema Seats', badge: 'CINEMA SEAT', param: 'cinema' }
     ];
   }
 
-  if (canonicalBiz === 'hotel_resort' || canonicalService === 'in_room_dining') {
+  if (canonicalBiz === 'hotel_resort' || canonicalService === 'hotel') {
     return [
       { id: 'room', label: '🏨 Hotel Room', singular: 'Room', plural: 'Rooms', badge: 'ROOM NO.', param: 'room' }
     ];
