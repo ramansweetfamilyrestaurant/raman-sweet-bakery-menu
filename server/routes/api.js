@@ -1888,12 +1888,34 @@ router.post('/orders', orderCreationRateLimiter, async (req, res) => {
   }
 });
 
-// GET Track Order Status (Public Customer Route)
+// GET Track Order Status (Public Customer Route - Strict Tenant Scoped)
 router.get('/orders/track/:id', async (req, res) => {
   try {
     const { id } = req.params;
-    const orders = await query('SELECT id, session_id, round_number, parent_order_id, table_number, customer_name, status, kitchen_prepared, sent_to_kds, total_amount, subtotal_amount, cgst_amount, sgst_amount, tax_amount, grand_total_amount, gst_rate, items, created_at FROM orders WHERE id = $1', [id]);
-    if (orders.length === 0) {
+    const { slug } = req.query;
+
+    const numericId = parseInt(id, 10);
+    const orderId = isNaN(numericId) ? id : numericId;
+    if (!orderId) {
+      return res.status(400).json({ error: 'invalid_order_id', message: 'Valid order ID is required' });
+    }
+
+    if (!slug || typeof slug !== 'string' || slug.trim() === '') {
+      return res.status(400).json({ error: 'missing_slug', message: 'Restaurant slug is required to track orders' });
+    }
+
+    const resto = await resolveRestaurant(req, slug);
+    if (!resto) {
+      return res.status(404).json({ error: 'restaurant_not_found', message: 'Restaurant not found' });
+    }
+    const targetId = resto.id;
+
+    const orders = await query(
+      'SELECT id, session_id, round_number, parent_order_id, table_number, customer_name, status, kitchen_prepared, sent_to_kds, total_amount, subtotal_amount, cgst_amount, sgst_amount, tax_amount, grand_total_amount, gst_rate, items, created_at FROM orders WHERE id = $1 AND restaurant_id = $2',
+      [orderId, targetId]
+    );
+
+    if (!orders || orders.length === 0) {
       return res.status(404).json({ error: 'Order not found' });
     }
     const order = orders[0];
@@ -2122,7 +2144,7 @@ router.get('/kitchen/orders', async (req, res) => {
   }
 });
 
-// PATCH /api/kitchen/orders/:id/complete - Mark order food prepared from /kitchen page (Tenant Scoped)
+// PATCH /api/kitchen/orders/:id/complete - Mark order food prepared from /kitchen page (Strict Tenant Scoped)
 router.patch('/kitchen/orders/:id/complete', async (req, res) => {
   try {
     const { id } = req.params;
@@ -2130,25 +2152,35 @@ router.patch('/kitchen/orders/:id/complete', async (req, res) => {
     const numericId = parseInt(id, 10);
     const orderId = isNaN(numericId) ? id : numericId;
 
-    let targetId = null;
-    if (slug && typeof slug === 'string' && slug.trim() !== '') {
-      const restos = await query('SELECT id FROM restaurants WHERE LOWER(slug) = $1', [slug.trim().toLowerCase()]);
-      if (restos && restos.length > 0) targetId = restos[0].id;
+    if (!orderId) {
+      return res.status(400).json({ error: 'invalid_order_id', message: 'Valid order ID is required' });
     }
 
-    // Set kitchen_prepared=1 so it disappears from KDS and admin gets notified
-    if (targetId) {
-      await query(
-        'UPDATE orders SET kitchen_prepared = 1 WHERE id = $1 AND restaurant_id = $2',
-        [orderId, targetId]
-      );
-    } else {
-      // No slug provided - update by id only (fallback)
-      await query(
-        'UPDATE orders SET kitchen_prepared = 1 WHERE id = $1',
-        [orderId]
-      );
+    if (!slug || typeof slug !== 'string' || slug.trim() === '') {
+      return res.status(400).json({ error: 'missing_slug', message: 'Restaurant slug is required' });
     }
+
+    const resto = await resolveRestaurant(req, slug);
+    if (!resto) {
+      return res.status(404).json({ error: 'restaurant_not_found', message: 'Restaurant not found' });
+    }
+    const targetId = resto.id;
+
+    // Check if order exists and belongs to this tenant restaurant
+    const checkOrder = await query(
+      'SELECT id, kitchen_prepared FROM orders WHERE id = $1 AND restaurant_id = $2',
+      [orderId, targetId]
+    );
+
+    if (!checkOrder || checkOrder.length === 0) {
+      return res.status(404).json({ error: 'order_not_found', message: 'Order not found for this restaurant' });
+    }
+
+    // Set kitchen_prepared=1 strictly scoped to tenant restaurant_id
+    await query(
+      'UPDATE orders SET kitchen_prepared = 1 WHERE id = $1 AND restaurant_id = $2',
+      [orderId, targetId]
+    );
 
     res.json({ success: true, id: orderId, kitchen_prepared: 1 });
   } catch (err) {

@@ -756,7 +756,7 @@ export default function App() {
       try {
         if (activeOrderId) {
           try {
-            const data = await trackOrderStatus(activeOrderId);
+            const data = await trackOrderStatus(activeOrderId, currentSlug);
             if (data) {
               setActiveOrderTrack(data);
               return;

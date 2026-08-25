@@ -553,8 +553,12 @@ export async function updateOrderStatus(id, status, token, extraBody = {}) {
   return handleResponse(res, 'Failed to update order status');
 }
 
-export async function trackOrderStatus(id) {
-  const res = await fetch(`${API_BASE}/orders/track/${id}`);
+export async function trackOrderStatus(id, slug = '') {
+  const cleanSlug = slug ? String(slug).trim() : '';
+  const url = cleanSlug
+    ? `${API_BASE}/orders/track/${id}?slug=${encodeURIComponent(cleanSlug)}`
+    : `${API_BASE}/orders/track/${id}`;
+  const res = await fetch(url);
   return handleResponse(res, 'Failed to track order');
 }
 

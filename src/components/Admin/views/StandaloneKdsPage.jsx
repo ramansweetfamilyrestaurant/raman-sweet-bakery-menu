@@ -178,7 +178,7 @@ export default function StandaloneKdsPage({ slug = '' }) {
   const handleMarkPrepared = async (orderId) => {
     // Get the current slug for tenant scoping
     const parts = window.location.pathname.split('/').filter(Boolean);
-    let currentSlug = slug;
+    let currentSlug = slug || new URLSearchParams(window.location.search).get('slug') || '';
     if (!currentSlug && parts.length >= 2 && parts[parts.length - 1] === 'kitchen') {
       currentSlug = parts[parts.length - 2];
     }
