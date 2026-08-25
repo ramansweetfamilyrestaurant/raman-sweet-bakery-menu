@@ -709,13 +709,13 @@ export default function SuperAdminDashboard({ token, username, onLogout, onRetur
           <table className="sa-table">
             <thead>
               <tr>
-                <th>SHOP / RESTAURANT</th>
-                <th>OWNER / CONTACT</th>
-                <th>PLAN</th>
-                <th>STATUS</th>
-                <th>RENEWAL / EXPIRY</th>
-                <th>SCANS</th>
-                <th style={{ textAlign: 'right' }}>ACTIONS</th>
+                <th style={{ minWidth: '240px' }}>SHOP / RESTAURANT</th>
+                <th style={{ minWidth: '160px' }}>OWNER / CONTACT</th>
+                <th style={{ minWidth: '130px' }}>PLAN</th>
+                <th style={{ minWidth: '110px' }}>STATUS</th>
+                <th style={{ minWidth: '140px' }}>RENEWAL / EXPIRY</th>
+                <th style={{ minWidth: '90px' }}>SCANS</th>
+                <th style={{ minWidth: '90px', textAlign: 'right' }}>ACTIONS</th>
               </tr>
             </thead>
             <tbody>
@@ -726,31 +726,33 @@ export default function SuperAdminDashboard({ token, username, onLogout, onRetur
 
                 return (
                   <tr key={r.id}>
-                    <td>
+                    <td style={{ minWidth: '240px', maxWidth: '280px' }}>
                       <div 
                         onClick={() => setSelectedTenant360(r)}
                         style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer' }}
-                        title="Click to open Shop 360° Profile"
+                        title={r.name}
                       >
                         <img
                           src={getRestaurantLogoUrl(r.logo)}
                           alt={r.name}
                           onError={(e) => { e.currentTarget.src = '/images/default-logo.webp'; }}
-                          style={{ width: '32px', height: '32px', borderRadius: '50%', objectFit: 'cover', border: '1.5px solid #D4AF37' }}
+                          style={{ width: '32px', height: '32px', borderRadius: '50%', objectFit: 'cover', border: '1.5px solid #D4AF37', flexShrink: 0 }}
                         />
-                        <div>
-                          <strong style={{ display: 'block', fontSize: '0.86rem', color: 'var(--sa-text-main)' }}>{r.name}</strong>
-                          <span style={{ fontSize: '0.7rem', color: 'var(--sa-accent-hover, #B48F27)', fontWeight: 700 }}>/{r.slug}</span>
+                        <div style={{ minWidth: 0, overflow: 'hidden' }}>
+                          <strong style={{ display: 'block', fontSize: '0.86rem', color: 'var(--sa-text-main)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{r.name}</strong>
+                          <span style={{ fontSize: '0.7rem', color: 'var(--sa-accent-hover, #B48F27)', fontWeight: 700, display: 'block', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>/{r.slug}</span>
                         </div>
                       </div>
                     </td>
-                    <td>
-                      <span style={{ fontFamily: 'monospace', fontWeight: 800, fontSize: '0.78rem', display: 'block', color: 'var(--sa-text-main)' }}>
-                        {r.owner_username || 'admin'}
-                      </span>
-                      <span style={{ fontSize: '0.7rem', color: 'var(--sa-text-muted)', display: 'block' }}>
-                        {r.phone || (r.owner_email ? r.owner_email : 'No contact')}
-                      </span>
+                    <td style={{ minWidth: '160px', maxWidth: '190px' }}>
+                      <div style={{ minWidth: 0, overflow: 'hidden' }}>
+                        <span style={{ fontFamily: 'monospace', fontWeight: 800, fontSize: '0.78rem', display: 'block', color: 'var(--sa-text-main)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                          {r.owner_username || 'admin'}
+                        </span>
+                        <span style={{ fontSize: '0.7rem', color: 'var(--sa-text-muted)', display: 'block', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                          {r.phone || (r.owner_email ? r.owner_email : 'No contact')}
+                        </span>
+                      </div>
                     </td>
                     <td>
                       <span style={{ fontWeight: 800, color: 'var(--sa-primary)', fontSize: '0.78rem' }}>{(r.plan_tier || 'pro').toUpperCase()}</span>
@@ -1847,13 +1849,13 @@ export default function SuperAdminDashboard({ token, username, onLogout, onRetur
                   <table className="sa-table">
                     <thead>
                       <tr>
-                        <th>SHOP / RESTAURANT</th>
-                        <th>OWNER / CONTACT</th>
-                        <th>PLAN & BILLING</th>
-                        <th>STATUS</th>
-                        <th>AUTO-RENEW</th>
-                        <th>ACCESS UNTIL / RENEWAL</th>
-                        <th style={{ textAlign: 'right' }}>ACTION</th>
+                        <th style={{ minWidth: '240px' }}>SHOP / RESTAURANT</th>
+                        <th style={{ minWidth: '160px' }}>OWNER / CONTACT</th>
+                        <th style={{ minWidth: '140px' }}>PLAN & BILLING</th>
+                        <th style={{ minWidth: '110px' }}>STATUS</th>
+                        <th style={{ minWidth: '110px' }}>AUTO-RENEW</th>
+                        <th style={{ minWidth: '150px' }}>ACCESS UNTIL / RENEWAL</th>
+                        <th style={{ minWidth: '90px', textAlign: 'right' }}>ACTION</th>
                       </tr>
                     </thead>
                     <tbody>
@@ -1865,31 +1867,33 @@ export default function SuperAdminDashboard({ token, username, onLogout, onRetur
 
                         return (
                           <tr key={r.id}>
-                            <td>
+                            <td style={{ minWidth: '240px', maxWidth: '280px' }}>
                               <div
                                 onClick={() => setSelectedTenant360(r)}
                                 style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer' }}
-                                title="Click to open Shop 360° Profile"
+                                title={r.name}
                               >
                                 <img
                                   src={getRestaurantLogoUrl(r.logo)}
                                   alt={r.name}
                                   onError={(e) => { e.currentTarget.src = '/images/default-logo.webp'; }}
-                                  style={{ width: '32px', height: '32px', borderRadius: '50%', objectFit: 'cover', border: '1.5px solid #D4AF37' }}
+                                  style={{ width: '32px', height: '32px', borderRadius: '50%', objectFit: 'cover', border: '1.5px solid #D4AF37', flexShrink: 0 }}
                                 />
-                                <div>
-                                  <strong style={{ display: 'block', fontSize: '0.86rem', color: 'var(--sa-text-main)' }}>{r.name}</strong>
-                                  <span style={{ fontSize: '0.7rem', color: 'var(--sa-accent-hover, #B48F27)', fontWeight: 700 }}>/{r.slug}</span>
+                                <div style={{ minWidth: 0, overflow: 'hidden' }}>
+                                  <strong style={{ display: 'block', fontSize: '0.86rem', color: 'var(--sa-text-main)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{r.name}</strong>
+                                  <span style={{ fontSize: '0.7rem', color: 'var(--sa-accent-hover, #B48F27)', fontWeight: 700, display: 'block', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>/{r.slug}</span>
                                 </div>
                               </div>
                             </td>
-                            <td>
-                              <span style={{ fontFamily: 'monospace', fontWeight: 800, fontSize: '0.78rem', display: 'block', color: 'var(--sa-text-main)' }}>
-                                {r.owner_username || 'admin'}
-                              </span>
-                              <span style={{ fontSize: '0.7rem', color: 'var(--sa-text-muted)' }}>
-                                {r.phone || r.owner_email || 'No contact'}
-                              </span>
+                            <td style={{ minWidth: '160px', maxWidth: '190px' }}>
+                              <div style={{ minWidth: 0, overflow: 'hidden' }}>
+                                <span style={{ fontFamily: 'monospace', fontWeight: 800, fontSize: '0.78rem', display: 'block', color: 'var(--sa-text-main)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                                  {r.owner_username || 'admin'}
+                                </span>
+                                <span style={{ fontSize: '0.7rem', color: 'var(--sa-text-muted)', display: 'block', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                                  {r.phone || r.owner_email || 'No contact'}
+                                </span>
+                              </div>
                             </td>
                             <td>
                               <span style={{ fontWeight: 800, color: 'var(--sa-primary)', fontSize: '0.78rem' }}>

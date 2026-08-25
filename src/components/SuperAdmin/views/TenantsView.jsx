@@ -71,13 +71,13 @@ export default function TenantsView({ restaurants, searchQuery, onSelectTenant, 
         <table className="sa-table">
           <thead>
             <tr>
-              <th>RESTAURANT</th>
-              <th>OWNER</th>
-              <th>PLAN</th>
-              <th>STATUS</th>
-              <th>ACCESS UNTIL</th>
-              <th>DISHES</th>
-              <th style={{ textAlign: 'right' }}>ACTION</th>
+              <th style={{ minWidth: '240px' }}>RESTAURANT</th>
+              <th style={{ minWidth: '160px' }}>OWNER</th>
+              <th style={{ minWidth: '130px' }}>PLAN</th>
+              <th style={{ minWidth: '110px' }}>STATUS</th>
+              <th style={{ minWidth: '140px' }}>ACCESS UNTIL</th>
+              <th style={{ minWidth: '90px' }}>DISHES</th>
+              <th style={{ minWidth: '90px', textAlign: 'right' }}>ACTION</th>
             </tr>
           </thead>
           <tbody>
@@ -93,8 +93,8 @@ export default function TenantsView({ restaurants, searchQuery, onSelectTenant, 
 
                 return (
                   <tr key={r.id}>
-                    <td>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    <td style={{ minWidth: '240px', maxWidth: '280px' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }} title={r.name}>
                         <div style={{
                           width: '32px', height: '32px', borderRadius: '50%',
                           background: 'var(--sa-primary)', color: 'var(--sa-accent)',
@@ -103,13 +103,22 @@ export default function TenantsView({ restaurants, searchQuery, onSelectTenant, 
                         }}>
                           {r.name.charAt(0).toUpperCase()}
                         </div>
-                        <div>
-                          <strong style={{ fontSize: '0.88rem', display: 'block', color: 'var(--sa-text-main)' }}>{r.name}</strong>
-                          <span style={{ fontSize: '0.7rem', color: 'var(--sa-text-muted)' }}>/{r.slug}</span>
+                        <div style={{ minWidth: 0, overflow: 'hidden' }}>
+                          <strong style={{ fontSize: '0.88rem', display: 'block', color: 'var(--sa-text-main)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{r.name}</strong>
+                          <span style={{ fontSize: '0.7rem', color: 'var(--sa-text-muted)', display: 'block', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>/{r.slug}</span>
                         </div>
                       </div>
                     </td>
-                    <td style={{ fontWeight: 700, color: 'var(--sa-text-muted)' }}>{r.owner_username || 'N/A'}</td>
+                    <td style={{ minWidth: '160px', maxWidth: '190px' }}>
+                      <div style={{ minWidth: 0, overflow: 'hidden' }}>
+                        <span style={{ fontWeight: 800, fontSize: '0.82rem', display: 'block', color: 'var(--sa-text-main)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                          {r.owner_username || r.owner_name || 'admin'}
+                        </span>
+                        <span style={{ fontSize: '0.7rem', color: 'var(--sa-text-muted)', display: 'block', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                          {r.owner_email || 'No email'}
+                        </span>
+                      </div>
+                    </td>
                     <td>
                       <span style={{ fontWeight: 800, color: 'var(--sa-success)' }}>{(r.plan_tier || 'pro').toUpperCase()}</span>
                       <span style={{ fontSize: '0.68rem', color: 'var(--sa-text-muted)', display: 'block' }}>
