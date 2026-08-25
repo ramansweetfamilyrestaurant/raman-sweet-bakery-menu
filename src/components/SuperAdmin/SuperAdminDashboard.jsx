@@ -32,7 +32,6 @@ export default function SuperAdminDashboard({ token, username, onLogout, onRetur
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [showMobileMoreDrawer, setShowMobileMoreDrawer] = useState(false);
   const [billingFilter, setBillingFilter] = useState('all');
-  const [categoryFilter, setCategoryFilter] = useState('all'); // 'all', 'dine_in', 'hotel', 'cinema'
 
   // Security & Portal Tab State & Eye Toggles
   const [secTab, setSecTab] = useState('security'); // 'security', 'gateway', 'branding', 'health'
@@ -706,11 +705,11 @@ export default function SuperAdminDashboard({ token, username, onLogout, onRetur
         <EmptyState
           icon={Store}
           title="No shops match your criteria"
-          description="Try clearing your search query or switching status/category filters."
+          description="Try clearing your search query or switching status filters."
           action={
             <button
               type="button"
-              onClick={() => { setSearchQuery(''); setStatusFilter('all'); setCategoryFilter('all'); }}
+              onClick={() => { setSearchQuery(''); setStatusFilter('all'); }}
               className="sa-btn sa-btn-secondary sa-btn-sm"
             >
               Clear Search & Filters
@@ -1177,16 +1176,15 @@ export default function SuperAdminDashboard({ token, username, onLogout, onRetur
 
                 <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
                   {[
-                    { id: 'dine_in', emoji: '🍽️', label: 'Dine-In', count: restaurants.filter(r => (r.service_model || r.business_category || 'dine_in') === 'dine_in').length },
-                    { id: 'hotel', emoji: '🏨', label: 'Hotel', count: restaurants.filter(r => (r.service_model || r.business_category || 'dine_in') === 'hotel').length },
-                    { id: 'cinema', emoji: '🎬', label: 'Cinema', count: restaurants.filter(r => (r.service_model || r.business_category || 'dine_in') === 'cinema').length },
+                    { id: 'restaurant', emoji: '🍽️', label: 'Restaurant', count: restaurants.filter(r => (!r.business_type || r.business_type === 'restaurant')).length },
+                    { id: 'cafe', emoji: '☕', label: 'Cafe', count: restaurants.filter(r => r.business_type === 'cafe').length },
+                    { id: 'bakery_confectionery', emoji: '🍰', label: 'Bakery', count: restaurants.filter(r => r.business_type === 'bakery_confectionery').length },
+                    { id: 'hotel_resort', emoji: '🏨', label: 'Hotel', count: restaurants.filter(r => r.business_type === 'hotel_resort').length },
+                    { id: 'cinema_theatre', emoji: '🎬', label: 'Cinema', count: restaurants.filter(r => r.business_type === 'cinema_theatre').length }
                   ].map(cat => (
                     <div
                       key={cat.id}
-                      onClick={() => {
-                        setCategoryFilter(cat.id);
-                        setActiveView('tenants');
-                      }}
+                      onClick={() => setActiveView('tenants')}
                       style={{
                         background: 'var(--sa-surface-subtle, #F8FAFC)',
                         border: '1px solid var(--sa-border, #E2E8F0)',
@@ -1198,7 +1196,7 @@ export default function SuperAdminDashboard({ token, username, onLogout, onRetur
                         cursor: 'pointer',
                         transition: 'all 0.15s ease'
                       }}
-                      title={`Filter by ${cat.label}`}
+                      title={`View ${cat.label}s`}
                     >
                       <span style={{ fontSize: '1.1rem' }}>{cat.emoji}</span>
                       <div>
