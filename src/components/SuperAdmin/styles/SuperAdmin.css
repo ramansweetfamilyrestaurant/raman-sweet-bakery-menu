@@ -2887,40 +2887,48 @@
   }
 }
 
-/* Mobile (<= 767px): Clean horizontally scrollable category strip */
+/* Mobile (<= 767px): 2-Column Responsive Grid (Dine-In | Hotel, Cinema Full-Width) */
 @media (max-width: 767px) {
   .sa-category-mix-container {
     flex-direction: column;
     align-items: stretch;
     padding: 12px 14px;
     gap: 10px;
-    overflow: hidden;
+    width: 100%;
+    max-width: 100%;
+    box-sizing: border-box;
   }
+  
   .sa-category-mix-header {
     margin-bottom: 2px;
   }
+  
   .sa-category-mix-grid {
-    display: flex;
-    overflow-x: auto;
-    overflow-y: hidden;
-    flex-wrap: nowrap;
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
     gap: 8px;
-    padding-bottom: 4px;
-    padding-top: 2px;
-    margin: 0 -4px;
-    padding-left: 4px;
-    padding-right: 4px;
+    width: 100%;
     max-width: 100%;
-    scrollbar-width: none;
-    -ms-overflow-style: none;
-    -webkit-overflow-scrolling: touch;
+    box-sizing: border-box;
   }
-  .sa-category-mix-grid::-webkit-scrollbar {
-    display: none;
+  
+  .sa-category-mix-grid > :nth-child(3) {
+    grid-column: 1 / -1;
   }
+  
   .sa-category-mix-card {
-    flex: 0 0 auto;
-    min-width: 128px;
     padding: 8px 12px;
+    min-height: 42px;
+    box-sizing: border-box;
+    width: 100%;
+  }
+  
+  .sa-category-mix-label {
+    font-size: 0.78rem;
+  }
+
+  .sa-category-mix-count {
+    font-size: 0.90rem;
+    padding: 2px 7px;
   }
 }
