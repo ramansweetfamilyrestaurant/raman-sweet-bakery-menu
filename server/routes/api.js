@@ -1508,9 +1508,9 @@ router.post('/orders', orderCreationRateLimiter, async (req, res) => {
     // Step 9: Optional distance/location metadata (Non-blocking)
     let distanceMetersValue = distance_meters !== undefined && distance_meters !== null && !isNaN(Number(distance_meters)) ? Number(distance_meters) : null;
 
-    // Step 10: Check cart + price + availability on SERVER (Only after authorization passes)
+    // Step 10: Check cart + price + availability on SERVER (Server is the SOLE price authority)
     const dbDishes = await query('SELECT id, name, price, price_half, available FROM dishes WHERE restaurant_id = $1', [targetId]);
-    const dbCombos = await query('SELECT id, name, price, available FROM combos WHERE restaurant_id = $1', [targetId]);
+    const dbCombos = await query('SELECT id, name, price, available, description FROM combos WHERE restaurant_id = $1', [targetId]);
     const dishMap = new Map((dbDishes || []).map(d => [String(d.id), d]));
     const comboMap = new Map((dbCombos || []).map(c => [String(c.id), c]));
 
@@ -1518,43 +1518,88 @@ router.post('/orders', orderCreationRateLimiter, async (req, res) => {
     const verifiedItems = [];
 
     for (const item of items) {
-      const isCombo = item.type === 'combo' || String(item.dish_id || '').startsWith('combo_');
-      const cleanId = String(item.dish_id || '').replace(/^combo_/, '');
-      const dbItem = isCombo ? comboMap.get(cleanId) : dishMap.get(cleanId);
-
-      if (dbItem) {
-        if (dbItem.available === false || dbItem.available === 0) {
-          return res.status(400).json({
-            error: 'dish_unavailable',
-            message: `"${dbItem.name}" is currently sold out / unavailable.`
-          });
-        }
-        const itemPrice = Number(item.price) > 0 ? Number(item.price) : Number(dbItem.price || 0);
-        const qty = Math.max(1, parseInt(item.quantity) || 1);
-        serverVerifiedTotal += itemPrice * qty;
-
-        verifiedItems.push({
-          dish_id: item.dish_id,
-          name: dbItem.name || item.name,
-          portion: item.portion || '',
-          modifiers: Array.isArray(item.modifiers) ? item.modifiers : [],
-          price: itemPrice,
-          quantity: qty,
-          ...(isCombo ? { type: 'combo', includes: item.includes || '' } : {})
-        });
-      } else {
-        const itemPrice = Number(item.price) || 0;
-        const qty = Math.max(1, parseInt(item.quantity) || 1);
-        serverVerifiedTotal += itemPrice * qty;
-        verifiedItems.push({
-          dish_id: item.dish_id,
-          name: item.name || 'Menu Item',
-          portion: item.portion || '',
-          modifiers: Array.isArray(item.modifiers) ? item.modifiers : [],
-          price: itemPrice,
-          quantity: qty
+      if (!item || typeof item !== 'object') {
+        return res.status(400).json({
+          error: 'invalid_item',
+          message: 'Invalid order item payload.'
         });
       }
+
+      // Validate Quantity strictly: positive integer between 1 and 100
+      const rawQty = item.quantity;
+      const numQty = Number(rawQty);
+      if (
+        rawQty === undefined ||
+        rawQty === null ||
+        rawQty === '' ||
+        typeof rawQty === 'boolean' ||
+        isNaN(numQty) ||
+        !Number.isInteger(numQty) ||
+        numQty < 1 ||
+        numQty > 100
+      ) {
+        return res.status(400).json({
+          error: 'invalid_quantity',
+          message: `Quantity for item "${item.name || item.dish_id || 'unknown'}" must be a valid integer between 1 and 100.`
+        });
+      }
+      const qty = numQty;
+
+      const isCombo = item.type === 'combo' || String(item.dish_id || '').startsWith('combo_');
+      const cleanId = String(item.dish_id || '').replace(/^combo_/, '').trim();
+
+      if (!cleanId) {
+        return res.status(400).json({
+          error: 'invalid_item',
+          message: 'Item identifier is missing or invalid.'
+        });
+      }
+
+      const dbItem = isCombo ? comboMap.get(cleanId) : dishMap.get(cleanId);
+
+      // Invariant 2, 6, 7: Reject unknown items or items not belonging to this restaurant
+      if (!dbItem) {
+        return res.status(400).json({
+          error: 'invalid_item',
+          message: `The item "${item.name || cleanId}" does not exist for this restaurant.`
+        });
+      }
+
+      // Invariant: Reject sold out / unavailable items
+      if (dbItem.available === false || dbItem.available === 0 || dbItem.available === '0' || dbItem.available === 'false') {
+        return res.status(400).json({
+          error: 'dish_unavailable',
+          message: `"${dbItem.name}" is currently sold out / unavailable.`
+        });
+      }
+
+      // Invariant 1, 3, 4: Server determines price exclusively from database record
+      let itemPrice = 0;
+      let portionLabel = item.portion || '';
+      if (isCombo) {
+        itemPrice = Number(dbItem.price) || 0;
+      } else {
+        const isHalfPortion = String(item.portion || item.portion_type || '').toLowerCase().trim() === 'half';
+        const hasHalfPrice = dbItem.price_half !== null && dbItem.price_half !== undefined && Number(dbItem.price_half) > 0;
+        if (isHalfPortion && hasHalfPrice) {
+          itemPrice = Number(dbItem.price_half);
+          portionLabel = 'Half';
+        } else {
+          itemPrice = Number(dbItem.price) || 0;
+        }
+      }
+
+      serverVerifiedTotal += itemPrice * qty;
+
+      verifiedItems.push({
+        dish_id: item.dish_id,
+        name: dbItem.name,
+        portion: portionLabel,
+        modifiers: Array.isArray(item.modifiers) ? item.modifiers : [],
+        price: itemPrice,
+        quantity: qty,
+        ...(isCombo ? { type: 'combo', includes: dbItem.description || item.includes || '' } : {})
+      });
     }
 
     // Step 10: Idempotency & In-Flight Concurrency Mutex
