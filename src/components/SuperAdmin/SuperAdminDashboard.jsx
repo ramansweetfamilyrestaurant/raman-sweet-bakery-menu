@@ -459,6 +459,8 @@ export default function SuperAdminDashboard({ token, username, onLogout, onRetur
     if (isSuspended) return 'suspended';
     const isVip = (r.subscription_type === 'ADMIN_GRANTED' || r.mandate_status === 'admin_granted');
     if (isVip) return 'vip';
+    const isAutoRenewOff = (r.auto_renew === 0 || r.auto_renew === false || r.cancel_requested_at !== null || r.subscription_status === 'auto_renew_off');
+    if (isAutoRenewOff) return 'autorenew_off';
     const daysLeft = getDaysRemaining(r.plan_expires_at);
     const isExpired = (!isVip && daysLeft !== null && daysLeft <= 0) || r.subscription_status === 'expired';
     if (isExpired) return 'expired';
@@ -466,8 +468,6 @@ export default function SuperAdminDashboard({ token, username, onLogout, onRetur
     if (isFailed) return 'failed';
     const isTrial = (r.subscription_status === 'trialing' || (r.trial_ends_at && new Date(r.trial_ends_at) > new Date()));
     if (isTrial) return 'trial';
-    const isAutoRenewOff = (r.auto_renew === 0 || r.auto_renew === false || r.cancel_requested_at !== null || r.subscription_status === 'auto_renew_off');
-    if (isAutoRenewOff) return 'autorenew_off';
     return 'active';
   };
 
@@ -1730,7 +1730,7 @@ export default function SuperAdminDashboard({ token, username, onLogout, onRetur
                 {/* KPI 2: Active Paid */}
                 <KpiCard
                   label="Active Paid"
-                  value={totalActive}
+                  value={paidTenants.length}
                   icon={CheckCircle}
                   color="#15803D"
                   onClick={() => setStatusFilter('active')}
