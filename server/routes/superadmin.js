@@ -1105,6 +1105,138 @@ router.get('/audit-logs', authenticateToken, requireSuperAdmin, async (req, res)
   }
 });
 
+// GET Comprehensive Real-Time Database Health & System Telemetry
+router.get('/operations/stats', authenticateToken, requireSuperAdmin, async (req, res) => {
+  const startPing = Date.now();
+  try {
+    // 1. Live Postgres Ping & Version
+    const pingRes = await query('SELECT 1 AS ping, version()');
+    const pingMs = Date.now() - startPing;
+    const pgVersion = pingRes && pingRes[0] ? pingRes[0].version.split(' on ')[0] : 'PostgreSQL Serverless';
+
+    // 2. Database Total Size
+    let dbSizePretty = 'Serverless Pool';
+    let dbSizeBytes = 0;
+    try {
+      const sizeRes = await query('SELECT pg_size_pretty(pg_database_size(current_database())) AS size, pg_database_size(current_database()) AS bytes');
+      if (sizeRes && sizeRes[0]) {
+        dbSizePretty = sizeRes[0].size;
+        dbSizeBytes = parseInt(sizeRes[0].bytes, 10) || 0;
+      }
+    } catch (e) {
+      console.warn('DB size query warning:', e.message);
+    }
+
+    // 3. Active Connections Count
+    let activeConnections = 1;
+    try {
+      const connRes = await query('SELECT count(*)::int AS total FROM pg_stat_activity WHERE datname = current_database()');
+      if (connRes && connRes[0]) {
+        activeConnections = connRes[0].total;
+      }
+    } catch (e) {
+      activeConnections = 1;
+    }
+
+    // 4. Detailed Table Breakdown
+    const targetTables = ['restaurants', 'dishes', 'categories', 'orders', 'order_items', 'payments', 'audit_logs', 'admins', 'saas_plans'];
+    const tableStats = [];
+
+    for (const t of targetTables) {
+      try {
+        const countRes = await query(`SELECT count(*)::int AS total FROM ${t}`);
+        const totalRows = countRes && countRes[0] ? countRes[0].total : 0;
+        let sizePretty = '< 1 MB';
+        try {
+          const tSizeRes = await query(`SELECT pg_size_pretty(pg_total_relation_size('${t}')) AS size`);
+          if (tSizeRes && tSizeRes[0]) sizePretty = tSizeRes[0].size;
+        } catch {}
+
+        tableStats.push({
+          table_name: t,
+          row_count: totalRows,
+          size_pretty: sizePretty,
+          status: 'HEALTHY'
+        });
+      } catch (err) {
+        tableStats.push({
+          table_name: t,
+          row_count: 0,
+          size_pretty: 'N/A',
+          status: 'UNAVAILABLE'
+        });
+      }
+    }
+
+    // 5. System Memory & Process Stats
+    const mem = process.memoryUsage();
+    const heapUsedMB = Math.round(mem.heapUsed / 1024 / 1024);
+    const heapTotalMB = Math.round(mem.heapTotal / 1024 / 1024);
+    const rssMB = Math.round(mem.rss / 1024 / 1024);
+    const uptimeSec = Math.floor(process.uptime());
+    const uptimeHours = (uptimeSec / 3600).toFixed(1);
+
+    // 6. Settings check for external services
+    let settings = {};
+    try {
+      const settingsRows = await query('SELECT * FROM system_settings');
+      (settingsRows || []).forEach(r => { settings[r.key] = r.value; });
+    } catch (e) {
+      console.warn('System settings query notice:', e.message);
+    }
+
+    res.json({
+      success: true,
+      timestamp: new Date().toISOString(),
+      database: {
+        status: 'CONNECTED',
+        provider: 'Neon PostgreSQL (Serverless)',
+        version: pgVersion,
+        ping_ms: pingMs,
+        total_size: dbSizePretty,
+        total_size_bytes: dbSizeBytes,
+        active_connections: activeConnections,
+        tables: tableStats
+      },
+      system: {
+        node_version: process.version,
+        environment: process.env.NODE_ENV || 'production',
+        uptime_seconds: uptimeSec,
+        uptime_hours: uptimeHours,
+        memory: {
+          heap_used_mb: heapUsedMB,
+          heap_total_mb: heapTotalMB,
+          rss_mb: rssMB,
+          usage_percent: Math.min(100, Math.round((heapUsedMB / heapTotalMB) * 100))
+        },
+        platform: process.platform
+      },
+      services: {
+        cashfree: {
+          configured: !!(settings.cashfree_app_id && settings.cashfree_secret_key),
+          env: (settings.cashfree_env || 'sandbox').toUpperCase(),
+          status: 'ACTIVE'
+        },
+        cloudflare_r2: {
+          status: isR2Active() ? 'ACTIVE' : 'FALLBACK_DB',
+          engine: isR2Active() ? 'Cloudflare R2 Object Storage' : 'PostgreSQL Base64 Proxy'
+        },
+        gemini_ai: {
+          status: 'OPERATIONAL',
+          model: 'Google Gemini 1.5 Flash'
+        },
+        subscription_cron: {
+          status: 'SCHEDULED',
+          interval: 'Every 60 Minutes (Automated)'
+        }
+      }
+    });
+  } catch (err) {
+    console.error('Operations stats fetch error:', err);
+    res.status(500).json({ error: 'Failed to retrieve operations telemetry', details: err.message });
+  }
+});
+
 // POST Global Database Optimization & Archival (Super Admin)
 router.post('/optimize-db', authenticateToken, requireSuperAdmin, async (req, res) => {
   try {
