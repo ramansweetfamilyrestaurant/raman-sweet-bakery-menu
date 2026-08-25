@@ -1040,10 +1040,14 @@ export default function SetupView({
               ];
 
               const planTier = (restaurantInfo?.plan_tier || 'pro').toLowerCase();
-              const rawAllowed = (restaurantInfo?.allowed_themes || (planTier === 'basic' ? 'gold' : planTier === 'pro' ? 'gold,emerald,crimson,navy' : 'ALL')).trim();
+              const rawAllowed = (
+                restaurantInfo?.allowed_themes !== undefined && restaurantInfo?.allowed_themes !== null
+                  ? String(restaurantInfo.allowed_themes)
+                  : (planTier === 'basic' ? 'gold' : planTier === 'pro' ? 'gold,emerald,crimson,navy' : 'ALL')
+              ).trim();
               
               const isThemePermitted = (themeKey) => {
-                if (rawAllowed === 'ALL') return true;
+                if (!rawAllowed || rawAllowed === 'ALL') return true;
                 const allowedList = rawAllowed.split(',').map(s => s.trim().toLowerCase());
                 return allowedList.includes(themeKey.toLowerCase());
               };

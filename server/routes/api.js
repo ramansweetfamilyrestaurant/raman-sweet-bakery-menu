@@ -548,6 +548,7 @@ router.get('/info', async (req, res) => {
       dual_printer_enabled: dualPrinterEnabled,
       max_combos: maxCombos,
       theme_color: resto.theme_color || 'gold',
+      allowed_themes: saasPlan.allowed_themes || (planTierKey === 'basic' ? 'gold' : planTierKey === 'pro' ? 'gold,emerald,crimson,navy' : 'ALL'),
       scan_count: resto.scan_count || 0,
       latitude: resto.latitude !== undefined && resto.latitude !== null ? Number(resto.latitude) : null,
       longitude: resto.longitude !== undefined && resto.longitude !== null ? Number(resto.longitude) : null,
