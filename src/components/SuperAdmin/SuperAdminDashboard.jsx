@@ -410,6 +410,7 @@ export default function SuperAdminDashboard({ token, username, onLogout, onRetur
   const [sortBy, setSortBy] = useState('recent'); // 'recent', 'name_asc', 'plan', 'expiry', 'scans'
   const [viewMode, setViewMode] = useState('grid'); // 'grid', 'table'
   const [openMoreId, setOpenMoreId] = useState(null);
+  const [selectedMoreResto, setSelectedMoreResto] = useState(null);
 
   // Helper to determine canonical tenant lifecycle status
   const getTenantStatus = (r) => {
@@ -953,140 +954,19 @@ export default function SuperAdminDashboard({ token, username, onLogout, onRetur
                     <Crown size={13} color="#FFD700" /> Manage Menu
                   </button>
 
-                  {/* ••• More Button & Dropdown */}
-                  <div style={{ position: 'relative' }}>
-                    <button
-                      type="button"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        setOpenMoreId(openMoreId === r.id ? null : r.id);
-                      }}
-                      className="sa-btn sa-btn-secondary sa-btn-sm"
-                      style={{ padding: '7px 10px', fontWeight: 900, minWidth: '36px' }}
-                      title="More Actions"
-                    >
-                      •••
-                    </button>
-
-                    {openMoreId === r.id && (
-                      <div
-                        onClick={(e) => e.stopPropagation()}
-                        style={{
-                          position: 'absolute',
-                          bottom: '100%',
-                          right: 0,
-                          marginBottom: '6px',
-                          background: '#FFFFFF',
-                          borderRadius: '12px',
-                          border: '1.5px solid var(--sa-border-strong)',
-                          boxShadow: 'var(--sa-shadow-lg)',
-                          padding: '6px',
-                          zIndex: 50,
-                          display: 'flex',
-                          flexDirection: 'column',
-                          gap: '2px',
-                          minWidth: '190px'
-                        }}
-                      >
-                        {/* 1. Edit Details */}
-                        <button
-                          type="button"
-                          onClick={() => {
-                            setEditModalData(r);
-                            setOpenMoreId(null);
-                          }}
-                          className="sa-btn sa-btn-sm"
-                          style={{ justifyContent: 'flex-start', width: '100%', border: 'none', background: 'transparent', padding: '7px 10px', fontSize: '0.76rem', fontWeight: 700, color: '#374151' }}
-                        >
-                          <Edit3 size={13} /> Edit Restaurant
-                        </button>
-
-                        {/* 2. Grant or Revoke Free Access */}
-                        {isVip ? (
-                          <button
-                            type="button"
-                            onClick={() => {
-                              setRevokeModalResto(r);
-                              setOpenMoreId(null);
-                            }}
-                            className="sa-btn sa-btn-sm"
-                            style={{ justifyContent: 'flex-start', width: '100%', border: 'none', background: '#FEE2E2', padding: '7px 10px', fontSize: '0.76rem', fontWeight: 800, color: '#991B1B' }}
-                          >
-                            <Shield size={13} /> Revoke VIP Access
-                          </button>
-                        ) : (
-                          <button
-                            type="button"
-                            onClick={() => {
-                              setGrantModalResto(r);
-                              setOpenMoreId(null);
-                            }}
-                            className="sa-btn sa-btn-sm"
-                            style={{ justifyContent: 'flex-start', width: '100%', border: 'none', background: '#F3E8FF', padding: '7px 10px', fontSize: '0.76rem', fontWeight: 800, color: '#6B21A8' }}
-                          >
-                            <Crown size={13} /> Grant VIP Access
-                          </button>
-                        )}
-
-                        {/* 3. Live Menu Preview Link */}
-                        <a
-                          href={`/${r.subdomain || r.slug}`}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          onClick={() => setOpenMoreId(null)}
-                          className="sa-btn sa-btn-sm"
-                          style={{ justifyContent: 'flex-start', width: '100%', border: 'none', background: 'transparent', padding: '7px 10px', fontSize: '0.76rem', fontWeight: 700, color: '#374151', textDecoration: 'none' }}
-                        >
-                          <ExternalLink size={13} /> Live Customer Menu
-                        </a>
-
-                        {/* 4. Copy URL Link */}
-                        <button
-                          type="button"
-                          onClick={() => {
-                            const url = `${window.location.origin}/${r.subdomain || r.slug}`;
-                            navigator.clipboard.writeText(url);
-                            setCopiedId(r.id + '-menu');
-                            setTimeout(() => setCopiedId(null), 2000);
-                            setOpenMoreId(null);
-                          }}
-                          className="sa-btn sa-btn-sm"
-                          style={{ justifyContent: 'flex-start', width: '100%', border: 'none', background: 'transparent', padding: '7px 10px', fontSize: '0.76rem', fontWeight: 700, color: '#374151' }}
-                        >
-                          {copiedId === r.id + '-menu' ? <Check size={11} color="#166534" /> : <Copy size={11} />} Copy Menu URL
-                        </button>
-
-                        {/* 5. Toggle Active/Suspended */}
-                        <button
-                          type="button"
-                          onClick={() => {
-                            handleToggleActive(r.id, r.active);
-                            setOpenMoreId(null);
-                          }}
-                          className="sa-btn sa-btn-sm"
-                          style={{ justifyContent: 'flex-start', width: '100%', border: 'none', background: 'transparent', padding: '7px 10px', fontSize: '0.76rem', fontWeight: 700, color: r.active === false ? '#15803D' : '#D97706' }}
-                        >
-                          {r.active === false ? <ShieldCheck size={13} /> : <Shield size={13} />}
-                          {r.active === false ? 'Reactivate Shop' : 'Suspend Shop'}
-                        </button>
-
-                        <div style={{ height: '1px', background: 'var(--sa-border)', margin: '2px 0' }} />
-
-                        {/* 6. Delete Restaurant (Protected Guard) */}
-                        <button
-                          type="button"
-                          onClick={() => {
-                            handleDeleteRestaurant(r.id, r.name);
-                            setOpenMoreId(null);
-                          }}
-                          className="sa-btn sa-btn-sm"
-                          style={{ justifyContent: 'flex-start', width: '100%', border: 'none', background: 'transparent', padding: '7px 10px', fontSize: '0.76rem', fontWeight: 800, color: '#DC2626' }}
-                        >
-                          <Trash2 size={13} /> Delete Restaurant
-                        </button>
-                      </div>
-                    )}
-                  </div>
+                  {/* ••• More Button */}
+                  <button
+                    type="button"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setSelectedMoreResto(r);
+                    }}
+                    className="sa-btn sa-btn-secondary sa-btn-sm"
+                    style={{ padding: '7px 11px', fontWeight: 900, minWidth: '38px', borderRadius: '10px' }}
+                    title="More Shop Actions"
+                  >
+                    •••
+                  </button>
                 </div>
               </div>
             );
@@ -3211,6 +3091,196 @@ export default function SuperAdminDashboard({ token, username, onLogout, onRetur
           </div>
         </div>
       </Drawer>
+
+      {/* 🎯 Action Sheet / Quick Menu Modal for 3-Dots */}
+      {selectedMoreResto && (
+        <div
+          onClick={() => setSelectedMoreResto(null)}
+          style={{
+            position: 'fixed',
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            background: 'rgba(0, 0, 0, 0.55)',
+            backdropFilter: 'blur(5px)',
+            zIndex: 2500,
+            display: 'flex',
+            alignItems: 'flex-end',
+            justifyContent: 'center',
+            padding: 0
+          }}
+          className="sa-more-actions-overlay"
+        >
+          <div
+            onClick={(e) => e.stopPropagation()}
+            className="sa-more-actions-card"
+            style={{
+              background: '#FFFFFF',
+              borderRadius: '24px 24px 0 0',
+              width: '100%',
+              maxWidth: '480px',
+              padding: '16px 20px 32px 20px',
+              boxShadow: '0 -10px 40px rgba(0, 0, 0, 0.25)',
+              borderTop: '2px solid #D4AF37',
+              maxHeight: '85vh',
+              overflowY: 'auto',
+              boxSizing: 'border-box'
+            }}
+          >
+            {/* Top Drag Pill */}
+            <div style={{ display: 'flex', justifyContent: 'center', marginBottom: '14px' }}>
+              <div style={{ width: '38px', height: '4px', background: '#E2E8F0', borderRadius: '2px' }} />
+            </div>
+
+            {/* Restaurant Summary Header */}
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '16px', paddingBottom: '12px', borderBottom: '1px solid #F1F5F9' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '12px', minWidth: 0 }}>
+                <img
+                  src={getRestaurantLogoUrl(selectedMoreResto.logo)}
+                  alt={selectedMoreResto.name}
+                  onError={(e) => { e.currentTarget.src = '/images/default-logo.webp'; }}
+                  style={{ width: '42px', height: '42px', borderRadius: '50%', objectFit: 'cover', border: '1.5px solid #D4AF37', flexShrink: 0 }}
+                />
+                <div style={{ minWidth: 0, overflow: 'hidden' }}>
+                  <strong style={{ display: 'block', fontSize: '0.94rem', color: 'var(--sa-text-main)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                    {selectedMoreResto.name}
+                  </strong>
+                  <span style={{ fontSize: '0.74rem', color: 'var(--sa-accent-hover, #B48F27)', fontWeight: 700, display: 'block', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                    /{selectedMoreResto.slug}
+                  </span>
+                </div>
+              </div>
+
+              <button
+                type="button"
+                onClick={() => setSelectedMoreResto(null)}
+                style={{ background: '#F1F5F9', border: 'none', width: '32px', height: '32px', borderRadius: '50%', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#64748B', fontWeight: 900, flexShrink: 0 }}
+              >
+                ✕
+              </button>
+            </div>
+
+            {/* Action Items */}
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+              {/* 1. VIP Grant / Revoke */}
+              {((selectedMoreResto.subscription_type === 'ADMIN_GRANTED' || selectedMoreResto.mandate_status === 'admin_granted')) ? (
+                <button
+                  type="button"
+                  onClick={() => {
+                    setRevokeModalResto(selectedMoreResto);
+                    setSelectedMoreResto(null);
+                  }}
+                  style={{ display: 'flex', alignItems: 'center', gap: '12px', padding: '12px 14px', borderRadius: '12px', background: '#FEF2F2', border: '1px solid #FECACA', color: '#991B1B', fontWeight: 800, fontSize: '0.84rem', cursor: 'pointer', textAlign: 'left' }}
+                >
+                  <Shield size={18} color="#DC2626" />
+                  <div>
+                    <strong style={{ display: 'block' }}>Revoke VIP Access</strong>
+                    <span style={{ fontSize: '0.70rem', color: '#B91C1C', fontWeight: 600 }}>Revert account back to normal billing</span>
+                  </div>
+                </button>
+              ) : (
+                <button
+                  type="button"
+                  onClick={() => {
+                    setGrantModalResto(selectedMoreResto);
+                    setSelectedMoreResto(null);
+                  }}
+                  style={{ display: 'flex', alignItems: 'center', gap: '12px', padding: '12px 14px', borderRadius: '12px', background: '#F3E8FF', border: '1px solid #E9D5FF', color: '#6B21A8', fontWeight: 800, fontSize: '0.84rem', cursor: 'pointer', textAlign: 'left' }}
+                >
+                  <Crown size={18} color="#7E22CE" />
+                  <div>
+                    <strong style={{ display: 'block' }}>Grant VIP Access</strong>
+                    <span style={{ fontSize: '0.70rem', color: '#7E22CE', fontWeight: 600 }}>Give complimentary 100% free lifetime access</span>
+                  </div>
+                </button>
+              )}
+
+              {/* 2. Edit Restaurant Details */}
+              <button
+                type="button"
+                onClick={() => {
+                  setEditModalData(selectedMoreResto);
+                  setSelectedMoreResto(null);
+                }}
+                style={{ display: 'flex', alignItems: 'center', gap: '12px', padding: '12px 14px', borderRadius: '12px', background: '#F8FAFC', border: '1px solid #E2E8F0', color: '#334155', fontWeight: 800, fontSize: '0.84rem', cursor: 'pointer', textAlign: 'left' }}
+              >
+                <Edit3 size={18} color="#475569" />
+                <div>
+                  <strong style={{ display: 'block' }}>Edit Restaurant Details</strong>
+                  <span style={{ fontSize: '0.70rem', color: '#64748B', fontWeight: 600 }}>Update shop name, contact, slug and owner info</span>
+                </div>
+              </button>
+
+              {/* 3. Live Customer Menu */}
+              <a
+                href={`/${selectedMoreResto.subdomain || selectedMoreResto.slug}`}
+                target="_blank"
+                rel="noopener noreferrer"
+                onClick={() => setSelectedMoreResto(null)}
+                style={{ display: 'flex', alignItems: 'center', gap: '12px', padding: '12px 14px', borderRadius: '12px', background: '#F8FAFC', border: '1px solid #E2E8F0', color: '#334155', fontWeight: 800, fontSize: '0.84rem', textDecoration: 'none', cursor: 'pointer' }}
+              >
+                <ExternalLink size={18} color="#475569" />
+                <div>
+                  <strong style={{ display: 'block' }}>Open Live Customer Menu</strong>
+                  <span style={{ fontSize: '0.70rem', color: '#64748B', fontWeight: 600 }}>Preview live digital menu seen by diners</span>
+                </div>
+              </a>
+
+              {/* 4. Copy Menu URL Link */}
+              <button
+                type="button"
+                onClick={() => {
+                  const url = `${window.location.origin}/${selectedMoreResto.subdomain || selectedMoreResto.slug}`;
+                  navigator.clipboard.writeText(url);
+                  setCopiedId(selectedMoreResto.id + '-menu');
+                  setTimeout(() => setCopiedId(null), 2000);
+                  setSelectedMoreResto(null);
+                }}
+                style={{ display: 'flex', alignItems: 'center', gap: '12px', padding: '12px 14px', borderRadius: '12px', background: '#F8FAFC', border: '1px solid #E2E8F0', color: '#334155', fontWeight: 800, fontSize: '0.84rem', cursor: 'pointer', textAlign: 'left' }}
+              >
+                <Copy size={18} color="#475569" />
+                <div>
+                  <strong style={{ display: 'block' }}>{copiedId === selectedMoreResto.id + '-menu' ? '✅ Copied to Clipboard!' : 'Copy Menu URL Link'}</strong>
+                  <span style={{ fontSize: '0.70rem', color: '#64748B', fontWeight: 600 }}>Copy direct public menu URL link</span>
+                </div>
+              </button>
+
+              {/* 5. Reactivate or Suspend */}
+              <button
+                type="button"
+                onClick={() => {
+                  handleToggleActive(selectedMoreResto.id, selectedMoreResto.active);
+                  setSelectedMoreResto(null);
+                }}
+                style={{ display: 'flex', alignItems: 'center', gap: '12px', padding: '12px 14px', borderRadius: '12px', background: selectedMoreResto.active === false ? '#F0FDF4' : '#FFFBEB', border: selectedMoreResto.active === false ? '1px solid #BBF7D0' : '1px solid #FDE68A', color: selectedMoreResto.active === false ? '#15803D' : '#D97706', fontWeight: 800, fontSize: '0.84rem', cursor: 'pointer', textAlign: 'left' }}
+              >
+                {selectedMoreResto.active === false ? <ShieldCheck size={18} color="#16A34A" /> : <Shield size={18} color="#D97706" />}
+                <div>
+                  <strong style={{ display: 'block' }}>{selectedMoreResto.active === false ? 'Reactivate Shop Access' : 'Suspend Shop Access'}</strong>
+                  <span style={{ fontSize: '0.70rem', color: selectedMoreResto.active === false ? '#15803D' : '#B45309', fontWeight: 600 }}>{selectedMoreResto.active === false ? 'Unlock customer menu and ordering' : 'Temporarily disable customer menu access'}</span>
+                </div>
+              </button>
+
+              {/* 6. Delete Restaurant */}
+              <button
+                type="button"
+                onClick={() => {
+                  handleDeleteRestaurant(selectedMoreResto.id, selectedMoreResto.name);
+                  setSelectedMoreResto(null);
+                }}
+                style={{ display: 'flex', alignItems: 'center', gap: '12px', padding: '12px 14px', borderRadius: '12px', background: '#FEF2F2', border: '1px solid #FECACA', color: '#DC2626', fontWeight: 800, fontSize: '0.84rem', cursor: 'pointer', textAlign: 'left', marginTop: '4px' }}
+              >
+                <Trash2 size={18} color="#DC2626" />
+                <div>
+                  <strong style={{ display: 'block' }}>Delete Restaurant</strong>
+                  <span style={{ fontSize: '0.70rem', color: '#EF4444', fontWeight: 600 }}>Permanently remove shop, menus and staff</span>
+                </div>
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* ➕ Modal: Add New Shop / Restaurant */}
       {showAddModal && (

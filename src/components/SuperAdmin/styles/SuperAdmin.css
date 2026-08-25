@@ -2652,3 +2652,37 @@
   max-width: 100% !important;
   box-sizing: border-box !important;
 }
+
+/* 🎯 3-Dot Quick Actions Mobile Sheet & Desktop Modal */
+.sa-more-actions-overlay {
+  animation: saFadeIn 0.18s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+@keyframes saFadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@media (min-width: 768px) {
+  .sa-more-actions-overlay {
+    align-items: center !important;
+    padding: 20px !important;
+  }
+
+  .sa-more-actions-card {
+    border-radius: 24px !important;
+    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3) !important;
+    border: 1.5px solid var(--sa-border-strong) !important;
+  }
+}
+
+@media (max-width: 767px) {
+  .sa-more-actions-card {
+    animation: saSlideUp 0.22s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+  }
+}
+
+@keyframes saSlideUp {
+  from { transform: translateY(100%); }
+  to { transform: translateY(0); }
+}
