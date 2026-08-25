@@ -524,9 +524,11 @@ async function createTables() {
       `ALTER TABLE restaurants ADD COLUMN IF NOT EXISTS city VARCHAR(100);`,
       `ALTER TABLE restaurants ADD COLUMN IF NOT EXISTS state VARCHAR(100);`,
       `ALTER TABLE restaurants ADD COLUMN IF NOT EXISTS pincode VARCHAR(20);`,
-      // Step 3.159 Business Category System
-      `ALTER TABLE restaurants ADD COLUMN IF NOT EXISTS business_category VARCHAR(50) DEFAULT 'dine_in';`,
-      `UPDATE restaurants SET business_category = 'dine_in' WHERE business_category IS NULL OR business_category = '';`,
+      // Step 3.159 Business Category Migration (repurposing service_model as canonical category)
+      `ALTER TABLE restaurants ADD COLUMN IF NOT EXISTS service_model VARCHAR(50) DEFAULT 'dine_in';`,
+      `UPDATE restaurants SET service_model = 'cinema' WHERE business_type = 'cinema_theatre' OR service_model = 'seat_service' OR service_model = 'cinema';`,
+      `UPDATE restaurants SET service_model = 'hotel' WHERE business_type = 'hotel_resort' OR service_model = 'in_room_dining' OR service_model = 'hotel';`,
+      `UPDATE restaurants SET service_model = 'dine_in' WHERE service_model IS NULL OR service_model = '' OR service_model = 'dine_in_table' OR (business_type != 'cinema_theatre' AND business_type != 'hotel_resort');`,
       // Step 2.1 Table Presence Verification Foundation
       `ALTER TABLE restaurants ADD COLUMN IF NOT EXISTS table_verification_mode VARCHAR(50) DEFAULT 'GPS_WITH_STAFF_FALLBACK';`,
       `ALTER TABLE restaurants ADD COLUMN IF NOT EXISTS staff_verification_timeout_seconds INT DEFAULT 120;`,
@@ -1007,8 +1009,10 @@ async function createTables() {
       if (!restoCols.some(c => c.name === 'city')) sqliteDb.exec("ALTER TABLE restaurants ADD COLUMN city TEXT");
       if (!restoCols.some(c => c.name === 'state')) sqliteDb.exec("ALTER TABLE restaurants ADD COLUMN state TEXT");
       if (!restoCols.some(c => c.name === 'pincode')) sqliteDb.exec("ALTER TABLE restaurants ADD COLUMN pincode TEXT");
-      if (!restoCols.some(c => c.name === 'business_category')) sqliteDb.exec("ALTER TABLE restaurants ADD COLUMN business_category TEXT DEFAULT 'dine_in'");
-      sqliteDb.exec("UPDATE restaurants SET business_category = 'dine_in' WHERE business_category IS NULL OR business_category = ''");
+      if (!restoCols.some(c => c.name === 'service_model')) sqliteDb.exec("ALTER TABLE restaurants ADD COLUMN service_model TEXT DEFAULT 'dine_in'");
+      sqliteDb.exec("UPDATE restaurants SET service_model = 'cinema' WHERE business_type = 'cinema_theatre' OR service_model = 'seat_service' OR service_model = 'cinema'");
+      sqliteDb.exec("UPDATE restaurants SET service_model = 'hotel' WHERE business_type = 'hotel_resort' OR service_model = 'in_room_dining' OR service_model = 'hotel'");
+      sqliteDb.exec("UPDATE restaurants SET service_model = 'dine_in' WHERE service_model IS NULL OR service_model = '' OR service_model = 'dine_in_table' OR (business_type != 'cinema_theatre' AND business_type != 'hotel_resort')");
 
       const planCols = sqliteDb.pragma('table_info(saas_plans)');
       if (!planCols.some(c => c.name === 'max_dishes')) sqliteDb.exec("ALTER TABLE saas_plans ADD COLUMN max_dishes INTEGER DEFAULT 9999");

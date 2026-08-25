@@ -59,10 +59,10 @@ export default function OrdersView({
   };
 
   const profile = resolveBusinessProfile(restaurantInfo || settingsForm || {});
-  const isCinema = (profile?.business_type || settingsForm?.business_type || restaurantInfo?.business_type) === 'cinema_theatre' && 
-                   (profile?.service_model || settingsForm?.service_model || restaurantInfo?.service_model) === 'seat_service';
-  const isHotel = (profile?.business_type || settingsForm?.business_type || restaurantInfo?.business_type) === 'hotel_resort' && 
-                  (profile?.service_model || settingsForm?.service_model || restaurantInfo?.service_model) === 'in_room_dining';
+  const effectiveBiz = profile?.business_type || settingsForm?.business_type || restaurantInfo?.business_type;
+  const effectiveService = profile?.service_model || settingsForm?.service_model || restaurantInfo?.service_model;
+  const isCinema = effectiveBiz === 'cinema_theatre' || effectiveService === 'cinema' || effectiveService === 'seat_service';
+  const isHotel = effectiveBiz === 'hotel_resort' || effectiveService === 'hotel' || effectiveService === 'in_room_dining';
   const isDining = !isCinema && !isHotel;
 
   const [cinemaScreens, setCinemaScreens] = useState([]);

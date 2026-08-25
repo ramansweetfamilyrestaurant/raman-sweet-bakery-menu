@@ -26,7 +26,6 @@ import {
   cancelSubscription,
   changePlan
 } from '../../../api/client';
-import { BUSINESS_CATEGORY_LIST } from '../../../constants/businessCategories';
 import { CUSTOMER_MENU_THEMES, THEME_LIST, resolveTheme } from '../../../constants/themes';
 
 export default function SetupView({
@@ -43,6 +42,7 @@ export default function SetupView({
   setShowHelpModal,
   onOpenBillingModal,
   onRefreshInfo,
+  readOnly = false,
   supportPhone,
   restaurantInfo,
   onNavigate,
@@ -192,7 +192,8 @@ export default function SetupView({
 
   // Cinema Management State
   const profile = resolveBusinessProfile(settingsForm || {});
-  const isCinema = (profile?.business_type || settingsForm?.business_type) === 'cinema_theatre' && 
+  const isCinema = (profile?.business_type || settingsForm?.business_type) === 'cinema_theatre' || 
+                   (profile?.service_model || settingsForm?.service_model) === 'cinema' ||
                    (profile?.service_model || settingsForm?.service_model) === 'seat_service';
 
   const [cinemaScreens, setCinemaScreens] = useState([]);
@@ -1703,57 +1704,11 @@ export default function SetupView({
                   </div>
                   <div>
                     <strong style={{ fontSize: '0.92rem', color: '#0F172A', fontWeight: 800, display: 'block' }}>Business Profile</strong>
-                    <span style={{ fontSize: '0.72rem', color: '#64748B' }}>Configure business venue type, customer dietary profile, and service model</span>
+                    <span style={{ fontSize: '0.72rem', color: '#64748B' }}>Configure business venue type and customer dietary profile</span>
                   </div>
                 </div>
 
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', paddingLeft: '46px' }}>
-                  {/* Control 0: Business Category */}
-                  <div style={{ background: '#F8FAFC', padding: '10px 12px', borderRadius: '12px', border: '1px solid #E2E8F0' }}>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '4px' }}>
-                      <label style={{ fontSize: '0.80rem', fontWeight: 800, color: '#1E293B' }}>
-                        Business Category
-                      </label>
-                      <span style={{ fontSize: '0.66rem', fontWeight: 700, color: '#16A34A', background: '#DCFCE7', padding: '2px 6px', borderRadius: '8px' }}>
-                        Canonical
-                      </span>
-                    </div>
-                    <span style={{ fontSize: '0.68rem', color: '#64748B', display: 'block', marginBottom: '8px' }}>
-                      Select the primary industry category for this business account.
-                    </span>
-                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(110px, 1fr))', gap: '8px' }}>
-                      {BUSINESS_CATEGORY_LIST.map(cat => {
-                        const isSelected = (settingsForm.business_category || 'dine_in') === cat.value;
-                        return (
-                          <button
-                            key={cat.value}
-                            type="button"
-                            onClick={() => setSettingsForm({ ...settingsForm, business_category: cat.value })}
-                            style={{
-                              padding: '8px 10px',
-                              minHeight: '44px',
-                              borderRadius: '8px',
-                              border: isSelected ? '2px solid #16A34A' : '1px solid #CBD5E1',
-                              background: isSelected ? '#F0FDF4' : '#FFFFFF',
-                              cursor: 'pointer',
-                              display: 'flex',
-                              flexDirection: 'column',
-                              alignItems: 'center',
-                              justifyContent: 'center',
-                              gap: '2px',
-                              transition: 'all 0.15s ease'
-                            }}
-                          >
-                            <span style={{ fontSize: '1.05rem' }}>{cat.emoji}</span>
-                            <span style={{ fontSize: '0.76rem', fontWeight: 800, color: isSelected ? '#166534' : '#334155' }}>
-                              {cat.label}
-                            </span>
-                          </button>
-                        );
-                      })}
-                    </div>
-                  </div>
-
                   {/* Control A: Business Type */}
                   <div style={{ background: '#F8FAFC', padding: '10px 12px', borderRadius: '12px', border: '1px solid #E2E8F0' }}>
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '4px' }}>
@@ -1775,7 +1730,7 @@ export default function SetupView({
                       onChange={(e) => {
                         const newBiz = e.target.value;
                         const safeResto = (currentFoodType === 'pure_veg' ? 'pure_veg' : currentFoodType === 'veg_nonveg' ? 'veg_nonveg' : (newBiz === 'bakery_confectionery' ? 'bakery' : 'pure_veg'));
-                        const autoService = resolveServiceModelForBusinessType(newBiz, settingsForm.service_model);
+                        const autoService = resolveServiceModelForBusinessType(newBiz);
                         setSettingsForm({
                           ...settingsForm,
                           business_type: newBiz,
@@ -1797,7 +1752,7 @@ export default function SetupView({
                   <div style={{ background: '#F8FAFC', padding: '10px 12px', borderRadius: '12px', border: '1px solid #E2E8F0' }}>
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '4px' }}>
                       <label htmlFor="admin-food-type" style={{ fontSize: '0.80rem', fontWeight: 800, color: '#1E293B' }}>
-                        Food Type
+                        Food Dietary Type
                       </label>
                       {isLegacyFood && (
                         <span style={{ fontSize: '0.66rem', fontWeight: 700, color: '#64748B', background: '#E2E8F0', padding: '2px 6px', borderRadius: '8px' }}>
@@ -1830,38 +1785,6 @@ export default function SetupView({
                     </select>
                   </div>
 
-                  {/* Control C: Service Model */}
-                  <div style={{ background: '#F8FAFC', padding: '10px 12px', borderRadius: '12px', border: '1px solid #E2E8F0' }}>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '4px' }}>
-                      <label htmlFor="admin-service-model" style={{ fontSize: '0.80rem', fontWeight: 800, color: '#1E293B', display: 'flex', alignItems: 'center', gap: '4px' }}>
-                        <span>Service Model</span>
-                        <span style={{ fontSize: '0.70rem' }}>🔒</span>
-                      </label>
-                      <span style={{ fontSize: '0.66rem', fontWeight: 700, color: '#0369A1', background: '#E0F2FE', padding: '2px 6px', borderRadius: '8px' }}>
-                        Auto-selected
-                      </span>
-                    </div>
-                    <div style={{
-                      width: '100%',
-                      padding: '8px 12px',
-                      borderRadius: '8px',
-                      border: '1px solid #CBD5E1',
-                      fontSize: '0.84rem',
-                      fontWeight: 800,
-                      background: '#F1F5F9',
-                      color: '#0F172A',
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'space-between'
-                    }}>
-                      <span>{SERVICE_MODEL_METADATA[currentServiceModel]?.label || currentServiceModel}</span>
-                      <span style={{ fontSize: '0.70rem', color: '#64748B', fontWeight: 600 }}>Determined by Business Type</span>
-                    </div>
-                    <span style={{ fontSize: '0.68rem', color: '#64748B', display: 'block', marginTop: '4px' }}>
-                      Service model is determined by your business type.
-                    </span>
-                  </div>
-
                   {/* Preview Box */}
                   <div style={{ padding: '10px 12px', background: '#F1F5F9', borderRadius: '10px', border: '1px dashed #CBD5E1' }}>
                     <div style={{ fontSize: '0.68rem', fontWeight: 800, color: '#475569', textTransform: 'uppercase', letterSpacing: '0.04em', marginBottom: '6px' }}>
@@ -1875,7 +1798,7 @@ export default function SetupView({
                         {FOOD_TYPE_METADATA[currentFoodType]?.icon || '🟢'} Food: {FOOD_TYPE_METADATA[currentFoodType]?.label || currentFoodType}
                       </span>
                       <span style={{ fontSize: '0.74rem', fontWeight: 700, background: '#FFFFFF', padding: '3px 8px', borderRadius: '6px', border: '1px solid #E2E8F0', color: '#1E293B', display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
-                        Service: {SERVICE_MODEL_METADATA[currentServiceModel]?.label || currentServiceModel}
+                        🏷️ Badge: {BUSINESS_TYPE_METADATA[currentBusinessType]?.banner_badge || '🍽️ RESTAURANT'}
                       </span>
                     </div>
                   </div>

@@ -1,4 +1,4 @@
-﻿/**
+/**
  * Canonical Business Category Registry for TouchQR (Step 3.159)
  * 
  * Defines canonical tenant classifications:
@@ -47,6 +47,18 @@ export function isValidBusinessCategory(val) {
   return VALID_BUSINESS_CATEGORIES.has(val.trim().toLowerCase());
 }
 
+const CATEGORY_ALIASES = {
+  seat_service: 'cinema',
+  seat: 'cinema',
+  cinema: 'cinema',
+  in_room_dining: 'hotel',
+  room: 'hotel',
+  hotel: 'hotel',
+  dine_in_table: 'dine_in',
+  table: 'dine_in',
+  dine_in: 'dine_in'
+};
+
 /**
  * Safely resolves any string or legacy/null value to a valid canonical category.
  * Defaults safely to 'dine_in'.
@@ -54,6 +66,9 @@ export function isValidBusinessCategory(val) {
 export function resolveBusinessCategory(val) {
   if (!val || typeof val !== 'string') return DEFAULT_BUSINESS_CATEGORY;
   const normalized = val.trim().toLowerCase();
+  if (CATEGORY_ALIASES[normalized]) {
+    return CATEGORY_ALIASES[normalized];
+  }
   if (VALID_BUSINESS_CATEGORIES.has(normalized)) {
     return normalized;
   }

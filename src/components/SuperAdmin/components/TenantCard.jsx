@@ -1,10 +1,10 @@
 import React from 'react';
 import StatusBadge from './StatusBadge';
 import { Eye, Edit3, Trash2, ExternalLink } from 'lucide-react';
-import { getBusinessCategoryMeta } from '../../../constants/businessCategories';
+import { BUSINESS_TYPE_METADATA } from '../../../utils/businessTaxonomy';
 
 export default function TenantCard({ resto, onOpen360, onEdit, onDelete, onImpersonate }) {
-  const catMeta = getBusinessCategoryMeta(resto.business_category);
+  const bizMeta = BUSINESS_TYPE_METADATA[resto.business_type] || { icon: '🏢', label: resto.business_type || 'Restaurant' };
 
   return (
     <div className="sa-stat-card" style={{ padding: '20px', display: 'flex', flexDirection: 'column', gap: '14px' }}>
@@ -29,8 +29,8 @@ export default function TenantCard({ resto, onOpen360, onEdit, onDelete, onImper
           border: '1px solid var(--sa-border)',
           color: 'var(--sa-text-main)'
         }}>
-          <span>{catMeta.emoji}</span>
-          <span>{catMeta.label}</span>
+          <span>{bizMeta.icon}</span>
+          <span>{(bizMeta.label || 'Restaurant').replace(/\s*\(.*\)/, '')}</span>
         </span>
       </div>
 

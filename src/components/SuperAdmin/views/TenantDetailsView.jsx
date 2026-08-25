@@ -8,7 +8,7 @@ import {
 } from 'lucide-react';
 import Drawer from '../components/Drawer';
 import StatusBadge from '../components/StatusBadge';
-import { getBusinessCategoryMeta, getBusinessCategoryLabel, getBusinessCategoryEmoji } from '../../../constants/businessCategories';
+import { BUSINESS_TYPE_METADATA } from '../../../utils/businessTaxonomy';
 import '../styles/SuperAdmin.css';
 
 const getRestaurantLogoUrl = (logo) => {
@@ -211,7 +211,7 @@ export default function TenantDetailsView({
                   background: 'rgba(212, 175, 55, 0.15)', color: '#DFBA67', border: '1px solid rgba(212, 175, 55, 0.4)',
                   display: 'inline-flex', alignItems: 'center', gap: '4px'
                 }}>
-                  {getBusinessCategoryEmoji(tenant.business_category)} {getBusinessCategoryLabel(tenant.business_category).toUpperCase()}
+                  {bizMeta.icon} {(bizMeta.label || 'Restaurant').replace(/\s*\(.*\)/, '').toUpperCase()}
                 </span>
               </div>
               <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
@@ -390,17 +390,17 @@ export default function TenantDetailsView({
 
           {/* Business & Owner Info Grid */}
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '12px', fontSize: '0.84rem' }}>
-            {/* Business Category */}
+            {/* Business Venue Type */}
             <div style={{ background: 'var(--sa-surface-subtle)', padding: '12px 14px', borderRadius: '12px', border: '1px solid var(--sa-border)' }}>
-              <span style={{ fontSize: '0.70rem', color: 'var(--sa-text-muted)', fontWeight: 800, display: 'block' }}>BUSINESS CATEGORY</span>
+              <span style={{ fontSize: '0.70rem', color: 'var(--sa-text-muted)', fontWeight: 800, display: 'block' }}>BUSINESS VENUE TYPE</span>
               <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginTop: '4px' }}>
-                <span style={{ fontSize: '1.2rem' }}>{getBusinessCategoryEmoji(tenant.business_category)}</span>
+                <span style={{ fontSize: '1.2rem' }}>{bizMeta.icon}</span>
                 <div>
                   <strong style={{ color: 'var(--sa-text-main)', fontSize: '0.88rem', display: 'block' }}>
-                    {getBusinessCategoryLabel(tenant.business_category)}
+                    {bizMeta.label || 'Restaurant'}
                   </strong>
                   <span style={{ fontSize: '0.68rem', color: 'var(--sa-text-muted)', display: 'block' }}>
-                    {getBusinessCategoryMeta(tenant.business_category).description}
+                    {bizMeta.description || 'TouchQR Digital Menu Venue'}
                   </span>
                 </div>
               </div>

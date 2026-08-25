@@ -25,6 +25,7 @@ import {
   isValidFoodType,
   isValidServiceModel,
   isServiceModelValidForBusinessType,
+  resolveBusinessCategoryFromType,
   resolveServiceModelForBusinessType,
   resolveBusinessProfile,
   resolveBannerBadge
@@ -1329,48 +1330,16 @@ const handleUpdateSettings = async (req, res) => {
       }
     }
 
-    let cleanServiceModel = null;
-    if (service_model !== undefined && service_model !== null && String(service_model).trim() !== '') {
-      const norm = String(service_model).trim().toLowerCase();
-      if (isValidServiceModel(norm)) {
-        cleanServiceModel = norm;
-      } else if (SERVICE_MODEL_ALIASES[norm]) {
-        cleanServiceModel = SERVICE_MODEL_ALIASES[norm];
-      } else {
-        return res.status(400).json({ error: `Invalid service_model '${service_model}'. Allowed values: ${SERVICE_MODELS.join(', ')}` });
-      }
-    }
-
-    let cleanBusinessCategory = null;
-    if (business_category !== undefined && business_category !== null && String(business_category).trim() !== '') {
-      const normCat = String(business_category).trim().toLowerCase();
-      const validCategories = ['dine_in', 'hotel', 'cinema'];
-      if (validCategories.includes(normCat)) {
-        cleanBusinessCategory = normCat;
-      } else {
-        return res.status(400).json({ error: `Invalid business_category '${business_category}'. Allowed values: ${validCategories.join(', ')}` });
-      }
-    }
-
-    // 🛡️ AUTHORITATIVE BUSINESS TYPE -> SERVICE MODEL DEPENDENCY VALIDATION
+    // 🛡️ AUTHORITATIVE BUSINESS TYPE -> SERVICE MODEL (CATEGORY) DERIVATION
     let effectiveBizType = cleanBusinessType;
     if (!effectiveBizType) {
       const currentRestoForBiz = await query('SELECT business_type FROM restaurants WHERE id = $1', [targetId]);
       effectiveBizType = currentRestoForBiz && currentRestoForBiz.length > 0 ? (currentRestoForBiz[0].business_type || 'restaurant') : 'restaurant';
     }
 
-    if (cleanServiceModel) {
-      if (!isServiceModelValidForBusinessType(effectiveBizType, cleanServiceModel)) {
-        return res.status(400).json({
-          error: 'invalid_service_model_for_business_type',
-          message: `Service model '${cleanServiceModel}' is invalid for business type '${effectiveBizType}'`,
-          business_type: effectiveBizType,
-          service_model: cleanServiceModel
-        });
-      }
-    } else if (cleanBusinessType && (service_model === undefined || service_model === null)) {
-      cleanServiceModel = resolveServiceModelForBusinessType(cleanBusinessType);
-    }
+    // service_model is now the authoritative category field ('dine_in', 'hotel', 'cinema')
+    const cleanServiceModel = resolveBusinessCategoryFromType(effectiveBizType);
+    const cleanBusinessCategory = cleanServiceModel;
 
     // 🛡️ AUTHORITATIVE SAAS PLAN MAX_TABLES / SPACES ENFORCEMENT
     const isSpaceUpdate = total_tables !== undefined || total_cabins !== undefined || total_rooms !== undefined || total_vip !== undefined;

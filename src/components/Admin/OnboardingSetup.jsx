@@ -41,7 +41,7 @@ export default function OnboardingSetup({ token, restaurantInfo, setRestaurantIn
       resto_type: restaurantInfo?.resto_type || 'pure_veg',
       business_type: restaurantInfo?.business_type || profile.business_type || 'restaurant',
       food_type: restaurantInfo?.food_type || profile.food_type || 'pure_veg',
-      service_model: restaurantInfo?.service_model || profile.service_model || 'dine_in_table',
+      service_model: restaurantInfo?.service_model || profile.service_model || 'dine_in',
       theme_color: restaurantInfo?.theme_color || 'gold'
     };
   });
@@ -74,7 +74,7 @@ export default function OnboardingSetup({ token, restaurantInfo, setRestaurantIn
         resto_type: prev.resto_type || restaurantInfo.resto_type || 'pure_veg',
         business_type: prev.business_type || restaurantInfo.business_type || profile.business_type || 'restaurant',
         food_type: prev.food_type || restaurantInfo.food_type || profile.food_type || 'pure_veg',
-        service_model: prev.service_model || restaurantInfo.service_model || profile.service_model || 'dine_in_table',
+        service_model: prev.service_model || restaurantInfo.service_model || profile.service_model || 'dine_in',
         theme_color: prev.theme_color || restaurantInfo.theme_color || 'gold'
       }));
     }
@@ -303,7 +303,6 @@ export default function OnboardingSetup({ token, restaurantInfo, setRestaurantIn
         business_type: formData.business_type,
         food_type: formData.food_type,
         service_model: formData.service_model,
-        business_category: formData.business_category || 'dine_in',
         resto_type: safeResto,
         theme_color: formData.theme_color,
         location_initialized: true
@@ -890,23 +889,6 @@ export default function OnboardingSetup({ token, restaurantInfo, setRestaurantIn
                   </div>
                 </div>
 
-                {/* Control 3: Service Model */}
-                <div>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '4px' }}>
-                    <label style={{ fontSize: '0.74rem', fontWeight: 800, color: '#E2E8F0', display: 'flex', alignItems: 'center', gap: '4px' }}>
-                      <span>Service Model</span>
-                      <span style={{ fontSize: '0.70rem' }}>🔒</span>
-                    </label>
-                    <span style={{ fontSize: '0.66rem', fontWeight: 700, color: '#DFBA67', background: 'rgba(223, 186, 103, 0.15)', padding: '2px 6px', borderRadius: '8px' }}>
-                      Auto-selected
-                    </span>
-                  </div>
-                  <div style={{ width: '100%', padding: '10px 12px', borderRadius: '10px', background: '#0A2315', border: '1px solid rgba(223, 186, 103, 0.4)', color: '#FFF', fontSize: '0.84rem', boxSizing: 'border-box', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                    <span>{SERVICE_MODEL_METADATA[formData.service_model]?.label || formData.service_model}</span>
-                    <span style={{ fontSize: '0.70rem', color: '#94A3B8' }}>Determined by Business Type</span>
-                  </div>
-                </div>
-
                 {/* Live Preview */}
                 <div style={{ padding: '8px 12px', background: 'rgba(223, 186, 103, 0.08)', borderRadius: '10px', border: '1px dashed rgba(223, 186, 103, 0.3)', display: 'flex', flexWrap: 'wrap', gap: '6px' }}>
                   <span style={{ fontSize: '0.72rem', fontWeight: 700, color: '#DFBA67' }}>
@@ -918,7 +900,7 @@ export default function OnboardingSetup({ token, restaurantInfo, setRestaurantIn
                   </span>
                   <span style={{ color: 'rgba(255,255,255,0.3)' }}>•</span>
                   <span style={{ fontSize: '0.72rem', fontWeight: 700, color: '#93C5FD' }}>
-                    {SERVICE_MODEL_METADATA[formData.service_model]?.label || formData.service_model}
+                    🏷️ {BUSINESS_TYPE_METADATA[formData.business_type]?.banner_badge || '🍽️ RESTAURANT'}
                   </span>
                 </div>
               </div>

@@ -2109,7 +2109,7 @@ export default function App() {
         spaceLabel={getDynamicSpaceLabel()}
         onToggleLang={() => setLang(lang === 'en' ? 'hi' : 'en')}
         onOpenInfoModal={() => setShowInfoModal(true)}
-        onCallStaff={((info?.business_type === 'cinema_theatre' && info?.service_model === 'seat_service') || currentSpaceType === 'cinema_seat' || currentSpaceType === 'cinema' || String(info?.table_prefix || '').toLowerCase() === 'cinema_seat') ? null : () => setShowServiceModal(true)}
+        onCallStaff={(info?.business_type === 'cinema_theatre' || info?.service_model === 'cinema' || info?.service_model === 'seat_service' || currentSpaceType === 'cinema_seat' || currentSpaceType === 'cinema' || String(info?.table_prefix || '').toLowerCase() === 'cinema_seat') ? null : () => setShowServiceModal(true)}
         onOpenReviewModal={handleRateUsClick}
         onOpenAdmin={() => {
           const targetSlug = getSlugFromUrl() || (info && info.slug) || localStorage.getItem('touchqr_admin_slug') || '';
@@ -2719,7 +2719,7 @@ export default function App() {
       )}
 
       {/* 🛎️ Service Request Modal & Toast */}
-      {showServiceModal && !((info?.business_type === 'cinema_theatre' && info?.service_model === 'seat_service') || currentSpaceType === 'cinema_seat' || currentSpaceType === 'cinema' || String(info?.table_prefix || '').toLowerCase() === 'cinema_seat') && (
+      {showServiceModal && !(info?.business_type === 'cinema_theatre' || info?.service_model === 'cinema' || info?.service_model === 'seat_service' || currentSpaceType === 'cinema_seat' || currentSpaceType === 'cinema' || String(info?.table_prefix || '').toLowerCase() === 'cinema_seat') && (
         <ServiceRequestModal
           tableNum={getDynamicSpaceLabel() || (effectiveTableNum ? `Table ${effectiveTableNum}` : 'Table 1')}
           slug={getSlugFromUrl() || (info && info.slug)}

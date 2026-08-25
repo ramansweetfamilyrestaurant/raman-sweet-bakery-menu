@@ -29,7 +29,8 @@ import {
 } from '../utils/presenceVerification.js';
 import { 
   resolveBusinessProfile, 
-  resolveBannerBadge 
+  resolveBannerBadge,
+  resolveBusinessCategoryFromType
 } from '../config/businessTaxonomy.js';
 
 const router = express.Router();
@@ -389,7 +390,7 @@ router.get('/menu-bundle', async (req, res) => {
       business_type: businessProfile.business_type,
       food_type: businessProfile.food_type,
       service_model: businessProfile.service_model,
-      business_category: resto.business_category || 'dine_in',
+      business_category: businessProfile.service_model,
       is_pure_veg: businessProfile.is_pure_veg,
       logo: resto.logo || '',
       openingHours: resto.opening_hours || '',
@@ -518,7 +519,7 @@ router.get('/info', async (req, res) => {
       business_type: businessProfile.business_type,
       food_type: businessProfile.food_type,
       service_model: businessProfile.service_model,
-      business_category: resto.business_category || 'dine_in',
+      business_category: businessProfile.service_model,
       is_pure_veg: businessProfile.is_pure_veg,
       logo: resto.logo || '',
       openingHours: resto.opening_hours || '',
@@ -2294,15 +2295,13 @@ router.post('/register', registrationRateLimiter, async (req, res) => {
       const isActive = !requireApproval;
 
       // 1. Create Restaurant Record (mandate_status='pending', auto_debit_enabled=0, onboarding_completed=false)
-      const validCategories = ['dine_in', 'hotel', 'cinema'];
-      const regCategory = req.body.business_category && validCategories.includes(String(req.body.business_category).toLowerCase().trim())
-        ? String(req.body.business_category).toLowerCase().trim()
-        : 'dine_in';
+      const effectiveBiz = req.body.business_type || 'restaurant';
+      const regCategory = resolveBusinessCategoryFromType(effectiveBiz);
 
       const restoRes = await txQuery(`
         INSERT INTO restaurants (
-          name, slug, tagline, logo, phone, address, opening_hours, plan_tier, plan_price, plan_expires_at, trial_started_at, trial_ends_at, whatsapp_number, theme_color, business_category, active, total_tables, mandate_status, auto_debit_enabled, onboarding_completed, location_initialized, owner_name, owner_email
-        ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21, $22, $23) RETURNING id
+          name, slug, tagline, logo, phone, address, opening_hours, plan_tier, plan_price, plan_expires_at, trial_started_at, trial_ends_at, whatsapp_number, theme_color, business_type, service_model, business_category, active, total_tables, mandate_status, auto_debit_enabled, onboarding_completed, location_initialized, owner_name, owner_email
+        ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21, $22, $23, $24, $25) RETURNING id
       `, [
         name.trim(),
         cleanSlug,
@@ -2318,6 +2317,8 @@ router.post('/register', registrationRateLimiter, async (req, res) => {
         expiryDateISO,
         cleanPhone,
         'gold',
+        effectiveBiz,
+        regCategory,
         regCategory,
         isActive ? 1 : 0,
         0,

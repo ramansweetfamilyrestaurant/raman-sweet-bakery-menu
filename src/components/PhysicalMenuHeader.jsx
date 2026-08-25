@@ -39,8 +39,8 @@ export default function PhysicalMenuHeader({ info, categories, selectedCategory,
             fontWeight: 700
           }}>
             {(() => {
-              const isCin = (info?.business_type === 'cinema_theatre' && info?.service_model === 'seat_service') || String(info?.table_prefix || '').toLowerCase() === 'cinema_seat';
-              const isHot = (info?.business_type === 'hotel_resort' && info?.service_model === 'in_room_dining') || String(info?.table_prefix || '').toLowerCase() === 'room';
+              const isCin = (info?.business_type === 'cinema_theatre' || info?.service_model === 'cinema' || info?.service_model === 'seat_service') || String(info?.table_prefix || '').toLowerCase() === 'cinema_seat';
+              const isHot = (info?.business_type === 'hotel_resort' || info?.service_model === 'hotel' || info?.service_model === 'in_room_dining') || String(info?.table_prefix || '').toLowerCase() === 'room';
               if (isCin) return '🟢 CINEMA SEAT MENU CARD';
               if (isHot) return '🟢 ROOM SERVICE MENU CARD';
               return '🟢 TABLE QR MENU CARD';

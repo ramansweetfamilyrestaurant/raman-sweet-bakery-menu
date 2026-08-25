@@ -86,9 +86,11 @@ export default function OverviewView({ restaurants, pendingRegistrations = [], o
         </div>
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(130px, 1fr))', gap: '10px' }}>
           {[
-            { id: 'dine_in', emoji: '🍽️', label: 'Dine-In', count: restaurants.filter(r => (r.business_category || 'dine_in') === 'dine_in').length },
-            { id: 'hotel', emoji: '🏨', label: 'Hotel', count: restaurants.filter(r => (r.business_category || 'dine_in') === 'hotel').length },
-            { id: 'cinema', emoji: '🎬', label: 'Cinema', count: restaurants.filter(r => (r.business_category || 'dine_in') === 'cinema').length }
+            { id: 'restaurant', emoji: '🍽️', label: 'Restaurant', count: restaurants.filter(r => (!r.business_type || r.business_type === 'restaurant')).length },
+            { id: 'cafe', emoji: '☕', label: 'Cafe', count: restaurants.filter(r => r.business_type === 'cafe').length },
+            { id: 'bakery_confectionery', emoji: '🍰', label: 'Bakery', count: restaurants.filter(r => r.business_type === 'bakery_confectionery').length },
+            { id: 'hotel_resort', emoji: '🏨', label: 'Hotel', count: restaurants.filter(r => r.business_type === 'hotel_resort').length },
+            { id: 'cinema_theatre', emoji: '🎬', label: 'Cinema', count: restaurants.filter(r => r.business_type === 'cinema_theatre').length }
           ].map(cat => (
             <div
               key={cat.id}

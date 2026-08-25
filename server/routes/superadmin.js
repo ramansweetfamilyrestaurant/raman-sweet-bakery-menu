@@ -7,6 +7,7 @@ import { isR2Active, uploadImageToR2, deleteImageFromR2 } from '../services/r2Im
 import { JWT_SECRET } from '../config/jwt.js';
 import { superAdminLoginRateLimiter } from '../middleware/rateLimiters.js';
 import { resolveCanonicalSubscriptionState } from '../services/subscriptionState.js';
+import { resolveBusinessCategoryFromType, resolveBusinessProfile } from '../config/businessTaxonomy.js';
 
 let sharpModule = null;
 async function getSharp() {
@@ -409,7 +410,7 @@ router.get('/restaurants/:id/360', authenticateToken, requireSuperAdmin, async (
 // POST Create New Tenant Restaurant
 router.post('/restaurants', authenticateToken, requireSuperAdmin, async (req, res) => {
   try {
-    const { name, slug, owner_username, owner_password, phone, address, tagline, plan_tier, plan_price, plan_expires_at, whatsapp_number, theme_color, business_category } = req.body;
+    const { name, slug, owner_username, owner_password, phone, address, tagline, plan_tier, plan_price, plan_expires_at, whatsapp_number, theme_color, business_type, service_model, business_category } = req.body;
 
     if (!name || !slug || !owner_username || !owner_password) {
       return res.status(400).json({ error: 'Restaurant Name, URL Slug, Owner Username and Password are required' });
@@ -418,11 +419,9 @@ router.post('/restaurants', authenticateToken, requireSuperAdmin, async (req, re
     // Clean & sanitize slug (lowercase, hyphenated)
     const cleanSlug = slug.toLowerCase().replace(/[^a-z0-9-]/g, '-').replace(/-+/g, '-').replace(/^-|-$/g, '');
 
-    // Validate canonical business category
-    const validCategories = ['dine_in', 'hotel', 'cinema'];
-    const cleanCategory = business_category && validCategories.includes(String(business_category).toLowerCase().trim())
-      ? String(business_category).toLowerCase().trim()
-      : 'dine_in';
+    // Validate canonical business category / service_model
+    const effectiveBiz = business_type || 'restaurant';
+    const cleanCategory = resolveBusinessCategoryFromType(effectiveBiz);
 
     // Check if slug or username already exists
     const slugCheck = await query('SELECT * FROM restaurants WHERE slug = $1', [cleanSlug]);
@@ -440,8 +439,8 @@ router.post('/restaurants', authenticateToken, requireSuperAdmin, async (req, re
 
     const restoRes = await query(`
       INSERT INTO restaurants (
-        name, slug, tagline, logo, phone, address, opening_hours, plan_tier, plan_price, plan_expires_at, whatsapp_number, theme_color, business_category, active
-      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14) RETURNING id
+        name, slug, tagline, logo, phone, address, opening_hours, plan_tier, plan_price, plan_expires_at, whatsapp_number, theme_color, business_type, service_model, business_category, active
+      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16) RETURNING id
     `, [
       name,
       cleanSlug,
@@ -455,6 +454,8 @@ router.post('/restaurants', authenticateToken, requireSuperAdmin, async (req, re
       expiryDate,
       whatsapp_number || phone || '',
       theme_color || 'gold',
+      effectiveBiz,
+      cleanCategory,
       cleanCategory,
       true
     ]);
@@ -562,7 +563,7 @@ router.post('/restaurants/:id/exit-impersonation', authenticateToken, requireSup
 router.put('/restaurants/:id', authenticateToken, requireSuperAdmin, async (req, res) => {
   try {
     const { id } = req.params;
-    const { name, tagline, logo, phone, address, fssai_lic_no, owner_username, owner_password, plan_tier, plan_price, plan_expires_at, whatsapp_number, whatsapp_enabled, direct_ordering_enabled, google_reviews_enabled, theme_color, order_retention_days, custom_domain, owner_name, owner_email, business_category } = req.body;
+    const { name, tagline, logo, phone, address, fssai_lic_no, owner_username, owner_password, plan_tier, plan_price, plan_expires_at, whatsapp_number, whatsapp_enabled, direct_ordering_enabled, google_reviews_enabled, theme_color, order_retention_days, custom_domain, owner_name, owner_email, business_type, service_model, business_category } = req.body;
 
     let cleanDomain = null;
     if (custom_domain !== undefined) {
@@ -570,10 +571,9 @@ router.put('/restaurants/:id', authenticateToken, requireSuperAdmin, async (req,
     }
 
     let cleanCategory = undefined;
-    if (business_category !== undefined) {
-      const validCategories = ['dine_in', 'hotel', 'cinema'];
-      const normalized = String(business_category).toLowerCase().trim();
-      cleanCategory = validCategories.includes(normalized) ? normalized : 'dine_in';
+    if (service_model !== undefined || business_category !== undefined || business_type !== undefined) {
+      const rawCat = service_model || business_category || business_type;
+      cleanCategory = resolveBusinessCategoryFromType(rawCat);
     }
 
     let cleanOwnerEmail = undefined;
@@ -606,6 +606,7 @@ router.put('/restaurants/:id', authenticateToken, requireSuperAdmin, async (req,
           order_retention_days = $15, custom_domain = $16,
           owner_name = COALESCE($17, owner_name),
           owner_email = CASE WHEN $18::boolean THEN $19 ELSE owner_email END,
+          service_model = COALESCE($20, service_model),
           business_category = COALESCE($20, business_category)
       WHERE id = $21
     `, [

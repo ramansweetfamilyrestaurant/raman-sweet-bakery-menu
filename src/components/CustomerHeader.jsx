@@ -117,7 +117,7 @@ export default function CustomerHeader({ info, lang, tableNum, spaceLabel, onTog
                 {getDisplayBadge()}
               </span>
 
-              {onCallStaff && !((info?.business_type === 'cinema_theatre' && info?.service_model === 'seat_service') || String(info?.table_prefix || '').toLowerCase() === 'cinema_seat' || String(tableNum || '').toLowerCase().includes('screen') || String(tableNum || '').toLowerCase().includes('seat')) && (
+              {onCallStaff && !(info?.business_type === 'cinema_theatre' || info?.service_model === 'cinema' || info?.service_model === 'seat_service' || String(info?.table_prefix || '').toLowerCase() === 'cinema_seat' || String(tableNum || '').toLowerCase().includes('screen') || String(tableNum || '').toLowerCase().includes('seat')) && (
                 <button
                   onClick={onCallStaff}
                   style={{

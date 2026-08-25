@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { CreditCard, ArrowDown } from 'lucide-react';
 import StatusBadge from '../components/StatusBadge';
-import { getBusinessCategoryMeta } from '../../../constants/businessCategories';
+import { BUSINESS_TYPE_METADATA } from '../../../utils/businessTaxonomy';
 
 export default function SubscriptionsView({ restaurants, onSelectTenant }) {
   const [filter, setFilter] = useState('all');
@@ -82,7 +82,7 @@ export default function SubscriptionsView({ restaurants, onSelectTenant }) {
                       <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginTop: '2px' }}>
                         <span style={{ fontSize: '0.7rem', color: 'var(--sa-text-muted)' }}>/{r.slug}</span>
                         {(() => {
-                          const meta = getBusinessCategoryMeta(r.business_category);
+                          const bizMeta = BUSINESS_TYPE_METADATA[r.business_type] || { icon: '🏢', label: r.business_type || 'Restaurant' };
                           return (
                             <span style={{
                               fontSize: '0.66rem',
@@ -93,7 +93,7 @@ export default function SubscriptionsView({ restaurants, onSelectTenant }) {
                               borderRadius: '4px',
                               border: '1px solid var(--sa-border)'
                             }}>
-                              {meta.emoji} {meta.label}
+                              {bizMeta.icon} {(bizMeta.label || 'Restaurant').replace(/\s*\(.*\)/, '')}
                             </span>
                           );
                         })()}

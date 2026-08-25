@@ -1,28 +1,18 @@
 import React, { useState } from 'react';
 import { Store, Plus, RefreshCw, Eye, Sparkles } from 'lucide-react';
 import StatusBadge from '../components/StatusBadge';
-import { getBusinessCategoryMeta } from '../../../constants/businessCategories';
+import { BUSINESS_TYPE_METADATA } from '../../../utils/businessTaxonomy';
 
 export default function TenantsView({ restaurants, searchQuery, onSelectTenant, onAddTenant, onRefresh, loading }) {
   const [statusFilter, setStatusFilter] = useState('all');
-  const [categoryFilter, setCategoryFilter] = useState('all');
 
   const filtered = restaurants.filter(r => {
     const isSuspended = (r.active === false || r.active === 0 || r.active === '0');
     if (statusFilter === 'active' && isSuspended) return false;
     if (statusFilter === 'suspended' && !isSuspended) return false;
 
-    const cat = r.business_category || 'dine_in';
-    if (categoryFilter !== 'all' && cat !== categoryFilter) return false;
-
     if (!searchQuery || !searchQuery.trim()) return true;
     const q = searchQuery.toLowerCase().trim();
-    const catMatch = (
-      (q === 'hotel' && cat === 'hotel') ||
-      (q === 'cinema' && cat === 'cinema') ||
-      ((q === 'dine' || q === 'dine-in' || q === 'dine_in') && cat === 'dine_in') ||
-      cat.includes(q)
-    );
 
     return (
       r.name.toLowerCase().includes(q) ||
@@ -30,7 +20,7 @@ export default function TenantsView({ restaurants, searchQuery, onSelectTenant, 
       (r.owner_username && r.owner_username.toLowerCase().includes(q)) ||
       (r.owner_name && r.owner_name.toLowerCase().includes(q)) ||
       (r.owner_email && r.owner_email.toLowerCase().includes(q)) ||
-      catMatch
+      (r.business_type && r.business_type.toLowerCase().includes(q))
     );
   });
 
@@ -73,25 +63,6 @@ export default function TenantsView({ restaurants, searchQuery, onSelectTenant, 
             </button>
           </div>
 
-          {/* Business Category Filter */}
-          <div style={{ display: 'flex', background: 'var(--sa-surface-subtle)', padding: '2px', borderRadius: 'var(--sa-radius-md)', border: '1px solid var(--sa-border)' }}>
-            {[
-              { id: 'all', label: 'All Businesses' },
-              { id: 'dine_in', label: '🍽️ Dine-In' },
-              { id: 'hotel', label: '🏨 Hotel' },
-              { id: 'cinema', label: '🎬 Cinema' },
-            ].map(cat => (
-              <button
-                key={cat.id}
-                onClick={() => setCategoryFilter(cat.id)}
-                className={`sa-btn sa-btn-sm ${categoryFilter === cat.id ? 'sa-btn-primary' : 'sa-btn-secondary'}`}
-                style={{ border: 'none' }}
-              >
-                {cat.label} ({cat.id === 'all' ? restaurants.length : restaurants.filter(r => (r.business_category || 'dine_in') === cat.id).length})
-              </button>
-            ))}
-          </div>
-
           <button onClick={onRefresh} className="sa-btn sa-btn-secondary sa-btn-sm">
             <RefreshCw size={13} className={loading ? 'spin' : ''} />
           </button>
@@ -108,7 +79,7 @@ export default function TenantsView({ restaurants, searchQuery, onSelectTenant, 
           <thead>
             <tr>
               <th style={{ minWidth: '240px' }}>RESTAURANT</th>
-              <th style={{ minWidth: '120px' }}>CATEGORY</th>
+              <th style={{ minWidth: '130px' }}>TYPE</th>
               <th style={{ minWidth: '160px' }}>OWNER</th>
               <th style={{ minWidth: '130px' }}>PLAN</th>
               <th style={{ minWidth: '110px' }}>STATUS</th>
@@ -127,7 +98,7 @@ export default function TenantsView({ restaurants, searchQuery, onSelectTenant, 
             ) : (
               filtered.map(r => {
                 const isLifetime = r.subscription_type === 'ADMIN_GRANTED' || (r.access_until && new Date(r.access_until).getFullYear() > 2030);
-                const catMeta = getBusinessCategoryMeta(r.business_category);
+                const bizMeta = BUSINESS_TYPE_METADATA[r.business_type] || { icon: '🏢', label: r.business_type || 'Restaurant' };
 
                 return (
                   <tr key={r.id}>
@@ -161,8 +132,8 @@ export default function TenantsView({ restaurants, searchQuery, onSelectTenant, 
                         border: '1px solid var(--sa-border, #CBD5E1)',
                         whiteSpace: 'nowrap'
                       }}>
-                        <span>{catMeta.emoji}</span>
-                        <span>{catMeta.label.toUpperCase()}</span>
+                        <span>{bizMeta.icon}</span>
+                        <span>{(bizMeta.label || 'Restaurant').replace(/\s*\(.*\)/, '').toUpperCase()}</span>
                       </span>
                     </td>
                     <td style={{ minWidth: '160px', maxWidth: '190px' }}>
@@ -171,7 +142,7 @@ export default function TenantsView({ restaurants, searchQuery, onSelectTenant, 
                           {r.owner_username || r.owner_name || 'admin'}
                         </span>
                         <span style={{ fontSize: '0.7rem', color: 'var(--sa-text-muted)', display: 'block', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                          {r.owner_email || 'No email'}
+                          {r.phone || r.owner_email || 'No contact'}
                         </span>
                       </div>
                     </td>
@@ -205,7 +176,7 @@ export default function TenantsView({ restaurants, searchQuery, onSelectTenant, 
       <div className="sa-mobile-card-list">
         {filtered.map(r => {
           const isLifetime = r.subscription_type === 'ADMIN_GRANTED' || (r.access_until && new Date(r.access_until).getFullYear() > 2030);
-          const catMeta = getBusinessCategoryMeta(r.business_category);
+          const bizMeta = BUSINESS_TYPE_METADATA[r.business_type] || { icon: '🏢', label: r.business_type || 'Restaurant' };
 
           return (
             <div key={r.id} className="sa-mobile-card" onClick={() => onSelectTenant(r)} style={{ cursor: 'pointer', padding: '14px' }}>
@@ -215,7 +186,7 @@ export default function TenantsView({ restaurants, searchQuery, onSelectTenant, 
                   <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginTop: '2px' }}>
                     <span style={{ fontSize: '0.72rem', color: 'var(--sa-accent)', fontWeight: 800 }}>/{r.slug}</span>
                     <span style={{ fontSize: '0.66rem', fontWeight: 800, color: 'var(--sa-text-muted)', background: 'var(--sa-surface-subtle)', padding: '1px 5px', borderRadius: '4px', border: '1px solid var(--sa-border)' }}>
-                      {catMeta.emoji} {catMeta.label}
+                      {bizMeta.icon} {(bizMeta.label || 'Restaurant').replace(/\s*\(.*\)/, '')}
                     </span>
                   </div>
                 </div>

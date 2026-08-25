@@ -38,9 +38,9 @@ export const FOOD_TYPES = Object.freeze([
 ]);
 
 export const SERVICE_MODELS = Object.freeze([
-  'dine_in_table',
-  'seat_service',
-  'in_room_dining'
+  'dine_in',
+  'hotel',
+  'cinema'
 ]);
 
 export const BUSINESS_TYPE_METADATA = Object.freeze({
@@ -76,9 +76,9 @@ export const FOOD_TYPE_METADATA = Object.freeze({
 });
 
 export const SERVICE_MODEL_METADATA = Object.freeze({
-  dine_in_table: { label: '🍽️ Dine-In Table', icon: '🍽️', desc: 'Guests order from tables with waiter service' },
-  seat_service: { label: '🎬 Seat Service', icon: '🎬', desc: 'Food served directly to numbered cinema or theatre seats' },
-  in_room_dining: { label: '🏨 In-Room Dining', icon: '🏨', desc: 'Food served directly to hotel or resort guest rooms' }
+  dine_in: { label: '🍽️ Dine-In', icon: '🍽️', emoji: '🍽️', desc: 'Restaurant table QR and dine-in ordering' },
+  hotel: { label: '🏨 Hotel', icon: '🏨', emoji: '🏨', desc: 'Hotel dining and guest room service' },
+  cinema: { label: '🎬 Cinema', icon: '🎬', emoji: '🎬', desc: 'Cinema snacks and seat-based ordering' }
 });
 
 export const BUSINESS_TYPE_ALIASES = Object.freeze({
@@ -114,59 +114,63 @@ export const FOOD_TYPE_ALIASES = Object.freeze({
 });
 
 export const SERVICE_MODEL_ALIASES = Object.freeze({
-  'table': 'dine_in_table',
-  'dine_in': 'dine_in_table',
-  'room': 'in_room_dining',
-  'room_service': 'in_room_dining',
-  'seat': 'seat_service',
-  'seat_service': 'seat_service',
-  'seat_delivery': 'seat_service'
+  'table': 'dine_in',
+  'dine_in': 'dine_in',
+  'dine_in_table': 'dine_in',
+  'room': 'hotel',
+  'room_service': 'hotel',
+  'in_room_dining': 'hotel',
+  'hotel': 'hotel',
+  'seat': 'cinema',
+  'seat_service': 'cinema',
+  'seat_delivery': 'cinema',
+  'cinema': 'cinema'
 });
 
 export const BUSINESS_TYPE_DEFAULT_SERVICE_MODEL = Object.freeze({
-  restaurant: 'dine_in_table',
-  cafe: 'dine_in_table',
-  bakery_confectionery: 'dine_in_table',
-  sweet_shop: 'dine_in_table',
-  fast_food_qsr: 'dine_in_table',
-  dhaba: 'dine_in_table',
-  food_court: 'dine_in_table',
-  cloud_kitchen: 'dine_in_table',
-  canteen_cafeteria: 'dine_in_table',
-  hotel_resort: 'in_room_dining',
-  cinema_theatre: 'seat_service',
-  lounge: 'dine_in_table',
-  pub_bar: 'dine_in_table',
-  club: 'dine_in_table',
-  juice_beverage: 'dine_in_table',
-  ice_cream_dessert: 'dine_in_table',
-  food_truck: 'dine_in_table',
-  catering: 'dine_in_table',
-  institutional: 'dine_in_table',
-  other: 'dine_in_table'
+  restaurant: 'dine_in',
+  cafe: 'dine_in',
+  bakery_confectionery: 'dine_in',
+  sweet_shop: 'dine_in',
+  fast_food_qsr: 'dine_in',
+  dhaba: 'dine_in',
+  food_court: 'dine_in',
+  cloud_kitchen: 'dine_in',
+  canteen_cafeteria: 'dine_in',
+  hotel_resort: 'hotel',
+  cinema_theatre: 'cinema',
+  lounge: 'dine_in',
+  pub_bar: 'dine_in',
+  club: 'dine_in',
+  juice_beverage: 'dine_in',
+  ice_cream_dessert: 'dine_in',
+  food_truck: 'dine_in',
+  catering: 'dine_in',
+  institutional: 'dine_in',
+  other: 'dine_in'
 });
 
 export const BUSINESS_TYPE_ALLOWED_SERVICE_MODELS = Object.freeze({
-  restaurant: Object.freeze(['dine_in_table']),
-  cafe: Object.freeze(['dine_in_table']),
-  bakery_confectionery: Object.freeze(['dine_in_table']),
-  sweet_shop: Object.freeze(['dine_in_table']),
-  fast_food_qsr: Object.freeze(['dine_in_table']),
-  dhaba: Object.freeze(['dine_in_table']),
-  food_court: Object.freeze(['dine_in_table']),
-  cloud_kitchen: Object.freeze(['dine_in_table']),
-  canteen_cafeteria: Object.freeze(['dine_in_table']),
-  hotel_resort: Object.freeze(['in_room_dining']),
-  cinema_theatre: Object.freeze(['seat_service']),
-  lounge: Object.freeze(['dine_in_table']),
-  pub_bar: Object.freeze(['dine_in_table']),
-  club: Object.freeze(['dine_in_table']),
-  juice_beverage: Object.freeze(['dine_in_table']),
-  ice_cream_dessert: Object.freeze(['dine_in_table']),
-  food_truck: Object.freeze(['dine_in_table']),
-  catering: Object.freeze(['dine_in_table']),
-  institutional: Object.freeze(['dine_in_table']),
-  other: Object.freeze(['dine_in_table'])
+  restaurant: Object.freeze(['dine_in']),
+  cafe: Object.freeze(['dine_in']),
+  bakery_confectionery: Object.freeze(['dine_in']),
+  sweet_shop: Object.freeze(['dine_in']),
+  fast_food_qsr: Object.freeze(['dine_in']),
+  dhaba: Object.freeze(['dine_in']),
+  food_court: Object.freeze(['dine_in']),
+  cloud_kitchen: Object.freeze(['dine_in']),
+  canteen_cafeteria: Object.freeze(['dine_in']),
+  hotel_resort: Object.freeze(['hotel']),
+  cinema_theatre: Object.freeze(['cinema']),
+  lounge: Object.freeze(['dine_in']),
+  pub_bar: Object.freeze(['dine_in']),
+  club: Object.freeze(['dine_in']),
+  juice_beverage: Object.freeze(['dine_in']),
+  ice_cream_dessert: Object.freeze(['dine_in']),
+  food_truck: Object.freeze(['dine_in']),
+  catering: Object.freeze(['dine_in']),
+  institutional: Object.freeze(['dine_in']),
+  other: Object.freeze(['dine_in'])
 });
 
 export function isValidBusinessType(value) {
@@ -182,6 +186,17 @@ export function isValidFoodType(value) {
 export function isValidServiceModel(value) {
   if (!value || typeof value !== 'string') return false;
   return SERVICE_MODELS.includes(value.trim().toLowerCase());
+}
+
+/**
+ * Resolves the canonical business category / service_model from a business type.
+ * @param {string} businessType
+ * @returns {'dine_in'|'hotel'|'cinema'}
+ */
+export function resolveBusinessCategoryFromType(businessType) {
+  const cleanBiz = businessType ? String(businessType).trim().toLowerCase() : 'restaurant';
+  const canonicalBiz = BUSINESS_TYPE_ALIASES[cleanBiz] || (isValidBusinessType(cleanBiz) ? cleanBiz : 'restaurant');
+  return BUSINESS_TYPE_DEFAULT_SERVICE_MODEL[canonicalBiz] || 'dine_in';
 }
 
 /**
@@ -203,24 +218,13 @@ export function isServiceModelValidForBusinessType(businessType, serviceModel) {
 }
 
 /**
- * Resolves the authoritative service model for a business type, preserving valid selections or defaulting safely.
+ * Resolves the authoritative service model (category) for a business type.
  * @param {string} businessType
  * @param {string|null} [currentServiceModel=null]
  * @returns {string}
  */
 export function resolveServiceModelForBusinessType(businessType, currentServiceModel = null) {
-  const cleanBiz = businessType ? String(businessType).trim().toLowerCase() : 'restaurant';
-  const canonicalBiz = BUSINESS_TYPE_ALIASES[cleanBiz] || (isValidBusinessType(cleanBiz) ? cleanBiz : 'restaurant');
-
-  if (currentServiceModel) {
-    const cleanService = String(currentServiceModel).trim().toLowerCase();
-    const canonicalService = SERVICE_MODEL_ALIASES[cleanService] || cleanService;
-    if (isServiceModelValidForBusinessType(canonicalBiz, canonicalService)) {
-      return canonicalService;
-    }
-  }
-
-  return BUSINESS_TYPE_DEFAULT_SERVICE_MODEL[canonicalBiz] || 'dine_in_table';
+  return resolveBusinessCategoryFromType(businessType);
 }
 
 export function resolveBusinessProfile(restaurant = {}) {
@@ -380,6 +384,7 @@ export default {
   isValidFoodType,
   isValidServiceModel,
   isServiceModelValidForBusinessType,
+  resolveBusinessCategoryFromType,
   resolveServiceModelForBusinessType,
   resolveBusinessProfile,
   resolveBannerBadge,
