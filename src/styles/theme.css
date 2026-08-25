@@ -97,6 +97,58 @@
   --border-light: rgba(37, 99, 235, 0.25);
 }
 
+/* Theme 5: Royal Amber & Artisan Dark */
+[data-theme="amber"] {
+  --primary-emerald: #451A03;
+  --header-gradient: linear-gradient(180deg, #451A03 0%, #78350F 100%);
+  --footer-gradient: linear-gradient(180deg, #270E02 0%, #451A03 100%);
+  --dock-gradient: linear-gradient(135deg, #451A03 0%, #92400E 100%);
+  --gold-primary: #D97706;
+  --gold-bright: #FBBF24;
+  --accent-gold: #FBBF24;
+  --bg-app: #FFFBEB;
+  --border-light: rgba(217, 119, 6, 0.25);
+}
+
+/* Theme 6: Imperial Velvet & Amethyst */
+[data-theme="purple"] {
+  --primary-emerald: #3B0764;
+  --header-gradient: linear-gradient(180deg, #3B0764 0%, #581C87 100%);
+  --footer-gradient: linear-gradient(180deg, #1E0338 0%, #3B0764 100%);
+  --dock-gradient: linear-gradient(135deg, #3B0764 0%, #6B21A8 100%);
+  --gold-primary: #9333EA;
+  --gold-bright: #C084FC;
+  --accent-gold: #C084FC;
+  --bg-app: #FAF5FF;
+  --border-light: rgba(147, 51, 234, 0.25);
+}
+
+/* Theme 7: Champagne & Rose Gold */
+[data-theme="rose"] {
+  --primary-emerald: #4C0519;
+  --header-gradient: linear-gradient(180deg, #4C0519 0%, #831843 100%);
+  --footer-gradient: linear-gradient(180deg, #28020C 0%, #4C0519 100%);
+  --dock-gradient: linear-gradient(135deg, #4C0519 0%, #9D174D 100%);
+  --gold-primary: #DB2777;
+  --gold-bright: #F472B6;
+  --accent-gold: #F472B6;
+  --bg-app: #FDF2F8;
+  --border-light: rgba(219, 39, 119, 0.25);
+}
+
+/* Theme 8: Obsidian Cyber & Neon Cyan */
+[data-theme="dark"], [data-theme="cyber"] {
+  --primary-emerald: #020617;
+  --header-gradient: linear-gradient(180deg, #020617 0%, #0F172A 100%);
+  --footer-gradient: linear-gradient(180deg, #000000 0%, #020617 100%);
+  --dock-gradient: linear-gradient(135deg, #020617 0%, #0E7490 100%);
+  --gold-primary: #0891B2;
+  --gold-bright: #22D3EE;
+  --accent-gold: #22D3EE;
+  --bg-app: #0F172A;
+  --border-light: rgba(34, 211, 238, 0.25);
+}
+
 * {
   box-sizing: border-box;
   margin: 0;

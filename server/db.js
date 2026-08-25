@@ -528,6 +528,8 @@ async function createTables() {
       `ALTER TABLE restaurants ADD COLUMN IF NOT EXISTS staff_verification_timeout_seconds INT DEFAULT 120;`,
       `ALTER TABLE saas_plans ADD COLUMN IF NOT EXISTS presence_verification_enabled INT DEFAULT 1;`,
       `ALTER TABLE saas_plans ADD COLUMN IF NOT EXISTS allowed_verification_modes VARCHAR(255) DEFAULT 'QR_ONLY,GPS_ONLY,GPS_WITH_STAFF_FALLBACK,STAFF_ONLY';`,
+      `ALTER TABLE saas_plans ADD COLUMN IF NOT EXISTS theme_color VARCHAR(50) DEFAULT 'gold';`,
+      `ALTER TABLE saas_plans ADD COLUMN IF NOT EXISTS allowed_themes VARCHAR(255) DEFAULT 'ALL';`,
       `ALTER TABLE table_location_verifications ADD COLUMN IF NOT EXISTS space_type VARCHAR(50) DEFAULT 'table';`,
       `ALTER TABLE table_location_verifications ADD COLUMN IF NOT EXISTS space_number VARCHAR(100);`,
       `ALTER TABLE table_location_verifications ADD COLUMN IF NOT EXISTS verification_method VARCHAR(20) DEFAULT 'GPS';`,
