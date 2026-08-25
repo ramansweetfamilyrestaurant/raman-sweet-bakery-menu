@@ -132,9 +132,8 @@ export default function Header({
                 <div className="sa-header-brand-title">
                   Touch<span className="sa-gold-text">QR</span>
                 </div>
-                <div className="sa-header-brand-subtitle">
-                  <span className="sa-mobile-only">SUPER ADMIN</span>
-                  <span className="sa-desktop-only">{currentTitle}</span>
+                <div className="sa-header-brand-subtitle sa-desktop-only">
+                  {currentTitle}
                 </div>
               </div>
             </div>
@@ -178,16 +177,17 @@ export default function Header({
               {searchQuery && <span className="sa-search-dot-indicator" />}
             </button>
 
-            {/* All Systems Operational Badge (Desktop/Tablet) */}
+            {/* All Systems Operational Badge (Desktop/Tablet Only) */}
             <div className="sa-ssl-badge sa-desktop-only-ssl" title="Neon DB, Cashfree & APIs Operational">
               <span className="sa-live-dot active" />
               <span className="sa-ssl-text" style={{ color: '#15803D' }}>All Systems Operational</span>
             </div>
 
+            {/* Broadcast Button (Desktop/Tablet Only) */}
             {onOpenBroadcast && (
               <button
                 onClick={onOpenBroadcast}
-                className="sa-quick-broadcast-btn"
+                className="sa-quick-broadcast-btn sa-desktop-only"
                 title="Broadcast announcement"
               >
                 <Megaphone size={13} />
@@ -195,18 +195,18 @@ export default function Header({
               </button>
             )}
 
-            {/* Notification Bell with Badge (Desktop) */}
+            {/* Notification Bell with Badge (Desktop Only) */}
             <div className="sa-desktop-only-ssl" style={{ position: 'relative', cursor: 'pointer', padding: '4px' }} title="1 Active Notice">
               <span style={{ fontSize: '0.9rem' }}>🔔</span>
               <span style={{ position: 'absolute', top: '2px', right: '2px', width: '6px', height: '6px', background: '#EF4444', borderRadius: '50%' }} />
             </div>
 
-            {/* Profile Avatar & Quick Logout */}
+            {/* Profile Avatar & Quick Logout (Clean on Mobile) */}
             <div className="sa-header-profile">
               <div className="sa-profile-avatar" title={`Logged in as ${username || 'Super Admin'}`}>
                 {username ? username.charAt(0).toUpperCase() : 'S'}
               </div>
-              <div style={{ display: 'flex', flexDirection: 'column', lineHeight: 1.1 }}>
+              <div className="sa-desktop-only" style={{ display: 'flex', flexDirection: 'column', lineHeight: 1.1 }}>
                 <span className="sa-profile-name" style={{ fontSize: '0.78rem', fontWeight: 800 }}>
                   {username || 'Super Admin'}
                 </span>
@@ -219,7 +219,7 @@ export default function Header({
                   onClick={onLogout}
                   className="sa-header-logout-btn"
                   title="Logout from Super Admin"
-                  style={{ marginLeft: '4px' }}
+                  style={{ marginLeft: '2px' }}
                 >
                   <LogOut size={14} />
                 </button>
