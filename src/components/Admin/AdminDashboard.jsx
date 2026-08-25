@@ -1489,6 +1489,7 @@ export default function AdminDashboard({
         kds_enabled: (infoData.kds_enabled ?? infoData.permissions?.kds_enabled) === 1 || (infoData.kds_enabled ?? infoData.permissions?.kds_enabled) === true || (infoData.kds_enabled ?? infoData.permissions?.kds_enabled) === '1',
         kds_screen_enabled: infoData.kds_screen_enabled !== undefined ? infoData.kds_screen_enabled : 1,
         dual_printer_enabled: (infoData.dual_printer_enabled ?? infoData.permissions?.dual_printer_enabled) === 1 || (infoData.dual_printer_enabled ?? infoData.permissions?.dual_printer_enabled) === true || (infoData.dual_printer_enabled ?? infoData.permissions?.dual_printer_enabled) === '1',
+        theme_color: infoData.theme_color || 'gold',
         filters_visibility: { ...defaultVis, ...infoData.filters_visibility }
       };
     }
@@ -1503,6 +1504,7 @@ export default function AdminDashboard({
       currency_symbol: '₹',
       fssai_lic_no: '',
       resto_type: 'pure_veg',
+      theme_color: 'gold',
       custom_domain: '',
       total_tables: 0,
       total_cabins: 0,
@@ -1741,6 +1743,7 @@ export default function AdminDashboard({
           kds_enabled: (infoData.kds_enabled ?? infoData.permissions?.kds_enabled) === 1 || (infoData.kds_enabled ?? infoData.permissions?.kds_enabled) === true || (infoData.kds_enabled ?? infoData.permissions?.kds_enabled) === '1',
           kds_screen_enabled: infoData.kds_screen_enabled !== undefined ? infoData.kds_screen_enabled : 1,
           dual_printer_enabled: (infoData.dual_printer_enabled ?? infoData.permissions?.dual_printer_enabled) === 1 || (infoData.dual_printer_enabled ?? infoData.permissions?.dual_printer_enabled) === true || (infoData.dual_printer_enabled ?? infoData.permissions?.dual_printer_enabled) === '1',
+          theme_color: infoData.theme_color || 'gold',
           filters_visibility: { ...defaultVis, ...infoData.filters_visibility }
         });
       }
@@ -1750,6 +1753,14 @@ export default function AdminDashboard({
       setLoading(false);
     }
   };
+
+  // Sync active luxury brand theme with document attribute
+  useEffect(() => {
+    const currentTheme = settingsForm?.theme_color || restaurantInfo?.theme_color || 'gold';
+    if (currentTheme) {
+      document.documentElement.setAttribute('data-theme', currentTheme);
+    }
+  }, [settingsForm?.theme_color, restaurantInfo?.theme_color]);
 
   useEffect(() => {
     if (!token) {
@@ -2376,6 +2387,9 @@ export default function AdminDashboard({
       }
 
       setSettingsSavedMsg(true);
+      if (settingsForm.theme_color) {
+        document.documentElement.setAttribute('data-theme', settingsForm.theme_color);
+      }
       await loadData();
       setTimeout(() => setSettingsSavedMsg(false), 3000);
       return { success: true };
