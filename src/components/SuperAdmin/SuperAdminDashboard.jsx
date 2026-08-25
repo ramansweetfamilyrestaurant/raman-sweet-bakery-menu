@@ -1663,17 +1663,17 @@ export default function SuperAdminDashboard({ token, username, onLogout, onRetur
               </div>
 
               {/* ⚠️ 3. BILLING ATTENTION HUB */}
-              <div className="sa-table-container" style={{ padding: '18px 20px', display: 'flex', flexDirection: 'column', gap: '12px' }}>
-                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+              <div className="sa-table-container" style={{ padding: '16px 18px', display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '8px' }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                    <div style={{ width: '32px', height: '32px', borderRadius: '8px', background: '#FEF3C7', color: '#B45309', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                    <div style={{ width: '32px', height: '32px', borderRadius: '8px', background: '#FEF3C7', color: '#B45309', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
                       <Shield size={18} />
                     </div>
-                    <h3 style={{ margin: 0, fontSize: '1.05rem', fontWeight: 900, color: 'var(--sa-text-main)' }}>
+                    <h3 style={{ margin: 0, fontSize: '0.98rem', fontWeight: 900, color: 'var(--sa-text-main)' }}>
                       ⚠️ Billing Attention Required
                     </h3>
                   </div>
-                  <span style={{ fontSize: '0.74rem', color: 'var(--sa-text-muted)', fontWeight: 700 }}>
+                  <span style={{ fontSize: '0.72rem', color: 'var(--sa-text-muted)', fontWeight: 700 }}>
                     Actionable subscription events
                   </span>
                 </div>
@@ -1681,9 +1681,9 @@ export default function SuperAdminDashboard({ token, username, onLogout, onRetur
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
                   {/* Row 1: Payment Failures */}
                   {restaurants.filter(r => r.subscription_status === 'payment_failed' || r.subscription_status === 'past_due').length > 0 && (
-                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '10px 14px', background: '#FEF2F2', borderRadius: '12px', border: '1px solid #FCA5A5' }}>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                        <span style={{ background: '#DC2626', color: '#FFF', padding: '2px 6px', borderRadius: '4px', fontSize: '0.68rem', fontWeight: 900 }}>CRITICAL</span>
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '10px', padding: '10px 14px', background: '#FEF2F2', borderRadius: '12px', border: '1px solid #FCA5A5' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flex: '1 1 200px' }}>
+                        <span style={{ background: '#DC2626', color: '#FFF', padding: '2px 6px', borderRadius: '4px', fontSize: '0.68rem', fontWeight: 900, flexShrink: 0 }}>CRITICAL</span>
                         <span style={{ fontSize: '0.82rem', fontWeight: 800, color: '#991B1B' }}>
                           {restaurants.filter(r => r.subscription_status === 'payment_failed' || r.subscription_status === 'past_due').length} Payment Failed / Past Due Accounts
                         </span>
@@ -1692,6 +1692,7 @@ export default function SuperAdminDashboard({ token, username, onLogout, onRetur
                         type="button"
                         onClick={() => setStatusFilter('failed')}
                         className="sa-btn sa-btn-secondary sa-btn-sm"
+                        style={{ flexShrink: 0 }}
                       >
                         Resolve ➔
                       </button>
@@ -1700,9 +1701,9 @@ export default function SuperAdminDashboard({ token, username, onLogout, onRetur
 
                   {/* Row 2: Auto-Renew Off */}
                   {restaurants.filter(r => (r.auto_renew === 0 || r.auto_renew === false || r.cancel_requested_at !== null) && r.active !== false).length > 0 && (
-                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '10px 14px', background: '#FFFBEB', borderRadius: '12px', border: '1px solid #FCD34D' }}>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                        <span style={{ background: '#D97706', color: '#FFF', padding: '2px 6px', borderRadius: '4px', fontSize: '0.68rem', fontWeight: 900 }}>CANCEL PENDING</span>
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '10px', padding: '10px 14px', background: '#FFFBEB', borderRadius: '12px', border: '1px solid #FCD34D' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flex: '1 1 200px' }}>
+                        <span style={{ background: '#D97706', color: '#FFF', padding: '2px 6px', borderRadius: '4px', fontSize: '0.68rem', fontWeight: 900, flexShrink: 0 }}>CANCEL PENDING</span>
                         <span style={{ fontSize: '0.82rem', fontWeight: 800, color: '#92400E' }}>
                           {restaurants.filter(r => (r.auto_renew === 0 || r.auto_renew === false || r.cancel_requested_at !== null) && r.active !== false).length} Accounts with Auto-Renew Disabled
                         </span>
@@ -1711,6 +1712,7 @@ export default function SuperAdminDashboard({ token, username, onLogout, onRetur
                         type="button"
                         onClick={() => setStatusFilter('autorenew_off')}
                         className="sa-btn sa-btn-secondary sa-btn-sm"
+                        style={{ flexShrink: 0 }}
                       >
                         View ➔
                       </button>
@@ -1722,9 +1724,9 @@ export default function SuperAdminDashboard({ token, username, onLogout, onRetur
                     const d = getDaysRemaining(r.plan_expires_at);
                     return d !== null && d > 0 && d <= 7 && r.subscription_type !== 'ADMIN_GRANTED';
                   }).length > 0 && (
-                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '10px 14px', background: '#F8FAFC', borderRadius: '12px', border: '1px solid #E2E8F0' }}>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                        <span style={{ background: '#64748B', color: '#FFF', padding: '2px 6px', borderRadius: '4px', fontSize: '0.68rem', fontWeight: 900 }}>EXPIRING</span>
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '10px', padding: '10px 14px', background: '#F8FAFC', borderRadius: '12px', border: '1px solid #E2E8F0' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flex: '1 1 200px' }}>
+                        <span style={{ background: '#64748B', color: '#FFF', padding: '2px 6px', borderRadius: '4px', fontSize: '0.68rem', fontWeight: 900, flexShrink: 0 }}>EXPIRING</span>
                         <span style={{ fontSize: '0.82rem', fontWeight: 800, color: '#334155' }}>
                           {restaurants.filter(r => {
                             const d = getDaysRemaining(r.plan_expires_at);
@@ -1736,6 +1738,7 @@ export default function SuperAdminDashboard({ token, username, onLogout, onRetur
                         type="button"
                         onClick={() => setStatusFilter('expired')}
                         className="sa-btn sa-btn-secondary sa-btn-sm"
+                        style={{ flexShrink: 0 }}
                       >
                         View ➔
                       </button>
@@ -1744,9 +1747,9 @@ export default function SuperAdminDashboard({ token, username, onLogout, onRetur
 
                   {/* Row 4: Scheduled Plan Changes */}
                   {restaurants.filter(r => r.scheduled_plan_key !== null).length > 0 && (
-                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '10px 14px', background: '#EFF6FF', borderRadius: '12px', border: '1px solid #BFDBFE' }}>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                        <span style={{ background: '#2563EB', color: '#FFF', padding: '2px 6px', borderRadius: '4px', fontSize: '0.68rem', fontWeight: 900 }}>PLAN SWITCH</span>
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '10px', padding: '10px 14px', background: '#EFF6FF', borderRadius: '12px', border: '1px solid #BFDBFE' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flex: '1 1 200px' }}>
+                        <span style={{ background: '#2563EB', color: '#FFF', padding: '2px 6px', borderRadius: '4px', fontSize: '0.68rem', fontWeight: 900, flexShrink: 0 }}>PLAN SWITCH</span>
                         <span style={{ fontSize: '0.82rem', fontWeight: 800, color: '#1E40AF' }}>
                           {restaurants.filter(r => r.scheduled_plan_key !== null).length} Scheduled Plan Changes at Next Billing Boundary
                         </span>
@@ -1755,6 +1758,7 @@ export default function SuperAdminDashboard({ token, username, onLogout, onRetur
                         type="button"
                         onClick={() => setActiveView('plans')}
                         className="sa-btn sa-btn-secondary sa-btn-sm"
+                        style={{ flexShrink: 0 }}
                       >
                         View ➔
                       </button>

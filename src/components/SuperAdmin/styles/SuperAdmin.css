@@ -690,6 +690,7 @@
 
 .sa-table {
   width: 100%;
+  min-width: 820px;
   border-collapse: collapse;
   text-align: left;
   font-size: 0.85rem;
@@ -706,6 +707,7 @@
   border-bottom: 1px solid var(--sa-border);
   height: 42px;
   box-sizing: border-box;
+  white-space: nowrap;
 }
 
 .sa-table td {
@@ -715,6 +717,7 @@
   vertical-align: middle;
   height: 54px;
   box-sizing: border-box;
+  white-space: nowrap;
   transition: background 0.15s ease;
 }
 
