@@ -1135,8 +1135,22 @@ router.delete('/plans/:key', authenticateToken, requireSuperAdmin, async (req, r
 // GET Platform Audit Logs
 router.get('/audit-logs', authenticateToken, requireSuperAdmin, async (req, res) => {
   try {
-    const logs = await query('SELECT * FROM audit_logs ORDER BY id DESC LIMIT 150');
-    res.json(logs);
+    const logs = await query(`
+      SELECT 
+        a.id,
+        a.restaurant_id,
+        a.actor_role,
+        a.action,
+        a.details,
+        a.created_at,
+        r.name AS restaurant_name,
+        r.logo AS restaurant_logo
+      FROM audit_logs a
+      LEFT JOIN restaurants r ON r.id = a.restaurant_id
+      ORDER BY a.id DESC 
+      LIMIT 150
+    `);
+    res.json(logs || []);
   } catch (err) {
     console.error('Fetch audit logs error:', err);
     res.status(500).json({ error: 'Failed to fetch audit logs' });

@@ -15,8 +15,21 @@ import TenantDetailsView from './views/TenantDetailsView';
 import CommunicationView from './views/CommunicationView';
 import OperationsView from './views/OperationsView';
 import AuditLogsView from './views/AuditLogsView';
-import { KpiCard, SectionHeader, StatusBadge, EmptyState, DataTable, FilterPills, SearchBar, TenantCard } from './components';
 import './styles/SuperAdmin.css';
+
+const getEventTaxonomy = (action = '') => {
+  const act = String(action).toUpperCase();
+  if (act.includes('LOGIN') || act.includes('IMPERSONAT') || act.includes('SECURITY') || act.includes('PASSWORD') || act.includes('AUTH') || act.includes('ACCESS')) {
+    return { label: 'SECURITY', bg: '#EFF6FF', color: '#1D4ED8' };
+  }
+  if (act.includes('PAYMENT') || act.includes('CASHFREE') || act.includes('SUB_') || act.includes('SUBSCRIPTION') || act.includes('PLAN') || act.includes('BILLING') || act.includes('MANDATE') || act.includes('CANCEL') || act.includes('RENEW')) {
+    return { label: 'BILLING', bg: '#ECFEFF', color: '#0E7490' };
+  }
+  if (act.includes('TENANT') || act.includes('RESTAURANT') || act.includes('ACTIVAT') || act.includes('SUSPEND') || act.includes('DELETE') || act.includes('REGISTER') || act.includes('SHOP')) {
+    return { label: 'TENANT', bg: '#DCFCE7', color: '#15803D' };
+  }
+  return { label: 'SYSTEM', bg: '#F3E8FF', color: '#7E22CE' };
+};
 
 export default function SuperAdminDashboard({ token, username, onLogout, onReturnToMenu, onImpersonate }) {
   const [restaurants, setRestaurants] = useState([]);
@@ -1444,21 +1457,48 @@ export default function SuperAdminDashboard({ token, username, onLogout, onRetur
 
                   {/* 4-Item System Health Strip */}
                   <div className="sa-health-strip">
-                    <div className="sa-health-chip">
+                    <div
+                      className="sa-health-chip"
+                      title={`Neon PostgreSQL: ${dbStats?.database?.status || 'Unknown'} (${dbStats?.database?.ping_ms || 0}ms latency)`}
+                    >
                       <span className="sa-health-chip-name">Database</span>
-                      <span className="sa-health-chip-status"><span className="sa-live-dot active" /> Healthy</span>
+                      <span className="sa-health-chip-status">
+                        <span className={`sa-live-dot ${dbStats?.database?.status === 'CONNECTED' ? 'active' : (dbStats ? 'danger' : 'muted')}`} />
+                        {dbStats?.database?.status === 'CONNECTED' ? (dbStats?.database?.ping_ms ? `Healthy (${dbStats.database.ping_ms}ms)` : 'Healthy') : (dbStats ? 'Degraded' : 'Unknown')}
+                      </span>
                     </div>
-                    <div className="sa-health-chip">
+
+                    <div
+                      className="sa-health-chip"
+                      title="Express API Server / Telemetry Gateway"
+                    >
                       <span className="sa-health-chip-name">API Gateway</span>
-                      <span className="sa-health-chip-status"><span className="sa-live-dot active" /> Healthy</span>
+                      <span className="sa-health-chip-status">
+                        <span className={`sa-live-dot ${dbStats?.success ? 'active' : (dbStats ? 'danger' : 'muted')}`} />
+                        {dbStats?.success ? 'Operational' : (dbStats ? 'Degraded' : 'Unknown')}
+                      </span>
                     </div>
-                    <div className="sa-health-chip">
+
+                    <div
+                      className="sa-health-chip"
+                      title={`Cashfree Payment Gateway: ${(paymentKeys?.cashfree_app_id || dbStats?.services?.cashfree?.configured) ? 'Credentials Configured (Sandbox)' : 'Unconfigured'}`}
+                    >
                       <span className="sa-health-chip-name">Cashfree</span>
-                      <span className="sa-health-chip-status"><span className="sa-live-dot active" /> Healthy</span>
+                      <span className="sa-health-chip-status">
+                        <span className={`sa-live-dot ${(paymentKeys?.cashfree_app_id || dbStats?.services?.cashfree?.configured) ? 'active' : 'muted'}`} />
+                        {(paymentKeys?.cashfree_app_id || dbStats?.services?.cashfree?.configured) ? 'Configured' : 'Unconfigured'}
+                      </span>
                     </div>
-                    <div className="sa-health-chip">
+
+                    <div
+                      className="sa-health-chip"
+                      title="Automated Compaction & Order Purge Schedulers"
+                    >
                       <span className="sa-health-chip-name">Cron Jobs</span>
-                      <span className="sa-health-chip-status"><span className="sa-live-dot active" /> Healthy</span>
+                      <span className="sa-health-chip-status">
+                        <span className={`sa-live-dot ${dbStats?.services?.subscription_cron?.status === 'SCHEDULED' ? 'active' : 'muted'}`} />
+                        {dbStats?.services?.subscription_cron?.status === 'SCHEDULED' ? 'Scheduled' : 'Unknown'}
+                      </span>
                     </div>
                   </div>
                 </div>
@@ -1495,120 +1535,158 @@ export default function SuperAdminDashboard({ token, username, onLogout, onRetur
                       </tr>
                     </thead>
                     <tbody>
-                      {[...restaurants].sort((a, b) => (b.id || 0) - (a.id || 0)).slice(0, 5).map((r, idx) => {
-                        const eventTypes = [
-                          { label: 'SECURITY', bg: '#EFF6FF', color: '#1D4ED8', desc: 'Super Admin logged in' },
-                          { label: 'BILLING', bg: '#ECFEFF', color: '#0E7490', desc: `Payment of ₹${r.plan_price || 999} processed` },
-                          { label: 'TENANT', bg: '#DCFCE7', color: '#15803D', desc: `Plan updated to ${(r.plan_tier || 'pro').toUpperCase()}` },
-                          { label: 'SYSTEM', bg: '#F3E8FF', color: '#7E22CE', desc: 'Daily backup successful' },
-                          { label: 'BILLING', bg: '#ECFEFF', color: '#0E7490', desc: 'Subscription auto-renew active' }
-                        ];
-                        const ev = eventTypes[idx % eventTypes.length];
-                        const dateFormatted = r.created_at ? new Date(r.created_at).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' }) : '24 May, 11:32 AM';
+                      {Array.isArray(auditLogs) && auditLogs.length > 0 ? (
+                        auditLogs.slice(0, 5).map((log) => {
+                          const tenantObj = restaurants.find(r => r.id === log.restaurant_id);
+                          const tenantName = tenantObj?.name || log.restaurant_name || (log.actor_role === 'superadmin' ? 'Master Super Admin' : 'Platform System');
+                          const tenantLogo = tenantObj?.logo || log.restaurant_logo;
+                          const ownerName = tenantObj?.owner_username || tenantObj?.owner_name || (log.actor_role === 'superadmin' ? 'Super Admin' : 'System');
+                          const ownerSub = tenantObj?.owner_email || (log.actor_role === 'superadmin' ? 'admin@touchqr.in' : 'system@touchqr.in');
+                          const ev = getEventTaxonomy(log.action);
+                          const dateFormatted = log.created_at ? new Date(log.created_at).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' }) : 'Just now';
 
-                        return (
-                          <tr key={r.id}>
-                            <td style={{ fontSize: '0.74rem', color: 'var(--sa-text-muted)', whiteSpace: 'nowrap' }}>
-                              {dateFormatted}
-                            </td>
-                            <td>
-                              <div
-                                onClick={() => setSelectedTenant360(r)}
-                                style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer' }}
-                                title="Click to open Tenant 360° Profile"
-                              >
-                                <img
-                                  src={getRestaurantLogoUrl(r.logo)}
-                                  alt={r.name}
-                                  onError={(e) => { e.currentTarget.src = '/images/default-logo.webp'; }}
-                                  style={{ width: '28px', height: '28px', borderRadius: '50%', objectFit: 'cover', border: '1px solid #D4AF37' }}
-                                />
-                                <strong style={{ fontSize: '0.82rem', color: 'var(--sa-text-main)' }}>{r.name}</strong>
-                              </div>
-                            </td>
-                            <td>
-                              <div style={{ display: 'flex', flexDirection: 'column' }}>
-                                <span style={{ fontWeight: 800, fontSize: '0.76rem', color: 'var(--sa-text-main)' }}>
-                                  {r.owner_username || r.owner_name || 'John Doe'}
+                          return (
+                            <tr key={log.id}>
+                              <td style={{ fontSize: '0.74rem', color: 'var(--sa-text-muted)', whiteSpace: 'nowrap' }}>
+                                {dateFormatted}
+                              </td>
+                              <td>
+                                <div
+                                  onClick={() => tenantObj && setSelectedTenant360(tenantObj)}
+                                  style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: tenantObj ? 'pointer' : 'default' }}
+                                  title={tenantObj ? "Click to open Tenant 360° Profile" : tenantName}
+                                >
+                                  {tenantLogo ? (
+                                    <img
+                                      src={getRestaurantLogoUrl(tenantLogo)}
+                                      alt={tenantName}
+                                      onError={(e) => { e.currentTarget.src = '/images/default-logo.webp'; }}
+                                      style={{ width: '28px', height: '28px', borderRadius: '50%', objectFit: 'cover', border: '1px solid #D4AF37' }}
+                                    />
+                                  ) : (
+                                    <div style={{ width: '28px', height: '28px', borderRadius: '50%', background: '#F1F5F9', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.75rem', fontWeight: 900, color: '#475569', border: '1px solid var(--sa-border)' }}>
+                                      {tenantName.charAt(0)}
+                                    </div>
+                                  )}
+                                  <strong style={{ fontSize: '0.82rem', color: 'var(--sa-text-main)' }}>{tenantName}</strong>
+                                </div>
+                              </td>
+                              <td>
+                                <div style={{ display: 'flex', flexDirection: 'column' }}>
+                                  <span style={{ fontWeight: 800, fontSize: '0.76rem', color: 'var(--sa-text-main)' }}>
+                                    {ownerName}
+                                  </span>
+                                  <span style={{ fontSize: '0.68rem', color: 'var(--sa-text-muted)' }}>
+                                    {ownerSub}
+                                  </span>
+                                </div>
+                              </td>
+                              <td>
+                                <span style={{
+                                  fontSize: '0.66rem',
+                                  fontWeight: 900,
+                                  background: ev.bg,
+                                  color: ev.color,
+                                  padding: '2px 6px',
+                                  borderRadius: '4px',
+                                  letterSpacing: '0.04em'
+                                }}>
+                                  {ev.label}
                                 </span>
-                                <span style={{ fontSize: '0.68rem', color: 'var(--sa-text-muted)' }}>
-                                  {r.owner_email || `${r.slug}@example.com`}
-                                </span>
-                              </div>
-                            </td>
-                            <td>
-                              <span style={{
-                                fontSize: '0.66rem',
-                                fontWeight: 900,
-                                background: ev.bg,
-                                color: ev.color,
-                                padding: '2px 6px',
-                                borderRadius: '4px',
-                                letterSpacing: '0.04em'
-                              }}>
-                                {ev.label}
-                              </span>
-                            </td>
-                            <td style={{ fontSize: '0.76rem', color: 'var(--sa-text-main)' }}>
-                              {ev.desc}
-                            </td>
-                            <td style={{ textAlign: 'right' }}>
-                              <button
-                                type="button"
-                                onClick={() => setSelectedTenant360(r)}
-                                className="sa-btn sa-btn-secondary sa-btn-sm"
-                                style={{ padding: '3px 8px', fontSize: '0.70rem', fontWeight: 800 }}
-                              >
-                                View
-                              </button>
-                            </td>
-                          </tr>
-                        );
-                      })}
+                              </td>
+                              <td style={{ fontSize: '0.76rem', color: 'var(--sa-text-main)', maxWidth: '280px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }} title={log.details || log.action}>
+                                {log.details || log.action}
+                              </td>
+                              <td style={{ textAlign: 'right' }}>
+                                {tenantObj ? (
+                                  <button
+                                    type="button"
+                                    onClick={() => setSelectedTenant360(tenantObj)}
+                                    className="sa-btn sa-btn-secondary sa-btn-sm"
+                                    style={{ padding: '3px 8px', fontSize: '0.70rem', fontWeight: 800 }}
+                                  >
+                                    View
+                                  </button>
+                                ) : (
+                                  <button
+                                    type="button"
+                                    onClick={() => setActiveView('activity')}
+                                    className="sa-btn sa-btn-secondary sa-btn-sm"
+                                    style={{ padding: '3px 8px', fontSize: '0.70rem', fontWeight: 800 }}
+                                  >
+                                    Logs
+                                  </button>
+                                )}
+                              </td>
+                            </tr>
+                          );
+                        })
+                      ) : (
+                        <tr>
+                          <td colSpan={6} style={{ textAlign: 'center', padding: '24px', color: 'var(--sa-text-muted)', fontSize: '0.82rem' }}>
+                            No recent tenant activity logged
+                          </td>
+                        </tr>
+                      )}
                     </tbody>
                   </table>
                 </div>
 
                 {/* Mobile Adaptable Event Cards List */}
                 <div className="sa-activity-mobile-list">
-                  {[...restaurants].sort((a, b) => (b.id || 0) - (a.id || 0)).slice(0, 5).map((r, idx) => {
-                    const eventTypes = [
-                      { label: 'SECURITY', bg: '#EFF6FF', color: '#1D4ED8', action: 'Login' },
-                      { label: 'BILLING', bg: '#ECFEFF', color: '#0E7490', action: 'Payment Success' },
-                      { label: 'TENANT', bg: '#DCFCE7', color: '#15803D', action: 'Tenant Updated' },
-                      { label: 'SYSTEM', bg: '#F3E8FF', color: '#7E22CE', action: 'Backup Completed' },
-                      { label: 'BILLING', bg: '#ECFEFF', color: '#0E7490', action: 'Subscription Active' }
-                    ];
-                    const ev = eventTypes[idx % eventTypes.length];
-                    const timeStr = r.created_at ? new Date(r.created_at).toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' }) : '11:32 AM';
+                  {Array.isArray(auditLogs) && auditLogs.length > 0 ? (
+                    auditLogs.slice(0, 5).map((log) => {
+                      const tenantObj = restaurants.find(r => r.id === log.restaurant_id);
+                      const tenantName = tenantObj?.name || log.restaurant_name || (log.actor_role === 'superadmin' ? 'Master Super Admin' : 'Platform System');
+                      const tenantLogo = tenantObj?.logo || log.restaurant_logo;
+                      const ev = getEventTaxonomy(log.action);
+                      const timeStr = log.created_at ? new Date(log.created_at).toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' }) : 'Just now';
 
-                    return (
-                      <div key={r.id} className="sa-activity-mobile-item" onClick={() => setSelectedTenant360(r)}>
-                        <div className="sa-activity-mobile-left">
-                          <img
-                            src={getRestaurantLogoUrl(r.logo)}
-                            alt={r.name}
-                            onError={(e) => { e.currentTarget.src = '/images/default-logo.webp'; }}
-                            className="sa-activity-mobile-logo"
-                          />
-                          <div className="sa-activity-mobile-details">
-                            <span className="sa-activity-mobile-name">{r.name}</span>
-                            <span className="sa-activity-mobile-time">{timeStr} • {ev.action}</span>
+                      return (
+                        <div
+                          key={log.id}
+                          className="sa-activity-mobile-item"
+                          onClick={() => tenantObj ? setSelectedTenant360(tenantObj) : setActiveView('activity')}
+                        >
+                          <div className="sa-activity-mobile-left">
+                            {tenantLogo ? (
+                              <img
+                                src={getRestaurantLogoUrl(tenantLogo)}
+                                alt={tenantName}
+                                onError={(e) => { e.currentTarget.src = '/images/default-logo.webp'; }}
+                                className="sa-activity-mobile-logo"
+                              />
+                            ) : (
+                              <div style={{ width: '32px', height: '32px', borderRadius: '50%', background: '#F1F5F9', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.75rem', fontWeight: 900, color: '#475569', flexShrink: 0, border: '1px solid var(--sa-border)' }}>
+                                {tenantName.charAt(0)}
+                              </div>
+                            )}
+                            <div className="sa-activity-mobile-details">
+                              <span className="sa-activity-mobile-name">{tenantName}</span>
+                              <span className="sa-activity-mobile-time" title={log.details || log.action}>
+                                {timeStr} • {log.action || 'System Event'}
+                              </span>
+                            </div>
                           </div>
+                          <span style={{
+                            fontSize: '0.64rem',
+                            fontWeight: 900,
+                            background: ev.bg,
+                            color: ev.color,
+                            padding: '2px 5px',
+                            borderRadius: '4px',
+                            flexShrink: 0
+                          }}>
+                            {ev.label}
+                          </span>
                         </div>
-                        <span style={{
-                          fontSize: '0.64rem',
-                          fontWeight: 900,
-                          background: ev.bg,
-                          color: ev.color,
-                          padding: '2px 5px',
-                          borderRadius: '4px'
-                        }}>
-                          {ev.label}
-                        </span>
-                      </div>
-                    );
-                  })}
+                      );
+                    })
+                  ) : (
+                    <div style={{ textAlign: 'center', padding: '16px', color: 'var(--sa-text-muted)', fontSize: '0.78rem' }}>
+                      No recent tenant activity logged
+                    </div>
+                  )}
                 </div>
               </div>
             </div>
