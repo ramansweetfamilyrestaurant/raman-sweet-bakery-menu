@@ -1155,14 +1155,37 @@ router.get('/operations/stats', authenticateToken, requireSuperAdmin, async (req
     // 2. Database Total Size
     let dbSizePretty = 'Serverless Pool';
     let dbSizeBytes = 0;
+    let dbSizeMB = 0;
     try {
       const sizeRes = await query('SELECT pg_size_pretty(pg_database_size(current_database())) AS size, pg_database_size(current_database()) AS bytes');
       if (sizeRes && sizeRes[0]) {
         dbSizePretty = sizeRes[0].size;
         dbSizeBytes = parseInt(sizeRes[0].bytes, 10) || 0;
+        dbSizeMB = parseFloat((dbSizeBytes / (1024 * 1024)).toFixed(2));
       }
     } catch (e) {
       console.warn('DB size query warning:', e.message);
+    }
+
+    // 2b. Stored Media Forensic Metrics
+    let storedImagesCount = 0;
+    let storedImagesBinaryBytes = 0;
+    let storedImagesBinaryPretty = '0 B';
+    try {
+      const imgRes = await query(`
+        SELECT 
+          COUNT(*)::int AS total_count,
+          COALESCE(SUM(octet_length(data)), 0)::bigint AS binary_bytes,
+          pg_size_pretty(COALESCE(SUM(octet_length(data)), 0)::bigint) AS binary_pretty
+        FROM stored_images
+      `);
+      if (imgRes && imgRes[0]) {
+        storedImagesCount = imgRes[0].total_count || 0;
+        storedImagesBinaryBytes = parseInt(imgRes[0].binary_bytes, 10) || 0;
+        storedImagesBinaryPretty = imgRes[0].binary_pretty || '0 B';
+      }
+    } catch (e) {
+      console.warn('Stored images telemetry notice:', e.message);
     }
 
     // 3. Active Connections Count
@@ -1233,8 +1256,21 @@ router.get('/operations/stats', authenticateToken, requireSuperAdmin, async (req
         ping_ms: pingMs,
         total_size: dbSizePretty,
         total_size_bytes: dbSizeBytes,
+        total_size_mb: dbSizeMB,
         active_connections: activeConnections,
         tables: tableStats
+      },
+      storage: {
+        database_size_bytes: dbSizeBytes,
+        database_size_mb: dbSizeMB,
+        database_size_pretty: (dbSizeBytes / (1024 * 1024)).toFixed(2) + ' MB',
+        stored_images_count: storedImagesCount,
+        stored_images_binary_bytes: storedImagesBinaryBytes,
+        stored_images_binary_pretty: storedImagesBinaryPretty,
+        r2_usage_bytes: null,
+        r2_usage_status: 'not_metered',
+        quota_bytes: null,
+        quota_status: 'not_enforced'
       },
       system: {
         node_version: process.version,

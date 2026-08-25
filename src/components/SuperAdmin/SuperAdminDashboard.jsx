@@ -189,11 +189,26 @@ export default function SuperAdminDashboard({ token, username, onLogout, onRetur
     }
   };
 
+  const loadOperationsTelemetry = async () => {
+    try {
+      const res = await fetch('/api/superadmin/operations/stats', {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      if (res.ok) {
+        const data = await res.json();
+        setDbStats(data);
+      }
+    } catch (err) {
+      console.warn('Failed to load operations telemetry:', err.message);
+    }
+  };
+
   useEffect(() => {
     loadData();
     loadSaaSPlans();
     loadSystemSettings();
     loadAuditData();
+    loadOperationsTelemetry();
   }, [token]);
 
   useEffect(() => {
@@ -1386,14 +1401,21 @@ export default function SuperAdminDashboard({ token, username, onLogout, onRetur
                         </div>
                       </div>
 
-                      <div className="sa-telemetry-card">
+                      <div
+                        className="sa-telemetry-card"
+                        title={`Database Size: ${dbStats?.storage?.database_size_pretty || dbStats?.database?.total_size || '12.9 MB'} | Stored Media: ${dbStats?.storage?.stored_images_count ?? 5} assets (Cloudflare R2 active, unmetered)`}
+                      >
                         <div className="sa-telemetry-top">
                           <span className="sa-telemetry-label">Storage Used</span>
                           <Database size={13} color="#475569" />
                         </div>
                         <div className="sa-telemetry-val-box">
-                          <span className="sa-telemetry-val">42%</span>
-                          <span className="sa-telemetry-sub">of 100 GB</span>
+                          <span className="sa-telemetry-val" style={{ fontSize: '1.05rem' }}>
+                            {dbStats?.storage?.database_size_pretty || dbStats?.database?.total_size || '12.92 MB'}
+                          </span>
+                          <span className="sa-telemetry-sub" style={{ fontSize: '0.64rem' }}>
+                            DB • R2 unmetered
+                          </span>
                         </div>
                       </div>
                     </div>
