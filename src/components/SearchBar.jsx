@@ -64,11 +64,11 @@ export default function SearchBar({ value, onChange, onClear, onQuickFilter, fil
             padding: '9px 36px 9px 36px',
             fontSize: '0.84rem',
             fontWeight: 500,
-            background: '#FFFFFF',
+            background: 'var(--theme-input-bg, var(--bg-card, #FFFFFF))',
             color: 'var(--text-dark)',
-            border: '1.5px solid var(--border-light)',
+            border: '1.5px solid var(--theme-card-border, var(--border-light))',
             borderRadius: 'var(--radius-pill)',
-            boxShadow: 'var(--shadow-sm)',
+            boxShadow: 'var(--theme-shadow, var(--shadow-sm))',
             outline: 'none',
             transition: 'var(--transition-fast)'
           }}
@@ -116,12 +116,12 @@ export default function SearchBar({ value, onChange, onClear, onQuickFilter, fil
                   fontWeight: 700,
                   padding: '4px 11px',
                   borderRadius: 'var(--radius-pill)',
-                  background: isSelected ? 'var(--primary-emerald)' : '#FFFFFF',
+                  background: isSelected ? 'var(--theme-nav-active, var(--primary-emerald))' : 'var(--theme-card-bg, var(--bg-card, #FFFFFF))',
                   color: isSelected ? '#FFFFFF' : 'var(--text-dark)',
-                  border: isSelected ? '1.5px solid var(--gold-bright)' : '1px solid var(--border-light)',
+                  border: isSelected ? '1.5px solid var(--gold-bright)' : '1px solid var(--theme-card-border, var(--border-light))',
                   whiteSpace: 'nowrap',
                   transition: 'var(--transition-fast)',
-                  boxShadow: 'var(--shadow-sm)'
+                  boxShadow: 'var(--theme-shadow, var(--shadow-sm))'
                 }}
               >
                 {f.label}

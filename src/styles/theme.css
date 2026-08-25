@@ -45,108 +45,308 @@
 
 /* ========== MULTI-TENANT BRAND THEME PRESETS ========== */
 
-/* Theme 1: Gold & Forest Green (Default Luxury) */
+/* Theme 1: Gold & Forest Green (Taj / Oberoi Luxury) */
 [data-theme="gold"], [data-theme="default"], :root:not([data-theme]) {
+  --bg-app: #F6F4EE;
+  --theme-page-bg: #F6F4EE;
+  --theme-page-gradient: linear-gradient(180deg, #F6F4EE 0%, #EFECE3 100%);
+  --bg-card: #FFFFFF;
+  --bg-card-soft: #FAF8F5;
+  --bg-secondary: #F1EFE8;
+  --theme-card-bg: #FFFFFF;
+  --theme-card-border: rgba(197, 160, 89, 0.3);
+  --theme-card-hover: rgba(197, 160, 89, 0.65);
+  --theme-surface: #FFFFFF;
+  --theme-input-bg: #FFFFFF;
+  --text-dark: #1C1917;
+  --text-muted: #666157;
   --primary-emerald: #0A2315;
-  --header-gradient: linear-gradient(180deg, #0A2315 0%, #123722 100%);
-  --footer-gradient: linear-gradient(180deg, #05140B 0%, #0A2315 100%);
-  --dock-gradient: linear-gradient(135deg, #0A2315 0%, #143A24 100%);
+  --theme-primary: #0A2315;
+  --theme-primary-dark: #05140B;
   --gold-primary: #C5A059;
   --gold-bright: #D4AF37;
   --accent-gold: #D4AF37;
-  --bg-app: #F6F4EE;
-  --border-light: rgba(197, 160, 89, 0.25);
+  --gold-border: rgba(197, 160, 89, 0.4);
+  --gold-gradient: linear-gradient(135deg, #DFBA67 0%, #C5A059 50%, #9B7733 100%);
+  --header-gradient: linear-gradient(180deg, #0A2315 0%, #123722 100%);
+  --footer-gradient: linear-gradient(180deg, #05140B 0%, #0A2315 100%);
+  --dock-gradient: linear-gradient(135deg, #0A2315 0%, #143A24 100%);
+  --border-light: rgba(197, 160, 89, 0.3);
+  --theme-divider: rgba(197, 160, 89, 0.2);
+  --theme-nav-bg: #FFFFFF;
+  --theme-nav-active: #0A2315;
+  --theme-badge-bg: #FAF8F5;
+  --theme-badge-text: #1C1917;
+  --theme-price-color: #0A2315;
+  --theme-btn-gradient: linear-gradient(135deg, #0A2315 0%, #1B4D2E 100%);
+  --theme-btn-secondary-bg: linear-gradient(135deg, #FEF3C7 0%, #FDE68A 100%);
+  --theme-shadow: 0 6px 18px rgba(10, 35, 21, 0.08);
 }
 
 /* Theme 2: Emerald Mint & Teal */
 [data-theme="emerald"] {
+  --bg-app: #F0FDF4;
+  --theme-page-bg: #F0FDF4;
+  --theme-page-gradient: linear-gradient(180deg, #F0FDF4 0%, #DCFCE7 100%);
+  --bg-card: #FFFFFF;
+  --bg-card-soft: #F0FDF4;
+  --bg-secondary: #DCFCE7;
+  --theme-card-bg: #FFFFFF;
+  --theme-card-border: rgba(16, 185, 129, 0.3);
+  --theme-card-hover: rgba(16, 185, 129, 0.7);
+  --theme-surface: #FFFFFF;
+  --theme-input-bg: #FFFFFF;
+  --text-dark: #064E3B;
+  --text-muted: #047857;
   --primary-emerald: #064E3B;
-  --header-gradient: linear-gradient(180deg, #064E3B 0%, #047857 100%);
-  --footer-gradient: linear-gradient(180deg, #022C22 0%, #064E3B 100%);
-  --dock-gradient: linear-gradient(135deg, #064E3B 0%, #047857 100%);
+  --theme-primary: #064E3B;
+  --theme-primary-dark: #022C22;
   --gold-primary: #059669;
   --gold-bright: #34D399;
   --accent-gold: #34D399;
-  --bg-app: #F0FDF4;
-  --border-light: rgba(16, 185, 129, 0.25);
+  --gold-border: rgba(16, 185, 129, 0.4);
+  --gold-gradient: linear-gradient(135deg, #34D399 0%, #059669 50%, #047857 100%);
+  --header-gradient: linear-gradient(180deg, #064E3B 0%, #047857 100%);
+  --footer-gradient: linear-gradient(180deg, #022C22 0%, #064E3B 100%);
+  --dock-gradient: linear-gradient(135deg, #064E3B 0%, #047857 100%);
+  --border-light: rgba(16, 185, 129, 0.3);
+  --theme-divider: rgba(16, 185, 129, 0.2);
+  --theme-nav-bg: #FFFFFF;
+  --theme-nav-active: #064E3B;
+  --theme-badge-bg: #F0FDF4;
+  --theme-badge-text: #064E3B;
+  --theme-price-color: #064E3B;
+  --theme-btn-gradient: linear-gradient(135deg, #064E3B 0%, #059669 100%);
+  --theme-btn-secondary-bg: linear-gradient(135deg, #DCFCE7 0%, #BBF7D0 100%);
+  --theme-shadow: 0 6px 18px rgba(6, 78, 59, 0.1);
 }
 
 /* Theme 3: Crimson Ruby & Gold */
 [data-theme="crimson"] {
+  --bg-app: #FFF1F2;
+  --theme-page-bg: #FFF1F2;
+  --theme-page-gradient: linear-gradient(180deg, #FFF1F2 0%, #FFE4E6 100%);
+  --bg-card: #FFFFFF;
+  --bg-card-soft: #FFF1F2;
+  --bg-secondary: #FFE4E6;
+  --theme-card-bg: #FFFFFF;
+  --theme-card-border: rgba(225, 29, 72, 0.3);
+  --theme-card-hover: rgba(225, 29, 72, 0.7);
+  --theme-surface: #FFFFFF;
+  --theme-input-bg: #FFFFFF;
+  --text-dark: #4C0519;
+  --text-muted: #9F1239;
   --primary-emerald: #881337;
-  --header-gradient: linear-gradient(180deg, #881337 0%, #9F1239 100%);
-  --footer-gradient: linear-gradient(180deg, #4C0519 0%, #881337 100%);
-  --dock-gradient: linear-gradient(135deg, #881337 0%, #BE123C 100%);
+  --theme-primary: #881337;
+  --theme-primary-dark: #4C0519;
   --gold-primary: #E11D48;
   --gold-bright: #FB7185;
   --accent-gold: #FB7185;
-  --bg-app: #FFF1F2;
-  --border-light: rgba(225, 29, 72, 0.25);
+  --gold-border: rgba(225, 29, 72, 0.4);
+  --gold-gradient: linear-gradient(135deg, #FB7185 0%, #E11D48 50%, #BE123C 100%);
+  --header-gradient: linear-gradient(180deg, #881337 0%, #9F1239 100%);
+  --footer-gradient: linear-gradient(180deg, #4C0519 0%, #881337 100%);
+  --dock-gradient: linear-gradient(135deg, #881337 0%, #BE123C 100%);
+  --border-light: rgba(225, 29, 72, 0.3);
+  --theme-divider: rgba(225, 29, 72, 0.2);
+  --theme-nav-bg: #FFFFFF;
+  --theme-nav-active: #881337;
+  --theme-badge-bg: #FFF1F2;
+  --theme-badge-text: #881337;
+  --theme-price-color: #881337;
+  --theme-btn-gradient: linear-gradient(135deg, #881337 0%, #BE123C 100%);
+  --theme-btn-secondary-bg: linear-gradient(135deg, #FFE4E6 0%, #FECDD3 100%);
+  --theme-shadow: 0 6px 18px rgba(136, 19, 55, 0.12);
 }
 
 /* Theme 4: Midnight Navy & Royal Blue */
 [data-theme="navy"] {
+  --bg-app: #F8FAFC;
+  --theme-page-bg: #F8FAFC;
+  --theme-page-gradient: linear-gradient(180deg, #F8FAFC 0%, #F1F5F9 100%);
+  --bg-card: #FFFFFF;
+  --bg-card-soft: #F8FAFC;
+  --bg-secondary: #E2E8F0;
+  --theme-card-bg: #FFFFFF;
+  --theme-card-border: rgba(37, 99, 235, 0.28);
+  --theme-card-hover: rgba(37, 99, 235, 0.65);
+  --theme-surface: #FFFFFF;
+  --theme-input-bg: #FFFFFF;
+  --text-dark: #0F172A;
+  --text-muted: #475569;
   --primary-emerald: #0F172A;
-  --header-gradient: linear-gradient(180deg, #0F172A 0%, #1E293B 100%);
-  --footer-gradient: linear-gradient(180deg, #020617 0%, #0F172A 100%);
-  --dock-gradient: linear-gradient(135deg, #0F172A 0%, #1E3A8A 100%);
+  --theme-primary: #0F172A;
+  --theme-primary-dark: #020617;
   --gold-primary: #2563EB;
   --gold-bright: #60A5FA;
   --accent-gold: #60A5FA;
-  --bg-app: #F8FAFC;
+  --gold-border: rgba(37, 99, 235, 0.4);
+  --gold-gradient: linear-gradient(135deg, #60A5FA 0%, #2563EB 50%, #1D4ED8 100%);
+  --header-gradient: linear-gradient(180deg, #0F172A 0%, #1E293B 100%);
+  --footer-gradient: linear-gradient(180deg, #020617 0%, #0F172A 100%);
+  --dock-gradient: linear-gradient(135deg, #0F172A 0%, #1E3A8A 100%);
   --border-light: rgba(37, 99, 235, 0.25);
+  --theme-divider: rgba(37, 99, 235, 0.18);
+  --theme-nav-bg: #FFFFFF;
+  --theme-nav-active: #0F172A;
+  --theme-badge-bg: #F8FAFC;
+  --theme-badge-text: #0F172A;
+  --theme-price-color: #0F172A;
+  --theme-btn-gradient: linear-gradient(135deg, #0F172A 0%, #1E40AF 100%);
+  --theme-btn-secondary-bg: linear-gradient(135deg, #EFF6FF 0%, #DBEAFE 100%);
+  --theme-shadow: 0 6px 18px rgba(15, 23, 42, 0.1);
 }
 
 /* Theme 5: Royal Amber & Artisan Dark */
 [data-theme="amber"] {
+  --bg-app: #FFFBEB;
+  --theme-page-bg: #FFFBEB;
+  --theme-page-gradient: linear-gradient(180deg, #FFFBEB 0%, #FEF3C7 100%);
+  --bg-card: #FFFFFF;
+  --bg-card-soft: #FFFBEB;
+  --bg-secondary: #FEF3C7;
+  --theme-card-bg: #FFFFFF;
+  --theme-card-border: rgba(217, 119, 6, 0.3);
+  --theme-card-hover: rgba(217, 119, 6, 0.7);
+  --theme-surface: #FFFFFF;
+  --theme-input-bg: #FFFFFF;
+  --text-dark: #451A03;
+  --text-muted: #78350F;
   --primary-emerald: #451A03;
-  --header-gradient: linear-gradient(180deg, #451A03 0%, #78350F 100%);
-  --footer-gradient: linear-gradient(180deg, #270E02 0%, #451A03 100%);
-  --dock-gradient: linear-gradient(135deg, #451A03 0%, #92400E 100%);
+  --theme-primary: #451A03;
+  --theme-primary-dark: #270E02;
   --gold-primary: #D97706;
   --gold-bright: #FBBF24;
   --accent-gold: #FBBF24;
-  --bg-app: #FFFBEB;
-  --border-light: rgba(217, 119, 6, 0.25);
+  --gold-border: rgba(217, 119, 6, 0.4);
+  --gold-gradient: linear-gradient(135deg, #FBBF24 0%, #D97706 50%, #B45309 100%);
+  --header-gradient: linear-gradient(180deg, #451A03 0%, #78350F 100%);
+  --footer-gradient: linear-gradient(180deg, #270E02 0%, #451A03 100%);
+  --dock-gradient: linear-gradient(135deg, #451A03 0%, #92400E 100%);
+  --border-light: rgba(217, 119, 6, 0.3);
+  --theme-divider: rgba(217, 119, 6, 0.2);
+  --theme-nav-bg: #FFFFFF;
+  --theme-nav-active: #451A03;
+  --theme-badge-bg: #FFFBEB;
+  --theme-badge-text: #451A03;
+  --theme-price-color: #451A03;
+  --theme-btn-gradient: linear-gradient(135deg, #451A03 0%, #92400E 100%);
+  --theme-btn-secondary-bg: linear-gradient(135deg, #FEF3C7 0%, #FDE68A 100%);
+  --theme-shadow: 0 6px 18px rgba(69, 26, 3, 0.12);
 }
 
 /* Theme 6: Imperial Velvet & Amethyst */
 [data-theme="purple"] {
+  --bg-app: #FAF5FF;
+  --theme-page-bg: #FAF5FF;
+  --theme-page-gradient: linear-gradient(180deg, #FAF5FF 0%, #F3E8FF 100%);
+  --bg-card: #FFFFFF;
+  --bg-card-soft: #FAF5FF;
+  --bg-secondary: #F3E8FF;
+  --theme-card-bg: #FFFFFF;
+  --theme-card-border: rgba(147, 51, 234, 0.28);
+  --theme-card-hover: rgba(147, 51, 234, 0.65);
+  --theme-surface: #FFFFFF;
+  --theme-input-bg: #FFFFFF;
+  --text-dark: #3B0764;
+  --text-muted: #6B21A8;
   --primary-emerald: #3B0764;
-  --header-gradient: linear-gradient(180deg, #3B0764 0%, #581C87 100%);
-  --footer-gradient: linear-gradient(180deg, #1E0338 0%, #3B0764 100%);
-  --dock-gradient: linear-gradient(135deg, #3B0764 0%, #6B21A8 100%);
+  --theme-primary: #3B0764;
+  --theme-primary-dark: #1E0338;
   --gold-primary: #9333EA;
   --gold-bright: #C084FC;
   --accent-gold: #C084FC;
-  --bg-app: #FAF5FF;
-  --border-light: rgba(147, 51, 234, 0.25);
+  --gold-border: rgba(147, 51, 234, 0.4);
+  --gold-gradient: linear-gradient(135deg, #C084FC 0%, #9333EA 50%, #7E22CE 100%);
+  --header-gradient: linear-gradient(180deg, #3B0764 0%, #581C87 100%);
+  --footer-gradient: linear-gradient(180deg, #1E0338 0%, #3B0764 100%);
+  --dock-gradient: linear-gradient(135deg, #3B0764 0%, #6B21A8 100%);
+  --border-light: rgba(147, 51, 234, 0.28);
+  --theme-divider: rgba(147, 51, 234, 0.18);
+  --theme-nav-bg: #FFFFFF;
+  --theme-nav-active: #3B0764;
+  --theme-badge-bg: #FAF5FF;
+  --theme-badge-text: #3B0764;
+  --theme-price-color: #3B0764;
+  --theme-btn-gradient: linear-gradient(135deg, #3B0764 0%, #7E22CE 100%);
+  --theme-btn-secondary-bg: linear-gradient(135deg, #F3E8FF 0%, #E9D5FF 100%);
+  --theme-shadow: 0 6px 18px rgba(59, 7, 100, 0.12);
 }
 
 /* Theme 7: Champagne & Rose Gold */
 [data-theme="rose"] {
+  --bg-app: #FDF2F8;
+  --theme-page-bg: #FDF2F8;
+  --theme-page-gradient: linear-gradient(180deg, #FDF2F8 0%, #FCE7F3 100%);
+  --bg-card: #FFFFFF;
+  --bg-card-soft: #FDF2F8;
+  --bg-secondary: #FCE7F3;
+  --theme-card-bg: #FFFFFF;
+  --theme-card-border: rgba(219, 39, 119, 0.28);
+  --theme-card-hover: rgba(219, 39, 119, 0.65);
+  --theme-surface: #FFFFFF;
+  --theme-input-bg: #FFFFFF;
+  --text-dark: #4C0519;
+  --text-muted: #831843;
   --primary-emerald: #4C0519;
-  --header-gradient: linear-gradient(180deg, #4C0519 0%, #831843 100%);
-  --footer-gradient: linear-gradient(180deg, #28020C 0%, #4C0519 100%);
-  --dock-gradient: linear-gradient(135deg, #4C0519 0%, #9D174D 100%);
+  --theme-primary: #4C0519;
+  --theme-primary-dark: #28020C;
   --gold-primary: #DB2777;
   --gold-bright: #F472B6;
   --accent-gold: #F472B6;
-  --bg-app: #FDF2F8;
-  --border-light: rgba(219, 39, 119, 0.25);
+  --gold-border: rgba(219, 39, 119, 0.4);
+  --gold-gradient: linear-gradient(135deg, #F472B6 0%, #DB2777 50%, #BE185D 100%);
+  --header-gradient: linear-gradient(180deg, #4C0519 0%, #831843 100%);
+  --footer-gradient: linear-gradient(180deg, #28020C 0%, #4C0519 100%);
+  --dock-gradient: linear-gradient(135deg, #4C0519 0%, #9D174D 100%);
+  --border-light: rgba(219, 39, 119, 0.28);
+  --theme-divider: rgba(219, 39, 119, 0.18);
+  --theme-nav-bg: #FFFFFF;
+  --theme-nav-active: #4C0519;
+  --theme-badge-bg: #FDF2F8;
+  --theme-badge-text: #4C0519;
+  --theme-price-color: #4C0519;
+  --theme-btn-gradient: linear-gradient(135deg, #4C0519 0%, #BE185D 100%);
+  --theme-btn-secondary-bg: linear-gradient(135deg, #FCE7F3 0%, #FBCFE8 100%);
+  --theme-shadow: 0 6px 18px rgba(76, 5, 25, 0.12);
 }
 
-/* Theme 8: Obsidian Cyber & Neon Cyan */
+/* Theme 8: Obsidian Cyber & Neon Cyan (Sleek Dark Theme) */
 [data-theme="dark"], [data-theme="cyber"] {
+  --bg-app: #0B0F19;
+  --theme-page-bg: #0B0F19;
+  --theme-page-gradient: linear-gradient(180deg, #0B0F19 0%, #020617 100%);
+  --bg-card: #131B2E;
+  --bg-card-soft: #1E293B;
+  --bg-secondary: #1E293B;
+  --theme-card-bg: #131B2E;
+  --theme-card-border: rgba(34, 211, 238, 0.35);
+  --theme-card-hover: rgba(34, 211, 238, 0.8);
+  --theme-surface: #131B2E;
+  --theme-input-bg: #131B2E;
+  --text-dark: #F8FAFC;
+  --text-muted: #94A3B8;
   --primary-emerald: #020617;
-  --header-gradient: linear-gradient(180deg, #020617 0%, #0F172A 100%);
-  --footer-gradient: linear-gradient(180deg, #000000 0%, #020617 100%);
-  --dock-gradient: linear-gradient(135deg, #020617 0%, #0E7490 100%);
+  --theme-primary: #020617;
+  --theme-primary-dark: #000000;
   --gold-primary: #0891B2;
   --gold-bright: #22D3EE;
   --accent-gold: #22D3EE;
-  --bg-app: #0F172A;
-  --border-light: rgba(34, 211, 238, 0.25);
+  --gold-border: rgba(34, 211, 238, 0.4);
+  --gold-gradient: linear-gradient(135deg, #22D3EE 0%, #0891B2 50%, #0E7490 100%);
+  --header-gradient: linear-gradient(180deg, #020617 0%, #0F172A 100%);
+  --footer-gradient: linear-gradient(180deg, #000000 0%, #020617 100%);
+  --dock-gradient: linear-gradient(135deg, #020617 0%, #0E7490 100%);
+  --border-light: rgba(34, 211, 238, 0.3);
+  --theme-divider: rgba(34, 211, 238, 0.2);
+  --theme-nav-bg: #131B2E;
+  --theme-nav-active: linear-gradient(135deg, #0891B2 0%, #0E7490 100%);
+  --theme-badge-bg: #1E293B;
+  --theme-badge-text: #22D3EE;
+  --theme-price-color: #22D3EE;
+  --theme-btn-gradient: linear-gradient(135deg, #0891B2 0%, #06B6D4 100%);
+  --theme-btn-secondary-bg: linear-gradient(135deg, #1E293B 0%, #334155 100%);
+  --theme-shadow: 0 8px 24px rgba(0, 0, 0, 0.5);
 }
 
 * {

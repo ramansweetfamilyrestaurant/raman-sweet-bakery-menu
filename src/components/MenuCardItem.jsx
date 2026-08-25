@@ -17,12 +17,12 @@ export default function MenuCardItem({ dish, lang, onClick, onAddToCart, currenc
   return (
     <div 
       style={{
-        background: '#FFFFFF',
+        background: 'var(--theme-card-bg, var(--bg-card, #FFFFFF))',
         borderRadius: 'var(--radius-md)',
         padding: '10px 12px',
         marginBottom: '10px',
-        border: isAvailable ? '1.5px solid var(--gold-border)' : '1.5px dashed #FCA5A5',
-        boxShadow: 'var(--shadow-md)',
+        border: isAvailable ? '1.5px solid var(--theme-card-border, var(--gold-border))' : '1.5px dashed #FCA5A5',
+        boxShadow: 'var(--theme-shadow, var(--shadow-md))',
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'space-between',
@@ -33,12 +33,12 @@ export default function MenuCardItem({ dish, lang, onClick, onAddToCart, currenc
         overflow: 'hidden'
       }}
       onMouseOver={(e) => {
-        e.currentTarget.style.borderColor = 'var(--gold-bright)';
+        e.currentTarget.style.borderColor = 'var(--theme-card-hover, var(--gold-bright))';
         e.currentTarget.style.boxShadow = 'var(--shadow-lg)';
       }}
       onMouseOut={(e) => {
-        e.currentTarget.style.borderColor = isAvailable ? 'var(--gold-border)' : '#FCA5A5';
-        e.currentTarget.style.boxShadow = 'var(--shadow-md)';
+        e.currentTarget.style.borderColor = isAvailable ? 'var(--theme-card-border, var(--gold-border))' : '#FCA5A5';
+        e.currentTarget.style.boxShadow = 'var(--theme-shadow, var(--shadow-md))';
       }}
     >
       {/* Left Details */}
@@ -263,12 +263,12 @@ export default function MenuCardItem({ dish, lang, onClick, onAddToCart, currenc
               fontWeight: 900,
               padding: '3px 12px',
               borderRadius: 'var(--radius-pill)',
-              background: '#FFFFFF',
-              color: 'var(--text-dark)',
-              border: '1.5px solid var(--border-light)',
+              background: 'var(--theme-badge-bg, var(--bg-card-soft, #FFFFFF))',
+              color: 'var(--theme-price-color, var(--text-dark))',
+              border: '1.5px solid var(--theme-card-border, var(--border-light))',
               whiteSpace: 'nowrap',
               lineHeight: 1.2,
-              boxShadow: '0 1px 4px rgba(0,0,0,0.06)',
+              boxShadow: 'var(--theme-shadow, 0 1px 4px rgba(0,0,0,0.06))',
               cursor: 'pointer'
             }}
             onClick={() => onClick(dish)}
@@ -288,9 +288,9 @@ export default function MenuCardItem({ dish, lang, onClick, onAddToCart, currenc
               flexShrink: 0,
               borderRadius: 'var(--radius-sm)',
               overflow: 'hidden',
-              border: '1.5px solid var(--gold-border)',
+              border: '1.5px solid var(--theme-card-border, var(--gold-border))',
               position: 'relative',
-              background: 'var(--gold-soft)',
+              background: 'var(--bg-secondary)',
               cursor: 'pointer',
               boxShadow: 'var(--shadow-sm)'
             }}
@@ -310,7 +310,7 @@ export default function MenuCardItem({ dish, lang, onClick, onAddToCart, currenc
                 onAddToCart(dish, hasHalfPrice ? portionMode : 'full');
               }}
               style={{
-                background: 'linear-gradient(135deg, var(--primary-emerald) 0%, #059669 100%)',
+                background: 'var(--theme-btn-gradient, linear-gradient(135deg, var(--primary-emerald) 0%, var(--gold-primary) 100%))',
                 color: '#FFFFFF',
                 border: 'none',
                 padding: '4px 10px',
@@ -318,7 +318,7 @@ export default function MenuCardItem({ dish, lang, onClick, onAddToCart, currenc
                 fontSize: '0.72rem',
                 fontWeight: 900,
                 cursor: 'pointer',
-                boxShadow: '0 3px 10px rgba(16, 185, 129, 0.35)',
+                boxShadow: 'var(--theme-shadow, 0 3px 10px rgba(0, 0, 0, 0.25))',
                 transition: 'transform 0.15s ease'
               }}
               onMouseOver={(e) => e.currentTarget.style.transform = 'scale(1.05)'}

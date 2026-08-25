@@ -2127,7 +2127,7 @@ export default function App() {
       {/* 🛎️ Live Dine-In Customer Order Tracker Banner */}
       {activeOrderTrack && (info?.direct_ordering_enabled !== false && info?.direct_ordering_enabled !== 0) && (
         <div style={{
-          background: 'linear-gradient(135deg, #0A2315 0%, #143A24 100%)',
+          background: 'var(--header-gradient, linear-gradient(135deg, #0A2315 0%, #143A24 100%))',
           color: '#FFFFFF',
           padding: '10px 16px',
           borderBottom: '2px solid var(--gold-bright)',
@@ -2763,11 +2763,11 @@ export default function App() {
           top: '80px',
           left: '50%',
           transform: 'translateX(-50%)',
-          background: 'linear-gradient(135deg, #0A2315 0%, #143A24 100%)',
-          color: '#4ADE80',
+          background: 'var(--dock-gradient, var(--header-gradient))',
+          color: 'var(--gold-bright, #4ADE80)',
           padding: '12px 20px',
           borderRadius: 'var(--radius-pill)',
-          border: '1.5px solid #4ADE80',
+          border: '1.5px solid var(--gold-bright, #4ADE80)',
           boxShadow: '0 10px 30px rgba(0,0,0,0.4)',
           zIndex: 10010,
           fontWeight: 800,
@@ -3095,7 +3095,7 @@ export default function App() {
           padding: '20px'
         }}>
           <div style={{
-            background: 'linear-gradient(135deg, #0A2315 0%, #143A24 100%)',
+            background: 'var(--dock-gradient, var(--header-gradient, linear-gradient(135deg, #0A2315 0%, #143A24 100%)))',
             border: '2px solid var(--gold-bright)',
             borderRadius: '24px',
             maxWidth: '420px',

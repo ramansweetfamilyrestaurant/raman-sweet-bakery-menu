@@ -20,11 +20,11 @@ export default function DishCard({ dish, onClick, onAddToCart, currencySymbol = 
     <article 
       onClick={() => onClick(dish)}
       style={{
-        background: '#FFFFFF',
+        background: 'var(--theme-card-bg, var(--bg-card, #FFFFFF))',
         borderRadius: 'var(--radius-md)',
         overflow: 'hidden',
-        boxShadow: 'var(--shadow-sm)',
-        border: '1px solid var(--border-light)',
+        boxShadow: 'var(--theme-shadow, var(--shadow-sm))',
+        border: '1.5px solid var(--theme-card-border, var(--border-light))',
         display: 'flex',
         flexDirection: 'column',
         position: 'relative',
@@ -36,12 +36,12 @@ export default function DishCard({ dish, onClick, onAddToCart, currencySymbol = 
       onMouseOver={(e) => {
         e.currentTarget.style.transform = 'translateY(-3px)';
         e.currentTarget.style.boxShadow = 'var(--shadow-md)';
-        e.currentTarget.style.borderColor = 'var(--border-hover)';
+        e.currentTarget.style.borderColor = 'var(--theme-card-hover, var(--gold-bright))';
       }}
       onMouseOut={(e) => {
         e.currentTarget.style.transform = 'translateY(0)';
-        e.currentTarget.style.boxShadow = 'var(--shadow-sm)';
-        e.currentTarget.style.borderColor = 'var(--border-light)';
+        e.currentTarget.style.boxShadow = 'var(--theme-shadow, var(--shadow-sm))';
+        e.currentTarget.style.borderColor = 'var(--theme-card-border, var(--border-light))';
       }}
     >
       {/* Image Wrap */}
@@ -257,13 +257,13 @@ export default function DishCard({ dish, onClick, onAddToCart, currencySymbol = 
             <span style={{
               fontSize: '0.86rem',
               fontWeight: 900,
-              color: 'var(--text-dark)',
-              background: '#FFFFFF',
-              border: '1.5px solid var(--border-light)',
+              color: 'var(--theme-price-color, var(--text-dark))',
+              background: 'var(--theme-badge-bg, var(--bg-card-soft, #FFFFFF))',
+              border: '1.5px solid var(--theme-card-border, var(--border-light))',
               padding: '3px 10px',
               borderRadius: 'var(--radius-pill)',
               whiteSpace: 'nowrap',
-              boxShadow: '0 1px 4px rgba(0,0,0,0.06)'
+              boxShadow: 'var(--theme-shadow, 0 1px 4px rgba(0,0,0,0.06))'
             }}>
               {symbol}{Number(dish.price).toLocaleString('en-IN')}
             </span>
@@ -287,7 +287,7 @@ export default function DishCard({ dish, onClick, onAddToCart, currencySymbol = 
         <div style={{
           marginTop: '12px',
           paddingTop: '10px',
-          borderTop: '1px solid var(--border-light)',
+          borderTop: '1px solid var(--theme-divider, var(--border-light))',
           display: 'flex',
           justifyContent: 'space-between',
           alignItems: 'center'
@@ -314,15 +314,15 @@ export default function DishCard({ dish, onClick, onAddToCart, currencySymbol = 
                       onAddToCart(dish, 'half');
                     }}
                     style={{
-                      background: 'linear-gradient(135deg, #FEF3C7 0%, #FDE68A 100%)',
-                      color: '#92400E',
-                      border: '1px solid #F59E0B',
+                      background: 'var(--theme-btn-secondary-bg, linear-gradient(135deg, #FEF3C7 0%, #FDE68A 100%))',
+                      color: 'var(--theme-text-primary, #92400E)',
+                      border: '1px solid var(--theme-card-border, #F59E0B)',
                       padding: '4px 10px',
                       borderRadius: 'var(--radius-pill)',
                       fontSize: '0.7rem',
                       fontWeight: 900,
                       cursor: 'pointer',
-                      boxShadow: '0 2px 8px rgba(245, 158, 11, 0.25)',
+                      boxShadow: 'var(--theme-shadow, 0 2px 8px rgba(0, 0, 0, 0.15))',
                       transition: 'transform 0.15s ease'
                     }}
                     onMouseOver={(e) => e.currentTarget.style.transform = 'scale(1.05)'}
@@ -336,7 +336,7 @@ export default function DishCard({ dish, onClick, onAddToCart, currencySymbol = 
                       onAddToCart(dish, 'full');
                     }}
                     style={{
-                      background: 'linear-gradient(135deg, var(--primary-emerald) 0%, #059669 100%)',
+                      background: 'var(--theme-btn-gradient, linear-gradient(135deg, var(--primary-emerald) 0%, var(--gold-primary) 100%))',
                       color: '#FFFFFF',
                       border: 'none',
                       padding: '4px 12px',
@@ -344,7 +344,7 @@ export default function DishCard({ dish, onClick, onAddToCart, currencySymbol = 
                       fontSize: '0.7rem',
                       fontWeight: 900,
                       cursor: 'pointer',
-                      boxShadow: '0 3px 10px rgba(16, 185, 129, 0.35)',
+                      boxShadow: 'var(--theme-shadow, 0 3px 10px rgba(0, 0, 0, 0.25))',
                       transition: 'transform 0.15s ease'
                     }}
                     onMouseOver={(e) => e.currentTarget.style.transform = 'scale(1.05)'}
@@ -360,7 +360,7 @@ export default function DishCard({ dish, onClick, onAddToCart, currencySymbol = 
                     onAddToCart(dish, 'full');
                   }}
                   style={{
-                    background: 'linear-gradient(135deg, var(--primary-emerald) 0%, #059669 100%)',
+                    background: 'var(--theme-btn-gradient, linear-gradient(135deg, var(--primary-emerald) 0%, var(--gold-primary) 100%))',
                     color: '#FFFFFF',
                     border: 'none',
                     padding: '4px 14px',
@@ -368,7 +368,7 @@ export default function DishCard({ dish, onClick, onAddToCart, currencySymbol = 
                     fontSize: '0.74rem',
                     fontWeight: 900,
                     cursor: 'pointer',
-                    boxShadow: '0 3px 10px rgba(16, 185, 129, 0.35)',
+                    boxShadow: 'var(--theme-shadow, 0 3px 10px rgba(0, 0, 0, 0.25))',
                     transition: 'transform 0.15s ease'
                   }}
                   onMouseOver={(e) => e.currentTarget.style.transform = 'scale(1.05)'}

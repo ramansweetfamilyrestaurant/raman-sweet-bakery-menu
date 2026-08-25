@@ -17,8 +17,8 @@ export default function BottomDock({ categoriesCount, lang, onOpenCategories, on
         backdropFilter: 'blur(16px)',
         WebkitBackdropFilter: 'blur(16px)',
         borderRadius: 'var(--radius-pill)',
-        border: '1.5px solid rgba(212, 175, 55, 0.5)',
-        boxShadow: '0 12px 36px rgba(10, 35, 21, 0.45)',
+        border: '1.5px solid var(--border-light, rgba(212, 175, 55, 0.5))',
+        boxShadow: 'var(--theme-shadow, 0 12px 36px rgba(10, 35, 21, 0.45))',
         padding: '7px 14px',
         display: 'flex',
         alignItems: 'center',
@@ -38,7 +38,7 @@ export default function BottomDock({ categoriesCount, lang, onOpenCategories, on
             flex: 1
           }}
         >
-          <Info size={18} color="#D4AF37" />
+          <Info size={18} color="var(--gold-bright, #D4AF37)" />
           Info
         </button>
 
@@ -50,17 +50,17 @@ export default function BottomDock({ categoriesCount, lang, onOpenCategories, on
             display: 'flex',
             alignItems: 'center',
             gap: '6px',
-            background: 'linear-gradient(135deg, #DFBA67 0%, #C5A059 50%, #9B7733 100%)',
-            color: '#0A2315',
+            background: 'var(--gold-gradient, linear-gradient(135deg, #DFBA67 0%, #C5A059 50%, #9B7733 100%))',
+            color: 'var(--primary-emerald, #0A2315)',
             fontSize: '0.82rem',
             fontWeight: 900,
             padding: '9px 22px',
             borderRadius: 'var(--radius-pill)',
-            boxShadow: '0 4px 20px rgba(212, 175, 55, 0.6)',
+            boxShadow: '0 4px 20px rgba(0,0,0, 0.3)',
             letterSpacing: '0.5px'
           }}
         >
-          <BookOpen size={17} color="#0A2315" />
+          <BookOpen size={17} color="var(--primary-emerald, #0A2315)" />
           {lang === 'hi' ? '📖 मेनु' : '📖 MENU'}
         </button>
 

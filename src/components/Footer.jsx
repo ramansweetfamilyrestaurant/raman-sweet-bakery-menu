@@ -49,14 +49,14 @@ export default function Footer({ info, onOpenAdmin, onOpenReviewModal }) {
         }}>
           {info?.openingHours && (
             <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-              <Clock size={16} color="#A7F3D0" />
+              <Clock size={16} color="var(--gold-bright, #A7F3D0)" />
               <span>{info.openingHours}</span>
             </div>
           )}
 
           {info?.phone && (
             <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-              <Phone size={16} color="#A7F3D0" />
+              <Phone size={16} color="var(--gold-bright, #A7F3D0)" />
               <span>{info.phone}</span>
             </div>
           )}
@@ -69,7 +69,7 @@ export default function Footer({ info, onOpenAdmin, onOpenReviewModal }) {
             maxWidth: '450px',
             lineHeight: 1.4
           }}>
-            <MapPin size={14} color="#A7F3D0" style={{ verticalAlign: 'middle', marginRight: '4px' }} />
+            <MapPin size={14} color="var(--gold-bright, #A7F3D0)" style={{ verticalAlign: 'middle', marginRight: '4px' }} />
             {info.address}
           </div>
         )}
@@ -79,8 +79,8 @@ export default function Footer({ info, onOpenAdmin, onOpenReviewModal }) {
             type="button"
             onClick={onOpenReviewModal}
             style={{
-              background: 'linear-gradient(135deg, #FFD700 0%, #FFA500 100%)',
-              color: '#0A2315',
+              background: 'var(--gold-gradient, linear-gradient(135deg, #FFD700 0%, #FFA500 100%))',
+              color: 'var(--primary-emerald, #0A2315)',
               border: 'none',
               padding: '8px 18px',
               borderRadius: 'var(--radius-pill)',
@@ -90,7 +90,7 @@ export default function Footer({ info, onOpenAdmin, onOpenReviewModal }) {
               display: 'inline-flex',
               alignItems: 'center',
               gap: '6px',
-              boxShadow: '0 4px 12px rgba(255, 215, 0, 0.3)',
+              boxShadow: '0 4px 12px rgba(0, 0, 0, 0.25)',
               marginTop: '4px'
             }}
           >

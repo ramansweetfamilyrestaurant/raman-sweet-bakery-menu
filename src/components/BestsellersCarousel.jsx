@@ -53,24 +53,24 @@ export default function BestsellersCarousel({ dishes = [], onSelectDish, currenc
               style={{
                 flexShrink: 0,
                 width: '240px',
-                background: '#FFFFFF',
+                background: 'var(--theme-card-bg, var(--bg-card, #FFFFFF))',
                 borderRadius: 'var(--radius-md)',
                 overflow: 'hidden',
-                border: '1.5px solid var(--gold-border)',
-                boxShadow: 'var(--shadow-md)',
+                border: '1.5px solid var(--theme-card-border, var(--gold-border))',
+                boxShadow: 'var(--theme-shadow, var(--shadow-md))',
                 cursor: 'pointer',
                 transition: 'all 0.25s ease',
                 position: 'relative'
               }}
               onMouseOver={(e) => {
                 e.currentTarget.style.transform = 'translateY(-4px)';
-                e.currentTarget.style.borderColor = 'var(--gold-bright)';
+                e.currentTarget.style.borderColor = 'var(--theme-card-hover, var(--gold-bright))';
                 e.currentTarget.style.boxShadow = 'var(--shadow-lg)';
               }}
               onMouseOut={(e) => {
                 e.currentTarget.style.transform = 'translateY(0)';
-                e.currentTarget.style.borderColor = 'var(--gold-border)';
-                e.currentTarget.style.boxShadow = 'var(--shadow-md)';
+                e.currentTarget.style.borderColor = 'var(--theme-card-border, var(--gold-border))';
+                e.currentTarget.style.boxShadow = 'var(--theme-shadow, var(--shadow-md))';
               }}
             >
               {/* Image */}
@@ -78,7 +78,7 @@ export default function BestsellersCarousel({ dishes = [], onSelectDish, currenc
                 width: '100%',
                 height: '140px',
                 position: 'relative',
-                background: 'var(--gold-soft)',
+                background: 'var(--bg-secondary)',
                 overflow: 'hidden'
               }}>
                 <img
@@ -92,7 +92,7 @@ export default function BestsellersCarousel({ dishes = [], onSelectDish, currenc
                   position: 'absolute',
                   top: '10px',
                   left: '10px',
-                  background: 'linear-gradient(135deg, #0A2315 0%, #143A24 100%)',
+                  background: 'var(--dock-gradient, var(--header-gradient))',
                   color: 'var(--gold-bright)',
                   border: '1px solid var(--gold-bright)',
                   padding: '3px 10px',
