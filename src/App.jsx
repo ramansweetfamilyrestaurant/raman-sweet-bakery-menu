@@ -1101,12 +1101,13 @@ export default function App() {
 
   // Dynamic Theme Color Engine Applicator
   useEffect(() => {
-    if ((view === 'customer' || view === 'admin' || view === 'menu-preview') && info && info.theme_color) {
-      document.documentElement.setAttribute('data-theme', info.theme_color);
-    } else {
+    if (['menu', 'customer', 'admin', 'admin-dashboard', 'admin-setup', 'menu-preview'].includes(view)) {
+      const activeTheme = info?.theme_color || 'gold';
+      document.documentElement.setAttribute('data-theme', activeTheme);
+    } else if (!['super-admin-dashboard', 'super-admin-login'].includes(view)) {
       document.documentElement.setAttribute('data-theme', 'gold');
     }
-  }, [info, view]);
+  }, [info?.theme_color, view]);
 
   const [subscriptionLoading, setSubscriptionLoading] = useState(false);
 
