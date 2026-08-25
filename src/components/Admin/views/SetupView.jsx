@@ -1092,31 +1092,70 @@ export default function SetupView({
                         <div
                           key={t.key}
                           onClick={() => {
-                            setSettingsForm({ ...settingsForm, theme_color: t.key });
+                            setSettingsForm(prev => ({ ...prev, theme_color: t.key }));
                             document.documentElement.setAttribute('data-theme', t.key);
                           }}
                           style={{
-                            padding: '10px 12px',
+                            padding: '12px 14px',
                             borderRadius: '12px',
-                            border: isSelected ? '2px solid #059669' : '1px solid #E2E8F0',
-                            background: isSelected ? '#F0FDF4' : '#FFFFFF',
+                            border: isSelected ? `2px solid ${t.accent}` : '1px solid #E2E8F0',
+                            background: isSelected ? `${t.color}10` : '#FFFFFF',
                             cursor: 'pointer',
                             display: 'flex',
                             alignItems: 'center',
+                            justifyContent: 'space-between',
                             gap: '10px',
-                            transition: 'all 0.15s ease',
-                            boxShadow: isSelected ? '0 2px 8px rgba(5, 150, 105, 0.15)' : 'none'
+                            transition: 'all 0.2s ease',
+                            boxShadow: isSelected ? `0 4px 12px ${t.color}25` : '0 1px 2px rgba(0,0,0,0.03)'
                           }}
                         >
-                          <div style={{ width: '22px', height: '22px', borderRadius: '50%', background: t.color, border: `2px solid ${t.accent}`, flexShrink: 0 }} />
-                          <div style={{ minWidth: 0 }}>
-                            <div style={{ fontSize: '0.82rem', fontWeight: 800, color: isSelected ? '#059669' : '#0F172A', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{t.name}</div>
-                            <div style={{ fontSize: '0.7rem', color: '#64748B' }}>{t.desc}</div>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '10px', minWidth: 0 }}>
+                            <div style={{ width: '26px', height: '26px', borderRadius: '50%', background: t.color, border: `2px solid ${t.accent}`, flexShrink: 0, boxShadow: '0 2px 4px rgba(0,0,0,0.2)' }} />
+                            <div style={{ minWidth: 0 }}>
+                              <div style={{ fontSize: '0.84rem', fontWeight: 800, color: isSelected ? t.color : '#0F172A', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{t.name}</div>
+                              <div style={{ fontSize: '0.7rem', color: '#64748B' }}>{t.desc}</div>
+                            </div>
                           </div>
+                          {isSelected && (
+                            <span style={{ fontSize: '0.70rem', fontWeight: 900, color: '#FFFFFF', background: t.color, border: `1px solid ${t.accent}`, padding: '2px 6px', borderRadius: '6px', flexShrink: 0 }}>
+                              ✓ ACTIVE
+                            </span>
+                          )}
                         </div>
                       );
                     })}
                   </div>
+
+                  {/* Live Customer Menu Preview Box */}
+                  {(() => {
+                    const activeKey = settingsForm.theme_color || visibleThemes[0]?.key || 'gold';
+                    const activeThemeObj = visibleThemes.find(t => t.key === activeKey) || visibleThemes[0] || allThemes[0];
+                    return (
+                      <div style={{ marginTop: '12px', padding: '14px 16px', borderRadius: '14px', background: activeThemeObj.color, color: '#FFFFFF', border: `2px solid ${activeThemeObj.accent}`, boxShadow: '0 4px 16px rgba(0,0,0,0.12)' }}>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
+                          <div style={{ fontSize: '0.70rem', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.06em', color: activeThemeObj.accent }}>
+                            🎨 Live Customer Menu Header Preview
+                          </div>
+                          <span style={{ fontSize: '0.68rem', fontWeight: 800, color: activeThemeObj.color, background: activeThemeObj.accent, padding: '2px 8px', borderRadius: '10px' }}>
+                            {activeThemeObj.name}
+                          </span>
+                        </div>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                          {settingsForm.logo ? (
+                            <img src={settingsForm.logo} alt="Logo" style={{ width: '38px', height: '38px', borderRadius: '10px', objectFit: 'cover', border: `1.5px solid ${activeThemeObj.accent}` }} />
+                          ) : (
+                            <div style={{ width: '38px', height: '38px', borderRadius: '10px', background: 'rgba(255,255,255,0.15)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 900, fontSize: '0.8rem', border: `1.5px solid ${activeThemeObj.accent}` }}>
+                              🍽️
+                            </div>
+                          )}
+                          <div>
+                            <div style={{ fontSize: '0.96rem', fontWeight: 900, color: '#FFFFFF' }}>{settingsForm.name || 'Your Restaurant Name'}</div>
+                            <div style={{ fontSize: '0.74rem', color: 'rgba(255,255,255,0.85)' }}>{settingsForm.tagline || 'Scan QR Code • Digital Luxury Menu'}</div>
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  })()}
                 </>
               );
             })()}
