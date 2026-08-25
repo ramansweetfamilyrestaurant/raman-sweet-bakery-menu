@@ -1027,16 +1027,8 @@ export default function SetupView({
           </div>
 
           <div>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
-              <label style={{ fontSize: '0.74rem', fontWeight: 800, color: '#0F172A', textTransform: 'uppercase', letterSpacing: '0.04em', margin: 0 }}>
-                Customer Menu Luxury Brand Theme:
-              </label>
-              <span style={{ fontSize: '0.68rem', fontWeight: 800, color: '#059669', background: '#DCFCE7', padding: '2px 8px', borderRadius: '12px' }}>
-                8 Presets Available
-              </span>
-            </div>
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '10px' }}>
-              {[
+            {(() => {
+              const allThemes = [
                 { key: 'gold', name: 'Gold & Forest Green', color: '#0A2315', accent: '#D4AF37', desc: 'Taj / Oberoi Luxury' },
                 { key: 'emerald', name: 'Emerald Mint', color: '#064E3B', accent: '#34D399', desc: 'Fresh & Eco Bistro' },
                 { key: 'crimson', name: 'Crimson Ruby', color: '#881337', accent: '#FB7185', desc: 'Royal Fine-Dine' },
@@ -1045,37 +1037,85 @@ export default function SetupView({
                 { key: 'purple', name: 'Imperial Velvet', color: '#3B0764', accent: '#C084FC', desc: 'VIP Lounge & Bar' },
                 { key: 'rose', name: 'Champagne Rose', color: '#4C0519', accent: '#F472B6', desc: 'Chic Patisserie' },
                 { key: 'dark', name: 'Obsidian Cyber', color: '#020617', accent: '#22D3EE', desc: 'Neon Cyber GastroPub' },
-              ].map(t => {
-                const isSelected = (settingsForm.theme_color || 'gold') === t.key;
-                return (
-                  <div
-                    key={t.key}
-                    onClick={() => {
-                      setSettingsForm({ ...settingsForm, theme_color: t.key });
-                      document.documentElement.setAttribute('data-theme', t.key);
-                    }}
-                    style={{
-                      padding: '10px 12px',
-                      borderRadius: '12px',
-                      border: isSelected ? '2px solid #059669' : '1px solid #E2E8F0',
-                      background: isSelected ? '#F0FDF4' : '#FFFFFF',
-                      cursor: 'pointer',
-                      display: 'flex',
-                      alignItems: 'center',
-                      gap: '10px',
-                      transition: 'all 0.15s ease',
-                      boxShadow: isSelected ? '0 2px 8px rgba(5, 150, 105, 0.15)' : 'none'
-                    }}
-                  >
-                    <div style={{ width: '22px', height: '22px', borderRadius: '50%', background: t.color, border: `2px solid ${t.accent}`, flexShrink: 0 }} />
-                    <div style={{ minWidth: 0 }}>
-                      <div style={{ fontSize: '0.82rem', fontWeight: 800, color: isSelected ? '#059669' : '#0F172A', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{t.name}</div>
-                      <div style={{ fontSize: '0.7rem', color: '#64748B' }}>{t.desc}</div>
+              ];
+
+              const planTier = (restaurantInfo?.plan_tier || 'pro').toLowerCase();
+              const rawAllowed = (restaurantInfo?.allowed_themes || (planTier === 'basic' ? 'gold' : planTier === 'pro' ? 'gold,emerald,crimson,navy' : 'ALL')).trim();
+              
+              const isThemePermitted = (themeKey) => {
+                if (rawAllowed === 'ALL') return true;
+                const allowedList = rawAllowed.split(',').map(s => s.trim().toLowerCase());
+                return allowedList.includes(themeKey.toLowerCase());
+              };
+
+              const visibleThemes = allThemes.filter(t => isThemePermitted(t.key));
+
+              return (
+                <>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px', flexWrap: 'wrap', gap: '6px' }}>
+                    <label style={{ fontSize: '0.74rem', fontWeight: 800, color: '#0F172A', textTransform: 'uppercase', letterSpacing: '0.04em', margin: 0 }}>
+                      Customer Menu Luxury Brand Theme:
+                    </label>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                      <span style={{ fontSize: '0.68rem', fontWeight: 800, color: '#059669', background: '#DCFCE7', padding: '2px 8px', borderRadius: '12px' }}>
+                        {visibleThemes.length} Theme{visibleThemes.length === 1 ? '' : 's'} Available on {(restaurantInfo?.plan_tier || 'Current').toUpperCase()} Plan
+                      </span>
+                      {visibleThemes.length < allThemes.length && onOpenBillingModal && (
+                        <button
+                          type="button"
+                          onClick={onOpenBillingModal}
+                          style={{
+                            fontSize: '0.68rem',
+                            fontWeight: 800,
+                            color: '#9333EA',
+                            background: '#F3E8FF',
+                            border: '1px solid #D8B4FE',
+                            padding: '2px 8px',
+                            borderRadius: '12px',
+                            cursor: 'pointer'
+                          }}
+                        >
+                          👑 Unlock All 8 Themes
+                        </button>
+                      )}
                     </div>
                   </div>
-                );
-              })}
-            </div>
+
+                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '10px' }}>
+                    {visibleThemes.map(t => {
+                      const isSelected = (settingsForm.theme_color || visibleThemes[0]?.key || 'gold') === t.key;
+                      return (
+                        <div
+                          key={t.key}
+                          onClick={() => {
+                            setSettingsForm({ ...settingsForm, theme_color: t.key });
+                            document.documentElement.setAttribute('data-theme', t.key);
+                          }}
+                          style={{
+                            padding: '10px 12px',
+                            borderRadius: '12px',
+                            border: isSelected ? '2px solid #059669' : '1px solid #E2E8F0',
+                            background: isSelected ? '#F0FDF4' : '#FFFFFF',
+                            cursor: 'pointer',
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: '10px',
+                            transition: 'all 0.15s ease',
+                            boxShadow: isSelected ? '0 2px 8px rgba(5, 150, 105, 0.15)' : 'none'
+                          }}
+                        >
+                          <div style={{ width: '22px', height: '22px', borderRadius: '50%', background: t.color, border: `2px solid ${t.accent}`, flexShrink: 0 }} />
+                          <div style={{ minWidth: 0 }}>
+                            <div style={{ fontSize: '0.82rem', fontWeight: 800, color: isSelected ? '#059669' : '#0F172A', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{t.name}</div>
+                            <div style={{ fontSize: '0.7rem', color: '#64748B' }}>{t.desc}</div>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </>
+              );
+            })()}
           </div>
 
           <div>

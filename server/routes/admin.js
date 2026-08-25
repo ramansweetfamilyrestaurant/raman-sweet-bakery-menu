@@ -291,8 +291,14 @@ router.get('/me', authenticateToken, async (req, res) => {
       checkSubscriptionStatus(targetId)
     ]);
 
+    const tierKey = (restos[0]?.plan_tier || 'pro').toLowerCase();
+    const planRows = await query('SELECT allowed_themes, theme_color FROM saas_plans WHERE LOWER(key) = $1', [tierKey]);
+    const saasPlan = planRows[0] || {};
+    const allowedThemes = saasPlan.allowed_themes || (tierKey === 'basic' ? 'gold' : tierKey === 'pro' ? 'gold,emerald,crimson,navy' : 'ALL');
+
     const resto = restos[0] ? {
       ...restos[0],
+      allowed_themes: allowedThemes,
       onboarding_completed: restos[0].onboarding_completed !== undefined && restos[0].onboarding_completed !== null ? (restos[0].onboarding_completed === true || restos[0].onboarding_completed === 1 || restos[0].onboarding_completed === 'true') : true,
       location_initialized: restos[0].location_initialized !== undefined && restos[0].location_initialized !== null ? (restos[0].location_initialized === true || restos[0].location_initialized === 1 || restos[0].location_initialized === 'true') : false
     } : null;
@@ -376,6 +382,7 @@ router.get('/subscription-status', authenticateToken, async (req, res) => {
       watermark_removal_enabled: isValTrue(saasPlan.watermark_removal_enabled, true),
       custom_domain_enabled: isValTrue(saasPlan.custom_domain_enabled, true),
       dual_printer_enabled: isValTrue(saasPlan.dual_printer_enabled, tierKey === 'enterprise' || tierKey === 'vip_ultra_plan'),
+      allowed_themes: saasPlan.allowed_themes || (tierKey === 'basic' ? 'gold' : tierKey === 'pro' ? 'gold,emerald,crimson,navy' : 'ALL')
     };
 
     const parseDate = (val) => {
