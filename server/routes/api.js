@@ -11,8 +11,10 @@ import {
   authExchangeRateLimiter,
   locationVerifyRateLimiter,
   orderCreationRateLimiter,
-  serviceRequestRateLimiter
+  serviceRequestRateLimiter,
+  kdsPinRateLimiter
 } from '../middleware/rateLimiters.js';
+import { JWT_SECRET } from '../config/jwt.js';
 import { exchangeAuthCode } from '../services/authCodeService.js';
 import { checkExpiredSubscriptions } from '../subscriptionCron.js';
 import { verifyQrToken, normalizeSpaceType, normalizeSpaceNumber } from '../utils/qrSecurity.js';
@@ -421,6 +423,7 @@ router.get('/menu-bundle', async (req, res) => {
       custom_domain: resto.custom_domain || '',
       theme_color: resto.theme_color || 'gold',
       allowed_themes: saasP.allowed_themes || (planTierKey === 'basic' ? 'gold' : planTierKey === 'pro' ? 'gold,emerald,crimson,navy' : 'ALL'),
+      kds_pin_configured: Boolean(resto.kds_pin_hash),
       active: true
     };
 
@@ -569,6 +572,7 @@ router.get('/info', async (req, res) => {
       order_retention_days: resto.order_retention_days || 7,
       custom_domain: resto.custom_domain || '',
       kds_screen_enabled: resto.kds_screen_enabled !== undefined && resto.kds_screen_enabled !== null ? Number(resto.kds_screen_enabled) : 1,
+      kds_pin_configured: Boolean(resto.kds_pin_hash),
       onboarding_completed: resto.onboarding_completed !== undefined && resto.onboarding_completed !== null ? (resto.onboarding_completed === true || resto.onboarding_completed === 1 || resto.onboarding_completed === 'true') : true,
       location_initialized: resto.location_initialized !== undefined && resto.location_initialized !== null ? (resto.location_initialized === true || resto.location_initialized === 1 || resto.location_initialized === 'true') : false,
       active: true
@@ -2134,13 +2138,167 @@ router.post('/service-requests', serviceRequestRateLimiter, async (req, res) => 
   }
 });
 
-// GET /api/kitchen/orders - Dedicated KDS route per restaurant slug (Strict Multi-Tenant Isolation)
+// Helper: Strict slug-only restaurant resolver (prevents token-header cross-talk during KDS auth)
+async function resolveRestaurantBySlug(slug) {
+  if (!slug || typeof slug !== 'string' || slug.trim() === '') return null;
+  const cleanSlug = slug.trim().toLowerCase();
+  if (['menu', 'default', 'null', 'undefined', 'home', 'index', 'api', 'kitchen'].includes(cleanSlug)) return null;
+  const restos = await query('SELECT * FROM restaurants WHERE LOWER(slug) = $1', [cleanSlug]);
+  if (restos && restos.length > 0) return restos[0];
+  return null;
+}
+
+// 🛡️ Reusable KDS Authorization Verifier
+export function verifyKdsAuthorization(req, resto, requiredPermission = 'kds:read') {
+  if (!resto || !resto.id) {
+    return { authorized: false, status: 404, error: 'restaurant_not_found', message: 'Restaurant not found' };
+  }
+
+  const authHeader = req.headers['authorization'];
+  const token = authHeader && authHeader.split(' ')[1];
+
+  if (!token || token === 'null' || token === 'undefined' || token.trim() === '') {
+    return { authorized: false, status: 401, error: 'NO_KDS_TOKEN', message: 'KDS authentication required. Please provide a valid KDS token or Admin token.' };
+  }
+
+  let decoded;
+  try {
+    decoded = jwt.verify(token.trim(), JWT_SECRET);
+  } catch (err) {
+    if (err.name === 'TokenExpiredError') {
+      return { authorized: false, status: 401, error: 'KDS_TOKEN_EXPIRED', message: 'KDS session token has expired. Please re-enter PIN.' };
+    }
+    return { authorized: false, status: 401, error: 'INVALID_KDS_TOKEN', message: 'Invalid KDS session token. Please re-enter PIN.' };
+  }
+
+  if (!decoded || typeof decoded !== 'object') {
+    return { authorized: false, status: 401, error: 'INVALID_KDS_TOKEN', message: 'Malformed authentication token.' };
+  }
+
+  // Case 1: SuperAdmin master access
+  if (decoded.role === 'superadmin') {
+    return { authorized: true, user: decoded, isSuperAdmin: true };
+  }
+
+  // Case 2: Restaurant Admin access (matching tenant)
+  if (decoded.role === 'restaurant_admin') {
+    if (Number(decoded.restaurant_id) !== Number(resto.id)) {
+      return { authorized: false, status: 403, error: 'TENANT_MISMATCH', message: 'Admin token does not belong to this restaurant.' };
+    }
+    return { authorized: true, user: decoded, isAdmin: true };
+  }
+
+  // Case 3: KDS Screen access (dedicated scoped token)
+  if (decoded.role === 'kds_screen') {
+    // Tenant match check
+    if (Number(decoded.restaurant_id) !== Number(resto.id)) {
+      return { authorized: false, status: 403, error: 'TENANT_MISMATCH', message: 'KDS token does not belong to this restaurant.' };
+    }
+
+    // Permission / scope check
+    const perms = Array.isArray(decoded.permissions) ? decoded.permissions : [];
+    if (!perms.includes(requiredPermission)) {
+      return { authorized: false, status: 403, error: 'INSUFFICIENT_PERMISSIONS', message: 'KDS token lacks required permission.' };
+    }
+
+    // Invalidation check against restaurant's current kds_auth_version
+    const currentVersion = Number(resto.kds_auth_version || 1);
+    const tokenVersion = Number(decoded.auth_version || 1);
+    if (tokenVersion !== currentVersion) {
+      return { authorized: false, status: 401, error: 'KDS_TOKEN_EXPIRED', message: 'KDS session has been invalidated due to PIN change. Please enter new PIN.' };
+    }
+
+    return { authorized: true, user: decoded, isKds: true };
+  }
+
+  return { authorized: false, status: 403, error: 'UNAUTHORIZED_ROLE', message: 'Unauthorized role for KDS access.' };
+}
+
+// POST /api/kitchen/verify-pin - Authenticate kitchen screen with 4-digit PIN (Rate Limited & Scoped)
+router.post('/kitchen/verify-pin', kdsPinRateLimiter, async (req, res) => {
+  try {
+    const { slug, pin } = req.body || {};
+
+    if (!slug || typeof slug !== 'string' || slug.trim() === '') {
+      return res.status(400).json({ error: 'missing_slug', message: 'Restaurant slug is required' });
+    }
+
+    const cleanPin = String(pin || '').trim();
+    if (!/^\d{4}$/.test(cleanPin)) {
+      return res.status(400).json({ error: 'invalid_pin_format', message: 'KDS PIN must be exactly 4 numeric digits' });
+    }
+
+    const resto = await resolveRestaurantBySlug(slug);
+    if (!resto) {
+      return res.status(404).json({ error: 'restaurant_not_found', message: 'Restaurant not found' });
+    }
+
+    // Check SaaS Plan permissions for kds_enabled
+    const planTierKey = (resto.plan_tier || 'pro').toLowerCase();
+    const planRows = await query('SELECT kds_enabled FROM saas_plans WHERE LOWER(key) = $1', [planTierKey]);
+    const saasPlan = planRows[0] || {};
+    const kdsPlanEnabled = saasPlan.kds_enabled !== undefined && saasPlan.kds_enabled !== null
+      ? (saasPlan.kds_enabled === 1 || saasPlan.kds_enabled === true || saasPlan.kds_enabled === '1')
+      : true;
+
+    if (!kdsPlanEnabled) {
+      return res.status(403).json({ error: 'KDS_DISABLED', message: 'Kitchen Display System (KDS) is disabled on your SaaS plan tier.' });
+    }
+
+    // Check if KDS PIN is configured for this restaurant
+    if (!resto.kds_pin_hash) {
+      return res.status(403).json({
+        error: 'KDS_NOT_CONFIGURED',
+        message: 'Kitchen PIN has not been set by the restaurant administrator in Admin Setup.'
+      });
+    }
+
+    const isMatch = await bcrypt.compare(cleanPin, resto.kds_pin_hash);
+    if (!isMatch) {
+      return res.status(401).json({ error: 'INVALID_PIN', message: 'Incorrect 4-digit Kitchen PIN' });
+    }
+
+    const currentVersion = Number(resto.kds_auth_version || 1);
+    const kdsToken = jwt.sign(
+      {
+        role: 'kds_screen',
+        restaurant_id: resto.id,
+        slug: resto.slug,
+        auth_version: currentVersion,
+        permissions: ['kds:read', 'kds:complete']
+      },
+      JWT_SECRET,
+      { expiresIn: '30d' }
+    );
+
+    res.json({
+      success: true,
+      token: kdsToken,
+      restaurant: { id: resto.id, name: resto.name, slug: resto.slug }
+    });
+  } catch (err) {
+    console.error('KDS PIN verify error:', err);
+    res.status(500).json({ error: 'Failed to verify KDS PIN' });
+  }
+});
+
+// GET /api/kitchen/orders - Dedicated KDS route per restaurant slug (Strict Authentication & Data Minimization)
 router.get('/kitchen/orders', async (req, res) => {
   try {
     const { slug } = req.query;
-    const resto = await resolveRestaurant(req, slug);
+    if (!slug || typeof slug !== 'string' || slug.trim() === '') {
+      return res.status(400).json({ error: 'missing_slug', message: 'Restaurant slug is required' });
+    }
+
+    const resto = await resolveRestaurantBySlug(slug);
     if (!resto) {
-      return res.status(404).json({ error: 'Restaurant not found' });
+      return res.status(404).json({ error: 'restaurant_not_found', message: 'Restaurant not found' });
+    }
+
+    // Enforce KDS Authorization (Valid KDS JWT or Admin JWT matching this restaurant)
+    const authCheck = verifyKdsAuthorization(req, resto, 'kds:read');
+    if (!authCheck.authorized) {
+      return res.status(authCheck.status).json({ error: authCheck.error, message: authCheck.message });
     }
 
     // Check SaaS Plan permissions for kds_enabled
@@ -2157,8 +2315,11 @@ router.get('/kitchen/orders', async (req, res) => {
 
     const targetId = resto.id;
 
+    // 🛡️ Data Minimization: Explicitly select ONLY fields required by the Kitchen Display UI
     const orders = await query(`
-      SELECT * FROM orders
+      SELECT id, session_id, round_number, parent_order_id, table_number,
+             customer_name, items, status, kitchen_prepared, created_at
+      FROM orders
       WHERE restaurant_id = $1
         AND status IN ('kitchen', 'preparing')
         AND (kitchen_prepared IS NULL OR kitchen_prepared = 0)
@@ -2173,8 +2334,16 @@ router.get('/kitchen/orders', async (req, res) => {
         parsedItems = o.items;
       }
       return {
-        ...o,
-        items: parsedItems
+        id: o.id,
+        session_id: o.session_id,
+        round_number: o.round_number,
+        parent_order_id: o.parent_order_id,
+        table_number: o.table_number,
+        customer_name: o.customer_name,
+        items: parsedItems,
+        status: o.status,
+        kitchen_prepared: o.kitchen_prepared,
+        created_at: o.created_at
       };
     });
 
@@ -2189,7 +2358,7 @@ router.get('/kitchen/orders', async (req, res) => {
   }
 });
 
-// PATCH /api/kitchen/orders/:id/complete - Mark order food prepared from /kitchen page (Strict Tenant Scoped)
+// PATCH /api/kitchen/orders/:id/complete - Mark order food prepared from /kitchen page (Strict KDS Authentication & Tenant Scoped)
 router.patch('/kitchen/orders/:id/complete', async (req, res) => {
   try {
     const { id } = req.params;
@@ -2205,10 +2374,17 @@ router.patch('/kitchen/orders/:id/complete', async (req, res) => {
       return res.status(400).json({ error: 'missing_slug', message: 'Restaurant slug is required' });
     }
 
-    const resto = await resolveRestaurant(req, slug);
+    const resto = await resolveRestaurantBySlug(slug);
     if (!resto) {
       return res.status(404).json({ error: 'restaurant_not_found', message: 'Restaurant not found' });
     }
+
+    // Enforce KDS Authorization (Valid KDS JWT or Admin JWT matching this restaurant)
+    const authCheck = verifyKdsAuthorization(req, resto, 'kds:complete');
+    if (!authCheck.authorized) {
+      return res.status(authCheck.status).json({ error: authCheck.error, message: authCheck.message });
+    }
+
     const targetId = resto.id;
 
     // Check if order exists and belongs to this tenant restaurant

@@ -1,12 +1,51 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Clock, Maximize2, Minimize2, Flame, Bell, AlertTriangle } from 'lucide-react';
+import { Clock, Maximize2, Minimize2, Flame, Bell, AlertTriangle, Lock, KeyRound, CheckCircle, Delete, LogOut } from 'lucide-react';
 
 export default function StandaloneKdsPage({ slug = '' }) {
   const [orders, setOrders] = useState([]);
   const [restaurantName, setRestaurantName] = useState('Kitchen Display System');
   const [currentTime, setCurrentTime] = useState(new Date());
   const [isFullscreen, setIsFullscreen] = useState(false);
-  const [prevCount, setPrevCount] = useState(0);
+  const [loading, setLoading] = useState(true);
+  const [notFound, setNotFound] = useState(false);
+  const [kdsDisabled, setKdsDisabled] = useState(false);
+  const [needsPinUnlock, setNeedsPinUnlock] = useState(false);
+  const [pinUnconfigured, setPinUnconfigured] = useState(false);
+  const [pinInput, setPinInput] = useState('');
+  const [pinError, setPinError] = useState('');
+  const [pinSubmitting, setPinSubmitting] = useState(false);
+  const [audioUnlocked, setAudioUnlocked] = useState(false);
+  const [restaurantMeta, setRestaurantMeta] = useState(null);
+
+  const knownOrderIdsRef = useRef(null);
+
+  const resolveCurrentSlug = () => {
+    if (slug) return slug;
+    const parts = window.location.pathname.split('/').filter(Boolean);
+    if (parts.length >= 2 && parts[parts.length - 1] === 'kitchen') {
+      return parts[parts.length - 2];
+    } else if (parts.length > 0 && parts[0] !== 'kitchen') {
+      return parts[0];
+    }
+    const searchSlug = new URLSearchParams(window.location.search).get('slug');
+    if (searchSlug) return searchSlug;
+    return localStorage.getItem('touchqr_admin_slug') || localStorage.getItem('touchqr_last_slug') || '';
+  };
+
+  const getStoredKdsToken = (targetSlug) => {
+    if (!targetSlug) return '';
+    return localStorage.getItem(`touchqr_kds_token_${targetSlug}`) || '';
+  };
+
+  const setStoredKdsToken = (targetSlug, token) => {
+    if (!targetSlug) return;
+    localStorage.setItem(`touchqr_kds_token_${targetSlug}`, token);
+  };
+
+  const clearStoredKdsToken = (targetSlug) => {
+    if (!targetSlug) return;
+    localStorage.removeItem(`touchqr_kds_token_${targetSlug}`);
+  };
 
   useEffect(() => {
     const timer = setInterval(() => setCurrentTime(new Date()), 1000);
@@ -20,7 +59,6 @@ export default function StandaloneKdsPage({ slug = '' }) {
       const ctx = new AudioCtx();
       if (ctx.state === 'suspended') ctx.resume();
 
-      // 🚨 Super Loud Zomato/Swiggy Style 8-Cycle Emergency Order Siren Ringtone 🚨
       const pulses = [
         { freq1: 1050, freq2: 1650, start: 0.0 },
         { freq1: 1350, freq2: 1850, start: 0.30 },
@@ -35,7 +73,6 @@ export default function StandaloneKdsPage({ slug = '' }) {
       pulses.forEach(p => {
         const t = ctx.currentTime + p.start;
 
-        // Piercing Siren Tone 1 (Sawtooth)
         const osc1 = ctx.createOscillator();
         const gain1 = ctx.createGain();
         osc1.type = 'sawtooth';
@@ -48,7 +85,6 @@ export default function StandaloneKdsPage({ slug = '' }) {
         osc1.start(t);
         osc1.stop(t + 0.28);
 
-        // High Alarm Resonance Tone 2 (Square)
         const osc2 = ctx.createOscillator();
         const gain2 = ctx.createGain();
         osc2.type = 'square';
@@ -85,9 +121,6 @@ export default function StandaloneKdsPage({ slug = '' }) {
     }
   };
 
-  const knownOrderIdsRef = React.useRef(null);
-  const [audioUnlocked, setAudioUnlocked] = useState(false);
-
   const unlockAudio = () => {
     try {
       const AudioCtx = window.AudioContext || window.webkitAudioContext;
@@ -100,43 +133,59 @@ export default function StandaloneKdsPage({ slug = '' }) {
     setAudioUnlocked(true);
   };
 
-  const [notFound, setNotFound] = useState(false);
-  const [kdsDisabled, setKdsDisabled] = useState(false);
-  const [loading, setLoading] = useState(true);
-
   const fetchOrders = async () => {
+    const targetSlug = resolveCurrentSlug();
+    if (!targetSlug) {
+      setNotFound(true);
+      setLoading(false);
+      return;
+    }
+
+    const token = getStoredKdsToken(targetSlug);
+    if (!token) {
+      setNeedsPinUnlock(true);
+      setLoading(false);
+      return;
+    }
+
     try {
-      let targetSlug = slug;
-      if (!targetSlug) {
-        const parts = window.location.pathname.split('/').filter(Boolean);
-        if (parts.length >= 2 && parts[parts.length - 1] === 'kitchen') {
-          targetSlug = parts[parts.length - 2];
-        } else if (parts.length > 0 && parts[0] !== 'kitchen') {
-          targetSlug = parts[0];
+      const res = await fetch(`/api/kitchen/orders?slug=${encodeURIComponent(targetSlug)}`, {
+        headers: {
+          'Authorization': `Bearer ${token}`
         }
-      }
-      if (!targetSlug) {
-        targetSlug = localStorage.getItem('touchqr_admin_slug') || localStorage.getItem('touchqr_last_slug') || '';
-      }
-      if (!targetSlug) {
-        setNotFound(true);
+      });
+
+      if (res.status === 401 || res.status === 403) {
+        const errData = await res.json().catch(() => ({}));
+        if (errData.error === 'KDS_DISABLED') {
+          setKdsDisabled(true);
+          setLoading(false);
+          return;
+        }
+        if (errData.error === 'KDS_NOT_CONFIGURED') {
+          setPinUnconfigured(true);
+          setLoading(false);
+          return;
+        }
+        clearStoredKdsToken(targetSlug);
+        setNeedsPinUnlock(true);
+        if (errData.message) {
+          setPinError(errData.message);
+        }
         setLoading(false);
         return;
       }
 
-      const res = await fetch(`/api/kitchen/orders?slug=${encodeURIComponent(targetSlug)}`);
       if (res.status === 404) {
         setNotFound(true);
         setLoading(false);
         return;
       }
-      if (res.status === 403) {
-        setKdsDisabled(true);
-        setLoading(false);
-        return;
-      }
+
       const data = await res.json();
       if (data.success) {
+        setNeedsPinUnlock(false);
+        setPinUnconfigured(false);
         if (data.restaurant?.name) {
           setRestaurantName(data.restaurant.name);
         }
@@ -157,10 +206,6 @@ export default function StandaloneKdsPage({ slug = '' }) {
         }
         knownOrderIdsRef.current = currentIds;
         setOrders(activeOrders);
-      } else if (res.status === 404 || data.error === 'Restaurant not found') {
-        setNotFound(true);
-      } else if (res.status === 403 || data.error === 'KDS_DISABLED') {
-        setKdsDisabled(true);
       }
     } catch (e) {
       console.warn('Failed to poll kitchen orders:', e);
@@ -175,21 +220,127 @@ export default function StandaloneKdsPage({ slug = '' }) {
     return () => clearInterval(interval);
   }, [slug]);
 
+  const handleVerifyPin = async (e) => {
+    if (e) e.preventDefault();
+    const cleanPin = pinInput.trim();
+    if (!/^\d{4}$/.test(cleanPin)) {
+      setPinError('Please enter a valid 4-digit numeric PIN');
+      return;
+    }
+
+    const targetSlug = resolveCurrentSlug();
+    if (!targetSlug) return;
+
+    setPinSubmitting(true);
+    setPinError('');
+    try {
+      const res = await fetch('/api/kitchen/verify-pin', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ slug: targetSlug, pin: cleanPin })
+      });
+
+      const data = await res.json();
+      if (res.ok && data.success && data.token) {
+        setStoredKdsToken(targetSlug, data.token);
+        setNeedsPinUnlock(false);
+        setPinInput('');
+        setPinError('');
+        if (data.restaurant?.name) {
+          setRestaurantName(data.restaurant.name);
+        }
+        fetchOrders();
+      } else {
+        if (data.error === 'KDS_NOT_CONFIGURED') {
+          setPinUnconfigured(true);
+        } else if (data.error === 'KDS_DISABLED') {
+          setKdsDisabled(true);
+        } else {
+          setPinError(data.message || 'Incorrect 4-digit Kitchen PIN');
+        }
+      }
+    } catch (err) {
+      setPinError('Connection error. Please check your network and try again.');
+    } finally {
+      setPinSubmitting(false);
+    }
+  };
+
+  const handleKeypadPress = (val) => {
+    if (pinInput.length < 4) {
+      const newPin = pinInput + val;
+      setPinInput(newPin);
+      setPinError('');
+      if (newPin.length === 4) {
+        setTimeout(() => {
+          const cleanPin = newPin.trim();
+          const targetSlug = resolveCurrentSlug();
+          if (!targetSlug || !/^\d{4}$/.test(cleanPin)) return;
+          setPinSubmitting(true);
+          fetch('/api/kitchen/verify-pin', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ slug: targetSlug, pin: cleanPin })
+          })
+            .then(r => r.json().then(data => ({ ok: r.ok, data })))
+            .then(({ ok, data }) => {
+              if (ok && data.success && data.token) {
+                setStoredKdsToken(targetSlug, data.token);
+                setNeedsPinUnlock(false);
+                setPinInput('');
+                setPinError('');
+                if (data.restaurant?.name) setRestaurantName(data.restaurant.name);
+                fetchOrders();
+              } else {
+                if (data.error === 'KDS_NOT_CONFIGURED') {
+                  setPinUnconfigured(true);
+                } else if (data.error === 'KDS_DISABLED') {
+                  setKdsDisabled(true);
+                } else {
+                  setPinError(data.message || 'Incorrect 4-digit Kitchen PIN');
+                  setPinInput('');
+                }
+              }
+            })
+            .catch(() => {
+              setPinError('Connection error. Please try again.');
+            })
+            .finally(() => setPinSubmitting(false));
+        }, 100);
+      }
+    }
+  };
+
+  const handleKeypadDelete = () => {
+    setPinInput(prev => prev.slice(0, -1));
+    setPinError('');
+  };
+
+  const handleKeypadClear = () => {
+    setPinInput('');
+    setPinError('');
+  };
+
+  const handleLockScreen = () => {
+    const targetSlug = resolveCurrentSlug();
+    clearStoredKdsToken(targetSlug);
+    setNeedsPinUnlock(true);
+    setOrders([]);
+  };
+
   const handleMarkPrepared = async (orderId) => {
-    // Get the current slug for tenant scoping
-    const parts = window.location.pathname.split('/').filter(Boolean);
-    let currentSlug = slug || new URLSearchParams(window.location.search).get('slug') || '';
-    if (!currentSlug && parts.length >= 2 && parts[parts.length - 1] === 'kitchen') {
-      currentSlug = parts[parts.length - 2];
-    }
-    if (!currentSlug) {
-      currentSlug = localStorage.getItem('touchqr_admin_slug') || '';
-    }
+    const targetSlug = resolveCurrentSlug();
+    const token = getStoredKdsToken(targetSlug);
     try {
       setOrders(prev => prev.filter(o => o.id !== orderId));
-      await fetch(`/api/kitchen/orders/${orderId}/complete${currentSlug ? `?slug=${encodeURIComponent(currentSlug)}` : ''}`, {
-        method: 'PATCH'
+      const res = await fetch(`/api/kitchen/orders/${orderId}/complete?slug=${encodeURIComponent(targetSlug)}`, {
+        method: 'PATCH',
+        headers: token ? { 'Authorization': `Bearer ${token}` } : {}
       });
+      if (res.status === 401 || res.status === 403) {
+        clearStoredKdsToken(targetSlug);
+        setNeedsPinUnlock(true);
+      }
       fetchOrders();
     } catch (e) {
       alert('Failed to mark order prepared');
@@ -228,21 +379,9 @@ export default function StandaloneKdsPage({ slug = '' }) {
   };
 
   const parseItems = safeParseItems;
-  const [restaurantMeta, setRestaurantMeta] = useState(null);
 
   useEffect(() => {
-    let targetSlug = slug;
-    if (!targetSlug) {
-      const parts = window.location.pathname.split('/').filter(Boolean);
-      if (parts.length >= 2 && parts[parts.length - 1] === 'kitchen') {
-        targetSlug = parts[parts.length - 2];
-      } else if (parts.length > 0 && parts[0] !== 'kitchen') {
-        targetSlug = parts[0];
-      }
-    }
-    if (!targetSlug) {
-      targetSlug = localStorage.getItem('touchqr_admin_slug') || localStorage.getItem('touchqr_last_slug') || '';
-    }
+    const targetSlug = resolveCurrentSlug();
     if (targetSlug) {
       fetch(`/api/info?slug=${encodeURIComponent(targetSlug)}`)
         .then(r => r.json())
@@ -260,7 +399,6 @@ export default function StandaloneKdsPage({ slug = '' }) {
     if (!raw) return 'TAKEAWAY';
     const str = String(raw).trim();
 
-    // 1. Cinema Pattern Matching
     const cMatch = str.match(/^S?(\d+)[- •]+(?:Row[- ]*)?([A-Za-z]+)[- •]+(?:Seat[- ]*)?(\d+)$/i) ||
                    str.match(/Screen\s*(\d+)\s*[-•]\s*Row\s*([A-Za-z]+)\s*[-•]\s*Seat\s*(\d+)/i);
     if (cMatch) {
@@ -270,49 +408,26 @@ export default function StandaloneKdsPage({ slug = '' }) {
       return `🎬 ${str.toUpperCase()}`;
     }
 
-    // 2. Explicit order.space_type has priority #1
     const cleanSpaceType = spaceType ? String(spaceType).trim().toLowerCase() : null;
 
     if (cleanSpaceType === 'cinema_seat' || cleanSpaceType === 'cinema') {
       return `🎬 SEAT ${str.toUpperCase()}`;
     }
-    if (cleanSpaceType === 'room') {
-      const numOnly = str.replace(/^room\s*#?/i, '');
-      return `🏨 ROOM ${numOnly}`;
-    }
-    if (cleanSpaceType === 'cabin') {
-      const numOnly = str.replace(/^cabin\s*#?/i, '');
-      return `🛋️ CABIN ${numOnly}`;
-    }
-    if (cleanSpaceType === 'vip') {
-      const numOnly = str.replace(/^vip\s*#?/i, '');
-      return `👑 VIP ${numOnly}`;
-    }
+    if (cleanSpaceType === 'room') return `🏨 ROOM ${str.replace(/^room\s*#?/i, '')}`;
+    if (cleanSpaceType === 'cabin') return `🛋️ CABIN ${str.replace(/^cabin\s*#?/i, '')}`;
+    if (cleanSpaceType === 'vip') return `👑 VIP ${str.replace(/^vip\s*#?/i, '')}`;
     if (cleanSpaceType === 'table') {
       const numOnly = str.replace(/^table\s*#?/i, '');
       return `TABLE ${numOnly}`;
     }
 
-    // 3. Safe legacy string inference from raw value
-    if (/^room\s*#?\d+/i.test(str)) {
-      const numOnly = str.replace(/^room\s*#?/i, '');
-      return `🏨 ROOM ${numOnly}`;
-    }
-    if (/^cabin\s*#?\d+/i.test(str)) {
-      const numOnly = str.replace(/^cabin\s*#?/i, '');
-      return `🛋️ CABIN ${numOnly}`;
-    }
-    if (/^vip\s*#?\d+/i.test(str)) {
-      const numOnly = str.replace(/^vip\s*#?/i, '');
-      return `👑 VIP ${numOnly}`;
-    }
-
-    // 4. If already prefixed / pictographic
+    if (/^room\s*#?\d+/i.test(str)) return `🏨 ROOM ${str.replace(/^room\s*#?/i, '')}`;
+    if (/^cabin\s*#?\d+/i.test(str)) return `🛋️ CABIN ${str.replace(/^cabin\s*#?/i, '')}`;
+    if (/^vip\s*#?\d+/i.test(str)) return `👑 VIP ${str.replace(/^vip\s*#?/i, '')}`;
     if (/^(takeaway|parcel)/i.test(str) || /^[\p{Extended_Pictographic}\u2000-\u3300]/u.test(str)) {
       return str.toUpperCase();
     }
 
-    // 5. Fallback prefix if provided
     if (fallbackPrefix) {
       const cleanFallback = String(fallbackPrefix).trim().toLowerCase();
       if (cleanFallback === 'room') return `🏨 ROOM ${str}`;
@@ -337,7 +452,7 @@ export default function StandaloneKdsPage({ slug = '' }) {
           🍳 Connecting to Kitchen Display System...
         </h2>
         <span style={{ fontSize: '0.84rem', color: '#64748B' }}>
-          Verifying restaurant authorization & permissions
+          Verifying restaurant authorization & security permissions
         </span>
       </div>
     );
@@ -355,22 +470,17 @@ export default function StandaloneKdsPage({ slug = '' }) {
           fontSize: '4.5rem', marginBottom: '16px', filter: 'drop-shadow(0 4px 16px rgba(239,68,68,0.3))'
         }}>❌</div>
         <h1 style={{ fontSize: '1.75rem', fontWeight: 900, color: '#F87171', margin: '0 0 8px 0' }}>
-          404 - Page Not Found
+          404 - Restaurant Not Found
         </h1>
         <p style={{ fontSize: '0.92rem', color: '#94A3B8', maxWidth: '440px', margin: '0 auto 24px auto', lineHeight: 1.6 }}>
-          The page you are looking for does not exist or has been moved.
+          The kitchen screen you are trying to access does not exist. Please check the URL slug.
         </p>
         <button
           onClick={() => { window.location.href = '/'; }}
           style={{
-            padding: '13px 30px',
-            borderRadius: '9999px',
-            border: 'none',
+            padding: '13px 30px', borderRadius: '9999px', border: 'none',
             background: 'linear-gradient(135deg, #FFD700 0%, #D4AF37 100%)',
-            color: '#0A0A0A',
-            fontWeight: 900,
-            fontSize: '0.92rem',
-            cursor: 'pointer',
+            color: '#0A0A0A', fontWeight: 900, fontSize: '0.92rem', cursor: 'pointer',
             boxShadow: '0 4px 16px rgba(255,215,0,0.3)'
           }}
         >
@@ -398,24 +508,159 @@ export default function StandaloneKdsPage({ slug = '' }) {
           🔒 Kitchen KDS Display Screen Locked
         </h1>
         <p style={{ fontSize: '0.94rem', color: '#94A3B8', maxWidth: '480px', margin: '0 auto 24px auto', lineHeight: 1.6 }}>
-          Dedicated Kitchen Display System (KDS) is locked for this restaurant under its current SaaS subscription plan tier. Please upgrade to Pro or Enterprise plan in SuperAdmin to unlock KDS.
+          Dedicated Kitchen Display System (KDS) is locked for this restaurant under its current SaaS subscription plan tier. Please upgrade to Pro or Enterprise plan to unlock KDS.
         </p>
         <button
           onClick={() => { window.location.href = '/'; }}
           style={{
-            padding: '13px 30px',
-            borderRadius: '9999px',
-            border: 'none',
+            padding: '13px 30px', borderRadius: '9999px', border: 'none',
             background: 'linear-gradient(135deg, #FFD700 0%, #D4AF37 100%)',
-            color: '#0A0A0A',
-            fontWeight: 900,
-            fontSize: '0.92rem',
-            cursor: 'pointer',
+            color: '#0A0A0A', fontWeight: 900, fontSize: '0.92rem', cursor: 'pointer',
             boxShadow: '0 4px 16px rgba(255,215,0,0.3)'
           }}
         >
           🏠 Return to Homepage
         </button>
+      </div>
+    );
+  }
+
+  if (pinUnconfigured) {
+    return (
+      <div style={{
+        minHeight: '100vh', display: 'flex', flexDirection: 'column',
+        alignItems: 'center', justifyContent: 'center', padding: '32px 20px',
+        background: 'linear-gradient(135deg, #0F172A 0%, #1E293B 100%)',
+        color: '#FFFFFF', textAlign: 'center', fontFamily: 'system-ui, sans-serif'
+      }}>
+        <div style={{
+          width: '72px', height: '72px', borderRadius: '50%', background: '#FEE2E2', color: '#DC2626',
+          display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 20px', border: '2px solid #EF4444'
+        }}>
+          <Lock size={38} color="#DC2626" />
+        </div>
+        <h1 style={{ fontSize: '1.75rem', fontWeight: 900, color: '#F87171', margin: '0 0 8px 0' }}>
+          🔒 KDS Screen PIN Not Configured
+        </h1>
+        <p style={{ fontSize: '0.94rem', color: '#94A3B8', maxWidth: '480px', margin: '0 auto 24px auto', lineHeight: 1.6 }}>
+          The restaurant administrator has not set up a 4-digit Kitchen Display PIN yet. Please log into the Admin Dashboard and configure your KDS PIN under <strong>Setup → Security</strong> to activate this kitchen display screen.
+        </p>
+        <button
+          onClick={() => { window.location.href = `/${resolveCurrentSlug()}/admin`; }}
+          style={{
+            padding: '13px 30px', borderRadius: '9999px', border: 'none',
+            background: 'linear-gradient(135deg, #38BDF8 0%, #0284C7 100%)',
+            color: '#FFFFFF', fontWeight: 900, fontSize: '0.92rem', cursor: 'pointer',
+            boxShadow: '0 4px 16px rgba(56,189,248,0.3)'
+          }}
+        >
+          🔐 Go to Restaurant Admin Login
+        </button>
+      </div>
+    );
+  }
+
+  if (needsPinUnlock) {
+    return (
+      <div style={{
+        minHeight: '100vh', display: 'flex', flexDirection: 'column',
+        alignItems: 'center', justifyContent: 'center', padding: '24px 16px',
+        background: 'linear-gradient(135deg, #090D16 0%, #111827 100%)',
+        color: '#FFFFFF', fontFamily: 'system-ui, sans-serif'
+      }}>
+        <div style={{
+          background: '#0F172A', border: '1px solid #1E293B', borderRadius: '24px',
+          padding: '32px 24px', maxWidth: '380px', width: '100%',
+          boxShadow: '0 20px 40px rgba(0,0,0,0.6)', textAlign: 'center'
+        }}>
+          <div style={{
+            width: '60px', height: '60px', borderRadius: '18px',
+            background: 'linear-gradient(135deg, #38BDF8 0%, #2563EB 100%)',
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            margin: '0 auto 16px auto', boxShadow: '0 8px 24px rgba(56,189,248,0.3)'
+          }}>
+            <Lock size={28} color="#FFFFFF" />
+          </div>
+
+          <h2 style={{ fontSize: '1.35rem', fontWeight: 900, color: '#F8FAFC', margin: '0 0 4px 0' }}>
+            {restaurantName}
+          </h2>
+          <span style={{ fontSize: '0.82rem', color: '#94A3B8', fontWeight: 700, display: 'block', marginBottom: '20px' }}>
+            🍳 Kitchen Display System (KDS) Screen Locked
+          </span>
+
+          {pinError && (
+            <div style={{
+              background: '#450A0A', border: '1px solid #EF4444', color: '#FCA5A5',
+              padding: '10px 14px', borderRadius: '12px', fontSize: '0.82rem', fontWeight: 800,
+              marginBottom: '18px', textAlign: 'center'
+            }}>
+              ⚠️ {pinError}
+            </div>
+          )}
+
+          <div style={{ display: 'flex', justifyContent: 'center', gap: '14px', marginBottom: '24px' }}>
+            {[0, 1, 2, 3].map(idx => (
+              <div
+                key={idx}
+                style={{
+                  width: '52px', height: '56px', borderRadius: '14px',
+                  background: '#1E293B', border: pinInput.length === idx ? '2px solid #38BDF8' : '1px solid #334155',
+                  display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  fontSize: '1.6rem', fontWeight: 900, color: '#F8FAFC',
+                  boxShadow: pinInput.length === idx ? '0 0 12px rgba(56,189,248,0.3)' : 'none'
+                }}
+              >
+                {pinInput[idx] ? '●' : ''}
+              </div>
+            ))}
+          </div>
+
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '10px', marginBottom: '18px' }}>
+            {['1', '2', '3', '4', '5', '6', '7', '8', '9', 'C', '0', '⌫'].map((key) => (
+              <button
+                key={key}
+                type="button"
+                disabled={pinSubmitting}
+                onClick={() => {
+                  if (key === 'C') handleKeypadClear();
+                  else if (key === '⌫') handleKeypadDelete();
+                  else handleKeypadPress(key);
+                }}
+                style={{
+                  padding: '16px 0', borderRadius: '14px', border: '1px solid #334155',
+                  background: key === 'C' || key === '⌫' ? '#1E293B' : '#1E293B',
+                  color: key === 'C' ? '#F87171' : key === '⌫' ? '#FBBF24' : '#F8FAFC',
+                  fontSize: '1.25rem', fontWeight: 900, cursor: 'pointer',
+                  transition: 'background 0.1s', userSelect: 'none'
+                }}
+              >
+                {key}
+              </button>
+            ))}
+          </div>
+
+          <button
+            onClick={handleVerifyPin}
+            disabled={pinSubmitting || pinInput.length !== 4}
+            style={{
+              width: '100%', padding: '14px', borderRadius: '14px', border: 'none',
+              background: pinInput.length === 4
+                ? 'linear-gradient(135deg, #22C55E 0%, #16A34A 100%)'
+                : '#334155',
+              color: '#FFFFFF', fontWeight: 900, fontSize: '0.95rem',
+              cursor: pinInput.length === 4 && !pinSubmitting ? 'pointer' : 'not-allowed',
+              opacity: pinSubmitting ? 0.7 : 1,
+              boxShadow: pinInput.length === 4 ? '0 4px 16px rgba(34,197,94,0.3)' : 'none'
+            }}
+          >
+            {pinSubmitting ? '⏳ Verifying...' : '🔓 UNLOCK KITCHEN DISPLAY'}
+          </button>
+
+          <span style={{ fontSize: '0.72rem', color: '#64748B', display: 'block', marginTop: '16px' }}>
+            🔒 Authenticated & Scoped to {restaurantName}
+          </span>
+        </div>
       </div>
     );
   }
@@ -442,7 +687,7 @@ export default function StandaloneKdsPage({ slug = '' }) {
           🔊 TAP HERE TO UNLOCK KITCHEN EMERGENCY ALARM SOUND & FULL LOUD SIREN
         </div>
       )}
-      {/* Header Bar */}
+
       <div style={{
         display: 'flex', alignItems: 'center', justifyContent: 'space-between',
         flexWrap: 'wrap', gap: '12px', background: '#0F172A', padding: '14px 20px',
@@ -478,10 +723,21 @@ export default function StandaloneKdsPage({ slug = '' }) {
             {isFullscreen ? <Minimize2 size={16} /> : <Maximize2 size={16} />}
             <span>{isFullscreen ? 'Exit Fullscreen' : 'Fullscreen'}</span>
           </button>
+
+          <button
+            onClick={handleLockScreen}
+            title="Lock Kitchen Display Screen"
+            style={{
+              background: '#450A0A', border: '1px solid #991B1B', color: '#FCA5A5', padding: '8px 12px', borderRadius: '10px',
+              fontWeight: 800, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.84rem'
+            }}
+          >
+            <Lock size={15} />
+            <span>Lock</span>
+          </button>
         </div>
       </div>
 
-      {/* Tickets Grid */}
       {orders.length === 0 ? (
         <div style={{ padding: '80px 20px', textAlign: 'center', background: '#0F172A', borderRadius: '20px', border: '2px dashed #1E293B', maxWidth: '600px', margin: '40px auto' }}>
           <Flame size={56} color="#475569" style={{ marginBottom: '16px' }} />
@@ -515,7 +771,6 @@ export default function StandaloneKdsPage({ slug = '' }) {
                   overflow: 'hidden'
                 }}
               >
-                {/* Header */}
                 <div style={{ background: isDelayed ? '#7F1D1D' : '#1E3A8A', padding: '12px 16px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                   <div>
                     <strong style={{ fontSize: '1.3rem', color: '#FFF', fontWeight: 900, display: 'block' }}>
@@ -543,7 +798,6 @@ export default function StandaloneKdsPage({ slug = '' }) {
                   </div>
                 </div>
 
-                {/* Items List */}
                 <div style={{ padding: '16px', flex: 1, display: 'flex', flexDirection: 'column', gap: '10px' }}>
                   {hasNotes && (
                     <div style={{ padding: '10px 12px', background: '#451A03', border: '1px solid #F59E0B', borderRadius: '10px', color: '#FDE68A', fontSize: '0.85rem', fontWeight: 800, display: 'flex', alignItems: 'flex-start', gap: '8px' }}>
@@ -610,7 +864,6 @@ export default function StandaloneKdsPage({ slug = '' }) {
                   </div>
                 </div>
 
-                {/* Footer Action Button */}
                 <div style={{ padding: '14px 16px', background: '#0F172A', borderTop: '1px solid #334155' }}>
                   <button
                     onClick={() => handleMarkPrepared(order.id)}
@@ -635,4 +888,3 @@ export default function StandaloneKdsPage({ slug = '' }) {
     </div>
   );
 }
-

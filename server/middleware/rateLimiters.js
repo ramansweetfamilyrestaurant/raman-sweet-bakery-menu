@@ -192,3 +192,22 @@ export const serviceRequestRateLimiter = rateLimit({
   message: { error: 'Too many service requests. Please wait a moment before calling staff again.' },
   handler: createRateLimitHandler({ error: 'Too many service requests. Please wait a moment before calling staff again.' })
 });
+
+/**
+ * 8. Kitchen Display System (KDS) PIN Verification Rate Limiter
+ * Protection against PIN brute-forcing
+ * Limit: 10 attempts per IP per restaurant per 15 minutes
+ */
+export const kdsPinRateLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 minutes
+  max: 10,
+  standardHeaders: true,
+  legacyHeaders: false,
+  passOnStoreError: true,
+  validate: { keyGeneratorIpFallback: false },
+  keyGenerator: createScopedKeyGenerator('kds_pin'),
+  store: getRateLimitStore('kds_pin:'),
+  message: { error: 'TOO_MANY_PIN_ATTEMPTS', message: 'Too many KDS PIN attempts. Please wait 15 minutes and try again.' },
+  handler: createRateLimitHandler({ error: 'TOO_MANY_PIN_ATTEMPTS', message: 'Too many KDS PIN attempts. Please wait 15 minutes and try again.' })
+});
+

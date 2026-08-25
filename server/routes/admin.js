@@ -297,8 +297,10 @@ router.get('/me', authenticateToken, async (req, res) => {
     const saasPlan = planRows[0] || {};
     const allowedThemes = saasPlan.allowed_themes || (tierKey === 'basic' ? 'gold' : tierKey === 'pro' ? 'gold,emerald,crimson,navy' : 'ALL');
 
+    const { kds_pin_hash, ...safeRestoObj } = (restos[0] || {});
     const resto = restos[0] ? {
-      ...restos[0],
+      ...safeRestoObj,
+      kds_pin_configured: Boolean(kds_pin_hash),
       allowed_themes: allowedThemes,
       onboarding_completed: restos[0].onboarding_completed !== undefined && restos[0].onboarding_completed !== null ? (restos[0].onboarding_completed === true || restos[0].onboarding_completed === 1 || restos[0].onboarding_completed === 'true') : true,
       location_initialized: restos[0].location_initialized !== undefined && restos[0].location_initialized !== null ? (restos[0].location_initialized === true || restos[0].location_initialized === 1 || restos[0].location_initialized === 'true') : false
@@ -1422,6 +1424,33 @@ const handleUpdateSettings = async (req, res) => {
           feature: 'gst_invoice_enabled',
           message: '5% GST Tax Invoicing is not included in your current SaaS plan. Please upgrade your plan to enable GST billing.'
         });
+      }
+    // 🛡️ KDS PIN Configuration & Invalidation Handler
+    const { kds_pin } = req.body;
+    if (kds_pin !== undefined) {
+      if (kds_pin === '' || kds_pin === null) {
+        // Reset KDS PIN and increment token version to invalidate existing KDS tokens
+        await query(`
+          UPDATE restaurants 
+          SET kds_pin_hash = NULL,
+              kds_auth_version = COALESCE(kds_auth_version, 1) + 1 
+          WHERE id = $1
+        `, [targetId]);
+      } else {
+        const cleanPin = String(kds_pin).trim();
+        if (!/^\d{4}$/.test(cleanPin)) {
+          return res.status(400).json({
+            error: 'invalid_kds_pin',
+            message: 'Kitchen Display (KDS) PIN must be exactly 4 numeric digits (e.g. 1234)'
+          });
+        }
+        const pinHash = await bcrypt.hash(cleanPin, 10);
+        await query(`
+          UPDATE restaurants 
+          SET kds_pin_hash = $1,
+              kds_auth_version = COALESCE(kds_auth_version, 1) + 1 
+          WHERE id = $2
+        `, [pinHash, targetId]);
       }
     }
 

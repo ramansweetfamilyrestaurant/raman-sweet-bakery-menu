@@ -528,7 +528,8 @@ async function createTables() {
       `ALTER TABLE restaurants ADD COLUMN IF NOT EXISTS service_model VARCHAR(50) DEFAULT 'dine_in';`,
       `UPDATE restaurants SET service_model = 'cinema' WHERE business_type = 'cinema_theatre' OR service_model = 'seat_service' OR service_model = 'cinema';`,
       `UPDATE restaurants SET service_model = 'hotel' WHERE business_type = 'hotel_resort' OR service_model = 'in_room_dining' OR service_model = 'hotel';`,
-      `UPDATE restaurants SET service_model = 'dine_in' WHERE service_model IS NULL OR service_model = '' OR service_model = 'dine_in_table' OR (business_type != 'cinema_theatre' AND business_type != 'hotel_resort');`,
+      `ALTER TABLE restaurants ADD COLUMN IF NOT EXISTS kds_pin_hash VARCHAR(255);`,
+      `ALTER TABLE restaurants ADD COLUMN IF NOT EXISTS kds_auth_version INT DEFAULT 1;`,
       // Step 2.1 Table Presence Verification Foundation
       `ALTER TABLE restaurants ADD COLUMN IF NOT EXISTS table_verification_mode VARCHAR(50) DEFAULT 'GPS_WITH_STAFF_FALLBACK';`,
       `ALTER TABLE restaurants ADD COLUMN IF NOT EXISTS staff_verification_timeout_seconds INT DEFAULT 120;`,

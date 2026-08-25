@@ -66,6 +66,53 @@ export default function SetupView({
   const [planToChange, setPlanToChange] = useState(null); // target plan object for confirmation modal
   const [actionLoading, setActionLoading] = useState(false);
   const [billingActionMsg, setBillingActionMsg] = useState(null); // { type: 'success' | 'error', text: '' }
+  const [kdsPinInput, setKdsPinInput] = useState('');
+  const [kdsPinMsg, setKdsPinMsg] = useState(null); // { type: 'success' | 'error', text: '' }
+  const [savingKdsPin, setSavingKdsPin] = useState(false);
+
+  const handleSaveKdsPin = async (e) => {
+    if (e) e.preventDefault();
+    const cleanPin = kdsPinInput.trim();
+    if (!cleanPin && !restaurantInfo?.kds_pin_configured) {
+      setKdsPinMsg({ type: 'error', text: 'Please enter a 4-digit numeric PIN (e.g. 1234)' });
+      return;
+    }
+    if (cleanPin && !/^\d{4}$/.test(cleanPin)) {
+      setKdsPinMsg({ type: 'error', text: 'KDS PIN must be exactly 4 numeric digits (e.g. 1234)' });
+      return;
+    }
+
+    setSavingKdsPin(true);
+    setKdsPinMsg(null);
+    try {
+      const res = await fetch('/api/admin/settings', {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({ kds_pin: cleanPin })
+      });
+      const data = await res.json();
+      if (res.ok && data.success) {
+        setKdsPinMsg({
+          type: 'success',
+          text: cleanPin ? '✓ 4-Digit Kitchen PIN saved! Kitchen screen is now active.' : '✓ KDS PIN has been cleared and locked.'
+        });
+        setKdsPinInput('');
+        if (onRefreshInfo) await onRefreshInfo();
+      } else {
+        setKdsPinMsg({
+          type: 'error',
+          text: data.message || data.error || 'Failed to update KDS PIN'
+        });
+      }
+    } catch (err) {
+      setKdsPinMsg({ type: 'error', text: 'Network error saving KDS PIN' });
+    } finally {
+      setSavingKdsPin(false);
+    }
+  };
 
   const loadSubscriptionData = async () => {
     if (!token) return;
@@ -861,8 +908,8 @@ export default function SetupView({
                   <Lock size={20} />
                 </div>
                 <div style={{ minWidth: 0 }}>
-                  <strong style={{ fontSize: '0.94rem', color: '#0F172A', fontWeight: 800, display: 'block' }}>Admin Security</strong>
-                  <span style={{ fontSize: '0.75rem', color: '#64748B', fontWeight: 500 }}>Owner username and master login password</span>
+                  <strong style={{ fontSize: '0.94rem', color: '#0F172A', fontWeight: 800, display: 'block' }}>Admin Security & KDS PIN</strong>
+                  <span style={{ fontSize: '0.75rem', color: '#64748B', fontWeight: 500 }}>Owner credentials & Kitchen (KDS) 4-digit PIN</span>
                 </div>
               </div>
               <ChevronRight size={18} color="#94A3B8" style={{ flexShrink: 0 }} />
@@ -3050,6 +3097,66 @@ export default function SetupView({
               onChange={(e) => setCredForm({ ...credForm, confirmPassword: e.target.value })}
               style={{ width: '100%', padding: '10px 14px', borderRadius: '10px', border: '1px solid #CBD5E1', fontSize: '0.9rem', boxSizing: 'border-box' }}
             />
+          </div>
+
+          {/* 🍳 KDS 4-Digit PIN Security Management */}
+          <div style={{ margin: '14px 0 0 0', borderTop: '1px solid #E2E8F0', paddingTop: '18px' }}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '8px' }}>
+              <strong style={{ fontSize: '0.84rem', color: '#0F172A', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.04em' }}>
+                🍳 Kitchen Display (KDS) PIN
+              </strong>
+              <span style={{
+                fontSize: '0.72rem',
+                fontWeight: 800,
+                padding: '3px 8px',
+                borderRadius: '6px',
+                background: restaurantInfo?.kds_pin_configured ? '#DCFCE7' : '#FEE2E2',
+                color: restaurantInfo?.kds_pin_configured ? '#16A34A' : '#DC2626'
+              }}>
+                {restaurantInfo?.kds_pin_configured ? '🟢 PIN Active' : '🔴 Locked (No PIN)'}
+              </span>
+            </div>
+            <p style={{ fontSize: '0.76rem', color: '#64748B', margin: '0 0 12px 0', lineHeight: 1.4 }}>
+              Set a simple 4-digit PIN for your kitchen screen tablet (e.g. 1234). Kitchen cooks unlock live orders without full admin access. Updating this PIN automatically logs out existing kitchen screens.
+            </p>
+
+            {kdsPinMsg?.text && (
+              <div style={{
+                padding: '10px 14px', borderRadius: '10px', fontSize: '0.82rem', fontWeight: 800, marginBottom: '12px',
+                background: kdsPinMsg.type === 'error' ? '#FEE2E2' : '#DCFCE7',
+                color: kdsPinMsg.type === 'error' ? '#DC2626' : '#15803D',
+                border: `1px solid ${kdsPinMsg.type === 'error' ? '#FECACA' : '#86EFAC'}`
+              }}>
+                {kdsPinMsg.text}
+              </div>
+            )}
+
+            <div style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
+              <input
+                type="password"
+                maxLength={4}
+                placeholder="4-digit PIN"
+                value={kdsPinInput}
+                onChange={(e) => setKdsPinInput(e.target.value.replace(/\D/g, '').slice(0, 4))}
+                style={{
+                  width: '130px', padding: '10px 14px', borderRadius: '10px', border: '1px solid #CBD5E1',
+                  fontSize: '1.1rem', fontWeight: 800, textAlign: 'center', letterSpacing: '4px', boxSizing: 'border-box'
+                }}
+              />
+              <button
+                type="button"
+                disabled={savingKdsPin || kdsPinInput.length !== 4}
+                onClick={handleSaveKdsPin}
+                style={{
+                  flex: 1, padding: '11px 16px', borderRadius: '10px', border: 'none',
+                  background: kdsPinInput.length === 4 ? '#2563EB' : '#94A3B8',
+                  color: '#FFFFFF', fontWeight: 800, fontSize: '0.82rem',
+                  cursor: kdsPinInput.length === 4 && !savingKdsPin ? 'pointer' : 'not-allowed'
+                }}
+              >
+                {savingKdsPin ? 'Saving...' : (restaurantInfo?.kds_pin_configured ? 'Update KDS PIN' : 'Set KDS PIN')}
+              </button>
+            </div>
           </div>
         </form>
       </AdminDrawer>
