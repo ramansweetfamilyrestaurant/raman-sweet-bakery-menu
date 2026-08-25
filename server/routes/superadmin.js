@@ -1188,6 +1188,58 @@ router.get('/operations/stats', authenticateToken, requireSuperAdmin, async (req
       console.warn('Stored images telemetry notice:', e.message);
     }
 
+    // 2c. Active Sessions Telemetry (Open unsettled dining sessions across all tenants)
+    let activeSessionsCount = 0;
+    let activeOrdersCount = 0;
+    try {
+      const sessRes = await query(`
+        SELECT 
+          COUNT(DISTINCT COALESCE(session_id, restaurant_id::text || '_' || table_number::text))::int AS active_sessions,
+          COUNT(*)::int AS active_orders
+        FROM orders
+        WHERE LOWER(status) NOT IN ('completed', 'cancelled', 'rejected') 
+          AND (is_settled = 0 OR is_settled IS NULL)
+      `);
+      if (sessRes && sessRes[0]) {
+        activeSessionsCount = sessRes[0].active_sessions || 0;
+        activeOrdersCount = sessRes[0].active_orders || 0;
+      }
+    } catch (e) {
+      console.warn('Active sessions query notice:', e.message);
+    }
+
+    // 2d. Dishes Hosted Telemetry (Total dishes across all tenant menus)
+    let totalDishesHosted = 0;
+    let availableDishesHosted = 0;
+    try {
+      const dishRes = await query(`
+        SELECT 
+          COUNT(*)::int AS total_dishes,
+          COUNT(CASE WHEN available IS NOT FALSE THEN 1 END)::int AS available_dishes
+        FROM dishes
+      `);
+      if (dishRes && dishRes[0]) {
+        totalDishesHosted = dishRes[0].total_dishes || 0;
+        availableDishesHosted = dishRes[0].available_dishes || 0;
+      }
+    } catch (e) {
+      console.warn('Dishes hosted query notice:', e.message);
+    }
+
+    // 2e. QR Scans Telemetry (Platform all-time scans vs daily tracking status)
+    let totalLifetimeScans = 0;
+    try {
+      const scanRes = await query(`
+        SELECT COALESCE(SUM(scan_count), 0)::bigint AS total_scans
+        FROM restaurants
+      `);
+      if (scanRes && scanRes[0]) {
+        totalLifetimeScans = parseInt(scanRes[0].total_scans, 10) || 0;
+      }
+    } catch (e) {
+      console.warn('Scan count query notice:', e.message);
+    }
+
     // 3. Active Connections Count
     let activeConnections = 1;
     try {
@@ -1271,6 +1323,23 @@ router.get('/operations/stats', authenticateToken, requireSuperAdmin, async (req
         r2_usage_status: 'not_metered',
         quota_bytes: null,
         quota_status: 'not_enforced'
+      },
+      telemetry: {
+        active_sessions: {
+          value: activeSessionsCount,
+          active_orders_count: activeOrdersCount,
+          status: 'live'
+        },
+        dishes_hosted: {
+          value: totalDishesHosted,
+          available_dishes: availableDishesHosted,
+          status: 'live'
+        },
+        qr_scans_today: {
+          value: null,
+          total_all_time: totalLifetimeScans,
+          status: 'not_tracked'
+        }
       },
       system: {
         node_version: process.version,

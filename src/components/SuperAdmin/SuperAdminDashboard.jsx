@@ -1368,36 +1368,57 @@ export default function SuperAdminDashboard({ token, username, onLogout, onRetur
 
                     {/* 2x2 Telemetry Grid */}
                     <div className="sa-telemetry-grid">
-                      <div className="sa-telemetry-card">
+                      <div
+                        className="sa-telemetry-card"
+                        title={`Lifetime Cumulative Scans: ${(dbStats?.telemetry?.qr_scans_today?.total_all_time ?? totalScans).toLocaleString()} (Daily scan timestamps not metered)`}
+                      >
                         <div className="sa-telemetry-top">
                           <span className="sa-telemetry-label">QR Scans (Today)</span>
                           <QrCode size={13} color="#7E22CE" />
                         </div>
                         <div className="sa-telemetry-val-box">
-                          <span className="sa-telemetry-val">{totalScans > 0 ? totalScans.toLocaleString() : '1,345'}</span>
-                          <span className="sa-telemetry-trend">+12.5%</span>
+                          <span className="sa-telemetry-val" style={{ fontSize: '0.90rem', color: 'var(--sa-text-muted)' }}>
+                            Not tracked
+                          </span>
+                          <span className="sa-telemetry-sub">
+                            {(dbStats?.telemetry?.qr_scans_today?.total_all_time ?? totalScans).toLocaleString()} total
+                          </span>
                         </div>
                       </div>
 
-                      <div className="sa-telemetry-card">
+                      <div
+                        className="sa-telemetry-card"
+                        title={`Total Dishes: ${(dbStats?.telemetry?.dishes_hosted?.value ?? totalDishes).toLocaleString()} dishes hosted across active tenant menus`}
+                      >
                         <div className="sa-telemetry-top">
                           <span className="sa-telemetry-label">Dishes Hosted</span>
                           <Utensils size={13} color="#15803D" />
                         </div>
                         <div className="sa-telemetry-val-box">
-                          <span className="sa-telemetry-val">{totalDishes > 0 ? totalDishes.toLocaleString() : '2,453'}</span>
-                          <span className="sa-telemetry-trend">+8.3%</span>
+                          <span className="sa-telemetry-val">
+                            {(dbStats?.telemetry?.dishes_hosted?.value ?? totalDishes).toLocaleString()}
+                          </span>
+                          <span className="sa-telemetry-sub">
+                            Active in menus
+                          </span>
                         </div>
                       </div>
 
-                      <div className="sa-telemetry-card">
+                      <div
+                        className="sa-telemetry-card"
+                        title={`Active Dining Sessions: ${(dbStats?.telemetry?.active_sessions?.value ?? 0).toLocaleString()} open table sessions (${(dbStats?.telemetry?.active_sessions?.active_orders_count ?? 0).toLocaleString()} active orders)`}
+                      >
                         <div className="sa-telemetry-top">
                           <span className="sa-telemetry-label">Active Sessions</span>
                           <Activity size={13} color="#2563EB" />
                         </div>
                         <div className="sa-telemetry-val-box">
-                          <span className="sa-telemetry-val">27</span>
-                          <span className="sa-telemetry-sub">Live Now</span>
+                          <span className="sa-telemetry-val">
+                            {(dbStats?.telemetry?.active_sessions?.value ?? 0).toLocaleString()}
+                          </span>
+                          <span className="sa-telemetry-sub">
+                            Live dining now
+                          </span>
                         </div>
                       </div>
 
