@@ -34,7 +34,7 @@ export default function CustomerHeader({ info, lang, tableNum, spaceLabel, onTog
       WebkitBackdropFilter: 'blur(12px)',
       color: '#FFFFFF',
       padding: '12px 14px 14px',
-      borderBottom: '1.5px solid rgba(212, 175, 55, 0.4)',
+      borderBottom: '1.5px solid var(--border-light, rgba(212, 175, 55, 0.4))',
       position: 'sticky',
       top: 0,
       zIndex: 1000,
@@ -58,7 +58,7 @@ export default function CustomerHeader({ info, lang, tableNum, spaceLabel, onTog
               fontWeight: 800,
               color: '#FFFFFF',
               background: 'rgba(255, 255, 255, 0.14)',
-              border: '1px solid rgba(212, 175, 55, 0.5)',
+              border: '1px solid var(--border-light, rgba(212, 175, 55, 0.5))',
               padding: '3px 8px',
               borderRadius: 'var(--radius-pill)',
               display: 'inline-flex',
@@ -66,7 +66,7 @@ export default function CustomerHeader({ info, lang, tableNum, spaceLabel, onTog
               gap: '4px'
             }}
           >
-            <Globe size={12} color="#D4AF37" />
+            <Globe size={12} color="var(--gold-bright, #D4AF37)" />
             {lang === 'hi' ? 'हिंदी' : 'EN / हिंदी'}
           </button>
         ) : <div />}
@@ -79,8 +79,8 @@ export default function CustomerHeader({ info, lang, tableNum, spaceLabel, onTog
               style={{
                 fontSize: '0.68rem',
                 fontWeight: 800,
-                color: '#0A2315',
-                background: 'linear-gradient(135deg, #FFD700 0%, #DFBA67 100%)',
+                color: 'var(--primary-emerald, #0A2315)',
+                background: 'linear-gradient(135deg, var(--gold-bright, #FFD700) 0%, var(--gold-primary, #DFBA67) 100%)',
                 border: '1px solid #FFF',
                 padding: '3px 8px',
                 borderRadius: 'var(--radius-pill)',
@@ -92,7 +92,7 @@ export default function CustomerHeader({ info, lang, tableNum, spaceLabel, onTog
               }}
               title="Rate & Review on Google"
             >
-              <Star size={11} fill="#0A2315" color="#0A2315" /> Rate Us
+              <Star size={11} fill="var(--primary-emerald, #0A2315)" color="var(--primary-emerald, #0A2315)" /> Rate Us
             </button>
           )}
 
@@ -169,9 +169,9 @@ export default function CustomerHeader({ info, lang, tableNum, spaceLabel, onTog
           width: '44px',
           height: '44px',
           borderRadius: '50%',
-          border: '2px solid #D4AF37',
+          border: '2px solid var(--gold-bright, #D4AF37)',
           padding: '1px',
-          background: '#0A2315',
+          background: 'var(--primary-emerald, #0A2315)',
           flexShrink: 0
         }}>
           <img 

@@ -41,7 +41,7 @@ export default function CategoryNav({ categories, selectedCategory, onSelectCate
             boxShadow: 'var(--shadow-sm)'
           }}
         >
-          <Sparkles size={13} color={selectedCategory === 'all' ? '#D4AF37' : 'var(--primary-emerald)'} />
+          <Sparkles size={13} color={selectedCategory === 'all' ? 'var(--gold-bright, #D4AF37)' : 'var(--primary-emerald)'} />
           {lang === 'hi' ? 'सभी श्रेणियां' : 'All Categories'}
         </button>
 

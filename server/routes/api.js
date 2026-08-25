@@ -417,6 +417,8 @@ router.get('/menu-bundle', async (req, res) => {
       bluetooth_kot_enabled: bluetoothKotEnabled,
       dual_printer_enabled: dualPrinterEnabled,
       custom_domain: resto.custom_domain || '',
+      theme_color: resto.theme_color || 'gold',
+      allowed_themes: saasP.allowed_themes || (planTierKey === 'basic' ? 'gold' : planTierKey === 'pro' ? 'gold,emerald,crimson,navy' : 'ALL'),
       active: true
     };
 

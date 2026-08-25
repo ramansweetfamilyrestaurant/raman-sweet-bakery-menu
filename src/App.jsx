@@ -18,6 +18,7 @@ import CustomerReviewModal from './components/CustomerReviewModal';
 import PresenceVerificationModal from './components/PresenceVerificationModal';
 import CategoryImage from './components/CategoryImage';
 import { isValidQrTokenFormat, normalizeSpaceType, normalizeSpaceNumber } from './utils/qrSecurity';
+import { resolveTheme, DEFAULT_THEME } from './constants/themes';
 
 // Robust Lazy Loading with automatic retry on new production deploys
 const lazyWithRetry = (componentImport) =>
@@ -1102,10 +1103,10 @@ export default function App() {
   // Dynamic Theme Color Engine Applicator
   useEffect(() => {
     if (['menu', 'customer', 'admin', 'admin-dashboard', 'admin-setup', 'menu-preview'].includes(view)) {
-      const activeTheme = info?.theme_color || 'gold';
-      document.documentElement.setAttribute('data-theme', activeTheme);
+      const resolved = resolveTheme(info?.theme_color);
+      document.documentElement.setAttribute('data-theme', resolved.key);
     } else if (!['super-admin-dashboard', 'super-admin-login'].includes(view)) {
-      document.documentElement.setAttribute('data-theme', 'gold');
+      document.documentElement.setAttribute('data-theme', DEFAULT_THEME);
     }
   }, [info?.theme_color, view]);
 

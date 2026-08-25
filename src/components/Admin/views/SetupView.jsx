@@ -26,6 +26,7 @@ import {
   cancelSubscription,
   changePlan
 } from '../../../api/client';
+import { CUSTOMER_MENU_THEMES, THEME_LIST, resolveTheme } from '../../../constants/themes';
 
 export default function SetupView({
   settingsForm = {},
@@ -1028,17 +1029,7 @@ export default function SetupView({
 
           <div>
             {(() => {
-              const allThemes = [
-                { key: 'gold', name: 'Gold & Forest Green', color: '#0A2315', accent: '#D4AF37', desc: 'Taj / Oberoi Luxury' },
-                { key: 'emerald', name: 'Emerald Mint', color: '#064E3B', accent: '#34D399', desc: 'Fresh & Eco Bistro' },
-                { key: 'crimson', name: 'Crimson Ruby', color: '#881337', accent: '#FB7185', desc: 'Royal Fine-Dine' },
-                { key: 'navy', name: 'Midnight Navy', color: '#0F172A', accent: '#60A5FA', desc: 'Sleek Modern Lounge' },
-                { key: 'amber', name: 'Royal Amber', color: '#451A03', accent: '#FBBF24', desc: 'Artisan Bakery & Cafe' },
-                { key: 'purple', name: 'Imperial Velvet', color: '#3B0764', accent: '#C084FC', desc: 'VIP Lounge & Bar' },
-                { key: 'rose', name: 'Champagne Rose', color: '#4C0519', accent: '#F472B6', desc: 'Chic Patisserie' },
-                { key: 'dark', name: 'Obsidian Cyber', color: '#020617', accent: '#22D3EE', desc: 'Neon Cyber GastroPub' },
-              ];
-
+              const allThemes = THEME_LIST;
               const planTier = (restaurantInfo?.plan_tier || 'pro').toLowerCase();
               const rawAllowed = (
                 restaurantInfo?.allowed_themes !== undefined && restaurantInfo?.allowed_themes !== null
