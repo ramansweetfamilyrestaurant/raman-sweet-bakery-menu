@@ -10,6 +10,7 @@ import {
   FOOD_TYPE_METADATA,
   SERVICE_MODEL_METADATA,
   resolveBusinessProfile,
+  resolveBannerBadge,
   resolveServiceModelForBusinessType
 } from '../../../utils/businessTaxonomy';
 import {
@@ -1741,23 +1742,32 @@ export default function SetupView({
 
             const isLegacyBiz = settingsForm.business_type == null;
             const isLegacyFood = settingsForm.food_type == null;
-            const isLegacyService = settingsForm.service_model == null;
+
+            // Canonical category badge & service mode derivation
+            const serviceModelMeta = SERVICE_MODEL_METADATA[currentServiceModel] || SERVICE_MODEL_METADATA.dine_in;
+            const bannerBadgeText = resolveBannerBadge(settingsForm);
+
+            const serviceModeDescription = currentServiceModel === 'hotel'
+              ? '🏨 In-Room Guest Dining'
+              : currentServiceModel === 'cinema'
+              ? '🎬 Cinema Seat Ordering'
+              : '🍽️ Table QR Ordering';
 
             return (
               <div style={{ padding: '16px 18px', background: '#FFFFFF', borderRadius: '16px', border: '1px solid #E2E8F0', boxShadow: '0 1px 3px rgba(0,0,0,0.04)' }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '12px' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '14px' }}>
                   <div style={{ width: '36px', height: '36px', borderRadius: '10px', background: '#DCFCE7', color: '#16A34A', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1.1rem', flexShrink: 0 }}>
                     🏢
                   </div>
                   <div>
                     <strong style={{ fontSize: '0.92rem', color: '#0F172A', fontWeight: 800, display: 'block' }}>Business Profile</strong>
-                    <span style={{ fontSize: '0.72rem', color: '#64748B' }}>Configure business venue type and customer dietary profile</span>
+                    <span style={{ fontSize: '0.72rem', color: '#64748B' }}>Configure business venue type, dietary profile and ordering mode</span>
                   </div>
                 </div>
 
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', paddingLeft: '46px' }}>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '14px', paddingLeft: '46px' }}>
                   {/* Control A: Business Type */}
-                  <div style={{ background: '#F8FAFC', padding: '10px 12px', borderRadius: '12px', border: '1px solid #E2E8F0' }}>
+                  <div style={{ background: '#F8FAFC', padding: '12px 14px', borderRadius: '12px', border: '1px solid #E2E8F0' }}>
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '4px' }}>
                       <label htmlFor="admin-business-type" style={{ fontSize: '0.80rem', fontWeight: 800, color: '#1E293B' }}>
                         Business Type
@@ -1768,7 +1778,7 @@ export default function SetupView({
                         </span>
                       )}
                     </div>
-                    <span style={{ fontSize: '0.68rem', color: '#64748B', display: 'block', marginBottom: '6px' }}>
+                    <span style={{ fontSize: '0.68rem', color: '#64748B', display: 'block', marginBottom: '8px' }}>
                       Select the type of business or venue that operates this TouchQR account.
                     </span>
                     <select
@@ -1785,7 +1795,7 @@ export default function SetupView({
                           resto_type: safeResto
                         });
                       }}
-                      style={{ width: '100%', padding: '8px 12px', borderRadius: '8px', border: '1px solid #CBD5E1', fontSize: '0.84rem', fontWeight: 700, background: '#FFFFFF', color: '#0F172A' }}
+                      style={{ width: '100%', padding: '10px 12px', borderRadius: '8px', border: '1px solid #CBD5E1', fontSize: '0.84rem', fontWeight: 700, background: '#FFFFFF', color: '#0F172A' }}
                     >
                       {BUSINESS_TYPES.map(type => (
                         <option key={type} value={type}>
@@ -1796,7 +1806,7 @@ export default function SetupView({
                   </div>
 
                   {/* Control B: Food Type */}
-                  <div style={{ background: '#F8FAFC', padding: '10px 12px', borderRadius: '12px', border: '1px solid #E2E8F0' }}>
+                  <div style={{ background: '#F8FAFC', padding: '12px 14px', borderRadius: '12px', border: '1px solid #E2E8F0' }}>
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '4px' }}>
                       <label htmlFor="admin-food-type" style={{ fontSize: '0.80rem', fontWeight: 800, color: '#1E293B' }}>
                         Food Dietary Type
@@ -1807,7 +1817,7 @@ export default function SetupView({
                         </span>
                       )}
                     </div>
-                    <span style={{ fontSize: '0.68rem', color: '#64748B', display: 'block', marginBottom: '6px' }}>
+                    <span style={{ fontSize: '0.68rem', color: '#64748B', display: 'block', marginBottom: '8px' }}>
                       Tell customers what dietary profile applies to this menu.
                     </span>
                     <select
@@ -1822,7 +1832,7 @@ export default function SetupView({
                           resto_type: safeResto
                         });
                       }}
-                      style={{ width: '100%', padding: '8px 12px', borderRadius: '8px', border: '1px solid #CBD5E1', fontSize: '0.84rem', fontWeight: 700, background: '#FFFFFF', color: '#0F172A' }}
+                      style={{ width: '100%', padding: '10px 12px', borderRadius: '8px', border: '1px solid #CBD5E1', fontSize: '0.84rem', fontWeight: 700, background: '#FFFFFF', color: '#0F172A' }}
                     >
                       {FOOD_TYPES.map(type => (
                         <option key={type} value={type}>
@@ -1832,21 +1842,62 @@ export default function SetupView({
                     </select>
                   </div>
 
-                  {/* Preview Box */}
-                  <div style={{ padding: '10px 12px', background: '#F1F5F9', borderRadius: '10px', border: '1px dashed #CBD5E1' }}>
-                    <div style={{ fontSize: '0.68rem', fontWeight: 800, color: '#475569', textTransform: 'uppercase', letterSpacing: '0.04em', marginBottom: '6px' }}>
-                      ✨ Business Profile Preview
+                  {/* Premium Summary Card: Business Profile Preview */}
+                  <div style={{
+                    padding: '14px 16px',
+                    background: 'linear-gradient(135deg, #F8FAFC 0%, #F1F5F9 100%)',
+                    borderRadius: '12px',
+                    border: '1px solid #E2E8F0',
+                    boxShadow: 'inset 0 1px 2px rgba(0,0,0,0.02)'
+                  }}>
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '10px' }}>
+                      <span style={{ fontSize: '0.70rem', fontWeight: 900, color: '#475569', textTransform: 'uppercase', letterSpacing: '0.05em', display: 'flex', alignItems: 'center', gap: '5px' }}>
+                        ✨ Live Profile Preview
+                      </span>
+                      <span style={{
+                        fontSize: '0.72rem',
+                        fontWeight: 900,
+                        background: currentServiceModel === 'hotel' ? '#EFF6FF' : currentServiceModel === 'cinema' ? '#FDF2F8' : '#F0FDF4',
+                        color: currentServiceModel === 'hotel' ? '#1D4ED8' : currentServiceModel === 'cinema' ? '#BE185D' : '#15803D',
+                        border: `1px solid ${currentServiceModel === 'hotel' ? '#BFDBFE' : currentServiceModel === 'cinema' ? '#FBCFE8' : '#BBF7D0'}`,
+                        padding: '3px 9px',
+                        borderRadius: '20px',
+                        display: 'inline-flex',
+                        alignItems: 'center',
+                        gap: '4px'
+                      }}>
+                        {serviceModelMeta.emoji} {currentServiceModel === 'hotel' ? 'HOTEL' : currentServiceModel === 'cinema' ? 'CINEMA' : 'DINE-IN'}
+                      </span>
                     </div>
-                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px' }}>
-                      <span style={{ fontSize: '0.74rem', fontWeight: 700, background: '#FFFFFF', padding: '3px 8px', borderRadius: '6px', border: '1px solid #E2E8F0', color: '#1E293B', display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
-                        {BUSINESS_TYPE_METADATA[currentBusinessType]?.icon || '🍽️'} Business: {BUSINESS_TYPE_METADATA[currentBusinessType]?.label?.replace(/\s*\(.*\)/, '') || currentBusinessType}
-                      </span>
-                      <span style={{ fontSize: '0.74rem', fontWeight: 700, background: '#FFFFFF', padding: '3px 8px', borderRadius: '6px', border: '1px solid #E2E8F0', color: '#1E293B', display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
-                        {FOOD_TYPE_METADATA[currentFoodType]?.icon || '🟢'} Food: {FOOD_TYPE_METADATA[currentFoodType]?.label || currentFoodType}
-                      </span>
-                      <span style={{ fontSize: '0.74rem', fontWeight: 700, background: '#FFFFFF', padding: '3px 8px', borderRadius: '6px', border: '1px solid #E2E8F0', color: '#1E293B', display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
-                        🏷️ Badge: {BUSINESS_TYPE_METADATA[currentBusinessType]?.banner_badge || '🍽️ RESTAURANT'}
-                      </span>
+
+                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '8px' }}>
+                      <div style={{ background: '#FFFFFF', padding: '8px 10px', borderRadius: '8px', border: '1px solid #E2E8F0' }}>
+                        <span style={{ fontSize: '0.64rem', color: '#64748B', fontWeight: 700, textTransform: 'uppercase', display: 'block' }}>Business</span>
+                        <strong style={{ fontSize: '0.78rem', color: '#0F172A', fontWeight: 800, display: 'flex', alignItems: 'center', gap: '4px', marginTop: '2px' }}>
+                          {BUSINESS_TYPE_METADATA[currentBusinessType]?.icon || '🏢'} {BUSINESS_TYPE_METADATA[currentBusinessType]?.label?.replace(/\s*\(.*\)/, '') || currentBusinessType}
+                        </strong>
+                      </div>
+
+                      <div style={{ background: '#FFFFFF', padding: '8px 10px', borderRadius: '8px', border: '1px solid #E2E8F0' }}>
+                        <span style={{ fontSize: '0.64rem', color: '#64748B', fontWeight: 700, textTransform: 'uppercase', display: 'block' }}>Food Dietary</span>
+                        <strong style={{ fontSize: '0.78rem', color: '#0F172A', fontWeight: 800, display: 'flex', alignItems: 'center', gap: '4px', marginTop: '2px' }}>
+                          {FOOD_TYPE_METADATA[currentFoodType]?.icon || '🟢'} {FOOD_TYPE_METADATA[currentFoodType]?.label || currentFoodType}
+                        </strong>
+                      </div>
+
+                      <div style={{ background: '#FFFFFF', padding: '8px 10px', borderRadius: '8px', border: '1px solid #E2E8F0' }}>
+                        <span style={{ fontSize: '0.64rem', color: '#64748B', fontWeight: 700, textTransform: 'uppercase', display: 'block' }}>Service Mode</span>
+                        <strong style={{ fontSize: '0.78rem', color: '#0F172A', fontWeight: 800, display: 'flex', alignItems: 'center', gap: '4px', marginTop: '2px' }}>
+                          {serviceModeDescription}
+                        </strong>
+                      </div>
+
+                      <div style={{ background: '#FFFFFF', padding: '8px 10px', borderRadius: '8px', border: '1px solid #E2E8F0' }}>
+                        <span style={{ fontSize: '0.64rem', color: '#64748B', fontWeight: 700, textTransform: 'uppercase', display: 'block' }}>Menu Badge</span>
+                        <strong style={{ fontSize: '0.78rem', color: '#0F172A', fontWeight: 800, display: 'flex', alignItems: 'center', gap: '4px', marginTop: '2px' }}>
+                          🏷️ {bannerBadgeText}
+                        </strong>
+                      </div>
                     </div>
                   </div>
                 </div>
@@ -1882,7 +1933,7 @@ export default function SetupView({
 
           {/* Card 3: GST Configuration */}
           <div style={{ padding: '16px 18px', background: '#FFFFFF', borderRadius: '16px', border: '1px solid #E2E8F0', boxShadow: '0 1px 3px rgba(0,0,0,0.04)' }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: settingsForm.gst_enabled ? '10px' : '0' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: settingsForm.gst_enabled ? '12px' : '0' }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
                 <div style={{ width: '36px', height: '36px', borderRadius: '10px', background: '#E0F2FE', color: '#0284C7', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1.1rem', flexShrink: 0 }}>
                   🏷️
@@ -1894,12 +1945,42 @@ export default function SetupView({
               </div>
 
               {(settingsForm.gst_invoice_enabled !== false && settingsForm.gst_invoice_enabled !== 0) ? (
-                <input
-                  type="checkbox"
-                  checked={Boolean(settingsForm.gst_enabled)}
-                  onChange={(e) => setSettingsForm({ ...settingsForm, gst_enabled: e.target.checked })}
-                  style={{ width: '20px', height: '20px', cursor: 'pointer', accentColor: '#059669' }}
-                />
+                <button
+                  type="button"
+                  role="switch"
+                  aria-checked={Boolean(settingsForm.gst_enabled)}
+                  aria-label="Toggle 5% GST Tax Billing"
+                  onClick={() => setSettingsForm({ ...settingsForm, gst_enabled: !settingsForm.gst_enabled })}
+                  style={{
+                    width: '48px',
+                    height: '28px',
+                    minWidth: '48px',
+                    minHeight: '28px',
+                    padding: '2px',
+                    borderRadius: '14px',
+                    border: 'none',
+                    background: settingsForm.gst_enabled ? '#059669' : '#CBD5E1',
+                    cursor: 'pointer',
+                    position: 'relative',
+                    transition: 'background-color 0.2s ease',
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    boxSizing: 'border-box'
+                  }}
+                >
+                  <span
+                    style={{
+                      width: '24px',
+                      height: '24px',
+                      borderRadius: '50%',
+                      background: '#FFFFFF',
+                      boxShadow: '0 1px 3px rgba(0,0,0,0.2)',
+                      transform: settingsForm.gst_enabled ? 'translateX(20px)' : 'translateX(0px)',
+                      transition: 'transform 0.2s ease',
+                      display: 'block'
+                    }}
+                  />
+                </button>
               ) : (
                 <span style={{ fontSize: '0.72rem', fontWeight: 800, color: '#B45309', background: '#FEF3C7', border: '1px solid #F59E0B', padding: '3px 10px', borderRadius: '20px' }}>
                   🔒 Pro Feature
@@ -1909,15 +1990,16 @@ export default function SetupView({
 
             {settingsForm.gst_enabled && (
               <div style={{ marginTop: '12px', paddingTop: '12px', borderTop: '1px solid #F1F5F9', paddingLeft: '46px' }}>
-                <label style={{ fontSize: '0.72rem', fontWeight: 800, color: '#0F172A', display: 'block', marginBottom: '6px', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
+                <label htmlFor="admin-gstin-number" style={{ fontSize: '0.72rem', fontWeight: 800, color: '#0F172A', display: 'block', marginBottom: '6px', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
                   GSTIN Number:
                 </label>
                 <input
+                  id="admin-gstin-number"
                   type="text"
                   placeholder="e.g. 10AAAAA0000A1Z5"
                   value={settingsForm.gstin_number || ''}
-                  onChange={(e) => setSettingsForm({ ...settingsForm, gstin_number: e.target.value })}
-                  style={{ width: '100%', padding: '10px 14px', borderRadius: '10px', border: '1px solid #CBD5E1', fontSize: '0.86rem', boxSizing: 'border-box' }}
+                  onChange={(e) => setSettingsForm({ ...settingsForm, gstin_number: e.target.value.toUpperCase() })}
+                  style={{ width: '100%', padding: '10px 14px', borderRadius: '10px', border: '1px solid #CBD5E1', fontSize: '0.86rem', fontWeight: 700, boxSizing: 'border-box', background: '#FFFFFF', color: '#0F172A' }}
                 />
                 <span style={{ fontSize: '0.70rem', color: '#64748B', marginTop: '4px', display: 'block' }}>Printed on all customer receipt printouts and tax reports.</span>
               </div>

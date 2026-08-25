@@ -77,11 +77,11 @@ export default function OverviewView({ restaurants, pendingRegistrations = [], o
           <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
             <span style={{ fontSize: '1rem' }}>📊</span>
             <span style={{ fontSize: '0.82rem', fontWeight: 900, color: 'var(--sa-text-main)', letterSpacing: '0.5px', textTransform: 'uppercase' }}>
-              Business Distribution
+              Tenant Business Mix
             </span>
           </div>
           <span style={{ fontSize: '0.74rem', color: 'var(--sa-text-muted)', fontWeight: 600 }}>
-            Active Industry Segments
+            Business Type Distribution
           </span>
         </div>
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(130px, 1fr))', gap: '10px' }}>

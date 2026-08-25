@@ -12,13 +12,19 @@ export default function KpiCard({
   trend,
   trendType = 'positive', // 'positive', 'negative', 'warning', 'info', 'neutral'
   sparkline = false,
-  sparklineColor = '#F59E0B'
+  sparklineColor = '#F59E0B',
+  isPrimary = false
 }) {
   return (
     <div 
-      className="sa-kpi-card" 
+      className={`sa-kpi-card ${isPrimary ? 'sa-kpi-card-primary' : ''}`} 
       onClick={onClick}
-      style={{ cursor: onClick ? 'pointer' : 'default' }}
+      style={{
+        cursor: onClick ? 'pointer' : 'default',
+        border: isPrimary ? '1px solid rgba(212, 175, 55, 0.5)' : '1px solid var(--sa-border)',
+        boxShadow: isPrimary ? '0 4px 14px rgba(212, 175, 55, 0.12)' : '0 1px 3px rgba(0, 0, 0, 0.04)',
+        background: isPrimary ? 'linear-gradient(180deg, #FFFFFF 0%, #FFFDF8 100%)' : '#FFFFFF'
+      }}
     >
       <div className="sa-kpi-header">
         {Icon && (

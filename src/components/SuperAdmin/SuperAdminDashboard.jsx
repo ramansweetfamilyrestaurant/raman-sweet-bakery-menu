@@ -1086,7 +1086,7 @@ export default function SuperAdminDashboard({ token, username, onLogout, onRetur
 
               {/* 👑 2. TOP 5 PRIMARY KPI HERO ROW (WHITE CARDS WITH SEMANTIC ICONS & TRENDS) */}
               <div className="sa-stats-grid-5">
-                {/* KPI 1: MRR Revenue */}
+                {/* KPI 1: MRR Revenue (Primary Visual Focal Point) */}
                 <KpiCard
                   label="MRR Revenue"
                   value={`₹${estimatedRevenue.toLocaleString()}`}
@@ -1096,6 +1096,8 @@ export default function SuperAdminDashboard({ token, username, onLogout, onRetur
                   subtitle="This Month"
                   sparkline={true}
                   sparklineColor="#F59E0B"
+                  isPrimary={true}
+                  badge="PRIMARY"
                   onClick={() => setActiveView('billing')}
                 />
 
@@ -1152,7 +1154,7 @@ export default function SuperAdminDashboard({ token, username, onLogout, onRetur
                 />
               </div>
 
-              {/* 🏢 BUSINESS DISTRIBUTION METRIC SUMMARY */}
+              {/* 🏢 BUSINESS TYPE DISTRIBUTION SUMMARY */}
               <div style={{
                 background: 'var(--sa-surface, #FFFFFF)',
                 borderRadius: 'var(--sa-radius-lg, 16px)',
@@ -1167,10 +1169,10 @@ export default function SuperAdminDashboard({ token, username, onLogout, onRetur
               }}>
                 <div>
                   <div style={{ fontSize: '0.72rem', fontWeight: 800, color: 'var(--sa-text-muted)', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
-                    BUSINESS DISTRIBUTION
+                    TENANT BUSINESS MIX
                   </div>
                   <div style={{ fontSize: '0.90rem', fontWeight: 900, color: 'var(--sa-text-main)', marginTop: '2px' }}>
-                    Tenant Industry Breakdown
+                    Business Type Distribution
                   </div>
                 </div>
 
@@ -1221,98 +1223,111 @@ export default function SuperAdminDashboard({ token, username, onLogout, onRetur
                       <span className="sa-hub-subtitle">Operational Alerts</span>
                     </div>
 
-                    <div className="sa-attention-list">
-                      {/* Row 1: Payment Failed */}
-                      <div className="sa-attention-row">
-                        <div className="sa-attention-left">
-                          <div className="sa-attention-icon-box" style={{ background: '#FEE2E2', color: '#DC2626' }}>
-                            <CreditCard size={14} />
-                          </div>
-                          <div className="sa-attention-info">
-                            <span className="sa-attention-name">Payment Failed</span>
-                            <span className="sa-attention-count">
-                              {restaurants.filter(r => getTenantStatus(r) === 'failed').length} tenants
-                            </span>
-                          </div>
-                        </div>
-                        <button
-                          type="button"
-                          onClick={() => { setActiveView('tenants'); setStatusFilter('failed'); }}
-                          className="sa-attention-action-btn"
-                        >
-                          Review
-                        </button>
-                      </div>
+                    {(() => {
+                      const failedCount = restaurants.filter(r => getTenantStatus(r) === 'failed').length;
+                      const autoRenewOffCount = restaurants.filter(r => getTenantStatus(r) === 'autorenew_off').length;
+                      const expiringCount = restaurants.filter(r => {
+                        const d = getDaysRemaining(r.plan_expires_at);
+                        return d !== null && d > 0 && d <= 7 && r.subscription_type !== 'ADMIN_GRANTED';
+                      }).length;
+                      const pendingApprovalCount = restaurants.filter(r => getTenantStatus(r) === 'suspended').length;
 
-                      {/* Row 2: Auto-Renew Off */}
-                      <div className="sa-attention-row">
-                        <div className="sa-attention-left">
-                          <div className="sa-attention-icon-box" style={{ background: '#FEF3C7', color: '#D97706' }}>
-                            <RefreshCw size={14} />
+                      return (
+                        <div className="sa-attention-list">
+                          {/* Row 1: Payment Failed */}
+                          <div className="sa-attention-row" style={{ opacity: failedCount === 0 ? 0.75 : 1 }}>
+                            <div className="sa-attention-left">
+                              <div className="sa-attention-icon-box" style={{ background: failedCount > 0 ? '#FEE2E2' : '#F1F5F9', color: failedCount > 0 ? '#DC2626' : '#64748B' }}>
+                                <CreditCard size={14} />
+                              </div>
+                              <div className="sa-attention-info">
+                                <span className="sa-attention-name" style={{ color: failedCount > 0 ? 'var(--sa-text-main)' : '#64748B' }}>Payment Failed</span>
+                                <span className="sa-attention-count" style={{ color: failedCount > 0 ? '#DC2626' : '#94A3B8', fontWeight: failedCount > 0 ? 800 : 600 }}>
+                                  {failedCount} tenants
+                                </span>
+                              </div>
+                            </div>
+                            <button
+                              type="button"
+                              onClick={() => { setActiveView('tenants'); setStatusFilter('failed'); }}
+                              className="sa-attention-action-btn"
+                              style={{ opacity: failedCount === 0 ? 0.6 : 1 }}
+                            >
+                              Review
+                            </button>
                           </div>
-                          <div className="sa-attention-info">
-                            <span className="sa-attention-name">Auto-Renew Off</span>
-                            <span className="sa-attention-count">
-                              {restaurants.filter(r => getTenantStatus(r) === 'autorenew_off').length} tenants
-                            </span>
-                          </div>
-                        </div>
-                        <button
-                          type="button"
-                          onClick={() => setActiveView('billing')}
-                          className="sa-attention-action-btn"
-                        >
-                          Review
-                        </button>
-                      </div>
 
-                      {/* Row 3: Expiring in 7 Days */}
-                      <div className="sa-attention-row">
-                        <div className="sa-attention-left">
-                          <div className="sa-attention-icon-box" style={{ background: '#EFF6FF', color: '#2563EB' }}>
-                            <Calendar size={14} />
+                          {/* Row 2: Auto-Renew Off */}
+                          <div className="sa-attention-row" style={{ opacity: autoRenewOffCount === 0 ? 0.75 : 1 }}>
+                            <div className="sa-attention-left">
+                              <div className="sa-attention-icon-box" style={{ background: autoRenewOffCount > 0 ? '#FEF3C7' : '#F1F5F9', color: autoRenewOffCount > 0 ? '#D97706' : '#64748B' }}>
+                                <RefreshCw size={14} />
+                              </div>
+                              <div className="sa-attention-info">
+                                <span className="sa-attention-name" style={{ color: autoRenewOffCount > 0 ? 'var(--sa-text-main)' : '#64748B' }}>Auto-Renew Off</span>
+                                <span className="sa-attention-count" style={{ color: autoRenewOffCount > 0 ? '#D97706' : '#94A3B8', fontWeight: autoRenewOffCount > 0 ? 800 : 600 }}>
+                                  {autoRenewOffCount} tenants
+                                </span>
+                              </div>
+                            </div>
+                            <button
+                              type="button"
+                              onClick={() => setActiveView('billing')}
+                              className="sa-attention-action-btn"
+                              style={{ opacity: autoRenewOffCount === 0 ? 0.6 : 1 }}
+                            >
+                              Review
+                            </button>
                           </div>
-                          <div className="sa-attention-info">
-                            <span className="sa-attention-name">Expiring in 7 Days</span>
-                            <span className="sa-attention-count">
-                              {restaurants.filter(r => {
-                                const d = getDaysRemaining(r.plan_expires_at);
-                                return d !== null && d > 0 && d <= 7 && r.subscription_type !== 'ADMIN_GRANTED';
-                              }).length || 4} tenants
-                            </span>
-                          </div>
-                        </div>
-                        <button
-                          type="button"
-                          onClick={() => { setActiveView('tenants'); setStatusFilter('expired'); }}
-                          className="sa-attention-action-btn"
-                        >
-                          Review
-                        </button>
-                      </div>
 
-                      {/* Row 4: Pending Approvals */}
-                      <div className="sa-attention-row">
-                        <div className="sa-attention-left">
-                          <div className="sa-attention-icon-box" style={{ background: '#F0FDF4', color: '#16A34A' }}>
-                            <UserCheck size={14} />
+                          {/* Row 3: Expiring in 7 Days */}
+                          <div className="sa-attention-row" style={{ opacity: expiringCount === 0 ? 0.75 : 1 }}>
+                            <div className="sa-attention-left">
+                              <div className="sa-attention-icon-box" style={{ background: expiringCount > 0 ? '#EFF6FF' : '#F1F5F9', color: expiringCount > 0 ? '#2563EB' : '#64748B' }}>
+                                <Calendar size={14} />
+                              </div>
+                              <div className="sa-attention-info">
+                                <span className="sa-attention-name" style={{ color: expiringCount > 0 ? 'var(--sa-text-main)' : '#64748B' }}>Expiring in 7 Days</span>
+                                <span className="sa-attention-count" style={{ color: expiringCount > 0 ? '#2563EB' : '#94A3B8', fontWeight: expiringCount > 0 ? 800 : 600 }}>
+                                  {expiringCount} tenants
+                                </span>
+                              </div>
+                            </div>
+                            <button
+                              type="button"
+                              onClick={() => { setActiveView('tenants'); setStatusFilter('expired'); }}
+                              className="sa-attention-action-btn"
+                              style={{ opacity: expiringCount === 0 ? 0.6 : 1 }}
+                            >
+                              Review
+                            </button>
                           </div>
-                          <div className="sa-attention-info">
-                            <span className="sa-attention-name">Pending Approvals</span>
-                            <span className="sa-attention-count">
-                              {restaurants.filter(r => getTenantStatus(r) === 'suspended').length} requests
-                            </span>
+
+                          {/* Row 4: Pending Approvals */}
+                          <div className="sa-attention-row" style={{ opacity: pendingApprovalCount === 0 ? 0.75 : 1 }}>
+                            <div className="sa-attention-left">
+                              <div className="sa-attention-icon-box" style={{ background: pendingApprovalCount > 0 ? '#F0FDF4' : '#F1F5F9', color: pendingApprovalCount > 0 ? '#16A34A' : '#64748B' }}>
+                                <UserCheck size={14} />
+                              </div>
+                              <div className="sa-attention-info">
+                                <span className="sa-attention-name" style={{ color: pendingApprovalCount > 0 ? 'var(--sa-text-main)' : '#64748B' }}>Pending Approvals</span>
+                                <span className="sa-attention-count" style={{ color: pendingApprovalCount > 0 ? '#16A34A' : '#94A3B8', fontWeight: pendingApprovalCount > 0 ? 800 : 600 }}>
+                                  {pendingApprovalCount} requests
+                                </span>
+                              </div>
+                            </div>
+                            <button
+                              type="button"
+                              onClick={() => { setActiveView('tenants'); setStatusFilter('suspended'); }}
+                              className="sa-attention-action-btn"
+                              style={{ opacity: pendingApprovalCount === 0 ? 0.6 : 1 }}
+                            >
+                              Review
+                            </button>
                           </div>
                         </div>
-                        <button
-                          type="button"
-                          onClick={() => { setActiveView('tenants'); setStatusFilter('suspended'); }}
-                          className="sa-attention-action-btn"
-                        >
-                          Review
-                        </button>
-                      </div>
-                    </div>
+                      );
+                    })()}
                   </div>
 
                   <span 

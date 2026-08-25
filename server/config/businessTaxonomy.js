@@ -286,6 +286,8 @@ export function resolveBannerBadge(restaurant = {}) {
   const profile = resolveBusinessProfile(restaurant);
   const { business_type, food_type, is_pure_veg } = profile;
 
+  if (food_type === 'vegan') return '100% Vegan (Plant-Based)';
+
   if (is_pure_veg) {
     if (business_type === 'bakery_confectionery') return '100% Pure Veg Bakery';
     if (business_type === 'sweet_shop') return '100% Pure Veg Sweets';
@@ -293,7 +295,6 @@ export function resolveBannerBadge(restaurant = {}) {
     return '100% Pure Veg';
   }
 
-  if (food_type === 'vegan') return '100% Vegan (Plant-Based)';
   if (food_type === 'eggitarian') return 'Egg & Vegetarian';
   if (food_type === 'veg_nonveg') return 'Veg & Non-Veg';
 
