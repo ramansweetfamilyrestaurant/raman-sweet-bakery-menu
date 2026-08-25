@@ -2589,19 +2589,50 @@
     overflow-x: auto !important;
     -webkit-overflow-scrolling: touch !important;
     scrollbar-width: none !important;
-    gap: 6px !important;
-    padding-bottom: 2px !important;
+    -ms-overflow-style: none !important;
+    gap: 8px !important;
+    padding: 2px 2px 6px 2px !important;
+    width: 100% !important;
+    box-sizing: border-box !important;
   }
 
   .sa-filter-pills-strip::-webkit-scrollbar {
     display: none !important;
+    width: 0 !important;
+    height: 0 !important;
   }
 
   .sa-filter-pill-btn {
     flex-shrink: 0 !important;
-    padding: 5px 9px !important;
-    font-size: 0.72rem !important;
+    white-space: nowrap !important;
+    padding: 6px 12px !important;
+    font-size: 0.74rem !important;
   }
+}
+
+/* Base Filter Pills Strip (Universal Desktop + Tablet) */
+.sa-filter-pills-strip {
+  display: flex;
+  flex-wrap: nowrap;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+  gap: 8px;
+  padding: 2px 2px 6px 2px;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.sa-filter-pills-strip::-webkit-scrollbar {
+  display: none;
+  width: 0;
+  height: 0;
+}
+
+.sa-filter-pill-btn {
+  flex-shrink: 0;
+  white-space: nowrap;
 }
 
 /* Ensure settings page and all tabs never cause horizontal stretching */

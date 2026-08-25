@@ -1815,14 +1815,12 @@ export default function SuperAdminDashboard({ token, username, onLogout, onRetur
                 </div>
               </div>
 
-              {/* 🏷️ 5. FILTER PILLS STRIP (DEDICATED FULL-WIDTH SCROLLABLE ROW) */}
-              <div style={{ width: '100%', overflowX: 'auto', paddingBottom: '4px' }}>
-                <FilterPills
-                  pills={getDirectoryFilterPills()}
-                  activeId={statusFilter}
-                  onChange={setStatusFilter}
-                />
-              </div>
+              {/* 🏷️ 5. FILTER PILLS STRIP */}
+              <FilterPills
+                pills={getDirectoryFilterPills()}
+                activeId={statusFilter}
+                onChange={setStatusFilter}
+              />
 
               {/* 📋 5. SUBSCRIPTIONS TABLE (USING SHARED DataTable / Table) */}
               {filteredAndSortedRestaurants.length === 0 ? (
