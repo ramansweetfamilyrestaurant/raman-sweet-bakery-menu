@@ -3,7 +3,7 @@ import { ChevronRight, Crown, Plus, LogOut, ExternalLink, Trash2, CheckCircle, S
 import { fetchSuperAdminRestaurants, createTenantRestaurant, toggleTenantRestaurantActive, deleteTenantRestaurant, impersonateTenantRestaurant, updateTenantRestaurant, createAnnouncement, fetchSuperAnnouncements, deleteAnnouncement, clearAllAnnouncements, fetchAuditLogs, uploadImage, fetchSaaSPlans, createSaaSPlan, updateSaaSPlan, deleteSaaSPlan, superAdminOptimizeDatabase, updateSuperAdminCredentials, grantFreeAccess, revokeFreeAccess } from '../../api/client';
 import { SAAS_PLANS, getPlanDetails } from '../../config/plans';
 import { resolveImageUrl, getRestaurantLogoUrl } from '../../utils/imageHelper';
-import { BUSINESS_TYPES, BUSINESS_TYPE_METADATA, resolveServiceModelForBusinessType } from '../../utils/businessTaxonomy';
+import { BUSINESS_TYPES, BUSINESS_TYPE_METADATA, resolveBusinessProfile, resolveServiceModelForBusinessType } from '../../utils/businessTaxonomy';
 import GrantFreeAccessModal from './modals/GrantFreeAccessModal';
 import RevokeFreeAccessModal from './modals/RevokeFreeAccessModal';
 import Sidebar from './components/Sidebar';
@@ -1154,61 +1154,92 @@ export default function SuperAdminDashboard({ token, username, onLogout, onRetur
                 />
               </div>
 
-              {/* 🏢 BUSINESS TYPE DISTRIBUTION SUMMARY */}
-              <div style={{
-                background: 'var(--sa-surface, #FFFFFF)',
-                borderRadius: 'var(--sa-radius-lg, 16px)',
-                padding: '16px 20px',
-                border: '1px solid var(--sa-border, #E2E8F0)',
-                boxShadow: 'var(--sa-shadow-sm, 0 1px 3px rgba(0,0,0,0.05))',
-                display: 'flex',
-                justifyContent: 'space-between',
-                alignItems: 'center',
-                flexWrap: 'wrap',
-                gap: '12px'
-              }}>
-                <div>
-                  <div style={{ fontSize: '0.72rem', fontWeight: 800, color: 'var(--sa-text-muted)', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
-                    TENANT BUSINESS MIX
-                  </div>
-                  <div style={{ fontSize: '0.90rem', fontWeight: 900, color: 'var(--sa-text-main)', marginTop: '2px' }}>
-                    Business Type Distribution
-                  </div>
-                </div>
+              {/* 🏢 CANONICAL CATEGORY DISTRIBUTION SUMMARY */}
+              {(() => {
+                const categoryCounts = {
+                  dine_in: 0,
+                  hotel: 0,
+                  cinema: 0
+                };
 
-                <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
-                  {[
-                    { id: 'restaurant', emoji: '🍽️', label: 'Restaurant', count: restaurants.filter(r => (!r.business_type || r.business_type === 'restaurant')).length },
-                    { id: 'cafe', emoji: '☕', label: 'Cafe', count: restaurants.filter(r => r.business_type === 'cafe').length },
-                    { id: 'bakery_confectionery', emoji: '🍰', label: 'Bakery', count: restaurants.filter(r => r.business_type === 'bakery_confectionery').length },
-                    { id: 'hotel_resort', emoji: '🏨', label: 'Hotel', count: restaurants.filter(r => r.business_type === 'hotel_resort').length },
-                    { id: 'cinema_theatre', emoji: '🎬', label: 'Cinema', count: restaurants.filter(r => r.business_type === 'cinema_theatre').length }
-                  ].map(cat => (
-                    <div
-                      key={cat.id}
-                      onClick={() => setActiveView('tenants')}
-                      style={{
-                        background: 'var(--sa-surface-subtle, #F8FAFC)',
-                        border: '1px solid var(--sa-border, #E2E8F0)',
-                        borderRadius: '12px',
-                        padding: '8px 14px',
-                        display: 'flex',
-                        alignItems: 'center',
-                        gap: '8px',
-                        cursor: 'pointer',
-                        transition: 'all 0.15s ease'
-                      }}
-                      title={`View ${cat.label}s`}
-                    >
-                      <span style={{ fontSize: '1.1rem' }}>{cat.emoji}</span>
-                      <div>
-                        <span style={{ fontSize: '0.72rem', fontWeight: 700, color: 'var(--sa-text-muted)', display: 'block' }}>{cat.label}</span>
-                        <strong style={{ fontSize: '0.95rem', fontWeight: 900, color: 'var(--sa-text-main)' }}>{cat.count}</strong>
+                restaurants.forEach((tenant) => {
+                  const serviceModel = resolveBusinessProfile(tenant).service_model || 'dine_in';
+                  if (serviceModel === 'hotel') {
+                    categoryCounts.hotel += 1;
+                  } else if (serviceModel === 'cinema') {
+                    categoryCounts.cinema += 1;
+                  } else {
+                    categoryCounts.dine_in += 1;
+                  }
+                });
+
+                const categories = [
+                  { id: 'dine_in', emoji: '🍽️', label: 'Dine-In', count: categoryCounts.dine_in },
+                  { id: 'hotel', emoji: '🏨', label: 'Hotel', count: categoryCounts.hotel },
+                  { id: 'cinema', emoji: '🎬', label: 'Cinema', count: categoryCounts.cinema }
+                ];
+
+                return (
+                  <div style={{
+                    background: 'var(--sa-surface, #FFFFFF)',
+                    borderRadius: 'var(--sa-radius-lg, 16px)',
+                    padding: '16px 20px',
+                    border: '1px solid var(--sa-border, #E2E8F0)',
+                    boxShadow: 'var(--sa-shadow-sm, 0 1px 3px rgba(0,0,0,0.05))',
+                    display: 'flex',
+                    justifyContent: 'space-between',
+                    alignItems: 'center',
+                    flexWrap: 'wrap',
+                    gap: '14px'
+                  }}>
+                    <div>
+                      <div style={{ fontSize: '0.72rem', fontWeight: 800, color: 'var(--sa-text-muted)', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+                        TENANT BUSINESS MIX
+                      </div>
+                      <div style={{ fontSize: '0.90rem', fontWeight: 900, color: 'var(--sa-text-main)', marginTop: '2px' }}>
+                        Category Distribution
                       </div>
                     </div>
-                  ))}
-                </div>
-              </div>
+
+                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(130px, 1fr))', gap: '10px', flex: '1', maxWidth: '520px' }}>
+                      {categories.map(cat => (
+                        <div
+                          key={cat.id}
+                          onClick={() => setActiveView('tenants')}
+                          style={{
+                            background: 'var(--sa-surface-subtle, #F8FAFC)',
+                            border: '1px solid var(--sa-border, #E2E8F0)',
+                            borderRadius: '12px',
+                            padding: '10px 14px',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'space-between',
+                            cursor: 'pointer',
+                            transition: 'all 0.15s ease'
+                          }}
+                          title={`View ${cat.label}s`}
+                        >
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                            <span style={{ fontSize: '1.15rem' }}>{cat.emoji}</span>
+                            <span style={{ fontSize: '0.80rem', fontWeight: 800, color: 'var(--sa-text-main)' }}>{cat.label}</span>
+                          </div>
+                          <span style={{
+                            fontSize: '0.95rem',
+                            fontWeight: 900,
+                            color: 'var(--sa-text-main)',
+                            background: '#FFFFFF',
+                            border: '1px solid var(--sa-border, #E2E8F0)',
+                            padding: '2px 8px',
+                            borderRadius: '12px'
+                          }}>
+                            {cat.count}
+                          </span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                );
+              })()}
 
               {/* ⚠️ 3. TWO-COLUMN OPERATIONAL HUBS: NEEDS ATTENTION & PLATFORM HEALTH */}
               <div className="sa-dashboard-hubs-grid">
