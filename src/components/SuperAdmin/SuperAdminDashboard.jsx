@@ -195,6 +195,36 @@ export default function SuperAdminDashboard({ token, username, onLogout, onRetur
   });
   const [formError, setFormError] = useState('');
   const [formSubmitting, setFormSubmitting] = useState(false);
+  const [onboardingSuccessData, setOnboardingSuccessData] = useState(null);
+
+  // Check URL parameters for Cashfree return state (e.g. ?tab=shops&onboarding=success&created=slug)
+  useEffect(() => {
+    try {
+      const params = new URLSearchParams(window.location.search);
+      const onboarding = params.get('onboarding');
+      const createdSlug = params.get('created');
+      const reason = params.get('reason') || params.get('error');
+      const msg = params.get('msg');
+      const tab = params.get('tab');
+
+      if (tab === 'shops' || tab === 'tenants') {
+        setActiveView('tenants');
+      }
+
+      if (onboarding === 'success' && createdSlug) {
+        setOnboardingSuccessData({
+          slug: createdSlug,
+          msg: msg || `Business '${createdSlug}' provisioned successfully with verified Cashfree mandate!`
+        });
+        window.history.replaceState({}, document.title, window.location.pathname);
+      } else if (onboarding === 'failed') {
+        setToastMessage(`⚠️ Onboarding Notice: ${reason || 'Subscription authorization was not completed.'}`);
+        window.history.replaceState({}, document.title, window.location.pathname);
+      }
+    } catch (e) {
+      console.warn('URL param parse notice:', e.message);
+    }
+  }, []);
 
   const loadSaaSPlans = async () => {
     try {
@@ -3062,6 +3092,71 @@ export default function SuperAdminDashboard({ token, username, onLogout, onRetur
         token={token}
         createTenantRestaurant={createTenantRestaurant}
       />
+
+      {/* ✅ Modal: TouchQR Verified Onboarding Success */}
+      {onboardingSuccessData && (
+        <div style={{
+          position: 'fixed', inset: 0,
+          background: 'rgba(5, 20, 11, 0.82)', backdropFilter: 'blur(8px)',
+          zIndex: 2500, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '16px'
+        }}>
+          <div style={{
+            background: '#FFFFFF', borderRadius: '24px', maxWidth: '480px', width: '100%',
+            padding: '28px 24px', boxShadow: '0 25px 60px rgba(0,0,0,0.45)', border: '2px solid #10B981',
+            textAlign: 'center', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '14px'
+          }}>
+            <div style={{ width: '56px', height: '56px', borderRadius: '50%', background: '#ECFDF5', border: '2px solid #10B981', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+              <CheckCircle size={32} color="#059669" />
+            </div>
+
+            <div>
+              <h3 style={{ fontSize: '1.20rem', fontWeight: 900, color: '#0F172A', margin: '0 0 4px' }}>
+                Business Onboarding Verified
+              </h3>
+              <p style={{ fontSize: '0.82rem', color: '#64748B', margin: 0 }}>
+                {onboardingSuccessData.msg || 'The business tenant has been provisioned with verified mandate authorization.'}
+              </p>
+            </div>
+
+            <div style={{ background: '#F8FAFC', border: '1px solid #E2E8F0', borderRadius: '14px', padding: '14px', width: '100%', textAlign: 'left', fontSize: '0.82rem' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '8px' }}>
+                <span style={{ color: '#64748B' }}>Business URL:</span>
+                <strong style={{ color: '#B45309' }}>/r/{onboardingSuccessData.slug}</strong>
+              </div>
+              <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '8px' }}>
+                <span style={{ color: '#64748B' }}>Billing Gateway:</span>
+                <span style={{ background: '#EFF6FF', color: '#1D4ED8', padding: '2px 6px', borderRadius: '4px', fontWeight: 800, fontSize: '0.74rem' }}>
+                  Cashfree Mandate Authorized
+                </span>
+              </div>
+              <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                <span style={{ color: '#64748B' }}>Status:</span>
+                <span style={{ color: '#059669', fontWeight: 800 }}>Awaiting First Recurring Payment</span>
+              </div>
+            </div>
+
+            <div style={{ display: 'flex', gap: '10px', width: '100%', marginTop: '6px' }}>
+              <a
+                href={`/r/${onboardingSuccessData.slug}`}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="sa-btn sa-btn-accent"
+                style={{ flex: 1, minHeight: '44px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px', fontWeight: 900, textDecoration: 'none' }}
+              >
+                <span>View Business Live</span> <ExternalLink size={16} />
+              </a>
+              <button
+                type="button"
+                onClick={() => setOnboardingSuccessData(null)}
+                className="sa-btn sa-btn-secondary"
+                style={{ flex: 1, minHeight: '44px', fontWeight: 800 }}
+              >
+                Shop Directory
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* ✏️ Modal: Edit Shop / Restaurant Info */}
       {editModalData && (
