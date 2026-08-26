@@ -27,7 +27,7 @@ export default function AdminHeader({
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [showMoreMenu]);
 
-  const restoName = restaurantInfo?.name || 'Your Restaurant';
+  const restoName = restaurantInfo?.name || 'Your Business';
   const truncatedName = restoName.length > 22 ? `${restoName.substring(0, 20)}...` : restoName;
   const logoUrl = restaurantInfo?.logo;
   const resolvedLogo = resolveImageUrl(logoUrl);
@@ -39,7 +39,7 @@ export default function AdminHeader({
 
   return (
     <header className="adm-header">
-      {/* LEFT: [LOGO] Restaurant Name + Owner: admin • ● Live */}
+      {/* LEFT: [LOGO] Business Name + Admin: username • ● Live */}
       <div className="adm-header-left">
         <div style={{
           width: '38px',
@@ -63,7 +63,7 @@ export default function AdminHeader({
             />
           ) : (
             <div style={{ width: '100%', height: '100%', borderRadius: '50%', background: '#D4AF37', color: '#0A2315', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 900, fontSize: '0.95rem' }}>
-              {(restoName || 'R').charAt(0).toUpperCase()}
+              {(restoName || 'B').charAt(0).toUpperCase()}
             </div>
           )}
         </div>
@@ -73,7 +73,7 @@ export default function AdminHeader({
             {truncatedName}
           </h1>
           <div style={{ display: 'flex', alignItems: 'center', gap: '4px', fontSize: '0.68rem', color: '#CBD5E1', fontWeight: 600, marginTop: '1px' }}>
-            <span>Owner: {username || 'admin'}</span>
+            <span>Admin: {username || 'admin'}</span>
             <span style={{ color: 'rgba(255,255,255,0.4)' }}>•</span>
             <span style={{ color: '#22C55E', fontWeight: 800, display: 'inline-flex', alignItems: 'center', gap: '3px' }}>
               <span style={{ width: '6px', height: '6px', borderRadius: '50%', backgroundColor: '#22C55E' }} />

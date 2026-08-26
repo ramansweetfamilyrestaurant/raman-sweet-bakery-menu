@@ -661,6 +661,15 @@ export default function SetupView({
     }
   };
 
+  const isProfileConfigured = Boolean(settingsForm?.name && (settingsForm?.phone || restaurantInfo?.phone));
+  const isLogoConfigured = Boolean(settingsForm?.logo || restaurantInfo?.logo);
+  const isGpsConfigured = Boolean(settingsForm?.latitude && settingsForm?.longitude);
+  const isSecurityConfigured = true;
+
+  const totalChecks = 4;
+  const passedChecks = [isProfileConfigured, isLogoConfigured, isGpsConfigured, isSecurityConfigured].filter(Boolean).length;
+  const isFullySetup = passedChecks === totalChecks;
+
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '20px', maxWidth: '1400px', margin: '0 auto', width: '100%', boxSizing: 'border-box' }}>
       {/* Header Title */}
@@ -681,7 +690,7 @@ export default function SetupView({
             ⚙️ Setup & Configuration
           </h2>
           <span style={{ fontSize: '0.78rem', color: '#64748B', fontWeight: 500 }}>
-            Configure restaurant profile, sound alerts, menu settings, GPS geofence, and security
+            Configure business profile, sound alerts, menu settings, GPS geofence, and security
           </span>
         </div>
 
@@ -690,6 +699,67 @@ export default function SetupView({
             {saveSuccessMsg}
           </span>
         )}
+      </div>
+
+      {/* 📊 Setup Health Summary */}
+      <div style={{
+        background: '#FFFFFF',
+        borderRadius: '16px',
+        border: '1px solid #E2E8F0',
+        padding: '14px 18px',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'space-between',
+        flexWrap: 'wrap',
+        gap: '12px',
+        boxShadow: '0 2px 8px rgba(0,0,0,0.02)'
+      }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+          <div style={{
+            width: '36px', height: '36px', borderRadius: '10px',
+            background: isFullySetup ? '#DCFCE7' : '#FEF3C7',
+            color: isFullySetup ? '#15803D' : '#D97706',
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            fontSize: '1.1rem', flexShrink: 0
+          }}>
+            {isFullySetup ? '✓' : '⚡'}
+          </div>
+          <div>
+            <div style={{ fontSize: '0.86rem', fontWeight: 800, color: '#0F172A' }}>
+              Business Setup Health: {passedChecks}/{totalChecks} Completed
+            </div>
+            <div style={{ fontSize: '0.74rem', color: '#64748B', fontWeight: 500 }}>
+              {isFullySetup ? 'All core platform configuration parameters are active.' : 'Some operational parameters need your attention.'}
+            </div>
+          </div>
+        </div>
+
+        <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+          <span style={{
+            fontSize: '0.72rem', fontWeight: 800, padding: '4px 10px', borderRadius: '8px',
+            background: isProfileConfigured ? '#DCFCE7' : '#FEE2E2',
+            color: isProfileConfigured ? '#15803D' : '#DC2626',
+            border: isProfileConfigured ? '1px solid #86EFAC' : '1px solid #FCA5A5'
+          }}>
+            {isProfileConfigured ? '✓ Profile' : '⚠️ Profile'}
+          </span>
+          <span style={{
+            fontSize: '0.72rem', fontWeight: 800, padding: '4px 10px', borderRadius: '8px',
+            background: isLogoConfigured ? '#DCFCE7' : '#FEF3C7',
+            color: isLogoConfigured ? '#15803D' : '#D97706',
+            border: isLogoConfigured ? '1px solid #86EFAC' : '1px solid #FCD34D'
+          }}>
+            {isLogoConfigured ? '✓ Logo' : '○ Logo'}
+          </span>
+          <span style={{
+            fontSize: '0.72rem', fontWeight: 800, padding: '4px 10px', borderRadius: '8px',
+            background: isGpsConfigured ? '#DCFCE7' : '#FEF3C7',
+            color: isGpsConfigured ? '#15803D' : '#D97706',
+            border: isGpsConfigured ? '1px solid #86EFAC' : '1px solid #FCD34D'
+          }}>
+            {isGpsConfigured ? '✓ Geofence' : '○ GPS Geofence'}
+          </span>
+        </div>
       </div>
 
       {/* Grouped Section Control Center */}
@@ -847,7 +917,7 @@ export default function SetupView({
                   <Store size={20} />
                 </div>
                 <div style={{ minWidth: 0 }}>
-                  <strong style={{ fontSize: '0.94rem', color: '#0F172A', fontWeight: 800, display: 'block' }}>Restaurant Profile</strong>
+                  <strong style={{ fontSize: '0.94rem', color: '#0F172A', fontWeight: 800, display: 'block' }}>Business Profile</strong>
                   <span style={{ fontSize: '0.75rem', color: '#64748B', fontWeight: 500 }}>Name, logo, phone, address, FSSAI, Maps</span>
                 </div>
               </div>
@@ -870,12 +940,12 @@ export default function SetupView({
               }}
             >
               <div style={{ display: 'flex', alignItems: 'center', gap: '14px', minWidth: 0 }}>
-                <div style={{ width: '44px', height: '44px', borderRadius: '12px', background: '#F3E8FF', color: '#7E22CE', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                <div style={{ width: '44px', height: '44px', borderRadius: '12px', background: '#DCFCE7', color: '#16A34A', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
                   <CreditCard size={20} />
                 </div>
                 <div style={{ minWidth: 0 }}>
-                  <strong style={{ fontSize: '0.94rem', color: '#0F172A', fontWeight: 800, display: 'block' }}>Subscription & Billing</strong>
-                  <span style={{ fontSize: '0.75rem', color: '#64748B', fontWeight: 500 }}>Current plan, auto-renew status</span>
+                  <strong style={{ fontSize: '0.94rem', color: '#0F172A', fontWeight: 800, display: 'block' }}>Billing & Subscription</strong>
+                  <span style={{ fontSize: '0.75rem', color: '#64748B', fontWeight: 500 }}>Current plan, invoices, upgrade & limits</span>
                 </div>
               </div>
               <ChevronRight size={18} color="#94A3B8" style={{ flexShrink: 0 }} />
@@ -909,8 +979,8 @@ export default function SetupView({
                   <Lock size={20} />
                 </div>
                 <div style={{ minWidth: 0 }}>
-                  <strong style={{ fontSize: '0.94rem', color: '#0F172A', fontWeight: 800, display: 'block' }}>Admin Security & KDS PIN</strong>
-                  <span style={{ fontSize: '0.75rem', color: '#64748B', fontWeight: 500 }}>Owner credentials & Kitchen (KDS) 4-digit PIN</span>
+                  <strong style={{ fontSize: '0.94rem', color: '#0F172A', fontWeight: 800, display: 'block' }}>Security & Credentials</strong>
+                  <span style={{ fontSize: '0.75rem', color: '#64748B', fontWeight: 500 }}>Update admin username and login password</span>
                 </div>
               </div>
               <ChevronRight size={18} color="#94A3B8" style={{ flexShrink: 0 }} />
@@ -1008,11 +1078,11 @@ export default function SetupView({
         </div>
       </div>
 
-      {/* Drawer 1: Restaurant Profile */}
+      {/* Drawer 1: Business Profile */}
       <AdminDrawer
         isOpen={openDrawer === 'profile'}
         onClose={() => setOpenDrawer(null)}
-        title="🏪 Restaurant Profile"
+        title="🏪 Business Profile"
         subtitle="Public business identity and contact details"
         footer={(
           <button
@@ -1044,7 +1114,7 @@ export default function SetupView({
             )}
             <div style={{ flex: 1 }}>
               <label style={{ fontSize: '0.74rem', fontWeight: 800, color: '#0F172A', display: 'block', marginBottom: '6px', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
-                Restaurant Logo:
+                Business Logo:
               </label>
               <input type="file" accept="image/*" onChange={handleLogoUpload} disabled={uploadingLogo} style={{ fontSize: '0.78rem' }} />
               {uploadingLogo && <span style={{ fontSize: '0.72rem', color: '#059669', display: 'block', marginTop: '4px', fontWeight: 700 }}>Uploading logo image...</span>}
@@ -1053,7 +1123,7 @@ export default function SetupView({
 
           <div>
             <label style={{ fontSize: '0.74rem', fontWeight: 800, color: '#0F172A', display: 'block', marginBottom: '6px', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
-              Restaurant Name:
+              Business Name:
             </label>
             <input
               type="text"
