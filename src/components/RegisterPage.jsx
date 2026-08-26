@@ -29,6 +29,10 @@ export default function RegisterPage({ onRegisterSuccess }) {
     if (p && ['basic', 'pro', 'enterprise'].includes(p.toLowerCase())) {
       setFormData(prev => ({ ...prev, plan_tier: p.toLowerCase() }));
     }
+    const err = params.get('error');
+    if (err) {
+      setError(decodeURIComponent(err));
+    }
   }, []);
 
   useEffect(() => {
