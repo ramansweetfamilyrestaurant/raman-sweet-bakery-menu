@@ -11,9 +11,9 @@ const toBoolInt = (val) => {
 };
 
 const THEME_ACCESS_OPTIONS = [
-  { value: 'ALL', label: '🌟 All 8 Luxury Themes Unlocked' },
+  { value: 'gold', label: '👑 Standard Gold Theme Only (Default)' },
   { value: 'gold,emerald,crimson,navy', label: '💎 4 Popular Themes (Gold, Emerald, Crimson, Navy)' },
-  { value: 'gold', label: '👑 Standard Gold Theme Only' }
+  { value: 'ALL', label: '🌟 All 8 Luxury Themes Unlocked' }
 ];
 
 const INITIAL_CREATE_FORM = {
@@ -24,7 +24,7 @@ const INITIAL_CREATE_FORM = {
   badge: '🚀 VIP',
   description: '',
   theme_color: 'gold',
-  allowed_themes: 'ALL',
+  allowed_themes: 'gold',
   whatsapp_enabled: 1,
   direct_ordering_enabled: 1,
   google_reviews_enabled: 1
@@ -114,13 +114,23 @@ export default function SaaSPlansView({ token, restaurants = [] }) {
     }
   };
 
+  const isCreateFormValid = Boolean(
+    createForm.name.trim() &&
+    createForm.key.trim() &&
+    createForm.price !== '' &&
+    !isNaN(parseFloat(createForm.price)) &&
+    parseFloat(createForm.price) >= 0 &&
+    createForm.allowed_themes
+  );
+
   const handleCreatePlanSubmit = async (e) => {
     e.preventDefault();
     if (!createForm.name.trim()) return alert('Plan Name is required!');
+    if (!createForm.key.trim()) return alert('Unique Plan Key is required!');
 
     const numericPrice = parseFloat(createForm.price);
     if (createForm.price === '' || isNaN(numericPrice) || numericPrice < 0) {
-      return alert('Enter a valid monthly price.');
+      return alert('Enter a valid monthly price (0 or greater).');
     }
 
     setCreating(true);
@@ -128,13 +138,15 @@ export default function SaaSPlansView({ token, restaurants = [] }) {
       const directOrderingVal = toBoolInt(createForm.direct_ordering_enabled);
       const payload = {
         ...createForm,
+        name: createForm.name.trim(),
+        key: createForm.key.trim().toLowerCase(),
         price: numericPrice,
         original_price: createForm.original_price ? parseFloat(createForm.original_price) : (numericPrice * 2 - 1),
         direct_ordering_enabled: directOrderingVal,
         presence_verification_enabled: directOrderingVal,
         allowed_verification_modes: 'GPS_WITH_STAFF_FALLBACK',
         theme_color: createForm.theme_color || 'gold',
-        allowed_themes: createForm.allowed_themes || 'ALL'
+        allowed_themes: createForm.allowed_themes || 'gold'
       };
 
       const res = await fetch('/api/superadmin/plans', {
@@ -586,20 +598,28 @@ export default function SaaSPlansView({ token, restaurants = [] }) {
 
       {/* ✏️ 4. EDIT PLAN MODAL */}
       {editingPlan && (
-        <div className="sa-modal-overlay">
-          <div className="sa-modal-box" style={{ maxWidth: '520px' }}>
+        <div 
+          className="sa-modal-overlay"
+          onClick={() => setEditingPlan(null)}
+          onKeyDown={(e) => { if (e.key === 'Escape') setEditingPlan(null); }}
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="edit-plan-title"
+        >
+          <div className="sa-modal-box" style={{ maxWidth: '520px' }} onClick={(e) => e.stopPropagation()}>
             <div style={{
               display: 'flex', alignItems: 'center', justifyContent: 'space-between',
               marginBottom: '16px', paddingBottom: '12px', borderBottom: '1px solid var(--sa-border)'
             }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                 <Edit3 size={20} color="var(--sa-primary)" />
-                <h3 style={{ margin: 0, fontSize: '1.1rem', fontWeight: 900, color: 'var(--sa-text-main)' }}>Edit Plan: {editingPlan.name}</h3>
+                <h3 id="edit-plan-title" style={{ margin: 0, fontSize: '1.1rem', fontWeight: 900, color: 'var(--sa-text-main)' }}>Edit Plan: {editingPlan.name}</h3>
               </div>
               <button
                 type="button"
                 onClick={() => setEditingPlan(null)}
-                style={{ background: 'none', border: 'none', color: 'var(--sa-text-muted)', cursor: 'pointer' }}
+                aria-label="Close Edit Plan Modal"
+                style={{ background: 'none', border: 'none', color: 'var(--sa-text-muted)', cursor: 'pointer', padding: '4px' }}
               >
                 <X size={20} />
               </button>
@@ -624,6 +644,7 @@ export default function SaaSPlansView({ token, restaurants = [] }) {
                     type="number"
                     required
                     min="0"
+                    step="any"
                     value={editingPlan.price}
                     onChange={e => setEditingPlan({ ...editingPlan, price: parseFloat(e.target.value) || 0 })}
                     className="sa-input"
@@ -646,7 +667,7 @@ export default function SaaSPlansView({ token, restaurants = [] }) {
                   THEME ACCESS LEVEL
                 </label>
                 <select
-                  value={editingPlan.allowed_themes || 'ALL'}
+                  value={editingPlan.allowed_themes || 'gold'}
                   onChange={e => setEditingPlan({ ...editingPlan, allowed_themes: e.target.value })}
                   className="sa-input"
                   style={{ width: '100%', fontWeight: 700 }}
@@ -692,20 +713,28 @@ export default function SaaSPlansView({ token, restaurants = [] }) {
 
       {/* ✨ 5. CREATE PLAN MODAL */}
       {showCreateModal && (
-        <div className="sa-modal-overlay">
-          <div className="sa-modal-box" style={{ maxWidth: '520px' }}>
+        <div 
+          className="sa-modal-overlay"
+          onClick={() => setShowCreateModal(false)}
+          onKeyDown={(e) => { if (e.key === 'Escape') setShowCreateModal(false); }}
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="create-plan-title"
+        >
+          <div className="sa-modal-box" style={{ maxWidth: '520px' }} onClick={(e) => e.stopPropagation()}>
             <div style={{
               display: 'flex', alignItems: 'center', justifyContent: 'space-between',
               marginBottom: '16px', paddingBottom: '12px', borderBottom: '1px solid var(--sa-border)'
             }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                 <Sparkles size={20} color="var(--sa-accent)" />
-                <h3 style={{ margin: 0, fontSize: '1.1rem', fontWeight: 900, color: 'var(--sa-text-main)' }}>Create New Custom SaaS Plan</h3>
+                <h3 id="create-plan-title" style={{ margin: 0, fontSize: '1.1rem', fontWeight: 900, color: 'var(--sa-text-main)' }}>Create New Custom SaaS Plan</h3>
               </div>
               <button
                 type="button"
                 onClick={() => setShowCreateModal(false)}
-                style={{ background: 'none', border: 'none', color: 'var(--sa-text-muted)', cursor: 'pointer' }}
+                aria-label="Close Create Plan Modal"
+                style={{ background: 'none', border: 'none', color: 'var(--sa-text-muted)', cursor: 'pointer', padding: '4px' }}
               >
                 <X size={20} />
               </button>
@@ -713,20 +742,29 @@ export default function SaaSPlansView({ token, restaurants = [] }) {
 
             <form onSubmit={handleCreatePlanSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
               <div>
-                <label style={{ fontSize: '0.78rem', fontWeight: 800, color: 'var(--sa-text-muted)', display: 'block', marginBottom: '4px' }}>PLAN NAME *</label>
+                <label style={{ fontSize: '0.78rem', fontWeight: 800, color: 'var(--sa-text-muted)', display: 'block', marginBottom: '4px' }}>
+                  PLAN NAME <span style={{ color: '#EF4444' }}>*</span>
+                </label>
                 <input
                   type="text"
                   required
                   placeholder="e.g. VIP Ultra Plan"
                   value={createForm.name}
-                  onChange={e => setCreateForm({ ...createForm, name: e.target.value, key: e.target.value.toLowerCase().replace(/[^a-z0-9]/g, '_') })}
+                  onChange={e => setCreateForm({ 
+                    ...createForm, 
+                    name: e.target.value, 
+                    key: createForm.key || e.target.value.toLowerCase().replace(/[^a-z0-9]/g, '_') 
+                  })}
                   className="sa-input"
+                  aria-required="true"
                 />
               </div>
 
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
                 <div>
-                  <label style={{ fontSize: '0.78rem', fontWeight: 800, color: 'var(--sa-text-muted)', display: 'block', marginBottom: '4px' }}>PLAN KEY (UNIQUE)</label>
+                  <label style={{ fontSize: '0.78rem', fontWeight: 800, color: 'var(--sa-text-muted)', display: 'block', marginBottom: '4px' }}>
+                    PLAN KEY (UNIQUE) <span style={{ color: '#EF4444' }}>*</span>
+                  </label>
                   <input
                     type="text"
                     required
@@ -734,10 +772,13 @@ export default function SaaSPlansView({ token, restaurants = [] }) {
                     value={createForm.key}
                     onChange={e => setCreateForm({ ...createForm, key: e.target.value.toLowerCase().replace(/[^a-z0-9_]/g, '') })}
                     className="sa-input"
+                    aria-required="true"
                   />
                 </div>
                 <div>
-                  <label style={{ fontSize: '0.78rem', fontWeight: 800, color: 'var(--sa-text-muted)', display: 'block', marginBottom: '4px' }}>MONTHLY PRICE (₹) *</label>
+                  <label style={{ fontSize: '0.78rem', fontWeight: 800, color: 'var(--sa-text-muted)', display: 'block', marginBottom: '4px' }}>
+                    MONTHLY PRICE (₹) <span style={{ color: '#EF4444' }}>*</span>
+                  </label>
                   <input
                     type="number"
                     required
@@ -747,6 +788,7 @@ export default function SaaSPlansView({ token, restaurants = [] }) {
                     value={createForm.price}
                     onChange={e => setCreateForm({ ...createForm, price: e.target.value })}
                     className="sa-input"
+                    aria-required="true"
                   />
                 </div>
               </div>
@@ -757,7 +799,7 @@ export default function SaaSPlansView({ token, restaurants = [] }) {
                   THEME ACCESS LEVEL
                 </label>
                 <select
-                  value={createForm.allowed_themes || 'ALL'}
+                  value={createForm.allowed_themes || 'gold'}
                   onChange={e => setCreateForm({ ...createForm, allowed_themes: e.target.value })}
                   className="sa-input"
                   style={{ width: '100%', fontWeight: 700 }}
@@ -779,7 +821,13 @@ export default function SaaSPlansView({ token, restaurants = [] }) {
                 />
               </div>
 
-              <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '12px', marginTop: '12px' }}>
+              {!isCreateFormValid && (
+                <div style={{ fontSize: '0.72rem', color: '#94A3B8', fontWeight: 600, marginTop: '-4px' }}>
+                  * Required: Plan Name, unique Plan Key, and non-negative Monthly Price.
+                </div>
+              )}
+
+              <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '12px', marginTop: '8px' }}>
                 <button
                   type="button"
                   onClick={() => setShowCreateModal(false)}
@@ -789,9 +837,14 @@ export default function SaaSPlansView({ token, restaurants = [] }) {
                 </button>
                 <button
                   type="submit"
-                  disabled={creating}
+                  disabled={creating || !isCreateFormValid}
                   className="sa-btn sa-btn-accent"
-                  style={{ fontWeight: 900 }}
+                  style={{
+                    fontWeight: 900,
+                    opacity: (creating || !isCreateFormValid) ? 0.45 : 1,
+                    cursor: (creating || !isCreateFormValid) ? 'not-allowed' : 'pointer',
+                    boxShadow: (creating || !isCreateFormValid) ? 'none' : '0 4px 12px rgba(212, 175, 55, 0.35)'
+                  }}
                 >
                   {creating ? 'Creating Plan...' : '✨ Create SaaS Plan'}
                 </button>

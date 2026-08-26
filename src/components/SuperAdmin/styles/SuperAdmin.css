@@ -1131,23 +1131,31 @@
   left: 0;
   right: 0;
   bottom: 0;
-  background: rgba(10, 35, 21, 0.5);
+  background: rgba(0, 0, 0, 0.6) !important;
   backdrop-filter: blur(4px);
   -webkit-backdrop-filter: blur(4px);
-  z-index: 250;
+  z-index: 1000 !important;
   display: flex;
   align-items: center;
   justify-content: center;
   padding: 16px;
 }
 
+.sa-modal-box,
 .sa-modal {
   width: 100%;
-  max-width: 560px;
-  background: var(--sa-surface);
+  max-width: 520px;
+  max-height: 90vh;
+  overflow-y: auto;
+  background: #FFFFFF !important;
+  color: var(--sa-text-main) !important;
+  opacity: 1 !important;
   border-radius: var(--sa-radius-xl);
-  box-shadow: var(--sa-shadow-modal);
-  overflow: hidden;
+  border: 1px solid var(--sa-border);
+  box-shadow: 0 20px 40px -10px rgba(0, 0, 0, 0.35), 0 0 0 1px rgba(0, 0, 0, 0.05);
+  padding: 24px 20px;
+  position: relative;
+  z-index: 1001 !important;
   animation: sa-scale-up 0.2s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
