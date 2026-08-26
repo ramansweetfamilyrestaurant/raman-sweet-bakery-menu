@@ -406,13 +406,13 @@ export default function HomeView({
                   
                   {/* Area fill */}
                   <path
-                    d="M 10 95 Q 55 70 100 60 T 190 45 T 235 25 T 275 40 T 310 15 L 310 115 L 10 115 Z"
+                    d="M 10 95 C 50 80, 80 65, 110 55 C 145 46, 180 38, 210 25 C 240 36, 270 28, 310 12 L 310 115 L 10 115 Z"
                     fill="url(#salesGrad)"
                   />
                   
                   {/* Curve stroke */}
                   <path
-                    d="M 10 95 Q 55 70 100 60 T 190 45 T 235 25 T 275 40 T 310 15"
+                    d="M 10 95 C 50 80, 80 65, 110 55 C 145 46, 180 38, 210 25 C 240 36, 270 28, 310 12"
                     fill="none"
                     stroke="#16A34A"
                     strokeWidth="2.5"
@@ -422,18 +422,18 @@ export default function HomeView({
                   {/* Data Points */}
                   <circle cx="10" cy="95" r="3.5" fill="#16A34A" />
                   <circle cx="60" cy="72" r="3.5" fill="#16A34A" />
-                  <circle cx="110" cy="58" r="3.5" fill="#16A34A" />
-                  <circle cx="160" cy="50" r="3.5" fill="#16A34A" />
-                  <circle cx="210" cy="30" r="4.5" fill="#16A34A" stroke="#FFFFFF" strokeWidth="2" />
-                  <circle cx="260" cy="42" r="3.5" fill="#16A34A" />
-                  <circle cx="310" cy="15" r="3.5" fill="#16A34A" />
+                  <circle cx="110" cy="55" r="3.5" fill="#16A34A" />
+                  <circle cx="160" cy="42" r="3.5" fill="#16A34A" />
+                  <circle cx="210" cy="25" r="4.5" fill="#16A34A" stroke="#FFFFFF" strokeWidth="2" />
+                  <circle cx="260" cy="33" r="3.5" fill="#16A34A" />
+                  <circle cx="310" cy="12" r="3.5" fill="#16A34A" />
                 </svg>
 
                 {/* Peak Tooltip Pill */}
                 <div style={{
                   position: 'absolute',
-                  top: '10px',
-                  left: '62%',
+                  top: '6px',
+                  left: '65%',
                   transform: 'translateX(-50%)',
                   background: '#0F172A',
                   color: '#FFFFFF',

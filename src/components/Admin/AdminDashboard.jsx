@@ -2512,14 +2512,16 @@ export default function AdminDashboard({
   const isDirectOrderingEnabled = tenantCaps.direct_ordering_enabled;
 
   return (
-    <div style={{ minHeight: '100vh', background: 'var(--bg-app)', paddingBottom: '70px' }}>
+    <div className="adm-app-shell-root" style={{ minHeight: '100vh', background: '#F8FAFC', margin: 0, padding: 0 }}>
       <style>{`
         @media (max-width: 900px) {
+          .adm-app-shell-root { padding-bottom: 70px !important; }
           .adm-desktop-sidebar { display: none !important; }
           .admin-desktop-nav { display: none !important; }
           .admin-mobile-nav { display: flex !important; }
         }
         @media (min-width: 901px) {
+          .adm-app-shell-root { padding-bottom: 0 !important; }
           .adm-desktop-sidebar { display: block !important; }
           .admin-desktop-nav { display: none !important; }
           .admin-mobile-nav { display: none !important; }
