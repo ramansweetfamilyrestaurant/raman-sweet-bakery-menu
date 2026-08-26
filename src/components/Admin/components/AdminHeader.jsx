@@ -55,24 +55,8 @@ export default function AdminHeader({
         }
       `}</style>
 
-      {/* LEFT: Hamburger + Dynamic Greeting */}
-      <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-        <button
-          onClick={() => {}}
-          style={{
-            background: 'none',
-            border: 'none',
-            color: '#0F172A',
-            cursor: 'pointer',
-            padding: '4px',
-            display: 'flex',
-            alignItems: 'center'
-          }}
-          aria-label="Navigation Menu"
-        >
-          <Menu size={22} />
-        </button>
-
+      {/* LEFT: Dynamic Greeting (Three lines removed) */}
+      <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
         <div>
           <h2 style={{ fontSize: '0.98rem', fontWeight: 800, color: '#0F172A', margin: 0, lineHeight: 1.2, letterSpacing: '-0.01em' }}>
             {greeting}, Admin! 👋
