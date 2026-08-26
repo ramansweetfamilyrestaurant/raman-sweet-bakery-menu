@@ -4,10 +4,25 @@ import jwt from 'jsonwebtoken';
 import { query, runAutoDataSummarization, logAudit, saveR2ImageToDb, saveImageToDb, purgeLocalR2DiskCache, withTransaction } from '../db.js';
 import { authenticateToken } from '../middleware/auth.js';
 import { isR2Active, uploadImageToR2, deleteImageFromR2 } from '../services/r2ImageService.js';
+import { createCashfreeSubscriptionSession, getCashfreeConfigAsync } from '../services/cashfree.js';
 import { JWT_SECRET } from '../config/jwt.js';
 import { superAdminLoginRateLimiter } from '../middleware/rateLimiters.js';
 import { resolveCanonicalSubscriptionState } from '../services/subscriptionState.js';
 import { resolveBusinessCategoryFromType, resolveBusinessProfile } from '../config/businessTaxonomy.js';
+
+function getAppBaseUrl(req) {
+  if (process.env.APP_BASE_URL && !process.env.APP_BASE_URL.includes('onrender.com')) {
+    return process.env.APP_BASE_URL.replace(/\/$/, '');
+  }
+  if (req && req.headers) {
+    const proto = req.headers['x-forwarded-proto'] || (req.secure ? 'https' : 'http');
+    const host = req.headers['x-forwarded-host'] || req.headers.host;
+    if (host && !host.includes('onrender.com')) {
+      return `${proto}://${host}`;
+    }
+  }
+  return 'https://touchqr.in';
+}
 
 let sharpModule = null;
 async function getSharp() {
@@ -541,6 +556,134 @@ router.post('/restaurants', authenticateToken, requireSuperAdmin, async (req, re
   } catch (err) {
     console.error('Create restaurant error:', err);
     res.status(500).json({ error: err.message || 'Failed to create tenant business' });
+  }
+});
+
+// POST /api/superadmin/checkout-business (Initiates Cashfree Sandbox Subscription Session for SuperAdmin Paid Onboarding)
+router.post('/checkout-business', authenticateToken, requireSuperAdmin, async (req, res) => {
+  try {
+    const { 
+      name, slug, owner_username, owner_password, phone, address, tagline, 
+      plan_tier, whatsapp_number, theme_color, business_type, service_model, 
+      owner_email, gstin_number, owner_name 
+    } = req.body;
+
+    if (!name || !name.trim()) {
+      return res.status(400).json({ error: 'Business Name is required!' });
+    }
+    if (!slug || !slug.trim()) {
+      return res.status(400).json({ error: 'URL Slug is required!' });
+    }
+    if (!owner_username || !owner_username.trim()) {
+      return res.status(400).json({ error: 'Owner Username is required!' });
+    }
+    if (!owner_password || owner_password.length < 4) {
+      return res.status(400).json({ error: 'Password must be at least 4 characters long!' });
+    }
+
+    const cleanPhone = (phone || '').replace(/[^0-9]/g, '');
+    const cleanSlug = slug.toLowerCase().replace(/[^a-z0-9-]/g, '-').replace(/-+/g, '-').replace(/^-|-$/g, '');
+
+    // Check slug or username collision
+    const slugCheck = await query('SELECT id FROM restaurants WHERE slug = $1', [cleanSlug]);
+    if (slugCheck.length > 0) {
+      return res.status(400).json({ error: `URL Slug '${cleanSlug}' is already taken by another business!` });
+    }
+
+    const adminCheck = await query('SELECT id FROM admins WHERE username = $1', [owner_username.trim()]);
+    if (adminCheck.length > 0) {
+      return res.status(400).json({ error: `Owner Username '${owner_username}' is already taken!` });
+    }
+
+    // Resolve authoritative catalog price from saas_plans
+    const effectivePlanTier = (plan_tier || 'pro').toLowerCase();
+    const planRows = await query('SELECT * FROM saas_plans WHERE LOWER(key) = $1 LIMIT 1', [effectivePlanTier]);
+    const dbPlan = planRows[0] || { id: 2, key: 'pro', name: 'Pro Luxury Plan', price: 999 };
+
+    const regId = `reg_sa_${Date.now()}_${Math.floor(1000 + Math.random() * 9000)}`;
+    const baseUrl = getAppBaseUrl(req);
+    const returnUrl = `${baseUrl}/api/payment/register-return?reg_id=${regId}`;
+
+    const tempRestoId = Math.floor(100000 + Math.random() * 900000);
+    const cfResult = await createCashfreeSubscriptionSession({
+      restaurantId: tempRestoId,
+      planKey: dbPlan.key,
+      planName: dbPlan.name,
+      planPrice: Number(dbPlan.price) || 999,
+      trialEndISO: new Date(Date.now() + 30 * 86400 * 1000).toISOString(),
+      customerName: (owner_name || name).trim(),
+      customerPhone: cleanPhone || '9876543210',
+      returnUrl
+    });
+
+    if (!cfResult.configured || !cfResult.success) {
+      return res.status(400).json({
+        error: cfResult.message || 'Cashfree Payment Gateway is currently unavailable in Sandbox mode.'
+      });
+    }
+
+    const salt = await bcrypt.genSalt(10);
+    const passwordHash = await bcrypt.hash(owner_password, salt);
+
+    const regPayload = {
+      name: name.trim(),
+      slug: cleanSlug,
+      owner_name: (owner_name || '').trim(),
+      owner_email: owner_email || null,
+      phone: cleanPhone,
+      whatsapp_number: whatsapp_number || cleanPhone,
+      address: address || '',
+      tagline: tagline || '100% Quality Food & Customer Service',
+      theme_color: theme_color || 'gold',
+      business_type: business_type || 'restaurant',
+      service_model: service_model || 'dine_in',
+      gstin_number: gstin_number || null,
+      owner_username: owner_username.trim(),
+      owner_password,
+      password_hash: passwordHash,
+      plan_tier: dbPlan.key,
+      plan_price: dbPlan.price,
+      subscription_id: cfResult.subscription_id
+    };
+
+    const expiresAt = new Date(Date.now() + 24 * 3600 * 1000).toISOString();
+    await query(
+      `INSERT INTO pending_registrations (
+        id, payload, name, phone, owner_username, password_hash, plan_key, plan_price, trial_days, cashfree_subscription_id, cashfree_subscription_session_id, mandate_status, status, expires_at, owner_email
+      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15)`,
+      [
+        regId,
+        JSON.stringify(regPayload),
+        name.trim(),
+        cleanPhone,
+        owner_username.trim(),
+        passwordHash,
+        dbPlan.key,
+        dbPlan.price,
+        30,
+        cfResult.subscription_id,
+        cfResult.subscription_session_id || cfResult.payment_session_id || null,
+        'pending',
+        'checkout_started',
+        expiresAt,
+        owner_email || null
+      ]
+    );
+
+    await logAudit(null, 'superadmin', 'Initiate Business Paid Checkout', `SuperAdmin initiated Cashfree Sandbox checkout for '${name}' (Plan: ${dbPlan.key}, Price: ₹${dbPlan.price})`);
+
+    res.json({
+      success: true,
+      subscription_id: cfResult.subscription_id,
+      subscription_session_id: cfResult.subscription_session_id || cfResult.payment_session_id,
+      auth_url: cfResult.auth_url || cfResult.auth_link || cfResult.payment_link,
+      environment: cfResult.environment || 'sandbox',
+      plan_name: dbPlan.name,
+      plan_price: Number(dbPlan.price)
+    });
+  } catch (err) {
+    console.error('SuperAdmin checkout-business error:', err);
+    res.status(500).json({ error: err.message || 'Failed to initialize Cashfree checkout' });
   }
 });
 

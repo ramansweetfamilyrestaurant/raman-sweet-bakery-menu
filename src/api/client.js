@@ -98,6 +98,18 @@ export async function createTenantRestaurant(restaurantData, token) {
   return handleResponse(res, 'Failed to create tenant restaurant');
 }
 
+export async function createSuperAdminBusinessCheckout(businessData, token) {
+  const res = await fetch(`${API_BASE}/superadmin/checkout-business`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      Authorization: `Bearer ${token}`,
+    },
+    body: JSON.stringify(businessData),
+  });
+  return handleResponse(res, 'Failed to initialize Cashfree business checkout');
+}
+
 export async function toggleTenantRestaurantActive(id, active, token) {
   const res = await fetch(`${API_BASE}/superadmin/restaurants/${id}/toggle`, {
     method: 'PATCH',

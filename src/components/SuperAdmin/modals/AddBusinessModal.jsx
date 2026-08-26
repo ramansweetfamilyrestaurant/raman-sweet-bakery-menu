@@ -12,12 +12,14 @@ import {
   EyeOff, 
   ShieldCheck, 
   AlertCircle, 
-  Sparkles,
-  Lock,
-  Store,
-  RefreshCw,
-  Crown,
-  Gift
+  Sparkles, 
+  Lock, 
+  Store, 
+  RefreshCw, 
+  Crown, 
+  Gift,
+  ExternalLink,
+  CheckCircle
 } from 'lucide-react';
 import { 
   BUSINESS_TYPES, 
@@ -25,6 +27,7 @@ import {
   resolveServiceModelForBusinessType 
 } from '../../../utils/businessTaxonomy';
 import { SAAS_PLANS, getPlanDetails } from '../../../config/plans';
+import { createSuperAdminBusinessCheckout } from '../../../api/client';
 
 export default function AddBusinessModal({ 
   show, 
@@ -38,6 +41,7 @@ export default function AddBusinessModal({
   const [showPassword, setShowPassword] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState('');
+  const [checkoutState, setCheckoutState] = useState(null); // null | { status: 'launching' | 'launched' | 'failed', data }
 
   // Comprehensive Form State across all 5 steps
   const [formData, setFormData] = useState({
@@ -68,7 +72,7 @@ export default function AddBusinessModal({
     // Step 3: Plan & Billing
     plan_tier: 'pro',
     billing_cycle: 'monthly',
-    onboarding_mode: 'active', // 'active' | 'trial' | 'vip'
+    onboarding_mode: 'active', // 'active' (Paid Cashfree) | 'trial' | 'vip'
     plan_price: 999,
 
     // Step 4: Owner / Admin Account
@@ -123,13 +127,84 @@ export default function AddBusinessModal({
   const selectedPlanDetails = activePlansCatalog.find(p => p.key === formData.plan_tier || p.id === formData.plan_tier) || getPlanDetails(formData.plan_tier);
   const authoritativePrice = selectedPlanDetails ? Number(selectedPlanDetails.price) : 999;
 
+  // Launch Cashfree SDK Subscription Checkout
+  const launchCashfreeCheckout = async (checkoutData) => {
+    const sessionId = checkoutData.subscription_session_id;
+
+    // Ensure Cashfree SDK is loaded
+    let cfInstance = window.Cashfree;
+    if (!cfInstance) {
+      await new Promise((resolve) => {
+        const script = document.createElement('script');
+        script.src = 'https://sdk.cashfree.com/js/v3/cashfree.js';
+        script.onload = () => resolve(true);
+        script.onerror = () => resolve(false);
+        document.body.appendChild(script);
+      });
+      cfInstance = window.Cashfree;
+    }
+
+    if (sessionId && typeof cfInstance === 'function') {
+      const cashfree = cfInstance({ mode: checkoutData.environment || 'sandbox' });
+      if (typeof cashfree.subscriptionsCheckout === 'function') {
+        cashfree.subscriptionsCheckout({
+          subsSessionId: sessionId,
+          subscriptionSessionId: sessionId,
+          redirectTarget: '_self'
+        });
+        return;
+      } else if (typeof cashfree.checkout === 'function') {
+        cashfree.checkout({
+          subsSessionId: sessionId,
+          subscriptionSessionId: sessionId,
+          redirectTarget: '_self'
+        });
+        return;
+      }
+    }
+
+    if (checkoutData.auth_url) {
+      window.location.href = checkoutData.auth_url;
+      return;
+    }
+
+    throw new Error('Cashfree payment SDK unavailable. Please refresh and try again.');
+  };
+
   // Final Tenant Creation Handler (Executes ONLY on Step 5 confirmation)
   const handleFinalSubmit = async () => {
     setError('');
     setSubmitting(true);
 
     try {
-      // Calculate expiry date based on onboarding mode
+      // 1. PAID ONBOARDING PATH -> Cashfree Sandbox Checkout Session
+      if (formData.onboarding_mode === 'active') {
+        const checkoutPayload = {
+          name: formData.name.trim(),
+          slug: formData.slug.trim().toLowerCase(),
+          owner_name: formData.owner_name.trim(),
+          owner_username: formData.owner_username.trim(),
+          owner_password: formData.owner_password,
+          phone: formData.phone || formData.owner_phone || '',
+          whatsapp_number: formData.whatsapp_number || formData.phone || '',
+          address: [formData.address, formData.city, formData.state, formData.pincode].filter(Boolean).join(', '),
+          tagline: formData.tagline || '100% Quality Food & Customer Service',
+          plan_tier: formData.plan_tier,
+          theme_color: formData.theme_color || 'gold',
+          business_type: formData.business_type,
+          service_model: formData.service_model,
+          owner_email: formData.email || formData.owner_email || '',
+          gstin_number: formData.is_gst_applicable ? formData.gstin : ''
+        };
+
+        const res = await createSuperAdminBusinessCheckout(checkoutPayload, token);
+        setCheckoutState({ status: 'launching', data: res });
+        
+        await launchCashfreeCheckout(res);
+        return;
+      }
+
+      // 2. TRIAL OR VIP ONBOARDING PATH -> Instant Transactional Creation
       let expiryDate;
       if (formData.onboarding_mode === 'trial') {
         expiryDate = new Date(Date.now() + 16 * 24 * 60 * 60 * 1000).toISOString();
@@ -149,7 +224,7 @@ export default function AddBusinessModal({
         address: [formData.address, formData.city, formData.state, formData.pincode].filter(Boolean).join(', '),
         tagline: formData.tagline || '100% Quality Food & Customer Service',
         plan_tier: formData.plan_tier,
-        plan_price: formData.onboarding_mode === 'vip' || formData.onboarding_mode === 'trial' ? 0 : authoritativePrice,
+        plan_price: 0,
         plan_expires_at: expiryDate,
         theme_color: formData.theme_color || 'gold',
         business_type: formData.business_type,
@@ -165,17 +240,18 @@ export default function AddBusinessModal({
       onClose();
     } catch (err) {
       setError(err.message || 'Failed to create and activate business tenant');
+      setCheckoutState(null);
     } finally {
       setSubmitting(false);
     }
   };
 
   const stepsMeta = [
-    { num: 1, label: 'Business Info', shortLabel: 'Business', icon: Building2 },
-    { num: 2, label: 'Documents & KYC', shortLabel: 'KYC', icon: FileText },
-    { num: 3, label: 'Plan & Billing', shortLabel: 'Billing', icon: CreditCard },
-    { num: 4, label: 'Admin Account', shortLabel: 'Admin', icon: UserCheck },
-    { num: 5, label: 'Review & Confirm', shortLabel: 'Review', icon: CheckCircle2 }
+    { num: 1, label: 'Business Info', icon: Building2 },
+    { num: 2, label: 'Documents & KYC', icon: FileText },
+    { num: 3, label: 'Plan & Billing', icon: CreditCard },
+    { num: 4, label: 'Admin Account', icon: UserCheck },
+    { num: 5, label: 'Review & Confirm', icon: CheckCircle2 }
   ];
 
   const currentMeta = stepsMeta.find(s => s.num === currentStep) || stepsMeta[0];
@@ -282,7 +358,7 @@ export default function AddBusinessModal({
                   Add New Business
                 </h3>
                 <p style={{ fontSize: '0.72rem', color: '#94A3B8', margin: '2px 0 0 0', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                  Multi-step tenant setup
+                  Multi-step tenant setup & Cashfree billing
                 </p>
               </div>
             </div>
@@ -314,7 +390,7 @@ export default function AddBusinessModal({
                     opacity: isCurrent || isDone ? 1 : 0.45,
                     padding: '0 2px'
                   }}
-                  onClick={() => { if (isDone) setCurrentStep(s.num); }}
+                  onClick={() => { if (isDone && !checkoutState) setCurrentStep(s.num); }}
                 >
                   <div style={{
                     width: '28px',
@@ -372,10 +448,80 @@ export default function AddBusinessModal({
             </div>
           )}
 
+          {/* DEDICATED CASHFREE CHECKOUT LAUNCH SCREEN */}
+          {checkoutState && (
+            <div style={{
+              background: '#F8FAFC',
+              border: '2px solid #D4AF37',
+              borderRadius: '16px',
+              padding: '24px',
+              textAlign: 'center',
+              display: 'flex',
+              flexDirection: 'column',
+              alignItems: 'center',
+              gap: '14px'
+            }}>
+              <div style={{ width: '52px', height: '52px', borderRadius: '50%', background: '#FEFCE8', border: '2px solid #D4AF37', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                <RefreshCw size={24} className="spin" color="#B45309" />
+              </div>
+              <div>
+                <h4 style={{ fontSize: '1.05rem', fontWeight: 900, color: '#0F172A', margin: '0 0 4px' }}>
+                  Secure Cashfree Sandbox Checkout
+                </h4>
+                <p style={{ fontSize: '0.80rem', color: '#64748B', margin: 0 }}>
+                  Connecting to Cashfree recurring mandate gateway...
+                </p>
+              </div>
+
+              <div style={{ background: '#FFFFFF', border: '1px solid #E2E8F0', borderRadius: '12px', padding: '14px', width: '100%', maxWidth: '340px', textAlign: 'left', fontSize: '0.80rem' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '6px' }}>
+                  <span style={{ color: '#64748B' }}>Business:</span>
+                  <strong>{formData.name}</strong>
+                </div>
+                <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '6px' }}>
+                  <span style={{ color: '#64748B' }}>Plan:</span>
+                  <strong>{selectedPlanDetails?.name || formData.plan_tier}</strong>
+                </div>
+                <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '6px' }}>
+                  <span style={{ color: '#64748B' }}>Amount:</span>
+                  <strong style={{ color: '#B45309', fontSize: '0.90rem' }}>₹{authoritativePrice} / month</strong>
+                </div>
+                <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                  <span style={{ color: '#64748B' }}>Gateway:</span>
+                  <span style={{ background: '#EFF6FF', color: '#1D4ED8', padding: '2px 6px', borderRadius: '4px', fontWeight: 800, fontSize: '0.72rem' }}>
+                    Cashfree Sandbox
+                  </span>
+                </div>
+              </div>
+
+              <div style={{ fontSize: '0.74rem', color: '#64748B' }}>
+                ⚠️ Do not close or refresh the onboarding wizard during mandate authorization.
+              </div>
+
+              {checkoutState.data?.auth_url && (
+                <button
+                  type="button"
+                  onClick={() => launchCashfreeCheckout(checkoutState.data)}
+                  className="sa-btn sa-btn-accent"
+                  style={{ minHeight: '44px', width: '100%', maxWidth: '340px', fontWeight: 900, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}
+                >
+                  <span>Continue to Cashfree</span> <ExternalLink size={16} />
+                </button>
+              )}
+
+              <button
+                type="button"
+                onClick={() => setCheckoutState(null)}
+                style={{ background: 'none', border: 'none', color: '#64748B', fontSize: '0.76rem', fontWeight: 700, cursor: 'pointer', textDecoration: 'underline' }}
+              >
+                Cancel Checkout & Back to Form
+              </button>
+            </div>
+          )}
+
           {/* STEP 1: BUSINESS INFORMATION */}
-          {currentStep === 1 && (
+          {!checkoutState && currentStep === 1 && (
             <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
-              {/* Field 1: Business Name */}
               <div>
                 <label style={{ fontSize: '0.76rem', fontWeight: 900, color: '#334155', display: 'block', marginBottom: '6px', textTransform: 'uppercase', letterSpacing: '0.02em' }}>
                   BUSINESS NAME <span style={{ color: '#EF4444' }}>*</span>
@@ -390,7 +536,6 @@ export default function AddBusinessModal({
                 />
               </div>
 
-              {/* Field 2: Business Type */}
               <div>
                 <label style={{ fontSize: '0.76rem', fontWeight: 900, color: '#334155', display: 'block', marginBottom: '6px', textTransform: 'uppercase', letterSpacing: '0.02em' }}>
                   BUSINESS TYPE <span style={{ color: '#EF4444' }}>*</span>
@@ -408,7 +553,6 @@ export default function AddBusinessModal({
                 </select>
               </div>
 
-              {/* Field 3: Canonical Service Model (Dedicated Block, never overlapping) */}
               <div>
                 <label style={{ fontSize: '0.76rem', fontWeight: 900, color: '#334155', display: 'block', marginBottom: '6px', textTransform: 'uppercase', letterSpacing: '0.02em' }}>
                   CANONICAL SERVICE MODEL
@@ -434,7 +578,6 @@ export default function AddBusinessModal({
                 </div>
               </div>
 
-              {/* Field 4: Custom URL Slug */}
               <div>
                 <label style={{ fontSize: '0.76rem', fontWeight: 900, color: '#334155', display: 'block', marginBottom: '6px', textTransform: 'uppercase', letterSpacing: '0.02em' }}>
                   URL SLUG <span style={{ color: '#EF4444' }}>*</span>
@@ -449,7 +592,6 @@ export default function AddBusinessModal({
                 />
               </div>
 
-              {/* Field 5 & 6: Phone & Email (Responsive 2-col on desktop, 1-col on mobile) */}
               <div className="add-biz-grid-2">
                 <div>
                   <label style={{ fontSize: '0.76rem', fontWeight: 900, color: '#334155', display: 'block', marginBottom: '6px', textTransform: 'uppercase', letterSpacing: '0.02em' }}>
@@ -477,7 +619,6 @@ export default function AddBusinessModal({
                 </div>
               </div>
 
-              {/* Field 7: Address */}
               <div>
                 <label style={{ fontSize: '0.76rem', fontWeight: 900, color: '#334155', display: 'block', marginBottom: '6px', textTransform: 'uppercase', letterSpacing: '0.02em' }}>
                   BUSINESS ADDRESS
@@ -491,7 +632,6 @@ export default function AddBusinessModal({
                 />
               </div>
 
-              {/* Field 8: GST Applicable */}
               <div>
                 <label style={{ fontSize: '0.76rem', fontWeight: 900, color: '#334155', display: 'flex', alignItems: 'flex-start', gap: '8px', cursor: 'pointer', lineHeight: 1.4 }}>
                   <input
@@ -515,7 +655,6 @@ export default function AddBusinessModal({
                 )}
               </div>
 
-              {/* Field 9: Default Luxury Theme */}
               <div>
                 <label style={{ fontSize: '0.76rem', fontWeight: 900, color: '#334155', display: 'block', marginBottom: '6px', textTransform: 'uppercase', letterSpacing: '0.02em' }}>
                   DEFAULT LUXURY THEME
@@ -535,7 +674,7 @@ export default function AddBusinessModal({
           )}
 
           {/* STEP 2: DOCUMENTS / KYC */}
-          {currentStep === 2 && (
+          {!checkoutState && currentStep === 2 && (
             <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
               <div style={{ background: '#F8FAFC', border: '1px solid #E2E8F0', borderRadius: '12px', padding: '12px 14px', fontSize: '0.78rem', color: '#475569', lineHeight: 1.45 }}>
                 <div style={{ fontWeight: 800, color: '#0F172A', display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '4px' }}>
@@ -603,7 +742,7 @@ export default function AddBusinessModal({
           )}
 
           {/* STEP 3: PLAN & BILLING */}
-          {currentStep === 3 && (
+          {!checkoutState && currentStep === 3 && (
             <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
               <div style={{ fontSize: '0.76rem', fontWeight: 900, color: '#334155', textTransform: 'uppercase', letterSpacing: '0.02em' }}>
                 SELECT SAAS SUBSCRIPTION PLAN (CATALOG-BACKED)
@@ -661,8 +800,8 @@ export default function AddBusinessModal({
                       textAlign: 'center'
                     }}
                   >
-                    <div style={{ fontSize: '0.78rem', fontWeight: 900, color: '#065F46' }}>🟢 Immediate Active</div>
-                    <div style={{ fontSize: '0.66rem', color: '#047857', marginTop: '2px' }}>Standard 30-Day Cycle</div>
+                    <div style={{ fontSize: '0.78rem', fontWeight: 900, color: '#065F46' }}>💳 Paid Cashfree Mandate</div>
+                    <div style={{ fontSize: '0.66rem', color: '#047857', marginTop: '2px' }}>₹{authoritativePrice}/mo • Checkout Flow</div>
                   </div>
 
                   <div
@@ -677,7 +816,7 @@ export default function AddBusinessModal({
                     }}
                   >
                     <div style={{ fontSize: '0.78rem', fontWeight: 900, color: '#1E40AF' }}>🎁 16-Day Free Trial</div>
-                    <div style={{ fontSize: '0.66rem', color: '#2563EB', marginTop: '2px' }}>Zero upfront payment</div>
+                    <div style={{ fontSize: '0.66rem', color: '#2563EB', marginTop: '2px' }}>₹0 Due • No payment required</div>
                   </div>
 
                   <div
@@ -692,7 +831,7 @@ export default function AddBusinessModal({
                     }}
                   >
                     <div style={{ fontSize: '0.78rem', fontWeight: 900, color: '#854D0E' }}>👑 VIP Granted</div>
-                    <div style={{ fontSize: '0.66rem', color: '#A16207', marginTop: '2px' }}>Admin Lifetime Access</div>
+                    <div style={{ fontSize: '0.66rem', color: '#A16207', marginTop: '2px' }}>₹0 Due • Lifetime SuperAdmin Grant</div>
                   </div>
                 </div>
               </div>
@@ -700,7 +839,7 @@ export default function AddBusinessModal({
           )}
 
           {/* STEP 4: OWNER / ADMIN ACCOUNT */}
-          {currentStep === 4 && (
+          {!checkoutState && currentStep === 4 && (
             <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
               <div className="add-biz-grid-2">
                 <div>
@@ -789,7 +928,7 @@ export default function AddBusinessModal({
           )}
 
           {/* STEP 5: REVIEW & CONFIRM */}
-          {currentStep === 5 && (
+          {!checkoutState && currentStep === 5 && (
             <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
               <div style={{ background: '#F8FAFC', border: '1.5px solid #E2E8F0', borderRadius: '12px', padding: '14px' }}>
                 <div style={{ fontSize: '0.80rem', fontWeight: 900, color: '#0F172A', borderBottom: '1px solid #E2E8F0', paddingBottom: '6px', marginBottom: '8px', display: 'flex', justifyContent: 'space-between', flexWrap: 'wrap', gap: '4px' }}>
@@ -809,15 +948,15 @@ export default function AddBusinessModal({
               <div style={{ background: '#F8FAFC', border: '1.5px solid #E2E8F0', borderRadius: '12px', padding: '14px' }}>
                 <div style={{ fontSize: '0.80rem', fontWeight: 900, color: '#0F172A', borderBottom: '1px solid #E2E8F0', paddingBottom: '6px', marginBottom: '8px', display: 'flex', justifyContent: 'space-between', flexWrap: 'wrap', gap: '4px' }}>
                   <span>💳 Plan & Provisioning Mode</span>
-                  <span style={{ fontWeight: 900, color: '#059669' }}>
-                    {formData.onboarding_mode === 'trial' ? 'FREE TRIAL' : formData.onboarding_mode === 'vip' ? 'VIP GRANTED' : `₹${authoritativePrice}/mo`}
+                  <span style={{ fontWeight: 900, color: formData.onboarding_mode === 'active' ? '#B45309' : '#059669' }}>
+                    {formData.onboarding_mode === 'trial' ? 'FREE TRIAL (₹0)' : formData.onboarding_mode === 'vip' ? 'VIP GRANTED (₹0)' : `₹${authoritativePrice}/mo (CASHFREE)`}
                   </span>
                 </div>
                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))', gap: '6px', fontSize: '0.76rem' }}>
                   <div><strong>Plan Tier:</strong> {selectedPlanDetails?.name || formData.plan_tier}</div>
                   <div><strong>Catalog Price:</strong> ₹{authoritativePrice} / month</div>
-                  <div><strong>Provisioning:</strong> {formData.onboarding_mode.toUpperCase()}</div>
-                  <div><strong>Validity:</strong> {formData.onboarding_mode === 'trial' ? '16 Days Trial' : formData.onboarding_mode === 'vip' ? 'Lifetime Granted' : '30 Days Standard'}</div>
+                  <div><strong>Mode:</strong> {formData.onboarding_mode === 'active' ? 'PAID CASHFREE MANDATE' : formData.onboarding_mode.toUpperCase()}</div>
+                  <div><strong>Gateway:</strong> {formData.onboarding_mode === 'active' ? 'Cashfree Sandbox' : 'None (SuperAdmin Grant)'}</div>
                 </div>
               </div>
 
@@ -835,104 +974,106 @@ export default function AddBusinessModal({
         </div>
 
         {/* Modal Footer Navigation */}
-        <div className="add-biz-foot-pad" style={{
-          padding: '14px 22px',
-          background: '#F8FAFC',
-          borderTop: '1px solid #E2E8F0',
-          display: 'flex',
-          justifyContent: 'space-between',
-          alignItems: 'center',
-          flexShrink: 0
-        }}>
-          {currentStep > 1 ? (
-            <button
-              type="button"
-              onClick={() => setCurrentStep(prev => Math.max(1, prev - 1))}
-              disabled={submitting}
-              className="sa-btn sa-btn-secondary add-biz-cancel-btn"
-              style={{ minHeight: '44px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px', fontWeight: 800 }}
-            >
-              <ChevronLeft size={16} /> Back
-            </button>
-          ) : (
-            <button
-              type="button"
-              onClick={onClose}
-              disabled={submitting}
-              className="sa-btn sa-btn-secondary add-biz-cancel-btn"
-              style={{ minHeight: '44px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
-            >
-              Cancel
-            </button>
-          )}
-
-          <div className="add-biz-footer-btns">
-            {currentStep < 5 ? (
+        {!checkoutState && (
+          <div className="add-biz-foot-pad" style={{
+            padding: '14px 22px',
+            background: '#F8FAFC',
+            borderTop: '1px solid #E2E8F0',
+            display: 'flex',
+            justifyContent: 'space-between',
+            alignItems: 'center',
+            flexShrink: 0
+          }}>
+            {currentStep > 1 ? (
               <button
                 type="button"
-                onClick={() => {
-                  if (currentStep === 1 && !isStep1Valid) return;
-                  if (currentStep === 4 && !isStep4Valid) return;
-                  setCurrentStep(prev => Math.min(5, prev + 1));
-                }}
-                disabled={(currentStep === 1 && !isStep1Valid) || (currentStep === 4 && !isStep4Valid)}
-                className="sa-btn sa-btn-accent"
-                style={{
-                  minHeight: '44px',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  gap: '6px',
-                  fontWeight: 900,
-                  opacity: ((currentStep === 1 && !isStep1Valid) || (currentStep === 4 && !isStep4Valid)) ? 0.5 : 1,
-                  cursor: ((currentStep === 1 && !isStep1Valid) || (currentStep === 4 && !isStep4Valid)) ? 'not-allowed' : 'pointer',
-                  padding: '10px 20px'
-                }}
+                onClick={() => setCurrentStep(prev => Math.max(1, prev - 1))}
+                disabled={submitting}
+                className="sa-btn sa-btn-secondary add-biz-cancel-btn"
+                style={{ minHeight: '44px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px', fontWeight: 800 }}
               >
-                {currentStep === 4 ? 'Review Business' : 'Continue'} <ChevronRight size={16} />
+                <ChevronLeft size={16} /> Back
               </button>
             ) : (
               <button
                 type="button"
-                onClick={handleFinalSubmit}
+                onClick={onClose}
                 disabled={submitting}
-                className="sa-btn sa-btn-accent"
-                style={{
-                  minHeight: '44px',
-                  fontWeight: 900,
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  gap: '8px',
-                  padding: '10px 22px',
-                  boxShadow: '0 4px 16px rgba(212, 175, 55, 0.4)'
-                }}
+                className="sa-btn sa-btn-secondary add-biz-cancel-btn"
+                style={{ minHeight: '44px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
               >
-                {submitting ? (
-                  <>
-                    <RefreshCw size={16} className="spin" />
-                    <span>Creating & Provisioning...</span>
-                  </>
-                ) : formData.onboarding_mode === 'trial' ? (
-                  <>
-                    <Gift size={16} />
-                    <span>🎁 Start 16-Day Trial Business</span>
-                  </>
-                ) : formData.onboarding_mode === 'vip' ? (
-                  <>
-                    <Crown size={16} />
-                    <span>👑 Create VIP Tenant Business</span>
-                  </>
-                ) : (
-                  <>
-                    <Sparkles size={16} />
-                    <span>✓ Create & Activate Business</span>
-                  </>
-                )}
+                Cancel
               </button>
             )}
+
+            <div className="add-biz-footer-btns">
+              {currentStep < 5 ? (
+                <button
+                  type="button"
+                  onClick={() => {
+                    if (currentStep === 1 && !isStep1Valid) return;
+                    if (currentStep === 4 && !isStep4Valid) return;
+                    setCurrentStep(prev => Math.min(5, prev + 1));
+                  }}
+                  disabled={(currentStep === 1 && !isStep1Valid) || (currentStep === 4 && !isStep4Valid)}
+                  className="sa-btn sa-btn-accent"
+                  style={{
+                    minHeight: '44px',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    gap: '6px',
+                    fontWeight: 900,
+                    opacity: ((currentStep === 1 && !isStep1Valid) || (currentStep === 4 && !isStep4Valid)) ? 0.5 : 1,
+                    cursor: ((currentStep === 1 && !isStep1Valid) || (currentStep === 4 && !isStep4Valid)) ? 'not-allowed' : 'pointer',
+                    padding: '10px 20px'
+                  }}
+                >
+                  {currentStep === 4 ? 'Review Business' : 'Continue'} <ChevronRight size={16} />
+                </button>
+              ) : (
+                <button
+                  type="button"
+                  onClick={handleFinalSubmit}
+                  disabled={submitting}
+                  className="sa-btn sa-btn-accent"
+                  style={{
+                    minHeight: '44px',
+                    fontWeight: 900,
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    gap: '8px',
+                    padding: '10px 22px',
+                    boxShadow: '0 4px 16px rgba(212, 175, 55, 0.4)'
+                  }}
+                >
+                  {submitting ? (
+                    <>
+                      <RefreshCw size={16} className="spin" />
+                      <span>Processing...</span>
+                    </>
+                  ) : formData.onboarding_mode === 'trial' ? (
+                    <>
+                      <Gift size={16} />
+                      <span>🎁 Start 16-Day Trial Business</span>
+                    </>
+                  ) : formData.onboarding_mode === 'vip' ? (
+                    <>
+                      <Crown size={16} />
+                      <span>👑 Create VIP Tenant Business</span>
+                    </>
+                  ) : (
+                    <>
+                      <CreditCard size={16} />
+                      <span>💳 Proceed to Cashfree Payment</span>
+                    </>
+                  )}
+                </button>
+              )}
+            </div>
           </div>
-        </div>
+        )}
       </div>
     </div>
   );
