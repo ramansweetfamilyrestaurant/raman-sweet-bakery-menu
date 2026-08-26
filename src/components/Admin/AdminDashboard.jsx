@@ -13,6 +13,7 @@ import { Plus, Edit, Trash2, Eye, EyeOff, LogOut, ArrowLeft, Layers, Utensils, Q
 import PaymentModal from '../PaymentModal';
 
 import './styles/Admin.css';
+import AdminSidebar from './components/AdminSidebar';
 import AdminHeader from './components/AdminHeader';
 import AdminBottomNavigation from './components/AdminBottomNavigation';
 import AdminDesktopNavigation from './components/AdminDesktopNavigation';
@@ -2513,12 +2514,14 @@ export default function AdminDashboard({
   return (
     <div style={{ minHeight: '100vh', background: 'var(--bg-app)', paddingBottom: '70px' }}>
       <style>{`
-        @media (max-width: 768px) {
+        @media (max-width: 900px) {
+          .adm-desktop-sidebar { display: none !important; }
           .admin-desktop-nav { display: none !important; }
           .admin-mobile-nav { display: flex !important; }
         }
-        @media (min-width: 769px) {
-          .admin-desktop-nav { display: block !important; }
+        @media (min-width: 901px) {
+          .adm-desktop-sidebar { display: block !important; }
+          .admin-desktop-nav { display: none !important; }
           .admin-mobile-nav { display: none !important; }
         }
       `}</style>
@@ -2862,9 +2865,26 @@ export default function AdminDashboard({
         </div>
       )}
 
-      {/* Modern Single POS Header Shell */}
-      <div className="adm-dashboard-container">
-        <AdminHeader
+      {/* Complete Responsive Dashboard Shell */}
+      <div className="adm-dashboard-shell" style={{ display: 'flex', width: '100%', minHeight: '100vh' }}>
+        {/* Desktop Left Sidebar */}
+        <div className="adm-desktop-sidebar">
+          <AdminSidebar
+            activeTab={activeTab}
+            setActiveTab={setActiveTab}
+            restaurantInfo={restaurantInfo}
+            username={username}
+            pendingOrdersCount={orders.filter(o => o.status === 'pending').length}
+            onLogout={onLogout}
+            onOpenHelp={() => setShowHelpModal(true)}
+            onReturnToMenu={onReturnToMenu}
+            capabilities={tenantCaps}
+          />
+        </div>
+
+        {/* Right Main Dashboard Area */}
+        <div className="adm-dashboard-container" style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column' }}>
+          <AdminHeader
           restaurantInfo={restaurantInfo}
           username={username}
           onLogout={onLogout}
@@ -3071,6 +3091,7 @@ export default function AdminDashboard({
           analyticsEnabled={isAnalyticsEnabled}
           ordersEnabled={isDirectOrderingEnabled}
         />
+      </div>
       </div>
 
       {/* Dish & Category Form Modals */}
