@@ -1,13 +1,30 @@
 import React, { useState } from 'react';
-import { BarChart2, Download, TrendingUp, TrendingDown, Calendar, DollarSign, Award, Clock, Sparkles, ChevronRight, Filter, CreditCard, ShoppingBag } from 'lucide-react';
+import { 
+  BarChart2, 
+  Download, 
+  TrendingUp, 
+  TrendingDown, 
+  Calendar, 
+  DollarSign, 
+  Award, 
+  Clock, 
+  Sparkles, 
+  ChevronRight, 
+  Filter, 
+  CreditCard, 
+  ShoppingBag,
+  Zap,
+  ArrowUpRight
+} from 'lucide-react';
+import { getDishImageUrl } from '../../../utils/imageHelper';
 
 export default function AnalyticsView({
   analyticsData,
   onExportReport,
-  onDownloadAllCSV, // backward compatibility
+  onDownloadAllCSV,
   onFilterPeriod,
   exporting = false,
-  exportingAll = false, // backward compatibility
+  exportingAll = false,
   analyticsExportEnabled = true,
   currencySymbol = '₹'
 }) {
@@ -21,26 +38,16 @@ export default function AnalyticsView({
   const allTimeRevenue = analyticsData?.total_sales ?? analyticsData?.total_revenue ?? 0;
   const totalOrders = analyticsData?.total_orders ?? 0;
   const aov = analyticsData?.average_order_value ?? (totalOrders > 0 ? Math.round(allTimeRevenue / totalOrders) : 0);
-  const growthPct = analyticsData?.growth_percentage ?? 0;
   const topDishes = analyticsData?.top_dishes || [];
   const dailyChart = analyticsData?.daily_chart || [];
   const availableMonths = (analyticsData?.available_months || []).filter(m => Number(m.year) >= 2020);
   const paymentMethods = analyticsData?.payment_methods || analyticsData?.period_payment_methods || { upi: { count: 0, amount: 0 }, cash: { count: 0, amount: 0 }, card: { count: 0, amount: 0 } };
-  const lastUpdated = analyticsData?.last_updated ? new Date(analyticsData.last_updated) : new Date();
-
-  let formattedLastUpdated = '';
-  try {
-    formattedLastUpdated = new Intl.DateTimeFormat('en-IN', { timeZone: 'Asia/Kolkata', hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: true }).format(lastUpdated);
-  } catch (e) {
-    formattedLastUpdated = lastUpdated.toLocaleTimeString();
-  }
 
   const totalPaymentAmt = (paymentMethods.upi?.amount || 0) + (paymentMethods.cash?.amount || 0) + (paymentMethods.card?.amount || 0);
   const upiPercent = totalPaymentAmt > 0 ? Math.round(((paymentMethods.upi?.amount || 0) / totalPaymentAmt) * 100) : 0;
   const cashPercent = totalPaymentAmt > 0 ? Math.round(((paymentMethods.cash?.amount || 0) / totalPaymentAmt) * 100) : 0;
   const cardPercent = totalPaymentAmt > 0 ? (100 - upiPercent - cashPercent) : 0;
 
-  const maxDailySales = Math.max(...dailyChart.map(d => Number(d.sales) || 0), 1);
   const maxDishQty = Math.max(...topDishes.map(d => Number(d.quantity ?? d.sales_count ?? 1)), 1);
 
   const handleFilterChange = (e) => {
@@ -72,436 +79,333 @@ export default function AnalyticsView({
   };
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: '16px', paddingBottom: '90px', maxWidth: '1200px', margin: '0 auto', width: '100%' }}>
-      
-      {/* 🚀 Header, Filter Dropdown & Unified Single Export Action */}
+    <div style={{
+      display: 'flex',
+      flexDirection: 'column',
+      gap: '18px',
+      width: '100%',
+      maxWidth: '100%',
+      boxSizing: 'border-box',
+      fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif',
+      paddingBottom: '100px'
+    }}>
+      {/* ========================================================
+          1. HEADER & PERIOD FILTER + EXPORT ACTION
+         ======================================================== */}
       <div style={{
+        background: '#FFFFFF',
+        borderRadius: '18px',
+        border: '1px solid #E2E8F0',
+        padding: '18px 22px',
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'space-between',
         flexWrap: 'wrap',
-        gap: '12px',
-        background: '#FFFFFF',
-        padding: '16px 18px',
-        borderRadius: '16px',
-        border: '1px solid #E2E8F0',
-        boxShadow: '0 2px 8px rgba(0,0,0,0.02)'
+        gap: '14px',
+        boxShadow: '0 1px 3px rgba(0,0,0,0.02)'
       }}>
-        <div style={{ minWidth: '220px', flex: '1 1 auto' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '4px', flexWrap: 'wrap' }}>
+        <div>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
             <h2 style={{ fontSize: '1.25rem', fontWeight: 900, color: '#0F172A', margin: 0, letterSpacing: '-0.02em' }}>
-              Sales Analytics & Lifetime Reports
+              Sales Analytics & BI Reports
             </h2>
-            <span style={{ fontSize: '0.68rem', fontWeight: 800, background: '#DCFCE7', color: '#15803D', border: '1px solid #86EFAC', padding: '2px 8px', borderRadius: '12px', display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
-              ● LIVE
+            <span style={{
+              background: '#DCFCE7',
+              color: '#16A34A',
+              fontSize: '0.68rem',
+              fontWeight: 800,
+              padding: '2px 8px',
+              borderRadius: '8px'
+            }}>
+              ● Real-Time
             </span>
           </div>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap', fontSize: '0.74rem', color: '#64748B', fontWeight: 500 }}>
-            <span>Real-time revenue metrics & professional sales reports</span>
-            <span>•</span>
-            <span style={{ color: '#059669', fontWeight: 700 }}>Auto-refreshes every 10s</span>
-            <span>•</span>
-            <span>Includes individual recent orders and historical daily summaries</span>
-            {formattedLastUpdated && (
-              <>
-                <span>•</span>
-                <span>Updated: {formattedLastUpdated}</span>
-              </>
-            )}
-          </div>
+          <p style={{ fontSize: '0.76rem', color: '#64748B', margin: '3px 0 0 0' }}>
+            Business performance metrics, sales trends, and payment breakdowns.
+          </p>
         </div>
 
-        {/* Period Selector Dropdown & Single Unified Professional Export Button */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap', width: '100%', justifyContent: 'space-between' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '6px', background: '#F8FAFC', padding: '6px 12px', borderRadius: '10px', border: '1.5px solid #0284C7', flex: '1 1 auto', minWidth: '220px' }}>
-            <Calendar size={16} color="#0284C7" />
+        {/* Controls: Date Period Selector + Export Button */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap' }}>
+          <div style={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: '6px',
+            background: '#F8FAFC',
+            padding: '7px 12px',
+            borderRadius: '10px',
+            border: '1px solid #E2E8F0'
+          }}>
+            <Calendar size={15} color="#16A34A" />
             <select
               value={activeFilter}
               onChange={handleFilterChange}
               style={{
                 background: 'transparent',
                 border: 'none',
-                fontSize: '0.84rem',
-                fontWeight: 800,
+                fontSize: '0.78rem',
+                fontWeight: 700,
                 color: '#0F172A',
                 cursor: 'pointer',
-                outline: 'none',
-                width: '100%'
+                outline: 'none'
               }}
             >
-              <option value="all">📊 All-Time Overview (Complete History)</option>
-              <option value="today">🟢 Today's Realtime (Since Midnight)</option>
-              <option value="7d">🔵 Last 7 Days (Past Week)</option>
-              <option value="30d">🟣 Last 30 Days (Past Month)</option>
-              <option value="6m">🗓️ Last 6 Months (Half-Year History)</option>
+              <option value="all">📊 All-Time Lifetime Overview</option>
+              <option value="today">🟢 Today's Realtime</option>
+              <option value="7d">🔵 Last 7 Days (Week)</option>
+              <option value="30d">🟣 Last 30 Days (Month)</option>
+              <option value="6m">🗓️ Last 6 Months</option>
               {availableMonths.map(m => (
-                <option key={m.key} value={`month:${m.key}`}>📅 Monthly Archive: {m.label}</option>
+                <option key={m.key} value={`month:${m.key}`}>📅 Monthly: {m.label}</option>
               ))}
             </select>
           </div>
 
-          {/* Unified Single One-Click Professional Export Action */}
           {analyticsExportEnabled ? (
             <button
               onClick={handleExportClick}
               disabled={isExporting}
               style={{
-                background: isExporting
-                  ? '#64748B'
-                  : 'linear-gradient(135deg, #0284C7 0%, #0369A1 100%)',
+                background: isExporting ? '#94A3B8' : '#0A2315',
                 color: '#FFFFFF',
                 border: 'none',
-                padding: '9px 18px',
+                padding: '9px 16px',
                 borderRadius: '10px',
-                fontSize: '0.82rem',
-                fontWeight: 800,
-                cursor: isExporting ? 'not-allowed' : 'pointer',
-                opacity: isExporting ? 0.75 : 1,
-                display: 'inline-flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                gap: '8px',
-                minHeight: '40px',
-                boxShadow: '0 2px 8px rgba(2, 132, 199, 0.3)',
-                transition: 'all 0.2s ease',
-                flex: '1 1 auto',
-                minWidth: '200px'
-              }}
-            >
-              <Download size={16} />
-              <span>{isExporting ? '⏳ Preparing Report...' : '📊 Export Sales Report'}</span>
-            </button>
-          ) : (
-            <div
-              style={{
                 fontSize: '0.78rem',
                 fontWeight: 800,
-                color: '#B45309',
-                background: '#FEF3C7',
-                border: '1px solid #F59E0B',
-                padding: '8px 14px',
-                borderRadius: '10px',
+                cursor: isExporting ? 'not-allowed' : 'pointer',
                 display: 'inline-flex',
                 alignItems: 'center',
                 gap: '6px',
-                flex: '1 1 auto',
-                justifyContent: 'center'
+                boxShadow: '0 2px 6px rgba(10,35,21,0.2)',
+                transition: 'all 0.15s ease'
               }}
             >
-              <span>🔒 Export Sales Report (Pro Plan)</span>
-            </div>
+              <Download size={15} color="#D4AF37" />
+              <span>{isExporting ? 'Preparing Report...' : 'Export CSV'}</span>
+            </button>
+          ) : (
+            <span style={{
+              fontSize: '0.74rem',
+              fontWeight: 800,
+              color: '#D4AF37',
+              background: '#071F14',
+              padding: '8px 12px',
+              borderRadius: '10px',
+              border: '1px solid rgba(212, 175, 55, 0.3)'
+            }}>
+              🔒 CSV Export (Pro Plan)
+            </span>
           )}
         </div>
       </div>
 
-      {/* 💳 KPI Cards Grid (Compact 2-Columns on Mobile, 4-5 on Desktop) */}
+      {/* ========================================================
+          2. KPI SUMMARY METRIC CARDS (4 EXECUTIVE BLOCKS)
+         ======================================================== */}
       <div style={{
         display: 'grid',
-        gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))',
-        gap: '12px'
+        gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))',
+        gap: '14px'
       }}>
-        {/* Today */}
+        {/* Total / Period Revenue */}
         <div style={{
           background: '#FFFFFF',
-          padding: '16px 18px',
-          borderRadius: '16px',
-          border: activeFilter === 'today' ? '2px solid #10B981' : '1px solid #E2E8F0',
-          boxShadow: activeFilter === 'today' ? '0 4px 12px rgba(16,185,129,0.15)' : '0 2px 8px rgba(0,0,0,0.02)',
-          display: 'flex',
-          flexDirection: 'column',
-          justifyContent: 'space-between',
-          position: 'relative',
-          overflow: 'hidden'
-        }}>
-          <div style={{ position: 'absolute', top: 0, left: 0, width: '4px', height: '100%', background: '#10B981' }} />
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
-            <span style={{ fontSize: '0.72rem', fontWeight: 800, color: '#64748B', letterSpacing: '0.04em' }}>TODAY'S REVENUE</span>
-            <span style={{ fontSize: '0.68rem', fontWeight: 800, background: '#DCFCE7', color: '#15803D', padding: '2px 6px', borderRadius: '8px' }}>
-              {todayOrders} orders
-            </span>
-          </div>
-          <div style={{ fontSize: '1.5rem', fontWeight: 900, color: '#059669', letterSpacing: '-0.02em' }}>
-            {currencySymbol}{Number(todayRevenue).toLocaleString('en-IN')}
-          </div>
-          <span style={{ fontSize: '0.7rem', color: '#94A3B8', marginTop: '6px', fontWeight: 500 }}>
-            Since 12:00 AM Midnight
-          </span>
-        </div>
-
-        {/* 7 Days */}
-        <div style={{
-          background: '#FFFFFF',
-          padding: '16px 18px',
-          borderRadius: '16px',
-          border: activeFilter === 'week' ? '2px solid #0284C7' : '1px solid #E2E8F0',
-          boxShadow: activeFilter === 'week' ? '0 4px 12px rgba(2,132,199,0.15)' : '0 2px 8px rgba(0,0,0,0.02)',
-          display: 'flex',
-          flexDirection: 'column',
-          justifyContent: 'space-between',
-          position: 'relative',
-          overflow: 'hidden'
-        }}>
-          <div style={{ position: 'absolute', top: 0, left: 0, width: '4px', height: '100%', background: '#0284C7' }} />
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
-            <span style={{ fontSize: '0.72rem', fontWeight: 800, color: '#64748B', letterSpacing: '0.04em' }}>7 DAYS REVENUE</span>
-            <TrendingUp size={16} color="#0284C7" />
-          </div>
-          <div style={{ fontSize: '1.5rem', fontWeight: 900, color: '#0F172A', letterSpacing: '-0.02em' }}>
-            {currencySymbol}{Number(days7Revenue).toLocaleString('en-IN')}
-          </div>
-          <span style={{ fontSize: '0.7rem', color: '#94A3B8', marginTop: '6px', fontWeight: 500 }}>
-            Past 1 week performance
-          </span>
-        </div>
-
-        {/* 30 Days + Growth % */}
-        <div style={{
-          background: '#FFFFFF',
-          padding: '16px 18px',
-          borderRadius: '16px',
-          border: activeFilter === 'month' ? '2px solid #6366F1' : '1px solid #E2E8F0',
-          boxShadow: activeFilter === 'month' ? '0 4px 12px rgba(99,102,241,0.15)' : '0 2px 8px rgba(0,0,0,0.02)',
-          display: 'flex',
-          flexDirection: 'column',
-          justifyContent: 'space-between',
-          position: 'relative',
-          overflow: 'hidden'
-        }}>
-          <div style={{ position: 'absolute', top: 0, left: 0, width: '4px', height: '100%', background: '#6366F1' }} />
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
-            <span style={{ fontSize: '0.72rem', fontWeight: 800, color: '#64748B', letterSpacing: '0.04em' }}>30 DAYS REVENUE</span>
-            {growthPct !== 0 && (
-              <span style={{
-                fontSize: '0.66rem',
-                fontWeight: 800,
-                background: growthPct >= 0 ? '#DCFCE7' : '#FEE2E2',
-                color: growthPct >= 0 ? '#15803D' : '#B91C1C',
-                padding: '2px 5px',
-                borderRadius: '6px',
-                display: 'inline-flex',
-                alignItems: 'center',
-                gap: '2px'
-              }}>
-                {growthPct >= 0 ? <TrendingUp size={11} /> : <TrendingDown size={11} />}
-                {growthPct >= 0 ? `+${growthPct}%` : `${growthPct}%`}
-              </span>
-            )}
-          </div>
-          <div style={{ fontSize: '1.5rem', fontWeight: 900, color: '#0F172A', letterSpacing: '-0.02em' }}>
-            {currencySymbol}{Number(days30Revenue).toLocaleString('en-IN')}
-          </div>
-          <span style={{ fontSize: '0.7rem', color: '#94A3B8', marginTop: '6px', fontWeight: 500 }}>
-            Monthly sales volume
-          </span>
-        </div>
-
-        {/* Average Order Value (AOV) */}
-        <div style={{
-          background: '#FFFFFF',
-          padding: '16px 18px',
           borderRadius: '16px',
           border: '1px solid #E2E8F0',
-          boxShadow: '0 2px 8px rgba(0,0,0,0.02)',
-          display: 'flex',
-          flexDirection: 'column',
-          justifyContent: 'space-between',
-          position: 'relative',
-          overflow: 'hidden'
+          padding: '18px',
+          boxShadow: '0 1px 3px rgba(0,0,0,0.02)'
         }}>
-          <div style={{ position: 'absolute', top: 0, left: 0, width: '4px', height: '100%', background: '#EC4899' }} />
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
-            <span style={{ fontSize: '0.72rem', fontWeight: 800, color: '#64748B', letterSpacing: '0.04em' }}>AVG TICKET (AOV)</span>
-            <ShoppingBag size={16} color="#EC4899" />
-          </div>
-          <div style={{ fontSize: '1.5rem', fontWeight: 900, color: '#BE185D', letterSpacing: '-0.02em' }}>
-            {currencySymbol}{Number(aov).toLocaleString('en-IN')}
-          </div>
-          <span style={{ fontSize: '0.7rem', color: '#94A3B8', marginTop: '6px', fontWeight: 500 }}>
-            Average bill per table
-          </span>
-        </div>
-
-        {/* All-Time Sales */}
-        <div style={{
-          background: '#FFFFFF',
-          padding: '16px 18px',
-          borderRadius: '16px',
-          border: activeFilter === 'all' ? '2px solid #D97706' : '1px solid #E2E8F0',
-          boxShadow: activeFilter === 'all' ? '0 4px 12px rgba(217,119,6,0.15)' : '0 2px 8px rgba(0,0,0,0.02)',
-          display: 'flex',
-          flexDirection: 'column',
-          justifyContent: 'space-between',
-          position: 'relative',
-          overflow: 'hidden'
-        }}>
-          <div style={{ position: 'absolute', top: 0, left: 0, width: '4px', height: '100%', background: '#D97706' }} />
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
-            <span style={{ fontSize: '0.72rem', fontWeight: 800, color: '#64748B', letterSpacing: '0.04em' }}>ALL-TIME SALES</span>
-            <Award size={16} color="#D97706" />
-          </div>
-          <div style={{ fontSize: '1.5rem', fontWeight: 900, color: '#B45309', letterSpacing: '-0.02em' }}>
+          <div style={{ fontSize: '0.74rem', color: '#64748B', fontWeight: 600 }}>Total Revenue</div>
+          <div style={{ fontSize: '1.5rem', fontWeight: 900, color: '#0F172A', letterSpacing: '-0.02em', marginTop: '2px' }}>
             {currencySymbol}{Number(allTimeRevenue).toLocaleString('en-IN')}
           </div>
-          <span style={{ fontSize: '0.7rem', color: '#94A3B8', marginTop: '6px', fontWeight: 500 }}>
-            {totalOrders > 0 ? `${totalOrders} total orders (live + historical rollups)` : 'Lifetime restaurant gross'}
+          <span style={{ fontSize: '0.68rem', color: '#16A34A', fontWeight: 700, display: 'block', marginTop: '4px' }}>
+            ↑ Verified Sales Revenue
+          </span>
+        </div>
+
+        {/* Total Orders */}
+        <div style={{
+          background: '#FFFFFF',
+          borderRadius: '16px',
+          border: '1px solid #E2E8F0',
+          padding: '18px',
+          boxShadow: '0 1px 3px rgba(0,0,0,0.02)'
+        }}>
+          <div style={{ fontSize: '0.74rem', color: '#64748B', fontWeight: 600 }}>Total Completed Orders</div>
+          <div style={{ fontSize: '1.5rem', fontWeight: 900, color: '#0F172A', letterSpacing: '-0.02em', marginTop: '2px' }}>
+            {totalOrders}
+          </div>
+          <span style={{ fontSize: '0.68rem', color: '#64748B', fontWeight: 600, display: 'block', marginTop: '4px' }}>
+            {todayOrders} orders today
+          </span>
+        </div>
+
+        {/* Average Order Value */}
+        <div style={{
+          background: '#FFFFFF',
+          borderRadius: '16px',
+          border: '1px solid #E2E8F0',
+          padding: '18px',
+          boxShadow: '0 1px 3px rgba(0,0,0,0.02)'
+        }}>
+          <div style={{ fontSize: '0.74rem', color: '#64748B', fontWeight: 600 }}>Average Order Value (AOV)</div>
+          <div style={{ fontSize: '1.5rem', fontWeight: 900, color: '#0F172A', letterSpacing: '-0.02em', marginTop: '2px' }}>
+            {currencySymbol}{Math.round(aov).toLocaleString('en-IN')}
+          </div>
+          <span style={{ fontSize: '0.68rem', color: '#0284C7', fontWeight: 700, display: 'block', marginTop: '4px' }}>
+            Per transaction average
+          </span>
+        </div>
+
+        {/* Today's Sales */}
+        <div style={{
+          background: '#FFFFFF',
+          borderRadius: '16px',
+          border: '1px solid #E2E8F0',
+          padding: '18px',
+          boxShadow: '0 1px 3px rgba(0,0,0,0.02)'
+        }}>
+          <div style={{ fontSize: '0.74rem', color: '#64748B', fontWeight: 600 }}>Today's Sales</div>
+          <div style={{ fontSize: '1.5rem', fontWeight: 900, color: '#16A34A', letterSpacing: '-0.02em', marginTop: '2px' }}>
+            {currencySymbol}{Number(todayRevenue).toLocaleString('en-IN')}
+          </div>
+          <span style={{ fontSize: '0.68rem', color: '#16A34A', fontWeight: 700, display: 'block', marginTop: '4px' }}>
+            ● Active Business Day
           </span>
         </div>
       </div>
 
-      {/* 💳 Payment Methods Split & Collection Breakdown */}
-      {totalPaymentAmt > 0 && (
-        <div style={{
-          background: '#FFFFFF',
-          padding: '18px 22px',
-          borderRadius: '16px',
-          border: '1px solid #E2E8F0',
-          boxShadow: '0 2px 8px rgba(0,0,0,0.02)',
-          display: 'flex',
-          flexDirection: 'column',
-          gap: '12px'
-        }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '8px' }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-              <CreditCard size={18} color="#6366F1" />
-              <h3 style={{ fontSize: '0.96rem', fontWeight: 900, color: '#0F172A', margin: 0 }}>
-                Payment Method Collection Split
-              </h3>
-            </div>
-            <div style={{ display: 'flex', gap: '14px', fontSize: '0.76rem', fontWeight: 700 }}>
-              <span style={{ color: '#059669' }}>● UPI / Online ({upiPercent}%)</span>
-              <span style={{ color: '#D97706' }}>● Cash ({cashPercent}%)</span>
-              {cardPercent > 0 && <span style={{ color: '#2563EB' }}>● Card ({cardPercent}%)</span>}
-            </div>
-          </div>
-
-          <div style={{ width: '100%', height: '10px', background: '#F1F5F9', borderRadius: '8px', overflow: 'hidden', display: 'flex' }}>
-            <div style={{ width: `${upiPercent}%`, height: '100%', background: '#10B981', transition: 'all 0.3s ease' }} title={`UPI: ${currencySymbol}${paymentMethods.upi?.amount || 0}`} />
-            <div style={{ width: `${cashPercent}%`, height: '100%', background: '#F59E0B', transition: 'all 0.3s ease' }} title={`Cash: ${currencySymbol}${paymentMethods.cash?.amount || 0}`} />
-            <div style={{ width: `${cardPercent}%`, height: '100%', background: '#3B82F6', transition: 'all 0.3s ease' }} title={`Card: ${currencySymbol}${paymentMethods.card?.amount || 0}`} />
-          </div>
-        </div>
-      )}
-
-      {/* 📊 Visual Sales Trend Chart */}
-      {dailyChart.length > 0 && (
-        <div style={{
-          background: '#FFFFFF',
-          padding: '20px 22px',
-          borderRadius: '16px',
-          border: '1px solid #E2E8F0',
-          boxShadow: '0 2px 8px rgba(0,0,0,0.02)'
-        }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '18px' }}>
-            <h3 style={{ fontSize: '0.98rem', fontWeight: 900, color: '#0F172A', margin: 0, display: 'flex', alignItems: 'center', gap: '8px' }}>
-              <BarChart2 size={18} color="#0284C7" /> {!activeFilter.startsWith('month:') ? 'Sales Trend' : 'Daily Sales Trend (Selected Month)'}
-            </h3>
-            <span style={{ fontSize: '0.74rem', color: '#64748B', fontWeight: 600 }}>Daily Gross (INR)</span>
-          </div>
-
-          <div style={{ display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between', height: '140px', gap: '6px', paddingTop: '10px', overflowX: 'auto' }}>
-            {dailyChart.map((item, idx) => {
-              const heightPercent = Math.max(Math.round((Number(item.sales || 0) / maxDailySales) * 100), 8);
-              const isToday = item.date === new Date().toISOString().split('T')[0];
-              return (
-                <div key={idx} style={{ flex: '1 0 28px', minWidth: '24px', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '8px', height: '100%', justifyContent: 'flex-end' }}>
-                  <span style={{ fontSize: '0.68rem', fontWeight: 800, color: item.sales > 0 ? '#0F172A' : '#CBD5E1' }}>
-                    {item.sales > 0 ? `${currencySymbol}${item.sales}` : '0'}
-                  </span>
-                  <div style={{
-                    width: '100%',
-                    maxWidth: '36px',
-                    height: `${heightPercent}%`,
-                    background: isToday
-                      ? 'linear-gradient(180deg, #10B981 0%, #059669 100%)'
-                      : item.sales > 0
-                        ? 'linear-gradient(180deg, #38BDF8 0%, #0284C7 100%)'
-                        : '#F1F5F9',
-                    borderRadius: '6px 6px 3px 3px',
-                    transition: 'all 0.3s ease'
-                  }} />
-                  <span style={{ fontSize: '0.68rem', color: isToday ? '#059669' : '#64748B', fontWeight: isToday ? 900 : 600, whiteSpace: 'nowrap' }}>
-                    {isToday ? 'Today' : item.displayDate}
-                  </span>
-                </div>
-              );
-            })}
-          </div>
-        </div>
-      )}
-
-      {/* 🏆 Top Selling Dishes Leaderboard (True Lifetime Merged) */}
+      {/* ========================================================
+          3. MAIN INSIGHTS: TOP DISHES & PAYMENT BREAKDOWN
+         ======================================================== */}
       <div style={{
-        background: '#FFFFFF',
-        padding: '22px',
-        borderRadius: '16px',
-        border: '1px solid #E2E8F0',
-        boxShadow: '0 2px 8px rgba(0,0,0,0.02)'
+        display: 'grid',
+        gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))',
+        gap: '16px'
       }}>
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px', flexWrap: 'wrap', gap: '8px' }}>
-          <h3 style={{ fontSize: '1rem', fontWeight: 900, color: '#0F172A', margin: 0, display: 'flex', alignItems: 'center', gap: '8px' }}>
-            <Award size={18} color="#D97706" /> All-Time Best Selling Dishes
+        {/* Top Selling Items */}
+        <div style={{
+          background: '#FFFFFF',
+          borderRadius: '18px',
+          border: '1px solid #E2E8F0',
+          padding: '20px',
+          boxShadow: '0 1px 3px rgba(0,0,0,0.02)'
+        }}>
+          <h3 style={{ fontSize: '0.96rem', fontWeight: 800, color: '#0F172A', margin: '0 0 16px 0' }}>
+            Top Selling Dishes
           </h3>
-          <span style={{ fontSize: '0.74rem', color: '#64748B', fontWeight: 600 }}>Lifetime Volume Ranking</span>
-        </div>
 
-        {topDishes.length === 0 ? (
-          <p style={{ fontSize: '0.84rem', color: '#94A3B8', margin: 0, fontStyle: 'italic' }}>No sales data recorded yet.</p>
-        ) : (
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
-            {topDishes.slice(0, 6).map((dish, idx) => {
-              const qty = Number(dish.quantity ?? dish.sales_count ?? 0);
-              const percent = Math.round((qty / maxDishQty) * 100);
-              return (
-                <div
-                  key={idx}
-                  style={{
-                    display: 'flex',
-                    flexDirection: 'column',
-                    gap: '6px',
-                    padding: '12px 14px',
-                    background: '#F8FAFC',
-                    borderRadius: '12px',
-                    border: '1px solid #F1F5F9',
-                    transition: 'transform 0.15s ease'
-                  }}
-                >
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                      <span style={{ fontSize: '1rem' }}>
-                        {idx === 0 ? '🥇' : idx === 1 ? '🥈' : idx === 2 ? '🥉' : '🏅'}
-                      </span>
-                      <div>
-                        <strong style={{ fontSize: '0.9rem', color: '#0F172A', fontWeight: 800 }}>
-                          {dish.name}
-                        </strong>
-                        <span style={{ fontSize: '0.74rem', color: '#64748B', marginLeft: '8px', fontWeight: 600 }}>
-                          ({qty} {qty === 1 ? 'item' : 'items'} sold)
-                        </span>
+          {topDishes.length === 0 ? (
+            <div style={{ padding: '24px', textAlign: 'center', color: '#64748B', fontSize: '0.80rem' }}>
+              No item sales recorded for this period yet.
+            </div>
+          ) : (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
+              {topDishes.slice(0, 5).map((dish, i) => {
+                const sold = Number(dish.quantity ?? dish.sales_count ?? 0);
+                return (
+                  <div key={i} style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                    <div style={{
+                      width: '38px',
+                      height: '38px',
+                      borderRadius: '10px',
+                      background: '#F8FAFC',
+                      border: '1px solid #E2E8F0',
+                      overflow: 'hidden',
+                      flexShrink: 0
+                    }}>
+                      <img
+                        src={getDishImageUrl(dish.image || dish.image_url)}
+                        alt={dish.name || dish.dish_name}
+                        style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                        onError={(e) => { e.currentTarget.src = '/images/default-dish.webp'; }}
+                      />
+                    </div>
+
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.80rem', fontWeight: 700, color: '#0F172A', marginBottom: '4px' }}>
+                        <span style={{ whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{dish.name || dish.dish_name}</span>
+                        <span style={{ color: '#64748B', fontSize: '0.74rem' }}>{sold} orders</span>
+                      </div>
+                      <div style={{ width: '100%', height: '6px', background: '#F1F5F9', borderRadius: '4px', overflow: 'hidden' }}>
+                        <div style={{ width: `${Math.round((sold / maxDishQty) * 100)}%`, height: '100%', background: '#0D3823', borderRadius: '4px' }} />
                       </div>
                     </div>
-                    {dish.revenue > 0 && (
-                      <strong style={{ fontSize: '0.92rem', color: '#059669', fontWeight: 900 }}>
-                        {currencySymbol}{Number(dish.revenue || 0).toLocaleString('en-IN')}
-                      </strong>
-                    )}
                   </div>
+                );
+              })}
+            </div>
+          )}
+        </div>
 
-                  {/* Volume bar */}
-                  <div style={{ width: '100%', height: '5px', background: '#E2E8F0', borderRadius: '4px', overflow: 'hidden' }}>
-                    <div style={{
-                      width: `${percent}%`,
-                      height: '100%',
-                      background: idx === 0 ? '#F59E0B' : idx === 1 ? '#0284C7' : '#10B981',
-                      borderRadius: '4px'
-                    }} />
-                  </div>
+        {/* Payment Mix Breakdown */}
+        <div style={{
+          background: '#FFFFFF',
+          borderRadius: '18px',
+          border: '1px solid #E2E8F0',
+          padding: '20px',
+          boxShadow: '0 1px 3px rgba(0,0,0,0.02)'
+        }}>
+          <h3 style={{ fontSize: '0.96rem', fontWeight: 800, color: '#0F172A', margin: '0 0 16px 0' }}>
+            Payment Modes Breakdown
+          </h3>
+
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
+            {/* UPI / Digital QR */}
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', background: '#F8FAFC', padding: '12px 14px', borderRadius: '12px', border: '1px solid #E2E8F0' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                <div style={{ width: '32px', height: '32px', borderRadius: '8px', background: '#DCFCE7', color: '#16A34A', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                  <Zap size={16} />
                 </div>
-              );
-            })}
-          </div>
-        )}
-      </div>
+                <div>
+                  <strong style={{ fontSize: '0.82rem', color: '#0F172A', display: 'block' }}>UPI / Digital QR</strong>
+                  <span style={{ fontSize: '0.68rem', color: '#64748B' }}>{paymentMethods.upi?.count || 0} transactions</span>
+                </div>
+              </div>
+              <div style={{ textAlign: 'right' }}>
+                <strong style={{ fontSize: '0.90rem', color: '#0F172A', display: 'block' }}>{currencySymbol}{paymentMethods.upi?.amount || 0}</strong>
+                <span style={{ fontSize: '0.68rem', color: '#16A34A', fontWeight: 700 }}>{upiPercent}% share</span>
+              </div>
+            </div>
 
+            {/* Cash at Counter */}
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', background: '#F8FAFC', padding: '12px 14px', borderRadius: '12px', border: '1px solid #E2E8F0' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                <div style={{ width: '32px', height: '32px', borderRadius: '8px', background: '#FEF3C7', color: '#D97706', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                  <DollarSign size={16} />
+                </div>
+                <div>
+                  <strong style={{ fontSize: '0.82rem', color: '#0F172A', display: 'block' }}>Cash Payments</strong>
+                  <span style={{ fontSize: '0.68rem', color: '#64748B' }}>{paymentMethods.cash?.count || 0} transactions</span>
+                </div>
+              </div>
+              <div style={{ textAlign: 'right' }}>
+                <strong style={{ fontSize: '0.90rem', color: '#0F172A', display: 'block' }}>{currencySymbol}{paymentMethods.cash?.amount || 0}</strong>
+                <span style={{ fontSize: '0.68rem', color: '#D97706', fontWeight: 700 }}>{cashPercent}% share</span>
+              </div>
+            </div>
+
+            {/* Card / POS */}
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', background: '#F8FAFC', padding: '12px 14px', borderRadius: '12px', border: '1px solid #E2E8F0' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                <div style={{ width: '32px', height: '32px', borderRadius: '8px', background: '#E0F2FE', color: '#0284C7', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                  <CreditCard size={16} />
+                </div>
+                <div>
+                  <strong style={{ fontSize: '0.82rem', color: '#0F172A', display: 'block' }}>Card / POS</strong>
+                  <span style={{ fontSize: '0.68rem', color: '#64748B' }}>{paymentMethods.card?.count || 0} transactions</span>
+                </div>
+              </div>
+              <div style={{ textAlign: 'right' }}>
+                <strong style={{ fontSize: '0.90rem', color: '#0F172A', display: 'block' }}>{currencySymbol}{paymentMethods.card?.amount || 0}</strong>
+                <span style={{ fontSize: '0.68rem', color: '#0284C7', fontWeight: 700 }}>{cardPercent}% share</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
     </div>
   );
 }
