@@ -144,11 +144,15 @@ export default function SuperAdminLogin({ onLoginSuccess, onCancel }) {
           </div>
         )}
 
-        <h1 style={{ fontSize: '1.35rem', fontWeight: 900, color: '#0A2315', margin: '0 0 4px 0', letterSpacing: '-0.02em' }}>
-          SaaS Master Control
+        <div style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', padding: '4px 10px', borderRadius: '6px', background: 'linear-gradient(135deg, #0A2315 0%, #164E2A 100%)', color: '#DFBA67', fontSize: '0.70rem', fontWeight: 900, letterSpacing: '0.08em', border: '1px solid #D4AF37', marginBottom: '8px' }}>
+          <Crown size={12} color="#DFBA67" /> SUPER ADMIN
+        </div>
+
+        <h1 style={{ fontSize: '1.45rem', fontWeight: 900, color: '#0A2315', margin: '0 0 4px 0', letterSpacing: '-0.02em' }}>
+          TouchQR
         </h1>
-        <p style={{ fontSize: '0.80rem', color: '#64748B', margin: '0 0 16px 0', fontWeight: 600 }}>
-          Super Admin Authorization Gateway
+        <p style={{ fontSize: '0.82rem', color: '#64748B', margin: '0 0 16px 0', fontWeight: 600 }}>
+          Multi-Business SaaS Control Center
         </p>
 
         {/* Security Trust Banner */}
@@ -157,7 +161,7 @@ export default function SuperAdminLogin({ onLoginSuccess, onCancel }) {
           border: '1px solid #BBF7D0',
           borderRadius: '10px',
           padding: '7px 12px',
-          fontSize: '0.74rem',
+          fontSize: '0.76rem',
           color: '#166534',
           fontWeight: 700,
           display: 'flex',
@@ -166,7 +170,7 @@ export default function SuperAdminLogin({ onLoginSuccess, onCancel }) {
           gap: '6px',
           marginBottom: '20px'
         }}>
-          <ShieldCheck size={15} color="#15803D" /> 256-Bit SSL Encrypted Admin Portal
+          <span>🔒 Secure Admin Portal</span>
         </div>
 
         {error && (
@@ -317,9 +321,7 @@ export default function SuperAdminLogin({ onLoginSuccess, onCancel }) {
                 <span>Signing in...</span>
               </>
             ) : (
-              <>
-                <span>👑 Sign In to Super Admin</span>
-              </>
+              <span>Sign In</span>
             )}
           </button>
         </form>

@@ -79,13 +79,13 @@ export default function OwnerLoginModal({
           </div>
 
           <h2 style={{ fontSize: '1.35rem', fontWeight: 900, color: '#FFD700', margin: '0 0 6px 0', letterSpacing: '-0.3px' }}>
-            {mode === 'forgot' ? 'Reset Admin Password' : 'TouchQR Owner Login'}
+            {mode === 'forgot' ? 'Reset Admin Password' : 'TouchQR Business Login'}
           </h2>
 
           <p style={{ fontSize: '0.84rem', color: '#94A3B8', margin: 0, lineHeight: 1.4 }}>
             {mode === 'forgot'
-              ? 'Enter your restaurant slug/username and your new desired password.'
-              : 'Access your TouchQR digital menu, KOT orders, & billing hub.'}
+              ? 'Enter your business slug/username and your new desired password.'
+              : 'Access your TouchQR digital ordering, operations & growth hub.'}
           </p>
         </div>
 
@@ -105,7 +105,7 @@ export default function OwnerLoginModal({
               transition: 'all 0.2s ease'
             }}
           >
-            🔑 Owner Login
+            🔑 Business Login
           </button>
           <button
             type="button"
@@ -145,14 +145,14 @@ export default function OwnerLoginModal({
         <form onSubmit={handleSubmit}>
           <div style={{ marginBottom: '16px' }}>
             <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: 900, color: '#D4AF37', marginBottom: '6px', letterSpacing: '0.5px' }}>
-              {mode === 'forgot' ? 'RESTAURANT SLUG OR USERNAME *' : 'ADMIN USERNAME *'}
+              {mode === 'forgot' ? 'BUSINESS SLUG OR USERNAME *' : 'BUSINESS ADMIN USERNAME *'}
             </label>
             <input
               type="text"
               required
               value={usernameInput}
               onChange={e => setUsernameInput(e.target.value)}
-              placeholder={mode === 'forgot' ? 'e.g. royal-spice or admin' : 'e.g. admin'}
+              placeholder={mode === 'forgot' ? 'e.g. business-slug or admin' : 'e.g. admin'}
               style={{
                 width: '100%', padding: '12px 14px', borderRadius: '10px',
                 border: '1px solid rgba(212, 175, 55, 0.4)', background: 'rgba(0,0,0,0.4)',
@@ -221,15 +221,11 @@ export default function OwnerLoginModal({
             }}
           >
             {loading ? (
-              <span>Processing...</span>
+              <span>Signing in...</span>
             ) : mode === 'login' ? (
-              <>
-                <span>Login to Admin Panel</span> <ArrowRight size={18} />
-              </>
+              <span>Sign In</span>
             ) : (
-              <>
-                <span>Update Password Now</span> <ArrowRight size={18} />
-              </>
+              <span>Update Password Now</span>
             )}
           </button>
         </form>

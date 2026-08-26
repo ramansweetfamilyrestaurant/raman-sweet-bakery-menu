@@ -126,6 +126,10 @@ export default function AdminLogin({ onLoginSuccess, onCancel, restaurantName, t
             {mode === 'forgot' ? <Lock size={26} color="#DFBA67" /> : <Crown size={28} color="#DFBA67" />}
           </div>
 
+          <div style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', padding: '4px 10px', borderRadius: '6px', background: 'rgba(10, 35, 21, 0.08)', color: '#0A2315', fontSize: '0.70rem', fontWeight: 900, letterSpacing: '0.08em', border: '1px solid rgba(212, 175, 55, 0.4)', marginBottom: '8px' }}>
+            BUSINESS ADMIN
+          </div>
+
           <h1 style={{
             fontSize: '1.4rem',
             fontWeight: 900,
@@ -133,12 +137,12 @@ export default function AdminLogin({ onLoginSuccess, onCancel, restaurantName, t
             margin: '0 0 4px 0',
             letterSpacing: '-0.02em'
           }}>
-            {mode === 'forgot' ? 'Reset Password' : 'Sign in to TouchQR'}
+            {mode === 'forgot' ? 'Reset Password' : (restaurantName ? `${restaurantName}` : 'Sign in to TouchQR')}
           </h1>
           <p style={{ fontSize: '0.80rem', color: '#64748B', margin: 0, fontWeight: 600, lineHeight: 1.4 }}>
             {mode === 'forgot'
               ? 'Account Recovery & Password Assistance'
-              : (restaurantName ? `${restaurantName} • Admin Control Panel` : 'Restaurant Operations, Ordering & Growth Platform')}
+              : (restaurantName ? 'Business Admin Control Panel' : 'Business Operations, Ordering & Growth Platform')}
           </p>
         </div>
 
@@ -148,7 +152,7 @@ export default function AdminLogin({ onLoginSuccess, onCancel, restaurantName, t
           border: '1px solid #BBF7D0',
           borderRadius: '10px',
           padding: '7px 12px',
-          fontSize: '0.74rem',
+          fontSize: '0.76rem',
           color: '#166534',
           fontWeight: 700,
           display: 'flex',
@@ -157,7 +161,7 @@ export default function AdminLogin({ onLoginSuccess, onCancel, restaurantName, t
           gap: '6px',
           marginBottom: '20px'
         }}>
-          <ShieldCheck size={15} color="#15803D" /> Secure Encrypted Admin Gateway
+          <span>🔒 Secure Admin Portal</span>
         </div>
 
         {/* Form Alerts */}
@@ -205,7 +209,7 @@ export default function AdminLogin({ onLoginSuccess, onCancel, restaurantName, t
                 textTransform: 'uppercase'
               }}
             >
-              {mode === 'forgot' ? 'Username or Registered Phone' : 'Username / Email'}
+              {mode === 'forgot' ? 'Username or Registered Phone' : 'BUSINESS ADMIN USERNAME / EMAIL'}
             </label>
             <div style={{ position: 'relative', display: 'flex', alignItems: 'center' }}>
               <User size={17} color="#94A3B8" style={{ position: 'absolute', left: '12px', pointerEvents: 'none' }} />
@@ -253,10 +257,10 @@ export default function AdminLogin({ onLoginSuccess, onCancel, restaurantName, t
                 🔒 Account Recovery Support
               </div>
               <p style={{ fontSize: '0.80rem', color: '#047857', lineHeight: 1.5, margin: '0 0 14px 0' }}>
-                For account protection, please contact Super Admin support via WhatsApp with your registered restaurant details to verify and reset your credentials.
+                For account protection, please contact Super Admin support via WhatsApp with your registered business details to verify and reset your credentials.
               </p>
               <a
-                href={`https://wa.me/${(supportPhone || '919876543210').replace(/[^0-9]/g, '')}?text=${encodeURIComponent('Hello Super Admin, I am requesting password recovery assistance for my restaurant: ' + (restaurantName || targetSlug || ''))}`}
+                href={`https://wa.me/${(supportPhone || '919876543210').replace(/[^0-9]/g, '')}?text=${encodeURIComponent('Hello Super Admin, I am requesting password recovery assistance for my business: ' + (restaurantName || targetSlug || ''))}`}
                 target="_blank"
                 rel="noopener noreferrer"
                 style={{
@@ -386,10 +390,7 @@ export default function AdminLogin({ onLoginSuccess, onCancel, restaurantName, t
                   <span>Signing in...</span>
                 </>
               ) : (
-                <>
-                  <span>Sign In</span>
-                  <ArrowRight size={16} color="#DFBA67" />
-                </>
+                <span>Sign In</span>
               )}
             </button>
           )}
@@ -403,7 +404,7 @@ export default function AdminLogin({ onLoginSuccess, onCancel, restaurantName, t
                 fontSize: '0.84rem', fontWeight: 800, border: 'none', background: 'none', cursor: 'pointer'
               }}
             >
-              ← Back to Owner Sign In
+              ← Back to Business Sign In
             </button>
           ) : (
             <button
@@ -424,7 +425,7 @@ export default function AdminLogin({ onLoginSuccess, onCancel, restaurantName, t
                 cursor: 'pointer'
               }}
             >
-              <ArrowLeft size={15} /> Return to Customer Menu
+              <ArrowLeft size={15} /> Return to Menu
             </button>
           )}
         </form>
