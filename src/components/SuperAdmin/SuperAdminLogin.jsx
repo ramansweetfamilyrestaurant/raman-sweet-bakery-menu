@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Crown, Lock, User, ArrowLeft, ShieldAlert, Eye, EyeOff, ShieldCheck } from 'lucide-react';
+import { Crown, Lock, User, ArrowLeft, ShieldAlert, Eye, EyeOff, ShieldCheck, RefreshCw } from 'lucide-react';
 import { superAdminLogin } from '../../api/client';
 import { resolveImageUrl } from '../../utils/imageHelper';
 
@@ -54,7 +54,7 @@ export default function SuperAdminLogin({ onLoginSuccess, onCancel }) {
       display: 'flex',
       alignItems: 'center',
       justifyContent: 'center',
-      padding: '20px',
+      padding: '24px 16px',
       position: 'relative',
       overflow: 'hidden'
     }}>
@@ -66,32 +66,32 @@ export default function SuperAdminLogin({ onLoginSuccess, onCancel }) {
       }} />
 
       <div style={{
-        maxWidth: '420px',
+        maxWidth: '430px',
         width: '100%',
-        background: 'rgba(255, 255, 255, 0.96)',
-        backdropFilter: 'blur(20px)',
-        WebkitBackdropFilter: 'blur(20px)',
-        borderRadius: '28px',
-        padding: '36px 26px 28px',
-        boxShadow: '0 25px 70px rgba(0, 0, 0, 0.45)',
-        border: '2px solid #D4AF37',
+        background: '#FFFFFF',
+        borderRadius: '24px',
+        padding: '36px 28px 28px',
+        boxShadow: '0 25px 60px -10px rgba(0, 0, 0, 0.45), 0 0 0 1px rgba(212, 175, 55, 0.35)',
+        border: '1.5px solid #D4AF37',
         textAlign: 'center',
         position: 'relative',
-        zIndex: 2
+        zIndex: 2,
+        boxSizing: 'border-box'
       }}>
         {/* Back Button */}
         <button
           type="button"
           onClick={onCancel}
+          aria-label="Return to previous screen"
           style={{
             position: 'absolute',
             top: '20px',
             left: '20px',
-            color: 'var(--text-muted)',
+            color: '#64748B',
             display: 'flex',
             alignItems: 'center',
             gap: '4px',
-            fontSize: '0.8rem',
+            fontSize: '0.78rem',
             fontWeight: 800,
             background: '#F1F5F9',
             border: 'none',
@@ -100,21 +100,21 @@ export default function SuperAdminLogin({ onLoginSuccess, onCancel }) {
             cursor: 'pointer'
           }}
         >
-          <ArrowLeft size={15} /> Back
+          <ArrowLeft size={14} /> Back
         </button>
 
         {/* Crown Badge or Platform Logo */}
         {platformLogo && !logoErr ? (
           <div style={{
-            width: '64px',
-            height: '64px',
+            width: '60px',
+            height: '60px',
             borderRadius: '16px',
             background: '#FFFFFF',
             padding: '4px',
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
-            margin: '12px auto 16px',
+            margin: '12px auto 14px',
             boxShadow: '0 8px 24px rgba(10, 35, 21, 0.25)',
             border: '2px solid #D4AF37',
             overflow: 'hidden'
@@ -128,26 +128,26 @@ export default function SuperAdminLogin({ onLoginSuccess, onCancel }) {
           </div>
         ) : (
           <div style={{
-            width: '64px',
-            height: '64px',
-            borderRadius: '50%',
+            width: '60px',
+            height: '60px',
+            borderRadius: '16px',
             background: 'linear-gradient(135deg, #0A2315 0%, #164E2A 100%)',
             color: '#DFBA67',
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
-            margin: '12px auto 16px',
+            margin: '12px auto 14px',
             boxShadow: '0 8px 24px rgba(10, 35, 21, 0.3)',
             border: '2px solid #D4AF37'
           }}>
-            <Crown size={30} color="#DFBA67" />
+            <Crown size={28} color="#DFBA67" />
           </div>
         )}
 
-        <h2 style={{ fontSize: '1.35rem', fontWeight: 900, color: 'var(--primary-emerald)', marginBottom: '4px', letterSpacing: '-0.02em' }}>
+        <h1 style={{ fontSize: '1.35rem', fontWeight: 900, color: '#0A2315', margin: '0 0 4px 0', letterSpacing: '-0.02em' }}>
           SaaS Master Control
-        </h2>
-        <p style={{ fontSize: '0.78rem', color: 'var(--text-muted)', marginBottom: '18px', fontWeight: 600 }}>
+        </h1>
+        <p style={{ fontSize: '0.80rem', color: '#64748B', margin: '0 0 16px 0', fontWeight: 600 }}>
           Super Admin Authorization Gateway
         </p>
 
@@ -155,8 +155,8 @@ export default function SuperAdminLogin({ onLoginSuccess, onCancel }) {
         <div style={{
           background: '#F0FDF4',
           border: '1px solid #BBF7D0',
-          borderRadius: '12px',
-          padding: '8px 12px',
+          borderRadius: '10px',
+          padding: '7px 12px',
           fontSize: '0.74rem',
           color: '#166534',
           fontWeight: 700,
@@ -166,7 +166,7 @@ export default function SuperAdminLogin({ onLoginSuccess, onCancel }) {
           gap: '6px',
           marginBottom: '20px'
         }}>
-          <ShieldCheck size={16} color="#15803D" /> 256-Bit SSL Encrypted Admin Portal
+          <ShieldCheck size={15} color="#15803D" /> 256-Bit SSL Encrypted Admin Portal
         </div>
 
         {error && (
@@ -188,41 +188,59 @@ export default function SuperAdminLogin({ onLoginSuccess, onCancel }) {
           </div>
         )}
 
-        <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
+        <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
           <div style={{ textAlign: 'left' }}>
-            <label style={{ fontSize: '0.76rem', fontWeight: 900, color: 'var(--text-dark)', marginBottom: '6px', display: 'block', letterSpacing: '0.03em' }}>
+            <label 
+              htmlFor="superadmin-username"
+              style={{ fontSize: '0.76rem', fontWeight: 900, color: '#334155', marginBottom: '6px', display: 'block', letterSpacing: '0.03em' }}
+            >
               SUPER ADMIN USERNAME
             </label>
-            <div style={{ position: 'relative' }}>
-              <User size={18} color="#C5A059" style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)' }} />
+            <div style={{ position: 'relative', display: 'flex', alignItems: 'center' }}>
+              <User size={17} color="#94A3B8" style={{ position: 'absolute', left: '12px', pointerEvents: 'none' }} />
               <input
+                id="superadmin-username"
                 type="text"
                 value={username}
                 onChange={(e) => setUsername(e.target.value)}
                 placeholder="Enter admin username"
-                autoComplete="off"
+                autoComplete="username"
                 required
                 style={{
                   width: '100%',
-                  padding: '12px 12px 12px 38px',
+                  height: '46px',
+                  padding: '10px 14px 10px 38px',
                   borderRadius: '12px',
-                  border: '1.5px solid var(--border-light)',
-                  fontSize: '0.88rem',
+                  border: '1.5px solid #CBD5E1',
+                  fontSize: '0.90rem',
                   fontWeight: 600,
                   outline: 'none',
-                  boxSizing: 'border-box'
+                  boxSizing: 'border-box',
+                  transition: 'border-color 0.15s ease, box-shadow 0.15s ease'
+                }}
+                onFocus={(e) => {
+                  e.target.style.borderColor = '#D4AF37';
+                  e.target.style.boxShadow = '0 0 0 3px rgba(212, 175, 55, 0.2)';
+                }}
+                onBlur={(e) => {
+                  e.target.style.borderColor = '#CBD5E1';
+                  e.target.style.boxShadow = 'none';
                 }}
               />
             </div>
           </div>
 
           <div style={{ textAlign: 'left' }}>
-            <label style={{ fontSize: '0.76rem', fontWeight: 900, color: 'var(--text-dark)', marginBottom: '6px', display: 'block', letterSpacing: '0.03em' }}>
+            <label 
+              htmlFor="superadmin-password"
+              style={{ fontSize: '0.76rem', fontWeight: 900, color: '#334155', marginBottom: '6px', display: 'block', letterSpacing: '0.03em' }}
+            >
               MASTER PASSWORD
             </label>
-            <div style={{ position: 'relative' }}>
-              <Lock size={18} color="#C5A059" style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)' }} />
+            <div style={{ position: 'relative', display: 'flex', alignItems: 'center' }}>
+              <Lock size={17} color="#94A3B8" style={{ position: 'absolute', left: '12px', pointerEvents: 'none' }} />
               <input
+                id="superadmin-password"
                 type={showPassword ? 'text' : 'password'}
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
@@ -231,32 +249,40 @@ export default function SuperAdminLogin({ onLoginSuccess, onCancel }) {
                 required
                 style={{
                   width: '100%',
-                  padding: '12px 40px 12px 38px',
+                  height: '46px',
+                  padding: '10px 42px 10px 38px',
                   borderRadius: '12px',
-                  border: '1.5px solid var(--border-light)',
-                  fontSize: '0.88rem',
+                  border: '1.5px solid #CBD5E1',
+                  fontSize: '0.90rem',
                   fontWeight: 600,
                   outline: 'none',
-                  boxSizing: 'border-box'
+                  boxSizing: 'border-box',
+                  transition: 'border-color 0.15s ease, box-shadow 0.15s ease'
+                }}
+                onFocus={(e) => {
+                  e.target.style.borderColor = '#D4AF37';
+                  e.target.style.boxShadow = '0 0 0 3px rgba(212, 175, 55, 0.2)';
+                }}
+                onBlur={(e) => {
+                  e.target.style.borderColor = '#CBD5E1';
+                  e.target.style.boxShadow = 'none';
                 }}
               />
               <button
                 type="button"
                 onClick={() => setShowPassword(!showPassword)}
+                aria-label={showPassword ? 'Hide password' : 'Show password'}
                 style={{
                   position: 'absolute',
                   right: '12px',
-                  top: '50%',
-                  transform: 'translateY(-50%)',
                   background: 'none',
                   border: 'none',
                   cursor: 'pointer',
-                  color: '#64748B',
+                  color: '#94A3B8',
                   display: 'flex',
                   alignItems: 'center',
-                  padding: 0
+                  padding: '4px'
                 }}
-                title={showPassword ? 'Hide password' : 'Show password'}
               >
                 {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
               </button>
@@ -267,19 +293,34 @@ export default function SuperAdminLogin({ onLoginSuccess, onCancel }) {
             type="submit"
             disabled={loading}
             style={{
-              marginTop: '10px',
+              height: '48px',
+              marginTop: '4px',
               background: 'linear-gradient(135deg, #0A2315 0%, #164E2A 100%)',
               color: '#DFBA67',
-              padding: '14px',
-              borderRadius: 'var(--radius-pill)',
-              fontSize: '0.92rem',
+              borderRadius: '12px',
+              fontSize: '0.94rem',
               fontWeight: 900,
               border: '1.5px solid #D4AF37',
-              boxShadow: '0 6px 20px rgba(10, 35, 21, 0.4)',
-              cursor: loading ? 'not-allowed' : 'pointer'
+              boxShadow: '0 4px 16px rgba(10, 35, 21, 0.3)',
+              cursor: loading ? 'not-allowed' : 'pointer',
+              opacity: loading ? 0.75 : 1,
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              gap: '8px',
+              transition: 'all 0.15s ease'
             }}
           >
-            {loading ? 'Authenticating...' : '👑 Login to Super Admin Panel'}
+            {loading ? (
+              <>
+                <RefreshCw size={16} className="animate-spin" />
+                <span>Signing in...</span>
+              </>
+            ) : (
+              <>
+                <span>👑 Sign In to Super Admin</span>
+              </>
+            )}
           </button>
         </form>
       </div>
