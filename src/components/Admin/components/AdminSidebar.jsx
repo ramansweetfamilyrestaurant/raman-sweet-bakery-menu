@@ -37,23 +37,24 @@ export default function AdminSidebar({
 
   return (
     <aside style={{
-      width: '240px',
-      minWidth: '240px',
+      width: '100%',
       height: '100vh',
-      position: 'sticky',
-      top: 0,
       background: '#051E13',
       color: '#FFFFFF',
       display: 'flex',
       flexDirection: 'column',
       justifyContent: 'space-between',
-      padding: '24px 16px 20px 16px',
+      padding: '20px 16px',
       boxSizing: 'border-box',
-      zIndex: 100,
+      overflow: 'hidden',
       fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif'
     }}>
+      <style>{`
+        .sidebar-nav-scroll::-webkit-scrollbar { width: 4px; }
+        .sidebar-nav-scroll::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.1); borderRadius: 4px; }
+      `}</style>
       {/* TOP SECTION: BRAND + PROFILE + NAV */}
-      <div style={{ display: 'flex', flexDirection: 'column', gap: '22px' }}>
+      <div className="sidebar-nav-scroll" style={{ display: 'flex', flexDirection: 'column', gap: '18px', overflowY: 'auto', flex: 1, paddingRight: '2px' }}>
         
         {/* 1. MASTER BRAND LOGO */}
         <div style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '0 4px' }}>
