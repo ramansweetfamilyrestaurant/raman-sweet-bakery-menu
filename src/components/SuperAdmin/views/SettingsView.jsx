@@ -121,14 +121,13 @@ export default function SettingsView({ paymentKeys, onSavePaymentKeys, securityF
               </label>
               <input
                 type="password"
-                required
                 placeholder="••••••••••••••••••••••••"
-                value={keysForm.cashfree_secret_key}
+                value={keysForm.cashfree_secret_key || ''}
                 onChange={(e) => setKeysForm({ ...keysForm, cashfree_secret_key: e.target.value })}
                 style={{ width: '100%', padding: '10px', borderRadius: 'var(--sa-radius-md)', border: '1.5px solid var(--sa-border)', fontSize: '0.85rem' }}
               />
               <span style={{ fontSize: '0.72rem', color: 'var(--sa-success)', fontWeight: 800, marginTop: '4px', display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
-                <ShieldCheck size={13} /> Configured ✓ API Secrets are masked for security.
+                <ShieldCheck size={13} /> Masked for security. Leave unchanged or blank to preserve existing key.
               </span>
             </div>
 

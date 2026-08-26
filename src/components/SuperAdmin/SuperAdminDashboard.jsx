@@ -113,6 +113,11 @@ export default function SuperAdminDashboard({ token, username, onLogout, onRetur
   const [dbOptimizeMsg, setDbOptimizeMsg] = useState('');
   const [dbStats, setDbStats] = useState(null);
 
+  const [prodModalOpen, setProdModalOpen] = useState(false);
+  const [prodPassword, setProdPassword] = useState('');
+  const [prodConfirmChecked, setProdConfirmChecked] = useState(false);
+  const [prodError, setProdError] = useState('');
+
   const loadSystemSettings = async () => {
     try {
       const res = await fetch('/api/superadmin/settings', {
@@ -132,6 +137,11 @@ export default function SuperAdminDashboard({ token, username, onLogout, onRetur
           ...prev,
           cashfree_app_id: data.cashfree_app_id !== undefined ? data.cashfree_app_id : prev.cashfree_app_id,
           cashfree_secret_key: data.cashfree_secret_key !== undefined ? data.cashfree_secret_key : prev.cashfree_secret_key,
+          cashfree_env: data.cashfree_env || data.cashfree_environment || prev.cashfree_env || 'sandbox',
+          _saved_env: data.cashfree_env || data.cashfree_environment || 'sandbox',
+          _runtime_cashfree_env: data._runtime_cashfree_env || 'sandbox',
+          _runtime_env_source: data._runtime_env_source || 'system_settings',
+          _is_secret_configured: data._is_secret_configured,
           support_whatsapp: data.support_whatsapp || prev.support_whatsapp || '919876543210',
           default_trial_days: data.default_trial_days || prev.default_trial_days || '16',
           platform_logo_url: logoUrlFromBackend !== undefined ? logoUrlFromBackend : prev.platform_logo_url
@@ -2164,26 +2174,28 @@ export default function SuperAdminDashboard({ token, username, onLogout, onRetur
                     <div className="sa-settings-diagnostics-list">
                       <div className="sa-settings-diagnostics-row">
                         <span className="sa-settings-diagnostics-label">SSL Encryption</span>
-                        <span className="sa-settings-diagnostics-val" style={{ color: '#15803D' }}>
-                          <span className="sa-live-dot active" /> 256-Bit TLS
+                        <span className="sa-settings-diagnostics-val" style={{ color: (typeof window !== 'undefined' && window.location.protocol === 'https:') ? '#15803D' : '#B45309' }}>
+                          <span className={`sa-live-dot ${(typeof window !== 'undefined' && window.location.protocol === 'https:') ? 'active' : 'warning'}`} />
+                          {(typeof window !== 'undefined' && window.location.protocol === 'https:') ? 'HTTPS / TLS Active' : 'HTTP (Non-SSL)'}
                         </span>
                       </div>
                       <div className="sa-settings-diagnostics-row">
                         <span className="sa-settings-diagnostics-label">Cashfree Gateway</span>
-                        <span className="sa-settings-diagnostics-val" style={{ color: paymentKeys.cashfree_env === 'production' ? '#B45309' : '#15803D' }}>
-                          {(paymentKeys.cashfree_env || 'sandbox').toUpperCase()}
+                        <span className="sa-settings-diagnostics-val" style={{ color: (paymentKeys._runtime_cashfree_env || paymentKeys.cashfree_env) === 'production' ? '#B45309' : '#15803D' }}>
+                          <span className={`sa-live-dot ${(paymentKeys._runtime_cashfree_env || paymentKeys.cashfree_env) === 'production' ? 'warning' : 'active'}`} />
+                          {((paymentKeys._runtime_cashfree_env || paymentKeys.cashfree_env || 'sandbox')).toUpperCase()}
                         </span>
                       </div>
                       <div className="sa-settings-diagnostics-row">
-                        <span className="sa-settings-diagnostics-label">Neon DB Backup</span>
+                        <span className="sa-settings-diagnostics-label">PostgreSQL Database</span>
                         <span className="sa-settings-diagnostics-val" style={{ color: '#15803D' }}>
-                          Auto-Mirror
+                          <span className="sa-live-dot active" /> Connected (Neon)
                         </span>
                       </div>
                       <div className="sa-settings-diagnostics-row">
                         <span className="sa-settings-diagnostics-label">Cloudflare R2</span>
                         <span className="sa-settings-diagnostics-val" style={{ color: '#15803D' }}>
-                          Connected
+                          <span className="sa-live-dot active" /> Configured & Active
                         </span>
                       </div>
                     </div>
@@ -2278,11 +2290,24 @@ export default function SuperAdminDashboard({ token, username, onLogout, onRetur
                         </div>
                       </div>
 
+                      {/* Runtime Precedence Notification */}
+                      {paymentKeys._runtime_env_source === 'environment_variable' && (
+                        <div style={{ background: '#EFF6FF', padding: '12px 14px', borderRadius: '10px', border: '1px solid #BFDBFE', fontSize: '0.78rem', color: '#1E40AF', fontWeight: 700 }}>
+                          ⚡ <strong>Runtime Precedence:</strong> Live payment requests currently use <code>process.env.CASHFREE_ENVIRONMENT</code> (<strong>{(paymentKeys._runtime_cashfree_env || 'sandbox').toUpperCase()}</strong>). Environment variables take precedence over database settings.
+                        </div>
+                      )}
+
                       <div className="sa-settings-field-group">
                         <label className="sa-settings-label">CASHFREE ENVIRONMENT</label>
                         <select
                           value={paymentKeys.cashfree_env || 'sandbox'}
-                          onChange={(e) => setPaymentKeys({ ...paymentKeys, cashfree_env: e.target.value })}
+                          onChange={(e) => {
+                            const newEnv = e.target.value;
+                            if (newEnv === 'production' && paymentKeys._saved_env !== 'production') {
+                              setProdModalOpen(true);
+                            }
+                            setPaymentKeys({ ...paymentKeys, cashfree_env: newEnv });
+                          }}
                           className="sa-settings-input"
                           style={{ fontWeight: 800 }}
                         >
@@ -2293,7 +2318,7 @@ export default function SuperAdminDashboard({ token, username, onLogout, onRetur
 
                       {paymentKeys.cashfree_env === 'production' && (
                         <div style={{ background: '#FFFBEB', padding: '12px 14px', borderRadius: '10px', border: '1px solid #FCD34D', fontSize: '0.76rem', color: '#B45309', fontWeight: 800 }}>
-                          ⚠️ Production gateway changes affect live shop payments, webhooks, and automatic subscription renewals.
+                          ⚠️ Production gateway mode requires Super Admin password verification before activation and enables live customer billing.
                         </div>
                       )}
 
@@ -2313,7 +2338,7 @@ export default function SuperAdminDashboard({ token, username, onLogout, onRetur
                         <div className="sa-settings-input-wrap">
                           <input
                             type={showSecretKey ? 'text' : 'password'}
-                            placeholder="Cashfree Secret Key"
+                            placeholder="••••••••••••••••••••••••"
                             value={paymentKeys.cashfree_secret_key || ''}
                             onChange={(e) => setPaymentKeys({ ...paymentKeys, cashfree_secret_key: e.target.value })}
                             className="sa-settings-input"
@@ -2323,12 +2348,20 @@ export default function SuperAdminDashboard({ token, username, onLogout, onRetur
                             {showSecretKey ? <EyeOff size={16} /> : <Eye size={16} />}
                           </button>
                         </div>
+                        <span style={{ fontSize: '0.72rem', color: 'var(--sa-text-muted)', marginTop: '4px', display: 'block' }}>
+                          * Leave as masked dots or blank to keep currently configured secret intact.
+                        </span>
                       </div>
 
                       <button
                         type="button"
                         disabled={keysSaving}
                         onClick={async () => {
+                          if (paymentKeys.cashfree_env === 'production' && paymentKeys._saved_env !== 'production') {
+                            setProdModalOpen(true);
+                            return;
+                          }
+
                           setKeysSaving(true);
                           setKeysMsg('');
                           try {
@@ -2338,7 +2371,12 @@ export default function SuperAdminDashboard({ token, username, onLogout, onRetur
                               body: JSON.stringify(paymentKeys)
                             });
                             const data = await res.json();
-                            if (res.ok) setKeysMsg(data.message || '✅ Gateway credentials saved successfully!');
+                            if (res.ok) {
+                              setKeysMsg(data.message || '✅ Gateway credentials saved successfully!');
+                              setPaymentKeys(prev => ({ ...prev, _saved_env: prev.cashfree_env }));
+                            } else {
+                              setKeysMsg(`⚠️ ${data.message || data.error || 'Failed to save gateway credentials'}`);
+                            }
                           } catch {
                             setKeysMsg('⚠️ Failed to save gateway credentials');
                           } finally {
@@ -3535,6 +3573,137 @@ export default function SuperAdminDashboard({ token, username, onLogout, onRetur
           return res;
         }}
       />
+
+      {/* ⚡ Production Switch Confirmation Modal */}
+      {prodModalOpen && (
+        <div style={{
+          position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
+          background: 'rgba(0, 0, 0, 0.75)', backdropFilter: 'blur(6px)',
+          display: 'flex', alignItems: 'center', justifyContent: 'center',
+          zIndex: 99999, padding: '16px'
+        }}>
+          <div style={{
+            background: '#FFFFFF', borderRadius: '18px', maxWidth: '520px', width: '100%',
+            padding: '24px', boxShadow: '0 20px 40px rgba(0,0,0,0.3)', border: '2px solid #F59E0B'
+          }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '14px' }}>
+              <div style={{ width: '42px', height: '42px', borderRadius: '12px', background: '#FEF3C7', color: '#B45309', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1.4rem' }}>
+                ⚡
+              </div>
+              <div>
+                <h3 style={{ margin: 0, fontSize: '1.1rem', fontWeight: 900, color: '#1E293B' }}>
+                  Enable Cashfree Production Mode?
+                </h3>
+                <span style={{ fontSize: '0.74rem', color: '#64748B', fontWeight: 600 }}>
+                  High Security Environment Transition
+                </span>
+              </div>
+            </div>
+
+            <div style={{ background: '#FFFBEB', border: '1px solid #FCD34D', borderRadius: '12px', padding: '14px', marginBottom: '16px', fontSize: '0.80rem', color: '#92400E', lineHeight: '1.45' }}>
+              <strong>⚠️ CRITICAL NOTICE:</strong> Switching to <strong>PRODUCTION</strong> enables live payment transactions. All subscriber checkouts, UPI mandates, and automatic recurring renewals will charge <strong>REAL MONEY</strong> on customer accounts.
+            </div>
+
+            {prodError && (
+              <div style={{ background: '#FEE2E2', border: '1px solid #FCA5A5', color: '#B91C1C', padding: '10px 14px', borderRadius: '10px', fontSize: '0.78rem', fontWeight: 800, marginBottom: '14px' }}>
+                ⚠️ {prodError}
+              </div>
+            )}
+
+            <form onSubmit={async (e) => {
+              e.preventDefault();
+              if (!prodConfirmChecked) {
+                setProdError('You must check the confirmation checkbox to proceed.');
+                return;
+              }
+              if (!prodPassword) {
+                setProdError('Super Admin password is required.');
+                return;
+              }
+              setKeysSaving(true);
+              setProdError('');
+              try {
+                const res = await fetch('/api/superadmin/settings', {
+                  method: 'POST',
+                  headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+                  body: JSON.stringify({
+                    ...paymentKeys,
+                    cashfree_env: 'production',
+                    currentPassword: prodPassword,
+                    confirm_production_switch: true
+                  })
+                });
+                const data = await res.json();
+                if (res.ok) {
+                  setKeysMsg('✅ Switched to Production mode successfully!');
+                  setPaymentKeys(prev => ({ ...prev, cashfree_env: 'production', _saved_env: 'production' }));
+                  setProdModalOpen(false);
+                  setProdPassword('');
+                  setProdConfirmChecked(false);
+                } else {
+                  setProdError(data.message || data.error || 'Failed to switch to Production');
+                }
+              } catch (err) {
+                setProdError('Network error: ' + err.message);
+              } finally {
+                setKeysSaving(false);
+              }
+            }}>
+              <div style={{ marginBottom: '14px' }}>
+                <label style={{ fontSize: '0.76rem', fontWeight: 800, color: '#475569', display: 'block', marginBottom: '6px' }}>
+                  🔑 ENTER SUPER ADMIN PASSWORD:
+                </label>
+                <input
+                  type="password"
+                  required
+                  placeholder="Master Super Admin password"
+                  value={prodPassword}
+                  onChange={(e) => setProdPassword(e.target.value)}
+                  style={{ width: '100%', padding: '10px 12px', borderRadius: '10px', border: '1.5px solid #CBD5E1', fontSize: '0.88rem' }}
+                />
+              </div>
+
+              <div style={{ display: 'flex', alignItems: 'flex-start', gap: '10px', marginBottom: '20px' }}>
+                <input
+                  type="checkbox"
+                  id="prod_confirm_check"
+                  checked={prodConfirmChecked}
+                  onChange={(e) => setProdConfirmChecked(e.target.checked)}
+                  style={{ marginTop: '3px', width: '16px', height: '16px', cursor: 'pointer' }}
+                />
+                <label htmlFor="prod_confirm_check" style={{ fontSize: '0.78rem', color: '#334155', fontWeight: 700, cursor: 'pointer', lineHeight: '1.4' }}>
+                  I understand this will enable Cashfree production payments and live customer transactions.
+                </label>
+              </div>
+
+              <div style={{ display: 'flex', gap: '10px', justifyContent: 'flex-end' }}>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setProdModalOpen(false);
+                    setProdPassword('');
+                    setProdConfirmChecked(false);
+                    setProdError('');
+                    setPaymentKeys(prev => ({ ...prev, cashfree_env: prev._saved_env || 'sandbox' }));
+                  }}
+                  className="sa-btn sa-btn-secondary"
+                  style={{ padding: '10px 16px', fontWeight: 800 }}
+                >
+                  Cancel (Stay Sandbox)
+                </button>
+                <button
+                  type="submit"
+                  disabled={keysSaving}
+                  className="sa-btn sa-btn-primary"
+                  style={{ padding: '10px 20px', fontWeight: 900, background: '#D97706', borderColor: '#D97706', color: '#FFFFFF' }}
+                >
+                  {keysSaving ? 'Verifying...' : '⚡ Confirm & Enable Production'}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

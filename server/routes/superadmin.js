@@ -1529,12 +1529,49 @@ async function mirrorExternalLogoToR2(externalUrl) {
   return url;
 }
 
-// GET System Settings for Super Admin
+// Helper: Identify sensitive setting keys for response masking
+const SENSITIVE_SETTING_KEYS = [
+  'cashfree_secret_key',
+  'cashfree_client_secret',
+  'cashfree_secret',
+  'jwt_secret',
+  'database_url',
+  'cron_secret',
+  'r2_secret_access_key',
+  'password',
+  'token',
+  'private_key',
+  'api_secret'
+];
+
+function isSensitiveSettingKey(key) {
+  if (!key || typeof key !== 'string') return false;
+  const k = key.toLowerCase();
+  return SENSITIVE_SETTING_KEYS.some(s => k.includes(s) || k.endsWith('_secret') || (k.endsWith('_key') && k.includes('secret')));
+}
+
+// GET System Settings for Super Admin (Server-side Secret Masking)
 router.get('/settings', authenticateToken, requireSuperAdmin, async (req, res) => {
   try {
     const rows = await query('SELECT * FROM system_settings');
     const settings = {};
-    (rows || []).forEach(r => { settings[r.key] = r.value; });
+    (rows || []).forEach(r => {
+      if (isSensitiveSettingKey(r.key)) {
+        settings[r.key] = (r.value && r.value.trim()) ? '••••••••' : '';
+      } else {
+        settings[r.key] = r.value;
+      }
+    });
+
+    // Provide complete transparency on runtime environment vs saved setting
+    const runtimeEnv = (process.env.CASHFREE_ENVIRONMENT || '').toLowerCase().trim();
+    settings._runtime_cashfree_env = runtimeEnv || settings.cashfree_env || settings.cashfree_environment || 'sandbox';
+    settings._runtime_env_source = runtimeEnv ? 'environment_variable' : 'system_settings';
+    settings._is_secret_configured = Boolean(
+      (process.env.CASHFREE_CLIENT_SECRET && process.env.CASHFREE_CLIENT_SECRET.trim()) ||
+      (rows || []).some(r => isSensitiveSettingKey(r.key) && r.value && r.value.trim())
+    );
+
     res.json(settings);
   } catch (err) {
     console.error('Fetch system settings error:', err);
@@ -1542,15 +1579,75 @@ router.get('/settings', authenticateToken, requireSuperAdmin, async (req, res) =
   }
 });
 
-// POST Update System Settings for Super Admin
+// POST Update System Settings for Super Admin (Safe Secret & Protected Production Switch)
 router.post('/settings', authenticateToken, requireSuperAdmin, async (req, res) => {
   try {
     const payload = req.body || {};
-    
+
+    // 1. Protected Operation: Check if switching Cashfree environment to PRODUCTION
+    const targetEnv = (payload.cashfree_env || payload.cashfree_environment || '').toLowerCase().trim();
+    if (targetEnv === 'production') {
+      const existingEnvRows = await query("SELECT value FROM system_settings WHERE key IN ('cashfree_env', 'cashfree_environment')");
+      const currentDbEnv = (existingEnvRows[0]?.value || 'sandbox').toLowerCase().trim();
+
+      if (currentDbEnv !== 'production') {
+        if (!payload.currentPassword) {
+          return res.status(400).json({
+            error: 'PASSWORD_REQUIRED',
+            message: 'Super Admin password verification is required to switch Cashfree payment gateway to Production mode.'
+          });
+        }
+
+        const adminRows = await query("SELECT password_hash FROM admins WHERE id = $1 AND role = 'superadmin'", [req.user.id]);
+        if (!adminRows || adminRows.length === 0) {
+          return res.status(403).json({ error: 'UNAUTHORIZED', message: 'Super Admin account not found.' });
+        }
+
+        const isPasswordValid = await bcrypt.compare(payload.currentPassword, adminRows[0].password_hash);
+        if (!isPasswordValid) {
+          return res.status(400).json({
+            error: 'INVALID_PASSWORD',
+            message: 'Incorrect Super Admin password. Production environment switch rejected.'
+          });
+        }
+
+        if (payload.confirm_production_switch !== true && payload.confirm_production_switch !== 'true') {
+          return res.status(400).json({
+            error: 'CONFIRMATION_REQUIRED',
+            message: 'Explicit confirmation checkbox is required to enable Cashfree production payments.'
+          });
+        }
+
+        await logAudit(null, 'superadmin', 'CASHFREE_ENVIRONMENT_CHANGED', 'Switched Cashfree gateway environment from sandbox to production');
+      }
+    }
+
+    // Keys to ignore from raw saving
+    const ignoredKeys = new Set([
+      'currentPassword',
+      'confirm_production_switch',
+      '_runtime_cashfree_env',
+      '_runtime_env_source',
+      '_is_secret_configured'
+    ]);
+
+    let updatedPaymentKeys = false;
+
     for (let [k, v] of Object.entries(payload)) {
+      if (ignoredKeys.has(k)) continue;
+
       if (v !== undefined && v !== null) {
         let strVal = String(v).trim().replace(/^['"]+|['"]+$/g, '');
-        
+
+        // 2. Safe Secret Handling: If user sent masked dots "••••••••", keep existing secret in database!
+        if (isSensitiveSettingKey(k)) {
+          if (strVal === '••••••••' || strVal.includes('••••') || strVal === '') {
+            // Keep existing stored secret intact
+            continue;
+          }
+          updatedPaymentKeys = true;
+        }
+
         if (k === 'platform_logo_url') {
           strVal = strVal.split('?')[0];
           purgeLocalR2DiskCache('logo.webp');
@@ -1595,7 +1692,12 @@ router.post('/settings', authenticateToken, requireSuperAdmin, async (req, res) 
       }
     }
 
-    await logAudit(null, 'superadmin', 'Update System Settings', 'Updated System Settings');
+    if (updatedPaymentKeys) {
+      await logAudit(null, 'superadmin', 'UPDATE_PAYMENT_API_KEYS', 'Updated Payment Gateway API Credentials');
+    } else {
+      await logAudit(null, 'superadmin', 'Update System Settings', 'Updated System Settings');
+    }
+
     res.json({ success: true, message: 'System Settings & API Keys updated successfully!' });
   } catch (err) {
     console.error('Update system settings error:', err);
