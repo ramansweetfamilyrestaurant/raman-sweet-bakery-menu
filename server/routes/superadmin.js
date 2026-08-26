@@ -408,12 +408,18 @@ router.get('/restaurants/:id/360', authenticateToken, requireSuperAdmin, async (
 });
 
 // POST Create New Tenant Restaurant
+// POST Create New Tenant Business / Restaurant (Multi-Step Onboarding V2)
 router.post('/restaurants', authenticateToken, requireSuperAdmin, async (req, res) => {
   try {
-    const { name, slug, owner_username, owner_password, phone, address, tagline, plan_tier, plan_price, plan_expires_at, whatsapp_number, theme_color, business_type, service_model, business_category } = req.body;
+    const { 
+      name, slug, owner_username, owner_password, phone, address, tagline, 
+      plan_tier, plan_price, plan_expires_at, whatsapp_number, theme_color, 
+      business_type, service_model, business_category, owner_email, gstin_number,
+      onboarding_mode
+    } = req.body;
 
     if (!name || !slug || !owner_username || !owner_password) {
-      return res.status(400).json({ error: 'Restaurant Name, URL Slug, Owner Username and Password are required' });
+      return res.status(400).json({ error: 'Business Name, URL Slug, Owner Username and Password are required' });
     }
 
     // Clean & sanitize slug (lowercase, hyphenated)
@@ -426,7 +432,7 @@ router.post('/restaurants', authenticateToken, requireSuperAdmin, async (req, re
     // Check if slug or username already exists
     const slugCheck = await query('SELECT * FROM restaurants WHERE slug = $1', [cleanSlug]);
     if (slugCheck.length > 0) {
-      return res.status(400).json({ error: `URL Slug '${cleanSlug}' is already taken by another restaurant!` });
+      return res.status(400).json({ error: `URL Slug '${cleanSlug}' is already taken by another business!` });
     }
 
     const adminCheck = await query('SELECT * FROM admins WHERE username = $1', [owner_username]);
@@ -434,26 +440,41 @@ router.post('/restaurants', authenticateToken, requireSuperAdmin, async (req, re
       return res.status(400).json({ error: `Owner Username '${owner_username}' is already taken!` });
     }
 
-    // 1. Create Restaurant Entry
-    const expiryDate = plan_expires_at || new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString();
+    // 1. Resolve Plan & Expiry Date based on Onboarding Mode
     const effectivePlanTier = (plan_tier || 'pro').toLowerCase();
+    const isTrial = (onboarding_mode === 'trial');
+    const isVip = (onboarding_mode === 'vip');
+
+    let expiryDate = plan_expires_at;
+    if (!expiryDate) {
+      if (isTrial) {
+        expiryDate = new Date(Date.now() + 16 * 24 * 60 * 60 * 1000).toISOString();
+      } else if (isVip) {
+        expiryDate = new Date('2099-12-31T23:59:59Z').toISOString();
+      } else {
+        expiryDate = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString();
+      }
+    }
 
     // Resolve authoritative catalog price from saas_plans
     const saasPlanRows = await query('SELECT id, key, price FROM saas_plans WHERE LOWER(key) = $1 LIMIT 1', [effectivePlanTier]);
     const matchedPlan = saasPlanRows && saasPlanRows[0];
     const defaultCatalogPrice = matchedPlan ? Number(matchedPlan.price) : (effectivePlanTier === 'enterprise' ? 1999 : effectivePlanTier === 'basic' ? 499 : 999);
-    const effectivePlanPrice = (plan_price !== undefined && plan_price !== null && !isNaN(parseFloat(plan_price)))
-      ? parseFloat(plan_price)
+    
+    // For VIP or Trial, subscription amount is 0; otherwise authoritatively catalog price
+    const effectivePlanPrice = (isTrial || isVip) 
+      ? 0 
       : defaultCatalogPrice;
 
+    // 2. Create Restaurant Entry
     const restoRes = await query(`
       INSERT INTO restaurants (
-        name, slug, tagline, logo, phone, address, opening_hours, plan_tier, plan_price, plan_expires_at, whatsapp_number, theme_color, business_type, service_model, business_category, active
-      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16) RETURNING id
+        name, slug, tagline, logo, phone, address, opening_hours, plan_tier, plan_price, plan_expires_at, whatsapp_number, theme_color, business_type, service_model, business_category, active, owner_email, gstin_number
+      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18) RETURNING id
     `, [
       name,
       cleanSlug,
-      tagline || '100% Quality Food & Service',
+      tagline || '100% Quality Food & Customer Service',
       '/images/default-logo.webp',
       phone || '',
       address || '',
@@ -466,20 +487,23 @@ router.post('/restaurants', authenticateToken, requireSuperAdmin, async (req, re
       effectiveBiz,
       cleanCategory,
       cleanCategory,
-      true
+      true,
+      owner_email || null,
+      gstin_number || null
     ]);
 
     const newRestoId = restoRes[0]?.id || restoRes.lastInsertRowid;
 
-    // 2. Create Matching Subscription Record with Authoritative Amount
+    // 3. Create Matching Subscription Record
+    const subStatus = isTrial ? 'trialing' : 'active';
     await query(`
       INSERT INTO subscriptions (
         restaurant_id, plan_id, gateway, status, amount, currency, billing_cycle,
         current_period_start, current_period_end
-      ) VALUES ($1, $2, 'none', 'active', $3, 'INR', 'monthly', CURRENT_TIMESTAMP, $4)
-    `, [newRestoId, matchedPlan?.id || null, effectivePlanPrice, expiryDate]);
+      ) VALUES ($1, $2, 'none', $3, $4, 'INR', 'monthly', CURRENT_TIMESTAMP, $5)
+    `, [newRestoId, matchedPlan?.id || null, subStatus, effectivePlanPrice, expiryDate]);
 
-    // 3. Create Owner Admin User
+    // 4. Create Owner Admin User
     const salt = await bcrypt.genSalt(10);
     const hash = await bcrypt.hash(owner_password, salt);
 
@@ -488,17 +512,17 @@ router.post('/restaurants', authenticateToken, requireSuperAdmin, async (req, re
       VALUES ($1, $2, $3, $4)
     `, [newRestoId, owner_username, hash, 'restaurant_admin']);
 
-    await logAudit(newRestoId, 'superadmin', 'Create Tenant', `Created restaurant '${name}' (Slug: ${cleanSlug}, Owner: ${owner_username}, Plan: ${effectivePlanTier}, Price: ₹${effectivePlanPrice})`);
+    await logAudit(newRestoId, 'superadmin', 'Create Tenant', `Created business '${name}' (Slug: ${cleanSlug}, Owner: ${owner_username}, Plan: ${effectivePlanTier}, Mode: ${onboarding_mode || 'active'}, Price: ₹${effectivePlanPrice})`);
 
     res.json({
       success: true,
       id: newRestoId,
       slug: cleanSlug,
-      message: `Tenant Restaurant '${name}' created successfully with slug '/r/${cleanSlug}'!`
+      message: `Business '${name}' created and provisioned successfully with slug '/r/${cleanSlug}'!`
     });
   } catch (err) {
     console.error('Create restaurant error:', err);
-    res.status(500).json({ error: err.message || 'Failed to create tenant restaurant' });
+    res.status(500).json({ error: err.message || 'Failed to create tenant business' });
   }
 });
 

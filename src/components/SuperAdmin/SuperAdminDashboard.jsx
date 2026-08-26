@@ -6,6 +6,7 @@ import { resolveImageUrl, getRestaurantLogoUrl } from '../../utils/imageHelper';
 import { BUSINESS_TYPES, BUSINESS_TYPE_METADATA, resolveBusinessProfile, resolveServiceModelForBusinessType } from '../../utils/businessTaxonomy';
 import GrantFreeAccessModal from './modals/GrantFreeAccessModal';
 import RevokeFreeAccessModal from './modals/RevokeFreeAccessModal';
+import AddBusinessModal from './modals/AddBusinessModal';
 import Sidebar from './components/Sidebar';
 import Header from './components/Header';
 import BottomNavigation from './components/BottomNavigation';
@@ -3052,164 +3053,15 @@ export default function SuperAdminDashboard({ token, username, onLogout, onRetur
         </div>
       )}
 
-      {/* ➕ Modal: Add New Shop / Restaurant */}
-      {showAddModal && (
-        <div style={{
-          position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
-          background: 'rgba(0,0,0,0.65)', backdropFilter: 'blur(6px)',
-          zIndex: 2000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '16px'
-        }}>
-          <div className="sa-modal-box" style={{
-            background: '#FFFFFF', borderRadius: '24px', maxWidth: '540px', width: '100%',
-            padding: '28px 24px', boxShadow: '0 20px 60px rgba(0,0,0,0.4)', border: '2px solid #D4AF37',
-            maxHeight: '90vh', overflowY: 'auto', position: 'relative'
-          }}>
-            <button
-              type="button"
-              onClick={() => setShowAddModal(false)}
-              style={{
-                position: 'absolute', top: '18px', right: '18px', background: '#F3F4F6',
-                border: 'none', width: '32px', height: '32px', borderRadius: '50%',
-                cursor: 'pointer', fontWeight: 900, color: '#4B5563', display: 'flex',
-                alignItems: 'center', justifyContent: 'center', zIndex: 10
-              }}
-            >
-              ✕
-            </button>
-
-            <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '18px' }}>
-              <div style={{ width: '36px', height: '36px', borderRadius: '10px', background: '#DCFCE7', color: '#15803D', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                <Store size={20} />
-              </div>
-              <h3 style={{ fontSize: '1.15rem', fontWeight: 900, color: 'var(--sa-text-main)', margin: 0 }}>Add New Business</h3>
-            </div>
-
-            {formError && (
-              <div style={{ background: '#FEE2E2', color: '#DC2626', padding: '10px 14px', borderRadius: '12px', fontSize: '0.82rem', fontWeight: 700, marginBottom: '14px' }}>
-                {formError}
-              </div>
-            )}
-
-            <form onSubmit={handleCreateRestaurant} style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
-              <div>
-                <label style={{ fontSize: '0.78rem', fontWeight: 800, color: 'var(--text-dark)', marginBottom: '4px', display: 'block' }}>BUSINESS NAME *</label>
-                <input
-                  type="text"
-                  placeholder="e.g. Royal Pizza & Cafe"
-                  value={form.name}
-                  onChange={handleNameChange}
-                  required
-                  style={{ width: '100%', padding: '11px 14px', borderRadius: '12px', border: '1.5px solid var(--border-light)', fontSize: '0.9rem', outline: 'none' }}
-                />
-              </div>
-
-              <div>
-                <label style={{ fontSize: '0.78rem', fontWeight: 800, color: 'var(--text-dark)', marginBottom: '4px', display: 'block' }}>BUSINESS TYPE *</label>
-                <select
-                  value={form.business_type || 'restaurant'}
-                  onChange={(e) => {
-                    const bType = e.target.value;
-                    const sModel = resolveServiceModelForBusinessType(bType);
-                    setForm({ ...form, business_type: bType, service_model: sModel });
-                  }}
-                  style={{ width: '100%', padding: '11px 14px', borderRadius: '12px', border: '1.5px solid var(--border-light)', fontSize: '0.9rem', outline: 'none', background: '#FFFFFF', fontWeight: 700 }}
-                >
-                  {BUSINESS_TYPES.map((type) => (
-                    <option key={type} value={type}>
-                      {BUSINESS_TYPE_METADATA[type]?.icon || '🏢'} {BUSINESS_TYPE_METADATA[type]?.label || type}
-                    </option>
-                  ))}
-                </select>
-              </div>
-
-              <div>
-                <label style={{ fontSize: '0.78rem', fontWeight: 800, color: 'var(--text-dark)', marginBottom: '4px', display: 'block' }}>CUSTOM URL SLUG *</label>
-                <input
-                  type="text"
-                  placeholder="e.g. royal-pizza"
-                  value={form.slug}
-                  onChange={(e) => setForm({ ...form, slug: e.target.value })}
-                  required
-                  style={{ width: '100%', padding: '11px 14px', borderRadius: '12px', border: '1.5px solid var(--border-light)', fontSize: '0.9rem', fontWeight: 800, color: 'var(--gold-primary)', outline: 'none' }}
-                />
-              </div>
-
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
-                <div>
-                  <label style={{ fontSize: '0.78rem', fontWeight: 800, color: 'var(--text-dark)', marginBottom: '4px', display: 'block' }}>PLAN TIER</label>
-                  <select
-                    value={form.plan_tier}
-                    onChange={(e) => {
-                      const tier = e.target.value;
-                      const selectedPlan = (plansList || []).find(p => p.key === tier) || getPlanDetails(tier);
-                      setForm({ ...form, plan_tier: tier, plan_price: selectedPlan.price });
-                    }}
-                    style={{ width: '100%', padding: '11px 14px', borderRadius: '12px', border: '1.5px solid var(--border-light)', fontSize: '0.86rem', outline: 'none', fontWeight: 700 }}
-                  >
-                    {(plansList.length > 0 ? plansList : Object.values(SAAS_PLANS)).map(p => (
-                      <option key={p.key || p.id} value={p.key || p.id}>{p.name} (₹{p.price}/mo)</option>
-                    ))}
-                  </select>
-                </div>
-
-                <div>
-                  <label style={{ fontSize: '0.78rem', fontWeight: 800, color: 'var(--text-dark)', marginBottom: '4px', display: 'block' }}>THEME COLOR</label>
-                  <select
-                    value={form.theme_color}
-                    onChange={(e) => setForm({ ...form, theme_color: e.target.value })}
-                    style={{ width: '100%', padding: '11px 14px', borderRadius: '12px', border: '1.5px solid var(--border-light)', fontSize: '0.86rem', outline: 'none', fontWeight: 700 }}
-                  >
-                    <option value="gold">Gold & Forest Green</option>
-                    <option value="emerald">Emerald Mint & Teal</option>
-                    <option value="crimson">Ruby Red & Gold</option>
-                    <option value="navy">Midnight Navy & Blue</option>
-                  </select>
-                </div>
-              </div>
-
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
-                <div>
-                  <label style={{ fontSize: '0.78rem', fontWeight: 800, color: 'var(--text-dark)', marginBottom: '4px', display: 'block' }}>OWNER USERNAME *</label>
-                  <input
-                    type="text"
-                    value={form.owner_username}
-                    onChange={(e) => setForm({ ...form, owner_username: e.target.value })}
-                    required
-                    style={{ width: '100%', padding: '11px 14px', borderRadius: '12px', border: '1.5px solid var(--border-light)', fontSize: '0.86rem', outline: 'none' }}
-                  />
-                </div>
-                <div>
-                  <label style={{ fontSize: '0.78rem', fontWeight: 800, color: 'var(--text-dark)', marginBottom: '4px', display: 'block' }}>OWNER PASSWORD *</label>
-                  <input
-                    type="text"
-                    value={form.owner_password}
-                    onChange={(e) => setForm({ ...form, owner_password: e.target.value })}
-                    required
-                    style={{ width: '100%', padding: '11px 14px', borderRadius: '12px', border: '1.5px solid var(--border-light)', fontSize: '0.86rem', outline: 'none' }}
-                  />
-                </div>
-              </div>
-
-              <div>
-                <label style={{ fontSize: '0.78rem', fontWeight: 800, color: 'var(--text-dark)', marginBottom: '4px', display: 'block' }}>PHONE NUMBER</label>
-                <input
-                  type="text"
-                  value={form.phone}
-                  onChange={(e) => setForm({ ...form, phone: e.target.value, whatsapp_number: e.target.value })}
-                  style={{ width: '100%', padding: '11px 14px', borderRadius: '12px', border: '1.5px solid var(--border-light)', fontSize: '0.86rem', outline: 'none' }}
-                />
-              </div>
-
-              <div style={{ display: 'flex', gap: '12px', marginTop: '14px' }}>
-                <button type="button" onClick={() => setShowAddModal(false)} className="sa-btn sa-btn-secondary" style={{ flex: 1 }}>Cancel</button>
-                <button type="submit" disabled={formSubmitting} className="sa-btn sa-btn-accent" style={{ flex: 1 }}>
-                  {formSubmitting ? 'Creating...' : '✓ Create Business'}
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
+      {/* ➕ Multi-Step Wizard Modal: Add New Business V2 */}
+      <AddBusinessModal
+        show={showAddModal}
+        onClose={() => setShowAddModal(false)}
+        onSuccess={loadData}
+        plansList={plansList}
+        token={token}
+        createTenantRestaurant={createTenantRestaurant}
+      />
 
       {/* ✏️ Modal: Edit Shop / Restaurant Info */}
       {editModalData && (
