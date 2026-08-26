@@ -142,6 +142,9 @@ export default function SuperAdminDashboard({ token, username, onLogout, onRetur
           _runtime_cashfree_env: data._runtime_cashfree_env || 'sandbox',
           _runtime_env_source: data._runtime_env_source || 'system_settings',
           _is_secret_configured: data._is_secret_configured,
+          webhook_evidence: data.webhook_evidence || prev.webhook_evidence || { configured: data._is_secret_configured, production_verified: false },
+          db_status: data.db_status || prev.db_status || 'connected',
+          r2_status: data.r2_status || prev.r2_status || 'active',
           support_whatsapp: data.support_whatsapp || prev.support_whatsapp || '919876543210',
           default_trial_days: data.default_trial_days || prev.default_trial_days || '16',
           platform_logo_url: logoUrlFromBackend !== undefined ? logoUrlFromBackend : prev.platform_logo_url
@@ -2172,30 +2175,57 @@ export default function SuperAdminDashboard({ token, username, onLogout, onRetur
                       <span>System Security Status</span>
                     </div>
                     <div className="sa-settings-diagnostics-list">
+                      {/* 1. SSL / HTTPS */}
                       <div className="sa-settings-diagnostics-row">
-                        <span className="sa-settings-diagnostics-label">SSL Encryption</span>
+                        <span className="sa-settings-diagnostics-label">🔒 HTTPS / TLS</span>
                         <span className="sa-settings-diagnostics-val" style={{ color: (typeof window !== 'undefined' && window.location.protocol === 'https:') ? '#15803D' : '#B45309' }}>
                           <span className={`sa-live-dot ${(typeof window !== 'undefined' && window.location.protocol === 'https:') ? 'active' : 'warning'}`} />
-                          {(typeof window !== 'undefined' && window.location.protocol === 'https:') ? 'HTTPS / TLS Active' : 'HTTP (Non-SSL)'}
+                          {(typeof window !== 'undefined' && window.location.protocol === 'https:') ? 'Active' : 'Not Secure'}
                         </span>
                       </div>
+
+                      {/* 2. Cashfree Gateway Runtime Environment */}
                       <div className="sa-settings-diagnostics-row">
-                        <span className="sa-settings-diagnostics-label">Cashfree Gateway</span>
+                        <span className="sa-settings-diagnostics-label">💳 Cashfree Gateway</span>
                         <span className="sa-settings-diagnostics-val" style={{ color: (paymentKeys._runtime_cashfree_env || paymentKeys.cashfree_env) === 'production' ? '#B45309' : '#15803D' }}>
                           <span className={`sa-live-dot ${(paymentKeys._runtime_cashfree_env || paymentKeys.cashfree_env) === 'production' ? 'warning' : 'active'}`} />
                           {((paymentKeys._runtime_cashfree_env || paymentKeys.cashfree_env || 'sandbox')).toUpperCase()}
                         </span>
                       </div>
+
+                      {/* 3. Cashfree Credentials Configuration */}
                       <div className="sa-settings-diagnostics-row">
-                        <span className="sa-settings-diagnostics-label">PostgreSQL Database</span>
-                        <span className="sa-settings-diagnostics-val" style={{ color: '#15803D' }}>
-                          <span className="sa-live-dot active" /> Connected (Neon)
+                        <span className="sa-settings-diagnostics-label">🔑 Credentials</span>
+                        <span className="sa-settings-diagnostics-val" style={{ color: paymentKeys._is_secret_configured ? '#15803D' : '#B45309' }}>
+                          <span className={`sa-live-dot ${paymentKeys._is_secret_configured ? 'active' : 'warning'}`} />
+                          {paymentKeys._is_secret_configured ? 'Configured' : 'Not Configured'}
                         </span>
                       </div>
+
+                      {/* 4. Cashfree Production Webhook Evidence */}
                       <div className="sa-settings-diagnostics-row">
-                        <span className="sa-settings-diagnostics-label">Cloudflare R2</span>
-                        <span className="sa-settings-diagnostics-val" style={{ color: '#15803D' }}>
-                          <span className="sa-live-dot active" /> Configured & Active
+                        <span className="sa-settings-diagnostics-label">🔔 Production Webhook</span>
+                        <span className="sa-settings-diagnostics-val" style={{ color: paymentKeys.webhook_evidence?.production_verified ? '#15803D' : '#B45309' }}>
+                          <span className={`sa-live-dot ${paymentKeys.webhook_evidence?.production_verified ? 'active' : 'warning'}`} />
+                          {paymentKeys.webhook_evidence?.production_verified ? 'Verified' : 'Pending'}
+                        </span>
+                      </div>
+
+                      {/* 5. PostgreSQL Database Connectivity */}
+                      <div className="sa-settings-diagnostics-row">
+                        <span className="sa-settings-diagnostics-label">🗄 PostgreSQL DB</span>
+                        <span className="sa-settings-diagnostics-val" style={{ color: paymentKeys.db_status === 'connected' || !paymentKeys.db_status ? '#15803D' : '#EF4444' }}>
+                          <span className={`sa-live-dot ${paymentKeys.db_status === 'connected' || !paymentKeys.db_status ? 'active' : 'danger'}`} />
+                          {paymentKeys.db_status === 'connected' || !paymentKeys.db_status ? 'Connected (Neon)' : 'Degraded'}
+                        </span>
+                      </div>
+
+                      {/* 6. Cloudflare R2 / Storage Status */}
+                      <div className="sa-settings-diagnostics-row">
+                        <span className="sa-settings-diagnostics-label">☁ Cloudflare R2</span>
+                        <span className="sa-settings-diagnostics-val" style={{ color: paymentKeys.r2_status === 'active' || !paymentKeys.r2_status ? '#15803D' : '#B45309' }}>
+                          <span className={`sa-live-dot ${paymentKeys.r2_status === 'active' || !paymentKeys.r2_status ? 'active' : 'warning'}`} />
+                          {paymentKeys.r2_status === 'active' || !paymentKeys.r2_status ? 'Configured & Active' : 'Fallback Mode'}
                         </span>
                       </div>
                     </div>

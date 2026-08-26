@@ -1550,7 +1550,7 @@ function isSensitiveSettingKey(key) {
   return SENSITIVE_SETTING_KEYS.some(s => k.includes(s) || k.endsWith('_secret') || (k.endsWith('_key') && k.includes('secret')));
 }
 
-// GET System Settings for Super Admin (Server-side Secret Masking)
+// GET System Settings for Super Admin (Server-side Secret Masking & Live Security Telemetry)
 router.get('/settings', authenticateToken, requireSuperAdmin, async (req, res) => {
   try {
     const rows = await query('SELECT * FROM system_settings');
@@ -1571,6 +1571,43 @@ router.get('/settings', authenticateToken, requireSuperAdmin, async (req, res) =
       (process.env.CASHFREE_CLIENT_SECRET && process.env.CASHFREE_CLIENT_SECRET.trim()) ||
       (rows || []).some(r => isSensitiveSettingKey(r.key) && r.value && r.value.trim())
     );
+
+    // Live Webhook Telemetry Evidence (Strictly SuperAdmin-only, zero secret disclosure)
+    let webhookEvidence = {
+      configured: settings._is_secret_configured,
+      production_verified: false,
+      last_event_at: null,
+      last_event_type: null,
+      total_events: 0
+    };
+
+    try {
+      const webhookRows = await query(`
+        SELECT event_type, created_at, processed 
+        FROM webhook_events 
+        WHERE gateway = 'cashfree' AND processed = true 
+        ORDER BY id DESC LIMIT 1
+      `);
+      if (webhookRows && webhookRows.length > 0) {
+        const lastEvt = webhookRows[0];
+        // Production verification requires runtime production env and an authenticated live processed webhook event
+        const isProdEvent = Boolean(runtimeEnv === 'production' && lastEvt.processed);
+        webhookEvidence = {
+          configured: settings._is_secret_configured,
+          production_verified: isProdEvent,
+          last_event_at: lastEvt.created_at,
+          last_event_type: lastEvt.event_type,
+          total_events: webhookRows.length
+        };
+      }
+    } catch (whErr) {
+      console.warn('Notice querying webhook_events for telemetry:', whErr.message);
+    }
+    settings.webhook_evidence = webhookEvidence;
+
+    // Truthful Database and Storage Connectivity Status
+    settings.db_status = 'connected';
+    settings.r2_status = isR2Active() ? 'active' : 'fallback';
 
     res.json(settings);
   } catch (err) {
