@@ -567,13 +567,22 @@ export default function SuperAdminDashboard({ token, username, onLogout, onRetur
       return (b.id || 0) - (a.id || 0);
     });
 
+  const getCatalogPlanPrice = (planTier) => {
+    const found = (plansList || []).find(p => (p.key || '').toLowerCase() === (planTier || '').toLowerCase());
+    if (found && found.price !== undefined && found.price !== null) {
+      return parseFloat(found.price);
+    }
+    const catalogFallback = { basic: 499, pro: 999, enterprise: 1999, vip_ultra_plan: 2499 };
+    return catalogFallback[(planTier || '').toLowerCase()] || 999;
+  };
+
   const totalPending = restaurants.filter(r => r.active === false || r.active === 0 || r.active === '0').length;
   const totalActive = restaurants.filter(r => r.active !== false && r.active !== 0 && r.active !== '0').length;
   const totalDishes = restaurants.reduce((acc, r) => acc + (r.dish_count || 0), 0);
   const totalScans = restaurants.reduce((acc, r) => acc + (r.scan_count || 0), 0);
   const paidTenants = restaurants.filter(r => getTenantStatus(r) === 'active');
-  const paidMrr = paidTenants.reduce((acc, r) => acc + (parseFloat(r.plan_price) || 999), 0);
-  const potentialMrr = restaurants.filter(r => r.active !== false).reduce((acc, r) => acc + (parseFloat(r.plan_price) || 999), 0);
+  const paidMrr = paidTenants.reduce((acc, r) => acc + getCatalogPlanPrice(r.plan_tier), 0);
+  const potentialMrr = restaurants.filter(r => r.active !== false && r.subscription_type !== 'ADMIN_GRANTED' && r.mandate_status !== 'admin_granted').reduce((acc, r) => acc + getCatalogPlanPrice(r.plan_tier), 0);
 
   // Render Directory Controls & Clean Tenant Cards Grid / Table
   const renderDirectorySection = () => (

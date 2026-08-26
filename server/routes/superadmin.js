@@ -436,6 +436,15 @@ router.post('/restaurants', authenticateToken, requireSuperAdmin, async (req, re
 
     // 1. Create Restaurant Entry
     const expiryDate = plan_expires_at || new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString();
+    const effectivePlanTier = (plan_tier || 'pro').toLowerCase();
+
+    // Resolve authoritative catalog price from saas_plans
+    const saasPlanRows = await query('SELECT id, key, price FROM saas_plans WHERE LOWER(key) = $1 LIMIT 1', [effectivePlanTier]);
+    const matchedPlan = saasPlanRows && saasPlanRows[0];
+    const defaultCatalogPrice = matchedPlan ? Number(matchedPlan.price) : (effectivePlanTier === 'enterprise' ? 1999 : effectivePlanTier === 'basic' ? 499 : 999);
+    const effectivePlanPrice = (plan_price !== undefined && plan_price !== null && !isNaN(parseFloat(plan_price)))
+      ? parseFloat(plan_price)
+      : defaultCatalogPrice;
 
     const restoRes = await query(`
       INSERT INTO restaurants (
@@ -449,8 +458,8 @@ router.post('/restaurants', authenticateToken, requireSuperAdmin, async (req, re
       phone || '',
       address || '',
       '8:00 AM - 10:30 PM',
-      plan_tier || 'pro',
-      plan_price ? parseFloat(plan_price) : 999,
+      effectivePlanTier,
+      effectivePlanPrice,
       expiryDate,
       whatsapp_number || phone || '',
       theme_color || 'gold',
@@ -462,7 +471,15 @@ router.post('/restaurants', authenticateToken, requireSuperAdmin, async (req, re
 
     const newRestoId = restoRes[0]?.id || restoRes.lastInsertRowid;
 
-    // 2. Create Owner Admin User
+    // 2. Create Matching Subscription Record with Authoritative Amount
+    await query(`
+      INSERT INTO subscriptions (
+        restaurant_id, plan_id, gateway, status, amount, currency, billing_cycle,
+        current_period_start, current_period_end
+      ) VALUES ($1, $2, 'none', 'active', $3, 'INR', 'monthly', CURRENT_TIMESTAMP, $4)
+    `, [newRestoId, matchedPlan?.id || null, effectivePlanPrice, expiryDate]);
+
+    // 3. Create Owner Admin User
     const salt = await bcrypt.genSalt(10);
     const hash = await bcrypt.hash(owner_password, salt);
 
@@ -471,7 +488,7 @@ router.post('/restaurants', authenticateToken, requireSuperAdmin, async (req, re
       VALUES ($1, $2, $3, $4)
     `, [newRestoId, owner_username, hash, 'restaurant_admin']);
 
-    await logAudit(newRestoId, 'superadmin', 'Create Tenant', `Created restaurant '${name}' (Slug: ${cleanSlug}, Owner: ${owner_username})`);
+    await logAudit(newRestoId, 'superadmin', 'Create Tenant', `Created restaurant '${name}' (Slug: ${cleanSlug}, Owner: ${owner_username}, Plan: ${effectivePlanTier}, Price: ₹${effectivePlanPrice})`);
 
     res.json({
       success: true,

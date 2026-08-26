@@ -6,20 +6,34 @@ import { resolveBusinessProfile } from '../../../utils/businessTaxonomy';
 export default function OverviewView({ restaurants, pendingRegistrations = [], onSelectTenant, onNavigate }) {
   const [showAllRegistrations, setShowAllRegistrations] = useState(false);
 
+  const getCatalogPlanPrice = (planTier) => {
+    const catalogFallback = { basic: 499, pro: 999, enterprise: 1999, vip_ultra_plan: 2499 };
+    return catalogFallback[(planTier || '').toLowerCase()] || 999;
+  };
+
+  const getTenantStatus = (r) => {
+    const isSuspended = (r.active === false || r.active === 0 || r.active === '0');
+    if (isSuspended) return 'suspended';
+    const isVip = (r.subscription_type === 'ADMIN_GRANTED' || r.mandate_status === 'admin_granted');
+    if (isVip) return 'vip';
+    const isAutoRenewOff = (r.auto_renew === 0 || r.auto_renew === false || r.cancel_requested_at !== null || r.subscription_status === 'auto_renew_off');
+    if (isAutoRenewOff) return 'autorenew_off';
+    const isExpired = r.subscription_status === 'expired' || (r.plan_expires_at && new Date(r.plan_expires_at) < new Date());
+    if (isExpired) return 'expired';
+    const isFailed = (r.subscription_status === 'payment_failed' || r.subscription_status === 'past_due');
+    if (isFailed) return 'failed';
+    const isTrial = (r.subscription_status === 'trialing' || (r.trial_ends_at && new Date(r.trial_ends_at) > new Date()));
+    if (isTrial) return 'trial';
+    return 'active';
+  };
+
   const totalTenants = restaurants.length;
   const activeCount = restaurants.filter(r => r.active !== false && r.active !== 0 && r.active !== '0').length;
-  const trialCount = restaurants.filter(r => r.subscription_status === 'trialing' || (r.trial_ends_at && new Date(r.trial_ends_at) > new Date())).length;
-  const pastDueCount = restaurants.filter(r => r.subscription_status === 'payment_failed' || r.subscription_status === 'past_due').length;
+  const trialCount = restaurants.filter(r => getTenantStatus(r) === 'trial').length;
+  const pastDueCount = restaurants.filter(r => getTenantStatus(r) === 'failed').length;
 
-  const paidMrr = restaurants.reduce((sum, r) => {
-    const isSusp = (r.active === false || r.active === 0 || r.active === '0');
-    const isVip = (r.subscription_type === 'ADMIN_GRANTED' || r.mandate_status === 'admin_granted');
-    const isTrial = (r.subscription_status === 'trialing' || (r.trial_ends_at && new Date(r.trial_ends_at) > new Date()));
-    if (!isSusp && !isVip && !isTrial) {
-      return sum + (parseFloat(r.plan_price) || 999);
-    }
-    return sum;
-  }, 0);
+  const paidTenants = restaurants.filter(r => getTenantStatus(r) === 'active');
+  const paidMrr = paidTenants.reduce((sum, r) => sum + getCatalogPlanPrice(r.plan_tier), 0);
 
   // Grouped Attention Items
   const pendingCancellations = restaurants.filter(r => r.cancel_requested_at);

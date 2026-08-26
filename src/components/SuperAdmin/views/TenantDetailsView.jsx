@@ -84,6 +84,7 @@ export default function TenantDetailsView({
 
   // Resolved merged objects (prefer real-time 360 data, fallback to list item)
   const tenant = t360Data?.tenant || resto;
+  const bizMeta = BUSINESS_TYPE_METADATA[tenant.business_type] || { icon: '🏢', label: tenant.business_type || 'Restaurant', description: 'TouchQR Digital Menu Venue' };
   const owner = t360Data?.owner || {
     owner_name: resto.owner_name,
     phone: resto.phone,

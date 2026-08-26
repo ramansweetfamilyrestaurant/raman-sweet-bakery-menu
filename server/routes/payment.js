@@ -748,7 +748,7 @@ const handleCashfreeWebhook = async (req, res) => {
       let restoId = null;
       let subDbRecord = null;
       if (subscriptionId) {
-        const subRows = await txQuery('SELECT * FROM subscriptions WHERE gateway_subscription_id = $1 LIMIT 1', [subscriptionId]);
+        const subRows = await txQuery('SELECT * FROM subscriptions WHERE gateway_subscription_id = $1 LIMIT 1 FOR UPDATE', [subscriptionId]);
         subDbRecord = subRows[0] || null;
         restoId = subDbRecord?.restaurant_id || null;
       }
