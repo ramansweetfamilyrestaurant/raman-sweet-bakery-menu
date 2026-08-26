@@ -84,18 +84,64 @@ export default function MenuView({
         border: '1px solid #E2E8F0',
         boxShadow: '0 2px 8px rgba(0,0,0,0.02)'
       }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap' }}>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
           <h2 style={{ fontSize: '1.3rem', fontWeight: 900, color: '#0F172A', margin: 0, letterSpacing: '-0.02em' }}>
             Menu Management
           </h2>
-          <span style={{ fontSize: '0.72rem', fontWeight: 800, background: '#F1F5F9', color: '#475569', border: '1px solid #E2E8F0', padding: '3px 10px', borderRadius: '12px' }}>
-            {dishQuota.display} Dishes • {catQuota.display} Categories • {comboQuota.display} Combos
-          </span>
-          {comboQuota.isAtLimit && (
-            <span style={{ fontSize: '0.70rem', fontWeight: 800, background: '#FEE2E2', color: '#DC2626', border: '1px solid #FCA5A5', padding: '2px 8px', borderRadius: '8px' }}>
-              ⚠️ Combo Limit Reached
-            </span>
-          )}
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
+            <div style={{
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: '6px',
+              background: '#F8FAFC',
+              border: '1px solid #E2E8F0',
+              padding: '4px 10px',
+              borderRadius: '10px',
+              fontSize: '0.74rem',
+              fontWeight: 800,
+              color: '#334155'
+            }}>
+              <span>🍲 Dishes:</span>
+              <strong style={{ color: '#0F172A' }}>{dishQuota.display}</strong>
+            </div>
+
+            <div style={{
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: '6px',
+              background: '#F8FAFC',
+              border: '1px solid #E2E8F0',
+              padding: '4px 10px',
+              borderRadius: '10px',
+              fontSize: '0.74rem',
+              fontWeight: 800,
+              color: '#334155'
+            }}>
+              <span>📁 Categories:</span>
+              <strong style={{ color: '#0F172A' }}>{catQuota.display}</strong>
+            </div>
+
+            <div style={{
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: '6px',
+              background: comboQuota.isAtLimit ? '#FEE2E2' : comboQuota.isNearLimit ? '#FEF3C7' : '#F8FAFC',
+              border: comboQuota.isAtLimit ? '1px solid #FCA5A5' : comboQuota.isNearLimit ? '1px solid #FCD34D' : '1px solid #E2E8F0',
+              padding: '4px 10px',
+              borderRadius: '10px',
+              fontSize: '0.74rem',
+              fontWeight: 800,
+              color: comboQuota.isAtLimit ? '#DC2626' : comboQuota.isNearLimit ? '#B45309' : '#334155'
+            }}>
+              <span>🍱 Combos:</span>
+              <strong>{comboQuota.display}</strong>
+              {comboQuota.isAtLimit && (
+                <span style={{ fontSize: '0.65rem', background: '#DC2626', color: '#FFF', padding: '1px 5px', borderRadius: '6px', marginLeft: '2px' }}>
+                  LIMIT
+                </span>
+              )}
+            </div>
+          </div>
         </div>
 
         {activeSubTab === 'dishes' && (

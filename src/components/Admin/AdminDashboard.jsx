@@ -2625,48 +2625,43 @@ export default function AdminDashboard({
         </div>
       )}
 
-      {/* 🔔 2. Compact Post-Refresh Status Badge (Only shown if audio context is suspended after refresh before user gesture) */}
+      {/* 🔔 2. Compact Post-Refresh Status Strip (Non-blocking below header) */}
       {!isAudioReady && hasSoundSetupCompleted && !audioBannerDismissed && (
         <div style={{
-          position: 'fixed',
-          top: '72px',
-          right: '16px',
-          zIndex: 9999,
-          background: 'rgba(15, 23, 42, 0.92)',
-          backdropFilter: 'blur(8px)',
-          color: '#FFFFFF',
-          padding: '5px 12px',
-          borderRadius: '20px',
-          border: '1px solid rgba(245, 158, 11, 0.4)',
-          boxShadow: '0 4px 16px rgba(0,0,0,0.25)',
+          background: '#FFFBEB',
+          borderBottom: '1px solid #FDE68A',
+          padding: '6px 16px',
           display: 'flex',
           alignItems: 'center',
-          gap: '8px',
+          justifyContent: 'center',
+          gap: '10px',
           fontSize: '0.78rem',
-          fontWeight: 600
+          color: '#92400E',
+          fontWeight: 600,
+          boxSizing: 'border-box'
         }}>
-          <span style={{ color: '#FBBF24' }}>🔔 Sound not active</span>
+          <span>🔔 Order sound off</span>
           <button
             onClick={handleEnableSound}
             style={{
-              background: 'linear-gradient(135deg, #F59E0B, #D97706)',
+              background: '#D97706',
               border: 'none',
               color: '#FFFFFF',
               padding: '3px 10px',
-              borderRadius: '12px',
-              fontWeight: 700,
+              borderRadius: '8px',
+              fontWeight: 800,
               fontSize: '0.72rem',
               cursor: 'pointer'
             }}
           >
-            Enable
+            Enable Sound
           </button>
           <button
             onClick={() => setAudioBannerDismissed(true)}
             style={{
               background: 'none',
               border: 'none',
-              color: '#94A3B8',
+              color: '#B45309',
               cursor: 'pointer',
               fontSize: '0.85rem',
               padding: '0 2px'
