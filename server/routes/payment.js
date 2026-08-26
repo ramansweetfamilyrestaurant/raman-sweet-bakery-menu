@@ -320,7 +320,7 @@ export async function finalizePendingRegistration(reg_id, inputSubId = null) {
         restaurant_id, plan_id, gateway, gateway_subscription_id, status, amount, currency, billing_cycle, trial_start, trial_end, current_period_start, current_period_end
       ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)
     `, [
-      newRestoId, dbPlan.id, 'cashfree', targetSubId || null, 'active', dbPlan.price, 'INR', 'monthly', nowISO, expiryDateISO, nowISO, expiryDateISO
+      newRestoId, dbPlan.id, 'cashfree', targetSubId || null, 'trialing', dbPlan.price, 'INR', 'monthly', nowISO, expiryDateISO, nowISO, expiryDateISO
     ]);
 
     const hash = regData.password_hash || (await bcrypt.hash(regData.owner_password || 'default123', await bcrypt.genSalt(10)));
@@ -354,10 +354,14 @@ router.all('/register-return', async (req, res) => {
   const reg_id = req.query.reg_id || req.body?.reg_id || req.query.reg_token || req.body?.reg_token;
   const inputSubId = req.query.subscription_id || req.query.sub_id || req.body?.subscription_id || req.body?.sub_id;
   const baseUrl = getAppBaseUrl(req);
+  const isSuperAdminOrigin = typeof reg_id === 'string' && reg_id.startsWith('reg_sa_');
 
-  console.log('[REGISTRATION] Received callback. Method:', req.method, 'reg_id:', reg_id);
+  console.log('[REGISTRATION] Received callback. Method:', req.method, 'reg_id:', reg_id, 'isSuperAdmin:', isSuperAdminOrigin);
 
   if (!reg_id) {
+    if (isSuperAdminOrigin) {
+      return res.redirect(`${baseUrl}/superadmin?tab=tenants&error=${encodeURIComponent('Invalid or expired registration session')}`);
+    }
     return res.redirect(`${baseUrl}/register?error=Invalid registration session`);
   }
 
@@ -368,9 +372,17 @@ router.all('/register-return', async (req, res) => {
       username: result.username,
       slug: result.cleanSlug
     });
+
+    if (isSuperAdminOrigin) {
+      return res.redirect(`${baseUrl}/superadmin?tab=tenants&created=${encodeURIComponent(result.cleanSlug)}&msg=${encodeURIComponent(`Business '${result.cleanSlug}' provisioned successfully with Cashfree mandate!`)}`);
+    }
+
     res.redirect(`${baseUrl}/${result.cleanSlug}/admin?code=${encodeURIComponent(authCode)}&slug=${encodeURIComponent(result.cleanSlug)}`);
   } catch (err) {
     console.error('[REGISTRATION] verification failed:', err.message);
+    if (isSuperAdminOrigin) {
+      return res.redirect(`${baseUrl}/superadmin?tab=tenants&error=${encodeURIComponent(err.message)}`);
+    }
     res.redirect(`${baseUrl}/register?error=${encodeURIComponent(err.message)}`);
   }
 });
