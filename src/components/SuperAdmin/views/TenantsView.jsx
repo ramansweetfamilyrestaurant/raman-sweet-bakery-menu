@@ -68,7 +68,7 @@ export default function TenantsView({ restaurants, searchQuery, onSelectTenant, 
           </button>
 
           <button onClick={onAddTenant} className="sa-btn sa-btn-accent sa-btn-sm">
-            <Plus size={15} /> Add Restaurant
+            <Plus size={15} /> Add Business
           </button>
         </div>
       </div>
@@ -78,13 +78,13 @@ export default function TenantsView({ restaurants, searchQuery, onSelectTenant, 
         <table className="sa-table">
           <thead>
             <tr>
-              <th style={{ minWidth: '240px' }}>RESTAURANT</th>
+              <th style={{ minWidth: '240px' }}>BUSINESS</th>
               <th style={{ minWidth: '130px' }}>TYPE</th>
               <th style={{ minWidth: '160px' }}>OWNER</th>
               <th style={{ minWidth: '130px' }}>PLAN</th>
               <th style={{ minWidth: '110px' }}>STATUS</th>
               <th style={{ minWidth: '140px' }}>ACCESS UNTIL</th>
-              <th style={{ minWidth: '90px' }}>DISHES</th>
+              <th style={{ minWidth: '90px' }}>ITEMS</th>
               <th style={{ minWidth: '90px', textAlign: 'right' }}>ACTION</th>
             </tr>
           </thead>
@@ -92,7 +92,7 @@ export default function TenantsView({ restaurants, searchQuery, onSelectTenant, 
             {filtered.length === 0 ? (
               <tr>
                 <td colSpan={8} style={{ textAlign: 'center', padding: '32px', color: 'var(--sa-text-muted)' }}>
-                  No tenant restaurants matching criteria.
+                  No businesses matching criteria.
                 </td>
               </tr>
             ) : (

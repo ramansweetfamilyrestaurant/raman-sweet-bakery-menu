@@ -300,7 +300,7 @@ export default function SuperAdminDashboard({ token, username, onLogout, onRetur
       });
       loadData();
     } catch (err) {
-      setFormError(err.message || 'Failed to create restaurant');
+      setFormError(err.message || 'Failed to create business');
     } finally {
       setFormSubmitting(false);
     }
@@ -612,7 +612,7 @@ export default function SuperAdminDashboard({ token, username, onLogout, onRetur
               className="sa-btn sa-btn-accent sa-btn-sm"
               style={{ fontWeight: 900 }}
             >
-              <Plus size={15} /> Add Restaurant
+              <Plus size={15} /> Add Business
             </button>
             <button
               type="button"
@@ -1124,7 +1124,7 @@ export default function SuperAdminDashboard({ token, username, onLogout, onRetur
                     className="sa-btn sa-btn-accent sa-btn-sm"
                     style={{ fontWeight: 900, display: 'flex', alignItems: 'center', gap: '4px' }}
                   >
-                    <Plus size={15} /> Add Restaurant
+                    <Plus size={15} /> Add Business
                   </button>
                   <button
                     onClick={loadData}
@@ -3081,7 +3081,7 @@ export default function SuperAdminDashboard({ token, username, onLogout, onRetur
               <div style={{ width: '36px', height: '36px', borderRadius: '10px', background: '#DCFCE7', color: '#15803D', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                 <Store size={20} />
               </div>
-              <h3 style={{ fontSize: '1.15rem', fontWeight: 900, color: 'var(--sa-text-main)', margin: 0 }}>Add New Shop / Restaurant</h3>
+              <h3 style={{ fontSize: '1.15rem', fontWeight: 900, color: 'var(--sa-text-main)', margin: 0 }}>Add New Business</h3>
             </div>
 
             {formError && (
@@ -3092,7 +3092,7 @@ export default function SuperAdminDashboard({ token, username, onLogout, onRetur
 
             <form onSubmit={handleCreateRestaurant} style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
               <div>
-                <label style={{ fontSize: '0.78rem', fontWeight: 800, color: 'var(--text-dark)', marginBottom: '4px', display: 'block' }}>RESTAURANT NAME *</label>
+                <label style={{ fontSize: '0.78rem', fontWeight: 800, color: 'var(--text-dark)', marginBottom: '4px', display: 'block' }}>BUSINESS NAME *</label>
                 <input
                   type="text"
                   placeholder="e.g. Royal Pizza & Cafe"
@@ -3203,7 +3203,7 @@ export default function SuperAdminDashboard({ token, username, onLogout, onRetur
               <div style={{ display: 'flex', gap: '12px', marginTop: '14px' }}>
                 <button type="button" onClick={() => setShowAddModal(false)} className="sa-btn sa-btn-secondary" style={{ flex: 1 }}>Cancel</button>
                 <button type="submit" disabled={formSubmitting} className="sa-btn sa-btn-accent" style={{ flex: 1 }}>
-                  {formSubmitting ? 'Creating...' : '✓ Create Restaurant'}
+                  {formSubmitting ? 'Creating...' : '✓ Create Business'}
                 </button>
               </div>
             </form>

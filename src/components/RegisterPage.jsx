@@ -410,7 +410,7 @@ export default function RegisterPage({ onRegisterSuccess }) {
           boxShadow: '0 20px 50px rgba(0,0,0,0.6)'
         }}>
           <h2 style={{ fontSize: '1.25rem', fontWeight: 900, color: '#FFFFFF', margin: '0 0 4px 0', textAlign: 'center' }}>
-            Create Restaurant Account 🚀
+            Create Business Account 🚀
           </h2>
           <p style={{ fontSize: '0.8rem', color: '#9CA3AF', textAlign: 'center', margin: '0 0 20px 0' }}>
             Instant setup • {trialDays ? `${trialDays}-day ` : ''}unrestricted trial access
