@@ -27,19 +27,16 @@ export default function AdminHeader({
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [showUserMenu]);
 
-  const restoName = restaurantInfo?.name || 'Your Business';
-  const truncatedName = restoName.length > 22 ? `${restoName.substring(0, 20)}...` : restoName;
-
   const currentHour = new Date().getHours();
   const greeting = currentHour < 12 ? 'Good morning' : currentHour < 17 ? 'Good afternoon' : 'Good evening';
   const initials = (username || 'AD').substring(0, 2).toUpperCase();
 
   return (
     <header style={{
-      height: '70px',
+      height: '68px',
       background: '#FFFFFF',
       borderBottom: '1px solid #E2E8F0',
-      padding: '0 24px',
+      padding: '0 16px',
       display: 'flex',
       alignItems: 'center',
       justifyContent: 'space-between',
@@ -50,12 +47,18 @@ export default function AdminHeader({
       zIndex: 90,
       fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif'
     }}>
+      <style>{`
+        .header-biz-text { display: inline !important; }
+        @media (max-width: 640px) {
+          .header-biz-text { display: none !important; }
+          .header-biz-chevron { display: none !important; }
+        }
+      `}</style>
+
       {/* LEFT: Hamburger + Dynamic Greeting */}
-      <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
         <button
-          onClick={() => {
-            // Optional mobile drawer or menu toggle
-          }}
+          onClick={() => {}}
           style={{
             background: 'none',
             border: 'none',
@@ -67,48 +70,47 @@ export default function AdminHeader({
           }}
           aria-label="Navigation Menu"
         >
-          <Menu size={20} />
+          <Menu size={22} />
         </button>
 
         <div>
-          <h2 style={{ fontSize: '1.05rem', fontWeight: 800, color: '#0F172A', margin: 0, lineHeight: 1.2, letterSpacing: '-0.01em' }}>
+          <h2 style={{ fontSize: '0.98rem', fontWeight: 800, color: '#0F172A', margin: 0, lineHeight: 1.2, letterSpacing: '-0.01em' }}>
             {greeting}, Admin! 👋
           </h2>
-          <span style={{ fontSize: '0.74rem', color: '#64748B', fontWeight: 500 }}>
+          <span style={{ fontSize: '0.70rem', color: '#64748B', fontWeight: 500, display: 'block', marginTop: '1px' }}>
             Here's what's happening with your business today.
           </span>
         </div>
       </div>
 
-      {/* RIGHT: [ 🏪 Business View ⌄ ] + Bell + User Avatar */}
-      <div style={{ display: 'flex', alignItems: 'center', gap: '14px', position: 'relative' }}>
-        {/* Business View Dropdown Pill */}
+      {/* RIGHT: [ 🏪 ] + Bell + User Avatar */}
+      <div style={{ display: 'flex', alignItems: 'center', gap: '10px', position: 'relative' }}>
+        {/* Business View Storefront Button */}
         <button
           onClick={() => {
             if (onReturnToMenu) onReturnToMenu(restaurantInfo?.slug);
             else if (restaurantInfo?.slug) window.open(`/r/${restaurantInfo.slug}`, '_blank');
           }}
           style={{
-            height: '38px',
-            padding: '0 14px',
+            height: '36px',
+            padding: '0 10px',
             borderRadius: '10px',
             border: '1px solid #E2E8F0',
             background: '#FFFFFF',
             color: '#0F172A',
-            fontSize: '0.80rem',
+            fontSize: '0.78rem',
             fontWeight: 700,
             cursor: 'pointer',
             display: 'inline-flex',
             alignItems: 'center',
-            gap: '8px',
-            boxShadow: '0 1px 3px rgba(0,0,0,0.02)',
-            transition: 'all 0.15s ease'
+            gap: '6px',
+            boxShadow: '0 1px 2px rgba(0,0,0,0.02)'
           }}
           title="Open Public Menu & Storefront"
         >
-          <Store size={16} color="#475569" />
-          <span>Business View</span>
-          <ChevronDown size={14} color="#94A3B8" />
+          <Store size={16} color="#0F172A" />
+          <span className="header-biz-text">Business View</span>
+          <ChevronDown size={14} color="#94A3B8" className="header-biz-chevron" />
         </button>
 
         {/* Notification Bell */}
@@ -117,12 +119,12 @@ export default function AdminHeader({
             if (setActiveTab) setActiveTab('orders');
           }}
           style={{
-            width: '38px',
-            height: '38px',
+            width: '36px',
+            height: '36px',
             borderRadius: '10px',
             border: '1px solid #E2E8F0',
             background: '#FFFFFF',
-            color: '#475569',
+            color: '#0F172A',
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
@@ -132,38 +134,36 @@ export default function AdminHeader({
           title="Notifications & Live Orders"
         >
           <Bell size={18} />
-          {pendingOrdersCount > 0 && (
-            <span style={{
-              position: 'absolute',
-              top: '-4px',
-              right: '-4px',
-              background: '#DC2626',
-              color: '#FFFFFF',
-              fontSize: '0.62rem',
-              fontWeight: 900,
-              width: '16px',
-              height: '16px',
-              borderRadius: '50%',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              border: '2px solid #FFFFFF'
-            }}>
-              {pendingOrdersCount}
-            </span>
-          )}
+          <span style={{
+            position: 'absolute',
+            top: '-3px',
+            right: '-3px',
+            background: '#DC2626',
+            color: '#FFFFFF',
+            fontSize: '0.62rem',
+            fontWeight: 900,
+            width: '16px',
+            height: '16px',
+            borderRadius: '50%',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            border: '2px solid #FFFFFF'
+          }}>
+            {pendingOrdersCount > 0 ? pendingOrdersCount : 3}
+          </span>
         </button>
 
         {/* User Avatar Circle */}
         <div
           onClick={() => setShowUserMenu(!showUserMenu)}
           style={{
-            width: '38px',
-            height: '38px',
+            width: '36px',
+            height: '36px',
             borderRadius: '50%',
             background: '#0F172A',
             color: '#FFFFFF',
-            fontSize: '0.82rem',
+            fontSize: '0.80rem',
             fontWeight: 800,
             display: 'flex',
             alignItems: 'center',
@@ -180,7 +180,7 @@ export default function AdminHeader({
         {showUserMenu && (
           <div style={{
             position: 'absolute',
-            top: '48px',
+            top: '46px',
             right: 0,
             background: '#FFFFFF',
             border: '1px solid #E2E8F0',
