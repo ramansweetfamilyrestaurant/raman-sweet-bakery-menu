@@ -122,7 +122,7 @@ export default function OperationsView({ token, paymentKeys, setPaymentKeys }) {
   const services = telemetry?.services || {
     cashfree: { configured: true, env: 'SANDBOX', status: 'ACTIVE' },
     cloudflare_r2: { status: 'ACTIVE', engine: 'Cloudflare R2 Object Storage' },
-    gemini_ai: { status: 'OPERATIONAL', model: 'Google Gemini 1.5 Flash' },
+    gemini_ai: { status: 'CONFIGURED', model: 'Google Gemini 1.5 Flash' },
     subscription_cron: { status: 'SCHEDULED', interval: 'Every 60 Minutes (Automated)' }
   };
 
@@ -244,10 +244,16 @@ export default function OperationsView({ token, paymentKeys, setPaymentKeys }) {
             </div>
           </div>
 
-          <div style={{ background: 'rgba(255,255,255,0.07)', padding: '10px 12px', borderRadius: '12px', border: '1px solid rgba(255,255,255,0.06)' }}>
+          <div 
+            style={{ background: 'rgba(255,255,255,0.07)', padding: '10px 12px', borderRadius: '12px', border: '1px solid rgba(255,255,255,0.06)' }}
+            title="Current Node.js worker/container uptime. Serverless instances may restart and reset this value."
+          >
             <div style={{ fontSize: '0.65rem', color: '#94A3B8', fontWeight: 800, textTransform: 'uppercase' }}>SERVER UPTIME</div>
             <div style={{ fontSize: '0.90rem', fontWeight: 900, color: '#F472B6', marginTop: '2px' }}>
-              ⏱️ {system.uptime_hours} hrs continuous
+              ⏱️ {system.uptime_hours ? `${system.uptime_hours} hrs` : 'Unknown'}
+            </div>
+            <div style={{ fontSize: '0.62rem', color: '#CBD5E1', fontWeight: 600, marginTop: '2px' }}>
+              Current worker uptime
             </div>
           </div>
         </div>
@@ -377,7 +383,9 @@ export default function OperationsView({ token, paymentKeys, setPaymentKeys }) {
                   <Sparkles size={18} />
                 </div>
                 <div style={{ minWidth: 0 }}>
-                  <div style={{ fontSize: '0.92rem', fontWeight: 900, color: '#7E22CE' }}>🟢 Operational</div>
+                  <div style={{ fontSize: '0.92rem', fontWeight: 900, color: '#7E22CE' }}>
+                    {services.gemini_ai?.status === 'NOT_CONFIGURED' ? '⚪ Not Configured' : '🟢 Configured & Ready'}
+                  </div>
                   <div style={{ fontSize: '0.74rem', fontWeight: 800, color: 'var(--sa-text-main)' }}>Gemini 1.5 Flash</div>
                   <div style={{ fontSize: '0.68rem', color: 'var(--sa-text-muted)' }}>Auto AI Assistant</div>
                 </div>
