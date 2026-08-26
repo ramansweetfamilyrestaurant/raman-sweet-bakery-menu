@@ -13,19 +13,21 @@ import {
   Utensils, 
   Layers, 
   Package, 
-  Sliders, 
   CheckCircle2, 
   AlertCircle, 
-  Lock,
-  ChevronRight,
-  ExternalLink,
-  ChevronDown,
-  Copy,
-  Store,
-  Check,
-  Tag
+  ChevronRight, 
+  ExternalLink, 
+  ChevronDown, 
+  Copy, 
+  Store, 
+  Check, 
+  Tag,
+  FolderPlus,
+  Flame,
+  Coffee,
+  Pizza,
+  ShoppingBag
 } from 'lucide-react';
-import PlanLockedCard from '../components/PlanLockedCard';
 import { resolveImageUrl, getDishImageUrl, getCategoryImageUrl } from '../../../utils/imageHelper';
 import { formatQuota } from '../../../utils/planCapabilities';
 
@@ -57,7 +59,6 @@ export default function MenuView({
   maxDishes = 9999,
   maxCategories = 9999,
   maxCombos = 9999,
-  modifiersEnabled = true,
   onUpgrade = null,
   onReturnToMenu = null,
   restaurantInfo = {}
@@ -117,31 +118,33 @@ export default function MenuView({
       <style>{`
         .no-scrollbar::-webkit-scrollbar { display: none; }
         .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
-        .ultra-dish-card {
+        .ultra-card-hover {
           transition: all 0.18s cubic-bezier(0.16, 1, 0.3, 1);
         }
-        .ultra-dish-card:hover {
+        .ultra-card-hover:hover {
           box-shadow: 0 4px 16px rgba(0,0,0,0.04) !important;
           border-color: #CBD5E1 !important;
-        }
-        .ultra-dish-card:active {
-          transform: scale(0.995);
         }
         .action-btn-hover {
           transition: all 0.15s ease;
         }
         .action-btn-hover:active {
-          transform: scale(0.92);
+          transform: scale(0.94);
+        }
+        .premium-search-input:focus {
+          border-color: #16A34A !important;
+          background: #FFFFFF !important;
+          box-shadow: 0 0 0 3px rgba(22, 163, 74, 0.12) !important;
         }
       `}</style>
 
       {/* ========================================================
-          1. ULTRA PREMIUM TOP BAR & STOREFRONT PREVIEW
+          1. TOP BRAND HEADER & STOREFRONT PREVIEW
          ======================================================== */}
       <div style={{
         background: '#FFFFFF',
         borderRadius: '18px',
-        border: '1px solid rgba(226, 232, 240, 0.8)',
+        border: '1px solid rgba(226, 232, 240, 0.85)',
         padding: '16px 20px',
         display: 'flex',
         alignItems: 'center',
@@ -204,7 +207,7 @@ export default function MenuView({
       </div>
 
       {/* ========================================================
-          2. SEGMENTED TABS
+          2. SEGMENTED TABS (DISHES • CATEGORIES • COMBOS ONLY)
          ======================================================== */}
       <div style={{
         display: 'flex',
@@ -215,19 +218,18 @@ export default function MenuView({
         border: '1px solid #E2E8F0',
         padding: '5px',
         width: '100%',
-        boxSizing: 'border-box',
-        overflowX: 'auto'
+        boxSizing: 'border-box'
       }}>
         <button
           onClick={() => setActiveSubTab && setActiveSubTab('dishes')}
           style={{
             flex: 1,
-            padding: '9px 12px',
+            padding: '10px 14px',
             borderRadius: '10px',
             border: 'none',
             background: activeSubTab === 'dishes' ? '#0A2315' : 'transparent',
             color: activeSubTab === 'dishes' ? '#FFFFFF' : '#64748B',
-            fontSize: '0.78rem',
+            fontSize: '0.80rem',
             fontWeight: 800,
             cursor: 'pointer',
             display: 'flex',
@@ -238,7 +240,7 @@ export default function MenuView({
             transition: 'all 0.15s ease'
           }}
         >
-          <Utensils size={14} />
+          <Utensils size={15} />
           <span>Dishes ({safeDishes.length})</span>
         </button>
 
@@ -246,12 +248,12 @@ export default function MenuView({
           onClick={() => setActiveSubTab && setActiveSubTab('categories')}
           style={{
             flex: 1,
-            padding: '9px 12px',
+            padding: '10px 14px',
             borderRadius: '10px',
             border: 'none',
             background: activeSubTab === 'categories' ? '#0A2315' : 'transparent',
             color: activeSubTab === 'categories' ? '#FFFFFF' : '#64748B',
-            fontSize: '0.78rem',
+            fontSize: '0.80rem',
             fontWeight: 800,
             cursor: 'pointer',
             display: 'flex',
@@ -262,7 +264,7 @@ export default function MenuView({
             transition: 'all 0.15s ease'
           }}
         >
-          <Layers size={14} />
+          <Layers size={15} />
           <span>Categories ({safeCategories.length})</span>
         </button>
 
@@ -270,12 +272,12 @@ export default function MenuView({
           onClick={() => setActiveSubTab && setActiveSubTab('combos')}
           style={{
             flex: 1,
-            padding: '9px 12px',
+            padding: '10px 14px',
             borderRadius: '10px',
             border: 'none',
             background: activeSubTab === 'combos' ? '#0A2315' : 'transparent',
             color: activeSubTab === 'combos' ? '#FFFFFF' : '#64748B',
-            fontSize: '0.78rem',
+            fontSize: '0.80rem',
             fontWeight: 800,
             cursor: 'pointer',
             display: 'flex',
@@ -286,60 +288,48 @@ export default function MenuView({
             transition: 'all 0.15s ease'
           }}
         >
-          <Package size={14} />
+          <Package size={15} />
           <span>Combos ({safeCombos.length})</span>
-        </button>
-
-        <button
-          onClick={() => setActiveSubTab && setActiveSubTab('modifiers')}
-          style={{
-            flex: 1,
-            padding: '9px 12px',
-            borderRadius: '10px',
-            border: 'none',
-            background: activeSubTab === 'modifiers' ? '#0A2315' : 'transparent',
-            color: activeSubTab === 'modifiers' ? '#FFFFFF' : '#64748B',
-            fontSize: '0.78rem',
-            fontWeight: 800,
-            cursor: 'pointer',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            gap: '6px',
-            whiteSpace: 'nowrap',
-            transition: 'all 0.15s ease'
-          }}
-        >
-          <Sliders size={14} />
-          <span>Modifiers</span>
-          {!modifiersEnabled && <Lock size={12} color="#D4AF37" />}
         </button>
       </div>
 
       {/* ========================================================
-          3. SEARCH & DYNAMIC FILTER BAR
+          3. DISHES TAB: ULTRA-PREMIUM SEARCH + DYNAMIC FILTERS
          ======================================================== */}
       {activeSubTab === 'dishes' && (
         <>
-          {/* Search Field */}
+          {/* Ultra-Premium Search Box */}
           <div style={{ position: 'relative', width: '100%' }}>
-            <Search size={16} color="#94A3B8" style={{ position: 'absolute', left: '14px', top: '50%', transform: 'translateY(-50%)' }} />
+            <div style={{
+              position: 'absolute',
+              left: '14px',
+              top: '50%',
+              transform: 'translateY(-50%)',
+              display: 'flex',
+              alignItems: 'center',
+              pointerEvents: 'none'
+            }}>
+              <Search size={17} color="#16A34A" />
+            </div>
+
             <input
               type="text"
               value={search}
               onChange={(e) => setSearch(e.target.value)}
-              placeholder="Search by dish name, category, or ingredients..."
+              placeholder="Search dishes, categories, or ingredients..."
+              className="premium-search-input"
               style={{
                 width: '100%',
-                padding: '11px 36px 11px 38px',
+                padding: '12px 42px 12px 42px',
                 borderRadius: '14px',
-                border: '1px solid #E2E8F0',
+                border: '1.5px solid #E2E8F0',
                 background: '#FFFFFF',
                 fontSize: '0.84rem',
                 color: '#0F172A',
                 outline: 'none',
                 boxSizing: 'border-box',
-                boxShadow: '0 1px 2px rgba(0,0,0,0.02)'
+                boxShadow: '0 2px 6px rgba(0,0,0,0.02)',
+                transition: 'all 0.18s ease'
               }}
             />
             {search && (
@@ -353,8 +343,8 @@ export default function MenuView({
                   background: '#F1F5F9',
                   border: 'none',
                   borderRadius: '50%',
-                  width: '20px',
-                  height: '20px',
+                  width: '22px',
+                  height: '22px',
                   color: '#64748B',
                   cursor: 'pointer',
                   display: 'flex',
@@ -363,7 +353,7 @@ export default function MenuView({
                   padding: 0
                 }}
               >
-                <X size={12} />
+                <X size={13} />
               </button>
             )}
           </div>
@@ -465,9 +455,7 @@ export default function MenuView({
             </span>
           </div>
 
-          {/* ========================================================
-              4. ULTRA PREMIUM DISH CARDS
-             ======================================================== */}
+          {/* Dishes Cards Grid */}
           {filteredDishes.length === 0 ? (
             <div style={{
               background: '#FFFFFF',
@@ -510,7 +498,7 @@ export default function MenuView({
                 return (
                   <div
                     key={dish.id}
-                    className="ultra-dish-card"
+                    className="ultra-card-hover"
                     style={{
                       background: '#FFFFFF',
                       borderRadius: '18px',
@@ -697,184 +685,367 @@ export default function MenuView({
       )}
 
       {/* ========================================================
-          5. CATEGORIES TAB CONTENT
+          4. REDESIGNED ULTRA-PREMIUM CATEGORIES SECTION
          ======================================================== */}
       {activeSubTab === 'categories' && (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0 2px' }}>
-            <span style={{ fontSize: '0.80rem', fontWeight: 800, color: '#0F172A' }}>
-              Categories ({safeCategories.length})
-            </span>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+          {/* Header Bar */}
+          <div style={{
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            background: '#FFFFFF',
+            borderRadius: '16px',
+            border: '1px solid #E2E8F0',
+            padding: '14px 18px',
+            boxShadow: '0 1px 3px rgba(0,0,0,0.02)'
+          }}>
+            <div>
+              <h3 style={{ fontSize: '0.96rem', fontWeight: 900, color: '#0F172A', margin: 0 }}>
+                Menu Categories
+              </h3>
+              <span style={{ fontSize: '0.72rem', color: '#64748B' }}>
+                Organize dishes into structured sections ({safeCategories.length} categories)
+              </span>
+            </div>
+
             <button
               onClick={onOpenAddCategory}
               className="action-btn-hover"
               style={{
-                padding: '7px 14px',
-                borderRadius: '8px',
+                padding: '8px 16px',
+                borderRadius: '10px',
                 background: '#0A2315',
                 color: '#FFFFFF',
-                fontSize: '0.74rem',
+                fontSize: '0.76rem',
                 fontWeight: 800,
                 border: 'none',
-                cursor: 'pointer'
+                cursor: 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '6px',
+                boxShadow: '0 2px 6px rgba(10,35,21,0.2)'
               }}
             >
-              + Add Category
+              <FolderPlus size={15} color="#D4AF37" />
+              <span>+ Add Category</span>
             </button>
           </div>
 
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-            {safeCategories.map(cat => {
-              const count = safeDishes.filter(d => String(d.category_id) === String(cat.id)).length;
-              return (
-                <div
-                  key={cat.id}
-                  style={{
-                    background: '#FFFFFF',
-                    borderRadius: '16px',
-                    border: '1px solid #E2E8F0',
-                    padding: '14px 16px',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'space-between',
-                    boxShadow: '0 1px 2px rgba(0,0,0,0.02)'
-                  }}
-                >
-                  <div>
-                    <h4 style={{ fontSize: '0.88rem', fontWeight: 800, color: '#0F172A', margin: '0 0 2px 0' }}>{cat.name}</h4>
-                    <span style={{ fontSize: '0.70rem', color: '#64748B' }}>{count} dish{count !== 1 ? 'es' : ''}</span>
-                  </div>
-                  <div style={{ display: 'flex', gap: '6px' }}>
-                    <button onClick={() => onOpenEditCategory && onOpenEditCategory(cat)} className="action-btn-hover" style={{ padding: '6px 12px', borderRadius: '8px', border: '1px solid #E2E8F0', background: '#FFFFFF', color: '#0F172A', fontSize: '0.74rem', fontWeight: 700, cursor: 'pointer' }}>
-                      Edit
-                    </button>
-                    <button onClick={() => setDeleteConfirmCategory(cat)} className="action-btn-hover" style={{ padding: '6px 8px', borderRadius: '8px', border: '1px solid #FEE2E2', background: '#FFF5F5', color: '#DC2626', cursor: 'pointer' }}>
-                      <Trash2 size={13} />
-                    </button>
-                  </div>
-                </div>
-              );
-            })}
-          </div>
-        </div>
-      )}
-
-      {/* ========================================================
-          6. COMBOS TAB CONTENT
-         ======================================================== */}
-      {activeSubTab === 'combos' && (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0 2px' }}>
-            <span style={{ fontSize: '0.80rem', fontWeight: 800, color: '#0F172A' }}>
-              Value Combos ({safeCombos.length})
-            </span>
-            <button
-              onClick={onOpenAddCombo}
-              className="action-btn-hover"
-              style={{
-                padding: '7px 14px',
-                borderRadius: '8px',
-                background: '#0A2315',
-                color: '#FFFFFF',
-                fontSize: '0.74rem',
-                fontWeight: 800,
-                border: 'none',
-                cursor: 'pointer'
-              }}
-            >
-              + Add Combo
-            </button>
-          </div>
-
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-            {safeCombos.map(combo => (
-              <div
-                key={combo.id}
-                style={{
-                  background: '#FFFFFF',
-                  borderRadius: '16px',
-                  border: '1px solid #E2E8F0',
-                  padding: '14px 16px',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'space-between',
-                  boxShadow: '0 1px 2px rgba(0,0,0,0.02)'
-                }}
-              >
-                <div>
-                  <h4 style={{ fontSize: '0.88rem', fontWeight: 800, color: '#0F172A', margin: '0 0 2px 0' }}>{combo.name}</h4>
-                  <strong style={{ fontSize: '0.92rem', color: '#0F172A' }}>{currencySymbol}{combo.price}</strong>
-                </div>
-                <div style={{ display: 'flex', gap: '6px' }}>
-                  <button onClick={() => onOpenEditCombo && onOpenEditCombo(combo)} className="action-btn-hover" style={{ padding: '6px 12px', borderRadius: '8px', border: '1px solid #E2E8F0', background: '#FFFFFF', color: '#0F172A', fontSize: '0.74rem', fontWeight: 700, cursor: 'pointer' }}>
-                    Edit
-                  </button>
-                  <button onClick={() => setDeleteConfirmCombo(combo)} className="action-btn-hover" style={{ padding: '6px 8px', borderRadius: '8px', border: '1px solid #FEE2E2', background: '#FFF5F5', color: '#DC2626', cursor: 'pointer' }}>
-                    <Trash2 size={13} />
-                  </button>
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
-
-      {/* ========================================================
-          7. MODIFIERS TAB (PLAN-GATED)
-         ======================================================== */}
-      {activeSubTab === 'modifiers' && (
-        <div>
-          {!modifiersEnabled ? (
-            <div style={{ maxWidth: '600px', margin: '0 auto' }}>
-              <PlanLockedCard
-                featureKey="modifiers_enabled"
-                featureName="Dish Modifiers & Add-Ons"
-                featureDescription="Allow guests to customize items with extra toppings, spice levels, and variants."
-                requiredPlanName="Pro Plan or Higher"
-                onUpgradeClick={onUpgrade}
-              />
+          {/* Categories Grid */}
+          {safeCategories.length === 0 ? (
+            <div style={{ background: '#FFFFFF', borderRadius: '18px', border: '1px solid #E2E8F0', padding: '40px 20px', textAlign: 'center' }}>
+              <Layers size={32} color="#94A3B8" style={{ margin: '0 auto 10px auto' }} />
+              <h3 style={{ fontSize: '1rem', fontWeight: 800, color: '#0F172A', margin: '0 0 4px 0' }}>No categories yet</h3>
+              <p style={{ fontSize: '0.76rem', color: '#64748B', margin: '0 0 14px 0' }}>Create categories to organize your menu items.</p>
+              <button onClick={onOpenAddCategory} style={{ padding: '8px 16px', borderRadius: '10px', background: '#0A2315', color: '#FFFFFF', border: 'none', fontWeight: 800, cursor: 'pointer' }}>
+                + Add Category
+              </button>
             </div>
           ) : (
-            <div style={{ background: '#FFFFFF', borderRadius: '18px', border: '1px solid #E2E8F0', padding: '36px 20px', textAlign: 'center' }}>
-              <Sliders size={30} color="#16A34A" style={{ margin: '0 auto 10px auto' }} />
-              <h3 style={{ fontSize: '1rem', fontWeight: 800, color: '#0F172A', margin: '0 0 4px 0' }}>Modifiers Active</h3>
-              <p style={{ fontSize: '0.76rem', color: '#64748B', margin: 0 }}>Configure modifiers directly within dish edit forms.</p>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: '10px' }}>
+              {safeCategories.map((cat, idx) => {
+                const count = safeDishes.filter(d => String(d.category_id) === String(cat.id)).length;
+                return (
+                  <div
+                    key={cat.id}
+                    className="ultra-card-hover"
+                    style={{
+                      background: '#FFFFFF',
+                      borderRadius: '16px',
+                      border: '1px solid rgba(226, 232, 240, 0.85)',
+                      padding: '16px',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'space-between',
+                      boxShadow: '0 2px 6px rgba(0,0,0,0.02)',
+                      gap: '12px'
+                    }}
+                  >
+                    {/* Category Icon & Details */}
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '12px', minWidth: 0, flex: 1 }}>
+                      <div style={{
+                        width: '44px',
+                        height: '44px',
+                        borderRadius: '12px',
+                        background: '#F0FDF4',
+                        border: '1px solid #DCFCE7',
+                        color: '#16A34A',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        flexShrink: 0
+                      }}>
+                        <Layers size={20} />
+                      </div>
+
+                      <div style={{ minWidth: 0, flex: 1 }}>
+                        <h4 style={{
+                          fontSize: '0.90rem',
+                          fontWeight: 800,
+                          color: '#0F172A',
+                          margin: 0,
+                          whiteSpace: 'nowrap',
+                          overflow: 'hidden',
+                          textOverflow: 'ellipsis'
+                        }}>
+                          {cat.name}
+                        </h4>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginTop: '3px' }}>
+                          <span style={{ fontSize: '0.72rem', color: '#64748B', fontWeight: 600 }}>
+                            {count} dish{count !== 1 ? 'es' : ''}
+                          </span>
+                          <span style={{ color: '#CBD5E1' }}>•</span>
+                          <span style={{ fontSize: '0.66rem', color: '#16A34A', fontWeight: 800, background: '#DCFCE7', padding: '1px 6px', borderRadius: '4px' }}>
+                            ● Active
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Action Controls */}
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flexShrink: 0 }}>
+                      <button
+                        onClick={() => onOpenEditCategory && onOpenEditCategory(cat)}
+                        className="action-btn-hover"
+                        style={{
+                          padding: '6px 12px',
+                          borderRadius: '8px',
+                          border: '1px solid #E2E8F0',
+                          background: '#F8FAFC',
+                          color: '#0F172A',
+                          fontSize: '0.74rem',
+                          fontWeight: 700,
+                          cursor: 'pointer',
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: '4px'
+                        }}
+                      >
+                        <Edit3 size={12} />
+                        <span>Edit</span>
+                      </button>
+
+                      <button
+                        onClick={() => setDeleteConfirmCategory(cat)}
+                        className="action-btn-hover"
+                        style={{
+                          padding: '6px 8px',
+                          borderRadius: '8px',
+                          border: '1px solid #FEE2E2',
+                          background: '#FFF5F5',
+                          color: '#DC2626',
+                          cursor: 'pointer'
+                        }}
+                        title="Delete Category"
+                      >
+                        <Trash2 size={13} />
+                      </button>
+                    </div>
+                  </div>
+                );
+              })}
             </div>
           )}
         </div>
       )}
 
       {/* ========================================================
-          8. FLOATING + ADD DISH ACTION BUTTON (FAB)
+          5. REDESIGNED ULTRA-PREMIUM COMBOS SECTION
          ======================================================== */}
-      <button
-        onClick={onOpenAddDish}
-        disabled={dishQuota.isAtLimit}
-        style={{
-          position: 'fixed',
-          bottom: '76px',
-          right: '16px',
-          background: dishQuota.isAtLimit ? '#64748B' : 'linear-gradient(135deg, #0A2315 0%, #062B1C 100%)',
-          color: '#FFFFFF',
-          border: '1.5px solid rgba(212, 175, 55, 0.4)',
-          borderRadius: '30px',
-          padding: '10px 18px',
-          fontSize: '0.82rem',
-          fontWeight: 900,
-          boxShadow: '0 6px 20px rgba(0,0,0,0.25)',
-          display: 'flex',
-          alignItems: 'center',
-          gap: '6px',
-          zIndex: 900,
-          cursor: dishQuota.isAtLimit ? 'not-allowed' : 'pointer'
-        }}
-      >
-        <Plus size={16} color="#D4AF37" strokeWidth={3} />
-        <span>Add Dish</span>
-      </button>
+      {activeSubTab === 'combos' && (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+          {/* Header Bar */}
+          <div style={{
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            background: '#FFFFFF',
+            borderRadius: '16px',
+            border: '1px solid #E2E8F0',
+            padding: '14px 18px',
+            boxShadow: '0 1px 3px rgba(0,0,0,0.02)'
+          }}>
+            <div>
+              <h3 style={{ fontSize: '0.96rem', fontWeight: 900, color: '#0F172A', margin: 0 }}>
+                Value Meal Combos
+              </h3>
+              <span style={{ fontSize: '0.72rem', color: '#64748B' }}>
+                Multi-dish bundles to boost Average Order Value ({safeCombos.length} combos)
+              </span>
+            </div>
+
+            <button
+              onClick={onOpenAddCombo}
+              className="action-btn-hover"
+              style={{
+                padding: '8px 16px',
+                borderRadius: '10px',
+                background: '#0A2315',
+                color: '#FFFFFF',
+                fontSize: '0.76rem',
+                fontWeight: 800,
+                border: 'none',
+                cursor: 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '6px',
+                boxShadow: '0 2px 6px rgba(10,35,21,0.2)'
+              }}
+            >
+              <Package size={15} color="#D4AF37" />
+              <span>+ Add Combo</span>
+            </button>
+          </div>
+
+          {/* Combos Grid */}
+          {safeCombos.length === 0 ? (
+            <div style={{ background: '#FFFFFF', borderRadius: '18px', border: '1px solid #E2E8F0', padding: '40px 20px', textAlign: 'center' }}>
+              <Package size={32} color="#94A3B8" style={{ margin: '0 auto 10px auto' }} />
+              <h3 style={{ fontSize: '1rem', fontWeight: 800, color: '#0F172A', margin: '0 0 4px 0' }}>No meal combos yet</h3>
+              <p style={{ fontSize: '0.76rem', color: '#64748B', margin: '0 0 14px 0' }}>Create value meal bundles (e.g., Burger + Fries + Drink) to increase sales.</p>
+              <button onClick={onOpenAddCombo} style={{ padding: '8px 16px', borderRadius: '10px', background: '#0A2315', color: '#FFFFFF', border: 'none', fontWeight: 800, cursor: 'pointer' }}>
+                + Add Combo
+              </button>
+            </div>
+          ) : (
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(290px, 1fr))', gap: '12px' }}>
+              {safeCombos.map(combo => (
+                <div
+                  key={combo.id}
+                  className="ultra-card-hover"
+                  style={{
+                    background: '#FFFFFF',
+                    borderRadius: '18px',
+                    border: '1px solid rgba(226, 232, 240, 0.85)',
+                    padding: '16px',
+                    display: 'flex',
+                    flexDirection: 'column',
+                    justifyContent: 'space-between',
+                    gap: '12px',
+                    boxShadow: '0 2px 6px rgba(0,0,0,0.02)'
+                  }}
+                >
+                  <div>
+                    {/* Top Row: Tag + Status */}
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '6px' }}>
+                      <span style={{
+                        fontSize: '0.64rem',
+                        fontWeight: 800,
+                        background: '#FEF3C7',
+                        color: '#D97706',
+                        padding: '2px 7px',
+                        borderRadius: '6px',
+                        display: 'inline-flex',
+                        alignItems: 'center',
+                        gap: '3px'
+                      }}>
+                        <Sparkles size={11} />
+                        <span>VALUE COMBO</span>
+                      </span>
+
+                      <span style={{
+                        fontSize: '0.66rem',
+                        fontWeight: 800,
+                        color: '#16A34A',
+                        background: '#DCFCE7',
+                        padding: '2px 7px',
+                        borderRadius: '6px'
+                      }}>
+                        ● In Stock
+                      </span>
+                    </div>
+
+                    <h4 style={{ fontSize: '0.94rem', fontWeight: 800, color: '#0F172A', margin: '0 0 4px 0' }}>
+                      {combo.name}
+                    </h4>
+
+                    <div style={{ display: 'flex', alignItems: 'baseline', gap: '6px', marginTop: '6px' }}>
+                      <span style={{ fontSize: '1.15rem', fontWeight: 900, color: '#0F172A' }}>
+                        {currencySymbol}{combo.price}
+                      </span>
+                    </div>
+                  </div>
+
+                  {/* Action Buttons */}
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: '6px', borderTop: '1px solid #F1F5F9', paddingTop: '10px' }}>
+                    <button
+                      onClick={() => onOpenEditCombo && onOpenEditCombo(combo)}
+                      className="action-btn-hover"
+                      style={{
+                        padding: '6px 12px',
+                        borderRadius: '8px',
+                        border: '1px solid #E2E8F0',
+                        background: '#F8FAFC',
+                        color: '#0F172A',
+                        fontSize: '0.74rem',
+                        fontWeight: 700,
+                        cursor: 'pointer',
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '4px'
+                      }}
+                    >
+                      <Edit3 size={12} />
+                      <span>Edit Combo</span>
+                    </button>
+
+                    <button
+                      onClick={() => setDeleteConfirmCombo(combo)}
+                      className="action-btn-hover"
+                      style={{
+                        padding: '6px 8px',
+                        borderRadius: '8px',
+                        border: '1px solid #FEE2E2',
+                        background: '#FFF5F5',
+                        color: '#DC2626',
+                        cursor: 'pointer'
+                      }}
+                      title="Delete Combo"
+                    >
+                      <Trash2 size={13} />
+                    </button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
 
       {/* ========================================================
-          9. QUICK PRICE MODAL
+          6. FLOATING + ADD DISH ACTION BUTTON (FAB)
+         ======================================================== */}
+      {activeSubTab === 'dishes' && (
+        <button
+          onClick={onOpenAddDish}
+          disabled={dishQuota.isAtLimit}
+          style={{
+            position: 'fixed',
+            bottom: '76px',
+            right: '16px',
+            background: dishQuota.isAtLimit ? '#64748B' : 'linear-gradient(135deg, #0A2315 0%, #062B1C 100%)',
+            color: '#FFFFFF',
+            border: '1.5px solid rgba(212, 175, 55, 0.4)',
+            borderRadius: '30px',
+            padding: '10px 18px',
+            fontSize: '0.82rem',
+            fontWeight: 900,
+            boxShadow: '0 6px 20px rgba(0,0,0,0.25)',
+            display: 'flex',
+            alignItems: 'center',
+            gap: '6px',
+            zIndex: 900,
+            cursor: dishQuota.isAtLimit ? 'not-allowed' : 'pointer'
+          }}
+        >
+          <Plus size={16} color="#D4AF37" strokeWidth={3} />
+          <span>Add Dish</span>
+        </button>
+      )}
+
+      {/* ========================================================
+          7. QUICK PRICE MODAL
          ======================================================== */}
       {quickPriceDish && (
         <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 9999, padding: '16px' }}>
@@ -930,7 +1101,7 @@ export default function MenuView({
       )}
 
       {/* ========================================================
-          10. DELETE CONFIRMATION MODALS
+          8. DELETE CONFIRMATION MODALS
          ======================================================== */}
       {deleteConfirmDish && (
         <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 9999, padding: '16px' }}>
@@ -963,6 +1134,25 @@ export default function MenuView({
                 Cancel
               </button>
               <button onClick={() => { onDeleteCategory(deleteConfirmCategory.id); setDeleteConfirmCategory(null); }} style={{ padding: '8px 14px', borderRadius: '8px', border: 'none', background: '#DC2626', color: '#FFFFFF', fontWeight: 800, cursor: 'pointer' }}>
+                Delete
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {deleteConfirmCombo && (
+        <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 9999, padding: '16px' }}>
+          <div style={{ background: '#FFFFFF', borderRadius: '18px', padding: '24px', maxWidth: '340px', width: '100%', textAlign: 'center', boxShadow: '0 10px 30px rgba(0,0,0,0.15)' }}>
+            <h3 style={{ fontSize: '1.05rem', fontWeight: 800, color: '#0F172A', margin: '0 0 8px 0' }}>Delete Combo</h3>
+            <p style={{ fontSize: '0.80rem', color: '#64748B', margin: '0 0 18px 0' }}>
+              Permanently delete combo <strong>'{deleteConfirmCombo.name}'</strong>?
+            </p>
+            <div style={{ display: 'flex', gap: '10px', justifyContent: 'center' }}>
+              <button onClick={() => setDeleteConfirmCombo(null)} style={{ padding: '8px 14px', borderRadius: '10px', border: '1px solid #E2E8F0', background: '#F8FAFC', fontWeight: 700, cursor: 'pointer' }}>
+                Cancel
+              </button>
+              <button onClick={() => { onDeleteCombo(deleteConfirmCombo.id); setDeleteConfirmCombo(null); }} style={{ padding: '8px 14px', borderRadius: '8px', border: 'none', background: '#DC2626', color: '#FFFFFF', fontWeight: 800, cursor: 'pointer' }}>
                 Delete
               </button>
             </div>
