@@ -600,6 +600,12 @@ router.post('/checkout-business', authenticateToken, requireSuperAdmin, async (r
     const planRows = await query('SELECT * FROM saas_plans WHERE LOWER(key) = $1 LIMIT 1', [effectivePlanTier]);
     const dbPlan = planRows[0] || { id: 2, key: 'pro', name: 'Pro Luxury Plan', price: 999 };
 
+    const isTrial = (req.body.onboarding_mode === 'trial');
+    const trialDays = isTrial ? 16 : 0;
+    const trialEndISO = isTrial 
+      ? new Date(Date.now() + 16 * 86400 * 1000).toISOString()
+      : new Date(Date.now() + 30 * 86400 * 1000).toISOString();
+
     const regId = `reg_sa_${Date.now()}_${Math.floor(1000 + Math.random() * 9000)}`;
     const baseUrl = getAppBaseUrl(req);
     const returnUrl = `${baseUrl}/api/payment/register-return?reg_id=${regId}`;
@@ -610,7 +616,7 @@ router.post('/checkout-business', authenticateToken, requireSuperAdmin, async (r
       planKey: dbPlan.key,
       planName: dbPlan.name,
       planPrice: Number(dbPlan.price) || 999,
-      trialEndISO: new Date(Date.now() + 30 * 86400 * 1000).toISOString(),
+      trialEndISO,
       customerName: (owner_name || name).trim(),
       customerPhone: cleanPhone || '9876543210',
       returnUrl
@@ -643,7 +649,10 @@ router.post('/checkout-business', authenticateToken, requireSuperAdmin, async (r
       password_hash: passwordHash,
       plan_tier: dbPlan.key,
       plan_price: dbPlan.price,
-      subscription_id: cfResult.subscription_id
+      subscription_id: cfResult.subscription_id,
+      onboarding_mode: isTrial ? 'trial' : 'active',
+      subscription_type: isTrial ? 'TRIAL' : 'PAID',
+      trial_days: trialDays
     };
 
     const expiresAt = new Date(Date.now() + 24 * 3600 * 1000).toISOString();
@@ -660,7 +669,7 @@ router.post('/checkout-business', authenticateToken, requireSuperAdmin, async (r
         passwordHash,
         dbPlan.key,
         dbPlan.price,
-        30,
+        trialDays,
         cfResult.subscription_id,
         cfResult.subscription_session_id || cfResult.payment_session_id || null,
         'pending',
@@ -670,7 +679,7 @@ router.post('/checkout-business', authenticateToken, requireSuperAdmin, async (r
       ]
     );
 
-    await logAudit(null, 'superadmin', 'Initiate Business Paid Checkout', `SuperAdmin initiated Cashfree Sandbox checkout for '${name}' (Plan: ${dbPlan.key}, Price: ₹${dbPlan.price})`);
+    await logAudit(null, 'superadmin', 'Initiate Business Checkout', `SuperAdmin initiated Cashfree Sandbox checkout for '${name}' (Plan: ${dbPlan.key}, Price: ₹${dbPlan.price}, Mode: ${isTrial ? 'trial' : 'paid'})`);
 
     res.json({
       success: true,

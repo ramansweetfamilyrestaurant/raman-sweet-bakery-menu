@@ -289,38 +289,43 @@ export async function finalizePendingRegistration(reg_id, inputSubId = null) {
     const dbPlan = planRows[0] || { id: 2, key: 'pro', name: 'Pro Luxury Plan', price: 999 };
 
     const now = new Date();
-    const trialDays = regData.trial_days || 16;
-    const trialEnd = new Date(now.getTime() + trialDays * 86400 * 1000);
+    const isTrialMode = (regData.subscription_type === 'TRIAL' || regData.onboarding_mode === 'trial' || (regData.trial_days && Number(regData.trial_days) > 0 && regData.onboarding_mode !== 'active'));
+    const subType = isTrialMode ? 'TRIAL' : 'PAID';
+    const subStatus = isTrialMode ? 'trialing' : 'awaiting_charge';
+    const trialDays = isTrialMode ? (Number(regData.trial_days) || 16) : null;
+    const trialStartedAt = isTrialMode ? now.toISOString() : null;
+    const trialEndsAt = isTrialMode ? new Date(now.getTime() + (trialDays || 16) * 86400 * 1000).toISOString() : null;
+    const expiryDateISO = isTrialMode ? trialEndsAt : new Date(now.getTime() + 30 * 86400 * 1000).toISOString();
     const nowISO = now.toISOString();
-    const expiryDateISO = trialEnd.toISOString();
 
     const effectiveBiz = regData.business_type || 'restaurant';
     const regCategory = resolveBusinessCategoryFromType(effectiveBiz);
 
     const restoRes = await txQuery(`
       INSERT INTO restaurants (
-        name, slug, tagline, logo, phone, address, opening_hours, plan_tier, plan_price, plan_expires_at, trial_started_at, trial_ends_at, whatsapp_number, theme_color, business_type, service_model, business_category, active, total_tables, mandate_status, mandate_id, auto_debit_enabled, onboarding_completed, location_initialized, owner_name, owner_email
-      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21, $22, $23, $24, $25, $26) RETURNING id
+        name, slug, tagline, logo, phone, address, opening_hours, plan_tier, plan_price, plan_expires_at, trial_started_at, trial_ends_at, whatsapp_number, theme_color, business_type, service_model, business_category, active, total_tables, mandate_status, mandate_id, auto_debit_enabled, onboarding_completed, location_initialized, owner_name, owner_email, subscription_type
+      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21, $22, $23, $24, $25, $26, $27) RETURNING id
     `, [
-      regData.name, cleanSlug, '100% Fresh & Authentic Food',
+      regData.name, cleanSlug, regData.tagline || '100% Fresh & Authentic Food',
       '/images/default-logo.webp',
-      regData.phone, '', '8:00 AM - 10:30 PM',
-      dbPlan.key, dbPlan.price, expiryDateISO, nowISO, expiryDateISO, regData.phone, 'gold',
+      regData.phone, regData.address || '', '8:00 AM - 10:30 PM',
+      dbPlan.key, dbPlan.price, expiryDateISO, trialStartedAt, trialEndsAt, regData.whatsapp_number || regData.phone, regData.theme_color || 'gold',
       effectiveBiz,
       regCategory,
       regCategory,
       1, 0, 'active', targetSubId || null, 1, false, false, regData.owner_name || '',
-      regData.owner_email || null
+      regData.owner_email || null,
+      subType
     ]);
 
     const newRestoId = restoRes[0]?.id || restoRes.lastInsertRowid;
 
     await txQuery(`
       INSERT INTO subscriptions (
-        restaurant_id, plan_id, gateway, gateway_subscription_id, status, amount, currency, billing_cycle, trial_start, trial_end, current_period_start, current_period_end
-      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)
+        restaurant_id, plan_id, gateway, gateway_subscription_id, status, amount, currency, billing_cycle, trial_start, trial_end, current_period_start, current_period_end, subscription_type
+      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)
     `, [
-      newRestoId, dbPlan.id, 'cashfree', targetSubId || null, 'trialing', dbPlan.price, 'INR', 'monthly', nowISO, expiryDateISO, nowISO, expiryDateISO
+      newRestoId, dbPlan.id, 'cashfree', targetSubId || null, subStatus, dbPlan.price, 'INR', 'monthly', trialStartedAt, trialEndsAt, nowISO, expiryDateISO, subType
     ]);
 
     const hash = regData.password_hash || (await bcrypt.hash(regData.owner_password || 'default123', await bcrypt.genSalt(10)));

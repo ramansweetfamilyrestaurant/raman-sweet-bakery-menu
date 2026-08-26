@@ -510,7 +510,16 @@ export default function SuperAdminDashboard({ token, username, onLogout, onRetur
     if (isExpired) return 'expired';
     const isFailed = (r.subscription_status === 'payment_failed' || r.subscription_status === 'past_due');
     if (isFailed) return 'failed';
-    const isTrial = (r.subscription_status === 'trialing' || (r.trial_ends_at && new Date(r.trial_ends_at) > new Date()));
+
+    // Awaiting First Recurring Payment (Paid plan mandate authorized on Cashfree, pre-first debit)
+    const isAwaitingCharge = (
+      (r.subscription_status === 'awaiting_charge' || r.subscription_status === 'authorized' || r.subscription_status === 'pending_payment' || (r.subscription_status === 'trialing' && !r.trial_ends_at && !r.trial_end)) &&
+      r.subscription_type !== 'TRIAL' && 
+      (r.mandate_status === 'active' || r.mandate_id)
+    );
+    if (isAwaitingCharge) return 'awaiting_charge';
+
+    const isTrial = (r.subscription_status === 'trialing' || r.subscription_type === 'TRIAL' || (r.trial_ends_at && new Date(r.trial_ends_at) > new Date()));
     if (isTrial) return 'trial';
     return 'active';
   };
@@ -519,11 +528,12 @@ export default function SuperAdminDashboard({ token, username, onLogout, onRetur
   const getDirectoryFilterPills = () => [
     { id: 'all', label: 'All', count: restaurants.length },
     { id: 'active', label: '🟢 Active', count: restaurants.filter(r => getTenantStatus(r) === 'active').length },
+    { id: 'awaiting_charge', label: '🟣 Awaiting Charge', count: restaurants.filter(r => getTenantStatus(r) === 'awaiting_charge').length },
     { id: 'trial', label: '🎁 Trial', count: restaurants.filter(r => getTenantStatus(r) === 'trial').length },
     { id: 'failed', label: '🟡 Past Due', count: restaurants.filter(r => getTenantStatus(r) === 'failed').length },
     { id: 'autorenew_off', label: '🟠 Renew Off', count: restaurants.filter(r => getTenantStatus(r) === 'autorenew_off').length },
     { id: 'expired', label: '🔴 Expired', count: restaurants.filter(r => getTenantStatus(r) === 'expired').length },
-    { id: 'vip', label: '🟣 VIP', count: restaurants.filter(r => getTenantStatus(r) === 'vip').length },
+    { id: 'vip', label: '👑 VIP', count: restaurants.filter(r => getTenantStatus(r) === 'vip').length },
     { id: 'suspended', label: '⚫ Suspended', count: restaurants.filter(r => getTenantStatus(r) === 'suspended').length },
   ];
 
@@ -540,7 +550,7 @@ export default function SuperAdminDashboard({ token, username, onLogout, onRetur
     if (status === 'vip') {
       return (
         <span style={{ background: 'linear-gradient(135deg, #7C3AED 0%, #6D28D9 100%)', color: '#FFFFFF', padding: '3px 8px', borderRadius: 'var(--sa-radius-full)', fontSize: '0.66rem', fontWeight: 900, display: 'inline-flex', alignItems: 'center', gap: '3px' }}>
-          🟣 VIP
+          👑 VIP
         </span>
       );
     }
@@ -558,10 +568,18 @@ export default function SuperAdminDashboard({ token, username, onLogout, onRetur
         </span>
       );
     }
+    if (status === 'awaiting_charge') {
+      return (
+        <span style={{ background: '#FAF5FF', color: '#7E22CE', border: '1px solid #E9D5FF', padding: '3px 8px', borderRadius: 'var(--sa-radius-full)', fontSize: '0.66rem', fontWeight: 900, display: 'inline-flex', alignItems: 'center', gap: '3px' }}>
+          🟣 Awaiting First Charge
+        </span>
+      );
+    }
     if (status === 'trial') {
+      const daysLeft = getDaysRemaining(r.trial_ends_at || r.plan_expires_at);
       return (
         <span style={{ background: '#EFF6FF', color: '#1D4ED8', border: '1px solid #BFDBFE', padding: '3px 8px', borderRadius: 'var(--sa-radius-full)', fontSize: '0.66rem', fontWeight: 900, display: 'inline-flex', alignItems: 'center', gap: '3px' }}>
-          🎁 Trial
+          🎁 Trial {daysLeft !== null && daysLeft > 0 ? `(${daysLeft}d left)` : ''}
         </span>
       );
     }

@@ -22,7 +22,15 @@ export default function OverviewView({ restaurants, pendingRegistrations = [], o
     if (isExpired) return 'expired';
     const isFailed = (r.subscription_status === 'payment_failed' || r.subscription_status === 'past_due');
     if (isFailed) return 'failed';
-    const isTrial = (r.subscription_status === 'trialing' || (r.trial_ends_at && new Date(r.trial_ends_at) > new Date()));
+
+    const isAwaitingCharge = (
+      (r.subscription_status === 'awaiting_charge' || r.subscription_status === 'authorized' || r.subscription_status === 'pending_payment' || (r.subscription_status === 'trialing' && !r.trial_ends_at && !r.trial_end)) &&
+      r.subscription_type !== 'TRIAL' && 
+      (r.mandate_status === 'active' || r.mandate_id)
+    );
+    if (isAwaitingCharge) return 'awaiting_charge';
+
+    const isTrial = (r.subscription_status === 'trialing' || r.subscription_type === 'TRIAL' || (r.trial_ends_at && new Date(r.trial_ends_at) > new Date()));
     if (isTrial) return 'trial';
     return 'active';
   };

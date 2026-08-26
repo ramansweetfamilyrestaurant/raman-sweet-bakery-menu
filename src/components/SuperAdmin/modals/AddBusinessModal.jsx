@@ -177,8 +177,8 @@ export default function AddBusinessModal({
     setSubmitting(true);
 
     try {
-      // 1. PAID ONBOARDING PATH -> Cashfree Sandbox Checkout Session
-      if (formData.onboarding_mode === 'active') {
+      // 1. PAID OR 16-DAY TRIAL PATH -> Cashfree Sandbox Checkout Session
+      if (formData.onboarding_mode === 'active' || formData.onboarding_mode === 'trial') {
         const checkoutPayload = {
           name: formData.name.trim(),
           slug: formData.slug.trim().toLowerCase(),
@@ -194,7 +194,8 @@ export default function AddBusinessModal({
           business_type: formData.business_type,
           service_model: formData.service_model,
           owner_email: formData.email || formData.owner_email || '',
-          gstin_number: formData.is_gst_applicable ? formData.gstin : ''
+          gstin_number: formData.is_gst_applicable ? formData.gstin : '',
+          onboarding_mode: formData.onboarding_mode
         };
 
         const res = await createSuperAdminBusinessCheckout(checkoutPayload, token);
@@ -204,15 +205,8 @@ export default function AddBusinessModal({
         return;
       }
 
-      // 2. TRIAL OR VIP ONBOARDING PATH -> Instant Transactional Creation
-      let expiryDate;
-      if (formData.onboarding_mode === 'trial') {
-        expiryDate = new Date(Date.now() + 16 * 24 * 60 * 60 * 1000).toISOString();
-      } else if (formData.onboarding_mode === 'vip') {
-        expiryDate = new Date('2099-12-31T23:59:59Z').toISOString();
-      } else {
-        expiryDate = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString();
-      }
+      // 2. VIP ONBOARDING PATH -> Instant Transactional Creation
+      const expiryDate = new Date('2099-12-31T23:59:59Z').toISOString();
 
       const payload = {
         name: formData.name.trim(),
@@ -816,7 +810,7 @@ export default function AddBusinessModal({
                     }}
                   >
                     <div style={{ fontSize: '0.78rem', fontWeight: 900, color: '#1E40AF' }}>🎁 16-Day Free Trial</div>
-                    <div style={{ fontSize: '0.66rem', color: '#2563EB', marginTop: '2px' }}>₹0 Due • No payment required</div>
+                    <div style={{ fontSize: '0.66rem', color: '#2563EB', marginTop: '2px' }}>₹0 Due • Cashfree AutoPay Setup</div>
                   </div>
 
                   <div
@@ -1056,7 +1050,7 @@ export default function AddBusinessModal({
                   ) : formData.onboarding_mode === 'trial' ? (
                     <>
                       <Gift size={16} />
-                      <span>🎁 Start 16-Day Trial Business</span>
+                      <span>🎁 Setup 16-Day Trial Mandate (₹0 Today)</span>
                     </>
                   ) : formData.onboarding_mode === 'vip' ? (
                     <>
