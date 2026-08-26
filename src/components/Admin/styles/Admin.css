@@ -57,7 +57,7 @@
   display: flex;
   flex-direction: column;
   min-height: 100vh;
-  background-color: var(--adm-bg);
+  background-color: #F8FAFC;
   color: var(--adm-text);
   font-family: var(--adm-font);
   font-size: 0.9rem;
@@ -74,21 +74,21 @@
   flex-direction: column;
   width: 100%;
   min-width: 0;
+  background-color: #F8FAFC;
 }
 
 .adm-content-body {
   padding: 16px;
-  max-width: 1280px;
   width: 100%;
-  margin: 0 auto;
+  max-width: 100%;
   box-sizing: border-box;
   padding-bottom: 90px; /* Space for bottom nav on mobile */
 }
 
 @media (min-width: 768px) {
   .adm-content-body {
-    padding: 24px;
-    padding-bottom: 32px;
+    padding: 24px 28px;
+    padding-bottom: 36px;
   }
 }
 

@@ -77,7 +77,7 @@ export default function HomeView({
     ? new Date(restaurantInfo.subscription_end_date).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })
     : '15 Jun 2025';
 
-  // Real or canonical top selling items matching reference UI
+  // Top Selling Items
   const defaultTopDishes = [
     { name: 'Paneer Paratha', sold: 120, image: '/images/default-dish.webp' },
     { name: 'Chhole Bhature', sold: 98, image: '/images/default-dish.webp' },
@@ -109,20 +109,48 @@ export default function HomeView({
       flexDirection: 'column',
       gap: '20px',
       width: '100%',
-      maxWidth: '1440px',
-      margin: '0 auto',
       boxSizing: 'border-box',
       fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif'
     }}>
+      <style>{`
+        .home-main-layout {
+          display: grid;
+          grid-template-columns: minmax(0, 1fr) 300px;
+          gap: 20px;
+          align-items: start;
+        }
+        .home-dual-row {
+          display: grid;
+          grid-template-columns: repeat(2, minmax(0, 1fr));
+          gap: 18px;
+        }
+        .home-kpi-row {
+          display: grid;
+          grid-template-columns: repeat(4, minmax(0, 1fr));
+          gap: 16px;
+        }
+        @media (max-width: 1180px) {
+          .home-main-layout {
+            grid-template-columns: 1fr !important;
+          }
+          .home-kpi-row {
+            grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+          }
+        }
+        @media (max-width: 680px) {
+          .home-dual-row {
+            grid-template-columns: 1fr !important;
+          }
+          .home-kpi-row {
+            grid-template-columns: 1fr !important;
+          }
+        }
+      `}</style>
       
       {/* ========================================================
-          1. ROW 1: 4 EXECUTIVE KPI CARDS
+          1. ROW 1: 4 EXECUTIVE KPI CARDS (Full Width)
          ======================================================== */}
-      <div style={{
-        display: 'grid',
-        gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))',
-        gap: '16px'
-      }}>
+      <div className="home-kpi-row">
         {/* KPI 1: Today's Sales */}
         <div style={{
           background: '#FFFFFF',
@@ -132,7 +160,8 @@ export default function HomeView({
           display: 'flex',
           alignItems: 'flex-start',
           gap: '14px',
-          boxShadow: '0 1px 3px rgba(0,0,0,0.02)'
+          boxShadow: '0 1px 3px rgba(0,0,0,0.02)',
+          boxSizing: 'border-box'
         }}>
           <div style={{
             width: '42px',
@@ -143,25 +172,25 @@ export default function HomeView({
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
-            fontSize: '1.2rem',
+            fontSize: '1.25rem',
             fontWeight: 900,
             flexShrink: 0
           }}>
             ₹
           </div>
           <div style={{ flex: 1, minWidth: 0 }}>
-            <div style={{ fontSize: '0.76rem', color: '#64748B', fontWeight: 600 }}>
+            <div style={{ fontSize: '0.78rem', color: '#64748B', fontWeight: 600 }}>
               Today's Sales
             </div>
             <div style={{ display: 'flex', alignItems: 'baseline', gap: '8px', marginTop: '2px', flexWrap: 'wrap' }}>
-              <span style={{ fontSize: '1.45rem', fontWeight: 900, color: '#0F172A', letterSpacing: '-0.02em' }}>
+              <span style={{ fontSize: '1.5rem', fontWeight: 900, color: '#0F172A', letterSpacing: '-0.02em' }}>
                 {currencySymbol}{Math.round(todayRevenue).toLocaleString('en-IN')}
               </span>
-              <span style={{ fontSize: '0.72rem', fontWeight: 700, color: '#16A34A' }}>
+              <span style={{ fontSize: '0.74rem', fontWeight: 700, color: '#16A34A' }}>
                 ↑ 18.6%
               </span>
             </div>
-            <span style={{ fontSize: '0.68rem', color: '#94A3B8', display: 'block', marginTop: '1px' }}>
+            <span style={{ fontSize: '0.70rem', color: '#94A3B8', display: 'block', marginTop: '2px' }}>
               vs yesterday
             </span>
           </div>
@@ -176,7 +205,8 @@ export default function HomeView({
           display: 'flex',
           alignItems: 'flex-start',
           gap: '14px',
-          boxShadow: '0 1px 3px rgba(0,0,0,0.02)'
+          boxShadow: '0 1px 3px rgba(0,0,0,0.02)',
+          boxSizing: 'border-box'
         }}>
           <div style={{
             width: '42px',
@@ -192,18 +222,18 @@ export default function HomeView({
             <ShoppingBag size={20} />
           </div>
           <div style={{ flex: 1, minWidth: 0 }}>
-            <div style={{ fontSize: '0.76rem', color: '#64748B', fontWeight: 600 }}>
+            <div style={{ fontSize: '0.78rem', color: '#64748B', fontWeight: 600 }}>
               Orders Today
             </div>
             <div style={{ display: 'flex', alignItems: 'baseline', gap: '8px', marginTop: '2px', flexWrap: 'wrap' }}>
-              <span style={{ fontSize: '1.45rem', fontWeight: 900, color: '#0F172A', letterSpacing: '-0.02em' }}>
+              <span style={{ fontSize: '1.5rem', fontWeight: 900, color: '#0F172A', letterSpacing: '-0.02em' }}>
                 {todayOrders}
               </span>
-              <span style={{ fontSize: '0.72rem', fontWeight: 700, color: '#16A34A' }}>
+              <span style={{ fontSize: '0.74rem', fontWeight: 700, color: '#16A34A' }}>
                 ↑ 12.4%
               </span>
             </div>
-            <span style={{ fontSize: '0.68rem', color: '#94A3B8', display: 'block', marginTop: '1px' }}>
+            <span style={{ fontSize: '0.70rem', color: '#94A3B8', display: 'block', marginTop: '2px' }}>
               vs yesterday
             </span>
           </div>
@@ -218,7 +248,8 @@ export default function HomeView({
           display: 'flex',
           alignItems: 'flex-start',
           gap: '14px',
-          boxShadow: '0 1px 3px rgba(0,0,0,0.02)'
+          boxShadow: '0 1px 3px rgba(0,0,0,0.02)',
+          boxSizing: 'border-box'
         }}>
           <div style={{
             width: '42px',
@@ -234,11 +265,11 @@ export default function HomeView({
             <Clock size={20} />
           </div>
           <div style={{ flex: 1, minWidth: 0 }}>
-            <div style={{ fontSize: '0.76rem', color: '#64748B', fontWeight: 600 }}>
+            <div style={{ fontSize: '0.78rem', color: '#64748B', fontWeight: 600 }}>
               Pending Orders
             </div>
             <div style={{ display: 'flex', alignItems: 'baseline', gap: '8px', marginTop: '2px', flexWrap: 'wrap' }}>
-              <span style={{ fontSize: '1.45rem', fontWeight: 900, color: '#0F172A', letterSpacing: '-0.02em' }}>
+              <span style={{ fontSize: '1.5rem', fontWeight: 900, color: '#0F172A', letterSpacing: '-0.02em' }}>
                 {pendingOrdersCount}
               </span>
               <button
@@ -247,7 +278,7 @@ export default function HomeView({
                   background: 'none',
                   border: 'none',
                   color: '#D97706',
-                  fontSize: '0.72rem',
+                  fontSize: '0.74rem',
                   fontWeight: 800,
                   cursor: 'pointer',
                   padding: 0
@@ -268,7 +299,8 @@ export default function HomeView({
           display: 'flex',
           alignItems: 'flex-start',
           gap: '14px',
-          boxShadow: '0 1px 3px rgba(0,0,0,0.02)'
+          boxShadow: '0 1px 3px rgba(0,0,0,0.02)',
+          boxSizing: 'border-box'
         }}>
           <div style={{
             width: '42px',
@@ -284,18 +316,18 @@ export default function HomeView({
             <TrendingUp size={20} />
           </div>
           <div style={{ flex: 1, minWidth: 0 }}>
-            <div style={{ fontSize: '0.76rem', color: '#64748B', fontWeight: 600 }}>
+            <div style={{ fontSize: '0.78rem', color: '#64748B', fontWeight: 600 }}>
               Average Order Value
             </div>
             <div style={{ display: 'flex', alignItems: 'baseline', gap: '8px', marginTop: '2px', flexWrap: 'wrap' }}>
-              <span style={{ fontSize: '1.45rem', fontWeight: 900, color: '#0F172A', letterSpacing: '-0.02em' }}>
+              <span style={{ fontSize: '1.5rem', fontWeight: 900, color: '#0F172A', letterSpacing: '-0.02em' }}>
                 {currencySymbol}{Math.round(aov).toLocaleString('en-IN')}
               </span>
-              <span style={{ fontSize: '0.72rem', fontWeight: 700, color: '#16A34A' }}>
+              <span style={{ fontSize: '0.74rem', fontWeight: 700, color: '#16A34A' }}>
                 ↑ 8.3%
               </span>
             </div>
-            <span style={{ fontSize: '0.68rem', color: '#94A3B8', display: 'block', marginTop: '1px' }}>
+            <span style={{ fontSize: '0.70rem', color: '#94A3B8', display: 'block', marginTop: '2px' }}>
               vs yesterday
             </span>
           </div>
@@ -303,46 +335,38 @@ export default function HomeView({
       </div>
 
       {/* ========================================================
-          2. MAIN WORKSPACE GRID (2 COLUMNS MAIN + 1 COLUMN RIGHT)
+          2. MAIN TWO-COLUMN DASHBOARD GRID
          ======================================================== */}
-      <div style={{
-        display: 'grid',
-        gridTemplateColumns: 'minmax(0, 1.9fr) minmax(280px, 1fr)',
-        gap: '20px',
-        alignItems: 'start'
-      }}>
+      <div className="home-main-layout">
         
-        {/* ================= LEFT MAIN WORKSPACE ================= */}
+        {/* ================= LEFT MAIN COLUMN ================= */}
         <div style={{ display: 'flex', flexDirection: 'column', gap: '20px', minWidth: 0 }}>
           
-          {/* A. SALES OVERVIEW & TOP SELLING ITEMS ROW */}
-          <div style={{
-            display: 'grid',
-            gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))',
-            gap: '16px'
-          }}>
+          {/* A. ROW 1: SALES OVERVIEW + TOP SELLING ITEMS */}
+          <div className="home-dual-row">
             {/* 1. Sales Overview Chart Card */}
             <div style={{
               background: '#FFFFFF',
               borderRadius: '18px',
               border: '1px solid #E2E8F0',
-              padding: '20px',
+              padding: '22px',
               boxShadow: '0 1px 3px rgba(0,0,0,0.02)',
               display: 'flex',
               flexDirection: 'column',
-              justifyContent: 'space-between'
+              justifyContent: 'space-between',
+              boxSizing: 'border-box'
             }}>
               <div>
-                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '12px' }}>
-                  <h3 style={{ fontSize: '0.95rem', fontWeight: 800, color: '#0F172A', margin: 0 }}>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '14px' }}>
+                  <h3 style={{ fontSize: '0.98rem', fontWeight: 800, color: '#0F172A', margin: 0 }}>
                     Sales Overview
                   </h3>
                   <button style={{
                     background: '#FFFFFF',
                     border: '1px solid #E2E8F0',
                     borderRadius: '8px',
-                    padding: '4px 10px',
-                    fontSize: '0.72rem',
+                    padding: '5px 12px',
+                    fontSize: '0.74rem',
                     fontWeight: 700,
                     color: '#475569',
                     display: 'inline-flex',
@@ -355,23 +379,23 @@ export default function HomeView({
                   </button>
                 </div>
 
-                <div style={{ marginBottom: '14px' }}>
+                <div style={{ marginBottom: '16px' }}>
                   <div style={{ display: 'flex', alignItems: 'baseline', gap: '8px' }}>
-                    <span style={{ fontSize: '1.45rem', fontWeight: 900, color: '#0F172A', letterSpacing: '-0.02em' }}>
+                    <span style={{ fontSize: '1.5rem', fontWeight: 900, color: '#0F172A', letterSpacing: '-0.02em' }}>
                       {currencySymbol}{totalRevenue.toLocaleString('en-IN')}
                     </span>
-                    <span style={{ fontSize: '0.72rem', fontWeight: 700, color: '#16A34A' }}>
+                    <span style={{ fontSize: '0.74rem', fontWeight: 700, color: '#16A34A' }}>
                       ↑ 15.7%
                     </span>
                   </div>
-                  <span style={{ fontSize: '0.70rem', color: '#94A3B8' }}>
+                  <span style={{ fontSize: '0.72rem', color: '#94A3B8' }}>
                     Total Sales
                   </span>
                 </div>
               </div>
 
               {/* Smooth Vector Area Graph */}
-              <div style={{ position: 'relative', width: '100%', height: '140px', marginTop: '10px' }}>
+              <div style={{ position: 'relative', width: '100%', height: '150px', marginTop: '10px' }}>
                 <svg viewBox="0 0 320 120" style={{ width: '100%', height: '100%', overflow: 'visible' }}>
                   <defs>
                     <linearGradient id="salesGrad" x1="0%" y1="0%" x2="0%" y2="100%">
@@ -396,34 +420,34 @@ export default function HomeView({
                   />
 
                   {/* Data Points */}
-                  <circle cx="10" cy="95" r="3" fill="#16A34A" />
-                  <circle cx="60" cy="72" r="3" fill="#16A34A" />
-                  <circle cx="110" cy="58" r="3" fill="#16A34A" />
-                  <circle cx="160" cy="50" r="3" fill="#16A34A" />
-                  <circle cx="210" cy="30" r="4" fill="#16A34A" stroke="#FFFFFF" strokeWidth="2" />
-                  <circle cx="260" cy="42" r="3" fill="#16A34A" />
-                  <circle cx="310" cy="15" r="3" fill="#16A34A" />
+                  <circle cx="10" cy="95" r="3.5" fill="#16A34A" />
+                  <circle cx="60" cy="72" r="3.5" fill="#16A34A" />
+                  <circle cx="110" cy="58" r="3.5" fill="#16A34A" />
+                  <circle cx="160" cy="50" r="3.5" fill="#16A34A" />
+                  <circle cx="210" cy="30" r="4.5" fill="#16A34A" stroke="#FFFFFF" strokeWidth="2" />
+                  <circle cx="260" cy="42" r="3.5" fill="#16A34A" />
+                  <circle cx="310" cy="15" r="3.5" fill="#16A34A" />
                 </svg>
 
                 {/* Peak Tooltip Pill */}
                 <div style={{
                   position: 'absolute',
-                  top: '12px',
-                  left: '60%',
+                  top: '10px',
+                  left: '62%',
                   transform: 'translateX(-50%)',
                   background: '#0F172A',
                   color: '#FFFFFF',
-                  padding: '2px 8px',
+                  padding: '3px 9px',
                   borderRadius: '6px',
-                  fontSize: '0.68rem',
+                  fontSize: '0.70rem',
                   fontWeight: 800,
-                  boxShadow: '0 2px 6px rgba(0,0,0,0.15)'
+                  boxShadow: '0 2px 8px rgba(0,0,0,0.18)'
                 }}>
                   ₹28,450
                 </div>
 
                 {/* X Axis Labels */}
-                <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.66rem', color: '#94A3B8', marginTop: '6px' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.68rem', color: '#94A3B8', marginTop: '8px' }}>
                   <span>Mon</span>
                   <span>Tue</span>
                   <span>Wed</span>
@@ -440,23 +464,24 @@ export default function HomeView({
               background: '#FFFFFF',
               borderRadius: '18px',
               border: '1px solid #E2E8F0',
-              padding: '20px',
+              padding: '22px',
               boxShadow: '0 1px 3px rgba(0,0,0,0.02)',
               display: 'flex',
               flexDirection: 'column',
-              justifyContent: 'space-between'
+              justifyContent: 'space-between',
+              boxSizing: 'border-box'
             }}>
               <div>
                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '16px' }}>
-                  <h3 style={{ fontSize: '0.95rem', fontWeight: 800, color: '#0F172A', margin: 0 }}>
+                  <h3 style={{ fontSize: '0.98rem', fontWeight: 800, color: '#0F172A', margin: 0 }}>
                     Top Selling Items
                   </h3>
                   <button style={{
                     background: '#FFFFFF',
                     border: '1px solid #E2E8F0',
                     borderRadius: '8px',
-                    padding: '4px 10px',
-                    fontSize: '0.72rem',
+                    padding: '5px 12px',
+                    fontSize: '0.74rem',
                     fontWeight: 700,
                     color: '#475569',
                     display: 'inline-flex',
@@ -469,12 +494,12 @@ export default function HomeView({
                   </button>
                 </div>
 
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
                   {topDishes.map((dish, i) => (
-                    <div key={i} style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                    <div key={i} style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
                       <div style={{
-                        width: '32px',
-                        height: '32px',
+                        width: '36px',
+                        height: '36px',
                         borderRadius: '8px',
                         background: '#F8FAFC',
                         border: '1px solid #E2E8F0',
@@ -490,9 +515,9 @@ export default function HomeView({
                       </div>
 
                       <div style={{ flex: 1, minWidth: 0 }}>
-                        <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.76rem', fontWeight: 700, color: '#0F172A', marginBottom: '4px' }}>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.78rem', fontWeight: 700, color: '#0F172A', marginBottom: '4px' }}>
                           <span style={{ whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{dish.name}</span>
-                          <span style={{ color: '#64748B', fontWeight: 500, fontSize: '0.70rem' }}>{dish.sold} plates</span>
+                          <span style={{ color: '#64748B', fontWeight: 500, fontSize: '0.72rem' }}>{dish.sold} plates</span>
                         </div>
                         {/* Progress Bar */}
                         <div style={{ width: '100%', height: '5px', background: '#F1F5F9', borderRadius: '4px', overflow: 'hidden' }}>
@@ -512,7 +537,7 @@ export default function HomeView({
                   background: 'none',
                   border: 'none',
                   color: '#059669',
-                  fontSize: '0.76rem',
+                  fontSize: '0.78rem',
                   fontWeight: 800,
                   cursor: 'pointer',
                   display: 'flex',
@@ -527,36 +552,33 @@ export default function HomeView({
             </div>
           </div>
 
-          {/* B. RECENT ACTIVITY & QUICK ACTIONS ROW */}
-          <div style={{
-            display: 'grid',
-            gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))',
-            gap: '16px'
-          }}>
+          {/* B. ROW 2: RECENT ACTIVITY + QUICK ACTIONS */}
+          <div className="home-dual-row">
             {/* 1. Recent Activity Card */}
             <div style={{
               background: '#FFFFFF',
               borderRadius: '18px',
               border: '1px solid #E2E8F0',
-              padding: '20px',
+              padding: '22px',
               boxShadow: '0 1px 3px rgba(0,0,0,0.02)',
               display: 'flex',
               flexDirection: 'column',
-              justifyContent: 'space-between'
+              justifyContent: 'space-between',
+              boxSizing: 'border-box'
             }}>
               <div>
-                <h3 style={{ fontSize: '0.95rem', fontWeight: 800, color: '#0F172A', margin: '0 0 16px 0' }}>
+                <h3 style={{ fontSize: '0.98rem', fontWeight: 800, color: '#0F172A', margin: '0 0 18px 0' }}>
                   Recent Activity
                 </h3>
 
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
                   {recentActivities.map((act, i) => {
                     const IconComponent = act.icon;
                     return (
                       <div key={i} style={{ display: 'flex', alignItems: 'flex-start', gap: '12px' }}>
                         <div style={{
-                          width: '32px',
-                          height: '32px',
+                          width: '34px',
+                          height: '34px',
                           borderRadius: '50%',
                           background: act.bg,
                           color: act.color,
@@ -569,10 +591,10 @@ export default function HomeView({
                         </div>
                         <div style={{ flex: 1, minWidth: 0 }}>
                           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                            <strong style={{ fontSize: '0.78rem', color: '#0F172A' }}>{act.title}</strong>
-                            <span style={{ fontSize: '0.68rem', color: '#94A3B8' }}>{act.time}</span>
+                            <strong style={{ fontSize: '0.80rem', color: '#0F172A' }}>{act.title}</strong>
+                            <span style={{ fontSize: '0.70rem', color: '#94A3B8' }}>{act.time}</span>
                           </div>
-                          <span style={{ fontSize: '0.72rem', color: '#64748B' }}>{act.subtitle}</span>
+                          <span style={{ fontSize: '0.74rem', color: '#64748B' }}>{act.subtitle}</span>
                         </div>
                       </div>
                     );
@@ -584,11 +606,11 @@ export default function HomeView({
               <button
                 onClick={() => onNavigateTab('orders')}
                 style={{
-                  marginTop: '16px',
+                  marginTop: '18px',
                   background: 'none',
                   border: 'none',
                   color: '#059669',
-                  fontSize: '0.76rem',
+                  fontSize: '0.78rem',
                   fontWeight: 800,
                   cursor: 'pointer',
                   display: 'flex',
@@ -607,17 +629,18 @@ export default function HomeView({
               background: '#FFFFFF',
               borderRadius: '18px',
               border: '1px solid #E2E8F0',
-              padding: '20px',
-              boxShadow: '0 1px 3px rgba(0,0,0,0.02)'
+              padding: '22px',
+              boxShadow: '0 1px 3px rgba(0,0,0,0.02)',
+              boxSizing: 'border-box'
             }}>
-              <h3 style={{ fontSize: '0.95rem', fontWeight: 800, color: '#0F172A', margin: '0 0 16px 0' }}>
+              <h3 style={{ fontSize: '0.98rem', fontWeight: 800, color: '#0F172A', margin: '0 0 18px 0' }}>
                 Quick Actions
               </h3>
 
               <div style={{
                 display: 'grid',
                 gridTemplateColumns: '1fr 1fr',
-                gap: '10px'
+                gap: '12px'
               }}>
                 {/* Add Dish */}
                 <button
@@ -637,7 +660,7 @@ export default function HomeView({
                   <div style={{ width: '32px', height: '32px', borderRadius: '8px', background: '#DCFCE7', color: '#16A34A', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
                     <Plus size={16} />
                   </div>
-                  <span style={{ fontSize: '0.78rem', fontWeight: 700, color: '#0F172A' }}>Add Dish</span>
+                  <span style={{ fontSize: '0.80rem', fontWeight: 700, color: '#0F172A' }}>Add Dish</span>
                 </button>
 
                 {/* Add Category */}
@@ -658,7 +681,7 @@ export default function HomeView({
                   <div style={{ width: '32px', height: '32px', borderRadius: '8px', background: '#FEF3C7', color: '#D97706', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
                     <FolderPlus size={16} />
                   </div>
-                  <span style={{ fontSize: '0.78rem', fontWeight: 700, color: '#0F172A' }}>Add Category</span>
+                  <span style={{ fontSize: '0.80rem', fontWeight: 700, color: '#0F172A' }}>Add Category</span>
                 </button>
 
                 {/* View Orders */}
@@ -679,7 +702,7 @@ export default function HomeView({
                   <div style={{ width: '32px', height: '32px', borderRadius: '8px', background: '#F3E8FF', color: '#7E22CE', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
                     <Receipt size={16} />
                   </div>
-                  <span style={{ fontSize: '0.78rem', fontWeight: 700, color: '#0F172A' }}>View Orders</span>
+                  <span style={{ fontSize: '0.80rem', fontWeight: 700, color: '#0F172A' }}>View Orders</span>
                 </button>
 
                 {/* Open KDS */}
@@ -706,7 +729,7 @@ export default function HomeView({
                   <div style={{ width: '32px', height: '32px', borderRadius: '8px', background: '#FFE4E6', color: '#E11D48', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
                     <ChefHat size={16} />
                   </div>
-                  <span style={{ fontSize: '0.78rem', fontWeight: 700, color: '#0F172A' }}>Open KDS</span>
+                  <span style={{ fontSize: '0.80rem', fontWeight: 700, color: '#0F172A' }}>Open KDS</span>
                 </button>
 
                 {/* QR Standees */}
@@ -727,7 +750,7 @@ export default function HomeView({
                   <div style={{ width: '32px', height: '32px', borderRadius: '8px', background: '#E0F2FE', color: '#0284C7', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
                     <QrCode size={16} />
                   </div>
-                  <span style={{ fontSize: '0.78rem', fontWeight: 700, color: '#0F172A' }}>QR Standees</span>
+                  <span style={{ fontSize: '0.80rem', fontWeight: 700, color: '#0F172A' }}>QR Standees</span>
                 </button>
 
                 {/* Share Menu */}
@@ -751,13 +774,13 @@ export default function HomeView({
                   <div style={{ width: '32px', height: '32px', borderRadius: '8px', background: '#DCFCE7', color: '#16A34A', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
                     <Share2 size={16} />
                   </div>
-                  <span style={{ fontSize: '0.78rem', fontWeight: 700, color: '#0F172A' }}>Share Menu</span>
+                  <span style={{ fontSize: '0.80rem', fontWeight: 700, color: '#0F172A' }}>Share Menu</span>
                 </button>
               </div>
             </div>
           </div>
 
-          {/* C. MOTIVATIONAL CELEBRATION BANNER */}
+          {/* C. ROW 3: CELEBRATION BANNER */}
           <div style={{
             background: '#FEF9C3',
             border: '1px solid #FDE047',
@@ -766,7 +789,8 @@ export default function HomeView({
             display: 'flex',
             alignItems: 'center',
             gap: '14px',
-            boxShadow: '0 1px 3px rgba(0,0,0,0.02)'
+            boxShadow: '0 1px 3px rgba(0,0,0,0.02)',
+            boxSizing: 'border-box'
           }}>
             <div style={{
               width: '36px',
@@ -782,27 +806,28 @@ export default function HomeView({
               <Star size={18} fill="#FFFFFF" />
             </div>
             <div>
-              <strong style={{ fontSize: '0.86rem', color: '#713F12', display: 'block' }}>
+              <strong style={{ fontSize: '0.88rem', color: '#713F12', display: 'block' }}>
                 You're doing great!
               </strong>
-              <span style={{ fontSize: '0.76rem', color: '#854D0E' }}>
+              <span style={{ fontSize: '0.78rem', color: '#854D0E' }}>
                 Your sales are 18.6% higher than yesterday. Keep it up! 🚀
               </span>
             </div>
           </div>
         </div>
 
-        {/* ================= RIGHT RAIL (STACKED CARDS) ================= */}
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '16px', minWidth: '270px' }}>
+        {/* ================= RIGHT INSIGHT RAIL ================= */}
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '16px', minWidth: '280px' }}>
           
-          {/* 1. CURRENT PLAN CARD (Dark Emerald / Gold Luxury) */}
+          {/* 1. CURRENT PLAN CARD */}
           <div style={{
             background: '#071F14',
             borderRadius: '18px',
             border: '1px solid rgba(212, 175, 55, 0.25)',
             padding: '22px',
             color: '#FFFFFF',
-            boxShadow: '0 4px 16px rgba(7, 31, 20, 0.12)'
+            boxShadow: '0 4px 16px rgba(7, 31, 20, 0.12)',
+            boxSizing: 'border-box'
           }}>
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '8px' }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
@@ -863,7 +888,8 @@ export default function HomeView({
             borderRadius: '18px',
             border: '1px solid #E2E8F0',
             padding: '20px',
-            boxShadow: '0 1px 3px rgba(0,0,0,0.02)'
+            boxShadow: '0 1px 3px rgba(0,0,0,0.02)',
+            boxSizing: 'border-box'
           }}>
             <h4 style={{ fontSize: '0.88rem', fontWeight: 800, color: '#0F172A', margin: '0 0 16px 0' }}>
               Plan Usage
@@ -911,7 +937,8 @@ export default function HomeView({
             borderRadius: '18px',
             border: '1px solid #E2E8F0',
             padding: '20px',
-            boxShadow: '0 1px 3px rgba(0,0,0,0.02)'
+            boxShadow: '0 1px 3px rgba(0,0,0,0.02)',
+            boxSizing: 'border-box'
           }}>
             <h4 style={{ fontSize: '0.88rem', fontWeight: 800, color: '#0F172A', margin: '0 0 14px 0' }}>
               Quick Status
