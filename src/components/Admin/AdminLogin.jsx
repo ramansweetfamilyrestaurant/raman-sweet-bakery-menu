@@ -212,7 +212,7 @@ export default function AdminLogin({ onLoginSuccess, onCancel, restaurantName, t
               {mode === 'forgot' ? 'Username or Registered Phone' : 'BUSINESS ADMIN USERNAME / EMAIL'}
             </label>
             <div style={{ position: 'relative', display: 'flex', alignItems: 'center' }}>
-              <User size={17} color="#94A3B8" style={{ position: 'absolute', left: '12px', pointerEvents: 'none' }} />
+              <User size={18} color="#94A3B8" style={{ position: 'absolute', left: '14px', top: '50%', transform: 'translateY(-50%)', pointerEvents: 'none' }} />
               <input
                 id="admin-username-input"
                 type="text"
@@ -224,7 +224,10 @@ export default function AdminLogin({ onLoginSuccess, onCancel, restaurantName, t
                 style={{
                   width: '100%',
                   height: '46px',
-                  padding: '10px 14px 10px 38px',
+                  paddingTop: '10px',
+                  paddingBottom: '10px',
+                  paddingLeft: '44px',
+                  paddingRight: '14px',
                   fontSize: '0.90rem',
                   fontWeight: 600,
                   borderRadius: '12px',
@@ -307,7 +310,7 @@ export default function AdminLogin({ onLoginSuccess, onCancel, restaurantName, t
                 </button>
               </div>
               <div style={{ position: 'relative', display: 'flex', alignItems: 'center' }}>
-                <KeyRound size={17} color="#94A3B8" style={{ position: 'absolute', left: '12px', pointerEvents: 'none' }} />
+                <KeyRound size={18} color="#94A3B8" style={{ position: 'absolute', left: '14px', top: '50%', transform: 'translateY(-50%)', pointerEvents: 'none' }} />
                 <input
                   id="admin-password-input"
                   type={showPassword ? 'text' : 'password'}
@@ -319,7 +322,10 @@ export default function AdminLogin({ onLoginSuccess, onCancel, restaurantName, t
                   style={{
                     width: '100%',
                     height: '46px',
-                    padding: '10px 42px 10px 38px',
+                    paddingTop: '10px',
+                    paddingBottom: '10px',
+                    paddingLeft: '44px',
+                    paddingRight: '42px',
                     fontSize: '0.90rem',
                     fontWeight: 600,
                     borderRadius: '12px',
@@ -344,6 +350,8 @@ export default function AdminLogin({ onLoginSuccess, onCancel, restaurantName, t
                   style={{
                     position: 'absolute',
                     right: '12px',
+                    top: '50%',
+                    transform: 'translateY(-50%)',
                     background: 'none',
                     border: 'none',
                     color: '#94A3B8',

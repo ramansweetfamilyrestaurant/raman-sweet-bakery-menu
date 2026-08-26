@@ -201,7 +201,7 @@ export default function SuperAdminLogin({ onLoginSuccess, onCancel }) {
               SUPER ADMIN USERNAME
             </label>
             <div style={{ position: 'relative', display: 'flex', alignItems: 'center' }}>
-              <User size={17} color="#94A3B8" style={{ position: 'absolute', left: '12px', pointerEvents: 'none' }} />
+              <User size={18} color="#94A3B8" style={{ position: 'absolute', left: '14px', top: '50%', transform: 'translateY(-50%)', pointerEvents: 'none' }} />
               <input
                 id="superadmin-username"
                 type="text"
@@ -213,7 +213,10 @@ export default function SuperAdminLogin({ onLoginSuccess, onCancel }) {
                 style={{
                   width: '100%',
                   height: '46px',
-                  padding: '10px 14px 10px 38px',
+                  paddingTop: '10px',
+                  paddingBottom: '10px',
+                  paddingLeft: '44px',
+                  paddingRight: '14px',
                   borderRadius: '12px',
                   border: '1.5px solid #CBD5E1',
                   fontSize: '0.90rem',
@@ -242,7 +245,7 @@ export default function SuperAdminLogin({ onLoginSuccess, onCancel }) {
               MASTER PASSWORD
             </label>
             <div style={{ position: 'relative', display: 'flex', alignItems: 'center' }}>
-              <Lock size={17} color="#94A3B8" style={{ position: 'absolute', left: '12px', pointerEvents: 'none' }} />
+              <Lock size={18} color="#94A3B8" style={{ position: 'absolute', left: '14px', top: '50%', transform: 'translateY(-50%)', pointerEvents: 'none' }} />
               <input
                 id="superadmin-password"
                 type={showPassword ? 'text' : 'password'}
@@ -254,7 +257,10 @@ export default function SuperAdminLogin({ onLoginSuccess, onCancel }) {
                 style={{
                   width: '100%',
                   height: '46px',
-                  padding: '10px 42px 10px 38px',
+                  paddingTop: '10px',
+                  paddingBottom: '10px',
+                  paddingLeft: '44px',
+                  paddingRight: '42px',
                   borderRadius: '12px',
                   border: '1.5px solid #CBD5E1',
                   fontSize: '0.90rem',
@@ -279,6 +285,8 @@ export default function SuperAdminLogin({ onLoginSuccess, onCancel }) {
                 style={{
                   position: 'absolute',
                   right: '12px',
+                  top: '50%',
+                  transform: 'translateY(-50%)',
                   background: 'none',
                   border: 'none',
                   cursor: 'pointer',
