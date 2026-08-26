@@ -76,6 +76,7 @@ export default function MenuView({
   const [sortBy, setSortBy] = useState('recent'); // 'recent', 'name_asc', 'price_asc', 'price_desc'
   const [viewMode, setViewMode] = useState('grid'); // 'grid' | 'list'
   const [showAddMenuDropdown, setShowAddMenuDropdown] = useState(false);
+  const [showMobileAddDropdown, setShowMobileAddDropdown] = useState(false);
   const [openDishMenuId, setOpenDishMenuId] = useState(null);
 
   const safeDishes = Array.isArray(dishes) ? dishes : [];
@@ -301,7 +302,7 @@ export default function MenuView({
 
           <div style={{ display: 'flex', borderRadius: '10px', overflow: 'hidden', boxShadow: '0 2px 8px rgba(10,35,21,0.25)' }}>
             <button
-              onClick={onOpenAddDish}
+              onClick={activeSubTab === 'combos' ? onOpenAddCombo : activeSubTab === 'categories' ? onOpenAddCategory : onOpenAddDish}
               disabled={dishQuota.isAtLimit}
               style={{
                 padding: '10px 18px',
@@ -317,7 +318,9 @@ export default function MenuView({
               }}
             >
               <Plus size={16} color="#D4AF37" strokeWidth={3} />
-              <span>Add Dish</span>
+              <span>
+                {activeSubTab === 'combos' ? '+ Add Combo' : activeSubTab === 'categories' ? '+ Add Category' : '+ Add Dish'}
+              </span>
             </button>
             <button
               onClick={() => setShowAddMenuDropdown(!showAddMenuDropdown)}
@@ -428,7 +431,8 @@ export default function MenuView({
         padding: '20px 18px',
         color: '#FFFFFF',
         boxShadow: '0 4px 16px rgba(10,35,21,0.2)',
-        border: '1px solid rgba(212, 175, 55, 0.2)'
+        border: '1px solid rgba(212, 175, 55, 0.2)',
+        position: 'relative'
       }}>
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '6px' }}>
           <h2 style={{ fontSize: '1.25rem', fontWeight: 900, margin: 0, letterSpacing: '-0.02em', color: '#FFFFFF' }}>
@@ -456,73 +460,189 @@ export default function MenuView({
           <div
             onClick={() => setActiveSubTab && setActiveSubTab('dishes')}
             style={{
-              background: 'rgba(255, 255, 255, 0.08)',
+              background: activeSubTab === 'dishes' ? 'rgba(22, 163, 74, 0.25)' : 'rgba(255, 255, 255, 0.08)',
               borderRadius: '12px',
               padding: '10px 8px',
               textAlign: 'center',
-              border: '1px solid rgba(255,255,255,0.06)',
+              border: activeSubTab === 'dishes' ? '1px solid #22C55E' : '1px solid rgba(255,255,255,0.06)',
               cursor: 'pointer'
             }}
           >
             <div style={{ fontSize: '1.1rem', fontWeight: 900, color: '#FFFFFF' }}>{safeDishes.length}</div>
-            <div style={{ fontSize: '0.66rem', color: '#94A3B8', fontWeight: 600, marginTop: '2px' }}>Dishes</div>
+            <div style={{ fontSize: '0.66rem', color: activeSubTab === 'dishes' ? '#4ADE80' : '#94A3B8', fontWeight: 700, marginTop: '2px' }}>Dishes</div>
           </div>
 
           <div
             onClick={() => setActiveSubTab && setActiveSubTab('categories')}
             style={{
-              background: 'rgba(255, 255, 255, 0.08)',
+              background: activeSubTab === 'categories' ? 'rgba(2, 132, 199, 0.25)' : 'rgba(255, 255, 255, 0.08)',
               borderRadius: '12px',
               padding: '10px 8px',
               textAlign: 'center',
-              border: '1px solid rgba(255,255,255,0.06)',
+              border: activeSubTab === 'categories' ? '1px solid #38BDF8' : '1px solid rgba(255,255,255,0.06)',
               cursor: 'pointer'
             }}
           >
             <div style={{ fontSize: '1.1rem', fontWeight: 900, color: '#FFFFFF' }}>{safeCategories.length}</div>
-            <div style={{ fontSize: '0.66rem', color: '#94A3B8', fontWeight: 600, marginTop: '2px' }}>Categories</div>
+            <div style={{ fontSize: '0.66rem', color: activeSubTab === 'categories' ? '#38BDF8' : '#94A3B8', fontWeight: 700, marginTop: '2px' }}>Categories</div>
           </div>
 
           <div
             onClick={() => setActiveSubTab && setActiveSubTab('combos')}
             style={{
-              background: 'rgba(255, 255, 255, 0.08)',
+              background: activeSubTab === 'combos' ? 'rgba(147, 51, 234, 0.25)' : 'rgba(255, 255, 255, 0.08)',
               borderRadius: '12px',
               padding: '10px 8px',
               textAlign: 'center',
-              border: '1px solid rgba(255,255,255,0.06)',
+              border: activeSubTab === 'combos' ? '1px solid #C084FC' : '1px solid rgba(255,255,255,0.06)',
               cursor: 'pointer'
             }}
           >
             <div style={{ fontSize: '1.1rem', fontWeight: 900, color: '#FFFFFF' }}>{safeCombos.length}</div>
-            <div style={{ fontSize: '0.66rem', color: '#94A3B8', fontWeight: 600, marginTop: '2px' }}>Combos</div>
+            <div style={{ fontSize: '0.66rem', color: activeSubTab === 'combos' ? '#C084FC' : '#94A3B8', fontWeight: 700, marginTop: '2px' }}>Combos</div>
           </div>
         </div>
 
-        {/* Mobile Add Dish Button */}
-        <button
-          onClick={onOpenAddDish}
-          disabled={dishQuota.isAtLimit}
-          style={{
-            width: '100%',
-            padding: '11px',
-            background: 'linear-gradient(135deg, #16A34A 0%, #15803D 100%)',
-            color: '#FFFFFF',
-            border: 'none',
-            borderRadius: '12px',
-            fontSize: '0.84rem',
-            fontWeight: 800,
-            cursor: dishQuota.isAtLimit ? 'not-allowed' : 'pointer',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            gap: '8px',
-            boxShadow: '0 4px 12px rgba(22, 163, 74, 0.3)'
-          }}
-        >
-          <Plus size={16} color="#FFFFFF" strokeWidth={3} />
-          <span>+ Add Dish</span>
-        </button>
+        {/* Mobile Split Action Button (+ Add Dish | ▼) */}
+        <div style={{ display: 'flex', borderRadius: '12px', overflow: 'hidden', boxShadow: '0 4px 12px rgba(22, 163, 74, 0.3)' }}>
+          <button
+            onClick={activeSubTab === 'combos' ? onOpenAddCombo : activeSubTab === 'categories' ? onOpenAddCategory : onOpenAddDish}
+            disabled={dishQuota.isAtLimit}
+            style={{
+              flex: 1,
+              padding: '11px 14px',
+              background: 'linear-gradient(135deg, #16A34A 0%, #15803D 100%)',
+              color: '#FFFFFF',
+              border: 'none',
+              fontSize: '0.84rem',
+              fontWeight: 800,
+              cursor: dishQuota.isAtLimit ? 'not-allowed' : 'pointer',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              gap: '6px'
+            }}
+          >
+            <Plus size={16} color="#FFFFFF" strokeWidth={3} />
+            <span>
+              {activeSubTab === 'combos' ? '+ Add Combo' : activeSubTab === 'categories' ? '+ Add Category' : '+ Add Dish'}
+            </span>
+          </button>
+          <button
+            onClick={() => setShowMobileAddDropdown(!showMobileAddDropdown)}
+            style={{
+              padding: '11px 12px',
+              background: '#0F6932',
+              color: '#FFFFFF',
+              border: 'none',
+              borderLeft: '1px solid rgba(255,255,255,0.2)',
+              cursor: 'pointer',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center'
+            }}
+          >
+            <ChevronDown size={15} />
+          </button>
+        </div>
+
+        {/* Mobile Add Dropdown Modal */}
+        {showMobileAddDropdown && (
+          <div style={{
+            position: 'absolute',
+            bottom: '12px',
+            left: '18px',
+            right: '18px',
+            background: '#FFFFFF',
+            borderRadius: '16px',
+            border: '1px solid #E2E8F0',
+            boxShadow: '0 10px 30px rgba(0,0,0,0.35)',
+            padding: '8px',
+            zIndex: 1000,
+            color: '#0F172A'
+          }}>
+            <button
+              onClick={() => { onOpenAddDish(); setShowMobileAddDropdown(false); }}
+              style={{
+                width: '100%',
+                textAlign: 'left',
+                padding: '10px 12px',
+                borderRadius: '10px',
+                border: 'none',
+                background: 'transparent',
+                color: '#0F172A',
+                fontSize: '0.82rem',
+                fontWeight: 700,
+                cursor: 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '10px'
+              }}
+            >
+              <div style={{ width: '28px', height: '28px', borderRadius: '8px', background: '#DCFCE7', color: '#16A34A', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                <Plus size={16} />
+              </div>
+              <div>
+                <strong>+ Add Dish</strong>
+                <span style={{ fontSize: '0.68rem', color: '#64748B', display: 'block' }}>Add single food item</span>
+              </div>
+            </button>
+
+            <button
+              onClick={() => { onOpenAddCategory(); setShowMobileAddDropdown(false); }}
+              style={{
+                width: '100%',
+                textAlign: 'left',
+                padding: '10px 12px',
+                borderRadius: '10px',
+                border: 'none',
+                background: 'transparent',
+                color: '#0F172A',
+                fontSize: '0.82rem',
+                fontWeight: 700,
+                cursor: 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '10px'
+              }}
+            >
+              <div style={{ width: '28px', height: '28px', borderRadius: '8px', background: '#EFF6FF', color: '#0284C7', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                <FolderPlus size={16} />
+              </div>
+              <div>
+                <strong>+ Add Category</strong>
+                <span style={{ fontSize: '0.68rem', color: '#64748B', display: 'block' }}>Create a new food section</span>
+              </div>
+            </button>
+
+            <button
+              onClick={() => { onOpenAddCombo(); setShowMobileAddDropdown(false); }}
+              style={{
+                width: '100%',
+                textAlign: 'left',
+                padding: '10px 12px',
+                borderRadius: '10px',
+                border: 'none',
+                background: 'transparent',
+                color: '#0F172A',
+                fontSize: '0.82rem',
+                fontWeight: 700,
+                cursor: 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '10px'
+              }}
+            >
+              <div style={{ width: '28px', height: '28px', borderRadius: '8px', background: '#FAF5FF', color: '#9333EA', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                <Package size={16} />
+              </div>
+              <div>
+                <strong>+ Add Combo</strong>
+                <span style={{ fontSize: '0.68rem', color: '#64748B', display: 'block' }}>Create value meal bundle</span>
+              </div>
+            </button>
+          </div>
+        )}
       </div>
 
       {/* ========================================================
@@ -840,16 +960,16 @@ export default function MenuView({
         }}>
           {/* Tile 1: All Dishes */}
           <button
-            onClick={() => setSelectedCatFilter('all')}
+            onClick={() => { setSelectedCatFilter('all'); setActiveSubTab && setActiveSubTab('dishes'); }}
             className="category-tile-btn"
             style={{
               width: '84px',
               minWidth: '84px',
               height: '84px',
               borderRadius: '16px',
-              border: selectedCatFilter === 'all' ? '1.5px solid #0A2315' : '1px solid #E2E8F0',
-              background: selectedCatFilter === 'all' ? '#0A2315' : '#FFFFFF',
-              color: selectedCatFilter === 'all' ? '#FFFFFF' : '#0F172A',
+              border: selectedCatFilter === 'all' && activeSubTab === 'dishes' ? '1.5px solid #0A2315' : '1px solid #E2E8F0',
+              background: selectedCatFilter === 'all' && activeSubTab === 'dishes' ? '#0A2315' : '#FFFFFF',
+              color: selectedCatFilter === 'all' && activeSubTab === 'dishes' ? '#FFFFFF' : '#0F172A',
               display: 'flex',
               flexDirection: 'column',
               alignItems: 'center',
@@ -861,27 +981,70 @@ export default function MenuView({
               flexShrink: 0
             }}
           >
-            <div style={{ fontSize: '1.2rem', color: selectedCatFilter === 'all' ? '#4ADE80' : '#16A34A' }}>
+            <div style={{ fontSize: '1.2rem', color: selectedCatFilter === 'all' && activeSubTab === 'dishes' ? '#4ADE80' : '#16A34A' }}>
               <LayoutGrid size={20} />
             </div>
             <span style={{ fontSize: '0.72rem', fontWeight: 800, textAlign: 'center', lineHeight: 1.1 }}>
               All Dishes
             </span>
-            <span style={{ fontSize: '0.64rem', color: selectedCatFilter === 'all' ? '#94A3B8' : '#64748B', fontWeight: 600 }}>
+            <span style={{ fontSize: '0.64rem', color: selectedCatFilter === 'all' && activeSubTab === 'dishes' ? '#94A3B8' : '#64748B', fontWeight: 600 }}>
               {safeDishes.length}
+            </span>
+          </button>
+
+          {/* Tile 2: Combos Shortcut Tile */}
+          <button
+            onClick={() => setActiveSubTab && setActiveSubTab('combos')}
+            className="category-tile-btn"
+            style={{
+              width: '84px',
+              minWidth: '84px',
+              height: '84px',
+              borderRadius: '16px',
+              border: activeSubTab === 'combos' ? '1.5px solid #9333EA' : '1px solid #E2E8F0',
+              background: activeSubTab === 'combos' ? '#9333EA' : '#FFFFFF',
+              color: activeSubTab === 'combos' ? '#FFFFFF' : '#0F172A',
+              display: 'flex',
+              flexDirection: 'column',
+              alignItems: 'center',
+              justifyContent: 'center',
+              gap: '3px',
+              padding: '6px',
+              cursor: 'pointer',
+              boxShadow: '0 1px 3px rgba(0,0,0,0.03)',
+              flexShrink: 0
+            }}
+          >
+            <div style={{ fontSize: '1.3rem' }}>
+              🍱
+            </div>
+            <span style={{
+              fontSize: '0.72rem',
+              fontWeight: 800,
+              textAlign: 'center',
+              lineHeight: 1.1,
+              whiteSpace: 'nowrap',
+              overflow: 'hidden',
+              textOverflow: 'ellipsis',
+              maxWidth: '72px'
+            }}>
+              Combos
+            </span>
+            <span style={{ fontSize: '0.64rem', color: activeSubTab === 'combos' ? '#F3E8FF' : '#9333EA', fontWeight: 700 }}>
+              {safeCombos.length}
             </span>
           </button>
 
           {/* Dynamic Category Tiles */}
           {safeCategories.map(cat => {
             const count = safeDishes.filter(d => String(d.category_id) === String(cat.id)).length;
-            const isSelected = String(selectedCatFilter) === String(cat.id);
+            const isSelected = String(selectedCatFilter) === String(cat.id) && activeSubTab === 'dishes';
             const emoji = getCategoryEmoji(cat.name);
 
             return (
               <button
                 key={cat.id}
-                onClick={() => setSelectedCatFilter(isSelected ? 'all' : cat.id)}
+                onClick={() => { setSelectedCatFilter(isSelected ? 'all' : cat.id); setActiveSubTab && setActiveSubTab('dishes'); }}
                 className="category-tile-btn"
                 style={{
                   width: '84px',
@@ -927,538 +1090,711 @@ export default function MenuView({
       </div>
 
       {/* ========================================================
-          5. DISH CATALOG HEADER & CONTROLS
+          5. COMBOS VIEW (WHEN COMBOS TAB IS SELECTED)
          ======================================================== */}
-      <div style={{
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'space-between',
-        padding: '2px 2px 0 2px'
-      }}>
-        <h3 style={{ fontSize: '1.05rem', fontWeight: 900, color: '#0F172A', margin: 0 }}>
-          {activeCategoryObj ? `${activeCategoryObj.name} (${filteredDishes.length})` : `All Dishes (${filteredDishes.length})`}
-        </h3>
+      {activeSubTab === 'combos' && (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
+          <div style={{
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            background: '#FFFFFF',
+            borderRadius: '16px',
+            border: '1px solid #E2E8F0',
+            padding: '14px 18px',
+            boxShadow: '0 1px 3px rgba(0,0,0,0.02)'
+          }}>
+            <div>
+              <h3 style={{ fontSize: '1rem', fontWeight: 900, color: '#0F172A', margin: 0 }}>
+                Value Meal Combos ({safeCombos.length})
+              </h3>
+              <span style={{ fontSize: '0.72rem', color: '#64748B' }}>
+                Multi-dish bundles to boost Average Order Value
+              </span>
+            </div>
 
-        {/* View Toggle + Sort Dropdown */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-          {/* Grid / List switch (Desktop) */}
-          <div style={{ display: 'flex', background: '#FFFFFF', border: '1px solid #E2E8F0', borderRadius: '8px', padding: '2px' }}>
             <button
-              onClick={() => setViewMode('grid')}
+              onClick={onOpenAddCombo}
               style={{
-                padding: '4px 7px',
+                padding: '8px 16px',
+                borderRadius: '10px',
+                background: '#0A2315',
+                color: '#FFFFFF',
+                fontSize: '0.78rem',
+                fontWeight: 800,
                 border: 'none',
-                borderRadius: '6px',
-                background: viewMode === 'grid' ? '#F1F5F9' : 'transparent',
-                color: viewMode === 'grid' ? '#0F172A' : '#94A3B8',
-                cursor: 'pointer'
+                cursor: 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '6px',
+                boxShadow: '0 2px 6px rgba(10,35,21,0.2)'
               }}
-              title="Grid View"
             >
-              <Grid size={14} />
-            </button>
-            <button
-              onClick={() => setViewMode('list')}
-              style={{
-                padding: '4px 7px',
-                border: 'none',
-                borderRadius: '6px',
-                background: viewMode === 'list' ? '#F1F5F9' : 'transparent',
-                color: viewMode === 'list' ? '#0F172A' : '#94A3B8',
-                cursor: 'pointer'
-              }}
-              title="List View"
-            >
-              <List size={14} />
+              <Package size={15} color="#D4AF37" />
+              <span>+ Add Combo</span>
             </button>
           </div>
 
-          {/* Sort Dropdown */}
-          <select
-            value={sortBy}
-            onChange={(e) => setSortBy(e.target.value)}
-            style={{
-              padding: '6px 10px',
-              borderRadius: '8px',
-              border: '1px solid #E2E8F0',
+          {safeCombos.length === 0 ? (
+            <div style={{
               background: '#FFFFFF',
-              color: '#0F172A',
-              fontSize: '0.74rem',
-              fontWeight: 700,
-              cursor: 'pointer',
-              outline: 'none'
-            }}
-          >
-            <option value="recent">Sort by: Recently Updated</option>
-            <option value="name_asc">Sort by: Name (A-Z)</option>
-            <option value="price_asc">Sort by: Price (Low to High)</option>
-            <option value="price_desc">Sort by: Price (High to Low)</option>
-          </select>
-        </div>
-      </div>
-
-      {/* ========================================================
-          6. DESKTOP DISH CATALOG: 4-COLUMN RESPONSIVE GRID
-         ======================================================== */}
-      {filteredDishes.length === 0 ? (
-        <div style={{
-          background: '#FFFFFF',
-          borderRadius: '18px',
-          border: '1px solid #E2E8F0',
-          padding: '44px 20px',
-          textAlign: 'center',
-          boxShadow: '0 1px 3px rgba(0,0,0,0.02)'
-        }}>
-          <Utensils size={32} color="#94A3B8" style={{ margin: '0 auto 10px auto' }} />
-          <h3 style={{ fontSize: '1rem', fontWeight: 800, color: '#0F172A', margin: '0 0 4px 0' }}>
-            {search ? 'No dishes match your search' : 'No dishes in this category'}
-          </h3>
-          <p style={{ fontSize: '0.76rem', color: '#64748B', margin: '0 0 16px 0' }}>
-            {search ? 'Try clearing search keyword or filters.' : 'Add your first dish to this category.'}
-          </p>
-          <button
-            onClick={search ? () => { setSearch(''); setSelectedCatFilter('all'); setDietFilter('all'); } : onOpenAddDish}
-            style={{
-              padding: '9px 18px',
-              borderRadius: '10px',
-              background: '#0A2315',
-              color: '#FFFFFF',
-              border: 'none',
-              fontSize: '0.78rem',
-              fontWeight: 800,
-              cursor: 'pointer'
-            }}
-          >
-            {search ? 'Clear Search' : '+ Add Dish'}
-          </button>
-        </div>
-      ) : (
-        <>
-          {/* Desktop 4-Column Grid */}
-          <div className={viewMode === 'grid' ? 'desktop-dish-grid' : 'desktop-dish-list'}>
-            {filteredDishes.map(dish => {
-              const isAvailable = dish.is_available !== false;
-              const isVeg = dish.type === 'veg';
-              const catObj = safeCategories.find(c => String(c.id) === String(dish.category_id));
-
-              return (
+              borderRadius: '18px',
+              border: '1px solid #E2E8F0',
+              padding: '44px 20px',
+              textAlign: 'center',
+              boxShadow: '0 1px 3px rgba(0,0,0,0.02)'
+            }}>
+              <Package size={34} color="#9333EA" style={{ margin: '0 auto 10px auto' }} />
+              <h3 style={{ fontSize: '1.05rem', fontWeight: 800, color: '#0F172A', margin: '0 0 4px 0' }}>No meal combos created yet</h3>
+              <p style={{ fontSize: '0.78rem', color: '#64748B', margin: '0 0 16px 0' }}>Create value meal bundles (e.g. Burger + Fries + Coke) to increase revenue.</p>
+              <button
+                onClick={onOpenAddCombo}
+                style={{
+                  padding: '9px 18px',
+                  borderRadius: '10px',
+                  background: '#0A2315',
+                  color: '#FFFFFF',
+                  border: 'none',
+                  fontSize: '0.80rem',
+                  fontWeight: 800,
+                  cursor: 'pointer'
+                }}
+              >
+                + Add First Combo
+              </button>
+            </div>
+          ) : (
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: '14px' }}>
+              {safeCombos.map(combo => (
                 <div
-                  key={dish.id}
-                  className="dish-card-reference"
+                  key={combo.id}
                   style={{
                     background: '#FFFFFF',
                     borderRadius: '16px',
                     border: '1px solid #E2E8F0',
-                    padding: '14px',
+                    padding: '16px',
                     boxShadow: '0 1px 3px rgba(0,0,0,0.02)',
                     display: 'flex',
                     flexDirection: 'column',
                     justifyContent: 'space-between',
-                    boxSizing: 'border-box',
-                    position: 'relative',
-                    opacity: isAvailable ? 1 : 0.75
+                    gap: '12px'
                   }}
                 >
                   <div>
-                    {/* Top Container: Image + Bestseller Badge + 3-Dot Overflow */}
-                    <div style={{
-                      position: 'relative',
-                      width: '100%',
-                      height: '140px',
-                      borderRadius: '12px',
-                      background: '#F8FAFC',
-                      overflow: 'hidden',
-                      marginBottom: '10px',
-                      border: '1px solid #F1F5F9'
-                    }}>
-                      <img
-                        src={getDishImageUrl(dish.image || dish.image_url)}
-                        alt={dish.name}
-                        style={{ width: '100%', height: '100%', objectFit: 'cover' }}
-                        onError={(e) => { e.currentTarget.src = '/images/default-dish.webp'; }}
-                      />
-
-                      {/* Bestseller Badge (Top-Left) or Veg Stamp */}
-                      {dish.must_try ? (
-                        <span style={{
-                          position: 'absolute',
-                          top: '8px',
-                          left: '8px',
-                          background: '#062B1C',
-                          color: '#FFFFFF',
-                          fontSize: '0.62rem',
-                          fontWeight: 800,
-                          padding: '3px 8px',
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '8px' }}>
+                      <span style={{
+                        fontSize: '0.64rem',
+                        fontWeight: 800,
+                        background: '#FAF5FF',
+                        color: '#9333EA',
+                        border: '1px solid #F3E8FF',
+                        padding: '2px 8px',
+                        borderRadius: '6px'
+                      }}>
+                        ✨ VALUE COMBO
+                      </span>
+                      <button
+                        onClick={() => onToggleComboAvailability && onToggleComboAvailability(combo.id, !combo.is_available)}
+                        style={{
+                          background: combo.is_available !== false ? '#DCFCE7' : '#FEE2E2',
+                          color: combo.is_available !== false ? '#15803D' : '#DC2626',
+                          border: `1px solid ${combo.is_available !== false ? '#BBF7D0' : '#FECACA'}`,
+                          padding: '2px 7px',
                           borderRadius: '6px',
-                          boxShadow: '0 2px 4px rgba(0,0,0,0.2)'
+                          fontSize: '0.66rem',
+                          fontWeight: 800,
+                          cursor: 'pointer'
+                        }}
+                      >
+                        {combo.is_available !== false ? '✓ In Stock' : '✕ Sold Out'}
+                      </button>
+                    </div>
+
+                    <h4 style={{ fontSize: '0.96rem', fontWeight: 800, color: '#0F172A', margin: '0 0 4px 0' }}>
+                      {combo.name}
+                    </h4>
+
+                    <div style={{ fontSize: '1.15rem', fontWeight: 900, color: '#0F172A', marginTop: '6px' }}>
+                      {currencySymbol}{combo.price}
+                    </div>
+                  </div>
+
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: '6px', borderTop: '1px solid #F8FAFC', paddingTop: '10px' }}>
+                    <button
+                      onClick={() => onOpenEditCombo && onOpenEditCombo(combo)}
+                      style={{
+                        padding: '6px 12px',
+                        borderRadius: '8px',
+                        border: '1px solid #E2E8F0',
+                        background: '#F8FAFC',
+                        color: '#0F172A',
+                        fontSize: '0.74rem',
+                        fontWeight: 700,
+                        cursor: 'pointer',
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '4px'
+                      }}
+                    >
+                      <Edit3 size={12} />
+                      <span>Edit Combo</span>
+                    </button>
+                    <button
+                      onClick={() => setDeleteConfirmCombo(combo)}
+                      style={{
+                        padding: '6px 8px',
+                        borderRadius: '8px',
+                        border: '1px solid #FEE2E2',
+                        background: '#FFF5F5',
+                        color: '#DC2626',
+                        cursor: 'pointer'
+                      }}
+                      title="Delete Combo"
+                    >
+                      <Trash2 size={13} />
+                    </button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* ========================================================
+          6. DISH CATALOG (WHEN DISHES TAB IS SELECTED)
+         ======================================================== */}
+      {activeSubTab === 'dishes' && (
+        <>
+          {/* Header & Controls */}
+          <div style={{
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            padding: '2px 2px 0 2px'
+          }}>
+            <h3 style={{ fontSize: '1.05rem', fontWeight: 900, color: '#0F172A', margin: 0 }}>
+              {activeCategoryObj ? `${activeCategoryObj.name} (${filteredDishes.length})` : `All Dishes (${filteredDishes.length})`}
+            </h3>
+
+            {/* View Toggle + Sort Dropdown */}
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+              {/* Grid / List switch (Desktop) */}
+              <div style={{ display: 'flex', background: '#FFFFFF', border: '1px solid #E2E8F0', borderRadius: '8px', padding: '2px' }}>
+                <button
+                  onClick={() => setViewMode('grid')}
+                  style={{
+                    padding: '4px 7px',
+                    border: 'none',
+                    borderRadius: '6px',
+                    background: viewMode === 'grid' ? '#F1F5F9' : 'transparent',
+                    color: viewMode === 'grid' ? '#0F172A' : '#94A3B8',
+                    cursor: 'pointer'
+                  }}
+                  title="Grid View"
+                >
+                  <Grid size={14} />
+                </button>
+                <button
+                  onClick={() => setViewMode('list')}
+                  style={{
+                    padding: '4px 7px',
+                    border: 'none',
+                    borderRadius: '6px',
+                    background: viewMode === 'list' ? '#F1F5F9' : 'transparent',
+                    color: viewMode === 'list' ? '#0F172A' : '#94A3B8',
+                    cursor: 'pointer'
+                  }}
+                  title="List View"
+                >
+                  <List size={14} />
+                </button>
+              </div>
+
+              {/* Sort Dropdown */}
+              <select
+                value={sortBy}
+                onChange={(e) => setSortBy(e.target.value)}
+                style={{
+                  padding: '6px 10px',
+                  borderRadius: '8px',
+                  border: '1px solid #E2E8F0',
+                  background: '#FFFFFF',
+                  color: '#0F172A',
+                  fontSize: '0.74rem',
+                  fontWeight: 700,
+                  cursor: 'pointer',
+                  outline: 'none'
+                }}
+              >
+                <option value="recent">Sort by: Recently Updated</option>
+                <option value="name_asc">Sort by: Name (A-Z)</option>
+                <option value="price_asc">Sort by: Price (Low to High)</option>
+                <option value="price_desc">Sort by: Price (High to Low)</option>
+              </select>
+            </div>
+          </div>
+
+          {/* Desktop 4-Column Grid */}
+          {filteredDishes.length === 0 ? (
+            <div style={{
+              background: '#FFFFFF',
+              borderRadius: '18px',
+              border: '1px solid #E2E8F0',
+              padding: '44px 20px',
+              textAlign: 'center',
+              boxShadow: '0 1px 3px rgba(0,0,0,0.02)'
+            }}>
+              <Utensils size={32} color="#94A3B8" style={{ margin: '0 auto 10px auto' }} />
+              <h3 style={{ fontSize: '1rem', fontWeight: 800, color: '#0F172A', margin: '0 0 4px 0' }}>
+                {search ? 'No dishes match your search' : 'No dishes in this category'}
+              </h3>
+              <p style={{ fontSize: '0.76rem', color: '#64748B', margin: '0 0 16px 0' }}>
+                {search ? 'Try clearing search keyword or filters.' : 'Add your first dish to this category.'}
+              </p>
+              <button
+                onClick={search ? () => { setSearch(''); setSelectedCatFilter('all'); setDietFilter('all'); } : onOpenAddDish}
+                style={{
+                  padding: '9px 18px',
+                  borderRadius: '10px',
+                  background: '#0A2315',
+                  color: '#FFFFFF',
+                  border: 'none',
+                  fontSize: '0.78rem',
+                  fontWeight: 800,
+                  cursor: 'pointer'
+                }}
+              >
+                {search ? 'Clear Search' : '+ Add Dish'}
+              </button>
+            </div>
+          ) : (
+            <>
+              {/* Desktop Grid View */}
+              <div className={viewMode === 'grid' ? 'desktop-dish-grid' : 'desktop-dish-list'}>
+                {filteredDishes.map(dish => {
+                  const isAvailable = dish.is_available !== false;
+                  const isVeg = dish.type === 'veg';
+                  const catObj = safeCategories.find(c => String(c.id) === String(dish.category_id));
+
+                  return (
+                    <div
+                      key={dish.id}
+                      className="dish-card-reference"
+                      style={{
+                        background: '#FFFFFF',
+                        borderRadius: '16px',
+                        border: '1px solid #E2E8F0',
+                        padding: '14px',
+                        boxShadow: '0 1px 3px rgba(0,0,0,0.02)',
+                        display: 'flex',
+                        flexDirection: 'column',
+                        justifyContent: 'space-between',
+                        boxSizing: 'border-box',
+                        position: 'relative',
+                        opacity: isAvailable ? 1 : 0.75
+                      }}
+                    >
+                      <div>
+                        {/* Top Container: Image + Bestseller Badge + 3-Dot Overflow */}
+                        <div style={{
+                          position: 'relative',
+                          width: '100%',
+                          height: '140px',
+                          borderRadius: '12px',
+                          background: '#F8FAFC',
+                          overflow: 'hidden',
+                          marginBottom: '10px',
+                          border: '1px solid #F1F5F9'
                         }}>
-                          Bestseller
+                          <img
+                            src={getDishImageUrl(dish.image || dish.image_url)}
+                            alt={dish.name}
+                            style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                            onError={(e) => { e.currentTarget.src = '/images/default-dish.webp'; }}
+                          />
+
+                          {/* Bestseller Badge (Top-Left) or Veg Stamp */}
+                          {dish.must_try ? (
+                            <span style={{
+                              position: 'absolute',
+                              top: '8px',
+                              left: '8px',
+                              background: '#062B1C',
+                              color: '#FFFFFF',
+                              fontSize: '0.62rem',
+                              fontWeight: 800,
+                              padding: '3px 8px',
+                              borderRadius: '6px',
+                              boxShadow: '0 2px 4px rgba(0,0,0,0.2)'
+                            }}>
+                              Bestseller
+                            </span>
+                          ) : (
+                            <span style={{
+                              position: 'absolute',
+                              top: '8px',
+                              left: '8px',
+                              width: '14px',
+                              height: '14px',
+                              background: '#FFFFFF',
+                              border: `1.5px solid ${isVeg ? '#16A34A' : '#DC2626'}`,
+                              borderRadius: '3px',
+                              display: 'flex',
+                              alignItems: 'center',
+                              justifyContent: 'center',
+                              boxShadow: '0 1px 3px rgba(0,0,0,0.15)'
+                            }}>
+                              <span style={{
+                                width: '6px',
+                                height: '6px',
+                                borderRadius: '50%',
+                                backgroundColor: isVeg ? '#16A34A' : '#DC2626'
+                              }} />
+                            </span>
+                          )}
+
+                          {/* 3-Dot Menu Button (Top-Right) */}
+                          <div style={{ position: 'absolute', top: '6px', right: '6px' }}>
+                            <button
+                              onClick={() => setOpenDishMenuId(openDishMenuId === dish.id ? null : dish.id)}
+                              style={{
+                                width: '26px',
+                                height: '26px',
+                                borderRadius: '50%',
+                                background: 'rgba(255, 255, 255, 0.9)',
+                                border: '1px solid #E2E8F0',
+                                color: '#0F172A',
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                                cursor: 'pointer',
+                                padding: 0
+                              }}
+                            >
+                              <MoreVertical size={14} />
+                            </button>
+
+                            {/* Floating Context Menu */}
+                            {openDishMenuId === dish.id && (
+                              <div style={{
+                                position: 'absolute',
+                                top: '30px',
+                                right: 0,
+                                background: '#FFFFFF',
+                                borderRadius: '10px',
+                                border: '1px solid #E2E8F0',
+                                boxShadow: '0 6px 20px rgba(0,0,0,0.15)',
+                                padding: '4px',
+                                zIndex: 100,
+                                minWidth: '130px'
+                              }}>
+                                <button
+                                  onClick={() => { onOpenEditDish(dish); setOpenDishMenuId(null); }}
+                                  style={{
+                                    width: '100%',
+                                    textAlign: 'left',
+                                    padding: '6px 10px',
+                                    borderRadius: '6px',
+                                    border: 'none',
+                                    background: 'transparent',
+                                    color: '#0F172A',
+                                    fontSize: '0.74rem',
+                                    fontWeight: 700,
+                                    cursor: 'pointer',
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    gap: '6px'
+                                  }}
+                                >
+                                  <Edit3 size={12} />
+                                  <span>Edit Details</span>
+                                </button>
+                                <button
+                                  onClick={() => {
+                                    setQuickPriceDish(dish);
+                                    setQuickPriceVal({ price: dish.price || '', price_half: dish.price_half || '' });
+                                    setOpenDishMenuId(null);
+                                  }}
+                                  style={{
+                                    width: '100%',
+                                    textAlign: 'left',
+                                    padding: '6px 10px',
+                                    borderRadius: '6px',
+                                    border: 'none',
+                                    background: 'transparent',
+                                    color: '#0284C7',
+                                    fontSize: '0.74rem',
+                                    fontWeight: 700,
+                                    cursor: 'pointer',
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    gap: '6px'
+                                  }}
+                                >
+                                  <DollarSign size={12} />
+                                  <span>Quick Price</span>
+                                </button>
+                                <button
+                                  onClick={() => {
+                                    onToggleAvailability(dish.id, !isAvailable);
+                                    setOpenDishMenuId(null);
+                                  }}
+                                  style={{
+                                    width: '100%',
+                                    textAlign: 'left',
+                                    padding: '6px 10px',
+                                    borderRadius: '6px',
+                                    border: 'none',
+                                    background: 'transparent',
+                                    color: isAvailable ? '#DC2626' : '#16A34A',
+                                    fontSize: '0.74rem',
+                                    fontWeight: 700,
+                                    cursor: 'pointer',
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    gap: '6px'
+                                  }}
+                                >
+                                  <CheckCircle2 size={12} />
+                                  <span>{isAvailable ? 'Mark Sold Out' : 'Mark In Stock'}</span>
+                                </button>
+                                <button
+                                  onClick={() => { setDeleteConfirmDish(dish); setOpenDishMenuId(null); }}
+                                  style={{
+                                    width: '100%',
+                                    textAlign: 'left',
+                                    padding: '6px 10px',
+                                    borderRadius: '6px',
+                                    border: 'none',
+                                    background: 'transparent',
+                                    color: '#DC2626',
+                                    fontSize: '0.74rem',
+                                    fontWeight: 700,
+                                    cursor: 'pointer',
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    gap: '6px'
+                                  }}
+                                >
+                                  <Trash2 size={12} />
+                                  <span>Delete</span>
+                                </button>
+                              </div>
+                            )}
+                          </div>
+                        </div>
+
+                        {/* Dish Name */}
+                        <h4 style={{
+                          fontSize: '0.94rem',
+                          fontWeight: 800,
+                          color: '#0F172A',
+                          margin: '0 0 2px 0',
+                          whiteSpace: 'nowrap',
+                          overflow: 'hidden',
+                          textOverflow: 'ellipsis'
+                        }} title={dish.name}>
+                          {dish.name}
+                        </h4>
+
+                        {/* Category / Cuisine */}
+                        <span style={{
+                          fontSize: '0.72rem',
+                          color: '#64748B',
+                          display: 'block',
+                          marginBottom: '8px',
+                          whiteSpace: 'nowrap',
+                          overflow: 'hidden',
+                          textOverflow: 'ellipsis'
+                        }}>
+                          {catObj?.name || 'Main Course'}
                         </span>
-                      ) : (
+                      </div>
+
+                      {/* Bottom Row: Price & In-Stock Status Pill */}
+                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: '6px', paddingTop: '6px', borderTop: '1px solid #F8FAFC' }}>
+                        <div style={{ display: 'flex', alignItems: 'baseline', gap: '4px' }}>
+                          <span style={{ fontSize: '1rem', fontWeight: 900, color: '#0F172A' }}>
+                            {currencySymbol}{dish.price || 0}
+                          </span>
+                          {dish.price_half && (
+                            <span style={{ fontSize: '0.68rem', color: '#64748B' }}>
+                              +H:{currencySymbol}{dish.price_half}
+                            </span>
+                          )}
+                        </div>
+
+                        <button
+                          onClick={() => onToggleAvailability && onToggleAvailability(dish.id, !isAvailable)}
+                          style={{
+                            background: isAvailable ? '#DCFCE7' : '#FEE2E2',
+                            color: isAvailable ? '#15803D' : '#DC2626',
+                            border: `1px solid ${isAvailable ? '#BBF7D0' : '#FECACA'}`,
+                            padding: '3px 8px',
+                            borderRadius: '6px',
+                            fontSize: '0.68rem',
+                            fontWeight: 800,
+                            cursor: 'pointer',
+                            display: 'inline-flex',
+                            alignItems: 'center',
+                            gap: '3px'
+                          }}
+                        >
+                          <span>{isAvailable ? '✓ In Stock' : '✕ Sold Out'}</span>
+                        </button>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+
+              {/* Mobile Compact Single-Column Dish List */}
+              <div className="mobile-only-dish-list" style={{
+                display: 'flex',
+                flexDirection: 'column',
+                gap: '10px'
+              }}>
+                {filteredDishes.map(dish => {
+                  const isAvailable = dish.is_available !== false;
+                  const isVeg = dish.type === 'veg';
+                  const catObj = safeCategories.find(c => String(c.id) === String(dish.category_id));
+
+                  return (
+                    <div
+                      key={dish.id}
+                      className="mobile-dish-row"
+                      style={{
+                        background: '#FFFFFF',
+                        borderRadius: '16px',
+                        border: '1px solid #E2E8F0',
+                        padding: '12px 14px',
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '12px',
+                        boxShadow: '0 1px 3px rgba(0,0,0,0.02)',
+                        opacity: isAvailable ? 1 : 0.75
+                      }}
+                    >
+                      {/* Left: 70px Image */}
+                      <div style={{
+                        width: '68px',
+                        height: '68px',
+                        borderRadius: '12px',
+                        background: '#F8FAFC',
+                        border: '1px solid #E2E8F0',
+                        overflow: 'hidden',
+                        flexShrink: 0,
+                        position: 'relative'
+                      }}>
+                        <img
+                          src={getDishImageUrl(dish.image || dish.image_url)}
+                          alt={dish.name}
+                          style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                          onError={(e) => { e.currentTarget.src = '/images/default-dish.webp'; }}
+                        />
                         <span style={{
                           position: 'absolute',
-                          top: '8px',
-                          left: '8px',
-                          width: '14px',
-                          height: '14px',
+                          top: '4px',
+                          left: '4px',
+                          width: '12px',
+                          height: '12px',
                           background: '#FFFFFF',
                           border: `1.5px solid ${isVeg ? '#16A34A' : '#DC2626'}`,
                           borderRadius: '3px',
                           display: 'flex',
                           alignItems: 'center',
-                          justifyContent: 'center',
-                          boxShadow: '0 1px 3px rgba(0,0,0,0.15)'
+                          justifyContent: 'center'
                         }}>
-                          <span style={{
-                            width: '6px',
-                            height: '6px',
-                            borderRadius: '50%',
-                            backgroundColor: isVeg ? '#16A34A' : '#DC2626'
-                          }} />
+                          <span style={{ width: '5px', height: '5px', borderRadius: '50%', backgroundColor: isVeg ? '#16A34A' : '#DC2626' }} />
                         </span>
-                      )}
+                      </div>
 
-                      {/* 3-Dot Menu Button (Top-Right) */}
-                      <div style={{ position: 'absolute', top: '6px', right: '6px' }}>
+                      {/* Middle Details */}
+                      <div style={{ flex: 1, minWidth: 0 }}>
+                        <h4 style={{
+                          fontSize: '0.90rem',
+                          fontWeight: 800,
+                          color: '#0F172A',
+                          margin: 0,
+                          whiteSpace: 'nowrap',
+                          overflow: 'hidden',
+                          textOverflow: 'ellipsis'
+                        }}>
+                          {dish.name}
+                        </h4>
+
+                        <span style={{ fontSize: '0.68rem', color: '#64748B', display: 'block', marginTop: '2px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                          {catObj?.name || 'North Indian'}
+                        </span>
+
+                        <div style={{ fontSize: '0.96rem', fontWeight: 900, color: '#0F172A', marginTop: '3px' }}>
+                          {currencySymbol}{dish.price || 0}
+                        </div>
+                      </div>
+
+                      {/* Right Actions: Edit + Status */}
+                      <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: '6px', flexShrink: 0 }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                          <button
+                            onClick={() => onOpenEditDish(dish)}
+                            style={{
+                              padding: '4px 6px',
+                              borderRadius: '6px',
+                              border: '1px solid #E2E8F0',
+                              background: '#F8FAFC',
+                              color: '#0F172A',
+                              cursor: 'pointer'
+                            }}
+                          >
+                            <Edit3 size={13} />
+                          </button>
+
+                          <button
+                            onClick={() => setDeleteConfirmDish(dish)}
+                            style={{
+                              padding: '4px 6px',
+                              borderRadius: '6px',
+                              border: '1px solid #FEE2E2',
+                              background: '#FFF5F5',
+                              color: '#DC2626',
+                              cursor: 'pointer'
+                            }}
+                          >
+                            <Trash2 size={13} />
+                          </button>
+                        </div>
+
                         <button
-                          onClick={() => setOpenDishMenuId(openDishMenuId === dish.id ? null : dish.id)}
+                          onClick={() => onToggleAvailability && onToggleAvailability(dish.id, !isAvailable)}
                           style={{
-                            width: '26px',
-                            height: '26px',
-                            borderRadius: '50%',
-                            background: 'rgba(255, 255, 255, 0.9)',
-                            border: '1px solid #E2E8F0',
-                            color: '#0F172A',
-                            display: 'flex',
-                            alignItems: 'center',
-                            justifyContent: 'center',
-                            cursor: 'pointer',
-                            padding: 0
+                            background: isAvailable ? '#DCFCE7' : '#FEE2E2',
+                            color: isAvailable ? '#15803D' : '#DC2626',
+                            border: `1px solid ${isAvailable ? '#BBF7D0' : '#FECACA'}`,
+                            padding: '3px 8px',
+                            borderRadius: '6px',
+                            fontSize: '0.66rem',
+                            fontWeight: 800,
+                            cursor: 'pointer'
                           }}
                         >
-                          <MoreVertical size={14} />
+                          {isAvailable ? '✓ In Stock' : '✕ Sold Out'}
                         </button>
-
-                        {/* Floating Context Menu */}
-                        {openDishMenuId === dish.id && (
-                          <div style={{
-                            position: 'absolute',
-                            top: '30px',
-                            right: 0,
-                            background: '#FFFFFF',
-                            borderRadius: '10px',
-                            border: '1px solid #E2E8F0',
-                            boxShadow: '0 6px 20px rgba(0,0,0,0.15)',
-                            padding: '4px',
-                            zIndex: 100,
-                            minWidth: '130px'
-                          }}>
-                            <button
-                              onClick={() => { onOpenEditDish(dish); setOpenDishMenuId(null); }}
-                              style={{
-                                width: '100%',
-                                textAlign: 'left',
-                                padding: '6px 10px',
-                                borderRadius: '6px',
-                                border: 'none',
-                                background: 'transparent',
-                                color: '#0F172A',
-                                fontSize: '0.74rem',
-                                fontWeight: 700,
-                                cursor: 'pointer',
-                                display: 'flex',
-                                alignItems: 'center',
-                                gap: '6px'
-                              }}
-                            >
-                              <Edit3 size={12} />
-                              <span>Edit Details</span>
-                            </button>
-                            <button
-                              onClick={() => {
-                                setQuickPriceDish(dish);
-                                setQuickPriceVal({ price: dish.price || '', price_half: dish.price_half || '' });
-                                setOpenDishMenuId(null);
-                              }}
-                              style={{
-                                width: '100%',
-                                textAlign: 'left',
-                                padding: '6px 10px',
-                                borderRadius: '6px',
-                                border: 'none',
-                                background: 'transparent',
-                                color: '#0284C7',
-                                fontSize: '0.74rem',
-                                fontWeight: 700,
-                                cursor: 'pointer',
-                                display: 'flex',
-                                alignItems: 'center',
-                                gap: '6px'
-                              }}
-                            >
-                              <DollarSign size={12} />
-                              <span>Quick Price</span>
-                            </button>
-                            <button
-                              onClick={() => {
-                                onToggleAvailability(dish.id, !isAvailable);
-                                setOpenDishMenuId(null);
-                              }}
-                              style={{
-                                width: '100%',
-                                textAlign: 'left',
-                                padding: '6px 10px',
-                                borderRadius: '6px',
-                                border: 'none',
-                                background: 'transparent',
-                                color: isAvailable ? '#DC2626' : '#16A34A',
-                                fontSize: '0.74rem',
-                                fontWeight: 700,
-                                cursor: 'pointer',
-                                display: 'flex',
-                                alignItems: 'center',
-                                gap: '6px'
-                              }}
-                            >
-                              <CheckCircle2 size={12} />
-                              <span>{isAvailable ? 'Mark Sold Out' : 'Mark In Stock'}</span>
-                            </button>
-                            <button
-                              onClick={() => { setDeleteConfirmDish(dish); setOpenDishMenuId(null); }}
-                              style={{
-                                width: '100%',
-                                textAlign: 'left',
-                                padding: '6px 10px',
-                                borderRadius: '6px',
-                                border: 'none',
-                                background: 'transparent',
-                                color: '#DC2626',
-                                fontSize: '0.74rem',
-                                fontWeight: 700,
-                                cursor: 'pointer',
-                                display: 'flex',
-                                alignItems: 'center',
-                                gap: '6px'
-                              }}
-                            >
-                              <Trash2 size={12} />
-                              <span>Delete</span>
-                            </button>
-                          </div>
-                        )}
                       </div>
                     </div>
-
-                    {/* Dish Name */}
-                    <h4 style={{
-                      fontSize: '0.94rem',
-                      fontWeight: 800,
-                      color: '#0F172A',
-                      margin: '0 0 2px 0',
-                      whiteSpace: 'nowrap',
-                      overflow: 'hidden',
-                      textOverflow: 'ellipsis'
-                    }} title={dish.name}>
-                      {dish.name}
-                    </h4>
-
-                    {/* Category / Cuisine */}
-                    <span style={{
-                      fontSize: '0.72rem',
-                      color: '#64748B',
-                      display: 'block',
-                      marginBottom: '8px',
-                      whiteSpace: 'nowrap',
-                      overflow: 'hidden',
-                      textOverflow: 'ellipsis'
-                    }}>
-                      {catObj?.name || 'Main Course'}
-                    </span>
-                  </div>
-
-                  {/* Bottom Row: Price & In-Stock Status Pill */}
-                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: '6px', paddingTop: '6px', borderTop: '1px solid #F8FAFC' }}>
-                    <div style={{ display: 'flex', alignItems: 'baseline', gap: '4px' }}>
-                      <span style={{ fontSize: '1rem', fontWeight: 900, color: '#0F172A' }}>
-                        {currencySymbol}{dish.price || 0}
-                      </span>
-                      {dish.price_half && (
-                        <span style={{ fontSize: '0.68rem', color: '#64748B' }}>
-                          +H:{currencySymbol}{dish.price_half}
-                        </span>
-                      )}
-                    </div>
-
-                    <button
-                      onClick={() => onToggleAvailability && onToggleAvailability(dish.id, !isAvailable)}
-                      style={{
-                        background: isAvailable ? '#DCFCE7' : '#FEE2E2',
-                        color: isAvailable ? '#15803D' : '#DC2626',
-                        border: `1px solid ${isAvailable ? '#BBF7D0' : '#FECACA'}`,
-                        padding: '3px 8px',
-                        borderRadius: '6px',
-                        fontSize: '0.68rem',
-                        fontWeight: 800,
-                        cursor: 'pointer',
-                        display: 'inline-flex',
-                        alignItems: 'center',
-                        gap: '3px'
-                      }}
-                    >
-                      <span>{isAvailable ? '✓ In Stock' : '✕ Sold Out'}</span>
-                    </button>
-                  </div>
-                </div>
-              );
-            })}
-          </div>
-
-          {/* ========================================================
-              MOBILE COMPACT SINGLE-COLUMN DISH LIST
-             ======================================================== */}
-          <div className="mobile-only-dish-list" style={{
-            display: 'flex',
-            flexDirection: 'column',
-            gap: '10px'
-          }}>
-            {filteredDishes.map(dish => {
-              const isAvailable = dish.is_available !== false;
-              const isVeg = dish.type === 'veg';
-              const catObj = safeCategories.find(c => String(c.id) === String(dish.category_id));
-
-              return (
-                <div
-                  key={dish.id}
-                  className="mobile-dish-row"
-                  style={{
-                    background: '#FFFFFF',
-                    borderRadius: '16px',
-                    border: '1px solid #E2E8F0',
-                    padding: '12px 14px',
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: '12px',
-                    boxShadow: '0 1px 3px rgba(0,0,0,0.02)',
-                    opacity: isAvailable ? 1 : 0.75
-                  }}
-                >
-                  {/* Left: 70px Image */}
-                  <div style={{
-                    width: '68px',
-                    height: '68px',
-                    borderRadius: '12px',
-                    background: '#F8FAFC',
-                    border: '1px solid #E2E8F0',
-                    overflow: 'hidden',
-                    flexShrink: 0,
-                    position: 'relative'
-                  }}>
-                    <img
-                      src={getDishImageUrl(dish.image || dish.image_url)}
-                      alt={dish.name}
-                      style={{ width: '100%', height: '100%', objectFit: 'cover' }}
-                      onError={(e) => { e.currentTarget.src = '/images/default-dish.webp'; }}
-                    />
-                    <span style={{
-                      position: 'absolute',
-                      top: '4px',
-                      left: '4px',
-                      width: '12px',
-                      height: '12px',
-                      background: '#FFFFFF',
-                      border: `1.5px solid ${isVeg ? '#16A34A' : '#DC2626'}`,
-                      borderRadius: '3px',
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center'
-                    }}>
-                      <span style={{ width: '5px', height: '5px', borderRadius: '50%', backgroundColor: isVeg ? '#16A34A' : '#DC2626' }} />
-                    </span>
-                  </div>
-
-                  {/* Middle Details */}
-                  <div style={{ flex: 1, minWidth: 0 }}>
-                    <h4 style={{
-                      fontSize: '0.90rem',
-                      fontWeight: 800,
-                      color: '#0F172A',
-                      margin: 0,
-                      whiteSpace: 'nowrap',
-                      overflow: 'hidden',
-                      textOverflow: 'ellipsis'
-                    }}>
-                      {dish.name}
-                    </h4>
-
-                    <span style={{ fontSize: '0.68rem', color: '#64748B', display: 'block', marginTop: '2px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                      {catObj?.name || 'North Indian'}
-                    </span>
-
-                    <div style={{ fontSize: '0.96rem', fontWeight: 900, color: '#0F172A', marginTop: '3px' }}>
-                      {currencySymbol}{dish.price || 0}
-                    </div>
-                  </div>
-
-                  {/* Right Actions: Edit + Status */}
-                  <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: '6px', flexShrink: 0 }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
-                      <button
-                        onClick={() => onOpenEditDish(dish)}
-                        style={{
-                          padding: '4px 6px',
-                          borderRadius: '6px',
-                          border: '1px solid #E2E8F0',
-                          background: '#F8FAFC',
-                          color: '#0F172A',
-                          cursor: 'pointer'
-                        }}
-                      >
-                        <Edit3 size={13} />
-                      </button>
-
-                      <button
-                        onClick={() => setDeleteConfirmDish(dish)}
-                        style={{
-                          padding: '4px 6px',
-                          borderRadius: '6px',
-                          border: '1px solid #FEE2E2',
-                          background: '#FFF5F5',
-                          color: '#DC2626',
-                          cursor: 'pointer'
-                        }}
-                      >
-                        <Trash2 size={13} />
-                      </button>
-                    </div>
-
-                    <button
-                      onClick={() => onToggleAvailability && onToggleAvailability(dish.id, !isAvailable)}
-                      style={{
-                        background: isAvailable ? '#DCFCE7' : '#FEE2E2',
-                        color: isAvailable ? '#15803D' : '#DC2626',
-                        border: `1px solid ${isAvailable ? '#BBF7D0' : '#FECACA'}`,
-                        padding: '3px 8px',
-                        borderRadius: '6px',
-                        fontSize: '0.66rem',
-                        fontWeight: 800,
-                        cursor: 'pointer'
-                      }}
-                    >
-                      {isAvailable ? '✓ In Stock' : '✕ Sold Out'}
-                    </button>
-                  </div>
-                </div>
-              );
-            })}
-          </div>
+                  );
+                })}
+              </div>
+            </>
+          )}
         </>
       )}
 
       {/* ========================================================
-          7. FLOATING + ADD DISH BUTTON (MOBILE)
+          7. FLOATING + ADD ACTION BUTTON (MOBILE FAB)
          ======================================================== */}
       <button
-        onClick={onOpenAddDish}
+        onClick={activeSubTab === 'combos' ? onOpenAddCombo : activeSubTab === 'categories' ? onOpenAddCategory : onOpenAddDish}
         disabled={dishQuota.isAtLimit}
         style={{
           position: 'fixed',
@@ -1480,7 +1816,9 @@ export default function MenuView({
         }}
       >
         <Plus size={16} color="#D4AF37" strokeWidth={3} />
-        <span>Add Dish</span>
+        <span>
+          {activeSubTab === 'combos' ? 'Add Combo' : activeSubTab === 'categories' ? 'Add Category' : 'Add Dish'}
+        </span>
       </button>
 
       {/* ========================================================
