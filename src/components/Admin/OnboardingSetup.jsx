@@ -91,7 +91,7 @@ export default function OnboardingSetup({ token, restaurantInfo, setRestaurantIn
   // Step 1 Validation
   const validateStep1 = () => {
     const errors = {};
-    if (!formData.name.trim()) errors.name = 'Restaurant Name is required';
+    if (!formData.name.trim()) errors.name = 'Business Name is required';
     if (!formData.phone.trim()) {
       errors.phone = 'Phone number is required';
     } else if (formData.phone.replace(/[^0-9]/g, '').length < 10) {
@@ -438,7 +438,7 @@ export default function OnboardingSetup({ token, restaurantInfo, setRestaurantIn
             <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
               <div>
                 <label style={{ display: 'block', fontSize: '0.78rem', fontWeight: 800, color: '#E2E8F0', marginBottom: '6px' }}>
-                  Restaurant Name *
+                  Business Name *
                 </label>
                 <input
                   type="text"

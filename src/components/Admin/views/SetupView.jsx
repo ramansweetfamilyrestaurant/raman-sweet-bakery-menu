@@ -1260,7 +1260,7 @@ export default function SetupView({
                             </div>
                           )}
                           <div>
-                            <div style={{ fontSize: '0.96rem', fontWeight: 900, color: '#FFFFFF' }}>{settingsForm.name || 'Your Restaurant Name'}</div>
+                            <div style={{ fontSize: '0.96rem', fontWeight: 900, color: '#FFFFFF' }}>{settingsForm.name || 'Your Business Name'}</div>
                             <div style={{ fontSize: '0.74rem', color: 'rgba(255,255,255,0.85)' }}>{settingsForm.tagline || 'Scan QR Code • Digital Luxury Menu'}</div>
                           </div>
                         </div>
