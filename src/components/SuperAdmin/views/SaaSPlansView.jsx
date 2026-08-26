@@ -16,6 +16,20 @@ const THEME_ACCESS_OPTIONS = [
   { value: 'gold', label: '👑 Standard Gold Theme Only' }
 ];
 
+const INITIAL_CREATE_FORM = {
+  key: '',
+  name: '',
+  price: '',
+  original_price: '',
+  badge: '🚀 VIP',
+  description: '',
+  theme_color: 'gold',
+  allowed_themes: 'ALL',
+  whatsapp_enabled: 1,
+  direct_ordering_enabled: 1,
+  google_reviews_enabled: 1
+};
+
 export default function SaaSPlansView({ token, restaurants = [] }) {
   const [plans, setPlans] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -25,19 +39,7 @@ export default function SaaSPlansView({ token, restaurants = [] }) {
 
   // Create Plan Modal State
   const [showCreateModal, setShowCreateModal] = useState(false);
-  const [createForm, setCreateForm] = useState({
-    key: '',
-    name: '',
-    price: 1499,
-    original_price: 2999,
-    badge: '🚀 VIP',
-    description: 'Custom VIP Plan with full features & themes',
-    theme_color: 'gold',
-    allowed_themes: 'ALL',
-    whatsapp_enabled: 1,
-    direct_ordering_enabled: 1,
-    google_reviews_enabled: 1
-  });
+  const [createForm, setCreateForm] = useState(INITIAL_CREATE_FORM);
   const [creating, setCreating] = useState(false);
 
   // Edit Single Plan Modal State
@@ -116,11 +118,18 @@ export default function SaaSPlansView({ token, restaurants = [] }) {
     e.preventDefault();
     if (!createForm.name.trim()) return alert('Plan Name is required!');
 
+    const numericPrice = parseFloat(createForm.price);
+    if (createForm.price === '' || isNaN(numericPrice) || numericPrice < 0) {
+      return alert('Enter a valid monthly price.');
+    }
+
     setCreating(true);
     try {
       const directOrderingVal = toBoolInt(createForm.direct_ordering_enabled);
       const payload = {
         ...createForm,
+        price: numericPrice,
+        original_price: createForm.original_price ? parseFloat(createForm.original_price) : (numericPrice * 2 - 1),
         direct_ordering_enabled: directOrderingVal,
         presence_verification_enabled: directOrderingVal,
         allowed_verification_modes: 'GPS_WITH_STAFF_FALLBACK',
@@ -140,19 +149,7 @@ export default function SaaSPlansView({ token, restaurants = [] }) {
       if (!res.ok) throw new Error(data.error || 'Failed to create plan');
       setMsg(`✨ SaaS Plan '${createForm.name}' created successfully!`);
       setShowCreateModal(false);
-      setCreateForm({
-        key: '',
-        name: '',
-        price: 1499,
-        original_price: 2999,
-        badge: '🚀 VIP',
-        description: 'Custom VIP Plan with full features & themes',
-        theme_color: 'gold',
-        allowed_themes: 'ALL',
-        whatsapp_enabled: 1,
-        direct_ordering_enabled: 1,
-        google_reviews_enabled: 1
-      });
+      setCreateForm(INITIAL_CREATE_FORM);
       setTimeout(() => setMsg(''), 4000);
       await fetchPlans();
     } catch (err) {
@@ -744,9 +741,11 @@ export default function SaaSPlansView({ token, restaurants = [] }) {
                   <input
                     type="number"
                     required
-                    placeholder="1499"
+                    min="0"
+                    step="any"
+                    placeholder="Enter monthly price"
                     value={createForm.price}
-                    onChange={e => setCreateForm({ ...createForm, price: parseFloat(e.target.value) || 0 })}
+                    onChange={e => setCreateForm({ ...createForm, price: e.target.value })}
                     className="sa-input"
                   />
                 </div>
