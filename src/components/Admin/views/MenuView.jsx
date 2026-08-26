@@ -23,9 +23,7 @@ import {
   Copy,
   Store,
   Check,
-  Tag,
-  ToggleLeft,
-  ToggleRight
+  Tag
 } from 'lucide-react';
 import PlanLockedCard from '../components/PlanLockedCard';
 import { resolveImageUrl, getDishImageUrl, getCategoryImageUrl } from '../../../utils/imageHelper';
@@ -119,33 +117,42 @@ export default function MenuView({
       <style>{`
         .no-scrollbar::-webkit-scrollbar { display: none; }
         .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
-        .modern-dish-card {
-          transition: transform 0.12s ease, box-shadow 0.12s ease, border-color 0.12s ease;
+        .ultra-dish-card {
+          transition: all 0.18s cubic-bezier(0.16, 1, 0.3, 1);
         }
-        .modern-dish-card:hover {
-          box-shadow: 0 4px 14px rgba(0,0,0,0.04) !important;
+        .ultra-dish-card:hover {
+          box-shadow: 0 4px 16px rgba(0,0,0,0.04) !important;
           border-color: #CBD5E1 !important;
+        }
+        .ultra-dish-card:active {
+          transform: scale(0.995);
+        }
+        .action-btn-hover {
+          transition: all 0.15s ease;
+        }
+        .action-btn-hover:active {
+          transform: scale(0.92);
         }
       `}</style>
 
       {/* ========================================================
-          1. TOP BRAND HEADER & STOREFRONT PREVIEW
+          1. ULTRA PREMIUM TOP BAR & STOREFRONT PREVIEW
          ======================================================== */}
       <div style={{
         background: '#FFFFFF',
-        borderRadius: '16px',
-        border: '1px solid #E2E8F0',
-        padding: '14px 18px',
+        borderRadius: '18px',
+        border: '1px solid rgba(226, 232, 240, 0.8)',
+        padding: '16px 20px',
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'space-between',
         flexWrap: 'wrap',
-        gap: '10px',
-        boxShadow: '0 1px 3px rgba(0,0,0,0.02)'
+        gap: '12px',
+        boxShadow: '0 2px 8px rgba(0,0,0,0.02)'
       }}>
         <div>
           <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-            <h2 style={{ fontSize: '1.2rem', fontWeight: 900, color: '#0F172A', margin: 0, letterSpacing: '-0.02em' }}>
+            <h2 style={{ fontSize: '1.25rem', fontWeight: 900, color: '#0F172A', margin: 0, letterSpacing: '-0.02em' }}>
               Menu & Catalog
             </h2>
             <span style={{
@@ -154,13 +161,13 @@ export default function MenuView({
               fontSize: '0.68rem',
               fontWeight: 800,
               padding: '2px 8px',
-              borderRadius: '10px',
+              borderRadius: '8px',
               display: 'inline-flex',
               alignItems: 'center',
               gap: '4px'
             }}>
-              <span style={{ width: '5px', height: '5px', borderRadius: '50%', backgroundColor: '#16A34A' }} />
-              {safeDishes.length} Active Dishes
+              <span style={{ width: '6px', height: '6px', borderRadius: '50%', backgroundColor: '#16A34A' }} />
+              {safeDishes.length} Dishes
             </span>
           </div>
           <span style={{ fontSize: '0.72rem', color: '#64748B', display: 'block', marginTop: '2px' }}>
@@ -175,6 +182,7 @@ export default function MenuView({
               if (onReturnToMenu) onReturnToMenu(restaurantInfo.slug);
               else window.open(`/r/${restaurantInfo.slug}`, '_blank');
             }}
+            className="action-btn-hover"
             style={{
               padding: '8px 14px',
               borderRadius: '10px',
@@ -190,13 +198,13 @@ export default function MenuView({
             }}
           >
             <Store size={15} color="#16A34A" />
-            <span>Preview Storefront</span>
+            <span>Customer Menu</span>
           </button>
         )}
       </div>
 
       {/* ========================================================
-          2. LUXURY SEGMENTED SUB-NAVIGATION TABS
+          2. SEGMENTED TABS
          ======================================================== */}
       <div style={{
         display: 'flex',
@@ -218,7 +226,7 @@ export default function MenuView({
             borderRadius: '10px',
             border: 'none',
             background: activeSubTab === 'dishes' ? '#0A2315' : 'transparent',
-            color: activeSubTab === 'dishes' ? '#FFFFFF' : '#475569',
+            color: activeSubTab === 'dishes' ? '#FFFFFF' : '#64748B',
             fontSize: '0.78rem',
             fontWeight: 800,
             cursor: 'pointer',
@@ -242,7 +250,7 @@ export default function MenuView({
             borderRadius: '10px',
             border: 'none',
             background: activeSubTab === 'categories' ? '#0A2315' : 'transparent',
-            color: activeSubTab === 'categories' ? '#FFFFFF' : '#475569',
+            color: activeSubTab === 'categories' ? '#FFFFFF' : '#64748B',
             fontSize: '0.78rem',
             fontWeight: 800,
             cursor: 'pointer',
@@ -266,7 +274,7 @@ export default function MenuView({
             borderRadius: '10px',
             border: 'none',
             background: activeSubTab === 'combos' ? '#0A2315' : 'transparent',
-            color: activeSubTab === 'combos' ? '#FFFFFF' : '#475569',
+            color: activeSubTab === 'combos' ? '#FFFFFF' : '#64748B',
             fontSize: '0.78rem',
             fontWeight: 800,
             cursor: 'pointer',
@@ -290,7 +298,7 @@ export default function MenuView({
             borderRadius: '10px',
             border: 'none',
             background: activeSubTab === 'modifiers' ? '#0A2315' : 'transparent',
-            color: activeSubTab === 'modifiers' ? '#FFFFFF' : '#475569',
+            color: activeSubTab === 'modifiers' ? '#FFFFFF' : '#64748B',
             fontSize: '0.78rem',
             fontWeight: 800,
             cursor: 'pointer',
@@ -309,11 +317,11 @@ export default function MenuView({
       </div>
 
       {/* ========================================================
-          3. DISHES TAB: SEARCH + FILTER CHIPS + HORIZONTAL CATEGORIES
+          3. SEARCH & DYNAMIC FILTER BAR
          ======================================================== */}
       {activeSubTab === 'dishes' && (
         <>
-          {/* Search Box */}
+          {/* Search Field */}
           <div style={{ position: 'relative', width: '100%' }}>
             <Search size={16} color="#94A3B8" style={{ position: 'absolute', left: '14px', top: '50%', transform: 'translateY(-50%)' }} />
             <input
@@ -327,7 +335,7 @@ export default function MenuView({
                 borderRadius: '14px',
                 border: '1px solid #E2E8F0',
                 background: '#FFFFFF',
-                fontSize: '0.82rem',
+                fontSize: '0.84rem',
                 color: '#0F172A',
                 outline: 'none',
                 boxSizing: 'border-box',
@@ -374,7 +382,7 @@ export default function MenuView({
               { id: 'nonveg', label: '🔴 Non-Veg' },
               { id: 'must_try', label: '⭐ Best Sellers' },
               { id: 'special', label: '✨ Chef Special' },
-              { id: 'off', label: '⚠️ Out of Stock' }
+              { id: 'off', label: '⚠️ Sold Out' }
             ].map(chip => (
               <button
                 key={chip.id}
@@ -458,16 +466,16 @@ export default function MenuView({
           </div>
 
           {/* ========================================================
-              MODERN LUXURY DISH CARDS (CLEAN, PROPORTIONED, INTUITIVE)
+              4. ULTRA PREMIUM DISH CARDS
              ======================================================== */}
           {filteredDishes.length === 0 ? (
             <div style={{
               background: '#FFFFFF',
-              borderRadius: '16px',
+              borderRadius: '18px',
               border: '1px solid #E2E8F0',
               padding: '40px 20px',
               textAlign: 'center',
-              boxShadow: '0 1px 2px rgba(0,0,0,0.02)'
+              boxShadow: '0 1px 3px rgba(0,0,0,0.02)'
             }}>
               <Utensils size={32} color="#94A3B8" style={{ margin: '0 auto 10px auto' }} />
               <h3 style={{ fontSize: '1rem', fontWeight: 800, color: '#0F172A', margin: '0 0 4px 0' }}>
@@ -502,24 +510,24 @@ export default function MenuView({
                 return (
                   <div
                     key={dish.id}
-                    className="modern-dish-card"
+                    className="ultra-dish-card"
                     style={{
                       background: '#FFFFFF',
-                      borderRadius: '16px',
-                      border: '1px solid #E2E8F0',
+                      borderRadius: '18px',
+                      border: '1px solid rgba(226, 232, 240, 0.85)',
                       padding: '14px 16px',
-                      boxShadow: '0 1px 3px rgba(0,0,0,0.02)',
+                      boxShadow: '0 2px 6px rgba(0,0,0,0.02)',
                       display: 'flex',
                       alignItems: 'center',
                       gap: '14px',
                       boxSizing: 'border-box',
-                      opacity: isAvailable ? 1 : 0.75
+                      opacity: isAvailable ? 1 : 0.72
                     }}
                   >
-                    {/* Left: Food Image + Indian Veg/NonVeg Stamp */}
+                    {/* Left: HD Food Image + Official Veg/NonVeg Stamp */}
                     <div style={{
-                      width: '68px',
-                      height: '68px',
+                      width: '72px',
+                      height: '72px',
                       borderRadius: '14px',
                       background: '#F8FAFC',
                       border: '1px solid #E2E8F0',
@@ -537,8 +545,8 @@ export default function MenuView({
                       {/* Official Indian Veg / Non-Veg Indicator Stamp */}
                       <span style={{
                         position: 'absolute',
-                        top: '4px',
-                        left: '4px',
+                        top: '5px',
+                        left: '5px',
                         width: '14px',
                         height: '14px',
                         background: '#FFFFFF',
@@ -558,11 +566,11 @@ export default function MenuView({
                       </span>
                     </div>
 
-                    {/* Middle: Dish Name, Category, Price & Tags */}
+                    {/* Middle: Name, Category & Price */}
                     <div style={{ flex: 1, minWidth: 0 }}>
                       <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
                         <h4 style={{
-                          fontSize: '0.90rem',
+                          fontSize: '0.92rem',
                           fontWeight: 800,
                           color: '#0F172A',
                           margin: 0,
@@ -583,23 +591,24 @@ export default function MenuView({
                         {catObj?.name || 'Uncategorized'}
                       </span>
 
-                      <div style={{ display: 'flex', alignItems: 'baseline', gap: '6px', marginTop: '3px' }}>
-                        <strong style={{ fontSize: '0.95rem', fontWeight: 900, color: '#0F172A' }}>
+                      <div style={{ display: 'flex', alignItems: 'baseline', gap: '6px', marginTop: '4px' }}>
+                        <strong style={{ fontSize: '1rem', fontWeight: 900, color: '#0F172A' }}>
                           {currencySymbol}{dish.price || 0}
                         </strong>
                         {dish.price_half && (
-                          <span style={{ fontSize: '0.68rem', color: '#64748B' }}>
+                          <span style={{ fontSize: '0.70rem', color: '#64748B' }}>
                             · Half: {currencySymbol}{dish.price_half}
                           </span>
                         )}
                       </div>
                     </div>
 
-                    {/* Right: Modern Stock Switch + Edit Button */}
+                    {/* Right: Smooth Stock Switch & Action Buttons */}
                     <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: '8px', flexShrink: 0 }}>
                       {/* Live In-Stock Toggle Switch */}
                       <button
                         onClick={() => onToggleAvailability && onToggleAvailability(dish.id, !isAvailable)}
+                        className="action-btn-hover"
                         style={{
                           display: 'inline-flex',
                           alignItems: 'center',
@@ -607,7 +616,7 @@ export default function MenuView({
                           background: isAvailable ? '#DCFCE7' : '#FEE2E2',
                           color: isAvailable ? '#16A34A' : '#DC2626',
                           border: `1px solid ${isAvailable ? '#BBF7D0' : '#FECACA'}`,
-                          padding: '4px 8px',
+                          padding: '5px 9px',
                           borderRadius: '8px',
                           fontSize: '0.68rem',
                           fontWeight: 800,
@@ -625,14 +634,15 @@ export default function MenuView({
                             setQuickPriceDish(dish);
                             setQuickPriceVal({ price: dish.price || '', price_half: dish.price_half || '' });
                           }}
+                          className="action-btn-hover"
                           style={{
-                            padding: '4px 6px',
+                            padding: '5px 7px',
                             borderRadius: '6px',
                             border: '1px solid #E2E8F0',
                             background: '#F8FAFC',
                             color: '#0284C7',
-                            fontSize: '0.68rem',
-                            fontWeight: 700,
+                            fontSize: '0.70rem',
+                            fontWeight: 800,
                             cursor: 'pointer'
                           }}
                           title="Quick Price"
@@ -642,13 +652,14 @@ export default function MenuView({
 
                         <button
                           onClick={() => onOpenEditDish && onOpenEditDish(dish)}
+                          className="action-btn-hover"
                           style={{
-                            padding: '4px 8px',
+                            padding: '5px 9px',
                             borderRadius: '6px',
                             border: '1px solid #E2E8F0',
                             background: '#F8FAFC',
                             color: '#0F172A',
-                            fontSize: '0.68rem',
+                            fontSize: '0.70rem',
                             fontWeight: 700,
                             cursor: 'pointer',
                             display: 'flex',
@@ -662,8 +673,9 @@ export default function MenuView({
 
                         <button
                           onClick={() => setDeleteConfirmDish(dish)}
+                          className="action-btn-hover"
                           style={{
-                            padding: '4px 6px',
+                            padding: '5px 7px',
                             borderRadius: '6px',
                             border: '1px solid #FEE2E2',
                             background: '#FFF5F5',
@@ -685,7 +697,7 @@ export default function MenuView({
       )}
 
       {/* ========================================================
-          4. CATEGORIES TAB CONTENT
+          5. CATEGORIES TAB CONTENT
          ======================================================== */}
       {activeSubTab === 'categories' && (
         <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
@@ -695,6 +707,7 @@ export default function MenuView({
             </span>
             <button
               onClick={onOpenAddCategory}
+              className="action-btn-hover"
               style={{
                 padding: '7px 14px',
                 borderRadius: '8px',
@@ -718,7 +731,7 @@ export default function MenuView({
                   key={cat.id}
                   style={{
                     background: '#FFFFFF',
-                    borderRadius: '14px',
+                    borderRadius: '16px',
                     border: '1px solid #E2E8F0',
                     padding: '14px 16px',
                     display: 'flex',
@@ -732,10 +745,10 @@ export default function MenuView({
                     <span style={{ fontSize: '0.70rem', color: '#64748B' }}>{count} dish{count !== 1 ? 'es' : ''}</span>
                   </div>
                   <div style={{ display: 'flex', gap: '6px' }}>
-                    <button onClick={() => onOpenEditCategory && onOpenEditCategory(cat)} style={{ padding: '6px 12px', borderRadius: '8px', border: '1px solid #E2E8F0', background: '#FFFFFF', color: '#0F172A', fontSize: '0.74rem', fontWeight: 700, cursor: 'pointer' }}>
+                    <button onClick={() => onOpenEditCategory && onOpenEditCategory(cat)} className="action-btn-hover" style={{ padding: '6px 12px', borderRadius: '8px', border: '1px solid #E2E8F0', background: '#FFFFFF', color: '#0F172A', fontSize: '0.74rem', fontWeight: 700, cursor: 'pointer' }}>
                       Edit
                     </button>
-                    <button onClick={() => setDeleteConfirmCategory(cat)} style={{ padding: '6px 8px', borderRadius: '8px', border: '1px solid #FEE2E2', background: '#FFF5F5', color: '#DC2626', cursor: 'pointer' }}>
+                    <button onClick={() => setDeleteConfirmCategory(cat)} className="action-btn-hover" style={{ padding: '6px 8px', borderRadius: '8px', border: '1px solid #FEE2E2', background: '#FFF5F5', color: '#DC2626', cursor: 'pointer' }}>
                       <Trash2 size={13} />
                     </button>
                   </div>
@@ -747,7 +760,7 @@ export default function MenuView({
       )}
 
       {/* ========================================================
-          5. COMBOS TAB CONTENT
+          6. COMBOS TAB CONTENT
          ======================================================== */}
       {activeSubTab === 'combos' && (
         <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
@@ -757,6 +770,7 @@ export default function MenuView({
             </span>
             <button
               onClick={onOpenAddCombo}
+              className="action-btn-hover"
               style={{
                 padding: '7px 14px',
                 borderRadius: '8px',
@@ -778,7 +792,7 @@ export default function MenuView({
                 key={combo.id}
                 style={{
                   background: '#FFFFFF',
-                  borderRadius: '14px',
+                  borderRadius: '16px',
                   border: '1px solid #E2E8F0',
                   padding: '14px 16px',
                   display: 'flex',
@@ -792,10 +806,10 @@ export default function MenuView({
                   <strong style={{ fontSize: '0.92rem', color: '#0F172A' }}>{currencySymbol}{combo.price}</strong>
                 </div>
                 <div style={{ display: 'flex', gap: '6px' }}>
-                  <button onClick={() => onOpenEditCombo && onOpenEditCombo(combo)} style={{ padding: '6px 12px', borderRadius: '8px', border: '1px solid #E2E8F0', background: '#FFFFFF', color: '#0F172A', fontSize: '0.74rem', fontWeight: 700, cursor: 'pointer' }}>
+                  <button onClick={() => onOpenEditCombo && onOpenEditCombo(combo)} className="action-btn-hover" style={{ padding: '6px 12px', borderRadius: '8px', border: '1px solid #E2E8F0', background: '#FFFFFF', color: '#0F172A', fontSize: '0.74rem', fontWeight: 700, cursor: 'pointer' }}>
                     Edit
                   </button>
-                  <button onClick={() => setDeleteConfirmCombo(combo)} style={{ padding: '6px 8px', borderRadius: '8px', border: '1px solid #FEE2E2', background: '#FFF5F5', color: '#DC2626', cursor: 'pointer' }}>
+                  <button onClick={() => setDeleteConfirmCombo(combo)} className="action-btn-hover" style={{ padding: '6px 8px', borderRadius: '8px', border: '1px solid #FEE2E2', background: '#FFF5F5', color: '#DC2626', cursor: 'pointer' }}>
                     <Trash2 size={13} />
                   </button>
                 </div>
@@ -806,7 +820,7 @@ export default function MenuView({
       )}
 
       {/* ========================================================
-          6. MODIFIERS TAB (PLAN-GATED)
+          7. MODIFIERS TAB (PLAN-GATED)
          ======================================================== */}
       {activeSubTab === 'modifiers' && (
         <div>
@@ -831,7 +845,7 @@ export default function MenuView({
       )}
 
       {/* ========================================================
-          7. FLOATING + ADD DISH ACTION BUTTON (FAB)
+          8. FLOATING + ADD DISH ACTION BUTTON (FAB)
          ======================================================== */}
       <button
         onClick={onOpenAddDish}
@@ -860,11 +874,11 @@ export default function MenuView({
       </button>
 
       {/* ========================================================
-          8. QUICK PRICE MODAL
+          9. QUICK PRICE MODAL
          ======================================================== */}
       {quickPriceDish && (
         <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 9999, padding: '16px' }}>
-          <form onSubmit={handleQuickPriceSubmit} style={{ background: '#FFFFFF', borderRadius: '16px', padding: '20px', maxWidth: '340px', width: '100%' }}>
+          <form onSubmit={handleQuickPriceSubmit} style={{ background: '#FFFFFF', borderRadius: '18px', padding: '22px', maxWidth: '340px', width: '100%', boxShadow: '0 10px 30px rgba(0,0,0,0.15)' }}>
             <h3 style={{ fontSize: '1rem', fontWeight: 800, color: '#0F172A', margin: '0 0 12px 0' }}>
               Quick Price: {quickPriceDish.name}
             </h3>
@@ -879,7 +893,7 @@ export default function MenuView({
                   required
                   value={quickPriceVal.price}
                   onChange={(e) => setQuickPriceVal({ ...quickPriceVal, price: e.target.value })}
-                  style={{ width: '100%', padding: '8px 12px', borderRadius: '8px', border: '1px solid #E2E8F0', fontSize: '0.84rem', boxSizing: 'border-box' }}
+                  style={{ width: '100%', padding: '9px 12px', borderRadius: '10px', border: '1px solid #E2E8F0', fontSize: '0.84rem', boxSizing: 'border-box' }}
                 />
               </div>
 
@@ -891,22 +905,22 @@ export default function MenuView({
                   type="number"
                   value={quickPriceVal.price_half}
                   onChange={(e) => setQuickPriceVal({ ...quickPriceVal, price_half: e.target.value })}
-                  style={{ width: '100%', padding: '8px 12px', borderRadius: '8px', border: '1px solid #E2E8F0', fontSize: '0.84rem', boxSizing: 'border-box' }}
+                  style={{ width: '100%', padding: '9px 12px', borderRadius: '10px', border: '1px solid #E2E8F0', fontSize: '0.84rem', boxSizing: 'border-box' }}
                 />
               </div>
             </div>
 
-            <div style={{ display: 'flex', gap: '8px', justifyContent: 'flex-end', marginTop: '16px' }}>
+            <div style={{ display: 'flex', gap: '8px', justifyContent: 'flex-end', marginTop: '18px' }}>
               <button
                 type="button"
                 onClick={() => setQuickPriceDish(null)}
-                style={{ padding: '8px 14px', borderRadius: '8px', border: '1px solid #E2E8F0', background: '#F8FAFC', fontWeight: 700, cursor: 'pointer' }}
+                style={{ padding: '8px 14px', borderRadius: '10px', border: '1px solid #E2E8F0', background: '#F8FAFC', fontWeight: 700, cursor: 'pointer' }}
               >
                 Cancel
               </button>
               <button
                 type="submit"
-                style={{ padding: '8px 16px', borderRadius: '8px', border: 'none', background: '#0A2315', color: '#FFFFFF', fontWeight: 800, cursor: 'pointer' }}
+                style={{ padding: '8px 16px', borderRadius: '10px', border: 'none', background: '#0A2315', color: '#FFFFFF', fontWeight: 800, cursor: 'pointer' }}
               >
                 Save Price
               </button>
@@ -916,17 +930,17 @@ export default function MenuView({
       )}
 
       {/* ========================================================
-          9. DELETE CONFIRMATION MODALS
+          10. DELETE CONFIRMATION MODALS
          ======================================================== */}
       {deleteConfirmDish && (
         <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 9999, padding: '16px' }}>
-          <div style={{ background: '#FFFFFF', borderRadius: '16px', padding: '24px', maxWidth: '340px', width: '100%', textAlign: 'center' }}>
+          <div style={{ background: '#FFFFFF', borderRadius: '18px', padding: '24px', maxWidth: '340px', width: '100%', textAlign: 'center', boxShadow: '0 10px 30px rgba(0,0,0,0.15)' }}>
             <h3 style={{ fontSize: '1.05rem', fontWeight: 800, color: '#0F172A', margin: '0 0 8px 0' }}>Delete Dish</h3>
             <p style={{ fontSize: '0.80rem', color: '#64748B', margin: '0 0 18px 0' }}>
               Permanently delete <strong>'{deleteConfirmDish.name}'</strong>?
             </p>
             <div style={{ display: 'flex', gap: '10px', justifyContent: 'center' }}>
-              <button onClick={() => setDeleteConfirmDish(null)} style={{ padding: '8px 14px', borderRadius: '8px', border: '1px solid #E2E8F0', background: '#F8FAFC', fontWeight: 700, cursor: 'pointer' }}>
+              <button onClick={() => setDeleteConfirmDish(null)} style={{ padding: '8px 14px', borderRadius: '10px', border: '1px solid #E2E8F0', background: '#F8FAFC', fontWeight: 700, cursor: 'pointer' }}>
                 Cancel
               </button>
               <button onClick={() => { onDeleteDish(deleteConfirmDish.id); setDeleteConfirmDish(null); }} style={{ padding: '8px 14px', borderRadius: '8px', border: 'none', background: '#DC2626', color: '#FFFFFF', fontWeight: 800, cursor: 'pointer' }}>
@@ -939,13 +953,13 @@ export default function MenuView({
 
       {deleteConfirmCategory && (
         <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 9999, padding: '16px' }}>
-          <div style={{ background: '#FFFFFF', borderRadius: '16px', padding: '24px', maxWidth: '340px', width: '100%', textAlign: 'center' }}>
+          <div style={{ background: '#FFFFFF', borderRadius: '18px', padding: '24px', maxWidth: '340px', width: '100%', textAlign: 'center', boxShadow: '0 10px 30px rgba(0,0,0,0.15)' }}>
             <h3 style={{ fontSize: '1.05rem', fontWeight: 800, color: '#0F172A', margin: '0 0 8px 0' }}>Delete Category</h3>
             <p style={{ fontSize: '0.80rem', color: '#64748B', margin: '0 0 18px 0' }}>
               Permanently delete category <strong>'{deleteConfirmCategory.name}'</strong>?
             </p>
             <div style={{ display: 'flex', gap: '10px', justifyContent: 'center' }}>
-              <button onClick={() => setDeleteConfirmCategory(null)} style={{ padding: '8px 14px', borderRadius: '8px', border: '1px solid #E2E8F0', background: '#F8FAFC', fontWeight: 700, cursor: 'pointer' }}>
+              <button onClick={() => setDeleteConfirmCategory(null)} style={{ padding: '8px 14px', borderRadius: '10px', border: '1px solid #E2E8F0', background: '#F8FAFC', fontWeight: 700, cursor: 'pointer' }}>
                 Cancel
               </button>
               <button onClick={() => { onDeleteCategory(deleteConfirmCategory.id); setDeleteConfirmCategory(null); }} style={{ padding: '8px 14px', borderRadius: '8px', border: 'none', background: '#DC2626', color: '#FFFFFF', fontWeight: 800, cursor: 'pointer' }}>
