@@ -159,40 +159,39 @@ export default function MenuView({
         .no-scrollbar::-webkit-scrollbar { display: none; }
         .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
         
-        .desktop-dish-grid {
+        .dish-catalog-grid {
           display: grid;
           grid-template-columns: repeat(4, minmax(0, 1fr));
           gap: 16px;
         }
 
-        .desktop-dish-list {
+        .dish-catalog-list {
           display: flex;
           flex-direction: column;
           gap: 10px;
         }
 
         @media (max-width: 1300px) {
-          .desktop-dish-grid {
+          .dish-catalog-grid {
             grid-template-columns: repeat(3, minmax(0, 1fr)) !important;
           }
         }
 
         @media (max-width: 1024px) {
-          .desktop-dish-grid {
+          .dish-catalog-grid {
             grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+            gap: 12px !important;
+          }
+        }
+
+        @media (max-width: 640px) {
+          .dish-catalog-grid {
+            grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+            gap: 10px !important;
           }
         }
 
         @media (max-width: 768px) {
-          .desktop-dish-grid {
-            display: none !important;
-          }
-          .desktop-dish-list {
-            display: none !important;
-          }
-          .mobile-only-dish-list {
-            display: flex !important;
-          }
           .desktop-only-header {
             display: none !important;
           }
@@ -205,9 +204,6 @@ export default function MenuView({
         }
 
         @media (min-width: 769px) {
-          .mobile-only-dish-list {
-            display: none !important;
-          }
           .mobile-only-hero {
             display: none !important;
           }
@@ -1266,12 +1262,14 @@ export default function MenuView({
          ======================================================== */}
       {activeSubTab === 'dishes' && (
         <>
-          {/* Header & Controls */}
+          {/* Header & Controls (View Mode Toggle & Sort) */}
           <div style={{
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'space-between',
-            padding: '2px 2px 0 2px'
+            padding: '2px 2px 0 2px',
+            flexWrap: 'wrap',
+            gap: '8px'
           }}>
             <h3 style={{ fontSize: '1.05rem', fontWeight: 900, color: '#0F172A', margin: 0 }}>
               {activeCategoryObj ? `${activeCategoryObj.name} (${filteredDishes.length})` : `All Dishes (${filteredDishes.length})`}
@@ -1279,35 +1277,49 @@ export default function MenuView({
 
             {/* View Toggle + Sort Dropdown */}
             <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-              {/* Grid / List switch (Desktop) */}
+              {/* Grid / List switch (Interactive on Mobile & Desktop) */}
               <div style={{ display: 'flex', background: '#FFFFFF', border: '1px solid #E2E8F0', borderRadius: '8px', padding: '2px' }}>
                 <button
                   onClick={() => setViewMode('grid')}
                   style={{
-                    padding: '4px 7px',
+                    padding: '5px 8px',
                     border: 'none',
                     borderRadius: '6px',
-                    background: viewMode === 'grid' ? '#F1F5F9' : 'transparent',
-                    color: viewMode === 'grid' ? '#0F172A' : '#94A3B8',
-                    cursor: 'pointer'
+                    background: viewMode === 'grid' ? '#0A2315' : 'transparent',
+                    color: viewMode === 'grid' ? '#FFFFFF' : '#64748B',
+                    cursor: 'pointer',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '4px',
+                    fontSize: '0.72rem',
+                    fontWeight: 700,
+                    transition: 'all 0.15s ease'
                   }}
                   title="Grid View"
                 >
-                  <Grid size={14} />
+                  <Grid size={13} />
+                  <span style={{ display: 'inline' }}>Grid</span>
                 </button>
                 <button
                   onClick={() => setViewMode('list')}
                   style={{
-                    padding: '4px 7px',
+                    padding: '5px 8px',
                     border: 'none',
                     borderRadius: '6px',
-                    background: viewMode === 'list' ? '#F1F5F9' : 'transparent',
-                    color: viewMode === 'list' ? '#0F172A' : '#94A3B8',
-                    cursor: 'pointer'
+                    background: viewMode === 'list' ? '#0A2315' : 'transparent',
+                    color: viewMode === 'list' ? '#FFFFFF' : '#64748B',
+                    cursor: 'pointer',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '4px',
+                    fontSize: '0.72rem',
+                    fontWeight: 700,
+                    transition: 'all 0.15s ease'
                   }}
                   title="List View"
                 >
-                  <List size={14} />
+                  <List size={13} />
+                  <span style={{ display: 'inline' }}>List</span>
                 </button>
               </div>
 
@@ -1335,7 +1347,7 @@ export default function MenuView({
             </div>
           </div>
 
-          {/* Desktop 4-Column Grid */}
+          {/* Empty State */}
           {filteredDishes.length === 0 ? (
             <div style={{
               background: '#FFFFFF',
@@ -1368,324 +1380,45 @@ export default function MenuView({
                 {search ? 'Clear Search' : '+ Add Dish'}
               </button>
             </div>
-          ) : (
-            <>
-              {/* Desktop Grid View */}
-              <div className={viewMode === 'grid' ? 'desktop-dish-grid' : 'desktop-dish-list'}>
-                {filteredDishes.map(dish => {
-                  const isAvailable = dish.is_available !== false;
-                  const isVeg = dish.type === 'veg';
-                  const catObj = safeCategories.find(c => String(c.id) === String(dish.category_id));
+          ) : viewMode === 'grid' ? (
+            /* ========================================================
+               GRID VIEW (DESKTOP: 4/3/2 COLS, MOBILE: 2 COLS)
+               ======================================================== */
+            <div className="dish-catalog-grid">
+              {filteredDishes.map(dish => {
+                const isAvailable = dish.is_available !== false;
+                const isVeg = dish.type === 'veg';
+                const catObj = safeCategories.find(c => String(c.id) === String(dish.category_id));
 
-                  return (
-                    <div
-                      key={dish.id}
-                      className="dish-card-reference"
-                      style={{
-                        background: '#FFFFFF',
-                        borderRadius: '16px',
-                        border: '1px solid #E2E8F0',
-                        padding: '14px',
-                        boxShadow: '0 1px 3px rgba(0,0,0,0.02)',
-                        display: 'flex',
-                        flexDirection: 'column',
-                        justifyContent: 'space-between',
-                        boxSizing: 'border-box',
-                        position: 'relative',
-                        opacity: isAvailable ? 1 : 0.75
-                      }}
-                    >
-                      <div>
-                        {/* Top Container: Image + Bestseller Badge + 3-Dot Overflow */}
-                        <div style={{
-                          position: 'relative',
-                          width: '100%',
-                          height: '140px',
-                          borderRadius: '12px',
-                          background: '#F8FAFC',
-                          overflow: 'hidden',
-                          marginBottom: '10px',
-                          border: '1px solid #F1F5F9'
-                        }}>
-                          <img
-                            src={getDishImageUrl(dish.image || dish.image_url)}
-                            alt={dish.name}
-                            style={{ width: '100%', height: '100%', objectFit: 'cover' }}
-                            onError={(e) => { e.currentTarget.src = '/images/default-dish.webp'; }}
-                          />
-
-                          {/* Bestseller Badge (Top-Left) or Veg Stamp */}
-                          {dish.must_try ? (
-                            <span style={{
-                              position: 'absolute',
-                              top: '8px',
-                              left: '8px',
-                              background: '#062B1C',
-                              color: '#FFFFFF',
-                              fontSize: '0.62rem',
-                              fontWeight: 800,
-                              padding: '3px 8px',
-                              borderRadius: '6px',
-                              boxShadow: '0 2px 4px rgba(0,0,0,0.2)'
-                            }}>
-                              Bestseller
-                            </span>
-                          ) : (
-                            <span style={{
-                              position: 'absolute',
-                              top: '8px',
-                              left: '8px',
-                              width: '14px',
-                              height: '14px',
-                              background: '#FFFFFF',
-                              border: `1.5px solid ${isVeg ? '#16A34A' : '#DC2626'}`,
-                              borderRadius: '3px',
-                              display: 'flex',
-                              alignItems: 'center',
-                              justifyContent: 'center',
-                              boxShadow: '0 1px 3px rgba(0,0,0,0.15)'
-                            }}>
-                              <span style={{
-                                width: '6px',
-                                height: '6px',
-                                borderRadius: '50%',
-                                backgroundColor: isVeg ? '#16A34A' : '#DC2626'
-                              }} />
-                            </span>
-                          )}
-
-                          {/* 3-Dot Menu Button (Top-Right) */}
-                          <div style={{ position: 'absolute', top: '6px', right: '6px' }}>
-                            <button
-                              onClick={() => setOpenDishMenuId(openDishMenuId === dish.id ? null : dish.id)}
-                              style={{
-                                width: '26px',
-                                height: '26px',
-                                borderRadius: '50%',
-                                background: 'rgba(255, 255, 255, 0.9)',
-                                border: '1px solid #E2E8F0',
-                                color: '#0F172A',
-                                display: 'flex',
-                                alignItems: 'center',
-                                justifyContent: 'center',
-                                cursor: 'pointer',
-                                padding: 0
-                              }}
-                            >
-                              <MoreVertical size={14} />
-                            </button>
-
-                            {/* Floating Context Menu */}
-                            {openDishMenuId === dish.id && (
-                              <div style={{
-                                position: 'absolute',
-                                top: '30px',
-                                right: 0,
-                                background: '#FFFFFF',
-                                borderRadius: '10px',
-                                border: '1px solid #E2E8F0',
-                                boxShadow: '0 6px 20px rgba(0,0,0,0.15)',
-                                padding: '4px',
-                                zIndex: 100,
-                                minWidth: '130px'
-                              }}>
-                                <button
-                                  onClick={() => { onOpenEditDish(dish); setOpenDishMenuId(null); }}
-                                  style={{
-                                    width: '100%',
-                                    textAlign: 'left',
-                                    padding: '6px 10px',
-                                    borderRadius: '6px',
-                                    border: 'none',
-                                    background: 'transparent',
-                                    color: '#0F172A',
-                                    fontSize: '0.74rem',
-                                    fontWeight: 700,
-                                    cursor: 'pointer',
-                                    display: 'flex',
-                                    alignItems: 'center',
-                                    gap: '6px'
-                                  }}
-                                >
-                                  <Edit3 size={12} />
-                                  <span>Edit Details</span>
-                                </button>
-                                <button
-                                  onClick={() => {
-                                    setQuickPriceDish(dish);
-                                    setQuickPriceVal({ price: dish.price || '', price_half: dish.price_half || '' });
-                                    setOpenDishMenuId(null);
-                                  }}
-                                  style={{
-                                    width: '100%',
-                                    textAlign: 'left',
-                                    padding: '6px 10px',
-                                    borderRadius: '6px',
-                                    border: 'none',
-                                    background: 'transparent',
-                                    color: '#0284C7',
-                                    fontSize: '0.74rem',
-                                    fontWeight: 700,
-                                    cursor: 'pointer',
-                                    display: 'flex',
-                                    alignItems: 'center',
-                                    gap: '6px'
-                                  }}
-                                >
-                                  <DollarSign size={12} />
-                                  <span>Quick Price</span>
-                                </button>
-                                <button
-                                  onClick={() => {
-                                    onToggleAvailability(dish.id, !isAvailable);
-                                    setOpenDishMenuId(null);
-                                  }}
-                                  style={{
-                                    width: '100%',
-                                    textAlign: 'left',
-                                    padding: '6px 10px',
-                                    borderRadius: '6px',
-                                    border: 'none',
-                                    background: 'transparent',
-                                    color: isAvailable ? '#DC2626' : '#16A34A',
-                                    fontSize: '0.74rem',
-                                    fontWeight: 700,
-                                    cursor: 'pointer',
-                                    display: 'flex',
-                                    alignItems: 'center',
-                                    gap: '6px'
-                                  }}
-                                >
-                                  <CheckCircle2 size={12} />
-                                  <span>{isAvailable ? 'Mark Sold Out' : 'Mark In Stock'}</span>
-                                </button>
-                                <button
-                                  onClick={() => { setDeleteConfirmDish(dish); setOpenDishMenuId(null); }}
-                                  style={{
-                                    width: '100%',
-                                    textAlign: 'left',
-                                    padding: '6px 10px',
-                                    borderRadius: '6px',
-                                    border: 'none',
-                                    background: 'transparent',
-                                    color: '#DC2626',
-                                    fontSize: '0.74rem',
-                                    fontWeight: 700,
-                                    cursor: 'pointer',
-                                    display: 'flex',
-                                    alignItems: 'center',
-                                    gap: '6px'
-                                  }}
-                                >
-                                  <Trash2 size={12} />
-                                  <span>Delete</span>
-                                </button>
-                              </div>
-                            )}
-                          </div>
-                        </div>
-
-                        {/* Dish Name */}
-                        <h4 style={{
-                          fontSize: '0.94rem',
-                          fontWeight: 800,
-                          color: '#0F172A',
-                          margin: '0 0 2px 0',
-                          whiteSpace: 'nowrap',
-                          overflow: 'hidden',
-                          textOverflow: 'ellipsis'
-                        }} title={dish.name}>
-                          {dish.name}
-                        </h4>
-
-                        {/* Category / Cuisine */}
-                        <span style={{
-                          fontSize: '0.72rem',
-                          color: '#64748B',
-                          display: 'block',
-                          marginBottom: '8px',
-                          whiteSpace: 'nowrap',
-                          overflow: 'hidden',
-                          textOverflow: 'ellipsis'
-                        }}>
-                          {catObj?.name || 'Main Course'}
-                        </span>
-                      </div>
-
-                      {/* Bottom Row: Price & In-Stock Status Pill */}
-                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: '6px', paddingTop: '6px', borderTop: '1px solid #F8FAFC' }}>
-                        <div style={{ display: 'flex', alignItems: 'baseline', gap: '4px' }}>
-                          <span style={{ fontSize: '1rem', fontWeight: 900, color: '#0F172A' }}>
-                            {currencySymbol}{dish.price || 0}
-                          </span>
-                          {dish.price_half && (
-                            <span style={{ fontSize: '0.68rem', color: '#64748B' }}>
-                              +H:{currencySymbol}{dish.price_half}
-                            </span>
-                          )}
-                        </div>
-
-                        <button
-                          onClick={() => onToggleAvailability && onToggleAvailability(dish.id, !isAvailable)}
-                          style={{
-                            background: isAvailable ? '#DCFCE7' : '#FEE2E2',
-                            color: isAvailable ? '#15803D' : '#DC2626',
-                            border: `1px solid ${isAvailable ? '#BBF7D0' : '#FECACA'}`,
-                            padding: '3px 8px',
-                            borderRadius: '6px',
-                            fontSize: '0.68rem',
-                            fontWeight: 800,
-                            cursor: 'pointer',
-                            display: 'inline-flex',
-                            alignItems: 'center',
-                            gap: '3px'
-                          }}
-                        >
-                          <span>{isAvailable ? '✓ In Stock' : '✕ Sold Out'}</span>
-                        </button>
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
-
-              {/* Mobile Compact Single-Column Dish List */}
-              <div className="mobile-only-dish-list" style={{
-                display: 'flex',
-                flexDirection: 'column',
-                gap: '10px'
-              }}>
-                {filteredDishes.map(dish => {
-                  const isAvailable = dish.is_available !== false;
-                  const isVeg = dish.type === 'veg';
-                  const catObj = safeCategories.find(c => String(c.id) === String(dish.category_id));
-
-                  return (
-                    <div
-                      key={dish.id}
-                      className="mobile-dish-row"
-                      style={{
-                        background: '#FFFFFF',
-                        borderRadius: '16px',
-                        border: '1px solid #E2E8F0',
-                        padding: '12px 14px',
-                        display: 'flex',
-                        alignItems: 'center',
-                        gap: '12px',
-                        boxShadow: '0 1px 3px rgba(0,0,0,0.02)',
-                        opacity: isAvailable ? 1 : 0.75
-                      }}
-                    >
-                      {/* Left: 70px Image */}
+                return (
+                  <div
+                    key={dish.id}
+                    className="dish-card-reference"
+                    style={{
+                      background: '#FFFFFF',
+                      borderRadius: '16px',
+                      border: '1px solid #E2E8F0',
+                      padding: '12px',
+                      boxShadow: '0 1px 3px rgba(0,0,0,0.02)',
+                      display: 'flex',
+                      flexDirection: 'column',
+                      justifyContent: 'space-between',
+                      boxSizing: 'border-box',
+                      position: 'relative',
+                      opacity: isAvailable ? 1 : 0.75
+                    }}
+                  >
+                    <div>
+                      {/* Top Container: Image + Bestseller Badge + 3-Dot Overflow */}
                       <div style={{
-                        width: '68px',
-                        height: '68px',
+                        position: 'relative',
+                        width: '100%',
+                        height: '130px',
                         borderRadius: '12px',
                         background: '#F8FAFC',
-                        border: '1px solid #E2E8F0',
                         overflow: 'hidden',
-                        flexShrink: 0,
-                        position: 'relative'
+                        marginBottom: '8px',
+                        border: '1px solid #F1F5F9'
                       }}>
                         <img
                           src={getDishImageUrl(dish.image || dish.image_url)}
@@ -1693,25 +1426,304 @@ export default function MenuView({
                           style={{ width: '100%', height: '100%', objectFit: 'cover' }}
                           onError={(e) => { e.currentTarget.src = '/images/default-dish.webp'; }}
                         />
-                        <span style={{
-                          position: 'absolute',
-                          top: '4px',
-                          left: '4px',
-                          width: '12px',
-                          height: '12px',
-                          background: '#FFFFFF',
-                          border: `1.5px solid ${isVeg ? '#16A34A' : '#DC2626'}`,
-                          borderRadius: '3px',
-                          display: 'flex',
-                          alignItems: 'center',
-                          justifyContent: 'center'
-                        }}>
-                          <span style={{ width: '5px', height: '5px', borderRadius: '50%', backgroundColor: isVeg ? '#16A34A' : '#DC2626' }} />
-                        </span>
+
+                        {/* Bestseller Badge (Top-Left) or Veg Stamp */}
+                        {dish.must_try ? (
+                          <span style={{
+                            position: 'absolute',
+                            top: '6px',
+                            left: '6px',
+                            background: '#062B1C',
+                            color: '#FFFFFF',
+                            fontSize: '0.60rem',
+                            fontWeight: 800,
+                            padding: '2px 7px',
+                            borderRadius: '5px',
+                            boxShadow: '0 2px 4px rgba(0,0,0,0.2)'
+                          }}>
+                            Bestseller
+                          </span>
+                        ) : (
+                          <span style={{
+                            position: 'absolute',
+                            top: '6px',
+                            left: '6px',
+                            width: '13px',
+                            height: '13px',
+                            background: '#FFFFFF',
+                            border: `1.5px solid ${isVeg ? '#16A34A' : '#DC2626'}`,
+                            borderRadius: '3px',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            boxShadow: '0 1px 3px rgba(0,0,0,0.15)'
+                          }}>
+                            <span style={{
+                              width: '5px',
+                              height: '5px',
+                              borderRadius: '50%',
+                              backgroundColor: isVeg ? '#16A34A' : '#DC2626'
+                            }} />
+                          </span>
+                        )}
+
+                        {/* 3-Dot Menu Button (Top-Right) */}
+                        <div style={{ position: 'absolute', top: '6px', right: '6px' }}>
+                          <button
+                            onClick={() => setOpenDishMenuId(openDishMenuId === dish.id ? null : dish.id)}
+                            style={{
+                              width: '26px',
+                              height: '26px',
+                              borderRadius: '50%',
+                              background: 'rgba(255, 255, 255, 0.92)',
+                              border: '1px solid #E2E8F0',
+                              color: '#0F172A',
+                              display: 'flex',
+                              alignItems: 'center',
+                              justifyContent: 'center',
+                              cursor: 'pointer',
+                              padding: 0
+                            }}
+                          >
+                            <MoreVertical size={14} />
+                          </button>
+
+                          {/* Floating Context Menu */}
+                          {openDishMenuId === dish.id && (
+                            <div style={{
+                              position: 'absolute',
+                              top: '30px',
+                              right: 0,
+                              background: '#FFFFFF',
+                              borderRadius: '10px',
+                              border: '1px solid #E2E8F0',
+                              boxShadow: '0 6px 20px rgba(0,0,0,0.15)',
+                              padding: '4px',
+                              zIndex: 100,
+                              minWidth: '130px'
+                            }}>
+                              <button
+                                onClick={() => { onOpenEditDish(dish); setOpenDishMenuId(null); }}
+                                style={{
+                                  width: '100%',
+                                  textAlign: 'left',
+                                  padding: '6px 10px',
+                                  borderRadius: '6px',
+                                  border: 'none',
+                                  background: 'transparent',
+                                  color: '#0F172A',
+                                  fontSize: '0.74rem',
+                                  fontWeight: 700,
+                                  cursor: 'pointer',
+                                  display: 'flex',
+                                  alignItems: 'center',
+                                  gap: '6px'
+                                }}
+                              >
+                                <Edit3 size={12} />
+                                <span>Edit Details</span>
+                              </button>
+                              <button
+                                onClick={() => {
+                                  setQuickPriceDish(dish);
+                                  setQuickPriceVal({ price: dish.price || '', price_half: dish.price_half || '' });
+                                  setOpenDishMenuId(null);
+                                }}
+                                style={{
+                                  width: '100%',
+                                  textAlign: 'left',
+                                  padding: '6px 10px',
+                                  borderRadius: '6px',
+                                  border: 'none',
+                                  background: 'transparent',
+                                  color: '#0284C7',
+                                  fontSize: '0.74rem',
+                                  fontWeight: 700,
+                                  cursor: 'pointer',
+                                  display: 'flex',
+                                  alignItems: 'center',
+                                  gap: '6px'
+                                }}
+                              >
+                                <DollarSign size={12} />
+                                <span>Quick Price</span>
+                              </button>
+                              <button
+                                onClick={() => {
+                                  onToggleAvailability(dish.id, !isAvailable);
+                                  setOpenDishMenuId(null);
+                                }}
+                                style={{
+                                  width: '100%',
+                                  textAlign: 'left',
+                                  padding: '6px 10px',
+                                  borderRadius: '6px',
+                                  border: 'none',
+                                  background: 'transparent',
+                                  color: isAvailable ? '#DC2626' : '#16A34A',
+                                  fontSize: '0.74rem',
+                                  fontWeight: 700,
+                                  cursor: 'pointer',
+                                  display: 'flex',
+                                  alignItems: 'center',
+                                  gap: '6px'
+                                }}
+                              >
+                                <CheckCircle2 size={12} />
+                                <span>{isAvailable ? 'Mark Sold Out' : 'Mark In Stock'}</span>
+                              </button>
+                              <button
+                                onClick={() => { setDeleteConfirmDish(dish); setOpenDishMenuId(null); }}
+                                style={{
+                                  width: '100%',
+                                  textAlign: 'left',
+                                  padding: '6px 10px',
+                                  borderRadius: '6px',
+                                  border: 'none',
+                                  background: 'transparent',
+                                  color: '#DC2626',
+                                  fontSize: '0.74rem',
+                                  fontWeight: 700,
+                                  cursor: 'pointer',
+                                  display: 'flex',
+                                  alignItems: 'center',
+                                  gap: '6px'
+                                }}
+                              >
+                                <Trash2 size={12} />
+                                <span>Delete</span>
+                              </button>
+                            </div>
+                          )}
+                        </div>
                       </div>
 
-                      {/* Middle Details */}
-                      <div style={{ flex: 1, minWidth: 0 }}>
+                      {/* Dish Name */}
+                      <h4 style={{
+                        fontSize: '0.90rem',
+                        fontWeight: 800,
+                        color: '#0F172A',
+                        margin: '0 0 2px 0',
+                        whiteSpace: 'nowrap',
+                        overflow: 'hidden',
+                        textOverflow: 'ellipsis'
+                      }} title={dish.name}>
+                        {dish.name}
+                      </h4>
+
+                      {/* Category / Cuisine */}
+                      <span style={{
+                        fontSize: '0.68rem',
+                        color: '#64748B',
+                        display: 'block',
+                        marginBottom: '6px',
+                        whiteSpace: 'nowrap',
+                        overflow: 'hidden',
+                        textOverflow: 'ellipsis'
+                      }}>
+                        {catObj?.name || 'Main Course'}
+                      </span>
+                    </div>
+
+                    {/* Bottom Row: Price & In-Stock Status Pill */}
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: '4px', paddingTop: '6px', borderTop: '1px solid #F8FAFC' }}>
+                      <div style={{ display: 'flex', alignItems: 'baseline', gap: '3px' }}>
+                        <span style={{ fontSize: '0.96rem', fontWeight: 900, color: '#0F172A' }}>
+                          {currencySymbol}{dish.price || 0}
+                        </span>
+                        {dish.price_half && (
+                          <span style={{ fontSize: '0.64rem', color: '#64748B' }}>
+                            +H:{currencySymbol}{dish.price_half}
+                          </span>
+                        )}
+                      </div>
+
+                      <button
+                        onClick={() => onToggleAvailability && onToggleAvailability(dish.id, !isAvailable)}
+                        style={{
+                          background: isAvailable ? '#DCFCE7' : '#FEE2E2',
+                          color: isAvailable ? '#15803D' : '#DC2626',
+                          border: `1px solid ${isAvailable ? '#BBF7D0' : '#FECACA'}`,
+                          padding: '2px 7px',
+                          borderRadius: '6px',
+                          fontSize: '0.64rem',
+                          fontWeight: 800,
+                          cursor: 'pointer',
+                          display: 'inline-flex',
+                          alignItems: 'center',
+                          gap: '3px'
+                        }}
+                      >
+                        <span>{isAvailable ? '✓ In Stock' : '✕ Sold Out'}</span>
+                      </button>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          ) : (
+            /* ========================================================
+               LIST VIEW (COMPACT HORIZONTAL ROWS ON MOBILE & DESKTOP)
+               ======================================================== */
+            <div className="dish-catalog-list">
+              {filteredDishes.map(dish => {
+                const isAvailable = dish.is_available !== false;
+                const isVeg = dish.type === 'veg';
+                const catObj = safeCategories.find(c => String(c.id) === String(dish.category_id));
+
+                return (
+                  <div
+                    key={dish.id}
+                    className="mobile-dish-row"
+                    style={{
+                      background: '#FFFFFF',
+                      borderRadius: '16px',
+                      border: '1px solid #E2E8F0',
+                      padding: '12px 14px',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '12px',
+                      boxShadow: '0 1px 3px rgba(0,0,0,0.02)',
+                      opacity: isAvailable ? 1 : 0.75
+                    }}
+                  >
+                    {/* Left: 68px Image */}
+                    <div style={{
+                      width: '68px',
+                      height: '68px',
+                      borderRadius: '12px',
+                      background: '#F8FAFC',
+                      border: '1px solid #E2E8F0',
+                      overflow: 'hidden',
+                      flexShrink: 0,
+                      position: 'relative'
+                    }}>
+                      <img
+                        src={getDishImageUrl(dish.image || dish.image_url)}
+                        alt={dish.name}
+                        style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                        onError={(e) => { e.currentTarget.src = '/images/default-dish.webp'; }}
+                      />
+                      <span style={{
+                        position: 'absolute',
+                        top: '4px',
+                        left: '4px',
+                        width: '12px',
+                        height: '12px',
+                        background: '#FFFFFF',
+                        border: `1.5px solid ${isVeg ? '#16A34A' : '#DC2626'}`,
+                        borderRadius: '3px',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center'
+                      }}>
+                        <span style={{ width: '5px', height: '5px', borderRadius: '50%', backgroundColor: isVeg ? '#16A34A' : '#DC2626' }} />
+                      </span>
+                    </div>
+
+                    {/* Middle Details */}
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
                         <h4 style={{
                           fontSize: '0.90rem',
                           fontWeight: 800,
@@ -1723,69 +1735,94 @@ export default function MenuView({
                         }}>
                           {dish.name}
                         </h4>
-
-                        <span style={{ fontSize: '0.68rem', color: '#64748B', display: 'block', marginTop: '2px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                          {catObj?.name || 'North Indian'}
-                        </span>
-
-                        <div style={{ fontSize: '0.96rem', fontWeight: 900, color: '#0F172A', marginTop: '3px' }}>
-                          {currencySymbol}{dish.price || 0}
-                        </div>
+                        {dish.must_try && (
+                          <span style={{ fontSize: '0.58rem', background: '#FEF3C7', color: '#D97706', padding: '1px 4px', borderRadius: '4px', fontWeight: 800, flexShrink: 0 }}>
+                            ⭐ Best
+                          </span>
+                        )}
                       </div>
 
-                      {/* Right Actions: Edit + Status */}
-                      <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: '6px', flexShrink: 0 }}>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
-                          <button
-                            onClick={() => onOpenEditDish(dish)}
-                            style={{
-                              padding: '4px 6px',
-                              borderRadius: '6px',
-                              border: '1px solid #E2E8F0',
-                              background: '#F8FAFC',
-                              color: '#0F172A',
-                              cursor: 'pointer'
-                            }}
-                          >
-                            <Edit3 size={13} />
-                          </button>
+                      <span style={{ fontSize: '0.68rem', color: '#64748B', display: 'block', marginTop: '2px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                        {catObj?.name || 'North Indian'}
+                      </span>
 
-                          <button
-                            onClick={() => setDeleteConfirmDish(dish)}
-                            style={{
-                              padding: '4px 6px',
-                              borderRadius: '6px',
-                              border: '1px solid #FEE2E2',
-                              background: '#FFF5F5',
-                              color: '#DC2626',
-                              cursor: 'pointer'
-                            }}
-                          >
-                            <Trash2 size={13} />
-                          </button>
-                        </div>
+                      <div style={{ fontSize: '0.96rem', fontWeight: 900, color: '#0F172A', marginTop: '3px' }}>
+                        {currencySymbol}{dish.price || 0}
+                      </div>
+                    </div>
 
+                    {/* Right Actions: Edit + Status */}
+                    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: '6px', flexShrink: 0 }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
                         <button
-                          onClick={() => onToggleAvailability && onToggleAvailability(dish.id, !isAvailable)}
+                          onClick={() => {
+                            setQuickPriceDish(dish);
+                            setQuickPriceVal({ price: dish.price || '', price_half: dish.price_half || '' });
+                          }}
                           style={{
-                            background: isAvailable ? '#DCFCE7' : '#FEE2E2',
-                            color: isAvailable ? '#15803D' : '#DC2626',
-                            border: `1px solid ${isAvailable ? '#BBF7D0' : '#FECACA'}`,
-                            padding: '3px 8px',
+                            padding: '4px 6px',
                             borderRadius: '6px',
-                            fontSize: '0.66rem',
+                            border: '1px solid #E2E8F0',
+                            background: '#F8FAFC',
+                            color: '#0284C7',
+                            fontSize: '0.68rem',
                             fontWeight: 800,
                             cursor: 'pointer'
                           }}
+                          title="Quick Price"
                         >
-                          {isAvailable ? '✓ In Stock' : '✕ Sold Out'}
+                          ₹
+                        </button>
+
+                        <button
+                          onClick={() => onOpenEditDish(dish)}
+                          style={{
+                            padding: '4px 6px',
+                            borderRadius: '6px',
+                            border: '1px solid #E2E8F0',
+                            background: '#F8FAFC',
+                            color: '#0F172A',
+                            cursor: 'pointer'
+                          }}
+                        >
+                          <Edit3 size={13} />
+                        </button>
+
+                        <button
+                          onClick={() => setDeleteConfirmDish(dish)}
+                          style={{
+                            padding: '4px 6px',
+                            borderRadius: '6px',
+                            border: '1px solid #FEE2E2',
+                            background: '#FFF5F5',
+                            color: '#DC2626',
+                            cursor: 'pointer'
+                          }}
+                        >
+                          <Trash2 size={13} />
                         </button>
                       </div>
+
+                      <button
+                        onClick={() => onToggleAvailability && onToggleAvailability(dish.id, !isAvailable)}
+                        style={{
+                          background: isAvailable ? '#DCFCE7' : '#FEE2E2',
+                          color: isAvailable ? '#15803D' : '#DC2626',
+                          border: `1px solid ${isAvailable ? '#BBF7D0' : '#FECACA'}`,
+                          padding: '3px 8px',
+                          borderRadius: '6px',
+                          fontSize: '0.66rem',
+                          fontWeight: 800,
+                          cursor: 'pointer'
+                        }}
+                      >
+                        {isAvailable ? '✓ In Stock' : '✕ Sold Out'}
+                      </button>
                     </div>
-                  );
-                })}
-              </div>
-            </>
+                  </div>
+                );
+              })}
+            </div>
           )}
         </>
       )}
