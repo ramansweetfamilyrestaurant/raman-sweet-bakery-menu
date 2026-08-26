@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { 
   Plus, 
   Search, 
@@ -16,6 +16,7 @@ import {
   CheckCircle2, 
   AlertCircle, 
   ChevronRight, 
+  ChevronLeft,
   ExternalLink, 
   ChevronDown, 
   Copy, 
@@ -23,14 +24,10 @@ import {
   Check, 
   Tag,
   FolderPlus,
-  Grid,
-  List,
-  ArrowUpDown,
-  Flame,
   LayoutGrid,
+  List,
   Eye,
-  SlidersHorizontal,
-  MoreHorizontal
+  SlidersHorizontal
 } from 'lucide-react';
 import { resolveImageUrl, getDishImageUrl, getCategoryImageUrl } from '../../../utils/imageHelper';
 import { formatQuota } from '../../../utils/planCapabilities';
@@ -73,11 +70,15 @@ export default function MenuView({
   const [quickPriceDish, setQuickPriceDish] = useState(null);
   const [quickPriceVal, setQuickPriceVal] = useState({ price: '', price_half: '' });
   const [dietFilter, setDietFilter] = useState('all'); // 'all', 'veg', 'nonveg', 'must_try', 'available', 'sold_out'
-  const [sortBy, setSortBy] = useState('recent'); // 'recent', 'name_asc', 'price_asc', 'price_desc'
+  const [sortBy, setSortBy] = useState('recent'); // 'recent', 'name_asc', 'price_asc', 'price_desc', 'instock_first'
   const [viewMode, setViewMode] = useState('grid'); // 'grid' | 'list'
   const [showAddMenuDropdown, setShowAddMenuDropdown] = useState(false);
   const [showMobileAddDropdown, setShowMobileAddDropdown] = useState(false);
   const [openDishMenuId, setOpenDishMenuId] = useState(null);
+
+  // Pagination state
+  const [currentPage, setCurrentPage] = useState(1);
+  const [pageSize, setPageSize] = useState(24);
 
   const safeDishes = Array.isArray(dishes) ? dishes : [];
   const safeCategories = Array.isArray(categories) ? categories : [];
@@ -86,6 +87,21 @@ export default function MenuView({
   const dishQuota = formatQuota(safeDishes.length, maxDishes);
   const catQuota = formatQuota(safeCategories.length, maxCategories);
   const comboQuota = formatQuota(safeCombos.length, maxCombos);
+
+  // Reset pagination on filter or search change
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [search, selectedCatFilter, dietFilter, sortBy, pageSize]);
+
+  // Close open menus on outside click / escape
+  useEffect(() => {
+    if (!openDishMenuId) return;
+    const handleKey = (e) => {
+      if (e.key === 'Escape') setOpenDishMenuId(null);
+    };
+    window.addEventListener('keydown', handleKey);
+    return () => window.removeEventListener('keydown', handleKey);
+  }, [openDishMenuId]);
 
   // Filtered & Sorted dishes
   const filteredDishes = useMemo(() => {
@@ -110,10 +126,25 @@ export default function MenuView({
       list.sort((a, b) => (Number(b.price) || 0) - (Number(a.price) || 0));
     } else if (sortBy === 'name_asc') {
       list.sort((a, b) => (a.name || '').localeCompare(b.name || ''));
+    } else if (sortBy === 'instock_first') {
+      list.sort((a, b) => (b.is_available !== false ? 1 : 0) - (a.is_available !== false ? 1 : 0));
     }
 
     return list;
   }, [safeDishes, search, selectedCatFilter, dietFilter, sortBy]);
+
+  // Pagination calculation
+  const totalItems = filteredDishes.length;
+  const isAllPages = pageSize === 'all';
+  const effectivePageSize = isAllPages ? (totalItems || 1) : Number(pageSize);
+  const totalPages = Math.ceil(totalItems / effectivePageSize) || 1;
+  const safeCurrentPage = Math.min(Math.max(1, currentPage), totalPages);
+
+  const paginatedDishes = useMemo(() => {
+    if (isAllPages) return filteredDishes;
+    const startIndex = (safeCurrentPage - 1) * effectivePageSize;
+    return filteredDishes.slice(startIndex, startIndex + effectivePageSize);
+  }, [filteredDishes, isAllPages, safeCurrentPage, effectivePageSize]);
 
   const activeCategoryObj = safeCategories.find(c => String(c.id) === String(selectedCatFilter));
 
@@ -125,7 +156,7 @@ export default function MenuView({
     }
   };
 
-  // Helper for category food emojis/icons
+  // Helper for category food emojis
   const getCategoryEmoji = (name = '') => {
     const n = name.toLowerCase();
     if (n.includes('chaat') || n.includes('kachori')) return '🍲';
@@ -144,6 +175,66 @@ export default function MenuView({
     return '🍽️';
   };
 
+  // Helper to format price with optional old price / savings only when real data exists
+  const renderDishPrice = (dish, layout = 'card') => {
+    const currentPrice = Number(dish.price) || 0;
+    const rawOldPrice = Number(dish.original_price || dish.mrp || dish.old_price || dish.compare_at_price);
+    const hasValidOldPrice = !isNaN(rawOldPrice) && rawOldPrice > currentPrice;
+    const savings = hasValidOldPrice ? rawOldPrice - currentPrice : 0;
+    const hasHalfPrice = dish.price_half && Number(dish.price_half) > 0;
+
+    return (
+      <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
+        <div style={{ display: 'flex', alignItems: 'baseline', gap: '6px', flexWrap: 'wrap' }}>
+          {/* Main Current Selling Price */}
+          <span style={{ 
+            fontSize: layout === 'card' ? '1.14rem' : '1.02rem', 
+            fontWeight: 900, 
+            color: '#0F172A',
+            letterSpacing: '-0.02em',
+            lineHeight: 1
+          }}>
+            {currencySymbol}{currentPrice}
+          </span>
+
+          {/* Struck-through Old Price (Only if real data exists) */}
+          {hasValidOldPrice && (
+            <span style={{ 
+              fontSize: '0.80rem', 
+              color: '#94A3B8', 
+              textDecoration: 'line-through', 
+              fontWeight: 500 
+            }}>
+              {currencySymbol}{rawOldPrice}
+            </span>
+          )}
+
+          {/* Optional SAVE Badge */}
+          {hasValidOldPrice && savings > 0 && (
+            <span style={{
+              fontSize: '0.62rem',
+              fontWeight: 800,
+              color: '#15803D',
+              background: '#DCFCE7',
+              padding: '1px 5px',
+              borderRadius: '4px',
+              letterSpacing: '0.02em'
+            }}>
+              SAVE {currencySymbol}{savings}
+            </span>
+          )}
+        </div>
+
+        {/* Half Portion Price Indicator */}
+        {hasHalfPrice && (
+          <span style={{ fontSize: '0.68rem', color: '#64748B', fontWeight: 600 }}>
+            Half: {currencySymbol}{dish.price_half}
+          </span>
+        )}
+      </div>
+    );
+  };
+
   return (
     <div style={{
       display: 'flex',
@@ -159,39 +250,64 @@ export default function MenuView({
         .no-scrollbar::-webkit-scrollbar { display: none; }
         .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
         
+        /* Grid View Responsiveness */
         .dish-catalog-grid {
           display: grid;
           grid-template-columns: repeat(4, minmax(0, 1fr));
           gap: 16px;
         }
 
-        .dish-catalog-list {
-          display: flex;
-          flex-direction: column;
-          gap: 10px;
-        }
-
-        @media (max-width: 1300px) {
+        @media (max-width: 1250px) {
           .dish-catalog-grid {
             grid-template-columns: repeat(3, minmax(0, 1fr)) !important;
+            gap: 14px !important;
           }
         }
 
-        @media (max-width: 1024px) {
+        @media (max-width: 900px) {
           .dish-catalog-grid {
             grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
             gap: 12px !important;
           }
         }
 
-        @media (max-width: 640px) {
+        @media (max-width: 500px) {
           .dish-catalog-grid {
-            grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
-            gap: 10px !important;
+            grid-template-columns: 1fr !important;
+            gap: 12px !important;
           }
         }
 
+        /* List View Display */
+        .dish-catalog-table-wrapper {
+          width: 100%;
+          background: #FFFFFF;
+          border-radius: 16px;
+          border: 1px solid #E2E8F0;
+          overflow: hidden;
+          box-shadow: 0 1px 3px rgba(0,0,0,0.02);
+        }
+
+        .dish-table-row {
+          transition: background 0.15s ease;
+        }
+        .dish-table-row:hover {
+          background-color: #F8FAFC;
+        }
+
+        .mobile-dish-list-container {
+          display: none;
+          flex-direction: column;
+          gap: 10px;
+        }
+
         @media (max-width: 768px) {
+          .desktop-table-view {
+            display: none !important;
+          }
+          .mobile-dish-list-container {
+            display: flex !important;
+          }
           .desktop-only-header {
             display: none !important;
           }
@@ -209,28 +325,21 @@ export default function MenuView({
           }
         }
 
+        .dish-grid-card {
+          transition: transform 0.16s ease, box-shadow 0.16s ease, border-color 0.16s ease;
+        }
+        .dish-grid-card:hover {
+          transform: translateY(-2px);
+          box-shadow: 0 8px 22px rgba(0,0,0,0.06) !important;
+          border-color: #CBD5E1 !important;
+        }
+
         .category-tile-btn {
           transition: all 0.16s cubic-bezier(0.16, 1, 0.3, 1);
         }
         .category-tile-btn:hover {
           transform: translateY(-2px);
           box-shadow: 0 4px 12px rgba(0,0,0,0.05);
-        }
-
-        .dish-card-reference {
-          transition: all 0.18s cubic-bezier(0.16, 1, 0.3, 1);
-        }
-        .dish-card-reference:hover {
-          transform: translateY(-2px);
-          box-shadow: 0 6px 18px rgba(0,0,0,0.06) !important;
-          border-color: #CBD5E1 !important;
-        }
-
-        .mobile-dish-row {
-          transition: all 0.15s ease;
-        }
-        .mobile-dish-row:active {
-          background: #F8FAFC !important;
         }
       `}</style>
 
@@ -265,7 +374,7 @@ export default function MenuView({
             </span>
           </div>
           <p style={{ fontSize: '0.82rem', color: '#64748B', margin: '4px 0 0 0' }}>
-            Manage and organize your dishes, categories and combos.
+            Manage and organize your dishes, categories and combos with precision.
           </p>
         </div>
 
@@ -331,6 +440,7 @@ export default function MenuView({
                 alignItems: 'center',
                 justifyContent: 'center'
               }}
+              title="Add more options"
             >
               <ChevronDown size={14} />
             </button>
@@ -876,7 +986,7 @@ export default function MenuView({
             }}
           >
             <SlidersHorizontal size={14} color="#64748B" />
-            <span>Filters</span>
+            <span>Reset Filters</span>
           </button>
         </div>
 
@@ -893,7 +1003,7 @@ export default function MenuView({
             { id: 'veg', label: '🟢 Veg' },
             { id: 'nonveg', label: '🔴 Non-Veg' },
             { id: 'must_try', label: '⭐ Best Sellers' },
-            { id: 'available', label: '🟢 Available' },
+            { id: 'available', label: '🟢 In Stock' },
             { id: 'sold_out', label: '✕ Sold Out' }
           ].map(chip => (
             <button
@@ -1262,64 +1372,82 @@ export default function MenuView({
          ======================================================== */}
       {activeSubTab === 'dishes' && (
         <>
-          {/* Header & Controls (View Mode Toggle & Sort) */}
+          {/* Header & Controls Toolbar */}
           <div style={{
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'space-between',
             padding: '2px 2px 0 2px',
             flexWrap: 'wrap',
-            gap: '8px'
+            gap: '10px'
           }}>
-            <h3 style={{ fontSize: '1.05rem', fontWeight: 900, color: '#0F172A', margin: 0 }}>
-              {activeCategoryObj ? `${activeCategoryObj.name} (${filteredDishes.length})` : `All Dishes (${filteredDishes.length})`}
-            </h3>
+            <div>
+              <h3 style={{ fontSize: '1.05rem', fontWeight: 900, color: '#0F172A', margin: 0, letterSpacing: '-0.01em' }}>
+                {activeCategoryObj ? `${activeCategoryObj.name}` : `All Dishes`}
+                <span style={{ fontSize: '0.84rem', color: '#64748B', fontWeight: 600, marginLeft: '6px' }}>
+                  ({filteredDishes.length})
+                </span>
+              </h3>
+            </div>
 
-            {/* View Toggle + Sort Dropdown */}
-            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-              {/* Grid / List switch (Interactive on Mobile & Desktop) */}
-              <div style={{ display: 'flex', background: '#FFFFFF', border: '1px solid #E2E8F0', borderRadius: '8px', padding: '2px' }}>
+            {/* View Toggle + Sort + Items Per Page */}
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
+              {/* Segmented View Toggle [ ▦ Grid ] [ ☷ List ] */}
+              <div 
+                role="group" 
+                aria-label="View Mode Selector"
+                style={{ 
+                  display: 'inline-flex', 
+                  background: '#FFFFFF', 
+                  border: '1px solid #E2E8F0', 
+                  borderRadius: '10px', 
+                  padding: '3px',
+                  boxShadow: '0 1px 2px rgba(0,0,0,0.03)'
+                }}
+              >
                 <button
                   onClick={() => setViewMode('grid')}
+                  aria-pressed={viewMode === 'grid'}
                   style={{
-                    padding: '5px 8px',
+                    padding: '5px 10px',
                     border: 'none',
-                    borderRadius: '6px',
+                    borderRadius: '7px',
                     background: viewMode === 'grid' ? '#0A2315' : 'transparent',
-                    color: viewMode === 'grid' ? '#FFFFFF' : '#64748B',
+                    color: viewMode === 'grid' ? '#FFFFFF' : '#475569',
                     cursor: 'pointer',
                     display: 'flex',
                     alignItems: 'center',
-                    gap: '4px',
-                    fontSize: '0.72rem',
-                    fontWeight: 700,
+                    gap: '5px',
+                    fontSize: '0.74rem',
+                    fontWeight: 800,
                     transition: 'all 0.15s ease'
                   }}
                   title="Grid View"
                 >
-                  <Grid size={13} />
-                  <span style={{ display: 'inline' }}>Grid</span>
+                  <LayoutGrid size={13} />
+                  <span>Grid</span>
                 </button>
                 <button
                   onClick={() => setViewMode('list')}
+                  aria-pressed={viewMode === 'list'}
                   style={{
-                    padding: '5px 8px',
+                    padding: '5px 10px',
                     border: 'none',
-                    borderRadius: '6px',
+                    borderRadius: '7px',
                     background: viewMode === 'list' ? '#0A2315' : 'transparent',
-                    color: viewMode === 'list' ? '#FFFFFF' : '#64748B',
+                    color: viewMode === 'list' ? '#FFFFFF' : '#475569',
                     cursor: 'pointer',
                     display: 'flex',
                     alignItems: 'center',
-                    gap: '4px',
-                    fontSize: '0.72rem',
-                    fontWeight: 700,
+                    gap: '5px',
+                    fontSize: '0.74rem',
+                    fontWeight: 800,
                     transition: 'all 0.15s ease'
                   }}
                   title="List View"
                 >
-                  <List size={13} />
-                  <span style={{ display: 'inline' }}>List</span>
+                  <List size={14} />
+                  <span>List</span>
                 </button>
               </div>
 
@@ -1328,21 +1456,45 @@ export default function MenuView({
                 value={sortBy}
                 onChange={(e) => setSortBy(e.target.value)}
                 style={{
-                  padding: '6px 10px',
-                  borderRadius: '8px',
+                  padding: '6px 12px',
+                  borderRadius: '10px',
                   border: '1px solid #E2E8F0',
                   background: '#FFFFFF',
                   color: '#0F172A',
-                  fontSize: '0.74rem',
+                  fontSize: '0.76rem',
                   fontWeight: 700,
                   cursor: 'pointer',
-                  outline: 'none'
+                  outline: 'none',
+                  boxShadow: '0 1px 2px rgba(0,0,0,0.03)'
                 }}
               >
                 <option value="recent">Sort by: Recently Updated</option>
                 <option value="name_asc">Sort by: Name (A-Z)</option>
                 <option value="price_asc">Sort by: Price (Low to High)</option>
                 <option value="price_desc">Sort by: Price (High to Low)</option>
+                <option value="instock_first">Sort by: In Stock First</option>
+              </select>
+
+              {/* Page Size Dropdown */}
+              <select
+                value={pageSize}
+                onChange={(e) => setPageSize(e.target.value === 'all' ? 'all' : Number(e.target.value))}
+                style={{
+                  padding: '6px 10px',
+                  borderRadius: '10px',
+                  border: '1px solid #E2E8F0',
+                  background: '#FFFFFF',
+                  color: '#64748B',
+                  fontSize: '0.76rem',
+                  fontWeight: 700,
+                  cursor: 'pointer',
+                  outline: 'none'
+                }}
+              >
+                <option value={24}>24 / page</option>
+                <option value={48}>48 / page</option>
+                <option value={96}>96 / page</option>
+                <option value="all">All ({filteredDishes.length})</option>
               </select>
             </div>
           </div>
@@ -1353,39 +1505,39 @@ export default function MenuView({
               background: '#FFFFFF',
               borderRadius: '18px',
               border: '1px solid #E2E8F0',
-              padding: '44px 20px',
+              padding: '48px 20px',
               textAlign: 'center',
               boxShadow: '0 1px 3px rgba(0,0,0,0.02)'
             }}>
-              <Utensils size={32} color="#94A3B8" style={{ margin: '0 auto 10px auto' }} />
-              <h3 style={{ fontSize: '1rem', fontWeight: 800, color: '#0F172A', margin: '0 0 4px 0' }}>
-                {search ? 'No dishes match your search' : 'No dishes in this category'}
+              <Utensils size={36} color="#94A3B8" style={{ margin: '0 auto 12px auto' }} />
+              <h3 style={{ fontSize: '1.05rem', fontWeight: 800, color: '#0F172A', margin: '0 0 6px 0' }}>
+                {search ? 'No dishes match your search' : 'No dishes found'}
               </h3>
-              <p style={{ fontSize: '0.76rem', color: '#64748B', margin: '0 0 16px 0' }}>
-                {search ? 'Try clearing search keyword or filters.' : 'Add your first dish to this category.'}
+              <p style={{ fontSize: '0.78rem', color: '#64748B', margin: '0 0 18px 0', maxWidth: '340px', marginLeft: 'auto', marginRight: 'auto' }}>
+                {search ? 'Try clearing your search keyword or active filters to see more menu items.' : 'Add your first dish to this category to get started.'}
               </p>
               <button
                 onClick={search ? () => { setSearch(''); setSelectedCatFilter('all'); setDietFilter('all'); } : onOpenAddDish}
                 style={{
-                  padding: '9px 18px',
+                  padding: '10px 20px',
                   borderRadius: '10px',
                   background: '#0A2315',
                   color: '#FFFFFF',
                   border: 'none',
-                  fontSize: '0.78rem',
+                  fontSize: '0.80rem',
                   fontWeight: 800,
                   cursor: 'pointer'
                 }}
               >
-                {search ? 'Clear Search' : '+ Add Dish'}
+                {search ? 'Clear Search & Filters' : '+ Add Dish'}
               </button>
             </div>
           ) : viewMode === 'grid' ? (
             /* ========================================================
-               GRID VIEW (DESKTOP: 4/3/2 COLS, MOBILE: 2 COLS)
+               1. POLISHED GRID VIEW (4/3/2/1 COLS RESPONSIVE)
                ======================================================== */
             <div className="dish-catalog-grid">
-              {filteredDishes.map(dish => {
+              {paginatedDishes.map(dish => {
                 const isAvailable = dish.is_available !== false;
                 const isVeg = dish.type === 'veg';
                 const catObj = safeCategories.find(c => String(c.id) === String(dish.category_id));
@@ -1393,7 +1545,7 @@ export default function MenuView({
                 return (
                   <div
                     key={dish.id}
-                    className="dish-card-reference"
+                    className="dish-grid-card"
                     style={{
                       background: '#FFFFFF',
                       borderRadius: '16px',
@@ -1405,19 +1557,20 @@ export default function MenuView({
                       justifyContent: 'space-between',
                       boxSizing: 'border-box',
                       position: 'relative',
-                      opacity: isAvailable ? 1 : 0.75
+                      opacity: isAvailable ? 1 : 0.72,
+                      minHeight: '290px'
                     }}
                   >
                     <div>
-                      {/* Top Container: Image + Bestseller Badge + 3-Dot Overflow */}
+                      {/* Dish Image Container (~42% Card Height) */}
                       <div style={{
                         position: 'relative',
                         width: '100%',
-                        height: '130px',
+                        height: '138px',
                         borderRadius: '12px',
                         background: '#F8FAFC',
                         overflow: 'hidden',
-                        marginBottom: '8px',
+                        marginBottom: '10px',
                         border: '1px solid #F1F5F9'
                       }}>
                         <img
@@ -1427,63 +1580,65 @@ export default function MenuView({
                           onError={(e) => { e.currentTarget.src = '/images/default-dish.webp'; }}
                         />
 
-                        {/* Bestseller Badge (Top-Left) or Veg Stamp */}
-                        {dish.must_try ? (
-                          <span style={{
-                            position: 'absolute',
-                            top: '6px',
-                            left: '6px',
-                            background: '#062B1C',
-                            color: '#FFFFFF',
-                            fontSize: '0.60rem',
-                            fontWeight: 800,
-                            padding: '2px 7px',
-                            borderRadius: '5px',
-                            boxShadow: '0 2px 4px rgba(0,0,0,0.2)'
-                          }}>
-                            Bestseller
-                          </span>
-                        ) : (
-                          <span style={{
-                            position: 'absolute',
-                            top: '6px',
-                            left: '6px',
-                            width: '13px',
-                            height: '13px',
-                            background: '#FFFFFF',
-                            border: `1.5px solid ${isVeg ? '#16A34A' : '#DC2626'}`,
-                            borderRadius: '3px',
-                            display: 'flex',
-                            alignItems: 'center',
-                            justifyContent: 'center',
-                            boxShadow: '0 1px 3px rgba(0,0,0,0.15)'
-                          }}>
+                        {/* Top-Left: Bestseller Badge or FSSAI Veg/NonVeg Stamp */}
+                        <div style={{ position: 'absolute', top: '8px', left: '8px', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                          {dish.must_try ? (
                             <span style={{
-                              width: '5px',
-                              height: '5px',
-                              borderRadius: '50%',
-                              backgroundColor: isVeg ? '#16A34A' : '#DC2626'
-                            }} />
-                          </span>
-                        )}
+                              background: '#0A2315',
+                              color: '#FFFFFF',
+                              fontSize: '0.62rem',
+                              fontWeight: 800,
+                              padding: '3px 8px',
+                              borderRadius: '6px',
+                              boxShadow: '0 2px 6px rgba(0,0,0,0.25)',
+                              display: 'inline-flex',
+                              alignItems: 'center',
+                              gap: '3px'
+                            }}>
+                              <Star size={10} color="#D4AF37" fill="#D4AF37" />
+                              <span>Bestseller</span>
+                            </span>
+                          ) : (
+                            <span style={{
+                              width: '15px',
+                              height: '15px',
+                              background: '#FFFFFF',
+                              border: `1.5px solid ${isVeg ? '#16A34A' : '#DC2626'}`,
+                              borderRadius: '3px',
+                              display: 'flex',
+                              alignItems: 'center',
+                              justifyContent: 'center',
+                              boxShadow: '0 1px 3px rgba(0,0,0,0.18)'
+                            }}>
+                              <span style={{
+                                width: '6px',
+                                height: '6px',
+                                borderRadius: '50%',
+                                backgroundColor: isVeg ? '#16A34A' : '#DC2626'
+                              }} />
+                            </span>
+                          )}
+                        </div>
 
-                        {/* 3-Dot Menu Button (Top-Right) */}
+                        {/* Top-Right: 3-Dot Overflow Menu */}
                         <div style={{ position: 'absolute', top: '6px', right: '6px' }}>
                           <button
                             onClick={() => setOpenDishMenuId(openDishMenuId === dish.id ? null : dish.id)}
                             style={{
-                              width: '26px',
-                              height: '26px',
+                              width: '28px',
+                              height: '28px',
                               borderRadius: '50%',
-                              background: 'rgba(255, 255, 255, 0.92)',
-                              border: '1px solid #E2E8F0',
+                              background: 'rgba(255, 255, 255, 0.94)',
+                              border: '1px solid rgba(0,0,0,0.06)',
                               color: '#0F172A',
                               display: 'flex',
                               alignItems: 'center',
                               justifyContent: 'center',
                               cursor: 'pointer',
-                              padding: 0
+                              padding: 0,
+                              boxShadow: '0 2px 6px rgba(0,0,0,0.1)'
                             }}
+                            title="More Actions"
                           >
                             <MoreVertical size={14} />
                           </button>
@@ -1492,35 +1647,35 @@ export default function MenuView({
                           {openDishMenuId === dish.id && (
                             <div style={{
                               position: 'absolute',
-                              top: '30px',
+                              top: '32px',
                               right: 0,
                               background: '#FFFFFF',
-                              borderRadius: '10px',
+                              borderRadius: '12px',
                               border: '1px solid #E2E8F0',
-                              boxShadow: '0 6px 20px rgba(0,0,0,0.15)',
-                              padding: '4px',
+                              boxShadow: '0 10px 28px rgba(0,0,0,0.15)',
+                              padding: '5px',
                               zIndex: 100,
-                              minWidth: '130px'
+                              minWidth: '145px'
                             }}>
                               <button
                                 onClick={() => { onOpenEditDish(dish); setOpenDishMenuId(null); }}
                                 style={{
                                   width: '100%',
                                   textAlign: 'left',
-                                  padding: '6px 10px',
-                                  borderRadius: '6px',
+                                  padding: '7px 10px',
+                                  borderRadius: '8px',
                                   border: 'none',
                                   background: 'transparent',
                                   color: '#0F172A',
-                                  fontSize: '0.74rem',
+                                  fontSize: '0.76rem',
                                   fontWeight: 700,
                                   cursor: 'pointer',
                                   display: 'flex',
                                   alignItems: 'center',
-                                  gap: '6px'
+                                  gap: '8px'
                                 }}
                               >
-                                <Edit3 size={12} />
+                                <Edit3 size={13} />
                                 <span>Edit Details</span>
                               </button>
                               <button
@@ -1532,20 +1687,20 @@ export default function MenuView({
                                 style={{
                                   width: '100%',
                                   textAlign: 'left',
-                                  padding: '6px 10px',
-                                  borderRadius: '6px',
+                                  padding: '7px 10px',
+                                  borderRadius: '8px',
                                   border: 'none',
                                   background: 'transparent',
                                   color: '#0284C7',
-                                  fontSize: '0.74rem',
+                                  fontSize: '0.76rem',
                                   fontWeight: 700,
                                   cursor: 'pointer',
                                   display: 'flex',
                                   alignItems: 'center',
-                                  gap: '6px'
+                                  gap: '8px'
                                 }}
                               >
-                                <DollarSign size={12} />
+                                <DollarSign size={13} />
                                 <span>Quick Price</span>
                               </button>
                               <button
@@ -1556,20 +1711,20 @@ export default function MenuView({
                                 style={{
                                   width: '100%',
                                   textAlign: 'left',
-                                  padding: '6px 10px',
-                                  borderRadius: '6px',
+                                  padding: '7px 10px',
+                                  borderRadius: '8px',
                                   border: 'none',
                                   background: 'transparent',
                                   color: isAvailable ? '#DC2626' : '#16A34A',
-                                  fontSize: '0.74rem',
+                                  fontSize: '0.76rem',
                                   fontWeight: 700,
                                   cursor: 'pointer',
                                   display: 'flex',
                                   alignItems: 'center',
-                                  gap: '6px'
+                                  gap: '8px'
                                 }}
                               >
-                                <CheckCircle2 size={12} />
+                                <CheckCircle2 size={13} />
                                 <span>{isAvailable ? 'Mark Sold Out' : 'Mark In Stock'}</span>
                               </button>
                               <button
@@ -1577,20 +1732,20 @@ export default function MenuView({
                                 style={{
                                   width: '100%',
                                   textAlign: 'left',
-                                  padding: '6px 10px',
-                                  borderRadius: '6px',
+                                  padding: '7px 10px',
+                                  borderRadius: '8px',
                                   border: 'none',
                                   background: 'transparent',
                                   color: '#DC2626',
-                                  fontSize: '0.74rem',
+                                  fontSize: '0.76rem',
                                   fontWeight: 700,
                                   cursor: 'pointer',
                                   display: 'flex',
                                   alignItems: 'center',
-                                  gap: '6px'
+                                  gap: '8px'
                                 }}
                               >
-                                <Trash2 size={12} />
+                                <Trash2 size={13} />
                                 <span>Delete</span>
                               </button>
                             </div>
@@ -1598,25 +1753,30 @@ export default function MenuView({
                         </div>
                       </div>
 
-                      {/* Dish Name */}
+                      {/* Dish Title (Max 2 lines, clean height) */}
                       <h4 style={{
-                        fontSize: '0.90rem',
+                        fontSize: '0.94rem',
                         fontWeight: 800,
                         color: '#0F172A',
                         margin: '0 0 2px 0',
-                        whiteSpace: 'nowrap',
+                        lineHeight: 1.25,
+                        minHeight: '2.5em',
+                        display: '-webkit-box',
+                        WebkitLineClamp: 2,
+                        WebkitBoxOrient: 'vertical',
                         overflow: 'hidden',
-                        textOverflow: 'ellipsis'
+                        letterSpacing: '-0.01em'
                       }} title={dish.name}>
                         {dish.name}
                       </h4>
 
-                      {/* Category / Cuisine */}
+                      {/* Category Label */}
                       <span style={{
-                        fontSize: '0.68rem',
+                        fontSize: '0.70rem',
                         color: '#64748B',
                         display: 'block',
-                        marginBottom: '6px',
+                        marginBottom: '8px',
+                        fontWeight: 600,
                         whiteSpace: 'nowrap',
                         overflow: 'hidden',
                         textOverflow: 'ellipsis'
@@ -1625,33 +1785,35 @@ export default function MenuView({
                       </span>
                     </div>
 
-                    {/* Bottom Row: Price & In-Stock Status Pill */}
-                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: '4px', paddingTop: '6px', borderTop: '1px solid #F8FAFC' }}>
-                      <div style={{ display: 'flex', alignItems: 'baseline', gap: '3px' }}>
-                        <span style={{ fontSize: '0.96rem', fontWeight: 900, color: '#0F172A' }}>
-                          {currencySymbol}{dish.price || 0}
-                        </span>
-                        {dish.price_half && (
-                          <span style={{ fontSize: '0.64rem', color: '#64748B' }}>
-                            +H:{currencySymbol}{dish.price_half}
-                          </span>
-                        )}
-                      </div>
+                    {/* Bottom Row: Price & In Stock Pill (Rock-solid baseline) */}
+                    <div style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'space-between',
+                      marginTop: '6px',
+                      paddingTop: '8px',
+                      borderTop: '1px solid #F1F5F9'
+                    }}>
+                      {/* Formatted Price Hierarchy */}
+                      {renderDishPrice(dish, 'card')}
 
+                      {/* Status Pill Toggle */}
                       <button
                         onClick={() => onToggleAvailability && onToggleAvailability(dish.id, !isAvailable)}
                         style={{
                           background: isAvailable ? '#DCFCE7' : '#FEE2E2',
                           color: isAvailable ? '#15803D' : '#DC2626',
                           border: `1px solid ${isAvailable ? '#BBF7D0' : '#FECACA'}`,
-                          padding: '2px 7px',
+                          padding: '3px 8px',
                           borderRadius: '6px',
-                          fontSize: '0.64rem',
+                          fontSize: '0.68rem',
                           fontWeight: 800,
                           cursor: 'pointer',
                           display: 'inline-flex',
                           alignItems: 'center',
-                          gap: '3px'
+                          gap: '3px',
+                          whiteSpace: 'nowrap',
+                          flexShrink: 0
                         }}
                       >
                         <span>{isAvailable ? '✓ In Stock' : '✕ Sold Out'}</span>
@@ -1663,179 +1825,474 @@ export default function MenuView({
             </div>
           ) : (
             /* ========================================================
-               LIST VIEW (COMPACT HORIZONTAL ROWS ON MOBILE & DESKTOP)
+               2. POLISHED LIST VIEW (DESKTOP DATA TABLE + MOBILE CARDS)
                ======================================================== */
-            <div className="dish-catalog-list">
-              {filteredDishes.map(dish => {
-                const isAvailable = dish.is_available !== false;
-                const isVeg = dish.type === 'veg';
-                const catObj = safeCategories.find(c => String(c.id) === String(dish.category_id));
-
-                return (
-                  <div
-                    key={dish.id}
-                    className="mobile-dish-row"
-                    style={{
-                      background: '#FFFFFF',
-                      borderRadius: '16px',
-                      border: '1px solid #E2E8F0',
-                      padding: '12px 14px',
-                      display: 'flex',
-                      alignItems: 'center',
-                      gap: '12px',
-                      boxShadow: '0 1px 3px rgba(0,0,0,0.02)',
-                      opacity: isAvailable ? 1 : 0.75
-                    }}
-                  >
-                    {/* Left: 68px Image */}
-                    <div style={{
-                      width: '68px',
-                      height: '68px',
-                      borderRadius: '12px',
+            <>
+              {/* DESKTOP DATA TABLE (>= 769px) */}
+              <div className="desktop-table-view dish-catalog-table-wrapper">
+                <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left' }}>
+                  <thead>
+                    <tr style={{
                       background: '#F8FAFC',
-                      border: '1px solid #E2E8F0',
-                      overflow: 'hidden',
-                      flexShrink: 0,
-                      position: 'relative'
+                      borderBottom: '1px solid #E2E8F0',
+                      color: '#64748B',
+                      fontSize: '0.70rem',
+                      fontWeight: 800,
+                      textTransform: 'uppercase',
+                      letterSpacing: '0.05em'
                     }}>
-                      <img
-                        src={getDishImageUrl(dish.image || dish.image_url)}
-                        alt={dish.name}
-                        style={{ width: '100%', height: '100%', objectFit: 'cover' }}
-                        onError={(e) => { e.currentTarget.src = '/images/default-dish.webp'; }}
-                      />
-                      <span style={{
-                        position: 'absolute',
-                        top: '4px',
-                        left: '4px',
-                        width: '12px',
-                        height: '12px',
+                      <th style={{ padding: '12px 16px', width: '56px' }}>IMAGE</th>
+                      <th style={{ padding: '12px 16px' }}>DISH</th>
+                      <th style={{ padding: '12px 16px', width: '160px' }}>CATEGORY</th>
+                      <th style={{ padding: '12px 16px', width: '140px' }}>PRICE</th>
+                      <th style={{ padding: '12px 16px', width: '120px' }}>STATUS</th>
+                      <th style={{ padding: '12px 16px', width: '140px', textAlign: 'right' }}>ACTIONS</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {paginatedDishes.map(dish => {
+                      const isAvailable = dish.is_available !== false;
+                      const isVeg = dish.type === 'veg';
+                      const catObj = safeCategories.find(c => String(c.id) === String(dish.category_id));
+
+                      return (
+                        <tr 
+                          key={dish.id}
+                          className="dish-table-row"
+                          style={{
+                            borderBottom: '1px solid #F1F5F9',
+                            opacity: isAvailable ? 1 : 0.72
+                          }}
+                        >
+                          {/* Image Thumbnail */}
+                          <td style={{ padding: '10px 16px' }}>
+                            <div style={{
+                              width: '46px',
+                              height: '46px',
+                              borderRadius: '10px',
+                              background: '#F8FAFC',
+                              border: '1px solid #E2E8F0',
+                              overflow: 'hidden',
+                              position: 'relative'
+                            }}>
+                              <img
+                                src={getDishImageUrl(dish.image || dish.image_url)}
+                                alt={dish.name}
+                                style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                                onError={(e) => { e.currentTarget.src = '/images/default-dish.webp'; }}
+                              />
+                            </div>
+                          </td>
+
+                          {/* Dish Name & Details */}
+                          <td style={{ padding: '10px 16px' }}>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                              <span style={{
+                                width: '12px',
+                                height: '12px',
+                                background: '#FFFFFF',
+                                border: `1.5px solid ${isVeg ? '#16A34A' : '#DC2626'}`,
+                                borderRadius: '3px',
+                                display: 'inline-flex',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                                flexShrink: 0
+                              }}>
+                                <span style={{ width: '4px', height: '4px', borderRadius: '50%', backgroundColor: isVeg ? '#16A34A' : '#DC2626' }} />
+                              </span>
+
+                              <strong style={{ fontSize: '0.90rem', color: '#0F172A', fontWeight: 800 }}>
+                                {dish.name}
+                              </strong>
+
+                              {dish.must_try && (
+                                <span style={{
+                                  fontSize: '0.60rem',
+                                  background: '#FEF3C7',
+                                  color: '#D97706',
+                                  padding: '1px 5px',
+                                  borderRadius: '4px',
+                                  fontWeight: 800,
+                                  display: 'inline-flex',
+                                  alignItems: 'center',
+                                  gap: '2px'
+                                }}>
+                                  ⭐ Best
+                                </span>
+                              )}
+                            </div>
+
+                            {dish.description && (
+                              <p style={{
+                                fontSize: '0.72rem',
+                                color: '#64748B',
+                                margin: '2px 0 0 18px',
+                                maxWidth: '400px',
+                                whiteSpace: 'nowrap',
+                                overflow: 'hidden',
+                                textOverflow: 'ellipsis'
+                              }}>
+                                {dish.description}
+                              </p>
+                            )}
+                          </td>
+
+                          {/* Category */}
+                          <td style={{ padding: '10px 16px' }}>
+                            <span style={{
+                              fontSize: '0.74rem',
+                              color: '#334155',
+                              fontWeight: 600,
+                              background: '#F1F5F9',
+                              padding: '3px 8px',
+                              borderRadius: '6px'
+                            }}>
+                              {catObj?.name || 'Main Course'}
+                            </span>
+                          </td>
+
+                          {/* Price */}
+                          <td style={{ padding: '10px 16px' }}>
+                            {renderDishPrice(dish, 'table')}
+                          </td>
+
+                          {/* Status */}
+                          <td style={{ padding: '10px 16px' }}>
+                            <button
+                              onClick={() => onToggleAvailability && onToggleAvailability(dish.id, !isAvailable)}
+                              style={{
+                                background: isAvailable ? '#DCFCE7' : '#FEE2E2',
+                                color: isAvailable ? '#15803D' : '#DC2626',
+                                border: `1px solid ${isAvailable ? '#BBF7D0' : '#FECACA'}`,
+                                padding: '3px 8px',
+                                borderRadius: '6px',
+                                fontSize: '0.68rem',
+                                fontWeight: 800,
+                                cursor: 'pointer',
+                                display: 'inline-flex',
+                                alignItems: 'center',
+                                gap: '3px'
+                              }}
+                            >
+                              <span>{isAvailable ? '✓ In Stock' : '✕ Sold Out'}</span>
+                            </button>
+                          </td>
+
+                          {/* Actions */}
+                          <td style={{ padding: '10px 16px', textAlign: 'right' }}>
+                            <div style={{ display: 'inline-flex', alignItems: 'center', gap: '5px' }}>
+                              <button
+                                onClick={() => {
+                                  setQuickPriceDish(dish);
+                                  setQuickPriceVal({ price: dish.price || '', price_half: dish.price_half || '' });
+                                }}
+                                style={{
+                                  padding: '5px 8px',
+                                  borderRadius: '6px',
+                                  border: '1px solid #E2E8F0',
+                                  background: '#FFFFFF',
+                                  color: '#0284C7',
+                                  fontSize: '0.72rem',
+                                  fontWeight: 800,
+                                  cursor: 'pointer'
+                                }}
+                                title="Quick Price"
+                              >
+                                ₹ Price
+                              </button>
+
+                              <button
+                                onClick={() => onOpenEditDish(dish)}
+                                style={{
+                                  padding: '5px 8px',
+                                  borderRadius: '6px',
+                                  border: '1px solid #E2E8F0',
+                                  background: '#FFFFFF',
+                                  color: '#0F172A',
+                                  cursor: 'pointer'
+                                }}
+                                title="Edit Dish"
+                              >
+                                <Edit3 size={13} />
+                              </button>
+
+                              <button
+                                onClick={() => setDeleteConfirmDish(dish)}
+                                style={{
+                                  padding: '5px 7px',
+                                  borderRadius: '6px',
+                                  border: '1px solid #FEE2E2',
+                                  background: '#FFF5F5',
+                                  color: '#DC2626',
+                                  cursor: 'pointer'
+                                }}
+                                title="Delete Dish"
+                              >
+                                <Trash2 size={13} />
+                              </button>
+                            </div>
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
+
+              {/* MOBILE COMPACT LIST ROWS (< 769px) */}
+              <div className="mobile-dish-list-container">
+                {paginatedDishes.map(dish => {
+                  const isAvailable = dish.is_available !== false;
+                  const isVeg = dish.type === 'veg';
+                  const catObj = safeCategories.find(c => String(c.id) === String(dish.category_id));
+
+                  return (
+                    <div
+                      key={dish.id}
+                      style={{
                         background: '#FFFFFF',
-                        border: `1.5px solid ${isVeg ? '#16A34A' : '#DC2626'}`,
-                        borderRadius: '3px',
+                        borderRadius: '14px',
+                        border: '1px solid #E2E8F0',
+                        padding: '12px 14px',
                         display: 'flex',
                         alignItems: 'center',
-                        justifyContent: 'center'
+                        gap: '12px',
+                        boxShadow: '0 1px 3px rgba(0,0,0,0.02)',
+                        opacity: isAvailable ? 1 : 0.72
+                      }}
+                    >
+                      {/* Left: 64px Image */}
+                      <div style={{
+                        width: '64px',
+                        height: '64px',
+                        borderRadius: '10px',
+                        background: '#F8FAFC',
+                        border: '1px solid #E2E8F0',
+                        overflow: 'hidden',
+                        flexShrink: 0,
+                        position: 'relative'
                       }}>
-                        <span style={{ width: '5px', height: '5px', borderRadius: '50%', backgroundColor: isVeg ? '#16A34A' : '#DC2626' }} />
-                      </span>
-                    </div>
-
-                    {/* Middle Details */}
-                    <div style={{ flex: 1, minWidth: 0 }}>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
-                        <h4 style={{
-                          fontSize: '0.90rem',
-                          fontWeight: 800,
-                          color: '#0F172A',
-                          margin: 0,
-                          whiteSpace: 'nowrap',
-                          overflow: 'hidden',
-                          textOverflow: 'ellipsis'
+                        <img
+                          src={getDishImageUrl(dish.image || dish.image_url)}
+                          alt={dish.name}
+                          style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                          onError={(e) => { e.currentTarget.src = '/images/default-dish.webp'; }}
+                        />
+                        <span style={{
+                          position: 'absolute',
+                          top: '3px',
+                          left: '3px',
+                          width: '12px',
+                          height: '12px',
+                          background: '#FFFFFF',
+                          border: `1.5px solid ${isVeg ? '#16A34A' : '#DC2626'}`,
+                          borderRadius: '3px',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center'
                         }}>
-                          {dish.name}
-                        </h4>
-                        {dish.must_try && (
-                          <span style={{ fontSize: '0.58rem', background: '#FEF3C7', color: '#D97706', padding: '1px 4px', borderRadius: '4px', fontWeight: 800, flexShrink: 0 }}>
-                            ⭐ Best
-                          </span>
-                        )}
+                          <span style={{ width: '4px', height: '4px', borderRadius: '50%', backgroundColor: isVeg ? '#16A34A' : '#DC2626' }} />
+                        </span>
                       </div>
 
-                      <span style={{ fontSize: '0.68rem', color: '#64748B', display: 'block', marginTop: '2px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                        {catObj?.name || 'North Indian'}
-                      </span>
+                      {/* Middle: Name + Category + Price */}
+                      <div style={{ flex: 1, minWidth: 0 }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                          <h4 style={{
+                            fontSize: '0.88rem',
+                            fontWeight: 800,
+                            color: '#0F172A',
+                            margin: 0,
+                            whiteSpace: 'nowrap',
+                            overflow: 'hidden',
+                            textOverflow: 'ellipsis'
+                          }}>
+                            {dish.name}
+                          </h4>
+                          {dish.must_try && (
+                            <span style={{ fontSize: '0.58rem', background: '#FEF3C7', color: '#D97706', padding: '1px 4px', borderRadius: '4px', fontWeight: 800, flexShrink: 0 }}>
+                              ⭐ Best
+                            </span>
+                          )}
+                        </div>
 
-                      <div style={{ fontSize: '0.96rem', fontWeight: 900, color: '#0F172A', marginTop: '3px' }}>
-                        {currencySymbol}{dish.price || 0}
+                        <span style={{ fontSize: '0.68rem', color: '#64748B', display: 'block', marginTop: '1px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                          {catObj?.name || 'Main Course'}
+                        </span>
+
+                        <div style={{ marginTop: '3px' }}>
+                          {renderDishPrice(dish, 'list')}
+                        </div>
                       </div>
-                    </div>
 
-                    {/* Right Actions: Edit + Status */}
-                    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: '6px', flexShrink: 0 }}>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                      {/* Right: Actions + In-stock */}
+                      <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: '6px', flexShrink: 0 }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                          <button
+                            onClick={() => onOpenEditDish(dish)}
+                            style={{
+                              padding: '5px 7px',
+                              borderRadius: '6px',
+                              border: '1px solid #E2E8F0',
+                              background: '#F8FAFC',
+                              color: '#0F172A',
+                              cursor: 'pointer'
+                            }}
+                            title="Edit"
+                          >
+                            <Edit3 size={13} />
+                          </button>
+
+                          <button
+                            onClick={() => setDeleteConfirmDish(dish)}
+                            style={{
+                              padding: '5px 7px',
+                              borderRadius: '6px',
+                              border: '1px solid #FEE2E2',
+                              background: '#FFF5F5',
+                              color: '#DC2626',
+                              cursor: 'pointer'
+                            }}
+                            title="Delete"
+                          >
+                            <Trash2 size={13} />
+                          </button>
+                        </div>
+
                         <button
-                          onClick={() => {
-                            setQuickPriceDish(dish);
-                            setQuickPriceVal({ price: dish.price || '', price_half: dish.price_half || '' });
-                          }}
+                          onClick={() => onToggleAvailability && onToggleAvailability(dish.id, !isAvailable)}
                           style={{
-                            padding: '4px 6px',
+                            background: isAvailable ? '#DCFCE7' : '#FEE2E2',
+                            color: isAvailable ? '#15803D' : '#DC2626',
+                            border: `1px solid ${isAvailable ? '#BBF7D0' : '#FECACA'}`,
+                            padding: '2px 7px',
                             borderRadius: '6px',
-                            border: '1px solid #E2E8F0',
-                            background: '#F8FAFC',
-                            color: '#0284C7',
-                            fontSize: '0.68rem',
+                            fontSize: '0.64rem',
                             fontWeight: 800,
                             cursor: 'pointer'
                           }}
-                          title="Quick Price"
                         >
-                          ₹
-                        </button>
-
-                        <button
-                          onClick={() => onOpenEditDish(dish)}
-                          style={{
-                            padding: '4px 6px',
-                            borderRadius: '6px',
-                            border: '1px solid #E2E8F0',
-                            background: '#F8FAFC',
-                            color: '#0F172A',
-                            cursor: 'pointer'
-                          }}
-                        >
-                          <Edit3 size={13} />
-                        </button>
-
-                        <button
-                          onClick={() => setDeleteConfirmDish(dish)}
-                          style={{
-                            padding: '4px 6px',
-                            borderRadius: '6px',
-                            border: '1px solid #FEE2E2',
-                            background: '#FFF5F5',
-                            color: '#DC2626',
-                            cursor: 'pointer'
-                          }}
-                        >
-                          <Trash2 size={13} />
+                          {isAvailable ? '✓ In Stock' : '✕ Sold Out'}
                         </button>
                       </div>
-
-                      <button
-                        onClick={() => onToggleAvailability && onToggleAvailability(dish.id, !isAvailable)}
-                        style={{
-                          background: isAvailable ? '#DCFCE7' : '#FEE2E2',
-                          color: isAvailable ? '#15803D' : '#DC2626',
-                          border: `1px solid ${isAvailable ? '#BBF7D0' : '#FECACA'}`,
-                          padding: '3px 8px',
-                          borderRadius: '6px',
-                          fontSize: '0.66rem',
-                          fontWeight: 800,
-                          cursor: 'pointer'
-                        }}
-                      >
-                        {isAvailable ? '✓ In Stock' : '✕ Sold Out'}
-                      </button>
                     </div>
-                  </div>
-                );
-              })}
+                  );
+                })}
+              </div>
+            </>
+          )}
+
+          {/* ========================================================
+              8. POLISHED PAGINATION BAR
+             ======================================================== */}
+          {filteredDishes.length > 0 && (
+            <div style={{
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+              padding: '12px 6px',
+              flexWrap: 'wrap',
+              gap: '10px',
+              borderTop: '1px solid #E2E8F0',
+              marginTop: '8px'
+            }}>
+              <span style={{ fontSize: '0.76rem', color: '#64748B', fontWeight: 600 }}>
+                Showing{' '}
+                <strong style={{ color: '#0F172A' }}>
+                  {isAllPages ? 1 : Math.min(totalItems, (safeCurrentPage - 1) * effectivePageSize + 1)}
+                </strong>
+                –
+                <strong style={{ color: '#0F172A' }}>
+                  {isAllPages ? totalItems : Math.min(totalItems, safeCurrentPage * effectivePageSize)}
+                </strong>
+                {' '}of <strong style={{ color: '#0F172A' }}>{totalItems}</strong> dishes
+              </span>
+
+              {!isAllPages && totalPages > 1 && (
+                <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                  {/* Prev Button */}
+                  <button
+                    onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
+                    disabled={safeCurrentPage === 1}
+                    style={{
+                      padding: '6px 9px',
+                      borderRadius: '8px',
+                      border: '1px solid #E2E8F0',
+                      background: safeCurrentPage === 1 ? '#F8FAFC' : '#FFFFFF',
+                      color: safeCurrentPage === 1 ? '#CBD5E1' : '#0F172A',
+                      cursor: safeCurrentPage === 1 ? 'not-allowed' : 'pointer',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center'
+                    }}
+                    title="Previous Page"
+                  >
+                    <ChevronLeft size={14} />
+                  </button>
+
+                  {/* Page Numbers */}
+                  {Array.from({ length: totalPages }, (_, i) => i + 1)
+                    .filter(p => p === 1 || p === totalPages || Math.abs(p - safeCurrentPage) <= 1)
+                    .map((p, idx, arr) => {
+                      const isPrevGap = idx > 0 && p - arr[idx - 1] > 1;
+                      return (
+                        <React.Fragment key={p}>
+                          {isPrevGap && <span style={{ padding: '0 4px', color: '#94A3B8', fontSize: '0.74rem' }}>...</span>}
+                          <button
+                            onClick={() => setCurrentPage(p)}
+                            style={{
+                              width: '30px',
+                              height: '30px',
+                              borderRadius: '8px',
+                              border: p === safeCurrentPage ? '1px solid #0A2315' : '1px solid #E2E8F0',
+                              background: p === safeCurrentPage ? '#0A2315' : '#FFFFFF',
+                              color: p === safeCurrentPage ? '#FFFFFF' : '#0F172A',
+                              fontSize: '0.74rem',
+                              fontWeight: 800,
+                              cursor: 'pointer'
+                            }}
+                          >
+                            {p}
+                          </button>
+                        </React.Fragment>
+                      );
+                    })}
+
+                  {/* Next Button */}
+                  <button
+                    onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
+                    disabled={safeCurrentPage === totalPages}
+                    style={{
+                      padding: '6px 9px',
+                      borderRadius: '8px',
+                      border: '1px solid #E2E8F0',
+                      background: safeCurrentPage === totalPages ? '#F8FAFC' : '#FFFFFF',
+                      color: safeCurrentPage === totalPages ? '#CBD5E1' : '#0F172A',
+                      cursor: safeCurrentPage === totalPages ? 'not-allowed' : 'pointer',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center'
+                    }}
+                    title="Next Page"
+                  >
+                    <ChevronRight size={14} />
+                  </button>
+                </div>
+              )}
             </div>
           )}
         </>
       )}
 
       {/* ========================================================
-          7. FLOATING + ADD ACTION BUTTON (MOBILE FAB)
+          7. FLOATING + ADD ACTION BUTTON (MOBILE ONLY)
          ======================================================== */}
       <button
         onClick={activeSubTab === 'combos' ? onOpenAddCombo : activeSubTab === 'categories' ? onOpenAddCategory : onOpenAddDish}
         disabled={dishQuota.isAtLimit}
         style={{
           position: 'fixed',
-          bottom: '76px',
+          bottom: '84px',
           right: '16px',
           background: dishQuota.isAtLimit ? '#64748B' : 'linear-gradient(135deg, #0A2315 0%, #062B1C 100%)',
           color: '#FFFFFF',
@@ -1848,7 +2305,7 @@ export default function MenuView({
           display: 'flex',
           alignItems: 'center',
           gap: '6px',
-          zIndex: 900,
+          zIndex: 89,
           cursor: dishQuota.isAtLimit ? 'not-allowed' : 'pointer'
         }}
       >
