@@ -142,7 +142,7 @@ export default function HomeView({
             grid-template-columns: 1fr !important;
           }
           .home-kpi-row {
-            grid-template-columns: 1fr !important;
+            grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
           }
         }
       `}</style>
@@ -156,7 +156,7 @@ export default function HomeView({
           background: '#FFFFFF',
           borderRadius: '16px',
           border: '1px solid #E2E8F0',
-          padding: '20px',
+          padding: '18px 20px',
           display: 'flex',
           alignItems: 'flex-start',
           gap: '14px',
@@ -201,7 +201,7 @@ export default function HomeView({
           background: '#FFFFFF',
           borderRadius: '16px',
           border: '1px solid #E2E8F0',
-          padding: '20px',
+          padding: '18px 20px',
           display: 'flex',
           alignItems: 'flex-start',
           gap: '14px',
@@ -244,7 +244,7 @@ export default function HomeView({
           background: '#FFFFFF',
           borderRadius: '16px',
           border: '1px solid #E2E8F0',
-          padding: '20px',
+          padding: '18px 20px',
           display: 'flex',
           alignItems: 'flex-start',
           gap: '14px',
@@ -295,7 +295,7 @@ export default function HomeView({
           background: '#FFFFFF',
           borderRadius: '16px',
           border: '1px solid #E2E8F0',
-          padding: '20px',
+          padding: '18px 20px',
           display: 'flex',
           alignItems: 'flex-start',
           gap: '14px',
@@ -567,9 +567,17 @@ export default function HomeView({
               boxSizing: 'border-box'
             }}>
               <div>
-                <h3 style={{ fontSize: '0.98rem', fontWeight: 800, color: '#0F172A', margin: '0 0 18px 0' }}>
-                  Recent Activity
-                </h3>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '18px' }}>
+                  <h3 style={{ fontSize: '0.98rem', fontWeight: 800, color: '#0F172A', margin: 0 }}>
+                    Recent Activity
+                  </h3>
+                  <button
+                    onClick={() => onNavigateTab('orders')}
+                    style={{ background: 'none', border: 'none', color: '#059669', fontSize: '0.74rem', fontWeight: 800, cursor: 'pointer' }}
+                  >
+                    View All
+                  </button>
+                </div>
 
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
                   {recentActivities.map((act, i) => {
@@ -602,7 +610,7 @@ export default function HomeView({
                 </div>
               </div>
 
-              {/* View All Activity */}
+              {/* View All Activity Bottom */}
               <button
                 onClick={() => onNavigateTab('orders')}
                 style={{
@@ -780,8 +788,8 @@ export default function HomeView({
             </div>
           </div>
 
-          {/* C. ROW 3: CELEBRATION BANNER */}
-          <div style={{
+          {/* C. ROW 3: CELEBRATION BANNER (On Desktop inside Left Column, On Mobile at Bottom) */}
+          <div className="home-desktop-banner" style={{
             background: '#FEF9C3',
             border: '1px solid #FDE047',
             borderRadius: '16px',
@@ -816,10 +824,10 @@ export default function HomeView({
           </div>
         </div>
 
-        {/* ================= RIGHT INSIGHT RAIL ================= */}
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '16px', minWidth: '280px' }}>
+        {/* ================= RIGHT RAIL / MOBILE ADAPTER ================= */}
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '16px', minWidth: 0 }}>
           
-          {/* 1. CURRENT PLAN CARD */}
+          {/* 1. CURRENT PLAN CARD (Dark Emerald Luxury) */}
           <div style={{
             background: '#071F14',
             borderRadius: '18px',
@@ -829,57 +837,60 @@ export default function HomeView({
             boxShadow: '0 4px 16px rgba(7, 31, 20, 0.12)',
             boxSizing: 'border-box'
           }}>
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '8px' }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                <Crown size={16} color="#D4AF37" />
-                <span style={{ fontSize: '0.82rem', fontWeight: 900, color: '#D4AF37', letterSpacing: '0.04em' }}>
-                  {planName.toUpperCase()}
-                </span>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '10px' }}>
+              <div style={{ flex: 1, minWidth: '180px' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '4px' }}>
+                  <Crown size={16} color="#D4AF37" />
+                  <span style={{ fontSize: '0.82rem', fontWeight: 900, color: '#D4AF37', letterSpacing: '0.04em' }}>
+                    {planName.toUpperCase()}
+                  </span>
+                  <span style={{
+                    fontSize: '0.66rem',
+                    fontWeight: 800,
+                    background: 'rgba(34, 197, 94, 0.2)',
+                    color: '#4ADE80',
+                    border: '1px solid rgba(74, 222, 128, 0.4)',
+                    padding: '2px 8px',
+                    borderRadius: '8px',
+                    marginLeft: '4px'
+                  }}>
+                    {isTrial ? 'Trial' : 'Active'}
+                  </span>
+                </div>
+
+                <div style={{ display: 'flex', alignItems: 'baseline', gap: '6px', margin: '4px 0 2px 0' }}>
+                  <span style={{ fontSize: '1.65rem', fontWeight: 900, color: '#FFFFFF', letterSpacing: '-0.02em' }}>
+                    {currencySymbol}{planPrice}
+                  </span>
+                  <span style={{ fontSize: '0.78rem', color: '#94A3B8', fontWeight: 500 }}>
+                    / month
+                  </span>
+                </div>
+
+                <div style={{ fontSize: '0.72rem', color: '#CBD5E1' }}>
+                  Next billing on {nextBillingDate}
+                </div>
               </div>
-              <span style={{
-                fontSize: '0.66rem',
-                fontWeight: 800,
-                background: 'rgba(34, 197, 94, 0.2)',
-                color: '#4ADE80',
-                border: '1px solid rgba(74, 222, 128, 0.4)',
-                padding: '2px 8px',
-                borderRadius: '8px'
-              }}>
-                {isTrial ? 'Trial' : 'Active'}
-              </span>
-            </div>
 
-            <div style={{ display: 'flex', alignItems: 'baseline', gap: '6px', margin: '8px 0 4px 0' }}>
-              <span style={{ fontSize: '1.65rem', fontWeight: 900, color: '#FFFFFF', letterSpacing: '-0.02em' }}>
-                {currencySymbol}{planPrice}
-              </span>
-              <span style={{ fontSize: '0.78rem', color: '#94A3B8', fontWeight: 500 }}>
-                / month
-              </span>
+              <button
+                onClick={() => onNavigateToSetup ? onNavigateToSetup('subscription') : onNavigateTab('settings')}
+                style={{
+                  padding: '11px 22px',
+                  borderRadius: '10px',
+                  background: 'linear-gradient(135deg, #D4AF37 0%, #B48F27 100%)',
+                  color: '#0A2315',
+                  fontSize: '0.82rem',
+                  fontWeight: 900,
+                  border: 'none',
+                  cursor: 'pointer',
+                  boxShadow: '0 2px 8px rgba(212, 175, 55, 0.3)',
+                  transition: 'all 0.15s ease',
+                  flexShrink: 0
+                }}
+              >
+                Manage Plan
+              </button>
             </div>
-
-            <div style={{ fontSize: '0.72rem', color: '#CBD5E1', marginBottom: '16px' }}>
-              Next billing on {nextBillingDate}
-            </div>
-
-            <button
-              onClick={() => onNavigateToSetup ? onNavigateToSetup('subscription') : onNavigateTab('settings')}
-              style={{
-                width: '100%',
-                padding: '11px',
-                borderRadius: '10px',
-                background: 'linear-gradient(135deg, #D4AF37 0%, #B48F27 100%)',
-                color: '#0A2315',
-                fontSize: '0.82rem',
-                fontWeight: 900,
-                border: 'none',
-                cursor: 'pointer',
-                boxShadow: '0 2px 8px rgba(212, 175, 55, 0.3)',
-                transition: 'all 0.15s ease'
-              }}
-            >
-              Manage Plan
-            </button>
           </div>
 
           {/* 2. PLAN USAGE CARD */}
@@ -895,7 +906,7 @@ export default function HomeView({
               Plan Usage
             </h4>
 
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '14px' }}>
               {/* Dishes */}
               <div>
                 <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.76rem', marginBottom: '4px' }}>
@@ -944,7 +955,7 @@ export default function HomeView({
               Quick Status
             </h4>
 
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '10px 24px' }}>
               {/* QR Ordering */}
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', fontSize: '0.76rem' }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: '#334155', fontWeight: 600 }}>
