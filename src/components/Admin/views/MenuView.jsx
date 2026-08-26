@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { Plus, Search, MoreVertical, Edit, Trash2, Star, Sparkles, DollarSign, Filter, X } from 'lucide-react';
 import AdminDrawer from '../components/AdminDrawer';
 import { resolveImageUrl, getDishImageUrl, getCategoryImageUrl, hasCustomCategoryImage } from '../../../utils/imageHelper';
+import { formatQuota } from '../../../utils/planCapabilities';
 
 export default function MenuView({
   dishes = [],
@@ -27,7 +28,11 @@ export default function MenuView({
   onDeleteCombo,
   onToggleComboAvailability,
   onToggleBadge,
-  currencySymbol = '₹'
+  currencySymbol = '₹',
+  maxDishes = 9999,
+  maxCategories = 9999,
+  maxCombos = 9999,
+  onUpgrade = null
 }) {
   const [deleteConfirmDish, setDeleteConfirmDish] = useState(null);
   const [selectedDishForMore, setSelectedDishForMore] = useState(null);
@@ -38,6 +43,10 @@ export default function MenuView({
   const safeDishes = Array.isArray(dishes) ? dishes : [];
   const safeCategories = Array.isArray(categories) ? categories : [];
   const safeCombos = Array.isArray(combos) ? combos : [];
+
+  const dishQuota = formatQuota(safeDishes.length, maxDishes);
+  const catQuota = formatQuota(safeCategories.length, maxCategories);
+  const comboQuota = formatQuota(safeCombos.length, maxCombos);
 
   const filteredDishes = safeDishes.filter(d => {
     const matchesSearch = !search || d.name.toLowerCase().includes(search.toLowerCase());
@@ -80,8 +89,13 @@ export default function MenuView({
             Menu Management
           </h2>
           <span style={{ fontSize: '0.72rem', fontWeight: 800, background: '#F1F5F9', color: '#475569', border: '1px solid #E2E8F0', padding: '3px 10px', borderRadius: '12px' }}>
-            {safeDishes.length} Dishes • {safeCategories.length} Categories
+            {dishQuota.display} Dishes • {catQuota.display} Categories • {comboQuota.display} Combos
           </span>
+          {comboQuota.isAtLimit && (
+            <span style={{ fontSize: '0.70rem', fontWeight: 800, background: '#FEE2E2', color: '#DC2626', border: '1px solid #FCA5A5', padding: '2px 8px', borderRadius: '8px' }}>
+              ⚠️ Combo Limit Reached
+            </span>
+          )}
         </div>
 
         {activeSubTab === 'dishes' && (

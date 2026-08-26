@@ -86,22 +86,18 @@ export default function AdminHeader({
       {/* CENTER: Desktop Integrated Nav Tabs (hidden on mobile) */}
       {setActiveTab && (
         <div className="adm-header-desktop-tabs">
-          {ordersEnabled && (
-            <button
-              onClick={() => setActiveTab('orders')}
-              className={`adm-header-tab ${isOrdersActive ? 'active' : ''}`}
-            >
-              Orders {pendingOrdersCount > 0 ? `(${pendingOrdersCount})` : ''}
-            </button>
-          )}
-          {analyticsEnabled && (
-            <button
-              onClick={() => setActiveTab('analytics')}
-              className={`adm-header-tab ${isAnalyticsActive ? 'active' : ''}`}
-            >
-              Analytics
-            </button>
-          )}
+          <button
+            onClick={() => setActiveTab('orders')}
+            className={`adm-header-tab ${isOrdersActive ? 'active' : ''}`}
+          >
+            Orders {pendingOrdersCount > 0 ? `(${pendingOrdersCount})` : ''}
+          </button>
+          <button
+            onClick={() => setActiveTab('analytics')}
+            className={`adm-header-tab ${isAnalyticsActive ? 'active' : ''}`}
+          >
+            Analytics
+          </button>
           <button
             onClick={() => setActiveTab('dishes')}
             className={`adm-header-tab ${isMenuActive ? 'active' : ''}`}

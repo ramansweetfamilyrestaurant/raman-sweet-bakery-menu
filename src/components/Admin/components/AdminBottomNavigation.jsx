@@ -9,35 +9,31 @@ export default function AdminBottomNavigation({ activeTab, setActiveTab, pending
 
   return (
     <nav className="adm-mobile-nav">
-      {ordersEnabled && (
-        <button
-          onClick={() => setActiveTab('orders')}
-          className={`adm-mobile-nav-item ${isOrdersActive ? 'active' : ''}`}
-          style={{ position: 'relative' }}
-        >
-          <ShoppingBag size={20} />
-          <span>Orders</span>
-          {pendingOrdersCount > 0 && (
-            <span style={{
-              position: 'absolute', top: '4px', right: 'calc(50% - 18px)',
-              background: 'var(--adm-danger)', color: '#FFF', fontSize: '0.62rem',
-              fontWeight: 900, borderRadius: '9999px', padding: '1px 5px', minWidth: '16px', textAlign: 'center'
-            }}>
-              {pendingOrdersCount}
-            </span>
-          )}
-        </button>
-      )}
+      <button
+        onClick={() => setActiveTab('orders')}
+        className={`adm-mobile-nav-item ${isOrdersActive ? 'active' : ''}`}
+        style={{ position: 'relative' }}
+      >
+        <ShoppingBag size={20} />
+        <span>Orders</span>
+        {pendingOrdersCount > 0 && (
+          <span style={{
+            position: 'absolute', top: '4px', right: 'calc(50% - 18px)',
+            background: 'var(--adm-danger)', color: '#FFF', fontSize: '0.62rem',
+            fontWeight: 900, borderRadius: '9999px', padding: '1px 5px', minWidth: '16px', textAlign: 'center'
+          }}>
+            {pendingOrdersCount}
+          </span>
+        )}
+      </button>
 
-      {analyticsEnabled && (
-        <button
-          onClick={() => setActiveTab('analytics')}
-          className={`adm-mobile-nav-item ${isAnalyticsActive ? 'active' : ''}`}
-        >
-          <BarChart2 size={20} />
-          <span>Analytics</span>
-        </button>
-      )}
+      <button
+        onClick={() => setActiveTab('analytics')}
+        className={`adm-mobile-nav-item ${isAnalyticsActive ? 'active' : ''}`}
+      >
+        <BarChart2 size={20} />
+        <span>Analytics</span>
+      </button>
 
       <button
         onClick={() => setActiveTab('dishes')}

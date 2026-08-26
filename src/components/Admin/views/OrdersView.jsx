@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useMemo } from 'react';
-import { Clock, Printer, MapPin, Bell, RefreshCw, CheckCircle2, QrCode, XCircle, UtensilsCrossed, Shield, ShieldCheck, ShieldAlert, Check, X, AlertTriangle } from 'lucide-react';
+import { Clock, Printer, MapPin, Bell, RefreshCw, CheckCircle2, QrCode, XCircle, UtensilsCrossed, Shield, ShieldCheck, ShieldAlert, Check, X, AlertTriangle, MessageSquare } from 'lucide-react';
 import KdsDisplayView from './KdsDisplayView';
+import PlanLockedCard from '../components/PlanLockedCard';
 import { resolveBusinessProfile } from '../../../utils/businessTaxonomy';
 import { fetchCinemaScreens, fetchCinemaSeats } from '../../../api/client';
 
@@ -409,19 +410,92 @@ export default function OrdersView({
   const kdsEnabled = kdsPlanEnabled && kdsScreenEnabled;
   const dualPrinterEnabled = restaurantInfo?.dual_printer_enabled === 1 || restaurantInfo?.dual_printer_enabled === true || restaurantInfo?.dual_printer_enabled === '1';
 
+  const whatsappOrderingEnabled = Boolean(
+    restaurantInfo?.whatsapp_ordering_enabled === 1 ||
+    restaurantInfo?.whatsapp_ordering_enabled === true ||
+    restaurantInfo?.whatsapp_ordering_enabled === '1'
+  );
+
   if (ordersEnabled === false) {
-    return (
-      <div style={{ padding: '40px 20px', textAlign: 'center', background: '#FFF', borderRadius: 'var(--adm-radius-lg)', border: '1px solid var(--adm-border)' }}>
-        <div style={{ width: '60px', height: '60px', borderRadius: '50%', background: '#FEF3C7', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 16px auto', border: '1px solid #F59E0B' }}>
-          <XCircle size={32} color="#B45309" />
+    if (whatsappOrderingEnabled) {
+      return (
+        <div style={{
+          background: '#FFFFFF',
+          borderRadius: '16px',
+          border: '1px solid #E2E8F0',
+          padding: '32px 24px',
+          textAlign: 'center',
+          maxWidth: '680px',
+          margin: '20px auto',
+          boxShadow: '0 4px 16px rgba(0,0,0,0.03)'
+        }}>
+          <div style={{
+            width: '56px',
+            height: '56px',
+            borderRadius: '16px',
+            background: '#DCFCE7',
+            color: '#15803D',
+            display: 'inline-flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            fontSize: '1.8rem',
+            marginBottom: '14px'
+          }}>
+            💬
+          </div>
+          <h3 style={{ fontSize: '1.2rem', fontWeight: 900, color: '#0F172A', margin: '0 0 8px 0' }}>
+            WhatsApp Direct Ordering Active
+          </h3>
+          <p style={{ fontSize: '0.86rem', color: '#64748B', lineHeight: '1.5', maxWidth: '520px', margin: '0 auto 20px auto' }}>
+            Your digital menu accepts customer food orders directly via structured WhatsApp chat messages to your business number.
+          </p>
+
+          <div style={{
+            background: '#F8FAFC',
+            borderRadius: '12px',
+            border: '1px solid #E2E8F0',
+            padding: '14px 18px',
+            marginBottom: '24px',
+            textAlign: 'left'
+          }}>
+            <div style={{ fontSize: '0.82rem', fontWeight: 800, color: '#334155', marginBottom: '4px' }}>
+              Want Direct Table QR Ordering & Live Dashboard KOT?
+            </div>
+            <div style={{ fontSize: '0.78rem', color: '#64748B' }}>
+              Upgrade to the <strong>Enterprise Plan (₹1,999/mo)</strong> to receive live POS table orders directly on this screen.
+            </div>
+          </div>
+
+          {onNavigateToSetup && (
+            <button
+              onClick={() => onNavigateToSetup('subscription')}
+              style={{
+                padding: '12px 24px',
+                borderRadius: '12px',
+                border: 'none',
+                background: 'linear-gradient(135deg, #059669 0%, #10B981 100%)',
+                color: '#FFFFFF',
+                fontSize: '0.88rem',
+                fontWeight: 900,
+                cursor: 'pointer',
+                boxShadow: '0 4px 14px rgba(16, 185, 129, 0.25)'
+              }}
+            >
+              View Upgrade Options
+            </button>
+          )}
         </div>
-        <h3 style={{ fontSize: '1.2rem', fontWeight: 900, color: 'var(--adm-primary)', margin: '0 0 6px 0' }}>
-          🔒 Live Customer QR Order Receiving Page Locked
-        </h3>
-        <p style={{ fontSize: '0.86rem', color: 'var(--adm-muted)', maxWidth: '480px', margin: '0 auto 16px auto' }}>
-          Live order receiving is disabled for your restaurant on the current plan tier. Upgrade to Pro or Enterprise plan in SuperAdmin to unlock live QR table order receiving!
-        </p>
-      </div>
+      );
+    }
+
+    return (
+      <PlanLockedCard
+        featureKey="direct_ordering_enabled"
+        title="Direct Table / Space QR Ordering"
+        description="Direct QR table ordering is not included in your current plan."
+        minTier="Enterprise"
+        onUpgrade={onNavigateToSetup ? () => onNavigateToSetup('subscription') : null}
+      />
     );
   }
 

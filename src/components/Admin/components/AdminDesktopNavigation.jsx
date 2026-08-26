@@ -9,25 +9,21 @@ export default function AdminDesktopNavigation({ activeTab, setActiveTab, pendin
 
   return (
     <nav className="adm-desktop-nav">
-      {ordersEnabled && (
-        <button
-          onClick={() => setActiveTab('orders')}
-          className={`adm-desktop-nav-item ${isOrdersActive ? 'active' : ''}`}
-        >
-          <ShoppingBag size={16} />
-          <span>Orders {pendingOrdersCount > 0 ? `(${pendingOrdersCount})` : ''}</span>
-        </button>
-      )}
+      <button
+        onClick={() => setActiveTab('orders')}
+        className={`adm-desktop-nav-item ${isOrdersActive ? 'active' : ''}`}
+      >
+        <ShoppingBag size={16} />
+        <span>Orders {pendingOrdersCount > 0 ? `(${pendingOrdersCount})` : ''}</span>
+      </button>
 
-      {analyticsEnabled && (
-        <button
-          onClick={() => setActiveTab('analytics')}
-          className={`adm-desktop-nav-item ${isAnalyticsActive ? 'active' : ''}`}
-        >
-          <BarChart2 size={16} />
-          <span>Analytics</span>
-        </button>
-      )}
+      <button
+        onClick={() => setActiveTab('analytics')}
+        className={`adm-desktop-nav-item ${isAnalyticsActive ? 'active' : ''}`}
+      >
+        <BarChart2 size={16} />
+        <span>Analytics</span>
+      </button>
 
       <button
         onClick={() => setActiveTab('dishes')}

@@ -3,6 +3,7 @@ import { fetchCategories, fetchDishes, toggleDishAvailability, toggleCategoryAct
 import { getPlanDetails } from '../../config/plans';
 import { generateQrToken } from '../../utils/qrSecurity';
 import { getSpaceConfig } from '../../utils/businessTaxonomy';
+import { resolveTenantCapabilities } from '../../utils/planCapabilities';
 import { soundManager, unlockNotificationSound, playPresenceAlert, playWaiterAlert, subscribeAudioState } from '../../utils/soundManager';
 import DishFormModal from './DishFormModal';
 import CategoryFormModal from './CategoryFormModal';
@@ -2504,17 +2505,9 @@ export default function AdminDashboard({
   const occupiedTablesCount = tableGrid.filter(t => t.status === 'occupied').length;
   const serviceNeededCount = tableGrid.filter(t => t.status === 'service_needed').length;
 
-  const isAnalyticsEnabled = Boolean(
-    restaurantInfo &&
-    (restaurantInfo.analytics_export_enabled === true || restaurantInfo.analytics_export_enabled === 1 || restaurantInfo.analytics_export_enabled === '1') &&
-    (settingsForm.analytics_export_enabled === true || settingsForm.analytics_export_enabled === 1 || settingsForm.analytics_export_enabled === '1')
-  );
-
-  const isDirectOrderingEnabled = Boolean(
-    restaurantInfo &&
-    (restaurantInfo.direct_ordering_enabled === true || restaurantInfo.direct_ordering_enabled === 1 || restaurantInfo.direct_ordering_enabled === '1') &&
-    (restaurantInfo.permissions?.direct_ordering_enabled !== false && restaurantInfo.permissions?.direct_ordering_enabled !== 0 && restaurantInfo.permissions?.direct_ordering_enabled !== 'false')
-  );
+  const tenantCaps = resolveTenantCapabilities(restaurantInfo, settingsForm);
+  const isAnalyticsEnabled = true;
+  const isDirectOrderingEnabled = tenantCaps.direct_ordering_enabled;
 
   return (
     <div style={{ minHeight: '100vh', background: 'var(--bg-app)', paddingBottom: '70px' }}>
@@ -2932,7 +2925,7 @@ export default function AdminDashboard({
             )}
 
             {/* ANALYTICS VIEW */}
-            {activeTab === 'analytics' && isAnalyticsEnabled && (
+            {activeTab === 'analytics' && (
               <AnalyticsView
                 analyticsData={analyticsData}
                 onExportReport={handleExportSalesReport}
@@ -2940,7 +2933,7 @@ export default function AdminDashboard({
                 onFilterPeriod={handleFilterAnalytics}
                 exporting={exportingReport}
                 exportingAll={exportingReport}
-                analyticsExportEnabled={isAnalyticsEnabled}
+                analyticsExportEnabled={tenantCaps.analytics_export_enabled}
                 currencySymbol={settingsForm.currency_symbol !== undefined && settingsForm.currency_symbol !== null ? settingsForm.currency_symbol : '₹'}
               />
             )}
@@ -2972,6 +2965,13 @@ export default function AdminDashboard({
                 onToggleComboAvailability={toggleComboAvailability}
                 onToggleBadge={handleToggleBadge}
                 currencySymbol={settingsForm.currency_symbol !== undefined && settingsForm.currency_symbol !== null ? settingsForm.currency_symbol : '₹'}
+                maxDishes={tenantCaps.max_dishes}
+                maxCategories={tenantCaps.max_categories}
+                maxCombos={tenantCaps.max_combos}
+                onUpgrade={() => {
+                  setInitialSetupDrawer('subscription');
+                  setActiveTab('settings');
+                }}
               />
             )}
 
