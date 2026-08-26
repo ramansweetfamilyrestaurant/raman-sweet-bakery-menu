@@ -1,5 +1,34 @@
 import React, { useState, useEffect, useMemo } from 'react';
-import { Clock, Printer, MapPin, Bell, RefreshCw, CheckCircle2, QrCode, XCircle, UtensilsCrossed, Shield, ShieldCheck, ShieldAlert, Check, X, AlertTriangle, MessageSquare } from 'lucide-react';
+import { 
+  Clock, 
+  Printer, 
+  MapPin, 
+  Bell, 
+  RefreshCw, 
+  CheckCircle2, 
+  QrCode, 
+  XCircle, 
+  UtensilsCrossed, 
+  Shield, 
+  ShieldCheck, 
+  ShieldAlert, 
+  Check, 
+  X, 
+  AlertTriangle, 
+  MessageSquare,
+  ShoppingBag,
+  ChefHat,
+  Receipt,
+  ExternalLink,
+  ChevronRight,
+  ChevronDown,
+  Filter,
+  Eye,
+  CreditCard,
+  Share2,
+  Tv,
+  ArrowUpRight
+} from 'lucide-react';
 import KdsDisplayView from './KdsDisplayView';
 import PlanLockedCard from '../components/PlanLockedCard';
 import { resolveBusinessProfile } from '../../../utils/businessTaxonomy';
@@ -38,7 +67,7 @@ export default function OrdersView({
       try {
         const parsed = JSON.parse(rawItems);
         return Array.isArray(parsed) ? parsed : [];
-      } catch (e) {
+      } catch {
         return [];
       }
     }
@@ -97,12 +126,14 @@ export default function OrdersView({
   const validOrders = (Array.isArray(orders) ? orders : []).filter(o => o.status !== 'rejected' && o.status !== 'cancelled');
   const safeServiceRequests = Array.isArray(serviceRequests) ? serviceRequests : [];
 
-  const [processingReqState, setProcessingReqState] = useState({}); // { [id]: 'approving' | 'rejecting' }
+  const [selectedOrder, setSelectedOrder] = useState(null);
+  const [sourceFilter, setSourceFilter] = useState('all'); // 'all' | 'direct' | 'whatsapp' | 'manual'
+  const [spaceCategoryFilter, setSpaceCategoryFilter] = useState('all');
+  const [processingReqState, setProcessingReqState] = useState({});
   const [rejectingModalReq, setRejectingModalReq] = useState(null);
   const [selectedRejectReason, setSelectedRejectReason] = useState('Customer not visible at table');
   const [customRejectReason, setCustomRejectReason] = useState('');
   const [currentTime, setCurrentTime] = useState(Date.now());
-  const [spaceCategoryFilter, setSpaceCategoryFilter] = useState('all'); // 'all' | 'table' | 'cabin' | 'vip'
 
   useEffect(() => {
     const timer = setInterval(() => setCurrentTime(Date.now()), 1000);
@@ -140,1997 +171,1108 @@ export default function OrdersView({
     return { space_type: isHotel ? 'room' : 'table', space_number: String(numOnly) };
   };
 
-  const parseServiceReqSpaceLocation = (req) => {
-    return parseOrderSpaceLocation({ table_number: req?.table_number, space_type: req?.space_type });
-  };
-
-  const handleApprove = async (sr) => {
-    if (processingReqState[sr.id]) return;
-    setProcessingReqState(prev => ({ ...prev, [sr.id]: 'approving' }));
-    try {
-      if (onApprovePresenceRequest) {
-        await onApprovePresenceRequest(sr.id);
-      } else {
-        await onResolveServiceRequest(sr.id);
-      }
-    } catch (err) {
-      console.error('Approve presence error:', err);
-    } finally {
-      setProcessingReqState(prev => {
-        const next = { ...prev };
-        delete next[sr.id];
-        return next;
-      });
-    }
-  };
-
-  const handleOpenRejectModal = (sr) => {
-    setRejectingModalReq(sr);
-    setSelectedRejectReason('Customer not visible at table');
-    setCustomRejectReason('');
-  };
-
-  const handleConfirmReject = async () => {
-    if (!rejectingModalReq) return;
-    const reqId = rejectingModalReq.id;
-    const finalReason = selectedRejectReason === 'Other' ? (customRejectReason.trim() || 'Rejected by staff') : selectedRejectReason;
-    
-    setProcessingReqState(prev => ({ ...prev, [reqId]: 'rejecting' }));
-    setRejectingModalReq(null);
-    try {
-      if (onRejectPresenceRequest) {
-        await onRejectPresenceRequest(reqId, finalReason);
-      } else {
-        await onResolveServiceRequest(reqId);
-      }
-    } catch (err) {
-      console.error('Reject presence error:', err);
-    } finally {
-      setProcessingReqState(prev => {
-        const next = { ...prev };
-        delete next[reqId];
-        return next;
-      });
-    }
-  };
-
   const formatCleanTableLabel = (raw, spaceType) => {
-    if (!raw) return isCinema ? 'Screen 1 • Seat 1' : (spaceType === 'room' || (isHotel && prefix === 'room')) ? 'Room 101' : 'Table 1';
+    if (!raw) return isCinema ? 'Screen 1 • Seat 1' : isHotel ? 'Room 101' : 'Table 1';
     const str = String(raw).trim();
     
-    // Cinema matching
-    const cMatch = str.match(/^S?(\d+)[- •]+(?:Row[- ]*)?([A-Za-z]+)[- •]+(?:Seat[- ]*)?(\d+)$/i) ||
-                   str.match(/Screen\s*(\d+)\s*[-•]\s*Row\s*([A-Za-z]+)\s*[-•]\s*Seat\s*(\d+)/i);
-    if (cMatch) {
-      return `🎬 Screen ${cMatch[1]} • Row ${cMatch[2].toUpperCase()} • Seat ${cMatch[3]}`;
+    if (isCinema) {
+      return `🎬 ${str.toLowerCase().startsWith('screen') ? str : `Screen 1 • Seat ${str}`}`;
     }
-    if (str.toLowerCase().startsWith('screen')) {
-      return `🎬 ${str}`;
-    }
-    if ((spaceType === 'cinema_seat' || isCinema) && !str.toLowerCase().includes('table')) {
-      return `🎬 Seat ${str}`;
-    }
-
-    // Explicit spaceType matching
-    if (spaceType === 'table') {
-      return `🍽️ Table ${str.replace(/^table\s*#?/i, '')}`;
-    }
-    if (spaceType === 'room' || /^room\s*#?\d+/i.test(str)) {
-      return `🏨 ${str.toLowerCase().startsWith('room') ? (str.charAt(0).toUpperCase() + str.slice(1)) : `Room ${str}`}`;
+    if (spaceType === 'room' || isHotel || /^room\s*#?\d+/i.test(str)) {
+      return `🏨 ${str.toLowerCase().startsWith('room') ? str : `Room ${str}`}`;
     }
     if (spaceType === 'cabin' || /^cabin\s*#?\d+/i.test(str)) {
-      return `🛋️ ${str.toLowerCase().startsWith('cabin') ? (str.charAt(0).toUpperCase() + str.slice(1)) : `Cabin ${str}`}`;
+      return `🛋️ ${str.toLowerCase().startsWith('cabin') ? str : `Cabin ${str}`}`;
     }
     if (spaceType === 'vip' || /^vip\s*#?\d+/i.test(str)) {
       return `👑 ${str.toUpperCase()}`;
     }
-
-    // Safe fallback based on active prefix
-    if (prefix === 'room' && /^\d+$/.test(str)) {
-      return `🏨 Room ${str}`;
+    if (/^(takeaway|parcel|pickup)/i.test(str)) {
+      return `🛍️ ${str}`;
     }
-
-    if (/^(table|room|cabin|vip|takeaway|parcel)/i.test(str) || /^[\p{Extended_Pictographic}\u2000-\u3300]/u.test(str)) {
-      return str;
-    }
-    return `Table ${str}`;
+    return `🍽️ ${str.toLowerCase().startsWith('table') ? str : `Table ${str}`}`;
   };
 
-  const pendingCount = validOrders.filter(o => o.status === 'pending').length;
-  const kitchenCount = validOrders.filter(o => o.status === 'kitchen' || o.status === 'accepted').length;
-  const servedCount = validOrders.filter(o => o.status === 'served').length;
+  const getTimeAgo = (timestamp) => {
+    if (!timestamp) return 'Just now';
+    const diffMs = currentTime - new Date(timestamp).getTime();
+    const diffSec = Math.max(0, Math.floor(diffMs / 1000));
+    if (diffSec < 60) return `${diffSec}s ago`;
+    const diffMin = Math.floor(diffSec / 60);
+    if (diffMin < 60) return `${diffMin}m ago`;
+    const diffHr = Math.floor(diffMin / 60);
+    return `${diffHr}h ago`;
+  };
+
+  // Metrics
+  const pendingCount = validOrders.filter(o => o.status === 'pending' || o.status === 'ordered').length;
+  const kitchenCount = validOrders.filter(o => o.status === 'kitchen' || o.status === 'accepted' || o.status === 'preparing').length;
+  const servedCount = validOrders.filter(o => o.status === 'served' || o.status === 'ready').length;
   const completedCount = validOrders.filter(o => o.status === 'completed').length;
   const todayTotalSales = validOrders.reduce((sum, o) => sum + (Number(o.total_amount) || 0), 0);
 
+  // Filtered Orders
   const filteredOrders = validOrders.filter(o => {
-    if (kotFilter === 'pending') return o.status === 'pending';
-    if (kotFilter === 'kitchen') return o.status === 'kitchen' || o.status === 'accepted';
-    if (kotFilter === 'served') return o.status === 'served';
-    if (kotFilter === 'completed') return o.status === 'completed';
+    // Status Filter
+    if (kotFilter === 'pending' && !(o.status === 'pending' || o.status === 'ordered')) return false;
+    if (kotFilter === 'kitchen' && !(o.status === 'kitchen' || o.status === 'accepted' || o.status === 'preparing')) return false;
+    if (kotFilter === 'served' && !(o.status === 'served' || o.status === 'ready')) return false;
+    if (kotFilter === 'completed' && o.status !== 'completed') return false;
+
+    // Source Filter
+    if (sourceFilter === 'direct' && o.order_source !== 'direct_qr' && o.order_type !== 'direct') return false;
+    if (sourceFilter === 'whatsapp' && o.order_source !== 'whatsapp') return false;
+    if (sourceFilter === 'manual' && o.order_source !== 'pos' && o.order_source !== 'manual') return false;
+
     return true;
   });
 
-  const prefix = isCinema
-    ? 'cinema_seat'
-    : isHotel
-      ? 'room'
-      : String(restaurantInfo?.table_prefix || settingsForm?.table_prefix || 'table').toLowerCase();
-  const spaceLabel = prefix === 'cabin' ? 'Cabin' : prefix === 'room' ? 'Room' : prefix === 'vip' ? 'VIP Lounge' : 'Table';
-  const spacePlural = prefix === 'cabin' ? 'Cabins' : prefix === 'room' ? 'Rooms' : prefix === 'vip' ? 'VIP Lounges' : 'Tables';
-  const spaceField = prefix === 'cabin' ? 'total_cabins' : prefix === 'room' ? 'total_rooms' : prefix === 'vip' ? 'total_vip' : 'total_tables';
-
-  // Unified Physical Space Inventory (Tables + Cabins + VIP for Dining, Rooms for Hotel)
-  const spaceInventory = useMemo(() => {
-    if (isCinema) return [];
-    if (isHotel) {
-      const roomCount = Number(restaurantInfo?.total_rooms ?? settingsForm?.total_rooms) || 10;
-      return Array.from({ length: roomCount }, (_, i) => {
-        const num = String(i + 1);
-        return {
-          id: `room_${num}`,
-          space_type: 'room',
-          space_number: num,
-          category: 'room',
-          label: `ROOM ${num}`,
-          displayLabel: `🏨 ROOM ${num}`,
-          icon: '🏨',
-          prefix: 'Room'
-        };
-      });
+  const getStatusBadge = (status) => {
+    switch (status?.toLowerCase()) {
+      case 'pending':
+      case 'ordered':
+        return { label: 'PENDING', bg: '#FEF3C7', color: '#D97706', border: '#FDE68A' };
+      case 'kitchen':
+      case 'accepted':
+      case 'preparing':
+        return { label: 'PREPARING', bg: '#E0F2FE', color: '#0284C7', border: '#BAE6FD' };
+      case 'served':
+      case 'ready':
+        return { label: 'READY', bg: '#DCFCE7', color: '#16A34A', border: '#BBF7D0' };
+      case 'completed':
+        return { label: 'COMPLETED', bg: '#F1F5F9', color: '#475569', border: '#E2E8F0' };
+      default:
+        return { label: (status || 'UNKNOWN').toUpperCase(), bg: '#F8FAFC', color: '#64748B', border: '#E2E8F0' };
     }
+  };
 
-    // Standard Dining: Tables + Cabins + VIP
-    const rawT = restaurantInfo?.total_tables ?? settingsForm?.total_tables;
-    const cCount = Number(restaurantInfo?.total_cabins ?? settingsForm?.total_cabins) || 0;
-    const vCount = Number(restaurantInfo?.total_vip ?? settingsForm?.total_vip) || 0;
-    const tCount = (rawT === undefined || rawT === null || isNaN(Number(rawT))) && cCount === 0 && vCount === 0
-      ? 10
-      : (Number(rawT) || 0);
-
-    const spaces = [];
-
-    // 1. Tables
-    for (let i = 1; i <= tCount; i++) {
-      const num = String(i);
-      spaces.push({
-        id: `table_${num}`,
-        space_type: 'table',
-        space_number: num,
-        category: 'table',
-        label: `TABLE ${num}`,
-        displayLabel: `🍽️ TABLE ${num}`,
-        icon: '🍽️',
-        prefix: 'Table'
-      });
-    }
-
-    // 2. Cabins
-    for (let i = 1; i <= cCount; i++) {
-      const num = String(i);
-      spaces.push({
-        id: `cabin_${num}`,
-        space_type: 'cabin',
-        space_number: num,
-        category: 'cabin',
-        label: `CABIN ${num}`,
-        displayLabel: `🛋️ CABIN ${num}`,
-        icon: '🛋️',
-        prefix: 'Cabin'
-      });
-    }
-
-    // 3. VIP Lounges
-    for (let i = 1; i <= vCount; i++) {
-      const num = String(i);
-      spaces.push({
-        id: `vip_${num}`,
-        space_type: 'vip',
-        space_number: num,
-        category: 'vip',
-        label: `VIP ${num}`,
-        displayLabel: `👑 VIP ${num}`,
-        icon: '👑',
-        prefix: 'VIP'
-      });
-    }
-
-    return spaces;
-  }, [isCinema, isHotel, restaurantInfo?.total_tables, settingsForm?.total_tables, restaurantInfo?.total_cabins, settingsForm?.total_cabins, restaurantInfo?.total_vip, settingsForm?.total_vip, restaurantInfo?.total_rooms, settingsForm?.total_rooms]);
-
-  // Operational State mapping per physical space
-  const spaceGrid = useMemo(() => {
-    return spaceInventory.map(space => {
-      const activeOrder = validOrders.find(o => {
-        if (o.status === 'completed' || o.status === 'rejected' || o.status === 'cancelled') return false;
-        const loc = parseOrderSpaceLocation(o);
-        return loc.space_type === space.space_type && String(loc.space_number) === String(space.space_number);
-      });
-
-      const serviceReq = safeServiceRequests.find(s => {
-        const loc = parseServiceReqSpaceLocation(s);
-        return loc.space_type === space.space_type && String(loc.space_number) === String(space.space_number);
-      });
-
-      let status = 'free';
-      if (serviceReq) {
-        status = 'call';
-      } else if (activeOrder) {
-        if (activeOrder.status === 'served') {
-          status = 'served';
-        } else if (activeOrder.kitchen_prepared === 1 || activeOrder.kitchen_prepared === '1' || activeOrder.kitchen_prepared === true) {
-          status = 'ready';
-        } else {
-          status = 'order_active';
-        }
-      }
-
-      return {
-        ...space,
-        status,
-        activeOrder,
-        serviceRequest: serviceReq
-      };
-    });
-  }, [spaceInventory, validOrders, safeServiceRequests, isHotel]);
-
-  // Summary operational counters
-  const summaryCounters = useMemo(() => {
-    let free = 0;
-    let activeOrders = 0;
-    let calls = 0;
-    let ready = 0;
-    let served = 0;
-
-    spaceGrid.forEach(s => {
-      if (s.status === 'free') free++;
-      else if (s.status === 'call') calls++;
-      else if (s.status === 'ready') ready++;
-      else if (s.status === 'served') served++;
-      else if (s.status === 'order_active') activeOrders++;
-    });
-
-    return { free, activeOrders, calls, ready, served, total: spaceGrid.length };
-  }, [spaceGrid]);
-
-  const tableCategoryCount = spaceGrid.filter(s => s.category === 'table').length;
-  const cabinCategoryCount = spaceGrid.filter(s => s.category === 'cabin').length;
-  const vipCategoryCount = spaceGrid.filter(s => s.category === 'vip').length;
-
-  const filteredSpaceGrid = useMemo(() => {
-    if (spaceCategoryFilter === 'all') return spaceGrid;
-    return spaceGrid.filter(s => s.category === spaceCategoryFilter);
-  }, [spaceGrid, spaceCategoryFilter]);
-
-  // Backward compatibility alias for legacy references
-  const currentSpaceCount = spaceInventory.length;
-  const tableGrid = spaceGrid;
-
-  const kdsPlanEnabled = restaurantInfo?.kds_enabled !== undefined ? (restaurantInfo.kds_enabled === 1 || restaurantInfo.kds_enabled === true || restaurantInfo.kds_enabled === '1') : true;
-  const kdsScreenEnabled = restaurantInfo?.kds_screen_enabled !== undefined ? (restaurantInfo.kds_screen_enabled === 1 || restaurantInfo.kds_screen_enabled === true || restaurantInfo.kds_screen_enabled === '1') : true;
-  const kdsEnabled = kdsPlanEnabled && kdsScreenEnabled;
-  const dualPrinterEnabled = restaurantInfo?.dual_printer_enabled === 1 || restaurantInfo?.dual_printer_enabled === true || restaurantInfo?.dual_printer_enabled === '1';
-
-  const whatsappOrderingEnabled = Boolean(
-    restaurantInfo?.whatsapp_ordering_enabled === 1 ||
-    restaurantInfo?.whatsapp_ordering_enabled === true ||
-    restaurantInfo?.whatsapp_ordering_enabled === '1'
-  );
-
-  if (ordersEnabled === false) {
-    if (whatsappOrderingEnabled) {
-      return (
-        <div style={{
-          background: '#FFFFFF',
-          borderRadius: '16px',
-          border: '1px solid #E2E8F0',
-          padding: '32px 24px',
-          textAlign: 'center',
-          maxWidth: '680px',
-          margin: '20px auto',
-          boxShadow: '0 4px 16px rgba(0,0,0,0.03)'
-        }}>
-          <div style={{
-            width: '56px',
-            height: '56px',
-            borderRadius: '16px',
-            background: '#DCFCE7',
-            color: '#15803D',
-            display: 'inline-flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            fontSize: '1.8rem',
-            marginBottom: '14px'
-          }}>
-            💬
-          </div>
-          <h3 style={{ fontSize: '1.2rem', fontWeight: 900, color: '#0F172A', margin: '0 0 8px 0' }}>
-            WhatsApp Direct Ordering Active
-          </h3>
-          <p style={{ fontSize: '0.86rem', color: '#64748B', lineHeight: '1.5', maxWidth: '520px', margin: '0 auto 20px auto' }}>
-            Your digital menu accepts customer food orders directly via structured WhatsApp chat messages to your business number.
-          </p>
-
-          <div style={{
-            background: '#F8FAFC',
-            borderRadius: '12px',
-            border: '1px solid #E2E8F0',
-            padding: '14px 18px',
-            marginBottom: '24px',
-            textAlign: 'left'
-          }}>
-            <div style={{ fontSize: '0.82rem', fontWeight: 800, color: '#334155', marginBottom: '4px' }}>
-              Want Direct Table QR Ordering & Live Dashboard KOT?
-            </div>
-            <div style={{ fontSize: '0.78rem', color: '#64748B' }}>
-              Upgrade to the <strong>Enterprise Plan (₹1,999/mo)</strong> to receive live POS table orders directly on this screen.
-            </div>
-          </div>
-
-          {onNavigateToSetup && (
-            <button
-              onClick={() => onNavigateToSetup('subscription')}
-              style={{
-                padding: '12px 24px',
-                borderRadius: '12px',
-                border: 'none',
-                background: 'linear-gradient(135deg, #059669 0%, #10B981 100%)',
-                color: '#FFFFFF',
-                fontSize: '0.88rem',
-                fontWeight: 900,
-                cursor: 'pointer',
-                boxShadow: '0 4px 14px rgba(16, 185, 129, 0.25)'
-              }}
-            >
-              View Upgrade Options
-            </button>
-          )}
-        </div>
-      );
-    }
-
+  // If online ordering is locked completely
+  if (!ordersEnabled) {
     return (
-      <PlanLockedCard
-        featureKey="direct_ordering_enabled"
-        title="Direct Table / Space QR Ordering"
-        description="Direct QR table ordering is not included in your current plan."
-        minTier="Enterprise"
-        onUpgrade={onNavigateToSetup ? () => onNavigateToSetup('subscription') : null}
-      />
+      <div style={{ padding: '24px', maxWidth: '800px', margin: '0 auto' }}>
+        <PlanLockedCard
+          featureKey="direct_ordering_enabled"
+          featureName="Live Orders Operations"
+          featureDescription="Real-time guest QR ordering, kitchen display, and digital POS management."
+          requiredPlanName="Basic Plan or Higher"
+          onUpgradeClick={() => onNavigateToSetup && onNavigateToSetup('subscription')}
+        />
+      </div>
     );
   }
 
-  const isPrep = (val) => val === 1 || val === '1' || val === true;
-
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: '16px', maxWidth: '1400px', margin: '0 auto', width: '100%', boxSizing: 'border-box' }}>
-      {/* Header Controls */}
+    <div style={{
+      display: 'flex',
+      flexDirection: 'column',
+      gap: '20px',
+      width: '100%',
+      boxSizing: 'border-box',
+      fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif'
+    }}>
+      <style>{`
+        .orders-metric-grid {
+          display: grid;
+          grid-template-columns: repeat(4, minmax(0, 1fr));
+          gap: 16px;
+        }
+        .orders-table-wrapper {
+          display: block;
+        }
+        .orders-mobile-cards {
+          display: none;
+        }
+        @media (max-width: 900px) {
+          .orders-metric-grid {
+            grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+            gap: 12px !important;
+          }
+          .orders-table-wrapper {
+            display: none !important;
+          }
+          .orders-mobile-cards {
+            display: flex !important;
+            flex-direction: column;
+            gap: 12px;
+          }
+        }
+      `}</style>
+
+      {/* ========================================================
+          1. MASTER HEADER & OPERATIONS SUB-NAV
+         ======================================================== */}
       <div style={{
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'space-between',
         flexWrap: 'wrap',
-        gap: '12px',
+        gap: '14px',
         background: '#FFFFFF',
-        padding: '16px 20px',
-        borderRadius: '16px',
+        borderRadius: '18px',
         border: '1px solid #E2E8F0',
-        boxShadow: '0 2px 8px rgba(0,0,0,0.02)'
+        padding: '18px 22px',
+        boxShadow: '0 1px 3px rgba(0,0,0,0.02)'
       }}>
         <div>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '2px', flexWrap: 'wrap' }}>
-            <h2 style={{ fontSize: '1.3rem', fontWeight: 900, color: '#0F172A', margin: 0, letterSpacing: '-0.02em' }}>
-              {isCinema
-                ? (kdsEnabled ? 'Cinema Orders & Kitchen Operations' : 'Live Cinema Seat Orders & Operations')
-                : isHotel
-                  ? (kdsEnabled ? 'Room Orders & Kitchen Operations' : 'Live Room Orders & Operations')
-                  : (kdsEnabled ? 'Orders & Kitchen Operations' : 'Live Table Orders & Operations')}
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+            <h2 style={{ fontSize: '1.25rem', fontWeight: 900, color: '#0F172A', margin: 0, letterSpacing: '-0.02em' }}>
+              Live Orders Console
             </h2>
-            <span style={{ fontSize: '0.68rem', fontWeight: 800, background: '#DCFCE7', color: '#15803D', border: '1px solid #86EFAC', padding: '2px 8px', borderRadius: '12px', display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
-              ● LIVE
+            <span style={{
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: '4px',
+              background: '#DCFCE7',
+              color: '#16A34A',
+              fontSize: '0.68rem',
+              fontWeight: 800,
+              padding: '2px 8px',
+              borderRadius: '12px'
+            }}>
+              <span style={{ width: '6px', height: '6px', borderRadius: '50%', backgroundColor: '#16A34A' }} />
+              Live
             </span>
           </div>
-          <span style={{ fontSize: '0.78rem', color: '#64748B', fontWeight: 500 }}>
-            {isCinema
-              ? (kdsEnabled ? 'Live auditorium seat orders & kitchen display screen' : 'Live auditorium seat orders & operations')
-              : isHotel
-                ? (kdsEnabled ? 'Live in-room guest dining orders & kitchen screen' : 'Live in-room guest dining orders & operations')
-                : (kdsEnabled ? 'Live table orders, floor map & kitchen display screen' : 'Live table orders, floor map & waiter calls')}
-          </span>
+          <p style={{ fontSize: '0.76rem', color: '#64748B', margin: '3px 0 0 0' }}>
+            {isCinema 
+              ? 'Manage seat-based snacks and beverage deliveries.' 
+              : isHotel 
+                ? 'Manage in-room dining orders and room service.' 
+                : 'Manage table orders, kitchen preparation, and customer bills.'}
+          </p>
         </div>
 
-        <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
-          <span style={{ background: '#DCFCE7', color: '#15803D', padding: '6px 14px', borderRadius: '10px', border: '1px solid #86EFAC', fontSize: '0.8rem', fontWeight: 800 }}>
-            {currencySymbol}{todayTotalSales.toLocaleString()} Today
-          </span>
-          {pendingCount > 0 ? (
-            <span style={{ background: '#FEF3C7', color: '#B45309', padding: '6px 14px', borderRadius: '10px', border: '1px solid #FCD34D', fontSize: '0.8rem', fontWeight: 800 }}>
-              🔔 {pendingCount} Pending
-            </span>
-          ) : (
-            <span style={{ background: '#F1F5F9', color: '#475569', padding: '6px 14px', borderRadius: '10px', border: '1px solid #E2E8F0', fontSize: '0.8rem', fontWeight: 700 }}>
-              0 Pending
-            </span>
-          )}
-        </div>
-      </div>
-
-      {/* Sub-Navigation Segmented Control */}
-      <div style={{ display: 'flex', gap: '6px', background: '#FFFFFF', padding: '5px', borderRadius: '12px', width: 'fit-content', maxWidth: '100%', border: '1px solid #E2E8F0', flexWrap: 'wrap' }}>
-        <button
-          onClick={() => setActiveSubTab('orders')}
-          style={{
-            padding: '7px 16px',
-            borderRadius: '9px',
-            fontSize: '0.82rem',
-            fontWeight: 800,
-            border: 'none',
-            cursor: 'pointer',
-            background: activeSubTab === 'orders' ? '#0F172A' : 'transparent',
-            color: activeSubTab === 'orders' ? '#FFFFFF' : '#64748B',
-            transition: 'all 0.15s ease'
-          }}
-        >
-          {isCinema ? `🎬 Seat Orders (${validOrders.length})` : isHotel ? `🏨 Room Orders (${validOrders.length})` : `📋 Live Orders (${validOrders.length})`}
-        </button>
-        <button
-          onClick={() => setActiveSubTab('floor-map')}
-          style={{
-            padding: '7px 16px',
-            borderRadius: '9px',
-            fontSize: '0.82rem',
-            fontWeight: 800,
-            border: 'none',
-            cursor: 'pointer',
-            background: activeSubTab === 'floor-map' ? '#0F172A' : 'transparent',
-            color: activeSubTab === 'floor-map' ? '#FFFFFF' : '#64748B',
-            transition: 'all 0.15s ease'
-          }}
-        >
-          {isCinema
-            ? `💺 Cinema Seats (${cinemaSeats.length})`
-            : isHotel
-              ? `🏨 Room Status (${spaceInventory.length} Rooms)`
-              : `🗺️ Space Map (${spaceInventory.length} Spaces)`}
-        </button>
-        {!isCinema && (
+        {/* Sub-Navigation Pills & Actions */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
+          {/* Live Orders Subtab */}
           <button
-            onClick={() => setActiveSubTab('service-requests')}
+            onClick={() => setActiveSubTab && setActiveSubTab('orders')}
             style={{
-              padding: '7px 16px',
-              borderRadius: '9px',
-              fontSize: '0.82rem',
-              fontWeight: 800,
-              border: 'none',
+              padding: '8px 14px',
+              borderRadius: '10px',
+              border: '1px solid',
+              borderColor: activeSubTab === 'orders' ? '#0D3823' : '#E2E8F0',
+              background: activeSubTab === 'orders' ? '#0D3823' : '#FFFFFF',
+              color: activeSubTab === 'orders' ? '#FFFFFF' : '#334155',
+              fontSize: '0.78rem',
+              fontWeight: 700,
               cursor: 'pointer',
-              background: activeSubTab === 'service-requests' ? '#0F172A' : 'transparent',
-              color: activeSubTab === 'service-requests' ? '#FFFFFF' : '#64748B',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '6px',
               transition: 'all 0.15s ease'
             }}
           >
-            {isHotel ? `🛎️ Guest Requests (${safeServiceRequests.length})` : `🛎️ Waiter Calls (${safeServiceRequests.length})`}
+            <ShoppingBag size={15} />
+            <span>Orders ({validOrders.length})</span>
           </button>
-        )}
-        {kdsEnabled && (
-          <a
-            href={`/${localStorage.getItem('touchqr_admin_slug') || restaurantInfo?.slug || ''}/kitchen`}
-            target="_blank"
-            rel="noopener noreferrer"
+
+          {/* Service Requests Subtab */}
+          <button
+            onClick={() => setActiveSubTab && setActiveSubTab('service-requests')}
             style={{
-              padding: '7px 16px',
-              borderRadius: '9px',
-              fontSize: '0.82rem',
-              fontWeight: 800,
-              background: '#0F172A',
-              color: '#38BDF8',
-              border: '1px solid #38BDF8',
-              textDecoration: 'none',
-              display: 'inline-flex',
+              padding: '8px 14px',
+              borderRadius: '10px',
+              border: '1px solid',
+              borderColor: activeSubTab === 'service-requests' ? '#0D3823' : '#E2E8F0',
+              background: activeSubTab === 'service-requests' ? '#0D3823' : '#FFFFFF',
+              color: activeSubTab === 'service-requests' ? '#FFFFFF' : '#334155',
+              fontSize: '0.78rem',
+              fontWeight: 700,
+              cursor: 'pointer',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '6px',
+              transition: 'all 0.15s ease'
+            }}
+          >
+            <Bell size={15} />
+            <span>Service Calls {safeServiceRequests.length > 0 ? `(${safeServiceRequests.length})` : ''}</span>
+          </button>
+
+          {/* KDS Subtab */}
+          <button
+            onClick={() => {
+              if (settingsForm?.kds_enabled || restaurantInfo?.kds_enabled) {
+                window.open('/kds', '_blank');
+              } else {
+                setActiveSubTab && setActiveSubTab('kds');
+              }
+            }}
+            style={{
+              padding: '8px 14px',
+              borderRadius: '10px',
+              border: '1px solid #E2E8F0',
+              background: '#FFFFFF',
+              color: '#0F172A',
+              fontSize: '0.78rem',
+              fontWeight: 700,
+              cursor: 'pointer',
+              display: 'flex',
               alignItems: 'center',
               gap: '6px'
             }}
           >
-            🍳 /kitchen Screen ↗
-          </a>
-        )}
+            <ChefHat size={15} color="#D97706" />
+            <span>Kitchen Display</span>
+            <ArrowUpRight size={13} color="#94A3B8" />
+          </button>
+        </div>
       </div>
 
-      {/* LIVE ORDERS SUBTAB */}
-      {activeSubTab === 'orders' && (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-          {/* Status Filter Horizontal Strip */}
-          <div style={{ display: 'flex', gap: '8px', overflowX: 'auto', paddingBottom: '4px', scrollbarWidth: 'none', WebkitOverflowScrolling: 'touch' }}>
-            {[
-              { id: 'all', label: `All (${validOrders.length})` },
-              { id: 'pending', label: `🟡 Pending (${pendingCount})` },
-              { id: 'kitchen', label: kdsEnabled ? `👨‍🍳 Kitchen (${kitchenCount})` : `🟢 In Progress (${kitchenCount})` },
-              { id: 'served', label: `🍽 Served (${servedCount})` },
-              { id: 'completed', label: `✅ Complete (${completedCount})` }
-            ].map(filter => {
-              const isActive = kotFilter === filter.id;
+      {/* ========================================================
+          2. ATTENTION SUMMARY (4 METRICS)
+         ======================================================== */}
+      <div className="orders-metric-grid">
+        {/* Needs Attention (Pending) */}
+        <div 
+          onClick={() => setKotFilter('pending')}
+          style={{
+            background: kotFilter === 'pending' ? '#FEF3C7' : '#FFFFFF',
+            borderRadius: '16px',
+            border: kotFilter === 'pending' ? '2px solid #D97706' : '1px solid #E2E8F0',
+            padding: '18px',
+            cursor: 'pointer',
+            boxShadow: '0 1px 3px rgba(0,0,0,0.02)',
+            display: 'flex',
+            alignItems: 'center',
+            gap: '14px',
+            transition: 'all 0.15s ease'
+          }}
+        >
+          <div style={{
+            width: '42px',
+            height: '42px',
+            borderRadius: '12px',
+            background: '#FEF3C7',
+            color: '#D97706',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            flexShrink: 0
+          }}>
+            <Clock size={20} />
+          </div>
+          <div>
+            <div style={{ fontSize: '0.74rem', color: '#64748B', fontWeight: 600 }}>Needs Attention</div>
+            <div style={{ fontSize: '1.45rem', fontWeight: 900, color: '#0F172A', letterSpacing: '-0.02em' }}>
+              {pendingCount}
+            </div>
+            <span style={{ fontSize: '0.68rem', color: pendingCount > 0 ? '#D97706' : '#16A34A', fontWeight: 700 }}>
+              {pendingCount > 0 ? 'Pending acceptance' : 'All clear'}
+            </span>
+          </div>
+        </div>
+
+        {/* Preparing */}
+        <div 
+          onClick={() => setKotFilter('kitchen')}
+          style={{
+            background: kotFilter === 'kitchen' ? '#E0F2FE' : '#FFFFFF',
+            borderRadius: '16px',
+            border: kotFilter === 'kitchen' ? '2px solid #0284C7' : '1px solid #E2E8F0',
+            padding: '18px',
+            cursor: 'pointer',
+            boxShadow: '0 1px 3px rgba(0,0,0,0.02)',
+            display: 'flex',
+            alignItems: 'center',
+            gap: '14px',
+            transition: 'all 0.15s ease'
+          }}
+        >
+          <div style={{
+            width: '42px',
+            height: '42px',
+            borderRadius: '12px',
+            background: '#E0F2FE',
+            color: '#0284C7',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            flexShrink: 0
+          }}>
+            <UtensilsCrossed size={20} />
+          </div>
+          <div>
+            <div style={{ fontSize: '0.74rem', color: '#64748B', fontWeight: 600 }}>Preparing</div>
+            <div style={{ fontSize: '1.45rem', fontWeight: 900, color: '#0F172A', letterSpacing: '-0.02em' }}>
+              {kitchenCount}
+            </div>
+            <span style={{ fontSize: '0.68rem', color: '#0284C7', fontWeight: 700 }}>
+              In kitchen prep
+            </span>
+          </div>
+        </div>
+
+        {/* Ready */}
+        <div 
+          onClick={() => setKotFilter('served')}
+          style={{
+            background: kotFilter === 'served' ? '#DCFCE7' : '#FFFFFF',
+            borderRadius: '16px',
+            border: kotFilter === 'served' ? '2px solid #16A34A' : '1px solid #E2E8F0',
+            padding: '18px',
+            cursor: 'pointer',
+            boxShadow: '0 1px 3px rgba(0,0,0,0.02)',
+            display: 'flex',
+            alignItems: 'center',
+            gap: '14px',
+            transition: 'all 0.15s ease'
+          }}
+        >
+          <div style={{
+            width: '42px',
+            height: '42px',
+            borderRadius: '12px',
+            background: '#DCFCE7',
+            color: '#16A34A',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            flexShrink: 0
+          }}>
+            <CheckCircle2 size={20} />
+          </div>
+          <div>
+            <div style={{ fontSize: '0.74rem', color: '#64748B', fontWeight: 600 }}>Ready to Bill</div>
+            <div style={{ fontSize: '1.45rem', fontWeight: 900, color: '#0F172A', letterSpacing: '-0.02em' }}>
+              {servedCount}
+            </div>
+            <span style={{ fontSize: '0.68rem', color: '#16A34A', fontWeight: 700 }}>
+              Served / Ready
+            </span>
+          </div>
+        </div>
+
+        {/* Completed Today */}
+        <div 
+          onClick={() => setKotFilter('completed')}
+          style={{
+            background: kotFilter === 'completed' ? '#F3E8FF' : '#FFFFFF',
+            borderRadius: '16px',
+            border: kotFilter === 'completed' ? '2px solid #7E22CE' : '1px solid #E2E8F0',
+            padding: '18px',
+            cursor: 'pointer',
+            boxShadow: '0 1px 3px rgba(0,0,0,0.02)',
+            display: 'flex',
+            alignItems: 'center',
+            gap: '14px',
+            transition: 'all 0.15s ease'
+          }}
+        >
+          <div style={{
+            width: '42px',
+            height: '42px',
+            borderRadius: '12px',
+            background: '#F3E8FF',
+            color: '#7E22CE',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            flexShrink: 0
+          }}>
+            <Receipt size={20} />
+          </div>
+          <div>
+            <div style={{ fontSize: '0.74rem', color: '#64748B', fontWeight: 600 }}>Completed Today</div>
+            <div style={{ fontSize: '1.45rem', fontWeight: 900, color: '#0F172A', letterSpacing: '-0.02em' }}>
+              {completedCount}
+            </div>
+            <span style={{ fontSize: '0.68rem', color: '#7E22CE', fontWeight: 700 }}>
+              {currencySymbol}{Math.round(todayTotalSales).toLocaleString('en-IN')} sales
+            </span>
+          </div>
+        </div>
+      </div>
+
+      {/* ========================================================
+          3. FILTER CONTROL STRIP
+         ======================================================== */}
+      <div style={{
+        background: '#FFFFFF',
+        borderRadius: '16px',
+        border: '1px solid #E2E8F0',
+        padding: '12px 18px',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'space-between',
+        flexWrap: 'wrap',
+        gap: '12px',
+        boxShadow: '0 1px 3px rgba(0,0,0,0.02)'
+      }}>
+        {/* Status Tabs */}
+        <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap' }}>
+          {[
+            { id: 'all', label: `All (${validOrders.length})` },
+            { id: 'pending', label: `Pending (${pendingCount})` },
+            { id: 'kitchen', label: `Preparing (${kitchenCount})` },
+            { id: 'served', label: `Ready (${servedCount})` },
+            { id: 'completed', label: `Completed (${completedCount})` }
+          ].map(tab => (
+            <button
+              key={tab.id}
+              onClick={() => setKotFilter(tab.id)}
+              style={{
+                padding: '6px 12px',
+                borderRadius: '8px',
+                border: kotFilter === tab.id ? '1px solid #0D3823' : '1px solid transparent',
+                background: kotFilter === tab.id ? '#0D3823' : '#F8FAFC',
+                color: kotFilter === tab.id ? '#FFFFFF' : '#475569',
+                fontSize: '0.76rem',
+                fontWeight: 700,
+                cursor: 'pointer',
+                transition: 'all 0.15s ease'
+              }}
+            >
+              {tab.label}
+            </button>
+          ))}
+        </div>
+
+        {/* Source Filters */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+          <span style={{ fontSize: '0.72rem', color: '#64748B', fontWeight: 600 }}>Source:</span>
+          <select
+            value={sourceFilter}
+            onChange={(e) => setSourceFilter(e.target.value)}
+            style={{
+              padding: '6px 12px',
+              borderRadius: '8px',
+              border: '1px solid #E2E8F0',
+              background: '#FFFFFF',
+              color: '#0F172A',
+              fontSize: '0.76rem',
+              fontWeight: 700,
+              cursor: 'pointer'
+            }}
+          >
+            <option value="all">All Sources</option>
+            <option value="direct">Direct QR</option>
+            <option value="whatsapp">WhatsApp Orders</option>
+            <option value="manual">Manual POS</option>
+          </select>
+        </div>
+      </div>
+
+      {/* ========================================================
+          4. MAIN LIVE ORDER WORKSPACE (DESKTOP HYBRID + MOBILE)
+         ======================================================== */}
+      {filteredOrders.length === 0 ? (
+        <div style={{
+          background: '#FFFFFF',
+          borderRadius: '18px',
+          border: '1px solid #E2E8F0',
+          padding: '48px 24px',
+          textAlign: 'center',
+          boxShadow: '0 1px 3px rgba(0,0,0,0.02)'
+        }}>
+          <div style={{
+            width: '56px',
+            height: '56px',
+            borderRadius: '50%',
+            background: '#F1F5F9',
+            color: '#64748B',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            margin: '0 auto 16px auto'
+          }}>
+            <ShoppingBag size={24} />
+          </div>
+          <h3 style={{ fontSize: '1.1rem', fontWeight: 800, color: '#0F172A', margin: '0 0 6px 0' }}>
+            No orders found
+          </h3>
+          <p style={{ fontSize: '0.80rem', color: '#64748B', margin: '0 0 20px 0', maxWidth: '400px', marginInline: 'auto' }}>
+            {kotFilter !== 'all' 
+              ? `There are currently no orders in '${kotFilter}' state.` 
+              : 'Customer QR orders and manual POS bills will automatically appear here.'}
+          </p>
+          {kotFilter !== 'all' && (
+            <button
+              onClick={() => setKotFilter('all')}
+              style={{
+                padding: '8px 16px',
+                borderRadius: '10px',
+                border: '1px solid #E2E8F0',
+                background: '#F8FAFC',
+                color: '#0F172A',
+                fontSize: '0.78rem',
+                fontWeight: 700,
+                cursor: 'pointer'
+              }}
+            >
+              Show All Orders
+            </button>
+          )}
+        </div>
+      ) : (
+        <>
+          {/* DESKTOP TABLE VIEW */}
+          <div className="orders-table-wrapper" style={{
+            background: '#FFFFFF',
+            borderRadius: '18px',
+            border: '1px solid #E2E8F0',
+            overflow: 'hidden',
+            boxShadow: '0 1px 3px rgba(0,0,0,0.02)'
+          }}>
+            <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left', fontSize: '0.82rem' }}>
+              <thead>
+                <tr style={{ background: '#F8FAFC', borderBottom: '1px solid #E2E8F0', color: '#64748B', fontWeight: 700, fontSize: '0.72rem', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
+                  <th style={{ padding: '14px 18px' }}>ORDER</th>
+                  <th style={{ padding: '14px 18px' }}>LOCATION</th>
+                  <th style={{ padding: '14px 18px' }}>TIME</th>
+                  <th style={{ padding: '14px 18px' }}>ITEMS</th>
+                  <th style={{ padding: '14px 18px' }}>TOTAL</th>
+                  <th style={{ padding: '14px 18px' }}>STATUS</th>
+                  <th style={{ padding: '14px 18px', textAlign: 'right' }}>ACTIONS</th>
+                </tr>
+              </thead>
+              <tbody>
+                {filteredOrders.map(order => {
+                  const items = safeParseItems(order.items);
+                  const spaceInfo = parseOrderSpaceLocation(order);
+                  const cleanLoc = formatCleanTableLabel(order.table_number, spaceInfo.space_type);
+                  const statusInfo = getStatusBadge(order.status);
+                  const isPending = order.status === 'pending' || order.status === 'ordered';
+                  const isKitchen = order.status === 'kitchen' || order.status === 'accepted' || order.status === 'preparing';
+                  const isReady = order.status === 'served' || order.status === 'ready';
+
+                  return (
+                    <tr 
+                      key={order.id}
+                      style={{
+                        borderBottom: '1px solid #F1F5F9',
+                        transition: 'background 0.15s ease'
+                      }}
+                      onMouseEnter={(e) => { e.currentTarget.style.background = '#F8FAFC'; }}
+                      onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent'; }}
+                    >
+                      {/* Order # & Source */}
+                      <td style={{ padding: '14px 18px', fontWeight: 800, color: '#0F172A' }}>
+                        <div>#{order.id}</div>
+                        <span style={{ fontSize: '0.68rem', color: '#64748B', fontWeight: 600 }}>
+                          {order.order_source === 'whatsapp' ? '💬 WhatsApp' : order.order_source === 'pos' ? '🖥️ POS' : '📱 QR Order'}
+                        </span>
+                      </td>
+
+                      {/* Location */}
+                      <td style={{ padding: '14px 18px', fontWeight: 700, color: '#0F172A' }}>
+                        {cleanLoc}
+                      </td>
+
+                      {/* Time */}
+                      <td style={{ padding: '14px 18px', color: '#64748B', fontSize: '0.76rem' }}>
+                        {getTimeAgo(order.created_at)}
+                      </td>
+
+                      {/* Items */}
+                      <td style={{ padding: '14px 18px' }}>
+                        <div style={{ fontWeight: 700, color: '#0F172A' }}>
+                          {items.length} item{items.length > 1 ? 's' : ''}
+                        </div>
+                        <div style={{ fontSize: '0.72rem', color: '#64748B', maxWidth: '200px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                          {items.map(i => `${i.quantity || 1}x ${i.name}`).join(', ')}
+                        </div>
+                      </td>
+
+                      {/* Total Amount */}
+                      <td style={{ padding: '14px 18px', fontWeight: 900, color: '#0F172A', fontSize: '0.90rem' }}>
+                        {currencySymbol}{Math.round(order.total_amount || order.total || 0).toLocaleString('en-IN')}
+                      </td>
+
+                      {/* Status */}
+                      <td style={{ padding: '14px 18px' }}>
+                        <span style={{
+                          display: 'inline-block',
+                          padding: '3px 8px',
+                          borderRadius: '8px',
+                          background: statusInfo.bg,
+                          color: statusInfo.color,
+                          border: `1px solid ${statusInfo.border}`,
+                          fontSize: '0.68rem',
+                          fontWeight: 800,
+                          letterSpacing: '0.02em'
+                        }}>
+                          {statusInfo.label}
+                        </span>
+                      </td>
+
+                      {/* Actions */}
+                      <td style={{ padding: '14px 18px', textAlign: 'right' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: '6px' }}>
+                          {isPending && (
+                            <button
+                              onClick={() => onUpdateStatus ? onUpdateStatus(order.id, 'kitchen') : null}
+                              style={{
+                                padding: '6px 12px',
+                                borderRadius: '8px',
+                                background: '#16A34A',
+                                color: '#FFFFFF',
+                                border: 'none',
+                                fontSize: '0.74rem',
+                                fontWeight: 800,
+                                cursor: 'pointer'
+                              }}
+                            >
+                              ⚡ Accept
+                            </button>
+                          )}
+
+                          {isKitchen && (
+                            <button
+                              onClick={() => onUpdateStatus ? onUpdateStatus(order.id, 'served') : null}
+                              style={{
+                                padding: '6px 12px',
+                                borderRadius: '8px',
+                                background: '#0284C7',
+                                color: '#FFFFFF',
+                                border: 'none',
+                                fontSize: '0.74rem',
+                                fontWeight: 800,
+                                cursor: 'pointer'
+                              }}
+                            >
+                              ✓ Ready
+                            </button>
+                          )}
+
+                          {isReady && (
+                            <button
+                              onClick={() => onOpenBillModal ? onOpenBillModal(order) : (onUpdateStatus && onUpdateStatus(order.id, 'completed'))}
+                              style={{
+                                padding: '6px 12px',
+                                borderRadius: '8px',
+                                background: '#7E22CE',
+                                color: '#FFFFFF',
+                                border: 'none',
+                                fontSize: '0.74rem',
+                                fontWeight: 800,
+                                cursor: 'pointer'
+                              }}
+                            >
+                              💳 Bill
+                            </button>
+                          )}
+
+                          {/* Print KOT */}
+                          <button
+                            onClick={() => onDirectPrint ? onDirectPrint(order, 'kot') : null}
+                            style={{
+                              padding: '6px 8px',
+                              borderRadius: '8px',
+                              border: '1px solid #E2E8F0',
+                              background: '#FFFFFF',
+                              color: '#334155',
+                              cursor: 'pointer'
+                            }}
+                            title="Print KOT"
+                          >
+                            <Printer size={14} />
+                          </button>
+
+                          {/* Open Details */}
+                          <button
+                            onClick={() => setSelectedOrder(order)}
+                            style={{
+                              padding: '6px 10px',
+                              borderRadius: '8px',
+                              border: '1px solid #E2E8F0',
+                              background: '#F8FAFC',
+                              color: '#0F172A',
+                              fontSize: '0.74rem',
+                              fontWeight: 700,
+                              cursor: 'pointer'
+                            }}
+                          >
+                            View
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+
+          {/* MOBILE ORDER CARDS VIEW */}
+          <div className="orders-mobile-cards">
+            {filteredOrders.map(order => {
+              const items = safeParseItems(order.items);
+              const spaceInfo = parseOrderSpaceLocation(order);
+              const cleanLoc = formatCleanTableLabel(order.table_number, spaceInfo.space_type);
+              const statusInfo = getStatusBadge(order.status);
+              const isPending = order.status === 'pending' || order.status === 'ordered';
+              const isKitchen = order.status === 'kitchen' || order.status === 'accepted' || order.status === 'preparing';
+              const isReady = order.status === 'served' || order.status === 'ready';
+
               return (
-                <button
-                  key={filter.id}
-                  onClick={() => setKotFilter(filter.id)}
+                <div
+                  key={order.id}
                   style={{
-                    flexShrink: 0,
-                    padding: '6px 14px',
-                    fontSize: '0.78rem',
-                    fontWeight: 700,
-                    borderRadius: '20px',
-                    border: '1px solid',
-                    borderColor: isActive ? '#0F172A' : '#E2E8F0',
-                    cursor: 'pointer',
-                    background: isActive ? '#0F172A' : '#FFFFFF',
-                    color: isActive ? '#FFFFFF' : '#475569',
-                    boxShadow: isActive ? '0 2px 6px rgba(15, 23, 42, 0.15)' : 'none',
-                    transition: 'all 0.15s ease'
+                    background: '#FFFFFF',
+                    borderRadius: '16px',
+                    border: '1px solid #E2E8F0',
+                    padding: '16px',
+                    boxShadow: '0 1px 3px rgba(0,0,0,0.02)',
+                    display: 'flex',
+                    flexDirection: 'column',
+                    gap: '12px'
                   }}
                 >
-                  {filter.label}
-                </button>
+                  {/* Top Bar: Order ID + Status Badge */}
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                    <div>
+                      <strong style={{ fontSize: '0.92rem', color: '#0F172A' }}>#{order.id}</strong>
+                      <span style={{ fontSize: '0.70rem', color: '#64748B', marginLeft: '6px' }}>
+                        {getTimeAgo(order.created_at)}
+                      </span>
+                    </div>
+                    <span style={{
+                      padding: '3px 8px',
+                      borderRadius: '8px',
+                      background: statusInfo.bg,
+                      color: statusInfo.color,
+                      border: `1px solid ${statusInfo.border}`,
+                      fontSize: '0.66rem',
+                      fontWeight: 800
+                    }}>
+                      {statusInfo.label}
+                    </span>
+                  </div>
+
+                  {/* Location & Source */}
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', fontSize: '0.78rem' }}>
+                    <span style={{ fontWeight: 700, color: '#0F172A' }}>{cleanLoc}</span>
+                    <span style={{ color: '#64748B', fontSize: '0.72rem' }}>
+                      {order.order_source === 'whatsapp' ? '💬 WhatsApp' : order.order_source === 'pos' ? '🖥️ POS' : '📱 Direct QR'}
+                    </span>
+                  </div>
+
+                  {/* Items List */}
+                  <div style={{
+                    background: '#F8FAFC',
+                    borderRadius: '10px',
+                    padding: '10px 12px',
+                    fontSize: '0.76rem',
+                    color: '#334155',
+                    display: 'flex',
+                    flexDirection: 'column',
+                    gap: '4px'
+                  }}>
+                    {items.map((it, idx) => (
+                      <div key={idx} style={{ display: 'flex', justifyContent: 'space-between' }}>
+                        <span>{it.quantity || 1}x {it.name}</span>
+                        <strong style={{ color: '#0F172A' }}>{currencySymbol}{Math.round((it.price || 0) * (it.quantity || 1))}</strong>
+                      </div>
+                    ))}
+                  </div>
+
+                  {/* Total & Action Buttons */}
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', paddingTop: '4px' }}>
+                    <div>
+                      <span style={{ fontSize: '0.68rem', color: '#64748B', display: 'block' }}>Total Amount</span>
+                      <strong style={{ fontSize: '1.1rem', color: '#0F172A' }}>
+                        {currencySymbol}{Math.round(order.total_amount || order.total || 0).toLocaleString('en-IN')}
+                      </strong>
+                    </div>
+
+                    <div style={{ display: 'flex', gap: '6px' }}>
+                      {isPending && (
+                        <button
+                          onClick={() => onUpdateStatus ? onUpdateStatus(order.id, 'kitchen') : null}
+                          style={{
+                            padding: '8px 14px',
+                            borderRadius: '10px',
+                            background: '#16A34A',
+                            color: '#FFFFFF',
+                            border: 'none',
+                            fontSize: '0.78rem',
+                            fontWeight: 800,
+                            cursor: 'pointer'
+                          }}
+                        >
+                          ⚡ Accept
+                        </button>
+                      )}
+
+                      {isKitchen && (
+                        <button
+                          onClick={() => onUpdateStatus ? onUpdateStatus(order.id, 'served') : null}
+                          style={{
+                            padding: '8px 14px',
+                            borderRadius: '10px',
+                            background: '#0284C7',
+                            color: '#FFFFFF',
+                            border: 'none',
+                            fontSize: '0.78rem',
+                            fontWeight: 800,
+                            cursor: 'pointer'
+                          }}
+                        >
+                          ✓ Ready
+                        </button>
+                      )}
+
+                      {isReady && (
+                        <button
+                          onClick={() => onOpenBillModal ? onOpenBillModal(order) : (onUpdateStatus && onUpdateStatus(order.id, 'completed'))}
+                          style={{
+                            padding: '8px 14px',
+                            borderRadius: '10px',
+                            background: '#7E22CE',
+                            color: '#FFFFFF',
+                            border: 'none',
+                            fontSize: '0.78rem',
+                            fontWeight: 800,
+                            cursor: 'pointer'
+                          }}
+                        >
+                          💳 Bill
+                        </button>
+                      )}
+
+                      <button
+                        onClick={() => setSelectedOrder(order)}
+                        style={{
+                          padding: '8px 12px',
+                          borderRadius: '10px',
+                          border: '1px solid #E2E8F0',
+                          background: '#F8FAFC',
+                          color: '#0F172A',
+                          fontSize: '0.78rem',
+                          fontWeight: 700,
+                          cursor: 'pointer'
+                        }}
+                      >
+                        Details
+                      </button>
+                    </div>
+                  </div>
+                </div>
               );
             })}
           </div>
-
-          {/* Orders Cards */}
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-            {filteredOrders.length === 0 ? (
-              <div style={{ padding: '40px 20px', textAlign: 'center', background: '#FFFFFF', borderRadius: '16px', border: '1px solid #E2E8F0' }}>
-                <Clock size={36} color="#94A3B8" style={{ marginBottom: '8px' }} />
-                <h4 style={{ fontSize: '1rem', fontWeight: 800, color: '#0F172A', margin: '0 0 4px 0' }}>
-                  {isCinema ? '🎬 No Active Seat Orders' : 'No active orders in this view'}
-                </h4>
-                <p style={{ fontSize: '0.8rem', color: '#64748B', margin: 0 }}>
-                  {isCinema
-                    ? 'When guests scan their cinema seat QR codes, active orders will appear here live.'
-                    : 'New orders placed via QR will ring and appear here live.'}
-                </p>
-              </div>
-            ) : (
-              filteredOrders.map(order => {
-                const isCompleted = order.status === 'completed';
-                const isPending = order.status === 'pending';
-                const isKitchen = order.status === 'kitchen' || order.status === 'accepted';
-
-                return (
-                  <div
-                    key={order.id}
-                    style={{
-                      background: '#FFFFFF',
-                      border: '1px solid #E2E8F0',
-                      borderRadius: '16px',
-                      padding: '16px 18px',
-                      display: 'flex',
-                      flexDirection: 'column',
-                      gap: '12px',
-                      boxShadow: '0 2px 8px rgba(0,0,0,0.02)',
-                      position: 'relative'
-                    }}
-                  >
-                    {/* Top Row: Table Name + ID + Customer + Status */}
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '8px' }}>
-                      <div>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
-                          <span style={{
-                            background: '#0F172A',
-                            color: '#FFFFFF',
-                            padding: '3px 10px',
-                            borderRadius: '8px',
-                            fontWeight: 900,
-                            fontSize: '0.85rem'
-                          }}>
-                            {formatCleanTableLabel(order.table_number, order.space_type)}
-                          </span>
-                          <span style={{ fontSize: '0.85rem', fontWeight: 800, color: '#64748B' }}>
-                            Order {order.id}
-                          </span>
-                          {Number(order.round_number) > 1 && (
-                            <span style={{ background: '#FEF3C7', color: '#B45309', border: '1px solid #FCD34D', padding: '2px 8px', borderRadius: '8px', fontSize: '0.72rem', fontWeight: 800 }}>
-                              🔄 Round {order.round_number} (Add-on{isCinema ? ' Seat Order' : (order.space_type === 'room' || (isHotel && prefix === 'room')) ? ' Room Order' : ''})
-                            </span>
-                          )}
-                        </div>
-
-                        <div style={{ fontSize: '0.76rem', color: '#64748B', marginTop: '5px', fontWeight: 600 }}>
-                          {order.customer_name || 'Dine-in Guest'}
-                          {order.customer_phone ? <span style={{ color: '#0F172A', marginLeft: '6px' }}>📞 {order.customer_phone}</span> : ''}
-                          <span style={{ margin: '0 6px', color: '#CBD5E1' }}>•</span>
-                          {new Date(order.created_at || Date.now()).toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' })}
-                        </div>
-                      </div>
-
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
-                        <span style={{
-                          padding: '4px 10px',
-                          borderRadius: '10px',
-                          fontSize: '0.72rem',
-                          fontWeight: 900,
-                          background: isCompleted ? '#DCFCE7' : isPending ? '#FEF3C7' : '#E0F2FE',
-                          color: isCompleted ? '#15803D' : isPending ? '#B45309' : '#0369A1',
-                          border: isCompleted ? '1px solid #86EFAC' : isPending ? '1px solid #FCD34D' : '1px solid #BAE6FD'
-                        }}>
-                          {(order.status || 'PENDING').toUpperCase()}
-                        </span>
-
-                        {onPreviewPrint && (
-                          <button
-                            onClick={() => onPreviewPrint(order, 'bill')}
-                            title="Preview Customer Bill Receipt"
-                            style={{
-                              background: '#F1F5F9',
-                              border: '1px solid #E2E8F0',
-                              color: '#475569',
-                              cursor: 'pointer',
-                              fontSize: '0.74rem',
-                              fontWeight: 700,
-                              padding: '4px 10px',
-                              borderRadius: '8px',
-                              display: 'inline-flex',
-                              alignItems: 'center',
-                              gap: '4px'
-                            }}
-                          >
-                            👁️ Preview Bill
-                          </button>
-                        )}
-                      </div>
-                    </div>
-
-                    {/* Order Items Container */}
-                    <div style={{ fontSize: '0.84rem', background: '#F8FAFC', padding: '12px 14px', borderRadius: '12px', border: '1px solid #F1F5F9', display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                      {safeParseItems(order.items).map((item, idx) => (
-                        <div key={idx} style={{ display: 'flex', flexDirection: 'column', gap: '2px', borderBottom: idx < safeParseItems(order.items).length - 1 ? '1px dashed #E2E8F0' : 'none', paddingBottom: '6px' }}>
-                          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                            <span style={{ fontWeight: 800, color: '#0F172A' }}>
-                              {item.name}{item.portion ? ` (${item.portion})` : ''} <span style={{ color: '#059669', marginLeft: '4px' }}>×{item.quantity || item.qty || 1}</span>
-                            </span>
-                            <strong style={{ color: '#0F172A', fontWeight: 800 }}>
-                              {currencySymbol}{(Number(item.price) || 0) * (item.quantity || item.qty || 1)}
-                            </strong>
-                          </div>
-                          {(() => {
-                            const mods = safeParseModifiers(item.modifiers);
-                            if (mods.length === 0) return null;
-                            return (
-                              <div style={{ display: 'flex', gap: '4px', flexWrap: 'wrap', paddingLeft: '8px', marginTop: '2px' }}>
-                                {mods.map((m, mIdx) => (
-                                  <span key={mIdx} style={{ fontSize: '0.70rem', color: '#065F46', background: '#D1FAE5', border: '1px solid #6EE7B7', padding: '1px 6px', borderRadius: '4px', fontWeight: 800 }}>
-                                    ➕ {m.name} (+{currencySymbol}{m.price})
-                                  </span>
-                                ))}
-                              </div>
-                            );
-                          })()}
-                        </div>
-                      ))}
-                    </div>
-
-                    {/* Action Buttons Toolbar */}
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', paddingTop: '6px', flexWrap: 'wrap', gap: '10px' }}>
-                      <strong style={{ fontSize: '1.15rem', color: '#059669', fontWeight: 900 }}>
-                        {currencySymbol}{Number(order.total_amount).toFixed(2)}
-                      </strong>
-
-                      <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap', alignItems: 'center' }}>
-                        {order.status === 'pending' && (
-                          <>
-                            <button
-                              onClick={() => onUpdateStatus(order.id, 'accepted')}
-                              style={{
-                                background: 'linear-gradient(135deg, #059669 0%, #10B981 100%)',
-                                color: '#FFFFFF',
-                                border: 'none',
-                                padding: '8px 16px',
-                                borderRadius: '10px',
-                                fontSize: '0.8rem',
-                                fontWeight: 800,
-                                cursor: 'pointer',
-                                minHeight: '40px',
-                                boxShadow: '0 2px 6px rgba(16, 185, 129, 0.25)'
-                              }}
-                            >
-                              ✓ Accept Order
-                            </button>
-                            <button
-                              onClick={() => onUpdateStatus(order.id, 'rejected')}
-                              style={{
-                                background: '#FEE2E2',
-                                color: '#DC2626',
-                                border: '1px solid #FECACA',
-                                padding: '8px 14px',
-                                borderRadius: '10px',
-                                fontSize: '0.8rem',
-                                fontWeight: 800,
-                                cursor: 'pointer',
-                                minHeight: '40px',
-                                display: 'inline-flex',
-                                alignItems: 'center',
-                                gap: '4px'
-                              }}
-                            >
-                              <XCircle size={14} /> Reject
-                            </button>
-                          </>
-                        )}
-                        {order.status === 'accepted' && (
-                          <>
-                            {order.kitchen_prepared !== 1 && order.kitchen_prepared !== true && order.kitchen_prepared !== '1' && (
-                              <>
-                                {kdsEnabled && (
-                                  <button
-                                    onClick={() => onUpdateStatus(order.id, 'kitchen', { sent_to_kds: 1 })}
-                                    style={{
-                                      background: '#0F172A',
-                                      color: '#38BDF8',
-                                      border: '1px solid #38BDF8',
-                                      padding: '8px 14px',
-                                      borderRadius: '10px',
-                                      fontSize: '0.8rem',
-                                      fontWeight: 800,
-                                      cursor: 'pointer',
-                                      minHeight: '40px'
-                                    }}
-                                  >
-                                    🍳 Send to Kitchen
-                                  </button>
-                                )}
-                                <button
-                                  onClick={() => onUpdateStatus(order.id, 'accepted', { sent_to_kds: 0, kitchen_prepared: 1 })}
-                                  style={{
-                                    background: 'linear-gradient(135deg, #2563EB 0%, #3B82F6 100%)',
-                                    color: '#FFFFFF',
-                                    border: 'none',
-                                    padding: '8px 14px',
-                                    borderRadius: '10px',
-                                    fontSize: '0.8rem',
-                                    fontWeight: 800,
-                                    cursor: 'pointer',
-                                    minHeight: '40px',
-                                    display: 'inline-flex',
-                                    alignItems: 'center',
-                                    gap: '4px',
-                                    boxShadow: '0 2px 6px rgba(37, 99, 235, 0.25)'
-                                  }}
-                                >
-                                  ⚡ Mark Ready
-                                </button>
-                              </>
-                            )}
-                            <button
-                              onClick={() => onUpdateStatus(order.id, 'served', { sent_to_kds: 0, kitchen_prepared: 1, silent: true })}
-                              style={{
-                                background: '#0F172A',
-                                color: '#FFFFFF',
-                                border: 'none',
-                                padding: '8px 14px',
-                                borderRadius: '10px',
-                                fontSize: '0.8rem',
-                                fontWeight: 800,
-                                cursor: 'pointer',
-                                minHeight: '40px'
-                              }}
-                            >
-                              🍽️ Mark Served
-                            </button>
-                            <button
-                              onClick={() => onUpdateStatus(order.id, 'completed')}
-                              style={{
-                                background: '#F1F5F9',
-                                color: '#334155',
-                                border: '1px solid #E2E8F0',
-                                padding: '8px 14px',
-                                borderRadius: '10px',
-                                fontSize: '0.8rem',
-                                fontWeight: 800,
-                                cursor: 'pointer',
-                                minHeight: '40px'
-                              }}
-                            >
-                              💳 Settle Bill
-                            </button>
-                          </>
-                        )}
-                        {order.status === 'kitchen' && (
-                          <>
-                            <button
-                              onClick={() => onUpdateStatus(order.id, 'served', { sent_to_kds: 0, kitchen_prepared: 1, silent: true })}
-                              style={{
-                                background: '#0F172A',
-                                color: '#FFFFFF',
-                                border: 'none',
-                                padding: '8px 14px',
-                                borderRadius: '10px',
-                                fontSize: '0.8rem',
-                                fontWeight: 800,
-                                cursor: 'pointer',
-                                minHeight: '40px'
-                              }}
-                            >
-                              🍽️ Mark Served
-                            </button>
-                            <button
-                              onClick={() => onUpdateStatus(order.id, 'completed')}
-                              style={{
-                                background: '#F1F5F9',
-                                color: '#334155',
-                                border: '1px solid #E2E8F0',
-                                padding: '8px 14px',
-                                borderRadius: '10px',
-                                fontSize: '0.8rem',
-                                fontWeight: 800,
-                                cursor: 'pointer',
-                                minHeight: '40px'
-                              }}
-                            >
-                              💳 Settle Bill
-                            </button>
-                          </>
-                        )}
-                        {order.status === 'served' && (
-                          <button
-                            onClick={() => onUpdateStatus(order.id, 'completed')}
-                            style={{
-                              background: '#10B981',
-                              color: '#FFFFFF',
-                              border: 'none',
-                              padding: '8px 16px',
-                              borderRadius: '10px',
-                              fontSize: '0.8rem',
-                              fontWeight: 800,
-                              cursor: 'pointer',
-                              minHeight: '40px'
-                            }}
-                          >
-                            💳 Settle Bill
-                          </button>
-                        )}
-                        {onDirectPrint && (
-                          <button
-                            onClick={() => onDirectPrint(order, 'kot')}
-                            disabled={printingOrderId === order.id}
-                            style={{
-                              background: '#F1F5F9',
-                              color: '#334155',
-                              border: '1px solid #E2E8F0',
-                              padding: '8px 12px',
-                              borderRadius: '10px',
-                              fontSize: '0.78rem',
-                              fontWeight: 800,
-                              cursor: 'pointer',
-                              minHeight: '40px',
-                              display: 'inline-flex',
-                              alignItems: 'center',
-                              gap: '4px',
-                              opacity: printingOrderId === order.id ? 0.7 : 1
-                            }}
-                          >
-                            {printingOrderId === order.id && printingType === 'kot' ? '⏳ Printing...' : '🖨️ KOT'}
-                          </button>
-                        )}
-                        <button
-                          onClick={() => onOpenBillModal ? onOpenBillModal(order) : (onPrintBill && onPrintBill(order))}
-                          disabled={printingOrderId === order.id}
-                          style={{
-                            background: '#F1F5F9',
-                            color: '#334155',
-                            border: '1px solid #E2E8F0',
-                            padding: '8px 14px',
-                            borderRadius: '10px',
-                            fontSize: '0.78rem',
-                            fontWeight: 800,
-                            cursor: 'pointer',
-                            minHeight: '40px',
-                            display: 'inline-flex',
-                            alignItems: 'center',
-                            gap: '4px',
-                            opacity: printingOrderId === order.id ? 0.7 : 1
-                          }}
-                        >
-                          <Printer size={14} />
-                          <span>{printingOrderId === order.id && printingType === 'bill' ? '⏳ Printing...' : 'Bill'}</span>
-                        </button>
-                      </div>
-                    </div>
-                  </div>
-                );
-              })
-            )}
-          </div>
-        </div>
+        </>
       )}
 
-      {/* FLOOR MAP / CINEMA SEATS SUBTAB */}
-      {activeSubTab === 'floor-map' && (
-        isCinema ? (
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-            {loadingCinema ? (
-              <div style={{ padding: '40px 20px', textAlign: 'center', background: '#FFFFFF', borderRadius: '16px', border: '1px solid #E2E8F0', color: 'var(--adm-muted)' }}>
-                ⏳ Loading auditorium screens and seat inventory...
-              </div>
-            ) : cinemaScreens.length === 0 ? (
-              <div style={{ padding: '40px 20px', textAlign: 'center', background: '#FFFFFF', borderRadius: '16px', border: '1px solid #E2E8F0' }}>
-                <div style={{ fontSize: '2.5rem', marginBottom: '8px' }}>🎬</div>
-                <h4 style={{ fontSize: '1.05rem', fontWeight: 800, color: '#0F172A', margin: '0 0 6px 0' }}>
-                  No Cinema Seats Configured
-                </h4>
-                <p style={{ fontSize: '0.84rem', color: '#64748B', maxWidth: '440px', margin: '0 auto 16px auto' }}>
-                  Please configure auditorium screens, rows, and seats in Cinema Management to view live seat order status.
-                </p>
-                {onNavigateToSetup && (
-                  <button
-                    onClick={() => onNavigateToSetup('cinema')}
-                    className="adm-btn adm-btn-primary"
-                    style={{ fontWeight: 800 }}
-                  >
-                    Go to Cinema Management ➔
-                  </button>
-                )}
-              </div>
-            ) : (
-              cinemaScreens.map(scr => {
-                const scrSeats = cinemaSeats.filter(st => Number(st.screen_id) === Number(scr.id));
-                const rows = {};
-                scrSeats.forEach(st => {
-                  const r = (st.row_label || 'A').toUpperCase();
-                  if (!rows[r]) rows[r] = [];
-                  rows[r].push(st);
-                });
-                const rowLabels = Object.keys(rows).sort();
-
-                return (
-                  <div
-                    key={scr.id}
-                    style={{
-                      background: '#FFFFFF',
-                      borderRadius: '16px',
-                      border: '1px solid #E2E8F0',
-                      padding: '18px 20px',
-                      boxShadow: '0 2px 8px rgba(0,0,0,0.02)',
-                      display: 'flex',
-                      flexDirection: 'column',
-                      gap: '14px'
-                    }}
-                  >
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '8px', borderBottom: '1px solid #F1F5F9', paddingBottom: '12px' }}>
-                      <div>
-                        <strong style={{ fontSize: '1.1rem', color: '#0F172A', fontWeight: 900 }}>
-                          🎬 Screen {scr.screen_number}: {scr.name}
-                        </strong>
-                        <span style={{ fontSize: '0.78rem', color: '#64748B', marginLeft: '8px', fontWeight: 600 }}>
-                          ({scrSeats.length} configured seats)
-                        </span>
-                      </div>
-                    </div>
-
-                    {rowLabels.length === 0 ? (
-                      <div style={{ fontSize: '0.82rem', color: '#94A3B8', fontStyle: 'italic', padding: '10px 0' }}>
-                        No rows or seats configured for this screen yet.
-                      </div>
-                    ) : (
-                      rowLabels.map(rLabel => (
-                        <div key={rLabel} style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                          <div style={{ fontSize: '0.78rem', fontWeight: 800, color: '#475569', display: 'flex', alignItems: 'center', gap: '6px' }}>
-                            <span style={{ background: '#F1F5F9', padding: '2px 8px', borderRadius: '6px', border: '1px solid #E2E8F0' }}>
-                              ROW {rLabel}
-                            </span>
-                          </div>
-
-                          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(180px, 1fr))', gap: '8px' }}>
-                            {rows[rLabel]
-                              .sort((a, b) => Number(a.seat_number) - Number(b.seat_number))
-                              .map(seat => {
-                                const seatKey1 = `Screen ${scr.screen_number} - Row ${rLabel} - Seat ${seat.seat_number}`.toLowerCase();
-                                const seatKey2 = `S${scr.screen_number}-${rLabel}-${seat.seat_number}`.toLowerCase();
-                                const seatKey3 = `${seat.seat_code || ''}`.toLowerCase();
-
-                                const activeOrder = validOrders.find(o => {
-                                  if (o.status === 'completed' || o.status === 'rejected' || o.status === 'cancelled') return false;
-                                  const tStr = String(o.table_number || '').toLowerCase();
-                                  return tStr === seatKey1 || tStr === seatKey2 || (seatKey3 && tStr === seatKey3);
-                                });
-
-                                const isOccupied = Boolean(activeOrder);
-
-                                return (
-                                  <div
-                                    key={seat.id}
-                                    style={{
-                                      background: isOccupied ? '#FEF2F2' : '#F8FAFC',
-                                      border: '1px solid',
-                                      borderColor: isOccupied ? '#FECACA' : '#E2E8F0',
-                                      borderRadius: '12px',
-                                      padding: '10px 12px',
-                                      display: 'flex',
-                                      flexDirection: 'column',
-                                      justifyContent: 'space-between',
-                                      gap: '6px'
-                                    }}
-                                  >
-                                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                                      <strong style={{ fontSize: '0.86rem', color: isOccupied ? '#991B1B' : '#0F172A', fontWeight: 800 }}>
-                                        💺 {rLabel}{seat.seat_number}
-                                      </strong>
-                                      <span style={{
-                                        fontSize: '0.66rem',
-                                        fontWeight: 800,
-                                        padding: '2px 6px',
-                                        borderRadius: '6px',
-                                        background: isOccupied ? '#FEE2E2' : '#DCFCE7',
-                                        color: isOccupied ? '#DC2626' : '#15803D',
-                                        border: isOccupied ? '1px solid #FCA5A5' : '1px solid #86EFAC'
-                                      }}>
-                                        {isOccupied ? '🔴 ORDER' : '🟢 FREE'}
-                                      </span>
-                                    </div>
-
-                                    {isOccupied && activeOrder && (
-                                      <div style={{ fontSize: '0.74rem', background: '#FFFFFF', padding: '6px 8px', borderRadius: '8px', border: '1px solid #FECACA' }}>
-                                        <div style={{ display: 'flex', justifyContent: 'space-between', fontWeight: 800 }}>
-                                          <span>Order {activeOrder.id}</span>
-                                          <span style={{ color: '#DC2626' }}>{currencySymbol}{activeOrder.total_amount}</span>
-                                        </div>
-                                        <div style={{ display: 'flex', gap: '4px', marginTop: '6px' }}>
-                                          <button
-                                            onClick={() => onOpenBillModal ? onOpenBillModal(activeOrder) : (onPrintBill && onPrintBill(activeOrder))}
-                                            style={{ flex: 1, padding: '4px', fontSize: '0.70rem', fontWeight: 800, borderRadius: '6px', background: '#F1F5F9', border: '1px solid #E2E8F0', cursor: 'pointer' }}
-                                          >
-                                            Bill
-                                          </button>
-                                          <button
-                                            onClick={() => onUpdateStatus(activeOrder.id, 'completed')}
-                                            style={{ flex: 1, padding: '4px', fontSize: '0.70rem', fontWeight: 800, borderRadius: '6px', background: '#0F172A', color: '#FFF', border: 'none', cursor: 'pointer' }}
-                                          >
-                                            Settle
-                                          </button>
-                                        </div>
-                                      </div>
-                                    )}
-                                  </div>
-                                );
-                              })}
-                          </div>
-                        </div>
-                      ))
-                    )}
-                  </div>
-                );
-              })
-            )}
-          </div>
-        ) : (
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-            {/* Summary Operational Counters Header */}
-            <div style={{
-              display: 'flex',
-              gap: '10px',
-              flexWrap: 'wrap',
-              alignItems: 'center',
-              background: '#FFFFFF',
-              padding: '14px 18px',
-              borderRadius: '16px',
-              border: '1px solid #E2E8F0',
-              boxShadow: '0 1px 3px rgba(0,0,0,0.02)'
-            }}>
-              <div style={{ fontWeight: 800, fontSize: '0.92rem', color: '#0F172A', marginRight: '4px' }}>
-                {isHotel ? '🏨 Room Overview' : '🗺️ Space Overview'}:
-              </div>
-              <span style={{ fontSize: '0.80rem', fontWeight: 800, background: '#DCFCE7', color: '#15803D', border: '1px solid #86EFAC', padding: '4px 10px', borderRadius: '8px' }}>
-                🟢 Free: {summaryCounters.free}
-              </span>
-              <span style={{ fontSize: '0.80rem', fontWeight: 800, background: '#FFEDD5', color: '#C2410C', border: '1px solid #FDBA74', padding: '4px 10px', borderRadius: '8px' }}>
-                🟠 Active Orders: {summaryCounters.activeOrders}
-              </span>
-              {summaryCounters.calls > 0 && (
-                <span style={{ fontSize: '0.80rem', fontWeight: 800, background: '#FEF3C7', color: '#B45309', border: '1px solid #FCD34D', padding: '4px 10px', borderRadius: '8px' }}>
-                  🟡 Calls: {summaryCounters.calls}
-                </span>
-              )}
-              {summaryCounters.ready > 0 && (
-                <span style={{ fontSize: '0.80rem', fontWeight: 800, background: '#EFF6FF', color: '#1D4ED8', border: '1px solid #93C5FD', padding: '4px 10px', borderRadius: '8px' }}>
-                  🔵 Ready: {summaryCounters.ready}
-                </span>
-              )}
-              {summaryCounters.served > 0 && (
-                <span style={{ fontSize: '0.80rem', fontWeight: 800, background: '#F1F5F9', color: '#475569', border: '1px solid #CBD5E1', padding: '4px 10px', borderRadius: '8px' }}>
-                  📦 Served: {summaryCounters.served}
-                </span>
-              )}
-            </div>
-
-            {/* Category Filter Tabs (Dining Only) */}
-            {!isHotel && (tableCategoryCount > 0 || cabinCategoryCount > 0 || vipCategoryCount > 0) && (
-              <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
-                <button
-                  onClick={() => setSpaceCategoryFilter('all')}
-                  style={{
-                    padding: '6px 14px',
-                    borderRadius: '8px',
-                    fontSize: '0.78rem',
-                    fontWeight: 800,
-                    border: '1px solid',
-                    borderColor: spaceCategoryFilter === 'all' ? '#0F172A' : '#E2E8F0',
-                    background: spaceCategoryFilter === 'all' ? '#0F172A' : '#FFFFFF',
-                    color: spaceCategoryFilter === 'all' ? '#FFFFFF' : '#475569',
-                    cursor: 'pointer',
-                    transition: 'all 0.15s ease'
-                  }}
-                >
-                  All Spaces ({spaceGrid.length})
-                </button>
-                {tableCategoryCount > 0 && (
-                  <button
-                    onClick={() => setSpaceCategoryFilter('table')}
-                    style={{
-                      padding: '6px 14px',
-                      borderRadius: '8px',
-                      fontSize: '0.78rem',
-                      fontWeight: 800,
-                      border: '1px solid',
-                      borderColor: spaceCategoryFilter === 'table' ? '#0F172A' : '#E2E8F0',
-                      background: spaceCategoryFilter === 'table' ? '#0F172A' : '#FFFFFF',
-                      color: spaceCategoryFilter === 'table' ? '#FFFFFF' : '#475569',
-                      cursor: 'pointer',
-                      transition: 'all 0.15s ease'
-                    }}
-                  >
-                    🍽️ Tables ({tableCategoryCount})
-                  </button>
-                )}
-                {cabinCategoryCount > 0 && (
-                  <button
-                    onClick={() => setSpaceCategoryFilter('cabin')}
-                    style={{
-                      padding: '6px 14px',
-                      borderRadius: '8px',
-                      fontSize: '0.78rem',
-                      fontWeight: 800,
-                      border: '1px solid',
-                      borderColor: spaceCategoryFilter === 'cabin' ? '#0F172A' : '#E2E8F0',
-                      background: spaceCategoryFilter === 'cabin' ? '#0F172A' : '#FFFFFF',
-                      color: spaceCategoryFilter === 'cabin' ? '#FFFFFF' : '#475569',
-                      cursor: 'pointer',
-                      transition: 'all 0.15s ease'
-                    }}
-                  >
-                    🛋️ Cabins ({cabinCategoryCount})
-                  </button>
-                )}
-                {vipCategoryCount > 0 && (
-                  <button
-                    onClick={() => setSpaceCategoryFilter('vip')}
-                    style={{
-                      padding: '6px 14px',
-                      borderRadius: '8px',
-                      fontSize: '0.78rem',
-                      fontWeight: 800,
-                      border: '1px solid',
-                      borderColor: spaceCategoryFilter === 'vip' ? '#0F172A' : '#E2E8F0',
-                      background: spaceCategoryFilter === 'vip' ? '#0F172A' : '#FFFFFF',
-                      color: spaceCategoryFilter === 'vip' ? '#FFFFFF' : '#475569',
-                      cursor: 'pointer',
-                      transition: 'all 0.15s ease'
-                    }}
-                  >
-                    👑 VIP ({vipCategoryCount})
-                  </button>
-                )}
-              </div>
-            )}
-
-            {/* Space Grid Cards */}
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(220px, 1fr))', gap: '12px' }}>
-              {filteredSpaceGrid.length === 0 ? (
-                <div style={{
-                  gridColumn: '1 / -1',
-                  padding: '48px 24px',
-                  textAlign: 'center',
-                  background: '#FFFFFF',
-                  borderRadius: '16px',
-                  border: '1px dashed #CBD5E1'
-                }}>
-                  <div style={{ fontSize: '2rem', marginBottom: '12px' }}>
-                    {isHotel ? '🏨' : '🍽️'}
-                  </div>
-                  <h3 style={{ fontSize: '1.1rem', fontWeight: 900, color: '#0F172A', margin: '0 0 6px 0' }}>
-                    {isHotel
-                      ? 'No Hotel Rooms Configured Yet'
-                      : 'No Dining Spaces Configured Yet'}
-                  </h3>
-                  <p style={{ fontSize: '0.84rem', color: '#64748B', maxWidth: '420px', margin: '0 auto 16px auto' }}>
-                    {isHotel
-                      ? 'Add guest rooms in the QR Standee & Space QR Generator to view live room statuses and orders.'
-                      : 'Add tables, cabins, or VIP lounges in the QR Standee & Space QR Generator to monitor live space status.'}
-                  </p>
-                  {onNavigateToSetup && (
-                    <button
-                      onClick={() => onNavigateToSetup(isHotel ? 'hotel' : 'tables')}
-                      className="adm-btn adm-btn-primary"
-                      style={{ fontWeight: 800 }}
-                    >
-                      Go to Space Setup ➔
-                    </button>
-                  )}
-                </div>
-              ) : (
-                filteredSpaceGrid.map(t => {
-                  const isCall = t.status === 'call';
-                  const isOrderActive = t.status === 'order_active';
-                  const isReady = t.status === 'ready';
-                  const isServed = t.status === 'served';
-                  const isFree = t.status === 'free';
-
-                  const cardBg = isCall ? '#FFFBEB' : isReady ? '#EFF6FF' : isOrderActive ? '#FFF7ED' : isServed ? '#F8FAFC' : '#FFFFFF';
-                  const cardBorder = isCall ? '#FDE68A' : isReady ? '#93C5FD' : isOrderActive ? '#FDBA74' : isServed ? '#CBD5E1' : '#E2E8F0';
-
-                  return (
-                    <div
-                      key={t.id}
-                      style={{
-                        background: cardBg,
-                        border: `1px solid ${cardBorder}`,
-                        borderRadius: '16px',
-                        padding: '16px',
-                        display: 'flex',
-                        flexDirection: 'column',
-                        justifyContent: 'space-between',
-                        gap: '12px',
-                        boxShadow: '0 2px 8px rgba(0,0,0,0.02)'
-                      }}
-                    >
-                      <div>
-                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
-                          <strong style={{ fontSize: '1.05rem', color: '#0F172A', fontWeight: 900 }}>
-                            {t.displayLabel}
-                          </strong>
-                          <span style={{
-                            padding: '3px 8px',
-                            borderRadius: '8px',
-                            fontSize: '0.70rem',
-                            fontWeight: 800,
-                            background: isCall ? '#FEF3C7' : isReady ? '#DBEAFE' : isOrderActive ? '#FFEDD5' : isServed ? '#F1F5F9' : '#DCFCE7',
-                            color: isCall ? '#B45309' : isReady ? '#1D4ED8' : isOrderActive ? '#C2410C' : isServed ? '#475569' : '#15803D',
-                            border: isCall ? '1px solid #FCD34D' : isReady ? '1px solid #93C5FD' : isOrderActive ? '1px solid #FDBA74' : isServed ? '1px solid #CBD5E1' : '1px solid #86EFAC'
-                          }}>
-                            {isCall ? '🟡 CALL' : isReady ? '🔵 READY' : isOrderActive ? '🟠 ORDER ACTIVE' : isServed ? '📦 SERVED' : '🟢 FREE'}
-                          </span>
-                        </div>
-
-                        {t.activeOrder && (
-                          <div style={{ fontSize: '0.80rem', background: '#FFFFFF', padding: '10px', borderRadius: '10px', border: '1px solid #E2E8F0', marginTop: '6px' }}>
-                            <div style={{ display: 'flex', justifyContent: 'space-between', fontWeight: 800 }}>
-                              <span>Order {t.activeOrder.id}</span>
-                              <span style={{ color: '#DC2626' }}>{currencySymbol}{t.activeOrder.total_amount}</span>
-                            </div>
-                            <div style={{ color: '#64748B', marginTop: '3px' }}>
-                              {t.activeOrder.customer_name || 'Guest'} • {safeParseItems(t.activeOrder.items).length} items
-                            </div>
-                            {isReady && (
-                              <div style={{ color: '#1D4ED8', fontWeight: 800, fontSize: '0.74rem', marginTop: '4px' }}>
-                                🛎️ Food Prepared in Kitchen!
-                              </div>
-                            )}
-                            {isServed && (
-                              <div style={{ color: '#475569', fontWeight: 700, fontSize: '0.74rem', marginTop: '4px' }}>
-                                📦 Order Served at Space
-                              </div>
-                            )}
-                          </div>
-                        )}
-
-                        {isCall && t.serviceRequest && (
-                          t.serviceRequest.request_type === 'presence_verification' ? (
-                            <div style={{ fontSize: '0.80rem', background: '#F0FDF4', padding: '10px', borderRadius: '10px', border: '1px solid #BBF7D0', marginTop: '6px' }}>
-                              <strong style={{ color: '#166534', display: 'flex', alignItems: 'center', gap: '4px' }}>
-                                🛡️ Presence Verification
-                              </strong>
-                              <span style={{ fontSize: '0.74rem', color: '#15803D', display: 'block', marginTop: '2px' }}>
-                                Customer awaiting space authorization
-                              </span>
-                            </div>
-                          ) : (
-                            <div style={{ fontSize: '0.80rem', background: '#FFFFFF', padding: '10px', borderRadius: '10px', border: '1px solid #FDE68A', marginTop: '6px' }}>
-                              <strong style={{ color: '#B45309', display: 'block' }}>{t.serviceRequest.request_type}</strong>
-                              {t.serviceRequest.note && <span style={{ fontStyle: 'italic', color: '#64748B' }}>"{t.serviceRequest.note}"</span>}
-                            </div>
-                          )
-                        )}
-
-                        {isFree && (
-                          <span style={{ fontSize: '0.78rem', color: '#15803D', fontWeight: 600, display: 'block', margin: '6px 0' }}>
-                            Ready for guests ✨
-                          </span>
-                        )}
-                      </div>
-
-                      <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap' }}>
-                        {t.activeOrder && (
-                          <>
-                            <button
-                              onClick={() => onOpenBillModal ? onOpenBillModal(t.activeOrder) : (onPrintBill && onPrintBill(t.activeOrder))}
-                              style={{
-                                flex: 1,
-                                padding: '8px',
-                                borderRadius: '8px',
-                                background: '#F1F5F9',
-                                color: '#334155',
-                                border: '1px solid #E2E8F0',
-                                fontSize: '0.78rem',
-                                fontWeight: 800,
-                                cursor: 'pointer',
-                                display: 'inline-flex',
-                                alignItems: 'center',
-                                justifyContent: 'center',
-                                gap: '4px'
-                              }}
-                            >
-                              <Printer size={12} /> Bill
-                            </button>
-                            <button
-                              onClick={() => onUpdateStatus(t.activeOrder.id, 'completed')}
-                              style={{
-                                flex: 1,
-                                padding: '8px',
-                                borderRadius: '8px',
-                                background: '#0F172A',
-                                color: '#FFFFFF',
-                                border: 'none',
-                                fontSize: '0.78rem',
-                                fontWeight: 800,
-                                cursor: 'pointer'
-                              }}
-                            >
-                              Clear
-                            </button>
-                          </>
-                        )}
-
-                        {isCall && t.serviceRequest && (
-                          t.serviceRequest.request_type === 'presence_verification' ? (
-                            <div style={{ display: 'flex', gap: '6px', width: '100%' }}>
-                              <button
-                                onClick={() => handleApprove(t.serviceRequest)}
-                                disabled={Boolean(processingReqState[t.serviceRequest.id])}
-                                style={{
-                                  flex: 2,
-                                  padding: '8px',
-                                  borderRadius: '8px',
-                                  background: 'linear-gradient(135deg, #10B981 0%, #059669 100%)',
-                                  color: '#FFFFFF',
-                                  border: 'none',
-                                  fontSize: '0.78rem',
-                                  fontWeight: 800,
-                                  cursor: processingReqState[t.serviceRequest.id] ? 'not-allowed' : 'pointer',
-                                  opacity: processingReqState[t.serviceRequest.id] ? 0.7 : 1,
-                                  display: 'flex',
-                                  alignItems: 'center',
-                                  justifyContent: 'center',
-                                  gap: '4px'
-                                }}
-                              >
-                                {processingReqState[t.serviceRequest.id] === 'approving' ? 'Approving...' : '✓ Approve'}
-                              </button>
-                              <button
-                                onClick={() => handleOpenRejectModal(t.serviceRequest)}
-                                disabled={Boolean(processingReqState[t.serviceRequest.id])}
-                                style={{
-                                  flex: 1,
-                                  padding: '8px',
-                                  borderRadius: '8px',
-                                  background: '#FEF2F2',
-                                  color: '#DC2626',
-                                  border: '1px solid #FECACA',
-                                  fontSize: '0.78rem',
-                                  fontWeight: 800,
-                                  cursor: processingReqState[t.serviceRequest.id] ? 'not-allowed' : 'pointer',
-                                  opacity: processingReqState[t.serviceRequest.id] ? 0.7 : 1,
-                                  display: 'flex',
-                                  alignItems: 'center',
-                                  justifyContent: 'center'
-                                }}
-                              >
-                                ✕ Reject
-                              </button>
-                            </div>
-                          ) : (
-                            <button
-                              onClick={() => onResolveServiceRequest(t.serviceRequest.id)}
-                              style={{
-                                width: '100%',
-                                padding: '8px',
-                                borderRadius: '8px',
-                                background: '#FEF3C7',
-                                color: '#B45309',
-                                border: '1px solid #FCD34D',
-                                fontSize: '0.78rem',
-                                fontWeight: 800,
-                                cursor: 'pointer'
-                              }}
-                            >
-                              ✓ Attend Call
-                            </button>
-                          )
-                        )}
-
-                        {isFree && onPrintQR && (
-                          <button
-                            onClick={() => onPrintQR(t.space_number, t.space_type)}
-                            style={{
-                              width: '100%',
-                              padding: '8px',
-                              borderRadius: '8px',
-                              background: '#F8FAFC',
-                              color: '#475569',
-                              border: '1px solid #E2E8F0',
-                              fontSize: '0.76rem',
-                              fontWeight: 800,
-                              cursor: 'pointer',
-                              display: 'inline-flex',
-                              alignItems: 'center',
-                              justifyContent: 'center',
-                              gap: '4px'
-                            }}
-                          >
-                            <QrCode size={12} /> Print {t.prefix} Standee
-                          </button>
-                        )}
-                      </div>
-                    </div>
-                  );
-                })
-              )}
-            </div>
-          </div>
-        )
-      )}
-
-      {/* WAITER CALLS SUBTAB */}
-      {activeSubTab === 'service-requests' && (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-          {/* Subtab Status Summary Bar */}
-          <div style={{
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'space-between',
-            background: safeServiceRequests.length > 0 ? '#FFFBEB' : '#F0FDF4',
-            border: safeServiceRequests.length > 0 ? '1px solid #FDE68A' : '1px solid #BBF7D0',
-            padding: '12px 18px',
-            borderRadius: '16px',
-            flexWrap: 'wrap',
-            gap: '10px'
-          }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-              <div style={{
-                width: '36px',
-                height: '36px',
-                borderRadius: '50%',
-                background: safeServiceRequests.length > 0 ? '#FEF3C7' : '#DCFCE7',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                fontSize: '1.1rem'
-              }}>
-                {safeServiceRequests.length > 0 ? '🛎️' : '✨'}
-              </div>
-              <div>
-                <strong style={{ fontSize: '0.96rem', color: safeServiceRequests.length > 0 ? '#92400E' : '#166534', display: 'block' }}>
-                  {safeServiceRequests.length > 0 ? `Active Waiter Calls (${safeServiceRequests.length} Pending)` : 'All Tables Attended'}
-                </strong>
-                <span style={{ fontSize: '0.78rem', color: safeServiceRequests.length > 0 ? '#B45309' : '#15803D' }}>
-                  {safeServiceRequests.length > 0 ? 'Staff attention required at the tables listed below.' : 'No pending bell rings or customer assistance requests.'}
-                </span>
-              </div>
-            </div>
-
-            {safeServiceRequests.length > 0 && (
-              <span style={{
-                background: '#F59E0B',
-                color: '#FFFFFF',
-                padding: '4px 12px',
-                borderRadius: '20px',
-                fontSize: '0.76rem',
-                fontWeight: 900,
-                boxShadow: '0 2px 8px rgba(245, 158, 11, 0.35)'
-              }}>
-                ⚡ Needs Attention
-              </span>
-            )}
-          </div>
-
-          {/* Cards Grid */}
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: '16px' }}>
-            {safeServiceRequests.length === 0 ? (
-              <div style={{
-                gridColumn: '1 / -1',
-                padding: '48px 20px',
-                textAlign: 'center',
-                background: '#FFFFFF',
-                borderRadius: '20px',
-                border: '1.5px dashed #CBD5E1',
-                display: 'flex',
-                flexDirection: 'column',
-                alignItems: 'center',
-                justifyContent: 'center',
-                gap: '8px'
-              }}>
-                <div style={{
-                  width: '56px',
-                  height: '56px',
-                  borderRadius: '50%',
-                  background: '#DCFCE7',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  fontSize: '1.6rem',
-                  marginBottom: '4px'
-                }}>
-                  🎉
-                </div>
-                <strong style={{ fontSize: '1.1rem', color: '#0F172A' }}>No Pending Waiter Calls</strong>
-                <p style={{ fontSize: '0.84rem', color: '#64748B', margin: 0, maxWidth: '420px' }}>
-                  Customer requests made via the digital QR menu (e.g. "Call Waiter", "Clean Table", "Water") will ring and pop up here live.
-                </p>
-              </div>
-            ) : (
-              safeServiceRequests.map(sr => {
-                const isPresence = sr.request_type === 'presence_verification';
-
-                if (isPresence) {
-                  const isExpired = (sr.expires_at && new Date(sr.expires_at).getTime() <= currentTime) || sr.is_expired;
-                  const remainingMs = sr.expires_at ? Math.max(0, new Date(sr.expires_at).getTime() - currentTime) : 0;
-                  const remainingSecs = Math.floor(remainingMs / 1000);
-                  const mins = Math.floor(remainingSecs / 60);
-                  const secs = remainingSecs % 60;
-                  const countdownStr = `${String(mins).padStart(2, '0')}:${String(secs).padStart(2, '0')}`;
-                  const isApproving = processingReqState[sr.id] === 'approving';
-                  const isRejecting = processingReqState[sr.id] === 'rejecting';
-                  const isProcessing = isApproving || isRejecting;
-
-                  return (
-                    <div
-                      key={sr.id}
-                      style={{
-                        background: isExpired ? '#F8FAFC' : '#FFFFFF',
-                        border: isExpired ? '1.5px solid #CBD5E1' : '1.5px solid #10B981',
-                        borderLeft: isExpired ? '6px solid #94A3B8' : '6px solid #10B981',
-                        borderRadius: '18px',
-                        padding: '18px',
-                        display: 'flex',
-                        flexDirection: 'column',
-                        justifyContent: 'space-between',
-                        gap: '14px',
-                        boxShadow: isExpired ? '0 4px 12px rgba(0,0,0,0.03)' : '0 8px 24px rgba(16, 185, 129, 0.12)',
-                        transition: 'transform 0.15s ease, box-shadow 0.15s ease'
-                      }}
-                    >
-                      <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-                        {/* Header: Table badge & Presence status */}
-                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '6px' }}>
-                          <span style={{
-                            background: '#0F172A',
-                            color: '#FFFFFF',
-                            padding: '4px 10px',
-                            borderRadius: '8px',
-                            fontSize: '0.88rem',
-                            fontWeight: 900,
-                            letterSpacing: '0.2px',
-                            display: 'inline-flex',
-                            alignItems: 'center',
-                            gap: '6px'
-                          }}>
-                            🛡️ {formatCleanTableLabel(sr.table_number, sr.space_type)}
-                          </span>
-                          <span style={{
-                            background: isExpired ? '#F1F5F9' : '#DCFCE7',
-                            color: isExpired ? '#64748B' : '#166534',
-                            border: isExpired ? '1px solid #CBD5E1' : '1px solid #86EFAC',
-                            padding: '2px 8px',
-                            borderRadius: '12px',
-                            fontSize: '0.7rem',
-                            fontWeight: 900,
-                            display: 'inline-flex',
-                            alignItems: 'center',
-                            gap: '4px'
-                          }}>
-                            <span style={{
-                              width: '6px',
-                              height: '6px',
-                              borderRadius: '50%',
-                              background: isExpired ? '#94A3B8' : '#10B981',
-                              display: 'inline-block'
-                            }} />
-                            {isExpired ? 'EXPIRED' : 'PRESENCE VERIFICATION'}
-                          </span>
-                        </div>
-
-                        {/* Request Information */}
-                        <div>
-                          <strong style={{ fontSize: '1.05rem', color: isExpired ? '#64748B' : '#0F172A', display: 'block', fontWeight: 900, marginBottom: '4px' }}>
-                            🛡️ Table Presence Verification
-                          </strong>
-                          <p style={{ fontSize: '0.82rem', color: '#64748B', margin: 0, lineHeight: 1.4 }}>
-                            Customer is at the table requesting staff authorization to place a table order.
-                          </p>
-                          <div style={{
-                            display: 'flex',
-                            alignItems: 'center',
-                            gap: '8px',
-                            marginTop: '8px',
-                            fontSize: '0.74rem',
-                            color: '#475569',
-                            background: '#F8FAFC',
-                            padding: '6px 10px',
-                            borderRadius: '8px',
-                            border: '1px solid #E2E8F0',
-                            flexWrap: 'wrap'
-                          }}>
-                            <span style={{ fontWeight: 800, color: '#0F172A' }}>Request P-{sr.id}</span>
-                            <span>•</span>
-                            <span>⏱️ {new Date(sr.created_at || Date.now()).toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' })}</span>
-                            {sr.expires_at && (
-                              <>
-                                <span>•</span>
-                                <span style={{ fontWeight: 800, color: isExpired ? '#DC2626' : '#059669' }}>
-                                  {isExpired ? '⌛ Expired' : `⌛ Expires in ${countdownStr}`}
-                                </span>
-                              </>
-                            )}
-                          </div>
-                        </div>
-                      </div>
-
-                      {/* Action Buttons */}
-                      {isExpired ? (
-                        <button
-                          onClick={() => onResolveServiceRequest(sr.id)}
-                          style={{
-                            width: '100%',
-                            background: '#F1F5F9',
-                            color: '#64748B',
-                            padding: '10px 14px',
-                            borderRadius: '10px',
-                            fontWeight: 800,
-                            fontSize: '0.84rem',
-                            border: '1px solid #CBD5E1',
-                            cursor: 'pointer',
-                            display: 'flex',
-                            alignItems: 'center',
-                            justifyContent: 'center',
-                            gap: '6px'
-                          }}
-                        >
-                          ✕ Dismiss Expired Request
-                        </button>
-                      ) : (
-                        <div style={{ display: 'flex', gap: '8px', width: '100%' }}>
-                          <button
-                            onClick={() => handleApprove(sr)}
-                            disabled={isProcessing}
-                            style={{
-                              flex: 2,
-                              background: 'linear-gradient(135deg, #10B981 0%, #059669 100%)',
-                              color: '#FFFFFF',
-                              padding: '10px 14px',
-                              borderRadius: '10px',
-                              fontWeight: 900,
-                              fontSize: '0.86rem',
-                              border: 'none',
-                              cursor: isProcessing ? 'not-allowed' : 'pointer',
-                              opacity: isProcessing ? 0.7 : 1,
-                              display: 'flex',
-                              alignItems: 'center',
-                              justifyContent: 'center',
-                              gap: '6px',
-                              boxShadow: '0 4px 14px rgba(16, 185, 129, 0.35)',
-                              transition: 'all 0.15s ease'
-                            }}
-                          >
-                            {isApproving ? 'Approving...' : '✓ Approve Presence'}
-                          </button>
-                          <button
-                            onClick={() => handleOpenRejectModal(sr)}
-                            disabled={isProcessing}
-                            style={{
-                              flex: 1,
-                              background: '#FFFFFF',
-                              color: '#DC2626',
-                              padding: '10px 12px',
-                              borderRadius: '10px',
-                              fontWeight: 800,
-                              fontSize: '0.84rem',
-                              border: '1.5px solid #FECACA',
-                              cursor: isProcessing ? 'not-allowed' : 'pointer',
-                              opacity: isProcessing ? 0.7 : 1,
-                              display: 'flex',
-                              alignItems: 'center',
-                              justifyContent: 'center',
-                              gap: '4px',
-                              transition: 'all 0.15s ease'
-                            }}
-                          >
-                            ✕ Reject
-                          </button>
-                        </div>
-                      )}
-                    </div>
-                  );
-                }
-
-                // Normal Waiter Request
-                return (
-                  <div
-                    key={sr.id}
-                    style={{
-                      background: '#FFFFFF',
-                      border: '1.5px solid #FCD34D',
-                      borderLeft: '6px solid #F59E0B',
-                      borderRadius: '18px',
-                      padding: '16px',
-                      display: 'flex',
-                      flexDirection: 'column',
-                      justifyContent: 'space-between',
-                      gap: '14px',
-                      boxShadow: '0 8px 24px rgba(245, 158, 11, 0.12)',
-                      transition: 'transform 0.15s ease, box-shadow 0.15s ease'
-                    }}
-                  >
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
-                      {/* Header: Table badge & Urgent status */}
-                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                        <span style={{
-                          background: '#0F172A',
-                          color: '#FFFFFF',
-                          padding: '4px 10px',
-                          borderRadius: '8px',
-                          fontSize: '0.88rem',
-                          fontWeight: 900,
-                          letterSpacing: '0.2px',
-                          display: 'inline-flex',
-                          alignItems: 'center',
-                          gap: '6px'
-                        }}>
-                          🍽️ {formatCleanTableLabel(sr.table_number, sr.space_type)}
-                        </span>
-                        <span style={{
-                          background: '#FEF3C7',
-                          color: '#B45309',
-                          border: '1px solid #FCD34D',
-                          padding: '2px 8px',
-                          borderRadius: '12px',
-                          fontSize: '0.7rem',
-                          fontWeight: 900,
-                          display: 'inline-flex',
-                          alignItems: 'center',
-                          gap: '4px'
-                        }}>
-                          <span style={{ width: '6px', height: '6px', borderRadius: '50%', background: '#F59E0B', display: 'inline-block' }}></span>
-                          PENDING
-                        </span>
-                      </div>
-
-                      {/* Request Type */}
-                      <div>
-                        <strong style={{ fontSize: '1.05rem', color: '#1E293B', display: 'block', fontWeight: 900 }}>
-                          {sr.request_type}
-                        </strong>
-                        {sr.note && (
-                          <div style={{
-                            background: '#F8FAFC',
-                            border: '1px dashed #CBD5E1',
-                            padding: '8px 10px',
-                            borderRadius: '8px',
-                            fontSize: '0.8rem',
-                            color: '#475569',
-                            fontStyle: 'italic',
-                            marginTop: '6px'
-                          }}>
-                            💬 "{sr.note}"
-                          </div>
-                        )}
-                      </div>
-
-                      {/* Time Requested */}
-                      <span style={{ fontSize: '0.72rem', color: '#64748B', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '4px' }}>
-                        ⏱️ Requested at {new Date(sr.created_at || Date.now()).toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' })}
-                      </span>
-                    </div>
-
-                    {/* Action Button */}
-                    <button
-                      onClick={() => onResolveServiceRequest(sr.id)}
-                      style={{
-                        width: '100%',
-                        background: 'linear-gradient(135deg, #F59E0B 0%, #D97706 100%)',
-                        color: '#FFFFFF',
-                        padding: '10px 14px',
-                        borderRadius: '10px',
-                        fontWeight: 900,
-                        fontSize: '0.86rem',
-                        border: 'none',
-                        cursor: 'pointer',
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        gap: '6px',
-                        boxShadow: '0 4px 14px rgba(245, 158, 11, 0.35)',
-                        transition: 'all 0.15s ease'
-                      }}
-                    >
-                      ✓ Mark Attended & Clear
-                    </button>
-                  </div>
-                );
-              })
-            )}
-          </div>
-        </div>
-      )}
-
-      {/* REJECTION REASON MODAL */}
-      {rejectingModalReq && (
+      {/* ========================================================
+          5. LUXURY ORDER DETAILS SLIDE-OVER DRAWER
+         ======================================================== */}
+      {selectedOrder && (
         <div style={{
           position: 'fixed',
-          top: 0,
-          left: 0,
-          right: 0,
-          bottom: 0,
-          background: 'rgba(15, 23, 42, 0.75)',
+          inset: 0,
+          background: 'rgba(10, 35, 21, 0.5)',
           backdropFilter: 'blur(4px)',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
           zIndex: 9999,
-          padding: '20px'
+          display: 'flex',
+          justifyContent: 'flex-end'
         }}>
           <div style={{
-            background: '#FFFFFF',
-            borderRadius: '24px',
-            maxWidth: '460px',
             width: '100%',
-            padding: '24px',
-            boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.25)',
+            maxWidth: '460px',
+            height: '100%',
+            background: '#FFFFFF',
+            boxShadow: '-10px 0 30px rgba(0,0,0,0.15)',
             display: 'flex',
             flexDirection: 'column',
-            gap: '18px'
+            justifyContent: 'space-between',
+            boxSizing: 'border-box'
           }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                <div style={{
-                  width: '38px',
-                  height: '38px',
-                  borderRadius: '50%',
-                  background: '#FEE2E2',
-                  color: '#DC2626',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  fontSize: '1.1rem',
-                  fontWeight: 900
-                }}>
-                  ✕
-                </div>
-                <div>
-                  <h3 style={{ margin: 0, fontSize: '1.15rem', fontWeight: 900, color: '#0F172A' }}>
-                    Reject Presence Request
-                  </h3>
-                  <span style={{ fontSize: '0.78rem', color: '#64748B' }}>
-                    {formatCleanTableLabel(rejectingModalReq.table_number, rejectingModalReq.space_type)} • Request P-{rejectingModalReq.id}
-                  </span>
-                </div>
+            {/* Header */}
+            <div style={{ padding: '20px 24px', borderBottom: '1px solid #E2E8F0', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+              <div>
+                <h3 style={{ fontSize: '1.15rem', fontWeight: 900, color: '#0F172A', margin: 0 }}>
+                  Order #{selectedOrder.id}
+                </h3>
+                <span style={{ fontSize: '0.74rem', color: '#64748B' }}>
+                  {new Date(selectedOrder.created_at).toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' })} • {formatCleanTableLabel(selectedOrder.table_number, selectedOrder.space_type)}
+                </span>
               </div>
               <button
-                onClick={() => setRejectingModalReq(null)}
-                style={{
-                  background: '#F1F5F9',
-                  border: 'none',
-                  borderRadius: '50%',
-                  width: '32px',
-                  height: '32px',
-                  cursor: 'pointer',
-                  fontSize: '1rem',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  color: '#64748B'
-                }}
+                onClick={() => setSelectedOrder(null)}
+                style={{ background: 'none', border: 'none', color: '#64748B', cursor: 'pointer', padding: '4px' }}
               >
-                ✕
+                <X size={20} />
               </button>
             </div>
 
-            <div>
-              <label style={{ fontSize: '0.82rem', fontWeight: 800, color: '#334155', display: 'block', marginBottom: '8px' }}>
-                Select Reason for Rejection:
-              </label>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                {[
-                  'Customer not visible at table',
-                  'Wrong table / seat',
-                  'Unable to verify physical presence',
-                  'Other'
-                ].map(reason => (
-                  <label
-                    key={reason}
-                    onClick={() => setSelectedRejectReason(reason)}
-                    style={{
-                      display: 'flex',
-                      alignItems: 'center',
-                      gap: '10px',
-                      padding: '10px 14px',
-                      borderRadius: '12px',
-                      border: selectedRejectReason === reason ? '2px solid #DC2626' : '1px solid #E2E8F0',
-                      background: selectedRejectReason === reason ? '#FEF2F2' : '#FFFFFF',
-                      cursor: 'pointer',
-                      fontSize: '0.86rem',
-                      fontWeight: selectedRejectReason === reason ? 800 : 500,
-                      color: selectedRejectReason === reason ? '#991B1B' : '#334155',
-                      transition: 'all 0.15s ease'
-                    }}
-                  >
-                    <input
-                      type="radio"
-                      name="reject_reason"
-                      checked={selectedRejectReason === reason}
-                      onChange={() => setSelectedRejectReason(reason)}
-                      style={{ accentColor: '#DC2626' }}
-                    />
-                    <span>{reason}</span>
-                  </label>
-                ))}
+            {/* Scrollable Content */}
+            <div style={{ padding: '24px', flex: 1, overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '18px' }}>
+              {/* Status Pill */}
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', background: '#F8FAFC', padding: '12px 16px', borderRadius: '12px', border: '1px solid #E2E8F0' }}>
+                <span style={{ fontSize: '0.78rem', color: '#64748B', fontWeight: 600 }}>Order Status:</span>
+                <span style={{
+                  padding: '4px 10px',
+                  borderRadius: '8px',
+                  background: getStatusBadge(selectedOrder.status).bg,
+                  color: getStatusBadge(selectedOrder.status).color,
+                  fontWeight: 800,
+                  fontSize: '0.72rem'
+                }}>
+                  {getStatusBadge(selectedOrder.status).label}
+                </span>
               </div>
 
-              {selectedRejectReason === 'Other' && (
-                <input
-                  type="text"
-                  placeholder="Type reason for rejection..."
-                  value={customRejectReason}
-                  onChange={(e) => setCustomRejectReason(e.target.value)}
+              {/* Itemized Dishes */}
+              <div>
+                <h4 style={{ fontSize: '0.84rem', fontWeight: 800, color: '#0F172A', margin: '0 0 10px 0' }}>
+                  Order Items
+                </h4>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                  {safeParseItems(selectedOrder.items).map((item, idx) => (
+                    <div key={idx} style={{ display: 'flex', justifyContent: 'space-between', padding: '8px 0', borderBottom: '1px solid #F1F5F9' }}>
+                      <div>
+                        <strong style={{ fontSize: '0.82rem', color: '#0F172A' }}>{item.quantity || 1}x {item.name}</strong>
+                        {item.modifiers && item.modifiers.length > 0 && (
+                          <div style={{ fontSize: '0.70rem', color: '#64748B' }}>
+                            {item.modifiers.map(m => m.name || m).join(', ')}
+                          </div>
+                        )}
+                      </div>
+                      <span style={{ fontWeight: 800, fontSize: '0.84rem', color: '#0F172A' }}>
+                        {currencySymbol}{Math.round((item.price || 0) * (item.quantity || 1))}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              {/* Bill Breakdown */}
+              <div style={{ background: '#F8FAFC', padding: '16px', borderRadius: '14px', border: '1px solid #E2E8F0' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.78rem', color: '#64748B', marginBottom: '6px' }}>
+                  <span>Subtotal</span>
+                  <span>{currencySymbol}{Math.round(selectedOrder.subtotal || selectedOrder.total_amount || 0)}</span>
+                </div>
+                {selectedOrder.gst_amount > 0 && (
+                  <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.78rem', color: '#64748B', marginBottom: '6px' }}>
+                    <span>GST (Tax)</span>
+                    <span>{currencySymbol}{Math.round(selectedOrder.gst_amount)}</span>
+                  </div>
+                )}
+                <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.94rem', fontWeight: 900, color: '#0F172A', borderTop: '1px solid #E2E8F0', paddingTop: '8px', marginTop: '4px' }}>
+                  <span>Total Amount</span>
+                  <span>{currencySymbol}{Math.round(selectedOrder.total_amount || selectedOrder.total || 0)}</span>
+                </div>
+              </div>
+
+              {/* Print Actions */}
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
+                <button
+                  onClick={() => onDirectPrint ? onDirectPrint(selectedOrder, 'kot') : null}
+                  style={{
+                    padding: '10px',
+                    borderRadius: '10px',
+                    border: '1px solid #E2E8F0',
+                    background: '#FFFFFF',
+                    color: '#0F172A',
+                    fontSize: '0.78rem',
+                    fontWeight: 700,
+                    cursor: 'pointer',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    gap: '6px'
+                  }}
+                >
+                  <Printer size={15} />
+                  <span>Print KOT</span>
+                </button>
+                <button
+                  onClick={() => onPrintBill ? onPrintBill(selectedOrder, 'cash') : null}
+                  style={{
+                    padding: '10px',
+                    borderRadius: '10px',
+                    border: '1px solid #E2E8F0',
+                    background: '#FFFFFF',
+                    color: '#0F172A',
+                    fontSize: '0.78rem',
+                    fontWeight: 700,
+                    cursor: 'pointer',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    gap: '6px'
+                  }}
+                >
+                  <Receipt size={15} />
+                  <span>Print Bill</span>
+                </button>
+              </div>
+            </div>
+
+            {/* Bottom State Transition CTA */}
+            <div style={{ padding: '18px 24px', borderTop: '1px solid #E2E8F0', background: '#F8FAFC' }}>
+              {(selectedOrder.status === 'pending' || selectedOrder.status === 'ordered') && (
+                <button
+                  onClick={() => {
+                    if (onUpdateStatus) onUpdateStatus(selectedOrder.id, 'kitchen');
+                    setSelectedOrder(null);
+                  }}
                   style={{
                     width: '100%',
-                    marginTop: '10px',
-                    padding: '10px 14px',
-                    borderRadius: '10px',
-                    border: '1px solid #CBD5E1',
-                    fontSize: '0.86rem',
-                    boxSizing: 'border-box'
+                    padding: '12px',
+                    borderRadius: '12px',
+                    background: '#16A34A',
+                    color: '#FFFFFF',
+                    fontSize: '0.84rem',
+                    fontWeight: 900,
+                    border: 'none',
+                    cursor: 'pointer',
+                    boxShadow: '0 2px 8px rgba(22, 163, 74, 0.3)'
                   }}
-                />
+                >
+                  Accept & Send to Kitchen
+                </button>
               )}
-            </div>
 
-            <div style={{ display: 'flex', gap: '10px', marginTop: '6px' }}>
-              <button
-                onClick={() => setRejectingModalReq(null)}
-                style={{
-                  flex: 1,
-                  padding: '12px',
-                  borderRadius: '12px',
-                  background: '#F1F5F9',
-                  color: '#475569',
-                  fontWeight: 800,
-                  border: 'none',
-                  fontSize: '0.88rem',
-                  cursor: 'pointer'
-                }}
-              >
-                Cancel
-              </button>
-              <button
-                onClick={handleConfirmReject}
-                style={{
-                  flex: 1.5,
-                  padding: '12px',
-                  borderRadius: '12px',
-                  background: '#DC2626',
-                  color: '#FFFFFF',
-                  fontWeight: 900,
-                  border: 'none',
-                  fontSize: '0.88rem',
-                  cursor: 'pointer',
-                  boxShadow: '0 4px 12px rgba(220, 38, 38, 0.35)'
-                }}
-              >
-                Confirm Rejection
-              </button>
+              {(selectedOrder.status === 'kitchen' || selectedOrder.status === 'accepted' || selectedOrder.status === 'preparing') && (
+                <button
+                  onClick={() => {
+                    if (onUpdateStatus) onUpdateStatus(selectedOrder.id, 'served');
+                    setSelectedOrder(null);
+                  }}
+                  style={{
+                    width: '100%',
+                    padding: '12px',
+                    borderRadius: '12px',
+                    background: '#0284C7',
+                    color: '#FFFFFF',
+                    fontSize: '0.84rem',
+                    fontWeight: 900,
+                    border: 'none',
+                    cursor: 'pointer',
+                    boxShadow: '0 2px 8px rgba(2, 132, 199, 0.3)'
+                  }}
+                >
+                  Mark Order as Ready / Served
+                </button>
+              )}
+
+              {(selectedOrder.status === 'served' || selectedOrder.status === 'ready') && (
+                <button
+                  onClick={() => {
+                    setSelectedOrder(null);
+                    if (onOpenBillModal) onOpenBillModal(selectedOrder);
+                    else if (onUpdateStatus) onUpdateStatus(selectedOrder.id, 'completed');
+                  }}
+                  style={{
+                    width: '100%',
+                    padding: '12px',
+                    borderRadius: '12px',
+                    background: '#7E22CE',
+                    color: '#FFFFFF',
+                    fontSize: '0.84rem',
+                    fontWeight: 900,
+                    border: 'none',
+                    cursor: 'pointer',
+                    boxShadow: '0 2px 8px rgba(126, 34, 206, 0.3)'
+                  }}
+                >
+                  Generate Bill & Complete Order
+                </button>
+              )}
             </div>
           </div>
         </div>
@@ -2138,4 +1280,3 @@ export default function OrdersView({
     </div>
   );
 }
-
