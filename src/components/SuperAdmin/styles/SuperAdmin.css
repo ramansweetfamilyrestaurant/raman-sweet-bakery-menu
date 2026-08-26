@@ -2810,3 +2810,210 @@
     padding: 2px 7px;
   }
 }
+
+/* ========================================================================= */
+/* SUPER ADMIN — AUDIT LOG TRAIL & ACTIVITY STREAM RESPONSIVE STYLING        */
+/* ========================================================================= */
+
+.sa-audit-container {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  width: 100%;
+  box-sizing: border-box;
+  padding-bottom: 24px;
+}
+
+.sa-audit-hero-card {
+  background: linear-gradient(135deg, #0A2315 0%, #153B25 100%);
+  color: #FFFFFF;
+  border-radius: 20px;
+  padding: 20px 20px;
+  border: 1.5px solid rgba(212, 175, 55, 0.45);
+  box-shadow: 0 8px 24px rgba(10, 35, 21, 0.25);
+  position: relative;
+  overflow: hidden;
+  box-sizing: border-box;
+}
+
+.sa-audit-hero-metrics {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 10px;
+  margin-top: 16px;
+  padding-top: 14px;
+  border-top: 1px solid rgba(255, 255, 255, 0.12);
+}
+
+.sa-audit-metric-tile {
+  background: rgba(255, 255, 255, 0.07);
+  padding: 10px 12px;
+  border-radius: 12px;
+  border: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.sa-audit-controls-strip {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 12px;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.sa-filter-strip-wrapper {
+  position: relative;
+  flex: 1;
+  min-width: 0;
+  max-width: 100%;
+}
+
+.sa-filter-strip-fade {
+  position: absolute;
+  right: 0;
+  top: 0;
+  bottom: 6px;
+  width: 24px;
+  background: linear-gradient(to right, transparent, rgba(248, 250, 252, 0.85));
+  pointer-events: none;
+}
+
+.sa-audit-desktop-table {
+  display: block;
+}
+
+.sa-audit-mobile-cards {
+  display: none;
+}
+
+.sa-audit-mobile-card {
+  background: #FFFFFF;
+  border-radius: 14px;
+  border: 1px solid var(--sa-border);
+  padding: 14px 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 9px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.03);
+  box-sizing: border-box;
+}
+
+.sa-audit-mobile-card-top {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 8px;
+}
+
+.sa-audit-mobile-timestamp {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 0.74rem;
+  color: var(--sa-text-muted);
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+
+.sa-audit-mobile-time {
+  color: var(--sa-text-main);
+  font-weight: 800;
+}
+
+.sa-audit-mobile-view-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 44px;
+  min-width: 72px;
+  padding: 6px 14px;
+  border-radius: 10px;
+  border: 1px solid var(--sa-border);
+  background: #F8FAFC;
+  color: var(--sa-text-main);
+  font-size: 0.76rem;
+  font-weight: 800;
+  cursor: pointer;
+  touch-action: manipulation;
+  transition: all 0.15s ease;
+}
+
+.sa-audit-mobile-view-btn:active {
+  background: #E2E8F0;
+  transform: scale(0.97);
+}
+
+.sa-audit-mobile-badges {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+.sa-audit-mobile-action {
+  font-size: 0.84rem;
+  font-weight: 800;
+  color: var(--sa-text-main);
+  line-height: 1.3;
+}
+
+.sa-audit-tenant-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  font-size: 0.70rem;
+  color: #B48F27;
+  font-weight: 800;
+  cursor: pointer;
+  margin-left: 6px;
+}
+
+.sa-audit-mobile-details {
+  font-size: 0.76rem;
+  color: #475569;
+  background: #F8FAFC;
+  padding: 8px 10px;
+  border-radius: 8px;
+  border: 1px solid #E2E8F0;
+  line-height: 1.35;
+  word-break: break-word;
+}
+
+@media (max-width: 767px) {
+  .sa-audit-hero-card {
+    padding: 16px 14px;
+    border-radius: 16px;
+  }
+  .sa-audit-hero-metrics {
+    grid-template-columns: repeat(2, 1fr) !important;
+    gap: 8px !important;
+    margin-top: 14px !important;
+    padding-top: 12px !important;
+  }
+  .sa-audit-controls-strip {
+    flex-direction: column !important;
+    align-items: stretch !important;
+    gap: 10px !important;
+  }
+  .sa-audit-filter-controls-right {
+    display: flex !important;
+    flex-direction: column !important;
+    width: 100% !important;
+    gap: 8px !important;
+  }
+  .sa-audit-filter-controls-right select,
+  .sa-audit-filter-controls-right .sa-search-wrap {
+    width: 100% !important;
+  }
+  .sa-audit-desktop-table {
+    display: none !important;
+  }
+  .sa-audit-mobile-cards {
+    display: flex !important;
+    flex-direction: column !important;
+    gap: 10px !important;
+    width: 100% !important;
+    box-sizing: border-box !important;
+  }
+}
