@@ -175,7 +175,12 @@ export default function MenuView({
     return '🍽️';
   };
 
-  // Helper to format price in ultra-premium luxury pills
+  // Dynamic currency resolver from restaurant settings or props
+  const curr = restaurantInfo?.currency_symbol !== undefined && restaurantInfo?.currency_symbol !== null 
+    ? restaurantInfo.currency_symbol 
+    : currencySymbol;
+
+  // Helper to format price in a single clean segmented pill
   const renderDishPrice = (dish, layout = 'card') => {
     const currentPrice = Number(dish.price) || 0;
     const rawOldPrice = Number(dish.original_price || dish.mrp || dish.old_price || dish.compare_at_price);
@@ -187,41 +192,35 @@ export default function MenuView({
     if (hasHalfPrice) {
       return (
         <div style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', flexWrap: 'wrap' }}>
-          {/* Dual Segmented Luxury Capsule */}
+          {/* Single Compact Segmented Pill: [ Full 160 | Half 95 ] */}
           <div style={{
             display: 'inline-flex',
             alignItems: 'center',
             background: '#F8FAFC',
             border: '1px solid #E2E8F0',
-            borderRadius: '999px',
-            padding: '2px',
-            boxShadow: '0 1px 2px rgba(0,0,0,0.03)'
+            borderRadius: '8px',
+            padding: '3px 8px',
+            gap: '8px',
+            boxShadow: '0 1px 2px rgba(0,0,0,0.02)'
           }}>
-            {/* Full portion */}
-            <span style={{
-              display: 'inline-flex',
-              alignItems: 'center',
-              gap: '4px',
-              padding: '2px 8px',
-              background: '#FFFFFF',
-              borderRadius: '999px',
-              boxShadow: '0 1px 2px rgba(0,0,0,0.05)'
-            }}>
-              <span style={{ fontSize: '0.60rem', fontWeight: 800, color: '#16A34A', textTransform: 'uppercase', letterSpacing: '0.04em' }}>Full</span>
-              <strong style={{ fontSize: layout === 'card' ? '0.94rem' : '0.88rem', fontWeight: 900, color: '#0F172A', lineHeight: 1 }}>{currencySymbol}{currentPrice}</strong>
-            </span>
+            {/* Full price section */}
+            <div style={{ display: 'inline-flex', alignItems: 'baseline', gap: '3px' }}>
+              <span style={{ fontSize: '0.62rem', color: '#64748B', fontWeight: 600 }}>Full</span>
+              <strong style={{ fontSize: layout === 'card' ? '0.92rem' : '0.86rem', fontWeight: 800, color: '#0F172A', lineHeight: 1 }}>
+                {curr}{currentPrice}
+              </strong>
+            </div>
 
-            {/* Half portion */}
-            <span style={{
-              display: 'inline-flex',
-              alignItems: 'center',
-              gap: '4px',
-              padding: '2px 8px',
-              borderRadius: '999px'
-            }}>
-              <span style={{ fontSize: '0.60rem', fontWeight: 800, color: '#D97706', textTransform: 'uppercase', letterSpacing: '0.04em' }}>Half</span>
-              <strong style={{ fontSize: layout === 'card' ? '0.90rem' : '0.84rem', fontWeight: 800, color: '#475569', lineHeight: 1 }}>{currencySymbol}{rawHalfPrice}</strong>
-            </span>
+            {/* Very subtle vertical divider */}
+            <span style={{ width: '1px', height: '11px', background: '#CBD5E1', display: 'inline-block' }} />
+
+            {/* Half price section */}
+            <div style={{ display: 'inline-flex', alignItems: 'baseline', gap: '3px' }}>
+              <span style={{ fontSize: '0.62rem', color: '#64748B', fontWeight: 600 }}>Half</span>
+              <strong style={{ fontSize: layout === 'card' ? '0.90rem' : '0.84rem', fontWeight: 800, color: '#334155', lineHeight: 1 }}>
+                {curr}{rawHalfPrice}
+              </strong>
+            </div>
           </div>
 
           {/* Struck-through Old Price */}
@@ -232,41 +231,45 @@ export default function MenuView({
               textDecoration: 'line-through',
               fontWeight: 500
             }}>
-              {currencySymbol}{rawOldPrice}
+              {curr}{rawOldPrice}
             </span>
           )}
         </div>
       );
     }
 
-    // Single Price Layout: Sleek, high-contrast, crystal clear typography
+    // Single Price Layout: Clean single pill without an empty Half section
     return (
       <div style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', flexWrap: 'wrap' }}>
         <div style={{
           display: 'inline-flex',
-          alignItems: 'baseline',
-          gap: '2px'
+          alignItems: 'center',
+          background: '#F8FAFC',
+          border: '1px solid #E2E8F0',
+          borderRadius: '8px',
+          padding: '3px 9px',
+          boxShadow: '0 1px 2px rgba(0,0,0,0.02)'
         }}>
-          <span style={{
-            fontSize: layout === 'card' ? '1.14rem' : '1.02rem',
-            fontWeight: 900,
+          <strong style={{
+            fontSize: layout === 'card' ? '0.98rem' : '0.92rem',
+            fontWeight: 800,
             color: '#0F172A',
-            letterSpacing: '-0.02em',
+            letterSpacing: '-0.01em',
             lineHeight: 1
           }}>
-            {currencySymbol}{currentPrice}
-          </span>
+            {curr}{currentPrice}
+          </strong>
         </div>
 
         {/* Struck-through Old Price */}
         {hasValidOldPrice && (
           <span style={{
-            fontSize: '0.76rem',
+            fontSize: '0.74rem',
             color: '#94A3B8',
             textDecoration: 'line-through',
             fontWeight: 500
           }}>
-            {currencySymbol}{rawOldPrice}
+            {curr}{rawOldPrice}
           </span>
         )}
 
@@ -278,11 +281,11 @@ export default function MenuView({
             color: '#15803D',
             background: '#DCFCE7',
             border: '1px solid #BBF7D0',
-            padding: '1px 6px',
-            borderRadius: '999px',
+            padding: '1px 5px',
+            borderRadius: '4px',
             letterSpacing: '0.02em'
           }}>
-            SAVE {currencySymbol}{savings}
+            SAVE {curr}{savings}
           </span>
         )}
       </div>
@@ -1375,7 +1378,7 @@ export default function MenuView({
                     </h4>
 
                     <div style={{ fontSize: '1.15rem', fontWeight: 900, color: '#0F172A', marginTop: '6px' }}>
-                      {currencySymbol}{combo.price}
+                      {curr}{combo.price}
                     </div>
                   </div>
 
@@ -2382,7 +2385,7 @@ export default function MenuView({
             <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
               <div>
                 <label style={{ fontSize: '0.72rem', color: '#64748B', fontWeight: 600, display: 'block', marginBottom: '4px' }}>
-                  Full Price ({currencySymbol})
+                  Full Price ({curr})
                 </label>
                 <input
                   type="number"
@@ -2395,7 +2398,7 @@ export default function MenuView({
 
               <div>
                 <label style={{ fontSize: '0.72rem', color: '#64748B', fontWeight: 600, display: 'block', marginBottom: '4px' }}>
-                  Half Price ({currencySymbol}) Optional
+                  Half Price ({curr}) Optional
                 </label>
                 <input
                   type="number"
