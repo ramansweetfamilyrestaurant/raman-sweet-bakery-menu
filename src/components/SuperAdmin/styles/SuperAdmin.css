@@ -2186,7 +2186,7 @@
   background: #FFFFFF;
   border: 1px solid var(--sa-border);
   border-radius: var(--sa-radius-lg);
-  padding: 16px;
+  padding: 14px 16px;
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
 }
 
@@ -2205,27 +2205,69 @@
 .sa-settings-diagnostics-list {
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: 10px;
 }
 
 .sa-settings-diagnostics-row {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  font-size: 0.72rem;
+  display: grid;
+  grid-template-columns: minmax(110px, 125px) minmax(0, 1fr);
+  align-items: flex-start;
+  gap: 8px;
+  font-size: 0.74rem;
+  line-height: 1.35;
 }
 
 .sa-settings-diagnostics-label {
   color: var(--sa-text-muted);
   font-weight: 700;
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  white-space: nowrap;
 }
 
 .sa-settings-diagnostics-val {
   color: var(--sa-text-main);
   font-weight: 800;
   display: flex;
-  align-items: center;
-  gap: 4px;
+  align-items: flex-start;
+  justify-content: flex-end;
+  text-align: right;
+  gap: 5px;
+  word-break: break-word;
+}
+
+.sa-settings-diagnostics-val .sa-live-dot {
+  margin-top: 3px;
+  flex-shrink: 0;
+}
+
+@media (max-width: 480px) {
+  .sa-settings-diagnostics-card {
+    padding: 12px 14px;
+    margin-top: 6px;
+  }
+  .sa-settings-diagnostics-header {
+    font-size: 0.78rem;
+    margin-bottom: 10px;
+    padding-bottom: 6px;
+  }
+  .sa-settings-diagnostics-list {
+    gap: 10px;
+  }
+  .sa-settings-diagnostics-row {
+    grid-template-columns: minmax(105px, 120px) minmax(0, 1fr);
+    gap: 8px;
+    font-size: 0.72rem;
+  }
+  .sa-settings-diagnostics-label {
+    font-size: 0.72rem;
+    gap: 4px;
+  }
+  .sa-settings-diagnostics-val {
+    font-size: 0.72rem;
+    gap: 4px;
+  }
 }
 
 /* Main Settings Configuration Card */
@@ -2437,7 +2479,7 @@
   background: #FFFFFF;
   border: 1px solid var(--sa-border);
   border-radius: var(--sa-radius-lg);
-  padding: 16px;
+  padding: 14px 16px;
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
 }
 
@@ -2456,27 +2498,41 @@
 .sa-settings-diagnostics-list {
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: 10px;
 }
 
 .sa-settings-diagnostics-row {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  font-size: 0.72rem;
+  display: grid;
+  grid-template-columns: minmax(110px, 125px) minmax(0, 1fr);
+  align-items: flex-start;
+  gap: 8px;
+  font-size: 0.74rem;
+  line-height: 1.35;
 }
 
 .sa-settings-diagnostics-label {
   color: var(--sa-text-muted);
   font-weight: 700;
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  white-space: nowrap;
 }
 
 .sa-settings-diagnostics-val {
   color: var(--sa-text-main);
   font-weight: 800;
   display: flex;
-  align-items: center;
-  gap: 4px;
+  align-items: flex-start;
+  justify-content: flex-end;
+  text-align: right;
+  gap: 5px;
+  word-break: break-word;
+}
+
+.sa-settings-diagnostics-val .sa-live-dot {
+  margin-top: 3px;
+  flex-shrink: 0;
 }
 
 /* Main Settings Configuration Card */

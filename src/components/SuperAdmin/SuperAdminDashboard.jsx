@@ -2168,8 +2168,8 @@ export default function SuperAdminDashboard({ token, username, onLogout, onRetur
                     })}
                   </div>
 
-                  {/* Diagnostics Status Card (Desktop Side) */}
-                  <div className="sa-settings-diagnostics-card sa-desktop-only">
+                  {/* Diagnostics Status Card */}
+                  <div className="sa-settings-diagnostics-card">
                     <div className="sa-settings-diagnostics-header">
                       <ShieldCheck size={16} color="#15803D" />
                       <span>System Security Status</span>
