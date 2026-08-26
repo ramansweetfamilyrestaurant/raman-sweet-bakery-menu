@@ -23,31 +23,30 @@ import { resolveTheme, DEFAULT_THEME } from './constants/themes';
 // Robust Lazy Loading with automatic retry on new production deploys
 const lazyWithRetry = (componentImport) =>
   lazy(async () => {
-    const pageHasAlreadyBeenForceRefreshed = JSON.parse(
-      window.sessionStorage.getItem('retry-chunk-refresh') || 'false'
-    );
     try {
-      const component = await componentImport();
-      window.sessionStorage.setItem('retry-chunk-refresh', 'false');
-      return component;
+      return await componentImport();
     } catch (error) {
-      console.warn('Chunk loading failed, checking for updated deploy...', error);
+      console.warn('Chunk loading failed, automatically refreshing to latest deploy...', error);
       const isChunkError = error?.message && (
         error.message.includes('dynamically imported module') ||
         error.message.includes('Failed to fetch dynamically imported module') ||
         error.message.includes('error loading dynamically imported module') ||
         error.message.includes('Importing a module script failed')
       );
-      if (isChunkError && !pageHasAlreadyBeenForceRefreshed) {
-        window.sessionStorage.setItem('retry-chunk-refresh', 'true');
-        if ('caches' in window) {
-          try {
-            const keys = await caches.keys();
-            await Promise.all(keys.map(k => caches.delete(k)));
-          } catch {}
+      if (isChunkError) {
+        const lastReload = parseInt(window.sessionStorage.getItem('last-chunk-reload') || '0', 10);
+        const now = Date.now();
+        if (now - lastReload > 8000) {
+          window.sessionStorage.setItem('last-chunk-reload', String(now));
+          if ('caches' in window) {
+            try {
+              const keys = await caches.keys();
+              await Promise.all(keys.map(k => caches.delete(k)));
+            } catch {}
+          }
+          window.location.reload();
+          return new Promise(() => {});
         }
-        window.location.reload();
-        return new Promise(() => {});
       }
       throw error;
     }
