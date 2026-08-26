@@ -279,9 +279,17 @@ export default function AuditLogsView({
           <select
             value={actorFilter}
             onChange={(e) => setActorFilter(e.target.value)}
+            className="sa-audit-actor-select"
             style={{
-              padding: '8px 10px', borderRadius: '10px', border: '1px solid var(--sa-border)',
-              fontSize: '0.76rem', fontWeight: 800, color: 'var(--sa-text-main)', background: '#FFFFFF', outline: 'none',
+              height: '42px',
+              padding: '0 14px',
+              borderRadius: '12px',
+              border: '1.5px solid #E2E8F0',
+              fontSize: '0.80rem',
+              fontWeight: 700,
+              color: '#0F172A',
+              background: '#FFFFFF',
+              outline: 'none',
               boxSizing: 'border-box'
             }}
           >
@@ -293,14 +301,44 @@ export default function AuditLogsView({
           </select>
 
           {/* Full Text Search Input with Safe Padding & Alignment */}
-          <div className="sa-audit-search-wrap">
-            <Search className="sa-audit-search-icon" size={15} />
+          <div className="sa-audit-search-wrap" style={{ position: 'relative', width: '100%', minWidth: '240px', boxSizing: 'border-box', display: 'flex', alignItems: 'center' }}>
+            <Search
+              className="sa-audit-search-icon"
+              size={16}
+              style={{
+                position: 'absolute',
+                left: '14px',
+                top: '50%',
+                transform: 'translateY(-50%)',
+                width: '16px',
+                height: '16px',
+                color: '#64748B',
+                pointerEvents: 'none',
+                zIndex: 2
+              }}
+            />
             <input
               type="text"
               className="sa-audit-search-input"
               placeholder="Search action, details, actor..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
+              style={{
+                width: '100%',
+                height: '42px',
+                boxSizing: 'border-box',
+                paddingLeft: '44px',
+                paddingRight: '38px',
+                paddingTop: 0,
+                paddingBottom: 0,
+                borderRadius: '12px',
+                border: '1.5px solid #E2E8F0',
+                fontSize: '0.80rem',
+                fontWeight: 600,
+                color: '#0F172A',
+                background: '#FFFFFF',
+                outline: 'none'
+              }}
             />
             {searchQuery && (
               <button
@@ -308,6 +346,24 @@ export default function AuditLogsView({
                 onClick={() => setSearchQuery('')}
                 className="sa-audit-search-clear-btn"
                 aria-label="Clear search"
+                style={{
+                  position: 'absolute',
+                  right: '12px',
+                  top: '50%',
+                  transform: 'translateY(-50%)',
+                  width: '20px',
+                  height: '20px',
+                  borderRadius: '50%',
+                  background: '#F1F5F9',
+                  border: 'none',
+                  color: '#64748B',
+                  cursor: 'pointer',
+                  fontSize: '0.70rem',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  zIndex: 3
+                }}
               >
                 ✕
               </button>
