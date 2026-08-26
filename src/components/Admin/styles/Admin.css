@@ -64,7 +64,7 @@
   line-height: 1.45;
   width: 100%;
   box-sizing: border-box;
-  overflow-x: hidden;
+  overflow-x: clip;
 }
 
 /* Main Content Area */
