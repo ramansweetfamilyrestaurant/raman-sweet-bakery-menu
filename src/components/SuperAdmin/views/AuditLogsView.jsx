@@ -293,53 +293,20 @@ export default function AuditLogsView({
           </select>
 
           {/* Full Text Search Input with Safe Padding & Alignment */}
-          <div className="sa-search-wrap" style={{ position: 'relative', minWidth: '220px', flex: '1 1 auto' }}>
-            <Search
-              size={14}
-              style={{
-                position: 'absolute',
-                left: '12px',
-                top: '50%',
-                transform: 'translateY(-50%)',
-                color: 'var(--sa-text-muted)',
-                pointerEvents: 'none'
-              }}
-            />
+          <div className="sa-audit-search-wrap">
+            <Search className="sa-audit-search-icon" size={15} />
             <input
               type="text"
+              className="sa-audit-search-input"
               placeholder="Search action, details, actor..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              style={{
-                width: '100%',
-                padding: '9px 34px 9px 36px',
-                borderRadius: '10px',
-                border: '1px solid var(--sa-border)',
-                fontSize: '0.76rem',
-                outline: 'none',
-                background: '#FFFFFF',
-                boxSizing: 'border-box'
-              }}
             />
             {searchQuery && (
               <button
                 type="button"
                 onClick={() => setSearchQuery('')}
-                style={{
-                  position: 'absolute',
-                  right: '10px',
-                  top: '50%',
-                  transform: 'translateY(-50%)',
-                  background: 'none',
-                  border: 'none',
-                  color: 'var(--sa-text-muted)',
-                  cursor: 'pointer',
-                  fontSize: '0.80rem',
-                  padding: '4px',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center'
-                }}
+                className="sa-audit-search-clear-btn"
                 aria-label="Clear search"
               >
                 ✕
