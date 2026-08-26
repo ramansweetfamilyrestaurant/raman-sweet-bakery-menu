@@ -2546,7 +2546,7 @@ export default function AdminDashboard({
         }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
             <Megaphone size={16} color="#FBBF24" />
-            <span><strong>Notice from SaaS Master:</strong> {announcements[0].message}</span>
+            <span><strong>Platform Notice:</strong> {announcements[0].message}</span>
           </div>
           <button
             onClick={() => setDismissedNotice(true)}

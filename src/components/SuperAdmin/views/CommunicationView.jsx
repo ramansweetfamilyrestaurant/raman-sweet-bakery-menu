@@ -28,7 +28,7 @@ export default function CommunicationView({ announcementsList, onSendAnnouncemen
             <Megaphone size={22} color="var(--sa-primary)" /> Platform Broadcast Command Center
           </h2>
           <span style={{ fontSize: '0.76rem', color: 'var(--sa-text-muted)', fontWeight: 600 }}>
-            Send real-time platform notification banners directly to all shop admin dashboards.
+            Send real-time platform notification banners directly to all business admin dashboards.
           </span>
         </div>
       </div>
@@ -54,7 +54,7 @@ export default function CommunicationView({ announcementsList, onSendAnnouncemen
 
             <div style={{ display: 'flex', gap: '6px', overflowX: 'auto', paddingBottom: '2px', scrollbarWidth: 'none' }}>
               {[
-                { label: '⚡ New Feature', text: '🎉 New Feature Released: WhatsApp Direct Ordering is now live for all shops!' },
+                { label: '⚡ New Feature', text: '🎉 New Feature Released: WhatsApp Direct Ordering is now live for all businesses!' },
                 { label: '🛠️ Maintenance', text: '⚠️ Scheduled maintenance tonight from 2:00 AM - 3:00 AM IST. QR menus remain online.' },
                 { label: '📢 System Update', text: 'ℹ️ Platform speed optimization complete. Dashboard loading 40% faster!' },
               ].map((tpl, i) => (
@@ -108,9 +108,9 @@ export default function CommunicationView({ announcementsList, onSendAnnouncemen
                 className="sa-settings-input"
                 style={{ fontWeight: 800 }}
               >
-                <option value="all">👥 All Shops & Restaurants</option>
-                <option value="active">🟢 Active Paid Clients Only</option>
-                <option value="trial">🎁 Trial Users Only</option>
+                <option value="all">👥 All Businesses</option>
+                <option value="active">🟢 Active Paid Businesses Only</option>
+                <option value="trial">🎁 Trial Businesses Only</option>
               </select>
             </div>
           </div>
@@ -126,7 +126,7 @@ export default function CommunicationView({ announcementsList, onSendAnnouncemen
               <Megaphone size={18} color={type === 'warning' ? '#B45309' : type === 'success' ? '#15803D' : type === 'error' ? '#B91C1C' : '#1D4ED8'} />
               <div style={{ flex: 1, minWidth: 0 }}>
                 <div style={{ fontSize: '0.66rem', fontWeight: 900, textTransform: 'uppercase', color: type === 'warning' ? '#B45309' : type === 'success' ? '#15803D' : type === 'error' ? '#B91C1C' : '#1D4ED8' }}>
-                  Live Shop Dashboard Banner Preview
+                  Live Business Dashboard Banner Preview
                 </div>
                 <div style={{ fontSize: '0.82rem', fontWeight: 700, color: '#1E293B', wordBreak: 'break-word' }}>
                   {message}

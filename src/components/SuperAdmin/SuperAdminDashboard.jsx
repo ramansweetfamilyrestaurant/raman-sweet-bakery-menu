@@ -362,7 +362,7 @@ export default function SuperAdminDashboard({ token, username, onLogout, onRetur
   };
 
   const handleDeleteAnnouncement = async (id) => {
-    if (!window.confirm('Delete this broadcast announcement? It will be removed from all shop dashboards immediately.')) return;
+    if (!window.confirm('Delete this broadcast announcement? It will be removed from all business dashboards immediately.')) return;
     try {
       await deleteAnnouncement(id, token);
       loadSuperAnnouncements();
@@ -373,7 +373,7 @@ export default function SuperAdminDashboard({ token, username, onLogout, onRetur
   };
 
   const handleClearAllAnnouncements = async () => {
-    if (!window.confirm('Clear ALL active broadcast notices across all shop dashboards?')) return;
+    if (!window.confirm('Clear ALL active broadcast notices across all business dashboards?')) return;
     try {
       await clearAllAnnouncements(token);
       loadSuperAnnouncements();
@@ -389,7 +389,7 @@ export default function SuperAdminDashboard({ token, username, onLogout, onRetur
     setAnnounceSubmitting(true);
     try {
       await createAnnouncement(announceMsg.trim(), announceType, token);
-      alert('📢 Announcement broadcasted successfully to all shop dashboards!');
+      alert('📢 Announcement broadcasted successfully to all business dashboards!');
       setAnnounceMsg('');
       loadSuperAnnouncements();
     } catch (err) {
@@ -3357,15 +3357,16 @@ export default function SuperAdminDashboard({ token, username, onLogout, onRetur
                 </div>
               )}
 
-              <div style={{ marginBottom: '16px' }}>
+              <div style={{ marginBottom: '16px', width: '100%', boxSizing: 'border-box' }}>
                 <label style={{ fontSize: '0.72rem', fontWeight: 900, color: '#475569', display: 'block', marginBottom: '6px', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
                   MASTER PLATFORM WHATSAPP
                 </label>
-                <div style={{ display: 'flex', gap: '8px' }}>
+                <div style={{ display: 'flex', gap: '8px', width: '100%', boxSizing: 'border-box' }}>
                   <div style={{
                     display: 'flex', alignItems: 'center', gap: '4px',
-                    padding: '0 12px', background: '#F8FAFC', border: '1.5px solid #CBD5E1',
-                    borderRadius: '12px', fontSize: '0.86rem', fontWeight: 900, color: '#334155'
+                    padding: '0 10px', background: '#F8FAFC', border: '1.5px solid #CBD5E1',
+                    borderRadius: '12px', fontSize: '0.86rem', fontWeight: 900, color: '#334155',
+                    flexShrink: 0
                   }}>
                     <span>🇮🇳</span>
                     <span>+91</span>
@@ -3382,18 +3383,18 @@ export default function SuperAdminDashboard({ token, username, onLogout, onRetur
                     }}
                     maxLength={10}
                     style={{
-                      flex: 1, padding: '12px 14px', borderRadius: '12px',
+                      flex: 1, minWidth: 0, width: '100%', padding: '12px 14px', borderRadius: '12px',
                       border: '1.5px solid #CBD5E1', fontSize: '0.96rem', fontWeight: 800,
                       color: '#0F172A', boxSizing: 'border-box'
                     }}
                   />
                 </div>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '6px' }}>
+                <div style={{ display: 'flex', flexWrap: 'wrap', justifyContent: 'space-between', alignItems: 'center', marginTop: '6px', gap: '4px' }}>
                   <span style={{ fontSize: '0.70rem', color: '#64748B', fontWeight: 600 }}>
                     India (+91) • 10-digit mobile number
                   </span>
                   {masterWhatsapp && (
-                    <span style={{ fontSize: '0.70rem', color: '#16A34A', fontWeight: 800 }}>
+                    <span style={{ fontSize: '0.70rem', color: '#16A34A', fontWeight: 800, wordBreak: 'break-all' }}>
                       Preview: https://wa.me/{masterWhatsapp.replace(/[^0-9]/g, '')}
                     </span>
                   )}
@@ -3415,8 +3416,9 @@ export default function SuperAdminDashboard({ token, username, onLogout, onRetur
                   className="sa-btn sa-btn-primary"
                   style={{
                     flex: 2, minHeight: '44px', fontWeight: 900,
-                    display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px',
-                    background: '#16A34A', borderColor: '#16A34A'
+                    display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px',
+                    background: '#16A34A', borderColor: '#16A34A',
+                    whiteSpace: 'nowrap'
                   }}
                 >
                   {whatsappSaving ? (
@@ -3427,7 +3429,8 @@ export default function SuperAdminDashboard({ token, username, onLogout, onRetur
                   ) : (
                     <>
                       <MessageSquare size={16} />
-                      <span>💬 Save WhatsApp Number</span>
+                      <span className="sa-desktop-only">Save WhatsApp Number</span>
+                      <span className="sa-mobile-only">Save Number</span>
                     </>
                   )}
                 </button>
@@ -3512,7 +3515,7 @@ export default function SuperAdminDashboard({ token, username, onLogout, onRetur
               </div>
               <div style={{ paddingRight: '36px' }}>
                 <h3 style={{ margin: 0, fontSize: '1.1rem', fontWeight: 900, color: 'var(--sa-primary)' }}>Global Broadcast Center</h3>
-                <span style={{ fontSize: '0.74rem', color: 'var(--sa-text-muted)', fontWeight: 600 }}>Send real-time platform notification banners directly to shop admin dashboards</span>
+                <span style={{ fontSize: '0.74rem', color: 'var(--sa-text-muted)', fontWeight: 600 }}>Send real-time platform notification banners directly to business admin dashboards</span>
               </div>
             </div>
 
@@ -3530,7 +3533,7 @@ export default function SuperAdminDashboard({ token, username, onLogout, onRetur
                 {/* Template Chips */}
                 <div style={{ display: 'flex', gap: '6px', overflowX: 'auto', paddingBottom: '2px', scrollbarWidth: 'none' }}>
                   {[
-                    { label: '⚡ New Feature', text: '🎉 New Feature Released: WhatsApp Direct Ordering is now live for all shops!' },
+                    { label: '⚡ New Feature', text: '🎉 New Feature Released: WhatsApp Direct Ordering is now live for all businesses!' },
                     { label: '🛠️ Maintenance', text: '⚠️ Scheduled maintenance tonight from 2:00 AM - 3:00 AM IST. QR menus remain online.' },
                     { label: '📢 System Update', text: 'ℹ️ Platform speed optimization complete. Dashboard loading 40% faster!' },
                   ].map((tpl, i) => (
