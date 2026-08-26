@@ -1,7 +1,7 @@
 import express from 'express';
 import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
-import { query, runAutoDataSummarization, logAudit, saveR2ImageToDb, saveImageToDb, purgeLocalR2DiskCache } from '../db.js';
+import { query, runAutoDataSummarization, logAudit, saveR2ImageToDb, saveImageToDb, purgeLocalR2DiskCache, withTransaction } from '../db.js';
 import { authenticateToken } from '../middleware/auth.js';
 import { isR2Active, uploadImageToR2, deleteImageFromR2 } from '../services/r2ImageService.js';
 import { JWT_SECRET } from '../config/jwt.js';
@@ -466,59 +466,77 @@ router.post('/restaurants', authenticateToken, requireSuperAdmin, async (req, re
       ? 0 
       : defaultCatalogPrice;
 
-    // 2. Create Restaurant Entry
-    const restoRes = await query(`
-      INSERT INTO restaurants (
-        name, slug, tagline, logo, phone, address, opening_hours, plan_tier, plan_price, plan_expires_at, whatsapp_number, theme_color, business_type, service_model, business_category, active, owner_email, gstin_number
-      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18) RETURNING id
-    `, [
-      name,
-      cleanSlug,
-      tagline || '100% Quality Food & Customer Service',
-      '/images/default-logo.webp',
-      phone || '',
-      address || '',
-      '8:00 AM - 10:30 PM',
-      effectivePlanTier,
-      effectivePlanPrice,
-      expiryDate,
-      whatsapp_number || phone || '',
-      theme_color || 'gold',
-      effectiveBiz,
-      cleanCategory,
-      cleanCategory,
-      true,
-      owner_email || null,
-      gstin_number || null
-    ]);
-
-    const newRestoId = restoRes[0]?.id || restoRes.lastInsertRowid;
-
-    // 3. Create Matching Subscription Record
-    const subStatus = isTrial ? 'trialing' : 'active';
-    await query(`
-      INSERT INTO subscriptions (
-        restaurant_id, plan_id, gateway, status, amount, currency, billing_cycle,
-        current_period_start, current_period_end
-      ) VALUES ($1, $2, 'none', $3, $4, 'INR', 'monthly', CURRENT_TIMESTAMP, $5)
-    `, [newRestoId, matchedPlan?.id || null, subStatus, effectivePlanPrice, expiryDate]);
-
-    // 4. Create Owner Admin User
+    // Hash admin password prior to transaction
     const salt = await bcrypt.genSalt(10);
     const hash = await bcrypt.hash(owner_password, salt);
 
-    await query(`
-      INSERT INTO admins (restaurant_id, username, password_hash, role)
-      VALUES ($1, $2, $3, $4)
-    `, [newRestoId, owner_username, hash, 'restaurant_admin']);
+    // Atomic Transaction: restaurant + subscription + admin + audit log
+    const createdTenant = await withTransaction(async (txQuery) => {
+      // 1. Create Restaurant Entry
+      const restoRes = await txQuery(`
+        INSERT INTO restaurants (
+          name, slug, tagline, logo, phone, address, opening_hours, plan_tier, plan_price, plan_expires_at, whatsapp_number, theme_color, business_type, service_model, business_category, active, owner_email, gstin_number, subscription_type
+        ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19) RETURNING id
+      `, [
+        name,
+        cleanSlug,
+        tagline || '100% Quality Food & Customer Service',
+        '/images/default-logo.webp',
+        phone || '',
+        address || '',
+        '8:00 AM - 10:30 PM',
+        effectivePlanTier,
+        effectivePlanPrice,
+        expiryDate,
+        whatsapp_number || phone || '',
+        theme_color || 'gold',
+        effectiveBiz,
+        cleanCategory,
+        cleanCategory,
+        true,
+        owner_email || null,
+        gstin_number || null,
+        isVip ? 'ADMIN_GRANTED' : (isTrial ? 'TRIAL' : 'PAID')
+      ]);
 
-    await logAudit(newRestoId, 'superadmin', 'Create Tenant', `Created business '${name}' (Slug: ${cleanSlug}, Owner: ${owner_username}, Plan: ${effectivePlanTier}, Mode: ${onboarding_mode || 'active'}, Price: ₹${effectivePlanPrice})`);
+      const newRestoId = restoRes[0]?.id || restoRes.lastInsertRowid;
+
+      // 2. Create Matching Subscription Record
+      const subStatus = isTrial ? 'trialing' : 'active';
+      await txQuery(`
+        INSERT INTO subscriptions (
+          restaurant_id, plan_id, gateway, status, amount, currency, billing_cycle,
+          current_period_start, current_period_end, subscription_type
+        ) VALUES ($1, $2, 'none', $3, $4, 'INR', 'monthly', CURRENT_TIMESTAMP, $5, $6)
+      `, [
+        newRestoId, 
+        matchedPlan?.id || null, 
+        subStatus, 
+        effectivePlanPrice, 
+        expiryDate,
+        isVip ? 'ADMIN_GRANTED' : (isTrial ? 'TRIAL' : 'PAID')
+      ]);
+
+      // 3. Create Owner Admin User
+      await txQuery(`
+        INSERT INTO admins (restaurant_id, username, password_hash, role)
+        VALUES ($1, $2, $3, $4)
+      `, [newRestoId, owner_username, hash, 'restaurant_admin']);
+
+      // 4. Create Audit Log in the same transaction
+      await txQuery(`
+        INSERT INTO audit_logs (restaurant_id, actor_role, action, details)
+        VALUES ($1, $2, $3, $4)
+      `, [newRestoId, 'superadmin', 'Create Tenant', `Created business '${name}' (Slug: ${cleanSlug}, Owner: ${owner_username}, Plan: ${effectivePlanTier}, Mode: ${onboarding_mode || 'active'}, Price: ₹${effectivePlanPrice})`]);
+
+      return { id: newRestoId, slug: cleanSlug };
+    });
 
     res.json({
       success: true,
-      id: newRestoId,
-      slug: cleanSlug,
-      message: `Business '${name}' created and provisioned successfully with slug '/r/${cleanSlug}'!`
+      id: createdTenant.id,
+      slug: createdTenant.slug,
+      message: `Business '${name}' created and provisioned successfully with slug '/r/${createdTenant.slug}'!`
     });
   } catch (err) {
     console.error('Create restaurant error:', err);
