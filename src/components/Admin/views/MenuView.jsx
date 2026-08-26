@@ -175,35 +175,97 @@ export default function MenuView({
     return '🍽️';
   };
 
-  // Helper to format price with optional old price / savings only when real data exists
+  // Helper to format price in ultra-premium Full & Half pills
   const renderDishPrice = (dish, layout = 'card') => {
     const currentPrice = Number(dish.price) || 0;
     const rawOldPrice = Number(dish.original_price || dish.mrp || dish.old_price || dish.compare_at_price);
     const hasValidOldPrice = !isNaN(rawOldPrice) && rawOldPrice > currentPrice;
     const savings = hasValidOldPrice ? rawOldPrice - currentPrice : 0;
-    const hasHalfPrice = dish.price_half && Number(dish.price_half) > 0;
+    const rawHalfPrice = Number(dish.price_half);
+    const hasHalfPrice = !isNaN(rawHalfPrice) && rawHalfPrice > 0;
 
     return (
-      <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
-        <div style={{ display: 'flex', alignItems: 'baseline', gap: '6px', flexWrap: 'wrap' }}>
-          {/* Main Current Selling Price */}
-          <span style={{ 
-            fontSize: layout === 'card' ? '1.14rem' : '1.02rem', 
-            fontWeight: 900, 
-            color: '#0F172A',
-            letterSpacing: '-0.02em',
-            lineHeight: 1
+      <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flexWrap: 'wrap' }}>
+          {/* Full Price Pill */}
+          <div style={{
+            background: hasHalfPrice ? '#F8FAFC' : '#F1F5F9',
+            border: '1px solid #E2E8F0',
+            borderRadius: '8px',
+            padding: layout === 'card' ? '3px 8px' : '2px 7px',
+            display: 'inline-flex',
+            alignItems: 'center',
+            gap: '4px',
+            boxShadow: '0 1px 2px rgba(0,0,0,0.02)'
           }}>
-            {currencySymbol}{currentPrice}
-          </span>
+            {hasHalfPrice && (
+              <span style={{
+                fontSize: '0.58rem',
+                fontWeight: 800,
+                color: '#64748B',
+                background: '#E2E8F0',
+                padding: '1px 4px',
+                borderRadius: '4px',
+                textTransform: 'uppercase',
+                letterSpacing: '0.03em'
+              }}>
+                Full
+              </span>
+            )}
+            <span style={{
+              fontSize: layout === 'card' ? '0.98rem' : '0.92rem',
+              fontWeight: 900,
+              color: '#0F172A',
+              letterSpacing: '-0.01em',
+              lineHeight: 1.1
+            }}>
+              {currencySymbol}{currentPrice}
+            </span>
+          </div>
 
-          {/* Struck-through Old Price (Only if real data exists) */}
+          {/* Half Price Pill (When available) */}
+          {hasHalfPrice && (
+            <div style={{
+              background: '#FEF9C3',
+              border: '1px solid #FEF08A',
+              borderRadius: '8px',
+              padding: layout === 'card' ? '3px 8px' : '2px 7px',
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: '4px',
+              boxShadow: '0 1px 2px rgba(0,0,0,0.02)'
+            }}>
+              <span style={{
+                fontSize: '0.58rem',
+                fontWeight: 800,
+                color: '#854D0E',
+                background: '#FDE047',
+                padding: '1px 4px',
+                borderRadius: '4px',
+                textTransform: 'uppercase',
+                letterSpacing: '0.03em'
+              }}>
+                Half
+              </span>
+              <span style={{
+                fontSize: layout === 'card' ? '0.94rem' : '0.88rem',
+                fontWeight: 900,
+                color: '#713F12',
+                letterSpacing: '-0.01em',
+                lineHeight: 1.1
+              }}>
+                {currencySymbol}{rawHalfPrice}
+              </span>
+            </div>
+          )}
+
+          {/* Struck-through Old Price */}
           {hasValidOldPrice && (
-            <span style={{ 
-              fontSize: '0.80rem', 
-              color: '#94A3B8', 
-              textDecoration: 'line-through', 
-              fontWeight: 500 
+            <span style={{
+              fontSize: '0.74rem',
+              color: '#94A3B8',
+              textDecoration: 'line-through',
+              fontWeight: 500
             }}>
               {currencySymbol}{rawOldPrice}
             </span>
@@ -212,10 +274,11 @@ export default function MenuView({
           {/* Optional SAVE Badge */}
           {hasValidOldPrice && savings > 0 && (
             <span style={{
-              fontSize: '0.62rem',
+              fontSize: '0.60rem',
               fontWeight: 800,
               color: '#15803D',
               background: '#DCFCE7',
+              border: '1px solid #BBF7D0',
               padding: '1px 5px',
               borderRadius: '4px',
               letterSpacing: '0.02em'
@@ -224,13 +287,6 @@ export default function MenuView({
             </span>
           )}
         </div>
-
-        {/* Half Portion Price Indicator */}
-        {hasHalfPrice && (
-          <span style={{ fontSize: '0.68rem', color: '#64748B', fontWeight: 600 }}>
-            Half: {currencySymbol}{dish.price_half}
-          </span>
-        )}
       </div>
     );
   };
