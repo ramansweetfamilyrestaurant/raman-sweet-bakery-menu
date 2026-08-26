@@ -1879,6 +1879,20 @@ router.post('/settings', authenticateToken, requireSuperAdmin, async (req, res) 
           updatedPaymentKeys = true;
         }
 
+        if (k === 'support_whatsapp') {
+          const digits = strVal.replace(/[^0-9]/g, '');
+          if (digits.length === 10 && /^[6-9]/.test(digits)) {
+            strVal = `91${digits}`;
+          } else if (digits.length === 12 && digits.startsWith('91') && /^[6-9]/.test(digits.slice(2))) {
+            strVal = digits;
+          } else {
+            return res.status(400).json({
+              error: 'INVALID_PHONE',
+              message: 'Enter a valid 10-digit Indian mobile number.'
+            });
+          }
+        }
+
         if (k === 'platform_logo_url') {
           strVal = strVal.split('?')[0];
           purgeLocalR2DiskCache('logo.webp');

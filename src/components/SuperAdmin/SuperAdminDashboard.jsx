@@ -59,6 +59,16 @@ export default function SuperAdminDashboard({ token, username, onLogout, onRetur
   const [showSecurityModal, setShowSecurityModal] = useState(false);
   const [showWhatsappModal, setShowWhatsappModal] = useState(false);
   const [masterWhatsapp, setMasterWhatsapp] = useState('919876543210');
+  const [whatsappSaving, setWhatsappSaving] = useState(false);
+  const [whatsappError, setWhatsappError] = useState('');
+  const [toastMessage, setToastMessage] = useState('');
+
+  useEffect(() => {
+    if (toastMessage) {
+      const timer = setTimeout(() => setToastMessage(''), 3500);
+      return () => clearTimeout(timer);
+    }
+  }, [toastMessage]);
 
   useEffect(() => {
     fetch('/api/settings')
@@ -3279,8 +3289,8 @@ export default function SuperAdminDashboard({ token, username, onLogout, onRetur
           display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '16px'
         }} onClick={() => setShowWhatsappModal(false)}>
           <div onClick={e => e.stopPropagation()} style={{
-            background: '#FFFFFF', borderRadius: '24px', maxWidth: '460px', width: '100%',
-            padding: '28px 24px', boxShadow: '0 20px 60px rgba(0,0,0,0.4)', border: '2px solid #22C55E', position: 'relative'
+            background: '#FFFFFF', borderRadius: '24px', maxWidth: '480px', width: '100%',
+            padding: '28px 24px', boxShadow: '0 25px 60px rgba(0,0,0,0.45)', border: '2px solid #22C55E', position: 'relative'
           }}>
             <button
               type="button"
@@ -3295,41 +3305,149 @@ export default function SuperAdminDashboard({ token, username, onLogout, onRetur
               ✕
             </button>
 
-            <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '14px' }}>
-              <div style={{ width: '38px', height: '38px', borderRadius: '12px', background: '#DCFCE7', color: '#15803D', display: 'flex', alignItems: 'center', justifyContent: 'center', border: '1.5px solid #86EFAC' }}>
-                <MessageSquare size={20} />
+            <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '8px' }}>
+              <div style={{ width: '42px', height: '42px', borderRadius: '14px', background: '#DCFCE7', color: '#15803D', display: 'flex', alignItems: 'center', justifyContent: 'center', border: '1.5px solid #86EFAC', flexShrink: 0 }}>
+                <MessageSquare size={22} />
               </div>
-              <h3 style={{ margin: 0, fontSize: '1.1rem', fontWeight: 900, color: '#0F172A' }}>WhatsApp Support Portal</h3>
+              <div>
+                <h3 style={{ margin: 0, fontSize: '1.15rem', fontWeight: 900, color: '#0F172A' }}>💬 WhatsApp Support Portal</h3>
+                <p style={{ margin: 0, fontSize: '0.76rem', color: '#64748B', fontWeight: 600 }}>
+                  Manage the platform support contact shown to businesses.
+                </p>
+              </div>
             </div>
 
             <form onSubmit={async (e) => {
               e.preventDefault();
+              setWhatsappError('');
+              const digits = String(masterWhatsapp || '').replace(/[^0-9]/g, '');
+              let canonical = '';
+              if (digits.length === 10 && /^[6-9]/.test(digits)) {
+                canonical = `91${digits}`;
+              } else if (digits.length === 12 && digits.startsWith('91') && /^[6-9]/.test(digits.slice(2))) {
+                canonical = digits;
+              } else {
+                setWhatsappError('Enter a valid 10-digit Indian mobile number.');
+                return;
+              }
+
+              setWhatsappSaving(true);
               try {
                 const res = await fetch('/api/superadmin/settings', {
                   method: 'POST',
                   headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
-                  body: JSON.stringify({ support_whatsapp: masterWhatsapp })
+                  body: JSON.stringify({ support_whatsapp: canonical })
                 });
                 const data = await res.json();
-                if (!res.ok) throw new Error(data.error || 'Failed to update');
-                alert('✅ Master Super Admin WhatsApp Support Number updated successfully!');
+                if (!res.ok) throw new Error(data.message || data.error || 'Failed to update');
+                setMasterWhatsapp(canonical);
+                setPaymentKeys(prev => ({ ...prev, support_whatsapp: canonical }));
+                setToastMessage('✓ WhatsApp support number updated');
                 setShowWhatsappModal(false);
               } catch (err) {
-                alert('⚠️ ' + err.message);
+                setWhatsappError(err.message || 'Unable to update WhatsApp number. Please try again.');
+              } finally {
+                setWhatsappSaving(false);
               }
-            }}>
-              <input
-                type="tel"
-                required
-                value={masterWhatsapp}
-                onChange={e => setMasterWhatsapp(e.target.value)}
-                style={{ width: '100%', padding: '12px 14px', borderRadius: '12px', border: '1.5px solid #CBD5E1', fontSize: '0.95rem', fontWeight: 800, marginBottom: '16px', boxSizing: 'border-box' }}
-              />
-              <button type="submit" className="sa-btn sa-btn-primary" style={{ width: '100%', padding: '14px' }}>
-                <MessageSquare size={18} /> 💾 Save WhatsApp Number
-              </button>
+            }} style={{ marginTop: '16px' }}>
+
+              {whatsappError && (
+                <div style={{ padding: '10px 14px', background: '#FEE2E2', border: '1px solid #FCA5A5', color: '#B91C1C', borderRadius: '10px', fontSize: '0.78rem', fontWeight: 800, marginBottom: '14px' }}>
+                  ⚠️ {whatsappError}
+                </div>
+              )}
+
+              <div style={{ marginBottom: '16px' }}>
+                <label style={{ fontSize: '0.72rem', fontWeight: 900, color: '#475569', display: 'block', marginBottom: '6px', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
+                  MASTER PLATFORM WHATSAPP
+                </label>
+                <div style={{ display: 'flex', gap: '8px' }}>
+                  <div style={{
+                    display: 'flex', alignItems: 'center', gap: '4px',
+                    padding: '0 12px', background: '#F8FAFC', border: '1.5px solid #CBD5E1',
+                    borderRadius: '12px', fontSize: '0.86rem', fontWeight: 900, color: '#334155'
+                  }}>
+                    <span>🇮🇳</span>
+                    <span>+91</span>
+                  </div>
+                  <input
+                    type="tel"
+                    required
+                    placeholder="9876543210"
+                    value={masterWhatsapp.replace(/^91/, '')}
+                    onChange={e => {
+                      const clean = e.target.value.replace(/[^0-9]/g, '');
+                      setMasterWhatsapp(clean ? `91${clean}` : '');
+                      setWhatsappError('');
+                    }}
+                    maxLength={10}
+                    style={{
+                      flex: 1, padding: '12px 14px', borderRadius: '12px',
+                      border: '1.5px solid #CBD5E1', fontSize: '0.96rem', fontWeight: 800,
+                      color: '#0F172A', boxSizing: 'border-box'
+                    }}
+                  />
+                </div>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '6px' }}>
+                  <span style={{ fontSize: '0.70rem', color: '#64748B', fontWeight: 600 }}>
+                    India (+91) • 10-digit mobile number
+                  </span>
+                  {masterWhatsapp && (
+                    <span style={{ fontSize: '0.70rem', color: '#16A34A', fontWeight: 800 }}>
+                      Preview: https://wa.me/{masterWhatsapp.replace(/[^0-9]/g, '')}
+                    </span>
+                  )}
+                </div>
+              </div>
+
+              <div style={{ display: 'flex', gap: '10px' }}>
+                <button
+                  type="button"
+                  onClick={() => setShowWhatsappModal(false)}
+                  className="sa-btn sa-btn-secondary"
+                  style={{ flex: 1, minHeight: '44px', fontWeight: 800 }}
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={whatsappSaving}
+                  className="sa-btn sa-btn-primary"
+                  style={{
+                    flex: 2, minHeight: '44px', fontWeight: 900,
+                    display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px',
+                    background: '#16A34A', borderColor: '#16A34A'
+                  }}
+                >
+                  {whatsappSaving ? (
+                    <>
+                      <RefreshCw size={16} className="spin" />
+                      <span>Saving...</span>
+                    </>
+                  ) : (
+                    <>
+                      <MessageSquare size={16} />
+                      <span>💬 Save WhatsApp Number</span>
+                    </>
+                  )}
+                </button>
+              </div>
             </form>
           </div>
+        </div>
+      )}
+
+      {/* Global Toast Notification Popup */}
+      {toastMessage && (
+        <div style={{
+          position: 'fixed', bottom: '24px', right: '24px', zIndex: 11000,
+          background: '#0F172A', color: '#FFFFFF', padding: '12px 20px',
+          borderRadius: '14px', boxShadow: '0 10px 30px rgba(0,0,0,0.3)',
+          border: '1.5px solid #22C55E', fontSize: '0.84rem', fontWeight: 800,
+          display: 'flex', alignItems: 'center', gap: '8px',
+          animation: 'fadeInUp 0.25s ease'
+        }}>
+          <span>{toastMessage}</span>
         </div>
       )}
 
