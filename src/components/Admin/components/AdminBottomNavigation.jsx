@@ -1,7 +1,8 @@
 import React from 'react';
-import { ShoppingBag, BarChart2, Utensils, Settings } from 'lucide-react';
+import { Home, ShoppingBag, BarChart2, Utensils, Settings } from 'lucide-react';
 
-export default function AdminBottomNavigation({ activeTab, setActiveTab, pendingOrdersCount = 0, analyticsEnabled = true, ordersEnabled = true }) {
+export default function AdminBottomNavigation({ activeTab, setActiveTab, pendingOrdersCount = 0 }) {
+  const isHomeActive = activeTab === 'home';
   const isOrdersActive = ['orders', 'floor-map', 'service-requests'].includes(activeTab);
   const isMenuActive = ['dishes', 'categories', 'combos'].includes(activeTab);
   const isSetupActive = ['settings', 'qr-generator', 'review'].includes(activeTab);
@@ -9,6 +10,14 @@ export default function AdminBottomNavigation({ activeTab, setActiveTab, pending
 
   return (
     <nav className="adm-mobile-nav">
+      <button
+        onClick={() => setActiveTab('home')}
+        className={`adm-mobile-nav-item ${isHomeActive ? 'active' : ''}`}
+      >
+        <Home size={20} />
+        <span>Home</span>
+      </button>
+
       <button
         onClick={() => setActiveTab('orders')}
         className={`adm-mobile-nav-item ${isOrdersActive ? 'active' : ''}`}
@@ -28,19 +37,19 @@ export default function AdminBottomNavigation({ activeTab, setActiveTab, pending
       </button>
 
       <button
-        onClick={() => setActiveTab('analytics')}
-        className={`adm-mobile-nav-item ${isAnalyticsActive ? 'active' : ''}`}
-      >
-        <BarChart2 size={20} />
-        <span>Analytics</span>
-      </button>
-
-      <button
         onClick={() => setActiveTab('dishes')}
         className={`adm-mobile-nav-item ${isMenuActive ? 'active' : ''}`}
       >
         <Utensils size={20} />
         <span>Menu</span>
+      </button>
+
+      <button
+        onClick={() => setActiveTab('analytics')}
+        className={`adm-mobile-nav-item ${isAnalyticsActive ? 'active' : ''}`}
+      >
+        <BarChart2 size={20} />
+        <span>Analytics</span>
       </button>
 
       <button

@@ -32,6 +32,7 @@ export default function AdminHeader({
   const logoUrl = restaurantInfo?.logo;
   const resolvedLogo = resolveImageUrl(logoUrl);
 
+  const isHomeActive = activeTab === 'home';
   const isOrdersActive = ['orders', 'floor-map', 'service-requests'].includes(activeTab);
   const isMenuActive = ['dishes', 'categories', 'combos'].includes(activeTab);
   const isSetupActive = ['settings', 'qr-generator', 'review'].includes(activeTab);
@@ -87,22 +88,28 @@ export default function AdminHeader({
       {setActiveTab && (
         <div className="adm-header-desktop-tabs">
           <button
+            onClick={() => setActiveTab('home')}
+            className={`adm-header-tab ${isHomeActive ? 'active' : ''}`}
+          >
+            Home
+          </button>
+          <button
             onClick={() => setActiveTab('orders')}
             className={`adm-header-tab ${isOrdersActive ? 'active' : ''}`}
           >
             Orders {pendingOrdersCount > 0 ? `(${pendingOrdersCount})` : ''}
           </button>
           <button
-            onClick={() => setActiveTab('analytics')}
-            className={`adm-header-tab ${isAnalyticsActive ? 'active' : ''}`}
-          >
-            Analytics
-          </button>
-          <button
             onClick={() => setActiveTab('dishes')}
             className={`adm-header-tab ${isMenuActive ? 'active' : ''}`}
           >
             Menu
+          </button>
+          <button
+            onClick={() => setActiveTab('analytics')}
+            className={`adm-header-tab ${isAnalyticsActive ? 'active' : ''}`}
+          >
+            Analytics
           </button>
           <button
             onClick={() => setActiveTab('settings')}

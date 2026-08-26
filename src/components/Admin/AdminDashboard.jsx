@@ -17,6 +17,7 @@ import AdminHeader from './components/AdminHeader';
 import AdminBottomNavigation from './components/AdminBottomNavigation';
 import AdminDesktopNavigation from './components/AdminDesktopNavigation';
 import OrdersView from './views/OrdersView';
+import HomeView from './views/HomeView';
 import AnalyticsView from './views/AnalyticsView';
 import MenuView from './views/MenuView';
 import SetupView from './views/SetupView';
@@ -62,7 +63,7 @@ export default function AdminDashboard({
   };
 
   const [showPaymentModal, setShowPaymentModal] = useState(false);
-  const [activeTab, setActiveTab] = useState('dishes'); // 'dishes', 'categories', 'qr-generator', 'settings'
+  const [activeTab, setActiveTab] = useState('home'); // 'home', 'orders', 'dishes', 'analytics', 'settings'
   const [initialSetupDrawer, setInitialSetupDrawer] = useState(null);
   const [categories, setCategories] = useState(() => getInitialAdminState('categories', []));
   const [dishes, setDishes] = useState(() => getInitialAdminState('dishes', []));
@@ -2879,6 +2880,28 @@ export default function AdminDashboard({
 
         <main className="adm-main-canvas">
           <div className="adm-content-body">
+            {/* HOME VIEW (Business Command Center) */}
+            {activeTab === 'home' && (
+              <HomeView
+                restaurantInfo={restaurantInfo}
+                analyticsData={analyticsData}
+                orders={orders}
+                serviceRequests={serviceRequests}
+                dishes={safeDishes}
+                categories={safeCategories}
+                combos={combos}
+                capabilities={tenantCaps}
+                onNavigateTab={(tab) => setActiveTab(tab)}
+                onOpenAddDish={() => setDishModalData('new')}
+                onReturnToMenu={onReturnToMenu}
+                onNavigateToSetup={(drawer = null) => {
+                  setInitialSetupDrawer(drawer);
+                  setActiveTab('settings');
+                }}
+                currencySymbol={settingsForm.currency_symbol !== undefined && settingsForm.currency_symbol !== null ? settingsForm.currency_symbol : '₹'}
+              />
+            )}
+
             {/* ORDERS VIEW */}
             {['orders', 'floor-map', 'service-requests'].includes(activeTab) && (
               <OrdersView
