@@ -785,11 +785,11 @@ export default function SetupView({
                 Business Logo
               </label>
               <div style={{ display: 'flex', alignItems: 'center', gap: '14px' }}>
-                {settingsForm.logo ? (
-                  <img src={settingsForm.logo} alt="Logo" style={{ width: '80px', height: '80px', borderRadius: '14px', objectFit: 'cover', border: '1px solid #CBD5E1', flexShrink: 0 }} />
+                {settingsForm.logo || restaurantInfo?.logo ? (
+                  <img src={settingsForm.logo || restaurantInfo?.logo} alt="Logo" style={{ width: '80px', height: '80px', borderRadius: '14px', objectFit: 'cover', border: '1px solid #CBD5E1', flexShrink: 0, background: '#FFFFFF' }} />
                 ) : (
                   <div style={{ width: '80px', height: '80px', borderRadius: '14px', background: 'linear-gradient(135deg, #7C1D1D 0%, #450A0A 100%)', color: '#F59E0B', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 900, fontSize: '1.8rem', border: '2px solid #F59E0B', flexShrink: 0, boxShadow: '0 4px 10px rgba(124, 29, 29, 0.2)' }}>
-                    R
+                    {(settingsForm.name || restaurantInfo?.name || 'R').charAt(0).toUpperCase()}
                   </div>
                 )}
                 <label style={{
@@ -928,12 +928,28 @@ export default function SetupView({
                 alignItems: 'center',
                 gap: '12px'
               }}>
-                <div style={{ width: '38px', height: '38px', borderRadius: '8px', background: '#7C1D1D', color: '#F59E0B', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 900, fontSize: '1rem', border: '1.5px solid #F59E0B', flexShrink: 0 }}>
-                  R
-                </div>
+                {settingsForm.logo || restaurantInfo?.logo ? (
+                  <img
+                    src={settingsForm.logo || restaurantInfo?.logo}
+                    alt="Logo"
+                    style={{
+                      width: '38px',
+                      height: '38px',
+                      borderRadius: '8px',
+                      objectFit: 'cover',
+                      border: '1.5px solid #F59E0B',
+                      flexShrink: 0,
+                      background: '#FFFFFF'
+                    }}
+                  />
+                ) : (
+                  <div style={{ width: '38px', height: '38px', borderRadius: '8px', background: 'linear-gradient(135deg, #7C1D1D 0%, #450A0A 100%)', color: '#F59E0B', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 900, fontSize: '1rem', border: '1.5px solid #F59E0B', flexShrink: 0 }}>
+                    {(settingsForm.name || restaurantInfo?.name || 'R').charAt(0).toUpperCase()}
+                  </div>
+                )}
                 <div style={{ minWidth: 0 }}>
                   <div style={{ fontSize: '0.84rem', fontWeight: 800, color: '#FFFFFF', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                    {settingsForm.name || 'Raman Sweet Bakery & Family Restaurant'}
+                    {settingsForm.name || restaurantInfo?.name || 'Raman Sweet Bakery & Family Restaurant'}
                   </div>
                   <div style={{ fontSize: '0.68rem', color: '#FDE68A' }}>
                     Scan QR Code • Digital Menu
@@ -1315,23 +1331,41 @@ export default function SetupView({
                   Gold & Forest Green
                 </span>
 
-                <div style={{
-                  width: '56px',
-                  height: '56px',
-                  borderRadius: '12px',
-                  background: 'linear-gradient(135deg, #7C1D1D 0%, #450A0A 100%)',
-                  color: '#F59E0B',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  fontWeight: 900,
-                  fontSize: '1.4rem',
-                  border: '2px solid #F59E0B',
-                  margin: '0 auto 8px auto',
-                  boxShadow: '0 4px 10px rgba(0,0,0,0.3)'
-                }}>
-                  R
-                </div>
+                {settingsForm.logo || restaurantInfo?.logo ? (
+                  <img
+                    src={settingsForm.logo || restaurantInfo?.logo}
+                    alt="Logo"
+                    style={{
+                      width: '56px',
+                      height: '56px',
+                      borderRadius: '12px',
+                      objectFit: 'cover',
+                      border: '2px solid #F59E0B',
+                      margin: '0 auto 8px auto',
+                      display: 'block',
+                      boxShadow: '0 4px 10px rgba(0,0,0,0.3)',
+                      background: '#FFFFFF'
+                    }}
+                  />
+                ) : (
+                  <div style={{
+                    width: '56px',
+                    height: '56px',
+                    borderRadius: '12px',
+                    background: 'linear-gradient(135deg, #7C1D1D 0%, #450A0A 100%)',
+                    color: '#F59E0B',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    fontWeight: 900,
+                    fontSize: '1.4rem',
+                    border: '2px solid #F59E0B',
+                    margin: '0 auto 8px auto',
+                    boxShadow: '0 4px 10px rgba(0,0,0,0.3)'
+                  }}>
+                    {(settingsForm.name || restaurantInfo?.name || 'R').charAt(0).toUpperCase()}
+                  </div>
+                )}
               </div>
 
               {/* Body Content Area */}
@@ -2857,11 +2891,11 @@ export default function SetupView({
                 Business Logo
               </label>
               <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                {settingsForm.logo ? (
-                  <img src={settingsForm.logo} alt="Logo" style={{ width: '80px', height: '80px', borderRadius: '14px', objectFit: 'cover', border: '1px solid #CBD5E1', flexShrink: 0 }} />
+                {settingsForm.logo || restaurantInfo?.logo ? (
+                  <img src={settingsForm.logo || restaurantInfo?.logo} alt="Logo" style={{ width: '80px', height: '80px', borderRadius: '14px', objectFit: 'cover', border: '1px solid #CBD5E1', flexShrink: 0, background: '#FFFFFF' }} />
                 ) : (
                   <div style={{ width: '80px', height: '80px', borderRadius: '14px', background: 'linear-gradient(135deg, #7C1D1D 0%, #450A0A 100%)', color: '#F59E0B', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 900, fontSize: '1.8rem', border: '2px solid #F59E0B', flexShrink: 0, boxShadow: '0 4px 10px rgba(124, 29, 29, 0.2)' }}>
-                    R
+                    {(settingsForm.name || restaurantInfo?.name || 'R').charAt(0).toUpperCase()}
                   </div>
                 )}
                 <label style={{
@@ -3000,12 +3034,28 @@ export default function SetupView({
                 alignItems: 'center',
                 gap: '12px'
               }}>
-                <div style={{ width: '38px', height: '38px', borderRadius: '8px', background: '#7C1D1D', color: '#F59E0B', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 900, fontSize: '1rem', border: '1.5px solid #F59E0B', flexShrink: 0 }}>
-                  R
-                </div>
+                {settingsForm.logo || restaurantInfo?.logo ? (
+                  <img
+                    src={settingsForm.logo || restaurantInfo?.logo}
+                    alt="Logo"
+                    style={{
+                      width: '38px',
+                      height: '38px',
+                      borderRadius: '8px',
+                      objectFit: 'cover',
+                      border: '1.5px solid #F59E0B',
+                      flexShrink: 0,
+                      background: '#FFFFFF'
+                    }}
+                  />
+                ) : (
+                  <div style={{ width: '38px', height: '38px', borderRadius: '8px', background: 'linear-gradient(135deg, #7C1D1D 0%, #450A0A 100%)', color: '#F59E0B', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 900, fontSize: '1rem', border: '1.5px solid #F59E0B', flexShrink: 0 }}>
+                    {(settingsForm.name || restaurantInfo?.name || 'R').charAt(0).toUpperCase()}
+                  </div>
+                )}
                 <div style={{ minWidth: 0 }}>
                   <div style={{ fontSize: '0.84rem', fontWeight: 800, color: '#FFFFFF', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                    {settingsForm.name || 'Raman Sweet Bakery & Family Restaurant'}
+                    {settingsForm.name || restaurantInfo?.name || 'Raman Sweet Bakery & Family Restaurant'}
                   </div>
                   <div style={{ fontSize: '0.68rem', color: '#FDE68A' }}>
                     Scan QR Code • Digital Menu
@@ -3373,23 +3423,41 @@ export default function SetupView({
                   Gold & Forest Green
                 </span>
 
-                <div style={{
-                  width: '56px',
-                  height: '56px',
-                  borderRadius: '12px',
-                  background: 'linear-gradient(135deg, #7C1D1D 0%, #450A0A 100%)',
-                  color: '#F59E0B',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  fontWeight: 900,
-                  fontSize: '1.4rem',
-                  border: '2px solid #F59E0B',
-                  margin: '0 auto 8px auto',
-                  boxShadow: '0 4px 10px rgba(0,0,0,0.3)'
-                }}>
-                  R
-                </div>
+                {settingsForm.logo || restaurantInfo?.logo ? (
+                  <img
+                    src={settingsForm.logo || restaurantInfo?.logo}
+                    alt="Logo"
+                    style={{
+                      width: '56px',
+                      height: '56px',
+                      borderRadius: '12px',
+                      objectFit: 'cover',
+                      border: '2px solid #F59E0B',
+                      margin: '0 auto 8px auto',
+                      display: 'block',
+                      boxShadow: '0 4px 10px rgba(0,0,0,0.3)',
+                      background: '#FFFFFF'
+                    }}
+                  />
+                ) : (
+                  <div style={{
+                    width: '56px',
+                    height: '56px',
+                    borderRadius: '12px',
+                    background: 'linear-gradient(135deg, #7C1D1D 0%, #450A0A 100%)',
+                    color: '#F59E0B',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    fontWeight: 900,
+                    fontSize: '1.4rem',
+                    border: '2px solid #F59E0B',
+                    margin: '0 auto 8px auto',
+                    boxShadow: '0 4px 10px rgba(0,0,0,0.3)'
+                  }}>
+                    {(settingsForm.name || restaurantInfo?.name || 'R').charAt(0).toUpperCase()}
+                  </div>
+                )}
               </div>
 
               {/* Body Content Area */}
