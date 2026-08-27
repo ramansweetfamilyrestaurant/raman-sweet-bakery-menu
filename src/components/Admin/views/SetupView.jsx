@@ -686,7 +686,7 @@ export default function SetupView({
   ];
 
   const renderBusinessProfileFullPage = () => (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: '20px', width: '100%' }}>
+    <div style={{ display: 'flex', flexDirection: 'column', gap: '20px', width: '100%', paddingBottom: '120px' }}>
       {/* Top App / Page Bar Matching Mockups */}
       <div style={{
         display: 'flex',
@@ -926,32 +926,35 @@ export default function SetupView({
                 border: '1px solid #D97706',
                 display: 'flex',
                 alignItems: 'center',
-                gap: '12px'
+                gap: '12px',
+                minHeight: '64px',
+                boxSizing: 'border-box'
               }}>
                 {settingsForm.logo || restaurantInfo?.logo ? (
                   <img
                     src={settingsForm.logo || restaurantInfo?.logo}
                     alt="Logo"
                     style={{
-                      width: '38px',
-                      height: '38px',
-                      borderRadius: '8px',
+                      width: '42px',
+                      height: '42px',
+                      borderRadius: '10px',
                       objectFit: 'cover',
                       border: '1.5px solid #F59E0B',
                       flexShrink: 0,
-                      background: '#FFFFFF'
+                      background: '#FFFFFF',
+                      boxShadow: '0 2px 6px rgba(0,0,0,0.2)'
                     }}
                   />
                 ) : (
-                  <div style={{ width: '38px', height: '38px', borderRadius: '8px', background: 'linear-gradient(135deg, #7C1D1D 0%, #450A0A 100%)', color: '#F59E0B', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 900, fontSize: '1rem', border: '1.5px solid #F59E0B', flexShrink: 0 }}>
+                  <div style={{ width: '42px', height: '42px', borderRadius: '10px', background: 'linear-gradient(135deg, #7C1D1D 0%, #450A0A 100%)', color: '#F59E0B', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 900, fontSize: '1.1rem', border: '1.5px solid #F59E0B', flexShrink: 0, boxShadow: '0 2px 6px rgba(0,0,0,0.2)' }}>
                     {(settingsForm.name || restaurantInfo?.name || 'R').charAt(0).toUpperCase()}
                   </div>
                 )}
-                <div style={{ minWidth: 0 }}>
-                  <div style={{ fontSize: '0.84rem', fontWeight: 800, color: '#FFFFFF', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                <div style={{ minWidth: 0, flex: 1 }}>
+                  <div style={{ fontSize: '0.86rem', fontWeight: 800, color: '#FFFFFF', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
                     {settingsForm.name || restaurantInfo?.name || 'Raman Sweet Bakery & Family Restaurant'}
                   </div>
-                  <div style={{ fontSize: '0.68rem', color: '#FDE68A' }}>
+                  <div style={{ fontSize: '0.68rem', color: '#FDE68A', marginTop: '2px' }}>
                     Scan QR Code • Digital Menu
                   </div>
                 </div>
