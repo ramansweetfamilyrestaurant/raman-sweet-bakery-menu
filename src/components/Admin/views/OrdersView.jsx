@@ -171,6 +171,206 @@ export default function OrdersView({
     return { space_type: isHotel ? 'room' : 'table', space_number: String(numOnly) };
   };
 
+  const parseServiceReqSpaceLocation = (req) => {
+    if (!req) return { space_type: 'table', space_number: '' };
+    const raw = String(req.table_number || '').trim();
+    const expType = req.space_type ? String(req.space_type).toLowerCase() : null;
+
+    if (/^cabin\s*#?\s*(\d+)/i.test(raw)) {
+      const m = raw.match(/^cabin\s*#?\s*(\d+)/i);
+      return { space_type: 'cabin', space_number: String(m[1]) };
+    }
+    if (/^vip\s*#?\s*(\d+)/i.test(raw)) {
+      const m = raw.match(/^vip\s*#?\s*(\d+)/i);
+      return { space_type: 'vip', space_number: String(m[1]) };
+    }
+    if (/^room\s*#?\s*(\d+)/i.test(raw)) {
+      const m = raw.match(/^room\s*#?\s*(\d+)/i);
+      return { space_type: 'room', space_number: String(m[1]) };
+    }
+    if (/^table\s*#?\s*(\d+)/i.test(raw)) {
+      const m = raw.match(/^table\s*#?\s*(\d+)/i);
+      return { space_type: 'table', space_number: String(m[1]) };
+    }
+
+    if (expType === 'cabin' || expType === 'vip' || expType === 'room' || expType === 'table') {
+      const numOnly = raw.replace(/\D/g, '') || raw;
+      return { space_type: expType, space_number: String(numOnly) };
+    }
+
+    const numOnly = raw.replace(/\D/g, '') || raw;
+    return { space_type: isHotel ? 'room' : 'table', space_number: String(numOnly) };
+  };
+
+  // ----------------------------------------------------
+  // PHYSICAL SPACE INVENTORY & LIVE OCCUPANCY MAP
+  // ----------------------------------------------------
+  const spaceInventory = useMemo(() => {
+    if (isCinema) return [];
+    if (isHotel) {
+      const roomCount = Number(restaurantInfo?.total_rooms ?? settingsForm?.total_rooms) || 10;
+      return Array.from({ length: roomCount }, (_, i) => {
+        const num = String(i + 1);
+        return {
+          id: `room_${num}`,
+          space_type: 'room',
+          space_number: num,
+          category: 'room',
+          label: `ROOM ${num}`,
+          displayLabel: `🏨 ROOM ${num}`,
+          icon: '🏨',
+          prefix: 'Room'
+        };
+      });
+    }
+
+    // Standard Dining: Tables + Cabins + VIP
+    const rawT = restaurantInfo?.total_tables ?? settingsForm?.total_tables;
+    const cCount = Number(restaurantInfo?.total_cabins ?? settingsForm?.total_cabins) || 0;
+    const vCount = Number(restaurantInfo?.total_vip ?? settingsForm?.total_vip) || 0;
+    const tCount = (rawT === undefined || rawT === null || isNaN(Number(rawT))) && cCount === 0 && vCount === 0
+      ? 10
+      : (Number(rawT) || 0);
+
+    const spaces = [];
+
+    // 1. Tables
+    for (let i = 1; i <= tCount; i++) {
+      const num = String(i);
+      spaces.push({
+        id: `table_${num}`,
+        space_type: 'table',
+        space_number: num,
+        category: 'table',
+        label: `TABLE ${num}`,
+        displayLabel: `🍽️ TABLE ${num}`,
+        icon: '🍽️',
+        prefix: 'Table'
+      });
+    }
+
+    // 2. Cabins
+    for (let i = 1; i <= cCount; i++) {
+      const num = String(i);
+      spaces.push({
+        id: `cabin_${num}`,
+        space_type: 'cabin',
+        space_number: num,
+        category: 'cabin',
+        label: `CABIN ${num}`,
+        displayLabel: `🛋️ CABIN ${num}`,
+        icon: '🛋️',
+        prefix: 'Cabin'
+      });
+    }
+
+    // 3. VIP Lounges
+    for (let i = 1; i <= vCount; i++) {
+      const num = String(i);
+      spaces.push({
+        id: `vip_${num}`,
+        space_type: 'vip',
+        space_number: num,
+        category: 'vip',
+        label: `VIP ${num}`,
+        displayLabel: `👑 VIP ${num}`,
+        icon: '👑',
+        prefix: 'VIP'
+      });
+    }
+
+    return spaces;
+  }, [isCinema, isHotel, restaurantInfo?.total_tables, settingsForm?.total_tables, restaurantInfo?.total_cabins, settingsForm?.total_cabins, restaurantInfo?.total_vip, settingsForm?.total_vip, restaurantInfo?.total_rooms, settingsForm?.total_rooms]);
+
+  // Operational State mapping per physical space
+  const spaceGrid = useMemo(() => {
+    return spaceInventory.map(space => {
+      const activeOrder = validOrders.find(o => {
+        if (o.status === 'completed' || o.status === 'rejected' || o.status === 'cancelled') return false;
+        const loc = parseOrderSpaceLocation(o);
+        return loc.space_type === space.space_type && String(loc.space_number) === String(space.space_number);
+      });
+
+      const serviceReq = safeServiceRequests.find(s => {
+        const loc = parseServiceReqSpaceLocation(s);
+        return loc.space_type === space.space_type && String(loc.space_number) === String(space.space_number);
+      });
+
+      let status = 'free';
+      if (serviceReq) {
+        status = 'call';
+      } else if (activeOrder) {
+        if (activeOrder.status === 'served') {
+          status = 'served';
+        } else if (activeOrder.kitchen_prepared === 1 || activeOrder.kitchen_prepared === '1' || activeOrder.kitchen_prepared === true) {
+          status = 'ready';
+        } else {
+          status = 'order_active';
+        }
+      }
+
+      return {
+        ...space,
+        status,
+        activeOrder,
+        serviceRequest: serviceReq
+      };
+    });
+  }, [spaceInventory, validOrders, safeServiceRequests, isHotel]);
+
+  // Summary operational counters
+  const summaryCounters = useMemo(() => {
+    let free = 0;
+    let activeOrders = 0;
+    let calls = 0;
+    let ready = 0;
+    let served = 0;
+
+    spaceGrid.forEach(s => {
+      if (s.status === 'free') free++;
+      else if (s.status === 'call') calls++;
+      else if (s.status === 'ready') ready++;
+      else if (s.status === 'served') served++;
+      else if (s.status === 'order_active') activeOrders++;
+    });
+
+    return { free, activeOrders, calls, ready, served, total: spaceGrid.length };
+  }, [spaceGrid]);
+
+  const filteredSpaceGrid = useMemo(() => {
+    if (spaceCategoryFilter === 'all') return spaceGrid;
+    return spaceGrid.filter(s => s.category === spaceCategoryFilter);
+  }, [spaceGrid, spaceCategoryFilter]);
+
+  const handleApprove = async (req) => {
+    if (!req || !onApprovePresenceRequest) return;
+    setProcessingReqState(prev => ({ ...prev, [req.id]: 'approving' }));
+    try {
+      await onApprovePresenceRequest(req.id, req);
+    } finally {
+      setProcessingReqState(prev => ({ ...prev, [req.id]: null }));
+    }
+  };
+
+  const handleOpenRejectModal = (req) => {
+    setRejectingModalReq(req);
+    setSelectedRejectReason('Customer not visible at table');
+    setCustomRejectReason('');
+  };
+
+  const handleConfirmReject = async () => {
+    if (!rejectingModalReq || !onRejectPresenceRequest) return;
+    const finalReason = selectedRejectReason === 'Other' ? (customRejectReason.trim() || 'Presence check rejected by admin') : selectedRejectReason;
+    const reqId = rejectingModalReq.id;
+    setProcessingReqState(prev => ({ ...prev, [reqId]: 'rejecting' }));
+    try {
+      await onRejectPresenceRequest(reqId, finalReason, rejectingModalReq);
+      setRejectingModalReq(null);
+    } finally {
+      setProcessingReqState(prev => ({ ...prev, [reqId]: null }));
+    }
+  };
+
   const formatCleanTableLabel = (raw, spaceType) => {
     if (!raw) return isCinema ? 'Screen 1 • Seat 1' : isHotel ? 'Room 101' : 'Table 1';
     const str = String(raw).trim();
@@ -351,8 +551,8 @@ export default function OrdersView({
               padding: '8px 14px',
               borderRadius: '10px',
               border: '1px solid',
-              borderColor: activeSubTab === 'orders' ? '#0D3823' : '#E2E8F0',
-              background: activeSubTab === 'orders' ? '#0D3823' : '#FFFFFF',
+              borderColor: activeSubTab === 'orders' ? '#261B14' : '#E2E8F0',
+              background: activeSubTab === 'orders' ? '#261B14' : '#FFFFFF',
               color: activeSubTab === 'orders' ? '#FFFFFF' : '#334155',
               fontSize: '0.78rem',
               fontWeight: 700,
@@ -367,6 +567,29 @@ export default function OrdersView({
             <span>Orders ({validOrders.length})</span>
           </button>
 
+          {/* Floor / Fleet Tables Map Subtab */}
+          <button
+            onClick={() => setActiveSubTab && setActiveSubTab('floor-map')}
+            style={{
+              padding: '8px 14px',
+              borderRadius: '10px',
+              border: '1px solid',
+              borderColor: activeSubTab === 'floor-map' ? '#261B14' : '#E2E8F0',
+              background: activeSubTab === 'floor-map' ? '#261B14' : '#FFFFFF',
+              color: activeSubTab === 'floor-map' ? '#FFFFFF' : '#334155',
+              fontSize: '0.78rem',
+              fontWeight: 700,
+              cursor: 'pointer',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '6px',
+              transition: 'all 0.15s ease'
+            }}
+          >
+            <MapPin size={15} />
+            <span>{isCinema ? `Seats Map (${cinemaSeats.length})` : isHotel ? `Room Status (${spaceInventory.length})` : `Tables Map (${spaceInventory.length})`}</span>
+          </button>
+
           {/* Service Requests Subtab */}
           <button
             onClick={() => setActiveSubTab && setActiveSubTab('service-requests')}
@@ -374,8 +597,8 @@ export default function OrdersView({
               padding: '8px 14px',
               borderRadius: '10px',
               border: '1px solid',
-              borderColor: activeSubTab === 'service-requests' ? '#0D3823' : '#E2E8F0',
-              background: activeSubTab === 'service-requests' ? '#0D3823' : '#FFFFFF',
+              borderColor: activeSubTab === 'service-requests' ? '#261B14' : '#E2E8F0',
+              background: activeSubTab === 'service-requests' ? '#261B14' : '#FFFFFF',
               color: activeSubTab === 'service-requests' ? '#FFFFFF' : '#334155',
               fontSize: '0.78rem',
               fontWeight: 700,
@@ -421,9 +644,11 @@ export default function OrdersView({
       </div>
 
       {/* ========================================================
-          2. ATTENTION SUMMARY (4 METRICS)
+          2. LIVE ORDERS SUBTAB (ORDERS METRICS + TABLE + CARDS)
          ======================================================== */}
-      <div className="orders-metric-grid">
+      {activeSubTab === 'orders' && (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+          <div className="orders-metric-grid">
         {/* Needs Attention (Pending) */}
         <div 
           onClick={() => setKotFilter('pending')}
@@ -1054,6 +1279,373 @@ export default function OrdersView({
             })}
           </div>
         </>
+      )}
+    </div>
+  )}
+
+      {/* ========================================================
+          3. FLOOR / FLEET SPACE MAP (TABLES, CABINS, VIP, ROOMS)
+         ======================================================== */}
+      {activeSubTab === 'floor-map' && (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+          {/* Summary Operational Counters */}
+          <div style={{
+            display: 'grid',
+            gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))',
+            gap: '10px'
+          }}>
+            <div style={{ background: '#FFFFFF', borderRadius: '12px', border: '1px solid #E2E8F0', padding: '12px 14px', display: 'flex', alignItems: 'center', gap: '10px' }}>
+              <span style={{ fontSize: '1.2rem' }}>🟢</span>
+              <div>
+                <strong style={{ fontSize: '1.1rem', color: '#0F172A', display: 'block', lineHeight: 1 }}>{summaryCounters.free}</strong>
+                <span style={{ fontSize: '0.68rem', color: '#64748B', fontWeight: 600 }}>Available / Free</span>
+              </div>
+            </div>
+
+            <div style={{ background: '#FFFFFF', borderRadius: '12px', border: '1px solid #E2E8F0', padding: '12px 14px', display: 'flex', alignItems: 'center', gap: '10px' }}>
+              <span style={{ fontSize: '1.2rem' }}>🔴</span>
+              <div>
+                <strong style={{ fontSize: '1.1rem', color: '#DC2626', display: 'block', lineHeight: 1 }}>{summaryCounters.activeOrders}</strong>
+                <span style={{ fontSize: '0.68rem', color: '#64748B', fontWeight: 600 }}>Active Orders</span>
+              </div>
+            </div>
+
+            <div style={{ background: '#FFFFFF', borderRadius: '12px', border: '1px solid #E2E8F0', padding: '12px 14px', display: 'flex', alignItems: 'center', gap: '10px' }}>
+              <span style={{ fontSize: '1.2rem' }}>🛎️</span>
+              <div>
+                <strong style={{ fontSize: '1.1rem', color: '#D97706', display: 'block', lineHeight: 1 }}>{summaryCounters.calls}</strong>
+                <span style={{ fontSize: '0.68rem', color: '#64748B', fontWeight: 600 }}>Service Calls</span>
+              </div>
+            </div>
+
+            <div style={{ background: '#FFFFFF', borderRadius: '12px', border: '1px solid #E2E8F0', padding: '12px 14px', display: 'flex', alignItems: 'center', gap: '10px' }}>
+              <span style={{ fontSize: '1.2rem' }}>🍽️</span>
+              <div>
+                <strong style={{ fontSize: '1.1rem', color: '#16A34A', display: 'block', lineHeight: 1 }}>{summaryCounters.served}</strong>
+                <span style={{ fontSize: '0.68rem', color: '#64748B', fontWeight: 600 }}>Served / Dining</span>
+              </div>
+            </div>
+          </div>
+
+          {/* Category Filter Pills (Tables, Cabins, VIP) */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', overflowX: 'auto', paddingBottom: '2px' }}>
+            {[
+              { id: 'all', label: `All Spaces (${spaceGrid.length})` },
+              { id: 'table', label: `🍽️ Tables (${spaceGrid.filter(s => s.category === 'table').length})` },
+              { id: 'cabin', label: `🛋️ Cabins (${spaceGrid.filter(s => s.category === 'cabin').length})` },
+              { id: 'vip', label: `👑 VIP (${spaceGrid.filter(s => s.category === 'vip').length})` }
+            ].filter(f => f.id === 'all' || spaceGrid.filter(s => s.category === f.id).length > 0).map(tab => (
+              <button
+                key={tab.id}
+                onClick={() => setSpaceCategoryFilter(tab.id)}
+                style={{
+                  padding: '6px 14px',
+                  borderRadius: '20px',
+                  border: spaceCategoryFilter === tab.id ? '1px solid #261B14' : '1px solid #E2E8F0',
+                  background: spaceCategoryFilter === tab.id ? '#261B14' : '#FFFFFF',
+                  color: spaceCategoryFilter === tab.id ? '#FFFFFF' : '#475569',
+                  fontSize: '0.74rem',
+                  fontWeight: 700,
+                  cursor: 'pointer',
+                  whiteSpace: 'nowrap'
+                }}
+              >
+                {tab.label}
+              </button>
+            ))}
+          </div>
+
+          {/* Physical Spaces Grid */}
+          <div style={{
+            display: 'grid',
+            gridTemplateColumns: 'repeat(auto-fill, minmax(220px, 1fr))',
+            gap: '14px'
+          }}>
+            {filteredSpaceGrid.map(space => {
+              const isFree = space.status === 'free';
+              const isOrder = Boolean(space.activeOrder);
+              const isCall = Boolean(space.serviceRequest);
+              const isServed = space.status === 'served';
+
+              let cardBg = '#FFFFFF';
+              let borderColor = '#E2E8F0';
+              let badgeText = '🟢 FREE';
+              let badgeBg = '#DCFCE7';
+              let badgeColor = '#15803D';
+
+              if (isCall) {
+                cardBg = '#FFFDF5';
+                borderColor = '#FCD34D';
+                badgeText = '🛎️ CALL';
+                badgeBg = '#FEF3C7';
+                badgeColor = '#B45309';
+              } else if (isServed) {
+                cardBg = '#F0FDF4';
+                borderColor = '#BBF7D0';
+                badgeText = '🍽️ SERVED';
+                badgeBg = '#DCFCE7';
+                badgeColor = '#15803D';
+              } else if (isOrder) {
+                cardBg = '#FEF2F2';
+                borderColor = '#FECACA';
+                badgeText = '🔴 ACTIVE';
+                badgeBg = '#FEE2E2';
+                badgeColor = '#DC2626';
+              }
+
+              return (
+                <div
+                  key={space.id}
+                  style={{
+                    background: cardBg,
+                    border: `1px solid ${borderColor}`,
+                    borderRadius: '16px',
+                    padding: '14px',
+                    display: 'flex',
+                    flexDirection: 'column',
+                    justifyContent: 'space-between',
+                    gap: '10px',
+                    boxShadow: '0 1px 3px rgba(0,0,0,0.02)',
+                    minHeight: '140px'
+                  }}
+                >
+                  {/* Space Header */}
+                  <div>
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '6px' }}>
+                      <strong style={{ fontSize: '0.92rem', color: '#0F172A', fontWeight: 900 }}>
+                        {space.displayLabel}
+                      </strong>
+                      <span style={{
+                        padding: '2px 7px',
+                        borderRadius: '6px',
+                        background: badgeBg,
+                        color: badgeColor,
+                        fontSize: '0.64rem',
+                        fontWeight: 800
+                      }}>
+                        {badgeText}
+                      </span>
+                    </div>
+
+                    {/* Active Order Details */}
+                    {isOrder && space.activeOrder && (
+                      <div style={{ background: '#FFFFFF', padding: '8px 10px', borderRadius: '10px', border: '1px solid #E2E8F0', marginTop: '6px' }}>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.74rem', fontWeight: 800 }}>
+                          <span>Order #{space.activeOrder.id}</span>
+                          <span style={{ color: '#DC2626' }}>{currencySymbol}{Math.round(space.activeOrder.total_amount || 0)}</span>
+                        </div>
+                        <span style={{ fontSize: '0.66rem', color: '#64748B', display: 'block', marginTop: '2px' }}>
+                          ⏱️ {getTimeAgo(space.activeOrder.created_at)} • {space.activeOrder.customer_name || 'Guest'}
+                        </span>
+                      </div>
+                    )}
+
+                    {/* Service Call Details */}
+                    {isCall && space.serviceRequest && (
+                      <div style={{ background: '#FFFFFF', padding: '8px 10px', borderRadius: '10px', border: '1px solid #FCD34D', marginTop: '6px' }}>
+                        <strong style={{ fontSize: '0.74rem', color: '#B45309', display: 'block' }}>
+                          {space.serviceRequest.request_type || 'Service Call'}
+                        </strong>
+                        {space.serviceRequest.note && (
+                          <span style={{ fontSize: '0.66rem', color: '#64748B', fontStyle: 'italic', display: 'block', marginTop: '2px' }}>
+                            "{space.serviceRequest.note}"
+                          </span>
+                        )}
+                      </div>
+                    )}
+
+                    {isFree && (
+                      <span style={{ fontSize: '0.74rem', color: '#16A34A', fontWeight: 600, display: 'block', marginTop: '6px' }}>
+                        Ready for guests ✨
+                      </span>
+                    )}
+                  </div>
+
+                  {/* Actions Row */}
+                  <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap', borderTop: '1px solid rgba(0,0,0,0.05)', paddingTop: '8px' }}>
+                    {isOrder && space.activeOrder && (
+                      <>
+                        <button
+                          onClick={() => setSelectedOrder(space.activeOrder)}
+                          style={{
+                            flex: 1,
+                            padding: '6px 8px',
+                            borderRadius: '8px',
+                            background: '#FFFFFF',
+                            border: '1px solid #E2E8F0',
+                            color: '#0F172A',
+                            fontSize: '0.70rem',
+                            fontWeight: 700,
+                            cursor: 'pointer'
+                          }}
+                        >
+                          Details
+                        </button>
+                        <button
+                          onClick={() => onOpenBillModal ? onOpenBillModal(space.activeOrder) : (onPrintBill && onPrintBill(space.activeOrder))}
+                          style={{
+                            flex: 1,
+                            padding: '6px 8px',
+                            borderRadius: '8px',
+                            background: '#261B14',
+                            color: '#FFFFFF',
+                            border: 'none',
+                            fontSize: '0.70rem',
+                            fontWeight: 800,
+                            cursor: 'pointer'
+                          }}
+                        >
+                          Bill
+                        </button>
+                      </>
+                    )}
+
+                    {isCall && space.serviceRequest && (
+                      <button
+                        onClick={() => onResolveServiceRequest && onResolveServiceRequest(space.serviceRequest.id)}
+                        style={{
+                          width: '100%',
+                          padding: '7px 10px',
+                          borderRadius: '8px',
+                          background: '#D97706',
+                          color: '#FFFFFF',
+                          border: 'none',
+                          fontSize: '0.72rem',
+                          fontWeight: 800,
+                          cursor: 'pointer'
+                        }}
+                      >
+                        ✓ Attend Call
+                      </button>
+                    )}
+
+                    {isFree && onPrintQR && (
+                      <button
+                        onClick={() => onPrintQR(space.space_number, space.space_type)}
+                        style={{
+                          width: '100%',
+                          padding: '6px 10px',
+                          borderRadius: '8px',
+                          background: '#F8FAFC',
+                          border: '1px solid #E2E8F0',
+                          color: '#475569',
+                          fontSize: '0.70rem',
+                          fontWeight: 700,
+                          cursor: 'pointer',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          gap: '4px'
+                        }}
+                      >
+                        <QrCode size={12} />
+                        <span>Print Standee QR</span>
+                      </button>
+                    )}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
+
+      {/* ========================================================
+          4. SERVICE CALLS / WAITER REQUESTS SUBTAB
+         ======================================================== */}
+      {activeSubTab === 'service-requests' && (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
+          <div style={{ background: '#FFFFFF', borderRadius: '16px', border: '1px solid #E2E8F0', padding: '16px 20px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+            <div>
+              <h3 style={{ fontSize: '1rem', fontWeight: 900, color: '#0F172A', margin: 0 }}>
+                Live Service & Waiter Calls ({safeServiceRequests.length})
+              </h3>
+              <span style={{ fontSize: '0.74rem', color: '#64748B' }}>
+                Real-time table calls, water requests, and assistance alerts from guests
+              </span>
+            </div>
+          </div>
+
+          {safeServiceRequests.length === 0 ? (
+            <div style={{ padding: '40px 20px', textAlign: 'center', background: '#FFFFFF', borderRadius: '16px', border: '1px solid #E2E8F0' }}>
+              <Bell size={36} color="#94A3B8" style={{ margin: '0 auto 8px auto' }} />
+              <h4 style={{ fontSize: '0.96rem', fontWeight: 800, color: '#0F172A', margin: '0 0 4px 0' }}>
+                No Pending Service Calls
+              </h4>
+              <p style={{ fontSize: '0.76rem', color: '#64748B', margin: 0 }}>
+                When customers at tables ring for assistance or request water, calls will appear here live.
+              </p>
+            </div>
+          ) : (
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: '14px' }}>
+              {safeServiceRequests.map(req => {
+                const spaceInfo = parseServiceReqSpaceLocation(req);
+                const label = formatCleanTableLabel(req.table_number, spaceInfo.space_type);
+
+                return (
+                  <div
+                    key={req.id}
+                    style={{
+                      background: '#FFFDF5',
+                      border: '1px solid #FCD34D',
+                      borderRadius: '16px',
+                      padding: '16px',
+                      display: 'flex',
+                      flexDirection: 'column',
+                      justifyContent: 'space-between',
+                      gap: '12px',
+                      boxShadow: '0 2px 6px rgba(217, 119, 6, 0.08)'
+                    }}
+                  >
+                    <div>
+                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '8px' }}>
+                        <strong style={{ fontSize: '0.94rem', color: '#0F172A', fontWeight: 900 }}>{label}</strong>
+                        <span style={{ background: '#FEF3C7', color: '#B45309', padding: '2px 8px', borderRadius: '6px', fontSize: '0.66rem', fontWeight: 800 }}>
+                          🛎️ Active Call
+                        </span>
+                      </div>
+
+                      <div style={{ background: '#FFFFFF', padding: '10px 12px', borderRadius: '10px', border: '1px solid #FDE68A' }}>
+                        <strong style={{ fontSize: '0.80rem', color: '#B45309', display: 'block' }}>
+                          {req.request_type || 'Assistance Needed'}
+                        </strong>
+                        {req.note && (
+                          <span style={{ fontSize: '0.72rem', color: '#64748B', fontStyle: 'italic', display: 'block', marginTop: '2px' }}>
+                            "{req.note}"
+                          </span>
+                        )}
+                      </div>
+
+                      <span style={{ fontSize: '0.68rem', color: '#94A3B8', display: 'block', marginTop: '8px' }}>
+                        ⏱️ Requested {getTimeAgo(req.created_at)}
+                      </span>
+                    </div>
+
+                    <button
+                      onClick={() => onResolveServiceRequest && onResolveServiceRequest(req.id)}
+                      style={{
+                        padding: '9px 14px',
+                        borderRadius: '10px',
+                        background: '#D97706',
+                        color: '#FFFFFF',
+                        border: 'none',
+                        fontSize: '0.78rem',
+                        fontWeight: 800,
+                        cursor: 'pointer',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        gap: '6px'
+                      }}
+                    >
+                      ✓ Mark Attended & Clear
+                    </button>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+        </div>
       )}
 
       {/* ========================================================
