@@ -2021,300 +2021,500 @@ export default function SetupView({
         </div>
       </div>
 
-      {/* Drawer 1: Business Profile */}
+      {/* Drawer 1: Business Profile (Mobile-First Polish) */}
       <AdminDrawer
         isOpen={openDrawer === 'profile'}
         onClose={() => setOpenDrawer(null)}
-        title="🏪 Business Profile"
-        subtitle="Public business identity and contact details"
+        title="Business Profile"
+        subtitle="Restaurant identity & contact details"
         footer={(
-          <button
-            onClick={handleFormSave}
-            style={{
-              width: '100%',
-              padding: '12px',
-              borderRadius: '12px',
-              border: 'none',
-              background: 'linear-gradient(135deg, #059669 0%, #10B981 100%)',
-              color: '#FFFFFF',
-              fontWeight: 900,
-              fontSize: '0.90rem',
-              cursor: 'pointer',
-              boxShadow: '0 4px 12px rgba(16, 185, 129, 0.25)'
-            }}
-          >
-            Save Profile Changes
-          </button>
+          <div style={{ width: '100%', display: 'flex', flexDirection: 'column', gap: '6px', alignItems: 'center' }}>
+            <button
+              onClick={handleFormSave}
+              style={{
+                width: '100%',
+                height: '50px',
+                borderRadius: '14px',
+                border: 'none',
+                background: '#064E3B',
+                color: '#FFFFFF',
+                fontWeight: 800,
+                fontSize: '0.94rem',
+                cursor: 'pointer',
+                boxShadow: '0 4px 14px rgba(6, 78, 59, 0.3)',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                gap: '8px',
+                transition: 'all 0.15s ease'
+              }}
+            >
+              <Check size={18} />
+              <span>Save Changes</span>
+            </button>
+            <span style={{ fontSize: '0.68rem', color: '#64748B', fontWeight: 600 }}>
+              All changes are saved securely
+            </span>
+          </div>
         )}
       >
-        <form onSubmit={handleFormSave} style={{ display: 'flex', flexDirection: 'column', gap: '14px', fontSize: '0.86rem' }}>
-          {/* Logo Upload Box */}
-          <div style={{ display: 'flex', alignItems: 'center', gap: '14px', padding: '14px', background: '#F8FAFC', borderRadius: '14px', border: '1px solid #E2E8F0' }}>
-            {settingsForm.logo ? (
-              <img src={settingsForm.logo} alt="Logo" style={{ width: '64px', height: '64px', borderRadius: '12px', objectFit: 'cover', border: '1px solid #CBD5E1' }} />
-            ) : (
-              <div style={{ width: '64px', height: '64px', borderRadius: '12px', background: '#0F172A', color: '#FFF', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 900, fontSize: '0.8rem' }}>LOGO</div>
-            )}
-            <div style={{ flex: 1 }}>
-              <label style={{ fontSize: '0.74rem', fontWeight: 800, color: '#0F172A', display: 'block', marginBottom: '6px', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
-                Business Logo:
-              </label>
-              <input type="file" accept="image/*" onChange={handleLogoUpload} disabled={uploadingLogo} style={{ fontSize: '0.78rem' }} />
-              {uploadingLogo && <span style={{ fontSize: '0.72rem', color: '#059669', display: 'block', marginTop: '4px', fontWeight: 700 }}>Uploading logo image...</span>}
+        <form onSubmit={handleFormSave} style={{ display: 'flex', flexDirection: 'column', gap: '16px', fontSize: '0.84rem' }}>
+          
+          {/* PROFILE COMPLETION CARD */}
+          <div style={{
+            background: '#FFFFFF',
+            borderRadius: '16px',
+            border: '1px solid #EAE5DF',
+            padding: '14px 16px',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            gap: '12px',
+            boxShadow: '0 1px 3px rgba(0,0,0,0.02)'
+          }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+              <div style={{ position: 'relative', width: '36px', height: '36px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                <svg width="36" height="36" viewBox="0 0 36 36">
+                  <path
+                    d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831"
+                    fill="none"
+                    stroke="#E2E8F0"
+                    strokeWidth="3.5"
+                  />
+                  <path
+                    d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831"
+                    fill="none"
+                    stroke="#059669"
+                    strokeWidth="3.5"
+                    strokeDasharray="90, 100"
+                    strokeLinecap="round"
+                  />
+                </svg>
+                <Check size={16} color="#059669" style={{ position: 'absolute' }} />
+              </div>
+              <div>
+                <strong style={{ fontSize: '0.86rem', color: '#0F172A', fontWeight: 800, display: 'block' }}>Profile Complete</strong>
+                <span style={{ fontSize: '0.70rem', color: '#059669', fontWeight: 700 }}>8 of 9 details added</span>
+              </div>
+            </div>
+            <span style={{ fontSize: '0.68rem', fontWeight: 800, background: '#DCFCE7', color: '#065F46', padding: '3px 8px', borderRadius: '10px' }}>
+              90% Complete
+            </span>
+          </div>
+
+          {/* SECTION 1: BUSINESS IDENTITY */}
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+            <span style={{ fontSize: '0.68rem', fontWeight: 800, color: '#64748B', letterSpacing: '0.06em', textTransform: 'uppercase' }}>
+              Business Identity
+            </span>
+            <div style={{
+              background: '#FFFFFF',
+              borderRadius: '16px',
+              border: '1px solid #EAE5DF',
+              padding: '16px',
+              display: 'flex',
+              flexDirection: 'column',
+              gap: '14px',
+              boxShadow: '0 1px 3px rgba(0,0,0,0.02)'
+            }}>
+              {/* Logo Upload Area */}
+              <div style={{
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                paddingBottom: '14px',
+                borderBottom: '1px solid #F1F5F9'
+              }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                  {settingsForm.logo ? (
+                    <img src={settingsForm.logo} alt="Logo" style={{ width: '52px', height: '52px', borderRadius: '12px', objectFit: 'cover', border: '1px solid #CBD5E1' }} />
+                  ) : (
+                    <div style={{ width: '52px', height: '52px', borderRadius: '12px', background: '#064E3B', color: '#D97706', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 900, fontSize: '1.1rem', border: '2px solid #D97706' }}>
+                      R
+                    </div>
+                  )}
+                  <div>
+                    <strong style={{ fontSize: '0.84rem', color: '#0F172A', fontWeight: 800, display: 'block' }}>Restaurant Logo</strong>
+                    <span style={{ fontSize: '0.68rem', color: '#64748B' }}>PNG, JPG up to 5MB</span>
+                  </div>
+                </div>
+                <label style={{
+                  padding: '7px 14px',
+                  borderRadius: '10px',
+                  border: '1px solid #E2E8F0',
+                  background: '#FAF8F5',
+                  color: '#0F172A',
+                  fontSize: '0.74rem',
+                  fontWeight: 700,
+                  cursor: 'pointer',
+                  transition: 'all 0.15s ease'
+                }}>
+                  Change logo
+                  <input type="file" accept="image/*" onChange={handleLogoUpload} disabled={uploadingLogo} style={{ display: 'none' }} />
+                </label>
+              </div>
+
+              {/* Form Fields */}
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                <div>
+                  <label style={{ fontSize: '0.72rem', fontWeight: 800, color: '#334155', display: 'block', marginBottom: '4px' }}>
+                    Business Name *
+                  </label>
+                  <input
+                    type="text"
+                    required
+                    placeholder="e.g. Raman Sweet Bakery & Family Restaurant"
+                    value={settingsForm.name || ''}
+                    onChange={(e) => setSettingsForm({ ...settingsForm, name: e.target.value })}
+                    style={{
+                      width: '100%',
+                      height: '48px',
+                      padding: '0 14px',
+                      borderRadius: '12px',
+                      border: '1px solid #E2E8F0',
+                      background: '#FFFFFF',
+                      fontSize: '0.86rem',
+                      color: '#0F172A',
+                      boxSizing: 'border-box',
+                      outline: 'none',
+                      fontFamily: 'inherit'
+                    }}
+                  />
+                </div>
+
+                <div>
+                  <label style={{ fontSize: '0.72rem', fontWeight: 800, color: '#334155', display: 'block', marginBottom: '4px' }}>
+                    Tagline / Slogan
+                  </label>
+                  <input
+                    type="text"
+                    placeholder="e.g. Pure Veg Family Restaurant & Bakery"
+                    value={settingsForm.tagline || ''}
+                    onChange={(e) => setSettingsForm({ ...settingsForm, tagline: e.target.value })}
+                    style={{
+                      width: '100%',
+                      height: '48px',
+                      padding: '0 14px',
+                      borderRadius: '12px',
+                      border: '1px solid #E2E8F0',
+                      background: '#FFFFFF',
+                      fontSize: '0.86rem',
+                      color: '#0F172A',
+                      boxSizing: 'border-box',
+                      outline: 'none',
+                      fontFamily: 'inherit'
+                    }}
+                  />
+                </div>
+
+                <div>
+                  <label style={{ fontSize: '0.72rem', fontWeight: 800, color: '#334155', display: 'block', marginBottom: '4px' }}>
+                    Contact Phone *
+                  </label>
+                  <input
+                    type="text"
+                    placeholder="e.g. +91 9708366583"
+                    value={settingsForm.phone || ''}
+                    onChange={(e) => setSettingsForm({ ...settingsForm, phone: e.target.value })}
+                    style={{
+                      width: '100%',
+                      height: '48px',
+                      padding: '0 14px',
+                      borderRadius: '12px',
+                      border: '1px solid #E2E8F0',
+                      background: '#FFFFFF',
+                      fontSize: '0.86rem',
+                      color: '#0F172A',
+                      boxSizing: 'border-box',
+                      outline: 'none',
+                      fontFamily: 'inherit'
+                    }}
+                  />
+                </div>
+
+                <div>
+                  <label style={{ fontSize: '0.72rem', fontWeight: 800, color: '#334155', display: 'block', marginBottom: '4px' }}>
+                    Owner Name <span style={{ color: '#94A3B8', fontWeight: 500 }}>(Optional)</span>
+                  </label>
+                  <input
+                    type="text"
+                    placeholder="e.g. Raman Kumar"
+                    value={settingsForm.owner_name || ''}
+                    onChange={(e) => setSettingsForm({ ...settingsForm, owner_name: e.target.value })}
+                    style={{
+                      width: '100%',
+                      height: '48px',
+                      padding: '0 14px',
+                      borderRadius: '12px',
+                      border: '1px solid #E2E8F0',
+                      background: '#FFFFFF',
+                      fontSize: '0.86rem',
+                      color: '#0F172A',
+                      boxSizing: 'border-box',
+                      outline: 'none',
+                      fontFamily: 'inherit'
+                    }}
+                  />
+                </div>
+
+                <div>
+                  <label style={{ fontSize: '0.72rem', fontWeight: 800, color: '#334155', display: 'block', marginBottom: '4px' }}>
+                    Owner Email <span style={{ color: '#94A3B8', fontWeight: 500 }}>(Optional)</span>
+                  </label>
+                  <input
+                    type="email"
+                    placeholder="e.g. owner@example.com"
+                    value={settingsForm.owner_email || ''}
+                    onChange={(e) => setSettingsForm({ ...settingsForm, owner_email: e.target.value })}
+                    style={{
+                      width: '100%',
+                      height: '48px',
+                      padding: '0 14px',
+                      borderRadius: '12px',
+                      border: '1px solid #E2E8F0',
+                      background: '#FFFFFF',
+                      fontSize: '0.86rem',
+                      color: '#0F172A',
+                      boxSizing: 'border-box',
+                      outline: 'none',
+                      fontFamily: 'inherit'
+                    }}
+                  />
+                </div>
+              </div>
             </div>
           </div>
 
-          <div>
-            <label style={{ fontSize: '0.74rem', fontWeight: 800, color: '#0F172A', display: 'block', marginBottom: '6px', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
-              Business Name:
-            </label>
-            <input
-              type="text"
-              required
-              value={settingsForm.name || ''}
-              onChange={(e) => setSettingsForm({ ...settingsForm, name: e.target.value })}
-              style={{ width: '100%', padding: '10px 14px', borderRadius: '10px', border: '1px solid #CBD5E1', fontSize: '0.9rem', boxSizing: 'border-box' }}
-            />
-          </div>
+          {/* SECTION 2: MENU APPEARANCE */}
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+            <span style={{ fontSize: '0.68rem', fontWeight: 800, color: '#64748B', letterSpacing: '0.06em', textTransform: 'uppercase' }}>
+              Menu Appearance
+            </span>
+            <div style={{
+              background: '#FFFFFF',
+              borderRadius: '16px',
+              border: '1px solid #EAE5DF',
+              padding: '16px',
+              display: 'flex',
+              flexDirection: 'column',
+              gap: '14px',
+              boxShadow: '0 1px 3px rgba(0,0,0,0.02)'
+            }}>
+              {/* Customer Theme Selector Row */}
+              <div style={{
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                padding: '10px 12px',
+                background: '#FAF8F5',
+                borderRadius: '12px',
+                border: '1px solid #EAE5DF'
+              }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                  <div style={{ width: '28px', height: '28px', borderRadius: '8px', background: '#064E3B', border: '2px solid #D97706', flexShrink: 0 }} />
+                  <div>
+                    <strong style={{ fontSize: '0.82rem', color: '#0F172A', fontWeight: 800, display: 'block' }}>Gold & Forest Green</strong>
+                    <span style={{ fontSize: '0.68rem', color: '#64748B' }}>Oberoi Luxury • Active Theme</span>
+                  </div>
+                </div>
+                <span style={{ fontSize: '0.68rem', fontWeight: 800, color: '#065F46', background: '#DCFCE7', padding: '3px 8px', borderRadius: '8px' }}>
+                  Active
+                </span>
+              </div>
 
-          <div>
-            <label style={{ fontSize: '0.74rem', fontWeight: 800, color: '#0F172A', display: 'block', marginBottom: '6px', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
-              Tagline / Slogan:
-            </label>
-            <input
-              type="text"
-              placeholder="e.g. Pure Veg Family Restaurant & Bakery"
-              value={settingsForm.tagline || ''}
-              onChange={(e) => setSettingsForm({ ...settingsForm, tagline: e.target.value })}
-              style={{ width: '100%', padding: '10px 14px', borderRadius: '10px', border: '1px solid #CBD5E1', fontSize: '0.9rem', boxSizing: 'border-box' }}
-            />
-          </div>
-
-          <div>
-            {(() => {
-              const allThemes = THEME_LIST;
-              const planTier = (restaurantInfo?.plan_tier || 'pro').toLowerCase();
-              const rawAllowed = (
-                restaurantInfo?.allowed_themes !== undefined && restaurantInfo?.allowed_themes !== null
-                  ? String(restaurantInfo.allowed_themes)
-                  : (planTier === 'basic' ? 'gold' : planTier === 'pro' ? 'gold,emerald,crimson,navy' : 'ALL')
-              ).trim();
-              
-              const isThemePermitted = (themeKey) => {
-                if (!rawAllowed || rawAllowed === 'ALL') return true;
-                const allowedList = rawAllowed.split(',').map(s => s.trim().toLowerCase());
-                return allowedList.includes(themeKey.toLowerCase());
-              };
-
-              const visibleThemes = allThemes.filter(t => isThemePermitted(t.key));
-
-              return (
-                <>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px', flexWrap: 'wrap', gap: '6px' }}>
-                    <label style={{ fontSize: '0.74rem', fontWeight: 800, color: '#0F172A', textTransform: 'uppercase', letterSpacing: '0.04em', margin: 0 }}>
-                      Customer Menu Luxury Brand Theme:
-                    </label>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                      <span style={{ fontSize: '0.68rem', fontWeight: 800, color: '#059669', background: '#DCFCE7', padding: '2px 8px', borderRadius: '12px' }}>
-                        {visibleThemes.length} Theme{visibleThemes.length === 1 ? '' : 's'} Available on {(restaurantInfo?.plan_tier || 'Current').toUpperCase()} Plan
-                      </span>
-                      {visibleThemes.length < allThemes.length && onOpenBillingModal && (
-                        <button
-                          type="button"
-                          onClick={onOpenBillingModal}
-                          style={{
-                            fontSize: '0.68rem',
-                            fontWeight: 800,
-                            color: '#9333EA',
-                            background: '#F3E8FF',
-                            border: '1px solid #D8B4FE',
-                            padding: '2px 8px',
-                            borderRadius: '12px',
-                            cursor: 'pointer'
-                          }}
-                        >
-                          👑 Unlock All 8 Themes
-                        </button>
-                      )}
+              {/* MINI LIVE PREVIEW CARD */}
+              <div style={{
+                borderRadius: '14px',
+                background: '#064E3B',
+                color: '#FFFFFF',
+                border: '1.5px solid #D97706',
+                padding: '14px 16px',
+                boxShadow: '0 4px 16px rgba(6, 78, 59, 0.2)'
+              }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
+                  <span style={{ fontSize: '0.66rem', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.06em', color: '#FDE68A' }}>
+                    🎨 Live Menu Preview
+                  </span>
+                  <span style={{ fontSize: '0.64rem', fontWeight: 800, color: '#064E3B', background: '#FDE68A', padding: '2px 7px', borderRadius: '8px' }}>
+                    Customer View
+                  </span>
+                </div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                  {settingsForm.logo ? (
+                    <img src={settingsForm.logo} alt="Logo" style={{ width: '38px', height: '38px', borderRadius: '10px', objectFit: 'cover', border: '1.5px solid #D97706' }} />
+                  ) : (
+                    <div style={{ width: '38px', height: '38px', borderRadius: '10px', background: 'rgba(255,255,255,0.15)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 900, fontSize: '0.9rem', border: '1.5px solid #D97706' }}>
+                      R
+                    </div>
+                  )}
+                  <div style={{ minWidth: 0 }}>
+                    <div style={{ fontSize: '0.88rem', fontWeight: 900, color: '#FFFFFF', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                      {settingsForm.name || 'Raman Sweet Bakery & Family Restaurant'}
+                    </div>
+                    <div style={{ fontSize: '0.70rem', color: 'rgba(255,255,255,0.85)' }}>
+                      Scan QR Code • Digital Menu
                     </div>
                   </div>
-
-                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '10px' }}>
-                    {visibleThemes.map(t => {
-                      const isSelected = (settingsForm.theme_color || visibleThemes[0]?.key || 'gold') === t.key;
-                      return (
-                        <div
-                          key={t.key}
-                          onClick={() => {
-                            setSettingsForm(prev => ({ ...prev, theme_color: t.key }));
-                            document.documentElement.setAttribute('data-theme', t.key);
-                          }}
-                          style={{
-                            padding: '12px 14px',
-                            borderRadius: '12px',
-                            border: isSelected ? `2px solid ${t.accent}` : '1px solid #E2E8F0',
-                            background: isSelected ? `${t.color}10` : '#FFFFFF',
-                            cursor: 'pointer',
-                            display: 'flex',
-                            alignItems: 'center',
-                            justifyContent: 'space-between',
-                            gap: '10px',
-                            transition: 'all 0.2s ease',
-                            boxShadow: isSelected ? `0 4px 12px ${t.color}25` : '0 1px 2px rgba(0,0,0,0.03)'
-                          }}
-                        >
-                          <div style={{ display: 'flex', alignItems: 'center', gap: '10px', minWidth: 0 }}>
-                            <div style={{ width: '26px', height: '26px', borderRadius: '50%', background: t.color, border: `2px solid ${t.accent}`, flexShrink: 0, boxShadow: '0 2px 4px rgba(0,0,0,0.2)' }} />
-                            <div style={{ minWidth: 0 }}>
-                              <div style={{ fontSize: '0.84rem', fontWeight: 800, color: isSelected ? t.color : '#0F172A', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{t.name}</div>
-                              <div style={{ fontSize: '0.7rem', color: '#64748B' }}>{t.desc}</div>
-                            </div>
-                          </div>
-                          {isSelected && (
-                            <span style={{ fontSize: '0.70rem', fontWeight: 900, color: '#FFFFFF', background: t.color, border: `1px solid ${t.accent}`, padding: '2px 6px', borderRadius: '6px', flexShrink: 0 }}>
-                              ✓ ACTIVE
-                            </span>
-                          )}
-                        </div>
-                      );
-                    })}
-                  </div>
-
-                  {/* Live Customer Menu Preview Box */}
-                  {(() => {
-                    const activeKey = settingsForm.theme_color || visibleThemes[0]?.key || 'gold';
-                    const activeThemeObj = visibleThemes.find(t => t.key === activeKey) || visibleThemes[0] || allThemes[0];
-                    return (
-                      <div style={{ marginTop: '12px', padding: '14px 16px', borderRadius: '14px', background: activeThemeObj.color, color: '#FFFFFF', border: `2px solid ${activeThemeObj.accent}`, boxShadow: '0 4px 16px rgba(0,0,0,0.12)' }}>
-                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
-                          <div style={{ fontSize: '0.70rem', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.06em', color: activeThemeObj.accent }}>
-                            🎨 Live Customer Menu Header Preview
-                          </div>
-                          <span style={{ fontSize: '0.68rem', fontWeight: 800, color: activeThemeObj.color, background: activeThemeObj.accent, padding: '2px 8px', borderRadius: '10px' }}>
-                            {activeThemeObj.name}
-                          </span>
-                        </div>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                          {settingsForm.logo ? (
-                            <img src={settingsForm.logo} alt="Logo" style={{ width: '38px', height: '38px', borderRadius: '10px', objectFit: 'cover', border: `1.5px solid ${activeThemeObj.accent}` }} />
-                          ) : (
-                            <div style={{ width: '38px', height: '38px', borderRadius: '10px', background: 'rgba(255,255,255,0.15)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 900, fontSize: '0.8rem', border: `1.5px solid ${activeThemeObj.accent}` }}>
-                              🍽️
-                            </div>
-                          )}
-                          <div>
-                            <div style={{ fontSize: '0.96rem', fontWeight: 900, color: '#FFFFFF' }}>{settingsForm.name || 'Your Business Name'}</div>
-                            <div style={{ fontSize: '0.74rem', color: 'rgba(255,255,255,0.85)' }}>{settingsForm.tagline || 'Scan QR Code • Digital Luxury Menu'}</div>
-                          </div>
-                        </div>
-                      </div>
-                    );
-                  })()}
-                </>
-              );
-            })()}
+                </div>
+              </div>
+            </div>
           </div>
 
-          <div>
-            <label style={{ fontSize: '0.74rem', fontWeight: 800, color: '#0F172A', display: 'block', marginBottom: '6px', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
-              Owner Full Name (Optional):
-            </label>
-            <input
-              type="text"
-              placeholder="e.g. Raman Kumar"
-              value={settingsForm.owner_name || ''}
-              onChange={(e) => setSettingsForm({ ...settingsForm, owner_name: e.target.value })}
-              style={{ width: '100%', padding: '10px 14px', borderRadius: '10px', border: '1px solid #CBD5E1', fontSize: '0.9rem', boxSizing: 'border-box' }}
-            />
-          </div>
+          {/* SECTION 3: BUSINESS DETAILS */}
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+            <span style={{ fontSize: '0.68rem', fontWeight: 800, color: '#64748B', letterSpacing: '0.06em', textTransform: 'uppercase' }}>
+              Business Details
+            </span>
+            <div style={{
+              background: '#FFFFFF',
+              borderRadius: '16px',
+              border: '1px solid #EAE5DF',
+              padding: '16px',
+              display: 'flex',
+              flexDirection: 'column',
+              gap: '12px',
+              boxShadow: '0 1px 3px rgba(0,0,0,0.02)'
+            }}>
+              {/* Structured Opening Hours Row */}
+              <div>
+                <label style={{ fontSize: '0.72rem', fontWeight: 800, color: '#334155', display: 'block', marginBottom: '4px' }}>
+                  Opening Hours *
+                </label>
+                <div style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '10px',
+                  padding: '10px 14px',
+                  background: '#FAF8F5',
+                  borderRadius: '12px',
+                  border: '1px solid #E2E8F0'
+                }}>
+                  <Clock size={18} color="#D97706" />
+                  <input
+                    type="text"
+                    placeholder="e.g. 8:00 AM – 10:30 PM • Mon – Sun"
+                    value={settingsForm.openingHours || '8:00 AM – 10:30 PM • Mon – Sun'}
+                    onChange={(e) => setSettingsForm({ ...settingsForm, openingHours: e.target.value })}
+                    style={{
+                      border: 'none',
+                      background: 'transparent',
+                      fontSize: '0.84rem',
+                      fontWeight: 700,
+                      color: '#0F172A',
+                      width: '100%',
+                      outline: 'none',
+                      fontFamily: 'inherit'
+                    }}
+                  />
+                </div>
+              </div>
 
-          <div>
-            <label style={{ fontSize: '0.74rem', fontWeight: 800, color: '#0F172A', display: 'block', marginBottom: '6px', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
-              Owner Email Address (Optional):
-            </label>
-            <input
-              type="email"
-              placeholder="e.g. owner@example.com"
-              value={settingsForm.owner_email || ''}
-              onChange={(e) => setSettingsForm({ ...settingsForm, owner_email: e.target.value })}
-              style={{ width: '100%', padding: '10px 14px', borderRadius: '10px', border: '1px solid #CBD5E1', fontSize: '0.9rem', boxSizing: 'border-box' }}
-            />
-          </div>
+              <div>
+                <label style={{ fontSize: '0.72rem', fontWeight: 800, color: '#334155', display: 'block', marginBottom: '4px' }}>
+                  FSSAI License Number <span style={{ color: '#94A3B8', fontWeight: 500 }}>(Optional)</span>
+                </label>
+                <input
+                  type="text"
+                  placeholder="e.g. 12345678901234"
+                  value={settingsForm.fssai_lic_no || ''}
+                  onChange={(e) => setSettingsForm({ ...settingsForm, fssai_lic_no: e.target.value })}
+                  style={{
+                    width: '100%',
+                    height: '48px',
+                    padding: '0 14px',
+                    borderRadius: '12px',
+                    border: '1px solid #E2E8F0',
+                    background: '#FFFFFF',
+                    fontSize: '0.86rem',
+                    color: '#0F172A',
+                    boxSizing: 'border-box',
+                    outline: 'none',
+                    fontFamily: 'inherit'
+                  }}
+                />
+              </div>
 
-          <div>
-            <label style={{ fontSize: '0.74rem', fontWeight: 800, color: '#0F172A', display: 'block', marginBottom: '6px', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
-              Contact Phone:
-            </label>
-            <input
-              type="text"
-              value={settingsForm.phone || ''}
-              onChange={(e) => setSettingsForm({ ...settingsForm, phone: e.target.value })}
-              style={{ width: '100%', padding: '10px 14px', borderRadius: '10px', border: '1px solid #CBD5E1', fontSize: '0.9rem', boxSizing: 'border-box' }}
-            />
-          </div>
+              <div>
+                <label style={{ fontSize: '0.72rem', fontWeight: 800, color: '#334155', display: 'block', marginBottom: '4px' }}>
+                  Address *
+                </label>
+                <textarea
+                  rows={2}
+                  placeholder="e.g. HawaiAdda Chowk, Near Katchari Gumti, Motihari, Bihar - 845401"
+                  value={settingsForm.address || ''}
+                  onChange={(e) => setSettingsForm({ ...settingsForm, address: e.target.value })}
+                  style={{
+                    width: '100%',
+                    padding: '10px 14px',
+                    borderRadius: '12px',
+                    border: '1px solid #E2E8F0',
+                    background: '#FFFFFF',
+                    fontSize: '0.84rem',
+                    color: '#0F172A',
+                    boxSizing: 'border-box',
+                    outline: 'none',
+                    fontFamily: 'inherit',
+                    lineHeight: 1.4
+                  }}
+                />
+              </div>
 
-          <div>
-            <label style={{ fontSize: '0.74rem', fontWeight: 800, color: '#0F172A', display: 'block', marginBottom: '6px', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
-              FSSAI License Number:
-            </label>
-            <input
-              type="text"
-              placeholder="e.g. 12345678901234"
-              value={settingsForm.fssai_lic_no || ''}
-              onChange={(e) => setSettingsForm({ ...settingsForm, fssai_lic_no: e.target.value })}
-              style={{ width: '100%', padding: '10px 14px', borderRadius: '10px', border: '1px solid #CBD5E1', fontSize: '0.9rem', boxSizing: 'border-box' }}
-            />
-          </div>
+              <div>
+                <label style={{ fontSize: '0.72rem', fontWeight: 800, color: '#334155', display: 'block', marginBottom: '4px' }}>
+                  Google Maps Location Link <span style={{ color: '#94A3B8', fontWeight: 500 }}>(Optional)</span>
+                </label>
+                <div style={{ position: 'relative' }}>
+                  <input
+                    type="url"
+                    placeholder="https://maps.google.com/..."
+                    value={settingsForm.google_maps_url || ''}
+                    onChange={(e) => setSettingsForm({ ...settingsForm, google_maps_url: e.target.value })}
+                    style={{
+                      width: '100%',
+                      height: '48px',
+                      padding: '0 36px 0 14px',
+                      borderRadius: '12px',
+                      border: '1px solid #E2E8F0',
+                      background: '#FFFFFF',
+                      fontSize: '0.84rem',
+                      color: '#0F172A',
+                      boxSizing: 'border-box',
+                      outline: 'none',
+                      fontFamily: 'inherit'
+                    }}
+                  />
+                  <MapPin size={16} color="#94A3B8" style={{ position: 'absolute', right: '12px', top: '16px' }} />
+                </div>
+              </div>
 
-          <div>
-            <label style={{ fontSize: '0.74rem', fontWeight: 800, color: '#0F172A', display: 'block', marginBottom: '6px', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
-              Opening Hours:
-            </label>
-            <input
-              type="text"
-              placeholder="e.g. 10:00 AM - 11:00 PM Daily"
-              value={settingsForm.openingHours || ''}
-              onChange={(e) => setSettingsForm({ ...settingsForm, openingHours: e.target.value })}
-              style={{ width: '100%', padding: '10px 14px', borderRadius: '10px', border: '1px solid #CBD5E1', fontSize: '0.9rem', boxSizing: 'border-box' }}
-            />
-          </div>
-
-          <div>
-            <label style={{ fontSize: '0.74rem', fontWeight: 800, color: '#0F172A', display: 'block', marginBottom: '6px', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
-              Google Maps Location Link:
-            </label>
-            <input
-              type="url"
-              placeholder="https://maps.google.com/..."
-              value={settingsForm.google_maps_url || ''}
-              onChange={(e) => setSettingsForm({ ...settingsForm, google_maps_url: e.target.value })}
-              style={{ width: '100%', padding: '10px 14px', borderRadius: '10px', border: '1px solid #CBD5E1', fontSize: '0.9rem', boxSizing: 'border-box' }}
-            />
-          </div>
-
-          <div>
-            <label style={{ fontSize: '0.74rem', fontWeight: 800, color: '#0F172A', display: 'block', marginBottom: '6px', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
-              Google Review Page Link:
-            </label>
-            <input
-              type="url"
-              placeholder="https://g.page/r/..."
-              value={settingsForm.google_review_url || ''}
-              onChange={(e) => setSettingsForm({ ...settingsForm, google_review_url: e.target.value })}
-              style={{ width: '100%', padding: '10px 14px', borderRadius: '10px', border: '1px solid #CBD5E1', fontSize: '0.9rem', boxSizing: 'border-box' }}
-            />
-          </div>
-
-          <div>
-            <label style={{ fontSize: '0.74rem', fontWeight: 800, color: '#0F172A', display: 'block', marginBottom: '6px', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
-              Address:
-            </label>
-            <textarea
-              rows={2}
-              value={settingsForm.address || ''}
-              onChange={(e) => setSettingsForm({ ...settingsForm, address: e.target.value })}
-              style={{ width: '100%', padding: '10px 14px', borderRadius: '10px', border: '1px solid #CBD5E1', fontSize: '0.9rem', boxSizing: 'border-box', fontFamily: 'inherit' }}
-            />
+              <div>
+                <label style={{ fontSize: '0.72rem', fontWeight: 800, color: '#334155', display: 'block', marginBottom: '4px' }}>
+                  Google Review Page Link <span style={{ color: '#94A3B8', fontWeight: 500 }}>(Optional)</span>
+                </label>
+                <div style={{ position: 'relative' }}>
+                  <input
+                    type="url"
+                    placeholder="https://g.page/r/..."
+                    value={settingsForm.google_review_url || ''}
+                    onChange={(e) => setSettingsForm({ ...settingsForm, google_review_url: e.target.value })}
+                    style={{
+                      width: '100%',
+                      height: '48px',
+                      padding: '0 36px 0 14px',
+                      borderRadius: '12px',
+                      border: '1px solid #E2E8F0',
+                      background: '#FFFFFF',
+                      fontSize: '0.84rem',
+                      color: '#0F172A',
+                      boxSizing: 'border-box',
+                      outline: 'none',
+                      fontFamily: 'inherit'
+                    }}
+                  />
+                  <ShieldCheck size={16} color="#94A3B8" style={{ position: 'absolute', right: '12px', top: '16px' }} />
+                </div>
+              </div>
+            </div>
           </div>
 
           {/* Custom Menu Domain (CNAME) - Only displayed if custom_domain_enabled on plan */}
