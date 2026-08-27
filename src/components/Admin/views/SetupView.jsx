@@ -78,6 +78,13 @@ export default function SetupView({
   const [prefShowBestsellerBadge, setPrefShowBestsellerBadge] = useState(settingsForm.show_bestseller_badge ?? true);
   const [activePrefModal, setActivePrefModal] = useState(null);
   const [prefSaveSuccess, setPrefSaveSuccess] = useState(false);
+  const [openPrefAccordion, setOpenPrefAccordion] = useState(null); // 'ordering' | 'experience' | 'seo' | null
+  const [prefAllowDigitalOrdering, setPrefAllowDigitalOrdering] = useState(settingsForm.allow_digital_ordering ?? true);
+  const [prefOrderThrottling, setPrefOrderThrottling] = useState(settingsForm.order_throttling ?? false);
+  const [prefDietaryFilters, setPrefDietaryFilters] = useState(settingsForm.show_dietary_filters ?? true);
+  const [prefWaiterCall, setPrefWaiterCall] = useState(settingsForm.show_waiter_call ?? true);
+  const [prefSeoRichSnippets, setPrefSeoRichSnippets] = useState(settingsForm.seo_rich_snippets ?? true);
+  const [prefSocialCards, setPrefSocialCards] = useState(settingsForm.social_share_cards ?? true);
   const [activeBpModal, setActiveBpModal] = useState(null); // 'business_type' | 'hours' | 'google_review' | 'maps_location' | 'theme'
   const [bpSaveSuccess, setBpSaveSuccess] = useState(false);
   const [isGstRegistered, setIsGstRegistered] = useState(Boolean(settingsForm.is_gst_registered || settingsForm.gst_number || settingsForm.gstin));
@@ -103,7 +110,13 @@ export default function SetupView({
         show_description: prefShowDescription,
         show_prep_time: prefShowPrepTime,
         show_veg_label: prefShowVegLabel,
-        show_bestseller_badge: prefShowBestsellerBadge
+        show_bestseller_badge: prefShowBestsellerBadge,
+        allow_digital_ordering: prefAllowDigitalOrdering,
+        order_throttling: prefOrderThrottling,
+        show_dietary_filters: prefDietaryFilters,
+        show_waiter_call: prefWaiterCall,
+        seo_rich_snippets: prefSeoRichSnippets,
+        social_share_cards: prefSocialCards
       };
       if (setSettingsForm) setSettingsForm(updated);
       if (handleSaveSettings) {
@@ -2522,48 +2535,6 @@ export default function SetupView({
           ))}
         </div>
       );
-    } else if (activePrefModal === 'ordering') {
-      modalTitle = 'Menu Ordering Rules';
-      content = (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', fontSize: '0.82rem', color: '#334155' }}>
-          <div style={{ padding: '12px', background: '#F8FAFC', borderRadius: '10px', border: '1px solid #E2E8F0' }}>
-            <strong style={{ display: 'block', color: '#0F172A', marginBottom: '4px' }}>⚡ Direct Digital Ordering</strong>
-            <span>Allow customers to place orders directly from their digital menu without waiting for staff.</span>
-          </div>
-          <div style={{ padding: '12px', background: '#F8FAFC', borderRadius: '10px', border: '1px solid #E2E8F0' }}>
-            <strong style={{ display: 'block', color: '#0F172A', marginBottom: '4px' }}>⏱️ Order Throttling & Kitchen Flow</strong>
-            <span>Automatically space incoming orders during peak rush hours to ensure high food quality.</span>
-          </div>
-        </div>
-      );
-    } else if (activePrefModal === 'experience') {
-      modalTitle = 'Customer Experience Settings';
-      content = (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', fontSize: '0.82rem', color: '#334155' }}>
-          <div style={{ padding: '12px', background: '#F8FAFC', borderRadius: '10px', border: '1px solid #E2E8F0' }}>
-            <strong style={{ display: 'block', color: '#0F172A', marginBottom: '4px' }}>🌟 Interactive Dietary Filters</strong>
-            <span>Quick filter buttons for Jain, Vegan, Gluten-Free, and Chef Specials at top of menu.</span>
-          </div>
-          <div style={{ padding: '12px', background: '#F8FAFC', borderRadius: '10px', border: '1px solid #E2E8F0' }}>
-            <strong style={{ display: 'block', color: '#0F172A', marginBottom: '4px' }}>💬 One-Click Waiter Call</strong>
-            <span>Floating assistance button allowing diners to request water, bill, or service.</span>
-          </div>
-        </div>
-      );
-    } else if (activePrefModal === 'seo') {
-      modalTitle = 'Menu SEO & Sharing';
-      content = (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', fontSize: '0.82rem', color: '#334155' }}>
-          <div style={{ padding: '12px', background: '#F8FAFC', borderRadius: '10px', border: '1px solid #E2E8F0' }}>
-            <strong style={{ display: 'block', color: '#0F172A', marginBottom: '4px' }}>🔍 Google Rich Menu Snippets</strong>
-            <span>Structured schema markup so your dishes appear directly on Google Search & Maps.</span>
-          </div>
-          <div style={{ padding: '12px', background: '#F8FAFC', borderRadius: '10px', border: '1px solid #E2E8F0' }}>
-            <strong style={{ display: 'block', color: '#0F172A', marginBottom: '4px' }}>📲 WhatsApp & Social Share</strong>
-            <span>Generates rich preview cards when your menu link is shared on WhatsApp and Instagram.</span>
-          </div>
-        </div>
-      );
     }
 
     return (
@@ -2614,850 +2585,979 @@ export default function SetupView({
     );
   };
 
-  const renderMenuPreferencesFullPage = () => (
-    <div className="bp-container" style={{ display: 'flex', flexDirection: 'column', gap: '16px', width: '100%', maxWidth: '100%', boxSizing: 'border-box', paddingBottom: '120px' }}>
-      
-      {/* 1. TOP HEADER */}
+  const renderMenuPreferencesFullPage = () => {
+    // Check if there are unsaved changes
+    const hasPrefChanges =
+      prefCurrency !== (settingsForm.currency || '₹ INR') ||
+      prefGst !== (settingsForm.tax_rate != null ? `${settingsForm.tax_rate}% GST` : '5% GST') ||
+      prefPriceDisplay !== (settingsForm.price_display || 'Full & Half') ||
+      prefLanguage !== (settingsForm.language || 'English') ||
+      prefShowSoldOut !== (settingsForm.show_sold_out ?? false) ||
+      prefShowOutOfStock !== (settingsForm.show_out_of_stock ?? true) ||
+      prefShowDishImages !== (settingsForm.show_dish_images ?? true) ||
+      prefAllowSearch !== (settingsForm.allow_search ?? true) ||
+      prefMenuLayout !== (settingsForm.menu_layout || 'grid') ||
+      prefDishesPerRow !== (settingsForm.dishes_per_row || 'auto') ||
+      prefDefaultCategory !== (settingsForm.default_category || 'All Dishes') ||
+      prefShowCategoryName !== (settingsForm.show_category_name ?? true) ||
+      prefShowDescription !== (settingsForm.show_description ?? true) ||
+      prefShowPrepTime !== (settingsForm.show_prep_time ?? false) ||
+      prefShowVegLabel !== (settingsForm.show_veg_label ?? true) ||
+      prefShowBestsellerBadge !== (settingsForm.show_bestseller_badge ?? true) ||
+      prefAllowDigitalOrdering !== (settingsForm.allow_digital_ordering ?? true) ||
+      prefOrderThrottling !== (settingsForm.order_throttling ?? false) ||
+      prefDietaryFilters !== (settingsForm.show_dietary_filters ?? true) ||
+      prefWaiterCall !== (settingsForm.show_waiter_call ?? true) ||
+      prefSeoRichSnippets !== (settingsForm.seo_rich_snippets ?? true) ||
+      prefSocialCards !== (settingsForm.social_share_cards ?? true);
+
+    const handleDiscardMenuPreferences = () => {
+      setPrefCurrency(settingsForm.currency || '₹ INR');
+      setPrefGst(settingsForm.tax_rate != null ? `${settingsForm.tax_rate}% GST` : '5% GST');
+      setPrefPriceDisplay(settingsForm.price_display || 'Full & Half');
+      setPrefLanguage(settingsForm.language || 'English');
+      setPrefShowSoldOut(settingsForm.show_sold_out ?? false);
+      setPrefShowOutOfStock(settingsForm.show_out_of_stock ?? true);
+      setPrefShowDishImages(settingsForm.show_dish_images ?? true);
+      setPrefAllowSearch(settingsForm.allow_search ?? true);
+      setPrefMenuLayout(settingsForm.menu_layout || 'grid');
+      setPrefDishesPerRow(settingsForm.dishes_per_row || 'auto');
+      setPrefDefaultCategory(settingsForm.default_category || 'All Dishes');
+      setPrefShowCategoryName(settingsForm.show_category_name ?? true);
+      setPrefShowDescription(settingsForm.show_description ?? true);
+      setPrefShowPrepTime(settingsForm.show_prep_time ?? false);
+      setPrefShowVegLabel(settingsForm.show_veg_label ?? true);
+      setPrefShowBestsellerBadge(settingsForm.show_bestseller_badge ?? true);
+      setPrefAllowDigitalOrdering(settingsForm.allow_digital_ordering ?? true);
+      setPrefOrderThrottling(settingsForm.order_throttling ?? false);
+      setPrefDietaryFilters(settingsForm.show_dietary_filters ?? true);
+      setPrefWaiterCall(settingsForm.show_waiter_call ?? true);
+      setPrefSeoRichSnippets(settingsForm.seo_rich_snippets ?? true);
+      setPrefSocialCards(settingsForm.social_share_cards ?? true);
+    };
+
+    const toggleAccordion = (section) => {
+      setOpenPrefAccordion(openPrefAccordion === section ? null : section);
+    };
+
+    return (
       <div style={{
         display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'space-between',
-        background: '#FFFFFF',
-        borderRadius: '16px',
-        border: '1px solid #EAE5DF',
-        padding: '14px 16px',
-        boxShadow: '0 1px 3px rgba(0,0,0,0.02)',
+        flexDirection: 'column',
+        gap: '16px',
+        maxWidth: '880px',
+        margin: '0 auto',
         width: '100%',
-        boxSizing: 'border-box'
+        boxSizing: 'border-box',
+        paddingBottom: hasPrefChanges ? '140px' : '40px'
       }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-          <button
-            type="button"
-            onClick={() => setActiveSubPage(null)}
-            style={{
-              width: '36px',
-              height: '36px',
-              borderRadius: '10px',
-              background: '#F8FAFC',
-              border: '1px solid #E2E8F0',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              color: '#0F172A',
-              cursor: 'pointer',
-              flexShrink: 0,
-              padding: 0
-            }}
-          >
-            <ArrowLeft size={18} />
-          </button>
-          <div>
-            <h2 style={{ fontSize: '1.18rem', fontWeight: 900, color: '#0F172A', margin: 0, letterSpacing: '-0.02em' }}>
-              Menu Preferences
-            </h2>
-            <p style={{ fontSize: '0.74rem', color: '#64748B', margin: 0 }}>
-              Control how your menu appears to customers
-            </p>
-          </div>
-        </div>
+        {/* Render selection modal */}
+        {renderPrefModal()}
 
+        {/* 1. MASTER PAGE HEADER */}
         <div style={{
-          display: 'inline-flex',
-          alignItems: 'center',
-          gap: '5px',
-          background: '#ECFDF5',
-          color: '#059669',
-          border: '1px solid #A7F3D0',
-          padding: '4px 10px',
-          borderRadius: '20px',
-          fontSize: '0.72rem',
-          fontWeight: 800,
-          flexShrink: 0
-        }}>
-          <span style={{ width: '6px', height: '6px', borderRadius: '50%', background: '#059669' }} />
-          <span>Configured</span>
-        </div>
-      </div>
-
-      {/* 2. CUSTOMER MENU SETTINGS */}
-      <div>
-        <div style={{ fontSize: '0.72rem', fontWeight: 800, color: '#475569', letterSpacing: '0.04em', textTransform: 'uppercase', marginBottom: '8px', paddingLeft: '4px' }}>
-          Customer Menu Settings
-        </div>
-        <div style={{
-          background: '#FFFFFF',
-          borderRadius: '16px',
-          border: '1px solid #EAE5DF',
-          overflow: 'hidden',
-          boxShadow: '0 1px 3px rgba(0,0,0,0.02)'
-        }}>
-          {/* Row A: Business Category */}
-          <div
-            onClick={() => setActivePrefModal('business_type')}
-            style={{
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'space-between',
-              padding: '14px 16px',
-              borderBottom: '1px solid #F1F5F9',
-              cursor: 'pointer',
-              transition: 'background 0.15s ease'
-            }}
-          >
-            <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-              <div style={{ width: '38px', height: '38px', borderRadius: '10px', background: '#EFF6FF', color: '#1D4ED8', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1.2rem', flexShrink: 0 }}>
-                {BUSINESS_TYPE_METADATA[settingsForm.business_type || 'restaurant']?.icon || '🏢'}
-              </div>
-              <div>
-                <strong style={{ fontSize: '0.86rem', fontWeight: 800, color: '#0F172A', display: 'block' }}>Business Category</strong>
-                <span style={{ fontSize: '0.72rem', color: '#64748B' }}>Venue and restaurant type</span>
-              </div>
-            </div>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-              <span style={{ fontSize: '0.82rem', fontWeight: 700, color: '#0F172A', maxWidth: '130px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                {BUSINESS_TYPE_METADATA[settingsForm.business_type || 'restaurant']?.label?.replace(/\s*\(.*\)/, '') || 'Restaurant'}
-              </span>
-              <ChevronRight size={15} color="#94A3B8" />
-            </div>
-          </div>
-
-          {/* Row B: Food Dietary Profile */}
-          <div
-            onClick={() => setActivePrefModal('food_type')}
-            style={{
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'space-between',
-              padding: '14px 16px',
-              borderBottom: '1px solid #F1F5F9',
-              cursor: 'pointer',
-              transition: 'background 0.15s ease'
-            }}
-          >
-            <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-              <div style={{ width: '38px', height: '38px', borderRadius: '10px', background: '#F0FDF4', color: '#15803D', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1.2rem', flexShrink: 0 }}>
-                {FOOD_TYPE_METADATA[settingsForm.food_type || 'pure_veg']?.icon || '🥗'}
-              </div>
-              <div>
-                <strong style={{ fontSize: '0.86rem', fontWeight: 800, color: '#0F172A', display: 'block' }}>Food Dietary Profile</strong>
-                <span style={{ fontSize: '0.72rem', color: '#64748B' }}>Vegetarian, Vegan or Non-veg</span>
-              </div>
-            </div>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-              <span style={{ fontSize: '0.82rem', fontWeight: 700, color: '#0F172A' }}>
-                {FOOD_TYPE_METADATA[settingsForm.food_type || 'pure_veg']?.label || 'Pure Veg'}
-              </span>
-              <ChevronRight size={15} color="#94A3B8" />
-            </div>
-          </div>
-
-          {/* Row C: Service Model */}
-          <div
-            onClick={() => setActivePrefModal('service_model')}
-            style={{
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'space-between',
-              padding: '14px 16px',
-              borderBottom: '1px solid #F1F5F9',
-              cursor: 'pointer',
-              transition: 'background 0.15s ease'
-            }}
-          >
-            <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-              <div style={{ width: '38px', height: '38px', borderRadius: '10px', background: '#FFF4EE', color: '#FF5A1F', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1.2rem', flexShrink: 0 }}>
-                {SERVICE_MODEL_METADATA[settingsForm.service_model || 'dine_in']?.icon || '🍽️'}
-              </div>
-              <div>
-                <strong style={{ fontSize: '0.86rem', fontWeight: 800, color: '#0F172A', display: 'block' }}>Service Mode</strong>
-                <span style={{ fontSize: '0.72rem', color: '#64748B' }}>Table QR, Hotel In-Room, Cinema</span>
-              </div>
-            </div>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-              <span style={{ fontSize: '0.82rem', fontWeight: 700, color: '#0F172A' }}>
-                {SERVICE_MODEL_METADATA[settingsForm.service_model || 'dine_in']?.label || 'Table Dining'}
-              </span>
-              <ChevronRight size={15} color="#94A3B8" />
-            </div>
-          </div>
-
-          {/* Row 1: Default Currency */}
-          <div
-            onClick={() => setActivePrefModal('currency')}
-            style={{
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'space-between',
-              padding: '14px 16px',
-              borderBottom: '1px solid #F1F5F9',
-              cursor: 'pointer',
-              transition: 'background 0.15s ease'
-            }}
-          >
-            <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-              <div style={{ width: '38px', height: '38px', borderRadius: '10px', background: '#ECFDF5', color: '#059669', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 900, fontSize: '1rem', flexShrink: 0 }}>
-                ₹
-              </div>
-              <div>
-                <strong style={{ fontSize: '0.86rem', fontWeight: 800, color: '#0F172A', display: 'block' }}>Default Currency</strong>
-                <span style={{ fontSize: '0.72rem', color: '#64748B' }}>Used for all menu prices</span>
-              </div>
-            </div>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-              <span style={{ fontSize: '0.82rem', fontWeight: 700, color: '#0F172A' }}>{prefCurrency}</span>
-              <ChevronRight size={15} color="#94A3B8" />
-            </div>
-          </div>
-
-          {/* Row 2: Default Tax / GST */}
-          <div
-            onClick={() => setActivePrefModal('tax')}
-            style={{
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'space-between',
-              padding: '14px 16px',
-              borderBottom: '1px solid #F1F5F9',
-              cursor: 'pointer',
-              transition: 'background 0.15s ease'
-            }}
-          >
-            <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-              <div style={{ width: '38px', height: '38px', borderRadius: '10px', background: '#FEF3C7', color: '#D97706', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-                <FileText size={18} />
-              </div>
-              <div>
-                <strong style={{ fontSize: '0.86rem', fontWeight: 800, color: '#0F172A', display: 'block' }}>Default Tax / GST</strong>
-                <span style={{ fontSize: '0.72rem', color: '#64748B' }}>Applied to eligible items</span>
-              </div>
-            </div>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-              <span style={{ fontSize: '0.82rem', fontWeight: 700, color: '#0F172A' }}>{prefGst}</span>
-              <ChevronRight size={15} color="#94A3B8" />
-            </div>
-          </div>
-
-          {/* Row 3: Price Display */}
-          <div
-            onClick={() => setActivePrefModal('price')}
-            style={{
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'space-between',
-              padding: '14px 16px',
-              borderBottom: '1px solid #F1F5F9',
-              cursor: 'pointer',
-              transition: 'background 0.15s ease'
-            }}
-          >
-            <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-              <div style={{ width: '38px', height: '38px', borderRadius: '10px', background: '#EDE9FE', color: '#7C3AED', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-                <Tag size={18} />
-              </div>
-              <div>
-                <strong style={{ fontSize: '0.86rem', fontWeight: 800, color: '#0F172A', display: 'block' }}>Price Display</strong>
-                <span style={{ fontSize: '0.72rem', color: '#64748B' }}>Choose how dish prices are shown</span>
-              </div>
-            </div>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-              <span style={{ fontSize: '0.82rem', fontWeight: 700, color: '#0F172A' }}>{prefPriceDisplay}</span>
-              <ChevronRight size={15} color="#94A3B8" />
-            </div>
-          </div>
-
-          {/* Row 4: Menu Language */}
-          <div
-            onClick={() => setActivePrefModal('language')}
-            style={{
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'space-between',
-              padding: '14px 16px',
-              cursor: 'pointer',
-              transition: 'background 0.15s ease'
-            }}
-          >
-            <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-              <div style={{ width: '38px', height: '38px', borderRadius: '10px', background: '#E0F2FE', color: '#0284C7', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-                <Languages size={18} />
-              </div>
-              <div>
-                <strong style={{ fontSize: '0.86rem', fontWeight: 800, color: '#0F172A', display: 'block' }}>Menu Language</strong>
-                <span style={{ fontSize: '0.72rem', color: '#64748B' }}>Primary language for your menu</span>
-              </div>
-            </div>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-              <span style={{ fontSize: '0.82rem', fontWeight: 700, color: '#0F172A' }}>{prefLanguage}</span>
-              <ChevronRight size={15} color="#94A3B8" />
-            </div>
-          </div>
-        </div>
-      </div>
-
-      {/* 3. MENU VISIBILITY */}
-      <div>
-        <div style={{ fontSize: '0.72rem', fontWeight: 800, color: '#475569', letterSpacing: '0.04em', textTransform: 'uppercase', marginBottom: '8px', paddingLeft: '4px' }}>
-          Menu Visibility
-        </div>
-        <div style={{
-          background: '#FFFFFF',
-          borderRadius: '16px',
-          border: '1px solid #EAE5DF',
-          overflow: 'hidden',
-          boxShadow: '0 1px 3px rgba(0,0,0,0.02)'
-        }}>
-          {/* Toggle 1: Show Sold Out Items */}
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '13px 16px', borderBottom: '1px solid #F1F5F9' }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-              <div style={{ width: '36px', height: '36px', borderRadius: '10px', background: '#FFF1EE', color: '#FF5A1F', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-                <EyeOff size={18} />
-              </div>
-              <div>
-                <strong style={{ fontSize: '0.84rem', fontWeight: 800, color: '#0F172A', display: 'block' }}>Show Sold Out Items</strong>
-                <span style={{ fontSize: '0.70rem', color: '#64748B' }}>Keep unavailable dishes visible</span>
-              </div>
-            </div>
-            <ToggleSwitch checked={prefShowSoldOut} onChange={setPrefShowSoldOut} />
-          </div>
-
-          {/* Toggle 2: Show Out of Stock Status */}
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '13px 16px', borderBottom: '1px solid #F1F5F9' }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-              <div style={{ width: '36px', height: '36px', borderRadius: '10px', background: '#ECFDF5', color: '#059669', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-                <ShoppingBag size={18} />
-              </div>
-              <div>
-                <strong style={{ fontSize: '0.84rem', fontWeight: 800, color: '#0F172A', display: 'block' }}>Show Out of Stock Status</strong>
-                <span style={{ fontSize: '0.70rem', color: '#64748B' }}>Display availability to customers</span>
-              </div>
-            </div>
-            <ToggleSwitch checked={prefShowOutOfStock} onChange={setPrefShowOutOfStock} />
-          </div>
-
-          {/* Toggle 3: Show Dish Images */}
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '13px 16px', borderBottom: '1px solid #F1F5F9' }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-              <div style={{ width: '36px', height: '36px', borderRadius: '10px', background: '#EFF6FF', color: '#2563EB', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-                <Image size={18} />
-              </div>
-              <div>
-                <strong style={{ fontSize: '0.84rem', fontWeight: 800, color: '#0F172A', display: 'block' }}>Show Dish Images</strong>
-                <span style={{ fontSize: '0.70rem', color: '#64748B' }}>Display images on menu cards</span>
-              </div>
-            </div>
-            <ToggleSwitch checked={prefShowDishImages} onChange={setPrefShowDishImages} />
-          </div>
-
-          {/* Toggle 4: Allow Customer Search */}
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '13px 16px' }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-              <div style={{ width: '36px', height: '36px', borderRadius: '10px', background: '#F5F3FF', color: '#7C3AED', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-                <Search size={18} />
-              </div>
-              <div>
-                <strong style={{ fontSize: '0.84rem', fontWeight: 800, color: '#0F172A', display: 'block' }}>Allow Customer Search</strong>
-                <span style={{ fontSize: '0.70rem', color: '#64748B' }}>Let customers search dishes</span>
-              </div>
-            </div>
-            <ToggleSwitch checked={prefAllowSearch} onChange={setPrefAllowSearch} />
-          </div>
-        </div>
-      </div>
-
-      {/* 4. MENU LAYOUT */}
-      <div>
-        <div style={{ fontSize: '0.72rem', fontWeight: 800, color: '#475569', letterSpacing: '0.04em', textTransform: 'uppercase', marginBottom: '8px', paddingLeft: '4px' }}>
-          Menu Layout
-        </div>
-        <div style={{
-          background: '#FFFFFF',
-          borderRadius: '16px',
-          border: '1px solid #EAE5DF',
-          padding: '16px',
           display: 'flex',
-          flexDirection: 'column',
-          gap: '14px',
-          boxShadow: '0 1px 3px rgba(0,0,0,0.02)'
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          background: '#FFFFFF',
+          borderRadius: '16px',
+          border: '1px solid #EAE5DF',
+          padding: '16px 20px',
+          boxShadow: '0 1px 3px rgba(0,0,0,0.02)',
+          boxSizing: 'border-box',
+          width: '100%'
         }}>
-          {/* 2 Visual Options Side by Side */}
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
-            {/* Grid View Box */}
-            <div
-              onClick={() => setPrefMenuLayout('grid')}
+          <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+            <button
+              type="button"
+              onClick={() => setActiveSubPage(null)}
               style={{
-                borderRadius: '14px',
-                border: prefMenuLayout === 'grid' ? '2px solid #064E3B' : '1px solid #E2E8F0',
-                background: prefMenuLayout === 'grid' ? '#F0FDF4' : '#FFFFFF',
-                padding: '12px 10px',
-                cursor: 'pointer',
-                position: 'relative',
+                width: '36px',
+                height: '36px',
+                borderRadius: '10px',
+                background: '#F8FAFC',
+                border: '1px solid #E2E8F0',
                 display: 'flex',
-                flexDirection: 'column',
                 alignItems: 'center',
-                textAlign: 'center',
-                transition: 'all 0.15s ease'
+                justifyContent: 'center',
+                color: '#0F172A',
+                cursor: 'pointer',
+                flexShrink: 0,
+                padding: 0
               }}
             >
-              {prefMenuLayout === 'grid' && (
-                <div style={{ position: 'absolute', top: '8px', right: '8px', width: '18px', height: '18px', borderRadius: '50%', background: '#064E3B', color: '#FFFFFF', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                  <Check size={11} strokeWidth={3} />
-                </div>
-              )}
-              {/* Miniature Realistic Grid Preview */}
-              <div style={{ width: '100%', height: '74px', background: '#F8FAFC', borderRadius: '8px', padding: '6px', marginBottom: '8px', display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '4px', boxSizing: 'border-box' }}>
-                {[1, 2, 3, 4, 5, 6].map(i => (
-                  <div key={i} style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
-                    <div style={{ width: '100%', height: '18px', borderRadius: '4px', background: 'linear-gradient(135deg, #EA580C 0%, #C2410C 100%)' }} />
-                    <div style={{ width: '80%', height: '3px', borderRadius: '2px', background: '#CBD5E1' }} />
-                  </div>
-                ))}
-              </div>
-              <strong style={{ fontSize: '0.82rem', fontWeight: 800, color: '#0F172A', marginBottom: '2px' }}>Grid View</strong>
-              {prefMenuLayout === 'grid' ? (
-                <span style={{ fontSize: '0.68rem', fontWeight: 800, color: '#064E3B' }}>Selected</span>
-              ) : (
-                <span style={{ fontSize: '0.68rem', color: '#94A3B8' }}>Select</span>
-              )}
-            </div>
-
-            {/* List View Box */}
-            <div
-              onClick={() => setPrefMenuLayout('list')}
-              style={{
-                borderRadius: '14px',
-                border: prefMenuLayout === 'list' ? '2px solid #064E3B' : '1px solid #E2E8F0',
-                background: prefMenuLayout === 'list' ? '#F0FDF4' : '#FFFFFF',
-                padding: '12px 10px',
-                cursor: 'pointer',
-                position: 'relative',
-                display: 'flex',
-                flexDirection: 'column',
-                alignItems: 'center',
-                textAlign: 'center',
-                transition: 'all 0.15s ease'
-              }}
-            >
-              {prefMenuLayout === 'list' && (
-                <div style={{ position: 'absolute', top: '8px', right: '8px', width: '18px', height: '18px', borderRadius: '50%', background: '#064E3B', color: '#FFFFFF', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                  <Check size={11} strokeWidth={3} />
-                </div>
-              )}
-              {/* Miniature Realistic List Preview */}
-              <div style={{ width: '100%', height: '74px', background: '#F8FAFC', borderRadius: '8px', padding: '6px', marginBottom: '8px', display: 'flex', flexDirection: 'column', gap: '5px', boxSizing: 'border-box', justifyContent: 'center' }}>
-                {[1, 2, 3].map(i => (
-                  <div key={i} style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                    <div style={{ width: '16px', height: '16px', borderRadius: '4px', background: 'linear-gradient(135deg, #EA580C 0%, #C2410C 100%)', flexShrink: 0 }} />
-                    <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '2px' }}>
-                      <div style={{ width: '60%', height: '3px', borderRadius: '2px', background: '#94A3B8' }} />
-                      <div style={{ width: '90%', height: '3px', borderRadius: '2px', background: '#CBD5E1' }} />
-                    </div>
-                  </div>
-                ))}
-              </div>
-              <strong style={{ fontSize: '0.82rem', fontWeight: 800, color: '#0F172A', marginBottom: '2px' }}>List View</strong>
-              {prefMenuLayout === 'list' ? (
-                <span style={{ fontSize: '0.68rem', fontWeight: 800, color: '#064E3B' }}>Selected</span>
-              ) : (
-                <span style={{ fontSize: '0.68rem', color: '#94A3B8' }}>Select</span>
-              )}
+              <ArrowLeft size={18} />
+            </button>
+            <div>
+              <h2 style={{ fontSize: '1.20rem', fontWeight: 900, color: '#0F172A', margin: 0, letterSpacing: '-0.02em' }}>
+                Menu Preferences
+              </h2>
+              <p style={{ fontSize: '0.74rem', color: '#64748B', margin: 0 }}>
+                Control how your digital menu looks and behaves.
+              </p>
             </div>
           </div>
 
-          {/* Dishes per Row */}
-          <div>
-            <label style={{ fontSize: '0.74rem', fontWeight: 800, color: '#475569', display: 'block', marginBottom: '6px' }}>
-              Dishes per Row
-            </label>
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px' }}>
-              <button
-                type="button"
-                onClick={() => setPrefDishesPerRow(1)}
-                style={{
-                  height: '38px',
-                  borderRadius: '10px',
-                  border: prefDishesPerRow === 1 ? '1.5px solid #A7F3D0' : '1px solid #E2E8F0',
-                  background: prefDishesPerRow === 1 ? '#ECFDF5' : '#FFFFFF',
-                  color: prefDishesPerRow === 1 ? '#064E3B' : '#64748B',
-                  fontWeight: 800,
-                  fontSize: '0.84rem',
-                  cursor: 'pointer',
-                  transition: 'all 0.15s ease'
-                }}
-              >
-                1
-              </button>
-              <button
-                type="button"
-                onClick={() => setPrefDishesPerRow(2)}
-                style={{
-                  height: '38px',
-                  borderRadius: '10px',
-                  border: prefDishesPerRow === 2 ? '1.5px solid #A7F3D0' : '1px solid #E2E8F0',
-                  background: prefDishesPerRow === 2 ? '#ECFDF5' : '#FFFFFF',
-                  color: prefDishesPerRow === 2 ? '#064E3B' : '#64748B',
-                  fontWeight: 800,
-                  fontSize: '0.84rem',
-                  cursor: 'pointer',
-                  transition: 'all 0.15s ease'
-                }}
-              >
-                2
-              </button>
-            </div>
+          <div style={{
+            display: 'inline-flex',
+            alignItems: 'center',
+            gap: '6px',
+            background: hasPrefChanges ? '#FEF3C7' : '#ECFDF5',
+            color: hasPrefChanges ? '#B45309' : '#059669',
+            border: `1px solid ${hasPrefChanges ? '#FDE68A' : '#A7F3D0'}`,
+            padding: '5px 12px',
+            borderRadius: '20px',
+            fontSize: '0.72rem',
+            fontWeight: 800,
+            flexShrink: 0
+          }}>
+            <span style={{ width: '6px', height: '6px', borderRadius: '50%', background: hasPrefChanges ? '#D97706' : '#059669' }} />
+            <span>{hasPrefChanges ? 'Unsaved changes' : 'All changes saved'}</span>
           </div>
+        </div>
 
-          {/* Default Category */}
-          <div>
-            <label style={{ fontSize: '0.74rem', fontWeight: 800, color: '#475569', display: 'block', marginBottom: '6px' }}>
-              Default Category
-            </label>
+        {/* SECTION 1 — ESSENTIAL SETTINGS */}
+        <div>
+          <div style={{ fontSize: '0.72rem', fontWeight: 800, color: '#475569', letterSpacing: '0.04em', textTransform: 'uppercase', marginBottom: '8px', paddingLeft: '4px' }}>
+            Essential Settings
+          </div>
+          <div style={{
+            background: '#FFFFFF',
+            borderRadius: '16px',
+            border: '1px solid #EAE5DF',
+            overflow: 'hidden',
+            boxShadow: '0 1px 3px rgba(0,0,0,0.02)'
+          }}>
+            {/* Row 1: Business Category */}
             <div
-              onClick={() => setActivePrefModal('category')}
+              onClick={() => setActivePrefModal('business_type')}
               style={{
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'space-between',
-                padding: '10px 14px',
-                borderRadius: '10px',
-                border: '1px solid #E2E8F0',
-                background: '#FFFFFF',
-                fontSize: '0.82rem',
-                fontWeight: 700,
-                color: '#0F172A',
-                cursor: 'pointer'
+                padding: '13px 16px',
+                borderBottom: '1px solid #F1F5F9',
+                cursor: 'pointer',
+                minHeight: '52px',
+                boxSizing: 'border-box'
               }}
             >
-              <span>{prefDefaultCategory}</span>
-              <ChevronDown size={15} color="#64748B" />
+              <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                <div style={{ width: '34px', height: '34px', borderRadius: '10px', background: '#F8FAFC', border: '1px solid #E2E8F0', color: '#1E293B', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1.1rem', flexShrink: 0 }}>
+                  {BUSINESS_TYPE_METADATA[settingsForm.business_type || 'restaurant']?.icon || '🏢'}
+                </div>
+                <div>
+                  <strong style={{ fontSize: '0.86rem', fontWeight: 800, color: '#0F172A', display: 'block' }}>Business Category</strong>
+                  <span style={{ fontSize: '0.70rem', color: '#64748B' }}>Venue and establishment classification</span>
+                </div>
+              </div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                <span style={{ fontSize: '0.82rem', fontWeight: 700, color: '#0F172A' }}>
+                  {BUSINESS_TYPE_METADATA[settingsForm.business_type || 'restaurant']?.label?.replace(/\s*\(.*\)/, '') || 'Restaurant'}
+                </span>
+                <ChevronRight size={15} color="#94A3B8" />
+              </div>
             </div>
-          </div>
-        </div>
-      </div>
 
-      {/* 5. DISH INFORMATION */}
-      <div>
-        <div style={{ fontSize: '0.72rem', fontWeight: 800, color: '#475569', letterSpacing: '0.04em', textTransform: 'uppercase', marginBottom: '8px', paddingLeft: '4px' }}>
-          Dish Information
-        </div>
-        <div style={{
-          background: '#FFFFFF',
-          borderRadius: '16px',
-          border: '1px solid #EAE5DF',
-          overflow: 'hidden',
-          boxShadow: '0 1px 3px rgba(0,0,0,0.02)'
-        }}>
-          {/* Row 1 */}
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '13px 16px', borderBottom: '1px solid #F1F5F9' }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-              <Layers size={17} color="#475569" />
-              <strong style={{ fontSize: '0.82rem', fontWeight: 800, color: '#0F172A' }}>Show Category Name</strong>
-            </div>
-            <ToggleSwitch checked={prefShowCategoryName} onChange={setPrefShowCategoryName} />
-          </div>
-
-          {/* Row 2 */}
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '13px 16px', borderBottom: '1px solid #F1F5F9' }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-              <Leaf size={17} color="#475569" />
-              <strong style={{ fontSize: '0.82rem', fontWeight: 800, color: '#0F172A' }}>Show Description</strong>
-            </div>
-            <ToggleSwitch checked={prefShowDescription} onChange={setPrefShowDescription} />
-          </div>
-
-          {/* Row 3 */}
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '13px 16px', borderBottom: '1px solid #F1F5F9' }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-              <Clock size={17} color="#475569" />
-              <strong style={{ fontSize: '0.82rem', fontWeight: 800, color: '#0F172A' }}>Show Preparation Time</strong>
-            </div>
-            <ToggleSwitch checked={prefShowPrepTime} onChange={setPrefShowPrepTime} />
-          </div>
-
-          {/* Row 4 */}
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '13px 16px', borderBottom: '1px solid #F1F5F9' }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-              <Leaf size={17} color="#475569" />
-              <strong style={{ fontSize: '0.82rem', fontWeight: 800, color: '#0F172A' }}>Show Veg / Non-Veg Label</strong>
-            </div>
-            <ToggleSwitch checked={prefShowVegLabel} onChange={setPrefShowVegLabel} />
-          </div>
-
-          {/* Row 5 */}
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '13px 16px' }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-              <Star size={17} color="#475569" />
-              <strong style={{ fontSize: '0.82rem', fontWeight: 800, color: '#0F172A' }}>Show Bestseller Badge</strong>
-            </div>
-            <ToggleSwitch checked={prefShowBestsellerBadge} onChange={setPrefShowBestsellerBadge} />
-          </div>
-        </div>
-      </div>
-
-      {/* 6. PRICE DISPLAY PREVIEW */}
-      <div>
-        <div style={{ marginBottom: '8px', paddingLeft: '4px' }}>
-          <div style={{ fontSize: '0.72rem', fontWeight: 800, color: '#475569', letterSpacing: '0.04em', textTransform: 'uppercase' }}>
-            Price Display Preview
-          </div>
-          <span style={{ fontSize: '0.70rem', color: '#64748B' }}>This is how prices will appear</span>
-        </div>
-
-        <div style={{
-          background: '#FFFFFF',
-          borderRadius: '16px',
-          border: '1px solid #EAE5DF',
-          padding: '16px',
-          display: 'flex',
-          flexDirection: 'column',
-          gap: '14px',
-          boxShadow: '0 1px 3px rgba(0,0,0,0.02)'
-        }}>
-          {/* Mini Dish Card Preview */}
-          <div style={{ display: 'flex', gap: '12px', alignItems: 'flex-start' }}>
-            <img
-              src="https://images.unsplash.com/photo-1631452180519-c014fe946bc7?w=150&auto=format&fit=crop&q=80"
-              alt="Paneer Butter Masala"
+            {/* Row 2: Food Type */}
+            <div
+              onClick={() => setActivePrefModal('food_type')}
               style={{
-                width: '64px',
-                height: '64px',
-                borderRadius: '12px',
-                objectFit: 'cover',
-                flexShrink: 0,
-                border: '1px solid #E2E8F0'
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                padding: '13px 16px',
+                borderBottom: '1px solid #F1F5F9',
+                cursor: 'pointer',
+                minHeight: '52px',
+                boxSizing: 'border-box'
               }}
-              onError={(e) => {
-                e.target.onerror = null;
-                e.target.style.display = 'none';
+            >
+              <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                <div style={{ width: '34px', height: '34px', borderRadius: '10px', background: '#F8FAFC', border: '1px solid #E2E8F0', color: '#15803D', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1.1rem', flexShrink: 0 }}>
+                  {FOOD_TYPE_METADATA[settingsForm.food_type || 'pure_veg']?.icon || '🥗'}
+                </div>
+                <div>
+                  <strong style={{ fontSize: '0.86rem', fontWeight: 800, color: '#0F172A', display: 'block' }}>Food Type</strong>
+                  <span style={{ fontSize: '0.70rem', color: '#64748B' }}>Dietary classification profile</span>
+                </div>
+              </div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                <span style={{ fontSize: '0.82rem', fontWeight: 700, color: '#0F172A' }}>
+                  {FOOD_TYPE_METADATA[settingsForm.food_type || 'pure_veg']?.label || 'Pure Veg'}
+                </span>
+                <ChevronRight size={15} color="#94A3B8" />
+              </div>
+            </div>
+
+            {/* Row 3: Service Mode */}
+            <div
+              onClick={() => setActivePrefModal('service_model')}
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                padding: '13px 16px',
+                borderBottom: '1px solid #F1F5F9',
+                cursor: 'pointer',
+                minHeight: '52px',
+                boxSizing: 'border-box'
               }}
-            />
-            <div style={{ minWidth: 0, flex: 1 }}>
-              <strong style={{ fontSize: '0.92rem', fontWeight: 900, color: '#0F172A', display: 'block', marginBottom: '2px' }}>
-                Paneer Butter Masala
-              </strong>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '5px', marginBottom: '4px', flexWrap: 'wrap' }}>
-                <span style={{ fontSize: '0.70rem', color: '#64748B' }}>Paneer •</span>
-                <span style={{ width: '6px', height: '6px', borderRadius: '50%', background: '#059669' }} />
-                <span style={{ fontSize: '0.70rem', fontWeight: 800, color: '#059669' }}>Bestseller</span>
+            >
+              <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                <div style={{ width: '34px', height: '34px', borderRadius: '10px', background: '#F8FAFC', border: '1px solid #E2E8F0', color: '#FF5A1F', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1.1rem', flexShrink: 0 }}>
+                  {SERVICE_MODEL_METADATA[settingsForm.service_model || 'dine_in']?.icon || '🍽️'}
+                </div>
+                <div>
+                  <strong style={{ fontSize: '0.86rem', fontWeight: 800, color: '#0F172A', display: 'block' }}>Service Mode</strong>
+                  <span style={{ fontSize: '0.70rem', color: '#64748B' }}>Ordering fulfillment model</span>
+                </div>
               </div>
-              <span style={{ fontSize: '0.72rem', color: '#64748B', lineHeight: 1.35, display: 'block' }}>
-                Creamy tomato gravy with soft paneer cubes.
-              </span>
-            </div>
-          </div>
-
-          {/* FULL / HALF Price Pills */}
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
-            <div style={{
-              background: '#F8FAFC',
-              border: '1px solid #E2E8F0',
-              borderRadius: '10px',
-              padding: '8px 14px',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'space-between'
-            }}>
-              <span style={{ fontSize: '0.68rem', fontWeight: 700, color: '#64748B', letterSpacing: '0.04em' }}>FULL</span>
-              <span style={{ fontSize: '0.96rem', fontWeight: 900, color: '#0F172A' }}>190</span>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                <span style={{ fontSize: '0.82rem', fontWeight: 700, color: '#0F172A' }}>
+                  {SERVICE_MODEL_METADATA[settingsForm.service_model || 'dine_in']?.label || 'Dine-In'}
+                </span>
+                <ChevronRight size={15} color="#94A3B8" />
+              </div>
             </div>
 
-            <div style={{
-              background: '#F8FAFC',
-              border: '1px solid #E2E8F0',
-              borderRadius: '10px',
-              padding: '8px 14px',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'space-between'
-            }}>
-              <span style={{ fontSize: '0.68rem', fontWeight: 700, color: '#64748B', letterSpacing: '0.04em' }}>HALF</span>
-              <span style={{ fontSize: '0.96rem', fontWeight: 900, color: '#0F172A' }}>110</span>
+            {/* Row 4: Currency */}
+            <div
+              onClick={() => setActivePrefModal('currency')}
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                padding: '13px 16px',
+                borderBottom: '1px solid #F1F5F9',
+                cursor: 'pointer',
+                minHeight: '52px',
+                boxSizing: 'border-box'
+              }}
+            >
+              <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                <div style={{ width: '34px', height: '34px', borderRadius: '10px', background: '#F8FAFC', border: '1px solid #E2E8F0', color: '#064E3B', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 900, fontSize: '0.94rem', flexShrink: 0 }}>
+                  ₹
+                </div>
+                <div>
+                  <strong style={{ fontSize: '0.86rem', fontWeight: 800, color: '#0F172A', display: 'block' }}>Currency</strong>
+                  <span style={{ fontSize: '0.70rem', color: '#64748B' }}>Primary pricing currency symbol</span>
+                </div>
+              </div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                <span style={{ fontSize: '0.82rem', fontWeight: 700, color: '#0F172A' }}>{prefCurrency}</span>
+                <ChevronRight size={15} color="#94A3B8" />
+              </div>
+            </div>
+
+            {/* Row 5: GST & Tax */}
+            <div
+              onClick={() => setActivePrefModal('tax')}
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                padding: '13px 16px',
+                borderBottom: '1px solid #F1F5F9',
+                cursor: 'pointer',
+                minHeight: '52px',
+                boxSizing: 'border-box'
+              }}
+            >
+              <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                <div style={{ width: '34px', height: '34px', borderRadius: '10px', background: '#F8FAFC', border: '1px solid #E2E8F0', color: '#D97706', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                  <FileText size={17} />
+                </div>
+                <div>
+                  <strong style={{ fontSize: '0.86rem', fontWeight: 800, color: '#0F172A', display: 'block' }}>GST & Tax</strong>
+                  <span style={{ fontSize: '0.70rem', color: '#64748B' }}>Automatic billing tax rate calculation</span>
+                </div>
+              </div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                <span style={{ fontSize: '0.82rem', fontWeight: 700, color: '#0F172A' }}>{prefGst}</span>
+                <ChevronRight size={15} color="#94A3B8" />
+              </div>
+            </div>
+
+            {/* Row 6: Menu Language */}
+            <div
+              onClick={() => setActivePrefModal('language')}
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                padding: '13px 16px',
+                cursor: 'pointer',
+                minHeight: '52px',
+                boxSizing: 'border-box'
+              }}
+            >
+              <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                <div style={{ width: '34px', height: '34px', borderRadius: '10px', background: '#F8FAFC', border: '1px solid #E2E8F0', color: '#0284C7', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                  <Globe size={17} />
+                </div>
+                <div>
+                  <strong style={{ fontSize: '0.86rem', fontWeight: 800, color: '#0F172A', display: 'block' }}>Menu Language</strong>
+                  <span style={{ fontSize: '0.70rem', color: '#64748B' }}>Default language for customer menu</span>
+                </div>
+              </div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                <span style={{ fontSize: '0.82rem', fontWeight: 700, color: '#0F172A' }}>{prefLanguage}</span>
+                <ChevronRight size={15} color="#94A3B8" />
+              </div>
             </div>
           </div>
         </div>
-      </div>
 
-      {/* 7. ADVANCED OPTIONS */}
-      <div>
-        <div style={{ fontSize: '0.72rem', fontWeight: 800, color: '#475569', letterSpacing: '0.04em', textTransform: 'uppercase', marginBottom: '8px', paddingLeft: '4px' }}>
-          Advanced Options
-        </div>
-        <div style={{
-          background: '#FFFFFF',
-          borderRadius: '16px',
-          border: '1px solid #EAE5DF',
-          overflow: 'hidden',
-          boxShadow: '0 1px 3px rgba(0,0,0,0.02)'
-        }}>
-          {/* Row 1 */}
-          <div
-            onClick={() => setActivePrefModal('ordering')}
-            style={{
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'space-between',
-              padding: '14px 16px',
-              borderBottom: '1px solid #F1F5F9',
-              cursor: 'pointer'
-            }}
-          >
-            <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-              <div style={{ width: '38px', height: '38px', borderRadius: '10px', background: '#ECFDF5', color: '#059669', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-                <ShoppingCart size={18} />
-              </div>
-              <div>
-                <strong style={{ fontSize: '0.84rem', fontWeight: 800, color: '#0F172A', display: 'block' }}>Menu Ordering</strong>
-                <span style={{ fontSize: '0.70rem', color: '#64748B' }}>Control ordering preferences and rules</span>
-              </div>
-            </div>
-            <ChevronRight size={15} color="#94A3B8" />
+        {/* SECTION 2 — CUSTOMER MENU VISIBILITY */}
+        <div>
+          <div style={{ fontSize: '0.72rem', fontWeight: 800, color: '#475569', letterSpacing: '0.04em', textTransform: 'uppercase', marginBottom: '8px', paddingLeft: '4px' }}>
+            Customer Menu Visibility
           </div>
-
-          {/* Row 2 */}
-          <div
-            onClick={() => setActivePrefModal('experience')}
-            style={{
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'space-between',
-              padding: '14px 16px',
-              borderBottom: '1px solid #F1F5F9',
-              cursor: 'pointer'
-            }}
-          >
-            <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-              <div style={{ width: '38px', height: '38px', borderRadius: '10px', background: '#F5F3FF', color: '#7C3AED', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-                <Users size={18} />
-              </div>
-              <div>
-                <strong style={{ fontSize: '0.84rem', fontWeight: 800, color: '#0F172A', display: 'block' }}>Customer Experience</strong>
-                <span style={{ fontSize: '0.70rem', color: '#64748B' }}>Manage customer facing experience</span>
-              </div>
-            </div>
-            <ChevronRight size={15} color="#94A3B8" />
-          </div>
-
-          {/* Row 3 */}
-          <div
-            onClick={() => setActivePrefModal('seo')}
-            style={{
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'space-between',
-              padding: '14px 16px',
-              cursor: 'pointer'
-            }}
-          >
-            <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-              <div style={{ width: '38px', height: '38px', borderRadius: '10px', background: '#FEF3C7', color: '#D97706', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-                <Globe size={18} />
-              </div>
-              <div>
-                <strong style={{ fontSize: '0.84rem', fontWeight: 800, color: '#0F172A', display: 'block' }}>Menu SEO & Sharing</strong>
-                <span style={{ fontSize: '0.70rem', color: '#64748B' }}>Improve discoverability and sharing options</span>
-              </div>
-            </div>
-            <ChevronRight size={15} color="#94A3B8" />
-          </div>
-        </div>
-      </div>
-
-      {/* 8. INFO BOX & NEED HELP */}
-      <div style={{
-        display: 'flex',
-        alignItems: 'center',
-        gap: '10px',
-        background: '#ECFDF5',
-        borderRadius: '12px',
-        border: '1px solid #A7F3D0',
-        padding: '12px 14px',
-        fontSize: '0.74rem',
-        color: '#065F46',
-        lineHeight: 1.4
-      }}>
-        <ShieldCheck size={18} color="#059669" style={{ flexShrink: 0 }} />
-        <span>All changes are saved automatically. Your menu preferences are always up to date.</span>
-      </div>
-
-      <div style={{
-        background: '#FFFBEB',
-        borderRadius: '14px',
-        border: '1px solid #FEF3C7',
-        padding: '14px 16px',
-        display: 'flex',
-        flexDirection: 'column',
-        gap: '10px'
-      }}>
-        <div style={{ display: 'flex', alignItems: 'flex-start', gap: '10px' }}>
-          <span style={{ fontSize: '1.1rem' }}>💡</span>
-          <div>
-            <strong style={{ fontSize: '0.84rem', color: '#92400E', fontWeight: 800, display: 'block', marginBottom: '2px' }}>Need Help?</strong>
-            <span style={{ fontSize: '0.72rem', color: '#B45309', lineHeight: 1.4, display: 'block' }}>
-              Learn more about menu preferences and best practices.
-            </span>
-          </div>
-        </div>
-        <button
-          type="button"
-          onClick={() => setShowHelpModal && setShowHelpModal(true)}
-          style={{
-            width: '100%',
-            height: '38px',
-            borderRadius: '10px',
-            border: '1px solid #E2E8F0',
+          <div style={{
             background: '#FFFFFF',
-            color: '#0F172A',
-            fontSize: '0.78rem',
-            fontWeight: 800,
-            cursor: 'pointer',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            gap: '6px'
-          }}
-        >
-          <span>View Help Guide</span>
-          <ArrowUpRight size={14} />
-        </button>
-      </div>
+            borderRadius: '16px',
+            border: '1px solid #EAE5DF',
+            overflow: 'hidden',
+            boxShadow: '0 1px 3px rgba(0,0,0,0.02)'
+          }}>
+            {/* Toggle 1 */}
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '13px 16px', borderBottom: '1px solid #F1F5F9', minHeight: '52px' }}>
+              <div>
+                <strong style={{ fontSize: '0.86rem', fontWeight: 800, color: '#0F172A', display: 'block' }}>Show sold-out items</strong>
+                <span style={{ fontSize: '0.70rem', color: '#64748B' }}>Display items that are currently sold out in menu</span>
+              </div>
+              <ToggleSwitch checked={prefShowSoldOut} onChange={setPrefShowSoldOut} />
+            </div>
 
-      {/* 9. SAVE ACTION AREA */}
-      <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', marginTop: '4px' }}>
-        <button
-          type="button"
-          onClick={handleSaveMenuPreferences}
-          disabled={savingForm}
-          style={{
-            width: '100%',
-            height: '46px',
-            borderRadius: '12px',
-            background: '#064E3B',
-            color: '#FFFFFF',
-            fontSize: '0.88rem',
-            fontWeight: 800,
-            border: 'none',
-            cursor: 'pointer',
-            boxShadow: '0 3px 12px rgba(6, 78, 59, 0.25)',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            gap: '8px',
-            transition: 'all 0.15s ease'
-          }}
-        >
-          <Check size={16} strokeWidth={2.5} />
-          <span>{savingForm ? 'Saving Preferences...' : 'Save Menu Preferences'}</span>
-        </button>
+            {/* Toggle 2 */}
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '13px 16px', borderBottom: '1px solid #F1F5F9', minHeight: '52px' }}>
+              <div>
+                <strong style={{ fontSize: '0.86rem', fontWeight: 800, color: '#0F172A', display: 'block' }}>Show out-of-stock status</strong>
+                <span style={{ fontSize: '0.70rem', color: '#64748B' }}>Show out of stock badge over unavailable dishes</span>
+              </div>
+              <ToggleSwitch checked={prefShowOutOfStock} onChange={setPrefShowOutOfStock} />
+            </div>
 
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px', fontSize: '0.76rem', color: '#059669', fontWeight: 800, paddingTop: '2px' }}>
-          <CheckCircle2 size={15} color="#059669" />
-          <span>{prefSaveSuccess ? 'Preferences saved successfully!' : 'All changes saved'}</span>
+            {/* Toggle 3 */}
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '13px 16px', borderBottom: '1px solid #F1F5F9', minHeight: '52px' }}>
+              <div>
+                <strong style={{ fontSize: '0.86rem', fontWeight: 800, color: '#0F172A', display: 'block' }}>Show dish images</strong>
+                <span style={{ fontSize: '0.70rem', color: '#64748B' }}>Display appetizing photos alongside dish names</span>
+              </div>
+              <ToggleSwitch checked={prefShowDishImages} onChange={setPrefShowDishImages} />
+            </div>
+
+            {/* Toggle 4 */}
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '13px 16px', minHeight: '52px' }}>
+              <div>
+                <strong style={{ fontSize: '0.86rem', fontWeight: 800, color: '#0F172A', display: 'block' }}>Allow customer search</strong>
+                <span style={{ fontSize: '0.70rem', color: '#64748B' }}>Enable instant search bar for diners to find dishes</span>
+              </div>
+              <ToggleSwitch checked={prefAllowSearch} onChange={setPrefAllowSearch} />
+            </div>
+          </div>
         </div>
-      </div>
 
-      {/* Interactive Selection Modals */}
-      {activePrefModal && renderPrefModal()}
-    </div>
-  );
+        {/* SECTION 3 — MENU LAYOUT */}
+        <div>
+          <div style={{ fontSize: '0.72rem', fontWeight: 800, color: '#475569', letterSpacing: '0.04em', textTransform: 'uppercase', marginBottom: '8px', paddingLeft: '4px' }}>
+            Menu Layout
+          </div>
+          <div style={{
+            background: '#FFFFFF',
+            borderRadius: '16px',
+            border: '1px solid #EAE5DF',
+            padding: '16px',
+            display: 'flex',
+            flexDirection: 'column',
+            gap: '14px',
+            boxShadow: '0 1px 3px rgba(0,0,0,0.02)'
+          }}>
+            {/* 2 Visual Options Side by Side */}
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+              {/* Grid View Box */}
+              <div
+                onClick={() => setPrefMenuLayout('grid')}
+                style={{
+                  borderRadius: '12px',
+                  border: prefMenuLayout === 'grid' ? '2px solid #064E3B' : '1px solid #E2E8F0',
+                  background: prefMenuLayout === 'grid' ? '#ECFDF5' : '#FFFFFF',
+                  padding: '12px 10px',
+                  cursor: 'pointer',
+                  position: 'relative',
+                  display: 'flex',
+                  flexDirection: 'column',
+                  alignItems: 'center',
+                  textAlign: 'center',
+                  transition: 'all 0.15s ease'
+                }}
+              >
+                {prefMenuLayout === 'grid' && (
+                  <div style={{ position: 'absolute', top: '8px', right: '8px', width: '18px', height: '18px', borderRadius: '50%', background: '#064E3B', color: '#FFFFFF', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                    <Check size={11} strokeWidth={3} />
+                  </div>
+                )}
+                {/* Miniature Realistic Grid Preview */}
+                <div style={{ width: '100%', height: '62px', background: '#F8FAFC', borderRadius: '8px', padding: '6px', marginBottom: '8px', display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '4px', boxSizing: 'border-box' }}>
+                  {[1, 2, 3, 4, 5, 6].map(i => (
+                    <div key={i} style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
+                      <div style={{ width: '100%', height: '14px', borderRadius: '3px', background: '#E2E8F0' }} />
+                      <div style={{ width: '70%', height: '3px', borderRadius: '2px', background: '#CBD5E1' }} />
+                    </div>
+                  ))}
+                </div>
+                <strong style={{ fontSize: '0.84rem', fontWeight: 800, color: '#0F172A', marginBottom: '2px' }}>Grid View</strong>
+                <span style={{ fontSize: '0.68rem', color: prefMenuLayout === 'grid' ? '#064E3B' : '#64748B', fontWeight: prefMenuLayout === 'grid' ? 800 : 500 }}>
+                  {prefMenuLayout === 'grid' ? 'Active' : 'Select'}
+                </span>
+              </div>
+
+              {/* List View Box */}
+              <div
+                onClick={() => setPrefMenuLayout('list')}
+                style={{
+                  borderRadius: '12px',
+                  border: prefMenuLayout === 'list' ? '2px solid #064E3B' : '1px solid #E2E8F0',
+                  background: prefMenuLayout === 'list' ? '#ECFDF5' : '#FFFFFF',
+                  padding: '12px 10px',
+                  cursor: 'pointer',
+                  position: 'relative',
+                  display: 'flex',
+                  flexDirection: 'column',
+                  alignItems: 'center',
+                  textAlign: 'center',
+                  transition: 'all 0.15s ease'
+                }}
+              >
+                {prefMenuLayout === 'list' && (
+                  <div style={{ position: 'absolute', top: '8px', right: '8px', width: '18px', height: '18px', borderRadius: '50%', background: '#064E3B', color: '#FFFFFF', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                    <Check size={11} strokeWidth={3} />
+                  </div>
+                )}
+                {/* Miniature Realistic List Preview */}
+                <div style={{ width: '100%', height: '62px', background: '#F8FAFC', borderRadius: '8px', padding: '6px', marginBottom: '8px', display: 'flex', flexDirection: 'column', gap: '5px', boxSizing: 'border-box', justifyContent: 'center' }}>
+                  {[1, 2, 3].map(i => (
+                    <div key={i} style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                      <div style={{ width: '14px', height: '14px', borderRadius: '3px', background: '#E2E8F0', flexShrink: 0 }} />
+                      <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '2px' }}>
+                        <div style={{ width: '60%', height: '3px', borderRadius: '2px', background: '#94A3B8' }} />
+                        <div style={{ width: '90%', height: '2px', borderRadius: '2px', background: '#CBD5E1' }} />
+                      </div>
+                    </div>
+                  ))}
+                </div>
+                <strong style={{ fontSize: '0.84rem', fontWeight: 800, color: '#0F172A', marginBottom: '2px' }}>List View</strong>
+                <span style={{ fontSize: '0.68rem', color: prefMenuLayout === 'list' ? '#064E3B' : '#64748B', fontWeight: prefMenuLayout === 'list' ? 800 : 500 }}>
+                  {prefMenuLayout === 'list' ? 'Active' : 'Select'}
+                </span>
+              </div>
+            </div>
+
+            {/* Dishes per Row Segmented Control */}
+            <div>
+              <label style={{ fontSize: '0.74rem', fontWeight: 800, color: '#334155', display: 'block', marginBottom: '6px' }}>
+                Dishes per Row
+              </label>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', gap: '6px', background: '#F8FAFC', padding: '4px', borderRadius: '12px', border: '1px solid #E2E8F0' }}>
+                {['auto', 1, 2, 3, 4].map(val => {
+                  const isSelected = String(prefDishesPerRow) === String(val);
+                  return (
+                    <button
+                      key={String(val)}
+                      type="button"
+                      onClick={() => setPrefDishesPerRow(val)}
+                      style={{
+                        height: '34px',
+                        borderRadius: '8px',
+                        border: 'none',
+                        background: isSelected ? '#064E3B' : 'transparent',
+                        color: isSelected ? '#FFFFFF' : '#475569',
+                        fontWeight: isSelected ? 800 : 600,
+                        fontSize: '0.80rem',
+                        cursor: 'pointer',
+                        transition: 'all 0.15s ease',
+                        textTransform: val === 'auto' ? 'capitalize' : 'none'
+                      }}
+                    >
+                      {val === 'auto' ? 'Auto' : val}
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+
+            {/* Default Category Dropdown */}
+            <div>
+              <label style={{ fontSize: '0.74rem', fontWeight: 800, color: '#334155', display: 'block', marginBottom: '6px' }}>
+                Default Category
+              </label>
+              <div
+                onClick={() => setActivePrefModal('category')}
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'space-between',
+                  height: '46px',
+                  padding: '0 14px',
+                  borderRadius: '10px',
+                  border: '1px solid #E2E8F0',
+                  background: '#FFFFFF',
+                  fontSize: '0.84rem',
+                  fontWeight: 700,
+                  color: '#0F172A',
+                  cursor: 'pointer'
+                }}
+              >
+                <span>{prefDefaultCategory}</span>
+                <ChevronDown size={16} color="#64748B" />
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* SECTION 4 — DISH INFORMATION */}
+        <div>
+          <div style={{ fontSize: '0.72rem', fontWeight: 800, color: '#475569', letterSpacing: '0.04em', textTransform: 'uppercase', marginBottom: '8px', paddingLeft: '4px' }}>
+            Dish Information
+          </div>
+          <div style={{
+            background: '#FFFFFF',
+            borderRadius: '16px',
+            border: '1px solid #EAE5DF',
+            overflow: 'hidden',
+            boxShadow: '0 1px 3px rgba(0,0,0,0.02)',
+            display: 'grid',
+            gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))'
+          }}>
+            {/* Item 1 */}
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '13px 16px', borderBottom: '1px solid #F1F5F9', minHeight: '52px' }}>
+              <div>
+                <strong style={{ fontSize: '0.84rem', fontWeight: 800, color: '#0F172A', display: 'block' }}>Show category name</strong>
+                <span style={{ fontSize: '0.68rem', color: '#64748B' }}>Display category headers above dishes</span>
+              </div>
+              <ToggleSwitch checked={prefShowCategoryName} onChange={setPrefShowCategoryName} />
+            </div>
+
+            {/* Item 2 */}
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '13px 16px', borderBottom: '1px solid #F1F5F9', minHeight: '52px' }}>
+              <div>
+                <strong style={{ fontSize: '0.84rem', fontWeight: 800, color: '#0F172A', display: 'block' }}>Show description</strong>
+                <span style={{ fontSize: '0.68rem', color: '#64748B' }}>Display ingredients and recipe notes</span>
+              </div>
+              <ToggleSwitch checked={prefShowDescription} onChange={setPrefShowDescription} />
+            </div>
+
+            {/* Item 3 */}
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '13px 16px', borderBottom: '1px solid #F1F5F9', minHeight: '52px' }}>
+              <div>
+                <strong style={{ fontSize: '0.84rem', fontWeight: 800, color: '#0F172A', display: 'block' }}>Show preparation time</strong>
+                <span style={{ fontSize: '0.68rem', color: '#64748B' }}>Show approx cooking minutes (e.g. 15-20 min)</span>
+              </div>
+              <ToggleSwitch checked={prefShowPrepTime} onChange={setPrefShowPrepTime} />
+            </div>
+
+            {/* Item 4 */}
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '13px 16px', borderBottom: '1px solid #F1F5F9', minHeight: '52px' }}>
+              <div>
+                <strong style={{ fontSize: '0.84rem', fontWeight: 800, color: '#0F172A', display: 'block' }}>Show Veg / Non-Veg label</strong>
+                <span style={{ fontSize: '0.68rem', color: '#64748B' }}>Standard food safety dot badges</span>
+              </div>
+              <ToggleSwitch checked={prefShowVegLabel} onChange={setPrefShowVegLabel} />
+            </div>
+
+            {/* Item 5 */}
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '13px 16px', minHeight: '52px' }}>
+              <div>
+                <strong style={{ fontSize: '0.84rem', fontWeight: 800, color: '#0F172A', display: 'block' }}>Show bestseller badge</strong>
+                <span style={{ fontSize: '0.68rem', color: '#64748B' }}>Highlight chef specials & popular items</span>
+              </div>
+              <ToggleSwitch checked={prefShowBestsellerBadge} onChange={setPrefShowBestsellerBadge} />
+            </div>
+          </div>
+        </div>
+
+        {/* SECTION 5 — LIVE PREVIEW */}
+        <div>
+          <div style={{ fontSize: '0.72rem', fontWeight: 800, color: '#475569', letterSpacing: '0.04em', textTransform: 'uppercase', marginBottom: '8px', paddingLeft: '4px' }}>
+            Customer Menu Preview
+          </div>
+          <div style={{
+            background: '#FFFFFF',
+            borderRadius: '16px',
+            border: '1px solid #EAE5DF',
+            padding: '16px',
+            display: 'flex',
+            flexDirection: 'column',
+            gap: '14px',
+            boxShadow: '0 1px 3px rgba(0,0,0,0.02)'
+          }}>
+            {/* Realistic Mini Dish Card Preview */}
+            <div style={{ display: 'flex', gap: '14px', alignItems: 'flex-start' }}>
+              <img
+                src="https://images.unsplash.com/photo-1631452180519-c014fe946bc7?w=150&auto=format&fit=crop&q=80"
+                alt="Paneer Butter Masala"
+                style={{
+                  width: '68px',
+                  height: '68px',
+                  borderRadius: '12px',
+                  objectFit: 'cover',
+                  flexShrink: 0,
+                  border: '1px solid #E2E8F0',
+                  boxShadow: '0 2px 6px rgba(0,0,0,0.06)'
+                }}
+                onError={(e) => {
+                  e.target.onerror = null;
+                  e.target.style.display = 'none';
+                }}
+              />
+              <div style={{ minWidth: 0, flex: 1 }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '2px' }}>
+                  {prefShowVegLabel && (
+                    <span style={{ width: '13px', height: '13px', borderRadius: '3px', border: '1.5px solid #16A34A', display: 'inline-flex', alignItems: 'center', justifyContent: 'center' }}>
+                      <span style={{ width: '5px', height: '5px', borderRadius: '50%', background: '#16A34A' }} />
+                    </span>
+                  )}
+                  <strong style={{ fontSize: '0.92rem', fontWeight: 900, color: '#0F172A' }}>
+                    Paneer Butter Masala
+                  </strong>
+                  {prefShowBestsellerBadge && (
+                    <span style={{ fontSize: '0.66rem', fontWeight: 800, color: '#EA580C', background: '#FFF7ED', border: '1px solid #FFEDD5', padding: '1px 6px', borderRadius: '6px' }}>
+                      🔥 Bestseller
+                    </span>
+                  )}
+                </div>
+                {prefShowCategoryName && (
+                  <span style={{ fontSize: '0.68rem', fontWeight: 700, color: '#64748B', textTransform: 'uppercase', display: 'block', marginBottom: '2px' }}>
+                    Main Course
+                  </span>
+                )}
+                {prefShowDescription && (
+                  <span style={{ fontSize: '0.72rem', color: '#64748B', lineHeight: 1.35, display: 'block' }}>
+                    Creamy tomato gravy with soft paneer cubes and authentic spices.
+                  </span>
+                )}
+              </div>
+            </div>
+
+            {/* FULL / HALF Price Pills */}
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
+              <div style={{
+                background: '#F8FAFC',
+                border: '1px solid #E2E8F0',
+                borderRadius: '10px',
+                padding: '8px 14px',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between'
+              }}>
+                <span style={{ fontSize: '0.70rem', fontWeight: 800, color: '#64748B', letterSpacing: '0.04em' }}>FULL</span>
+                <span style={{ fontSize: '0.94rem', fontWeight: 900, color: '#0F172A' }}>₹190</span>
+              </div>
+
+              <div style={{
+                background: '#F8FAFC',
+                border: '1px solid #E2E8F0',
+                borderRadius: '10px',
+                padding: '8px 14px',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between'
+              }}>
+                <span style={{ fontSize: '0.70rem', fontWeight: 800, color: '#64748B', letterSpacing: '0.04em' }}>HALF</span>
+                <span style={{ fontSize: '0.94rem', fontWeight: 900, color: '#0F172A' }}>₹110</span>
+              </div>
+            </div>
+
+            {/* Preview Action */}
+            <button
+              type="button"
+              onClick={() => window.open(window.location.origin, '_blank')}
+              style={{
+                width: '100%',
+                height: '38px',
+                borderRadius: '10px',
+                border: '1px solid #E2E8F0',
+                background: '#FAF8F5',
+                color: '#0F172A',
+                fontSize: '0.78rem',
+                fontWeight: 800,
+                cursor: 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                gap: '6px'
+              }}
+            >
+              <span>Preview customer menu</span>
+              <ArrowUpRight size={14} />
+            </button>
+          </div>
+        </div>
+
+        {/* SECTION 6 — ADVANCED ACCORDIONS */}
+        <div>
+          <div style={{ fontSize: '0.72rem', fontWeight: 800, color: '#475569', letterSpacing: '0.04em', textTransform: 'uppercase', marginBottom: '8px', paddingLeft: '4px' }}>
+            Advanced Options
+          </div>
+          <div style={{
+            background: '#FFFFFF',
+            borderRadius: '16px',
+            border: '1px solid #EAE5DF',
+            overflow: 'hidden',
+            boxShadow: '0 1px 3px rgba(0,0,0,0.02)'
+          }}>
+            {/* Accordion 1: Menu Ordering */}
+            <div style={{ borderBottom: '1px solid #F1F5F9' }}>
+              <div
+                onClick={() => toggleAccordion('ordering')}
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'space-between',
+                  padding: '14px 16px',
+                  cursor: 'pointer',
+                  background: openPrefAccordion === 'ordering' ? '#F8FAFC' : '#FFFFFF'
+                }}
+              >
+                <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                  <div style={{ width: '34px', height: '34px', borderRadius: '10px', background: '#ECFDF5', color: '#059669', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                    <ShoppingCart size={17} />
+                  </div>
+                  <div>
+                    <strong style={{ fontSize: '0.86rem', fontWeight: 800, color: '#0F172A', display: 'block' }}>Menu Ordering</strong>
+                    <span style={{ fontSize: '0.70rem', color: '#64748B' }}>Direct digital ordering & kitchen flow rules</span>
+                  </div>
+                </div>
+                <ChevronDown
+                  size={16}
+                  color="#64748B"
+                  style={{
+                    transform: openPrefAccordion === 'ordering' ? 'rotate(180deg)' : 'rotate(0deg)',
+                    transition: 'transform 0.2s ease'
+                  }}
+                />
+              </div>
+              {openPrefAccordion === 'ordering' && (
+                <div style={{ padding: '12px 16px', background: '#F8FAFC', borderTop: '1px solid #F1F5F9', display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                    <div>
+                      <strong style={{ fontSize: '0.82rem', color: '#0F172A', display: 'block' }}>Direct Digital Ordering</strong>
+                      <span style={{ fontSize: '0.68rem', color: '#64748B' }}>Allow customers to submit orders directly from menu</span>
+                    </div>
+                    <ToggleSwitch checked={prefAllowDigitalOrdering} onChange={setPrefAllowDigitalOrdering} />
+                  </div>
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                    <div>
+                      <strong style={{ fontSize: '0.82rem', color: '#0F172A', display: 'block' }}>Peak Rush Throttling</strong>
+                      <span style={{ fontSize: '0.68rem', color: '#64748B' }}>Space incoming orders automatically during peak hours</span>
+                    </div>
+                    <ToggleSwitch checked={prefOrderThrottling} onChange={setPrefOrderThrottling} />
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {/* Accordion 2: Customer Experience */}
+            <div style={{ borderBottom: '1px solid #F1F5F9' }}>
+              <div
+                onClick={() => toggleAccordion('experience')}
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'space-between',
+                  padding: '14px 16px',
+                  cursor: 'pointer',
+                  background: openPrefAccordion === 'experience' ? '#F8FAFC' : '#FFFFFF'
+                }}
+              >
+                <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                  <div style={{ width: '34px', height: '34px', borderRadius: '10px', background: '#F5F3FF', color: '#7C3AED', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                    <Users size={17} />
+                  </div>
+                  <div>
+                    <strong style={{ fontSize: '0.86rem', fontWeight: 800, color: '#0F172A', display: 'block' }}>Customer Experience</strong>
+                    <span style={{ fontSize: '0.70rem', color: '#64748B' }}>Interactive dietary filters & one-click waiter call</span>
+                  </div>
+                </div>
+                <ChevronDown
+                  size={16}
+                  color="#64748B"
+                  style={{
+                    transform: openPrefAccordion === 'experience' ? 'rotate(180deg)' : 'rotate(0deg)',
+                    transition: 'transform 0.2s ease'
+                  }}
+                />
+              </div>
+              {openPrefAccordion === 'experience' && (
+                <div style={{ padding: '12px 16px', background: '#F8FAFC', borderTop: '1px solid #F1F5F9', display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                    <div>
+                      <strong style={{ fontSize: '0.82rem', color: '#0F172A', display: 'block' }}>Interactive Dietary Filters</strong>
+                      <span style={{ fontSize: '0.68rem', color: '#64748B' }}>Show Jain, Vegan, Gluten-Free filter buttons at top</span>
+                    </div>
+                    <ToggleSwitch checked={prefDietaryFilters} onChange={setPrefDietaryFilters} />
+                  </div>
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                    <div>
+                      <strong style={{ fontSize: '0.82rem', color: '#0F172A', display: 'block' }}>One-Click Waiter Call</strong>
+                      <span style={{ fontSize: '0.68rem', color: '#64748B' }}>Floating button for diners to call service or ask for bill</span>
+                    </div>
+                    <ToggleSwitch checked={prefWaiterCall} onChange={setPrefWaiterCall} />
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {/* Accordion 3: Menu SEO & Sharing */}
+            <div>
+              <div
+                onClick={() => toggleAccordion('seo')}
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'space-between',
+                  padding: '14px 16px',
+                  cursor: 'pointer',
+                  background: openPrefAccordion === 'seo' ? '#F8FAFC' : '#FFFFFF'
+                }}
+              >
+                <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                  <div style={{ width: '34px', height: '34px', borderRadius: '10px', background: '#FEF3C7', color: '#D97706', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                    <Globe size={17} />
+                  </div>
+                  <div>
+                    <strong style={{ fontSize: '0.86rem', fontWeight: 800, color: '#0F172A', display: 'block' }}>Menu SEO & Sharing</strong>
+                    <span style={{ fontSize: '0.70rem', color: '#64748B' }}>Google rich snippet schema & WhatsApp preview cards</span>
+                  </div>
+                </div>
+                <ChevronDown
+                  size={16}
+                  color="#64748B"
+                  style={{
+                    transform: openPrefAccordion === 'seo' ? 'rotate(180deg)' : 'rotate(0deg)',
+                    transition: 'transform 0.2s ease'
+                  }}
+                />
+              </div>
+              {openPrefAccordion === 'seo' && (
+                <div style={{ padding: '12px 16px', background: '#F8FAFC', borderTop: '1px solid #F1F5F9', display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                    <div>
+                      <strong style={{ fontSize: '0.82rem', color: '#0F172A', display: 'block' }}>Google Rich Structured Snippets</strong>
+                      <span style={{ fontSize: '0.68rem', color: '#64748B' }}>Auto-generate Schema.org markup for Google Search</span>
+                    </div>
+                    <ToggleSwitch checked={prefSeoRichSnippets} onChange={setPrefSeoRichSnippets} />
+                  </div>
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                    <div>
+                      <strong style={{ fontSize: '0.82rem', color: '#0F172A', display: 'block' }}>WhatsApp & Social Preview Cards</strong>
+                      <span style={{ fontSize: '0.68rem', color: '#64748B' }}>Generate dynamic rich preview banner for shared links</span>
+                    </div>
+                    <ToggleSwitch checked={prefSocialCards} onChange={setPrefSocialCards} />
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+
+        {/* 7. SUBTLE AUTOMATIC SAVE NOTICE (When no unsaved changes) */}
+        {!hasPrefChanges && (
+          <div style={{
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            gap: '6px',
+            fontSize: '0.74rem',
+            color: '#64748B',
+            padding: '8px 0',
+            textAlign: 'center'
+          }}>
+            <ShieldCheck size={16} color="#059669" />
+            <span>All changes saved automatically. Your menu preferences are up to date.</span>
+          </div>
+        )}
+
+        {/* STICKY BOTTOM ACTION BAR (ONLY WHEN UNSAVED CHANGES EXIST) */}
+        {hasPrefChanges && (
+          <div style={{
+            position: 'fixed',
+            bottom: 0,
+            left: 0,
+            right: 0,
+            background: '#FFFFFF',
+            borderTop: '1px solid #EAE5DF',
+            padding: '12px 16px 24px 16px',
+            boxShadow: '0 -4px 16px rgba(0,0,0,0.08)',
+            zIndex: 900,
+            boxSizing: 'border-box'
+          }}>
+            <div style={{
+              maxWidth: '880px',
+              margin: '0 auto',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+              gap: '12px',
+              flexWrap: 'wrap'
+            }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <span style={{ width: '8px', height: '8px', borderRadius: '50%', background: '#D97706' }} />
+                <strong style={{ fontSize: '0.84rem', color: '#0F172A' }}>
+                  Unsaved changes
+                </strong>
+              </div>
+
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flex: '1 1 auto', justifyContent: 'flex-end' }}>
+                <button
+                  type="button"
+                  onClick={handleDiscardMenuPreferences}
+                  disabled={savingForm}
+                  style={{
+                    padding: '9px 16px',
+                    borderRadius: '10px',
+                    border: '1px solid #CBD5E1',
+                    background: '#FFFFFF',
+                    color: '#475569',
+                    fontSize: '0.82rem',
+                    fontWeight: 700,
+                    cursor: 'pointer',
+                    transition: 'all 0.15s ease'
+                  }}
+                >
+                  Discard
+                </button>
+                <button
+                  type="button"
+                  onClick={handleSaveMenuPreferences}
+                  disabled={savingForm}
+                  style={{
+                    padding: '9px 20px',
+                    borderRadius: '10px',
+                    border: 'none',
+                    background: '#064E3B',
+                    color: '#FFFFFF',
+                    fontSize: '0.84rem',
+                    fontWeight: 800,
+                    cursor: 'pointer',
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: '6px',
+                    boxShadow: '0 2px 8px rgba(6, 78, 59, 0.25)',
+                    transition: 'all 0.15s ease'
+                  }}
+                >
+                  <Check size={16} />
+                  <span>{savingForm ? 'Saving...' : 'Save Changes'}</span>
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+      </div>
+    );
+  };
 
   return (
     <div style={{
