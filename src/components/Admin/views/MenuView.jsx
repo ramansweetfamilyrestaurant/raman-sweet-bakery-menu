@@ -889,7 +889,7 @@ export default function MenuView({
       </div>
 
       {/* ========================================================
-          3. CATEGORIES CAROUSEL STRIP (WITH ARROWS)
+          3. CATEGORIES CAROUSEL STRIP (WITH ARROWS & VIEW ALL)
          ======================================================== */}
       <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0 2px' }}>
@@ -898,13 +898,32 @@ export default function MenuView({
           </h3>
           <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
             <button
+              onClick={() => { setSelectedCatFilter('all'); setActiveSubTab && setActiveSubTab('categories'); }}
+              style={{
+                background: 'transparent',
+                border: 'none',
+                color: '#64748B',
+                fontSize: '0.74rem',
+                fontWeight: 700,
+                cursor: 'pointer',
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '2px'
+              }}
+            >
+              <span>View all</span>
+              <ChevronRight size={13} />
+            </button>
+            <button
               onClick={() => handleScrollCategories('left')}
+              className="desktop-only-header"
               style={{ width: '26px', height: '26px', borderRadius: '50%', border: '1px solid #E2E8F0', background: '#FFFFFF', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', color: '#64748B' }}
             >
               <ChevronLeft size={14} />
             </button>
             <button
               onClick={() => handleScrollCategories('right')}
+              className="desktop-only-header"
               style={{ width: '26px', height: '26px', borderRadius: '50%', border: '1px solid #E2E8F0', background: '#FFFFFF', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', color: '#64748B' }}
             >
               <ChevronRight size={14} />
@@ -925,9 +944,9 @@ export default function MenuView({
             onClick={() => { setSelectedCatFilter('all'); setActiveSubTab && setActiveSubTab('dishes'); }}
             className="category-square-tile"
             style={{
-              width: '80px',
-              minWidth: '80px',
-              height: '82px',
+              width: '76px',
+              minWidth: '76px',
+              height: '80px',
               borderRadius: '16px',
               border: selectedCatFilter === 'all' && activeSubTab === 'dishes' ? '1.5px solid #261B14' : '1px solid #E2E8F0',
               background: selectedCatFilter === 'all' && activeSubTab === 'dishes' ? '#261B14' : '#FFFFFF',
@@ -936,7 +955,7 @@ export default function MenuView({
               flexDirection: 'column',
               alignItems: 'center',
               justifyContent: 'center',
-              gap: '3px',
+              gap: '2px',
               padding: '6px',
               cursor: 'pointer',
               boxShadow: '0 1px 3px rgba(0,0,0,0.03)',
@@ -959,9 +978,9 @@ export default function MenuView({
             onClick={() => setActiveSubTab && setActiveSubTab('combos')}
             className="category-square-tile"
             style={{
-              width: '80px',
-              minWidth: '80px',
-              height: '82px',
+              width: '76px',
+              minWidth: '76px',
+              height: '80px',
               borderRadius: '16px',
               border: activeSubTab === 'combos' ? '1.5px solid #9333EA' : '1px solid #E2E8F0',
               background: activeSubTab === 'combos' ? '#9333EA' : '#FFFFFF',
@@ -998,9 +1017,9 @@ export default function MenuView({
                 onClick={() => { setSelectedCatFilter(isSelected ? 'all' : cat.id); setActiveSubTab && setActiveSubTab('dishes'); }}
                 className="category-square-tile"
                 style={{
-                  width: '80px',
-                  minWidth: '80px',
-                  height: '82px',
+                  width: '76px',
+                  minWidth: '76px',
+                  height: '80px',
                   borderRadius: '16px',
                   border: isSelected ? '1.5px solid #261B14' : '1px solid #E2E8F0',
                   background: isSelected ? '#261B14' : '#FFFFFF',
@@ -1025,7 +1044,7 @@ export default function MenuView({
                   whiteSpace: 'nowrap',
                   overflow: 'hidden',
                   textOverflow: 'ellipsis',
-                  maxWidth: '70px'
+                  maxWidth: '68px'
                 }}>
                   {cat.name}
                 </span>
@@ -1039,63 +1058,75 @@ export default function MenuView({
       </div>
 
       {/* ========================================================
-          4. SEARCH & PILL FILTERS BAR
+          4. SEARCH & PILL FILTERS SECTION (MATCHING MOBILE SCREENSHOT)
          ======================================================== */}
-      <div style={{
-        background: '#FFFFFF',
-        borderRadius: '16px',
-        border: '1px solid #E2E8F0',
-        padding: '10px 14px',
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'space-between',
-        flexWrap: 'wrap',
-        gap: '10px',
-        boxShadow: '0 1px 3px rgba(0,0,0,0.02)'
-      }}>
-        {/* Search Input */}
-        <div style={{ position: 'relative', flex: 1, minWidth: '220px' }}>
-          <Search size={16} color="#94A3B8" style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)' }} />
-          <input
-            type="text"
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            placeholder="Search dishes, ingredients, cuisine..."
+      <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+        {/* Search Row + Filters Button */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+          <div style={{ position: 'relative', flex: 1 }}>
+            <Search size={16} color="#94A3B8" style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)' }} />
+            <input
+              type="text"
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              placeholder="Search dishes, ingredients..."
+              style={{
+                width: '100%',
+                padding: '11px 32px 11px 36px',
+                borderRadius: '12px',
+                border: '1px solid #E2E8F0',
+                background: '#FFFFFF',
+                fontSize: '0.82rem',
+                color: '#0F172A',
+                outline: 'none',
+                boxSizing: 'border-box',
+                boxShadow: '0 1px 2px rgba(0,0,0,0.02)'
+              }}
+            />
+            {search && (
+              <button
+                onClick={() => setSearch('')}
+                style={{ position: 'absolute', right: '10px', top: '50%', transform: 'translateY(-50%)', background: '#E2E8F0', border: 'none', borderRadius: '50%', width: '16px', height: '16px', color: '#64748B', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 0 }}
+              >
+                <X size={10} />
+              </button>
+            )}
+          </div>
+
+          <button
+            onClick={() => { setDietFilter(dietFilter === 'all' ? 'veg' : 'all'); }}
             style={{
-              width: '100%',
-              padding: '9px 32px 9px 36px',
-              borderRadius: '10px',
+              width: '42px',
+              height: '42px',
+              borderRadius: '12px',
               border: '1px solid #E2E8F0',
-              background: '#F8FAFC',
-              fontSize: '0.82rem',
+              background: '#FFFFFF',
               color: '#0F172A',
-              outline: 'none',
-              boxSizing: 'border-box'
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              cursor: 'pointer',
+              boxShadow: '0 1px 2px rgba(0,0,0,0.02)',
+              flexShrink: 0
             }}
-          />
-          {search && (
-            <button
-              onClick={() => setSearch('')}
-              style={{ position: 'absolute', right: '10px', top: '50%', transform: 'translateY(-50%)', background: '#E2E8F0', border: 'none', borderRadius: '50%', width: '16px', height: '16px', color: '#64748B', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 0 }}
-            >
-              <X size={10} />
-            </button>
-          )}
+            title="Filter Options"
+          >
+            <SlidersHorizontal size={17} color="#475569" />
+          </button>
         </div>
 
-        {/* Filter Pills */}
+        {/* Filter Pills Row */}
         <div className="no-scrollbar" style={{
           display: 'flex',
           alignItems: 'center',
-          gap: '6px',
-          overflowX: 'auto'
+          gap: '8px',
+          overflowX: 'auto',
+          paddingBottom: '2px'
         }}>
           {[
             { id: 'veg', label: 'Veg', dot: '🟢' },
             { id: 'nonveg', label: 'Non-Veg', dot: '🔴' },
-            { id: 'must_try', label: 'Best Sellers', icon: '⭐' },
-            { id: 'available', label: 'In Stock', dot: '🟢' },
-            { id: 'sold_out', label: 'Sold Out', dot: '⚪' }
+            { id: 'must_try', label: 'Best Sellers', icon: '⭐' }
           ].map(chip => {
             const isActive = dietFilter === chip.id;
             return (
@@ -1103,48 +1134,28 @@ export default function MenuView({
                 key={chip.id}
                 onClick={() => setDietFilter(isActive ? 'all' : chip.id)}
                 style={{
-                  padding: '6px 12px',
+                  padding: '7px 14px',
                   borderRadius: '20px',
                   border: isActive ? '1px solid #261B14' : '1px solid #E2E8F0',
                   background: isActive ? '#261B14' : '#FFFFFF',
                   color: isActive ? '#FFFFFF' : '#475569',
-                  fontSize: '0.74rem',
+                  fontSize: '0.76rem',
                   fontWeight: 700,
                   cursor: 'pointer',
                   whiteSpace: 'nowrap',
                   display: 'inline-flex',
                   alignItems: 'center',
-                  gap: '4px',
+                  gap: '5px',
+                  boxShadow: '0 1px 2px rgba(0,0,0,0.02)',
                   transition: 'all 0.15s ease'
                 }}
               >
-                {chip.dot && <span style={{ fontSize: '0.68rem' }}>{chip.dot}</span>}
+                {chip.dot && <span style={{ fontSize: '0.70rem' }}>{chip.dot}</span>}
                 {chip.icon && <span>{chip.icon}</span>}
                 <span>{chip.label}</span>
               </button>
             );
           })}
-
-          <button
-            onClick={() => { setDietFilter('all'); setSelectedCatFilter('all'); setSearch(''); }}
-            style={{
-              padding: '6px 12px',
-              borderRadius: '10px',
-              border: '1px solid #E2E8F0',
-              background: '#FFFFFF',
-              color: '#0F172A',
-              fontSize: '0.74rem',
-              fontWeight: 700,
-              cursor: 'pointer',
-              display: 'flex',
-              alignItems: 'center',
-              gap: '4px',
-              whiteSpace: 'nowrap'
-            }}
-          >
-            <SlidersHorizontal size={13} color="#64748B" />
-            <span>Filters</span>
-          </button>
         </div>
       </div>
 
@@ -1250,13 +1261,14 @@ export default function MenuView({
               </h3>
 
               <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                {/* Segmented Toggle [ ▦ Grid ] [ ☷ List ] */}
+                {/* Segmented Toggle [ ▦ Grid ] [ ☷ Sort ] */}
                 <div style={{
                   display: 'inline-flex',
                   background: '#FFFFFF',
                   border: '1px solid #E2E8F0',
                   borderRadius: '10px',
-                  padding: '3px'
+                  padding: '3px',
+                  gap: '4px'
                 }}>
                   <button
                     onClick={() => setViewMode('grid')}
@@ -1264,8 +1276,8 @@ export default function MenuView({
                       padding: '5px 10px',
                       border: 'none',
                       borderRadius: '7px',
-                      background: viewMode === 'grid' ? '#261B14' : 'transparent',
-                      color: viewMode === 'grid' ? '#FFFFFF' : '#64748B',
+                      background: viewMode === 'grid' ? '#F1F5F9' : 'transparent',
+                      color: viewMode === 'grid' ? '#0F172A' : '#64748B',
                       cursor: 'pointer',
                       display: 'flex',
                       alignItems: 'center',
@@ -1278,13 +1290,13 @@ export default function MenuView({
                     <span>Grid</span>
                   </button>
                   <button
-                    onClick={() => setViewMode('list')}
+                    onClick={() => setSortBy(sortBy === 'price_asc' ? 'recent' : 'price_asc')}
                     style={{
                       padding: '5px 10px',
                       border: 'none',
                       borderRadius: '7px',
-                      background: viewMode === 'list' ? '#261B14' : 'transparent',
-                      color: viewMode === 'list' ? '#FFFFFF' : '#64748B',
+                      background: 'transparent',
+                      color: '#64748B',
                       cursor: 'pointer',
                       display: 'flex',
                       alignItems: 'center',
@@ -1294,32 +1306,9 @@ export default function MenuView({
                     }}
                   >
                     <List size={13} />
-                    <span>List</span>
+                    <span>Sort</span>
                   </button>
                 </div>
-
-                {/* Sort Dropdown */}
-                <select
-                  value={sortBy}
-                  onChange={(e) => setSortBy(e.target.value)}
-                  style={{
-                    padding: '6px 10px',
-                    borderRadius: '8px',
-                    border: '1px solid #E2E8F0',
-                    background: '#FFFFFF',
-                    color: '#0F172A',
-                    fontSize: '0.74rem',
-                    fontWeight: 700,
-                    cursor: 'pointer',
-                    outline: 'none'
-                  }}
-                >
-                  <option value="recent">Sort by: Recently Updated</option>
-                  <option value="name_asc">Sort by: Name (A-Z)</option>
-                  <option value="price_asc">Sort by: Price (Low to High)</option>
-                  <option value="price_desc">Sort by: Price (High to Low)</option>
-                  <option value="instock_first">Sort by: In Stock First</option>
-                </select>
               </div>
             </div>
 

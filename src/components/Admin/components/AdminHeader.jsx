@@ -56,10 +56,7 @@ export default function AdminHeader({
         @media (max-width: 640px) {
           .header-biz-text { display: none !important; }
           .header-biz-chevron { display: none !important; }
-        }
-        @media (max-width: 480px) {
-          .header-subtitle { display: none !important; }
-          .header-greeting-title { font-size: 0.88rem !important; }
+          .header-desktop-subtitle { display: none !important; }
         }
       `}</style>
 
@@ -69,7 +66,7 @@ export default function AdminHeader({
           style={{
             background: 'transparent',
             border: 'none',
-            color: '#475569',
+            color: '#0F172A',
             cursor: 'pointer',
             padding: '4px',
             display: 'flex',
@@ -78,23 +75,23 @@ export default function AdminHeader({
           }}
           title="Menu"
         >
-          <Menu size={19} />
+          <Menu size={20} />
         </button>
 
         <div>
-          <h2 className="header-greeting-title" style={{ fontSize: '0.96rem', fontWeight: 800, color: '#0F172A', margin: 0, lineHeight: 1.2, letterSpacing: '-0.01em', display: 'flex', alignItems: 'center', gap: '5px' }}>
-            <span>{greeting}, Admin!</span>
-            <span>☀️</span>
-          </h2>
-          <span className="header-subtitle" style={{ fontSize: '0.70rem', color: '#64748B', fontWeight: 500, display: 'block', marginTop: '1px' }}>
-            Great food brings people together.
-          </span>
+          <div style={{ fontSize: '0.74rem', color: '#64748B', fontWeight: 600, lineHeight: 1.1 }}>
+            {greeting},
+          </div>
+          <div style={{ fontSize: '0.96rem', fontWeight: 800, color: '#0F172A', lineHeight: 1.2, letterSpacing: '-0.01em', display: 'flex', alignItems: 'center', gap: '3px' }}>
+            <span>Admin!</span>
+            <span>👋</span>
+          </div>
         </div>
       </div>
 
-      {/* RIGHT: Global Search + Business View + Bell + User Avatar */}
-      <div style={{ display: 'flex', alignItems: 'center', gap: '12px', position: 'relative' }}>
-        {/* Global Search Bar (Matching Reference) */}
+      {/* RIGHT: Global Search + Storefront + Bell + User Avatar */}
+      <div style={{ display: 'flex', alignItems: 'center', gap: '8px', position: 'relative' }}>
+        {/* Global Search Bar (Desktop) */}
         <div className="header-global-search" style={{
           position: 'relative',
           alignItems: 'center',
@@ -149,12 +146,13 @@ export default function AdminHeader({
             cursor: 'pointer',
             display: 'inline-flex',
             alignItems: 'center',
+            justifyContent: 'center',
             gap: '6px',
             boxShadow: '0 1px 2px rgba(0,0,0,0.02)'
           }}
           title="Open Public Menu & Storefront"
         >
-          <Store size={15} color="#0F172A" />
+          <Store size={16} color="#0F172A" />
           <span className="header-biz-text">Storefront</span>
         </button>
 
@@ -178,22 +176,22 @@ export default function AdminHeader({
           }}
           title="Notifications & Live Orders"
         >
-          <Bell size={17} color="#475569" />
+          <Bell size={17} color="#0F172A" />
           <span style={{
             position: 'absolute',
-            top: '-3px',
-            right: '-3px',
+            top: '-2px',
+            right: '-2px',
             background: '#DC2626',
             color: '#FFFFFF',
-            fontSize: '0.60rem',
+            fontSize: '0.58rem',
             fontWeight: 900,
-            width: '16px',
-            height: '16px',
+            width: '15px',
+            height: '15px',
             borderRadius: '50%',
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
-            border: '2px solid #FFFFFF'
+            border: '1.5px solid #FFFFFF'
           }}>
             {pendingOrdersCount > 0 ? pendingOrdersCount : 3}
           </span>

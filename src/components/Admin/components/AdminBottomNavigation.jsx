@@ -146,7 +146,7 @@ export default function AdminBottomNavigation({ activeTab, setActiveTab, pending
           <span style={{ fontSize: '0.68rem', fontWeight: isAnalyticsActive ? 800 : 600 }}>Analytics</span>
         </button>
 
-        {/* Setup */}
+        {/* More */}
         <button
           onClick={() => setActiveTab('settings')}
           style={{
@@ -155,7 +155,7 @@ export default function AdminBottomNavigation({ activeTab, setActiveTab, pending
             alignItems: 'center',
             justifyContent: 'center',
             gap: '3px',
-            color: isSetupActive ? '#16A34A' : '#64748B',
+            color: isSetupActive ? '#D97706' : '#64748B',
             background: 'none',
             border: 'none',
             cursor: 'pointer',
@@ -164,8 +164,8 @@ export default function AdminBottomNavigation({ activeTab, setActiveTab, pending
             padding: 0
           }}
         >
-          <Settings size={20} color={isSetupActive ? '#16A34A' : '#64748B'} strokeWidth={isSetupActive ? 2.5 : 2} />
-          <span style={{ fontSize: '0.68rem', fontWeight: isSetupActive ? 800 : 600 }}>Setup</span>
+          <span style={{ fontSize: '1.25rem', lineHeight: 1, color: isSetupActive ? '#D97706' : '#64748B' }}>⋯</span>
+          <span style={{ fontSize: '0.68rem', fontWeight: isSetupActive ? 800 : 600 }}>More</span>
         </button>
       </nav>
     </>
