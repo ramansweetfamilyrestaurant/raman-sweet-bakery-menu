@@ -686,69 +686,72 @@ export default function SetupView({
   ];
 
   const renderBusinessProfileFullPage = () => (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: '20px', width: '100%', paddingBottom: '120px' }}>
-      {/* Top App / Page Bar Matching Mockups */}
-      <div style={{
+    <div className="bp-container" style={{ display: 'flex', flexDirection: 'column', gap: '16px', width: '100%', maxWidth: '100%', boxSizing: 'border-box', paddingBottom: '120px' }}>
+      {/* Top App / Page Bar */}
+      <div className="bp-header-card" style={{
         display: 'flex',
-        alignItems: 'flex-start',
+        alignItems: 'center',
         justifyContent: 'space-between',
         flexWrap: 'wrap',
-        gap: '14px',
+        gap: '12px',
         background: '#FFFFFF',
         borderRadius: '16px',
         border: '1px solid #EAE5DF',
         padding: '16px 20px',
-        boxShadow: '0 1px 3px rgba(0,0,0,0.02)'
+        boxShadow: '0 1px 3px rgba(0,0,0,0.02)',
+        boxSizing: 'border-box',
+        width: '100%'
       }}>
-        <div>
+        <div style={{ minWidth: 0 }}>
           <div
             onClick={() => setActiveSubPage(null)}
-            style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', fontSize: '0.78rem', color: '#64748B', fontWeight: 700, cursor: 'pointer', marginBottom: '8px' }}
+            style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', fontSize: '0.78rem', color: '#64748B', fontWeight: 700, cursor: 'pointer', marginBottom: '6px' }}
           >
             <ArrowLeft size={14} />
             <span>Back to Settings</span>
           </div>
-          <h2 style={{ fontSize: '1.45rem', fontWeight: 900, color: '#0F172A', margin: '0 0 4px 0', letterSpacing: '-0.02em' }}>
+          <h2 style={{ fontSize: '1.35rem', fontWeight: 900, color: '#0F172A', margin: '0 0 2px 0', letterSpacing: '-0.02em' }}>
             Business Profile
           </h2>
-          <p style={{ fontSize: '0.82rem', color: '#64748B', margin: 0 }}>
+          <p style={{ fontSize: '0.78rem', color: '#64748B', margin: 0, lineHeight: 1.4 }}>
             Manage your restaurant identity, contact details and public information.
           </p>
         </div>
 
-        <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+        <div className="bp-actions-row" style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
           <button
             type="button"
             onClick={handleFormSave}
             disabled={savingForm}
             style={{
-              padding: '10px 22px',
+              padding: '9px 18px',
               borderRadius: '10px',
               background: '#261B14',
               color: '#FFFFFF',
-              fontSize: '0.84rem',
+              fontSize: '0.82rem',
               fontWeight: 800,
               border: 'none',
               cursor: 'pointer',
               boxShadow: '0 2px 8px rgba(0,0,0,0.12)',
               display: 'flex',
               alignItems: 'center',
+              justifyContent: 'center',
               gap: '6px',
               transition: 'all 0.15s ease'
             }}
           >
-            <Check size={16} />
+            <Check size={15} />
             <span>{savingForm ? 'Saving...' : 'Save Changes'}</span>
           </button>
           <button
             type="button"
             onClick={() => setActiveSubPage(null)}
             style={{
-              padding: '10px 20px',
+              padding: '9px 16px',
               borderRadius: '10px',
               background: '#FFFFFF',
               color: '#0F172A',
-              fontSize: '0.84rem',
+              fontSize: '0.82rem',
               fontWeight: 700,
               border: '1px solid #E2E8F0',
               cursor: 'pointer'
@@ -760,43 +763,46 @@ export default function SetupView({
       </div>
 
       {/* 2-Column Responsive Layout (Desktop 2-col, Mobile 1-col) */}
-      <div className="business-profile-page-grid">
+      <div className="business-profile-page-grid" style={{ width: '100%', maxWidth: '100%', boxSizing: 'border-box' }}>
         {/* Left Column: 5 Form Cards */}
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '14px', width: '100%', maxWidth: '100%', boxSizing: 'border-box' }}>
           
           {/* 1. RESTAURANT IDENTITY */}
-          <div style={{
+          <div className="bp-card" style={{
             background: '#FFFFFF',
             borderRadius: '16px',
             border: '1px solid #EAE5DF',
-            padding: '18px 20px',
+            padding: '16px 18px',
             display: 'flex',
             flexDirection: 'column',
-            gap: '16px',
-            boxShadow: '0 1px 3px rgba(0,0,0,0.02)'
+            gap: '14px',
+            boxShadow: '0 1px 3px rgba(0,0,0,0.02)',
+            boxSizing: 'border-box',
+            width: '100%'
           }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-              <span style={{ fontSize: '1.05rem' }}>🏪</span>
-              <strong style={{ fontSize: '0.94rem', color: '#0F172A', fontWeight: 800 }}>1. Restaurant Identity</strong>
+              <span style={{ fontSize: '1rem' }}>🏪</span>
+              <strong style={{ fontSize: '0.90rem', color: '#0F172A', fontWeight: 800 }}>1. Restaurant Identity</strong>
             </div>
 
             <div>
               <label style={{ fontSize: '0.74rem', fontWeight: 800, color: '#475569', display: 'block', marginBottom: '8px' }}>
                 Business Logo
               </label>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '14px' }}>
+              <div className="bp-logo-row" style={{ display: 'flex', alignItems: 'center', gap: '12px', width: '100%', boxSizing: 'border-box' }}>
                 {settingsForm.logo || restaurantInfo?.logo ? (
-                  <img src={settingsForm.logo || restaurantInfo?.logo} alt="Logo" style={{ width: '80px', height: '80px', borderRadius: '14px', objectFit: 'cover', border: '1px solid #CBD5E1', flexShrink: 0, background: '#FFFFFF' }} />
+                  <img src={settingsForm.logo || restaurantInfo?.logo} alt="Logo" className="bp-logo-box" style={{ width: '72px', height: '72px', borderRadius: '12px', objectFit: 'cover', border: '1px solid #CBD5E1', flexShrink: 0, background: '#FFFFFF' }} />
                 ) : (
-                  <div style={{ width: '80px', height: '80px', borderRadius: '14px', background: 'linear-gradient(135deg, #7C1D1D 0%, #450A0A 100%)', color: '#F59E0B', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 900, fontSize: '1.8rem', border: '2px solid #F59E0B', flexShrink: 0, boxShadow: '0 4px 10px rgba(124, 29, 29, 0.2)' }}>
+                  <div className="bp-logo-box" style={{ width: '72px', height: '72px', borderRadius: '12px', background: 'linear-gradient(135deg, #7C1D1D 0%, #450A0A 100%)', color: '#F59E0B', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 900, fontSize: '1.6rem', border: '2px solid #F59E0B', flexShrink: 0, boxShadow: '0 4px 10px rgba(124, 29, 29, 0.2)' }}>
                     {(settingsForm.name || restaurantInfo?.name || 'R').charAt(0).toUpperCase()}
                   </div>
                 )}
-                <label style={{
+                <label className="bp-upload-box" style={{
                   flex: 1,
+                  minWidth: 0,
                   border: '1.5px dashed #CBD5E1',
-                  borderRadius: '14px',
-                  padding: '14px',
+                  borderRadius: '12px',
+                  padding: '10px 12px',
                   display: 'flex',
                   flexDirection: 'column',
                   alignItems: 'center',
@@ -804,13 +810,13 @@ export default function SetupView({
                   textAlign: 'center',
                   background: '#FAF8F5',
                   cursor: 'pointer',
-                  gap: '4px',
+                  gap: '3px',
+                  boxSizing: 'border-box',
                   transition: 'all 0.15s ease'
                 }}>
-                  <Upload size={18} color="#64748B" />
-                  <strong style={{ fontSize: '0.80rem', color: '#0F172A', fontWeight: 800 }}>Upload Logo</strong>
-                  <span style={{ fontSize: '0.68rem', color: '#64748B' }}>PNG, JPG up to 2MB</span>
-                  <span style={{ fontSize: '0.64rem', color: '#94A3B8' }}>Recommended 512x512px</span>
+                  <Upload size={16} color="#64748B" />
+                  <strong style={{ fontSize: '0.78rem', color: '#0F172A', fontWeight: 800 }}>Upload Logo</strong>
+                  <span style={{ fontSize: '0.66rem', color: '#64748B' }}>PNG, JPG (512x512px)</span>
                   <input type="file" accept="image/*" onChange={handleLogoUpload} disabled={uploadingLogo} style={{ display: 'none' }} />
                 </label>
               </div>
@@ -828,12 +834,12 @@ export default function SetupView({
                 onChange={(e) => setSettingsForm({ ...settingsForm, name: e.target.value })}
                 style={{
                   width: '100%',
-                  height: '46px',
-                  padding: '0 14px',
+                  height: '44px',
+                  padding: '0 12px',
                   borderRadius: '10px',
                   border: '1px solid #E2E8F0',
                   background: '#FFFFFF',
-                  fontSize: '0.86rem',
+                  fontSize: '0.84rem',
                   color: '#0F172A',
                   boxSizing: 'border-box',
                   outline: 'none',
@@ -853,12 +859,12 @@ export default function SetupView({
                 onChange={(e) => setSettingsForm({ ...settingsForm, tagline: e.target.value })}
                 style={{
                   width: '100%',
-                  height: '46px',
-                  padding: '0 14px',
+                  height: '44px',
+                  padding: '0 12px',
                   borderRadius: '10px',
                   border: '1px solid #E2E8F0',
                   background: '#FFFFFF',
-                  fontSize: '0.86rem',
+                  fontSize: '0.84rem',
                   color: '#0F172A',
                   boxSizing: 'border-box',
                   outline: 'none',
@@ -869,19 +875,21 @@ export default function SetupView({
           </div>
 
           {/* 2. MENU BRANDING */}
-          <div style={{
+          <div className="bp-card" style={{
             background: '#FFFFFF',
             borderRadius: '16px',
             border: '1px solid #EAE5DF',
-            padding: '18px 20px',
+            padding: '16px 18px',
             display: 'flex',
             flexDirection: 'column',
-            gap: '16px',
-            boxShadow: '0 1px 3px rgba(0,0,0,0.02)'
+            gap: '14px',
+            boxShadow: '0 1px 3px rgba(0,0,0,0.02)',
+            boxSizing: 'border-box',
+            width: '100%'
           }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-              <span style={{ fontSize: '1.05rem' }}>🎨</span>
-              <strong style={{ fontSize: '0.94rem', color: '#0F172A', fontWeight: 800 }}>2. Menu Branding</strong>
+              <span style={{ fontSize: '1rem' }}>🎨</span>
+              <strong style={{ fontSize: '0.90rem', color: '#0F172A', fontWeight: 800 }}>2. Menu Branding</strong>
             </div>
 
             <div>
@@ -892,21 +900,23 @@ export default function SetupView({
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'space-between',
-                padding: '10px 14px',
+                padding: '10px 12px',
                 background: '#FFFFFF',
                 borderRadius: '12px',
                 border: '1px solid #E2E8F0',
-                cursor: 'pointer'
+                cursor: 'pointer',
+                boxSizing: 'border-box',
+                width: '100%'
               }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                  <div style={{ width: '24px', height: '24px', borderRadius: '50%', background: '#064E3B', border: '2px solid #D97706', flexShrink: 0 }} />
-                  <div>
-                    <div style={{ fontSize: '0.84rem', fontWeight: 800, color: '#0F172A' }}>Gold & Forest Green</div>
-                    <div style={{ fontSize: '0.70rem', color: '#64748B' }}>Oberoi Luxury</div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '10px', minWidth: 0 }}>
+                  <div style={{ width: '22px', height: '22px', borderRadius: '50%', background: '#064E3B', border: '2px solid #D97706', flexShrink: 0 }} />
+                  <div style={{ minWidth: 0 }}>
+                    <div style={{ fontSize: '0.82rem', fontWeight: 800, color: '#0F172A', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>Gold & Forest Green</div>
+                    <div style={{ fontSize: '0.68rem', color: '#64748B' }}>Oberoi Luxury</div>
                   </div>
                 </div>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                  <span style={{ fontSize: '0.70rem', fontWeight: 800, color: '#065F46', background: '#DCFCE7', padding: '3px 8px', borderRadius: '8px' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flexShrink: 0 }}>
+                  <span style={{ fontSize: '0.68rem', fontWeight: 800, color: '#065F46', background: '#DCFCE7', padding: '2px 7px', borderRadius: '6px' }}>
                     Active
                   </span>
                   <ChevronDown size={14} color="#64748B" />
@@ -921,23 +931,24 @@ export default function SetupView({
               <div style={{
                 borderRadius: '12px',
                 background: 'linear-gradient(180deg, #064E3B 0%, #022c22 100%)',
-                padding: '14px 16px',
+                padding: '12px 14px',
                 color: '#FFFFFF',
                 border: '1px solid #D97706',
                 display: 'flex',
                 alignItems: 'center',
-                gap: '12px',
-                minHeight: '64px',
-                boxSizing: 'border-box'
+                gap: '10px',
+                minHeight: '60px',
+                boxSizing: 'border-box',
+                width: '100%'
               }}>
                 {settingsForm.logo || restaurantInfo?.logo ? (
                   <img
                     src={settingsForm.logo || restaurantInfo?.logo}
                     alt="Logo"
                     style={{
-                      width: '42px',
-                      height: '42px',
-                      borderRadius: '10px',
+                      width: '40px',
+                      height: '40px',
+                      borderRadius: '8px',
                       objectFit: 'cover',
                       border: '1.5px solid #F59E0B',
                       flexShrink: 0,
@@ -946,15 +957,15 @@ export default function SetupView({
                     }}
                   />
                 ) : (
-                  <div style={{ width: '42px', height: '42px', borderRadius: '10px', background: 'linear-gradient(135deg, #7C1D1D 0%, #450A0A 100%)', color: '#F59E0B', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 900, fontSize: '1.1rem', border: '1.5px solid #F59E0B', flexShrink: 0, boxShadow: '0 2px 6px rgba(0,0,0,0.2)' }}>
+                  <div style={{ width: '40px', height: '40px', borderRadius: '8px', background: 'linear-gradient(135deg, #7C1D1D 0%, #450A0A 100%)', color: '#F59E0B', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 900, fontSize: '1.1rem', border: '1.5px solid #F59E0B', flexShrink: 0, boxShadow: '0 2px 6px rgba(0,0,0,0.2)' }}>
                     {(settingsForm.name || restaurantInfo?.name || 'R').charAt(0).toUpperCase()}
                   </div>
                 )}
                 <div style={{ minWidth: 0, flex: 1 }}>
-                  <div style={{ fontSize: '0.86rem', fontWeight: 800, color: '#FFFFFF', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                  <div style={{ fontSize: '0.84rem', fontWeight: 800, color: '#FFFFFF', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
                     {settingsForm.name || restaurantInfo?.name || 'Raman Sweet Bakery & Family Restaurant'}
                   </div>
-                  <div style={{ fontSize: '0.68rem', color: '#FDE68A', marginTop: '2px' }}>
+                  <div style={{ fontSize: '0.66rem', color: '#FDE68A', marginTop: '2px' }}>
                     Scan QR Code • Digital Menu
                   </div>
                 </div>
@@ -966,18 +977,19 @@ export default function SetupView({
               onClick={() => onOpenBillingModal && onOpenBillingModal()}
               style={{
                 width: '100%',
-                padding: '10px 14px',
+                padding: '9px 12px',
                 borderRadius: '10px',
                 border: '1px solid #E2E8F0',
                 background: '#FAF8F5',
                 color: '#0F172A',
-                fontSize: '0.80rem',
+                fontSize: '0.78rem',
                 fontWeight: 700,
                 cursor: 'pointer',
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
-                gap: '6px'
+                gap: '6px',
+                boxSizing: 'border-box'
               }}
             >
               <Sliders size={14} />
@@ -986,19 +998,21 @@ export default function SetupView({
           </div>
 
           {/* 3. OWNER & CONTACT */}
-          <div style={{
+          <div className="bp-card" style={{
             background: '#FFFFFF',
             borderRadius: '16px',
             border: '1px solid #EAE5DF',
-            padding: '18px 20px',
+            padding: '16px 18px',
             display: 'flex',
             flexDirection: 'column',
-            gap: '16px',
-            boxShadow: '0 1px 3px rgba(0,0,0,0.02)'
+            gap: '14px',
+            boxShadow: '0 1px 3px rgba(0,0,0,0.02)',
+            boxSizing: 'border-box',
+            width: '100%'
           }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-              <span style={{ fontSize: '1.05rem' }}>👤</span>
-              <strong style={{ fontSize: '0.94rem', color: '#0F172A', fontWeight: 800 }}>3. Owner & Contact</strong>
+              <span style={{ fontSize: '1rem' }}>👤</span>
+              <strong style={{ fontSize: '0.90rem', color: '#0F172A', fontWeight: 800 }}>3. Owner & Contact</strong>
             </div>
 
             <div>
@@ -1012,12 +1026,12 @@ export default function SetupView({
                 onChange={(e) => setSettingsForm({ ...settingsForm, owner_name: e.target.value })}
                 style={{
                   width: '100%',
-                  height: '46px',
-                  padding: '0 14px',
+                  height: '44px',
+                  padding: '0 12px',
                   borderRadius: '10px',
                   border: '1px solid #E2E8F0',
                   background: '#FFFFFF',
-                  fontSize: '0.86rem',
+                  fontSize: '0.84rem',
                   color: '#0F172A',
                   boxSizing: 'border-box',
                   outline: 'none',
@@ -1037,12 +1051,12 @@ export default function SetupView({
                 onChange={(e) => setSettingsForm({ ...settingsForm, owner_email: e.target.value })}
                 style={{
                   width: '100%',
-                  height: '46px',
-                  padding: '0 14px',
+                  height: '44px',
+                  padding: '0 12px',
                   borderRadius: '10px',
                   border: '1px solid #E2E8F0',
                   background: '#FFFFFF',
-                  fontSize: '0.86rem',
+                  fontSize: '0.84rem',
                   color: '#0F172A',
                   boxSizing: 'border-box',
                   outline: 'none',
@@ -1055,22 +1069,23 @@ export default function SetupView({
               <label style={{ fontSize: '0.74rem', fontWeight: 800, color: '#334155', display: 'block', marginBottom: '6px' }}>
                 Contact Phone <span style={{ color: '#EF4444' }}>*</span>
               </label>
-              <div style={{ display: 'flex', gap: '8px' }}>
+              <div style={{ display: 'flex', gap: '8px', width: '100%', boxSizing: 'border-box' }}>
                 <div style={{
                   display: 'flex',
                   alignItems: 'center',
-                  gap: '4px',
-                  padding: '0 12px',
+                  gap: '3px',
+                  padding: '0 10px',
                   background: '#FAF8F5',
                   border: '1px solid #E2E8F0',
                   borderRadius: '10px',
-                  fontSize: '0.84rem',
+                  fontSize: '0.82rem',
                   fontWeight: 700,
                   color: '#0F172A',
-                  height: '46px'
+                  height: '44px',
+                  flexShrink: 0
                 }}>
                   <span>+91</span>
-                  <ChevronDown size={13} color="#64748B" />
+                  <ChevronDown size={12} color="#64748B" />
                 </div>
                 <input
                   type="text"
@@ -1079,12 +1094,13 @@ export default function SetupView({
                   onChange={(e) => setSettingsForm({ ...settingsForm, phone: e.target.value })}
                   style={{
                     flex: 1,
-                    height: '46px',
-                    padding: '0 14px',
+                    minWidth: 0,
+                    height: '44px',
+                    padding: '0 12px',
                     borderRadius: '10px',
                     border: '1px solid #E2E8F0',
                     background: '#FFFFFF',
-                    fontSize: '0.86rem',
+                    fontSize: '0.84rem',
                     color: '#0F172A',
                     boxSizing: 'border-box',
                     outline: 'none',
@@ -1096,19 +1112,21 @@ export default function SetupView({
           </div>
 
           {/* 4. BUSINESS DETAILS */}
-          <div style={{
+          <div className="bp-card" style={{
             background: '#FFFFFF',
             borderRadius: '16px',
             border: '1px solid #EAE5DF',
-            padding: '18px 20px',
+            padding: '16px 18px',
             display: 'flex',
             flexDirection: 'column',
-            gap: '16px',
-            boxShadow: '0 1px 3px rgba(0,0,0,0.02)'
+            gap: '14px',
+            boxShadow: '0 1px 3px rgba(0,0,0,0.02)',
+            boxSizing: 'border-box',
+            width: '100%'
           }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-              <span style={{ fontSize: '1.05rem' }}>📄</span>
-              <strong style={{ fontSize: '0.94rem', color: '#0F172A', fontWeight: 800 }}>4. Business Details</strong>
+              <span style={{ fontSize: '1rem' }}>📄</span>
+              <strong style={{ fontSize: '0.90rem', color: '#0F172A', fontWeight: 800 }}>4. Business Details</strong>
             </div>
 
             <div>
@@ -1122,12 +1140,12 @@ export default function SetupView({
                 onChange={(e) => setSettingsForm({ ...settingsForm, fssai_lic_no: e.target.value })}
                 style={{
                   width: '100%',
-                  height: '46px',
-                  padding: '0 14px',
+                  height: '44px',
+                  padding: '0 12px',
                   borderRadius: '10px',
                   border: '1px solid #E2E8F0',
                   background: '#FFFFFF',
-                  fontSize: '0.86rem',
+                  fontSize: '0.84rem',
                   color: '#0F172A',
                   boxSizing: 'border-box',
                   outline: 'none',
@@ -1144,14 +1162,16 @@ export default function SetupView({
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'space-between',
-                padding: '10px 14px',
+                padding: '10px 12px',
                 background: '#FAF8F5',
                 borderRadius: '10px',
-                border: '1px solid #E2E8F0'
+                border: '1px solid #E2E8F0',
+                width: '100%',
+                boxSizing: 'border-box'
               }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                  <Clock size={18} color="#D97706" />
-                  <div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', minWidth: 0, flex: 1 }}>
+                  <Clock size={16} color="#D97706" style={{ flexShrink: 0 }} />
+                  <div style={{ minWidth: 0, flex: 1 }}>
                     <input
                       type="text"
                       placeholder="8:00 AM - 10:30 PM"
@@ -1160,18 +1180,19 @@ export default function SetupView({
                       style={{
                         border: 'none',
                         background: 'transparent',
-                        fontSize: '0.86rem',
+                        fontSize: '0.84rem',
                         fontWeight: 700,
                         color: '#0F172A',
                         outline: 'none',
                         padding: 0,
+                        width: '100%',
                         fontFamily: 'inherit'
                       }}
                     />
-                    <div style={{ fontSize: '0.70rem', color: '#64748B' }}>Mon - Sun</div>
+                    <div style={{ fontSize: '0.68rem', color: '#64748B' }}>Mon - Sun</div>
                   </div>
                 </div>
-                <ChevronDown size={14} color="#64748B" />
+                <ChevronDown size={14} color="#64748B" style={{ flexShrink: 0 }} />
               </div>
             </div>
 
@@ -1186,7 +1207,7 @@ export default function SetupView({
                 onChange={(e) => setSettingsForm({ ...settingsForm, address: e.target.value })}
                 style={{
                   width: '100%',
-                  padding: '10px 14px',
+                  padding: '10px 12px',
                   borderRadius: '10px',
                   border: '1px solid #E2E8F0',
                   background: '#FFFFFF',
@@ -1202,46 +1223,48 @@ export default function SetupView({
           </div>
 
           {/* 5. ONLINE PRESENCE */}
-          <div style={{
+          <div className="bp-card" style={{
             background: '#FFFFFF',
             borderRadius: '16px',
             border: '1px solid #EAE5DF',
-            padding: '18px 20px',
+            padding: '16px 18px',
             display: 'flex',
             flexDirection: 'column',
-            gap: '16px',
-            boxShadow: '0 1px 3px rgba(0,0,0,0.02)'
+            gap: '14px',
+            boxShadow: '0 1px 3px rgba(0,0,0,0.02)',
+            boxSizing: 'border-box',
+            width: '100%'
           }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-              <span style={{ fontSize: '1.05rem' }}>🌐</span>
-              <strong style={{ fontSize: '0.94rem', color: '#0F172A', fontWeight: 800 }}>5. Online Presence</strong>
+              <span style={{ fontSize: '1rem' }}>🌐</span>
+              <strong style={{ fontSize: '0.90rem', color: '#0F172A', fontWeight: 800 }}>5. Online Presence</strong>
             </div>
 
             <div>
               <label style={{ fontSize: '0.74rem', fontWeight: 800, color: '#334155', display: 'block', marginBottom: '6px' }}>
                 Google Maps Location Link <span style={{ color: '#94A3B8', fontWeight: 500 }}>(Optional)</span>
               </label>
-              <div style={{ position: 'relative' }}>
+              <div style={{ position: 'relative', width: '100%' }}>
                 <input
                   type="url"
-                  placeholder="https://share.google/2M5mFMPlmS6pAXRf7"
+                  placeholder="https://maps.google.com/..."
                   value={settingsForm.google_maps_url || ''}
                   onChange={(e) => setSettingsForm({ ...settingsForm, google_maps_url: e.target.value })}
                   style={{
                     width: '100%',
-                    height: '46px',
-                    padding: '0 36px 0 14px',
+                    height: '44px',
+                    padding: '0 34px 0 12px',
                     borderRadius: '10px',
                     border: '1px solid #E2E8F0',
                     background: '#FFFFFF',
-                    fontSize: '0.84rem',
+                    fontSize: '0.82rem',
                     color: '#0F172A',
                     boxSizing: 'border-box',
                     outline: 'none',
                     fontFamily: 'inherit'
                   }}
                 />
-                <ArrowUpRight size={16} color="#64748B" style={{ position: 'absolute', right: '12px', top: '15px' }} />
+                <ArrowUpRight size={15} color="#64748B" style={{ position: 'absolute', right: '10px', top: '14px', pointerEvents: 'none' }} />
               </div>
             </div>
 
@@ -1249,32 +1272,32 @@ export default function SetupView({
               <label style={{ fontSize: '0.74rem', fontWeight: 800, color: '#334155', display: 'block', marginBottom: '6px' }}>
                 Google Review Page Link <span style={{ color: '#94A3B8', fontWeight: 500 }}>(Optional)</span>
               </label>
-              <div style={{ position: 'relative' }}>
+              <div style={{ position: 'relative', width: '100%' }}>
                 <input
                   type="url"
-                  placeholder="https://www.google.com/search?q=raman+sweet+bakery..."
+                  placeholder="https://g.page/r/..."
                   value={settingsForm.google_review_url || ''}
                   onChange={(e) => setSettingsForm({ ...settingsForm, google_review_url: e.target.value })}
                   style={{
                     width: '100%',
-                    height: '46px',
-                    padding: '0 36px 0 14px',
+                    height: '44px',
+                    padding: '0 34px 0 12px',
                     borderRadius: '10px',
                     border: '1px solid #E2E8F0',
                     background: '#FFFFFF',
-                    fontSize: '0.84rem',
+                    fontSize: '0.82rem',
                     color: '#0F172A',
                     boxSizing: 'border-box',
                     outline: 'none',
                     fontFamily: 'inherit'
                   }}
                 />
-                <ArrowUpRight size={16} color="#64748B" style={{ position: 'absolute', right: '12px', top: '15px' }} />
+                <ArrowUpRight size={15} color="#64748B" style={{ position: 'absolute', right: '10px', top: '14px', pointerEvents: 'none' }} />
               </div>
             </div>
           </div>
 
-          <div style={{ fontSize: '0.76rem', color: '#64748B', display: 'flex', alignItems: 'center', gap: '6px', padding: '4px 0' }}>
+          <div style={{ fontSize: '0.74rem', color: '#64748B', display: 'flex', alignItems: 'center', gap: '6px', padding: '2px 0' }}>
             <span>ℹ️</span>
             <span>All changes are saved automatically. Please ensure all information is accurate.</span>
           </div>
@@ -1284,27 +1307,32 @@ export default function SetupView({
         <div style={{
           display: 'flex',
           flexDirection: 'column',
-          gap: '16px'
+          gap: '14px',
+          width: '100%',
+          maxWidth: '100%',
+          boxSizing: 'border-box'
         }}>
-          <div style={{
+          <div className="bp-card" style={{
             background: '#FFFFFF',
             borderRadius: '16px',
             border: '1px solid #EAE5DF',
-            padding: '18px 20px',
+            padding: '16px 18px',
             display: 'flex',
             flexDirection: 'column',
-            gap: '16px',
-            boxShadow: '0 1px 3px rgba(0,0,0,0.02)'
+            gap: '14px',
+            boxShadow: '0 1px 3px rgba(0,0,0,0.02)',
+            boxSizing: 'border-box',
+            width: '100%'
           }}>
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
               <div>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                   <span style={{ fontSize: '1rem' }}>👁️</span>
-                  <strong style={{ fontSize: '0.94rem', color: '#0F172A', fontWeight: 800 }}>Live Menu Preview</strong>
+                  <strong style={{ fontSize: '0.90rem', color: '#0F172A', fontWeight: 800 }}>Live Menu Preview</strong>
                 </div>
-                <span style={{ fontSize: '0.72rem', color: '#64748B' }}>How your restaurant appears to customers</span>
+                <span style={{ fontSize: '0.70rem', color: '#64748B' }}>How your restaurant appears to customers</span>
               </div>
-              <span style={{ fontSize: '0.68rem', fontWeight: 800, color: '#059669', background: '#DCFCE7', padding: '3px 8px', borderRadius: '10px', display: 'flex', alignItems: 'center', gap: '4px' }}>
+              <span style={{ fontSize: '0.66rem', fontWeight: 800, color: '#059669', background: '#DCFCE7', padding: '2px 7px', borderRadius: '8px', display: 'flex', alignItems: 'center', gap: '4px' }}>
                 <span style={{ width: '5px', height: '5px', borderRadius: '50%', backgroundColor: '#059669' }} />
                 Live
               </span>
@@ -1316,20 +1344,22 @@ export default function SetupView({
               background: 'linear-gradient(180deg, #064E3B 0%, #022c22 45%, #FFFFFF 45%, #FFFFFF 100%)',
               border: '1px solid #E2E8F0',
               overflow: 'hidden',
-              boxShadow: '0 4px 16px rgba(0,0,0,0.06)'
+              boxShadow: '0 4px 16px rgba(0,0,0,0.06)',
+              width: '100%',
+              boxSizing: 'border-box'
             }}>
               {/* Header Hero Area */}
-              <div style={{ padding: '18px 16px 14px 16px', textAlign: 'center', position: 'relative' }}>
+              <div style={{ padding: '16px 14px 12px 14px', textAlign: 'center', position: 'relative' }}>
                 <span style={{
                   position: 'absolute',
                   top: '10px',
                   right: '10px',
                   background: '#F59E0B',
                   color: '#450A0A',
-                  fontSize: '0.62rem',
+                  fontSize: '0.60rem',
                   fontWeight: 800,
-                  padding: '2px 8px',
-                  borderRadius: '6px'
+                  padding: '2px 6px',
+                  borderRadius: '5px'
                 }}>
                   Gold & Forest Green
                 </span>
@@ -1339,12 +1369,12 @@ export default function SetupView({
                     src={settingsForm.logo || restaurantInfo?.logo}
                     alt="Logo"
                     style={{
-                      width: '56px',
-                      height: '56px',
+                      width: '52px',
+                      height: '52px',
                       borderRadius: '12px',
                       objectFit: 'cover',
                       border: '2px solid #F59E0B',
-                      margin: '0 auto 8px auto',
+                      margin: '0 auto 6px auto',
                       display: 'block',
                       boxShadow: '0 4px 10px rgba(0,0,0,0.3)',
                       background: '#FFFFFF'
@@ -1352,8 +1382,8 @@ export default function SetupView({
                   />
                 ) : (
                   <div style={{
-                    width: '56px',
-                    height: '56px',
+                    width: '52px',
+                    height: '52px',
                     borderRadius: '12px',
                     background: 'linear-gradient(135deg, #7C1D1D 0%, #450A0A 100%)',
                     color: '#F59E0B',
@@ -1361,9 +1391,9 @@ export default function SetupView({
                     alignItems: 'center',
                     justifyContent: 'center',
                     fontWeight: 900,
-                    fontSize: '1.4rem',
+                    fontSize: '1.3rem',
                     border: '2px solid #F59E0B',
-                    margin: '0 auto 8px auto',
+                    margin: '0 auto 6px auto',
                     boxShadow: '0 4px 10px rgba(0,0,0,0.3)'
                   }}>
                     {(settingsForm.name || restaurantInfo?.name || 'R').charAt(0).toUpperCase()}
@@ -1372,20 +1402,20 @@ export default function SetupView({
               </div>
 
               {/* Body Content Area */}
-              <div style={{ padding: '0 16px 16px 16px', textAlign: 'center', background: '#FFFFFF' }}>
-                <strong style={{ fontSize: '0.94rem', color: '#0F172A', fontWeight: 900, display: 'block', marginBottom: '2px' }}>
-                  {settingsForm.name || 'Raman Sweet Bakery & Family Restaurant'}
+              <div style={{ padding: '0 14px 14px 14px', textAlign: 'center', background: '#FFFFFF', boxSizing: 'border-box' }}>
+                <strong style={{ fontSize: '0.90rem', color: '#0F172A', fontWeight: 900, display: 'block', marginBottom: '2px' }}>
+                  {settingsForm.name || restaurantInfo?.name || 'Raman Sweet Bakery & Family Restaurant'}
                 </strong>
-                <span style={{ fontSize: '0.72rem', color: '#64748B', display: 'block', marginBottom: '10px' }}>
+                <span style={{ fontSize: '0.70rem', color: '#64748B', display: 'block', marginBottom: '8px' }}>
                   {settingsForm.tagline || 'Pure Veg Family Restaurant & Bakery'}
                 </span>
 
-                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', marginBottom: '14px' }}>
-                  <span style={{ fontSize: '0.68rem', fontWeight: 700, color: '#059669', display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
-                    <span style={{ width: '6px', height: '6px', borderRadius: '50%', backgroundColor: '#059669' }} /> Pure Veg
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px', marginBottom: '12px', flexWrap: 'wrap' }}>
+                  <span style={{ fontSize: '0.66rem', fontWeight: 700, color: '#059669', display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
+                    <span style={{ width: '5px', height: '5px', borderRadius: '50%', backgroundColor: '#059669' }} /> Pure Veg
                   </span>
-                  <span style={{ fontSize: '0.68rem', color: '#64748B' }}>•</span>
-                  <span style={{ fontSize: '0.68rem', fontWeight: 700, color: '#0F172A' }}>
+                  <span style={{ fontSize: '0.66rem', color: '#64748B' }}>•</span>
+                  <span style={{ fontSize: '0.66rem', fontWeight: 700, color: '#0F172A' }}>
                     🕒 8:00 AM - 10:30 PM <span style={{ color: '#059669' }}>Open</span>
                   </span>
                 </div>
@@ -1394,42 +1424,43 @@ export default function SetupView({
                   type="button"
                   style={{
                     width: '100%',
-                    height: '42px',
+                    height: '40px',
                     borderRadius: '10px',
                     border: 'none',
                     background: '#064E3B',
                     color: '#FFFFFF',
-                    fontSize: '0.82rem',
+                    fontSize: '0.80rem',
                     fontWeight: 800,
                     cursor: 'pointer',
                     display: 'flex',
                     alignItems: 'center',
                     justifyContent: 'center',
-                    gap: '8px',
-                    marginBottom: '14px'
+                    gap: '6px',
+                    marginBottom: '12px',
+                    boxSizing: 'border-box'
                   }}
                 >
                   <span>View Digital Menu</span>
-                  <Printer size={14} />
+                  <Printer size={13} />
                 </button>
 
                 {/* 4 Action Icons */}
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '6px', borderTop: '1px solid #F1F5F9', paddingTop: '10px' }}>
-                  <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '3px' }}>
-                    <Printer size={14} color="#64748B" />
-                    <span style={{ fontSize: '0.60rem', color: '#64748B', fontWeight: 600 }}>Scan QR</span>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '4px', borderTop: '1px solid #F1F5F9', paddingTop: '8px' }}>
+                  <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '2px' }}>
+                    <Printer size={13} color="#64748B" />
+                    <span style={{ fontSize: '0.58rem', color: '#64748B', fontWeight: 600 }}>Scan QR</span>
                   </div>
-                  <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '3px' }}>
-                    <Utensils size={14} color="#64748B" />
-                    <span style={{ fontSize: '0.60rem', color: '#64748B', fontWeight: 600 }}>View Menu</span>
+                  <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '2px' }}>
+                    <Utensils size={13} color="#64748B" />
+                    <span style={{ fontSize: '0.58rem', color: '#64748B', fontWeight: 600 }}>View Menu</span>
                   </div>
-                  <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '3px' }}>
-                    <Store size={14} color="#64748B" />
-                    <span style={{ fontSize: '0.60rem', color: '#64748B', fontWeight: 600 }}>Place Order</span>
+                  <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '2px' }}>
+                    <Store size={13} color="#64748B" />
+                    <span style={{ fontSize: '0.58rem', color: '#64748B', fontWeight: 600 }}>Place Order</span>
                   </div>
-                  <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '3px' }}>
-                    <CreditCard size={14} color="#64748B" />
-                    <span style={{ fontSize: '0.60rem', color: '#64748B', fontWeight: 600 }}>Pay Bill</span>
+                  <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '2px' }}>
+                    <CreditCard size={13} color="#64748B" />
+                    <span style={{ fontSize: '0.58rem', color: '#64748B', fontWeight: 600 }}>Pay Bill</span>
                   </div>
                 </div>
               </div>
@@ -1439,14 +1470,15 @@ export default function SetupView({
             <div style={{
               display: 'flex',
               alignItems: 'flex-start',
-              gap: '10px',
-              padding: '12px 14px',
+              gap: '8px',
+              padding: '10px 12px',
               background: '#FFFBEB',
               borderRadius: '10px',
               border: '1px solid #FEF3C7',
-              fontSize: '0.76rem',
+              fontSize: '0.72rem',
               color: '#92400E',
-              lineHeight: 1.45
+              lineHeight: 1.4,
+              boxSizing: 'border-box'
             }}>
               <span>💡</span>
               <span>This is how your customers will see your digital menu and restaurant information.</span>
@@ -1457,22 +1489,23 @@ export default function SetupView({
               onClick={() => window.open(window.location.origin, '_blank')}
               style={{
                 width: '100%',
-                padding: '10px 14px',
+                padding: '9px 12px',
                 borderRadius: '10px',
                 border: '1px solid #E2E8F0',
                 background: '#FFFFFF',
                 color: '#0F172A',
-                fontSize: '0.80rem',
+                fontSize: '0.78rem',
                 fontWeight: 700,
                 cursor: 'pointer',
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
-                gap: '6px'
+                gap: '6px',
+                boxSizing: 'border-box'
               }}
             >
               <span>Preview Full Menu</span>
-              <ArrowUpRight size={14} />
+              <ArrowUpRight size={13} />
             </button>
           </div>
         </div>
@@ -1489,18 +1522,59 @@ export default function SetupView({
       margin: '0 auto',
       width: '100%',
       boxSizing: 'border-box',
+      overflowX: 'hidden',
       fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif'
     }}>
       <style>{`
         .business-profile-page-grid {
           display: grid;
           grid-template-columns: minmax(0, 1.75fr) minmax(320px, 1fr);
-          gap: 20px;
+          gap: 16px;
           align-items: flex-start;
+          width: 100%;
+          box-sizing: border-box;
         }
         @media (max-width: 960px) {
           .business-profile-page-grid {
-            grid-template-columns: 1fr !important;
+            grid-template-columns: 100% !important;
+            gap: 14px !important;
+          }
+          .bp-container {
+            gap: 12px !important;
+            padding-bottom: 110px !important;
+          }
+          .bp-header-card {
+            padding: 12px 14px !important;
+            border-radius: 14px !important;
+          }
+          .bp-header-card h2 {
+            font-size: 1.2rem !important;
+          }
+          .bp-actions-row {
+            width: 100% !important;
+            display: grid !important;
+            grid-template-columns: 1fr auto !important;
+            gap: 8px !important;
+          }
+          .bp-actions-row button {
+            height: 40px !important;
+            padding: 0 14px !important;
+            font-size: 0.80rem !important;
+          }
+          .bp-card {
+            padding: 14px 14px !important;
+            border-radius: 14px !important;
+            gap: 12px !important;
+          }
+          .bp-logo-row {
+            gap: 10px !important;
+          }
+          .bp-logo-box {
+            width: 64px !important;
+            height: 64px !important;
+          }
+          .bp-upload-box {
+            padding: 8px 10px !important;
           }
         }
         .settings-header-card {
