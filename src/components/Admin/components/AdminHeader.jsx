@@ -36,7 +36,7 @@ export default function AdminHeader({
       height: '68px',
       background: '#FFFFFF',
       borderBottom: '1px solid #E2E8F0',
-      padding: '0 16px',
+      padding: '0 20px',
       display: 'flex',
       alignItems: 'center',
       justifyContent: 'space-between',
@@ -49,26 +49,84 @@ export default function AdminHeader({
     }}>
       <style>{`
         .header-biz-text { display: inline !important; }
+        .header-global-search { display: flex !important; }
+        @media (max-width: 900px) {
+          .header-global-search { display: none !important; }
+        }
         @media (max-width: 640px) {
           .header-biz-text { display: none !important; }
           .header-biz-chevron { display: none !important; }
         }
       `}</style>
 
-      {/* LEFT: Dynamic Greeting (Three lines removed) */}
-      <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+      {/* LEFT: Menu Toggle + Dynamic Greeting */}
+      <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+        <button
+          style={{
+            background: 'transparent',
+            border: 'none',
+            color: '#475569',
+            cursor: 'pointer',
+            padding: '4px',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center'
+          }}
+          title="Menu"
+        >
+          <Menu size={20} />
+        </button>
+
         <div>
-          <h2 style={{ fontSize: '0.98rem', fontWeight: 800, color: '#0F172A', margin: 0, lineHeight: 1.2, letterSpacing: '-0.01em' }}>
-            {greeting}, Admin! 👋
+          <h2 style={{ fontSize: '0.98rem', fontWeight: 800, color: '#0F172A', margin: 0, lineHeight: 1.2, letterSpacing: '-0.01em', display: 'flex', alignItems: 'center', gap: '6px' }}>
+            <span>{greeting}, Admin!</span>
+            <span>☀️</span>
           </h2>
-          <span style={{ fontSize: '0.70rem', color: '#64748B', fontWeight: 500, display: 'block', marginTop: '1px' }}>
-            Here's what's happening with your business today.
+          <span style={{ fontSize: '0.72rem', color: '#64748B', fontWeight: 500, display: 'block', marginTop: '1px' }}>
+            Great food brings people together.
           </span>
         </div>
       </div>
 
-      {/* RIGHT: [ 🏪 ] + Bell + User Avatar */}
-      <div style={{ display: 'flex', alignItems: 'center', gap: '10px', position: 'relative' }}>
+      {/* RIGHT: Global Search + Business View + Bell + User Avatar */}
+      <div style={{ display: 'flex', alignItems: 'center', gap: '12px', position: 'relative' }}>
+        {/* Global Search Bar (Matching Reference) */}
+        <div className="header-global-search" style={{
+          position: 'relative',
+          alignItems: 'center',
+          background: '#F8FAFC',
+          border: '1px solid #E2E8F0',
+          borderRadius: '10px',
+          padding: '6px 12px',
+          width: '240px'
+        }}>
+          <span style={{ color: '#94A3B8', fontSize: '0.80rem', marginRight: '6px' }}>🔍</span>
+          <input
+            type="text"
+            placeholder="Search anything..."
+            style={{
+              border: 'none',
+              background: 'transparent',
+              outline: 'none',
+              fontSize: '0.78rem',
+              color: '#0F172A',
+              width: '100%'
+            }}
+          />
+          <span style={{
+            fontSize: '0.62rem',
+            color: '#94A3B8',
+            background: '#FFFFFF',
+            border: '1px solid #E2E8F0',
+            borderRadius: '4px',
+            padding: '1px 5px',
+            fontWeight: 700,
+            whiteSpace: 'nowrap'
+          }}>
+            Ctrl K
+          </span>
+        </div>
+
         {/* Business View Storefront Button */}
         <button
           onClick={() => {
@@ -92,9 +150,8 @@ export default function AdminHeader({
           }}
           title="Open Public Menu & Storefront"
         >
-          <Store size={16} color="#0F172A" />
-          <span className="header-biz-text">Business View</span>
-          <ChevronDown size={14} color="#94A3B8" className="header-biz-chevron" />
+          <Store size={15} color="#0F172A" />
+          <span className="header-biz-text">Storefront</span>
         </button>
 
         {/* Notification Bell */}
@@ -117,14 +174,14 @@ export default function AdminHeader({
           }}
           title="Notifications & Live Orders"
         >
-          <Bell size={18} />
+          <Bell size={17} color="#475569" />
           <span style={{
             position: 'absolute',
             top: '-3px',
             right: '-3px',
             background: '#DC2626',
             color: '#FFFFFF',
-            fontSize: '0.62rem',
+            fontSize: '0.60rem',
             fontWeight: 900,
             width: '16px',
             height: '16px',

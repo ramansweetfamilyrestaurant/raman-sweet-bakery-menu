@@ -209,18 +209,43 @@ export default function AdminSidebar({
               width: '100%',
               padding: '10px 14px',
               borderRadius: '12px',
-              border: isMenuActive ? '1px solid rgba(34, 197, 94, 0.25)' : '1px solid transparent',
+              border: isMenuActive ? '1px solid rgba(217, 119, 6, 0.3)' : '1px solid transparent',
               cursor: 'pointer',
-              background: isMenuActive ? '#0D3823' : 'transparent',
+              background: isMenuActive ? '#2A1B14' : 'transparent',
               color: isMenuActive ? '#FFFFFF' : '#CBD5E1',
-              fontWeight: isMenuActive ? 700 : 500,
+              fontWeight: isMenuActive ? 800 : 500,
               fontSize: '0.86rem',
               transition: 'all 0.15s ease'
             }}
           >
             <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-              <Utensils size={18} color={isMenuActive ? '#22C55E' : '#94A3B8'} />
+              <Utensils size={18} color={isMenuActive ? '#E07A5F' : '#94A3B8'} />
               <span>Menu</span>
+            </div>
+          </button>
+
+          {/* KDS */}
+          <button
+            onClick={() => setActiveTab('orders')}
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+              width: '100%',
+              padding: '10px 14px',
+              borderRadius: '12px',
+              border: '1px solid transparent',
+              cursor: 'pointer',
+              background: 'transparent',
+              color: '#CBD5E1',
+              fontWeight: 500,
+              fontSize: '0.86rem',
+              transition: 'all 0.15s ease'
+            }}
+          >
+            <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+              <span style={{ fontSize: '1.05rem', lineHeight: 1 }}>🖥️</span>
+              <span>KDS</span>
             </div>
           </button>
 
@@ -249,7 +274,82 @@ export default function AdminSidebar({
             </div>
           </button>
 
-          {/* Setup */}
+          {/* Customers */}
+          <button
+            onClick={() => setActiveTab('orders')}
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+              width: '100%',
+              padding: '10px 14px',
+              borderRadius: '12px',
+              border: '1px solid transparent',
+              cursor: 'pointer',
+              background: 'transparent',
+              color: '#CBD5E1',
+              fontWeight: 500,
+              fontSize: '0.86rem',
+              transition: 'all 0.15s ease'
+            }}
+          >
+            <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+              <span style={{ fontSize: '1.05rem', lineHeight: 1 }}>👥</span>
+              <span>Customers</span>
+            </div>
+          </button>
+
+          {/* Marketing */}
+          <button
+            onClick={() => setActiveTab('qr-generator')}
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+              width: '100%',
+              padding: '10px 14px',
+              borderRadius: '12px',
+              border: '1px solid transparent',
+              cursor: 'pointer',
+              background: 'transparent',
+              color: '#CBD5E1',
+              fontWeight: 500,
+              fontSize: '0.86rem',
+              transition: 'all 0.15s ease'
+            }}
+          >
+            <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+              <span style={{ fontSize: '1.05rem', lineHeight: 1 }}>📢</span>
+              <span>Marketing</span>
+            </div>
+          </button>
+
+          {/* Billing */}
+          <button
+            onClick={() => window.open('/billing', '_blank')}
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+              width: '100%',
+              padding: '10px 14px',
+              borderRadius: '12px',
+              border: '1px solid transparent',
+              cursor: 'pointer',
+              background: 'transparent',
+              color: '#CBD5E1',
+              fontWeight: 500,
+              fontSize: '0.86rem',
+              transition: 'all 0.15s ease'
+            }}
+          >
+            <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+              <span style={{ fontSize: '1.05rem', lineHeight: 1 }}>💳</span>
+              <span>Billing</span>
+            </div>
+          </button>
+
+          {/* Settings */}
           <button
             onClick={() => setActiveTab('settings')}
             style={{
@@ -270,76 +370,54 @@ export default function AdminSidebar({
           >
             <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
               <Settings size={18} color={isSetupActive ? '#22C55E' : '#94A3B8'} />
-              <span>Setup</span>
-            </div>
-          </button>
-
-          {/* More */}
-          <button
-            onClick={() => setActiveTab('qr-generator')}
-            style={{
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'space-between',
-              width: '100%',
-              padding: '10px 14px',
-              borderRadius: '12px',
-              border: isMoreActive ? '1px solid rgba(34, 197, 94, 0.25)' : '1px solid transparent',
-              cursor: 'pointer',
-              background: isMoreActive ? '#0D3823' : 'transparent',
-              color: isMoreActive ? '#FFFFFF' : '#CBD5E1',
-              fontWeight: isMoreActive ? 700 : 500,
-              fontSize: '0.86rem',
-              transition: 'all 0.15s ease'
-            }}
-          >
-            <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-              <MoreHorizontal size={18} color={isMoreActive ? '#22C55E' : '#94A3B8'} />
-              <span>More</span>
+              <span>Settings</span>
             </div>
           </button>
         </nav>
       </div>
 
-      {/* BOTTOM SECTION: NEED HELP + LOGOUT */}
-      <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+      {/* BOTTOM SECTION: NEED HELP + LOGOUT + FOOTER */}
+      <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', paddingTop: '10px' }}>
         
         {/* Support Pill Card */}
         <div
           onClick={onOpenHelp}
           style={{
-            background: 'rgba(255, 255, 255, 0.04)',
+            background: 'rgba(255, 255, 255, 0.05)',
             border: '1px solid rgba(255, 255, 255, 0.08)',
             borderRadius: '14px',
-            padding: '12px',
+            padding: '10px 12px',
             display: 'flex',
             alignItems: 'center',
-            gap: '10px',
+            justifyContent: 'space-between',
             cursor: 'pointer',
             transition: 'all 0.15s ease'
           }}
         >
-          <div style={{
-            width: '32px',
-            height: '32px',
-            borderRadius: '8px',
-            background: 'rgba(34, 197, 94, 0.15)',
-            color: '#22C55E',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            flexShrink: 0
-          }}>
-            <Headphones size={18} />
-          </div>
-          <div>
-            <div style={{ fontSize: '0.80rem', fontWeight: 700, color: '#FFFFFF' }}>
-              Need Help?
+          <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+            <div style={{
+              width: '30px',
+              height: '30px',
+              borderRadius: '8px',
+              background: 'rgba(224, 122, 95, 0.2)',
+              color: '#E07A5F',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              flexShrink: 0
+            }}>
+              <Headphones size={16} />
             </div>
-            <div style={{ fontSize: '0.70rem', color: '#22C55E', fontWeight: 600 }}>
-              Chat with Support
+            <div>
+              <div style={{ fontSize: '0.78rem', fontWeight: 800, color: '#FFFFFF' }}>
+                Need Help?
+              </div>
+              <div style={{ fontSize: '0.66rem', color: '#94A3B8' }}>
+                We're here 24/7
+              </div>
             </div>
           </div>
+          <span style={{ color: '#E07A5F', fontSize: '0.86rem', fontWeight: 800 }}>→</span>
         </div>
 
         {/* Logout */}
@@ -350,20 +428,26 @@ export default function AdminSidebar({
             alignItems: 'center',
             gap: '10px',
             width: '100%',
-            padding: '8px 12px',
+            padding: '6px 8px',
             borderRadius: '10px',
             border: 'none',
             cursor: 'pointer',
             background: 'transparent',
             color: '#94A3B8',
-            fontSize: '0.82rem',
+            fontSize: '0.80rem',
             fontWeight: 600,
             transition: 'color 0.15s ease'
           }}
         >
-          <LogOut size={16} />
+          <LogOut size={15} />
           <span>Logout</span>
         </button>
+
+        {/* Branding Footer */}
+        <div style={{ borderTop: '1px solid rgba(255,255,255,0.06)', paddingTop: '8px', textAlign: 'center' }}>
+          <div style={{ fontSize: '0.64rem', color: '#64748B' }}>TouchQR v1.0.0</div>
+          <div style={{ fontSize: '0.62rem', color: '#94A3B8', marginTop: '2px' }}>🇮🇳 Made with ❤️ in India</div>
+        </div>
       </div>
     </aside>
   );
