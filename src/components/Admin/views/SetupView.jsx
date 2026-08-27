@@ -928,6 +928,129 @@ export default function SetupView({
                 }}
               />
             </div>
+
+            {/* Business Category / Type */}
+            <div>
+              <label style={{ fontSize: '0.74rem', fontWeight: 800, color: '#334155', display: 'block', marginBottom: '6px' }}>
+                Business Category / Venue Type <span style={{ color: '#EF4444' }}>*</span>
+              </label>
+              <div style={{ position: 'relative' }}>
+                <select
+                  value={settingsForm.business_type || 'restaurant'}
+                  onChange={(e) => {
+                    const newBiz = e.target.value;
+                    const autoService = resolveServiceModelForBusinessType(newBiz);
+                    setSettingsForm({
+                      ...settingsForm,
+                      business_type: newBiz,
+                      service_model: autoService
+                    });
+                  }}
+                  style={{
+                    width: '100%',
+                    height: '44px',
+                    padding: '0 32px 0 12px',
+                    borderRadius: '10px',
+                    border: '1px solid #E2E8F0',
+                    background: '#FFFFFF',
+                    fontSize: '0.84rem',
+                    fontWeight: 700,
+                    color: '#0F172A',
+                    boxSizing: 'border-box',
+                    outline: 'none',
+                    fontFamily: 'inherit',
+                    cursor: 'pointer',
+                    appearance: 'none'
+                  }}
+                >
+                  {BUSINESS_TYPES.map(type => (
+                    <option key={type} value={type}>
+                      {BUSINESS_TYPE_METADATA[type]?.icon || '🏢'} {BUSINESS_TYPE_METADATA[type]?.label || type}
+                    </option>
+                  ))}
+                </select>
+                <ChevronDown size={15} color="#64748B" style={{ position: 'absolute', right: '12px', top: '15px', pointerEvents: 'none' }} />
+              </div>
+            </div>
+
+            {/* Food Dietary Type */}
+            <div>
+              <label style={{ fontSize: '0.74rem', fontWeight: 800, color: '#334155', display: 'block', marginBottom: '6px' }}>
+                Food Dietary Profile <span style={{ color: '#EF4444' }}>*</span>
+              </label>
+              <div style={{ position: 'relative' }}>
+                <select
+                  value={settingsForm.food_type || 'pure_veg'}
+                  onChange={(e) => {
+                    const newFood = e.target.value;
+                    setSettingsForm({
+                      ...settingsForm,
+                      food_type: newFood,
+                      resto_type: newFood === 'pure_veg' ? 'pure_veg' : newFood === 'veg_nonveg' ? 'veg_nonveg' : 'pure_veg'
+                    });
+                  }}
+                  style={{
+                    width: '100%',
+                    height: '44px',
+                    padding: '0 32px 0 12px',
+                    borderRadius: '10px',
+                    border: '1px solid #E2E8F0',
+                    background: '#FFFFFF',
+                    fontSize: '0.84rem',
+                    fontWeight: 700,
+                    color: '#0F172A',
+                    boxSizing: 'border-box',
+                    outline: 'none',
+                    fontFamily: 'inherit',
+                    cursor: 'pointer',
+                    appearance: 'none'
+                  }}
+                >
+                  {FOOD_TYPES.map(type => (
+                    <option key={type} value={type}>
+                      {FOOD_TYPE_METADATA[type]?.icon || '🥗'} {FOOD_TYPE_METADATA[type]?.label || type}
+                    </option>
+                  ))}
+                </select>
+                <ChevronDown size={15} color="#64748B" style={{ position: 'absolute', right: '12px', top: '15px', pointerEvents: 'none' }} />
+              </div>
+            </div>
+
+            {/* Service Model */}
+            <div>
+              <label style={{ fontSize: '0.74rem', fontWeight: 800, color: '#334155', display: 'block', marginBottom: '6px' }}>
+                Service Model & Ordering Mode <span style={{ color: '#EF4444' }}>*</span>
+              </label>
+              <div style={{ position: 'relative' }}>
+                <select
+                  value={settingsForm.service_model || 'dine_in'}
+                  onChange={(e) => setSettingsForm({ ...settingsForm, service_model: e.target.value })}
+                  style={{
+                    width: '100%',
+                    height: '44px',
+                    padding: '0 32px 0 12px',
+                    borderRadius: '10px',
+                    border: '1px solid #E2E8F0',
+                    background: '#FFFFFF',
+                    fontSize: '0.84rem',
+                    fontWeight: 700,
+                    color: '#0F172A',
+                    boxSizing: 'border-box',
+                    outline: 'none',
+                    fontFamily: 'inherit',
+                    cursor: 'pointer',
+                    appearance: 'none'
+                  }}
+                >
+                  {SERVICE_MODELS.map(model => (
+                    <option key={model} value={model}>
+                      {SERVICE_MODEL_METADATA[model]?.icon || '🍽️'} {SERVICE_MODEL_METADATA[model]?.label || model}
+                    </option>
+                  ))}
+                </select>
+                <ChevronDown size={15} color="#64748B" style={{ position: 'absolute', right: '12px', top: '15px', pointerEvents: 'none' }} />
+              </div>
+            </div>
           </div>
 
           {/* 2. MENU BRANDING */}
@@ -1617,7 +1740,121 @@ export default function SetupView({
     let modalTitle = '';
     let content = null;
 
-    if (activePrefModal === 'currency') {
+    if (activePrefModal === 'business_type') {
+      modalTitle = 'Select Business Category';
+      content = (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', maxHeight: '60vh', overflowY: 'auto' }}>
+          {BUSINESS_TYPES.map(type => (
+            <div
+              key={type}
+              onClick={() => {
+                const autoService = resolveServiceModelForBusinessType(type);
+                setSettingsForm({
+                  ...settingsForm,
+                  business_type: type,
+                  service_model: autoService
+                });
+                closeModal();
+              }}
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                padding: '12px 14px',
+                borderRadius: '10px',
+                border: (settingsForm.business_type || 'restaurant') === type ? '1.5px solid #064E3B' : '1px solid #E2E8F0',
+                background: (settingsForm.business_type || 'restaurant') === type ? '#ECFDF5' : '#FFFFFF',
+                cursor: 'pointer'
+              }}
+            >
+              <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                <span style={{ fontSize: '1.2rem' }}>{BUSINESS_TYPE_METADATA[type]?.icon || '🏢'}</span>
+                <div>
+                  <strong style={{ fontSize: '0.86rem', color: '#0F172A', display: 'block' }}>{BUSINESS_TYPE_METADATA[type]?.label || type}</strong>
+                  <span style={{ fontSize: '0.70rem', color: '#64748B' }}>{BUSINESS_TYPE_METADATA[type]?.desc}</span>
+                </div>
+              </div>
+              {(settingsForm.business_type || 'restaurant') === type && <Check size={16} color="#064E3B" />}
+            </div>
+          ))}
+        </div>
+      );
+    } else if (activePrefModal === 'food_type') {
+      modalTitle = 'Select Food Dietary Profile';
+      content = (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+          {FOOD_TYPES.map(type => (
+            <div
+              key={type}
+              onClick={() => {
+                setSettingsForm({
+                  ...settingsForm,
+                  food_type: type,
+                  resto_type: type === 'pure_veg' ? 'pure_veg' : type === 'veg_nonveg' ? 'veg_nonveg' : 'pure_veg'
+                });
+                closeModal();
+              }}
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                padding: '12px 14px',
+                borderRadius: '10px',
+                border: (settingsForm.food_type || 'pure_veg') === type ? '1.5px solid #064E3B' : '1px solid #E2E8F0',
+                background: (settingsForm.food_type || 'pure_veg') === type ? '#ECFDF5' : '#FFFFFF',
+                cursor: 'pointer'
+              }}
+            >
+              <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                <span style={{ fontSize: '1.2rem' }}>{FOOD_TYPE_METADATA[type]?.icon || '🥗'}</span>
+                <div>
+                  <strong style={{ fontSize: '0.86rem', color: '#0F172A', display: 'block' }}>{FOOD_TYPE_METADATA[type]?.label || type}</strong>
+                  <span style={{ fontSize: '0.70rem', color: '#64748B' }}>{FOOD_TYPE_METADATA[type]?.desc}</span>
+                </div>
+              </div>
+              {(settingsForm.food_type || 'pure_veg') === type && <Check size={16} color="#064E3B" />}
+            </div>
+          ))}
+        </div>
+      );
+    } else if (activePrefModal === 'service_model') {
+      modalTitle = 'Select Service Mode';
+      content = (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+          {SERVICE_MODELS.map(model => (
+            <div
+              key={model}
+              onClick={() => {
+                setSettingsForm({
+                  ...settingsForm,
+                  service_model: model
+                });
+                closeModal();
+              }}
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                padding: '12px 14px',
+                borderRadius: '10px',
+                border: (settingsForm.service_model || 'dine_in') === model ? '1.5px solid #064E3B' : '1px solid #E2E8F0',
+                background: (settingsForm.service_model || 'dine_in') === model ? '#ECFDF5' : '#FFFFFF',
+                cursor: 'pointer'
+              }}
+            >
+              <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                <span style={{ fontSize: '1.2rem' }}>{SERVICE_MODEL_METADATA[model]?.icon || '🍽️'}</span>
+                <div>
+                  <strong style={{ fontSize: '0.86rem', color: '#0F172A', display: 'block' }}>{SERVICE_MODEL_METADATA[model]?.label || model}</strong>
+                  <span style={{ fontSize: '0.70rem', color: '#64748B' }}>{SERVICE_MODEL_METADATA[model]?.desc}</span>
+                </div>
+              </div>
+              {(settingsForm.service_model || 'dine_in') === model && <Check size={16} color="#064E3B" />}
+            </div>
+          ))}
+        </div>
+      );
+    } else if (activePrefModal === 'currency') {
       modalTitle = 'Select Default Currency';
       const currencies = [
         { code: '₹ INR', label: 'Indian Rupee (₹)', symbol: '₹' },
@@ -1947,6 +2184,96 @@ export default function SetupView({
           overflow: 'hidden',
           boxShadow: '0 1px 3px rgba(0,0,0,0.02)'
         }}>
+          {/* Row A: Business Category */}
+          <div
+            onClick={() => setActivePrefModal('business_type')}
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+              padding: '14px 16px',
+              borderBottom: '1px solid #F1F5F9',
+              cursor: 'pointer',
+              transition: 'background 0.15s ease'
+            }}
+          >
+            <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+              <div style={{ width: '38px', height: '38px', borderRadius: '10px', background: '#EFF6FF', color: '#1D4ED8', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1.2rem', flexShrink: 0 }}>
+                {BUSINESS_TYPE_METADATA[settingsForm.business_type || 'restaurant']?.icon || '🏢'}
+              </div>
+              <div>
+                <strong style={{ fontSize: '0.86rem', fontWeight: 800, color: '#0F172A', display: 'block' }}>Business Category</strong>
+                <span style={{ fontSize: '0.72rem', color: '#64748B' }}>Venue and restaurant type</span>
+              </div>
+            </div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+              <span style={{ fontSize: '0.82rem', fontWeight: 700, color: '#0F172A', maxWidth: '130px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                {BUSINESS_TYPE_METADATA[settingsForm.business_type || 'restaurant']?.label?.replace(/\s*\(.*\)/, '') || 'Restaurant'}
+              </span>
+              <ChevronRight size={15} color="#94A3B8" />
+            </div>
+          </div>
+
+          {/* Row B: Food Dietary Profile */}
+          <div
+            onClick={() => setActivePrefModal('food_type')}
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+              padding: '14px 16px',
+              borderBottom: '1px solid #F1F5F9',
+              cursor: 'pointer',
+              transition: 'background 0.15s ease'
+            }}
+          >
+            <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+              <div style={{ width: '38px', height: '38px', borderRadius: '10px', background: '#F0FDF4', color: '#15803D', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1.2rem', flexShrink: 0 }}>
+                {FOOD_TYPE_METADATA[settingsForm.food_type || 'pure_veg']?.icon || '🥗'}
+              </div>
+              <div>
+                <strong style={{ fontSize: '0.86rem', fontWeight: 800, color: '#0F172A', display: 'block' }}>Food Dietary Profile</strong>
+                <span style={{ fontSize: '0.72rem', color: '#64748B' }}>Vegetarian, Vegan or Non-veg</span>
+              </div>
+            </div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+              <span style={{ fontSize: '0.82rem', fontWeight: 700, color: '#0F172A' }}>
+                {FOOD_TYPE_METADATA[settingsForm.food_type || 'pure_veg']?.label || 'Pure Veg'}
+              </span>
+              <ChevronRight size={15} color="#94A3B8" />
+            </div>
+          </div>
+
+          {/* Row C: Service Model */}
+          <div
+            onClick={() => setActivePrefModal('service_model')}
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+              padding: '14px 16px',
+              borderBottom: '1px solid #F1F5F9',
+              cursor: 'pointer',
+              transition: 'background 0.15s ease'
+            }}
+          >
+            <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+              <div style={{ width: '38px', height: '38px', borderRadius: '10px', background: '#FFF4EE', color: '#FF5A1F', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1.2rem', flexShrink: 0 }}>
+                {SERVICE_MODEL_METADATA[settingsForm.service_model || 'dine_in']?.icon || '🍽️'}
+              </div>
+              <div>
+                <strong style={{ fontSize: '0.86rem', fontWeight: 800, color: '#0F172A', display: 'block' }}>Service Mode</strong>
+                <span style={{ fontSize: '0.72rem', color: '#64748B' }}>Table QR, Hotel In-Room, Cinema</span>
+              </div>
+            </div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+              <span style={{ fontSize: '0.82rem', fontWeight: 700, color: '#0F172A' }}>
+                {SERVICE_MODEL_METADATA[settingsForm.service_model || 'dine_in']?.label || 'Table Dining'}
+              </span>
+              <ChevronRight size={15} color="#94A3B8" />
+            </div>
+          </div>
+
           {/* Row 1: Default Currency */}
           <div
             onClick={() => setActivePrefModal('currency')}
