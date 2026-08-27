@@ -51,8 +51,15 @@ export default function SetupView({
   initialDrawer = null
 }) {
   const [settingsTab, setSettingsTab] = useState('general'); // 'general' | 'restaurant' | 'operations' | 'menu-billing' | 'security' | 'advanced'
-  const [activeSubPage, setActiveSubPage] = useState(initialDrawer === 'profile' ? 'profile' : null);
-  const [openDrawer, setOpenDrawer] = useState(initialDrawer === 'profile' ? null : initialDrawer); // 'devices', 'menu', 'location', 'subscription', 'security', 'cinema'
+  const [activeSubPage, setActiveSubPage] = useState(
+    initialDrawer === 'profile' ? 'profile' :
+    initialDrawer === 'menu-preferences' ? 'menu-preferences' :
+    initialDrawer === 'devices' || initialDrawer === 'orders-devices' ? 'orders-devices' :
+    null
+  );
+  const [openDrawer, setOpenDrawer] = useState(
+    (initialDrawer === 'profile' || initialDrawer === 'menu-preferences' || initialDrawer === 'devices' || initialDrawer === 'orders-devices') ? null : initialDrawer
+  ); // 'menu', 'location', 'subscription', 'security', 'cinema'
   const [uploadingLogo, setUploadingLogo] = useState(false);
   const [gpsLoading, setGpsLoading] = useState(false);
   const [saveSuccessMsg, setSaveSuccessMsg] = useState('');
@@ -88,6 +95,21 @@ export default function SetupView({
   const [activeBpModal, setActiveBpModal] = useState(null); // 'business_type' | 'hours' | 'google_review' | 'maps_location' | 'theme'
   const [bpSaveSuccess, setBpSaveSuccess] = useState(false);
   const [isGstRegistered, setIsGstRegistered] = useState(Boolean(settingsForm.is_gst_registered || settingsForm.gst_number || settingsForm.gstin));
+
+  // Orders & Devices States
+  const [deviceOrderAlarm, setDeviceOrderAlarm] = useState(settingsForm.order_alarm_enabled !== false);
+  const [deviceKdsScreen, setDeviceKdsScreen] = useState(Boolean(settingsForm.kds_screen_enabled !== false && settingsForm.kds_screen_enabled !== 0));
+  const [devicePrinterMode, setDevicePrinterMode] = useState(settingsForm.printer_mode || 'single'); // 'single' | 'dual'
+  const [deviceMainPrinter, setDeviceMainPrinter] = useState(settingsForm.main_printer || 'Default System Thermal Printer');
+  const [devicePaperWidth, setDevicePaperWidth] = useState(settingsForm.printer_paper_width || '80mm');
+  const [deviceConnectionType, setDeviceConnectionType] = useState(settingsForm.connection_type || 'browser_dialog');
+  const [deviceAutoPrintKot, setDeviceAutoPrintKot] = useState(Boolean(settingsForm.auto_print_kot === 1 || settingsForm.auto_print_kot === true));
+  const [deviceAutoPrintBill, setDeviceAutoPrintBill] = useState(Boolean(settingsForm.auto_print_bill === 1 || settingsForm.auto_print_bill === true));
+  const [deviceKotTarget, setDeviceKotTarget] = useState(settingsForm.kot_printer_target || '');
+  const [deviceBillTarget, setDeviceBillTarget] = useState(settingsForm.bill_printer_target || '');
+  const [devicePrinterSectionExpanded, setDevicePrinterSectionExpanded] = useState(true);
+  const [deviceSaveSuccess, setDeviceSaveSuccess] = useState(false);
+  const [showPrinterPairingModal, setShowPrinterPairingModal] = useState(false);
 
   const handleSaveMenuPreferences = async (e) => {
     if (e) e.preventDefault();
@@ -126,6 +148,36 @@ export default function SetupView({
       setTimeout(() => setPrefSaveSuccess(false), 3500);
     } catch (err) {
       console.error('Error saving menu preferences:', err);
+    } finally {
+      setSavingForm(false);
+    }
+  };
+
+  const handleSaveDeviceSettings = async (e) => {
+    if (e) e.preventDefault();
+    setSavingForm(true);
+    try {
+      const updated = {
+        ...settingsForm,
+        order_alarm_enabled: deviceOrderAlarm,
+        kds_screen_enabled: deviceKdsScreen ? 1 : 0,
+        printer_mode: devicePrinterMode,
+        main_printer: deviceMainPrinter,
+        printer_paper_width: devicePaperWidth,
+        connection_type: deviceConnectionType,
+        auto_print_kot: deviceAutoPrintKot ? 1 : 0,
+        auto_print_bill: deviceAutoPrintBill ? 1 : 0,
+        kot_printer_target: deviceKotTarget,
+        bill_printer_target: deviceBillTarget
+      };
+      if (setSettingsForm) setSettingsForm(updated);
+      if (handleSaveSettings) {
+        await handleSaveSettings(updated);
+      }
+      setDeviceSaveSuccess(true);
+      setTimeout(() => setDeviceSaveSuccess(false), 3500);
+    } catch (err) {
+      console.error('Error saving device settings:', err);
     } finally {
       setSavingForm(false);
     }
@@ -3559,6 +3611,801 @@ export default function SetupView({
     );
   };
 
+  const renderOrdersDevicesFullPage = () => {
+    const isKdsPlanAllowed = Boolean(
+      settingsForm?.kds_enabled === 1 ||
+      settingsForm?.kds_enabled === true ||
+      settingsForm?.kds_enabled === '1' ||
+      restaurantInfo?.kds_enabled === 1 ||
+      restaurantInfo?.kds_enabled === true ||
+      restaurantInfo?.kds_enabled === '1' ||
+      restaurantInfo?.permissions?.kds_enabled === true
+    );
+
+    const isDualAllowed = Boolean(
+      settingsForm?.dual_printer_enabled === 1 ||
+      settingsForm?.dual_printer_enabled === true ||
+      settingsForm?.dual_printer_enabled === '1'
+    );
+
+    const hasDeviceChanges =
+      deviceOrderAlarm !== (settingsForm.order_alarm_enabled !== false) ||
+      deviceKdsScreen !== Boolean(settingsForm.kds_screen_enabled !== false && settingsForm.kds_screen_enabled !== 0) ||
+      devicePrinterMode !== (settingsForm.printer_mode || 'single') ||
+      deviceMainPrinter !== (settingsForm.main_printer || 'Default System Thermal Printer') ||
+      devicePaperWidth !== (settingsForm.printer_paper_width || '80mm') ||
+      deviceConnectionType !== (settingsForm.connection_type || 'browser_dialog') ||
+      deviceAutoPrintKot !== Boolean(settingsForm.auto_print_kot === 1 || settingsForm.auto_print_kot === true) ||
+      deviceAutoPrintBill !== Boolean(settingsForm.auto_print_bill === 1 || settingsForm.auto_print_bill === true) ||
+      deviceKotTarget !== (settingsForm.kot_printer_target || '') ||
+      deviceBillTarget !== (settingsForm.bill_printer_target || '');
+
+    const handleDiscardDeviceSettings = () => {
+      setDeviceOrderAlarm(settingsForm.order_alarm_enabled !== false);
+      setDeviceKdsScreen(Boolean(settingsForm.kds_screen_enabled !== false && settingsForm.kds_screen_enabled !== 0));
+      setDevicePrinterMode(settingsForm.printer_mode || 'single');
+      setDeviceMainPrinter(settingsForm.main_printer || 'Default System Thermal Printer');
+      setDevicePaperWidth(settingsForm.printer_paper_width || '80mm');
+      setDeviceConnectionType(settingsForm.connection_type || 'browser_dialog');
+      setDeviceAutoPrintKot(Boolean(settingsForm.auto_print_kot === 1 || settingsForm.auto_print_kot === true));
+      setDeviceAutoPrintBill(Boolean(settingsForm.auto_print_bill === 1 || settingsForm.auto_print_bill === true));
+      setDeviceKotTarget(settingsForm.kot_printer_target || '');
+      setDeviceBillTarget(settingsForm.bill_printer_target || '');
+    };
+
+    return (
+      <div style={{
+        display: 'flex',
+        flexDirection: 'column',
+        gap: '16px',
+        maxWidth: '880px',
+        margin: '0 auto',
+        width: '100%',
+        boxSizing: 'border-box',
+        paddingBottom: hasDeviceChanges ? '140px' : '40px'
+      }}>
+        {/* Modal: Printer Pairing Guide & Test Suite */}
+        {showPrinterPairingModal && (
+          <div
+            onClick={() => setShowPrinterPairingModal(false)}
+            style={{
+              position: 'fixed',
+              top: 0,
+              left: 0,
+              right: 0,
+              bottom: 0,
+              background: 'rgba(15, 23, 42, 0.5)',
+              backdropFilter: 'blur(4px)',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              padding: '16px',
+              zIndex: 9999
+            }}
+          >
+            <div
+              onClick={(e) => e.stopPropagation()}
+              style={{
+                background: '#FFFFFF',
+                borderRadius: '16px',
+                border: '1px solid #EAE5DF',
+                padding: '22px',
+                maxWidth: '520px',
+                width: '100%',
+                boxShadow: '0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.1)',
+                maxHeight: '88vh',
+                overflowY: 'auto'
+              }}
+            >
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '16px' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                  <div style={{ width: '36px', height: '36px', borderRadius: '10px', background: '#EFF6FF', color: '#0284C7', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                    <Printer size={18} />
+                  </div>
+                  <div>
+                    <strong style={{ fontSize: '1rem', color: '#0F172A', fontWeight: 900, display: 'block' }}>Printer Pairing & Test Suite</strong>
+                    <span style={{ fontSize: '0.72rem', color: '#64748B' }}>ESC/POS, Bluetooth, USB & Android Direct Setup</span>
+                  </div>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setShowPrinterPairingModal(false)}
+                  style={{ width: '30px', height: '30px', borderRadius: '8px', border: 'none', background: '#F1F5F9', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}
+                >
+                  <X size={16} color="#64748B" />
+                </button>
+              </div>
+
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
+                {/* Guide Steps */}
+                <div style={{ padding: '14px', background: '#FAF8F5', borderRadius: '12px', border: '1px solid #EAE5DF', fontSize: '0.78rem', color: '#334155', lineHeight: 1.5 }}>
+                  <strong style={{ color: '#0F172A', display: 'block', marginBottom: '6px', fontSize: '0.82rem' }}>📋 Quick Thermal Printer Setup Guide</strong>
+                  <ol style={{ margin: 0, paddingLeft: '18px', display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                    <li><strong>Windows / Desktop Chrome:</strong> Set your 80mm/58mm thermal printer as Default in Windows Printers. Enable "Kiosk Printing" in shortcut flags for instant 1-click zero-dialog printing.</li>
+                    <li><strong>Android / Tablet:</strong> Install the free <em>RawBT Print Service</em> app from Google Play, pair via Bluetooth/USB, and select "Android RawBT Direct App" above.</li>
+                    <li><strong>Network / Ethernet KOT:</strong> Connect printer to local Wi-Fi router and enter IP address (e.g. 192.168.1.200) in Advanced Routing target.</li>
+                  </ol>
+                </div>
+
+                {/* Print Test Actions */}
+                <div>
+                  <label style={{ fontSize: '0.74rem', fontWeight: 800, color: '#475569', display: 'block', marginBottom: '8px', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
+                    Run Diagnostics & Sample Receipts
+                  </label>
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        window.print();
+                      }}
+                      style={{
+                        padding: '12px',
+                        borderRadius: '10px',
+                        border: '1px solid #E2E8F0',
+                        background: '#FFFFFF',
+                        color: '#0F172A',
+                        fontSize: '0.80rem',
+                        fontWeight: 800,
+                        cursor: 'pointer',
+                        display: 'flex',
+                        flexDirection: 'column',
+                        alignItems: 'center',
+                        gap: '6px',
+                        boxShadow: '0 1px 3px rgba(0,0,0,0.02)'
+                      }}
+                    >
+                      <Receipt size={20} color="#064E3B" />
+                      <span>Print Test Bill</span>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        window.print();
+                      }}
+                      style={{
+                        padding: '12px',
+                        borderRadius: '10px',
+                        border: '1px solid #E2E8F0',
+                        background: '#FFFFFF',
+                        color: '#0F172A',
+                        fontSize: '0.80rem',
+                        fontWeight: 800,
+                        cursor: 'pointer',
+                        display: 'flex',
+                        flexDirection: 'column',
+                        alignItems: 'center',
+                        gap: '6px',
+                        boxShadow: '0 1px 3px rgba(0,0,0,0.02)'
+                      }}
+                    >
+                      <Utensils size={20} color="#D97706" />
+                      <span>Print Test KOT</span>
+                    </button>
+                  </div>
+                </div>
+
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '10px 12px', background: '#ECFDF5', borderRadius: '10px', border: '1px solid #A7F3D0', fontSize: '0.74rem', color: '#065F46' }}>
+                  <ShieldCheck size={16} color="#059669" style={{ flexShrink: 0 }} />
+                  <span>Compatible with EPSON, TVS, Star Micronics, Sunmi, Xprinter & all standard 58mm/80mm ESC/POS hardware.</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* 1. MASTER PAGE HEADER */}
+        <div style={{
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          background: '#FFFFFF',
+          borderRadius: '16px',
+          border: '1px solid #EAE5DF',
+          padding: '16px 20px',
+          boxShadow: '0 1px 3px rgba(0,0,0,0.02)',
+          boxSizing: 'border-box',
+          width: '100%'
+        }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+            <button
+              type="button"
+              onClick={() => setActiveSubPage(null)}
+              style={{
+                width: '36px',
+                height: '36px',
+                borderRadius: '10px',
+                background: '#F8FAFC',
+                border: '1px solid #E2E8F0',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                color: '#0F172A',
+                cursor: 'pointer',
+                flexShrink: 0,
+                padding: 0
+              }}
+            >
+              <ArrowLeft size={18} />
+            </button>
+            <div>
+              <h2 style={{ fontSize: '1.20rem', fontWeight: 900, color: '#0F172A', margin: 0, letterSpacing: '-0.02em' }}>
+                Orders & Devices
+              </h2>
+              <p style={{ fontSize: '0.74rem', color: '#64748B', margin: 0 }}>
+                Manage order alerts, kitchen display and printer settings
+              </p>
+            </div>
+          </div>
+
+          <div style={{
+            display: 'inline-flex',
+            alignItems: 'center',
+            gap: '6px',
+            background: hasDeviceChanges ? '#FEF3C7' : '#ECFDF5',
+            color: hasDeviceChanges ? '#B45309' : '#059669',
+            border: `1px solid ${hasDeviceChanges ? '#FDE68A' : '#A7F3D0'}`,
+            padding: '5px 12px',
+            borderRadius: '20px',
+            fontSize: '0.72rem',
+            fontWeight: 800,
+            flexShrink: 0
+          }}>
+            <span style={{ width: '6px', height: '6px', borderRadius: '50%', background: hasDeviceChanges ? '#D97706' : '#059669' }} />
+            <span>{hasDeviceChanges ? 'Unsaved changes' : 'All changes saved'}</span>
+          </div>
+        </div>
+
+        {/* SECTION 1 — ORDER ALERTS */}
+        <div style={{
+          background: '#FFFFFF',
+          borderRadius: '16px',
+          border: '1px solid #EAE5DF',
+          padding: '18px 20px',
+          boxShadow: '0 1px 3px rgba(0,0,0,0.02)',
+          display: 'flex',
+          flexDirection: 'column',
+          gap: '14px'
+        }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+              <div style={{ width: '38px', height: '38px', borderRadius: '10px', background: '#FFFBEB', color: '#D97706', border: '1px solid #FEF3C7', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                <Volume2 size={19} />
+              </div>
+              <div>
+                <strong style={{ fontSize: '0.92rem', color: '#0F172A', fontWeight: 800, display: 'block' }}>
+                  Live Order Siren Ringtone
+                </strong>
+                <span style={{ fontSize: '0.72rem', color: '#64748B' }}>
+                  Play an alert sound when a new customer order arrives
+                </span>
+              </div>
+            </div>
+            <ToggleSwitch checked={deviceOrderAlarm} onChange={setDeviceOrderAlarm} />
+          </div>
+
+          <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap', paddingLeft: '50px' }}>
+            <button
+              type="button"
+              onClick={testAlarmSound}
+              style={{
+                padding: '8px 14px',
+                borderRadius: '10px',
+                background: '#FFFBEB',
+                color: '#B45309',
+                border: '1px solid #FDE68A',
+                fontWeight: 800,
+                fontSize: '0.78rem',
+                cursor: 'pointer',
+                display: 'inline-flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                gap: '6px',
+                transition: 'all 0.15s ease'
+              }}
+            >
+              <Volume2 size={15} />
+              <span>🔊 Test Siren Sound</span>
+            </button>
+            <button
+              type="button"
+              onClick={requestPushPermission}
+              style={{
+                padding: '8px 14px',
+                borderRadius: '10px',
+                background: '#F8FAFC',
+                color: '#334155',
+                border: '1px solid #E2E8F0',
+                fontWeight: 800,
+                fontSize: '0.78rem',
+                cursor: 'pointer',
+                display: 'inline-flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                gap: '6px',
+                transition: 'all 0.15s ease'
+              }}
+            >
+              <span>🔔 Push Notifications</span>
+            </button>
+          </div>
+        </div>
+
+        {/* SECTION 2 — KITCHEN DISPLAY SYSTEM */}
+        <div style={{
+          background: '#FFFFFF',
+          borderRadius: '16px',
+          border: '1px solid #EAE5DF',
+          padding: '18px 20px',
+          boxShadow: '0 1px 3px rgba(0,0,0,0.02)',
+          display: 'flex',
+          flexDirection: 'column',
+          gap: '14px'
+        }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+              <div style={{ width: '38px', height: '38px', borderRadius: '10px', background: '#F5F3FF', color: '#7C3AED', border: '1px solid #EDE9FE', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                <Monitor size={19} />
+              </div>
+              <div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                  <strong style={{ fontSize: '0.92rem', color: '#0F172A', fontWeight: 800 }}>
+                    Kitchen Display System (KDS)
+                  </strong>
+                  <span style={{ fontSize: '0.66rem', fontWeight: 800, color: '#B45309', background: '#FEF3C7', border: '1px solid #FDE68A', padding: '1px 7px', borderRadius: '12px' }}>
+                    Enterprise
+                  </span>
+                </div>
+                <span style={{ fontSize: '0.72rem', color: '#64748B' }}>
+                  Dedicated kitchen screen for live orders and preparation
+                </span>
+              </div>
+            </div>
+            {isKdsPlanAllowed ? (
+              <ToggleSwitch checked={deviceKdsScreen} onChange={setDeviceKdsScreen} />
+            ) : (
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <span style={{ fontSize: '0.70rem', color: '#64748B', fontWeight: 600 }}>
+                  Available on Enterprise plan
+                </span>
+                <button
+                  type="button"
+                  onClick={() => setOpenDrawer('subscription')}
+                  style={{
+                    padding: '6px 12px',
+                    borderRadius: '8px',
+                    border: '1px solid #CBD5E1',
+                    background: '#FFFFFF',
+                    color: '#0F172A',
+                    fontSize: '0.74rem',
+                    fontWeight: 800,
+                    cursor: 'pointer'
+                  }}
+                >
+                  Upgrade Plan
+                </button>
+              </div>
+            )}
+          </div>
+
+          {/* Realistic KDS Monitor Preview Box */}
+          <div style={{
+            background: '#0F172A',
+            borderRadius: '14px',
+            padding: '14px 16px',
+            color: '#FFFFFF',
+            border: '1px solid #1E293B',
+            boxShadow: '0 4px 14px rgba(15, 23, 42, 0.25)'
+          }}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '12px', borderBottom: '1px solid #1E293B', paddingBottom: '8px' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                <span style={{ width: '8px', height: '8px', borderRadius: '50%', background: '#10B981' }} />
+                <span style={{ fontSize: '0.76rem', fontWeight: 800, color: '#F8FAFC' }}>Kitchen Screen Live View</span>
+              </div>
+              <button
+                type="button"
+                onClick={() => onNavigate && onNavigate('kds')}
+                style={{
+                  background: 'rgba(255,255,255,0.1)',
+                  border: '1px solid rgba(255,255,255,0.2)',
+                  color: '#FFFFFF',
+                  padding: '4px 10px',
+                  borderRadius: '6px',
+                  fontSize: '0.70rem',
+                  fontWeight: 700,
+                  cursor: 'pointer',
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: '4px'
+                }}
+              >
+                <span>Open KDS Screen</span>
+                <ArrowUpRight size={12} />
+              </button>
+            </div>
+
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '10px' }}>
+              {/* Order Card 1 */}
+              <div style={{ background: '#1E293B', borderRadius: '8px', padding: '10px', borderLeft: '3px solid #F59E0B' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '4px' }}>
+                  <span style={{ fontSize: '0.80rem', fontWeight: 800, color: '#FFFFFF' }}>Table 4 • #101</span>
+                  <span style={{ fontSize: '0.66rem', color: '#FCD34D', background: '#78350F', padding: '1px 5px', borderRadius: '4px', fontWeight: 700 }}>Cooking • 4m</span>
+                </div>
+                <div style={{ fontSize: '0.72rem', color: '#CBD5E1', lineHeight: 1.4 }}>
+                  <div>• Paneer Butter Masala ×1</div>
+                  <div>• Butter Naan ×2</div>
+                </div>
+              </div>
+
+              {/* Order Card 2 */}
+              <div style={{ background: '#1E293B', borderRadius: '8px', padding: '10px', borderLeft: '3px solid #10B981' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '4px' }}>
+                  <span style={{ fontSize: '0.80rem', fontWeight: 800, color: '#FFFFFF' }}>Table 7 • #102</span>
+                  <span style={{ fontSize: '0.66rem', color: '#6EE7B7', background: '#064E3B', padding: '1px 5px', borderRadius: '4px', fontWeight: 700 }}>Ready • 1m</span>
+                </div>
+                <div style={{ fontSize: '0.72rem', color: '#CBD5E1', lineHeight: 1.4 }}>
+                  <div>• Dal Makhani ×1</div>
+                  <div>• Jeera Rice ×1</div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* SECTION 3 — THERMAL RECEIPT PRINTER & ROUTING */}
+        <div style={{
+          background: '#FFFFFF',
+          borderRadius: '16px',
+          border: '1px solid #EAE5DF',
+          overflow: 'hidden',
+          boxShadow: '0 1px 3px rgba(0,0,0,0.02)'
+        }}>
+          {/* Header Bar */}
+          <div
+            onClick={() => setDevicePrinterSectionExpanded(!devicePrinterSectionExpanded)}
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+              padding: '16px 20px',
+              cursor: 'pointer',
+              background: '#FFFFFF'
+            }}
+          >
+            <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+              <div style={{ width: '38px', height: '38px', borderRadius: '10px', background: '#EFF6FF', color: '#0284C7', border: '1px solid #DBEAFE', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                <Printer size={19} />
+              </div>
+              <div>
+                <strong style={{ fontSize: '0.92rem', color: '#0F172A', fontWeight: 800, display: 'block' }}>
+                  Thermal Receipt Printer & Routing
+                </strong>
+                <span style={{ fontSize: '0.72rem', color: '#64748B' }}>
+                  Configure receipt, KOT and billing printer settings
+                </span>
+              </div>
+            </div>
+            <ChevronDown
+              size={18}
+              color="#64748B"
+              style={{
+                transform: devicePrinterSectionExpanded ? 'rotate(180deg)' : 'rotate(0deg)',
+                transition: 'transform 0.2s ease'
+              }}
+            />
+          </div>
+
+          {/* Expandable Configuration Body */}
+          {devicePrinterSectionExpanded && (
+            <div style={{ padding: '0 20px 20px 20px', display: 'flex', flexDirection: 'column', gap: '16px' }}>
+              {/* 1. PRINTER MODE SEGMENTED CONTROL */}
+              <div>
+                <label style={{ fontSize: '0.74rem', fontWeight: 800, color: '#334155', display: 'block', marginBottom: '6px' }}>
+                  PRINTER MODE
+                </label>
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px', background: '#FAF8F5', padding: '4px', borderRadius: '12px', border: '1px solid #EAE5DF' }}>
+                  <button
+                    type="button"
+                    onClick={() => setDevicePrinterMode('single')}
+                    style={{
+                      height: '42px',
+                      borderRadius: '10px',
+                      border: 'none',
+                      background: devicePrinterMode === 'single' ? '#064E3B' : 'transparent',
+                      color: devicePrinterMode === 'single' ? '#FFFFFF' : '#475569',
+                      fontWeight: devicePrinterMode === 'single' ? 800 : 600,
+                      fontSize: '0.84rem',
+                      cursor: 'pointer',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      gap: '6px',
+                      boxShadow: devicePrinterMode === 'single' ? '0 2px 6px rgba(6, 78, 59, 0.25)' : 'none',
+                      transition: 'all 0.15s ease'
+                    }}
+                  >
+                    <span>Single Printer</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      if (!isDualAllowed) {
+                        alert('Advanced Dual Printer routing is available on VIP Ultra. You can configure KOT and Billing targets below.');
+                      }
+                      setDevicePrinterMode('dual');
+                    }}
+                    style={{
+                      height: '42px',
+                      borderRadius: '10px',
+                      border: 'none',
+                      background: devicePrinterMode === 'dual' ? '#064E3B' : 'transparent',
+                      color: devicePrinterMode === 'dual' ? '#FFFFFF' : '#475569',
+                      fontWeight: devicePrinterMode === 'dual' ? 800 : 600,
+                      fontSize: '0.84rem',
+                      cursor: 'pointer',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      gap: '6px',
+                      boxShadow: devicePrinterMode === 'dual' ? '0 2px 6px rgba(6, 78, 59, 0.25)' : 'none',
+                      transition: 'all 0.15s ease'
+                    }}
+                  >
+                    <span>Advanced Routing</span>
+                    {!isDualAllowed && (
+                      <span style={{ fontSize: '0.62rem', background: '#FEF3C7', color: '#B45309', padding: '1px 5px', borderRadius: '4px', fontWeight: 800 }}>VIP</span>
+                    )}
+                  </button>
+                </div>
+              </div>
+
+              {/* 2. SELECT MAIN PRINTER STRUCTURED SETTINGS */}
+              <div style={{
+                background: '#FAF8F5',
+                borderRadius: '14px',
+                border: '1px solid #EAE5DF',
+                padding: '16px',
+                display: 'grid',
+                gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))',
+                gap: '14px'
+              }}>
+                {/* Field 1: Main Printer */}
+                <div>
+                  <label style={{ fontSize: '0.72rem', fontWeight: 800, color: '#475569', display: 'block', marginBottom: '6px', letterSpacing: '0.03em' }}>
+                    MAIN PRINTER
+                  </label>
+                  <select
+                    value={deviceMainPrinter}
+                    onChange={(e) => setDeviceMainPrinter(e.target.value)}
+                    style={{
+                      width: '100%',
+                      height: '42px',
+                      borderRadius: '10px',
+                      border: '1px solid #CBD5E1',
+                      background: '#FFFFFF',
+                      fontSize: '0.82rem',
+                      fontWeight: 700,
+                      color: '#0F172A',
+                      padding: '0 10px',
+                      boxSizing: 'border-box'
+                    }}
+                  >
+                    <option value="Default System Thermal Printer">Main Receipt Printer (KOT & Billing)</option>
+                    <option value="EPSON TM-T88VI">EPSON TM-T88VI (Kitchen/POS)</option>
+                    <option value="POS-80 Series Thermal">POS-80 Series Thermal (USB/LAN)</option>
+                    <option value="Sunmi / Android Built-in POS">Sunmi / Android Built-in POS</option>
+                  </select>
+                </div>
+
+                {/* Field 2: Paper Width */}
+                <div>
+                  <label style={{ fontSize: '0.72rem', fontWeight: 800, color: '#475569', display: 'block', marginBottom: '6px', letterSpacing: '0.03em' }}>
+                    PAPER WIDTH
+                  </label>
+                  <select
+                    value={devicePaperWidth}
+                    onChange={(e) => setDevicePaperWidth(e.target.value)}
+                    style={{
+                      width: '100%',
+                      height: '42px',
+                      borderRadius: '10px',
+                      border: '1px solid #CBD5E1',
+                      background: '#FFFFFF',
+                      fontSize: '0.82rem',
+                      fontWeight: 700,
+                      color: '#0F172A',
+                      padding: '0 10px',
+                      boxSizing: 'border-box'
+                    }}
+                  >
+                    <option value="80mm">80mm (Standard 3-inch)</option>
+                    <option value="58mm">58mm (Compact 2-inch)</option>
+                  </select>
+                </div>
+
+                {/* Field 3: Connection */}
+                <div>
+                  <label style={{ fontSize: '0.72rem', fontWeight: 800, color: '#475569', display: 'block', marginBottom: '6px', letterSpacing: '0.03em' }}>
+                    CONNECTION
+                  </label>
+                  <select
+                    value={deviceConnectionType}
+                    onChange={(e) => setDeviceConnectionType(e.target.value)}
+                    style={{
+                      width: '100%',
+                      height: '42px',
+                      borderRadius: '10px',
+                      border: '1px solid #CBD5E1',
+                      background: '#FFFFFF',
+                      fontSize: '0.82rem',
+                      fontWeight: 700,
+                      color: '#0F172A',
+                      padding: '0 10px',
+                      boxSizing: 'border-box'
+                    }}
+                  >
+                    <option value="browser_dialog">Default OS / Browser</option>
+                    <option value="rawbt">Android RawBT Direct App</option>
+                    <option value="direct_esc">USB / Bluetooth Direct ESC/POS</option>
+                  </select>
+                </div>
+              </div>
+
+              {/* 3. TWO COMPACT PREFERENCE TOGGLE ROWS */}
+              <div style={{
+                background: '#FFFFFF',
+                borderRadius: '14px',
+                border: '1px solid #EAE5DF',
+                overflow: 'hidden'
+              }}>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '13px 16px', borderBottom: '1px solid #F1F5F9', minHeight: '52px' }}>
+                  <div>
+                    <strong style={{ fontSize: '0.86rem', fontWeight: 800, color: '#0F172A', display: 'block' }}>
+                      Auto-print KOT for new live orders
+                    </strong>
+                    <span style={{ fontSize: '0.70rem', color: '#64748B' }}>
+                      Automatically print KOT when a new order arrives
+                    </span>
+                  </div>
+                  <ToggleSwitch checked={deviceAutoPrintKot} onChange={setDeviceAutoPrintKot} />
+                </div>
+
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '13px 16px', minHeight: '52px' }}>
+                  <div>
+                    <strong style={{ fontSize: '0.86rem', fontWeight: 800, color: '#0F172A', display: 'block' }}>
+                      Auto-print Bill on table settlement
+                    </strong>
+                    <span style={{ fontSize: '0.70rem', color: '#64748B' }}>
+                      Automatically print the bill when a table is settled
+                    </span>
+                  </div>
+                  <ToggleSwitch checked={deviceAutoPrintBill} onChange={setDeviceAutoPrintBill} />
+                </div>
+              </div>
+
+              {/* 4. BOTTOM ACTION */}
+              <button
+                type="button"
+                onClick={() => setShowPrinterPairingModal(true)}
+                style={{
+                  width: '100%',
+                  height: '42px',
+                  borderRadius: '10px',
+                  border: '1px solid #CBD5E1',
+                  background: '#FAF8F5',
+                  color: '#0F172A',
+                  fontSize: '0.82rem',
+                  fontWeight: 800,
+                  cursor: 'pointer',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  gap: '6px',
+                  transition: 'all 0.15s ease'
+                }}
+              >
+                <span>🖨 Open Printer Pairing Guide & Test Suite →</span>
+              </button>
+            </div>
+          )}
+        </div>
+
+        {/* SUBTLE AUTOMATIC SAVE NOTICE (When no unsaved changes) */}
+        {!hasDeviceChanges && (
+          <div style={{
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            gap: '6px',
+            fontSize: '0.74rem',
+            color: '#64748B',
+            padding: '8px 0',
+            textAlign: 'center'
+          }}>
+            <ShieldCheck size={16} color="#059669" />
+            <span>All changes saved automatically. Your printer & device settings are up to date.</span>
+          </div>
+        )}
+
+        {/* STICKY BOTTOM ACTION BAR (ONLY WHEN UNSAVED CHANGES EXIST) */}
+        {hasDeviceChanges && (
+          <div style={{
+            position: 'fixed',
+            bottom: 0,
+            left: 0,
+            right: 0,
+            background: '#FFFFFF',
+            borderTop: '1px solid #EAE5DF',
+            padding: '12px 16px 24px 16px',
+            boxShadow: '0 -4px 16px rgba(0,0,0,0.08)',
+            zIndex: 900,
+            boxSizing: 'border-box'
+          }}>
+            <div style={{
+              maxWidth: '880px',
+              margin: '0 auto',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+              gap: '12px',
+              flexWrap: 'wrap'
+            }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <span style={{ width: '8px', height: '8px', borderRadius: '50%', background: '#D97706' }} />
+                <strong style={{ fontSize: '0.84rem', color: '#0F172A' }}>
+                  Unsaved changes
+                </strong>
+              </div>
+
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flex: '1 1 auto', justifyContent: 'flex-end' }}>
+                <button
+                  type="button"
+                  onClick={handleDiscardDeviceSettings}
+                  disabled={savingForm}
+                  style={{
+                    padding: '9px 16px',
+                    borderRadius: '10px',
+                    border: '1px solid #CBD5E1',
+                    background: '#FFFFFF',
+                    color: '#475569',
+                    fontSize: '0.82rem',
+                    fontWeight: 700,
+                    cursor: 'pointer',
+                    transition: 'all 0.15s ease'
+                  }}
+                >
+                  Discard
+                </button>
+                <button
+                  type="button"
+                  onClick={handleSaveDeviceSettings}
+                  disabled={savingForm}
+                  style={{
+                    padding: '9px 20px',
+                    borderRadius: '10px',
+                    border: 'none',
+                    background: '#064E3B',
+                    color: '#FFFFFF',
+                    fontSize: '0.84rem',
+                    fontWeight: 800,
+                    cursor: 'pointer',
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: '6px',
+                    boxShadow: '0 2px 8px rgba(6, 78, 59, 0.25)',
+                    transition: 'all 0.15s ease'
+                  }}
+                >
+                  <Check size={16} />
+                  <span>{savingForm ? 'Saving...' : 'Save Device Settings'}</span>
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+      </div>
+    );
+  };
+
   return (
     <div style={{
       display: 'flex',
@@ -3937,6 +4784,8 @@ export default function SetupView({
         renderBusinessProfileFullPage()
       ) : activeSubPage === 'menu-preferences' ? (
         renderMenuPreferencesFullPage()
+      ) : activeSubPage === 'orders-devices' ? (
+        renderOrdersDevicesFullPage()
       ) : (
         <>
           {/* ========================================================
@@ -4279,7 +5128,7 @@ export default function SetupView({
                     </div>
                   </div>
 
-                  <div className="settings-card-primary" onClick={() => setOpenDrawer('devices')}>
+                  <div className="settings-card-primary" onClick={() => setActiveSubPage('orders-devices')}>
                     <div style={{ width: '40px', height: '40px', borderRadius: '12px', background: '#E0F2FE', color: '#0284C7', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                       <Bell size={20} />
                     </div>
@@ -4348,7 +5197,7 @@ export default function SetupView({
                     </div>
                   </div>
 
-                  <div className="mobile-list-item-row" onClick={() => setOpenDrawer('devices')}>
+                  <div className="mobile-list-item-row" onClick={() => setActiveSubPage('orders-devices')}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
                       <div style={{ width: '34px', height: '34px', borderRadius: '10px', background: '#E0F2FE', color: '#0284C7', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                         <Bell size={18} />
@@ -4647,7 +5496,7 @@ export default function SetupView({
 
               <div className="tab-content-grid-3col">
                 {/* Card 1: Orders & Devices */}
-                <div className="settings-card-primary" onClick={() => setOpenDrawer('devices')}>
+                <div className="settings-card-primary" onClick={() => setActiveSubPage('orders-devices')}>
                   <div style={{ width: '42px', height: '42px', borderRadius: '12px', background: '#E0F2FE', color: '#0284C7', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                     <Bell size={22} />
                   </div>
@@ -4685,7 +5534,7 @@ export default function SetupView({
                 </div>
 
                 {/* Card 3: Thermal Receipt Printer */}
-                <div className="settings-card-primary" onClick={() => setShowPrinterModal ? setShowPrinterModal(true) : setOpenDrawer('devices')}>
+                <div className="settings-card-primary" onClick={() => setActiveSubPage('orders-devices')}>
                   <div style={{ width: '42px', height: '42px', borderRadius: '12px', background: '#DCFCE7', color: '#16A34A', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                     <Printer size={22} />
                   </div>
