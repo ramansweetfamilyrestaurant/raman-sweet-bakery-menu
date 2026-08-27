@@ -705,12 +705,12 @@ export default function SetupView({
           background: #FFFFFF;
           border-radius: 16px;
           border: 1px solid #EAE5DF;
-          padding: 16px 22px;
+          padding: 16px 20px;
           box-shadow: 0 1px 3px rgba(0,0,0,0.02);
         }
         .settings-body-layout {
           display: flex;
-          gap: 22px;
+          gap: 20px;
           align-items: flex-start;
           width: 100%;
         }
@@ -763,21 +763,23 @@ export default function SetupView({
           align-items: center;
           gap: 8px;
           overflow-x: auto;
-          padding-bottom: 2px;
+          padding: 4px 0 6px 0;
           scrollbar-width: none;
           -webkit-overflow-scrolling: touch;
           width: 100%;
+          box-sizing: border-box;
         }
         .settings-mobile-tabs::-webkit-scrollbar {
           display: none;
         }
         .settings-mobile-tab-btn {
-          padding: 8px 16px;
-          border-radius: 10px;
+          flex-shrink: 0;
+          padding: 7px 14px;
+          border-radius: 20px;
           border: 1px solid #EAE5DF;
           background: #FFFFFF;
           color: #475569;
-          font-size: 0.78rem;
+          font-size: 0.76rem;
           font-weight: 700;
           cursor: pointer;
           white-space: nowrap;
@@ -792,12 +794,17 @@ export default function SetupView({
           color: #FFFFFF;
           box-shadow: 0 2px 6px rgba(38, 27, 20, 0.15);
         }
-        .quick-actions-3col {
+        .quick-actions-desktop {
           display: grid;
           grid-template-columns: repeat(3, 1fr);
           gap: 12px;
         }
-        .quick-action-card {
+        .quick-actions-mobile {
+          display: none;
+          grid-template-columns: 1fr 1fr;
+          gap: 10px;
+        }
+        .quick-action-card-desktop {
           cursor: pointer;
           display: flex;
           align-items: center;
@@ -809,44 +816,106 @@ export default function SetupView({
           transition: all 0.15s ease;
           box-shadow: 0 1px 3px rgba(0,0,0,0.02);
         }
-        .quick-action-card:hover {
+        .quick-action-card-desktop:hover {
           border-color: #FF5A1F;
           transform: translateY(-2px);
           box-shadow: 0 6px 16px rgba(255, 90, 31, 0.08);
+        }
+        .quick-action-tile-mobile {
+          cursor: pointer;
+          display: flex;
+          flex-direction: column;
+          align-items: center;
+          justify-content: center;
+          text-align: center;
+          padding: 14px 10px;
+          background: #FFFFFF;
+          border: 1px solid #EAE5DF;
+          border-radius: 14px;
+          gap: 8px;
+          box-shadow: 0 1px 3px rgba(0,0,0,0.02);
+          transition: all 0.15s ease;
+        }
+        .quick-action-tile-mobile:active {
+          transform: scale(0.98);
+          background: #FAF8F5;
         }
         .restaurant-health-banner {
           background: #FFFFFF;
           border-radius: 16px;
           border: 1px solid #EAE5DF;
-          padding: 16px 20px;
+          padding: 16px 18px;
           display: flex;
           flex-direction: column;
-          gap: 14px;
+          gap: 12px;
           box-shadow: 0 1px 3px rgba(0,0,0,0.02);
         }
-        .health-items-4col {
+        .health-items-desktop {
           display: grid;
           grid-template-columns: repeat(4, 1fr);
-          gap: 12px;
+          gap: 10px;
+        }
+        .health-items-mobile {
+          display: none;
+          flex-direction: column;
+          gap: 8px;
         }
         .health-item-card {
           display: flex;
           align-items: center;
-          gap: 10px;
-          padding: 10px 12px;
+          gap: 8px;
+          padding: 9px 12px;
           background: #FAF8F5;
           border-radius: 10px;
           border: 1px solid #EAE5DF;
+        }
+        .health-item-row-mobile {
+          display: flex;
+          align-items: center;
+          gap: 10px;
+          padding: 9px 12px;
+          background: #FAF8F5;
+          border-radius: 10px;
+          border: 1px solid #EAE5DF;
+          font-size: 0.78rem;
+          font-weight: 700;
+          color: #0F172A;
         }
         .frequently-used-grid {
           display: grid;
           grid-template-columns: repeat(4, 1fr);
           gap: 14px;
         }
+        .frequently-used-list-mobile {
+          display: none;
+          flex-direction: column;
+          gap: 8px;
+        }
         .more-settings-grid {
           display: grid;
           grid-template-columns: repeat(5, 1fr);
           gap: 12px;
+        }
+        .more-settings-list-mobile {
+          display: none;
+          flex-direction: column;
+          gap: 8px;
+        }
+        .mobile-list-item-row {
+          cursor: pointer;
+          display: flex;
+          align-items: center;
+          justify-content: space-between;
+          padding: 12px 14px;
+          background: #FFFFFF;
+          border: 1px solid #EAE5DF;
+          border-radius: 14px;
+          box-shadow: 0 1px 3px rgba(0,0,0,0.02);
+          transition: all 0.15s ease;
+        }
+        .mobile-list-item-row:active {
+          background: #FAF8F5;
+          border-color: #FF5A1F;
         }
         .settings-card-primary {
           cursor: pointer;
@@ -886,7 +955,7 @@ export default function SetupView({
         }
         .tab-content-grid-3col {
           display: grid;
-          grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+          grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
           gap: 14px;
         }
         @media (max-width: 1200px) {
@@ -896,32 +965,43 @@ export default function SetupView({
           .more-settings-grid {
             grid-template-columns: repeat(3, 1fr) !important;
           }
-          .health-items-4col {
+          .health-items-desktop {
             grid-template-columns: repeat(2, 1fr) !important;
           }
         }
-        @media (max-width: 900px) {
+        @media (max-width: 860px) {
           .settings-left-sidebar {
             display: none !important;
           }
           .settings-mobile-tabs {
             display: flex !important;
           }
-          .quick-actions-3col {
-            grid-template-columns: 1fr 1fr !important;
-            gap: 10px !important;
+          .quick-actions-desktop {
+            display: none !important;
+          }
+          .quick-actions-mobile {
+            display: grid !important;
+          }
+          .health-items-desktop {
+            display: none !important;
+          }
+          .health-items-mobile {
+            display: flex !important;
           }
           .frequently-used-grid {
-            grid-template-columns: 1fr !important;
-            gap: 10px !important;
+            display: none !important;
+          }
+          .frequently-used-list-mobile {
+            display: flex !important;
           }
           .more-settings-grid {
-            grid-template-columns: 1fr !important;
-            gap: 10px !important;
+            display: none !important;
           }
-          .health-items-4col {
-            grid-template-columns: 1fr !important;
-            gap: 8px !important;
+          .more-settings-list-mobile {
+            display: flex !important;
+          }
+          .settings-header-card {
+            padding: 14px 16px !important;
           }
         }
       `}</style>
@@ -932,7 +1012,7 @@ export default function SetupView({
       <div className="settings-header-card">
         <div>
           <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
-            <h2 style={{ fontSize: '1.22rem', fontWeight: 900, color: '#0F172A', margin: 0, letterSpacing: '-0.02em' }}>
+            <h2 style={{ fontSize: '1.18rem', fontWeight: 900, color: '#0F172A', margin: 0, letterSpacing: '-0.02em' }}>
               Settings & Setup
             </h2>
             <span style={{
@@ -943,7 +1023,7 @@ export default function SetupView({
               color: '#16A34A',
               fontSize: '0.68rem',
               fontWeight: 800,
-              padding: '3px 9px',
+              padding: '3px 8px',
               borderRadius: '12px',
               border: '1px solid #BBF7D0'
             }}>
@@ -951,7 +1031,7 @@ export default function SetupView({
               All systems ready
             </span>
           </div>
-          <p style={{ fontSize: '0.76rem', color: '#64748B', margin: '3px 0 0 0', fontWeight: 500 }}>
+          <p style={{ fontSize: '0.74rem', color: '#64748B', margin: '3px 0 0 0', fontWeight: 500 }}>
             Manage your restaurant, menu preferences, operations, security and account.
           </p>
         </div>
@@ -1061,7 +1141,7 @@ export default function SetupView({
               TAB VIEW 1: GENERAL (DASHBOARD OVERVIEW)
              ======================================================== */}
           {settingsTab === 'general' && (
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '22px' }}>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
               {/* SECTION 1: QUICK ACTIONS */}
               <div>
                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '10px' }}>
@@ -1069,9 +1149,9 @@ export default function SetupView({
                   <span style={{ fontSize: '0.72rem', color: '#FF5A1F', fontWeight: 700, cursor: 'pointer' }} onClick={() => setSettingsTab('operations')}>View all</span>
                 </div>
 
-                <div className="quick-actions-3col">
-                  {/* Action 1: Edit Profile */}
-                  <div className="quick-action-card" onClick={() => setOpenDrawer('profile')}>
+                {/* DESKTOP: 3 Cards Row */}
+                <div className="quick-actions-desktop">
+                  <div className="quick-action-card-desktop" onClick={() => setOpenDrawer('profile')}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '12px', minWidth: 0 }}>
                       <div style={{ width: '38px', height: '38px', borderRadius: '10px', background: '#FFF4EE', color: '#FF5A1F', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
                         <Store size={18} />
@@ -1084,8 +1164,7 @@ export default function SetupView({
                     <ChevronRight size={16} color="#94A3B8" />
                   </div>
 
-                  {/* Action 2: Generate QR */}
-                  <div className="quick-action-card" onClick={() => onNavigate && onNavigate('qr-generator')}>
+                  <div className="quick-action-card-desktop" onClick={() => onNavigate && onNavigate('qr-generator')}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '12px', minWidth: 0 }}>
                       <div style={{ width: '38px', height: '38px', borderRadius: '10px', background: '#DCFCE7', color: '#16A34A', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
                         <Printer size={18} />
@@ -1098,8 +1177,7 @@ export default function SetupView({
                     <ChevronRight size={16} color="#94A3B8" />
                   </div>
 
-                  {/* Action 3: Test Order Alert */}
-                  <div className="quick-action-card" onClick={testAlarmSound}>
+                  <div className="quick-action-card-desktop" onClick={testAlarmSound}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '12px', minWidth: 0 }}>
                       <div style={{ width: '38px', height: '38px', borderRadius: '10px', background: '#E0F2FE', color: '#0284C7', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
                         <Bell size={18} />
@@ -1110,6 +1188,37 @@ export default function SetupView({
                       </div>
                     </div>
                     <ChevronRight size={16} color="#94A3B8" />
+                  </div>
+                </div>
+
+                {/* MOBILE: 2x2 Compact Grid matching mockup */}
+                <div className="quick-actions-mobile">
+                  <div className="quick-action-tile-mobile" onClick={() => setOpenDrawer('profile')}>
+                    <div style={{ width: '38px', height: '38px', borderRadius: '10px', background: '#FFF4EE', color: '#FF5A1F', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                      <Store size={20} />
+                    </div>
+                    <strong style={{ fontSize: '0.80rem', color: '#0F172A', fontWeight: 800 }}>Edit Profile</strong>
+                  </div>
+
+                  <div className="quick-action-tile-mobile" onClick={() => onNavigate && onNavigate('qr-generator')}>
+                    <div style={{ width: '38px', height: '38px', borderRadius: '10px', background: '#DCFCE7', color: '#16A34A', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                      <Printer size={20} />
+                    </div>
+                    <strong style={{ fontSize: '0.80rem', color: '#0F172A', fontWeight: 800 }}>Generate QR</strong>
+                  </div>
+
+                  <div className="quick-action-tile-mobile" onClick={testAlarmSound}>
+                    <div style={{ width: '38px', height: '38px', borderRadius: '10px', background: '#E0F2FE', color: '#0284C7', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                      <Bell size={20} />
+                    </div>
+                    <strong style={{ fontSize: '0.80rem', color: '#0F172A', fontWeight: 800 }}>Test Alert</strong>
+                  </div>
+
+                  <div className="quick-action-tile-mobile" onClick={() => setOpenDrawer('menu')}>
+                    <div style={{ width: '38px', height: '38px', borderRadius: '10px', background: '#FFF4EE', color: '#FF5A1F', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                      <Utensils size={20} />
+                    </div>
+                    <strong style={{ fontSize: '0.80rem', color: '#0F172A', fontWeight: 800 }}>GST & Currency</strong>
                   </div>
                 </div>
               </div>
@@ -1129,7 +1238,8 @@ export default function SetupView({
                   <span style={{ fontSize: '0.72rem', color: '#FF5A1F', fontWeight: 700, cursor: 'pointer' }} onClick={() => setSettingsTab('restaurant')}>View all</span>
                 </div>
 
-                <div className="health-items-4col">
+                {/* Desktop 4-col */}
+                <div className="health-items-desktop">
                   <div className="health-item-card">
                     <span style={{ width: '20px', height: '20px', borderRadius: '50%', background: isProfileConfigured ? '#DCFCE7' : '#F1F5F9', color: isProfileConfigured ? '#16A34A' : '#94A3B8', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.72rem', fontWeight: 900 }}>✓</span>
                     <div>
@@ -1163,14 +1273,34 @@ export default function SetupView({
                   </div>
                 </div>
 
+                {/* Mobile compact checklist */}
+                <div className="health-items-mobile">
+                  <div className="health-item-row-mobile">
+                    <span style={{ width: '18px', height: '18px', borderRadius: '50%', background: isProfileConfigured ? '#DCFCE7' : '#F1F5F9', color: isProfileConfigured ? '#16A34A' : '#94A3B8', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.70rem', fontWeight: 900 }}>✓</span>
+                    <span>Business Profile</span>
+                  </div>
+                  <div className="health-item-row-mobile">
+                    <span style={{ width: '18px', height: '18px', borderRadius: '50%', background: isLogoConfigured ? '#DCFCE7' : '#F1F5F9', color: isLogoConfigured ? '#16A34A' : '#94A3B8', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.70rem', fontWeight: 900 }}>✓</span>
+                    <span>Restaurant Logo</span>
+                  </div>
+                  <div className="health-item-row-mobile">
+                    <span style={{ width: '18px', height: '18px', borderRadius: '50%', background: isGpsConfigured ? '#DCFCE7' : '#F1F5F9', color: isGpsConfigured ? '#16A34A' : '#94A3B8', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.70rem', fontWeight: 900 }}>✓</span>
+                    <span>Location & GPS</span>
+                  </div>
+                  <div className="health-item-row-mobile">
+                    <span style={{ width: '18px', height: '18px', borderRadius: '50%', background: '#DCFCE7', color: '#16A34A', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.70rem', fontWeight: 900 }}>✓</span>
+                    <span>Order Alerts</span>
+                  </div>
+                </div>
+
                 <div style={{ fontSize: '0.74rem', color: '#16A34A', fontWeight: 700, background: '#F0FDF4', padding: '8px 12px', borderRadius: '8px', border: '1px solid #DCFCE7' }}>
                   Your restaurant is ready to go 🎉
                 </div>
               </div>
 
-              {/* SECTION 3: FREQUENTLY USED (4-COLUMN GRID) */}
+              {/* SECTION 3: FREQUENTLY USED */}
               <div>
-                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '12px' }}>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '10px' }}>
                   <div>
                     <strong style={{ fontSize: '0.90rem', color: '#0F172A', fontWeight: 800, display: 'block' }}>Frequently Used</strong>
                     <span style={{ fontSize: '0.74rem', color: '#64748B' }}>Quick access to the most important settings.</span>
@@ -1178,8 +1308,8 @@ export default function SetupView({
                   <span style={{ fontSize: '0.72rem', color: '#FF5A1F', fontWeight: 700, cursor: 'pointer' }} onClick={() => setSettingsTab('restaurant')}>View all</span>
                 </div>
 
+                {/* Desktop 4-col Cards */}
                 <div className="frequently-used-grid">
-                  {/* Card 1: Business Profile */}
                   <div className="settings-card-primary" onClick={() => setOpenDrawer('profile')}>
                     <div style={{ width: '40px', height: '40px', borderRadius: '12px', background: '#FFF4EE', color: '#FF5A1F', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                       <Store size={20} />
@@ -1191,22 +1321,13 @@ export default function SetupView({
                       </span>
                     </div>
                     <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: 'auto', paddingTop: '6px' }}>
-                      <span style={{
-                        fontSize: '0.68rem',
-                        fontWeight: 800,
-                        padding: '3px 8px',
-                        borderRadius: '6px',
-                        background: '#DCFCE7',
-                        color: '#15803D',
-                        border: '1px solid #BBF7D0'
-                      }}>
+                      <span style={{ fontSize: '0.68rem', fontWeight: 800, padding: '3px 8px', borderRadius: '6px', background: '#DCFCE7', color: '#15803D', border: '1px solid #BBF7D0' }}>
                         Configured
                       </span>
                       <ChevronRight size={16} color="#94A3B8" />
                     </div>
                   </div>
 
-                  {/* Card 2: Menu Preferences */}
                   <div className="settings-card-primary" onClick={() => setOpenDrawer('menu')}>
                     <div style={{ width: '40px', height: '40px', borderRadius: '12px', background: '#FFF4EE', color: '#FF5A1F', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                       <Utensils size={20} />
@@ -1218,22 +1339,13 @@ export default function SetupView({
                       </span>
                     </div>
                     <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: 'auto', paddingTop: '6px' }}>
-                      <span style={{
-                        fontSize: '0.68rem',
-                        fontWeight: 800,
-                        padding: '3px 8px',
-                        borderRadius: '6px',
-                        background: '#DCFCE7',
-                        color: '#15803D',
-                        border: '1px solid #BBF7D0'
-                      }}>
+                      <span style={{ fontSize: '0.68rem', fontWeight: 800, padding: '3px 8px', borderRadius: '6px', background: '#DCFCE7', color: '#15803D', border: '1px solid #BBF7D0' }}>
                         Configured
                       </span>
                       <ChevronRight size={16} color="#94A3B8" />
                     </div>
                   </div>
 
-                  {/* Card 3: Orders & Devices */}
                   <div className="settings-card-primary" onClick={() => setOpenDrawer('devices')}>
                     <div style={{ width: '40px', height: '40px', borderRadius: '12px', background: '#E0F2FE', color: '#0284C7', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                       <Bell size={20} />
@@ -1245,22 +1357,13 @@ export default function SetupView({
                       </span>
                     </div>
                     <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: 'auto', paddingTop: '6px' }}>
-                      <span style={{
-                        fontSize: '0.68rem',
-                        fontWeight: 800,
-                        padding: '3px 8px',
-                        borderRadius: '6px',
-                        background: '#E0F2FE',
-                        color: '#0284C7',
-                        border: '1px solid #BAE6FD'
-                      }}>
+                      <span style={{ fontSize: '0.68rem', fontWeight: 800, padding: '3px 8px', borderRadius: '6px', background: '#E0F2FE', color: '#0284C7', border: '1px solid #BAE6FD' }}>
                         Connected
                       </span>
                       <ChevronRight size={16} color="#94A3B8" />
                     </div>
                   </div>
 
-                  {/* Card 4: Billing & Subscription */}
                   <div className="settings-card-primary" onClick={() => setOpenDrawer('subscription')}>
                     <div style={{ width: '40px', height: '40px', borderRadius: '12px', background: '#DCFCE7', color: '#16A34A', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                       <CreditCard size={20} />
@@ -1272,15 +1375,70 @@ export default function SetupView({
                       </span>
                     </div>
                     <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: 'auto', paddingTop: '6px' }}>
-                      <span style={{
-                        fontSize: '0.68rem',
-                        fontWeight: 800,
-                        padding: '3px 8px',
-                        borderRadius: '6px',
-                        background: '#DCFCE7',
-                        color: '#16A34A',
-                        border: '1px solid #BBF7D0'
-                      }}>
+                      <span style={{ fontSize: '0.68rem', fontWeight: 800, padding: '3px 8px', borderRadius: '6px', background: '#DCFCE7', color: '#16A34A', border: '1px solid #BBF7D0' }}>
+                        Active Plan
+                      </span>
+                      <ChevronRight size={16} color="#94A3B8" />
+                    </div>
+                  </div>
+                </div>
+
+                {/* Mobile Compact List Rows */}
+                <div className="frequently-used-list-mobile">
+                  <div className="mobile-list-item-row" onClick={() => setOpenDrawer('profile')}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                      <div style={{ width: '34px', height: '34px', borderRadius: '10px', background: '#FFF4EE', color: '#FF5A1F', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                        <Store size={18} />
+                      </div>
+                      <strong style={{ fontSize: '0.84rem', color: '#0F172A', fontWeight: 800 }}>Business Profile</strong>
+                    </div>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                      <span style={{ fontSize: '0.68rem', fontWeight: 800, padding: '3px 8px', borderRadius: '6px', background: '#DCFCE7', color: '#15803D', border: '1px solid #BBF7D0' }}>
+                        Configured
+                      </span>
+                      <ChevronRight size={16} color="#94A3B8" />
+                    </div>
+                  </div>
+
+                  <div className="mobile-list-item-row" onClick={() => setOpenDrawer('menu')}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                      <div style={{ width: '34px', height: '34px', borderRadius: '10px', background: '#FFF4EE', color: '#FF5A1F', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                        <Utensils size={18} />
+                      </div>
+                      <strong style={{ fontSize: '0.84rem', color: '#0F172A', fontWeight: 800 }}>Menu Preferences</strong>
+                    </div>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                      <span style={{ fontSize: '0.68rem', fontWeight: 800, padding: '3px 8px', borderRadius: '6px', background: '#DCFCE7', color: '#15803D', border: '1px solid #BBF7D0' }}>
+                        Configured
+                      </span>
+                      <ChevronRight size={16} color="#94A3B8" />
+                    </div>
+                  </div>
+
+                  <div className="mobile-list-item-row" onClick={() => setOpenDrawer('devices')}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                      <div style={{ width: '34px', height: '34px', borderRadius: '10px', background: '#E0F2FE', color: '#0284C7', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                        <Bell size={18} />
+                      </div>
+                      <strong style={{ fontSize: '0.84rem', color: '#0F172A', fontWeight: 800 }}>Orders & Devices</strong>
+                    </div>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                      <span style={{ fontSize: '0.68rem', fontWeight: 800, padding: '3px 8px', borderRadius: '6px', background: '#E0F2FE', color: '#0284C7', border: '1px solid #BAE6FD' }}>
+                        Connected
+                      </span>
+                      <ChevronRight size={16} color="#94A3B8" />
+                    </div>
+                  </div>
+
+                  <div className="mobile-list-item-row" onClick={() => setOpenDrawer('subscription')}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                      <div style={{ width: '34px', height: '34px', borderRadius: '10px', background: '#DCFCE7', color: '#16A34A', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                        <CreditCard size={18} />
+                      </div>
+                      <strong style={{ fontSize: '0.84rem', color: '#0F172A', fontWeight: 800 }}>Billing & Subscription</strong>
+                    </div>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                      <span style={{ fontSize: '0.68rem', fontWeight: 800, padding: '3px 8px', borderRadius: '6px', background: '#DCFCE7', color: '#16A34A', border: '1px solid #BBF7D0' }}>
                         Active Plan
                       </span>
                       <ChevronRight size={16} color="#94A3B8" />
@@ -1289,15 +1447,15 @@ export default function SetupView({
                 </div>
               </div>
 
-              {/* SECTION 4: MORE SETTINGS (5-COLUMN GRID) */}
+              {/* SECTION 4: MORE SETTINGS */}
               <div>
-                <div style={{ marginBottom: '12px' }}>
+                <div style={{ marginBottom: '10px' }}>
                   <strong style={{ fontSize: '0.90rem', color: '#0F172A', fontWeight: 800, display: 'block' }}>More Settings</strong>
                   <span style={{ fontSize: '0.74rem', color: '#64748B' }}>Additional settings and tools for your restaurant.</span>
                 </div>
 
+                {/* Desktop 5-col Grid */}
                 <div className="more-settings-grid">
-                  {/* More 1: Location & GPS */}
                   <div className="settings-card-secondary" onClick={() => setOpenDrawer('location')}>
                     <div style={{ width: '36px', height: '36px', borderRadius: '10px', background: '#DCFCE7', color: '#16A34A', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                       <MapPin size={18} />
@@ -1315,7 +1473,6 @@ export default function SetupView({
                     </div>
                   </div>
 
-                  {/* More 2: QR Standees */}
                   <div className="settings-card-secondary" onClick={() => onNavigate && onNavigate('qr-generator')}>
                     <div style={{ width: '36px', height: '36px', borderRadius: '10px', background: '#FEF3C7', color: '#D97706', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                       <Printer size={18} />
@@ -1333,7 +1490,6 @@ export default function SetupView({
                     </div>
                   </div>
 
-                  {/* More 3: Security & Credentials */}
                   <div className="settings-card-secondary" onClick={() => setOpenDrawer('security')}>
                     <div style={{ width: '36px', height: '36px', borderRadius: '10px', background: '#FEE2E2', color: '#DC2626', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                       <Lock size={18} />
@@ -1351,7 +1507,6 @@ export default function SetupView({
                     </div>
                   </div>
 
-                  {/* More 4: Reviews & AI */}
                   <div className="settings-card-secondary" onClick={() => onNavigate && onNavigate('review')}>
                     <div style={{ width: '36px', height: '36px', borderRadius: '10px', background: '#F3E8FF', color: '#7E22CE', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                       <ShieldCheck size={18} />
@@ -1369,7 +1524,6 @@ export default function SetupView({
                     </div>
                   </div>
 
-                  {/* More 5: Database Tools */}
                   <div className="settings-card-secondary" onClick={() => onOptimizeDatabase && onOptimizeDatabase()}>
                     <div style={{ width: '36px', height: '36px', borderRadius: '10px', background: '#DCFCE7', color: '#15803D', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                       <Upload size={18} />
@@ -1384,6 +1538,84 @@ export default function SetupView({
                       <span style={{ fontSize: '0.65rem', fontWeight: 800, padding: '2px 7px', borderRadius: '5px', background: '#DCFCE7', color: '#15803D', border: '1px solid #BBF7D0' }}>
                         Optimized
                       </span>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Mobile Compact List Rows for More Settings */}
+                <div className="more-settings-list-mobile">
+                  <div className="mobile-list-item-row" onClick={() => setOpenDrawer('location')}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                      <div style={{ width: '34px', height: '34px', borderRadius: '10px', background: '#DCFCE7', color: '#16A34A', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                        <MapPin size={18} />
+                      </div>
+                      <strong style={{ fontSize: '0.84rem', color: '#0F172A', fontWeight: 800 }}>Location & GPS</strong>
+                    </div>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                      <span style={{ fontSize: '0.68rem', fontWeight: 800, padding: '3px 8px', borderRadius: '6px', background: '#DCFCE7', color: '#15803D', border: '1px solid #BBF7D0' }}>
+                        Connected
+                      </span>
+                      <ChevronRight size={16} color="#94A3B8" />
+                    </div>
+                  </div>
+
+                  <div className="mobile-list-item-row" onClick={() => onNavigate && onNavigate('qr-generator')}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                      <div style={{ width: '34px', height: '34px', borderRadius: '10px', background: '#FEF3C7', color: '#D97706', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                        <Printer size={18} />
+                      </div>
+                      <strong style={{ fontSize: '0.84rem', color: '#0F172A', fontWeight: 800 }}>QR Standees & Table Stickers</strong>
+                    </div>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                      <span style={{ fontSize: '0.68rem', fontWeight: 800, padding: '3px 8px', borderRadius: '6px', background: '#FEF3C7', color: '#D97706', border: '1px solid #FDE68A' }}>
+                        Ready
+                      </span>
+                      <ChevronRight size={16} color="#94A3B8" />
+                    </div>
+                  </div>
+
+                  <div className="mobile-list-item-row" onClick={() => setOpenDrawer('security')}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                      <div style={{ width: '34px', height: '34px', borderRadius: '10px', background: '#FEE2E2', color: '#DC2626', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                        <Lock size={18} />
+                      </div>
+                      <strong style={{ fontSize: '0.84rem', color: '#0F172A', fontWeight: 800 }}>Security & Credentials</strong>
+                    </div>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                      <span style={{ fontSize: '0.68rem', fontWeight: 800, padding: '3px 8px', borderRadius: '6px', background: '#FEE2E2', color: '#DC2626', border: '1px solid #FECACA' }}>
+                        Secure
+                      </span>
+                      <ChevronRight size={16} color="#94A3B8" />
+                    </div>
+                  </div>
+
+                  <div className="mobile-list-item-row" onClick={() => onNavigate && onNavigate('review')}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                      <div style={{ width: '34px', height: '34px', borderRadius: '10px', background: '#F3E8FF', color: '#7E22CE', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                        <ShieldCheck size={18} />
+                      </div>
+                      <strong style={{ fontSize: '0.84rem', color: '#0F172A', fontWeight: 800 }}>Reviews & AI Auto-Reply</strong>
+                    </div>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                      <span style={{ fontSize: '0.68rem', fontWeight: 800, padding: '3px 8px', borderRadius: '6px', background: '#F3E8FF', color: '#7E22CE', border: '1px solid #E9D5FF' }}>
+                        Connected
+                      </span>
+                      <ChevronRight size={16} color="#94A3B8" />
+                    </div>
+                  </div>
+
+                  <div className="mobile-list-item-row" onClick={() => onOptimizeDatabase && onOptimizeDatabase()}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                      <div style={{ width: '34px', height: '34px', borderRadius: '10px', background: '#DCFCE7', color: '#15803D', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                        <Upload size={18} />
+                      </div>
+                      <strong style={{ fontSize: '0.84rem', color: '#0F172A', fontWeight: 800 }}>Database Tools</strong>
+                    </div>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                      <span style={{ fontSize: '0.68rem', fontWeight: 800, padding: '3px 8px', borderRadius: '6px', background: '#DCFCE7', color: '#15803D', border: '1px solid #BBF7D0' }}>
+                        Optimized
+                      </span>
+                      <ChevronRight size={16} color="#94A3B8" />
                     </div>
                   </div>
                 </div>
