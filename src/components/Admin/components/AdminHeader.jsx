@@ -57,10 +57,14 @@ export default function AdminHeader({
           .header-biz-text { display: none !important; }
           .header-biz-chevron { display: none !important; }
         }
+        @media (max-width: 480px) {
+          .header-subtitle { display: none !important; }
+          .header-greeting-title { font-size: 0.88rem !important; }
+        }
       `}</style>
 
       {/* LEFT: Menu Toggle + Dynamic Greeting */}
-      <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
         <button
           style={{
             background: 'transparent',
@@ -74,15 +78,15 @@ export default function AdminHeader({
           }}
           title="Menu"
         >
-          <Menu size={20} />
+          <Menu size={19} />
         </button>
 
         <div>
-          <h2 style={{ fontSize: '0.98rem', fontWeight: 800, color: '#0F172A', margin: 0, lineHeight: 1.2, letterSpacing: '-0.01em', display: 'flex', alignItems: 'center', gap: '6px' }}>
+          <h2 className="header-greeting-title" style={{ fontSize: '0.96rem', fontWeight: 800, color: '#0F172A', margin: 0, lineHeight: 1.2, letterSpacing: '-0.01em', display: 'flex', alignItems: 'center', gap: '5px' }}>
             <span>{greeting}, Admin!</span>
             <span>☀️</span>
           </h2>
-          <span style={{ fontSize: '0.72rem', color: '#64748B', fontWeight: 500, display: 'block', marginTop: '1px' }}>
+          <span className="header-subtitle" style={{ fontSize: '0.70rem', color: '#64748B', fontWeight: 500, display: 'block', marginTop: '1px' }}>
             Great food brings people together.
           </span>
         </div>

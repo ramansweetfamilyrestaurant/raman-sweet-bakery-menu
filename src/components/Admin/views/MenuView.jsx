@@ -1343,7 +1343,7 @@ export default function MenuView({
                 </button>
               </div>
             ) : viewMode === 'grid' ? (
-              /* GRID VIEW */
+              /* GRID VIEW (Both Desktop & Mobile 2-col) */
               <div className="center-dish-grid">
                 {paginatedDishes.map(dish => {
                   const isAvailable = dish.is_available !== false;
@@ -1554,82 +1554,83 @@ export default function MenuView({
                 })}
               </div>
             ) : (
-              /* LIST VIEW TABLE */
-              <div className="desktop-table-view" style={{ background: '#FFFFFF', borderRadius: '16px', border: '1px solid #E2E8F0', overflow: 'hidden' }}>
-                <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left' }}>
-                  <thead>
-                    <tr style={{ background: '#F8FAFC', borderBottom: '1px solid #E2E8F0', color: '#64748B', fontSize: '0.68rem', fontWeight: 800, textTransform: 'uppercase' }}>
-                      <th style={{ padding: '10px 14px' }}>IMAGE</th>
-                      <th style={{ padding: '10px 14px' }}>DISH</th>
-                      <th style={{ padding: '10px 14px' }}>CATEGORY</th>
-                      <th style={{ padding: '10px 14px' }}>PRICE</th>
-                      <th style={{ padding: '10px 14px' }}>STATUS</th>
-                      <th style={{ padding: '10px 14px', textAlign: 'right' }}>ACTIONS</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {paginatedDishes.map(dish => {
-                      const isAvailable = dish.is_available !== false;
-                      const isVeg = dish.type === 'veg';
-                      const catObj = safeCategories.find(c => String(c.id) === String(dish.category_id));
+              /* LIST VIEW (Table on Desktop, Cards on Mobile) */
+              <>
+                <div className="desktop-table-view" style={{ background: '#FFFFFF', borderRadius: '16px', border: '1px solid #E2E8F0', overflow: 'hidden' }}>
+                  <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left' }}>
+                    <thead>
+                      <tr style={{ background: '#F8FAFC', borderBottom: '1px solid #E2E8F0', color: '#64748B', fontSize: '0.68rem', fontWeight: 800, textTransform: 'uppercase' }}>
+                        <th style={{ padding: '10px 14px' }}>IMAGE</th>
+                        <th style={{ padding: '10px 14px' }}>DISH</th>
+                        <th style={{ padding: '10px 14px' }}>CATEGORY</th>
+                        <th style={{ padding: '10px 14px' }}>PRICE</th>
+                        <th style={{ padding: '10px 14px' }}>STATUS</th>
+                        <th style={{ padding: '10px 14px', textAlign: 'right' }}>ACTIONS</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {paginatedDishes.map(dish => {
+                        const isAvailable = dish.is_available !== false;
+                        const catObj = safeCategories.find(c => String(c.id) === String(dish.category_id));
 
-                      return (
-                        <tr key={dish.id} style={{ borderBottom: '1px solid #F1F5F9' }}>
-                          <td style={{ padding: '8px 14px' }}>
-                            <div style={{ width: '40px', height: '40px', borderRadius: '8px', overflow: 'hidden', background: '#F8FAFC', border: '1px solid #E2E8F0' }}>
-                              <img src={getDishImageUrl(dish.image || dish.image_url)} alt={dish.name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} onError={(e) => { e.currentTarget.src = '/images/default-dish.webp'; }} />
-                            </div>
-                          </td>
-                          <td style={{ padding: '8px 14px' }}>
-                            <strong style={{ fontSize: '0.86rem', color: '#0F172A' }}>{dish.name}</strong>
-                          </td>
-                          <td style={{ padding: '8px 14px' }}>
-                            <span style={{ fontSize: '0.72rem', color: '#64748B' }}>{catObj?.name || 'Main Course'}</span>
-                          </td>
-                          <td style={{ padding: '8px 14px' }}>
-                            {renderDishPrice(dish, 'table')}
-                          </td>
-                          <td style={{ padding: '8px 14px' }}>
-                            <button
-                              onClick={() => onToggleAvailability && onToggleAvailability(dish.id, !isAvailable)}
-                              style={{ background: isAvailable ? '#E6F9EE' : '#FEE2E2', color: isAvailable ? '#15803D' : '#DC2626', border: 'none', padding: '3px 8px', borderRadius: '6px', fontSize: '0.66rem', fontWeight: 800, cursor: 'pointer' }}
-                            >
-                              {isAvailable ? 'In Stock' : 'Sold Out'}
-                            </button>
-                          </td>
-                          <td style={{ padding: '8px 14px', textAlign: 'right' }}>
-                            <button onClick={() => onOpenEditDish(dish)} style={{ padding: '4px 8px', borderRadius: '6px', border: '1px solid #E2E8F0', background: '#FFFFFF', color: '#0F172A', fontSize: '0.70rem', fontWeight: 700, cursor: 'pointer' }}>Edit</button>
-                          </td>
-                        </tr>
-                      );
-                    })}
-                  </tbody>
-                </table>
-              </div>
+                        return (
+                          <tr key={dish.id} style={{ borderBottom: '1px solid #F1F5F9' }}>
+                            <td style={{ padding: '8px 14px' }}>
+                              <div style={{ width: '40px', height: '40px', borderRadius: '8px', overflow: 'hidden', background: '#F8FAFC', border: '1px solid #E2E8F0' }}>
+                                <img src={getDishImageUrl(dish.image || dish.image_url)} alt={dish.name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} onError={(e) => { e.currentTarget.src = '/images/default-dish.webp'; }} />
+                              </div>
+                            </td>
+                            <td style={{ padding: '8px 14px' }}>
+                              <strong style={{ fontSize: '0.86rem', color: '#0F172A' }}>{dish.name}</strong>
+                            </td>
+                            <td style={{ padding: '8px 14px' }}>
+                              <span style={{ fontSize: '0.72rem', color: '#64748B' }}>{catObj?.name || 'Main Course'}</span>
+                            </td>
+                            <td style={{ padding: '8px 14px' }}>
+                              {renderDishPrice(dish, 'table')}
+                            </td>
+                            <td style={{ padding: '8px 14px' }}>
+                              <button
+                                onClick={() => onToggleAvailability && onToggleAvailability(dish.id, !isAvailable)}
+                                style={{ background: isAvailable ? '#E6F9EE' : '#FEE2E2', color: isAvailable ? '#15803D' : '#DC2626', border: 'none', padding: '3px 8px', borderRadius: '6px', fontSize: '0.66rem', fontWeight: 800, cursor: 'pointer' }}
+                              >
+                                {isAvailable ? 'In Stock' : 'Sold Out'}
+                              </button>
+                            </td>
+                            <td style={{ padding: '8px 14px', textAlign: 'right' }}>
+                              <button onClick={() => onOpenEditDish(dish)} style={{ padding: '4px 8px', borderRadius: '6px', border: '1px solid #E2E8F0', background: '#FFFFFF', color: '#0F172A', fontSize: '0.70rem', fontWeight: 700, cursor: 'pointer' }}>Edit</button>
+                            </td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
+                </div>
+
+                {/* Mobile List View Cards */}
+                <div className="mobile-dish-list-container" style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                  {paginatedDishes.map(dish => {
+                    const isAvailable = dish.is_available !== false;
+                    const catObj = safeCategories.find(c => String(c.id) === String(dish.category_id));
+                    return (
+                      <div key={dish.id} style={{ background: '#FFFFFF', borderRadius: '14px', border: '1px solid #E2E8F0', padding: '10px', display: 'flex', alignItems: 'center', gap: '12px' }}>
+                        <div style={{ width: '56px', height: '56px', borderRadius: '10px', overflow: 'hidden', background: '#F8FAFC', border: '1px solid #E2E8F0', flexShrink: 0 }}>
+                          <img src={getDishImageUrl(dish.image || dish.image_url)} alt={dish.name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} onError={(e) => { e.currentTarget.src = '/images/default-dish.webp'; }} />
+                        </div>
+                        <div style={{ flex: 1, minWidth: 0 }}>
+                          <strong style={{ fontSize: '0.86rem', color: '#0F172A', display: 'block', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{dish.name}</strong>
+                          <span style={{ fontSize: '0.66rem', color: '#64748B', display: 'block', margin: '1px 0 4px 0' }}>{catObj?.name || 'Main Course'}</span>
+                          {renderDishPrice(dish, 'list')}
+                        </div>
+                        <button onClick={() => onToggleAvailability && onToggleAvailability(dish.id, !isAvailable)} style={{ background: isAvailable ? '#E6F9EE' : '#FEE2E2', color: isAvailable ? '#15803D' : '#DC2626', border: 'none', padding: '4px 8px', borderRadius: '6px', fontSize: '0.64rem', fontWeight: 800, cursor: 'pointer', flexShrink: 0 }}>
+                          {isAvailable ? 'In Stock' : 'Sold Out'}
+                        </button>
+                      </div>
+                    );
+                  })}
+                </div>
+              </>
             )}
-
-            {/* Mobile List View Fallback */}
-            <div className="mobile-dish-list-container">
-              {paginatedDishes.map(dish => {
-                const isAvailable = dish.is_available !== false;
-                const catObj = safeCategories.find(c => String(c.id) === String(dish.category_id));
-                return (
-                  <div key={dish.id} style={{ background: '#FFFFFF', borderRadius: '14px', border: '1px solid #E2E8F0', padding: '12px', display: 'flex', alignItems: 'center', gap: '12px' }}>
-                    <div style={{ width: '60px', height: '60px', borderRadius: '10px', overflow: 'hidden', background: '#F8FAFC', border: '1px solid #E2E8F0', flexShrink: 0 }}>
-                      <img src={getDishImageUrl(dish.image || dish.image_url)} alt={dish.name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} onError={(e) => { e.currentTarget.src = '/images/default-dish.webp'; }} />
-                    </div>
-                    <div style={{ flex: 1, minWidth: 0 }}>
-                      <strong style={{ fontSize: '0.86rem', color: '#0F172A', display: 'block', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{dish.name}</strong>
-                      <span style={{ fontSize: '0.66rem', color: '#64748B', display: 'block', margin: '1px 0 4px 0' }}>{catObj?.name || 'Main Course'}</span>
-                      {renderDishPrice(dish, 'list')}
-                    </div>
-                    <button onClick={() => onToggleAvailability && onToggleAvailability(dish.id, !isAvailable)} style={{ background: isAvailable ? '#E6F9EE' : '#FEE2E2', color: isAvailable ? '#15803D' : '#DC2626', border: 'none', padding: '4px 8px', borderRadius: '6px', fontSize: '0.64rem', fontWeight: 800, cursor: 'pointer' }}>
-                      {isAvailable ? 'In Stock' : 'Sold Out'}
-                    </button>
-                  </div>
-                );
-              })}
-            </div>
           </div>
 
           {/* ========================================================
