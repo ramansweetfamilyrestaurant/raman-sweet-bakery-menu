@@ -22,40 +22,20 @@ import { resolveTheme, DEFAULT_THEME } from './constants/themes';
 
 // Robust Lazy Loading with automatic retry on new production deploys
 const lazyWithRetry = (componentImport) =>
-  lazy(() =>
-    componentImport().then(
-      (module) => {
-        if (!module || !module.default) {
-          throw new Error('Module has no default export');
-        }
-        return module;
-      },
-      (error) => {
-        console.warn('Chunk loading failed, auto-reloading to latest version...', error);
-        const lastReload = parseInt(window.sessionStorage.getItem('last-chunk-reload') || '0', 10);
-        const now = Date.now();
-        if (now - lastReload > 5000) {
-          window.sessionStorage.setItem('last-chunk-reload', String(now));
-          if ('caches' in window) {
-            try {
-              caches.keys().then((keys) => {
-                Promise.all(keys.map((k) => caches.delete(k))).finally(() => {
-                  window.location.reload();
-                });
-              }).catch(() => {
-                window.location.reload();
-              });
-            } catch {
-              window.location.reload();
-            }
-          } else {
-            window.location.reload();
-          }
-        }
-        return new Promise(() => {});
+  lazy(async () => {
+    try {
+      return await componentImport();
+    } catch (error) {
+      console.warn('Chunk loading failed, reloading for updated deploy...', error);
+      const lastReload = parseInt(window.sessionStorage.getItem('last-chunk-reload') || '0', 10);
+      const now = Date.now();
+      if (now - lastReload > 5000) {
+        window.sessionStorage.setItem('last-chunk-reload', String(now));
+        window.location.reload();
       }
-    )
-  );
+      throw error;
+    }
+  });
 
 const AdminDashboard = lazyWithRetry(() => import('./components/Admin/AdminDashboard'));
 const OnboardingSetup = lazyWithRetry(() => import('./components/Admin/OnboardingSetup'));
