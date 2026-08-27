@@ -22,35 +22,40 @@ import { resolveTheme, DEFAULT_THEME } from './constants/themes';
 
 // Robust Lazy Loading with automatic retry on new production deploys
 const lazyWithRetry = (componentImport) =>
-  lazy(async () => {
-    try {
-      return await componentImport();
-    } catch (error) {
-      console.warn('Chunk loading failed, automatically refreshing to latest deploy...', error);
-      const isChunkError = error?.message && (
-        error.message.includes('dynamically imported module') ||
-        error.message.includes('Failed to fetch dynamically imported module') ||
-        error.message.includes('error loading dynamically imported module') ||
-        error.message.includes('Importing a module script failed')
-      );
-      if (isChunkError) {
+  lazy(() =>
+    componentImport().then(
+      (module) => {
+        if (!module || !module.default) {
+          throw new Error('Module has no default export');
+        }
+        return module;
+      },
+      (error) => {
+        console.warn('Chunk loading failed, auto-reloading to latest version...', error);
         const lastReload = parseInt(window.sessionStorage.getItem('last-chunk-reload') || '0', 10);
         const now = Date.now();
-        if (now - lastReload > 8000) {
+        if (now - lastReload > 5000) {
           window.sessionStorage.setItem('last-chunk-reload', String(now));
           if ('caches' in window) {
             try {
-              const keys = await caches.keys();
-              await Promise.all(keys.map(k => caches.delete(k)));
-            } catch {}
+              caches.keys().then((keys) => {
+                Promise.all(keys.map((k) => caches.delete(k))).finally(() => {
+                  window.location.reload();
+                });
+              }).catch(() => {
+                window.location.reload();
+              });
+            } catch {
+              window.location.reload();
+            }
+          } else {
+            window.location.reload();
           }
-          window.location.reload();
-          return new Promise(() => {});
         }
+        return new Promise(() => {});
       }
-      throw error;
-    }
-  });
+    )
+  );
 
 const AdminDashboard = lazyWithRetry(() => import('./components/Admin/AdminDashboard'));
 const OnboardingSetup = lazyWithRetry(() => import('./components/Admin/OnboardingSetup'));
