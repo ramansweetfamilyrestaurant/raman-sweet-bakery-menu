@@ -111,7 +111,7 @@ export default function AdminBottomNavigation({ activeTab, setActiveTab, pending
             alignItems: 'center',
             justifyContent: 'center',
             gap: '3px',
-            color: isMenuActive ? '#16A34A' : '#64748B',
+            color: isMenuActive ? '#D97706' : '#64748B',
             background: 'none',
             border: 'none',
             cursor: 'pointer',
@@ -120,7 +120,7 @@ export default function AdminBottomNavigation({ activeTab, setActiveTab, pending
             padding: 0
           }}
         >
-          <Utensils size={20} color={isMenuActive ? '#16A34A' : '#64748B'} strokeWidth={isMenuActive ? 2.5 : 2} />
+          <Utensils size={20} color={isMenuActive ? '#D97706' : '#64748B'} strokeWidth={isMenuActive ? 2.5 : 2} />
           <span style={{ fontSize: '0.68rem', fontWeight: isMenuActive ? 800 : 600 }}>Menu</span>
         </button>
 

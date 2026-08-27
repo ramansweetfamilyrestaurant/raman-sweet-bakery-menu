@@ -313,8 +313,8 @@ export default function MenuView({
 
         @media (max-width: 600px) {
           .center-dish-grid {
-            grid-template-columns: 1fr !important;
-            gap: 12px !important;
+            grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+            gap: 10px !important;
           }
           .header-cursive-quote {
             display: none !important;
@@ -333,9 +333,6 @@ export default function MenuView({
           }
           .desktop-table-view {
             display: none !important;
-          }
-          .mobile-dish-list-container {
-            display: flex !important;
           }
         }
 
@@ -505,95 +502,95 @@ export default function MenuView({
       </div>
 
       {/* ========================================================
-          MOBILE HERO CARD (DARK FOREST GREEN #062B1C)
+          MOBILE HERO CARD (NEW SLEEK DARK CHARCOAL THEME)
          ======================================================== */}
       <div className="mobile-only-hero" style={{
-        background: 'linear-gradient(145deg, #0A2315 0%, #061D11 100%)',
+        background: 'linear-gradient(145deg, #181310 0%, #090C0A 100%)',
         borderRadius: '20px',
-        padding: '20px 18px',
+        padding: '18px 16px',
         color: '#FFFFFF',
-        boxShadow: '0 4px 16px rgba(10,35,21,0.2)',
-        border: '1px solid rgba(212, 175, 55, 0.2)',
+        boxShadow: '0 6px 20px rgba(0,0,0,0.25)',
+        border: '1px solid rgba(212, 175, 55, 0.25)',
         position: 'relative'
       }}>
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '6px' }}>
-          <h2 style={{ fontSize: '1.25rem', fontWeight: 900, margin: 0, letterSpacing: '-0.02em', color: '#FFFFFF' }}>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '4px' }}>
+          <h2 style={{ fontSize: '1.20rem', fontWeight: 900, margin: 0, letterSpacing: '-0.02em', color: '#FFFFFF' }}>
             Menu & Catalog
           </h2>
           <span style={{
-            background: 'rgba(22, 163, 74, 0.25)',
+            background: 'rgba(34, 197, 94, 0.2)',
             color: '#4ADE80',
             border: '1px solid rgba(74, 222, 128, 0.3)',
-            fontSize: '0.66rem',
+            fontSize: '0.64rem',
             fontWeight: 800,
-            padding: '2px 8px',
+            padding: '2px 7px',
             borderRadius: '6px'
           }}>
-            LIVE
+            • LIVE
           </span>
         </div>
 
-        <p style={{ fontSize: '0.76rem', color: '#94A3B8', margin: '0 0 16px 0', lineHeight: 1.3 }}>
+        <p style={{ fontSize: '0.74rem', color: '#94A3B8', margin: '0 0 14px 0', lineHeight: 1.3 }}>
           Create, manage and organize your dishes, categories and combos.
         </p>
 
-        {/* 3 Metric Pills */}
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '8px', marginBottom: '16px' }}>
+        {/* 3 Metric Pills on Mobile */}
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '8px', marginBottom: '14px' }}>
           <div
             onClick={() => setActiveSubTab && setActiveSubTab('dishes')}
             style={{
-              background: activeSubTab === 'dishes' ? 'rgba(22, 163, 74, 0.25)' : 'rgba(255, 255, 255, 0.08)',
+              background: activeSubTab === 'dishes' ? '#3D271D' : 'rgba(255, 255, 255, 0.06)',
               borderRadius: '12px',
-              padding: '10px 8px',
+              padding: '8px 6px',
               textAlign: 'center',
-              border: activeSubTab === 'dishes' ? '1px solid #22C55E' : '1px solid rgba(255,255,255,0.06)',
+              border: activeSubTab === 'dishes' ? '1px solid #D97706' : '1px solid rgba(255,255,255,0.06)',
               cursor: 'pointer'
             }}
           >
             <div style={{ fontSize: '1.1rem', fontWeight: 900, color: '#FFFFFF' }}>{safeDishes.length}</div>
-            <div style={{ fontSize: '0.66rem', color: activeSubTab === 'dishes' ? '#4ADE80' : '#94A3B8', fontWeight: 700, marginTop: '2px' }}>Dishes</div>
+            <div style={{ fontSize: '0.64rem', color: activeSubTab === 'dishes' ? '#FB923C' : '#94A3B8', fontWeight: 700, marginTop: '2px' }}>Dishes</div>
           </div>
 
           <div
             onClick={() => setActiveSubTab && setActiveSubTab('categories')}
             style={{
-              background: activeSubTab === 'categories' ? 'rgba(2, 132, 199, 0.25)' : 'rgba(255, 255, 255, 0.08)',
+              background: activeSubTab === 'categories' ? 'rgba(2, 132, 199, 0.25)' : 'rgba(255, 255, 255, 0.06)',
               borderRadius: '12px',
-              padding: '10px 8px',
+              padding: '8px 6px',
               textAlign: 'center',
               border: activeSubTab === 'categories' ? '1px solid #38BDF8' : '1px solid rgba(255,255,255,0.06)',
               cursor: 'pointer'
             }}
           >
             <div style={{ fontSize: '1.1rem', fontWeight: 900, color: '#FFFFFF' }}>{safeCategories.length}</div>
-            <div style={{ fontSize: '0.66rem', color: activeSubTab === 'categories' ? '#38BDF8' : '#94A3B8', fontWeight: 700, marginTop: '2px' }}>Categories</div>
+            <div style={{ fontSize: '0.64rem', color: activeSubTab === 'categories' ? '#38BDF8' : '#94A3B8', fontWeight: 700, marginTop: '2px' }}>Categories</div>
           </div>
 
           <div
             onClick={() => setActiveSubTab && setActiveSubTab('combos')}
             style={{
-              background: activeSubTab === 'combos' ? 'rgba(147, 51, 234, 0.25)' : 'rgba(255, 255, 255, 0.08)',
+              background: activeSubTab === 'combos' ? 'rgba(147, 51, 234, 0.25)' : 'rgba(255, 255, 255, 0.06)',
               borderRadius: '12px',
-              padding: '10px 8px',
+              padding: '8px 6px',
               textAlign: 'center',
               border: activeSubTab === 'combos' ? '1px solid #C084FC' : '1px solid rgba(255,255,255,0.06)',
               cursor: 'pointer'
             }}
           >
             <div style={{ fontSize: '1.1rem', fontWeight: 900, color: '#FFFFFF' }}>{safeCombos.length}</div>
-            <div style={{ fontSize: '0.66rem', color: activeSubTab === 'combos' ? '#C084FC' : '#94A3B8', fontWeight: 700, marginTop: '2px' }}>Combos</div>
+            <div style={{ fontSize: '0.64rem', color: activeSubTab === 'combos' ? '#C084FC' : '#94A3B8', fontWeight: 700, marginTop: '2px' }}>Combos</div>
           </div>
         </div>
 
         {/* Mobile Split Action Button (+ Add Dish | ▼) */}
-        <div style={{ display: 'flex', borderRadius: '12px', overflow: 'hidden', boxShadow: '0 4px 12px rgba(22, 163, 74, 0.3)' }}>
+        <div style={{ display: 'flex', borderRadius: '12px', overflow: 'hidden', boxShadow: '0 4px 12px rgba(0,0,0,0.3)' }}>
           <button
             onClick={activeSubTab === 'combos' ? onOpenAddCombo : activeSubTab === 'categories' ? onOpenAddCategory : onOpenAddDish}
             disabled={dishQuota.isAtLimit}
             style={{
               flex: 1,
               padding: '11px 14px',
-              background: 'linear-gradient(135deg, #16A34A 0%, #15803D 100%)',
+              background: '#261B14',
               color: '#FFFFFF',
               border: 'none',
               fontSize: '0.84rem',
@@ -605,7 +602,7 @@ export default function MenuView({
               gap: '6px'
             }}
           >
-            <Plus size={16} color="#FFFFFF" strokeWidth={3} />
+            <Plus size={16} color="#FB923C" strokeWidth={3} />
             <span>
               {activeSubTab === 'combos' ? '+ Add Combo' : activeSubTab === 'categories' ? '+ Add Category' : '+ Add Dish'}
             </span>
@@ -614,10 +611,10 @@ export default function MenuView({
             onClick={() => setShowMobileAddDropdown(!showMobileAddDropdown)}
             style={{
               padding: '11px 12px',
-              background: '#0F6932',
+              background: '#1A120D',
               color: '#FFFFFF',
               border: 'none',
-              borderLeft: '1px solid rgba(255,255,255,0.2)',
+              borderLeft: '1px solid rgba(255,255,255,0.15)',
               cursor: 'pointer',
               display: 'flex',
               alignItems: 'center',
