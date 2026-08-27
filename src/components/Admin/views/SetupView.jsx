@@ -50,6 +50,7 @@ export default function SetupView({
   onOptimizeDatabase,
   initialDrawer = null
 }) {
+  const [settingsTab, setSettingsTab] = useState('general'); // 'general' | 'restaurant' | 'operations' | 'menu-billing' | 'security' | 'advanced'
   const [openDrawer, setOpenDrawer] = useState(initialDrawer); // 'profile', 'devices', 'menu', 'location', 'subscription', 'security', 'cinema'
   const [uploadingLogo, setUploadingLogo] = useState(false);
   const [gpsLoading, setGpsLoading] = useState(false);
@@ -670,412 +671,705 @@ export default function SetupView({
   const passedChecks = [isProfileConfigured, isLogoConfigured, isGpsConfigured, isSecurityConfigured].filter(Boolean).length;
   const isFullySetup = passedChecks === totalChecks;
 
+  const showAll = settingsTab === 'general';
+  const showRestaurant = showAll || settingsTab === 'restaurant';
+  const showOperations = showAll || settingsTab === 'operations';
+  const showMenuBilling = showAll || settingsTab === 'menu-billing';
+  const showSecurity = showAll || settingsTab === 'security';
+  const showAdvanced = showAll || settingsTab === 'advanced';
+
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: '20px', maxWidth: '1400px', margin: '0 auto', width: '100%', boxSizing: 'border-box' }}>
-      {/* Header Title */}
+    <div style={{
+      display: 'flex',
+      flexDirection: 'column',
+      gap: '20px',
+      maxWidth: '1400px',
+      margin: '0 auto',
+      width: '100%',
+      boxSizing: 'border-box',
+      fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif'
+    }}>
+      <style>{`
+        .settings-grid-2col {
+          display: grid;
+          grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+          gap: 14px;
+        }
+        .setting-card {
+          cursor: pointer;
+          display: flex;
+          align-items: center;
+          justify-content: space-between;
+          padding: 16px 18px;
+          background: #FFFFFF;
+          border-radius: 16px;
+          border: 1px solid #EAE5DF;
+          box-shadow: 0 1px 3px rgba(0,0,0,0.02);
+          transition: all 0.18s cubic-bezier(0.16, 1, 0.3, 1);
+        }
+        .setting-card:hover {
+          border-color: #FF5A1F;
+          transform: translateY(-2px);
+          box-shadow: 0 6px 16px rgba(255, 90, 31, 0.08);
+        }
+        .setting-card:hover .setting-chevron {
+          transform: translateX(3px);
+          color: #FF5A1F !important;
+        }
+        @media (max-width: 768px) {
+          .settings-grid-2col {
+            grid-template-columns: 1fr !important;
+            gap: 10px !important;
+          }
+          .setting-card {
+            padding: 14px 16px !important;
+            border-radius: 14px !important;
+          }
+        }
+      `}</style>
+
+      {/* ========================================================
+          1. MASTER PAGE HEADER WITH PROGRESS INDICATOR
+         ======================================================== */}
       <div style={{
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'space-between',
         flexWrap: 'wrap',
-        gap: '12px',
+        gap: '14px',
         background: '#FFFFFF',
-        padding: '16px 20px',
-        borderRadius: '16px',
-        border: '1px solid #E2E8F0',
-        boxShadow: '0 2px 8px rgba(0,0,0,0.02)'
+        borderRadius: '18px',
+        border: '1px solid #EAE5DF',
+        padding: '18px 22px',
+        boxShadow: '0 1px 3px rgba(0,0,0,0.02)'
       }}>
         <div>
-          <h2 style={{ fontSize: '1.3rem', fontWeight: 900, color: '#0F172A', margin: '0 0 2px 0', letterSpacing: '-0.02em' }}>
-            ⚙️ Setup & Configuration
-          </h2>
-          <span style={{ fontSize: '0.78rem', color: '#64748B', fontWeight: 500 }}>
-            Configure business profile, sound alerts, menu settings, GPS geofence, and security
-          </span>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
+            <h2 style={{ fontSize: '1.25rem', fontWeight: 900, color: '#0F172A', margin: 0, letterSpacing: '-0.02em' }}>
+              Settings & Setup
+            </h2>
+            <span style={{
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: '5px',
+              background: '#DCFCE7',
+              color: '#16A34A',
+              fontSize: '0.68rem',
+              fontWeight: 800,
+              padding: '3px 9px',
+              borderRadius: '12px',
+              border: '1px solid #BBF7D0'
+            }}>
+              <span style={{ width: '6px', height: '6px', borderRadius: '50%', backgroundColor: '#16A34A' }} />
+              All systems ready
+            </span>
+          </div>
+          <p style={{ fontSize: '0.76rem', color: '#64748B', margin: '3px 0 0 0', fontWeight: 500 }}>
+            Manage your restaurant, menu preferences, operations, security and account.
+          </p>
         </div>
 
-        {saveSuccessMsg && (
-          <span style={{ background: '#DCFCE7', color: '#15803D', border: '1px solid #86EFAC', padding: '6px 14px', borderRadius: '12px', fontSize: '0.8rem', fontWeight: 800 }}>
-            {saveSuccessMsg}
-          </span>
-        )}
-      </div>
-
-      {/* 📊 Setup Health Summary */}
-      <div style={{
-        background: '#FFFFFF',
-        borderRadius: '16px',
-        border: '1px solid #E2E8F0',
-        padding: '14px 18px',
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'space-between',
-        flexWrap: 'wrap',
-        gap: '12px',
-        boxShadow: '0 2px 8px rgba(0,0,0,0.02)'
-      }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-          <div style={{
-            width: '36px', height: '36px', borderRadius: '10px',
-            background: isFullySetup ? '#DCFCE7' : '#FEF3C7',
-            color: isFullySetup ? '#15803D' : '#D97706',
-            display: 'flex', alignItems: 'center', justifyContent: 'center',
-            fontSize: '1.1rem', flexShrink: 0
-          }}>
-            {isFullySetup ? '✓' : '⚡'}
+        {/* Right Side: Setup Progress Indicator */}
+        <div style={{
+          display: 'flex',
+          alignItems: 'center',
+          gap: '12px',
+          background: '#FAF8F5',
+          padding: '8px 14px',
+          borderRadius: '12px',
+          border: '1px solid #EAE5DF'
+        }}>
+          <div style={{ position: 'relative', width: '32px', height: '32px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+            <svg width="32" height="32" viewBox="0 0 36 36">
+              <path
+                d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831"
+                fill="none"
+                stroke="#E2E8F0"
+                strokeWidth="3.5"
+              />
+              <path
+                d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831"
+                fill="none"
+                stroke="#16A34A"
+                strokeWidth="3.5"
+                strokeDasharray={`${(passedChecks / totalChecks) * 100}, 100`}
+                strokeLinecap="round"
+              />
+            </svg>
+            <Check size={14} color="#16A34A" style={{ position: 'absolute' }} />
           </div>
           <div>
-            <div style={{ fontSize: '0.86rem', fontWeight: 800, color: '#0F172A' }}>
-              Business Setup Health: {passedChecks}/{totalChecks} Completed
-            </div>
-            <div style={{ fontSize: '0.74rem', color: '#64748B', fontWeight: 500 }}>
-              {isFullySetup ? 'All core platform configuration parameters are active.' : 'Some operational parameters need your attention.'}
+            <div style={{ fontSize: '0.68rem', color: '#64748B', fontWeight: 600 }}>Setup Progress</div>
+            <div style={{ fontSize: '0.86rem', fontWeight: 900, color: '#0F172A' }}>
+              {passedChecks} / {totalChecks} Complete
             </div>
           </div>
-        </div>
-
-        <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
-          <span style={{
-            fontSize: '0.72rem', fontWeight: 800, padding: '4px 10px', borderRadius: '8px',
-            background: isProfileConfigured ? '#DCFCE7' : '#FEE2E2',
-            color: isProfileConfigured ? '#15803D' : '#DC2626',
-            border: isProfileConfigured ? '1px solid #86EFAC' : '1px solid #FCA5A5'
-          }}>
-            {isProfileConfigured ? '✓ Profile' : '⚠️ Profile'}
-          </span>
-          <span style={{
-            fontSize: '0.72rem', fontWeight: 800, padding: '4px 10px', borderRadius: '8px',
-            background: isLogoConfigured ? '#DCFCE7' : '#FEF3C7',
-            color: isLogoConfigured ? '#15803D' : '#D97706',
-            border: isLogoConfigured ? '1px solid #86EFAC' : '1px solid #FCD34D'
-          }}>
-            {isLogoConfigured ? '✓ Logo' : '○ Logo'}
-          </span>
-          <span style={{
-            fontSize: '0.72rem', fontWeight: 800, padding: '4px 10px', borderRadius: '8px',
-            background: isGpsConfigured ? '#DCFCE7' : '#FEF3C7',
-            color: isGpsConfigured ? '#15803D' : '#D97706',
-            border: isGpsConfigured ? '1px solid #86EFAC' : '1px solid #FCD34D'
-          }}>
-            {isGpsConfigured ? '✓ Geofence' : '○ GPS Geofence'}
-          </span>
         </div>
       </div>
 
-      {/* Grouped Section Control Center */}
-      <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
-        {/* OPERATIONS GROUP */}
-        <div>
-          <div style={{ fontSize: '0.72rem', fontWeight: 800, color: '#64748B', letterSpacing: '0.06em', textTransform: 'uppercase', marginBottom: '8px', paddingLeft: '4px' }}>
-            🚀 OPERATIONS
-          </div>
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(320px, 1fr))', gap: '12px' }}>
-            <div
-              onClick={() => setOpenDrawer('devices')}
-              style={{
-                cursor: 'pointer',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'space-between',
-                padding: '16px 18px',
-                background: '#FFFFFF',
-                borderRadius: '16px',
-                border: '1px solid #E2E8F0',
-                boxShadow: '0 2px 8px rgba(0,0,0,0.02)',
-                transition: 'all 0.15s ease'
-              }}
-            >
-              <div style={{ display: 'flex', alignItems: 'center', gap: '14px', minWidth: 0 }}>
-                <div style={{ width: '44px', height: '44px', borderRadius: '12px', background: '#E0F2FE', color: '#0284C7', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-                  <Bell size={20} />
-                </div>
-                <div style={{ minWidth: 0 }}>
-                  <strong style={{ fontSize: '0.94rem', color: '#0F172A', fontWeight: 800, display: 'block' }}>Orders & Devices</strong>
-                  <span style={{ fontSize: '0.75rem', color: '#64748B', fontWeight: 500 }}>Siren audio alert, push alerts, thermal printer</span>
-                </div>
-              </div>
-              <ChevronRight size={18} color="#94A3B8" style={{ flexShrink: 0 }} />
-            </div>
-
-            <div
-              onClick={() => setOpenDrawer('menu')}
-              style={{
-                cursor: 'pointer',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'space-between',
-                padding: '16px 18px',
-                background: '#FFFFFF',
-                borderRadius: '16px',
-                border: '1px solid #E2E8F0',
-                boxShadow: '0 2px 8px rgba(0,0,0,0.02)',
-                transition: 'all 0.15s ease'
-              }}
-            >
-              <div style={{ display: 'flex', alignItems: 'center', gap: '14px', minWidth: 0 }}>
-                <div style={{ width: '44px', height: '44px', borderRadius: '12px', background: '#FEF3C7', color: '#D97706', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-                  <Utensils size={20} />
-                </div>
-                <div style={{ minWidth: 0 }}>
-                  <strong style={{ fontSize: '0.94rem', color: '#0F172A', fontWeight: 800, display: 'block' }}>Menu & GST</strong>
-                  <span style={{ fontSize: '0.75rem', color: '#64748B', fontWeight: 500 }}>5% GST tax billing, currency symbol, badge visibility</span>
-                </div>
-              </div>
-              <ChevronRight size={18} color="#94A3B8" style={{ flexShrink: 0 }} />
-            </div>
-
-            <div
-              onClick={() => setOpenDrawer('location')}
-              style={{
-                cursor: 'pointer',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'space-between',
-                padding: '16px 18px',
-                background: '#FFFFFF',
-                borderRadius: '16px',
-                border: '1px solid #E2E8F0',
-                boxShadow: '0 2px 8px rgba(0,0,0,0.02)',
-                transition: 'all 0.15s ease'
-              }}
-            >
-              <div style={{ display: 'flex', alignItems: 'center', gap: '14px', minWidth: 0 }}>
-                <div style={{ width: '44px', height: '44px', borderRadius: '12px', background: '#DCFCE7', color: '#15803D', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-                  <MapPin size={20} />
-                </div>
-                <div style={{ minWidth: 0 }}>
-                  <strong style={{ fontSize: '0.94rem', color: '#0F172A', fontWeight: 800, display: 'block' }}>Location & GPS Geofence</strong>
-                  <span style={{ fontSize: '0.75rem', color: '#64748B', fontWeight: 500 }}>Configure on-premise customer presence verification and geofence settings</span>
-                </div>
-              </div>
-              <ChevronRight size={18} color="#94A3B8" style={{ flexShrink: 0 }} />
-            </div>
-
-            {/* CINEMA MANAGEMENT CARD (Active only when business_type === 'cinema_theatre' && service_model === 'seat_service') */}
-            {isCinema && (
-              <div
-                onClick={() => setOpenDrawer('cinema')}
-                style={{
-                  cursor: 'pointer',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'space-between',
-                  padding: '16px 18px',
-                  background: '#F0F9FF',
-                  borderRadius: '16px',
-                  border: '1.5px solid #0284C7',
-                  boxShadow: '0 2px 8px rgba(2, 132, 199, 0.08)',
-                  transition: 'all 0.15s ease'
-                }}
-              >
-                <div style={{ display: 'flex', alignItems: 'center', gap: '14px', minWidth: 0 }}>
-                  <div style={{ width: '44px', height: '44px', borderRadius: '12px', background: '#E0F2FE', color: '#0284C7', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1.3rem', flexShrink: 0 }}>
-                    🎬
-                  </div>
-                  <div style={{ minWidth: 0 }}>
-                    <strong style={{ fontSize: '0.94rem', color: '#0F172A', fontWeight: 800, display: 'block' }}>🎬 Cinema Management</strong>
-                    <span style={{ fontSize: '0.75rem', color: '#64748B', fontWeight: 500 }}>
-                      Configure auditorium screens, rows and seats for seat-based QR ordering.
-                    </span>
-                    <span style={{ fontSize: '0.72rem', color: '#0284C7', fontWeight: 700, display: 'block', marginTop: '2px' }}>
-                      {cinemaScreens.length} {cinemaScreens.length === 1 ? 'Screen' : 'Screens'} • {cinemaSeats.filter(st => st.active !== false).length} Seats
-                    </span>
-                  </div>
-                </div>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flexShrink: 0 }}>
-                  <span style={{ fontSize: '0.78rem', fontWeight: 800, color: '#0284C7' }}>Manage Cinema →</span>
-                  <ChevronRight size={18} color="#0284C7" />
-                </div>
-              </div>
-            )}
-          </div>
+      {saveSuccessMsg && (
+        <div style={{
+          background: '#DCFCE7',
+          color: '#15803D',
+          border: '1px solid #86EFAC',
+          padding: '10px 16px',
+          borderRadius: '12px',
+          fontSize: '0.82rem',
+          fontWeight: 800,
+          display: 'flex',
+          alignItems: 'center',
+          gap: '8px'
+        }}>
+          <CheckCircle2 size={16} />
+          <span>{saveSuccessMsg}</span>
         </div>
+      )}
 
-        {/* BUSINESS GROUP */}
-        <div>
-          <div style={{ fontSize: '0.72rem', fontWeight: 800, color: '#64748B', letterSpacing: '0.06em', textTransform: 'uppercase', marginBottom: '8px', paddingLeft: '4px' }}>
-            🏢 BUSINESS
+      {/* ========================================================
+          2. HORIZONTAL SETTINGS NAVIGATION SYSTEM
+         ======================================================== */}
+      <div style={{
+        display: 'flex',
+        alignItems: 'center',
+        gap: '8px',
+        overflowX: 'auto',
+        paddingBottom: '2px',
+        scrollbarWidth: 'none',
+        WebkitOverflowScrolling: 'touch'
+      }}>
+        {[
+          { id: 'general', label: 'General' },
+          { id: 'restaurant', label: 'Restaurant' },
+          { id: 'operations', label: 'Operations' },
+          { id: 'menu-billing', label: 'Menu & Billing' },
+          { id: 'security', label: 'Security' },
+          { id: 'advanced', label: 'Advanced' }
+        ].map(tab => {
+          const isActive = settingsTab === tab.id;
+          return (
+            <button
+              key={tab.id}
+              onClick={() => setSettingsTab(tab.id)}
+              style={{
+                padding: '8px 18px',
+                borderRadius: '10px',
+                border: '1px solid',
+                borderColor: isActive ? '#261B14' : '#EAE5DF',
+                background: isActive ? '#261B14' : '#FFFFFF',
+                color: isActive ? '#FFFFFF' : '#475569',
+                fontSize: '0.80rem',
+                fontWeight: 700,
+                cursor: 'pointer',
+                whiteSpace: 'nowrap',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '6px',
+                position: 'relative',
+                transition: 'all 0.15s ease',
+                boxShadow: isActive ? '0 2px 6px rgba(38, 27, 20, 0.15)' : 'none'
+              }}
+            >
+              {isActive && (
+                <span style={{ width: '6px', height: '6px', borderRadius: '50%', backgroundColor: '#FF5A1F' }} />
+              )}
+              <span>{tab.label}</span>
+            </button>
+          );
+        })}
+      </div>
+
+      {/* ========================================================
+          3. QUICK SETUP ACTIONS & PROGRESS CHECKLIST
+         ======================================================== */}
+      <div style={{
+        display: 'grid',
+        gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))',
+        gap: '12px'
+      }}>
+        {/* Quick Actions Strip */}
+        <div style={{
+          background: '#FFFFFF',
+          borderRadius: '16px',
+          border: '1px solid #EAE5DF',
+          padding: '14px 16px',
+          display: 'flex',
+          flexDirection: 'column',
+          justifyContent: 'space-between',
+          gap: '10px'
+        }}>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+            <strong style={{ fontSize: '0.82rem', color: '#0F172A', fontWeight: 800 }}>⚡ Quick Setup</strong>
+            <span style={{ fontSize: '0.68rem', color: '#64748B', fontWeight: 600 }}>1-Click Shortcuts</span>
           </div>
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(320px, 1fr))', gap: '12px' }}>
-            <div
+
+          <div style={{
+            display: 'grid',
+            gridTemplateColumns: '1fr 1fr',
+            gap: '8px'
+          }}>
+            <button
               onClick={() => setOpenDrawer('profile')}
               style={{
+                padding: '8px 10px',
+                borderRadius: '10px',
+                background: '#FAF8F5',
+                border: '1px solid #EAE5DF',
+                color: '#261B14',
+                fontSize: '0.74rem',
+                fontWeight: 700,
                 cursor: 'pointer',
                 display: 'flex',
                 alignItems: 'center',
-                justifyContent: 'space-between',
-                padding: '16px 18px',
-                background: '#FFFFFF',
-                borderRadius: '16px',
-                border: '1px solid #E2E8F0',
-                boxShadow: '0 2px 8px rgba(0,0,0,0.02)',
-                transition: 'all 0.15s ease'
+                gap: '6px',
+                textAlign: 'left'
               }}
             >
-              <div style={{ display: 'flex', alignItems: 'center', gap: '14px', minWidth: 0 }}>
-                <div style={{ width: '44px', height: '44px', borderRadius: '12px', background: '#0F172A', color: '#F8FAFC', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-                  <Store size={20} />
-                </div>
-                <div style={{ minWidth: 0 }}>
-                  <strong style={{ fontSize: '0.94rem', color: '#0F172A', fontWeight: 800, display: 'block' }}>Business Profile</strong>
-                  <span style={{ fontSize: '0.75rem', color: '#64748B', fontWeight: 500 }}>Name, logo, phone, address, FSSAI, Maps</span>
-                </div>
-              </div>
-              <ChevronRight size={18} color="#94A3B8" style={{ flexShrink: 0 }} />
-            </div>
+              <Store size={14} color="#FF5A1F" />
+              <span>Edit Profile</span>
+            </button>
 
-            <div
-              onClick={() => setOpenDrawer('subscription')}
+            <button
+              onClick={() => setOpenDrawer('menu')}
               style={{
+                padding: '8px 10px',
+                borderRadius: '10px',
+                background: '#FAF8F5',
+                border: '1px solid #EAE5DF',
+                color: '#261B14',
+                fontSize: '0.74rem',
+                fontWeight: 700,
                 cursor: 'pointer',
                 display: 'flex',
                 alignItems: 'center',
-                justifyContent: 'space-between',
-                padding: '16px 18px',
-                background: '#FFFFFF',
-                borderRadius: '16px',
-                border: '1px solid #E2E8F0',
-                boxShadow: '0 2px 8px rgba(0,0,0,0.02)',
-                transition: 'all 0.15s ease'
+                gap: '6px',
+                textAlign: 'left'
               }}
             >
-              <div style={{ display: 'flex', alignItems: 'center', gap: '14px', minWidth: 0 }}>
-                <div style={{ width: '44px', height: '44px', borderRadius: '12px', background: '#DCFCE7', color: '#16A34A', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-                  <CreditCard size={20} />
-                </div>
-                <div style={{ minWidth: 0 }}>
-                  <strong style={{ fontSize: '0.94rem', color: '#0F172A', fontWeight: 800, display: 'block' }}>Billing & Subscription</strong>
-                  <span style={{ fontSize: '0.75rem', color: '#64748B', fontWeight: 500 }}>Current plan, invoices, upgrade & limits</span>
-                </div>
-              </div>
-              <ChevronRight size={18} color="#94A3B8" style={{ flexShrink: 0 }} />
-            </div>
-          </div>
-        </div>
+              <Utensils size={14} color="#FF5A1F" />
+              <span>GST & Currency</span>
+            </button>
 
-        {/* SECURITY GROUP */}
-        <div>
-          <div style={{ fontSize: '0.72rem', fontWeight: 800, color: '#64748B', letterSpacing: '0.06em', textTransform: 'uppercase', marginBottom: '8px', paddingLeft: '4px' }}>
-            🔒 SECURITY
-          </div>
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(320px, 1fr))', gap: '12px' }}>
-            <div
-              onClick={() => setOpenDrawer('security')}
+            <button
+              onClick={testAlarmSound}
               style={{
+                padding: '8px 10px',
+                borderRadius: '10px',
+                background: '#FAF8F5',
+                border: '1px solid #EAE5DF',
+                color: '#261B14',
+                fontSize: '0.74rem',
+                fontWeight: 700,
                 cursor: 'pointer',
                 display: 'flex',
                 alignItems: 'center',
-                justifyContent: 'space-between',
-                padding: '16px 18px',
-                background: '#FFFFFF',
-                borderRadius: '16px',
-                border: '1px solid #E2E8F0',
-                boxShadow: '0 2px 8px rgba(0,0,0,0.02)',
-                transition: 'all 0.15s ease'
+                gap: '6px',
+                textAlign: 'left'
               }}
             >
-              <div style={{ display: 'flex', alignItems: 'center', gap: '14px', minWidth: 0 }}>
-                <div style={{ width: '44px', height: '44px', borderRadius: '12px', background: '#FEE2E2', color: '#DC2626', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-                  <Lock size={20} />
-                </div>
-                <div style={{ minWidth: 0 }}>
-                  <strong style={{ fontSize: '0.94rem', color: '#0F172A', fontWeight: 800, display: 'block' }}>Security & Credentials</strong>
-                  <span style={{ fontSize: '0.75rem', color: '#64748B', fontWeight: 500 }}>Update admin username and login password</span>
-                </div>
-              </div>
-              <ChevronRight size={18} color="#94A3B8" style={{ flexShrink: 0 }} />
-            </div>
-          </div>
-        </div>
+              <Bell size={14} color="#0284C7" />
+              <span>Test Order Alert</span>
+            </button>
 
-        {/* ADVANCED GROUP */}
-        <div>
-          <div style={{ fontSize: '0.72rem', fontWeight: 800, color: '#64748B', letterSpacing: '0.06em', textTransform: 'uppercase', marginBottom: '8px', paddingLeft: '4px' }}>
-            ⚡ ADVANCED
-          </div>
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(320px, 1fr))', gap: '12px' }}>
-            <div
+            <button
               onClick={() => onNavigate && onNavigate('qr-generator')}
               style={{
+                padding: '8px 10px',
+                borderRadius: '10px',
+                background: '#FAF8F5',
+                border: '1px solid #EAE5DF',
+                color: '#261B14',
+                fontSize: '0.74rem',
+                fontWeight: 700,
                 cursor: 'pointer',
                 display: 'flex',
                 alignItems: 'center',
-                justifyContent: 'space-between',
-                padding: '16px 18px',
-                background: '#FFFFFF',
-                borderRadius: '16px',
-                border: '1px solid #E2E8F0',
-                boxShadow: '0 2px 8px rgba(0,0,0,0.02)',
-                transition: 'all 0.15s ease'
+                gap: '6px',
+                textAlign: 'left'
               }}
             >
-              <div style={{ display: 'flex', alignItems: 'center', gap: '14px', minWidth: 0 }}>
-                <div style={{ width: '44px', height: '44px', borderRadius: '12px', background: '#FEF3C7', color: '#D97706', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-                  <Printer size={20} />
-                </div>
-                <div style={{ minWidth: 0 }}>
-                  <strong style={{ fontSize: '0.94rem', color: '#0F172A', fontWeight: 800, display: 'block' }}>QR Standees & Table Stickers</strong>
-                  <span style={{ fontSize: '0.75rem', color: '#64748B', fontWeight: 500 }}>Generate & print table QR standees & stickers</span>
-                </div>
-              </div>
-              <ChevronRight size={18} color="#94A3B8" style={{ flexShrink: 0 }} />
-            </div>
-
-            <div
-              onClick={() => onNavigate && onNavigate('review')}
-              style={{
-                cursor: 'pointer',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'space-between',
-                padding: '16px 18px',
-                background: '#FFFFFF',
-                borderRadius: '16px',
-                border: '1px solid #E2E8F0',
-                boxShadow: '0 2px 8px rgba(0,0,0,0.02)',
-                transition: 'all 0.15s ease'
-              }}
-            >
-              <div style={{ display: 'flex', alignItems: 'center', gap: '14px', minWidth: 0 }}>
-                <div style={{ width: '44px', height: '44px', borderRadius: '12px', background: '#F3E8FF', color: '#7E22CE', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-                  <ShieldCheck size={20} />
-                </div>
-                <div style={{ minWidth: 0 }}>
-                  <strong style={{ fontSize: '0.94rem', color: '#0F172A', fontWeight: 800, display: 'block' }}>Reviews & AI Auto-Reply</strong>
-                  <span style={{ fontSize: '0.75rem', color: '#64748B', fontWeight: 500 }}>Google review link & instant AI review assistant</span>
-                </div>
-              </div>
-              <ChevronRight size={18} color="#94A3B8" style={{ flexShrink: 0 }} />
-            </div>
-
-            <div
-              onClick={() => onOptimizeDatabase && onOptimizeDatabase()}
-              style={{
-                cursor: 'pointer',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'space-between',
-                padding: '16px 18px',
-                background: '#FFFFFF',
-                borderRadius: '16px',
-                border: '1px solid #E2E8F0',
-                boxShadow: '0 2px 8px rgba(0,0,0,0.02)',
-                transition: 'all 0.15s ease'
-              }}
-            >
-              <div style={{ display: 'flex', alignItems: 'center', gap: '14px', minWidth: 0 }}>
-                <div style={{ width: '44px', height: '44px', borderRadius: '12px', background: '#DCFCE7', color: '#15803D', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-                  <Upload size={20} />
-                </div>
-                <div style={{ minWidth: 0 }}>
-                  <strong style={{ fontSize: '0.94rem', color: '#0F172A', fontWeight: 800, display: 'block' }}>Database Tools</strong>
-                  <span style={{ fontSize: '0.75rem', color: '#64748B', fontWeight: 500 }}>Purge temporary logs & optimize database engine</span>
-                </div>
-              </div>
-              <ChevronRight size={18} color="#94A3B8" style={{ flexShrink: 0 }} />
-            </div>
+              <Printer size={14} color="#16A34A" />
+              <span>Generate QR</span>
+            </button>
           </div>
         </div>
+
+        {/* Setup Progress Checklist Card */}
+        <div style={{
+          background: '#FFFFFF',
+          borderRadius: '16px',
+          border: '1px solid #EAE5DF',
+          padding: '14px 16px',
+          display: 'flex',
+          flexDirection: 'column',
+          justifyContent: 'space-between',
+          gap: '10px'
+        }}>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+              <CheckCircle2 size={16} color="#16A34A" />
+              <strong style={{ fontSize: '0.82rem', color: '#0F172A', fontWeight: 800 }}>Setup Checklist</strong>
+            </div>
+            <span style={{ fontSize: '0.68rem', color: '#16A34A', fontWeight: 800, background: '#DCFCE7', padding: '2px 8px', borderRadius: '8px', border: '1px solid #BBF7D0' }}>
+              {isFullySetup ? '4/4 Ready' : `${passedChecks}/${totalChecks} Done`}
+            </span>
+          </div>
+
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '6px' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.74rem', color: isProfileConfigured ? '#15803D' : '#64748B', fontWeight: isProfileConfigured ? 700 : 500 }}>
+              <span>{isProfileConfigured ? '✓' : '○'}</span>
+              <span>Business Profile</span>
+            </div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.74rem', color: isLogoConfigured ? '#15803D' : '#64748B', fontWeight: isLogoConfigured ? 700 : 500 }}>
+              <span>{isLogoConfigured ? '✓' : '○'}</span>
+              <span>Restaurant Logo</span>
+            </div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.74rem', color: isGpsConfigured ? '#15803D' : '#64748B', fontWeight: isGpsConfigured ? 700 : 500 }}>
+              <span>{isGpsConfigured ? '✓' : '○'}</span>
+              <span>Location & GPS</span>
+            </div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.74rem', color: '#15803D', fontWeight: 700 }}>
+              <span>✓</span>
+              <span>Order Alerts</span>
+            </div>
+          </div>
+
+          <div style={{ fontSize: '0.70rem', color: '#16A34A', fontWeight: 700, background: '#F0FDF4', padding: '4px 8px', borderRadius: '6px', border: '1px solid #DCFCE7' }}>
+            Your restaurant is ready to go 🎉
+          </div>
+        </div>
+      </div>
+
+      {/* ========================================================
+          4. GROUPED SETTINGS CARDS
+         ======================================================== */}
+      <div style={{ display: 'flex', flexDirection: 'column', gap: '22px' }}>
+        {/* SECTION 1 — RESTAURANT */}
+        {showRestaurant && (
+          <div>
+            <div style={{ fontSize: '0.72rem', fontWeight: 800, color: '#64748B', letterSpacing: '0.06em', textTransform: 'uppercase', marginBottom: '10px', paddingLeft: '4px' }}>
+              🏪 SECTION 1 — RESTAURANT
+            </div>
+            <div className="settings-grid-2col">
+              {/* Business Profile */}
+              <div className="setting-card" onClick={() => setOpenDrawer('profile')}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '14px', minWidth: 0 }}>
+                  <div style={{ width: '42px', height: '42px', borderRadius: '12px', background: '#FFF4EE', color: '#FF5A1F', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                    <Store size={20} />
+                  </div>
+                  <div style={{ minWidth: 0 }}>
+                    <strong style={{ fontSize: '0.92rem', color: '#0F172A', fontWeight: 800, display: 'block' }}>Business Profile</strong>
+                    <span style={{ fontSize: '0.74rem', color: '#64748B', fontWeight: 500, display: 'block', textOverflow: 'ellipsis', overflow: 'hidden', whiteSpace: 'nowrap' }}>
+                      Restaurant name, logo, contact details, address
+                    </span>
+                  </div>
+                </div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexShrink: 0 }}>
+                  <span style={{
+                    fontSize: '0.68rem',
+                    fontWeight: 800,
+                    padding: '3px 8px',
+                    borderRadius: '6px',
+                    background: isProfileConfigured ? '#DCFCE7' : '#FEF3C7',
+                    color: isProfileConfigured ? '#15803D' : '#D97706',
+                    border: isProfileConfigured ? '1px solid #BBF7D0' : '1px solid #FDE68A'
+                  }}>
+                    {isProfileConfigured ? 'Configured' : 'Needs attention'}
+                  </span>
+                  <ChevronRight size={18} color="#94A3B8" className="setting-chevron" style={{ transition: 'all 0.15s ease' }} />
+                </div>
+              </div>
+
+              {/* Location & GPS */}
+              <div className="setting-card" onClick={() => setOpenDrawer('location')}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '14px', minWidth: 0 }}>
+                  <div style={{ width: '42px', height: '42px', borderRadius: '12px', background: '#DCFCE7', color: '#16A34A', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                    <MapPin size={20} />
+                  </div>
+                  <div style={{ minWidth: 0 }}>
+                    <strong style={{ fontSize: '0.92rem', color: '#0F172A', fontWeight: 800, display: 'block' }}>Location & GPS</strong>
+                    <span style={{ fontSize: '0.74rem', color: '#64748B', fontWeight: 500, display: 'block', textOverflow: 'ellipsis', overflow: 'hidden', whiteSpace: 'nowrap' }}>
+                      Restaurant location and customer presence settings
+                    </span>
+                  </div>
+                </div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexShrink: 0 }}>
+                  <span style={{
+                    fontSize: '0.68rem',
+                    fontWeight: 800,
+                    padding: '3px 8px',
+                    borderRadius: '6px',
+                    background: isGpsConfigured ? '#DCFCE7' : '#FEF3C7',
+                    color: isGpsConfigured ? '#15803D' : '#D97706',
+                    border: isGpsConfigured ? '1px solid #BBF7D0' : '1px solid #FDE68A'
+                  }}>
+                    {isGpsConfigured ? 'Connected' : 'Setup required'}
+                  </span>
+                  <ChevronRight size={18} color="#94A3B8" className="setting-chevron" style={{ transition: 'all 0.15s ease' }} />
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* SECTION 2 — OPERATIONS */}
+        {showOperations && (
+          <div>
+            <div style={{ fontSize: '0.72rem', fontWeight: 800, color: '#64748B', letterSpacing: '0.06em', textTransform: 'uppercase', marginBottom: '10px', paddingLeft: '4px' }}>
+              ⚙️ SECTION 2 — OPERATIONS
+            </div>
+            <div className="settings-grid-2col">
+              {/* Orders & Devices */}
+              <div className="setting-card" onClick={() => setOpenDrawer('devices')}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '14px', minWidth: 0 }}>
+                  <div style={{ width: '42px', height: '42px', borderRadius: '12px', background: '#E0F2FE', color: '#0284C7', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                    <Bell size={20} />
+                  </div>
+                  <div style={{ minWidth: 0 }}>
+                    <strong style={{ fontSize: '0.92rem', color: '#0F172A', fontWeight: 800, display: 'block' }}>Orders & Devices</strong>
+                    <span style={{ fontSize: '0.74rem', color: '#64748B', fontWeight: 500, display: 'block', textOverflow: 'ellipsis', overflow: 'hidden', whiteSpace: 'nowrap' }}>
+                      Order alerts, sound notifications, printers and connected devices
+                    </span>
+                  </div>
+                </div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexShrink: 0 }}>
+                  <span style={{
+                    fontSize: '0.68rem',
+                    fontWeight: 800,
+                    padding: '3px 8px',
+                    borderRadius: '6px',
+                    background: '#E0F2FE',
+                    color: '#0284C7',
+                    border: '1px solid #BAE6FD'
+                  }}>
+                    Connected
+                  </span>
+                  <ChevronRight size={18} color="#94A3B8" className="setting-chevron" style={{ transition: 'all 0.15s ease' }} />
+                </div>
+              </div>
+
+              {/* QR Standees & Table Stickers */}
+              <div className="setting-card" onClick={() => onNavigate && onNavigate('qr-generator')}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '14px', minWidth: 0 }}>
+                  <div style={{ width: '42px', height: '42px', borderRadius: '12px', background: '#FEF3C7', color: '#D97706', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                    <Printer size={20} />
+                  </div>
+                  <div style={{ minWidth: 0 }}>
+                    <strong style={{ fontSize: '0.92rem', color: '#0F172A', fontWeight: 800, display: 'block' }}>QR Standees & Table Stickers</strong>
+                    <span style={{ fontSize: '0.74rem', color: '#64748B', fontWeight: 500, display: 'block', textOverflow: 'ellipsis', overflow: 'hidden', whiteSpace: 'nowrap' }}>
+                      Generate and manage QR codes for tables
+                    </span>
+                  </div>
+                </div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexShrink: 0 }}>
+                  <span style={{
+                    fontSize: '0.68rem',
+                    fontWeight: 800,
+                    padding: '3px 8px',
+                    borderRadius: '6px',
+                    background: '#FEF3C7',
+                    color: '#D97706',
+                    border: '1px solid #FDE68A'
+                  }}>
+                    Ready
+                  </span>
+                  <ChevronRight size={18} color="#94A3B8" className="setting-chevron" style={{ transition: 'all 0.15s ease' }} />
+                </div>
+              </div>
+
+              {/* Menu Preferences */}
+              <div className="setting-card" onClick={() => setOpenDrawer('menu')}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '14px', minWidth: 0 }}>
+                  <div style={{ width: '42px', height: '42px', borderRadius: '12px', background: '#FFF4EE', color: '#FF5A1F', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                    <Utensils size={20} />
+                  </div>
+                  <div style={{ minWidth: 0 }}>
+                    <strong style={{ fontSize: '0.92rem', color: '#0F172A', fontWeight: 800, display: 'block' }}>Menu Preferences</strong>
+                    <span style={{ fontSize: '0.74rem', color: '#64748B', fontWeight: 500, display: 'block', textOverflow: 'ellipsis', overflow: 'hidden', whiteSpace: 'nowrap' }}>
+                      Default currency, GST, menu display settings
+                    </span>
+                  </div>
+                </div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexShrink: 0 }}>
+                  <span style={{
+                    fontSize: '0.68rem',
+                    fontWeight: 800,
+                    padding: '3px 8px',
+                    borderRadius: '6px',
+                    background: '#DCFCE7',
+                    color: '#15803D',
+                    border: '1px solid #BBF7D0'
+                  }}>
+                    Configured
+                  </span>
+                  <ChevronRight size={18} color="#94A3B8" className="setting-chevron" style={{ transition: 'all 0.15s ease' }} />
+                </div>
+              </div>
+
+              {/* Cinema Management Card if active */}
+              {isCinema && (
+                <div className="setting-card" onClick={() => setOpenDrawer('cinema')} style={{ borderColor: '#0284C7', background: '#F0F9FF' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '14px', minWidth: 0 }}>
+                    <div style={{ width: '42px', height: '42px', borderRadius: '12px', background: '#E0F2FE', color: '#0284C7', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1.2rem', flexShrink: 0 }}>
+                      🎬
+                    </div>
+                    <div style={{ minWidth: 0 }}>
+                      <strong style={{ fontSize: '0.92rem', color: '#0F172A', fontWeight: 800, display: 'block' }}>Cinema Screens & Seats</strong>
+                      <span style={{ fontSize: '0.74rem', color: '#64748B', fontWeight: 500, display: 'block', textOverflow: 'ellipsis', overflow: 'hidden', whiteSpace: 'nowrap' }}>
+                        Auditorium screens, rows and seats for in-seat ordering
+                      </span>
+                    </div>
+                  </div>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexShrink: 0 }}>
+                    <span style={{ fontSize: '0.68rem', fontWeight: 800, padding: '3px 8px', borderRadius: '6px', background: '#E0F2FE', color: '#0284C7', border: '1px solid #BAE6FD' }}>
+                      {cinemaScreens.length} {cinemaScreens.length === 1 ? 'Screen' : 'Screens'}
+                    </span>
+                    <ChevronRight size={18} color="#0284C7" className="setting-chevron" style={{ transition: 'all 0.15s ease' }} />
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
+        )}
+
+        {/* SECTION 3 — ACCOUNT & BILLING */}
+        {(showMenuBilling || showSecurity || showAll) && (
+          <div>
+            <div style={{ fontSize: '0.72rem', fontWeight: 800, color: '#64748B', letterSpacing: '0.06em', textTransform: 'uppercase', marginBottom: '10px', paddingLeft: '4px' }}>
+              💳 SECTION 3 — ACCOUNT & BILLING
+            </div>
+            <div className="settings-grid-2col">
+              {/* Billing & Subscription */}
+              {(showMenuBilling || showAll) && (
+                <div className="setting-card" onClick={() => setOpenDrawer('subscription')}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '14px', minWidth: 0 }}>
+                    <div style={{ width: '42px', height: '42px', borderRadius: '12px', background: '#DCFCE7', color: '#16A34A', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                      <CreditCard size={20} />
+                    </div>
+                    <div style={{ minWidth: 0 }}>
+                      <strong style={{ fontSize: '0.92rem', color: '#0F172A', fontWeight: 800, display: 'block' }}>Billing & Subscription</strong>
+                      <span style={{ fontSize: '0.74rem', color: '#64748B', fontWeight: 500, display: 'block', textOverflow: 'ellipsis', overflow: 'hidden', whiteSpace: 'nowrap' }}>
+                        Current plan, usage, invoices and upgrades
+                      </span>
+                    </div>
+                  </div>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexShrink: 0 }}>
+                    <span style={{
+                      fontSize: '0.68rem',
+                      fontWeight: 800,
+                      padding: '3px 8px',
+                      borderRadius: '6px',
+                      background: '#DCFCE7',
+                      color: '#16A34A',
+                      border: '1px solid #BBF7D0'
+                    }}>
+                      Active Plan
+                    </span>
+                    <ChevronRight size={18} color="#94A3B8" className="setting-chevron" style={{ transition: 'all 0.15s ease' }} />
+                  </div>
+                </div>
+              )}
+
+              {/* Security & Credentials */}
+              {(showSecurity || showAll) && (
+                <div className="setting-card" onClick={() => setOpenDrawer('security')}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '14px', minWidth: 0 }}>
+                    <div style={{ width: '42px', height: '42px', borderRadius: '12px', background: '#FEE2E2', color: '#DC2626', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                      <Lock size={20} />
+                    </div>
+                    <div style={{ minWidth: 0 }}>
+                      <strong style={{ fontSize: '0.92rem', color: '#0F172A', fontWeight: 800, display: 'block' }}>Security & Credentials</strong>
+                      <span style={{ fontSize: '0.74rem', color: '#64748B', fontWeight: 500, display: 'block', textOverflow: 'ellipsis', overflow: 'hidden', whiteSpace: 'nowrap' }}>
+                        Admin login, password and account security
+                      </span>
+                    </div>
+                  </div>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexShrink: 0 }}>
+                    <span style={{
+                      fontSize: '0.68rem',
+                      fontWeight: 800,
+                      padding: '3px 8px',
+                      borderRadius: '6px',
+                      background: '#FEE2E2',
+                      color: '#DC2626',
+                      border: '1px solid #FECACA'
+                    }}>
+                      Secure
+                    </span>
+                    <ChevronRight size={18} color="#94A3B8" className="setting-chevron" style={{ transition: 'all 0.15s ease' }} />
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
+        )}
+
+        {/* SECTION 4 — GROWTH & ADVANCED */}
+        {showAdvanced && (
+          <div>
+            <div style={{ fontSize: '0.72rem', fontWeight: 800, color: '#64748B', letterSpacing: '0.06em', textTransform: 'uppercase', marginBottom: '10px', paddingLeft: '4px' }}>
+              🚀 SECTION 4 — GROWTH & ADVANCED
+            </div>
+            <div className="settings-grid-2col">
+              {/* Reviews & AI Auto-Reply */}
+              <div className="setting-card" onClick={() => onNavigate && onNavigate('review')}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '14px', minWidth: 0 }}>
+                  <div style={{ width: '42px', height: '42px', borderRadius: '12px', background: '#F3E8FF', color: '#7E22CE', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                    <ShieldCheck size={20} />
+                  </div>
+                  <div style={{ minWidth: 0 }}>
+                    <strong style={{ fontSize: '0.92rem', color: '#0F172A', fontWeight: 800, display: 'block' }}>Reviews & AI Auto-Reply</strong>
+                    <span style={{ fontSize: '0.74rem', color: '#64748B', fontWeight: 500, display: 'block', textOverflow: 'ellipsis', overflow: 'hidden', whiteSpace: 'nowrap' }}>
+                      Google review connection and AI reply assistant
+                    </span>
+                  </div>
+                </div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexShrink: 0 }}>
+                  <span style={{
+                    fontSize: '0.68rem',
+                    fontWeight: 800,
+                    padding: '3px 8px',
+                    borderRadius: '6px',
+                    background: '#F3E8FF',
+                    color: '#7E22CE',
+                    border: '1px solid #E9D5FF'
+                  }}>
+                    Connected
+                  </span>
+                  <ChevronRight size={18} color="#94A3B8" className="setting-chevron" style={{ transition: 'all 0.15s ease' }} />
+                </div>
+              </div>
+
+              {/* Database Tools */}
+              <div className="setting-card" onClick={() => onOptimizeDatabase && onOptimizeDatabase()}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '14px', minWidth: 0 }}>
+                  <div style={{ width: '42px', height: '42px', borderRadius: '12px', background: '#DCFCE7', color: '#15803D', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                    <Upload size={20} />
+                  </div>
+                  <div style={{ minWidth: 0 }}>
+                    <strong style={{ fontSize: '0.92rem', color: '#0F172A', fontWeight: 800, display: 'block' }}>Database Tools</strong>
+                    <span style={{ fontSize: '0.74rem', color: '#64748B', fontWeight: 500, display: 'block', textOverflow: 'ellipsis', overflow: 'hidden', whiteSpace: 'nowrap' }}>
+                      Database health, cleanup, import/export and optimization
+                    </span>
+                  </div>
+                </div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexShrink: 0 }}>
+                  <span style={{
+                    fontSize: '0.68rem',
+                    fontWeight: 800,
+                    padding: '3px 8px',
+                    borderRadius: '6px',
+                    background: '#DCFCE7',
+                    color: '#15803D',
+                    border: '1px solid #BBF7D0'
+                  }}>
+                    Optimized
+                  </span>
+                  <ChevronRight size={18} color="#94A3B8" className="setting-chevron" style={{ transition: 'all 0.15s ease' }} />
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
 
       {/* Drawer 1: Business Profile */}
