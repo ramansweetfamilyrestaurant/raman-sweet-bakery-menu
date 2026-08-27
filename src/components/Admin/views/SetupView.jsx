@@ -55,11 +55,12 @@ export default function SetupView({
     initialDrawer === 'profile' ? 'profile' :
     initialDrawer === 'menu-preferences' ? 'menu-preferences' :
     initialDrawer === 'devices' || initialDrawer === 'orders-devices' ? 'orders-devices' :
+    initialDrawer === 'subscription' || initialDrawer === 'billing' ? 'subscription' :
     null
   );
   const [openDrawer, setOpenDrawer] = useState(
-    (initialDrawer === 'profile' || initialDrawer === 'menu-preferences' || initialDrawer === 'devices' || initialDrawer === 'orders-devices') ? null : initialDrawer
-  ); // 'menu', 'location', 'subscription', 'security', 'cinema'
+    (initialDrawer === 'profile' || initialDrawer === 'menu-preferences' || initialDrawer === 'devices' || initialDrawer === 'orders-devices' || initialDrawer === 'subscription' || initialDrawer === 'billing') ? null : initialDrawer
+  ); // 'menu', 'location', 'security', 'cinema'
   const [uploadingLogo, setUploadingLogo] = useState(false);
   const [gpsLoading, setGpsLoading] = useState(false);
   const [saveSuccessMsg, setSaveSuccessMsg] = useState('');
@@ -287,13 +288,17 @@ export default function SetupView({
     }
   };
 
+  const [historySearchQuery, setHistorySearchQuery] = useState('');
+  const [historyDateFilter, setHistoryDateFilter] = useState('all'); // 'all' | '30days' | '90days' | 'year'
+  const [historyPage, setHistoryPage] = useState(1);
+
   useEffect(() => {
-    if (openDrawer === 'subscription') {
+    if (openDrawer === 'subscription' || activeSubPage === 'subscription' || activeSubPage === 'billing') {
       loadSubscriptionData();
       loadPlansData();
       loadPaymentHistoryData();
     }
-  }, [openDrawer]);
+  }, [openDrawer, activeSubPage]);
 
   const handleCancelAutoRenew = async () => {
     if (!token || actionLoading) return;
@@ -3969,7 +3974,7 @@ export default function SetupView({
                 </span>
                 <button
                   type="button"
-                  onClick={() => setOpenDrawer('subscription')}
+                  onClick={() => setActiveSubPage('subscription')}
                   style={{
                     padding: '6px 12px',
                     borderRadius: '8px',
@@ -4406,6 +4411,878 @@ export default function SetupView({
     );
   };
 
+  const renderSubscriptionBillingFullPage = () => {
+    const activePlanKey = (subData?.plan_tier || restaurantInfo?.plan_tier || settingsForm?.plan_tier || 'enterprise').toLowerCase();
+    const activePlanPrice = subData?.plan_price || restaurantInfo?.plan_price || 999;
+    const isComplimentary = subData?.mandate_status === 'admin_granted' || 
+                            restaurantInfo?.subscription_type === 'ADMIN_GRANTED' || 
+                            subData?.subscription_type === 'ADMIN_GRANTED';
+
+    const rawExpiryDate = subData?.current_period_end || 
+                          subData?.subscription?.current_period_end || 
+                          subData?.subscription?.next_billing_at || 
+                          subData?.plan_expires_at || 
+                          subData?.trial_ends_at || 
+                          subData?.access_until || 
+                          restaurantInfo?.access_until || 
+                          restaurantInfo?.plan_expires_at || 
+                          restaurantInfo?.trial_ends_at;
+
+    const formatBillingDate = (dateVal) => {
+      if (!dateVal) return null;
+      try {
+        const d = new Date(dateVal);
+        if (isNaN(d.getTime())) return null;
+        return d.toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' });
+      } catch {
+        return null;
+      }
+    };
+
+    const formattedDate = formatBillingDate(rawExpiryDate);
+    const renewalText = isComplimentary ? 'Complimentary Lifetime' : (formattedDate || '24 Jun 2026');
+
+    const autoRenewActive = !isComplimentary && (subData?.auto_renew === 1 || (subData?.auto_renew === undefined && subData?.mandate_status === 'active'));
+    const isCancelRequested = Boolean(subData?.cancel_requested_at || subData?.auto_renew === 0 || subData?.mandate_status === 'cancelled');
+
+    const sampleInvoices = [
+      { id: 'INV-2026-0524', date: '24 May 2026', amount: 999, method: 'UPI AutoPay', status: 'Paid' },
+      { id: 'INV-2026-0424', date: '24 Apr 2026', amount: 999, method: 'UPI AutoPay', status: 'Paid' },
+      { id: 'INV-2026-0324', date: '24 Mar 2026', amount: 999, method: 'UPI AutoPay', status: 'Paid' }
+    ];
+
+    const actualInvoices = (paymentHistory?.data && paymentHistory.data.length > 0)
+      ? paymentHistory.data.map((pay, idx) => ({
+          id: pay.gateway_payment_id || `INV-2026-0${5 - (idx % 5)}${24 - (idx * 2)}`,
+          date: pay.paid_at ? new Date(pay.paid_at).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' }) : `24 May 2026`,
+          amount: pay.amount || activePlanPrice,
+          method: pay.payment_method || 'UPI AutoPay',
+          status: (pay.status || 'paid').toLowerCase() === 'success' || (pay.status || '').toLowerCase() === 'paid' ? 'Paid' : 'Failed'
+        }))
+      : sampleInvoices;
+
+    const filteredInvoices = actualInvoices.filter(inv => {
+      const q = historySearchQuery.trim().toLowerCase();
+      if (!q) return true;
+      return inv.id.toLowerCase().includes(q) || String(inv.amount).includes(q) || inv.method.toLowerCase().includes(q) || inv.date.toLowerCase().includes(q);
+    });
+
+    const standardPlans = [
+      {
+        key: 'starter',
+        name: 'Starter',
+        price: 299,
+        badge: '⚡ Starter',
+        description: 'Essential digital menu & QR ordering for cafes & quick food joints',
+        features: [
+          '5 Tables & physical spaces',
+          '50 Dishes & 10 categories',
+          'Full digital QR menu',
+          'GST compliant billing'
+        ]
+      },
+      {
+        key: 'pro',
+        name: 'Professional',
+        price: 599,
+        badge: '✨ Professional',
+        description: 'Full-featured ordering, WhatsApp direct orders & live analytics',
+        features: [
+          '20 Tables & dining spaces',
+          '200 Dishes & categories',
+          'WhatsApp direct ordering',
+          'Custom brand domain & analytics'
+        ]
+      },
+      {
+        key: 'enterprise',
+        name: 'Enterprise',
+        price: 999,
+        badge: '👑 Enterprise',
+        description: 'High-volume dining, Kitchen Display System (KDS) & dual printers',
+        features: [
+          'Unlimited tables & physical spaces',
+          'Unlimited dishes & categories',
+          'Kitchen Display System (KDS)',
+          'Thermal printer auto-routing',
+          'Priority 24/7 dedicated support'
+        ]
+      }
+    ];
+
+    return (
+      <div style={{
+        display: 'flex',
+        flexDirection: 'column',
+        gap: '16px',
+        maxWidth: '880px',
+        margin: '0 auto',
+        width: '100%',
+        boxSizing: 'border-box',
+        paddingBottom: '80px',
+        fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif'
+      }}>
+        {/* Action Alert Banner */}
+        {billingActionMsg && (
+          <div style={{
+            padding: '12px 16px',
+            borderRadius: '14px',
+            fontSize: '0.82rem',
+            fontWeight: 700,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            gap: '8px',
+            background: billingActionMsg.type === 'error' ? '#FEF2F2' : '#ECFDF5',
+            color: billingActionMsg.type === 'error' ? '#DC2626' : '#059669',
+            border: `1px solid ${billingActionMsg.type === 'error' ? '#FECACA' : '#A7F3D0'}`
+          }}>
+            <span>{billingActionMsg.text}</span>
+            <button
+              type="button"
+              onClick={() => setBillingActionMsg(null)}
+              aria-label="Dismiss notification"
+              style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'inherit', padding: 0 }}
+            >
+              <X size={16} />
+            </button>
+          </div>
+        )}
+
+        {/* 1. MASTER PAGE HEADER */}
+        <div style={{
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          background: '#FFFFFF',
+          borderRadius: '16px',
+          border: '1px solid #EAE5DF',
+          padding: '16px 20px',
+          boxShadow: '0 1px 3px rgba(0,0,0,0.02)',
+          boxSizing: 'border-box',
+          width: '100%',
+          flexWrap: 'wrap',
+          gap: '12px'
+        }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+            <button
+              type="button"
+              onClick={() => setActiveSubPage(null)}
+              style={{
+                height: '36px',
+                padding: '0 12px',
+                borderRadius: '10px',
+                background: '#F8FAFC',
+                border: '1px solid #E2E8F0',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '6px',
+                color: '#0F172A',
+                cursor: 'pointer',
+                flexShrink: 0,
+                fontSize: '0.78rem',
+                fontWeight: 800
+              }}
+            >
+              <ArrowLeft size={16} />
+              <span>Settings</span>
+            </button>
+            <div>
+              <h2 style={{ fontSize: '1.20rem', fontWeight: 900, color: '#0F172A', margin: 0, letterSpacing: '-0.02em' }}>
+                Billing & Subscription
+              </h2>
+              <p style={{ fontSize: '0.74rem', color: '#64748B', margin: 0 }}>
+                Manage your plan, billing, payments and subscription preferences.
+              </p>
+            </div>
+          </div>
+
+          <div style={{
+            display: 'inline-flex',
+            alignItems: 'center',
+            gap: '6px',
+            background: '#ECFDF5',
+            color: '#059669',
+            border: '1px solid #A7F3D0',
+            padding: '5px 12px',
+            borderRadius: '20px',
+            fontSize: '0.72rem',
+            fontWeight: 800,
+            flexShrink: 0
+          }}>
+            <span style={{ width: '6px', height: '6px', borderRadius: '50%', background: '#059669' }} />
+            <span>Subscription Active</span>
+          </div>
+        </div>
+
+        {/* 2. PREMIUM TABS */}
+        <div style={{
+          display: 'grid',
+          gridTemplateColumns: '1fr 1fr 1fr',
+          gap: '6px',
+          background: '#FAF8F5',
+          padding: '4px',
+          borderRadius: '14px',
+          border: '1px solid #EAE5DF'
+        }}>
+          <button
+            type="button"
+            onClick={() => setSubTab('overview')}
+            style={{
+              padding: '9px 12px',
+              borderRadius: '10px',
+              border: 'none',
+              background: subTab === 'overview' ? '#064E3B' : 'transparent',
+              color: subTab === 'overview' ? '#FFFFFF' : '#475569',
+              fontWeight: subTab === 'overview' ? 800 : 600,
+              fontSize: '0.82rem',
+              cursor: 'pointer',
+              boxShadow: subTab === 'overview' ? '0 2px 6px rgba(6, 78, 59, 0.25)' : 'none',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              gap: '6px',
+              transition: 'all 0.15s ease'
+            }}
+          >
+            <CreditCard size={15} />
+            <span>Overview</span>
+          </button>
+
+          <button
+            type="button"
+            onClick={() => setSubTab('plans')}
+            style={{
+              padding: '9px 12px',
+              borderRadius: '10px',
+              border: 'none',
+              background: subTab === 'plans' ? '#064E3B' : 'transparent',
+              color: subTab === 'plans' ? '#FFFFFF' : '#475569',
+              fontWeight: subTab === 'plans' ? 800 : 600,
+              fontSize: '0.82rem',
+              cursor: 'pointer',
+              boxShadow: subTab === 'plans' ? '0 2px 6px rgba(6, 78, 59, 0.25)' : 'none',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              gap: '6px',
+              transition: 'all 0.15s ease'
+            }}
+          >
+            <Crown size={15} />
+            <span>Plans</span>
+          </button>
+
+          <button
+            type="button"
+            onClick={() => setSubTab('history')}
+            style={{
+              padding: '9px 12px',
+              borderRadius: '10px',
+              border: 'none',
+              background: subTab === 'history' ? '#064E3B' : 'transparent',
+              color: subTab === 'history' ? '#FFFFFF' : '#475569',
+              fontWeight: subTab === 'history' ? 800 : 600,
+              fontSize: '0.82rem',
+              cursor: 'pointer',
+              boxShadow: subTab === 'history' ? '0 2px 6px rgba(6, 78, 59, 0.25)' : 'none',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              gap: '6px',
+              transition: 'all 0.15s ease'
+            }}
+          >
+            <History size={15} />
+            <span>Payment History</span>
+          </button>
+        </div>
+
+        {/* TAB 1: OVERVIEW */}
+        {subTab === 'overview' && (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+            
+            {/* 1. CURRENT PLAN CARD */}
+            <div style={{
+              background: '#FFFFFF',
+              borderRadius: '16px',
+              border: '1px solid #EAE5DF',
+              padding: '22px',
+              boxShadow: '0 1px 3px rgba(0,0,0,0.02)',
+              display: 'flex',
+              flexDirection: 'column',
+              gap: '16px'
+            }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+                <div>
+                  <span style={{ fontSize: '0.70rem', fontWeight: 800, color: '#64748B', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
+                    CURRENT PLAN
+                  </span>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginTop: '4px' }}>
+                    <h3 style={{ margin: 0, fontSize: '1.35rem', fontWeight: 900, color: '#0F172A' }}>
+                      👑 Enterprise
+                    </h3>
+                  </div>
+                </div>
+
+                <div style={{ textAlign: 'right' }}>
+                  <div style={{ fontSize: '1.45rem', fontWeight: 900, color: '#064E3B' }}>
+                    {isComplimentary ? 'FREE' : `₹${activePlanPrice}`}
+                  </div>
+                  {!isComplimentary && (
+                    <span style={{ fontSize: '0.74rem', color: '#64748B', fontWeight: 600 }}>/ month</span>
+                  )}
+                </div>
+              </div>
+
+              {/* Structured Details Grid */}
+              <div style={{
+                display: 'grid',
+                gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))',
+                gap: '12px'
+              }}>
+                <div style={{ background: '#FAF8F5', padding: '12px 14px', borderRadius: '12px', border: '1px solid #EAE5DF' }}>
+                  <span style={{ fontSize: '0.70rem', color: '#64748B', fontWeight: 700, display: 'block', marginBottom: '2px' }}>
+                    Billing Cycle
+                  </span>
+                  <strong style={{ fontSize: '0.88rem', color: '#0F172A', fontWeight: 800 }}>
+                    Monthly
+                  </strong>
+                </div>
+
+                <div style={{ background: '#FAF8F5', padding: '12px 14px', borderRadius: '12px', border: '1px solid #EAE5DF' }}>
+                  <span style={{ fontSize: '0.70rem', color: '#64748B', fontWeight: 700, display: 'block', marginBottom: '2px' }}>
+                    Next Renewal
+                  </span>
+                  <strong style={{ fontSize: '0.88rem', color: '#0F172A', fontWeight: 800 }}>
+                    {renewalText}
+                  </strong>
+                </div>
+              </div>
+
+              {/* Horizontal Auto-Renew Row */}
+              <div style={{
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                padding: '14px 16px',
+                background: '#FAF8F5',
+                borderRadius: '12px',
+                border: '1px solid #EAE5DF',
+                flexWrap: 'wrap',
+                gap: '10px'
+              }}>
+                <div>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    <strong style={{ fontSize: '0.86rem', color: '#0F172A', fontWeight: 800 }}>
+                      Auto-Renew
+                    </strong>
+                    <span style={{
+                      padding: '2px 8px',
+                      borderRadius: '12px',
+                      fontSize: '0.68rem',
+                      fontWeight: 800,
+                      background: '#ECFDF5',
+                      color: '#059669',
+                      border: '1px solid #A7F3D0'
+                    }}>
+                      ● Active
+                    </span>
+                  </div>
+                  <span style={{ fontSize: '0.72rem', color: '#64748B', display: 'block', marginTop: '2px' }}>
+                    Your subscription renews automatically each month.
+                  </span>
+                </div>
+
+                <ToggleSwitch
+                  checked={autoRenewActive}
+                  onChange={(checked) => {
+                    if (!checked) {
+                      setShowCancelModal(true);
+                    } else {
+                      onOpenBillingModal();
+                    }
+                  }}
+                />
+              </div>
+            </div>
+
+            {/* 2. PLAN INCLUDES */}
+            <div style={{
+              background: '#FFFFFF',
+              borderRadius: '16px',
+              border: '1px solid #EAE5DF',
+              padding: '20px 22px',
+              boxShadow: '0 1px 3px rgba(0,0,0,0.02)',
+              display: 'flex',
+              flexDirection: 'column',
+              gap: '12px'
+            }}>
+              <span style={{ fontSize: '0.70rem', fontWeight: 800, color: '#64748B', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
+                PLAN INCLUDES
+              </span>
+              <div style={{
+                display: 'grid',
+                gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))',
+                gap: '10px'
+              }}>
+                {[
+                  'Full Digital QR Menu',
+                  'Unlimited Menu Items',
+                  'Orders & Table Management',
+                  'Thermal Printer Support',
+                  'Kitchen Display System',
+                  'Advanced Analytics',
+                  'Priority Support'
+                ].map((feature, i) => (
+                  <div key={i} style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '0.82rem', color: '#334155' }}>
+                    <div style={{ width: '18px', height: '18px', borderRadius: '50%', background: '#ECFDF5', color: '#059669', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                      <Check size={12} strokeWidth={3} />
+                    </div>
+                    <span style={{ fontWeight: 600 }}>{feature}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* 3. BILLING SUMMARY (3 Compact Information Cards) */}
+            <div style={{
+              display: 'grid',
+              gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))',
+              gap: '12px'
+            }}>
+              <div style={{
+                background: '#FFFFFF',
+                borderRadius: '14px',
+                border: '1px solid #EAE5DF',
+                padding: '16px 18px',
+                boxShadow: '0 1px 3px rgba(0,0,0,0.02)'
+              }}>
+                <span style={{ fontSize: '0.68rem', fontWeight: 800, color: '#64748B', textTransform: 'uppercase', letterSpacing: '0.03em', display: 'block', marginBottom: '4px' }}>
+                  CURRENT PLAN
+                </span>
+                <strong style={{ fontSize: '1.05rem', fontWeight: 900, color: '#0F172A' }}>
+                  Enterprise
+                </strong>
+              </div>
+
+              <div style={{
+                background: '#FFFFFF',
+                borderRadius: '14px',
+                border: '1px solid #EAE5DF',
+                padding: '16px 18px',
+                boxShadow: '0 1px 3px rgba(0,0,0,0.02)'
+              }}>
+                <span style={{ fontSize: '0.68rem', fontWeight: 800, color: '#64748B', textTransform: 'uppercase', letterSpacing: '0.03em', display: 'block', marginBottom: '4px' }}>
+                  MONTHLY COST
+                </span>
+                <strong style={{ fontSize: '1.05rem', fontWeight: 900, color: '#064E3B' }}>
+                  ₹999 / month
+                </strong>
+              </div>
+
+              <div style={{
+                background: '#FFFFFF',
+                borderRadius: '14px',
+                border: '1px solid #EAE5DF',
+                padding: '16px 18px',
+                boxShadow: '0 1px 3px rgba(0,0,0,0.02)'
+              }}>
+                <span style={{ fontSize: '0.68rem', fontWeight: 800, color: '#64748B', textTransform: 'uppercase', letterSpacing: '0.03em', display: 'block', marginBottom: '4px' }}>
+                  NEXT PAYMENT
+                </span>
+                <strong style={{ fontSize: '1.05rem', fontWeight: 900, color: '#0F172A' }}>
+                  {renewalText}
+                </strong>
+              </div>
+            </div>
+
+            {/* BOTTOM ACTIONS */}
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+              <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
+                <button
+                  type="button"
+                  onClick={() => setSubTab('plans')}
+                  style={{
+                    flex: '1 1 200px',
+                    height: '44px',
+                    borderRadius: '10px',
+                    border: 'none',
+                    background: '#064E3B',
+                    color: '#FFFFFF',
+                    fontSize: '0.86rem',
+                    fontWeight: 800,
+                    cursor: 'pointer',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    gap: '8px',
+                    boxShadow: '0 2px 8px rgba(6, 78, 59, 0.25)',
+                    transition: 'all 0.15s ease'
+                  }}
+                >
+                  <Crown size={16} />
+                  <span>Change Plan</span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => setSubTab('history')}
+                  style={{
+                    flex: '1 1 200px',
+                    height: '44px',
+                    borderRadius: '10px',
+                    border: '1px solid #CBD5E1',
+                    background: '#FFFFFF',
+                    color: '#334155',
+                    fontSize: '0.84rem',
+                    fontWeight: 700,
+                    cursor: 'pointer',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    gap: '6px',
+                    transition: 'all 0.15s ease'
+                  }}
+                >
+                  <History size={16} />
+                  <span>View Payment History</span>
+                </button>
+              </div>
+
+              <div style={{ textAlign: 'center', fontSize: '0.72rem', color: '#64748B', paddingTop: '4px' }}>
+                🛡️ Your subscription and payment records are securely managed.
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* TAB 2: PLANS COMPARISON */}
+        {subTab === 'plans' && (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))', gap: '14px' }}>
+              {standardPlans.map(p => {
+                const isCurrent = p.key === 'enterprise' || p.key === activePlanKey;
+
+                return (
+                  <div
+                    key={p.key}
+                    style={{
+                      background: '#FFFFFF',
+                      borderRadius: '16px',
+                      border: isCurrent ? '2px solid #064E3B' : '1px solid #EAE5DF',
+                      padding: '20px',
+                      position: 'relative',
+                      boxShadow: isCurrent ? '0 4px 14px rgba(6, 78, 59, 0.08)' : '0 1px 3px rgba(0,0,0,0.02)',
+                      display: 'flex',
+                      flexDirection: 'column',
+                      justifyContent: 'space-between',
+                      gap: '16px'
+                    }}
+                  >
+                    <div>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '8px' }}>
+                        <div>
+                          <span style={{ fontSize: '0.70rem', fontWeight: 800, color: '#64748B', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
+                            {p.badge}
+                          </span>
+                          <h4 style={{ margin: '2px 0 0', fontSize: '1.20rem', fontWeight: 900, color: '#0F172A' }}>
+                            {p.name}
+                          </h4>
+                        </div>
+                        {isCurrent && (
+                          <span style={{
+                            background: '#ECFDF5',
+                            color: '#064E3B',
+                            border: '1px solid #A7F3D0',
+                            padding: '3px 8px',
+                            borderRadius: '12px',
+                            fontSize: '0.68rem',
+                            fontWeight: 800
+                          }}>
+                            Current Plan
+                          </span>
+                        )}
+                      </div>
+
+                      <div style={{ margin: '6px 0 12px' }}>
+                        <span style={{ fontSize: '1.40rem', fontWeight: 900, color: '#064E3B' }}>₹{p.price}</span>
+                        <span style={{ fontSize: '0.74rem', color: '#64748B', fontWeight: 600 }}> / month</span>
+                      </div>
+
+                      <p style={{ fontSize: '0.76rem', color: '#64748B', lineHeight: 1.4, margin: '0 0 14px' }}>
+                        {p.description}
+                      </p>
+
+                      {/* Features List */}
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', borderTop: '1px solid #F1F5F9', paddingTop: '12px' }}>
+                        {p.features.map((feat, idx) => (
+                          <div key={idx} style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '0.78rem', color: '#334155' }}>
+                            <Check size={14} color="#059669" strokeWidth={2.5} style={{ flexShrink: 0 }} />
+                            <span>{feat}</span>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+
+                    {/* Action Button */}
+                    {isCurrent ? (
+                      <button
+                        disabled
+                        style={{
+                          width: '100%',
+                          height: '40px',
+                          borderRadius: '10px',
+                          border: '1px solid #A7F3D0',
+                          background: '#ECFDF5',
+                          color: '#064E3B',
+                          fontWeight: 800,
+                          fontSize: '0.82rem',
+                          cursor: 'default'
+                        }}
+                      >
+                        ✓ Active Current Plan
+                      </button>
+                    ) : (
+                      <button
+                        type="button"
+                        onClick={() => setPlanToChange(p)}
+                        style={{
+                          width: '100%',
+                          height: '40px',
+                          borderRadius: '10px',
+                          border: 'none',
+                          background: '#064E3B',
+                          color: '#FFFFFF',
+                          fontWeight: 800,
+                          fontSize: '0.82rem',
+                          cursor: 'pointer',
+                          boxShadow: '0 2px 6px rgba(6, 78, 59, 0.20)',
+                          transition: 'all 0.15s ease'
+                        }}
+                      >
+                        <span>{p.price > 999 ? 'Upgrade' : 'Switch to Plan'}</span>
+                      </button>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        )}
+
+        {/* TAB 3: PAYMENT HISTORY */}
+        {subTab === 'history' && (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
+            {/* Search & Filter Bar */}
+            <div style={{
+              background: '#FFFFFF',
+              borderRadius: '14px',
+              border: '1px solid #EAE5DF',
+              padding: '12px 14px',
+              display: 'flex',
+              justifyContent: 'space-between',
+              alignItems: 'center',
+              gap: '10px',
+              flexWrap: 'wrap'
+            }}>
+              <div style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: '8px',
+                background: '#FAF8F5',
+                border: '1px solid #EAE5DF',
+                borderRadius: '10px',
+                padding: '0 12px',
+                height: '38px',
+                flex: '1 1 240px'
+              }}>
+                <Search size={15} color="#64748B" />
+                <input
+                  type="text"
+                  value={historySearchQuery}
+                  onChange={(e) => {
+                    setHistorySearchQuery(e.target.value);
+                    setHistoryPage(1);
+                  }}
+                  placeholder="Search by Invoice ID or amount..."
+                  style={{
+                    border: 'none',
+                    background: 'transparent',
+                    outline: 'none',
+                    fontSize: '0.80rem',
+                    color: '#0F172A',
+                    width: '100%'
+                  }}
+                />
+              </div>
+
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <select
+                  value={historyDateFilter}
+                  onChange={(e) => setHistoryDateFilter(e.target.value)}
+                  style={{
+                    height: '38px',
+                    borderRadius: '10px',
+                    border: '1px solid #CBD5E1',
+                    background: '#FFFFFF',
+                    padding: '0 10px',
+                    fontSize: '0.78rem',
+                    fontWeight: 700,
+                    color: '#0F172A'
+                  }}
+                >
+                  <option value="all">All Invoices</option>
+                  <option value="30days">Last 30 Days</option>
+                  <option value="90days">Last 90 Days</option>
+                  <option value="year">This Year</option>
+                </select>
+
+                <button
+                  type="button"
+                  onClick={loadPaymentHistoryData}
+                  style={{
+                    height: '38px',
+                    padding: '0 12px',
+                    borderRadius: '10px',
+                    border: '1px solid #CBD5E1',
+                    background: '#FAF8F5',
+                    color: '#064E3B',
+                    fontWeight: 800,
+                    fontSize: '0.78rem',
+                    cursor: 'pointer',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '4px'
+                  }}
+                >
+                  <RefreshCw size={13} />
+                  <span>Refresh</span>
+                </button>
+              </div>
+            </div>
+
+            {/* Invoices Table Container */}
+            <div style={{
+              background: '#FFFFFF',
+              borderRadius: '16px',
+              border: '1px solid #EAE5DF',
+              overflow: 'hidden',
+              boxShadow: '0 1px 3px rgba(0,0,0,0.02)'
+            }}>
+              <div style={{ overflowX: 'auto' }}>
+                <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left', fontSize: '0.80rem' }}>
+                  <thead>
+                    <tr style={{ background: '#FAF8F5', borderBottom: '1px solid #EAE5DF', color: '#64748B', fontWeight: 800, fontSize: '0.70rem', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
+                      <th style={{ padding: '12px 16px' }}>Date</th>
+                      <th style={{ padding: '12px 16px' }}>Invoice ID</th>
+                      <th style={{ padding: '12px 16px' }}>Amount</th>
+                      <th style={{ padding: '12px 16px' }}>Payment Method</th>
+                      <th style={{ padding: '12px 16px' }}>Status</th>
+                      <th style={{ padding: '12px 16px', textAlign: 'right' }}>Action</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {filteredInvoices.length === 0 ? (
+                      <tr>
+                        <td colSpan={6} style={{ padding: '30px', textAlign: 'center', color: '#64748B' }}>
+                          No invoice records found matching your search.
+                        </td>
+                      </tr>
+                    ) : (
+                      filteredInvoices.map((inv, idx) => (
+                        <tr key={idx} style={{ borderBottom: idx < filteredInvoices.length - 1 ? '1px solid #F1F5F9' : 'none' }}>
+                          <td style={{ padding: '14px 16px', fontWeight: 800, color: '#0F172A' }}>
+                            {inv.date}
+                          </td>
+                          <td style={{ padding: '14px 16px', color: '#475569', fontWeight: 600 }}>
+                            {inv.id}
+                          </td>
+                          <td style={{ padding: '14px 16px', fontWeight: 900, color: '#0F172A' }}>
+                            ₹{inv.amount}
+                          </td>
+                          <td style={{ padding: '14px 16px', color: '#475569' }}>
+                            {inv.method}
+                          </td>
+                          <td style={{ padding: '14px 16px' }}>
+                            <span style={{
+                              padding: '2px 8px',
+                              borderRadius: '10px',
+                              fontSize: '0.70rem',
+                              fontWeight: 800,
+                              background: '#ECFDF5',
+                              color: '#059669',
+                              border: '1px solid #A7F3D0'
+                            }}>
+                              ● {inv.status}
+                            </span>
+                          </td>
+                          <td style={{ padding: '14px 16px', textAlign: 'right' }}>
+                            <button
+                              type="button"
+                              onClick={() => window.print()}
+                              style={{
+                                padding: '5px 10px',
+                                borderRadius: '8px',
+                                border: '1px solid #CBD5E1',
+                                background: '#FFFFFF',
+                                color: '#064E3B',
+                                fontSize: '0.74rem',
+                                fontWeight: 800,
+                                cursor: 'pointer',
+                                display: 'inline-flex',
+                                alignItems: 'center',
+                                gap: '4px'
+                              }}
+                            >
+                              <FileText size={13} />
+                              <span>View Invoice</span>
+                            </button>
+                          </td>
+                        </tr>
+                      ))
+                    )}
+                  </tbody>
+                </table>
+              </div>
+
+              {/* Pagination Bar */}
+              <div style={{
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                padding: '12px 16px',
+                borderTop: '1px solid #EAE5DF',
+                background: '#FAF8F5',
+                fontSize: '0.76rem',
+                color: '#64748B'
+              }}>
+                <span>Showing {filteredInvoices.length} of {actualInvoices.length} invoices</span>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                  <button
+                    type="button"
+                    disabled
+                    style={{ padding: '4px 10px', borderRadius: '6px', border: '1px solid #E2E8F0', background: '#FFFFFF', color: '#94A3B8', fontSize: '0.72rem', cursor: 'not-allowed', fontWeight: 700 }}
+                  >
+                    ← Previous
+                  </button>
+                  <span style={{ fontWeight: 800, color: '#0F172A', padding: '0 4px' }}>1</span>
+                  <button
+                    type="button"
+                    disabled
+                    style={{ padding: '4px 10px', borderRadius: '6px', border: '1px solid #E2E8F0', background: '#FFFFFF', color: '#94A3B8', fontSize: '0.72rem', cursor: 'not-allowed', fontWeight: 700 }}
+                  >
+                    Next →
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+      </div>
+    );
+  };
+
   return (
     <div style={{
       display: 'flex',
@@ -4786,6 +5663,8 @@ export default function SetupView({
         renderMenuPreferencesFullPage()
       ) : activeSubPage === 'orders-devices' ? (
         renderOrdersDevicesFullPage()
+      ) : activeSubPage === 'subscription' || activeSubPage === 'billing' ? (
+        renderSubscriptionBillingFullPage()
       ) : (
         <>
           {/* ========================================================
@@ -5146,7 +6025,7 @@ export default function SetupView({
                     </div>
                   </div>
 
-                  <div className="settings-card-primary" onClick={() => setOpenDrawer('subscription')}>
+                  <div className="settings-card-primary" onClick={() => setActiveSubPage('subscription')}>
                     <div style={{ width: '40px', height: '40px', borderRadius: '12px', background: '#DCFCE7', color: '#16A34A', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                       <CreditCard size={20} />
                     </div>
@@ -5212,7 +6091,7 @@ export default function SetupView({
                     </div>
                   </div>
 
-                  <div className="mobile-list-item-row" onClick={() => setOpenDrawer('subscription')}>
+                  <div className="mobile-list-item-row" onClick={() => setActiveSubPage('subscription')}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
                       <div style={{ width: '34px', height: '34px', borderRadius: '10px', background: '#DCFCE7', color: '#16A34A', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                         <CreditCard size={18} />
@@ -5630,7 +6509,7 @@ export default function SetupView({
                 </div>
 
                 {/* Card 3: Billing & Subscription */}
-                <div className="settings-card-primary" onClick={() => setOpenDrawer('subscription')}>
+                <div className="settings-card-primary" onClick={() => setActiveSubPage('subscription')}>
                   <div style={{ width: '42px', height: '42px', borderRadius: '12px', background: '#DCFCE7', color: '#16A34A', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                     <CreditCard size={22} />
                   </div>
@@ -7588,814 +8467,7 @@ export default function SetupView({
         </div>
       </AdminDrawer>
 
-      {/* Drawer 5: Subscription & Billing */}
-      <AdminDrawer
-        isOpen={openDrawer === 'subscription'}
-        onClose={() => setOpenDrawer(null)}
-        title="Subscription & Billing"
-        subtitle="Manage your plan, billing and payment records"
-      >
-        {(() => {
-          const activePlanKey = (subData?.plan_tier || restaurantInfo?.plan_tier || settingsForm?.plan_tier || 'pro').toLowerCase();
-          const activePlanPrice = subData?.plan_price || restaurantInfo?.plan_price || 999;
-          const isComplimentary = subData?.mandate_status === 'admin_granted' || 
-                                  restaurantInfo?.subscription_type === 'ADMIN_GRANTED' || 
-                                  subData?.subscription_type === 'ADMIN_GRANTED';
 
-          const rawExpiryDate = subData?.current_period_end || 
-                                subData?.subscription?.current_period_end || 
-                                subData?.subscription?.next_billing_at || 
-                                subData?.plan_expires_at || 
-                                subData?.trial_ends_at || 
-                                subData?.access_until || 
-                                restaurantInfo?.access_until || 
-                                restaurantInfo?.plan_expires_at || 
-                                restaurantInfo?.trial_ends_at;
-
-          const formatBillingDate = (dateVal) => {
-            if (!dateVal) return null;
-            try {
-              const d = new Date(dateVal);
-              if (isNaN(d.getTime())) return null;
-              return d.toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' });
-            } catch {
-              return null;
-            }
-          };
-
-          const formattedDate = formatBillingDate(rawExpiryDate);
-          const isLifetime = isComplimentary;
-
-          const autoRenewActive = !isComplimentary && (subData?.auto_renew === 1 || (subData?.auto_renew === undefined && subData?.mandate_status === 'active'));
-          const isCancelRequested = Boolean(subData?.cancel_requested_at || subData?.auto_renew === 0 || subData?.mandate_status === 'cancelled');
-
-          let renewalText = formattedDate || '24 Jun 2026';
-          if (isLifetime) {
-            renewalText = 'Complimentary Lifetime Access';
-          } else if (formattedDate) {
-            renewalText = formattedDate;
-          }
-
-          const currentStatus = (subData?.status || restaurantInfo?.subscription_status || 'active').toLowerCase();
-          const getStatusBadge = () => {
-            if (isComplimentary) {
-              return { text: '● Complimentary Access', bg: '#F5F3FF', color: '#7C3AED', border: '#DDD6FE' };
-            }
-            if (currentStatus === 'trialing') {
-              return { text: '● Free Trial Active', bg: '#EFF6FF', color: '#1D4ED8', border: '#BFDBFE' };
-            }
-            if (currentStatus === 'payment_failed') {
-              return { text: '● Payment Failed', bg: '#FEF2F2', color: '#DC2626', border: '#FECACA' };
-            }
-            if (currentStatus === 'cancelled' || isCancelRequested) {
-              return { text: '● Auto-Renew Off', bg: '#FEF3C7', color: '#B45309', border: '#FDE68A' };
-            }
-            if (currentStatus === 'expired') {
-              return { text: '● Expired', bg: '#FEE2E2', color: '#991B1B', border: '#FCA5A5' };
-            }
-            return { text: '● Active', bg: '#ECFDF5', color: '#059669', border: '#A7F3D0' };
-          };
-
-          const fallbackPlans = [
-            {
-              key: 'basic',
-              name: 'Starter Plan',
-              price: 499,
-              description: 'Essential digital menu & QR ordering for cafes & food joints',
-              max_tables: 5,
-              max_dishes: 50,
-              max_categories: 10,
-              kds_enabled: false,
-              custom_domain_enabled: false,
-              gst_invoice_enabled: true,
-              dual_printer_enabled: false,
-              whatsapp_enabled: false,
-              direct_ordering_enabled: true
-            },
-            {
-              key: 'pro',
-              name: 'Professional Plan',
-              price: 999,
-              description: 'Full-featured ordering, WhatsApp direct orders & live analytics',
-              max_tables: 20,
-              max_dishes: 200,
-              max_categories: 30,
-              kds_enabled: false,
-              custom_domain_enabled: true,
-              gst_invoice_enabled: true,
-              dual_printer_enabled: false,
-              whatsapp_enabled: true,
-              direct_ordering_enabled: true
-            },
-            {
-              key: 'enterprise',
-              name: 'Enterprise VIP Plan',
-              price: 1999,
-              description: 'High-volume dining, Kitchen Display System (KDS) & dual printers',
-              max_tables: 9999,
-              max_dishes: 9999,
-              max_categories: 9999,
-              kds_enabled: true,
-              custom_domain_enabled: true,
-              gst_invoice_enabled: true,
-              dual_printer_enabled: true,
-              whatsapp_enabled: true,
-              direct_ordering_enabled: true
-            },
-            {
-              key: 'vip_ultra_plan',
-              name: 'VIP Ultra Unlimited',
-              price: 2999,
-              description: 'Multi-counter dining spaces, KDS, and priority dedicated manager',
-              max_tables: 9999,
-              max_dishes: 9999,
-              max_categories: 9999,
-              kds_enabled: true,
-              custom_domain_enabled: true,
-              gst_invoice_enabled: true,
-              dual_printer_enabled: true,
-              whatsapp_enabled: true,
-              direct_ordering_enabled: true
-            }
-          ];
-
-          const displayPlans = (availablePlans && availablePlans.length > 0) ? availablePlans : fallbackPlans;
-
-          return (
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '14px', fontSize: '0.85rem' }}>
-              
-              {/* Action Notification Alert */}
-              {billingActionMsg && (
-                <div style={{
-                  padding: '12px 14px',
-                  borderRadius: '12px',
-                  fontSize: '0.82rem',
-                  fontWeight: 700,
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'space-between',
-                  gap: '8px',
-                  background: billingActionMsg.type === 'error' ? '#FEF2F2' : '#ECFDF5',
-                  color: billingActionMsg.type === 'error' ? '#DC2626' : '#059669',
-                  border: `1px solid ${billingActionMsg.type === 'error' ? '#FECACA' : '#A7F3D0'}`
-                }}>
-                  <span>{billingActionMsg.text}</span>
-                  <button
-                    type="button"
-                    onClick={() => setBillingActionMsg(null)}
-                    aria-label="Dismiss notification"
-                    style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'inherit', padding: 0 }}
-                  >
-                    <X size={16} />
-                  </button>
-                </div>
-              )}
-
-              {/* Scheduled Plan Change Banner */}
-              {subData?.scheduled_plan_key && (
-                <div style={{
-                  padding: '12px 14px',
-                  borderRadius: '12px',
-                  background: '#FFFBEB',
-                  border: '1px solid #FDE68A',
-                  color: '#92400E',
-                  fontSize: '0.80rem',
-                  fontWeight: 700,
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '10px'
-                }}>
-                  <Clock size={16} color="#D97706" style={{ flexShrink: 0 }} />
-                  <div>
-                    <strong>Scheduled Plan Change:</strong> Switching to <strong>{(subData.scheduled_plan_key).toUpperCase()}</strong> on {subData.plan_change_effective_at ? new Date(subData.plan_change_effective_at).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' }) : 'next billing cycle'}.
-                  </div>
-                </div>
-              )}
-
-              {/* Premium Segmented Tabs */}
-              <div style={{
-                display: 'grid',
-                gridTemplateColumns: '1fr 1fr 1fr',
-                gap: '6px',
-                background: '#FAF8F5',
-                padding: '4px',
-                borderRadius: '14px',
-                border: '1px solid #EAE5DF'
-              }}>
-                <button
-                  type="button"
-                  onClick={() => setSubTab('overview')}
-                  style={{
-                    padding: '8px 10px',
-                    borderRadius: '10px',
-                    border: 'none',
-                    background: subTab === 'overview' ? '#064E3B' : 'transparent',
-                    color: subTab === 'overview' ? '#FFFFFF' : '#475569',
-                    fontWeight: subTab === 'overview' ? 800 : 600,
-                    fontSize: '0.80rem',
-                    cursor: 'pointer',
-                    boxShadow: subTab === 'overview' ? '0 2px 6px rgba(6, 78, 59, 0.25)' : 'none',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    gap: '6px',
-                    transition: 'all 0.15s ease'
-                  }}
-                >
-                  <CreditCard size={14} />
-                  <span>Overview</span>
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setSubTab('plans')}
-                  style={{
-                    padding: '8px 10px',
-                    borderRadius: '10px',
-                    border: 'none',
-                    background: subTab === 'plans' ? '#064E3B' : 'transparent',
-                    color: subTab === 'plans' ? '#FFFFFF' : '#475569',
-                    fontWeight: subTab === 'plans' ? 800 : 600,
-                    fontSize: '0.80rem',
-                    cursor: 'pointer',
-                    boxShadow: subTab === 'plans' ? '0 2px 6px rgba(6, 78, 59, 0.25)' : 'none',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    gap: '6px',
-                    transition: 'all 0.15s ease'
-                  }}
-                >
-                  <Crown size={14} />
-                  <span>Plans</span>
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setSubTab('history')}
-                  style={{
-                    padding: '8px 10px',
-                    borderRadius: '10px',
-                    border: 'none',
-                    background: subTab === 'history' ? '#064E3B' : 'transparent',
-                    color: subTab === 'history' ? '#FFFFFF' : '#475569',
-                    fontWeight: subTab === 'history' ? 800 : 600,
-                    fontSize: '0.80rem',
-                    cursor: 'pointer',
-                    boxShadow: subTab === 'history' ? '0 2px 6px rgba(6, 78, 59, 0.25)' : 'none',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    gap: '6px',
-                    transition: 'all 0.15s ease'
-                  }}
-                >
-                  <History size={14} />
-                  <span>Payment History</span>
-                </button>
-              </div>
-
-              {/* TAB 1: OVERVIEW */}
-              {subTab === 'overview' && (
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
-                  
-                  {/* SECTION 1 — CURRENT PLAN SUMMARY CARD */}
-                  <div style={{
-                    background: '#FFFFFF',
-                    borderRadius: '16px',
-                    border: '1px solid #EAE5DF',
-                    padding: '18px 20px',
-                    boxShadow: '0 1px 3px rgba(0,0,0,0.02)',
-                    display: 'flex',
-                    flexDirection: 'column',
-                    gap: '14px'
-                  }}>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
-                      <div>
-                        <span style={{ fontSize: '0.68rem', fontWeight: 800, color: '#64748B', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
-                          CURRENT PLAN
-                        </span>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginTop: '2px' }}>
-                          <h3 style={{ margin: 0, fontSize: '1.25rem', fontWeight: 900, color: '#0F172A' }}>
-                            {activePlanKey === 'enterprise' ? 'Enterprise' : activePlanKey === 'basic' ? 'Starter' : 'Professional'}
-                          </h3>
-                          <Crown size={17} color="#D97706" />
-                        </div>
-                      </div>
-
-                      <div style={{ textAlign: 'right' }}>
-                        <div style={{ fontSize: '1.25rem', fontWeight: 900, color: '#064E3B' }}>
-                          {isComplimentary ? 'FREE' : `₹${activePlanPrice}`}
-                        </div>
-                        {!isComplimentary && (
-                          <span style={{ fontSize: '0.70rem', color: '#64748B', fontWeight: 600 }}>/ month</span>
-                        )}
-                      </div>
-                    </div>
-
-                    {/* Status Pill */}
-                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '8px 12px', background: '#FAF8F5', borderRadius: '10px', border: '1px solid #EAE5DF' }}>
-                      <span style={{ fontSize: '0.74rem', color: '#64748B', fontWeight: 700 }}>Status</span>
-                      <span style={{
-                        padding: '3px 10px',
-                        borderRadius: '20px',
-                        fontSize: '0.72rem',
-                        fontWeight: 800,
-                        background: getStatusBadge().bg,
-                        color: getStatusBadge().color,
-                        border: `1px solid ${getStatusBadge().border}`,
-                        display: 'inline-flex',
-                        alignItems: 'center',
-                        gap: '5px'
-                      }}>
-                        {getStatusBadge().text}
-                      </span>
-                    </div>
-
-                    {/* Structured Details Grid */}
-                    <div style={{
-                      display: 'grid',
-                      gridTemplateColumns: '1fr 1fr',
-                      gap: '10px'
-                    }}>
-                      <div style={{ background: '#FAF8F5', padding: '10px 12px', borderRadius: '10px', border: '1px solid #EAE5DF' }}>
-                        <span style={{ fontSize: '0.68rem', color: '#64748B', fontWeight: 700, display: 'block' }}>Billing Cycle</span>
-                        <strong style={{ fontSize: '0.84rem', color: '#0F172A', fontWeight: 800 }}>Monthly</strong>
-                      </div>
-
-                      <div style={{ background: '#FAF8F5', padding: '10px 12px', borderRadius: '10px', border: '1px solid #EAE5DF' }}>
-                        <span style={{ fontSize: '0.68rem', color: '#64748B', fontWeight: 700, display: 'block' }}>Next Renewal</span>
-                        <strong style={{ fontSize: '0.84rem', color: '#0F172A', fontWeight: 800 }}>
-                          {renewalText}
-                        </strong>
-                      </div>
-                    </div>
-
-                    {/* Auto-renew Management Row */}
-                    {!isComplimentary && (
-                      <div style={{
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'space-between',
-                        padding: '12px 14px',
-                        background: '#FAF8F5',
-                        borderRadius: '12px',
-                        border: '1px solid #EAE5DF'
-                      }}>
-                        <div>
-                          <strong style={{ fontSize: '0.82rem', color: '#0F172A', fontWeight: 800, display: 'block' }}>
-                            Auto-renew
-                          </strong>
-                          <span style={{ fontSize: '0.70rem', color: '#64748B' }}>
-                            {autoRenewActive ? 'Renews automatically each month' : 'Ends at current billing period'}
-                          </span>
-                        </div>
-                        <ToggleSwitch
-                          checked={autoRenewActive}
-                          onChange={(checked) => {
-                            if (!checked) {
-                              setShowCancelModal(true);
-                            } else {
-                              setOpenDrawer(null);
-                              onOpenBillingModal();
-                            }
-                          }}
-                        />
-                      </div>
-                    )}
-                  </div>
-
-                  {/* SECTION 2 — PLAN INCLUDES */}
-                  <div style={{
-                    background: '#FFFFFF',
-                    borderRadius: '16px',
-                    border: '1px solid #EAE5DF',
-                    padding: '16px 18px',
-                    boxShadow: '0 1px 3px rgba(0,0,0,0.02)',
-                    display: 'flex',
-                    flexDirection: 'column',
-                    gap: '10px'
-                  }}>
-                    <span style={{ fontSize: '0.70rem', fontWeight: 800, color: '#64748B', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
-                      PLAN INCLUDES
-                    </span>
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                      {[
-                        'Full digital QR menu',
-                        'Unlimited menu items',
-                        'Orders & table management',
-                        'Thermal printer support',
-                        'Kitchen Display System',
-                        'Advanced analytics',
-                        'Priority support'
-                      ].map((feature, i) => (
-                        <div key={i} style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '0.78rem', color: '#334155' }}>
-                          <div style={{ width: '18px', height: '18px', borderRadius: '50%', background: '#ECFDF5', color: '#059669', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-                            <Check size={12} strokeWidth={3} />
-                          </div>
-                          <span style={{ fontWeight: 600 }}>{feature}</span>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-
-                  {/* SECTION 3 — BILLING ACTIONS */}
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
-                    <button
-                      type="button"
-                      onClick={() => setSubTab('plans')}
-                      style={{
-                        width: '100%',
-                        height: '44px',
-                        borderRadius: '10px',
-                        border: 'none',
-                        background: '#064E3B',
-                        color: '#FFFFFF',
-                        fontSize: '0.86rem',
-                        fontWeight: 800,
-                        cursor: 'pointer',
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        gap: '8px',
-                        boxShadow: '0 2px 8px rgba(6, 78, 59, 0.25)',
-                        transition: 'all 0.15s ease'
-                      }}
-                    >
-                      <Crown size={16} />
-                      <span>Change Plan</span>
-                    </button>
-
-                    <button
-                      type="button"
-                      onClick={() => setSubTab('history')}
-                      style={{
-                        width: '100%',
-                        height: '42px',
-                        borderRadius: '10px',
-                        border: '1px solid #CBD5E1',
-                        background: '#FFFFFF',
-                        color: '#334155',
-                        fontSize: '0.82rem',
-                        fontWeight: 700,
-                        cursor: 'pointer',
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        gap: '6px',
-                        transition: 'all 0.15s ease'
-                      }}
-                    >
-                      <History size={15} />
-                      <span>View Payment History</span>
-                    </button>
-                  </div>
-                </div>
-              )}
-
-              {/* TAB 2: PLANS COMPARISON */}
-              {subTab === 'plans' && (
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-                  <span style={{ fontSize: '0.74rem', color: '#64748B', fontWeight: 600 }}>
-                    Select a plan to upgrade or switch. Changes schedule seamlessly for your next billing cycle.
-                  </span>
-
-                  {displayPlans.map(p => {
-                    const isCurrent = p.key.toLowerCase() === activePlanKey;
-                    const isScheduled = subData?.scheduled_plan_key?.toLowerCase() === p.key.toLowerCase();
-                    const isUpgrade = Number(p.price) > Number(activePlanPrice);
-
-                    return (
-                      <div
-                        key={p.key}
-                        style={{
-                          background: '#FFFFFF',
-                          borderRadius: '16px',
-                          border: isCurrent ? '2px solid #064E3B' : isScheduled ? '2px solid #D97706' : '1px solid #EAE5DF',
-                          padding: '16px',
-                          position: 'relative',
-                          boxShadow: isCurrent ? '0 4px 14px rgba(6, 78, 59, 0.10)' : '0 1px 3px rgba(0,0,0,0.02)',
-                          display: 'flex',
-                          flexDirection: 'column',
-                          gap: '10px'
-                        }}
-                      >
-                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
-                          <div>
-                            <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                              <h4 style={{ margin: 0, fontSize: '0.96rem', fontWeight: 900, color: '#0F172A' }}>{p.name}</h4>
-                              {isCurrent && (
-                                <span style={{ background: '#ECFDF5', color: '#064E3B', border: '1px solid #A7F3D0', padding: '2px 8px', borderRadius: '10px', fontSize: '0.66rem', fontWeight: 800 }}>
-                                  Current Plan
-                                </span>
-                              )}
-                            </div>
-                            <span style={{ fontSize: '0.72rem', color: '#64748B', display: 'block', marginTop: '2px' }}>
-                              {p.description}
-                            </span>
-                          </div>
-
-                          <div style={{ textAlign: 'right', flexShrink: 0 }}>
-                            <div style={{ fontSize: '1.15rem', fontWeight: 900, color: '#064E3B' }}>
-                              ₹{p.price}
-                            </div>
-                            <span style={{ fontSize: '0.68rem', color: '#64748B' }}>/ month</span>
-                          </div>
-                        </div>
-
-                        {/* Entitlement Chips */}
-                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '6px', fontSize: '0.72rem' }}>
-                          <div style={{ background: '#FAF8F5', padding: '6px 8px', borderRadius: '8px', color: '#334155' }}>
-                            🍽️ Tables: <strong>{p.max_tables >= 9999 ? 'Unlimited' : p.max_tables}</strong>
-                          </div>
-                          <div style={{ background: '#FAF8F5', padding: '6px 8px', borderRadius: '8px', color: '#334155' }}>
-                            🍛 Dishes: <strong>{p.max_dishes >= 9999 ? 'Unlimited' : p.max_dishes}</strong>
-                          </div>
-                          <div style={{ background: '#FAF8F5', padding: '6px 8px', borderRadius: '8px', color: '#334155' }}>
-                            🍳 KDS: <strong>{p.kds_enabled ? 'Included' : 'Not Included'}</strong>
-                          </div>
-                          <div style={{ background: '#FAF8F5', padding: '6px 8px', borderRadius: '8px', color: '#334155' }}>
-                            🖨️ Printer: <strong>{p.dual_printer_enabled ? 'Dual Routing' : 'Standard'}</strong>
-                          </div>
-                        </div>
-
-                        {/* Plan CTA */}
-                        {isCurrent ? (
-                          <button
-                            disabled
-                            style={{
-                              width: '100%',
-                              height: '38px',
-                              borderRadius: '10px',
-                              border: '1px solid #A7F3D0',
-                              background: '#ECFDF5',
-                              color: '#064E3B',
-                              fontWeight: 800,
-                              fontSize: '0.80rem',
-                              cursor: 'default'
-                            }}
-                          >
-                            ✓ Active Current Plan
-                          </button>
-                        ) : isScheduled ? (
-                          <button
-                            disabled
-                            style={{
-                              width: '100%',
-                              height: '38px',
-                              borderRadius: '10px',
-                              border: '1px solid #FDE68A',
-                              background: '#FFFBEB',
-                              color: '#B45309',
-                              fontWeight: 800,
-                              fontSize: '0.80rem',
-                              cursor: 'default'
-                            }}
-                          >
-                            🕒 Scheduled for Next Cycle
-                          </button>
-                        ) : (
-                          <button
-                            type="button"
-                            onClick={() => setPlanToChange(p)}
-                            style={{
-                              width: '100%',
-                              height: '38px',
-                              borderRadius: '10px',
-                              border: 'none',
-                              background: '#064E3B',
-                              color: '#FFFFFF',
-                              fontWeight: 800,
-                              fontSize: '0.82rem',
-                              cursor: 'pointer',
-                              display: 'flex',
-                              alignItems: 'center',
-                              justifyContent: 'center',
-                              gap: '6px',
-                              boxShadow: '0 2px 6px rgba(6, 78, 59, 0.20)'
-                            }}
-                          >
-                            <span>{isUpgrade ? `Upgrade to ${p.name}` : `Switch to ${p.name}`}</span>
-                          </button>
-                        )}
-                      </div>
-                    );
-                  })}
-                </div>
-              )}
-
-              {/* TAB 3: PAYMENT HISTORY */}
-              {subTab === 'history' && (
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
-                  {/* Summary Top Card */}
-                  <div style={{
-                    background: '#FAF8F5',
-                    borderRadius: '14px',
-                    border: '1px solid #EAE5DF',
-                    padding: '14px 16px',
-                    display: 'grid',
-                    gridTemplateColumns: 'repeat(3, 1fr)',
-                    gap: '10px'
-                  }}>
-                    <div>
-                      <span style={{ fontSize: '0.66rem', color: '#64748B', fontWeight: 700, display: 'block' }}>Total Paid (Year)</span>
-                      <strong style={{ fontSize: '0.88rem', color: '#0F172A', fontWeight: 900 }}>
-                        ₹{(paymentHistory?.data || []).reduce((sum, p) => sum + (Number(p.amount) || 0), 0) || (activePlanPrice * 12)}
-                      </strong>
-                    </div>
-                    <div>
-                      <span style={{ fontSize: '0.66rem', color: '#64748B', fontWeight: 700, display: 'block' }}>Next Payment</span>
-                      <strong style={{ fontSize: '0.84rem', color: '#064E3B', fontWeight: 800 }}>
-                        ₹{activePlanPrice}
-                      </strong>
-                    </div>
-                    <div>
-                      <span style={{ fontSize: '0.66rem', color: '#64748B', fontWeight: 700, display: 'block' }}>Payment Method</span>
-                      <strong style={{ fontSize: '0.78rem', color: '#0F172A', fontWeight: 800 }}>
-                        UPI / Cards
-                      </strong>
-                    </div>
-                  </div>
-
-                  {/* Transactions Header */}
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                    <span style={{ fontSize: '0.72rem', fontWeight: 800, color: '#64748B', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
-                      RECENT INVOICES
-                    </span>
-                    <button
-                      type="button"
-                      onClick={loadPaymentHistoryData}
-                      style={{
-                        background: 'none',
-                        border: 'none',
-                        color: '#064E3B',
-                        fontWeight: 800,
-                        fontSize: '0.74rem',
-                        cursor: 'pointer',
-                        display: 'flex',
-                        alignItems: 'center',
-                        gap: '4px'
-                      }}
-                    >
-                      <RefreshCw size={12} />
-                      <span>Refresh</span>
-                    </button>
-                  </div>
-
-                  {/* Transaction List */}
-                  {paymentHistory.loading ? (
-                    <div style={{ padding: '30px', textAlign: 'center', color: '#64748B', fontSize: '0.82rem' }}>
-                      ⏳ Loading invoices...
-                    </div>
-                  ) : (paymentHistory?.data && paymentHistory.data.length > 0) ? (
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                      {paymentHistory.data.map((pay, idx) => {
-                        const isSuccess = (pay.status || '').toUpperCase() === 'SUCCESS' || pay.status === 'paid';
-                        const dateStr = pay.paid_at ? new Date(pay.paid_at).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' }) : '24 May 2026';
-                        const invId = pay.gateway_payment_id || `INV-${new Date().getFullYear()}-${1000 + idx}`;
-                        return (
-                          <div
-                            key={pay.id || idx}
-                            style={{
-                              background: '#FFFFFF',
-                              borderRadius: '12px',
-                              border: '1px solid #EAE5DF',
-                              padding: '12px 14px',
-                              display: 'flex',
-                              justifyContent: 'space-between',
-                              alignItems: 'center',
-                              gap: '10px'
-                            }}
-                          >
-                            <div>
-                              <div style={{ fontSize: '0.84rem', fontWeight: 800, color: '#0F172A' }}>
-                                {dateStr}
-                              </div>
-                              <span style={{ fontSize: '0.70rem', color: '#64748B', display: 'block', marginTop: '1px' }}>
-                                {invId} • {activePlanKey.toUpperCase()} Plan
-                              </span>
-                            </div>
-
-                            <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                              <div style={{ textAlign: 'right' }}>
-                                <div style={{ fontSize: '0.88rem', fontWeight: 900, color: '#0F172A' }}>
-                                  ₹{pay.amount || activePlanPrice}
-                                </div>
-                                <span style={{
-                                  fontSize: '0.64rem',
-                                  fontWeight: 800,
-                                  color: '#059669',
-                                  background: '#ECFDF5',
-                                  border: '1px solid #A7F3D0',
-                                  padding: '1px 6px',
-                                  borderRadius: '10px',
-                                  display: 'inline-block'
-                                }}>
-                                  ● Paid
-                                </span>
-                              </div>
-
-                              <button
-                                type="button"
-                                onClick={() => window.print()}
-                                title="Download Invoice"
-                                style={{
-                                  width: '32px',
-                                  height: '32px',
-                                  borderRadius: '8px',
-                                  border: '1px solid #EAE5DF',
-                                  background: '#FAF8F5',
-                                  color: '#064E3B',
-                                  display: 'flex',
-                                  alignItems: 'center',
-                                  justifyContent: 'center',
-                                  cursor: 'pointer'
-                                }}
-                              >
-                                <FileText size={15} />
-                              </button>
-                            </div>
-                          </div>
-                        );
-                      })}
-                    </div>
-                  ) : (
-                    /* Fallback Realistic Sample Transactions */
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                      {[
-                        { date: '24 May 2026', id: 'INV-2026-0524', amount: activePlanPrice, status: 'Paid' },
-                        { date: '24 Apr 2026', id: 'INV-2026-0424', amount: activePlanPrice, status: 'Paid' },
-                        { date: '24 Mar 2026', id: 'INV-2026-0324', amount: activePlanPrice, status: 'Paid' }
-                      ].map((sample, idx) => (
-                        <div
-                          key={idx}
-                          style={{
-                            background: '#FFFFFF',
-                            borderRadius: '12px',
-                            border: '1px solid #EAE5DF',
-                            padding: '12px 14px',
-                            display: 'flex',
-                            justifyContent: 'space-between',
-                            alignItems: 'center',
-                            gap: '10px'
-                          }}
-                        >
-                          <div>
-                            <div style={{ fontSize: '0.84rem', fontWeight: 800, color: '#0F172A' }}>
-                              {sample.date}
-                            </div>
-                            <span style={{ fontSize: '0.70rem', color: '#64748B', display: 'block', marginTop: '1px' }}>
-                              {sample.id} • {activePlanKey.toUpperCase()} Plan
-                            </span>
-                          </div>
-
-                          <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                            <div style={{ textAlign: 'right' }}>
-                              <div style={{ fontSize: '0.88rem', fontWeight: 900, color: '#0F172A' }}>
-                                ₹{sample.amount}
-                              </div>
-                              <span style={{
-                                fontSize: '0.64rem',
-                                fontWeight: 800,
-                                color: '#059669',
-                                background: '#ECFDF5',
-                                border: '1px solid #A7F3D0',
-                                padding: '1px 6px',
-                                borderRadius: '10px',
-                                display: 'inline-block'
-                              }}>
-                                ● Paid
-                              </span>
-                            </div>
-
-                            <button
-                              type="button"
-                              onClick={() => window.print()}
-                              title="Download Invoice"
-                              style={{
-                                width: '32px',
-                                height: '32px',
-                                borderRadius: '8px',
-                                border: '1px solid #EAE5DF',
-                                background: '#FAF8F5',
-                                color: '#064E3B',
-                                display: 'flex',
-                                alignItems: 'center',
-                                justifyContent: 'center',
-                                cursor: 'pointer'
-                              }}
-                            >
-                              <FileText size={15} />
-                            </button>
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  )}
-                </div>
-              )}
-            </div>
-          );
-        })()}
-      </AdminDrawer>
 
       {/* Drawer 6: Admin Security */}
       <AdminDrawer
