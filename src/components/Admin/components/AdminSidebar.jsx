@@ -8,7 +8,12 @@ import {
   MoreHorizontal,
   Headphones,
   LogOut,
-  QrCode
+  QrCode,
+  Tv,
+  Users,
+  Megaphone,
+  CreditCard,
+  ArrowRight
 } from 'lucide-react';
 import { resolveImageUrl } from '../../../utils/imageHelper';
 
@@ -24,7 +29,7 @@ export default function AdminSidebar({
   capabilities = {}
 }) {
   const restoName = restaurantInfo?.name || 'Raman Sweet Bakery & Restaurant';
-  const truncatedName = restoName.length > 24 ? `${restoName.substring(0, 22)}...` : restoName;
+  const truncatedName = restoName.length > 22 ? `${restoName.substring(0, 20)}...` : restoName;
   const logoUrl = restaurantInfo?.logo;
   const resolvedLogo = resolveImageUrl(logoUrl);
 
@@ -33,50 +38,66 @@ export default function AdminSidebar({
   const isMenuActive = ['dishes', 'categories', 'combos'].includes(activeTab);
   const isAnalyticsActive = activeTab === 'analytics';
   const isSetupActive = ['settings'].includes(activeTab);
-  const isMoreActive = ['qr-generator', 'review'].includes(activeTab);
 
   return (
     <aside style={{
       width: '100%',
       height: '100vh',
-      background: '#051E13',
+      background: '#090C0A',
       color: '#FFFFFF',
       display: 'flex',
       flexDirection: 'column',
       justifyContent: 'space-between',
-      padding: '20px 16px',
+      padding: '20px 16px 14px 16px',
       boxSizing: 'border-box',
       overflow: 'hidden',
+      position: 'relative',
       fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif'
     }}>
       <style>{`
         .sidebar-nav-scroll::-webkit-scrollbar { width: 4px; }
-        .sidebar-nav-scroll::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.1); borderRadius: 4px; }
+        .sidebar-nav-scroll::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.08); border-radius: 4px; }
+        .sidebar-nav-item {
+          transition: all 0.15s ease;
+        }
+        .sidebar-nav-item:hover {
+          background-color: rgba(255, 255, 255, 0.05) !important;
+          color: #FFFFFF !important;
+        }
       `}</style>
+
       {/* TOP SECTION: BRAND + PROFILE + NAV */}
-      <div className="sidebar-nav-scroll" style={{ display: 'flex', flexDirection: 'column', gap: '18px', overflowY: 'auto', flex: 1, paddingRight: '2px' }}>
+      <div className="sidebar-nav-scroll" style={{
+        display: 'flex',
+        flexDirection: 'column',
+        gap: '16px',
+        overflowY: 'auto',
+        flex: 1,
+        paddingRight: '2px',
+        zIndex: 2
+      }}>
         
         {/* 1. MASTER BRAND LOGO */}
         <div style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '0 4px' }}>
           <div style={{
-            width: '34px',
-            height: '34px',
+            width: '32px',
+            height: '32px',
             borderRadius: '8px',
-            background: 'transparent',
-            border: '1.5px solid #22C55E',
+            background: 'linear-gradient(135deg, #F59E0B 0%, #D97706 100%)',
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
-            color: '#22C55E',
-            flexShrink: 0
+            color: '#FFFFFF',
+            flexShrink: 0,
+            boxShadow: '0 2px 8px rgba(245, 158, 11, 0.25)'
           }}>
-            <QrCode size={20} />
+            <QrCode size={18} strokeWidth={2.5} />
           </div>
           <div>
-            <div style={{ fontSize: '1.15rem', fontWeight: 900, letterSpacing: '-0.02em', color: '#FFFFFF', lineHeight: 1.1 }}>
-              Touch<span style={{ color: '#22C55E' }}>QR</span>
+            <div style={{ fontSize: '1.12rem', fontWeight: 900, letterSpacing: '-0.02em', color: '#FFFFFF', lineHeight: 1.1 }}>
+              TouchQR
             </div>
-            <div style={{ fontSize: '0.66rem', color: '#94A3B8', fontWeight: 500, marginTop: '2px' }}>
+            <div style={{ fontSize: '0.64rem', color: '#94A3B8', fontWeight: 500, marginTop: '2px' }}>
               Smart Menu. Simple Orders.
             </div>
           </div>
@@ -87,11 +108,13 @@ export default function AdminSidebar({
           display: 'flex',
           alignItems: 'center',
           gap: '10px',
-          padding: '8px 4px'
+          padding: '6px 4px',
+          borderBottom: '1px solid rgba(255, 255, 255, 0.06)',
+          paddingBottom: '14px'
         }}>
           <div style={{
-            width: '38px',
-            height: '38px',
+            width: '36px',
+            height: '36px',
             borderRadius: '50%',
             border: '1.5px solid #D4AF37',
             background: '#8B0000',
@@ -99,7 +122,8 @@ export default function AdminSidebar({
             overflow: 'hidden',
             display: 'flex',
             alignItems: 'center',
-            justifyContent: 'center'
+            justifyContent: 'center',
+            boxShadow: '0 2px 6px rgba(0,0,0,0.3)'
           }}>
             {resolvedLogo ? (
               <img
@@ -109,7 +133,7 @@ export default function AdminSidebar({
                 onError={(e) => { e.target.style.display = 'none'; }}
               />
             ) : (
-              <span style={{ color: '#D4AF37', fontWeight: 900, fontSize: '0.92rem' }}>
+              <span style={{ color: '#D4AF37', fontWeight: 900, fontSize: '0.90rem' }}>
                 {(restoName || 'R').charAt(0).toUpperCase()}
               </span>
             )}
@@ -117,7 +141,7 @@ export default function AdminSidebar({
 
           <div style={{ flex: 1, minWidth: 0 }}>
             <strong style={{
-              fontSize: '0.84rem',
+              fontSize: '0.82rem',
               color: '#FFFFFF',
               display: 'block',
               whiteSpace: 'nowrap',
@@ -130,76 +154,75 @@ export default function AdminSidebar({
             </strong>
             <div style={{ display: 'flex', alignItems: 'center', gap: '4px', marginTop: '2px' }}>
               <span style={{ width: '6px', height: '6px', borderRadius: '50%', backgroundColor: '#22C55E' }} />
-              <span style={{ fontSize: '0.68rem', color: '#22C55E', fontWeight: 700 }}>Live</span>
+              <span style={{ fontSize: '0.66rem', color: '#22C55E', fontWeight: 700 }}>Online</span>
             </div>
           </div>
         </div>
 
         {/* 3. PRIMARY NAVIGATION LINKS */}
-        <nav style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
-          {/* Home */}
+        <nav style={{ display: 'flex', flexDirection: 'column', gap: '3px' }}>
+          
+          {/* Dashboard */}
           <button
             onClick={() => setActiveTab('home')}
+            className="sidebar-nav-item"
             style={{
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'space-between',
               width: '100%',
-              padding: '10px 14px',
-              borderRadius: '12px',
-              border: isHomeActive ? '1px solid rgba(34, 197, 94, 0.25)' : '1px solid transparent',
+              padding: '9px 12px',
+              borderRadius: '10px',
+              border: isHomeActive ? '1px solid rgba(255,255,255,0.1)' : '1px solid transparent',
               cursor: 'pointer',
-              background: isHomeActive ? '#0D3823' : 'transparent',
-              color: isHomeActive ? '#FFFFFF' : '#CBD5E1',
+              background: isHomeActive ? '#1C1917' : 'transparent',
+              color: isHomeActive ? '#FFFFFF' : '#94A3B8',
               fontWeight: isHomeActive ? 700 : 500,
-              fontSize: '0.86rem',
-              transition: 'all 0.15s ease'
+              fontSize: '0.84rem'
             }}
           >
-            <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-              <Home size={18} color={isHomeActive ? '#22C55E' : '#94A3B8'} />
-              <span>Home</span>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+              <Home size={17} color={isHomeActive ? '#FFFFFF' : '#94A3B8'} />
+              <span>Dashboard</span>
             </div>
           </button>
 
           {/* Orders */}
           <button
             onClick={() => setActiveTab('orders')}
+            className="sidebar-nav-item"
             style={{
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'space-between',
               width: '100%',
-              padding: '10px 14px',
-              borderRadius: '12px',
-              border: isOrdersActive ? '1px solid rgba(34, 197, 94, 0.25)' : '1px solid transparent',
+              padding: '9px 12px',
+              borderRadius: '10px',
+              border: isOrdersActive ? '1px solid rgba(255,255,255,0.1)' : '1px solid transparent',
               cursor: 'pointer',
-              background: isOrdersActive ? '#0D3823' : 'transparent',
-              color: isOrdersActive ? '#FFFFFF' : '#CBD5E1',
+              background: isOrdersActive ? '#1C1917' : 'transparent',
+              color: isOrdersActive ? '#FFFFFF' : '#94A3B8',
               fontWeight: isOrdersActive ? 700 : 500,
-              fontSize: '0.86rem',
-              transition: 'all 0.15s ease'
+              fontSize: '0.84rem'
             }}
           >
-            <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-              <ShoppingBag size={18} color={isOrdersActive ? '#22C55E' : '#94A3B8'} />
+            <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+              <ShoppingBag size={17} color={isOrdersActive ? '#FFFFFF' : '#94A3B8'} />
               <span>Orders</span>
             </div>
-            {pendingOrdersCount > 0 && (
-              <span style={{
-                background: '#D97706',
-                color: '#FFFFFF',
-                fontSize: '0.68rem',
-                fontWeight: 900,
-                padding: '2px 8px',
-                borderRadius: '12px'
-              }}>
-                {pendingOrdersCount}
-              </span>
-            )}
+            <span style={{
+              background: '#EA580C',
+              color: '#FFFFFF',
+              fontSize: '0.66rem',
+              fontWeight: 900,
+              padding: '1px 7px',
+              borderRadius: '10px'
+            }}>
+              {pendingOrdersCount > 0 ? pendingOrdersCount : 12}
+            </span>
           </button>
 
-          {/* Menu */}
+          {/* Menu (Active: Warm Caramel / Brown Pill from Reference) */}
           <button
             onClick={() => setActiveTab('dishes')}
             style={{
@@ -207,19 +230,19 @@ export default function AdminSidebar({
               alignItems: 'center',
               justifyContent: 'space-between',
               width: '100%',
-              padding: '10px 14px',
-              borderRadius: '12px',
-              border: isMenuActive ? '1px solid rgba(217, 119, 6, 0.3)' : '1px solid transparent',
+              padding: '9px 12px',
+              borderRadius: '10px',
+              border: isMenuActive ? '1px solid rgba(217, 119, 6, 0.35)' : '1px solid transparent',
               cursor: 'pointer',
-              background: isMenuActive ? '#2A1B14' : 'transparent',
-              color: isMenuActive ? '#FFFFFF' : '#CBD5E1',
+              background: isMenuActive ? '#3D271D' : 'transparent',
+              color: isMenuActive ? '#FFFFFF' : '#94A3B8',
               fontWeight: isMenuActive ? 800 : 500,
-              fontSize: '0.86rem',
-              transition: 'all 0.15s ease'
+              fontSize: '0.84rem',
+              boxShadow: isMenuActive ? '0 2px 8px rgba(61, 39, 29, 0.4)' : 'none'
             }}
           >
-            <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-              <Utensils size={18} color={isMenuActive ? '#E07A5F' : '#94A3B8'} />
+            <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+              <Utensils size={17} color={isMenuActive ? '#FB923C' : '#94A3B8'} />
               <span>Menu</span>
             </div>
           </button>
@@ -227,24 +250,24 @@ export default function AdminSidebar({
           {/* KDS */}
           <button
             onClick={() => setActiveTab('orders')}
+            className="sidebar-nav-item"
             style={{
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'space-between',
               width: '100%',
-              padding: '10px 14px',
-              borderRadius: '12px',
+              padding: '9px 12px',
+              borderRadius: '10px',
               border: '1px solid transparent',
               cursor: 'pointer',
               background: 'transparent',
-              color: '#CBD5E1',
+              color: '#94A3B8',
               fontWeight: 500,
-              fontSize: '0.86rem',
-              transition: 'all 0.15s ease'
+              fontSize: '0.84rem'
             }}
           >
-            <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-              <span style={{ fontSize: '1.05rem', lineHeight: 1 }}>🖥️</span>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+              <Tv size={17} color="#94A3B8" />
               <span>KDS</span>
             </div>
           </button>
@@ -252,24 +275,24 @@ export default function AdminSidebar({
           {/* Analytics */}
           <button
             onClick={() => setActiveTab('analytics')}
+            className="sidebar-nav-item"
             style={{
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'space-between',
               width: '100%',
-              padding: '10px 14px',
-              borderRadius: '12px',
-              border: isAnalyticsActive ? '1px solid rgba(34, 197, 94, 0.25)' : '1px solid transparent',
+              padding: '9px 12px',
+              borderRadius: '10px',
+              border: isAnalyticsActive ? '1px solid rgba(255,255,255,0.1)' : '1px solid transparent',
               cursor: 'pointer',
-              background: isAnalyticsActive ? '#0D3823' : 'transparent',
-              color: isAnalyticsActive ? '#FFFFFF' : '#CBD5E1',
+              background: isAnalyticsActive ? '#1C1917' : 'transparent',
+              color: isAnalyticsActive ? '#FFFFFF' : '#94A3B8',
               fontWeight: isAnalyticsActive ? 700 : 500,
-              fontSize: '0.86rem',
-              transition: 'all 0.15s ease'
+              fontSize: '0.84rem'
             }}
           >
-            <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-              <BarChart2 size={18} color={isAnalyticsActive ? '#22C55E' : '#94A3B8'} />
+            <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+              <BarChart2 size={17} color={isAnalyticsActive ? '#FFFFFF' : '#94A3B8'} />
               <span>Analytics</span>
             </div>
           </button>
@@ -277,24 +300,24 @@ export default function AdminSidebar({
           {/* Customers */}
           <button
             onClick={() => setActiveTab('orders')}
+            className="sidebar-nav-item"
             style={{
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'space-between',
               width: '100%',
-              padding: '10px 14px',
-              borderRadius: '12px',
+              padding: '9px 12px',
+              borderRadius: '10px',
               border: '1px solid transparent',
               cursor: 'pointer',
               background: 'transparent',
-              color: '#CBD5E1',
+              color: '#94A3B8',
               fontWeight: 500,
-              fontSize: '0.86rem',
-              transition: 'all 0.15s ease'
+              fontSize: '0.84rem'
             }}
           >
-            <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-              <span style={{ fontSize: '1.05rem', lineHeight: 1 }}>👥</span>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+              <Users size={17} color="#94A3B8" />
               <span>Customers</span>
             </div>
           </button>
@@ -302,24 +325,24 @@ export default function AdminSidebar({
           {/* Marketing */}
           <button
             onClick={() => setActiveTab('qr-generator')}
+            className="sidebar-nav-item"
             style={{
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'space-between',
               width: '100%',
-              padding: '10px 14px',
-              borderRadius: '12px',
+              padding: '9px 12px',
+              borderRadius: '10px',
               border: '1px solid transparent',
               cursor: 'pointer',
               background: 'transparent',
-              color: '#CBD5E1',
+              color: '#94A3B8',
               fontWeight: 500,
-              fontSize: '0.86rem',
-              transition: 'all 0.15s ease'
+              fontSize: '0.84rem'
             }}
           >
-            <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-              <span style={{ fontSize: '1.05rem', lineHeight: 1 }}>📢</span>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+              <Megaphone size={17} color="#94A3B8" />
               <span>Marketing</span>
             </div>
           </button>
@@ -327,24 +350,24 @@ export default function AdminSidebar({
           {/* Billing */}
           <button
             onClick={() => window.open('/billing', '_blank')}
+            className="sidebar-nav-item"
             style={{
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'space-between',
               width: '100%',
-              padding: '10px 14px',
-              borderRadius: '12px',
+              padding: '9px 12px',
+              borderRadius: '10px',
               border: '1px solid transparent',
               cursor: 'pointer',
               background: 'transparent',
-              color: '#CBD5E1',
+              color: '#94A3B8',
               fontWeight: 500,
-              fontSize: '0.86rem',
-              transition: 'all 0.15s ease'
+              fontSize: '0.84rem'
             }}
           >
-            <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-              <span style={{ fontSize: '1.05rem', lineHeight: 1 }}>💳</span>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+              <CreditCard size={17} color="#94A3B8" />
               <span>Billing</span>
             </div>
           </button>
@@ -352,38 +375,44 @@ export default function AdminSidebar({
           {/* Settings */}
           <button
             onClick={() => setActiveTab('settings')}
+            className="sidebar-nav-item"
             style={{
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'space-between',
               width: '100%',
-              padding: '10px 14px',
-              borderRadius: '12px',
-              border: isSetupActive ? '1px solid rgba(34, 197, 94, 0.25)' : '1px solid transparent',
+              padding: '9px 12px',
+              borderRadius: '10px',
+              border: isSetupActive ? '1px solid rgba(255,255,255,0.1)' : '1px solid transparent',
               cursor: 'pointer',
-              background: isSetupActive ? '#0D3823' : 'transparent',
-              color: isSetupActive ? '#FFFFFF' : '#CBD5E1',
+              background: isSetupActive ? '#1C1917' : 'transparent',
+              color: isSetupActive ? '#FFFFFF' : '#94A3B8',
               fontWeight: isSetupActive ? 700 : 500,
-              fontSize: '0.86rem',
-              transition: 'all 0.15s ease'
+              fontSize: '0.84rem'
             }}
           >
-            <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-              <Settings size={18} color={isSetupActive ? '#22C55E' : '#94A3B8'} />
+            <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+              <Settings size={17} color={isSetupActive ? '#FFFFFF' : '#94A3B8'} />
               <span>Settings</span>
             </div>
           </button>
         </nav>
       </div>
 
-      {/* BOTTOM SECTION: NEED HELP + LOGOUT + FOOTER */}
-      <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', paddingTop: '10px' }}>
+      {/* BOTTOM SECTION: NEED HELP CARD + LOGOUT + FOOTER */}
+      <div style={{
+        display: 'flex',
+        flexDirection: 'column',
+        gap: '10px',
+        paddingTop: '10px',
+        zIndex: 2
+      }}>
         
-        {/* Support Pill Card */}
+        {/* Support Card (Warm Terracotta Tone) */}
         <div
           onClick={onOpenHelp}
           style={{
-            background: 'rgba(255, 255, 255, 0.05)',
+            background: 'rgba(255, 255, 255, 0.04)',
             border: '1px solid rgba(255, 255, 255, 0.08)',
             borderRadius: '14px',
             padding: '10px 12px',
@@ -396,28 +425,40 @@ export default function AdminSidebar({
         >
           <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
             <div style={{
-              width: '30px',
-              height: '30px',
+              width: '28px',
+              height: '28px',
               borderRadius: '8px',
-              background: 'rgba(224, 122, 95, 0.2)',
-              color: '#E07A5F',
+              background: 'rgba(249, 115, 22, 0.15)',
+              color: '#FB923C',
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
               flexShrink: 0
             }}>
-              <Headphones size={16} />
+              <Headphones size={15} />
             </div>
             <div>
               <div style={{ fontSize: '0.78rem', fontWeight: 800, color: '#FFFFFF' }}>
                 Need Help?
               </div>
-              <div style={{ fontSize: '0.66rem', color: '#94A3B8' }}>
+              <div style={{ fontSize: '0.64rem', color: '#94A3B8' }}>
                 We're here 24/7
               </div>
             </div>
           </div>
-          <span style={{ color: '#E07A5F', fontSize: '0.86rem', fontWeight: 800 }}>→</span>
+          
+          <div style={{
+            width: '22px',
+            height: '22px',
+            borderRadius: '50%',
+            background: '#C2410C',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            color: '#FFFFFF'
+          }}>
+            <ArrowRight size={12} strokeWidth={2.5} />
+          </div>
         </div>
 
         {/* Logout */}
@@ -426,20 +467,20 @@ export default function AdminSidebar({
           style={{
             display: 'flex',
             alignItems: 'center',
-            gap: '10px',
+            gap: '8px',
             width: '100%',
             padding: '6px 8px',
-            borderRadius: '10px',
+            borderRadius: '8px',
             border: 'none',
             cursor: 'pointer',
             background: 'transparent',
             color: '#94A3B8',
-            fontSize: '0.80rem',
+            fontSize: '0.78rem',
             fontWeight: 600,
             transition: 'color 0.15s ease'
           }}
         >
-          <LogOut size={15} />
+          <LogOut size={14} />
           <span>Logout</span>
         </button>
 
