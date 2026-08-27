@@ -56,6 +56,7 @@ export default function SetupView({
   const [uploadingLogo, setUploadingLogo] = useState(false);
   const [gpsLoading, setGpsLoading] = useState(false);
   const [saveSuccessMsg, setSaveSuccessMsg] = useState('');
+  const [showMapModal, setShowMapModal] = useState(false);
   const [savingForm, setSavingForm] = useState(false);
 
   // Menu Preferences States
