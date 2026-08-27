@@ -78,6 +78,9 @@ export default function SetupView({
   const [prefShowBestsellerBadge, setPrefShowBestsellerBadge] = useState(settingsForm.show_bestseller_badge ?? true);
   const [activePrefModal, setActivePrefModal] = useState(null);
   const [prefSaveSuccess, setPrefSaveSuccess] = useState(false);
+  const [activeBpModal, setActiveBpModal] = useState(null); // 'business_type' | 'hours' | 'google_review' | 'maps_location' | 'theme'
+  const [bpSaveSuccess, setBpSaveSuccess] = useState(false);
+  const [isGstRegistered, setIsGstRegistered] = useState(Boolean(settingsForm.is_gst_registered || settingsForm.gst_number || settingsForm.gstin));
 
   const handleSaveMenuPreferences = async (e) => {
     if (e) e.preventDefault();
@@ -741,143 +744,676 @@ export default function SetupView({
     { id: 'advanced', label: 'Advanced', icon: Code2 }
   ];
 
-  const renderBusinessProfileFullPage = () => (
-    <div className="bp-container" style={{ display: 'flex', flexDirection: 'column', gap: '16px', width: '100%', maxWidth: '100%', boxSizing: 'border-box', paddingBottom: '120px' }}>
-      {/* Top App / Page Bar */}
-      <div className="bp-header-card" style={{
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'space-between',
-        flexWrap: 'wrap',
-        gap: '12px',
-        background: '#FFFFFF',
-        borderRadius: '16px',
-        border: '1px solid #EAE5DF',
-        padding: '16px 20px',
-        boxShadow: '0 1px 3px rgba(0,0,0,0.02)',
-        boxSizing: 'border-box',
-        width: '100%'
-      }}>
-        <div style={{ minWidth: 0 }}>
-          <div
-            onClick={() => setActiveSubPage(null)}
-            style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', fontSize: '0.78rem', color: '#64748B', fontWeight: 700, cursor: 'pointer', marginBottom: '6px' }}
-          >
-            <ArrowLeft size={14} />
-            <span>Back to Settings</span>
-          </div>
-          <h2 style={{ fontSize: '1.35rem', fontWeight: 900, color: '#0F172A', margin: '0 0 2px 0', letterSpacing: '-0.02em' }}>
-            Business Profile
-          </h2>
-          <p style={{ fontSize: '0.78rem', color: '#64748B', margin: 0, lineHeight: 1.4 }}>
-            Manage your restaurant identity, contact details and public information.
-          </p>
-        </div>
+  const renderBpModal = () => {
+    if (!activeBpModal) return null;
+    const closeModal = () => setActiveBpModal(null);
 
-        <div className="bp-actions-row" style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+    let modalTitle = '';
+    let content = null;
+
+    if (activeBpModal === 'business_type') {
+      modalTitle = 'Select Business Type';
+      const mainTypes = [
+        'restaurant',
+        'cafe',
+        'bakery_confectionery',
+        'sweet_shop',
+        'fast_food_qsr',
+        'cloud_kitchen',
+        'food_court',
+        'dhaba',
+        'hotel_resort',
+        'cinema_theatre',
+        'other'
+      ];
+      content = (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', maxHeight: '60vh', overflowY: 'auto' }}>
+          {mainTypes.map(type => {
+            const isSelected = (settingsForm.business_type || 'restaurant') === type;
+            return (
+              <div
+                key={type}
+                onClick={() => {
+                  const autoService = resolveServiceModelForBusinessType(type);
+                  setSettingsForm({
+                    ...settingsForm,
+                    business_type: type,
+                    service_model: autoService
+                  });
+                  closeModal();
+                }}
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'space-between',
+                  padding: '12px 14px',
+                  borderRadius: '12px',
+                  border: isSelected ? '1.5px solid #064E3B' : '1px solid #E2E8F0',
+                  background: isSelected ? '#ECFDF5' : '#FFFFFF',
+                  cursor: 'pointer',
+                  transition: 'all 0.15s ease'
+                }}
+              >
+                <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                  <span style={{ fontSize: '1.3rem' }}>{BUSINESS_TYPE_METADATA[type]?.icon || '🏢'}</span>
+                  <div>
+                    <strong style={{ fontSize: '0.86rem', color: '#0F172A', display: 'block' }}>
+                      {BUSINESS_TYPE_METADATA[type]?.label?.replace(/\s*\(.*\)/, '') || type}
+                    </strong>
+                    <span style={{ fontSize: '0.70rem', color: '#64748B' }}>
+                      {BUSINESS_TYPE_METADATA[type]?.desc}
+                    </span>
+                  </div>
+                </div>
+                {isSelected && <Check size={16} color="#064E3B" />}
+              </div>
+            );
+          })}
+        </div>
+      );
+    } else if (activeBpModal === 'hours') {
+      modalTitle = 'Set Opening Hours';
+      const presets = [
+        '8:00 AM – 10:30 PM (Mon – Sun)',
+        '9:00 AM – 11:00 PM (Mon – Sun)',
+        '10:00 AM – 11:30 PM (Mon – Sun)',
+        '11:00 AM – 11:00 PM (Mon – Sun)',
+        '24 Hours Open (7 Days)'
+      ];
+      content = (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+          <div style={{ fontSize: '0.74rem', color: '#64748B', marginBottom: '2px' }}>
+            Choose a quick preset or type custom timings:
+          </div>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+            {presets.map(p => (
+              <button
+                key={p}
+                type="button"
+                onClick={() => {
+                  setSettingsForm({ ...settingsForm, openingHours: p.split(' (')[0] });
+                  closeModal();
+                }}
+                style={{
+                  padding: '10px 12px',
+                  borderRadius: '10px',
+                  border: '1px solid #E2E8F0',
+                  background: (settingsForm.openingHours || '').includes(p.split(' (')[0]) ? '#ECFDF5' : '#F8FAFC',
+                  fontSize: '0.80rem',
+                  fontWeight: 700,
+                  color: '#0F172A',
+                  textAlign: 'left',
+                  cursor: 'pointer'
+                }}
+              >
+                {p}
+              </button>
+            ))}
+          </div>
+          <div style={{ marginTop: '6px' }}>
+            <label style={{ fontSize: '0.74rem', fontWeight: 800, color: '#334155', display: 'block', marginBottom: '4px' }}>
+              Custom Hours
+            </label>
+            <input
+              type="text"
+              placeholder="e.g. 7:30 AM – 10:00 PM"
+              value={settingsForm.openingHours || ''}
+              onChange={(e) => setSettingsForm({ ...settingsForm, openingHours: e.target.value })}
+              style={{
+                width: '100%',
+                height: '44px',
+                padding: '0 12px',
+                borderRadius: '10px',
+                border: '1px solid #CBD5E1',
+                fontSize: '0.84rem',
+                color: '#0F172A',
+                boxSizing: 'border-box'
+              }}
+            />
+          </div>
           <button
             type="button"
-            onClick={handleFormSave}
-            disabled={savingForm}
+            onClick={closeModal}
             style={{
-              padding: '9px 18px',
+              marginTop: '8px',
+              height: '42px',
               borderRadius: '10px',
-              background: '#261B14',
+              background: '#064E3B',
               color: '#FFFFFF',
-              fontSize: '0.82rem',
               fontWeight: 800,
+              fontSize: '0.84rem',
               border: 'none',
-              cursor: 'pointer',
-              boxShadow: '0 2px 8px rgba(0,0,0,0.12)',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              gap: '6px',
-              transition: 'all 0.15s ease'
-            }}
-          >
-            <Check size={15} />
-            <span>{savingForm ? 'Saving...' : 'Save Changes'}</span>
-          </button>
-          <button
-            type="button"
-            onClick={() => setActiveSubPage(null)}
-            style={{
-              padding: '9px 16px',
-              borderRadius: '10px',
-              background: '#FFFFFF',
-              color: '#0F172A',
-              fontSize: '0.82rem',
-              fontWeight: 700,
-              border: '1px solid #E2E8F0',
               cursor: 'pointer'
             }}
           >
-            Discard
+            Apply Timings
           </button>
         </div>
-      </div>
+      );
+    } else if (activeBpModal === 'google_review') {
+      modalTitle = 'Connect Google Reviews';
+      content = (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+          <div style={{ fontSize: '0.74rem', color: '#64748B', lineHeight: 1.45 }}>
+            Paste your Google Business review link (e.g., from Google Maps or Business Profile) so diners can leave 5-star ratings directly from your menu.
+          </div>
+          <div>
+            <label style={{ fontSize: '0.74rem', fontWeight: 800, color: '#334155', display: 'block', marginBottom: '6px' }}>
+              Google Review Page URL
+            </label>
+            <input
+              type="url"
+              placeholder="https://g.page/r/your-business/review"
+              value={settingsForm.google_review_url || ''}
+              onChange={(e) => setSettingsForm({ ...settingsForm, google_review_url: e.target.value })}
+              style={{
+                width: '100%',
+                height: '46px',
+                padding: '0 12px',
+                borderRadius: '10px',
+                border: '1px solid #CBD5E1',
+                fontSize: '0.82rem',
+                color: '#0F172A',
+                boxSizing: 'border-box'
+              }}
+            />
+          </div>
+          {settingsForm.google_review_url && (
+            <a
+              href={settingsForm.google_review_url}
+              target="_blank"
+              rel="noopener noreferrer"
+              style={{
+                fontSize: '0.74rem',
+                color: '#2563EB',
+                fontWeight: 700,
+                textDecoration: 'none',
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '4px'
+              }}
+            >
+              Test Review Link ↗
+            </a>
+          )}
+          <button
+            type="button"
+            onClick={closeModal}
+            style={{
+              height: '44px',
+              borderRadius: '10px',
+              background: '#064E3B',
+              color: '#FFFFFF',
+              fontWeight: 800,
+              fontSize: '0.84rem',
+              border: 'none',
+              cursor: 'pointer'
+            }}
+          >
+            Save Review Link
+          </button>
+        </div>
+      );
+    } else if (activeBpModal === 'maps_location') {
+      modalTitle = 'Google Maps Location';
+      content = (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+          <div style={{ fontSize: '0.74rem', color: '#64748B', lineHeight: 1.45 }}>
+            Help diners find directions to your restaurant easily by adding your exact Google Maps link or GPS coordinates.
+          </div>
+          <div>
+            <label style={{ fontSize: '0.74rem', fontWeight: 800, color: '#334155', display: 'block', marginBottom: '6px' }}>
+              Google Maps Share Link
+            </label>
+            <input
+              type="url"
+              placeholder="https://maps.app.goo.gl/..."
+              value={settingsForm.google_maps_url || ''}
+              onChange={(e) => setSettingsForm({ ...settingsForm, google_maps_url: e.target.value })}
+              style={{
+                width: '100%',
+                height: '46px',
+                padding: '0 12px',
+                borderRadius: '10px',
+                border: '1px solid #CBD5E1',
+                fontSize: '0.82rem',
+                color: '#0F172A',
+                boxSizing: 'border-box'
+              }}
+            />
+          </div>
+          <div style={{ display: 'flex', gap: '8px' }}>
+            <button
+              type="button"
+              onClick={handleCaptureGps}
+              disabled={gpsLoading}
+              style={{
+                flex: 1,
+                height: '40px',
+                borderRadius: '10px',
+                border: '1px solid #CBD5E1',
+                background: '#F8FAFC',
+                color: '#0F172A',
+                fontSize: '0.76rem',
+                fontWeight: 700,
+                cursor: 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                gap: '6px'
+              }}
+            >
+              <Navigation size={14} color="#064E3B" />
+              <span>{gpsLoading ? 'Detecting...' : 'Use Current GPS'}</span>
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                closeModal();
+                setShowMapModal(true);
+              }}
+              style={{
+                flex: 1,
+                height: '40px',
+                borderRadius: '10px',
+                border: '1px solid #CBD5E1',
+                background: '#F8FAFC',
+                color: '#0F172A',
+                fontSize: '0.76rem',
+                fontWeight: 700,
+                cursor: 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                gap: '6px'
+              }}
+            >
+              <MapPin size={14} color="#D97706" />
+              <span>Pin on Map</span>
+            </button>
+          </div>
+          <button
+            type="button"
+            onClick={closeModal}
+            style={{
+              height: '44px',
+              borderRadius: '10px',
+              background: '#064E3B',
+              color: '#FFFFFF',
+              fontWeight: 800,
+              fontSize: '0.84rem',
+              border: 'none',
+              cursor: 'pointer',
+              marginTop: '4px'
+            }}
+          >
+            Save Location
+          </button>
+        </div>
+      );
+    } else if (activeBpModal === 'theme') {
+      modalTitle = 'Select Menu Theme';
+      const themes = [
+        { id: 'gold_forest', name: 'Gold & Forest Green', subtitle: 'Oberoi Luxury & Heritage', primary: '#064E3B', accent: '#F59E0B' },
+        { id: 'classic_maroon', name: 'Royal Crimson & Gold', subtitle: 'Fine Dine & Banquets', primary: '#7C1D1D', accent: '#F59E0B' },
+        { id: 'slate_minimal', name: 'Slate Charcoal & Amber', subtitle: 'Modern Cafe & Bistro', primary: '#0F172A', accent: '#F97316' },
+        { id: 'emerald_clean', name: 'Fresh Mint & Emerald', subtitle: 'Pure Veg & Healthy Eats', primary: '#047857', accent: '#10B981' }
+      ];
+      content = (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+          {themes.map(t => (
+            <div
+              key={t.id}
+              onClick={() => {
+                setSettingsForm({ ...settingsForm, theme: t.id });
+                closeModal();
+              }}
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                padding: '12px 14px',
+                borderRadius: '12px',
+                border: (settingsForm.theme || 'gold_forest') === t.id ? '1.5px solid #064E3B' : '1px solid #E2E8F0',
+                background: (settingsForm.theme || 'gold_forest') === t.id ? '#ECFDF5' : '#FFFFFF',
+                cursor: 'pointer'
+              }}
+            >
+              <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                <div style={{
+                  width: '28px',
+                  height: '28px',
+                  borderRadius: '50%',
+                  background: t.primary,
+                  border: `2.5px solid ${t.accent}`,
+                  boxShadow: '0 2px 4px rgba(0,0,0,0.15)',
+                  flexShrink: 0
+                }} />
+                <div>
+                  <strong style={{ fontSize: '0.86rem', color: '#0F172A', display: 'block' }}>{t.name}</strong>
+                  <span style={{ fontSize: '0.70rem', color: '#64748B' }}>{t.subtitle}</span>
+                </div>
+              </div>
+              {(settingsForm.theme || 'gold_forest') === t.id && <Check size={16} color="#064E3B" />}
+            </div>
+          ))}
+        </div>
+      );
+    }
 
-      {/* 2-Column Responsive Layout (Desktop 2-col, Mobile 1-col) */}
-      <div className="business-profile-page-grid" style={{ width: '100%', maxWidth: '100%', boxSizing: 'border-box' }}>
-        {/* Left Column: 5 Form Cards */}
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '14px', width: '100%', maxWidth: '100%', boxSizing: 'border-box' }}>
-          
-          {/* 1. RESTAURANT IDENTITY */}
-          <div className="bp-card" style={{
+    return (
+      <div
+        onClick={closeModal}
+        style={{
+          position: 'fixed',
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          background: 'rgba(15, 23, 42, 0.45)',
+          backdropFilter: 'blur(4px)',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          padding: '16px',
+          zIndex: 9999
+        }}
+      >
+        <div
+          onClick={(e) => e.stopPropagation()}
+          style={{
             background: '#FFFFFF',
             borderRadius: '16px',
             border: '1px solid #EAE5DF',
-            padding: '16px 18px',
+            padding: '20px',
+            maxWidth: '400px',
+            width: '100%',
+            boxShadow: '0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.1)',
+            maxHeight: '85vh',
+            overflowY: 'auto'
+          }}
+        >
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '14px' }}>
+            <strong style={{ fontSize: '1rem', fontWeight: 900, color: '#0F172A' }}>{modalTitle}</strong>
+            <button
+              type="button"
+              onClick={closeModal}
+              style={{
+                width: '30px',
+                height: '30px',
+                borderRadius: '8px',
+                border: '1px solid #E2E8F0',
+                background: '#F8FAFC',
+                color: '#64748B',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                cursor: 'pointer',
+                padding: 0
+              }}
+            >
+              ✕
+            </button>
+          </div>
+          {content}
+        </div>
+      </div>
+    );
+  };
+
+  const renderBusinessProfileFullPage = () => {
+    // Calculate details completion count
+    const completionList = [
+      Boolean(settingsForm.logo || restaurantInfo?.logo),
+      Boolean(settingsForm.name),
+      Boolean(settingsForm.tagline),
+      Boolean(settingsForm.business_type),
+      Boolean(settingsForm.food_type),
+      Boolean(settingsForm.phone),
+      Boolean(settingsForm.openingHours),
+      Boolean(settingsForm.address),
+      Boolean(settingsForm.fssai_lic_no || settingsForm.google_maps_url || settingsForm.gst_number)
+    ];
+    const completedCount = completionList.filter(Boolean).length;
+    const totalCount = 9;
+    const completionPercent = Math.round((completedCount / totalCount) * 100);
+
+    // Cuisines list
+    const availableCuisines = [
+      'North Indian',
+      'South Indian',
+      'Chinese',
+      'Fast Food',
+      'Bakery',
+      'Sweets',
+      'Multi-Cuisine',
+      'Biryani & Mughlai',
+      'Street Food & Chaat',
+      'Beverages & Shakes'
+    ];
+
+    const currentCuisines = Array.isArray(settingsForm.cuisines)
+      ? settingsForm.cuisines
+      : typeof settingsForm.cuisines === 'string' && settingsForm.cuisines
+        ? settingsForm.cuisines.split(',').map(s => s.trim()).filter(Boolean)
+        : ['North Indian', 'Sweets', 'Bakery'];
+
+    const toggleCuisine = (cuisine) => {
+      let updated;
+      if (currentCuisines.includes(cuisine)) {
+        updated = currentCuisines.filter(c => c !== cuisine);
+      } else {
+        updated = [...currentCuisines, cuisine];
+      }
+      setSettingsForm({ ...settingsForm, cuisines: updated });
+    };
+
+    const currentFoodType = settingsForm.food_type || 'pure_veg';
+    const isGstActive = Boolean(isGstRegistered || settingsForm.gst_number || settingsForm.gstin);
+    const isGstValid = Boolean(settingsForm.gst_number && settingsForm.gst_number.trim().length >= 15);
+
+    const handleSaveBusinessProfile = async (e) => {
+      if (e) e.preventDefault();
+      setSavingForm(true);
+      try {
+        const updated = {
+          ...settingsForm,
+          is_gst_registered: isGstRegistered
+        };
+        if (setSettingsForm) setSettingsForm(updated);
+        if (handleSaveSettings) {
+          await handleSaveSettings(updated);
+        }
+        setBpSaveSuccess(true);
+        setTimeout(() => setBpSaveSuccess(false), 3500);
+      } catch (err) {
+        console.error('Error saving business profile:', err);
+      } finally {
+        setSavingForm(false);
+      }
+    };
+
+    return (
+      <div style={{
+        display: 'flex',
+        flexDirection: 'column',
+        gap: '16px',
+        width: '100%',
+        maxWidth: '100%',
+        boxSizing: 'border-box',
+        paddingBottom: '140px'
+      }}>
+        {/* Render BP Subpage Modal */}
+        {renderBpModal()}
+
+        {/* TOP HEADER */}
+        <div style={{
+          background: '#FFFFFF',
+          borderRadius: '16px',
+          border: '1px solid #EAE5DF',
+          padding: '16px',
+          boxShadow: '0 1px 3px rgba(0,0,0,0.02)',
+          boxSizing: 'border-box'
+        }}>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '12px' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+              <button
+                type="button"
+                onClick={() => setActiveSubPage(null)}
+                style={{
+                  width: '36px',
+                  height: '36px',
+                  borderRadius: '10px',
+                  background: '#F8FAFC',
+                  border: '1px solid #E2E8F0',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  color: '#0F172A',
+                  cursor: 'pointer',
+                  flexShrink: 0,
+                  padding: 0
+                }}
+              >
+                <ArrowLeft size={18} />
+              </button>
+              <div>
+                <h2 style={{ fontSize: '1.18rem', fontWeight: 900, color: '#0F172A', margin: 0, letterSpacing: '-0.02em' }}>
+                  Business Profile
+                </h2>
+                <p style={{ fontSize: '0.74rem', color: '#64748B', margin: 0 }}>
+                  Manage your restaurant identity, food details and business information
+                </p>
+              </div>
+            </div>
+
+            <div style={{
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: '5px',
+              background: '#ECFDF5',
+              color: '#059669',
+              border: '1px solid #A7F3D0',
+              padding: '4px 10px',
+              borderRadius: '20px',
+              fontSize: '0.72rem',
+              fontWeight: 800,
+              flexShrink: 0
+            }}>
+              <span style={{ width: '6px', height: '6px', borderRadius: '50%', background: '#059669' }} />
+              <span>Profile Complete</span>
+            </div>
+          </div>
+
+          {/* Compact Completion Indicator */}
+          <div style={{
+            background: '#FAF8F5',
+            borderRadius: '12px',
+            border: '1px solid #EAE5DF',
+            padding: '10px 14px'
+          }}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '6px' }}>
+              <span style={{ fontSize: '0.74rem', fontWeight: 800, color: '#0F172A' }}>
+                Profile Strength
+              </span>
+              <span style={{ fontSize: '0.72rem', fontWeight: 800, color: '#064E3B' }}>
+                {completedCount} of {totalCount} details completed
+              </span>
+            </div>
+            <div style={{ width: '100%', height: '6px', background: '#E2E8F0', borderRadius: '4px', overflow: 'hidden' }}>
+              <div style={{
+                width: `${completionPercent}%`,
+                height: '100%',
+                background: 'linear-gradient(90deg, #059669 0%, #064E3B 100%)',
+                borderRadius: '4px',
+                transition: 'width 0.3s ease'
+              }} />
+            </div>
+          </div>
+        </div>
+
+        {/* SECTION 1 — BUSINESS IDENTITY */}
+        <div>
+          <div style={{ fontSize: '0.72rem', fontWeight: 800, color: '#475569', letterSpacing: '0.04em', textTransform: 'uppercase', marginBottom: '8px', paddingLeft: '4px' }}>
+            Business Identity
+          </div>
+          <div style={{
+            background: '#FFFFFF',
+            borderRadius: '16px',
+            border: '1px solid #EAE5DF',
+            padding: '16px',
             display: 'flex',
             flexDirection: 'column',
             gap: '14px',
             boxShadow: '0 1px 3px rgba(0,0,0,0.02)',
-            boxSizing: 'border-box',
-            width: '100%'
+            boxSizing: 'border-box'
           }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-              <span style={{ fontSize: '1rem' }}>🏪</span>
-              <strong style={{ fontSize: '0.90rem', color: '#0F172A', fontWeight: 800 }}>1. Restaurant Identity</strong>
-            </div>
-
+            {/* Logo Row */}
             <div>
               <label style={{ fontSize: '0.74rem', fontWeight: 800, color: '#475569', display: 'block', marginBottom: '8px' }}>
                 Business Logo
               </label>
-              <div className="bp-logo-row" style={{ display: 'flex', alignItems: 'center', gap: '12px', width: '100%', boxSizing: 'border-box' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '14px', width: '100%', boxSizing: 'border-box' }}>
                 {settingsForm.logo || restaurantInfo?.logo ? (
-                  <img src={settingsForm.logo || restaurantInfo?.logo} alt="Logo" className="bp-logo-box" style={{ width: '72px', height: '72px', borderRadius: '12px', objectFit: 'cover', border: '1px solid #CBD5E1', flexShrink: 0, background: '#FFFFFF' }} />
+                  <img
+                    src={settingsForm.logo || restaurantInfo?.logo}
+                    alt="Logo"
+                    style={{
+                      width: '72px',
+                      height: '72px',
+                      borderRadius: '14px',
+                      objectFit: 'cover',
+                      border: '1.5px solid #CBD5E1',
+                      flexShrink: 0,
+                      background: '#FFFFFF'
+                    }}
+                  />
                 ) : (
-                  <div className="bp-logo-box" style={{ width: '72px', height: '72px', borderRadius: '12px', background: 'linear-gradient(135deg, #7C1D1D 0%, #450A0A 100%)', color: '#F59E0B', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 900, fontSize: '1.6rem', border: '2px solid #F59E0B', flexShrink: 0, boxShadow: '0 4px 10px rgba(124, 29, 29, 0.2)' }}>
+                  <div style={{
+                    width: '72px',
+                    height: '72px',
+                    borderRadius: '14px',
+                    background: 'linear-gradient(135deg, #064E3B 0%, #022c22 100%)',
+                    color: '#F59E0B',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    fontWeight: 900,
+                    fontSize: '1.6rem',
+                    border: '2px solid #F59E0B',
+                    flexShrink: 0,
+                    boxShadow: '0 4px 10px rgba(6, 78, 59, 0.2)'
+                  }}>
                     {(settingsForm.name || restaurantInfo?.name || 'R').charAt(0).toUpperCase()}
                   </div>
                 )}
-                <label className="bp-upload-box" style={{
-                  flex: 1,
-                  minWidth: 0,
-                  border: '1.5px dashed #CBD5E1',
-                  borderRadius: '12px',
-                  padding: '10px 12px',
-                  display: 'flex',
-                  flexDirection: 'column',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  textAlign: 'center',
-                  background: '#FAF8F5',
-                  cursor: 'pointer',
-                  gap: '3px',
-                  boxSizing: 'border-box',
-                  transition: 'all 0.15s ease'
-                }}>
-                  <Upload size={16} color="#64748B" />
-                  <strong style={{ fontSize: '0.78rem', color: '#0F172A', fontWeight: 800 }}>Upload Logo</strong>
-                  <span style={{ fontSize: '0.66rem', color: '#64748B' }}>PNG, JPG (512x512px)</span>
-                  <input type="file" accept="image/*" onChange={handleLogoUpload} disabled={uploadingLogo} style={{ display: 'none' }} />
-                </label>
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <label style={{
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: '6px',
+                    padding: '8px 14px',
+                    borderRadius: '10px',
+                    background: '#F8FAFC',
+                    border: '1px solid #CBD5E1',
+                    color: '#0F172A',
+                    fontSize: '0.80rem',
+                    fontWeight: 800,
+                    cursor: 'pointer',
+                    marginBottom: '4px'
+                  }}>
+                    <Upload size={14} color="#64748B" />
+                    <span>{uploadingLogo ? 'Uploading...' : 'Change Logo'}</span>
+                    <input type="file" accept="image/*" onChange={handleLogoUpload} disabled={uploadingLogo} style={{ display: 'none' }} />
+                  </label>
+                  <span style={{ fontSize: '0.68rem', color: '#64748B', display: 'block' }}>
+                    PNG, JPG up to 2MB (512×512px)
+                  </span>
+                </div>
               </div>
             </div>
 
+            {/* Business Name */}
             <div>
               <label style={{ fontSize: '0.74rem', fontWeight: 800, color: '#334155', display: 'block', marginBottom: '6px' }}>
                 Business Name <span style={{ color: '#EF4444' }}>*</span>
@@ -890,12 +1426,13 @@ export default function SetupView({
                 onChange={(e) => setSettingsForm({ ...settingsForm, name: e.target.value })}
                 style={{
                   width: '100%',
-                  height: '44px',
-                  padding: '0 12px',
-                  borderRadius: '10px',
+                  height: '48px',
+                  padding: '0 14px',
+                  borderRadius: '12px',
                   border: '1px solid #E2E8F0',
                   background: '#FFFFFF',
-                  fontSize: '0.84rem',
+                  fontSize: '0.86rem',
+                  fontWeight: 600,
                   color: '#0F172A',
                   boxSizing: 'border-box',
                   outline: 'none',
@@ -904,6 +1441,7 @@ export default function SetupView({
               />
             </div>
 
+            {/* Tagline / Slogan */}
             <div>
               <label style={{ fontSize: '0.74rem', fontWeight: 800, color: '#334155', display: 'block', marginBottom: '6px' }}>
                 Tagline / Slogan
@@ -915,12 +1453,12 @@ export default function SetupView({
                 onChange={(e) => setSettingsForm({ ...settingsForm, tagline: e.target.value })}
                 style={{
                   width: '100%',
-                  height: '44px',
-                  padding: '0 12px',
-                  borderRadius: '10px',
+                  height: '48px',
+                  padding: '0 14px',
+                  borderRadius: '12px',
                   border: '1px solid #E2E8F0',
                   background: '#FFFFFF',
-                  fontSize: '0.84rem',
+                  fontSize: '0.86rem',
                   color: '#0F172A',
                   boxSizing: 'border-box',
                   outline: 'none',
@@ -929,274 +1467,160 @@ export default function SetupView({
               />
             </div>
 
-            {/* Business Category / Type */}
+            {/* Business Type Selectable Row */}
             <div>
               <label style={{ fontSize: '0.74rem', fontWeight: 800, color: '#334155', display: 'block', marginBottom: '6px' }}>
-                Business Category / Venue Type <span style={{ color: '#EF4444' }}>*</span>
+                Business Type <span style={{ color: '#EF4444' }}>*</span>
               </label>
-              <div style={{ position: 'relative' }}>
-                <select
-                  value={settingsForm.business_type || 'restaurant'}
-                  onChange={(e) => {
-                    const newBiz = e.target.value;
-                    const autoService = resolveServiceModelForBusinessType(newBiz);
-                    setSettingsForm({
-                      ...settingsForm,
-                      business_type: newBiz,
-                      service_model: autoService
-                    });
-                  }}
-                  style={{
-                    width: '100%',
-                    height: '44px',
-                    padding: '0 32px 0 12px',
-                    borderRadius: '10px',
-                    border: '1px solid #E2E8F0',
-                    background: '#FFFFFF',
-                    fontSize: '0.84rem',
-                    fontWeight: 700,
-                    color: '#0F172A',
-                    boxSizing: 'border-box',
-                    outline: 'none',
-                    fontFamily: 'inherit',
-                    cursor: 'pointer',
-                    appearance: 'none'
-                  }}
-                >
-                  {BUSINESS_TYPES.map(type => (
-                    <option key={type} value={type}>
-                      {BUSINESS_TYPE_METADATA[type]?.icon || '🏢'} {BUSINESS_TYPE_METADATA[type]?.label || type}
-                    </option>
-                  ))}
-                </select>
-                <ChevronDown size={15} color="#64748B" style={{ position: 'absolute', right: '12px', top: '15px', pointerEvents: 'none' }} />
-              </div>
-            </div>
-
-            {/* Food Dietary Type */}
-            <div>
-              <label style={{ fontSize: '0.74rem', fontWeight: 800, color: '#334155', display: 'block', marginBottom: '6px' }}>
-                Food Dietary Profile <span style={{ color: '#EF4444' }}>*</span>
-              </label>
-              <div style={{ position: 'relative' }}>
-                <select
-                  value={settingsForm.food_type || 'pure_veg'}
-                  onChange={(e) => {
-                    const newFood = e.target.value;
-                    setSettingsForm({
-                      ...settingsForm,
-                      food_type: newFood,
-                      resto_type: newFood === 'pure_veg' ? 'pure_veg' : newFood === 'veg_nonveg' ? 'veg_nonveg' : 'pure_veg'
-                    });
-                  }}
-                  style={{
-                    width: '100%',
-                    height: '44px',
-                    padding: '0 32px 0 12px',
-                    borderRadius: '10px',
-                    border: '1px solid #E2E8F0',
-                    background: '#FFFFFF',
-                    fontSize: '0.84rem',
-                    fontWeight: 700,
-                    color: '#0F172A',
-                    boxSizing: 'border-box',
-                    outline: 'none',
-                    fontFamily: 'inherit',
-                    cursor: 'pointer',
-                    appearance: 'none'
-                  }}
-                >
-                  {FOOD_TYPES.map(type => (
-                    <option key={type} value={type}>
-                      {FOOD_TYPE_METADATA[type]?.icon || '🥗'} {FOOD_TYPE_METADATA[type]?.label || type}
-                    </option>
-                  ))}
-                </select>
-                <ChevronDown size={15} color="#64748B" style={{ position: 'absolute', right: '12px', top: '15px', pointerEvents: 'none' }} />
-              </div>
-            </div>
-
-            {/* Service Model */}
-            <div>
-              <label style={{ fontSize: '0.74rem', fontWeight: 800, color: '#334155', display: 'block', marginBottom: '6px' }}>
-                Service Model & Ordering Mode <span style={{ color: '#EF4444' }}>*</span>
-              </label>
-              <div style={{ position: 'relative' }}>
-                <select
-                  value={settingsForm.service_model || 'dine_in'}
-                  onChange={(e) => setSettingsForm({ ...settingsForm, service_model: e.target.value })}
-                  style={{
-                    width: '100%',
-                    height: '44px',
-                    padding: '0 32px 0 12px',
-                    borderRadius: '10px',
-                    border: '1px solid #E2E8F0',
-                    background: '#FFFFFF',
-                    fontSize: '0.84rem',
-                    fontWeight: 700,
-                    color: '#0F172A',
-                    boxSizing: 'border-box',
-                    outline: 'none',
-                    fontFamily: 'inherit',
-                    cursor: 'pointer',
-                    appearance: 'none'
-                  }}
-                >
-                  {SERVICE_MODELS.map(model => (
-                    <option key={model} value={model}>
-                      {SERVICE_MODEL_METADATA[model]?.icon || '🍽️'} {SERVICE_MODEL_METADATA[model]?.label || model}
-                    </option>
-                  ))}
-                </select>
-                <ChevronDown size={15} color="#64748B" style={{ position: 'absolute', right: '12px', top: '15px', pointerEvents: 'none' }} />
-              </div>
-            </div>
-          </div>
-
-          {/* 2. MENU BRANDING */}
-          <div className="bp-card" style={{
-            background: '#FFFFFF',
-            borderRadius: '16px',
-            border: '1px solid #EAE5DF',
-            padding: '16px 18px',
-            display: 'flex',
-            flexDirection: 'column',
-            gap: '14px',
-            boxShadow: '0 1px 3px rgba(0,0,0,0.02)',
-            boxSizing: 'border-box',
-            width: '100%'
-          }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-              <span style={{ fontSize: '1rem' }}>🎨</span>
-              <strong style={{ fontSize: '0.90rem', color: '#0F172A', fontWeight: 800 }}>2. Menu Branding</strong>
-            </div>
-
-            <div>
-              <label style={{ fontSize: '0.74rem', fontWeight: 800, color: '#475569', display: 'block', marginBottom: '6px' }}>
-                Current Menu Theme
-              </label>
-              <div style={{
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'space-between',
-                padding: '10px 12px',
-                background: '#FFFFFF',
-                borderRadius: '12px',
-                border: '1px solid #E2E8F0',
-                cursor: 'pointer',
-                boxSizing: 'border-box',
-                width: '100%'
-              }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '10px', minWidth: 0 }}>
-                  <div style={{ width: '22px', height: '22px', borderRadius: '50%', background: '#064E3B', border: '2px solid #D97706', flexShrink: 0 }} />
-                  <div style={{ minWidth: 0 }}>
-                    <div style={{ fontSize: '0.82rem', fontWeight: 800, color: '#0F172A', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>Gold & Forest Green</div>
-                    <div style={{ fontSize: '0.68rem', color: '#64748B' }}>Oberoi Luxury</div>
-                  </div>
-                </div>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flexShrink: 0 }}>
-                  <span style={{ fontSize: '0.68rem', fontWeight: 800, color: '#065F46', background: '#DCFCE7', padding: '2px 7px', borderRadius: '6px' }}>
-                    Active
+              <div
+                onClick={() => setActiveBpModal('business_type')}
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'space-between',
+                  height: '50px',
+                  padding: '0 14px',
+                  borderRadius: '12px',
+                  border: '1px solid #E2E8F0',
+                  background: '#F8FAFC',
+                  cursor: 'pointer',
+                  boxSizing: 'border-box',
+                  transition: 'border 0.15s ease'
+                }}
+              >
+                <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                  <span style={{ fontSize: '1.2rem' }}>
+                    {BUSINESS_TYPE_METADATA[settingsForm.business_type || 'restaurant']?.icon || '🍽️'}
                   </span>
-                  <ChevronDown size={14} color="#64748B" />
+                  <strong style={{ fontSize: '0.86rem', color: '#0F172A', fontWeight: 700 }}>
+                    {BUSINESS_TYPE_METADATA[settingsForm.business_type || 'restaurant']?.label?.replace(/\s*\(.*\)/, '') || 'Restaurant'}
+                  </strong>
                 </div>
+                <ChevronRight size={16} color="#94A3B8" />
               </div>
             </div>
-
-            <div>
-              <label style={{ fontSize: '0.74rem', fontWeight: 800, color: '#475569', display: 'block', marginBottom: '6px' }}>
-                Theme Preview
-              </label>
-              <div style={{
-                borderRadius: '12px',
-                background: 'linear-gradient(180deg, #064E3B 0%, #022c22 100%)',
-                padding: '12px 14px',
-                color: '#FFFFFF',
-                border: '1px solid #D97706',
-                display: 'flex',
-                alignItems: 'center',
-                gap: '10px',
-                minHeight: '60px',
-                boxSizing: 'border-box',
-                width: '100%'
-              }}>
-                {settingsForm.logo || restaurantInfo?.logo ? (
-                  <img
-                    src={settingsForm.logo || restaurantInfo?.logo}
-                    alt="Logo"
-                    style={{
-                      width: '40px',
-                      height: '40px',
-                      borderRadius: '8px',
-                      objectFit: 'cover',
-                      border: '1.5px solid #F59E0B',
-                      flexShrink: 0,
-                      background: '#FFFFFF',
-                      boxShadow: '0 2px 6px rgba(0,0,0,0.2)'
-                    }}
-                  />
-                ) : (
-                  <div style={{ width: '40px', height: '40px', borderRadius: '8px', background: 'linear-gradient(135deg, #7C1D1D 0%, #450A0A 100%)', color: '#F59E0B', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 900, fontSize: '1.1rem', border: '1.5px solid #F59E0B', flexShrink: 0, boxShadow: '0 2px 6px rgba(0,0,0,0.2)' }}>
-                    {(settingsForm.name || restaurantInfo?.name || 'R').charAt(0).toUpperCase()}
-                  </div>
-                )}
-                <div style={{ minWidth: 0, flex: 1 }}>
-                  <div style={{ fontSize: '0.84rem', fontWeight: 800, color: '#FFFFFF', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                    {settingsForm.name || restaurantInfo?.name || 'Raman Sweet Bakery & Family Restaurant'}
-                  </div>
-                  <div style={{ fontSize: '0.66rem', color: '#FDE68A', marginTop: '2px' }}>
-                    Scan QR Code • Digital Menu
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            <button
-              type="button"
-              onClick={() => onOpenBillingModal && onOpenBillingModal()}
-              style={{
-                width: '100%',
-                padding: '9px 12px',
-                borderRadius: '10px',
-                border: '1px solid #E2E8F0',
-                background: '#FAF8F5',
-                color: '#0F172A',
-                fontSize: '0.78rem',
-                fontWeight: 700,
-                cursor: 'pointer',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                gap: '6px',
-                boxSizing: 'border-box'
-              }}
-            >
-              <Sliders size={14} />
-              <span>Customize Theme</span>
-            </button>
           </div>
+        </div>
 
-          {/* 3. OWNER & CONTACT */}
-          <div className="bp-card" style={{
+        {/* SECTION 2 — FOOD DETAILS */}
+        <div>
+          <div style={{ fontSize: '0.72rem', fontWeight: 800, color: '#475569', letterSpacing: '0.04em', textTransform: 'uppercase', marginBottom: '8px', paddingLeft: '4px' }}>
+            Food Details
+          </div>
+          <div style={{
             background: '#FFFFFF',
             borderRadius: '16px',
             border: '1px solid #EAE5DF',
-            padding: '16px 18px',
+            padding: '16px',
             display: 'flex',
             flexDirection: 'column',
             gap: '14px',
             boxShadow: '0 1px 3px rgba(0,0,0,0.02)',
-            boxSizing: 'border-box',
-            width: '100%'
+            boxSizing: 'border-box'
           }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-              <span style={{ fontSize: '1rem' }}>👤</span>
-              <strong style={{ fontSize: '0.90rem', color: '#0F172A', fontWeight: 800 }}>3. Owner & Contact</strong>
+            {/* Food Type Segmented Cards */}
+            <div>
+              <label style={{ fontSize: '0.74rem', fontWeight: 800, color: '#334155', display: 'block', marginBottom: '8px' }}>
+                Food Type <span style={{ color: '#EF4444' }}>*</span>
+              </label>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '8px' }}>
+                {[
+                  { id: 'pure_veg', label: 'Vegetarian', icon: '🟢', sub: 'Pure Veg' },
+                  { id: 'veg_nonveg', label: 'Both', icon: '🥗', sub: 'Veg & Non-Veg' },
+                  { id: 'non_veg', label: 'Non-Veg', icon: '🔴', sub: 'Non-Vegetarian' }
+                ].map(item => {
+                  const isSelected = currentFoodType === item.id || (item.id === 'veg_nonveg' && currentFoodType === 'mixed');
+                  return (
+                    <div
+                      key={item.id}
+                      onClick={() => {
+                        setSettingsForm({
+                          ...settingsForm,
+                          food_type: item.id,
+                          resto_type: item.id === 'pure_veg' ? 'pure_veg' : item.id === 'veg_nonveg' ? 'veg_nonveg' : 'pure_veg'
+                        });
+                      }}
+                      style={{
+                        padding: '12px 8px',
+                        borderRadius: '12px',
+                        border: isSelected ? '2px solid #064E3B' : '1px solid #E2E8F0',
+                        background: isSelected ? '#ECFDF5' : '#FAFAF9',
+                        textAlign: 'center',
+                        cursor: 'pointer',
+                        transition: 'all 0.15s ease',
+                        boxSizing: 'border-box'
+                      }}
+                    >
+                      <div style={{ fontSize: '1.2rem', marginBottom: '4px' }}>{item.icon}</div>
+                      <strong style={{ fontSize: '0.78rem', color: isSelected ? '#064E3B' : '#0F172A', display: 'block', fontWeight: 800 }}>
+                        {item.label}
+                      </strong>
+                      <span style={{ fontSize: '0.64rem', color: '#64748B' }}>{item.sub}</span>
+                    </div>
+                  );
+                })}
+              </div>
             </div>
 
+            {/* Cuisine / Specialization Multi-select Chips */}
+            <div>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '8px' }}>
+                <label style={{ fontSize: '0.74rem', fontWeight: 800, color: '#334155' }}>
+                  Cuisine / Specialization <span style={{ color: '#94A3B8', fontWeight: 500 }}>(Optional)</span>
+                </label>
+                <span style={{ fontSize: '0.68rem', color: '#64748B' }}>
+                  {currentCuisines.length} selected
+                </span>
+              </div>
+              <div style={{ display: 'flex', flexWrap: 'wrap', gap: '7px' }}>
+                {availableCuisines.map(cuisine => {
+                  const isChecked = currentCuisines.includes(cuisine);
+                  return (
+                    <button
+                      key={cuisine}
+                      type="button"
+                      onClick={() => toggleCuisine(cuisine)}
+                      style={{
+                        padding: '7px 12px',
+                        borderRadius: '20px',
+                        border: isChecked ? '1px solid #064E3B' : '1px solid #E2E8F0',
+                        background: isChecked ? '#064E3B' : '#F8FAFC',
+                        color: isChecked ? '#FFFFFF' : '#334155',
+                        fontSize: '0.76rem',
+                        fontWeight: isChecked ? 800 : 600,
+                        cursor: 'pointer',
+                        transition: 'all 0.15s ease'
+                      }}
+                    >
+                      {isChecked ? `✓ ${cuisine}` : `+ ${cuisine}`}
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* SECTION 3 — CONTACT & LOCATION */}
+        <div>
+          <div style={{ fontSize: '0.72rem', fontWeight: 800, color: '#475569', letterSpacing: '0.04em', textTransform: 'uppercase', marginBottom: '8px', paddingLeft: '4px' }}>
+            Contact & Location
+          </div>
+          <div style={{
+            background: '#FFFFFF',
+            borderRadius: '16px',
+            border: '1px solid #EAE5DF',
+            padding: '16px',
+            display: 'flex',
+            flexDirection: 'column',
+            gap: '14px',
+            boxShadow: '0 1px 3px rgba(0,0,0,0.02)',
+            boxSizing: 'border-box'
+          }}>
+            {/* Owner Name */}
             <div>
               <label style={{ fontSize: '0.74rem', fontWeight: 800, color: '#334155', display: 'block', marginBottom: '6px' }}>
-                Owner Full Name <span style={{ color: '#94A3B8', fontWeight: 500 }}>(Optional)</span>
+                Owner Name <span style={{ color: '#94A3B8', fontWeight: 500 }}>(Optional)</span>
               </label>
               <input
                 type="text"
@@ -1205,12 +1629,12 @@ export default function SetupView({
                 onChange={(e) => setSettingsForm({ ...settingsForm, owner_name: e.target.value })}
                 style={{
                   width: '100%',
-                  height: '44px',
-                  padding: '0 12px',
-                  borderRadius: '10px',
+                  height: '48px',
+                  padding: '0 14px',
+                  borderRadius: '12px',
                   border: '1px solid #E2E8F0',
                   background: '#FFFFFF',
-                  fontSize: '0.84rem',
+                  fontSize: '0.86rem',
                   color: '#0F172A',
                   boxSizing: 'border-box',
                   outline: 'none',
@@ -1219,31 +1643,7 @@ export default function SetupView({
               />
             </div>
 
-            <div>
-              <label style={{ fontSize: '0.74rem', fontWeight: 800, color: '#334155', display: 'block', marginBottom: '6px' }}>
-                Owner Email <span style={{ color: '#94A3B8', fontWeight: 500 }}>(Optional)</span>
-              </label>
-              <input
-                type="email"
-                placeholder="raman@example.com"
-                value={settingsForm.owner_email || ''}
-                onChange={(e) => setSettingsForm({ ...settingsForm, owner_email: e.target.value })}
-                style={{
-                  width: '100%',
-                  height: '44px',
-                  padding: '0 12px',
-                  borderRadius: '10px',
-                  border: '1px solid #E2E8F0',
-                  background: '#FFFFFF',
-                  fontSize: '0.84rem',
-                  color: '#0F172A',
-                  boxSizing: 'border-box',
-                  outline: 'none',
-                  fontFamily: 'inherit'
-                }}
-              />
-            </div>
-
+            {/* Contact Phone */}
             <div>
               <label style={{ fontSize: '0.74rem', fontWeight: 800, color: '#334155', display: 'block', marginBottom: '6px' }}>
                 Contact Phone <span style={{ color: '#EF4444' }}>*</span>
@@ -1252,34 +1652,33 @@ export default function SetupView({
                 <div style={{
                   display: 'flex',
                   alignItems: 'center',
-                  gap: '3px',
-                  padding: '0 10px',
-                  background: '#FAF8F5',
+                  gap: '4px',
+                  padding: '0 12px',
+                  background: '#F8FAFC',
                   border: '1px solid #E2E8F0',
-                  borderRadius: '10px',
-                  fontSize: '0.82rem',
-                  fontWeight: 700,
+                  borderRadius: '12px',
+                  fontSize: '0.84rem',
+                  fontWeight: 800,
                   color: '#0F172A',
-                  height: '44px',
+                  height: '48px',
                   flexShrink: 0
                 }}>
-                  <span>+91</span>
-                  <ChevronDown size={12} color="#64748B" />
+                  <span>🇮🇳 +91</span>
                 </div>
                 <input
-                  type="text"
+                  type="tel"
                   placeholder="9708366583"
                   value={settingsForm.phone || ''}
                   onChange={(e) => setSettingsForm({ ...settingsForm, phone: e.target.value })}
                   style={{
                     flex: 1,
                     minWidth: 0,
-                    height: '44px',
-                    padding: '0 12px',
-                    borderRadius: '10px',
+                    height: '48px',
+                    padding: '0 14px',
+                    borderRadius: '12px',
                     border: '1px solid #E2E8F0',
                     background: '#FFFFFF',
-                    fontSize: '0.84rem',
+                    fontSize: '0.86rem',
                     color: '#0F172A',
                     boxSizing: 'border-box',
                     outline: 'none',
@@ -1288,43 +1687,25 @@ export default function SetupView({
                 />
               </div>
             </div>
-          </div>
 
-          {/* 4. BUSINESS DETAILS */}
-          <div className="bp-card" style={{
-            background: '#FFFFFF',
-            borderRadius: '16px',
-            border: '1px solid #EAE5DF',
-            padding: '16px 18px',
-            display: 'flex',
-            flexDirection: 'column',
-            gap: '14px',
-            boxShadow: '0 1px 3px rgba(0,0,0,0.02)',
-            boxSizing: 'border-box',
-            width: '100%'
-          }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-              <span style={{ fontSize: '1rem' }}>📄</span>
-              <strong style={{ fontSize: '0.90rem', color: '#0F172A', fontWeight: 800 }}>4. Business Details</strong>
-            </div>
-
+            {/* Business Email */}
             <div>
               <label style={{ fontSize: '0.74rem', fontWeight: 800, color: '#334155', display: 'block', marginBottom: '6px' }}>
-                FSSAI License Number <span style={{ color: '#94A3B8', fontWeight: 500 }}>(Optional)</span>
+                Business Email <span style={{ color: '#94A3B8', fontWeight: 500 }}>(Optional)</span>
               </label>
               <input
-                type="text"
-                placeholder="12345678901234"
-                value={settingsForm.fssai_lic_no || ''}
-                onChange={(e) => setSettingsForm({ ...settingsForm, fssai_lic_no: e.target.value })}
+                type="email"
+                placeholder="contact@ramansweet.com"
+                value={settingsForm.owner_email || settingsForm.email || ''}
+                onChange={(e) => setSettingsForm({ ...settingsForm, owner_email: e.target.value })}
                 style={{
                   width: '100%',
-                  height: '44px',
-                  padding: '0 12px',
-                  borderRadius: '10px',
+                  height: '48px',
+                  padding: '0 14px',
+                  borderRadius: '12px',
                   border: '1px solid #E2E8F0',
                   background: '#FFFFFF',
-                  fontSize: '0.84rem',
+                  fontSize: '0.86rem',
                   color: '#0F172A',
                   boxSizing: 'border-box',
                   outline: 'none',
@@ -1333,48 +1714,41 @@ export default function SetupView({
               />
             </div>
 
+            {/* Opening Hours Row */}
             <div>
               <label style={{ fontSize: '0.74rem', fontWeight: 800, color: '#334155', display: 'block', marginBottom: '6px' }}>
                 Opening Hours <span style={{ color: '#EF4444' }}>*</span>
               </label>
-              <div style={{
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'space-between',
-                padding: '10px 12px',
-                background: '#FAF8F5',
-                borderRadius: '10px',
-                border: '1px solid #E2E8F0',
-                width: '100%',
-                boxSizing: 'border-box'
-              }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', minWidth: 0, flex: 1 }}>
-                  <Clock size={16} color="#D97706" style={{ flexShrink: 0 }} />
-                  <div style={{ minWidth: 0, flex: 1 }}>
-                    <input
-                      type="text"
-                      placeholder="8:00 AM - 10:30 PM"
-                      value={settingsForm.openingHours || '8:00 AM - 10:30 PM'}
-                      onChange={(e) => setSettingsForm({ ...settingsForm, openingHours: e.target.value })}
-                      style={{
-                        border: 'none',
-                        background: 'transparent',
-                        fontSize: '0.84rem',
-                        fontWeight: 700,
-                        color: '#0F172A',
-                        outline: 'none',
-                        padding: 0,
-                        width: '100%',
-                        fontFamily: 'inherit'
-                      }}
-                    />
-                    <div style={{ fontSize: '0.68rem', color: '#64748B' }}>Mon - Sun</div>
+              <div
+                onClick={() => setActiveBpModal('hours')}
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'space-between',
+                  padding: '12px 14px',
+                  background: '#F8FAFC',
+                  borderRadius: '12px',
+                  border: '1px solid #E2E8F0',
+                  cursor: 'pointer',
+                  boxSizing: 'border-box'
+                }}
+              >
+                <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                  <div style={{ width: '32px', height: '32px', borderRadius: '8px', background: '#FEF3C7', color: '#D97706', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                    <Clock size={16} />
+                  </div>
+                  <div>
+                    <strong style={{ fontSize: '0.84rem', color: '#0F172A', display: 'block' }}>
+                      {settingsForm.openingHours || '8:00 AM – 10:30 PM'}
+                    </strong>
+                    <span style={{ fontSize: '0.70rem', color: '#64748B' }}>Mon – Sun</span>
                   </div>
                 </div>
-                <ChevronDown size={14} color="#64748B" style={{ flexShrink: 0 }} />
+                <ChevronRight size={16} color="#94A3B8" />
               </div>
             </div>
 
+            {/* Address Multiline */}
             <div>
               <label style={{ fontSize: '0.74rem', fontWeight: 800, color: '#334155', display: 'block', marginBottom: '6px' }}>
                 Address <span style={{ color: '#EF4444' }}>*</span>
@@ -1386,8 +1760,8 @@ export default function SetupView({
                 onChange={(e) => setSettingsForm({ ...settingsForm, address: e.target.value })}
                 style={{
                   width: '100%',
-                  padding: '10px 12px',
-                  borderRadius: '10px',
+                  padding: '12px 14px',
+                  borderRadius: '12px',
                   border: '1px solid #E2E8F0',
                   background: '#FFFFFF',
                   fontSize: '0.84rem',
@@ -1399,298 +1773,431 @@ export default function SetupView({
                 }}
               />
             </div>
-          </div>
 
-          {/* 5. ONLINE PRESENCE */}
-          <div className="bp-card" style={{
-            background: '#FFFFFF',
-            borderRadius: '16px',
-            border: '1px solid #EAE5DF',
-            padding: '16px 18px',
-            display: 'flex',
-            flexDirection: 'column',
-            gap: '14px',
-            boxShadow: '0 1px 3px rgba(0,0,0,0.02)',
-            boxSizing: 'border-box',
-            width: '100%'
-          }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-              <span style={{ fontSize: '1rem' }}>🌐</span>
-              <strong style={{ fontSize: '0.90rem', color: '#0F172A', fontWeight: 800 }}>5. Online Presence</strong>
-            </div>
-
+            {/* Google Maps Dedicated Row */}
             <div>
               <label style={{ fontSize: '0.74rem', fontWeight: 800, color: '#334155', display: 'block', marginBottom: '6px' }}>
-                Google Maps Location Link <span style={{ color: '#94A3B8', fontWeight: 500 }}>(Optional)</span>
+                Google Maps Location
               </label>
-              <div style={{ position: 'relative', width: '100%' }}>
-                <input
-                  type="url"
-                  placeholder="https://maps.google.com/..."
-                  value={settingsForm.google_maps_url || ''}
-                  onChange={(e) => setSettingsForm({ ...settingsForm, google_maps_url: e.target.value })}
-                  style={{
-                    width: '100%',
-                    height: '44px',
-                    padding: '0 34px 0 12px',
-                    borderRadius: '10px',
-                    border: '1px solid #E2E8F0',
-                    background: '#FFFFFF',
-                    fontSize: '0.82rem',
-                    color: '#0F172A',
-                    boxSizing: 'border-box',
-                    outline: 'none',
-                    fontFamily: 'inherit'
-                  }}
-                />
-                <ArrowUpRight size={15} color="#64748B" style={{ position: 'absolute', right: '10px', top: '14px', pointerEvents: 'none' }} />
+              <div
+                onClick={() => setActiveBpModal('maps_location')}
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'space-between',
+                  padding: '12px 14px',
+                  background: settingsForm.google_maps_url ? '#ECFDF5' : '#F8FAFC',
+                  borderRadius: '12px',
+                  border: settingsForm.google_maps_url ? '1px solid #A7F3D0' : '1px solid #E2E8F0',
+                  cursor: 'pointer',
+                  boxSizing: 'border-box'
+                }}
+              >
+                <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                  <div style={{
+                    width: '32px',
+                    height: '32px',
+                    borderRadius: '8px',
+                    background: settingsForm.google_maps_url ? '#D1FAE5' : '#F1F5F9',
+                    color: settingsForm.google_maps_url ? '#059669' : '#64748B',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center'
+                  }}>
+                    <MapPin size={16} />
+                  </div>
+                  <div>
+                    <strong style={{ fontSize: '0.84rem', color: '#0F172A', display: 'block' }}>
+                      {settingsForm.google_maps_url ? 'Location Added' : 'Add Google Maps Location'}
+                    </strong>
+                    <span style={{ fontSize: '0.70rem', color: '#64748B' }}>
+                      {settingsForm.google_maps_url ? 'GPS coordinates / link verified' : 'Help customers find directions'}
+                    </span>
+                  </div>
+                </div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                  {settingsForm.google_maps_url && (
+                    <span style={{ fontSize: '0.68rem', fontWeight: 800, color: '#059669', background: '#FFFFFF', padding: '2px 8px', borderRadius: '6px' }}>
+                      Verified
+                    </span>
+                  )}
+                  <ChevronRight size={16} color="#94A3B8" />
+                </div>
               </div>
             </div>
-
-            <div>
-              <label style={{ fontSize: '0.74rem', fontWeight: 800, color: '#334155', display: 'block', marginBottom: '6px' }}>
-                Google Review Page Link <span style={{ color: '#94A3B8', fontWeight: 500 }}>(Optional)</span>
-              </label>
-              <div style={{ position: 'relative', width: '100%' }}>
-                <input
-                  type="url"
-                  placeholder="https://g.page/r/..."
-                  value={settingsForm.google_review_url || ''}
-                  onChange={(e) => setSettingsForm({ ...settingsForm, google_review_url: e.target.value })}
-                  style={{
-                    width: '100%',
-                    height: '44px',
-                    padding: '0 34px 0 12px',
-                    borderRadius: '10px',
-                    border: '1px solid #E2E8F0',
-                    background: '#FFFFFF',
-                    fontSize: '0.82rem',
-                    color: '#0F172A',
-                    boxSizing: 'border-box',
-                    outline: 'none',
-                    fontFamily: 'inherit'
-                  }}
-                />
-                <ArrowUpRight size={15} color="#64748B" style={{ position: 'absolute', right: '10px', top: '14px', pointerEvents: 'none' }} />
-              </div>
-            </div>
-          </div>
-
-          <div style={{ fontSize: '0.74rem', color: '#64748B', display: 'flex', alignItems: 'center', gap: '6px', padding: '2px 0' }}>
-            <span>ℹ️</span>
-            <span>All changes are saved automatically. Please ensure all information is accurate.</span>
           </div>
         </div>
 
-        {/* Right Column: Live Menu Preview Card */}
-        <div style={{
-          display: 'flex',
-          flexDirection: 'column',
-          gap: '14px',
-          width: '100%',
-          maxWidth: '100%',
-          boxSizing: 'border-box'
-        }}>
-          <div className="bp-card" style={{
+        {/* SECTION 4 — TAX & LEGAL */}
+        <div>
+          <div style={{ fontSize: '0.72rem', fontWeight: 800, color: '#475569', letterSpacing: '0.04em', textTransform: 'uppercase', marginBottom: '8px', paddingLeft: '4px' }}>
+            Tax & Legal
+          </div>
+          <div style={{
             background: '#FFFFFF',
             borderRadius: '16px',
             border: '1px solid #EAE5DF',
-            padding: '16px 18px',
+            padding: '16px',
             display: 'flex',
             flexDirection: 'column',
             gap: '14px',
             boxShadow: '0 1px 3px rgba(0,0,0,0.02)',
-            boxSizing: 'border-box',
-            width: '100%'
+            boxSizing: 'border-box'
           }}>
+            {/* GST Registered Toggle Row */}
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
               <div>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                  <span style={{ fontSize: '1rem' }}>👁️</span>
-                  <strong style={{ fontSize: '0.90rem', color: '#0F172A', fontWeight: 800 }}>Live Menu Preview</strong>
-                </div>
-                <span style={{ fontSize: '0.70rem', color: '#64748B' }}>How your restaurant appears to customers</span>
+                <strong style={{ fontSize: '0.86rem', fontWeight: 800, color: '#0F172A', display: 'block' }}>
+                  GST Registered Business?
+                </strong>
+                <span style={{ fontSize: '0.72rem', color: '#64748B' }}>
+                  Enable if your business has an active GSTIN
+                </span>
               </div>
-              <span style={{ fontSize: '0.66rem', fontWeight: 800, color: '#059669', background: '#DCFCE7', padding: '2px 7px', borderRadius: '8px', display: 'flex', alignItems: 'center', gap: '4px' }}>
-                <span style={{ width: '5px', height: '5px', borderRadius: '50%', backgroundColor: '#059669' }} />
-                Live
-              </span>
+              <ToggleSwitch
+                checked={isGstActive}
+                onChange={(val) => {
+                  setIsGstRegistered(val);
+                  if (!val) {
+                    setSettingsForm({ ...settingsForm, gst_number: '', is_gst_registered: false });
+                  } else {
+                    setSettingsForm({ ...settingsForm, is_gst_registered: true });
+                  }
+                }}
+              />
             </div>
 
-            {/* Complete Simulated Customer Menu Card */}
-            <div style={{
-              borderRadius: '16px',
-              background: 'linear-gradient(180deg, #064E3B 0%, #022c22 45%, #FFFFFF 45%, #FFFFFF 100%)',
-              border: '1px solid #E2E8F0',
-              overflow: 'hidden',
-              boxShadow: '0 4px 16px rgba(0,0,0,0.06)',
-              width: '100%',
-              boxSizing: 'border-box'
-            }}>
-              {/* Header Hero Area */}
-              <div style={{ padding: '16px 14px 12px 14px', textAlign: 'center', position: 'relative' }}>
-                <span style={{
-                  position: 'absolute',
-                  top: '10px',
-                  right: '10px',
-                  background: '#F59E0B',
-                  color: '#450A0A',
-                  fontSize: '0.60rem',
-                  fontWeight: 800,
-                  padding: '2px 6px',
-                  borderRadius: '5px'
-                }}>
-                  Gold & Forest Green
-                </span>
+            {/* Conditional GSTIN Field */}
+            {isGstActive && (
+              <div style={{
+                background: '#F8FAFC',
+                borderRadius: '12px',
+                border: '1px solid #E2E8F0',
+                padding: '12px 14px'
+              }}>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '6px' }}>
+                  <label style={{ fontSize: '0.74rem', fontWeight: 800, color: '#334155' }}>
+                    GST Number (GSTIN)
+                  </label>
+                  {isGstValid ? (
+                    <span style={{ fontSize: '0.68rem', fontWeight: 800, color: '#059669', background: '#ECFDF5', border: '1px solid #A7F3D0', padding: '2px 8px', borderRadius: '6px' }}>
+                      🛡️ GSTIN Verified
+                    </span>
+                  ) : (
+                    <span style={{ fontSize: '0.68rem', color: '#94A3B8' }}>
+                      15 characters required
+                    </span>
+                  )}
+                </div>
+                <input
+                  type="text"
+                  maxLength={15}
+                  placeholder="10AAAAA0000A1Z5"
+                  value={settingsForm.gst_number || settingsForm.gstin || ''}
+                  onChange={(e) => setSettingsForm({ ...settingsForm, gst_number: e.target.value.toUpperCase() })}
+                  style={{
+                    width: '100%',
+                    height: '46px',
+                    padding: '0 12px',
+                    borderRadius: '10px',
+                    border: isGstValid ? '1px solid #10B981' : '1px solid #CBD5E1',
+                    background: '#FFFFFF',
+                    fontSize: '0.86rem',
+                    fontWeight: 700,
+                    letterSpacing: '0.04em',
+                    color: '#0F172A',
+                    boxSizing: 'border-box',
+                    textTransform: 'uppercase'
+                  }}
+                />
+              </div>
+            )}
 
+            {/* FSSAI License Number */}
+            <div>
+              <label style={{ fontSize: '0.74rem', fontWeight: 800, color: '#334155', display: 'block', marginBottom: '6px' }}>
+                FSSAI License Number <span style={{ color: '#94A3B8', fontWeight: 500 }}>(Optional)</span>
+              </label>
+              <input
+                type="text"
+                maxLength={14}
+                placeholder="12345678901234 (14 digits)"
+                value={settingsForm.fssai_lic_no || ''}
+                onChange={(e) => setSettingsForm({ ...settingsForm, fssai_lic_no: e.target.value.replace(/\D/g, '') })}
+                style={{
+                  width: '100%',
+                  height: '48px',
+                  padding: '0 14px',
+                  borderRadius: '12px',
+                  border: '1px solid #E2E8F0',
+                  background: '#FFFFFF',
+                  fontSize: '0.86rem',
+                  fontWeight: 600,
+                  letterSpacing: '0.02em',
+                  color: '#0F172A',
+                  boxSizing: 'border-box'
+                }}
+              />
+              <span style={{ fontSize: '0.68rem', color: '#64748B', marginTop: '4px', display: 'block' }}>
+                Printed on customer bills and digital menu footer for food safety compliance
+              </span>
+            </div>
+          </div>
+        </div>
+
+        {/* SECTION 5 — ONLINE PRESENCE */}
+        <div>
+          <div style={{ fontSize: '0.72rem', fontWeight: 800, color: '#475569', letterSpacing: '0.04em', textTransform: 'uppercase', marginBottom: '8px', paddingLeft: '4px' }}>
+            Online Presence
+          </div>
+          <div style={{
+            background: '#FFFFFF',
+            borderRadius: '16px',
+            border: '1px solid #EAE5DF',
+            padding: '16px',
+            boxShadow: '0 1px 3px rgba(0,0,0,0.02)',
+            boxSizing: 'border-box'
+          }}>
+            <div
+              onClick={() => setActiveBpModal('google_review')}
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                padding: '12px 14px',
+                background: settingsForm.google_review_url ? '#ECFDF5' : '#F8FAFC',
+                borderRadius: '12px',
+                border: settingsForm.google_review_url ? '1px solid #A7F3D0' : '1px solid #E2E8F0',
+                cursor: 'pointer',
+                boxSizing: 'border-box'
+              }}
+            >
+              <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                <div style={{
+                  width: '36px',
+                  height: '36px',
+                  borderRadius: '10px',
+                  background: '#EFF6FF',
+                  color: '#1D4ED8',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  fontSize: '1.1rem',
+                  fontWeight: 900
+                }}>
+                  ⭐
+                </div>
+                <div>
+                  <strong style={{ fontSize: '0.86rem', color: '#0F172A', display: 'block' }}>
+                    Google Reviews
+                  </strong>
+                  <span style={{ fontSize: '0.72rem', color: '#64748B' }}>
+                    {settingsForm.google_review_url ? 'Connected to review page' : 'Connect your Google review page'}
+                  </span>
+                </div>
+              </div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                <span style={{
+                  fontSize: '0.68rem',
+                  fontWeight: 800,
+                  color: settingsForm.google_review_url ? '#059669' : '#0F172A',
+                  background: settingsForm.google_review_url ? '#DCFCE7' : '#E2E8F0',
+                  padding: '3px 8px',
+                  borderRadius: '6px'
+                }}>
+                  {settingsForm.google_review_url ? 'Connected' : '+ Add Link'}
+                </span>
+                <ChevronRight size={16} color="#94A3B8" />
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* SECTION 6 — MENU APPEARANCE */}
+        <div>
+          <div style={{ fontSize: '0.72rem', fontWeight: 800, color: '#475569', letterSpacing: '0.04em', textTransform: 'uppercase', marginBottom: '8px', paddingLeft: '4px' }}>
+            Menu Appearance
+          </div>
+          <div style={{
+            background: '#FFFFFF',
+            borderRadius: '16px',
+            border: '1px solid #EAE5DF',
+            padding: '16px',
+            display: 'flex',
+            flexDirection: 'column',
+            gap: '14px',
+            boxShadow: '0 1px 3px rgba(0,0,0,0.02)',
+            boxSizing: 'border-box'
+          }}>
+            {/* Theme Row */}
+            <div
+              onClick={() => setActiveBpModal('theme')}
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                padding: '12px 14px',
+                background: '#F8FAFC',
+                borderRadius: '12px',
+                border: '1px solid #E2E8F0',
+                cursor: 'pointer',
+                boxSizing: 'border-box'
+              }}
+            >
+              <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                <div style={{
+                  width: '26px',
+                  height: '26px',
+                  borderRadius: '50%',
+                  background: '#064E3B',
+                  border: '2.5px solid #F59E0B',
+                  boxShadow: '0 2px 4px rgba(0,0,0,0.15)',
+                  flexShrink: 0
+                }} />
+                <div>
+                  <strong style={{ fontSize: '0.86rem', color: '#0F172A', display: 'block' }}>
+                    Gold & Forest Green
+                  </strong>
+                  <span style={{ fontSize: '0.70rem', color: '#64748B' }}>Oberoi Luxury Theme</span>
+                </div>
+              </div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                <span style={{ fontSize: '0.68rem', fontWeight: 800, color: '#059669', background: '#DCFCE7', padding: '3px 8px', borderRadius: '6px' }}>
+                  Active
+                </span>
+                <ChevronRight size={16} color="#94A3B8" />
+              </div>
+            </div>
+
+            {/* Compact Live Header Preview */}
+            <div>
+              <span style={{ fontSize: '0.72rem', fontWeight: 800, color: '#475569', display: 'block', marginBottom: '8px' }}>
+                Customer Menu Header Preview
+              </span>
+              <div style={{
+                borderRadius: '14px',
+                background: 'linear-gradient(180deg, #064E3B 0%, #022c22 100%)',
+                padding: '14px 16px',
+                color: '#FFFFFF',
+                border: '1px solid #D97706',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '12px',
+                boxSizing: 'border-box',
+                boxShadow: '0 4px 14px rgba(6, 78, 59, 0.25)'
+              }}>
                 {settingsForm.logo || restaurantInfo?.logo ? (
                   <img
                     src={settingsForm.logo || restaurantInfo?.logo}
                     alt="Logo"
                     style={{
-                      width: '52px',
-                      height: '52px',
-                      borderRadius: '12px',
+                      width: '46px',
+                      height: '46px',
+                      borderRadius: '10px',
                       objectFit: 'cover',
-                      border: '2px solid #F59E0B',
-                      margin: '0 auto 6px auto',
-                      display: 'block',
-                      boxShadow: '0 4px 10px rgba(0,0,0,0.3)',
-                      background: '#FFFFFF'
+                      border: '1.5px solid #F59E0B',
+                      flexShrink: 0,
+                      background: '#FFFFFF',
+                      boxShadow: '0 2px 6px rgba(0,0,0,0.2)'
                     }}
                   />
                 ) : (
                   <div style={{
-                    width: '52px',
-                    height: '52px',
-                    borderRadius: '12px',
+                    width: '46px',
+                    height: '46px',
+                    borderRadius: '10px',
                     background: 'linear-gradient(135deg, #7C1D1D 0%, #450A0A 100%)',
                     color: '#F59E0B',
                     display: 'flex',
                     alignItems: 'center',
                     justifyContent: 'center',
                     fontWeight: 900,
-                    fontSize: '1.3rem',
-                    border: '2px solid #F59E0B',
-                    margin: '0 auto 6px auto',
-                    boxShadow: '0 4px 10px rgba(0,0,0,0.3)'
+                    fontSize: '1.2rem',
+                    border: '1.5px solid #F59E0B',
+                    flexShrink: 0
                   }}>
                     {(settingsForm.name || restaurantInfo?.name || 'R').charAt(0).toUpperCase()}
                   </div>
                 )}
-              </div>
-
-              {/* Body Content Area */}
-              <div style={{ padding: '0 14px 14px 14px', textAlign: 'center', background: '#FFFFFF', boxSizing: 'border-box' }}>
-                <strong style={{ fontSize: '0.90rem', color: '#0F172A', fontWeight: 900, display: 'block', marginBottom: '2px' }}>
-                  {settingsForm.name || restaurantInfo?.name || 'Raman Sweet Bakery & Family Restaurant'}
-                </strong>
-                <span style={{ fontSize: '0.70rem', color: '#64748B', display: 'block', marginBottom: '8px' }}>
-                  {settingsForm.tagline || 'Pure Veg Family Restaurant & Bakery'}
-                </span>
-
-                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px', marginBottom: '12px', flexWrap: 'wrap' }}>
-                  <span style={{ fontSize: '0.66rem', fontWeight: 700, color: '#059669', display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
-                    <span style={{ width: '5px', height: '5px', borderRadius: '50%', backgroundColor: '#059669' }} /> Pure Veg
-                  </span>
-                  <span style={{ fontSize: '0.66rem', color: '#64748B' }}>•</span>
-                  <span style={{ fontSize: '0.66rem', fontWeight: 700, color: '#0F172A' }}>
-                    🕒 8:00 AM - 10:30 PM <span style={{ color: '#059669' }}>Open</span>
-                  </span>
-                </div>
-
-                <button
-                  type="button"
-                  style={{
-                    width: '100%',
-                    height: '40px',
-                    borderRadius: '10px',
-                    border: 'none',
-                    background: '#064E3B',
-                    color: '#FFFFFF',
-                    fontSize: '0.80rem',
-                    fontWeight: 800,
-                    cursor: 'pointer',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    gap: '6px',
-                    marginBottom: '12px',
-                    boxSizing: 'border-box'
-                  }}
-                >
-                  <span>View Digital Menu</span>
-                  <Printer size={13} />
-                </button>
-
-                {/* 4 Action Icons */}
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '4px', borderTop: '1px solid #F1F5F9', paddingTop: '8px' }}>
-                  <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '2px' }}>
-                    <Printer size={13} color="#64748B" />
-                    <span style={{ fontSize: '0.58rem', color: '#64748B', fontWeight: 600 }}>Scan QR</span>
+                <div style={{ minWidth: 0, flex: 1 }}>
+                  <div style={{ fontSize: '0.88rem', fontWeight: 800, color: '#FFFFFF', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                    {settingsForm.name || restaurantInfo?.name || 'Raman Sweet Bakery & Family Restaurant'}
                   </div>
-                  <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '2px' }}>
-                    <Utensils size={13} color="#64748B" />
-                    <span style={{ fontSize: '0.58rem', color: '#64748B', fontWeight: 600 }}>View Menu</span>
+                  <div style={{ fontSize: '0.70rem', color: '#FDE68A', marginTop: '2px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                    {settingsForm.tagline || 'Pure Veg Family Restaurant & Bakery'}
                   </div>
-                  <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '2px' }}>
-                    <Store size={13} color="#64748B" />
-                    <span style={{ fontSize: '0.58rem', color: '#64748B', fontWeight: 600 }}>Place Order</span>
-                  </div>
-                  <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '2px' }}>
-                    <CreditCard size={13} color="#64748B" />
-                    <span style={{ fontSize: '0.58rem', color: '#64748B', fontWeight: 600 }}>Pay Bill</span>
+                  <div style={{ fontSize: '0.64rem', color: '#A7F3D0', marginTop: '3px', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                    <span>✨</span>
+                    <span>Scan QR Code • Digital Menu</span>
                   </div>
                 </div>
               </div>
             </div>
+          </div>
+        </div>
 
-            {/* Informational Tip Card */}
-            <div style={{
-              display: 'flex',
-              alignItems: 'flex-start',
-              gap: '8px',
-              padding: '10px 12px',
-              background: '#FFFBEB',
-              borderRadius: '10px',
-              border: '1px solid #FEF3C7',
-              fontSize: '0.72rem',
-              color: '#92400E',
-              lineHeight: 1.4,
-              boxSizing: 'border-box'
-            }}>
-              <span>💡</span>
-              <span>This is how your customers will see your digital menu and restaurant information.</span>
-            </div>
-
-            <button
-              type="button"
-              onClick={() => window.open(window.location.origin, '_blank')}
-              style={{
-                width: '100%',
-                padding: '9px 12px',
-                borderRadius: '10px',
-                border: '1px solid #E2E8F0',
-                background: '#FFFFFF',
-                color: '#0F172A',
-                fontSize: '0.78rem',
-                fontWeight: 700,
-                cursor: 'pointer',
+        {/* STICKY BOTTOM SAVE AREA */}
+        <div style={{
+          position: 'fixed',
+          bottom: 0,
+          left: 0,
+          right: 0,
+          background: '#FFFFFF',
+          borderTop: '1px solid #EAE5DF',
+          padding: '12px 16px 24px 16px',
+          boxShadow: '0 -4px 16px rgba(0,0,0,0.06)',
+          zIndex: 900,
+          boxSizing: 'border-box'
+        }}>
+          <div style={{ maxWidth: '540px', margin: '0 auto', display: 'flex', flexDirection: 'column', gap: '8px' }}>
+            {bpSaveSuccess && (
+              <div style={{
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
                 gap: '6px',
-                boxSizing: 'border-box'
+                background: '#ECFDF5',
+                color: '#064E3B',
+                border: '1px solid #A7F3D0',
+                padding: '6px 12px',
+                borderRadius: '8px',
+                fontSize: '0.76rem',
+                fontWeight: 800
+              }}>
+                <Check size={14} color="#059669" />
+                <span>All changes saved successfully!</span>
+              </div>
+            )}
+            <button
+              type="button"
+              onClick={handleSaveBusinessProfile}
+              disabled={savingForm}
+              style={{
+                width: '100%',
+                height: '48px',
+                borderRadius: '12px',
+                background: '#064E3B',
+                color: '#FFFFFF',
+                fontSize: '0.90rem',
+                fontWeight: 800,
+                border: 'none',
+                cursor: 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                gap: '8px',
+                boxShadow: '0 3px 10px rgba(6, 78, 59, 0.25)',
+                transition: 'all 0.15s ease'
               }}
             >
-              <span>Preview Full Menu</span>
-              <ArrowUpRight size={13} />
+              <Check size={18} />
+              <span>{savingForm ? 'Saving Changes...' : 'Save Changes'}</span>
             </button>
           </div>
         </div>
       </div>
-    </div>
-  );
+    );
+  };
 
   const ToggleSwitch = ({ checked, onChange, disabled = false }) => (
     <button
