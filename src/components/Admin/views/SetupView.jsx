@@ -242,6 +242,21 @@ export default function SetupView({
     { id: 'sess-2', device: 'Chrome • Android', location: 'Mobile Admin', time: '2 hours ago', current: false }
   ]);
 
+  // Database Tools Full-Page State
+  const [lastMaintTime, setLastMaintTime] = useState(() => {
+    const slug = settingsForm?.slug || '';
+    return (slug && localStorage.getItem(`touchqr_last_db_maint_${slug}`)) || 'Today, 10:30 AM';
+  });
+  const [dbRunningAction, setDbRunningAction] = useState(null); // 'optimize' | 'clear_logs' | 'clean_drafts' | 'purge_cache'
+  const [dbActionMsg, setDbActionMsg] = useState('');
+  const [dbActionError, setDbActionError] = useState('');
+  const [dbConfirmType, setDbConfirmType] = useState(null); // 'optimize' | 'clear_logs' | 'clean_drafts' | 'purge_cache'
+  const [dbLogs, setDbLogs] = useState([
+    { id: 1, action: 'Database optimization & table compaction', status: 'Completed', time: 'Today, 10:30 AM', type: 'opt' },
+    { id: 2, action: 'Temporary runtime logs cleanup', status: 'Completed', time: 'Yesterday, 04:20 PM', type: 'clean' },
+    { id: 3, action: 'Automated database health check', status: 'Healthy', time: '2 days ago', type: 'check' }
+  ]);
+
   // Location & GPS Full-Page State
   const [hasUnsavedLocation, setHasUnsavedLocation] = useState(false);
   const [initialLocationSnapshot, setInitialLocationSnapshot] = useState({
@@ -7770,24 +7785,12 @@ export default function SetupView({
 
   const renderDatabaseToolsFullPage = () => {
     const activeSlug = settingsForm?.slug || '';
-    const lastSavedMaintTime = localStorage.getItem(`touchqr_last_db_maint_${activeSlug}`) || 'Today, 10:30 AM';
-    const [lastMaintTime, setLastMaintTime] = useState(lastSavedMaintTime);
-    const [dbRunningAction, setDbRunningAction] = useState(null); // 'optimize' | 'clear_logs' | 'clean_drafts' | 'purge_cache'
-    const [dbActionMsg, setDbActionMsg] = useState('');
-    const [dbActionError, setDbActionError] = useState('');
-    const [dbConfirmType, setDbConfirmType] = useState(null); // 'optimize' | 'clear_logs' | 'clean_drafts' | 'purge_cache'
 
     // System Data Counts (Factual derived data)
     const totalSpacesCount = (Number(settingsForm?.total_tables) || 0) + 
       (Number(settingsForm?.total_cabins) || 0) + 
       (Number(settingsForm?.total_rooms) || 0) + 
       (Number(settingsForm?.total_vip) || 0);
-
-    const [dbLogs, setDbLogs] = useState([
-      { id: 1, action: 'Database optimization & table compaction', status: 'Completed', time: lastMaintTime, type: 'opt' },
-      { id: 2, action: 'Temporary runtime logs cleanup', status: 'Completed', time: 'Yesterday, 04:20 PM', type: 'clean' },
-      { id: 3, action: 'Automated database health check', status: 'Healthy', time: '2 days ago', type: 'check' }
-    ]);
 
     const handleExecuteOptimize = async () => {
       setDbRunningAction('optimize');
