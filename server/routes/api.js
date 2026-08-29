@@ -326,9 +326,117 @@ export function calculateOrderTax(subtotal, gstEnabled) {
   };
 }
 
+// 🏷️ Authoritative Offers & Promotions Helper (Cross-Database PostgreSQL + SQLite Safe)
+export async function enrichItemsWithActiveOffers(restaurantId, dishes = [], combos = [], currencySymbol = '₹') {
+  if ((!dishes || dishes.length === 0) && (!combos || combos.length === 0)) {
+    return { enrichedDishes: dishes, enrichedCombos: combos, validOffers: [] };
+  }
+
+  // Cross-database boolean-safe query: active IS NOT FALSE and not in ('0', 'false', 'f')
+  const [rawOffers, rawOfferItems] = await Promise.all([
+    query("SELECT * FROM offers WHERE restaurant_id = $1 AND (active IS NOT FALSE AND active::text NOT IN ('0', 'false', 'f'))", [restaurantId]).catch(() => []),
+    query("SELECT * FROM offer_items WHERE restaurant_id = $1", [restaurantId]).catch(() => [])
+  ]);
+
+  const now = new Date();
+  const validOffersMap = new Map();
+  (rawOffers || []).forEach(off => {
+    const startsAt = off.starts_at ? new Date(off.starts_at) : null;
+    const endsAt = off.ends_at ? new Date(off.ends_at) : null;
+    if (startsAt && startsAt > now) return;
+    if (endsAt && endsAt < now) return;
+    validOffersMap.set(off.id, off);
+  });
+
+  const dishOfferMap = new Map();
+  const comboOfferMap = new Map();
+
+  (rawOfferItems || []).forEach(item => {
+    const offer = validOffersMap.get(item.offer_id);
+    if (offer) {
+      if (item.dish_id && !dishOfferMap.has(item.dish_id)) {
+        dishOfferMap.set(item.dish_id, offer);
+      }
+      if (item.combo_id && !comboOfferMap.has(item.combo_id)) {
+        comboOfferMap.set(item.combo_id, offer);
+      }
+    }
+  });
+
+  const calculateOfferPrice = (basePrice, offer, sym = '₹') => {
+    if (!offer || basePrice <= 0) return null;
+    const numBase = Number(basePrice);
+    let discounted = numBase;
+    let badge = '';
+
+    if (offer.type === 'percentage') {
+      const pct = Math.min(100, Math.max(0, Number(offer.value)));
+      const discAmt = Math.round((numBase * pct) / 100);
+      discounted = Math.max(0, numBase - discAmt);
+      badge = `${pct}% OFF`;
+    } else if (offer.type === 'flat') {
+      const flatVal = Math.max(0, Number(offer.value));
+      discounted = Math.max(0, numBase - flatVal);
+      badge = `${sym}${flatVal} OFF`;
+    } else if (offer.type === 'special_price') {
+      discounted = Math.max(0, Number(offer.value));
+      badge = `Special Price`;
+    }
+
+    return {
+      offer_id: offer.id,
+      offer_name: offer.name,
+      offer_type: offer.type,
+      offer_value: offer.value,
+      offer_badge: badge,
+      offer_price: discounted,
+      regular_price: numBase,
+      discount_amount: Math.max(0, numBase - discounted)
+    };
+  };
+
+  const enrichedDishes = (dishes || []).map(dish => {
+    const offer = dishOfferMap.get(dish.id);
+    const offerData = offer ? calculateOfferPrice(dish.price, offer, currencySymbol) : null;
+    return {
+      ...dish,
+      ...(offerData ? {
+        offer: offerData,
+        offer_price: offerData.offer_price,
+        offer_badge: offerData.offer_badge,
+        offer_id: offerData.offer_id,
+        regular_price: offerData.regular_price
+      } : {})
+    };
+  });
+
+  const enrichedCombos = (combos || []).map(combo => {
+    const offer = comboOfferMap.get(combo.id);
+    const offerData = offer ? calculateOfferPrice(combo.price, offer, currencySymbol) : null;
+    return {
+      ...combo,
+      ...(offerData ? {
+        offer: offerData,
+        offer_price: offerData.offer_price,
+        offer_badge: offerData.offer_badge,
+        offer_id: offerData.offer_id,
+        regular_price: offerData.regular_price
+      } : {})
+    };
+  });
+
+  return {
+    enrichedDishes,
+    enrichedCombos,
+    validOffers: Array.from(validOffersMap.values())
+  };
+}
+
 // GET Combined Menu Bundle (Blazing-Fast Edge-Cached Payload)
 router.get('/menu-bundle', async (req, res) => {
-  res.setHeader('Cache-Control', 'public, max-age=10, stale-while-revalidate=30');
+  res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate, private');
+  res.setHeader('Pragma', 'no-cache');
+  res.setHeader('Expires', '0');
   try {
     const { slug } = req.query;
     const cleanSlug = String(slug || '').trim().toLowerCase();
@@ -347,7 +455,6 @@ router.get('/menu-bundle', async (req, res) => {
 
     const isActive = resto.active === 1 || resto.active === true || resto.active === '1' || resto.active === undefined || resto.active === null;
     if (!isActive || resto.active === false || resto.active === 0 || resto.active === 'false') {
-      res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
       return res.status(403).json({
         error: 'Restaurant Suspended',
         suspended: true,
@@ -358,9 +465,10 @@ router.get('/menu-bundle', async (req, res) => {
 
     const targetId = resto.id;
     const planTierKey = (resto.plan_tier || 'pro').toLowerCase();
+    const sym = (resto.currency_symbol !== null && resto.currency_symbol !== undefined) ? resto.currency_symbol : '₹';
 
-    // Execute queries in parallel including active offers
-    const [categories, dishes, combos, planRows, rawOffers, rawOfferItems] = await Promise.all([
+    // Execute queries in parallel
+    const [categories, rawDishes, rawCombos, planRows] = await Promise.all([
       query("SELECT * FROM categories WHERE restaurant_id = $1 AND (active IS NULL OR active::text NOT IN ('0', 'false', 'f')) ORDER BY sort_order ASC, id ASC", [targetId]),
       query(`
         SELECT d.*, c.name as category_name 
@@ -370,100 +478,11 @@ router.get('/menu-bundle', async (req, res) => {
         ORDER BY d.id ASC
       `, [targetId]),
       query("SELECT * FROM combos WHERE restaurant_id = $1 AND (available IS NOT FALSE) ORDER BY sort_order ASC, id ASC", [targetId]),
-      query('SELECT * FROM saas_plans WHERE key = $1 OR LOWER(key) = $1', [planTierKey]).catch(() => []),
-      query("SELECT * FROM offers WHERE restaurant_id = $1 AND (active = 1 OR active = true OR active = '1' OR active = 'true')", [targetId]).catch(() => []),
-      query("SELECT * FROM offer_items WHERE restaurant_id = $1", [targetId]).catch(() => [])
+      query('SELECT * FROM saas_plans WHERE key = $1 OR LOWER(key) = $1', [planTierKey]).catch(() => [])
     ]);
 
-    // Filter valid active offers by date
-    const now = new Date();
-    const validOffersMap = new Map(); // offer_id -> offer
-    (rawOffers || []).forEach(off => {
-      const startsAt = off.starts_at ? new Date(off.starts_at) : null;
-      const endsAt = off.ends_at ? new Date(off.ends_at) : null;
-      if (startsAt && startsAt > now) return;
-      if (endsAt && endsAt < now) return;
-      validOffersMap.set(off.id, off);
-    });
-
-    const dishOfferMap = new Map();
-    const comboOfferMap = new Map();
-
-    (rawOfferItems || []).forEach(item => {
-      const offer = validOffersMap.get(item.offer_id);
-      if (offer) {
-        if (item.dish_id && !dishOfferMap.has(item.dish_id)) {
-          dishOfferMap.set(item.dish_id, offer);
-        }
-        if (item.combo_id && !comboOfferMap.has(item.combo_id)) {
-          comboOfferMap.set(item.combo_id, offer);
-        }
-      }
-    });
-
-    const calculateOfferPrice = (basePrice, offer, currencySymbol = '₹') => {
-      if (!offer || basePrice <= 0) return null;
-      const numBase = Number(basePrice);
-      let discounted = numBase;
-      let badge = '';
-
-      if (offer.type === 'percentage') {
-        const pct = Math.min(100, Math.max(0, Number(offer.value)));
-        const discAmt = Math.round((numBase * pct) / 100);
-        discounted = Math.max(0, numBase - discAmt);
-        badge = `${pct}% OFF`;
-      } else if (offer.type === 'flat') {
-        const flatVal = Math.max(0, Number(offer.value));
-        discounted = Math.max(0, numBase - flatVal);
-        badge = `${currencySymbol}${flatVal} OFF`;
-      } else if (offer.type === 'special_price') {
-        discounted = Math.max(0, Number(offer.value));
-        badge = `Special Price`;
-      }
-
-      return {
-        offer_id: offer.id,
-        offer_name: offer.name,
-        offer_type: offer.type,
-        offer_value: offer.value,
-        offer_badge: badge,
-        offer_price: discounted,
-        regular_price: numBase,
-        discount_amount: Math.max(0, numBase - discounted)
-      };
-    };
-
-    const sym = (resto.currency_symbol !== null && resto.currency_symbol !== undefined) ? resto.currency_symbol : '₹';
-
-    const enrichedDishes = (dishes || []).map(dish => {
-      const offer = dishOfferMap.get(dish.id);
-      const offerData = offer ? calculateOfferPrice(dish.price, offer, sym) : null;
-      return {
-        ...dish,
-        ...(offerData ? {
-          offer: offerData,
-          offer_price: offerData.offer_price,
-          offer_badge: offerData.offer_badge,
-          offer_id: offerData.offer_id,
-          regular_price: offerData.regular_price
-        } : {})
-      };
-    });
-
-    const enrichedCombos = (combos || []).map(combo => {
-      const offer = comboOfferMap.get(combo.id);
-      const offerData = offer ? calculateOfferPrice(combo.price, offer, sym) : null;
-      return {
-        ...combo,
-        ...(offerData ? {
-          offer: offerData,
-          offer_price: offerData.offer_price,
-          offer_badge: offerData.offer_badge,
-          offer_id: offerData.offer_id,
-          regular_price: offerData.regular_price
-        } : {})
-      };
-    });
+    // Enrich dishes and combos with active promotions
+    const { enrichedDishes, enrichedCombos, validOffers } = await enrichItemsWithActiveOffers(targetId, rawDishes, rawCombos, sym);
 
     // Increment scan count asynchronously after main data fetch
     query('UPDATE restaurants SET scan_count = COALESCE(scan_count, 0) + 1 WHERE id = $1', [targetId]).catch(() => {});
@@ -558,7 +577,7 @@ router.get('/menu-bundle', async (req, res) => {
       categories: categories || [],
       dishes: enrichedDishes || [],
       combos: enrichedCombos || [],
-      offers: Array.from(validOffersMap.values()) || []
+      offers: validOffers || []
     };
 
     if (cleanSlug) {
@@ -818,6 +837,12 @@ router.get('/dishes', async (req, res) => {
     sql += ` ORDER BY d.id DESC`;
 
     const dishes = await query(sql, params);
+    if (!admin_view && targetId) {
+      const restoObj = await query('SELECT currency_symbol FROM restaurants WHERE id = $1', [targetId]).catch(() => []);
+      const sym = restoObj[0]?.currency_symbol || '₹';
+      const { enrichedDishes } = await enrichItemsWithActiveOffers(targetId, dishes, [], sym);
+      return res.json(enrichedDishes);
+    }
     res.json(dishes);
   } catch (err) {
     console.error('Error fetching dishes:', err);
@@ -832,7 +857,9 @@ router.get('/combos', async (req, res) => {
     const resto = await resolveRestaurant(req, slug);
     if (!resto) return res.json([]);
     const combos = await query('SELECT * FROM combos WHERE restaurant_id = $1 AND (available = true OR available IS NOT FALSE) ORDER BY sort_order ASC, id DESC', [resto.id]);
-    res.json(combos);
+    const sym = resto.currency_symbol || '₹';
+    const { enrichedCombos } = await enrichItemsWithActiveOffers(resto.id, [], combos, sym);
+    res.json(enrichedCombos);
   } catch (err) {
     console.error('Fetch public combos error:', err);
     res.status(500).json({ error: 'Failed to fetch combos' });
@@ -1643,7 +1670,7 @@ router.post('/orders', orderCreationRateLimiter, async (req, res) => {
     const [dbDishes, dbCombos, rawOffers, rawOfferItems] = await Promise.all([
       query('SELECT id, name, price, price_half, available FROM dishes WHERE restaurant_id = $1', [targetId]),
       query('SELECT id, name, price, available, description FROM combos WHERE restaurant_id = $1', [targetId]),
-      query("SELECT * FROM offers WHERE restaurant_id = $1 AND (active = 1 OR active = true OR active = '1' OR active = 'true')", [targetId]).catch(() => []),
+      query("SELECT * FROM offers WHERE restaurant_id = $1 AND (active IS NOT FALSE AND active::text NOT IN ('0', 'false', 'f'))", [targetId]).catch(() => []),
       query("SELECT * FROM offer_items WHERE restaurant_id = $1", [targetId]).catch(() => [])
     ]);
 

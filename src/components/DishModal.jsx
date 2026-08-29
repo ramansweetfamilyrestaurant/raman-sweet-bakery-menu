@@ -172,17 +172,33 @@ export default function DishModal({ dish, onClose, onAddToCart, currencySymbol =
             marginBottom: '10px'
           }}>
             <div>
-              <span style={{
-                fontSize: '0.7rem',
-                fontWeight: 800,
-                color: 'var(--text-gold)',
-                textTransform: 'uppercase',
-                letterSpacing: '1px',
-                display: 'block',
-                marginBottom: '2px'
-              }}>
-                {dish.category_name || 'Chef Specialty'}
-              </span>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '2px', flexWrap: 'wrap' }}>
+                <span style={{
+                  fontSize: '0.7rem',
+                  fontWeight: 800,
+                  color: 'var(--text-gold)',
+                  textTransform: 'uppercase',
+                  letterSpacing: '1px'
+                }}>
+                  {dish.category_name || 'Chef Specialty'}
+                </span>
+                {(dish.offer_badge || dish.offer?.offer_badge) && (
+                  <span style={{
+                    background: 'linear-gradient(135deg, #FFFBEB 0%, #FEF3C7 100%)',
+                    color: '#B45309',
+                    border: '1px solid #F59E0B',
+                    borderRadius: 'var(--radius-pill)',
+                    padding: '1.5px 7px',
+                    fontSize: '0.64rem',
+                    fontWeight: 900,
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: '2px'
+                  }}>
+                    🔥 {dish.offer_badge || dish.offer?.offer_badge}
+                  </span>
+                )}
+              </div>
 
               <h2 style={{
                 fontFamily: 'var(--font-heading)',
@@ -192,10 +208,17 @@ export default function DishModal({ dish, onClose, onAddToCart, currencySymbol =
                 lineHeight: 1.25,
                 display: 'flex',
                 alignItems: 'center',
-                gap: '6px'
+                gap: '6px',
+                margin: '2px 0 0 0'
               }}>
                 {displayName}
               </h2>
+
+              {(dish.offer?.ends_at || dish.offer_ends_at) && (
+                <span style={{ fontSize: '0.65rem', color: '#059669', fontWeight: 700, marginTop: '2px', display: 'block' }}>
+                  ⏳ {lang === 'hi' ? 'ऑफर समाप्ति:' : 'Offer valid till:'} {new Date(dish.offer?.ends_at || dish.offer_ends_at).toLocaleDateString()}
+                </span>
+              )}
             </div>
 
             {/* Dynamic Active Price Tag Pill matching Chaat section */}

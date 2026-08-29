@@ -4156,7 +4156,7 @@ router.post('/offers', authenticateToken, requireActiveSubscription, async (req,
 
     const offerResult = await query(
       'INSERT INTO offers (restaurant_id, name, type, value, starts_at, ends_at, active) VALUES ($1, $2, $3, $4, $5, $6, $7) RETURNING id',
-      [targetId, name.trim(), type, numValue, starts_at || new Date().toISOString(), ends_at || null, active ? 1 : 0]
+      [targetId, name.trim(), type, numValue, starts_at || new Date().toISOString(), ends_at || null, active !== false && active !== 0 && active !== '0']
     );
     const offerId = offerResult[0]?.id || offerResult.lastInsertRowid;
 
@@ -4193,7 +4193,7 @@ router.put('/offers/:id', authenticateToken, requireActiveSubscription, async (r
 
     await query(
       'UPDATE offers SET name = $1, type = $2, value = $3, starts_at = $4, ends_at = $5, active = $6, updated_at = CURRENT_TIMESTAMP WHERE id = $7 AND restaurant_id = $8',
-      [name.trim(), type, numValue, starts_at || new Date().toISOString(), ends_at || null, active ? 1 : 0, req.params.id, targetId]
+      [name.trim(), type, numValue, starts_at || new Date().toISOString(), ends_at || null, active !== false && active !== 0 && active !== '0', req.params.id, targetId]
     );
 
     // Re-sync offer_items
@@ -4227,7 +4227,7 @@ router.patch('/offers/:id/toggle', authenticateToken, requireActiveSubscription,
       return res.status(401).json({ error: 'Restaurant identity is missing from authentication context' });
     }
     const { active } = req.body;
-    await query('UPDATE offers SET active = $1, updated_at = CURRENT_TIMESTAMP WHERE id = $2 AND restaurant_id = $3', [active ? 1 : 0, req.params.id, targetId]);
+    await query('UPDATE offers SET active = $1, updated_at = CURRENT_TIMESTAMP WHERE id = $2 AND restaurant_id = $3', [active !== false && active !== 0 && active !== '0', req.params.id, targetId]);
     clearMenuBundleCache();
     res.json({ message: 'Offer status updated' });
   } catch (err) {

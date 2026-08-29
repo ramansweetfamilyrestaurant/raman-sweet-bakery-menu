@@ -2494,18 +2494,25 @@ export default function App() {
             if (allOfferItems.length === 0) return null;
             const sym = info?.currency_symbol || '₹';
             return (
-              <section style={{ marginBottom: '14px' }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '8px' }}>
-                  <span style={{ fontSize: '1rem' }}>🔥</span>
-                  <h2 style={{ margin: 0, fontSize: '0.88rem', fontWeight: 800, color: 'var(--text-dark)' }}>
-                    {lang === 'hi' ? 'स्पेशल ऑफर्स' : 'Special Offers'}
-                  </h2>
-                  <span style={{
-                    background: '#FEF3C7', color: '#92400E', fontSize: '0.65rem', fontWeight: 700,
-                    padding: '2px 8px', borderRadius: '20px'
-                  }}>
-                    {allOfferItems.length} {lang === 'hi' ? 'ऑफर' : allOfferItems.length === 1 ? 'deal' : 'deals'}
-                  </span>
+              <section style={{ marginBottom: '16px' }}>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '8px' }}>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                      <span style={{ fontSize: '1rem' }}>🔥</span>
+                      <h2 style={{ margin: 0, fontSize: '0.92rem', fontWeight: 800, color: 'var(--text-dark)' }}>
+                        {lang === 'hi' ? 'स्पेशल ऑफर्स' : 'Special Offers'}
+                      </h2>
+                      <span style={{
+                        background: '#FEF3C7', color: '#92400E', fontSize: '0.65rem', fontWeight: 700,
+                        padding: '1.5px 7px', borderRadius: '20px'
+                      }}>
+                        {allOfferItems.length} {lang === 'hi' ? 'ऑफर' : allOfferItems.length === 1 ? 'deal' : 'deals'}
+                      </span>
+                    </div>
+                    <span style={{ fontSize: '0.72rem', color: '#64748B', marginLeft: '22px' }}>
+                      {lang === 'hi' ? 'चयनित व्यंजनों पर विशेष छूट' : 'Save on selected dishes & combos'}
+                    </span>
+                  </div>
                 </div>
                 <div style={{
                   display: 'flex', gap: '10px', overflowX: 'auto', paddingBottom: '6px',
