@@ -24,6 +24,7 @@ import MenuView from './views/MenuView';
 import SetupView from './views/SetupView';
 import QrGeneratorView from './views/QrGeneratorView';
 import ReviewView from './views/ReviewView';
+import NotificationView from './views/NotificationView';
 
 export default function AdminDashboard({
   token,
@@ -3059,6 +3060,26 @@ export default function AdminDashboard({
                   setInitialSetupDrawer(drawer);
                   setActiveTab('settings');
                 }}
+              />
+            )}
+
+            {/* NOTIFICATIONS & ALERTS CENTER VIEW */}
+            {activeTab === 'notifications' && (
+              <NotificationView
+                orders={orders}
+                serviceRequests={serviceRequests}
+                dishes={safeDishes}
+                restaurantInfo={restaurantInfo}
+                settingsForm={settingsForm}
+                capabilities={tenantCaps}
+                token={token}
+                onNavigate={(tab, drawer = null) => {
+                  if (drawer) setInitialSetupDrawer(drawer);
+                  setActiveTab(tab);
+                }}
+                onBackToDashboard={() => setActiveTab('home')}
+                onUpdateOrderStatus={handleUpdateOrderStatus}
+                onResolveServiceRequest={handleResolveServiceRequest}
               />
             )}
 

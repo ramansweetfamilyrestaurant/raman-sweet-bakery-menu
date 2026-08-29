@@ -159,7 +159,7 @@ export default function AdminHeader({
         {/* Notification Bell */}
         <button
           onClick={() => {
-            if (setActiveTab) setActiveTab('orders');
+            if (setActiveTab) setActiveTab('notifications');
           }}
           style={{
             width: '36px',
