@@ -125,14 +125,48 @@ export default function BestsellersCarousel({ dishes = [], onSelectDish, currenc
                   justifyContent: 'space-between',
                   marginTop: '8px'
                 }}>
-                  <span style={{
-                    fontFamily: 'var(--font-heading)',
-                    fontSize: '1.1rem',
-                    fontWeight: 800,
-                    color: 'var(--primary-emerald)'
-                  }}>
-                    {symbol}{Math.round(dish.price)}
-                  </span>
+                  {dish.offer_price !== undefined && dish.offer_price !== null && Number(dish.offer_price) < Number(dish.price) ? (
+                    <div style={{ display: 'flex', alignItems: 'baseline', gap: '6px' }}>
+                      <span style={{
+                        fontFamily: 'var(--font-heading)',
+                        fontSize: '1.1rem',
+                        fontWeight: 800,
+                        color: 'var(--primary-emerald)'
+                      }}>
+                        {symbol}{Math.round(dish.offer_price)}
+                      </span>
+                      <span style={{
+                        fontSize: '0.74rem',
+                        color: '#94A3B8',
+                        textDecoration: 'line-through',
+                        fontWeight: 600
+                      }}>
+                        {symbol}{Math.round(dish.price)}
+                      </span>
+                    </div>
+                  ) : (
+                    <span style={{
+                      fontFamily: 'var(--font-heading)',
+                      fontSize: '1.1rem',
+                      fontWeight: 800,
+                      color: 'var(--primary-emerald)'
+                    }}>
+                      {symbol}{Math.round(dish.price)}
+                    </span>
+                  )}
+                  {(dish.offer_badge || dish.offer?.offer_badge) && (
+                    <span style={{
+                      fontSize: '0.60rem',
+                      fontWeight: 800,
+                      color: '#B45309',
+                      background: '#FEF3C7',
+                      border: '1px solid #F59E0B',
+                      padding: '1px 5px',
+                      borderRadius: 'var(--radius-pill)'
+                    }}>
+                      🔥 {dish.offer_badge || dish.offer?.offer_badge}
+                    </span>
+                  )}
                 </div>
               </div>
             </div>

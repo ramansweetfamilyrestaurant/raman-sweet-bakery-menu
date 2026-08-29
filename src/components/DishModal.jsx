@@ -315,7 +315,7 @@ export default function DishModal({ dish, onClose, onAddToCart, currencySymbol =
                     transition: 'var(--transition-fast)'
                   }}
                 >
-                  {dish.portion_full_label || (lang === 'hi' ? 'फुल' : 'Full')} • {symbol}{dish.price}
+                  {dish.portion_full_label || (lang === 'hi' ? 'फुल' : 'Full')} • {symbol}{dish.offer_price !== undefined && dish.offer_price !== null && Number(dish.offer_price) < Number(dish.price) ? dish.offer_price : dish.price}
                 </button>
               </div>
             </div>

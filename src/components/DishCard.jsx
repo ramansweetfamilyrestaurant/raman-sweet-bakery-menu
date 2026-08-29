@@ -343,7 +343,7 @@ export default function DishCard({ dish, onClick, onAddToCart, currencySymbol = 
             fontWeight: 700,
             color: 'var(--primary-emerald)'
           }}>
-            {hasHalfPrice ? `Half ${symbol}${dish.price_half} | Full ${symbol}${dish.price}` : (dish.portion || 'Special Portion')}
+            {hasHalfPrice ? `Half ${symbol}${dish.price_half} | Full ${symbol}${dish.offer_price !== undefined && dish.offer_price !== null && Number(dish.offer_price) < Number(dish.price) ? dish.offer_price : dish.price}` : (dish.portion || 'Special Portion')}
           </span>
 
           <span style={{

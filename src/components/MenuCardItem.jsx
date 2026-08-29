@@ -119,8 +119,27 @@ export default function MenuCardItem({ dish, lang, onClick, onAddToCart, currenc
         </div>
 
         {/* Badge Pill & Sold Out Indicator Row */}
-        {(dish.badge || !isAvailable) && (
+        {(dish.badge || (dish.offer_badge || dish.offer?.offer_badge) || !isAvailable) && (
           <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginTop: '4px', flexWrap: 'wrap' }}>
+            {/* Special Offer Badge */}
+            {(dish.offer_badge || dish.offer?.offer_badge) && (
+              <span style={{
+                background: 'linear-gradient(135deg, #FFFBEB 0%, #FEF3C7 100%)',
+                color: '#B45309',
+                border: '1px solid #F59E0B',
+                borderRadius: 'var(--radius-pill)',
+                padding: '2px 7px',
+                fontSize: '0.62rem',
+                fontWeight: 900,
+                boxShadow: '0 1px 4px rgba(0,0,0,0.08)',
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '2px'
+              }}>
+                🔥 {dish.offer_badge || dish.offer?.offer_badge}
+              </span>
+            )}
+
             {dish.badge && (() => {
               const lower = dish.badge.toLowerCase();
               let bg = 'linear-gradient(135deg, #FFFBEB 0%, #FEF3C7 100%)';
@@ -152,6 +171,7 @@ export default function MenuCardItem({ dish, lang, onClick, onAddToCart, currenc
                 border = '1px solid #A855F7';
                 icon = '🍕';
               } else if (lower.includes('100') || lower.includes('under')) {
+                if (filtersVisibility?.under100 === false) return null;
                 bg = 'linear-gradient(135deg, #F0FDF4 0%, #DCFCE7 100%)';
                 color = '#15803D';
                 border = '1px solid #22C55E';
@@ -252,29 +272,60 @@ export default function MenuCardItem({ dish, lang, onClick, onAddToCart, currenc
                 lineHeight: 1.2
               }}
             >
-              Full {symbol}{fullPriceNum}
+              Full {symbol}{dish.offer_price !== undefined && dish.offer_price !== null && Number(dish.offer_price) < fullPriceNum ? Math.round(Number(dish.offer_price)) : fullPriceNum}
             </button>
           </div>
         ) : (
-          /* Single Price Pill — Clean White Oval Pill */
-          <div 
-            style={{
-              fontSize: '0.86rem',
-              fontWeight: 900,
-              padding: '3px 12px',
-              borderRadius: 'var(--radius-pill)',
-              background: 'var(--theme-badge-bg, var(--bg-card-soft, #FFFFFF))',
-              color: 'var(--theme-price-color, var(--text-dark))',
-              border: '1.5px solid var(--theme-card-border, var(--border-light))',
-              whiteSpace: 'nowrap',
-              lineHeight: 1.2,
-              boxShadow: 'var(--theme-shadow, 0 1px 4px rgba(0,0,0,0.06))',
-              cursor: 'pointer'
-            }}
-            onClick={() => onClick(dish)}
-          >
-            {symbol}{fullPriceNum.toLocaleString('en-IN')}
-          </div>
+          /* Single Price Pill — Offer Dual Price or Standard White Oval Pill */
+          dish.offer_price !== undefined && dish.offer_price !== null && Number(dish.offer_price) < fullPriceNum ? (
+            <div 
+              style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: '1px', cursor: 'pointer' }}
+              onClick={() => onClick(dish)}
+            >
+              <div style={{
+                fontSize: '0.86rem',
+                fontWeight: 900,
+                padding: '2px 8px',
+                borderRadius: 'var(--radius-pill)',
+                background: '#ECFDF5',
+                color: '#064E3B',
+                border: '1.5px solid #A7F3D0',
+                whiteSpace: 'nowrap',
+                lineHeight: 1.2,
+                boxShadow: '0 1px 4px rgba(6, 78, 59, 0.12)'
+              }}>
+                {symbol}{Number(dish.offer_price).toLocaleString('en-IN')}
+              </div>
+              <span style={{
+                fontSize: '0.68rem',
+                color: '#94A3B8',
+                textDecoration: 'line-through',
+                fontWeight: 600,
+                marginRight: '2px'
+              }}>
+                {symbol}{fullPriceNum.toLocaleString('en-IN')}
+              </span>
+            </div>
+          ) : (
+            <div 
+              style={{
+                fontSize: '0.86rem',
+                fontWeight: 900,
+                padding: '3px 12px',
+                borderRadius: 'var(--radius-pill)',
+                background: 'var(--theme-badge-bg, var(--bg-card-soft, #FFFFFF))',
+                color: 'var(--theme-price-color, var(--text-dark))',
+                border: '1.5px solid var(--theme-card-border, var(--border-light))',
+                whiteSpace: 'nowrap',
+                lineHeight: 1.2,
+                boxShadow: 'var(--theme-shadow, 0 1px 4px rgba(0,0,0,0.06))',
+                cursor: 'pointer'
+              }}
+              onClick={() => onClick(dish)}
+            >
+              {symbol}{fullPriceNum.toLocaleString('en-IN')}
+            </div>
+          )
         )}
 
         {/* Dish Thumbnail & + Add WhatsApp Button */}

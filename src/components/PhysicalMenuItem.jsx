@@ -65,18 +65,18 @@ export default function PhysicalMenuItem({ dish, onClick }) {
           </h3>
 
           {/* Badge Tag */}
-          {dish.badge && (
+          {(dish.badge || (dish.offer_badge || dish.offer?.offer_badge)) && (
             <span style={{
               fontSize: '0.66rem',
               fontWeight: 800,
-              color: 'var(--primary-emerald)',
-              background: 'var(--gold-soft)',
-              border: '1px solid var(--gold-border)',
+              color: (dish.offer_badge || dish.offer?.offer_badge) ? '#B45309' : 'var(--primary-emerald)',
+              background: (dish.offer_badge || dish.offer?.offer_badge) ? '#FEF3C7' : 'var(--gold-soft)',
+              border: (dish.offer_badge || dish.offer?.offer_badge) ? '1px solid #F59E0B' : '1px solid var(--gold-border)',
               padding: '1px 7px',
               borderRadius: 'var(--radius-pill)',
               whiteSpace: 'nowrap'
             }}>
-              {dish.badge}
+              {(dish.offer_badge || dish.offer?.offer_badge) ? `🔥 ${dish.offer_badge || dish.offer?.offer_badge}` : dish.badge}
             </span>
           )}
         </div>
@@ -123,23 +123,45 @@ export default function PhysicalMenuItem({ dish, onClick }) {
                 color: selectedPortion === 'full' ? '#FFFFFF' : 'var(--primary-emerald)'
               }}
             >
-              Full {dish.price}
+              Full {dish.offer_price !== undefined && dish.offer_price !== null && Number(dish.offer_price) < Number(dish.price) ? dish.offer_price : dish.price}
             </button>
           </div>
         ) : (
-          <span 
-            onClick={() => onClick(dish)}
-            style={{
-              fontFamily: 'var(--font-heading)',
-              fontSize: '1.25rem',
-              fontWeight: 800,
-              color: 'var(--primary-emerald)',
-              flexShrink: 0,
-              cursor: 'pointer'
-            }}
-          >
-            {Number(dish.price).toLocaleString('en-IN')}
-          </span>
+          dish.offer_price !== undefined && dish.offer_price !== null && Number(dish.offer_price) < Number(dish.price) ? (
+            <div style={{ display: 'flex', alignItems: 'baseline', gap: '6px', flexShrink: 0 }} onClick={() => onClick(dish)}>
+              <span style={{
+                fontFamily: 'var(--font-heading)',
+                fontSize: '1.25rem',
+                fontWeight: 800,
+                color: '#064E3B',
+                cursor: 'pointer'
+              }}>
+                {Number(dish.offer_price).toLocaleString('en-IN')}
+              </span>
+              <span style={{
+                fontSize: '0.85rem',
+                color: '#94A3B8',
+                textDecoration: 'line-through',
+                fontWeight: 600
+              }}>
+                {Number(dish.price).toLocaleString('en-IN')}
+              </span>
+            </div>
+          ) : (
+            <span 
+              onClick={() => onClick(dish)}
+              style={{
+                fontFamily: 'var(--font-heading)',
+                fontSize: '1.25rem',
+                fontWeight: 800,
+                color: 'var(--primary-emerald)',
+                flexShrink: 0,
+                cursor: 'pointer'
+              }}
+            >
+              {Number(dish.price).toLocaleString('en-IN')}
+            </span>
+          )
         )}
       </div>
 
