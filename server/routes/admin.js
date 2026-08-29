@@ -4096,7 +4096,156 @@ Instructions:
     return res.json({ success: true, reply, provider: 'smart_engine' });
   } catch (err) {
     console.error('Generate AI Review Reply error:', err);
-    res.status(500).json({ error: 'Failed to generate AI reply' });
+// ========== OFFERS & PROMOTIONS CRUD (ADMIN ROUTES) ==========
+
+// GET all offers for admin
+router.get('/offers', authenticateToken, async (req, res) => {
+  try {
+    const targetId = req.user?.restaurant_id;
+    if (!targetId) {
+      return res.status(401).json({ error: 'Restaurant identity is missing from authentication context' });
+    }
+    const offers = await query('SELECT * FROM offers WHERE restaurant_id = $1 ORDER BY id DESC', [targetId]);
+    
+    // Fetch associated offer_items for each offer
+    const offerItems = await query('SELECT * FROM offer_items WHERE restaurant_id = $1', [targetId]);
+    const itemsByOffer = new Map();
+    (offerItems || []).forEach(item => {
+      if (!itemsByOffer.has(item.offer_id)) itemsByOffer.set(item.offer_id, []);
+      itemsByOffer.get(item.offer_id).push(item);
+    });
+
+    const enriched = (offers || []).map(o => ({
+      ...o,
+      items: itemsByOffer.get(o.id) || [],
+      items_count: (itemsByOffer.get(o.id) || []).length
+    }));
+
+    res.json(enriched);
+  } catch (err) {
+    console.error('Fetch offers error:', err);
+    res.status(500).json({ error: 'Failed to fetch offers' });
+  }
+});
+
+// POST create new offer
+router.post('/offers', authenticateToken, requireActiveSubscription, async (req, res) => {
+  try {
+    const targetId = req.user?.restaurant_id;
+    if (!targetId) {
+      return res.status(401).json({ error: 'Restaurant identity is missing from authentication context' });
+    }
+    const { name, type, value, starts_at, ends_at, active = true, items = [] } = req.body;
+    if (!name || !type || value === undefined || value === null) {
+      return res.status(400).json({ error: 'Name, type, and value are required' });
+    }
+    if (!['percentage', 'flat', 'special_price'].includes(type)) {
+      return res.status(400).json({ error: 'Invalid offer type. Allowed: percentage, flat, special_price' });
+    }
+    const numValue = Number(value);
+    if (isNaN(numValue) || numValue <= 0) {
+      return res.status(400).json({ error: 'Offer value must be a positive number' });
+    }
+    if (type === 'percentage' && numValue > 100) {
+      return res.status(400).json({ error: 'Percentage discount cannot exceed 100%' });
+    }
+
+    const offerResult = await query(
+      'INSERT INTO offers (restaurant_id, name, type, value, starts_at, ends_at, active) VALUES ($1, $2, $3, $4, $5, $6, $7) RETURNING id',
+      [targetId, name.trim(), type, numValue, starts_at || new Date().toISOString(), ends_at || null, active ? 1 : 0]
+    );
+    const offerId = offerResult[0]?.id || offerResult.lastInsertRowid;
+
+    if (Array.isArray(items) && items.length > 0) {
+      for (const item of items) {
+        const dishId = item.dish_id || (typeof item === 'number' || !isNaN(Number(item)) ? Number(item) : null);
+        const comboId = item.combo_id || null;
+        if (dishId || comboId) {
+          await query(
+            'INSERT INTO offer_items (offer_id, restaurant_id, dish_id, combo_id) VALUES ($1, $2, $3, $4)',
+            [offerId, targetId, dishId, comboId]
+          );
+        }
+      }
+    }
+
+    clearMenuBundleCache();
+    res.json({ id: offerId, message: 'Offer created successfully' });
+  } catch (err) {
+    console.error('Create offer error:', err);
+    res.status(500).json({ error: 'Failed to create offer' });
+  }
+});
+
+// PUT update offer
+router.put('/offers/:id', authenticateToken, requireActiveSubscription, async (req, res) => {
+  try {
+    const targetId = req.user?.restaurant_id;
+    if (!targetId) {
+      return res.status(401).json({ error: 'Restaurant identity is missing from authentication context' });
+    }
+    const { name, type, value, starts_at, ends_at, active, items = [] } = req.body;
+    const numValue = Number(value);
+
+    await query(
+      'UPDATE offers SET name = $1, type = $2, value = $3, starts_at = $4, ends_at = $5, active = $6, updated_at = CURRENT_TIMESTAMP WHERE id = $7 AND restaurant_id = $8',
+      [name.trim(), type, numValue, starts_at || new Date().toISOString(), ends_at || null, active ? 1 : 0, req.params.id, targetId]
+    );
+
+    // Re-sync offer_items
+    await query('DELETE FROM offer_items WHERE offer_id = $1 AND restaurant_id = $2', [req.params.id, targetId]);
+    if (Array.isArray(items) && items.length > 0) {
+      for (const item of items) {
+        const dishId = item.dish_id || (typeof item === 'number' || !isNaN(Number(item)) ? Number(item) : null);
+        const comboId = item.combo_id || null;
+        if (dishId || comboId) {
+          await query(
+            'INSERT INTO offer_items (offer_id, restaurant_id, dish_id, combo_id) VALUES ($1, $2, $3, $4)',
+            [req.params.id, targetId, dishId, comboId]
+          );
+        }
+      }
+    }
+
+    clearMenuBundleCache();
+    res.json({ message: 'Offer updated successfully' });
+  } catch (err) {
+    console.error('Update offer error:', err);
+    res.status(500).json({ error: 'Failed to update offer' });
+  }
+});
+
+// PATCH toggle offer active status
+router.patch('/offers/:id/toggle', authenticateToken, requireActiveSubscription, async (req, res) => {
+  try {
+    const targetId = req.user?.restaurant_id;
+    if (!targetId) {
+      return res.status(401).json({ error: 'Restaurant identity is missing from authentication context' });
+    }
+    const { active } = req.body;
+    await query('UPDATE offers SET active = $1, updated_at = CURRENT_TIMESTAMP WHERE id = $2 AND restaurant_id = $3', [active ? 1 : 0, req.params.id, targetId]);
+    clearMenuBundleCache();
+    res.json({ message: 'Offer status updated' });
+  } catch (err) {
+    console.error('Toggle offer error:', err);
+    res.status(500).json({ error: 'Failed to toggle offer' });
+  }
+});
+
+// DELETE offer
+router.delete('/offers/:id', authenticateToken, requireActiveSubscription, async (req, res) => {
+  try {
+    const targetId = req.user?.restaurant_id;
+    if (!targetId) {
+      return res.status(401).json({ error: 'Restaurant identity is missing from authentication context' });
+    }
+    await query('DELETE FROM offer_items WHERE offer_id = $1 AND restaurant_id = $2', [req.params.id, targetId]);
+    await query('DELETE FROM offers WHERE id = $1 AND restaurant_id = $2', [req.params.id, targetId]);
+    clearMenuBundleCache();
+    res.json({ message: 'Offer deleted successfully' });
+  } catch (err) {
+    console.error('Delete offer error:', err);
+    res.status(500).json({ error: 'Failed to delete offer' });
   }
 });
 

@@ -937,5 +937,56 @@ export async function deleteCinemaSeat(token, seatId) {
   return handleResponse(res, 'Failed to delete cinema seat');
 }
 
+// ========== OFFERS & PROMOTIONS CLIENT API ==========
 
+export async function fetchAdminOffers(token) {
+  const res = await fetch(`${API_BASE}/admin/offers`, {
+    headers: { Authorization: `Bearer ${token}` },
+    cache: 'no-store'
+  });
+  return handleResponse(res, 'Failed to fetch offers');
+}
 
+export async function createAdminOffer(offerData, token) {
+  const res = await fetch(`${API_BASE}/admin/offers`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      Authorization: `Bearer ${token}`
+    },
+    body: JSON.stringify(offerData)
+  });
+  return handleResponse(res, 'Failed to create offer');
+}
+
+export async function updateAdminOffer(id, offerData, token) {
+  const res = await fetch(`${API_BASE}/admin/offers/${encodeURIComponent(id)}`, {
+    method: 'PUT',
+    headers: {
+      'Content-Type': 'application/json',
+      Authorization: `Bearer ${token}`
+    },
+    body: JSON.stringify(offerData)
+  });
+  return handleResponse(res, 'Failed to update offer');
+}
+
+export async function toggleAdminOffer(id, active, token) {
+  const res = await fetch(`${API_BASE}/admin/offers/${encodeURIComponent(id)}/toggle`, {
+    method: 'PATCH',
+    headers: {
+      'Content-Type': 'application/json',
+      Authorization: `Bearer ${token}`
+    },
+    body: JSON.stringify({ active })
+  });
+  return handleResponse(res, 'Failed to toggle offer status');
+}
+
+export async function deleteAdminOffer(id, token) {
+  const res = await fetch(`${API_BASE}/admin/offers/${encodeURIComponent(id)}`, {
+    method: 'DELETE',
+    headers: { Authorization: `Bearer ${token}` }
+  });
+  return handleResponse(res, 'Failed to delete offer');
+}

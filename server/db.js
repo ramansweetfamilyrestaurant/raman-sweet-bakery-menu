@@ -338,6 +338,29 @@ async function createTables() {
         verified_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
         expires_at TIMESTAMP WITH TIME ZONE NOT NULL,
         created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+      );`,
+
+      `CREATE TABLE IF NOT EXISTS offers (
+        id SERIAL PRIMARY KEY,
+        restaurant_id INT REFERENCES restaurants(id) ON DELETE CASCADE,
+        name VARCHAR(255) NOT NULL,
+        type VARCHAR(50) NOT NULL,
+        value DECIMAL(10, 2) NOT NULL,
+        starts_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        ends_at TIMESTAMP,
+        active BOOLEAN DEFAULT TRUE,
+        minimum_order_value DECIMAL(10, 2) DEFAULT 0,
+        usage_limit INT DEFAULT 0,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+      );`,
+
+      `CREATE TABLE IF NOT EXISTS offer_items (
+        id SERIAL PRIMARY KEY,
+        offer_id INT REFERENCES offers(id) ON DELETE CASCADE,
+        restaurant_id INT REFERENCES restaurants(id) ON DELETE CASCADE,
+        dish_id INT REFERENCES dishes(id) ON DELETE CASCADE,
+        combo_id INT REFERENCES combos(id) ON DELETE CASCADE
       );`
     ];
 
@@ -945,6 +968,32 @@ async function createTables() {
         created_at TEXT DEFAULT CURRENT_TIMESTAMP,
         FOREIGN KEY (restaurant_id) REFERENCES restaurants (id) ON DELETE CASCADE
       );
+      CREATE TABLE IF NOT EXISTS offers (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        restaurant_id INTEGER NOT NULL,
+        name TEXT NOT NULL,
+        type TEXT NOT NULL,
+        value REAL NOT NULL,
+        starts_at TEXT DEFAULT CURRENT_TIMESTAMP,
+        ends_at TEXT,
+        active INTEGER DEFAULT 1,
+        minimum_order_value REAL DEFAULT 0,
+        usage_limit INTEGER DEFAULT 0,
+        created_at TEXT DEFAULT CURRENT_TIMESTAMP,
+        updated_at TEXT DEFAULT CURRENT_TIMESTAMP,
+        FOREIGN KEY (restaurant_id) REFERENCES restaurants (id) ON DELETE CASCADE
+      );
+      CREATE TABLE IF NOT EXISTS offer_items (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        offer_id INTEGER NOT NULL,
+        restaurant_id INTEGER NOT NULL,
+        dish_id INTEGER,
+        combo_id INTEGER,
+        FOREIGN KEY (offer_id) REFERENCES offers (id) ON DELETE CASCADE,
+        FOREIGN KEY (restaurant_id) REFERENCES restaurants (id) ON DELETE CASCADE,
+        FOREIGN KEY (dish_id) REFERENCES dishes (id) ON DELETE CASCADE,
+        FOREIGN KEY (combo_id) REFERENCES combos (id) ON DELETE CASCADE
+      );
     `);
 
     // Phase 4: Subscription Lifecycle columns for SQLite
@@ -1164,6 +1213,42 @@ async function createTables() {
       sqliteDb.exec("CREATE UNIQUE INDEX IF NOT EXISTS idx_payments_gateway_payid ON payments(gateway, gateway_payment_id)");
     } catch (err) {
       console.warn('SQLite migration info:', err.message);
+    }
+
+    // Offers & Promotions tables migration (isolated try/catch for pre-existing databases)
+    try {
+      sqliteDb.exec(`
+        CREATE TABLE IF NOT EXISTS offers (
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          restaurant_id INTEGER NOT NULL,
+          name TEXT NOT NULL,
+          type TEXT NOT NULL,
+          value REAL NOT NULL,
+          starts_at TEXT DEFAULT CURRENT_TIMESTAMP,
+          ends_at TEXT,
+          active INTEGER DEFAULT 1,
+          minimum_order_value REAL DEFAULT 0,
+          usage_limit INTEGER DEFAULT 0,
+          created_at TEXT DEFAULT CURRENT_TIMESTAMP,
+          updated_at TEXT DEFAULT CURRENT_TIMESTAMP,
+          FOREIGN KEY (restaurant_id) REFERENCES restaurants (id) ON DELETE CASCADE
+        );
+      `);
+      sqliteDb.exec(`
+        CREATE TABLE IF NOT EXISTS offer_items (
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          offer_id INTEGER NOT NULL,
+          restaurant_id INTEGER NOT NULL,
+          dish_id INTEGER,
+          combo_id INTEGER,
+          FOREIGN KEY (offer_id) REFERENCES offers (id) ON DELETE CASCADE,
+          FOREIGN KEY (restaurant_id) REFERENCES restaurants (id) ON DELETE CASCADE,
+          FOREIGN KEY (dish_id) REFERENCES dishes (id) ON DELETE CASCADE,
+          FOREIGN KEY (combo_id) REFERENCES combos (id) ON DELETE CASCADE
+        );
+      `);
+    } catch (err) {
+      console.warn('SQLite offers migration info:', err.message);
     }
   }
 }

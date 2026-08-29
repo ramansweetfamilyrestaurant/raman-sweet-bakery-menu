@@ -32,9 +32,14 @@ export default function DishModal({ dish, onClose, onAddToCart, currencySymbol =
     }
   };
 
-  const basePrice = (selectedPortion === 'half' && hasHalfPrice) ? Number(dish.price_half) : Number(dish.price);
+  const regularBasePrice = (selectedPortion === 'half' && hasHalfPrice) ? Number(dish.price_half) : Number(dish.price);
+  let basePrice = regularBasePrice;
+  if ((dish.offer_price !== undefined && dish.offer_price !== null) && selectedPortion !== 'half') {
+    basePrice = Number(dish.offer_price);
+  }
   const extraModifiersPrice = selectedModifiers.reduce((acc, m) => acc + (Number(m.price) || 0), 0);
   const activePrice = basePrice + extraModifiersPrice;
+  const regularActivePrice = regularBasePrice + extraModifiersPrice;
 
   const activePortionLabel = selectedPortion === 'half'
     ? (dish.portion_half_label || (lang === 'hi' ? 'हाफ हाफ पोर्शन' : 'Half Portion'))
@@ -194,21 +199,49 @@ export default function DishModal({ dish, onClose, onAddToCart, currencySymbol =
             </div>
 
             {/* Dynamic Active Price Tag Pill matching Chaat section */}
-            <div style={{
-              fontSize: '1rem',
-              fontWeight: 900,
-              padding: '3px 12px',
-              borderRadius: 'var(--radius-pill)',
-              background: '#FFFFFF',
-              color: 'var(--text-dark)',
-              border: '1.5px solid var(--border-light)',
-              boxShadow: '0 1px 4px rgba(0,0,0,0.06)',
-              whiteSpace: 'nowrap',
-              lineHeight: 1.2,
-              flexShrink: 0
-            }}>
-              {symbol}{Number(activePrice).toLocaleString('en-IN')}
-            </div>
+            {activePrice < regularActivePrice ? (
+              <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: '1px' }}>
+                <div style={{
+                  fontSize: '1.02rem',
+                  fontWeight: 900,
+                  padding: '2px 10px',
+                  borderRadius: 'var(--radius-pill)',
+                  background: '#ECFDF5',
+                  color: '#064E3B',
+                  border: '1.5px solid #A7F3D0',
+                  boxShadow: '0 1px 4px rgba(6, 78, 59, 0.12)',
+                  whiteSpace: 'nowrap',
+                  lineHeight: 1.2
+                }}>
+                  {symbol}{Number(activePrice).toLocaleString('en-IN')}
+                </div>
+                <div style={{
+                  fontSize: '0.72rem',
+                  color: '#94A3B8',
+                  textDecoration: 'line-through',
+                  fontWeight: 600,
+                  marginRight: '4px'
+                }}>
+                  {symbol}{Number(regularActivePrice).toLocaleString('en-IN')}
+                </div>
+              </div>
+            ) : (
+              <div style={{
+                fontSize: '1rem',
+                fontWeight: 900,
+                padding: '3px 12px',
+                borderRadius: 'var(--radius-pill)',
+                background: '#FFFFFF',
+                color: 'var(--text-dark)',
+                border: '1.5px solid var(--border-light)',
+                boxShadow: '0 1px 4px rgba(0,0,0,0.06)',
+                whiteSpace: 'nowrap',
+                lineHeight: 1.2,
+                flexShrink: 0
+              }}>
+                {symbol}{Number(activePrice).toLocaleString('en-IN')}
+              </div>
+            )}
           </div>
 
           {/* Interactive Half / Full Portion Selector */}

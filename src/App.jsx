@@ -526,9 +526,16 @@ export default function App() {
       portionName = dish.portion.trim();
     }
 
-    const basePrice = isHalf ? Math.round(Number(dish.price_half)) : Math.round(Number(dish.price));
+    const regularBasePrice = isHalf ? Math.round(Number(dish.price_half)) : Math.round(Number(dish.price));
+    let effectiveBasePrice = regularBasePrice;
+    if ((dish.offer_price !== undefined && dish.offer_price !== null) && !isHalf) {
+      effectiveBasePrice = Math.round(Number(dish.offer_price));
+    }
+
     const extraPrice = (selectedModifiers || []).reduce((acc, m) => acc + (Number(m.price) || 0), 0);
-    const unitPrice = basePrice + extraPrice;
+    const unitPrice = effectiveBasePrice + extraPrice;
+    const regularUnitPrice = regularBasePrice + extraPrice;
+    const discountAmount = Math.max(0, regularUnitPrice - unitPrice);
 
     // Unique cart key including selected modifiers
     const modKey = (selectedModifiers || []).map(m => m.name).sort().join('_');
@@ -546,6 +553,9 @@ export default function App() {
         portion: portionName,
         modifiers: selectedModifiers || [],
         price: unitPrice,
+        regular_price: regularUnitPrice,
+        discount_amount: discountAmount,
+        offer_id: dish.offer_id || null,
         quantity: 1
       }]);
     }
@@ -556,6 +566,10 @@ export default function App() {
     try { comboItems = typeof combo.items === 'string' ? JSON.parse(combo.items) : (combo.items || []); } catch { comboItems = []; }
     const includesText = comboItems.map(i => `${i.qty > 1 ? i.qty + 'x ' : ''}${i.dish_name}${i.portion === 'half' ? ' (H)' : ''}`).join(' + ');
     const cartKey = `combo_${combo.id}`;
+    const regularPrice = Math.round(Number(combo.price));
+    const effectivePrice = (combo.offer_price !== undefined && combo.offer_price !== null) ? Math.round(Number(combo.offer_price)) : regularPrice;
+    const discountAmount = Math.max(0, regularPrice - effectivePrice);
+
     const existingIndex = cartItems.findIndex(i => i.key === cartKey);
     if (existingIndex > -1) {
       const updated = [...cartItems];
@@ -566,7 +580,10 @@ export default function App() {
         key: cartKey,
         dish: { id: `combo_${combo.id}`, name: combo.name, image: combo.image },
         portion: 'Combo',
-        price: Math.round(Number(combo.price)),
+        price: effectivePrice,
+        regular_price: regularPrice,
+        discount_amount: discountAmount,
+        offer_id: combo.offer_id || null,
         quantity: 1,
         isCombo: true,
         comboIncludes: includesText
@@ -2469,6 +2486,101 @@ export default function App() {
           </div>
         ) : (
           <>
+          {/* 🔥 SPECIAL OFFERS BANNER */}
+          {!searchQuery && (() => {
+            const offerDishes = dishes.filter(d => d.offer_price !== undefined && d.offer_price !== null);
+            const offerCombos = (combos || []).filter(c => c.offer_price !== undefined && c.offer_price !== null);
+            const allOfferItems = [...offerDishes.map(d => ({ ...d, _type: 'dish' })), ...offerCombos.map(c => ({ ...c, _type: 'combo' }))];
+            if (allOfferItems.length === 0) return null;
+            const sym = info?.currency_symbol || '₹';
+            return (
+              <section style={{ marginBottom: '14px' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '8px' }}>
+                  <span style={{ fontSize: '1rem' }}>🔥</span>
+                  <h2 style={{ margin: 0, fontSize: '0.88rem', fontWeight: 800, color: 'var(--text-dark)' }}>
+                    {lang === 'hi' ? 'स्पेशल ऑफर्स' : 'Special Offers'}
+                  </h2>
+                  <span style={{
+                    background: '#FEF3C7', color: '#92400E', fontSize: '0.65rem', fontWeight: 700,
+                    padding: '2px 8px', borderRadius: '20px'
+                  }}>
+                    {allOfferItems.length} {lang === 'hi' ? 'ऑफर' : allOfferItems.length === 1 ? 'deal' : 'deals'}
+                  </span>
+                </div>
+                <div style={{
+                  display: 'flex', gap: '10px', overflowX: 'auto', paddingBottom: '6px',
+                  WebkitOverflowScrolling: 'touch', scrollbarWidth: 'none', msOverflowStyle: 'none'
+                }}>
+                  {allOfferItems.slice(0, 10).map((item, idx) => {
+                    const regularPrice = item._type === 'combo' ? (item.regular_price || item.price) : (item.regular_price || item.price || item.portion_full_price);
+                    const offerPrice = item.offer_price;
+                    return (
+                      <div
+                        key={`offer-${item._type}-${item.id}-${idx}`}
+                        onClick={() => {
+                          if (item._type === 'dish') {
+                            const catSection = document.getElementById(`category-${item.category_id}`);
+                            if (catSection) catSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                          } else {
+                            const comboSection = document.getElementById('combos-section');
+                            if (comboSection) comboSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                          }
+                        }}
+                        style={{
+                          minWidth: '140px', maxWidth: '160px', flex: '0 0 auto',
+                          background: '#FFFFFF', borderRadius: '12px',
+                          border: '1px solid #E2E8F0', padding: '10px',
+                          cursor: 'pointer', position: 'relative',
+                          boxShadow: '0 1px 4px rgba(0,0,0,0.04)'
+                        }}
+                      >
+                        {item.offer_badge && (
+                          <span style={{
+                            position: 'absolute', top: '6px', right: '6px',
+                            background: 'linear-gradient(135deg, #EF4444, #DC2626)',
+                            color: '#FFFFFF', fontSize: '0.58rem', fontWeight: 800,
+                            padding: '2px 6px', borderRadius: '6px', letterSpacing: '0.02em'
+                          }}>
+                            {item.offer_badge}
+                          </span>
+                        )}
+                        {item.image ? (
+                          <img src={item.image} alt={item.name} style={{
+                            width: '100%', height: '70px', objectFit: 'cover',
+                            borderRadius: '8px', marginBottom: '6px'
+                          }} />
+                        ) : (
+                          <div style={{
+                            width: '100%', height: '70px', borderRadius: '8px',
+                            marginBottom: '6px', background: '#F1F5F9',
+                            display: 'flex', alignItems: 'center', justifyContent: 'center',
+                            fontSize: '1.5rem'
+                          }}>
+                            {item._type === 'combo' ? '🍱' : '🍽️'}
+                          </div>
+                        )}
+                        <p style={{
+                          margin: '0 0 4px 0', fontSize: '0.74rem', fontWeight: 700,
+                          color: 'var(--text-dark)', lineHeight: 1.2,
+                          overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap'
+                        }}>
+                          {item.name}
+                        </p>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                          <span style={{ fontSize: '0.78rem', fontWeight: 800, color: '#059669' }}>
+                            {sym}{offerPrice}
+                          </span>
+                          <span style={{ fontSize: '0.65rem', color: '#94A3B8', textDecoration: 'line-through' }}>
+                            {sym}{regularPrice}
+                          </span>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </section>
+            );
+          })()}
           {/* 🛒 COMBO DEALS SECTION - ULTRA SLIM & MOBILE-NATIVE */}
           {combos.length > 0 && !searchQuery && info?.filters_visibility?.combo !== false && (
             <section id="combos-section" style={{ marginBottom: '12px', scrollMarginTop: '110px' }}>
@@ -2865,9 +2977,16 @@ export default function App() {
                               ))}
                             </div>
                           )}
-                          <span style={{ fontSize: '0.82rem', color: 'var(--gold-primary)', fontWeight: 800 }}>
-                            {sym}{item.price} x {item.quantity} = {sym}{item.price * item.quantity}
-                          </span>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginTop: '2px' }}>
+                            <span style={{ fontSize: '0.84rem', color: 'var(--gold-primary)', fontWeight: 800 }}>
+                              {sym}{item.price} x {item.quantity} = {sym}{item.price * item.quantity}
+                            </span>
+                            {item.regular_price && item.regular_price > item.price && (
+                              <span style={{ fontSize: '0.72rem', color: '#94A3B8', textDecoration: 'line-through' }}>
+                                {sym}{item.regular_price * item.quantity}
+                              </span>
+                            )}
+                          </div>
                         </div>
                         <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                           <button onClick={() => handleAddToCart(item.dish, (item.portion === 'Half' || item.portion === item.dish?.portion_half_label) ? 'half' : 'full', item.modifiers)} style={{ background: 'var(--primary-emerald)', color: '#FFF', border: 'none', width: '28px', height: '28px', borderRadius: '50%', fontWeight: 900, cursor: 'pointer', fontSize: '1rem' }}>+</button>
@@ -2975,6 +3094,15 @@ export default function App() {
                           <span>Items Subtotal</span>
                           <span>{sym}{subtotal.toFixed(2)}</span>
                         </div>
+                        {(() => {
+                          const totalSavings = cartItems.reduce((sum, item) => sum + ((item.discount_amount || 0) * (item.quantity || 1)), 0);
+                          return totalSavings > 0 ? (
+                            <div style={{ display: 'flex', justifyContent: 'space-between', color: '#059669', fontWeight: 600 }}>
+                              <span>🎉 Offer Savings</span>
+                              <span>-{sym}{totalSavings.toFixed(2)}</span>
+                            </div>
+                          ) : null;
+                        })()}
                         <div style={{ display: 'flex', justifyContent: 'space-between', color: '#64748B' }}>
                           <span>CGST (2.5%)</span>
                           <span>{sym}{cgst.toFixed(2)}</span>

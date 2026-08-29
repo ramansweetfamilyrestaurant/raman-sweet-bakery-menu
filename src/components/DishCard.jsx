@@ -124,8 +124,27 @@ export default function DishCard({ dish, onClick, onAddToCart, currencySymbol = 
             </span>
           </div>
 
+          {/* Special Offer Badge */}
+          {(dish.offer_badge || dish.offer?.offer_badge) && (
+            <div style={{
+              background: 'linear-gradient(135deg, #FFFBEB 0%, #FEF3C7 100%)',
+              color: '#B45309',
+              border: '1px solid #F59E0B',
+              borderRadius: 'var(--radius-pill)',
+              padding: '2px 7px',
+              fontSize: '0.62rem',
+              fontWeight: 900,
+              boxShadow: '0 2px 6px rgba(0,0,0,0.15)',
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: '2px'
+            }}>
+              🔥 {dish.offer_badge || dish.offer?.offer_badge}
+            </div>
+          )}
+
           {/* Customizable / Add-ons Badge */}
-          {(hasModifiers || hasHalfPrice) && (
+          {(hasModifiers || hasHalfPrice) && !(dish.offer_badge || dish.offer?.offer_badge) && (
             <div style={{
               background: '#0A2315',
               color: '#DFBA67',
@@ -254,19 +273,46 @@ export default function DishCard({ dish, onClick, onAddToCart, currencySymbol = 
               {displayName}
             </h3>
 
-            <span style={{
-              fontSize: '0.86rem',
-              fontWeight: 900,
-              color: 'var(--theme-price-color, var(--text-dark))',
-              background: 'var(--theme-badge-bg, var(--bg-card-soft, #FFFFFF))',
-              border: '1.5px solid var(--theme-card-border, var(--border-light))',
-              padding: '3px 10px',
-              borderRadius: 'var(--radius-pill)',
-              whiteSpace: 'nowrap',
-              boxShadow: 'var(--theme-shadow, 0 1px 4px rgba(0,0,0,0.06))'
-            }}>
-              {symbol}{Number(dish.price).toLocaleString('en-IN')}
-            </span>
+            {dish.offer_price !== undefined && dish.offer_price !== null && Number(dish.offer_price) < Number(dish.price) ? (
+              <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: '1px' }}>
+                <span style={{
+                  fontSize: '0.88rem',
+                  fontWeight: 900,
+                  color: '#064E3B',
+                  background: '#ECFDF5',
+                  border: '1.5px solid #A7F3D0',
+                  padding: '2px 8px',
+                  borderRadius: 'var(--radius-pill)',
+                  whiteSpace: 'nowrap',
+                  boxShadow: '0 1px 4px rgba(6, 78, 59, 0.12)'
+                }}>
+                  {symbol}{Number(dish.offer_price).toLocaleString('en-IN')}
+                </span>
+                <span style={{
+                  fontSize: '0.70rem',
+                  color: '#94A3B8',
+                  textDecoration: 'line-through',
+                  fontWeight: 600,
+                  marginRight: '4px'
+                }}>
+                  {symbol}{Number(dish.price).toLocaleString('en-IN')}
+                </span>
+              </div>
+            ) : (
+              <span style={{
+                fontSize: '0.86rem',
+                fontWeight: 900,
+                color: 'var(--theme-price-color, var(--text-dark))',
+                background: 'var(--theme-badge-bg, var(--bg-card-soft, #FFFFFF))',
+                border: '1.5px solid var(--theme-card-border, var(--border-light))',
+                padding: '3px 10px',
+                borderRadius: 'var(--radius-pill)',
+                whiteSpace: 'nowrap',
+                boxShadow: 'var(--theme-shadow, 0 1px 4px rgba(0,0,0,0.06))'
+              }}>
+                {symbol}{Number(dish.price).toLocaleString('en-IN')}
+              </span>
+            )}
           </div>
 
           {displayDesc && (

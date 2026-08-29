@@ -26,6 +26,7 @@ import QrGeneratorView from './views/QrGeneratorView';
 import ReviewView from './views/ReviewView';
 import NotificationView from './views/NotificationView';
 import SupportView from './views/SupportView';
+import OffersView from './views/OffersView';
 
 export default function AdminDashboard({
   token,
@@ -3041,6 +3042,24 @@ export default function AdminDashboard({
                   setActiveTab('settings');
                 }}
                 onUpdateSpaceType={handleUpdateSpaceType}
+              />
+            )}
+
+            {/* OFFERS & PROMOTIONS VIEW */}
+            {activeTab === 'offers' && (
+              <OffersView
+                restaurantInfo={restaurantInfo}
+                settingsForm={settingsForm}
+                dishes={dishes}
+                combos={combos}
+                categories={categories}
+                token={token}
+                capabilities={tenantCaps}
+                onUpgrade={() => {
+                  setInitialSetupDrawer('subscription');
+                  setActiveTab('settings');
+                }}
+                onNavigate={(tab) => setActiveTab(tab)}
               />
             )}
 

@@ -13,7 +13,8 @@ import {
   Users,
   Megaphone,
   CreditCard,
-  ArrowRight
+  ArrowRight,
+  Tag
 } from 'lucide-react';
 import { resolveImageUrl } from '../../../utils/imageHelper';
 
@@ -322,10 +323,10 @@ export default function AdminSidebar({
             </div>
           </button>
 
-          {/* Marketing */}
+          {/* Offers & Promotions */}
           <button
-            onClick={() => setActiveTab('qr-generator')}
-            className="sidebar-nav-item"
+            onClick={() => setActiveTab('offers')}
+            className={`sidebar-nav-item ${activeTab === 'offers' ? 'active' : ''}`}
             style={{
               display: 'flex',
               alignItems: 'center',
@@ -333,17 +334,42 @@ export default function AdminSidebar({
               width: '100%',
               padding: '9px 12px',
               borderRadius: '10px',
-              border: '1px solid transparent',
+              border: activeTab === 'offers' ? '1px solid #1E293B' : '1px solid transparent',
               cursor: 'pointer',
-              background: 'transparent',
-              color: '#94A3B8',
-              fontWeight: 500,
+              background: activeTab === 'offers' ? '#0F172A' : 'transparent',
+              color: activeTab === 'offers' ? '#FFFFFF' : '#94A3B8',
+              fontWeight: activeTab === 'offers' ? 700 : 500,
               fontSize: '0.84rem'
             }}
           >
             <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-              <Megaphone size={17} color="#94A3B8" />
-              <span>Marketing</span>
+              <Tag size={17} color={activeTab === 'offers' ? '#10B981' : '#94A3B8'} />
+              <span>Offers & Deals</span>
+            </div>
+          </button>
+
+          {/* QR Standees / Marketing */}
+          <button
+            onClick={() => setActiveTab('qr-generator')}
+            className={`sidebar-nav-item ${activeTab === 'qr-generator' ? 'active' : ''}`}
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+              width: '100%',
+              padding: '9px 12px',
+              borderRadius: '10px',
+              border: activeTab === 'qr-generator' ? '1px solid #1E293B' : '1px solid transparent',
+              cursor: 'pointer',
+              background: activeTab === 'qr-generator' ? '#0F172A' : 'transparent',
+              color: activeTab === 'qr-generator' ? '#FFFFFF' : '#94A3B8',
+              fontWeight: activeTab === 'qr-generator' ? 700 : 500,
+              fontSize: '0.84rem'
+            }}
+          >
+            <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+              <QrCode size={17} color={activeTab === 'qr-generator' ? '#10B981' : '#94A3B8'} />
+              <span>QR Standees</span>
             </div>
           </button>
 

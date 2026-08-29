@@ -359,8 +359,8 @@ router.get('/menu-bundle', async (req, res) => {
     const targetId = resto.id;
     const planTierKey = (resto.plan_tier || 'pro').toLowerCase();
 
-    // Execute queries in parallel
-    const [categories, dishes, combos, planRows] = await Promise.all([
+    // Execute queries in parallel including active offers
+    const [categories, dishes, combos, planRows, rawOffers, rawOfferItems] = await Promise.all([
       query("SELECT * FROM categories WHERE restaurant_id = $1 AND (active IS NULL OR active::text NOT IN ('0', 'false', 'f')) ORDER BY sort_order ASC, id ASC", [targetId]),
       query(`
         SELECT d.*, c.name as category_name 
@@ -370,8 +370,100 @@ router.get('/menu-bundle', async (req, res) => {
         ORDER BY d.id ASC
       `, [targetId]),
       query("SELECT * FROM combos WHERE restaurant_id = $1 AND (available IS NOT FALSE) ORDER BY sort_order ASC, id ASC", [targetId]),
-      query('SELECT * FROM saas_plans WHERE key = $1 OR LOWER(key) = $1', [planTierKey]).catch(() => [])
+      query('SELECT * FROM saas_plans WHERE key = $1 OR LOWER(key) = $1', [planTierKey]).catch(() => []),
+      query("SELECT * FROM offers WHERE restaurant_id = $1 AND (active = 1 OR active = true OR active = '1' OR active = 'true')", [targetId]).catch(() => []),
+      query("SELECT * FROM offer_items WHERE restaurant_id = $1", [targetId]).catch(() => [])
     ]);
+
+    // Filter valid active offers by date
+    const now = new Date();
+    const validOffersMap = new Map(); // offer_id -> offer
+    (rawOffers || []).forEach(off => {
+      const startsAt = off.starts_at ? new Date(off.starts_at) : null;
+      const endsAt = off.ends_at ? new Date(off.ends_at) : null;
+      if (startsAt && startsAt > now) return;
+      if (endsAt && endsAt < now) return;
+      validOffersMap.set(off.id, off);
+    });
+
+    const dishOfferMap = new Map();
+    const comboOfferMap = new Map();
+
+    (rawOfferItems || []).forEach(item => {
+      const offer = validOffersMap.get(item.offer_id);
+      if (offer) {
+        if (item.dish_id && !dishOfferMap.has(item.dish_id)) {
+          dishOfferMap.set(item.dish_id, offer);
+        }
+        if (item.combo_id && !comboOfferMap.has(item.combo_id)) {
+          comboOfferMap.set(item.combo_id, offer);
+        }
+      }
+    });
+
+    const calculateOfferPrice = (basePrice, offer, currencySymbol = '₹') => {
+      if (!offer || basePrice <= 0) return null;
+      const numBase = Number(basePrice);
+      let discounted = numBase;
+      let badge = '';
+
+      if (offer.type === 'percentage') {
+        const pct = Math.min(100, Math.max(0, Number(offer.value)));
+        const discAmt = Math.round((numBase * pct) / 100);
+        discounted = Math.max(0, numBase - discAmt);
+        badge = `${pct}% OFF`;
+      } else if (offer.type === 'flat') {
+        const flatVal = Math.max(0, Number(offer.value));
+        discounted = Math.max(0, numBase - flatVal);
+        badge = `${currencySymbol}${flatVal} OFF`;
+      } else if (offer.type === 'special_price') {
+        discounted = Math.max(0, Number(offer.value));
+        badge = `Special Price`;
+      }
+
+      return {
+        offer_id: offer.id,
+        offer_name: offer.name,
+        offer_type: offer.type,
+        offer_value: offer.value,
+        offer_badge: badge,
+        offer_price: discounted,
+        regular_price: numBase,
+        discount_amount: Math.max(0, numBase - discounted)
+      };
+    };
+
+    const sym = (resto.currency_symbol !== null && resto.currency_symbol !== undefined) ? resto.currency_symbol : '₹';
+
+    const enrichedDishes = (dishes || []).map(dish => {
+      const offer = dishOfferMap.get(dish.id);
+      const offerData = offer ? calculateOfferPrice(dish.price, offer, sym) : null;
+      return {
+        ...dish,
+        ...(offerData ? {
+          offer: offerData,
+          offer_price: offerData.offer_price,
+          offer_badge: offerData.offer_badge,
+          offer_id: offerData.offer_id,
+          regular_price: offerData.regular_price
+        } : {})
+      };
+    });
+
+    const enrichedCombos = (combos || []).map(combo => {
+      const offer = comboOfferMap.get(combo.id);
+      const offerData = offer ? calculateOfferPrice(combo.price, offer, sym) : null;
+      return {
+        ...combo,
+        ...(offerData ? {
+          offer: offerData,
+          offer_price: offerData.offer_price,
+          offer_badge: offerData.offer_badge,
+          offer_id: offerData.offer_id,
+          regular_price: offerData.regular_price
+        } : {})
+      };
+    });
 
     // Increment scan count asynchronously after main data fetch
     query('UPDATE restaurants SET scan_count = COALESCE(scan_count, 0) + 1 WHERE id = $1', [targetId]).catch(() => {});
@@ -436,7 +528,7 @@ router.get('/menu-bundle', async (req, res) => {
       google_maps_url: resto.google_maps_url || '',
       fssai_lic_no: resto.fssai_lic_no || '',
       filters_visibility: filtersVis,
-      currency_symbol: (resto.currency_symbol !== null && resto.currency_symbol !== undefined) ? resto.currency_symbol : '₹',
+      currency_symbol: sym,
       plan_tier: resto.plan_tier || 'pro',
       whatsapp_number: resto.whatsapp_number || resto.phone || '',
       whatsapp_enabled: whatsappEnabled,
@@ -464,8 +556,9 @@ router.get('/menu-bundle', async (req, res) => {
     const payload = {
       info: infoObj,
       categories: categories || [],
-      dishes: dishes || [],
-      combos: combos || []
+      dishes: enrichedDishes || [],
+      combos: enrichedCombos || [],
+      offers: Array.from(validOffersMap.values()) || []
     };
 
     if (cleanSlug) {
@@ -1547,10 +1640,35 @@ router.post('/orders', orderCreationRateLimiter, async (req, res) => {
     let distanceMetersValue = distance_meters !== undefined && distance_meters !== null && !isNaN(Number(distance_meters)) ? Number(distance_meters) : null;
 
     // Step 10: Check cart + price + availability on SERVER (Server is the SOLE price authority)
-    const dbDishes = await query('SELECT id, name, price, price_half, available FROM dishes WHERE restaurant_id = $1', [targetId]);
-    const dbCombos = await query('SELECT id, name, price, available, description FROM combos WHERE restaurant_id = $1', [targetId]);
+    const [dbDishes, dbCombos, rawOffers, rawOfferItems] = await Promise.all([
+      query('SELECT id, name, price, price_half, available FROM dishes WHERE restaurant_id = $1', [targetId]),
+      query('SELECT id, name, price, available, description FROM combos WHERE restaurant_id = $1', [targetId]),
+      query("SELECT * FROM offers WHERE restaurant_id = $1 AND (active = 1 OR active = true OR active = '1' OR active = 'true')", [targetId]).catch(() => []),
+      query("SELECT * FROM offer_items WHERE restaurant_id = $1", [targetId]).catch(() => [])
+    ]);
+
     const dishMap = new Map((dbDishes || []).map(d => [String(d.id), d]));
     const comboMap = new Map((dbCombos || []).map(c => [String(c.id), c]));
+
+    const orderNow = new Date();
+    const activeOffersMap = new Map();
+    (rawOffers || []).forEach(off => {
+      const startsAt = off.starts_at ? new Date(off.starts_at) : null;
+      const endsAt = off.ends_at ? new Date(off.ends_at) : null;
+      if (startsAt && startsAt > orderNow) return;
+      if (endsAt && endsAt < orderNow) return;
+      activeOffersMap.set(off.id, off);
+    });
+
+    const dishOfferMap = new Map();
+    const comboOfferMap = new Map();
+    (rawOfferItems || []).forEach(item => {
+      const offer = activeOffersMap.get(item.offer_id);
+      if (offer) {
+        if (item.dish_id && !dishOfferMap.has(item.dish_id)) dishOfferMap.set(item.dish_id, offer);
+        if (item.combo_id && !comboOfferMap.has(item.combo_id)) comboOfferMap.set(item.combo_id, offer);
+      }
+    });
 
     let serverVerifiedTotal = 0;
     const verifiedItems = [];
@@ -1611,30 +1729,57 @@ router.post('/orders', orderCreationRateLimiter, async (req, res) => {
         });
       }
 
-      // Invariant 1, 3, 4: Server determines price exclusively from database record
-      let itemPrice = 0;
+      // Invariant 1, 3, 4: Server determines price exclusively from database record & active offer
+      let baseRegularPrice = 0;
       let portionLabel = item.portion || '';
       if (isCombo) {
-        itemPrice = Number(dbItem.price) || 0;
+        baseRegularPrice = Number(dbItem.price) || 0;
       } else {
         const isHalfPortion = String(item.portion || item.portion_type || '').toLowerCase().trim() === 'half';
         const hasHalfPrice = dbItem.price_half !== null && dbItem.price_half !== undefined && Number(dbItem.price_half) > 0;
         if (isHalfPortion && hasHalfPrice) {
-          itemPrice = Number(dbItem.price_half);
+          baseRegularPrice = Number(dbItem.price_half);
           portionLabel = 'Half';
         } else {
-          itemPrice = Number(dbItem.price) || 0;
+          baseRegularPrice = Number(dbItem.price) || 0;
         }
       }
 
-      serverVerifiedTotal += itemPrice * qty;
+      // Check active offer for this dish/combo
+      const activeOffer = isCombo ? comboOfferMap.get(dbItem.id) : dishOfferMap.get(dbItem.id);
+      let effectiveItemPrice = baseRegularPrice;
+      let appliedDiscount = 0;
+      let appliedOfferId = null;
+
+      if (activeOffer) {
+        if (activeOffer.type === 'percentage') {
+          const pct = Math.min(100, Math.max(0, Number(activeOffer.value)));
+          appliedDiscount = Math.round((baseRegularPrice * pct) / 100);
+          effectiveItemPrice = Math.max(0, baseRegularPrice - appliedDiscount);
+          appliedOfferId = activeOffer.id;
+        } else if (activeOffer.type === 'flat') {
+          const flatVal = Math.max(0, Number(activeOffer.value));
+          appliedDiscount = Math.min(baseRegularPrice, flatVal);
+          effectiveItemPrice = Math.max(0, baseRegularPrice - appliedDiscount);
+          appliedOfferId = activeOffer.id;
+        } else if (activeOffer.type === 'special_price') {
+          effectiveItemPrice = Math.max(0, Number(activeOffer.value));
+          appliedDiscount = Math.max(0, baseRegularPrice - effectiveItemPrice);
+          appliedOfferId = activeOffer.id;
+        }
+      }
+
+      serverVerifiedTotal += effectiveItemPrice * qty;
 
       verifiedItems.push({
         dish_id: item.dish_id,
         name: dbItem.name,
         portion: portionLabel,
         modifiers: Array.isArray(item.modifiers) ? item.modifiers : [],
-        price: itemPrice,
+        price: effectiveItemPrice,
+        regular_price: baseRegularPrice,
+        discount_amount: appliedDiscount,
+        offer_id: appliedOfferId,
         quantity: qty,
         ...(isCombo ? { type: 'combo', includes: dbItem.description || item.includes || '' } : {})
       });
