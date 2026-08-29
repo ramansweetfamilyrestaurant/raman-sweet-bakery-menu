@@ -3078,7 +3078,7 @@ export default function AdminDashboard({
                   setActiveTab(tab);
                 }}
                 onBackToDashboard={() => setActiveTab('home')}
-                onUpdateOrderStatus={handleUpdateOrderStatus}
+                onUpdateOrderStatus={handleUpdateStatus}
                 onResolveServiceRequest={handleResolveServiceRequest}
               />
             )}
