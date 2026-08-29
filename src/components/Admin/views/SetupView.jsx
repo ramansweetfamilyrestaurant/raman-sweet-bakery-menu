@@ -1,5 +1,7 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { Store, Bell, Utensils, MapPin, CreditCard, Lock, ChevronRight, Upload, Volume2, ShieldCheck, Printer, Map, Plus, Trash2, Edit, Check, X, AlertTriangle, Film, Armchair, Crown, RefreshCw, Zap, Clock, CheckCircle2, History, ArrowUpRight, ArrowDownRight, ArrowLeft, Info, Home, Sliders, Code2, ChevronDown, Radio, QrCode, Palette, Database, IndianRupee, DollarSign, FileText, Tag, Languages, Eye, EyeOff, Package, ShoppingBag, Image, Search, Grid, List, Layers, AlignLeft, Leaf, Star, Flame, ShoppingCart, Users, Globe, HelpCircle, Lightbulb, Sparkles, Monitor, Navigation, Receipt } from 'lucide-react';
+import L from 'leaflet';
+import 'leaflet/dist/leaflet.css';
 import AdminDrawer from '../components/AdminDrawer';
 import LocationPickerModal from '../../Common/LocationPickerModal';
 import {
@@ -29,6 +31,149 @@ import {
 } from '../../../api/client';
 import { CUSTOMER_MENU_THEMES, THEME_LIST, resolveTheme } from '../../../constants/themes';
 
+// Configure Leaflet Default Marker Icon
+try {
+  delete L.Icon.Default.prototype._getIconUrl;
+  L.Icon.Default.mergeOptions({
+    iconRetinaUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon-2x.png',
+    iconUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon.png',
+    shadowUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-shadow.png',
+  });
+} catch (e) {}
+
+const restaurantMarkerIcon = L.divIcon({
+  className: 'custom-resto-marker',
+  html: `<div style="
+    background: linear-gradient(135deg, #064E3B 0%, #059669 100%);
+    width: 36px; height: 36px;
+    border-radius: 50% 50% 50% 0;
+    transform: rotate(-45deg);
+    display: flex; align-items: center; justify-content: center;
+    box-shadow: 0 4px 14px rgba(6, 78, 59, 0.4);
+    border: 2.5px solid #FFFFFF;
+    cursor: grab;
+  ">
+    <span style="transform: rotate(45deg); font-size: 16px;">📍</span>
+  </div>`,
+  iconSize: [36, 36],
+  iconAnchor: [18, 36],
+  popupAnchor: [0, -36]
+});
+
+function EmbeddedLocationMap({ lat, lng, radius, restaurantName, onLocationChange }) {
+  const mapContainerRef = useRef(null);
+  const mapInstanceRef = useRef(null);
+  const markerRef = useRef(null);
+  const circleRef = useRef(null);
+
+  const safeLat = Number(lat) || 26.6500;
+  const safeLng = Number(lng) || 84.5800;
+  const safeRadius = Number(radius) || 500;
+
+  useEffect(() => {
+    if (!mapContainerRef.current) return;
+
+    if (!mapInstanceRef.current) {
+      const map = L.map(mapContainerRef.current, {
+        center: [safeLat, safeLng],
+        zoom: 16,
+        zoomControl: true,
+        attributionControl: false
+      });
+
+      L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        maxZoom: 19,
+      }).addTo(map);
+
+      const marker = L.marker([safeLat, safeLng], {
+        draggable: true,
+        icon: restaurantMarkerIcon
+      }).addTo(map);
+
+      if (restaurantName) {
+        marker.bindPopup(`<strong>${restaurantName}</strong><br><span style="font-size:11px;color:#64748B">Restaurant Location</span>`);
+      }
+
+      const circle = L.circle([safeLat, safeLng], {
+        radius: safeRadius,
+        color: '#047857',
+        fillColor: '#059669',
+        fillOpacity: 0.14,
+        weight: 2
+      }).addTo(map);
+
+      marker.on('dragend', (e) => {
+        const newPos = e.target.getLatLng();
+        const nLat = parseFloat(newPos.lat.toFixed(6));
+        const nLng = parseFloat(newPos.lng.toFixed(6));
+        circle.setLatLng(newPos);
+        if (onLocationChange) onLocationChange(nLat, nLng);
+      });
+
+      map.on('click', (e) => {
+        const nLat = parseFloat(e.latlng.lat.toFixed(6));
+        const nLng = parseFloat(e.latlng.lng.toFixed(6));
+        marker.setLatLng(e.latlng);
+        circle.setLatLng(e.latlng);
+        if (onLocationChange) onLocationChange(nLat, nLng);
+      });
+
+      mapInstanceRef.current = map;
+      markerRef.current = marker;
+      circleRef.current = circle;
+    } else {
+      const map = mapInstanceRef.current;
+      const marker = markerRef.current;
+      const circle = circleRef.current;
+
+      if (map && marker && circle) {
+        marker.setLatLng([safeLat, safeLng]);
+        circle.setLatLng([safeLat, safeLng]);
+        circle.setRadius(safeRadius);
+        map.panTo([safeLat, safeLng]);
+      }
+    }
+  }, [safeLat, safeLng, safeRadius, restaurantName, onLocationChange]);
+
+  useEffect(() => {
+    return () => {
+      if (mapInstanceRef.current) {
+        try {
+          mapInstanceRef.current.remove();
+          mapInstanceRef.current = null;
+        } catch (e) {}
+      }
+    };
+  }, []);
+
+  return (
+    <div style={{ position: 'relative', width: '100%', height: '280px', borderRadius: '14px', overflow: 'hidden', border: '1px solid #EAE5DF' }}>
+      <div ref={mapContainerRef} style={{ width: '100%', height: '100%', zIndex: 1 }} />
+      <div style={{
+        position: 'absolute',
+        bottom: '10px',
+        right: '10px',
+        zIndex: 1000,
+        background: 'rgba(255, 255, 255, 0.95)',
+        backdropFilter: 'blur(4px)',
+        border: '1px solid #EAE5DF',
+        padding: '4px 10px',
+        borderRadius: '20px',
+        fontSize: '0.70rem',
+        fontWeight: 800,
+        color: '#064E3B',
+        boxShadow: '0 2px 6px rgba(0,0,0,0.1)',
+        display: 'flex',
+        alignItems: 'center',
+        gap: '5px'
+      }}>
+        <span style={{ width: '6px', height: '6px', borderRadius: '50%', background: '#059669' }} />
+        <span>Radius: {safeRadius}m Geofence</span>
+      </div>
+    </div>
+  );
+}
+
 export default function SetupView({
   settingsForm = {},
   setSettingsForm,
@@ -56,16 +201,139 @@ export default function SetupView({
     initialDrawer === 'menu-preferences' ? 'menu-preferences' :
     initialDrawer === 'devices' || initialDrawer === 'orders-devices' ? 'orders-devices' :
     initialDrawer === 'subscription' || initialDrawer === 'billing' ? 'subscription' :
+    initialDrawer === 'location' || initialDrawer === 'gps' ? 'location' :
     null
   );
   const [openDrawer, setOpenDrawer] = useState(
-    (initialDrawer === 'profile' || initialDrawer === 'menu-preferences' || initialDrawer === 'devices' || initialDrawer === 'orders-devices' || initialDrawer === 'subscription' || initialDrawer === 'billing') ? null : initialDrawer
-  ); // 'menu', 'location', 'security', 'cinema'
+    (initialDrawer === 'profile' || initialDrawer === 'menu-preferences' || initialDrawer === 'devices' || initialDrawer === 'orders-devices' || initialDrawer === 'subscription' || initialDrawer === 'billing' || initialDrawer === 'location' || initialDrawer === 'gps') ? null : initialDrawer
+  ); // 'menu', 'security', 'cinema'
   const [uploadingLogo, setUploadingLogo] = useState(false);
   const [gpsLoading, setGpsLoading] = useState(false);
   const [saveSuccessMsg, setSaveSuccessMsg] = useState('');
   const [showMapModal, setShowMapModal] = useState(false);
   const [savingForm, setSavingForm] = useState(false);
+
+  // Location & GPS Full-Page State
+  const [hasUnsavedLocation, setHasUnsavedLocation] = useState(false);
+  const [initialLocationSnapshot, setInitialLocationSnapshot] = useState({
+    address: settingsForm?.address || '',
+    latitude: settingsForm?.latitude || 26.6500,
+    longitude: settingsForm?.longitude || 84.5800,
+    max_distance_meters: settingsForm?.max_distance_meters || 500,
+    require_location_verification: settingsForm?.require_location_verification !== false,
+    verify_before_table_ordering: settingsForm?.verify_before_table_ordering !== false,
+    allow_outside_geofence: settingsForm?.allow_outside_geofence === true,
+    show_permission_explanation: settingsForm?.show_permission_explanation !== false,
+    outside_geofence_action: settingsForm?.outside_geofence_action || 'block'
+  });
+
+  const [testLocationState, setTestLocationState] = useState({
+    testing: false,
+    tested: false,
+    permission: 'unknown',
+    distance: 42,
+    inside: true,
+    error: null
+  });
+
+  const handleTestCurrentLocation = () => {
+    if (!navigator.geolocation) {
+      setTestLocationState(prev => ({
+        ...prev,
+        testing: false,
+        tested: true,
+        permission: 'denied',
+        error: 'Browser does not support geolocation'
+      }));
+      return;
+    }
+
+    setTestLocationState(prev => ({ ...prev, testing: true, error: null }));
+
+    navigator.geolocation.getCurrentPosition(
+      (pos) => {
+        const dLat = pos.coords.latitude;
+        const dLng = pos.coords.longitude;
+        const rLat = Number(settingsForm.latitude) || 26.6500;
+        const rLng = Number(settingsForm.longitude) || 84.5800;
+        const rad = Number(settingsForm.max_distance_meters) || 500;
+
+        // Haversine distance in meters
+        const R = 6371e3;
+        const φ1 = (dLat * Math.PI) / 180;
+        const φ2 = (rLat * Math.PI) / 180;
+        const Δφ = ((rLat - dLat) * Math.PI) / 180;
+        const Δλ = ((rLng - dLng) * Math.PI) / 180;
+        const a = Math.sin(Δφ / 2) * Math.sin(Δφ / 2) +
+                  Math.cos(φ1) * Math.cos(φ2) *
+                  Math.sin(Δλ / 2) * Math.sin(Δλ / 2);
+        const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+        const distMeters = Math.round(R * c);
+
+        setTestLocationState({
+          testing: false,
+          tested: true,
+          permission: 'granted',
+          distance: distMeters,
+          inside: distMeters <= rad,
+          error: null
+        });
+      },
+      (err) => {
+        setTestLocationState({
+          testing: false,
+          tested: true,
+          permission: err.code === 1 ? 'denied' : 'error',
+          distance: 0,
+          inside: false,
+          error: err.message
+        });
+      },
+      { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
+    );
+  };
+
+  const handleDiscardLocationChanges = () => {
+    setSettingsForm(prev => ({
+      ...prev,
+      address: initialLocationSnapshot.address,
+      latitude: initialLocationSnapshot.latitude,
+      longitude: initialLocationSnapshot.longitude,
+      max_distance_meters: initialLocationSnapshot.max_distance_meters,
+      require_location_verification: initialLocationSnapshot.require_location_verification,
+      verify_before_table_ordering: initialLocationSnapshot.verify_before_table_ordering,
+      allow_outside_geofence: initialLocationSnapshot.allow_outside_geofence,
+      show_permission_explanation: initialLocationSnapshot.show_permission_explanation,
+      outside_geofence_action: initialLocationSnapshot.outside_geofence_action
+    }));
+    setHasUnsavedLocation(false);
+  };
+
+  const handleSaveLocationSettings = async () => {
+    if (savingForm) return;
+    setSavingForm(true);
+    try {
+      await handleSaveSettings();
+      setHasUnsavedLocation(false);
+      setInitialLocationSnapshot({
+        address: settingsForm.address || '',
+        latitude: settingsForm.latitude || 26.6500,
+        longitude: settingsForm.longitude || 84.5800,
+        max_distance_meters: settingsForm.max_distance_meters || 500,
+        require_location_verification: settingsForm.require_location_verification !== false,
+        verify_before_table_ordering: settingsForm.verify_before_table_ordering !== false,
+        allow_outside_geofence: settingsForm.allow_outside_geofence === true,
+        show_permission_explanation: settingsForm.show_permission_explanation !== false,
+        outside_geofence_action: settingsForm.outside_geofence_action || 'block'
+      });
+      setSaveSuccessMsg('✓ Location & GPS settings saved successfully!');
+      setTimeout(() => setSaveSuccessMsg(''), 4000);
+    } catch (err) {
+      // Alert already handled
+    } finally {
+      setSavingForm(false);
+    }
+  };
 
   // Menu Preferences States
   const [prefCurrency, setPrefCurrency] = useState(settingsForm.currency || '₹ INR');
@@ -5283,6 +5551,908 @@ export default function SetupView({
     );
   };
 
+  const renderLocationGpsFullPage = () => {
+    const currentLat = Number(settingsForm.latitude) || 26.6500;
+    const currentLng = Number(settingsForm.longitude) || 84.5800;
+    const currentRadius = Number(settingsForm.max_distance_meters) || 500;
+    const currentAddress = settingsForm.address || 'HawaiAdda Chowk, Near Katchari Gumti, Motihari, Bihar';
+
+    const requireVerification = settingsForm.require_location_verification !== false;
+    const verifyBeforeOrder = settingsForm.verify_before_table_ordering !== false;
+    const allowOutside = settingsForm.allow_outside_geofence === true;
+    const showExplanation = settingsForm.show_permission_explanation !== false;
+    const outsideAction = settingsForm.outside_geofence_action || 'block';
+
+    return (
+      <div style={{
+        display: 'flex',
+        flexDirection: 'column',
+        gap: '16px',
+        maxWidth: '1120px',
+        margin: '0 auto',
+        width: '100%',
+        boxSizing: 'border-box',
+        paddingBottom: '120px',
+        fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif'
+      }}>
+        {/* Responsive CSS */}
+        <style>{`
+          .location-page-grid {
+            display: grid;
+            grid-template-columns: minmax(0, 1.65fr) minmax(320px, 1fr);
+            gap: 16px;
+            align-items: flex-start;
+            width: 100%;
+            box-sizing: border-box;
+          }
+          @media (max-width: 960px) {
+            .location-page-grid {
+              grid-template-columns: 100% !important;
+              gap: 14px !important;
+            }
+          }
+        `}</style>
+
+        {/* Action Alert Banner */}
+        {saveSuccessMsg && (
+          <div style={{
+            padding: '12px 16px',
+            borderRadius: '14px',
+            fontSize: '0.82rem',
+            fontWeight: 700,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            background: '#ECFDF5',
+            color: '#059669',
+            border: '1px solid #A7F3D0'
+          }}>
+            <span>{saveSuccessMsg}</span>
+            <button
+              type="button"
+              onClick={() => setSaveSuccessMsg('')}
+              style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'inherit', padding: 0 }}
+            >
+              <X size={16} />
+            </button>
+          </div>
+        )}
+
+        {/* 1. MASTER PAGE HEADER */}
+        <div style={{
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          background: '#FFFFFF',
+          borderRadius: '16px',
+          border: '1px solid #EAE5DF',
+          padding: '16px 20px',
+          boxShadow: '0 1px 3px rgba(0,0,0,0.02)',
+          boxSizing: 'border-box',
+          width: '100%',
+          flexWrap: 'wrap',
+          gap: '12px'
+        }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+            <button
+              type="button"
+              onClick={() => setActiveSubPage(null)}
+              style={{
+                height: '36px',
+                padding: '0 12px',
+                borderRadius: '10px',
+                background: '#F8FAFC',
+                border: '1px solid #E2E8F0',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '6px',
+                color: '#0F172A',
+                cursor: 'pointer',
+                flexShrink: 0,
+                fontSize: '0.78rem',
+                fontWeight: 800
+              }}
+            >
+              <ArrowLeft size={16} />
+              <span>Settings</span>
+            </button>
+            <div>
+              <h2 style={{ fontSize: '1.20rem', fontWeight: 900, color: '#0F172A', margin: 0, letterSpacing: '-0.02em' }}>
+                Location & GPS
+              </h2>
+              <p style={{ fontSize: '0.74rem', color: '#64748B', margin: 0 }}>
+                Manage your restaurant location, customer presence verification and geofence settings.
+              </p>
+            </div>
+          </div>
+
+          <div style={{
+            display: 'inline-flex',
+            alignItems: 'center',
+            gap: '6px',
+            background: '#ECFDF5',
+            color: '#059669',
+            border: '1px solid #A7F3D0',
+            padding: '5px 12px',
+            borderRadius: '20px',
+            fontSize: '0.72rem',
+            fontWeight: 800,
+            flexShrink: 0
+          }}>
+            <span style={{ width: '6px', height: '6px', borderRadius: '50%', background: '#059669' }} />
+            <span>Location Connected</span>
+          </div>
+        </div>
+
+        {/* 2-COLUMN MAIN CONTENT GRID */}
+        <div className="location-page-grid">
+          
+          {/* LEFT / MAIN COLUMN */}
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+
+            {/* SECTION 1 — RESTAURANT LOCATION CARD */}
+            <div style={{
+              background: '#FFFFFF',
+              borderRadius: '16px',
+              border: '1px solid #EAE5DF',
+              padding: '20px 22px',
+              boxShadow: '0 1px 3px rgba(0,0,0,0.02)',
+              display: 'flex',
+              flexDirection: 'column',
+              gap: '14px'
+            }}>
+              <div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                  <span style={{ fontSize: '1.1rem' }}>📍</span>
+                  <h3 style={{ margin: 0, fontSize: '1.05rem', fontWeight: 900, color: '#0F172A' }}>
+                    Restaurant Location
+                  </h3>
+                </div>
+                <p style={{ margin: '3px 0 0', fontSize: '0.74rem', color: '#64748B' }}>
+                  Set the exact location of your restaurant for customer presence verification.
+                </p>
+              </div>
+
+              {/* Address Input */}
+              <div>
+                <label style={{ fontSize: '0.72rem', fontWeight: 800, color: '#475569', display: 'block', marginBottom: '4px', textTransform: 'uppercase', letterSpacing: '0.03em' }}>
+                  Restaurant Address
+                </label>
+                <input
+                  type="text"
+                  value={settingsForm.address || ''}
+                  onChange={(e) => {
+                    setSettingsForm(prev => ({ ...prev, address: e.target.value }));
+                    setHasUnsavedLocation(true);
+                  }}
+                  placeholder="e.g. HawaiAdda Chowk, Near Katchari Gumti, Motihari, Bihar"
+                  style={{
+                    width: '100%',
+                    padding: '10px 14px',
+                    borderRadius: '10px',
+                    border: '1px solid #CBD5E1',
+                    fontSize: '0.84rem',
+                    fontWeight: 700,
+                    color: '#0F172A',
+                    boxSizing: 'border-box',
+                    background: '#FFFFFF'
+                  }}
+                />
+              </div>
+
+              {/* Latitude & Longitude Inputs */}
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
+                <div>
+                  <label style={{ fontSize: '0.72rem', fontWeight: 800, color: '#475569', display: 'block', marginBottom: '4px', textTransform: 'uppercase', letterSpacing: '0.03em' }}>
+                    Latitude
+                  </label>
+                  <input
+                    type="number"
+                    step="any"
+                    value={settingsForm.latitude || ''}
+                    onChange={(e) => {
+                      setSettingsForm(prev => ({ ...prev, latitude: parseFloat(e.target.value) || 0 }));
+                      setHasUnsavedLocation(true);
+                    }}
+                    placeholder="e.g. 26.6500"
+                    style={{
+                      width: '100%',
+                      padding: '10px 12px',
+                      borderRadius: '10px',
+                      border: '1px solid #CBD5E1',
+                      fontSize: '0.84rem',
+                      fontWeight: 700,
+                      color: '#0F172A',
+                      boxSizing: 'border-box',
+                      background: '#FFFFFF'
+                    }}
+                  />
+                </div>
+                <div>
+                  <label style={{ fontSize: '0.72rem', fontWeight: 800, color: '#475569', display: 'block', marginBottom: '4px', textTransform: 'uppercase', letterSpacing: '0.03em' }}>
+                    Longitude
+                  </label>
+                  <input
+                    type="number"
+                    step="any"
+                    value={settingsForm.longitude || ''}
+                    onChange={(e) => {
+                      setSettingsForm(prev => ({ ...prev, longitude: parseFloat(e.target.value) || 0 }));
+                      setHasUnsavedLocation(true);
+                    }}
+                    placeholder="e.g. 84.5800"
+                    style={{
+                      width: '100%',
+                      padding: '10px 12px',
+                      borderRadius: '10px',
+                      border: '1px solid #CBD5E1',
+                      fontSize: '0.84rem',
+                      fontWeight: 700,
+                      color: '#0F172A',
+                      boxSizing: 'border-box',
+                      background: '#FFFFFF'
+                    }}
+                  />
+                </div>
+              </div>
+
+              {/* Action Buttons */}
+              <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap', paddingTop: '2px' }}>
+                <button
+                  type="button"
+                  onClick={handleDetectGps}
+                  disabled={gpsLoading}
+                  style={{
+                    flex: '1 1 180px',
+                    height: '42px',
+                    padding: '0 16px',
+                    borderRadius: '10px',
+                    border: 'none',
+                    background: '#064E3B',
+                    color: '#FFFFFF',
+                    fontWeight: 800,
+                    fontSize: '0.82rem',
+                    cursor: gpsLoading ? 'not-allowed' : 'pointer',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    gap: '6px',
+                    boxShadow: '0 2px 6px rgba(6, 78, 59, 0.25)',
+                    transition: 'all 0.15s ease'
+                  }}
+                >
+                  <MapPin size={15} />
+                  <span>{gpsLoading ? 'Detecting Location...' : 'Use Current Location'}</span>
+                </button>
+
+                <a
+                  href={`https://www.google.com/maps?q=${currentLat},${currentLng}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  style={{
+                    flex: '1 1 180px',
+                    height: '42px',
+                    padding: '0 16px',
+                    borderRadius: '10px',
+                    border: '1px solid #CBD5E1',
+                    background: '#FFFFFF',
+                    color: '#334155',
+                    fontWeight: 700,
+                    fontSize: '0.82rem',
+                    cursor: 'pointer',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    gap: '6px',
+                    textDecoration: 'none',
+                    transition: 'all 0.15s ease',
+                    boxSizing: 'border-box'
+                  }}
+                >
+                  <Globe size={15} />
+                  <span>Open in Google Maps</span>
+                </a>
+              </div>
+
+              {/* Coordinates Verified Status */}
+              <div style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: '6px',
+                padding: '8px 12px',
+                background: '#FAF8F5',
+                borderRadius: '8px',
+                border: '1px solid #EAE5DF',
+                fontSize: '0.74rem',
+                color: '#059669',
+                fontWeight: 700
+              }}>
+                <Check size={14} strokeWidth={3} />
+                <span>Location coordinates verified (Lat: {currentLat.toFixed(4)}, Lng: {currentLng.toFixed(4)})</span>
+              </div>
+
+              {/* GPS Error Alert */}
+              {gpsErrorState && (
+                <div style={{ background: '#FEF2F2', color: '#DC2626', padding: '12px 14px', borderRadius: '10px', fontSize: '0.78rem', fontWeight: 700, border: '1px solid #FECACA', display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                  <strong>{gpsErrorState.title}</strong>
+                  <span>{gpsErrorState.msg}</span>
+                  <div style={{ display: 'flex', gap: '8px', marginTop: '4px' }}>
+                    <button
+                      type="button"
+                      onClick={handleDetectGps}
+                      style={{ padding: '6px 12px', borderRadius: '8px', background: '#DC2626', color: '#FFF', border: 'none', fontWeight: 800, fontSize: '0.74rem', cursor: 'pointer' }}
+                    >
+                      Try Again
+                    </button>
+                    {gpsErrorState.isDenied && (
+                      <button
+                        type="button"
+                        onClick={() => alert('📱 How to Allow Location Access:\n\n1. Tap the lock/tune icon in your browser address bar.\n2. Enable "Location" permission.\n3. Refresh this page and tap "Use Current Location" again.')}
+                        style={{ padding: '6px 12px', borderRadius: '8px', background: '#FFFFFF', color: '#334155', border: '1px solid #CBD5E1', fontWeight: 800, fontSize: '0.74rem', cursor: 'pointer' }}
+                      >
+                        How to Allow
+                      </button>
+                    )}
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {/* SECTION 2 — MAP CARD */}
+            <div style={{
+              background: '#FFFFFF',
+              borderRadius: '16px',
+              border: '1px solid #EAE5DF',
+              padding: '20px 22px',
+              boxShadow: '0 1px 3px rgba(0,0,0,0.02)',
+              display: 'flex',
+              flexDirection: 'column',
+              gap: '14px'
+            }}>
+              <div>
+                <h3 style={{ margin: 0, fontSize: '1.05rem', fontWeight: 900, color: '#0F172A' }}>
+                  Restaurant Location Preview
+                </h3>
+                <p style={{ margin: '3px 0 0', fontSize: '0.74rem', color: '#64748B' }}>
+                  Click anywhere on the map or drag the pin to fine-tune your entrance position.
+                </p>
+              </div>
+
+              {/* Embedded Interactive Leaflet Map */}
+              <EmbeddedLocationMap
+                lat={currentLat}
+                lng={currentLng}
+                radius={currentRadius}
+                restaurantName={settingsForm.name || restaurantInfo?.name || 'TouchQR Restaurant'}
+                onLocationChange={(newLat, newLng) => {
+                  setSettingsForm(prev => ({ ...prev, latitude: newLat, longitude: newLng, location_initialized: true }));
+                  setHasUnsavedLocation(true);
+                  setGpsSuccessMsg(`✓ Pin moved to: ${newLat}, ${newLng}`);
+                }}
+              />
+
+              {/* Geofence Radius Selector */}
+              <div>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
+                  <label style={{ fontSize: '0.72rem', fontWeight: 800, color: '#475569', textTransform: 'uppercase', letterSpacing: '0.03em' }}>
+                    Geofence Radius
+                  </label>
+                  <span style={{ fontSize: '0.80rem', fontWeight: 900, color: '#064E3B' }}>
+                    {currentRadius} meters
+                  </span>
+                </div>
+
+                {/* Quick Presets */}
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '8px', marginBottom: '12px' }}>
+                  {[
+                    { label: '100 m', val: 100 },
+                    { label: '250 m', val: 250 },
+                    { label: '500 m', val: 500 },
+                    { label: '1 km', val: 1000 }
+                  ].map(p => {
+                    const isSelected = currentRadius === p.val;
+                    return (
+                      <button
+                        key={p.val}
+                        type="button"
+                        onClick={() => {
+                          setSettingsForm(prev => ({ ...prev, max_distance_meters: p.val }));
+                          setHasUnsavedLocation(true);
+                        }}
+                        style={{
+                          height: '38px',
+                          borderRadius: '10px',
+                          border: isSelected ? '2px solid #064E3B' : '1px solid #EAE5DF',
+                          background: isSelected ? '#064E3B' : '#FAF8F5',
+                          color: isSelected ? '#FFFFFF' : '#334155',
+                          fontSize: '0.80rem',
+                          fontWeight: isSelected ? 800 : 600,
+                          cursor: 'pointer',
+                          boxShadow: isSelected ? '0 2px 6px rgba(6, 78, 59, 0.20)' : 'none',
+                          transition: 'all 0.15s ease'
+                        }}
+                      >
+                        {p.label}
+                      </button>
+                    );
+                  })}
+                </div>
+
+                {/* Custom Radius Slider & Input */}
+                <div style={{ background: '#FAF8F5', padding: '12px 14px', borderRadius: '12px', border: '1px solid #EAE5DF', display: 'flex', alignItems: 'center', gap: '14px' }}>
+                  <div style={{ flex: 1 }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.68rem', fontWeight: 700, color: '#64748B', marginBottom: '4px' }}>
+                      <span>Custom Radius</span>
+                      <span>50m - 5000m</span>
+                    </div>
+                    <input
+                      type="range"
+                      min="50"
+                      max="5000"
+                      step="50"
+                      value={currentRadius}
+                      onChange={(e) => {
+                        setSettingsForm(prev => ({ ...prev, max_distance_meters: parseInt(e.target.value) || 500 }));
+                        setHasUnsavedLocation(true);
+                      }}
+                      style={{ width: '100%', accentColor: '#064E3B', cursor: 'pointer' }}
+                    />
+                  </div>
+                  <div style={{ width: '90px' }}>
+                    <input
+                      type="number"
+                      min="20"
+                      max="10000"
+                      value={currentRadius}
+                      onChange={(e) => {
+                        setSettingsForm(prev => ({ ...prev, max_distance_meters: parseInt(e.target.value) || 500 }));
+                        setHasUnsavedLocation(true);
+                      }}
+                      style={{
+                        width: '100%',
+                        padding: '6px 8px',
+                        borderRadius: '8px',
+                        border: '1px solid #CBD5E1',
+                        fontSize: '0.84rem',
+                        fontWeight: 800,
+                        color: '#0F172A',
+                        textAlign: 'center',
+                        boxSizing: 'border-box'
+                      }}
+                    />
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* SECTION 3 — CUSTOMER PRESENCE VERIFICATION CARD */}
+            <div style={{
+              background: '#FFFFFF',
+              borderRadius: '16px',
+              border: '1px solid #EAE5DF',
+              padding: '20px 22px',
+              boxShadow: '0 1px 3px rgba(0,0,0,0.02)',
+              display: 'flex',
+              flexDirection: 'column',
+              gap: '14px'
+            }}>
+              <div>
+                <h3 style={{ margin: 0, fontSize: '1.05rem', fontWeight: 900, color: '#0F172A' }}>
+                  Customer Presence Verification
+                </h3>
+                <p style={{ margin: '3px 0 0', fontSize: '0.74rem', color: '#64748B' }}>
+                  Verify that customers are physically near your restaurant before allowing location-based actions.
+                </p>
+              </div>
+
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                {/* Setting 1 */}
+                <div style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'space-between',
+                  padding: '12px 14px',
+                  background: '#FAF8F5',
+                  borderRadius: '12px',
+                  border: '1px solid #EAE5DF',
+                  gap: '12px'
+                }}>
+                  <div>
+                    <strong style={{ fontSize: '0.84rem', color: '#0F172A', fontWeight: 800, display: 'block' }}>
+                      Require customer location verification
+                    </strong>
+                    <span style={{ fontSize: '0.72rem', color: '#64748B' }}>
+                      Verify customers are physically on-premises prior to scanning QR and browsing menu.
+                    </span>
+                  </div>
+                  <ToggleSwitch
+                    checked={requireVerification}
+                    onChange={(checked) => {
+                      setSettingsForm(prev => ({ ...prev, require_location_verification: checked }));
+                      setHasUnsavedLocation(true);
+                    }}
+                  />
+                </div>
+
+                {/* Setting 2 */}
+                <div style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'space-between',
+                  padding: '12px 14px',
+                  background: '#FAF8F5',
+                  borderRadius: '12px',
+                  border: '1px solid #EAE5DF',
+                  gap: '12px'
+                }}>
+                  <div>
+                    <strong style={{ fontSize: '0.84rem', color: '#0F172A', fontWeight: 800, display: 'block' }}>
+                      Verify location before table ordering
+                    </strong>
+                    <span style={{ fontSize: '0.72rem', color: '#64748B' }}>
+                      Cross-check device coordinates whenever a customer places a live dine-in food order.
+                    </span>
+                  </div>
+                  <ToggleSwitch
+                    checked={verifyBeforeOrder}
+                    onChange={(checked) => {
+                      setSettingsForm(prev => ({ ...prev, verify_before_table_ordering: checked }));
+                      setHasUnsavedLocation(true);
+                    }}
+                  />
+                </div>
+
+                {/* Setting 3 */}
+                <div style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'space-between',
+                  padding: '12px 14px',
+                  background: '#FAF8F5',
+                  borderRadius: '12px',
+                  border: '1px solid #EAE5DF',
+                  gap: '12px'
+                }}>
+                  <div>
+                    <strong style={{ fontSize: '0.84rem', color: '#0F172A', fontWeight: 800, display: 'block' }}>
+                      Allow ordering outside geofence
+                    </strong>
+                    <span style={{ fontSize: '0.72rem', color: '#64748B' }}>
+                      Allow takeaway or remote pre-orders even if the customer is beyond the geofence perimeter.
+                    </span>
+                  </div>
+                  <ToggleSwitch
+                    checked={allowOutside}
+                    onChange={(checked) => {
+                      setSettingsForm(prev => ({ ...prev, allow_outside_geofence: checked }));
+                      setHasUnsavedLocation(true);
+                    }}
+                  />
+                </div>
+
+                {/* Setting 4 */}
+                <div style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'space-between',
+                  padding: '12px 14px',
+                  background: '#FAF8F5',
+                  borderRadius: '12px',
+                  border: '1px solid #EAE5DF',
+                  gap: '12px'
+                }}>
+                  <div>
+                    <strong style={{ fontSize: '0.84rem', color: '#0F172A', fontWeight: 800, display: 'block' }}>
+                      Show location permission explanation
+                    </strong>
+                    <span style={{ fontSize: '0.72rem', color: '#64748B' }}>
+                      Display a helpful explanation modal to guests before requesting browser GPS access.
+                    </span>
+                  </div>
+                  <ToggleSwitch
+                    checked={showExplanation}
+                    onChange={(checked) => {
+                      setSettingsForm(prev => ({ ...prev, show_permission_explanation: checked }));
+                      setHasUnsavedLocation(true);
+                    }}
+                  />
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* RIGHT COLUMN */}
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+
+            {/* SECTION 4 — GEOFENCE BEHAVIOR CARD */}
+            <div style={{
+              background: '#FFFFFF',
+              borderRadius: '16px',
+              border: '1px solid #EAE5DF',
+              padding: '20px 22px',
+              boxShadow: '0 1px 3px rgba(0,0,0,0.02)',
+              display: 'flex',
+              flexDirection: 'column',
+              gap: '14px'
+            }}>
+              <div>
+                <h3 style={{ margin: 0, fontSize: '1.05rem', fontWeight: 900, color: '#0F172A' }}>
+                  Geofence Behavior
+                </h3>
+                <span style={{ fontSize: '0.72rem', color: '#64748B' }}>
+                  Rules when customers are inside vs outside the boundary.
+                </span>
+              </div>
+
+              {/* Inside Geofence Box */}
+              <div style={{ background: '#ECFDF5', borderRadius: '12px', border: '1px solid #A7F3D0', padding: '12px 14px' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '2px' }}>
+                  <span style={{ width: '8px', height: '8px', borderRadius: '50%', background: '#059669' }} />
+                  <strong style={{ fontSize: '0.82rem', color: '#064E3B' }}>Inside Geofence</strong>
+                </div>
+                <span style={{ fontSize: '0.72rem', color: '#047857' }}>
+                  Allow instant QR ordering and automatic customer presence verification.
+                </span>
+              </div>
+
+              {/* Outside Geofence Options */}
+              <div>
+                <label style={{ fontSize: '0.72rem', fontWeight: 800, color: '#475569', display: 'block', marginBottom: '8px', textTransform: 'uppercase', letterSpacing: '0.03em' }}>
+                  Outside Geofence Action:
+                </label>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                  {[
+                    { key: 'block', label: 'Block ordering', desc: 'Prevent orders with friendly message' },
+                    { key: 'warn', label: 'Show warning', desc: 'Warn customer but allow order' },
+                    { key: 'allow', label: 'Allow ordering', desc: 'Permit remote/takeaway orders' }
+                  ].map(opt => {
+                    const isSelected = outsideAction === opt.key;
+                    return (
+                      <div
+                        key={opt.key}
+                        onClick={() => {
+                          setSettingsForm(prev => ({ ...prev, outside_geofence_action: opt.key }));
+                          setHasUnsavedLocation(true);
+                        }}
+                        style={{
+                          padding: '10px 12px',
+                          borderRadius: '10px',
+                          border: isSelected ? '1.5px solid #064E3B' : '1px solid #EAE5DF',
+                          background: isSelected ? '#FAF8F5' : '#FFFFFF',
+                          cursor: 'pointer',
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: '10px',
+                          transition: 'all 0.15s ease'
+                        }}
+                      >
+                        <input
+                          type="radio"
+                          name="outside_geofence_action"
+                          checked={isSelected}
+                          onChange={() => {}}
+                          style={{ accentColor: '#064E3B', cursor: 'pointer' }}
+                        />
+                        <div>
+                          <strong style={{ fontSize: '0.80rem', color: '#0F172A', display: 'block' }}>{opt.label}</strong>
+                          <span style={{ fontSize: '0.70rem', color: '#64748B' }}>{opt.desc}</span>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+
+              {/* Status footer */}
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', paddingTop: '6px', borderTop: '1px solid #F1F5F9', fontSize: '0.74rem' }}>
+                <span style={{ color: '#64748B', fontWeight: 600 }}>Geofence Radius: <strong>{currentRadius} m</strong></span>
+                <span style={{ color: '#059669', fontWeight: 800, background: '#ECFDF5', padding: '2px 8px', borderRadius: '10px', border: '1px solid #A7F3D0' }}>
+                  ● Active
+                </span>
+              </div>
+            </div>
+
+            {/* SECTION 5 — LOCATION TEST CARD */}
+            <div style={{
+              background: '#FFFFFF',
+              borderRadius: '16px',
+              border: '1px solid #EAE5DF',
+              padding: '20px 22px',
+              boxShadow: '0 1px 3px rgba(0,0,0,0.02)',
+              display: 'flex',
+              flexDirection: 'column',
+              gap: '12px'
+            }}>
+              <div>
+                <h3 style={{ margin: 0, fontSize: '1.05rem', fontWeight: 900, color: '#0F172A' }}>
+                  Test Location
+                </h3>
+                <span style={{ fontSize: '0.72rem', color: '#64748B' }}>
+                  Simulate a live customer scan from this device.
+                </span>
+              </div>
+
+              {/* Status Row 1: Device Permission */}
+              <div style={{ background: '#FAF8F5', padding: '10px 12px', borderRadius: '10px', border: '1px solid #EAE5DF' }}>
+                <span style={{ fontSize: '0.68rem', color: '#64748B', fontWeight: 700, display: 'block' }}>Current Device Location</span>
+                <strong style={{ fontSize: '0.82rem', color: testLocationState.permission === 'denied' ? '#DC2626' : '#0F172A', fontWeight: 800 }}>
+                  Location permission: {testLocationState.permission === 'granted' ? 'Granted' : testLocationState.permission === 'denied' ? 'Denied' : 'Ready to Test'}
+                </strong>
+              </div>
+
+              {/* Status Row 2: Distance */}
+              <div style={{ background: '#FAF8F5', padding: '10px 12px', borderRadius: '10px', border: '1px solid #EAE5DF' }}>
+                <span style={{ fontSize: '0.68rem', color: '#64748B', fontWeight: 700, display: 'block' }}>Distance from Restaurant</span>
+                <strong style={{ fontSize: '0.88rem', color: '#064E3B', fontWeight: 900 }}>
+                  {testLocationState.tested ? `${testLocationState.distance} m` : '42 m (Estimated on-premise)'}
+                </strong>
+              </div>
+
+              {/* Status Row 3: Geofence Status Pill */}
+              <div style={{
+                padding: '10px 12px',
+                borderRadius: '10px',
+                background: (testLocationState.tested ? testLocationState.inside : true) ? '#ECFDF5' : '#FFFBEB',
+                border: (testLocationState.tested ? testLocationState.inside : true) ? '1px solid #A7F3D0' : '1px solid #FDE68A',
+                color: (testLocationState.tested ? testLocationState.inside : true) ? '#059669' : '#B45309',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '8px',
+                fontSize: '0.78rem',
+                fontWeight: 800
+              }}>
+                {(testLocationState.tested ? testLocationState.inside : true) ? (
+                  <>
+                    <Check size={16} strokeWidth={3} />
+                    <span>Inside Geofence ({currentRadius}m boundary)</span>
+                  </>
+                ) : (
+                  <>
+                    <AlertTriangle size={16} />
+                    <span>Outside Geofence ({testLocationState.distance}m exceeds {currentRadius}m)</span>
+                  </>
+                )}
+              </div>
+
+              {/* Action Button */}
+              <button
+                type="button"
+                onClick={handleTestCurrentLocation}
+                disabled={testLocationState.testing}
+                style={{
+                  width: '100%',
+                  height: '40px',
+                  borderRadius: '10px',
+                  border: '1px solid #CBD5E1',
+                  background: '#FFFFFF',
+                  color: '#0F172A',
+                  fontSize: '0.82rem',
+                  fontWeight: 800,
+                  cursor: 'pointer',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  gap: '6px',
+                  transition: 'all 0.15s ease'
+                }}
+              >
+                <Navigation size={14} />
+                <span>{testLocationState.testing ? 'Testing Coordinates...' : 'Test Current Location'}</span>
+              </button>
+            </div>
+
+            {/* SECTION 6 — LOCATION PRIVACY CARD */}
+            <div style={{
+              background: '#FFFFFF',
+              borderRadius: '16px',
+              border: '1px solid #EAE5DF',
+              padding: '18px 20px',
+              boxShadow: '0 1px 3px rgba(0,0,0,0.02)',
+              display: 'flex',
+              flexDirection: 'column',
+              gap: '10px'
+            }}>
+              <div>
+                <h3 style={{ margin: 0, fontSize: '0.96rem', fontWeight: 900, color: '#0F172A' }}>
+                  Customer Privacy
+                </h3>
+                <p style={{ margin: '3px 0 8px', fontSize: '0.72rem', color: '#64748B', lineHeight: 1.4 }}>
+                  Customer location is used only for presence verification and location-based ordering rules.
+                </p>
+              </div>
+
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', fontSize: '0.74rem', color: '#334155' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                  <Check size={13} color="#059669" strokeWidth={3} style={{ flexShrink: 0 }} />
+                  <span>Location is requested only when required</span>
+                </div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                  <Check size={13} color="#059669" strokeWidth={3} style={{ flexShrink: 0 }} />
+                  <span>Customers can manage browser location permission</span>
+                </div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                  <Check size={13} color="#059669" strokeWidth={3} style={{ flexShrink: 0 }} />
+                  <span>Location data is not displayed publicly</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* BOTTOM ACTION AREA — STICKY SAVE BAR */}
+        {hasUnsavedLocation ? (
+          <div style={{
+            position: 'fixed',
+            bottom: '20px',
+            left: '50%',
+            transform: 'translateX(-50%)',
+            zIndex: 1000,
+            maxWidth: '680px',
+            width: 'calc(100% - 32px)',
+            background: '#FFFFFF',
+            borderRadius: '16px',
+            border: '1px solid #EAE5DF',
+            padding: '12px 18px',
+            boxShadow: '0 10px 25px rgba(0,0,0,0.15)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            gap: '12px',
+            animation: 'fadeIn 0.2s ease-out'
+          }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <span style={{ width: '8px', height: '8px', borderRadius: '50%', background: '#D97706' }} />
+              <span style={{ fontSize: '0.82rem', fontWeight: 800, color: '#0F172A' }}>Unsaved changes</span>
+            </div>
+
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <button
+                type="button"
+                onClick={handleDiscardLocationChanges}
+                style={{
+                  height: '38px',
+                  padding: '0 14px',
+                  borderRadius: '10px',
+                  border: '1px solid #CBD5E1',
+                  background: '#FFFFFF',
+                  color: '#475569',
+                  fontWeight: 800,
+                  fontSize: '0.80rem',
+                  cursor: 'pointer'
+                }}
+              >
+                Discard
+              </button>
+              <button
+                type="button"
+                onClick={handleSaveLocationSettings}
+                disabled={savingForm}
+                style={{
+                  height: '38px',
+                  padding: '0 18px',
+                  borderRadius: '10px',
+                  border: 'none',
+                  background: '#064E3B',
+                  color: '#FFFFFF',
+                  fontWeight: 900,
+                  fontSize: '0.82rem',
+                  cursor: 'pointer',
+                  boxShadow: '0 2px 8px rgba(6, 78, 59, 0.25)'
+                }}
+              >
+                {savingForm ? 'Saving...' : 'Save Location Settings'}
+              </button>
+            </div>
+          </div>
+        ) : (
+          <div style={{ textAlign: 'center', fontSize: '0.74rem', color: '#059669', fontWeight: 700, paddingTop: '10px' }}>
+            ✓ All changes saved
+          </div>
+        )}
+      </div>
+    );
+  };
+
   return (
     <div style={{
       display: 'flex',
@@ -5665,6 +6835,8 @@ export default function SetupView({
         renderOrdersDevicesFullPage()
       ) : activeSubPage === 'subscription' || activeSubPage === 'billing' ? (
         renderSubscriptionBillingFullPage()
+      ) : activeSubPage === 'location' || activeSubPage === 'gps' ? (
+        renderLocationGpsFullPage()
       ) : (
         <>
           {/* ========================================================
@@ -6117,7 +7289,7 @@ export default function SetupView({
 
                 {/* Desktop 5-col Grid */}
                 <div className="more-settings-grid">
-                  <div className="settings-card-secondary" onClick={() => setOpenDrawer('location')}>
+                  <div className="settings-card-secondary" onClick={() => setActiveSubPage('location')}>
                     <div style={{ width: '36px', height: '36px', borderRadius: '10px', background: '#DCFCE7', color: '#16A34A', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                       <MapPin size={18} />
                     </div>
@@ -6205,7 +7377,7 @@ export default function SetupView({
 
                 {/* Mobile Compact List Rows for More Settings */}
                 <div className="more-settings-list-mobile">
-                  <div className="mobile-list-item-row" onClick={() => setOpenDrawer('location')}>
+                  <div className="mobile-list-item-row" onClick={() => setActiveSubPage('location')}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
                       <div style={{ width: '34px', height: '34px', borderRadius: '10px', background: '#DCFCE7', color: '#16A34A', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                         <MapPin size={18} />
@@ -6338,7 +7510,7 @@ export default function SetupView({
                 </div>
 
                 {/* Card 3: Location & GPS Geofence */}
-                <div className="settings-card-primary" onClick={() => setOpenDrawer('location')}>
+                <div className="settings-card-primary" onClick={() => setActiveSubPage('location')}>
                   <div style={{ width: '42px', height: '42px', borderRadius: '12px', background: '#DCFCE7', color: '#16A34A', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                     <MapPin size={22} />
                   </div>
@@ -8190,284 +9362,6 @@ export default function SetupView({
           </div>
         </form>
       </AdminDrawer>
-
-      {/* Drawer 4: Location & GPS Geofence */}
-      <AdminDrawer
-        isOpen={openDrawer === 'location'}
-        onClose={() => setOpenDrawer(null)}
-        title="📍 Location & GPS Geofence"
-        subtitle="Set coordinates to prevent fake orders from outside your restaurant"
-        footer={(
-          <button
-            onClick={handleFormSave}
-            style={{
-              width: '100%',
-              padding: '12px',
-              borderRadius: '12px',
-              border: 'none',
-              background: 'linear-gradient(135deg, #059669 0%, #10B981 100%)',
-              color: '#FFFFFF',
-              fontWeight: 900,
-              fontSize: '0.90rem',
-              cursor: 'pointer',
-              boxShadow: '0 4px 12px rgba(16, 185, 129, 0.25)'
-            }}
-          >
-            Save Location & Geofence
-          </button>
-        )}
-      >
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
-          {/* Card 1: GPS Capture & Map Tool */}
-          <div style={{ padding: '16px 18px', background: '#FFFFFF', borderRadius: '16px', border: '1px solid #E2E8F0', boxShadow: '0 1px 3px rgba(0,0,0,0.04)' }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '8px' }}>
-              <div style={{ width: '36px', height: '36px', borderRadius: '10px', background: '#FFE4E6', color: '#E11D48', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1.1rem', flexShrink: 0 }}>
-                📍
-              </div>
-              <div>
-                <strong style={{ fontSize: '0.92rem', color: '#0F172A', fontWeight: 800, display: 'block' }}>GPS Coordinate Pinpoint</strong>
-                <span style={{ fontSize: '0.72rem', color: '#64748B' }}>Auto-detect or pin your exact restaurant entrance</span>
-              </div>
-            </div>
-
-            <p style={{ fontSize: '0.76rem', color: '#64748B', margin: '0 0 12px 0', lineHeight: 1.45, paddingLeft: '46px' }}>
-              Customers must be physically present inside this radius to place live table orders.
-            </p>
-
-            {/* Informational Presence Verification Mode Banner */}
-            <div style={{ margin: '0 0 14px 46px', padding: '10px 14px', background: '#F0FDF4', borderRadius: '10px', border: '1px solid #BBF7D0', display: 'flex', alignItems: 'center', gap: '8px' }}>
-              <ShieldCheck size={16} color="#166534" style={{ flexShrink: 0 }} />
-              <span style={{ fontSize: '0.76rem', color: '#166534', fontWeight: 700 }}>
-                Table Presence Verification: <strong>GPS + Staff Fallback</strong> (Active automatically with Direct QR Ordering)
-              </span>
-            </div>
-
-            <div style={{ display: 'flex', gap: '10px', paddingLeft: '46px', flexWrap: 'wrap' }}>
-              <button
-                type="button"
-                onClick={handleDetectGps}
-                disabled={gpsLoading}
-                style={{
-                  flex: '1 1 140px',
-                  padding: '11px 14px',
-                  borderRadius: '10px',
-                  border: 'none',
-                  background: 'linear-gradient(135deg, #D97706 0%, #F59E0B 100%)',
-                  color: '#FFFFFF',
-                  fontWeight: 800,
-                  fontSize: '0.82rem',
-                  cursor: 'pointer',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  gap: '6px',
-                  boxShadow: '0 2px 6px rgba(217, 119, 6, 0.25)',
-                  transition: 'all 0.15s ease'
-                }}
-              >
-                <MapPin size={15} />
-                {gpsLoading ? 'Detecting GPS...' : gpsSuccessMsg ? '✓ GPS Captured' : '🎯 Auto Detect GPS'}
-              </button>
-
-              <button
-                type="button"
-                onClick={() => setShowMapModal(true)}
-                style={{
-                  flex: '1 1 140px',
-                  padding: '11px 14px',
-                  borderRadius: '10px',
-                  border: 'none',
-                  background: '#0F172A',
-                  color: '#FFFFFF',
-                  fontWeight: 800,
-                  fontSize: '0.82rem',
-                  cursor: 'pointer',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  gap: '6px',
-                  boxShadow: '0 2px 6px rgba(15, 23, 42, 0.25)',
-                  transition: 'all 0.15s ease'
-                }}
-              >
-                <Map size={15} />
-                🗺️ Interactive Map
-              </button>
-            </div>
-
-            {gpsSuccessMsg && (
-              <div style={{ marginTop: '12px', marginLeft: '46px', background: '#DCFCE7', color: '#15803D', padding: '10px 14px', borderRadius: '10px', fontSize: '0.80rem', fontWeight: 800, border: '1px solid #86EFAC' }}>
-                {gpsSuccessMsg}
-              </div>
-            )}
-
-            {gpsErrorState && (
-              <div style={{ marginTop: '12px', marginLeft: '46px', background: '#FEF2F2', color: '#DC2626', padding: '12px 14px', borderRadius: '10px', fontSize: '0.80rem', fontWeight: 700, border: '1px solid #FECACA', display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                <strong style={{ fontSize: '0.86rem' }}>{gpsErrorState.title}</strong>
-                <div style={{ lineHeight: 1.4 }}>{gpsErrorState.msg}</div>
-                <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', marginTop: '4px' }}>
-                  <button
-                    type="button"
-                    onClick={handleDetectGps}
-                    style={{ padding: '6px 12px', borderRadius: '8px', background: '#DC2626', color: '#FFF', border: 'none', fontWeight: 800, fontSize: '0.74rem', cursor: 'pointer' }}
-                  >
-                    Try Again
-                  </button>
-                  {gpsErrorState.isDenied && (
-                    <button
-                      type="button"
-                      onClick={() => alert('📱 How to Allow Location Access:\n\n1. Tap the 🔒 lock or ⓘ info icon in your browser address bar\n2. Tap "Site Settings" or "Permissions"\n3. Change "Location" from Blocked to Allow\n4. Refresh the page and click Detect Current Location again.')}
-                      style={{ padding: '6px 12px', borderRadius: '8px', background: '#F1F5F9', color: '#334155', border: '1px solid #CBD5E1', fontWeight: 800, fontSize: '0.74rem', cursor: 'pointer' }}
-                    >
-                      How to Allow
-                    </button>
-                  )}
-                </div>
-              </div>
-            )}
-          </div>
-
-          {/* Card 2: Current GPS Coordinates */}
-          <div style={{ padding: '16px 18px', background: '#FFFFFF', borderRadius: '16px', border: '1px solid #E2E8F0', boxShadow: '0 1px 3px rgba(0,0,0,0.04)' }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '10px' }}>
-              <div style={{ width: '36px', height: '36px', borderRadius: '10px', background: '#DCFCE7', color: '#16A34A', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1.1rem', flexShrink: 0 }}>
-                🌐
-              </div>
-              <div>
-                <strong style={{ fontSize: '0.92rem', color: '#0F172A', fontWeight: 800, display: 'block' }}>Entrance Coordinates</strong>
-                <span style={{ fontSize: '0.72rem', color: '#64748B' }}>Sub-meter precision latitude and longitude</span>
-              </div>
-            </div>
-
-            <div style={{ paddingLeft: '46px', display: 'flex', flexDirection: 'column', gap: '10px' }}>
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
-                <div>
-                  <label style={{ fontSize: '0.72rem', fontWeight: 800, color: '#0F172A', display: 'block', marginBottom: '4px', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
-                    Latitude:
-                  </label>
-                  <input
-                    type="number"
-                    step="any"
-                    placeholder="e.g. 26.0602"
-                    value={settingsForm.latitude || ''}
-                    onChange={(e) => setSettingsForm({ ...settingsForm, latitude: parseFloat(e.target.value) })}
-                    style={{ width: '100%', padding: '10px 12px', borderRadius: '10px', border: '1px solid #CBD5E1', fontSize: '0.88rem', fontWeight: 700, boxSizing: 'border-box', background: '#FFFFFF' }}
-                  />
-                </div>
-                <div>
-                  <label style={{ fontSize: '0.72rem', fontWeight: 800, color: '#0F172A', display: 'block', marginBottom: '4px', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
-                    Longitude:
-                  </label>
-                  <input
-                    type="number"
-                    step="any"
-                    placeholder="e.g. 85.1634"
-                    value={settingsForm.longitude || ''}
-                    onChange={(e) => setSettingsForm({ ...settingsForm, longitude: parseFloat(e.target.value) })}
-                    style={{ width: '100%', padding: '10px 12px', borderRadius: '10px', border: '1px solid #CBD5E1', fontSize: '0.88rem', fontWeight: 700, boxSizing: 'border-box', background: '#FFFFFF' }}
-                  />
-                </div>
-              </div>
-
-              {settingsForm.latitude && settingsForm.longitude && (
-                <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: '2px' }}>
-                  <a
-                    href={`https://www.google.com/maps?q=${settingsForm.latitude},${settingsForm.longitude}`}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    style={{ fontSize: '0.74rem', color: '#0284C7', fontWeight: 800, textDecoration: 'none', display: 'inline-flex', alignItems: 'center', gap: '4px' }}
-                  >
-                    Verify on Google Maps ↗
-                  </a>
-                </div>
-              )}
-            </div>
-          </div>
-
-          {/* Card 3: Geofence Ordering Radius */}
-          <div style={{ padding: '16px 18px', background: '#FFFFFF', borderRadius: '16px', border: '1px solid #E2E8F0', boxShadow: '0 1px 3px rgba(0,0,0,0.04)' }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '8px' }}>
-              <div style={{ width: '36px', height: '36px', borderRadius: '10px', background: '#FEF3C7', color: '#D97706', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1.1rem', flexShrink: 0 }}>
-                🎯
-              </div>
-              <div>
-                <strong style={{ fontSize: '0.92rem', color: '#0F172A', fontWeight: 800, display: 'block' }}>Max Ordering Distance Boundary</strong>
-                <span style={{ fontSize: '0.72rem', color: '#64748B' }}>Geofence restriction radius in meters</span>
-              </div>
-            </div>
-
-            <div style={{ paddingLeft: '46px', display: 'flex', flexDirection: 'column', gap: '10px' }}>
-              <div style={{ position: 'relative' }}>
-                <input
-                  type="number"
-                  min="20"
-                  max="5000"
-                  value={settingsForm.max_distance_meters || 100}
-                  onChange={(e) => setSettingsForm({ ...settingsForm, max_distance_meters: parseInt(e.target.value) || 100 })}
-                  style={{ width: '100%', padding: '10px 80px 10px 14px', borderRadius: '10px', border: '1px solid #CBD5E1', fontSize: '0.9rem', fontWeight: 800, boxSizing: 'border-box' }}
-                />
-                <span style={{ position: 'absolute', right: '14px', top: '50%', transform: 'translateY(-50%)', fontSize: '0.76rem', fontWeight: 800, color: '#64748B' }}>
-                  meters
-                </span>
-              </div>
-
-              {/* Quick Preset Pills */}
-              <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap' }}>
-                {[
-                  { label: '50m (Dining Hall)', val: 50 },
-                  { label: '100m (Standard)', val: 100 },
-                  { label: '250m (Premises)', val: 250 },
-                  { label: '500m (Zone)', val: 500 },
-                ].map(p => {
-                  const isActive = (settingsForm.max_distance_meters || 100) === p.val;
-                  return (
-                    <button
-                      key={p.val}
-                      type="button"
-                      onClick={() => setSettingsForm({ ...settingsForm, max_distance_meters: p.val })}
-                      style={{
-                        padding: '5px 10px',
-                        borderRadius: '8px',
-                        fontSize: '0.72rem',
-                        fontWeight: 800,
-                        cursor: 'pointer',
-                        border: isActive ? '1.5px solid #059669' : '1px solid #E2E8F0',
-                        background: isActive ? '#DCFCE7' : '#F8FAFC',
-                        color: isActive ? '#15803D' : '#475569',
-                        transition: 'all 0.15s ease'
-                      }}
-                    >
-                      {p.label}
-                    </button>
-                  );
-                })}
-              </div>
-            </div>
-          </div>
-
-          <LocationPickerModal
-            isOpen={showMapModal}
-            onClose={() => setShowMapModal(false)}
-            initialLat={Number(settingsForm.latitude) || 26.6500}
-            initialLng={Number(settingsForm.longitude) || 86.5800}
-            initialRadius={Number(settingsForm.max_distance_meters) || 100}
-            initialAddress={settingsForm.address || ''}
-            onSave={(loc) => {
-              setSettingsForm(prev => ({
-                ...prev,
-                latitude: loc.latitude,
-                longitude: loc.longitude,
-                max_distance_meters: loc.max_distance_meters,
-                location_initialized: true
-              }));
-              setGpsSuccessMsg(`✓ Location & Geofence updated via interactive map!`);
-              setTimeout(() => setGpsSuccessMsg(''), 5000);
-            }}
-          />
-        </div>
-      </AdminDrawer>
-
-
 
       {/* Drawer 6: Admin Security */}
       <AdminDrawer
