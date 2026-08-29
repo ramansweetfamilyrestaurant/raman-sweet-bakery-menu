@@ -2527,60 +2527,110 @@ export default function App() {
                         key={`offer-${item._type}-${item.id}-${idx}`}
                         onClick={() => {
                           if (item._type === 'dish') {
-                            const catSection = document.getElementById(`category-${item.category_id}`);
-                            if (catSection) catSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                            setSelectedDishModal(item);
                           } else {
-                            const comboSection = document.getElementById('combos-section');
-                            if (comboSection) comboSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                            setSelectedComboModal(item);
                           }
                         }}
                         style={{
-                          minWidth: '140px', maxWidth: '160px', flex: '0 0 auto',
+                          minWidth: '145px', maxWidth: '165px', flex: '0 0 auto',
                           background: '#FFFFFF', borderRadius: '12px',
                           border: '1px solid #E2E8F0', padding: '10px',
                           cursor: 'pointer', position: 'relative',
-                          boxShadow: '0 1px 4px rgba(0,0,0,0.04)'
+                          boxShadow: '0 1px 4px rgba(0,0,0,0.04)',
+                          display: 'flex', flexDirection: 'column', justifyContent: 'space-between'
                         }}
                       >
-                        {item.offer_badge && (
-                          <span style={{
-                            position: 'absolute', top: '6px', right: '6px',
-                            background: 'linear-gradient(135deg, #EF4444, #DC2626)',
-                            color: '#FFFFFF', fontSize: '0.58rem', fontWeight: 800,
-                            padding: '2px 6px', borderRadius: '6px', letterSpacing: '0.02em'
+                        <div>
+                          {item.offer_badge && (
+                            <span style={{
+                              position: 'absolute', top: '6px', right: '6px',
+                              background: 'linear-gradient(135deg, #EF4444, #DC2626)',
+                              color: '#FFFFFF', fontSize: '0.58rem', fontWeight: 800,
+                              padding: '2px 6px', borderRadius: '6px', letterSpacing: '0.02em',
+                              zIndex: 2
+                            }}>
+                              {item.offer_badge}
+                            </span>
+                          )}
+                          {item.image ? (
+                            <img src={item.image} alt={item.name} style={{
+                              width: '100%', height: '74px', objectFit: 'cover',
+                              borderRadius: '8px', marginBottom: '6px'
+                            }} />
+                          ) : (
+                            <div style={{
+                              width: '100%', height: '74px', borderRadius: '8px',
+                              marginBottom: '6px', background: '#F1F5F9',
+                              display: 'flex', alignItems: 'center', justifyContent: 'center',
+                              fontSize: '1.5rem'
+                            }}>
+                              {item._type === 'combo' ? '🍱' : '🍽️'}
+                            </div>
+                          )}
+                          <p style={{
+                            margin: '0 0 4px 0', fontSize: '0.74rem', fontWeight: 700,
+                            color: 'var(--text-dark)', lineHeight: 1.2,
+                            overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap'
                           }}>
-                            {item.offer_badge}
-                          </span>
-                        )}
-                        {item.image ? (
-                          <img src={item.image} alt={item.name} style={{
-                            width: '100%', height: '70px', objectFit: 'cover',
-                            borderRadius: '8px', marginBottom: '6px'
-                          }} />
-                        ) : (
-                          <div style={{
-                            width: '100%', height: '70px', borderRadius: '8px',
-                            marginBottom: '6px', background: '#F1F5F9',
-                            display: 'flex', alignItems: 'center', justifyContent: 'center',
-                            fontSize: '1.5rem'
-                          }}>
-                            {item._type === 'combo' ? '🍱' : '🍽️'}
+                            {item.name}
+                          </p>
+                        </div>
+
+                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: '6px', gap: '4px' }}>
+                          <div style={{ display: 'flex', flexDirection: 'column', gap: '1px' }}>
+                            <span style={{ fontSize: '0.84rem', fontWeight: 900, color: '#059669', lineHeight: 1.1 }}>
+                              {sym}{formatPriceNumber(offerPrice)}
+                            </span>
+                            {Number(regularPrice) > Number(offerPrice) && (
+                              <span style={{ fontSize: '0.66rem', color: '#94A3B8', textDecoration: 'line-through', lineHeight: 1 }}>
+                                {sym}{formatPriceNumber(regularPrice)}
+                              </span>
+                            )}
                           </div>
-                        )}
-                        <p style={{
-                          margin: '0 0 4px 0', fontSize: '0.74rem', fontWeight: 700,
-                          color: 'var(--text-dark)', lineHeight: 1.2,
-                          overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap'
-                        }}>
-                          {item.name}
-                        </p>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
-                          <span style={{ fontSize: '0.78rem', fontWeight: 800, color: '#059669' }}>
-                            {sym}{formatPriceNumber(offerPrice)}
-                          </span>
-                          <span style={{ fontSize: '0.65rem', color: '#94A3B8', textDecoration: 'line-through' }}>
-                            {sym}{formatPriceNumber(regularPrice)}
-                          </span>
+
+                          {isDirectOrderingActive && (
+                            <button
+                              type="button"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                if (item._type === 'combo') {
+                                  handleAddComboToCart(item);
+                                } else {
+                                  const hasHalf = item.price_half !== null && item.price_half !== undefined && Number(item.price_half) > 0;
+                                  const hasModifiers = Boolean(
+                                    item.modifiers && (
+                                      (Array.isArray(item.modifiers) && item.modifiers.length > 0) ||
+                                      (typeof item.modifiers === 'string' && item.modifiers.length > 4 && item.modifiers !== '[]')
+                                    )
+                                  );
+                                  if (hasHalf || hasModifiers) {
+                                    setSelectedDishModal(item);
+                                  } else {
+                                    handleAddToCart(item, 'full');
+                                  }
+                                }
+                              }}
+                              style={{
+                                background: 'linear-gradient(135deg, #10B981 0%, #059669 100%)',
+                                color: '#FFFFFF',
+                                border: 'none',
+                                padding: '4px 9px',
+                                borderRadius: 'var(--radius-pill)',
+                                fontSize: '0.70rem',
+                                fontWeight: 900,
+                                cursor: 'pointer',
+                                display: 'inline-flex',
+                                alignItems: 'center',
+                                gap: '2px',
+                                boxShadow: '0 2px 6px rgba(16, 185, 129, 0.35)',
+                                flexShrink: 0
+                              }}
+                            >
+                              <span>+</span>
+                              <span>{lang === 'hi' ? 'जोड़ें' : 'ADD'}</span>
+                            </button>
+                          )}
                         </div>
                       </div>
                     );
@@ -2632,48 +2682,79 @@ export default function App() {
                         minWidth: '220px', maxWidth: '240px', flexShrink: 0, scrollSnapAlign: 'start',
                         background: '#FFFFFF', borderRadius: '12px', padding: '8px 10px',
                         border: '1px solid var(--gold-border)', boxShadow: '0 2px 6px rgba(0,0,0,0.03)',
-                        display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer'
+                        display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer',
+                        justifyContent: 'space-between'
                       }}
                     >
-                      {/* Compact Image */}
-                      <div style={{
-                        width: '52px', height: '52px', borderRadius: '8px', overflow: 'hidden',
-                        background: '#F9FAFB', border: '1px solid var(--gold-border)', flexShrink: 0,
-                        position: 'relative'
-                      }}>
-                        <img 
-                          src={combo.image || '/images/default-category.webp'} 
-                          alt={combo.name}
-                          style={{ width: '100%', height: '100%', objectFit: 'cover' }}
-                          onError={(e) => { e.target.src = '/images/default-category.webp'; }}
-                        />
-                      </div>
+                      {/* Left: Compact Image + Info */}
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px', minWidth: 0, flex: 1 }}>
+                        <div style={{
+                          width: '50px', height: '50px', borderRadius: '8px', overflow: 'hidden',
+                          background: '#F9FAFB', border: '1px solid var(--gold-border)', flexShrink: 0,
+                          position: 'relative'
+                        }}>
+                          <img 
+                            src={combo.image || '/images/default-category.webp'} 
+                            alt={combo.name}
+                            style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                            onError={(e) => { e.target.src = '/images/default-category.webp'; }}
+                          />
+                        </div>
 
-                      {/* Info & Price */}
-                      <div style={{ flex: 1, minWidth: 0 }}>
-                        <h4 style={{ 
-                          margin: 0, fontSize: '0.8rem', fontWeight: 800, color: 'var(--text-dark)',
-                          whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' 
-                        }}>
-                          {combo.name}
-                        </h4>
-                        <p style={{
-                          margin: '2px 0 4px', fontSize: '0.66rem', color: 'var(--text-muted)',
-                          whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis'
-                        }}>
-                          {itemsSummaryText || combo.description || 'Special combo deal'}
-                        </p>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                          <span style={{ fontSize: '0.84rem', fontWeight: 900, color: '#059669' }}>
-                            {getCurrencySymbol(info?.currency_symbol)}{formatPriceNumber(combo.price)}
-                          </span>
-                          {originalTotal > combo.price && (
-                            <span style={{ fontSize: '0.68rem', color: '#94A3B8', textDecoration: 'line-through' }}>
-                              {getCurrencySymbol(info?.currency_symbol)}{formatPriceNumber(originalTotal)}
+                        <div style={{ flex: 1, minWidth: 0 }}>
+                          <h4 style={{ 
+                            margin: 0, fontSize: '0.8rem', fontWeight: 800, color: 'var(--text-dark)',
+                            whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' 
+                          }}>
+                            {combo.name}
+                          </h4>
+                          <p style={{
+                            margin: '2px 0 4px', fontSize: '0.66rem', color: 'var(--text-muted)',
+                            whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis'
+                          }}>
+                            {itemsSummaryText || combo.description || 'Special combo deal'}
+                          </p>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                            <span style={{ fontSize: '0.84rem', fontWeight: 900, color: '#059669' }}>
+                              {getCurrencySymbol(info?.currency_symbol)}{formatPriceNumber(combo.price)}
                             </span>
-                          )}
+                            {originalTotal > combo.price && (
+                              <span style={{ fontSize: '0.68rem', color: '#94A3B8', textDecoration: 'line-through' }}>
+                                {getCurrencySymbol(info?.currency_symbol)}{formatPriceNumber(originalTotal)}
+                              </span>
+                            )}
+                          </div>
                         </div>
                       </div>
+
+                      {/* Right: + ADD button when ordering active */}
+                      {isDirectOrderingActive && (
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleAddComboToCart(combo);
+                          }}
+                          style={{
+                            background: 'linear-gradient(135deg, #10B981 0%, #059669 100%)',
+                            color: '#FFFFFF',
+                            border: 'none',
+                            padding: '5px 8px',
+                            borderRadius: 'var(--radius-pill)',
+                            fontSize: '0.68rem',
+                            fontWeight: 900,
+                            cursor: 'pointer',
+                            display: 'inline-flex',
+                            alignItems: 'center',
+                            gap: '2px',
+                            boxShadow: '0 2px 6px rgba(16, 185, 129, 0.35)',
+                            flexShrink: 0
+                          }}
+                        >
+                          <span>+</span>
+                          <span>{lang === 'hi' ? 'जोड़ें' : 'ADD'}</span>
+                        </button>
+                      )}
                     </div>
                   );
                 })}
