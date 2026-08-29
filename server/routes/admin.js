@@ -4096,6 +4096,10 @@ Instructions:
     return res.json({ success: true, reply, provider: 'smart_engine' });
   } catch (err) {
     console.error('Generate AI Review Reply error:', err);
+    res.status(500).json({ error: 'Failed to generate AI review reply' });
+  }
+});
+
 // ========== OFFERS & PROMOTIONS CRUD (ADMIN ROUTES) ==========
 
 // GET all offers for admin
