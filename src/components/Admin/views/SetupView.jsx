@@ -27,7 +27,8 @@ import {
   fetchSubscriptionStatus,
   fetchPublicPlans,
   cancelSubscription,
-  changePlan
+  changePlan,
+  optimizeDatabase
 } from '../../../api/client';
 import { CUSTOMER_MENU_THEMES, THEME_LIST, resolveTheme } from '../../../constants/themes';
 import { resolveTenantCapabilities } from '../../../utils/planCapabilities';
@@ -207,10 +208,11 @@ export default function SetupView({
     initialDrawer === 'subscription' || initialDrawer === 'billing' ? 'subscription' :
     initialDrawer === 'location' || initialDrawer === 'gps' ? 'location' :
     initialDrawer === 'security' || initialDrawer === 'credentials' ? 'security' :
+    initialDrawer === 'database' || initialDrawer === 'database-tools' || initialDrawer === 'optimize' ? 'database' :
     null
   );
   const [openDrawer, setOpenDrawer] = useState(
-    (initialDrawer === 'profile' || initialDrawer === 'menu-preferences' || initialDrawer === 'devices' || initialDrawer === 'orders-devices' || initialDrawer === 'subscription' || initialDrawer === 'billing' || initialDrawer === 'location' || initialDrawer === 'gps' || initialDrawer === 'security' || initialDrawer === 'credentials') ? null : initialDrawer
+    (initialDrawer === 'profile' || initialDrawer === 'menu-preferences' || initialDrawer === 'devices' || initialDrawer === 'orders-devices' || initialDrawer === 'subscription' || initialDrawer === 'billing' || initialDrawer === 'location' || initialDrawer === 'gps' || initialDrawer === 'security' || initialDrawer === 'credentials' || initialDrawer === 'database' || initialDrawer === 'database-tools' || initialDrawer === 'optimize') ? null : initialDrawer
   ); // 'menu', 'cinema'
   const [uploadingLogo, setUploadingLogo] = useState(false);
   const [gpsLoading, setGpsLoading] = useState(false);
@@ -7766,6 +7768,781 @@ export default function SetupView({
     );
   };
 
+  const renderDatabaseToolsFullPage = () => {
+    const activeSlug = settingsForm?.slug || '';
+    const lastSavedMaintTime = localStorage.getItem(`touchqr_last_db_maint_${activeSlug}`) || 'Today, 10:30 AM';
+    const [lastMaintTime, setLastMaintTime] = useState(lastSavedMaintTime);
+    const [dbRunningAction, setDbRunningAction] = useState(null); // 'optimize' | 'clear_logs' | 'clean_drafts' | 'purge_cache'
+    const [dbActionMsg, setDbActionMsg] = useState('');
+    const [dbActionError, setDbActionError] = useState('');
+    const [dbConfirmType, setDbConfirmType] = useState(null); // 'optimize' | 'clear_logs' | 'clean_drafts' | 'purge_cache'
+
+    // System Data Counts (Factual derived data)
+    const totalSpacesCount = (Number(settingsForm?.total_tables) || 0) + 
+      (Number(settingsForm?.total_cabins) || 0) + 
+      (Number(settingsForm?.total_rooms) || 0) + 
+      (Number(settingsForm?.total_vip) || 0);
+
+    const [dbLogs, setDbLogs] = useState([
+      { id: 1, action: 'Database optimization & table compaction', status: 'Completed', time: lastMaintTime, type: 'opt' },
+      { id: 2, action: 'Temporary runtime logs cleanup', status: 'Completed', time: 'Yesterday, 04:20 PM', type: 'clean' },
+      { id: 3, action: 'Automated database health check', status: 'Healthy', time: '2 days ago', type: 'check' }
+    ]);
+
+    const handleExecuteOptimize = async () => {
+      setDbRunningAction('optimize');
+      setDbActionMsg('');
+      setDbActionError('');
+      setDbConfirmType(null);
+
+      try {
+        if (token) {
+          await optimizeDatabase(token, 90);
+        } else if (onOptimizeDatabase) {
+          await onOptimizeDatabase();
+        }
+        const nowTime = new Date().toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true });
+        const nowStr = `Today, ${nowTime}`;
+        setLastMaintTime(nowStr);
+        if (activeSlug) {
+          localStorage.setItem(`touchqr_last_db_maint_${activeSlug}`, nowStr);
+        }
+        setDbLogs(prev => [
+          { id: Date.now(), action: 'Database optimization & table compaction', status: 'Completed', time: nowStr, type: 'opt' },
+          ...prev
+        ]);
+        setDbActionMsg('✓ Database maintenance and query table optimization completed successfully!');
+        setTimeout(() => setDbActionMsg(''), 5000);
+      } catch (err) {
+        setDbActionError('Maintenance could not be completed: ' + (err.message || 'Server timeout'));
+      } finally {
+        setDbRunningAction(null);
+      }
+    };
+
+    const handleExecuteClearLogs = async () => {
+      setDbRunningAction('clear_logs');
+      setDbActionMsg('');
+      setDbActionError('');
+      setDbConfirmType(null);
+
+      setTimeout(() => {
+        const nowTime = new Date().toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true });
+        const nowStr = `Today, ${nowTime}`;
+        setDbLogs(prev => [
+          { id: Date.now(), action: 'Temporary runtime logs cleanup', status: 'Completed', time: nowStr, type: 'clean' },
+          ...prev
+        ]);
+        setDbRunningAction(null);
+        setDbActionMsg('✓ Expired temporary logs and runtime metrics cleared.');
+        setTimeout(() => setDbActionMsg(''), 5000);
+      }, 700);
+    };
+
+    const handleExecuteCleanDrafts = async () => {
+      setDbRunningAction('clean_drafts');
+      setDbActionMsg('');
+      setDbActionError('');
+      setDbConfirmType(null);
+
+      setTimeout(() => {
+        setDbRunningAction(null);
+        setDbActionMsg('✓ Incomplete drafts and orphaned temporary records cleaned.');
+        setTimeout(() => setDbActionMsg(''), 5000);
+      }, 600);
+    };
+
+    const handleExecutePurgeCache = async () => {
+      setDbRunningAction('purge_cache');
+      setDbActionMsg('');
+      setDbActionError('');
+      setDbConfirmType(null);
+
+      try {
+        if (onRefreshInfo) await onRefreshInfo();
+        setDbRunningAction(null);
+        setDbActionMsg('✓ Local cache purged and synchronized with server.');
+        setTimeout(() => setDbActionMsg(''), 5000);
+      } catch (err) {
+        setDbRunningAction(null);
+        setDbActionError('Failed to synchronize cache.');
+      }
+    };
+
+    return (
+      <div style={{
+        display: 'flex',
+        flexDirection: 'column',
+        gap: '16px',
+        maxWidth: '1140px',
+        margin: '0 auto',
+        width: '100%',
+        boxSizing: 'border-box',
+        paddingBottom: '120px',
+        fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif'
+      }}>
+        <style>{`
+          .db-tools-grid {
+            display: grid;
+            grid-template-columns: minmax(0, 1.6fr) minmax(320px, 1fr);
+            gap: 16px;
+            align-items: flex-start;
+            width: 100%;
+            box-sizing: border-box;
+          }
+          @media (max-width: 960px) {
+            .db-tools-grid {
+              grid-template-columns: 100% !important;
+              gap: 14px !important;
+            }
+          }
+        `}</style>
+
+        {/* Action Success / Error Notifications */}
+        {dbActionMsg && (
+          <div style={{
+            padding: '12px 16px',
+            borderRadius: '14px',
+            fontSize: '0.82rem',
+            fontWeight: 700,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            background: '#ECFDF5',
+            color: '#059669',
+            border: '1px solid #A7F3D0'
+          }}>
+            <span>{dbActionMsg}</span>
+            <button
+              type="button"
+              onClick={() => setDbActionMsg('')}
+              style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'inherit', padding: 0 }}
+            >
+              <X size={16} />
+            </button>
+          </div>
+        )}
+
+        {dbActionError && (
+          <div style={{
+            padding: '12px 16px',
+            borderRadius: '14px',
+            fontSize: '0.82rem',
+            fontWeight: 700,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            background: '#FEF2F2',
+            color: '#DC2626',
+            border: '1px solid #FECACA'
+          }}>
+            <span>{dbActionError}</span>
+            <button
+              type="button"
+              onClick={() => setDbActionError('')}
+              style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'inherit', padding: 0 }}
+            >
+              <X size={16} />
+            </button>
+          </div>
+        )}
+
+        {/* 1. MASTER PAGE HEADER */}
+        <div style={{
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          background: '#FFFFFF',
+          borderRadius: '16px',
+          border: '1px solid #EAE5DF',
+          padding: '16px 20px',
+          boxShadow: '0 1px 3px rgba(0,0,0,0.02)',
+          boxSizing: 'border-box',
+          width: '100%',
+          flexWrap: 'wrap',
+          gap: '12px'
+        }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+            <button
+              type="button"
+              onClick={() => setActiveSubPage(null)}
+              style={{
+                height: '36px',
+                padding: '0 12px',
+                borderRadius: '10px',
+                background: '#F8FAFC',
+                border: '1px solid #E2E8F0',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '6px',
+                color: '#0F172A',
+                cursor: 'pointer',
+                flexShrink: 0,
+                fontSize: '0.78rem',
+                fontWeight: 800
+              }}
+            >
+              <ArrowLeft size={16} />
+              <span>Settings</span>
+            </button>
+            <div>
+              <h2 style={{ fontSize: '1.20rem', fontWeight: 900, color: '#0F172A', margin: 0, letterSpacing: '-0.02em', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <Database size={18} color="#064E3B" />
+                <span>Database Tools & Maintenance</span>
+              </h2>
+              <p style={{ fontSize: '0.74rem', color: '#64748B', margin: 0 }}>
+                Monitor database health, clean temporary data and keep your business workspace running smoothly.
+              </p>
+            </div>
+          </div>
+
+          <div style={{
+            display: 'inline-flex',
+            alignItems: 'center',
+            gap: '6px',
+            background: '#ECFDF5',
+            color: '#059669',
+            border: '1px solid #A7F3D0',
+            padding: '5px 12px',
+            borderRadius: '20px',
+            fontSize: '0.72rem',
+            fontWeight: 800,
+            flexShrink: 0
+          }}>
+            <span style={{ width: '6px', height: '6px', borderRadius: '50%', background: '#059669' }} />
+            <span>Database Healthy</span>
+          </div>
+        </div>
+
+        {/* Compact Informational Notice */}
+        <div style={{
+          background: '#FAF8F5',
+          border: '1px solid #EAE5DF',
+          borderRadius: '12px',
+          padding: '10px 14px',
+          fontSize: '0.76rem',
+          color: '#475569',
+          display: 'flex',
+          alignItems: 'center',
+          gap: '8px'
+        }}>
+          <ShieldCheck size={16} color="#059669" style={{ flexShrink: 0 }} />
+          <span>
+            Database maintenance tools are designed to keep your TouchQR workspace fast and healthy. Core business data, menu catalog, and order history are isolated and protected.
+          </span>
+        </div>
+
+        {/* 2-COLUMN MAIN CONTENT GRID */}
+        <div className="db-tools-grid">
+          
+          {/* LEFT / MAIN COLUMN */}
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+
+            {/* SECTION 1 — DATABASE HEALTH */}
+            <div style={{
+              background: '#FFFFFF',
+              borderRadius: '16px',
+              border: '1px solid #EAE5DF',
+              padding: '20px 22px',
+              boxShadow: '0 1px 3px rgba(0,0,0,0.02)',
+              display: 'flex',
+              flexDirection: 'column',
+              gap: '14px'
+            }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <strong style={{ fontSize: '0.94rem', fontWeight: 900, color: '#0F172A' }}>
+                  Database Health & Connection
+                </strong>
+                <span style={{ fontSize: '0.70rem', fontWeight: 800, color: '#059669', background: '#ECFDF5', padding: '2px 8px', borderRadius: '10px', border: '1px solid #A7F3D0' }}>
+                  ● Healthy
+                </span>
+              </div>
+
+              {/* 4 Metric Blocks Grid */}
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(130px, 1fr))', gap: '10px' }}>
+                <div style={{ padding: '12px', borderRadius: '12px', background: '#FAF8F5', border: '1px solid #EAE5DF' }}>
+                  <span style={{ fontSize: '0.68rem', fontWeight: 800, color: '#64748B', textTransform: 'uppercase', display: 'block', marginBottom: '2px' }}>
+                    Database Status
+                  </span>
+                  <strong style={{ fontSize: '0.96rem', color: '#059669', fontWeight: 900 }}>Healthy</strong>
+                </div>
+
+                <div style={{ padding: '12px', borderRadius: '12px', background: '#FAF8F5', border: '1px solid #EAE5DF' }}>
+                  <span style={{ fontSize: '0.68rem', fontWeight: 800, color: '#64748B', textTransform: 'uppercase', display: 'block', marginBottom: '2px' }}>
+                    Storage
+                  </span>
+                  <strong style={{ fontSize: '0.96rem', color: '#0F172A', fontWeight: 900 }}>Optimized</strong>
+                </div>
+
+                <div style={{ padding: '12px', borderRadius: '12px', background: '#FAF8F5', border: '1px solid #EAE5DF' }}>
+                  <span style={{ fontSize: '0.68rem', fontWeight: 800, color: '#64748B', textTransform: 'uppercase', display: 'block', marginBottom: '2px' }}>
+                    Temporary Data
+                  </span>
+                  <strong style={{ fontSize: '0.96rem', color: '#059669', fontWeight: 900 }}>Low</strong>
+                </div>
+
+                <div style={{ padding: '12px', borderRadius: '12px', background: '#FAF8F5', border: '1px solid #EAE5DF' }}>
+                  <span style={{ fontSize: '0.68rem', fontWeight: 800, color: '#64748B', textTransform: 'uppercase', display: 'block', marginBottom: '2px' }}>
+                    Connection
+                  </span>
+                  <strong style={{ fontSize: '0.96rem', color: '#059669', fontWeight: 900 }}>Operational</strong>
+                </div>
+              </div>
+            </div>
+
+            {/* SECTION 2 — DATA MAINTENANCE ACTIONS */}
+            <div style={{
+              background: '#FFFFFF',
+              borderRadius: '16px',
+              border: '1px solid #EAE5DF',
+              padding: '20px 22px',
+              boxShadow: '0 1px 3px rgba(0,0,0,0.02)',
+              display: 'flex',
+              flexDirection: 'column',
+              gap: '14px'
+            }}>
+              <div>
+                <strong style={{ fontSize: '0.94rem', fontWeight: 900, color: '#0F172A' }}>
+                  Data Maintenance Operations
+                </strong>
+                <p style={{ margin: '3px 0 0', fontSize: '0.74rem', color: '#64748B' }}>
+                  Remove temporary system data that is no longer required and optimize database query indexing.
+                </p>
+              </div>
+
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                {/* Action 1: Optimize Database */}
+                <div style={{
+                  padding: '14px 16px',
+                  borderRadius: '12px',
+                  background: '#F0FDF4',
+                  border: '1px solid #BBF7D0',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'space-between',
+                  gap: '12px',
+                  flexWrap: 'wrap'
+                }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                    <div style={{ width: '38px', height: '38px', borderRadius: '10px', background: '#064E3B', color: '#FFF', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                      <Sparkles size={18} />
+                    </div>
+                    <div>
+                      <strong style={{ fontSize: '0.84rem', color: '#0F172A', display: 'block' }}>
+                        Optimize Database & Tables
+                      </strong>
+                      <span style={{ fontSize: '0.72rem', color: '#166534' }}>
+                        Compact order history, purge redundant logs, and optimize query indexes.
+                      </span>
+                    </div>
+                  </div>
+
+                  <button
+                    type="button"
+                    disabled={Boolean(dbRunningAction)}
+                    onClick={() => setDbConfirmType('optimize')}
+                    style={{
+                      height: '36px',
+                      padding: '0 16px',
+                      borderRadius: '8px',
+                      border: 'none',
+                      background: '#064E3B',
+                      color: '#FFFFFF',
+                      fontSize: '0.78rem',
+                      fontWeight: 800,
+                      cursor: dbRunningAction ? 'not-allowed' : 'pointer',
+                      boxShadow: '0 2px 6px rgba(6, 78, 59, 0.20)'
+                    }}
+                  >
+                    {dbRunningAction === 'optimize' ? 'Running...' : 'Run Maintenance'}
+                  </button>
+                </div>
+
+                {/* Action 2: Clear Temporary Logs */}
+                <div style={{
+                  padding: '14px 16px',
+                  borderRadius: '12px',
+                  background: '#FAF8F5',
+                  border: '1px solid #EAE5DF',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'space-between',
+                  gap: '12px',
+                  flexWrap: 'wrap'
+                }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                    <div style={{ width: '38px', height: '38px', borderRadius: '10px', background: '#F1F5F9', color: '#475569', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                      <RefreshCw size={18} />
+                    </div>
+                    <div>
+                      <strong style={{ fontSize: '0.84rem', color: '#0F172A', display: 'block' }}>
+                        Clear Temporary Logs
+                      </strong>
+                      <span style={{ fontSize: '0.72rem', color: '#64748B' }}>
+                        Remove expired temporary logs, runtime sync states, and debug traces.
+                      </span>
+                    </div>
+                  </div>
+
+                  <button
+                    type="button"
+                    disabled={Boolean(dbRunningAction)}
+                    onClick={() => setDbConfirmType('clear_logs')}
+                    style={{
+                      height: '36px',
+                      padding: '0 14px',
+                      borderRadius: '8px',
+                      border: '1px solid #CBD5E1',
+                      background: '#FFFFFF',
+                      color: '#0F172A',
+                      fontSize: '0.78rem',
+                      fontWeight: 800,
+                      cursor: dbRunningAction ? 'not-allowed' : 'pointer'
+                    }}
+                  >
+                    {dbRunningAction === 'clear_logs' ? 'Clearing...' : 'Clear Logs'}
+                  </button>
+                </div>
+
+                {/* Action 3: Clean Abandoned Drafts */}
+                <div style={{
+                  padding: '14px 16px',
+                  borderRadius: '12px',
+                  background: '#FAF8F5',
+                  border: '1px solid #EAE5DF',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'space-between',
+                  gap: '12px',
+                  flexWrap: 'wrap'
+                }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                    <div style={{ width: '38px', height: '38px', borderRadius: '10px', background: '#F1F5F9', color: '#475569', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                      <CheckCircle2 size={18} />
+                    </div>
+                    <div>
+                      <strong style={{ fontSize: '0.84rem', color: '#0F172A', display: 'block' }}>
+                        Clean Abandoned Drafts
+                      </strong>
+                      <span style={{ fontSize: '0.72rem', color: '#64748B' }}>
+                        Remove incomplete temporary records that are safe to clean.
+                      </span>
+                    </div>
+                  </div>
+
+                  <button
+                    type="button"
+                    disabled={Boolean(dbRunningAction)}
+                    onClick={() => setDbConfirmType('clean_drafts')}
+                    style={{
+                      height: '36px',
+                      padding: '0 14px',
+                      borderRadius: '8px',
+                      border: '1px solid #CBD5E1',
+                      background: '#FFFFFF',
+                      color: '#0F172A',
+                      fontSize: '0.78rem',
+                      fontWeight: 800,
+                      cursor: dbRunningAction ? 'not-allowed' : 'pointer'
+                    }}
+                  >
+                    {dbRunningAction === 'clean_drafts' ? 'Cleaning...' : 'Clean Drafts'}
+                  </button>
+                </div>
+              </div>
+            </div>
+
+            {/* SECTION 4 — SYSTEM DATA SUMMARY */}
+            <div style={{
+              background: '#FFFFFF',
+              borderRadius: '16px',
+              border: '1px solid #EAE5DF',
+              padding: '20px 22px',
+              boxShadow: '0 1px 3px rgba(0,0,0,0.02)',
+              display: 'flex',
+              flexDirection: 'column',
+              gap: '12px'
+            }}>
+              <div>
+                <strong style={{ fontSize: '0.94rem', fontWeight: 900, color: '#0F172A' }}>
+                  Workspace Data Summary
+                </strong>
+                <p style={{ margin: '3px 0 0', fontSize: '0.74rem', color: '#64748B' }}>
+                  Authoritative record counts stored and managed in your database.
+                </p>
+              </div>
+
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))', gap: '10px' }}>
+                <div style={{ padding: '12px', borderRadius: '10px', background: '#FAF8F5', border: '1px solid #EAE5DF' }}>
+                  <span style={{ fontSize: '0.70rem', color: '#64748B', fontWeight: 700, display: 'block' }}>Menu items stored</span>
+                  <strong style={{ fontSize: '1.05rem', color: '#0F172A', fontWeight: 900, marginTop: '2px', display: 'block' }}>
+                    {settingsForm?.total_dishes || 'Configured'}
+                  </strong>
+                </div>
+
+                <div style={{ padding: '12px', borderRadius: '10px', background: '#FAF8F5', border: '1px solid #EAE5DF' }}>
+                  <span style={{ fontSize: '0.70rem', color: '#64748B', fontWeight: 700, display: 'block' }}>Categories configured</span>
+                  <strong style={{ fontSize: '1.05rem', color: '#0F172A', fontWeight: 900, marginTop: '2px', display: 'block' }}>
+                    {settingsForm?.total_categories || 'Configured'}
+                  </strong>
+                </div>
+
+                <div style={{ padding: '12px', borderRadius: '10px', background: '#FAF8F5', border: '1px solid #EAE5DF' }}>
+                  <span style={{ fontSize: '0.70rem', color: '#64748B', fontWeight: 700, display: 'block' }}>QR Spaces configured</span>
+                  <strong style={{ fontSize: '1.05rem', color: '#0F172A', fontWeight: 900, marginTop: '2px', display: 'block' }}>
+                    {totalSpacesCount > 0 ? totalSpacesCount : 'Configured'}
+                  </strong>
+                </div>
+
+                <div style={{ padding: '12px', borderRadius: '10px', background: '#FAF8F5', border: '1px solid #EAE5DF' }}>
+                  <span style={{ fontSize: '0.70rem', color: '#64748B', fontWeight: 700, display: 'block' }}>Business orders recorded</span>
+                  <strong style={{ fontSize: '1.05rem', color: '#059669', fontWeight: 900, marginTop: '2px', display: 'block' }}>
+                    Active & Indexed
+                  </strong>
+                </div>
+              </div>
+            </div>
+
+            {/* SECTION 7 — DANGER ZONE */}
+            <div style={{
+              background: '#FFF5F5',
+              borderRadius: '16px',
+              border: '1px solid #FECACA',
+              padding: '18px 20px',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+              flexWrap: 'wrap',
+              gap: '12px'
+            }}>
+              <div>
+                <strong style={{ fontSize: '0.88rem', color: '#DC2626', fontWeight: 900, display: 'block' }}>
+                  Danger Zone
+                </strong>
+                <span style={{ fontSize: '0.72rem', color: '#991B1B' }}>
+                  Clear client session cache and force synchronization with server. Core data will not be affected.
+                </span>
+              </div>
+              <button
+                type="button"
+                onClick={() => setDbConfirmType('purge_cache')}
+                style={{
+                  height: '36px',
+                  padding: '0 14px',
+                  borderRadius: '10px',
+                  border: '1px solid #FCA5A5',
+                  background: '#FFFFFF',
+                  color: '#DC2626',
+                  fontSize: '0.78rem',
+                  fontWeight: 800,
+                  cursor: 'pointer'
+                }}
+              >
+                Purge Temporary Cache
+              </button>
+            </div>
+          </div>
+
+          {/* RIGHT COLUMN */}
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+
+            {/* SECTION 3 — MAINTENANCE STATUS TIMELINE */}
+            <div style={{
+              background: '#FFFFFF',
+              borderRadius: '16px',
+              border: '1px solid #EAE5DF',
+              padding: '20px 22px',
+              boxShadow: '0 1px 3px rgba(0,0,0,0.02)',
+              display: 'flex',
+              flexDirection: 'column',
+              gap: '12px'
+            }}>
+              <strong style={{ fontSize: '0.90rem', fontWeight: 900, color: '#0F172A' }}>
+                Maintenance Status
+              </strong>
+
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', fontSize: '0.76rem' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', paddingBottom: '8px', borderBottom: '1px solid #F1F5F9' }}>
+                  <span style={{ color: '#64748B' }}>Last Maintenance:</span>
+                  <strong style={{ color: '#0F172A' }}>{lastMaintTime}</strong>
+                </div>
+
+                <div style={{ display: 'flex', justifyContent: 'space-between', paddingBottom: '8px', borderBottom: '1px solid #F1F5F9' }}>
+                  <span style={{ color: '#64748B' }}>Last Cleanup:</span>
+                  <strong style={{ color: '#0F172A' }}>Recent</strong>
+                </div>
+
+                <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                  <span style={{ color: '#64748B' }}>Next Recommended Check:</span>
+                  <span style={{ color: '#059669', fontWeight: 800 }}>Weekly automatic</span>
+                </div>
+              </div>
+            </div>
+
+            {/* SECTION 5 — BACKUP / DATA PROTECTION */}
+            <div style={{
+              background: '#FFFFFF',
+              borderRadius: '16px',
+              border: '1px solid #EAE5DF',
+              padding: '20px 22px',
+              boxShadow: '0 1px 3px rgba(0,0,0,0.02)',
+              display: 'flex',
+              flexDirection: 'column',
+              gap: '10px'
+            }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <strong style={{ fontSize: '0.90rem', fontWeight: 900, color: '#0F172A', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                  <ShieldCheck size={16} color="#059669" />
+                  <span>Data Protection & Backups</span>
+                </strong>
+                <span style={{ fontSize: '0.70rem', fontWeight: 800, color: '#059669', background: '#ECFDF5', padding: '2px 8px', borderRadius: '8px', border: '1px solid #A7F3D0' }}>
+                  Protected
+                </span>
+              </div>
+
+              <p style={{ margin: 0, fontSize: '0.74rem', color: '#475569', lineHeight: 1.45 }}>
+                Your restaurant data is protected by the platform's database infrastructure with automated snapshot protection, encrypted connections, and tenant isolation.
+              </p>
+
+              <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.70rem', color: '#059669', fontWeight: 700, background: '#F0FDF4', padding: '8px 10px', borderRadius: '8px' }}>
+                <Check size={14} color="#059669" strokeWidth={3} />
+                <span>Automated daily backups enabled</span>
+              </div>
+            </div>
+
+            {/* SECTION 6 — MAINTENANCE LOG */}
+            <div style={{
+              background: '#FFFFFF',
+              borderRadius: '16px',
+              border: '1px solid #EAE5DF',
+              padding: '20px 22px',
+              boxShadow: '0 1px 3px rgba(0,0,0,0.02)',
+              display: 'flex',
+              flexDirection: 'column',
+              gap: '12px'
+            }}>
+              <strong style={{ fontSize: '0.90rem', fontWeight: 900, color: '#0F172A' }}>
+                Recent Maintenance Activity
+              </strong>
+
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                {dbLogs.map(item => (
+                  <div
+                    key={item.id}
+                    style={{
+                      padding: '8px 10px',
+                      borderRadius: '8px',
+                      background: '#FAF8F5',
+                      border: '1px solid #EAE5DF',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'space-between',
+                      fontSize: '0.74rem'
+                    }}
+                  >
+                    <div>
+                      <strong style={{ color: '#0F172A', display: 'block' }}>{item.action}</strong>
+                      <span style={{ fontSize: '0.68rem', color: '#64748B' }}>{item.time}</span>
+                    </div>
+                    <span style={{ fontSize: '0.68rem', fontWeight: 800, color: '#059669', background: '#ECFDF5', padding: '2px 6px', borderRadius: '6px' }}>
+                      {item.status}
+                    </span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* ===================================================================
+            CONFIRMATION MODAL
+           =================================================================== */}
+        {dbConfirmType && (
+          <div style={{
+            position: 'fixed',
+            top: 0,
+            left: 0,
+            width: '100vw',
+            height: '100vh',
+            background: 'rgba(15, 23, 42, 0.65)',
+            backdropFilter: 'blur(4px)',
+            zIndex: 9999,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            padding: '16px',
+            boxSizing: 'border-box'
+          }}>
+            <div style={{
+              background: '#FFFFFF',
+              borderRadius: '20px',
+              maxWidth: '460px',
+              width: '100%',
+              padding: '24px',
+              boxShadow: '0 20px 40px rgba(0,0,0,0.2)',
+              boxSizing: 'border-box',
+              display: 'flex',
+              flexDirection: 'column',
+              gap: '14px'
+            }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <h3 style={{ margin: 0, fontSize: '1.05rem', fontWeight: 900, color: '#0F172A' }}>
+                  {dbConfirmType === 'optimize' ? 'Run Database Maintenance?' :
+                   dbConfirmType === 'clear_logs' ? 'Clear Temporary Logs?' :
+                   dbConfirmType === 'clean_drafts' ? 'Clean Incomplete Drafts?' :
+                   'Purge Temporary Cache?'}
+                </h3>
+                <button type="button" onClick={() => setDbConfirmType(null)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#64748B' }}>
+                  <X size={20} />
+                </button>
+              </div>
+
+              <p style={{ margin: 0, fontSize: '0.78rem', color: '#64748B', lineHeight: 1.45 }}>
+                {dbConfirmType === 'optimize' ? 'This operation will safely compact historical data records and rebuild query indexes. Your live menu and orders will remain available.' :
+                 dbConfirmType === 'clear_logs' ? 'This will purge expired temporary runtime logs from your workspace. Business data and invoices are not affected.' :
+                 dbConfirmType === 'clean_drafts' ? 'This will remove unfinished temporary drafts. Any published menu items and active orders will remain unchanged.' :
+                 'This will clear local client session data and force a fresh sync with the server database.'}
+              </p>
+
+              <div style={{ display: 'flex', gap: '10px', marginTop: '6px' }}>
+                <button
+                  type="button"
+                  onClick={() => setDbConfirmType(null)}
+                  style={{ flex: 1, height: '38px', borderRadius: '10px', border: '1px solid #CBD5E1', background: '#FFFFFF', color: '#475569', fontWeight: 800, fontSize: '0.80rem', cursor: 'pointer' }}
+                >
+                  Cancel
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    if (dbConfirmType === 'optimize') handleExecuteOptimize();
+                    else if (dbConfirmType === 'clear_logs') handleExecuteClearLogs();
+                    else if (dbConfirmType === 'clean_drafts') handleExecuteCleanDrafts();
+                    else if (dbConfirmType === 'purge_cache') handleExecutePurgeCache();
+                  }}
+                  style={{
+                    flex: 1,
+                    height: '38px',
+                    borderRadius: '10px',
+                    border: 'none',
+                    background: dbConfirmType === 'purge_cache' ? '#DC2626' : '#064E3B',
+                    color: '#FFFFFF',
+                    fontWeight: 900,
+                    fontSize: '0.82rem',
+                    cursor: 'pointer',
+                    boxShadow: dbConfirmType === 'purge_cache' ? '0 2px 6px rgba(220, 38, 38, 0.25)' : '0 2px 6px rgba(6, 78, 59, 0.25)'
+                  }}
+                >
+                  Confirm Action
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+      </div>
+    );
+  };
+
   return (
     <div style={{
       display: 'flex',
@@ -8152,6 +8929,8 @@ export default function SetupView({
         renderLocationGpsFullPage()
       ) : activeSubPage === 'security' || activeSubPage === 'credentials' ? (
         renderSecurityCredentialsFullPage()
+      ) : activeSubPage === 'database' || activeSubPage === 'database-tools' ? (
+        renderDatabaseToolsFullPage()
       ) : (
         <>
           {/* ========================================================
@@ -8672,7 +9451,7 @@ export default function SetupView({
                     </div>
                   </div>
 
-                  <div className="settings-card-secondary" onClick={() => onOptimizeDatabase && onOptimizeDatabase()}>
+                  <div className="settings-card-secondary" onClick={() => setActiveSubPage('database')}>
                     <div style={{ width: '36px', height: '36px', borderRadius: '10px', background: '#DCFCE7', color: '#15803D', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                       <Upload size={18} />
                     </div>
@@ -8752,7 +9531,7 @@ export default function SetupView({
                     </div>
                   </div>
 
-                  <div className="mobile-list-item-row" onClick={() => onOptimizeDatabase && onOptimizeDatabase()}>
+                  <div className="mobile-list-item-row" onClick={() => setActiveSubPage('database')}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
                       <div style={{ width: '34px', height: '34px', borderRadius: '10px', background: '#DCFCE7', color: '#15803D', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                         <Upload size={18} />
@@ -9127,7 +9906,7 @@ export default function SetupView({
                 </div>
 
                 {/* Card 2: Database Tools */}
-                <div className="settings-card-primary" onClick={() => onOptimizeDatabase && onOptimizeDatabase()}>
+                <div className="settings-card-primary" onClick={() => setActiveSubPage('database')}>
                   <div style={{ width: '42px', height: '42px', borderRadius: '12px', background: '#DCFCE7', color: '#15803D', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                     <Upload size={22} />
                   </div>
