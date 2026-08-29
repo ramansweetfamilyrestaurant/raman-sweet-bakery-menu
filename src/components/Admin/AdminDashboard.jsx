@@ -3061,6 +3061,11 @@ export default function AdminDashboard({
               <SetupView
                 initialDrawer={initialSetupDrawer}
                 restaurantInfo={restaurantInfo}
+                capabilities={tenantCaps}
+                onUpgrade={() => {
+                  setInitialSetupDrawer('subscription');
+                  setActiveTab('settings');
+                }}
                 settingsForm={settingsForm}
                 setSettingsForm={setSettingsForm}
                 handleSaveSettings={handleSaveSettings}

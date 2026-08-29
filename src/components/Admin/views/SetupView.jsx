@@ -30,6 +30,7 @@ import {
   changePlan
 } from '../../../api/client';
 import { CUSTOMER_MENU_THEMES, THEME_LIST, resolveTheme } from '../../../constants/themes';
+import { resolveTenantCapabilities } from '../../../utils/planCapabilities';
 
 // Configure Leaflet Default Marker Icon
 try {
@@ -191,10 +192,13 @@ export default function SetupView({
   readOnly = false,
   supportPhone,
   restaurantInfo,
+  capabilities,
+  onUpgrade,
   onNavigate,
   onOptimizeDatabase,
   initialDrawer = null
 }) {
+  const resolvedCaps = capabilities || resolveTenantCapabilities(restaurantInfo, settingsForm);
   const [settingsTab, setSettingsTab] = useState('general'); // 'general' | 'restaurant' | 'operations' | 'menu-billing' | 'security' | 'advanced'
   const [activeSubPage, setActiveSubPage] = useState(
     initialDrawer === 'profile' ? 'profile' :
@@ -6478,7 +6482,7 @@ export default function SetupView({
 
   const renderSecurityCredentialsFullPage = () => {
     const isKdsConfigured = Boolean(restaurantInfo?.kds_pin_configured);
-    const isKdsPlanAllowed = capabilities ? capabilities.kds_enabled !== false : true;
+    const isKdsPlanAllowed = resolvedCaps ? resolvedCaps.kds_enabled !== false : true;
     const currentAdminUsername = credForm?.newUsername || localStorage.getItem('admin_username') || 'admin';
 
     // Password strength helper
