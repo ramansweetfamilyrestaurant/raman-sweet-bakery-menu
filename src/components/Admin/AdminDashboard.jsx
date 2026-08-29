@@ -25,6 +25,7 @@ import SetupView from './views/SetupView';
 import QrGeneratorView from './views/QrGeneratorView';
 import ReviewView from './views/ReviewView';
 import NotificationView from './views/NotificationView';
+import SupportView from './views/SupportView';
 
 export default function AdminDashboard({
   token,
@@ -2879,7 +2880,7 @@ export default function AdminDashboard({
             username={username}
             pendingOrdersCount={orders.filter(o => o.status === 'pending').length}
             onLogout={onLogout}
-            onOpenHelp={() => setShowHelpModal(true)}
+            onOpenHelp={() => setActiveTab('support')}
             onReturnToMenu={onReturnToMenu}
             capabilities={tenantCaps}
           />
@@ -2892,7 +2893,7 @@ export default function AdminDashboard({
           username={username}
           onLogout={onLogout}
           onReturnToMenu={onReturnToMenu}
-          onOpenHelp={() => setShowHelpModal(true)}
+          onOpenHelp={() => setActiveTab('support')}
           supportPhone={masterSupportPhone}
           activeTab={activeTab}
           setActiveTab={setActiveTab}
@@ -3080,6 +3081,22 @@ export default function AdminDashboard({
                 onBackToDashboard={() => setActiveTab('home')}
                 onUpdateOrderStatus={handleUpdateStatus}
                 onResolveServiceRequest={handleResolveServiceRequest}
+              />
+            )}
+
+            {/* HELP & SUPPORT CENTER VIEW */}
+            {activeTab === 'support' && (
+              <SupportView
+                restaurantInfo={restaurantInfo}
+                settingsForm={settingsForm}
+                capabilities={tenantCaps}
+                token={token}
+                onNavigate={(tab, drawer = null) => {
+                  if (drawer) setInitialSetupDrawer(drawer);
+                  setActiveTab(tab);
+                }}
+                onBackToDashboard={() => setActiveTab('home')}
+                onBackToSettings={() => setActiveTab('settings')}
               />
             )}
 
