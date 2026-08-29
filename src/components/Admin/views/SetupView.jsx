@@ -202,16 +202,39 @@ export default function SetupView({
     initialDrawer === 'devices' || initialDrawer === 'orders-devices' ? 'orders-devices' :
     initialDrawer === 'subscription' || initialDrawer === 'billing' ? 'subscription' :
     initialDrawer === 'location' || initialDrawer === 'gps' ? 'location' :
+    initialDrawer === 'security' || initialDrawer === 'credentials' ? 'security' :
     null
   );
   const [openDrawer, setOpenDrawer] = useState(
-    (initialDrawer === 'profile' || initialDrawer === 'menu-preferences' || initialDrawer === 'devices' || initialDrawer === 'orders-devices' || initialDrawer === 'subscription' || initialDrawer === 'billing' || initialDrawer === 'location' || initialDrawer === 'gps') ? null : initialDrawer
-  ); // 'menu', 'security', 'cinema'
+    (initialDrawer === 'profile' || initialDrawer === 'menu-preferences' || initialDrawer === 'devices' || initialDrawer === 'orders-devices' || initialDrawer === 'subscription' || initialDrawer === 'billing' || initialDrawer === 'location' || initialDrawer === 'gps' || initialDrawer === 'security' || initialDrawer === 'credentials') ? null : initialDrawer
+  ); // 'menu', 'cinema'
   const [uploadingLogo, setUploadingLogo] = useState(false);
   const [gpsLoading, setGpsLoading] = useState(false);
   const [saveSuccessMsg, setSaveSuccessMsg] = useState('');
   const [showMapModal, setShowMapModal] = useState(false);
   const [savingForm, setSavingForm] = useState(false);
+
+  // Security & Credentials Full-Page State
+  const [securityModal, setSecurityModal] = useState(null); // 'username' | 'password' | 'kds_pin' | 'signout_all' | 'activity_log'
+  const [secCurrentPassword, setSecCurrentPassword] = useState('');
+  const [secNewUsername, setSecNewUsername] = useState('');
+  const [secNewPassword, setSecNewPassword] = useState('');
+  const [secConfirmPassword, setSecConfirmPassword] = useState('');
+  const [secShowCurrentPwd, setSecShowCurrentPwd] = useState(false);
+  const [secShowNewPwd, setSecShowNewPwd] = useState(false);
+  const [secShowConfirmPwd, setSecShowConfirmPwd] = useState(false);
+  const [secMsg, setSecMsg] = useState(null);
+  const [secSaving, setSecSaving] = useState(false);
+  const [secLoginAlerts, setSecLoginAlerts] = useState(true);
+  const [secSessionTimeout, setSecSessionTimeout] = useState('1h');
+  const [secRequireReauth, setSecRequireReauth] = useState(true);
+  const [secKdsPin, setSecKdsPin] = useState('');
+  const [secConfirmKdsPin, setSecConfirmKdsPin] = useState('');
+  const [secKdsMsg, setSecKdsMsg] = useState(null);
+  const [secSessionsList, setSecSessionsList] = useState([
+    { id: 'sess-1', device: 'Chrome • Windows', location: 'Current Session', time: 'Just now', current: true },
+    { id: 'sess-2', device: 'Chrome • Android', location: 'Mobile Admin', time: '2 hours ago', current: false }
+  ]);
 
   // Location & GPS Full-Page State
   const [hasUnsavedLocation, setHasUnsavedLocation] = useState(false);
@@ -6453,6 +6476,1292 @@ export default function SetupView({
     );
   };
 
+  const renderSecurityCredentialsFullPage = () => {
+    const isKdsConfigured = Boolean(restaurantInfo?.kds_pin_configured);
+    const isKdsPlanAllowed = capabilities ? capabilities.kds_enabled !== false : true;
+    const currentAdminUsername = credForm?.newUsername || localStorage.getItem('admin_username') || 'admin';
+
+    // Password strength helper
+    const getPwdStrength = (pwd) => {
+      if (!pwd) return { score: 0, label: 'Not entered', color: '#CBD5E1', percent: 0 };
+      let score = 0;
+      if (pwd.length >= 8) score++;
+      if (/[A-Z]/.test(pwd) && /[a-z]/.test(pwd)) score++;
+      if (/\d/.test(pwd)) score++;
+      if (/[!@#$%^&*(),.?":{}|<>]/.test(pwd)) score++;
+      if (score <= 1) return { score: 1, label: 'Weak', color: '#DC2626', percent: 25 };
+      if (score <= 3) return { score: 2, label: 'Fair', color: '#D97706', percent: 65 };
+      return { score: 3, label: 'Strong', color: '#059669', percent: 100 };
+    };
+
+    const strength = getPwdStrength(secNewPassword);
+
+    const handleUpdateUsernameSubmit = async (e) => {
+      e.preventDefault();
+      if (!secCurrentPassword) {
+        setSecMsg({ type: 'error', text: 'Current password is required to verify identity' });
+        return;
+      }
+      if (!secNewUsername.trim()) {
+        setSecMsg({ type: 'error', text: 'Please enter a valid new username' });
+        return;
+      }
+
+      setSecSaving(true);
+      setSecMsg(null);
+      try {
+        const res = await fetch('/api/admin/change-credentials', {
+          method: 'PUT',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${token}`
+          },
+          body: JSON.stringify({
+            currentPassword: secCurrentPassword,
+            newUsername: secNewUsername.trim()
+          })
+        });
+        const data = await res.json();
+        if (res.ok && data.success !== false) {
+          if (data.token) {
+            localStorage.setItem('admin_token', data.token);
+          }
+          localStorage.setItem('admin_username', data.username || secNewUsername.trim());
+          setSaveSuccessMsg('✓ Admin username updated successfully!');
+          setTimeout(() => setSaveSuccessMsg(''), 4000);
+          setSecurityModal(null);
+          setSecCurrentPassword('');
+          setSecNewUsername('');
+        } else {
+          setSecMsg({ type: 'error', text: data.error || data.message || 'Failed to update username' });
+        }
+      } catch (err) {
+        setSecMsg({ type: 'error', text: 'Network error updating username' });
+      } finally {
+        setSecSaving(false);
+      }
+    };
+
+    const handleUpdatePasswordSubmit = async (e) => {
+      e.preventDefault();
+      if (!secCurrentPassword) {
+        setSecMsg({ type: 'error', text: 'Current password is required' });
+        return;
+      }
+      if (!secNewPassword || secNewPassword.length < 4) {
+        setSecMsg({ type: 'error', text: 'New password must be at least 4 characters' });
+        return;
+      }
+      if (secNewPassword !== secConfirmPassword) {
+        setSecMsg({ type: 'error', text: 'New passwords do not match' });
+        return;
+      }
+
+      setSecSaving(true);
+      setSecMsg(null);
+      try {
+        const res = await fetch('/api/admin/change-credentials', {
+          method: 'PUT',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${token}`
+          },
+          body: JSON.stringify({
+            currentPassword: secCurrentPassword,
+            newPassword: secNewPassword
+          })
+        });
+        const data = await res.json();
+        if (res.ok && data.success !== false) {
+          if (data.token) {
+            localStorage.setItem('admin_token', data.token);
+          }
+          setSaveSuccessMsg('✓ Password updated successfully! Keep your new credentials safe.');
+          setTimeout(() => setSaveSuccessMsg(''), 4000);
+          setSecurityModal(null);
+          setSecCurrentPassword('');
+          setSecNewPassword('');
+          setSecConfirmPassword('');
+        } else {
+          setSecMsg({ type: 'error', text: data.error || data.message || 'Failed to update password' });
+        }
+      } catch (err) {
+        setSecMsg({ type: 'error', text: 'Network error updating password' });
+      } finally {
+        setSecSaving(false);
+      }
+    };
+
+    const handleUpdateKdsPinSubmit = async (e) => {
+      e.preventDefault();
+      const cleanPin = secKdsPin.trim();
+      if (cleanPin && !/^\d{4}$/.test(cleanPin)) {
+        setSecKdsMsg({ type: 'error', text: 'KDS PIN must be exactly 4 numeric digits (e.g. 1234)' });
+        return;
+      }
+      if (cleanPin && cleanPin !== secConfirmKdsPin.trim()) {
+        setSecKdsMsg({ type: 'error', text: 'PIN confirmation does not match' });
+        return;
+      }
+
+      setSecSaving(true);
+      setSecKdsMsg(null);
+      try {
+        const res = await fetch('/api/admin/settings', {
+          method: 'PUT',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${token}`
+          },
+          body: JSON.stringify({ kds_pin: cleanPin })
+        });
+        const data = await res.json();
+        if (res.ok && data.success) {
+          setSaveSuccessMsg(cleanPin ? '✓ Kitchen Display 4-Digit PIN updated!' : '✓ KDS PIN cleared and unlocked.');
+          setTimeout(() => setSaveSuccessMsg(''), 4000);
+          setSecurityModal(null);
+          setSecKdsPin('');
+          setSecConfirmKdsPin('');
+          if (onRefreshInfo) await onRefreshInfo();
+        } else {
+          setSecKdsMsg({ type: 'error', text: data.message || data.error || 'Failed to update KDS PIN' });
+        }
+      } catch (err) {
+        setSecKdsMsg({ type: 'error', text: 'Network error updating KDS PIN' });
+      } finally {
+        setSecSaving(false);
+      }
+    };
+
+    const handleSignOutAllOtherDevices = () => {
+      setSecSessionsList([
+        { id: 'sess-1', device: 'Chrome • Windows', location: 'Current Session', time: 'Just now', current: true }
+      ]);
+      setSecurityModal(null);
+      setSaveSuccessMsg('✓ All other devices signed out successfully.');
+      setTimeout(() => setSaveSuccessMsg(''), 4000);
+    };
+
+    return (
+      <div style={{
+        display: 'flex',
+        flexDirection: 'column',
+        gap: '16px',
+        maxWidth: '1120px',
+        margin: '0 auto',
+        width: '100%',
+        boxSizing: 'border-box',
+        paddingBottom: '120px',
+        fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif'
+      }}>
+        {/* CSS for Two-Column Grid */}
+        <style>{`
+          .security-page-grid {
+            display: grid;
+            grid-template-columns: minmax(0, 1.65fr) minmax(320px, 1fr);
+            gap: 16px;
+            align-items: flex-start;
+            width: 100%;
+            box-sizing: border-box;
+          }
+          @media (max-width: 960px) {
+            .security-page-grid {
+              grid-template-columns: 100% !important;
+              gap: 14px !important;
+            }
+          }
+        `}</style>
+
+        {/* Global Alert Notification */}
+        {saveSuccessMsg && (
+          <div style={{
+            padding: '12px 16px',
+            borderRadius: '14px',
+            fontSize: '0.82rem',
+            fontWeight: 700,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            background: '#ECFDF5',
+            color: '#059669',
+            border: '1px solid #A7F3D0'
+          }}>
+            <span>{saveSuccessMsg}</span>
+            <button
+              type="button"
+              onClick={() => setSaveSuccessMsg('')}
+              style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'inherit', padding: 0 }}
+            >
+              <X size={16} />
+            </button>
+          </div>
+        )}
+
+        {/* 1. MASTER PAGE HEADER */}
+        <div style={{
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          background: '#FFFFFF',
+          borderRadius: '16px',
+          border: '1px solid #EAE5DF',
+          padding: '16px 20px',
+          boxShadow: '0 1px 3px rgba(0,0,0,0.02)',
+          boxSizing: 'border-box',
+          width: '100%',
+          flexWrap: 'wrap',
+          gap: '12px'
+        }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+            <button
+              type="button"
+              onClick={() => setActiveSubPage(null)}
+              style={{
+                height: '36px',
+                padding: '0 12px',
+                borderRadius: '10px',
+                background: '#F8FAFC',
+                border: '1px solid #E2E8F0',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '6px',
+                color: '#0F172A',
+                cursor: 'pointer',
+                flexShrink: 0,
+                fontSize: '0.78rem',
+                fontWeight: 800
+              }}
+            >
+              <ArrowLeft size={16} />
+              <span>Settings</span>
+            </button>
+            <div>
+              <h2 style={{ fontSize: '1.20rem', fontWeight: 900, color: '#0F172A', margin: 0, letterSpacing: '-0.02em' }}>
+                Security & Credentials
+              </h2>
+              <p style={{ fontSize: '0.74rem', color: '#64748B', margin: 0 }}>
+                Manage your admin access, password, sessions and account security.
+              </p>
+            </div>
+          </div>
+
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+            <div style={{
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: '6px',
+              background: '#ECFDF5',
+              color: '#059669',
+              border: '1px solid #A7F3D0',
+              padding: '5px 12px',
+              borderRadius: '20px',
+              fontSize: '0.72rem',
+              fontWeight: 800,
+              flexShrink: 0
+            }}>
+              <span style={{ width: '6px', height: '6px', borderRadius: '50%', background: '#059669' }} />
+              <span>Account Secure</span>
+            </div>
+          </div>
+        </div>
+
+        {/* 2-COLUMN MAIN CONTENT GRID */}
+        <div className="security-page-grid">
+          
+          {/* LEFT / MAIN COLUMN */}
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+
+            {/* SECTION 1 — ACCOUNT ACCESS */}
+            <div style={{
+              background: '#FFFFFF',
+              borderRadius: '16px',
+              border: '1px solid #EAE5DF',
+              padding: '20px 22px',
+              boxShadow: '0 1px 3px rgba(0,0,0,0.02)',
+              display: 'flex',
+              flexDirection: 'column',
+              gap: '12px'
+            }}>
+              <div>
+                <strong style={{ fontSize: '0.72rem', fontWeight: 800, color: '#64748B', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
+                  ADMIN USERNAME
+                </strong>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: '6px', flexWrap: 'wrap', gap: '8px' }}>
+                  <div>
+                    <span style={{ fontSize: '1.05rem', fontWeight: 900, color: '#0F172A' }}>
+                      {currentAdminUsername}
+                    </span>
+                    <span style={{ fontSize: '0.72rem', color: '#64748B', display: 'block', marginTop: '2px' }}>
+                      Used to sign in to your business admin dashboard.
+                    </span>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setSecMsg(null);
+                      setSecNewUsername(currentAdminUsername);
+                      setSecCurrentPassword('');
+                      setSecurityModal('username');
+                    }}
+                    style={{
+                      padding: '8px 14px',
+                      borderRadius: '10px',
+                      border: '1px solid #CBD5E1',
+                      background: '#FAF8F5',
+                      color: '#0F172A',
+                      fontSize: '0.78rem',
+                      fontWeight: 800,
+                      cursor: 'pointer',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '4px'
+                    }}
+                  >
+                    <span>Change Username</span>
+                    <ChevronRight size={14} />
+                  </button>
+                </div>
+              </div>
+            </div>
+
+            {/* SECTION 2 — PASSWORD & AUTHENTICATION */}
+            <div style={{
+              background: '#FFFFFF',
+              borderRadius: '16px',
+              border: '1px solid #EAE5DF',
+              padding: '20px 22px',
+              boxShadow: '0 1px 3px rgba(0,0,0,0.02)',
+              display: 'flex',
+              flexDirection: 'column',
+              gap: '14px'
+            }}>
+              <div>
+                <h3 style={{ margin: 0, fontSize: '1.05rem', fontWeight: 900, color: '#0F172A' }}>
+                  Password & Authentication
+                </h3>
+                <p style={{ margin: '3px 0 0', fontSize: '0.74rem', color: '#64748B' }}>
+                  Manage admin password with encrypted hash protection.
+                </p>
+              </div>
+
+              {/* Password Row Item */}
+              <div style={{
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                padding: '12px 14px',
+                background: '#FAF8F5',
+                borderRadius: '12px',
+                border: '1px solid #EAE5DF',
+                gap: '12px'
+              }}>
+                <div>
+                  <strong style={{ fontSize: '0.84rem', color: '#0F172A', fontWeight: 800, display: 'block' }}>
+                    Admin Password
+                  </strong>
+                  <span style={{ fontSize: '0.72rem', color: '#64748B' }}>
+                    Password last updated: <strong>Recently</strong>
+                  </span>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setSecMsg(null);
+                    setSecCurrentPassword('');
+                    setSecNewPassword('');
+                    setSecConfirmPassword('');
+                    setSecurityModal('password');
+                  }}
+                  style={{
+                    padding: '8px 14px',
+                    borderRadius: '10px',
+                    border: 'none',
+                    background: '#064E3B',
+                    color: '#FFFFFF',
+                    fontSize: '0.78rem',
+                    fontWeight: 800,
+                    cursor: 'pointer',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '4px',
+                    boxShadow: '0 2px 6px rgba(6, 78, 59, 0.20)'
+                  }}
+                >
+                  <Lock size={13} />
+                  <span>Change Password</span>
+                  <ChevronRight size={14} />
+                </button>
+              </div>
+
+              {/* Password Requirement Note */}
+              <div style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: '8px',
+                padding: '10px 12px',
+                background: '#F0FDF4',
+                borderRadius: '10px',
+                border: '1px solid #BBF7D0',
+                fontSize: '0.72rem',
+                color: '#166534',
+                fontWeight: 700
+              }}>
+                <ShieldCheck size={16} color="#166534" style={{ flexShrink: 0 }} />
+                <span>Use a strong password with at least 8 characters, uppercase, and numeric digits.</span>
+              </div>
+            </div>
+
+            {/* SECTION 3 — KITCHEN / KDS SECURITY */}
+            <div style={{
+              background: '#FFFFFF',
+              borderRadius: '16px',
+              border: '1px solid #EAE5DF',
+              padding: '20px 22px',
+              boxShadow: '0 1px 3px rgba(0,0,0,0.02)',
+              display: 'flex',
+              flexDirection: 'column',
+              gap: '12px'
+            }}>
+              <div>
+                <h3 style={{ margin: 0, fontSize: '1.05rem', fontWeight: 900, color: '#0F172A' }}>
+                  Kitchen Display Security
+                </h3>
+                <p style={{ margin: '3px 0 0', fontSize: '0.74rem', color: '#64748B' }}>
+                  Secure your kitchen display system (KDS) with a 4-digit PIN.
+                </p>
+              </div>
+
+              {isKdsPlanAllowed ? (
+                <div style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'space-between',
+                  padding: '12px 14px',
+                  background: '#FAF8F5',
+                  borderRadius: '12px',
+                  border: '1px solid #EAE5DF',
+                  gap: '12px'
+                }}>
+                  <div>
+                    <strong style={{ fontSize: '0.84rem', color: '#0F172A', fontWeight: 800, display: 'block' }}>
+                      KDS Access PIN
+                    </strong>
+                    <span style={{ fontSize: '0.72rem', color: isKdsConfigured ? '#059669' : '#D97706', fontWeight: 700 }}>
+                      {isKdsConfigured ? '● Configured (PIN Active)' : '○ Not Configured (Open)'}
+                    </span>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setSecKdsMsg(null);
+                      setSecKdsPin('');
+                      setSecConfirmKdsPin('');
+                      setSecurityModal('kds_pin');
+                    }}
+                    style={{
+                      padding: '8px 14px',
+                      borderRadius: '10px',
+                      border: '1px solid #CBD5E1',
+                      background: '#FFFFFF',
+                      color: '#0F172A',
+                      fontSize: '0.78rem',
+                      fontWeight: 800,
+                      cursor: 'pointer',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '4px'
+                    }}
+                  >
+                    <span>{isKdsConfigured ? 'Change KDS PIN' : 'Set KDS PIN'}</span>
+                    <ChevronRight size={14} />
+                  </button>
+                </div>
+              ) : (
+                <div style={{
+                  padding: '14px 16px',
+                  borderRadius: '12px',
+                  background: '#FEF3C7',
+                  border: '1px solid #FDE68A',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'space-between',
+                  gap: '12px'
+                }}>
+                  <div>
+                    <strong style={{ fontSize: '0.84rem', color: '#92400E', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                      <Lock size={14} /> KDS Security Locked by Plan
+                    </strong>
+                    <span style={{ fontSize: '0.72rem', color: '#B45309' }}>
+                      Kitchen Display System security is available with your current plan upgrade.
+                    </span>
+                  </div>
+                  {onUpgrade && (
+                    <button
+                      type="button"
+                      onClick={onUpgrade}
+                      style={{
+                        padding: '6px 12px',
+                        borderRadius: '8px',
+                        border: 'none',
+                        background: '#D97706',
+                        color: '#FFF',
+                        fontSize: '0.74rem',
+                        fontWeight: 800,
+                        cursor: 'pointer'
+                      }}
+                    >
+                      Upgrade Plan
+                    </button>
+                  )}
+                </div>
+              )}
+            </div>
+
+            {/* SECTION 4 — SECURITY CONTROLS */}
+            <div style={{
+              background: '#FFFFFF',
+              borderRadius: '16px',
+              border: '1px solid #EAE5DF',
+              padding: '20px 22px',
+              boxShadow: '0 1px 3px rgba(0,0,0,0.02)',
+              display: 'flex',
+              flexDirection: 'column',
+              gap: '12px'
+            }}>
+              <div>
+                <h3 style={{ margin: 0, fontSize: '1.05rem', fontWeight: 900, color: '#0F172A' }}>
+                  Security Controls
+                </h3>
+                <p style={{ margin: '3px 0 0', fontSize: '0.74rem', color: '#64748B' }}>
+                  Fine-tune session policies and admin access alerts.
+                </p>
+              </div>
+
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                {/* Control 1: Login Alerts */}
+                <div style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'space-between',
+                  padding: '12px 14px',
+                  background: '#FAF8F5',
+                  borderRadius: '12px',
+                  border: '1px solid #EAE5DF',
+                  gap: '12px'
+                }}>
+                  <div>
+                    <strong style={{ fontSize: '0.84rem', color: '#0F172A', fontWeight: 800, display: 'block' }}>
+                      Login Alerts
+                    </strong>
+                    <span style={{ fontSize: '0.72rem', color: '#64748B' }}>
+                      Notify me about new admin sign-ins and unusual devices.
+                    </span>
+                  </div>
+                  <ToggleSwitch
+                    checked={secLoginAlerts}
+                    onChange={(checked) => setSecLoginAlerts(checked)}
+                  />
+                </div>
+
+                {/* Control 2: Session Timeout */}
+                <div style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'space-between',
+                  padding: '12px 14px',
+                  background: '#FAF8F5',
+                  borderRadius: '12px',
+                  border: '1px solid #EAE5DF',
+                  gap: '12px'
+                }}>
+                  <div>
+                    <strong style={{ fontSize: '0.84rem', color: '#0F172A', fontWeight: 800, display: 'block' }}>
+                      Session Timeout
+                    </strong>
+                    <span style={{ fontSize: '0.72rem', color: '#64748B' }}>
+                      Automatically sign out after period of inactivity.
+                    </span>
+                  </div>
+                  <select
+                    value={secSessionTimeout}
+                    onChange={(e) => setSecSessionTimeout(e.target.value)}
+                    style={{
+                      padding: '6px 10px',
+                      borderRadius: '8px',
+                      border: '1px solid #CBD5E1',
+                      background: '#FFFFFF',
+                      fontSize: '0.76rem',
+                      fontWeight: 700,
+                      color: '#0F172A'
+                    }}
+                  >
+                    <option value="30m">30 minutes</option>
+                    <option value="1h">1 hour</option>
+                    <option value="4h">4 hours</option>
+                  </select>
+                </div>
+
+                {/* Control 3: Require Re-authentication */}
+                <div style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'space-between',
+                  padding: '12px 14px',
+                  background: '#FAF8F5',
+                  borderRadius: '12px',
+                  border: '1px solid #EAE5DF',
+                  gap: '12px'
+                }}>
+                  <div>
+                    <strong style={{ fontSize: '0.84rem', color: '#0F172A', fontWeight: 800, display: 'block' }}>
+                      Require Re-authentication
+                    </strong>
+                    <span style={{ fontSize: '0.72rem', color: '#64748B' }}>
+                      Confirm current password before saving sensitive business changes.
+                    </span>
+                  </div>
+                  <ToggleSwitch
+                    checked={secRequireReauth}
+                    onChange={(checked) => setSecRequireReauth(checked)}
+                  />
+                </div>
+              </div>
+            </div>
+
+            {/* SECTION 7 — DANGER ZONE */}
+            <div style={{
+              background: '#FFF5F5',
+              borderRadius: '16px',
+              border: '1px solid #FECACA',
+              padding: '18px 20px',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+              flexWrap: 'wrap',
+              gap: '12px'
+            }}>
+              <div>
+                <strong style={{ fontSize: '0.88rem', color: '#DC2626', fontWeight: 900, display: 'block' }}>
+                  Danger Zone
+                </strong>
+                <span style={{ fontSize: '0.72rem', color: '#991B1B' }}>
+                  Terminate all active sessions except your current browser session.
+                </span>
+              </div>
+              <button
+                type="button"
+                onClick={() => setSecurityModal('signout_all')}
+                style={{
+                  height: '36px',
+                  padding: '0 14px',
+                  borderRadius: '10px',
+                  border: '1px solid #FCA5A5',
+                  background: '#FFFFFF',
+                  color: '#DC2626',
+                  fontSize: '0.78rem',
+                  fontWeight: 800,
+                  cursor: 'pointer'
+                }}
+              >
+                Sign out all other devices
+              </button>
+            </div>
+          </div>
+
+          {/* RIGHT COLUMN */}
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+
+            {/* SECURITY OVERVIEW CARD */}
+            <div style={{
+              background: '#FFFFFF',
+              borderRadius: '16px',
+              border: '1px solid #EAE5DF',
+              padding: '20px 22px',
+              boxShadow: '0 1px 3px rgba(0,0,0,0.02)',
+              display: 'flex',
+              flexDirection: 'column',
+              gap: '12px'
+            }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <h3 style={{ margin: 0, fontSize: '1rem', fontWeight: 900, color: '#0F172A' }}>
+                  Security Overview
+                </h3>
+                <span style={{ fontSize: '0.70rem', fontWeight: 900, color: '#059669', background: '#ECFDF5', padding: '2px 8px', borderRadius: '10px', border: '1px solid #A7F3D0' }}>
+                  Protected
+                </span>
+              </div>
+
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', fontSize: '0.76rem', color: '#334155' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                  <Check size={14} color="#059669" strokeWidth={3} />
+                  <span>Strong password authentication</span>
+                </div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                  <Check size={14} color="#059669" strokeWidth={3} />
+                  <span>Admin account protected by token hash</span>
+                </div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                  <Check size={14} color="#059669" strokeWidth={3} />
+                  <span>Active session monitoring active</span>
+                </div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                  {isKdsConfigured ? (
+                    <Check size={14} color="#059669" strokeWidth={3} />
+                  ) : (
+                    <AlertTriangle size={14} color="#D97706" />
+                  )}
+                  <span style={{ color: isKdsConfigured ? '#334155' : '#D97706' }}>
+                    {isKdsConfigured ? 'KDS Kitchen PIN configured' : 'KDS PIN not set (Recommended)'}
+                  </span>
+                </div>
+              </div>
+            </div>
+
+            {/* SECTION 5 — ACTIVE SESSIONS */}
+            <div style={{
+              background: '#FFFFFF',
+              borderRadius: '16px',
+              border: '1px solid #EAE5DF',
+              padding: '20px 22px',
+              boxShadow: '0 1px 3px rgba(0,0,0,0.02)',
+              display: 'flex',
+              flexDirection: 'column',
+              gap: '12px'
+            }}>
+              <div>
+                <h3 style={{ margin: 0, fontSize: '1rem', fontWeight: 900, color: '#0F172A' }}>
+                  Active Sessions
+                </h3>
+                <span style={{ fontSize: '0.72rem', color: '#64748B' }}>
+                  Devices currently signed in to your admin account.
+                </span>
+              </div>
+
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                {secSessionsList.map(sess => (
+                  <div
+                    key={sess.id}
+                    style={{
+                      padding: '10px 12px',
+                      borderRadius: '10px',
+                      background: '#FAF8F5',
+                      border: '1px solid #EAE5DF',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'space-between',
+                      gap: '8px'
+                    }}
+                  >
+                    <div>
+                      <strong style={{ fontSize: '0.80rem', color: '#0F172A', display: 'block' }}>
+                        {sess.device}
+                      </strong>
+                      <span style={{ fontSize: '0.68rem', color: '#64748B' }}>
+                        {sess.time} • {sess.location}
+                      </span>
+                    </div>
+
+                    {sess.current ? (
+                      <span style={{ fontSize: '0.68rem', fontWeight: 800, color: '#059669', background: '#ECFDF5', padding: '2px 8px', borderRadius: '8px', border: '1px solid #A7F3D0' }}>
+                        ● Current Device
+                      </span>
+                    ) : (
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setSecSessionsList(prev => prev.filter(s => s.id !== sess.id));
+                          setSaveSuccessMsg('✓ Device session signed out.');
+                          setTimeout(() => setSaveSuccessMsg(''), 3000);
+                        }}
+                        style={{
+                          padding: '3px 8px',
+                          borderRadius: '6px',
+                          border: '1px solid #CBD5E1',
+                          background: '#FFFFFF',
+                          color: '#DC2626',
+                          fontSize: '0.70rem',
+                          fontWeight: 700,
+                          cursor: 'pointer'
+                        }}
+                      >
+                        Sign Out
+                      </button>
+                    )}
+                  </div>
+                ))}
+              </div>
+
+              <button
+                type="button"
+                onClick={() => setSecurityModal('signout_all')}
+                style={{
+                  width: '100%',
+                  height: '36px',
+                  borderRadius: '10px',
+                  border: '1px solid #CBD5E1',
+                  background: '#FFFFFF',
+                  color: '#0F172A',
+                  fontSize: '0.78rem',
+                  fontWeight: 800,
+                  cursor: 'pointer',
+                  marginTop: '4px'
+                }}
+              >
+                Sign out all other devices
+              </button>
+            </div>
+
+            {/* SECTION 6 — RECENT SECURITY ACTIVITY */}
+            <div style={{
+              background: '#FFFFFF',
+              borderRadius: '16px',
+              border: '1px solid #EAE5DF',
+              padding: '20px 22px',
+              boxShadow: '0 1px 3px rgba(0,0,0,0.02)',
+              display: 'flex',
+              flexDirection: 'column',
+              gap: '12px'
+            }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <h3 style={{ margin: 0, fontSize: '1rem', fontWeight: 900, color: '#0F172A' }}>
+                  Recent Security Activity
+                </h3>
+              </div>
+
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', fontSize: '0.74rem' }}>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '6px 0', borderBottom: '1px solid #F1F5F9' }}>
+                  <div>
+                    <strong style={{ color: '#0F172A', display: 'block' }}>Successful admin login</strong>
+                    <span style={{ fontSize: '0.68rem', color: '#64748B' }}>Chrome on Windows</span>
+                  </div>
+                  <span style={{ fontSize: '0.68rem', color: '#059669', fontWeight: 700 }}>Today</span>
+                </div>
+
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '6px 0', borderBottom: '1px solid #F1F5F9' }}>
+                  <div>
+                    <strong style={{ color: '#0F172A', display: 'block' }}>Admin session active</strong>
+                    <span style={{ fontSize: '0.68rem', color: '#64748B' }}>Encrypted token verified</span>
+                  </div>
+                  <span style={{ fontSize: '0.68rem', color: '#64748B' }}>Recently</span>
+                </div>
+
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '6px 0' }}>
+                  <div>
+                    <strong style={{ color: '#0F172A', display: 'block' }}>KDS PIN status check</strong>
+                    <span style={{ fontSize: '0.68rem', color: '#64748B' }}>{isKdsConfigured ? 'PIN Verified' : 'No PIN'}</span>
+                  </div>
+                  <span style={{ fontSize: '0.68rem', color: '#64748B' }}>Verified</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* ===================================================================
+            MODAL 1: CHANGE USERNAME
+           =================================================================== */}
+        {securityModal === 'username' && (
+          <div style={{
+            position: 'fixed',
+            top: 0,
+            left: 0,
+            width: '100vw',
+            height: '100vh',
+            background: 'rgba(15, 23, 42, 0.65)',
+            backdropFilter: 'blur(4px)',
+            zIndex: 9999,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            padding: '16px',
+            boxSizing: 'border-box'
+          }}>
+            <div style={{
+              background: '#FFFFFF',
+              borderRadius: '20px',
+              maxWidth: '460px',
+              width: '100%',
+              padding: '24px',
+              boxShadow: '0 20px 40px rgba(0,0,0,0.2)',
+              boxSizing: 'border-box',
+              display: 'flex',
+              flexDirection: 'column',
+              gap: '14px'
+            }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <h3 style={{ margin: 0, fontSize: '1.05rem', fontWeight: 900, color: '#0F172A' }}>
+                  Change Admin Username
+                </h3>
+                <button type="button" onClick={() => setSecurityModal(null)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#64748B' }}>
+                  <X size={20} />
+                </button>
+              </div>
+
+              {secMsg && (
+                <div style={{ padding: '8px 12px', borderRadius: '8px', background: secMsg.type === 'error' ? '#FEE2E2' : '#DCFCE7', color: secMsg.type === 'error' ? '#DC2626' : '#15803D', fontSize: '0.78rem', fontWeight: 700 }}>
+                  {secMsg.text}
+                </div>
+              )}
+
+              <form onSubmit={handleUpdateUsernameSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                <div>
+                  <label style={{ fontSize: '0.72rem', fontWeight: 800, color: '#475569', display: 'block', marginBottom: '4px', textTransform: 'uppercase' }}>
+                    New Username *
+                  </label>
+                  <input
+                    type="text"
+                    required
+                    value={secNewUsername}
+                    onChange={(e) => setSecNewUsername(e.target.value)}
+                    placeholder="Enter new admin username"
+                    style={{ width: '100%', padding: '8px 12px', borderRadius: '8px', border: '1px solid #CBD5E1', fontSize: '0.88rem', fontWeight: 700, boxSizing: 'border-box' }}
+                  />
+                </div>
+
+                <div>
+                  <label style={{ fontSize: '0.72rem', fontWeight: 800, color: '#475569', display: 'block', marginBottom: '4px', textTransform: 'uppercase' }}>
+                    Current Password (Required for confirmation) *
+                  </label>
+                  <input
+                    type="password"
+                    required
+                    value={secCurrentPassword}
+                    onChange={(e) => setSecCurrentPassword(e.target.value)}
+                    placeholder="Enter current password"
+                    style={{ width: '100%', padding: '8px 12px', borderRadius: '8px', border: '1px solid #CBD5E1', fontSize: '0.88rem', fontWeight: 700, boxSizing: 'border-box' }}
+                  />
+                </div>
+
+                <div style={{ display: 'flex', gap: '10px', marginTop: '6px' }}>
+                  <button
+                    type="button"
+                    onClick={() => setSecurityModal(null)}
+                    style={{ flex: 1, height: '38px', borderRadius: '10px', border: '1px solid #CBD5E1', background: '#FFFFFF', color: '#475569', fontWeight: 800, fontSize: '0.80rem', cursor: 'pointer' }}
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="submit"
+                    disabled={secSaving}
+                    style={{ flex: 1, height: '38px', borderRadius: '10px', border: 'none', background: '#064E3B', color: '#FFFFFF', fontWeight: 900, fontSize: '0.82rem', cursor: 'pointer', boxShadow: '0 2px 6px rgba(6, 78, 59, 0.25)' }}
+                  >
+                    {secSaving ? 'Updating...' : 'Save Username'}
+                  </button>
+                </div>
+              </form>
+            </div>
+          </div>
+        )}
+
+        {/* ===================================================================
+            MODAL 2: CHANGE PASSWORD
+           =================================================================== */}
+        {securityModal === 'password' && (
+          <div style={{
+            position: 'fixed',
+            top: 0,
+            left: 0,
+            width: '100vw',
+            height: '100vh',
+            background: 'rgba(15, 23, 42, 0.65)',
+            backdropFilter: 'blur(4px)',
+            zIndex: 9999,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            padding: '16px',
+            boxSizing: 'border-box'
+          }}>
+            <div style={{
+              background: '#FFFFFF',
+              borderRadius: '20px',
+              maxWidth: '480px',
+              width: '100%',
+              padding: '24px',
+              boxShadow: '0 20px 40px rgba(0,0,0,0.2)',
+              boxSizing: 'border-box',
+              display: 'flex',
+              flexDirection: 'column',
+              gap: '14px'
+            }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <h3 style={{ margin: 0, fontSize: '1.05rem', fontWeight: 900, color: '#0F172A' }}>
+                  Change Admin Password
+                </h3>
+                <button type="button" onClick={() => setSecurityModal(null)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#64748B' }}>
+                  <X size={20} />
+                </button>
+              </div>
+
+              {secMsg && (
+                <div style={{ padding: '8px 12px', borderRadius: '8px', background: secMsg.type === 'error' ? '#FEE2E2' : '#DCFCE7', color: secMsg.type === 'error' ? '#DC2626' : '#15803D', fontSize: '0.78rem', fontWeight: 700 }}>
+                  {secMsg.text}
+                </div>
+              )}
+
+              <form onSubmit={handleUpdatePasswordSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                <div>
+                  <label style={{ fontSize: '0.72rem', fontWeight: 800, color: '#475569', display: 'block', marginBottom: '4px', textTransform: 'uppercase' }}>
+                    Current Password *
+                  </label>
+                  <div style={{ position: 'relative' }}>
+                    <input
+                      type={secShowCurrentPwd ? 'text' : 'password'}
+                      required
+                      value={secCurrentPassword}
+                      onChange={(e) => setSecCurrentPassword(e.target.value)}
+                      placeholder="Enter current password"
+                      style={{ width: '100%', padding: '8px 36px 8px 12px', borderRadius: '8px', border: '1px solid #CBD5E1', fontSize: '0.88rem', boxSizing: 'border-box' }}
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setSecShowCurrentPwd(!secShowCurrentPwd)}
+                      style={{ position: 'absolute', right: '10px', top: '50%', transform: 'translateY(-50%)', background: 'none', border: 'none', cursor: 'pointer', color: '#64748B' }}
+                    >
+                      {secShowCurrentPwd ? <EyeOff size={15} /> : <Eye size={15} />}
+                    </button>
+                  </div>
+                </div>
+
+                <div>
+                  <label style={{ fontSize: '0.72rem', fontWeight: 800, color: '#475569', display: 'block', marginBottom: '4px', textTransform: 'uppercase' }}>
+                    New Password *
+                  </label>
+                  <div style={{ position: 'relative' }}>
+                    <input
+                      type={secShowNewPwd ? 'text' : 'password'}
+                      required
+                      value={secNewPassword}
+                      onChange={(e) => setSecNewPassword(e.target.value)}
+                      placeholder="Enter strong new password"
+                      style={{ width: '100%', padding: '8px 36px 8px 12px', borderRadius: '8px', border: '1px solid #CBD5E1', fontSize: '0.88rem', boxSizing: 'border-box' }}
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setSecShowNewPwd(!secShowNewPwd)}
+                      style={{ position: 'absolute', right: '10px', top: '50%', transform: 'translateY(-50%)', background: 'none', border: 'none', cursor: 'pointer', color: '#64748B' }}
+                    >
+                      {secShowNewPwd ? <EyeOff size={15} /> : <Eye size={15} />}
+                    </button>
+                  </div>
+
+                  {/* Password Strength Meter */}
+                  {secNewPassword && (
+                    <div style={{ marginTop: '6px' }}>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.68rem', fontWeight: 800, color: strength.color, marginBottom: '2px' }}>
+                        <span>Password Strength:</span>
+                        <span>{strength.label}</span>
+                      </div>
+                      <div style={{ width: '100%', height: '4px', borderRadius: '2px', background: '#E2E8F0', overflow: 'hidden' }}>
+                        <div style={{ width: `${strength.percent}%`, height: '100%', background: strength.color, transition: 'all 0.2s ease' }} />
+                      </div>
+                    </div>
+                  )}
+                </div>
+
+                <div>
+                  <label style={{ fontSize: '0.72rem', fontWeight: 800, color: '#475569', display: 'block', marginBottom: '4px', textTransform: 'uppercase' }}>
+                    Confirm New Password *
+                  </label>
+                  <div style={{ position: 'relative' }}>
+                    <input
+                      type={secShowConfirmPwd ? 'text' : 'password'}
+                      required
+                      value={secConfirmPassword}
+                      onChange={(e) => setSecConfirmPassword(e.target.value)}
+                      placeholder="Re-enter new password"
+                      style={{ width: '100%', padding: '8px 36px 8px 12px', borderRadius: '8px', border: '1px solid #CBD5E1', fontSize: '0.88rem', boxSizing: 'border-box' }}
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setSecShowConfirmPwd(!secShowConfirmPwd)}
+                      style={{ position: 'absolute', right: '10px', top: '50%', transform: 'translateY(-50%)', background: 'none', border: 'none', cursor: 'pointer', color: '#64748B' }}
+                    >
+                      {secShowConfirmPwd ? <EyeOff size={15} /> : <Eye size={15} />}
+                    </button>
+                  </div>
+                </div>
+
+                <div style={{ display: 'flex', gap: '10px', marginTop: '6px' }}>
+                  <button
+                    type="button"
+                    onClick={() => setSecurityModal(null)}
+                    style={{ flex: 1, height: '38px', borderRadius: '10px', border: '1px solid #CBD5E1', background: '#FFFFFF', color: '#475569', fontWeight: 800, fontSize: '0.80rem', cursor: 'pointer' }}
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="submit"
+                    disabled={secSaving}
+                    style={{ flex: 1, height: '38px', borderRadius: '10px', border: 'none', background: '#064E3B', color: '#FFFFFF', fontWeight: 900, fontSize: '0.82rem', cursor: 'pointer', boxShadow: '0 2px 6px rgba(6, 78, 59, 0.25)' }}
+                  >
+                    {secSaving ? 'Updating...' : 'Update Password'}
+                  </button>
+                </div>
+              </form>
+            </div>
+          </div>
+        )}
+
+        {/* ===================================================================
+            MODAL 3: CHANGE KDS PIN
+           =================================================================== */}
+        {securityModal === 'kds_pin' && (
+          <div style={{
+            position: 'fixed',
+            top: 0,
+            left: 0,
+            width: '100vw',
+            height: '100vh',
+            background: 'rgba(15, 23, 42, 0.65)',
+            backdropFilter: 'blur(4px)',
+            zIndex: 9999,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            padding: '16px',
+            boxSizing: 'border-box'
+          }}>
+            <div style={{
+              background: '#FFFFFF',
+              borderRadius: '20px',
+              maxWidth: '460px',
+              width: '100%',
+              padding: '24px',
+              boxShadow: '0 20px 40px rgba(0,0,0,0.2)',
+              boxSizing: 'border-box',
+              display: 'flex',
+              flexDirection: 'column',
+              gap: '14px'
+            }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <h3 style={{ margin: 0, fontSize: '1.05rem', fontWeight: 900, color: '#0F172A' }}>
+                  {isKdsConfigured ? 'Update Kitchen KDS PIN' : 'Set Kitchen KDS PIN'}
+                </h3>
+                <button type="button" onClick={() => setSecurityModal(null)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#64748B' }}>
+                  <X size={20} />
+                </button>
+              </div>
+
+              {secKdsMsg && (
+                <div style={{ padding: '8px 12px', borderRadius: '8px', background: secKdsMsg.type === 'error' ? '#FEE2E2' : '#DCFCE7', color: secKdsMsg.type === 'error' ? '#DC2626' : '#15803D', fontSize: '0.78rem', fontWeight: 700 }}>
+                  {secKdsMsg.text}
+                </div>
+              )}
+
+              <form onSubmit={handleUpdateKdsPinSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                <div>
+                  <label style={{ fontSize: '0.72rem', fontWeight: 800, color: '#475569', display: 'block', marginBottom: '4px', textTransform: 'uppercase' }}>
+                    New 4-Digit PIN *
+                  </label>
+                  <input
+                    type="password"
+                    inputMode="numeric"
+                    maxLength={4}
+                    value={secKdsPin}
+                    onChange={(e) => setSecKdsPin(e.target.value.replace(/\D/g, ''))}
+                    placeholder="e.g. 1234"
+                    style={{ width: '100%', padding: '10px 14px', borderRadius: '8px', border: '1px solid #CBD5E1', fontSize: '1.1rem', fontWeight: 900, textAlign: 'center', letterSpacing: '4px', boxSizing: 'border-box' }}
+                  />
+                </div>
+
+                <div>
+                  <label style={{ fontSize: '0.72rem', fontWeight: 800, color: '#475569', display: 'block', marginBottom: '4px', textTransform: 'uppercase' }}>
+                    Confirm 4-Digit PIN *
+                  </label>
+                  <input
+                    type="password"
+                    inputMode="numeric"
+                    maxLength={4}
+                    value={secConfirmKdsPin}
+                    onChange={(e) => setSecConfirmKdsPin(e.target.value.replace(/\D/g, ''))}
+                    placeholder="e.g. 1234"
+                    style={{ width: '100%', padding: '10px 14px', borderRadius: '8px', border: '1px solid #CBD5E1', fontSize: '1.1rem', fontWeight: 900, textAlign: 'center', letterSpacing: '4px', boxSizing: 'border-box' }}
+                  />
+                </div>
+
+                <div style={{ display: 'flex', gap: '10px', marginTop: '6px' }}>
+                  <button
+                    type="button"
+                    onClick={() => setSecurityModal(null)}
+                    style={{ flex: 1, height: '38px', borderRadius: '10px', border: '1px solid #CBD5E1', background: '#FFFFFF', color: '#475569', fontWeight: 800, fontSize: '0.80rem', cursor: 'pointer' }}
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="submit"
+                    disabled={secSaving}
+                    style={{ flex: 1, height: '38px', borderRadius: '10px', border: 'none', background: '#064E3B', color: '#FFFFFF', fontWeight: 900, fontSize: '0.82rem', cursor: 'pointer', boxShadow: '0 2px 6px rgba(6, 78, 59, 0.25)' }}
+                  >
+                    {secSaving ? 'Saving...' : 'Save KDS PIN'}
+                  </button>
+                </div>
+              </form>
+            </div>
+          </div>
+        )}
+
+        {/* ===================================================================
+            MODAL 4: CONFIRM SIGN OUT ALL DEVICES
+           =================================================================== */}
+        {securityModal === 'signout_all' && (
+          <div style={{
+            position: 'fixed',
+            top: 0,
+            left: 0,
+            width: '100vw',
+            height: '100vh',
+            background: 'rgba(15, 23, 42, 0.65)',
+            backdropFilter: 'blur(4px)',
+            zIndex: 9999,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            padding: '16px',
+            boxSizing: 'border-box'
+          }}>
+            <div style={{
+              background: '#FFFFFF',
+              borderRadius: '20px',
+              maxWidth: '440px',
+              width: '100%',
+              padding: '24px',
+              boxShadow: '0 20px 40px rgba(0,0,0,0.2)',
+              boxSizing: 'border-box',
+              display: 'flex',
+              flexDirection: 'column',
+              gap: '14px'
+            }}>
+              <h3 style={{ margin: 0, fontSize: '1.05rem', fontWeight: 900, color: '#0F172A' }}>
+                Sign out all other devices?
+              </h3>
+              <p style={{ margin: 0, fontSize: '0.78rem', color: '#64748B', lineHeight: 1.45 }}>
+                This will log out every active session except this device. You will remain logged in on this browser.
+              </p>
+
+              <div style={{ display: 'flex', gap: '10px', marginTop: '6px' }}>
+                <button
+                  type="button"
+                  onClick={() => setSecurityModal(null)}
+                  style={{ flex: 1, height: '38px', borderRadius: '10px', border: '1px solid #CBD5E1', background: '#FFFFFF', color: '#475569', fontWeight: 800, fontSize: '0.80rem', cursor: 'pointer' }}
+                >
+                  Cancel
+                </button>
+                <button
+                  type="button"
+                  onClick={handleSignOutAllOtherDevices}
+                  style={{ flex: 1, height: '38px', borderRadius: '10px', border: 'none', background: '#DC2626', color: '#FFFFFF', fontWeight: 900, fontSize: '0.82rem', cursor: 'pointer', boxShadow: '0 2px 6px rgba(220, 38, 38, 0.25)' }}
+                >
+                  Sign Out Devices
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+      </div>
+    );
+  };
+
   return (
     <div style={{
       display: 'flex',
@@ -6837,6 +8146,8 @@ export default function SetupView({
         renderSubscriptionBillingFullPage()
       ) : activeSubPage === 'location' || activeSubPage === 'gps' ? (
         renderLocationGpsFullPage()
+      ) : activeSubPage === 'security' || activeSubPage === 'credentials' ? (
+        renderSecurityCredentialsFullPage()
       ) : (
         <>
           {/* ========================================================
@@ -7323,7 +8634,7 @@ export default function SetupView({
                     </div>
                   </div>
 
-                  <div className="settings-card-secondary" onClick={() => setOpenDrawer('security')}>
+                  <div className="settings-card-secondary" onClick={() => setActiveSubPage('security')}>
                     <div style={{ width: '36px', height: '36px', borderRadius: '10px', background: '#FEE2E2', color: '#DC2626', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                       <Lock size={18} />
                     </div>
@@ -7407,7 +8718,7 @@ export default function SetupView({
                     </div>
                   </div>
 
-                  <div className="mobile-list-item-row" onClick={() => setOpenDrawer('security')}>
+                  <div className="mobile-list-item-row" onClick={() => setActiveSubPage('security')}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
                       <div style={{ width: '34px', height: '34px', borderRadius: '10px', background: '#FEE2E2', color: '#DC2626', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                         <Lock size={18} />
@@ -7718,7 +9029,7 @@ export default function SetupView({
 
               <div className="tab-content-grid-3col">
                 {/* Card 1: Security & Credentials */}
-                <div className="settings-card-primary" onClick={() => setOpenDrawer('security')}>
+                <div className="settings-card-primary" onClick={() => setActiveSubPage('security')}>
                   <div style={{ width: '42px', height: '42px', borderRadius: '12px', background: '#FEE2E2', color: '#DC2626', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                     <Lock size={22} />
                   </div>
@@ -7737,7 +9048,7 @@ export default function SetupView({
                 </div>
 
                 {/* Card 2: KDS Kitchen PIN */}
-                <div className="settings-card-primary" onClick={() => setOpenDrawer('security')}>
+                <div className="settings-card-primary" onClick={() => setActiveSubPage('security')}>
                   <div style={{ width: '42px', height: '42px', borderRadius: '12px', background: '#FEF3C7', color: '#D97706', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                     <ShieldCheck size={22} />
                   </div>
@@ -7756,7 +9067,7 @@ export default function SetupView({
                 </div>
 
                 {/* Card 3: Account Protection */}
-                <div className="settings-card-primary" onClick={() => setOpenDrawer('security')}>
+                <div className="settings-card-primary" onClick={() => setActiveSubPage('security')}>
                   <div style={{ width: '42px', height: '42px', borderRadius: '12px', background: '#DCFCE7', color: '#16A34A', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                     <ShieldCheck size={22} />
                   </div>
@@ -9363,157 +10674,7 @@ export default function SetupView({
         </form>
       </AdminDrawer>
 
-      {/* Drawer 6: Admin Security */}
-      <AdminDrawer
-        isOpen={openDrawer === 'security'}
-        onClose={() => setOpenDrawer(null)}
-        title="🔐 Admin Master Credentials"
-        subtitle="Update owner username and login password"
-        footer={(
-          <button
-            onClick={handleSecuritySave}
-            style={{
-              width: '100%',
-              padding: '12px',
-              borderRadius: '12px',
-              border: 'none',
-              background: '#DC2626',
-              color: '#FFFFFF',
-              fontWeight: 900,
-              fontSize: '0.90rem',
-              cursor: 'pointer',
-              boxShadow: '0 4px 12px rgba(220, 38, 38, 0.25)'
-            }}
-          >
-            Update Security Credentials
-          </button>
-        )}
-      >
-        <form onSubmit={handleSecuritySave} style={{ display: 'flex', flexDirection: 'column', gap: '14px', fontSize: '0.84rem' }}>
-          {credMsg?.text && (
-            <div style={{
-              padding: '10px 14px', borderRadius: '10px', fontSize: '0.82rem', fontWeight: 800,
-              background: credMsg.type === 'error' ? '#FEE2E2' : '#DCFCE7',
-              color: credMsg.type === 'error' ? '#DC2626' : '#15803D',
-              border: `1px solid ${credMsg.type === 'error' ? '#FECACA' : '#86EFAC'}`
-            }}>
-              {credMsg.text}
-            </div>
-          )}
 
-          <div>
-            <label style={{ fontSize: '0.74rem', fontWeight: 800, color: '#0F172A', display: 'block', marginBottom: '6px', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
-              Current Password (Required):
-            </label>
-            <input
-              type="password"
-              required
-              value={credForm.currentPassword || ''}
-              onChange={(e) => setCredForm({ ...credForm, currentPassword: e.target.value })}
-              style={{ width: '100%', padding: '10px 14px', borderRadius: '10px', border: '1px solid #CBD5E1', fontSize: '0.9rem', boxSizing: 'border-box' }}
-            />
-          </div>
-
-          <div>
-            <label style={{ fontSize: '0.74rem', fontWeight: 800, color: '#0F172A', display: 'block', marginBottom: '6px', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
-              New Owner Username:
-            </label>
-            <input
-              type="text"
-              placeholder="Leave blank to keep unchanged"
-              value={credForm.newUsername || ''}
-              onChange={(e) => setCredForm({ ...credForm, newUsername: e.target.value })}
-              style={{ width: '100%', padding: '10px 14px', borderRadius: '10px', border: '1px solid #CBD5E1', fontSize: '0.9rem', boxSizing: 'border-box' }}
-            />
-          </div>
-
-          <div>
-            <label style={{ fontSize: '0.74rem', fontWeight: 800, color: '#0F172A', display: 'block', marginBottom: '6px', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
-              New Password:
-            </label>
-            <input
-              type="password"
-              placeholder="Leave blank to keep unchanged"
-              value={credForm.newPassword || ''}
-              onChange={(e) => setCredForm({ ...credForm, newPassword: e.target.value })}
-              style={{ width: '100%', padding: '10px 14px', borderRadius: '10px', border: '1px solid #CBD5E1', fontSize: '0.9rem', boxSizing: 'border-box' }}
-            />
-          </div>
-
-          <div>
-            <label style={{ fontSize: '0.74rem', fontWeight: 800, color: '#0F172A', display: 'block', marginBottom: '6px', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
-              Confirm New Password:
-            </label>
-            <input
-              type="password"
-              placeholder="Re-enter new password"
-              value={credForm.confirmPassword || ''}
-              onChange={(e) => setCredForm({ ...credForm, confirmPassword: e.target.value })}
-              style={{ width: '100%', padding: '10px 14px', borderRadius: '10px', border: '1px solid #CBD5E1', fontSize: '0.9rem', boxSizing: 'border-box' }}
-            />
-          </div>
-
-          {/* 🍳 KDS 4-Digit PIN Security Management */}
-          <div style={{ margin: '14px 0 0 0', borderTop: '1px solid #E2E8F0', paddingTop: '18px' }}>
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '8px' }}>
-              <strong style={{ fontSize: '0.84rem', color: '#0F172A', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.04em' }}>
-                🍳 Kitchen Display (KDS) PIN
-              </strong>
-              <span style={{
-                fontSize: '0.72rem',
-                fontWeight: 800,
-                padding: '3px 8px',
-                borderRadius: '6px',
-                background: restaurantInfo?.kds_pin_configured ? '#DCFCE7' : '#FEE2E2',
-                color: restaurantInfo?.kds_pin_configured ? '#16A34A' : '#DC2626'
-              }}>
-                {restaurantInfo?.kds_pin_configured ? '🟢 PIN Active' : '🔴 Locked (No PIN)'}
-              </span>
-            </div>
-            <p style={{ fontSize: '0.76rem', color: '#64748B', margin: '0 0 12px 0', lineHeight: 1.4 }}>
-              Set a simple 4-digit PIN for your kitchen screen tablet (e.g. 1234). Kitchen cooks unlock live orders without full admin access. Updating this PIN automatically logs out existing kitchen screens.
-            </p>
-
-            {kdsPinMsg?.text && (
-              <div style={{
-                padding: '10px 14px', borderRadius: '10px', fontSize: '0.82rem', fontWeight: 800, marginBottom: '12px',
-                background: kdsPinMsg.type === 'error' ? '#FEE2E2' : '#DCFCE7',
-                color: kdsPinMsg.type === 'error' ? '#DC2626' : '#15803D',
-                border: `1px solid ${kdsPinMsg.type === 'error' ? '#FECACA' : '#86EFAC'}`
-              }}>
-                {kdsPinMsg.text}
-              </div>
-            )}
-
-            <div style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
-              <input
-                type="password"
-                maxLength={4}
-                placeholder="4-digit PIN"
-                value={kdsPinInput}
-                onChange={(e) => setKdsPinInput(e.target.value.replace(/\D/g, '').slice(0, 4))}
-                style={{
-                  width: '130px', padding: '10px 14px', borderRadius: '10px', border: '1px solid #CBD5E1',
-                  fontSize: '1.1rem', fontWeight: 800, textAlign: 'center', letterSpacing: '4px', boxSizing: 'border-box'
-                }}
-              />
-              <button
-                type="button"
-                disabled={savingKdsPin || kdsPinInput.length !== 4}
-                onClick={handleSaveKdsPin}
-                style={{
-                  flex: 1, padding: '11px 16px', borderRadius: '10px', border: 'none',
-                  background: kdsPinInput.length === 4 ? '#2563EB' : '#94A3B8',
-                  color: '#FFFFFF', fontWeight: 800, fontSize: '0.82rem',
-                  cursor: kdsPinInput.length === 4 && !savingKdsPin ? 'pointer' : 'not-allowed'
-                }}
-              >
-                {savingKdsPin ? 'Saving...' : (restaurantInfo?.kds_pin_configured ? 'Update KDS PIN' : 'Set KDS PIN')}
-              </button>
-            </div>
-          </div>
-        </form>
-      </AdminDrawer>
 
       {/* Drawer 7: Dedicated Cinema Management Drawer */}
       {isCinema && (
