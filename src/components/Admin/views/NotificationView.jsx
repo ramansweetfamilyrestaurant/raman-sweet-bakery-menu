@@ -347,12 +347,13 @@ export default function NotificationView({
     <div style={{
       display: 'flex',
       flexDirection: 'column',
-      gap: '16px',
+      gap: '14px',
       maxWidth: '1240px',
       margin: '0 auto',
       width: '100%',
       boxSizing: 'border-box',
       paddingBottom: '120px',
+      overflowX: 'hidden',
       fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif'
     }}>
       {/* Page Responsive Layout Styles */}
@@ -365,6 +366,33 @@ export default function NotificationView({
           width: 100%;
           box-sizing: border-box;
         }
+        .notif-metrics-grid {
+          display: grid;
+          grid-template-columns: repeat(3, 1fr);
+          gap: 12px;
+          width: 100%;
+          box-sizing: border-box;
+        }
+        .notif-metric-card {
+          background: #FFFFFF;
+          border-radius: 14px;
+          border: 1px solid #EAE5DF;
+          padding: 12px 16px;
+          display: flex;
+          align-items: center;
+          justify-content: space-between;
+          min-width: 0;
+          box-sizing: border-box;
+        }
+        .notif-metric-icon {
+          width: 32px;
+          height: 32px;
+          border-radius: 8px;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          flex-shrink: 0;
+        }
         .notif-filter-btn {
           padding: 6px 14px;
           border-radius: 20px;
@@ -376,6 +404,7 @@ export default function NotificationView({
           color: #64748B;
           transition: all 0.15s ease;
           white-space: nowrap;
+          flex-shrink: 0;
         }
         .notif-filter-btn.active {
           background: #064E3B;
@@ -384,25 +413,80 @@ export default function NotificationView({
           box-shadow: 0 2px 6px rgba(6, 78, 59, 0.20);
         }
         .notif-row-card {
+          background: #FFFFFF;
+          border-radius: 14px;
+          border: 1px solid #EAE5DF;
+          padding: 14px 16px;
+          display: flex;
+          align-items: flex-start;
+          gap: 14px;
+          cursor: pointer;
+          position: relative;
           transition: all 0.15s ease;
+          box-sizing: border-box;
+          width: 100%;
+          min-width: 0;
+          overflow: hidden;
         }
         .notif-row-card:hover {
           border-color: #CBD5E1 !important;
           box-shadow: 0 4px 12px rgba(0,0,0,0.03) !important;
+        }
+        .notif-header-container {
+          display: flex;
+          align-items: center;
+          justify-content: space-between;
+          background: #FFFFFF;
+          border-radius: 16px;
+          border: 1px solid #EAE5DF;
+          padding: 16px 20px;
+          box-shadow: 0 1px 3px rgba(0,0,0,0.02);
+          box-sizing: border-box;
+          width: 100%;
+          flex-wrap: wrap;
+          gap: 12px;
+        }
+        .notif-header-actions {
+          display: flex;
+          align-items: center;
+          gap: 10px;
+          flex-wrap: wrap;
         }
         @media (max-width: 960px) {
           .notif-page-grid {
             grid-template-columns: 100% !important;
             gap: 14px !important;
           }
+        }
+        @media (max-width: 640px) {
+          .notif-header-container {
+            padding: 12px 14px !important;
+            gap: 10px !important;
+          }
+          .notif-header-actions {
+            width: 100% !important;
+            justify-content: space-between !important;
+          }
           .notif-metrics-grid {
-            grid-template-columns: repeat(3, 1fr) !important;
+            gap: 8px !important;
+          }
+          .notif-metric-card {
+            padding: 10px 8px !important;
+          }
+          .notif-metric-icon {
+            display: none !important;
+          }
+          .notif-row-card {
+            padding: 12px !important;
+            gap: 10px !important;
           }
         }
-        @media (max-width: 480px) {
+        @media (max-width: 380px) {
           .notif-metrics-grid {
-            grid-template-columns: 1fr 1fr 1fr !important;
-            gap: 8px !important;
+            gap: 6px !important;
+          }
+          .notif-metric-card {
+            padding: 8px 6px !important;
           }
         }
       `}</style>
@@ -435,57 +519,44 @@ export default function NotificationView({
       {/* =========================================================================
           1. MASTER PAGE HEADER
          ========================================================================= */}
-      <div style={{
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'space-between',
-        background: '#FFFFFF',
-        borderRadius: '16px',
-        border: '1px solid #EAE5DF',
-        padding: '16px 20px',
-        boxShadow: '0 1px 3px rgba(0,0,0,0.02)',
-        boxSizing: 'border-box',
-        width: '100%',
-        flexWrap: 'wrap',
-        gap: '12px'
-      }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+      <div className="notif-header-container">
+        <div style={{ display: 'flex', alignItems: 'center', gap: '10px', minWidth: 0, flex: 1 }}>
           {onBackToDashboard && (
             <button
               type="button"
               onClick={onBackToDashboard}
               style={{
-                height: '36px',
-                padding: '0 12px',
-                borderRadius: '10px',
+                height: '34px',
+                padding: '0 10px',
+                borderRadius: '8px',
                 background: '#F8FAFC',
                 border: '1px solid #E2E8F0',
                 display: 'flex',
                 alignItems: 'center',
-                gap: '6px',
+                gap: '4px',
                 color: '#0F172A',
                 cursor: 'pointer',
                 flexShrink: 0,
-                fontSize: '0.78rem',
+                fontSize: '0.76rem',
                 fontWeight: 800
               }}
             >
-              <ArrowLeft size={16} />
-              <span>Dashboard</span>
+              <ArrowLeft size={15} />
+              <span>Back</span>
             </button>
           )}
-          <div>
-            <h2 style={{ fontSize: '1.20rem', fontWeight: 900, color: '#0F172A', margin: 0, letterSpacing: '-0.02em', display: 'flex', alignItems: 'center', gap: '8px' }}>
-              <Bell size={18} color="#064E3B" />
+          <div style={{ minWidth: 0, flex: 1 }}>
+            <h2 style={{ fontSize: '1.12rem', fontWeight: 900, color: '#0F172A', margin: 0, letterSpacing: '-0.02em', display: 'flex', alignItems: 'center', gap: '6px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+              <Bell size={17} color="#064E3B" style={{ flexShrink: 0 }} />
               <span>Notifications & Alerts</span>
             </h2>
-            <p style={{ fontSize: '0.74rem', color: '#64748B', margin: 0 }}>
-              Stay updated on orders, payments, system activity and important actions.
+            <p style={{ fontSize: '0.72rem', color: '#64748B', margin: 0, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+              Stay updated on orders, payments, and system operations.
             </p>
           </div>
         </div>
 
-        <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap' }}>
+        <div className="notif-header-actions">
           <button
             type="button"
             onClick={handleMarkAllRead}
@@ -497,16 +568,17 @@ export default function NotificationView({
               border: '1px solid #CBD5E1',
               background: '#FFFFFF',
               color: unreadCount > 0 ? '#0F172A' : '#94A3B8',
-              fontSize: '0.76rem',
+              fontSize: '0.74rem',
               fontWeight: 800,
               cursor: unreadCount > 0 ? 'pointer' : 'default',
               display: 'inline-flex',
               alignItems: 'center',
-              gap: '6px'
+              gap: '4px',
+              flexShrink: 0
             }}
           >
             <CheckCheck size={14} color={unreadCount > 0 ? '#059669' : '#94A3B8'} />
-            <span>Mark all as read</span>
+            <span>Mark all read</span>
           </button>
 
           <button
@@ -519,16 +591,17 @@ export default function NotificationView({
               border: 'none',
               background: '#064E3B',
               color: '#FFFFFF',
-              fontSize: '0.76rem',
+              fontSize: '0.74rem',
               fontWeight: 800,
               cursor: 'pointer',
               display: 'inline-flex',
               alignItems: 'center',
-              gap: '6px'
+              gap: '4px',
+              flexShrink: 0
             }}
           >
             <Sliders size={14} />
-            <span>Settings</span>
+            <span>Preferences</span>
           </button>
         </div>
       </div>
@@ -536,69 +609,45 @@ export default function NotificationView({
       {/* =========================================================================
           2. COMPACT SUMMARY PILLS (Unread, Urgent, Today)
          ========================================================================= */}
-      <div className="notif-metrics-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '12px' }}>
-        <div style={{
-          background: '#FFFFFF',
-          borderRadius: '14px',
-          border: '1px solid #EAE5DF',
-          padding: '12px 16px',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'space-between'
-        }}>
-          <div>
-            <span style={{ fontSize: '0.68rem', fontWeight: 800, color: '#64748B', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
-              Unread Alerts
+      <div className="notif-metrics-grid">
+        <div className="notif-metric-card">
+          <div style={{ minWidth: 0 }}>
+            <span style={{ fontSize: '0.64rem', fontWeight: 800, color: '#64748B', textTransform: 'uppercase', letterSpacing: '0.04em', display: 'block' }}>
+              Unread
             </span>
-            <div style={{ fontSize: '1.30rem', fontWeight: 900, color: '#0F172A', marginTop: '2px' }}>
+            <div style={{ fontSize: '1.25rem', fontWeight: 900, color: '#0F172A', marginTop: '1px' }}>
               {unreadCount}
             </div>
           </div>
-          <div style={{ width: '32px', height: '32px', borderRadius: '8px', background: '#F1F5F9', color: '#0F172A', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+          <div className="notif-metric-icon" style={{ background: '#F1F5F9', color: '#0F172A' }}>
             <Bell size={16} />
           </div>
         </div>
 
-        <div style={{
-          background: '#FFFFFF',
-          borderRadius: '14px',
-          border: '1px solid #EAE5DF',
-          padding: '12px 16px',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'space-between'
-        }}>
-          <div>
-            <span style={{ fontSize: '0.68rem', fontWeight: 800, color: '#DC2626', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
-              Urgent Attention
+        <div className="notif-metric-card">
+          <div style={{ minWidth: 0 }}>
+            <span style={{ fontSize: '0.64rem', fontWeight: 800, color: '#DC2626', textTransform: 'uppercase', letterSpacing: '0.04em', display: 'block' }}>
+              Urgent
             </span>
-            <div style={{ fontSize: '1.30rem', fontWeight: 900, color: '#DC2626', marginTop: '2px' }}>
+            <div style={{ fontSize: '1.25rem', fontWeight: 900, color: '#DC2626', marginTop: '1px' }}>
               {urgentCount}
             </div>
           </div>
-          <div style={{ width: '32px', height: '32px', borderRadius: '8px', background: '#FEE2E2', color: '#DC2626', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+          <div className="notif-metric-icon" style={{ background: '#FEE2E2', color: '#DC2626' }}>
             <AlertTriangle size={16} />
           </div>
         </div>
 
-        <div style={{
-          background: '#FFFFFF',
-          borderRadius: '14px',
-          border: '1px solid #EAE5DF',
-          padding: '12px 16px',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'space-between'
-        }}>
-          <div>
-            <span style={{ fontSize: '0.68rem', fontWeight: 800, color: '#059669', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
-              Today's Alerts
+        <div className="notif-metric-card">
+          <div style={{ minWidth: 0 }}>
+            <span style={{ fontSize: '0.64rem', fontWeight: 800, color: '#059669', textTransform: 'uppercase', letterSpacing: '0.04em', display: 'block' }}>
+              Today
             </span>
-            <div style={{ fontSize: '1.30rem', fontWeight: 900, color: '#059669', marginTop: '2px' }}>
+            <div style={{ fontSize: '1.25rem', fontWeight: 900, color: '#059669', marginTop: '1px' }}>
               {todayCount}
             </div>
           </div>
-          <div style={{ width: '32px', height: '32px', borderRadius: '8px', background: '#ECFDF5', color: '#059669', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+          <div className="notif-metric-icon" style={{ background: '#ECFDF5', color: '#059669' }}>
             <Clock size={16} />
           </div>
         </div>

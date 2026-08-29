@@ -316,6 +316,19 @@ export default function ReviewView({
           border-color: #064E3B;
           box-shadow: 0 2px 6px rgba(6, 78, 59, 0.20);
         }
+        .rating-summary-layout {
+          display: grid;
+          grid-template-columns: 150px 1fr;
+          gap: 20px;
+          align-items: center;
+          width: 100%;
+          box-sizing: border-box;
+        }
+        .rating-summary-score {
+          text-align: center;
+          border-right: 1px solid #EAE5DF;
+          padding-right: 16px;
+        }
         @media (max-width: 960px) {
           .reviews-page-grid {
             grid-template-columns: 100% !important;
@@ -323,6 +336,18 @@ export default function ReviewView({
           }
           .metrics-summary-grid {
             grid-template-columns: 1fr 1fr !important;
+          }
+        }
+        @media (max-width: 600px) {
+          .rating-summary-layout {
+            grid-template-columns: 100% !important;
+            gap: 12px !important;
+          }
+          .rating-summary-score {
+            border-right: none !important;
+            border-bottom: 1px solid #EAE5DF !important;
+            padding-right: 0 !important;
+            padding-bottom: 12px !important;
           }
         }
       `}</style>
@@ -615,9 +640,9 @@ export default function ReviewView({
               Rating Distribution & Summary
             </strong>
 
-            <div style={{ display: 'grid', gridTemplateColumns: '150px 1fr', gap: '20px', alignItems: 'center' }}>
+            <div className="rating-summary-layout">
               {/* Score Left */}
-              <div style={{ textAlign: 'center', borderRight: '1px solid #EAE5DF', paddingRight: '16px' }}>
+              <div className="rating-summary-score">
                 <div style={{ fontSize: '2.5rem', fontWeight: 900, color: '#0F172A', lineHeight: 1 }}>
                   4.7
                 </div>
