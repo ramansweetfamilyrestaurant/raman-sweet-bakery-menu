@@ -369,6 +369,8 @@ export async function enrichItemsWithActiveOffers(restaurantId, dishes = [], com
     let discounted = numBase;
     let badge = '';
 
+    const cleanSym = (sym !== undefined && sym !== null && String(sym).trim().toLowerCase() !== 'none') ? String(sym).trim() : '';
+
     if (offer.type === 'percentage') {
       const pct = Math.min(100, Math.max(0, Number(offer.value)));
       const discAmt = Math.round((numBase * pct) / 100);
@@ -377,7 +379,7 @@ export async function enrichItemsWithActiveOffers(restaurantId, dishes = [], com
     } else if (offer.type === 'flat') {
       const flatVal = Math.max(0, Number(offer.value));
       discounted = Math.max(0, numBase - flatVal);
-      badge = `${sym}${flatVal} OFF`;
+      badge = cleanSym ? `${cleanSym}${flatVal} OFF` : `${flatVal} OFF`;
     } else if (offer.type === 'special_price') {
       discounted = Math.max(0, Number(offer.value));
       badge = `Special Price`;

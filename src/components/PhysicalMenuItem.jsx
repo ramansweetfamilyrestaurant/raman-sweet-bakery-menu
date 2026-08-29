@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { formatPriceNumber } from '../utils/currencyHelper';
 
 export default function PhysicalMenuItem({ dish, onClick }) {
   const isAvailable = dish.available !== false;
@@ -106,7 +107,7 @@ export default function PhysicalMenuItem({ dish, onClick }) {
                 color: selectedPortion === 'half' ? '#FFFFFF' : 'var(--primary-emerald)'
               }}
             >
-              Half {dish.price_half}
+              Half {formatPriceNumber(dish.price_half)}
             </button>
 
             <button
@@ -123,7 +124,7 @@ export default function PhysicalMenuItem({ dish, onClick }) {
                 color: selectedPortion === 'full' ? '#FFFFFF' : 'var(--primary-emerald)'
               }}
             >
-              Full {dish.offer_price !== undefined && dish.offer_price !== null && Number(dish.offer_price) < Number(dish.price) ? dish.offer_price : dish.price}
+              Full {formatPriceNumber(dish.offer_price !== undefined && dish.offer_price !== null && Number(dish.offer_price) < Number(dish.price) ? dish.offer_price : dish.price)}
             </button>
           </div>
         ) : (
@@ -136,7 +137,7 @@ export default function PhysicalMenuItem({ dish, onClick }) {
                 color: '#064E3B',
                 cursor: 'pointer'
               }}>
-                {Number(dish.offer_price).toLocaleString('en-IN')}
+                {formatPriceNumber(dish.offer_price)}
               </span>
               <span style={{
                 fontSize: '0.85rem',
@@ -144,7 +145,7 @@ export default function PhysicalMenuItem({ dish, onClick }) {
                 textDecoration: 'line-through',
                 fontWeight: 600
               }}>
-                {Number(dish.price).toLocaleString('en-IN')}
+                {formatPriceNumber(dish.price)}
               </span>
             </div>
           ) : (
@@ -159,7 +160,7 @@ export default function PhysicalMenuItem({ dish, onClick }) {
                 cursor: 'pointer'
               }}
             >
-              {Number(dish.price).toLocaleString('en-IN')}
+              {formatPriceNumber(dish.price)}
             </span>
           )
         )}

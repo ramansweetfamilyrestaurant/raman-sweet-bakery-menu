@@ -1,11 +1,12 @@
 import React, { useState } from 'react';
 import { X, ShieldCheck, Sparkles, Clock, Utensils, CheckCircle } from 'lucide-react';
 import { getDishImageUrl } from '../utils/imageHelper';
+import { getCurrencySymbol, formatPriceNumber } from '../utils/currencyHelper';
 
 export default function DishModal({ dish, onClose, onAddToCart, currencySymbol = '₹', lang = 'en' }) {
   if (!dish) return null;
 
-  const symbol = (currencySymbol !== undefined && currencySymbol !== null) ? currencySymbol : '₹';
+  const symbol = getCurrencySymbol(currencySymbol);
   const displayName = (lang === 'hi' && dish.name_hi) ? dish.name_hi : dish.name;
   const displayDesc = (lang === 'hi' && dish.description_hi) ? dish.description_hi : dish.description;
   const hasHalfPrice = dish.price_half !== null && dish.price_half !== undefined && Number(dish.price_half) > 0;
@@ -236,7 +237,7 @@ export default function DishModal({ dish, onClose, onAddToCart, currencySymbol =
                   whiteSpace: 'nowrap',
                   lineHeight: 1.2
                 }}>
-                  {symbol}{Number(activePrice).toLocaleString('en-IN')}
+                  {symbol}{formatPriceNumber(activePrice)}
                 </div>
                 <div style={{
                   fontSize: '0.72rem',
@@ -245,7 +246,7 @@ export default function DishModal({ dish, onClose, onAddToCart, currencySymbol =
                   fontWeight: 600,
                   marginRight: '4px'
                 }}>
-                  {symbol}{Number(regularActivePrice).toLocaleString('en-IN')}
+                  {symbol}{formatPriceNumber(regularActivePrice)}
                 </div>
               </div>
             ) : (
@@ -262,7 +263,7 @@ export default function DishModal({ dish, onClose, onAddToCart, currencySymbol =
                 lineHeight: 1.2,
                 flexShrink: 0
               }}>
-                {symbol}{Number(activePrice).toLocaleString('en-IN')}
+                {symbol}{formatPriceNumber(activePrice)}
               </div>
             )}
           </div>
@@ -296,7 +297,7 @@ export default function DishModal({ dish, onClose, onAddToCart, currencySymbol =
                     transition: 'var(--transition-fast)'
                   }}
                 >
-                  {dish.portion_half_label || (lang === 'hi' ? 'हाफ' : 'Half')} • {symbol}{dish.price_half}
+                  {dish.portion_half_label || (lang === 'hi' ? 'हाफ' : 'Half')} • {symbol}{formatPriceNumber(dish.price_half)}
                 </button>
 
                 <button
@@ -315,7 +316,7 @@ export default function DishModal({ dish, onClose, onAddToCart, currencySymbol =
                     transition: 'var(--transition-fast)'
                   }}
                 >
-                  {dish.portion_full_label || (lang === 'hi' ? 'फुल' : 'Full')} • {symbol}{dish.offer_price !== undefined && dish.offer_price !== null && Number(dish.offer_price) < Number(dish.price) ? dish.offer_price : dish.price}
+                  {dish.portion_full_label || (lang === 'hi' ? 'फुल' : 'Full')} • {symbol}{formatPriceNumber(dish.offer_price !== undefined && dish.offer_price !== null && Number(dish.offer_price) < Number(dish.price) ? dish.offer_price : dish.price)}
                 </button>
               </div>
             </div>
@@ -380,7 +381,7 @@ export default function DishModal({ dish, onClose, onAddToCart, currencySymbol =
                         </span>
                       </div>
                       <span style={{ fontSize: '0.82rem', fontWeight: 800, color: 'var(--primary-emerald)' }}>
-                        +{symbol}{mod.price}
+                        +{symbol}{formatPriceNumber(mod.price)}
                       </span>
                     </label>
                   );
@@ -473,7 +474,7 @@ export default function DishModal({ dish, onClose, onAddToCart, currencySymbol =
                 Total (incl. add-ons)
               </span>
               <span style={{ fontSize: '1.3rem', fontWeight: 900, color: 'var(--primary-emerald)' }}>
-                {symbol}{activePrice}
+                {symbol}{formatPriceNumber(activePrice)}
               </span>
             </div>
 
@@ -503,7 +504,7 @@ export default function DishModal({ dish, onClose, onAddToCart, currencySymbol =
                 }}
               >
                 <span>➕</span>
-                <span>{lang === 'hi' ? 'ऑर्डर में जोड़ें' : 'Add to Order'} • {symbol}{activePrice}</span>
+                <span>{lang === 'hi' ? 'ऑर्डर में जोड़ें' : 'Add to Order'} • {symbol}{formatPriceNumber(activePrice)}</span>
               </button>
             ) : (
               <button

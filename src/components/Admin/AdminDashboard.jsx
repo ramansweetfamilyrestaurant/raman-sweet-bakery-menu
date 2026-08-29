@@ -5,6 +5,7 @@ import { generateQrToken } from '../../utils/qrSecurity';
 import { getSpaceConfig } from '../../utils/businessTaxonomy';
 import { resolveTenantCapabilities } from '../../utils/planCapabilities';
 import { soundManager, unlockNotificationSound, playPresenceAlert, playWaiterAlert, subscribeAudioState } from '../../utils/soundManager';
+import { getCurrencySymbol, formatPriceNumber } from '../../utils/currencyHelper';
 import DishFormModal from './DishFormModal';
 import CategoryFormModal from './CategoryFormModal';
 import ComboFormModal from './ComboFormModal';
@@ -833,7 +834,7 @@ export default function AdminDashboard({
   const generateRawBTText = (order, type = 'kot', restoInfo = {}, isReprint = false) => {
     let text = '';
     const orderItems = safeParseItems(order.items);
-    const currency = (restoInfo?.currency_symbol !== undefined && restoInfo?.currency_symbol !== null) ? restoInfo.currency_symbol : '₹';
+    const currency = getCurrencySymbol(restoInfo?.currency_symbol);
 
     if (type === 'kot') {
       text += "================================" + "\n";
@@ -858,7 +859,7 @@ export default function AdminDashboard({
         }
       });
       text += "--------------------------------" + "\n";
-      text += `TOTAL BILL: ${currency}${order.total_amount}\n`;
+      text += `TOTAL BILL: ${currency}${formatPriceNumber(order.total_amount)}\n`;
       text += "================================" + "\n";
       text += "  *** READY FOR KITCHEN ***\n\n\n";
     } else {
@@ -889,7 +890,7 @@ export default function AdminDashboard({
         subtotal += itemLineTotal;
         const name = (i.name + (i.portion ? ` (${i.portion})` : '')).padEnd(20).substring(0, 20);
         const qty = String(i.quantity).padEnd(4);
-        const amt = `${currency}${itemLineTotal}`.padStart(7);
+        const amt = `${currency}${formatPriceNumber(itemLineTotal)}`.padStart(7);
         text += `${qty}${name}${amt}\n`;
         const mods = safeParseModifiers(i.modifiers);
         if (mods.length > 0) {
@@ -901,13 +902,13 @@ export default function AdminDashboard({
         const cgst = Math.round(subtotal * 0.025 * 100) / 100;
         const sgst = Math.round(subtotal * 0.025 * 100) / 100;
         const grandTotal = Math.round((subtotal + cgst + sgst) * 100) / 100;
-        text += `Subtotal:      ${(currency + subtotal.toFixed(2)).padStart(17)}\n`;
-        text += `CGST (2.5%):   ${(currency + cgst.toFixed(2)).padStart(17)}\n`;
-        text += `SGST (2.5%):   ${(currency + sgst.toFixed(2)).padStart(17)}\n`;
+        text += `Subtotal:      ${(currency + formatPriceNumber(subtotal)).padStart(17)}\n`;
+        text += `CGST (2.5%):   ${(currency + formatPriceNumber(cgst)).padStart(17)}\n`;
+        text += `SGST (2.5%):   ${(currency + formatPriceNumber(sgst)).padStart(17)}\n`;
         text += "--------------------------------\n";
-        text += `Grand Total:   ${(currency + grandTotal.toFixed(2)).padStart(17)}\n`;
+        text += `Grand Total:   ${(currency + formatPriceNumber(grandTotal)).padStart(17)}\n`;
       } else {
-        text += `Grand Total:   ${(currency + subtotal.toFixed(2)).padStart(17)}\n`;
+        text += `Grand Total:   ${(currency + formatPriceNumber(subtotal)).padStart(17)}\n`;
       }
       text += "================================" + "\n";
       text += "   Thank you! Visit Again 🙏\n\n\n";

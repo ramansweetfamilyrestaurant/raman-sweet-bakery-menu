@@ -1,11 +1,12 @@
 import React from 'react';
 import { X, Plus, Sparkles, CheckCircle2, Utensils, Tag, ShieldCheck } from 'lucide-react';
 import { resolveImageUrl } from '../utils/imageHelper';
+import { getCurrencySymbol, formatPriceNumber } from '../utils/currencyHelper';
 
 export default function ComboModal({ combo, onClose, onAddToCart, canOrder = false, currencySymbol = '₹' }) {
   if (!combo) return null;
 
-  const symbol = (currencySymbol !== undefined && currencySymbol !== null) ? currencySymbol : '₹';
+  const symbol = getCurrencySymbol(currencySymbol);
 
   let comboItems = [];
   try {
@@ -177,11 +178,11 @@ export default function ComboModal({ combo, onClose, onAddToCart, canOrder = fal
                 whiteSpace: 'nowrap',
                 lineHeight: 1.2
               }}>
-                {symbol}{combo.price}
+                {symbol}{formatPriceNumber(combo.price)}
               </div>
               {originalTotal > combo.price && (
                 <div style={{ fontSize: '0.8rem', color: '#9CA3AF', textDecoration: 'line-through', marginTop: '4px', textAlign: 'center' }}>
-                  {symbol}{originalTotal}
+                  {symbol}{formatPriceNumber(originalTotal)}
                 </div>
               )}
             </div>
@@ -305,7 +306,7 @@ export default function ComboModal({ combo, onClose, onAddToCart, canOrder = fal
                 transition: 'all 0.2s ease'
               }}
             >
-              <Plus size={18} /> ADD THIS THALI TO CART ({currencySymbol}{combo.price})
+              <Plus size={18} /> ADD THIS THALI TO CART ({symbol}{formatPriceNumber(combo.price)})
             </button>
           ) : (
             <button

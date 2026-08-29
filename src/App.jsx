@@ -19,6 +19,7 @@ import PresenceVerificationModal from './components/PresenceVerificationModal';
 import CategoryImage from './components/CategoryImage';
 import { isValidQrTokenFormat, normalizeSpaceType, normalizeSpaceNumber } from './utils/qrSecurity';
 import { resolveTheme, DEFAULT_THEME } from './constants/themes';
+import { getCurrencySymbol, formatPriceNumber, formatPrice } from './utils/currencyHelper';
 
 // Robust Lazy Loading with automatic retry on new production deploys
 const lazyWithRetry = (componentImport) =>
@@ -2492,7 +2493,7 @@ export default function App() {
             const offerCombos = (combos || []).filter(c => c.offer_price !== undefined && c.offer_price !== null);
             const allOfferItems = [...offerDishes.map(d => ({ ...d, _type: 'dish' })), ...offerCombos.map(c => ({ ...c, _type: 'combo' }))];
             if (allOfferItems.length === 0) return null;
-            const sym = info?.currency_symbol || '₹';
+            const sym = getCurrencySymbol(info?.currency_symbol);
             return (
               <section style={{ marginBottom: '16px' }}>
                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '8px' }}>
@@ -2575,10 +2576,10 @@ export default function App() {
                         </p>
                         <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
                           <span style={{ fontSize: '0.78rem', fontWeight: 800, color: '#059669' }}>
-                            {sym}{offerPrice}
+                            {sym}{formatPriceNumber(offerPrice)}
                           </span>
                           <span style={{ fontSize: '0.65rem', color: '#94A3B8', textDecoration: 'line-through' }}>
-                            {sym}{regularPrice}
+                            {sym}{formatPriceNumber(regularPrice)}
                           </span>
                         </div>
                       </div>
@@ -2664,11 +2665,11 @@ export default function App() {
                         </p>
                         <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
                           <span style={{ fontSize: '0.84rem', fontWeight: 900, color: '#059669' }}>
-                            {(info?.currency_symbol !== undefined && info?.currency_symbol !== null) ? info.currency_symbol : '₹'}{combo.price}
+                            {getCurrencySymbol(info?.currency_symbol)}{formatPriceNumber(combo.price)}
                           </span>
                           {originalTotal > combo.price && (
                             <span style={{ fontSize: '0.68rem', color: '#94A3B8', textDecoration: 'line-through' }}>
-                              {(info?.currency_symbol !== undefined && info?.currency_symbol !== null) ? info.currency_symbol : '₹'}{originalTotal}
+                              {getCurrencySymbol(info?.currency_symbol)}{formatPriceNumber(originalTotal)}
                             </span>
                           )}
                         </div>
@@ -2728,7 +2729,7 @@ export default function App() {
                       key={dish.id}
                       dish={dish}
                       lang={lang}
-                      currencySymbol={info?.currency_symbol !== undefined ? info.currency_symbol : '₹'}
+                      currencySymbol={getCurrencySymbol(info?.currency_symbol)}
                       filtersVisibility={info?.filters_visibility}
                       onClick={() => setSelectedDishModal(dish)}
                       onAddToCart={isDirectOrderingActive ? handleAddToCart : undefined}
@@ -2746,7 +2747,7 @@ export default function App() {
                       key={dish.id}
                       dish={dish}
                       lang={lang}
-                      currencySymbol={info?.currency_symbol !== undefined ? info.currency_symbol : '₹'}
+                      currencySymbol={getCurrencySymbol(info?.currency_symbol)}
                       filtersVisibility={info?.filters_visibility}
                       onClick={() => setSelectedDishModal(dish)}
                       onAddToCart={isDirectOrderingActive ? handleAddToCart : undefined}
@@ -2806,11 +2807,11 @@ export default function App() {
                 <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
                   <span style={{ fontSize: '1rem', fontWeight: 900, color: '#FFFFFF' }}>
                     {(() => {
-                      const sym = (info?.currency_symbol !== undefined && info?.currency_symbol !== null) ? info.currency_symbol : '₹';
+                      const sym = getCurrencySymbol(info?.currency_symbol);
                       const subtotal = cartItems.reduce((sum, item) => sum + (item.price * item.quantity), 0);
                       const isGst = Boolean(info?.gst_enabled);
                       const grandTotal = isGst ? Math.round(subtotal * 1.05 * 100) / 100 : subtotal;
-                      return `${sym}${grandTotal.toFixed(2)}`;
+                      return `${sym}${formatPriceNumber(grandTotal)}`;
                     })()}
                   </span>
                   <span>→</span>
@@ -2897,7 +2898,7 @@ export default function App() {
           {(() => {
             const isAddon = Boolean(activeOrderId && activeOrderTrack && ['pending', 'accepted', 'kitchen', 'preparing', 'served'].includes(activeOrderTrack.status));
             const nextRound = (Number(activeOrderTrack?.current_round) || Number(activeOrderTrack?.round_number) || 1) + 1;
-            const sym = (info?.currency_symbol !== undefined && info?.currency_symbol !== null) ? info.currency_symbol : '₹';
+            const sym = getCurrencySymbol(info?.currency_symbol);
             const cartTotal = cartItems.reduce((sum, item) => sum + (item.price * item.quantity), 0);
             const subtotal = cartTotal;
             const isGst = Boolean(info?.gst_enabled);
@@ -2979,18 +2980,18 @@ export default function App() {
                             <div style={{ display: 'flex', gap: '4px', flexWrap: 'wrap', marginTop: '3px', marginBottom: '2px' }}>
                               {item.modifiers.map((m, mIdx) => (
                                 <span key={mIdx} style={{ fontSize: '0.68rem', background: '#F1F5F9', color: '#334155', padding: '1px 6px', borderRadius: '4px', border: '1px solid #CBD5E1', fontWeight: 700 }}>
-                                  + {m.name} (+{sym}{m.price})
+                                  + {m.name} (+{sym}{formatPriceNumber(m.price)})
                                 </span>
                               ))}
                             </div>
                           )}
                           <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginTop: '2px' }}>
                             <span style={{ fontSize: '0.84rem', color: 'var(--gold-primary)', fontWeight: 800 }}>
-                              {sym}{item.price} x {item.quantity} = {sym}{item.price * item.quantity}
+                              {sym}{formatPriceNumber(item.price)} x {item.quantity} = {sym}{formatPriceNumber(item.price * item.quantity)}
                             </span>
                             {item.regular_price && item.regular_price > item.price && (
                               <span style={{ fontSize: '0.72rem', color: '#94A3B8', textDecoration: 'line-through' }}>
-                                {sym}{item.regular_price * item.quantity}
+                                {sym}{formatPriceNumber(item.regular_price * item.quantity)}
                               </span>
                             )}
                           </div>
@@ -3099,24 +3100,24 @@ export default function App() {
                       }}>
                         <div style={{ display: 'flex', justifyContent: 'space-between', color: '#64748B' }}>
                           <span>Items Subtotal</span>
-                          <span>{sym}{subtotal.toFixed(2)}</span>
+                          <span>{sym}{formatPriceNumber(subtotal)}</span>
                         </div>
                         {(() => {
                           const totalSavings = cartItems.reduce((sum, item) => sum + ((item.discount_amount || 0) * (item.quantity || 1)), 0);
                           return totalSavings > 0 ? (
                             <div style={{ display: 'flex', justifyContent: 'space-between', color: '#059669', fontWeight: 600 }}>
                               <span>🎉 Offer Savings</span>
-                              <span>-{sym}{totalSavings.toFixed(2)}</span>
+                              <span>-{sym}{formatPriceNumber(totalSavings)}</span>
                             </div>
                           ) : null;
                         })()}
                         <div style={{ display: 'flex', justifyContent: 'space-between', color: '#64748B' }}>
                           <span>CGST (2.5%)</span>
-                          <span>{sym}{cgst.toFixed(2)}</span>
+                          <span>{sym}{formatPriceNumber(cgst)}</span>
                         </div>
                         <div style={{ display: 'flex', justifyContent: 'space-between', color: '#64748B' }}>
                           <span>SGST (2.5%)</span>
-                          <span>{sym}{sgst.toFixed(2)}</span>
+                          <span>{sym}{formatPriceNumber(sgst)}</span>
                         </div>
                         <div style={{
                           display: 'flex',
@@ -3128,7 +3129,7 @@ export default function App() {
                           marginTop: '2px'
                         }}>
                           <span>Grand Total (Inc. 5% GST)</span>
-                          <span>{sym}{grandTotal.toFixed(2)}</span>
+                          <span>{sym}{formatPriceNumber(grandTotal)}</span>
                         </div>
                       </div>
                     )}
@@ -3162,8 +3163,8 @@ export default function App() {
                           {placingOrder
                             ? 'Placing Order...'
                             : isAddon
-                              ? `⚡ Confirm & Place Round ${nextRound} Order (${sym}${isGst ? grandTotal.toFixed(2) : subtotal})`
-                              : `⚡ Confirm & Place Order (${sym}${isGst ? grandTotal.toFixed(2) : subtotal})`}
+                              ? `⚡ Confirm & Place Round ${nextRound} Order (${sym}${formatPriceNumber(isGst ? grandTotal : subtotal)})`
+                              : `⚡ Confirm & Place Order (${sym}${formatPriceNumber(isGst ? grandTotal : subtotal)})`}
                         </span>
                       </button>
                     )}
@@ -3430,7 +3431,7 @@ export default function App() {
         <DishModal
           dish={selectedDishModal}
           lang={lang}
-          currencySymbol={info?.currency_symbol !== undefined ? info.currency_symbol : '₹'}
+          currencySymbol={getCurrencySymbol(info?.currency_symbol)}
           onAddToCart={isDirectOrderingActive ? handleAddToCart : undefined}
           onClose={() => setSelectedDishModal(null)}
         />
@@ -3443,7 +3444,7 @@ export default function App() {
           onClose={() => setSelectedComboModal(null)}
           onAddToCart={isDirectOrderingActive ? handleAddComboToCart : undefined}
           canOrder={isDirectOrderingActive}
-          currencySymbol={info?.currency_symbol !== undefined && info?.currency_symbol !== null ? info.currency_symbol : '₹'}
+          currencySymbol={getCurrencySymbol(info?.currency_symbol)}
         />
       )}
 

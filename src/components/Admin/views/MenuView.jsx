@@ -36,6 +36,7 @@ import {
 } from 'lucide-react';
 import { resolveImageUrl, getDishImageUrl, getCategoryImageUrl } from '../../../utils/imageHelper';
 import { formatQuota } from '../../../utils/planCapabilities';
+import { getCurrencySymbol, formatPriceNumber } from '../../../utils/currencyHelper';
 
 export default function MenuView({
   dishes = [],
@@ -96,9 +97,7 @@ export default function MenuView({
   const comboQuota = formatQuota(safeCombos.length, maxCombos);
 
   // Dynamic currency resolver from restaurant settings or props
-  const curr = restaurantInfo?.currency_symbol !== undefined && restaurantInfo?.currency_symbol !== null 
-    ? restaurantInfo.currency_symbol 
-    : currencySymbol;
+  const curr = getCurrencySymbol(restaurantInfo?.currency_symbol !== undefined ? restaurantInfo.currency_symbol : currencySymbol);
 
   // Reset pagination on filter or search change
   useEffect(() => {
@@ -1910,7 +1909,7 @@ export default function MenuView({
               <div key={combo.id} style={{ background: '#FFFFFF', borderRadius: '16px', border: '1px solid #E2E8F0', padding: '16px', display: 'flex', flexDirection: 'column', justifyContent: 'space-between', gap: '12px', boxShadow: '0 1px 3px rgba(0,0,0,0.02)' }}>
                 <div>
                   <h4 style={{ fontSize: '0.96rem', fontWeight: 800, color: '#0F172A', margin: '0 0 4px 0' }}>{combo.name}</h4>
-                  <div style={{ fontSize: '1.15rem', fontWeight: 900, color: '#0F172A', marginTop: '6px' }}>{curr}{combo.price}</div>
+                  <div style={{ fontSize: '1.15rem', fontWeight: 900, color: '#0F172A', marginTop: '6px' }}>{curr}{formatPriceNumber(combo.price)}</div>
                 </div>
                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: '6px', borderTop: '1px solid #F1F5F9', paddingTop: '10px' }}>
                   <button onClick={() => onOpenEditCombo(combo)} style={{ padding: '6px 12px', borderRadius: '8px', border: '1px solid #E2E8F0', background: '#F8FAFC', color: '#0F172A', fontSize: '0.74rem', fontWeight: 700, cursor: 'pointer' }}>Edit</button>

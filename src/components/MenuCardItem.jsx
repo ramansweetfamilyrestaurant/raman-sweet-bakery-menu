@@ -1,8 +1,9 @@
 import React, { useState } from 'react';
 import { getDishImageUrl } from '../utils/imageHelper';
+import { getCurrencySymbol, formatPriceNumber } from '../utils/currencyHelper';
 
 export default function MenuCardItem({ dish, lang, onClick, onAddToCart, currencySymbol, filtersVisibility }) {
-  const symbol = currencySymbol !== undefined ? currencySymbol : '₹';
+  const symbol = getCurrencySymbol(currencySymbol);
   const isAvailable = dish.available !== false;
   const hasHalfPrice = dish.price_half !== null && dish.price_half !== undefined && Number(dish.price_half) > 0;
   const imageSrc = getDishImageUrl(dish.image);
@@ -272,7 +273,7 @@ export default function MenuCardItem({ dish, lang, onClick, onAddToCart, currenc
                 lineHeight: 1.2
               }}
             >
-              Full {symbol}{dish.offer_price !== undefined && dish.offer_price !== null && Number(dish.offer_price) < fullPriceNum ? Math.round(Number(dish.offer_price)) : fullPriceNum}
+              Full {symbol}{formatPriceNumber(dish.offer_price !== undefined && dish.offer_price !== null && Number(dish.offer_price) < fullPriceNum ? dish.offer_price : fullPriceNum)}
             </button>
           </div>
         ) : (
@@ -294,7 +295,7 @@ export default function MenuCardItem({ dish, lang, onClick, onAddToCart, currenc
                 lineHeight: 1.2,
                 boxShadow: '0 1px 4px rgba(6, 78, 59, 0.12)'
               }}>
-                {symbol}{Number(dish.offer_price).toLocaleString('en-IN')}
+                {symbol}{formatPriceNumber(dish.offer_price)}
               </div>
               <span style={{
                 fontSize: '0.68rem',
@@ -303,7 +304,7 @@ export default function MenuCardItem({ dish, lang, onClick, onAddToCart, currenc
                 fontWeight: 600,
                 marginRight: '2px'
               }}>
-                {symbol}{fullPriceNum.toLocaleString('en-IN')}
+                {symbol}{formatPriceNumber(fullPriceNum)}
               </span>
             </div>
           ) : (
@@ -323,7 +324,7 @@ export default function MenuCardItem({ dish, lang, onClick, onAddToCart, currenc
               }}
               onClick={() => onClick(dish)}
             >
-              {symbol}{fullPriceNum.toLocaleString('en-IN')}
+              {symbol}{formatPriceNumber(fullPriceNum)}
             </div>
           )
         )}

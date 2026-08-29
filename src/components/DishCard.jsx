@@ -1,9 +1,10 @@
 import React from 'react';
 import { ChevronRight } from 'lucide-react';
 import { getDishImageUrl } from '../utils/imageHelper';
+import { getCurrencySymbol, formatPriceNumber } from '../utils/currencyHelper';
 
 export default function DishCard({ dish, onClick, onAddToCart, currencySymbol = '₹', lang = 'en', filtersVisibility }) {
-  const symbol = (currencySymbol !== undefined && currencySymbol !== null) ? currencySymbol : '₹';
+  const symbol = getCurrencySymbol(currencySymbol);
   const isAvailable = dish.available !== false;
   const hasHalfPrice = dish.price_half !== null && dish.price_half !== undefined && Number(dish.price_half) > 0;
   const imageSrc = getDishImageUrl(dish.image);
@@ -286,7 +287,7 @@ export default function DishCard({ dish, onClick, onAddToCart, currencySymbol = 
                   whiteSpace: 'nowrap',
                   boxShadow: '0 1px 4px rgba(6, 78, 59, 0.12)'
                 }}>
-                  {symbol}{Number(dish.offer_price).toLocaleString('en-IN')}
+                  {symbol}{formatPriceNumber(dish.offer_price)}
                 </span>
                 <span style={{
                   fontSize: '0.70rem',
@@ -295,7 +296,7 @@ export default function DishCard({ dish, onClick, onAddToCart, currencySymbol = 
                   fontWeight: 600,
                   marginRight: '4px'
                 }}>
-                  {symbol}{Number(dish.price).toLocaleString('en-IN')}
+                  {symbol}{formatPriceNumber(dish.price)}
                 </span>
               </div>
             ) : (
@@ -310,7 +311,7 @@ export default function DishCard({ dish, onClick, onAddToCart, currencySymbol = 
                 whiteSpace: 'nowrap',
                 boxShadow: 'var(--theme-shadow, 0 1px 4px rgba(0,0,0,0.06))'
               }}>
-                {symbol}{Number(dish.price).toLocaleString('en-IN')}
+                {symbol}{formatPriceNumber(dish.price)}
               </span>
             )}
           </div>
@@ -343,7 +344,7 @@ export default function DishCard({ dish, onClick, onAddToCart, currencySymbol = 
             fontWeight: 700,
             color: 'var(--primary-emerald)'
           }}>
-            {hasHalfPrice ? `Half ${symbol}${dish.price_half} | Full ${symbol}${dish.offer_price !== undefined && dish.offer_price !== null && Number(dish.offer_price) < Number(dish.price) ? dish.offer_price : dish.price}` : (dish.portion || 'Special Portion')}
+            {hasHalfPrice ? `Half ${symbol}${formatPriceNumber(dish.price_half)} | Full ${symbol}${formatPriceNumber(dish.offer_price !== undefined && dish.offer_price !== null && Number(dish.offer_price) < Number(dish.price) ? dish.offer_price : dish.price)}` : (dish.portion || 'Special Portion')}
           </span>
 
           <span style={{

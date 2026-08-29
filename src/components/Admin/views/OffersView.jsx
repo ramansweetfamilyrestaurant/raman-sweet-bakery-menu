@@ -35,6 +35,7 @@ import {
   deleteAdminOffer 
 } from '../../../api/client';
 import { resolveTenantCapabilities } from '../../../utils/planCapabilities';
+import { getCurrencySymbol, formatPriceNumber } from '../../../utils/currencyHelper';
 import PlanLockedCard from '../components/PlanLockedCard';
 
 export default function OffersView({
@@ -49,7 +50,7 @@ export default function OffersView({
   onNavigate
 }) {
   const resolvedCaps = capabilities || resolveTenantCapabilities(restaurantInfo, settingsForm);
-  const currencySym = settingsForm?.currency_symbol || restaurantInfo?.currency_symbol || '₹';
+  const currencySym = getCurrencySymbol(settingsForm?.currency_symbol !== undefined ? settingsForm.currency_symbol : restaurantInfo?.currency_symbol);
 
   // Live Offers State
   const [offersList, setOffersList] = useState([]);
@@ -323,7 +324,7 @@ export default function OffersView({
       badge = `${pct}% OFF`;
     } else if (formType === 'flat') {
       disc = Math.max(0, numBase - val);
-      badge = `${currencySym}${val} OFF`;
+      badge = currencySym ? `${currencySym}${val} OFF` : `${val} OFF`;
     } else if (formType === 'special_price') {
       disc = Math.max(0, val);
       badge = `Special Price`;
@@ -764,8 +765,8 @@ export default function OffersView({
 
             let discountBadge = '';
             if (offer.type === 'percentage') discountBadge = `${offer.value}% OFF`;
-            else if (offer.type === 'flat') discountBadge = `${currencySym}${offer.value} OFF`;
-            else if (offer.type === 'special_price') discountBadge = `Special Price ${currencySym}${offer.value}`;
+            else if (offer.type === 'flat') discountBadge = currencySym ? `${currencySym}${formatPriceNumber(offer.value)} OFF` : `${formatPriceNumber(offer.value)} OFF`;
+            else if (offer.type === 'special_price') discountBadge = currencySym ? `Special Price ${currencySym}${formatPriceNumber(offer.value)}` : `Special Price ${formatPriceNumber(offer.value)}`;
 
             return (
               <div key={offer.id} className="offer-row-card">
@@ -972,7 +973,7 @@ export default function OffersView({
                     <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '8px' }}>
                       {[
                         { id: 'percentage', label: '% OFF', desc: 'Percentage Discount' },
-                        { id: 'flat', label: `${currencySym} Flat OFF`, desc: 'Fixed Amount Discount' },
+                        { id: 'flat', label: currencySym ? `${currencySym} Flat OFF` : 'Flat OFF', desc: 'Fixed Amount Discount' },
                         { id: 'special_price', label: 'Special Price', desc: 'Custom Target Price' }
                       ].map(t => {
                         const isSel = formType === t.id;
@@ -1102,7 +1103,7 @@ export default function OffersView({
                               </span>
                             </div>
                             <span style={{ fontSize: '0.76rem', fontWeight: 800, color: '#064E3B' }}>
-                              {currencySym}{d.price}
+                              {currencySym}{formatPriceNumber(d.price)}
                             </span>
                           </div>
                         );
@@ -1117,7 +1118,7 @@ export default function OffersView({
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
                   <div>
                     <label style={{ fontSize: '0.76rem', fontWeight: 800, color: '#475569', display: 'block', marginBottom: '4px' }}>
-                      {formType === 'percentage' ? 'Percentage Discount (%)' : formType === 'flat' ? `Flat Discount (${currencySym})` : `Special Price (${currencySym})`}
+                      {formType === 'percentage' ? 'Percentage Discount (%)' : formType === 'flat' ? `Flat Discount${currencySym ? ` (${currencySym})` : ''}` : `Special Price${currencySym ? ` (${currencySym})` : ''}`}
                     </label>
                     <input
                       type="number"
@@ -1229,10 +1230,10 @@ export default function OffersView({
 
                           <div style={{ textAlign: 'right' }}>
                             <div style={{ fontSize: '0.94rem', fontWeight: 900, color: '#064E3B' }}>
-                              {currencySym}{calc.discounted}
+                              {currencySym}{formatPriceNumber(calc.discounted)}
                             </div>
                             <div style={{ fontSize: '0.72rem', color: '#94A3B8', textDecoration: 'line-through' }}>
-                              {currencySym}{calc.original}
+                              {currencySym}{formatPriceNumber(calc.original)}
                             </div>
                           </div>
                         </div>

@@ -1,9 +1,10 @@
 import React from 'react';
 import { Flame } from 'lucide-react';
 import { getDishImageUrl } from '../utils/imageHelper';
+import { getCurrencySymbol, formatPriceNumber } from '../utils/currencyHelper';
 
 export default function BestsellersCarousel({ dishes = [], onSelectDish, currencySymbol = '₹', lang = 'en' }) {
-  const symbol = (currencySymbol !== undefined && currencySymbol !== null) ? currencySymbol : '₹';
+  const symbol = getCurrencySymbol(currencySymbol);
   const bestsellers = dishes.filter(d => d.must_try || d.bestseller || d.is_must_try || d.is_bestseller).slice(0, 10);
 
   if (!bestsellers || bestsellers.length === 0) return null;
@@ -133,7 +134,7 @@ export default function BestsellersCarousel({ dishes = [], onSelectDish, currenc
                         fontWeight: 800,
                         color: 'var(--primary-emerald)'
                       }}>
-                        {symbol}{Math.round(dish.offer_price)}
+                        {symbol}{formatPriceNumber(dish.offer_price)}
                       </span>
                       <span style={{
                         fontSize: '0.74rem',
@@ -141,7 +142,7 @@ export default function BestsellersCarousel({ dishes = [], onSelectDish, currenc
                         textDecoration: 'line-through',
                         fontWeight: 600
                       }}>
-                        {symbol}{Math.round(dish.price)}
+                        {symbol}{formatPriceNumber(dish.price)}
                       </span>
                     </div>
                   ) : (
@@ -151,7 +152,7 @@ export default function BestsellersCarousel({ dishes = [], onSelectDish, currenc
                       fontWeight: 800,
                       color: 'var(--primary-emerald)'
                     }}>
-                      {symbol}{Math.round(dish.price)}
+                      {symbol}{formatPriceNumber(dish.price)}
                     </span>
                   )}
                   {(dish.offer_badge || dish.offer?.offer_badge) && (
