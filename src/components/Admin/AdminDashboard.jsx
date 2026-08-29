@@ -3027,9 +3027,15 @@ export default function AdminDashboard({
                 onPrintAllQRs={handlePrintAllQRs}
                 settingsForm={settingsForm}
                 token={token}
+                restaurantInfo={restaurantInfo}
+                capabilities={tenantCaps}
                 onReturnToMenu={onReturnToMenu}
                 onBackToSetup={(drawer = null) => {
                   setInitialSetupDrawer(drawer);
+                  setActiveTab('settings');
+                }}
+                onUpgrade={() => {
+                  setInitialSetupDrawer('subscription');
                   setActiveTab('settings');
                 }}
                 onUpdateSpaceType={handleUpdateSpaceType}
