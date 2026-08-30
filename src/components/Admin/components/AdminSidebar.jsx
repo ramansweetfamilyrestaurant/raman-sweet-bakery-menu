@@ -373,10 +373,10 @@ export default function AdminSidebar({
             </div>
           </button>
 
-          {/* Billing */}
+          {/* Billing & Subscription */}
           <button
-            onClick={() => window.open('/billing', '_blank')}
-            className="sidebar-nav-item"
+            onClick={() => setActiveTab('billing')}
+            className={`sidebar-nav-item ${(activeTab === 'billing' || activeTab === 'subscription') ? 'active' : ''}`}
             style={{
               display: 'flex',
               alignItems: 'center',
@@ -384,16 +384,16 @@ export default function AdminSidebar({
               width: '100%',
               padding: '9px 12px',
               borderRadius: '10px',
-              border: '1px solid transparent',
+              border: (activeTab === 'billing' || activeTab === 'subscription') ? '1px solid #1E293B' : '1px solid transparent',
               cursor: 'pointer',
-              background: 'transparent',
-              color: '#94A3B8',
-              fontWeight: 500,
+              background: (activeTab === 'billing' || activeTab === 'subscription') ? '#0F172A' : 'transparent',
+              color: (activeTab === 'billing' || activeTab === 'subscription') ? '#FFFFFF' : '#94A3B8',
+              fontWeight: (activeTab === 'billing' || activeTab === 'subscription') ? 700 : 500,
               fontSize: '0.84rem'
             }}
           >
             <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-              <CreditCard size={17} color="#94A3B8" />
+              <CreditCard size={17} color={(activeTab === 'billing' || activeTab === 'subscription') ? '#10B981' : '#94A3B8'} />
               <span>Billing</span>
             </div>
           </button>

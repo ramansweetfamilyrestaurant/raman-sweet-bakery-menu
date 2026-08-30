@@ -29,6 +29,7 @@ import NotificationView from './views/NotificationView';
 import SupportView from './views/SupportView';
 import OffersView from './views/OffersView';
 import CustomersView from './views/CustomersView';
+import BillingView from './views/BillingView';
 
 export default function AdminDashboard({
   token,
@@ -3014,8 +3015,7 @@ export default function AdminDashboard({
                 maxCategories={tenantCaps.max_categories}
                 maxCombos={tenantCaps.max_combos}
                 onUpgrade={() => {
-                  setInitialSetupDrawer('subscription');
-                  setActiveTab('settings');
+                  setActiveTab('billing');
                 }}
               />
             )}
@@ -3040,8 +3040,7 @@ export default function AdminDashboard({
                   setActiveTab('settings');
                 }}
                 onUpgrade={() => {
-                  setInitialSetupDrawer('subscription');
-                  setActiveTab('settings');
+                  setActiveTab('billing');
                 }}
                 onUpdateSpaceType={handleUpdateSpaceType}
               />
@@ -3058,8 +3057,7 @@ export default function AdminDashboard({
                 token={token}
                 capabilities={tenantCaps}
                 onUpgrade={() => {
-                  setInitialSetupDrawer('subscription');
-                  setActiveTab('settings');
+                  setActiveTab('billing');
                 }}
                 onNavigate={(tab) => setActiveTab(tab)}
               />
@@ -3075,10 +3073,29 @@ export default function AdminDashboard({
                 capabilities={tenantCaps}
                 currencySymbol={settingsForm.currency_symbol !== undefined && settingsForm.currency_symbol !== null ? settingsForm.currency_symbol : '₹'}
                 onUpgrade={() => {
-                  setInitialSetupDrawer('subscription');
-                  setActiveTab('settings');
+                  setActiveTab('billing');
                 }}
                 onNavigate={(tab) => setActiveTab(tab)}
+              />
+            )}
+
+            {/* BILLING & SUBSCRIPTION VIEW (FULL-PAGE WORKSPACE) */}
+            {(activeTab === 'billing' || activeTab === 'subscription') && (
+              <BillingView
+                restaurantInfo={restaurantInfo}
+                settingsForm={settingsForm}
+                dishes={safeDishes}
+                categories={safeCategories}
+                combos={combos}
+                totalTablesCount={totalTablesCount}
+                token={token}
+                capabilities={tenantCaps}
+                currencySymbol={settingsForm.currency_symbol !== undefined && settingsForm.currency_symbol !== null ? settingsForm.currency_symbol : '₹'}
+                onUpgrade={(planKey) => {
+                  setActiveTab('billing');
+                }}
+                onNavigate={(tab) => setActiveTab(tab)}
+                onRefreshInfo={handleRefreshInfo}
               />
             )}
 
@@ -3092,8 +3109,7 @@ export default function AdminDashboard({
                 restaurantInfo={restaurantInfo}
                 capabilities={tenantCaps}
                 onUpgrade={() => {
-                  setInitialSetupDrawer('subscription');
-                  setActiveTab('settings');
+                  setActiveTab('billing');
                 }}
                 onBackToSetup={(drawer = null) => {
                   setInitialSetupDrawer(drawer);
@@ -3145,8 +3161,7 @@ export default function AdminDashboard({
                 restaurantInfo={restaurantInfo}
                 capabilities={tenantCaps}
                 onUpgrade={() => {
-                  setInitialSetupDrawer('subscription');
-                  setActiveTab('settings');
+                  setActiveTab('billing');
                 }}
                 settingsForm={settingsForm}
                 setSettingsForm={setSettingsForm}

@@ -32,6 +32,7 @@ import {
 } from '../../../api/client';
 import { CUSTOMER_MENU_THEMES, THEME_LIST, resolveTheme } from '../../../constants/themes';
 import { resolveTenantCapabilities } from '../../../utils/planCapabilities';
+import BillingView from './BillingView';
 
 // Configure Leaflet Default Marker Icon
 try {
@@ -4724,7 +4725,45 @@ export default function SetupView({
   };
 
   const renderSubscriptionBillingFullPage = () => {
-    const activePlanKey = (subData?.plan_tier || restaurantInfo?.plan_tier || settingsForm?.plan_tier || 'enterprise').toLowerCase();
+    return (
+      <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+          <button
+            type="button"
+            onClick={() => setActiveSubPage(null)}
+            style={{
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: '6px',
+              padding: '6px 12px',
+              borderRadius: '8px',
+              border: '1px solid #E2E8F0',
+              background: '#FFFFFF',
+              color: '#0F172A',
+              fontSize: '0.74rem',
+              fontWeight: 800,
+              cursor: 'pointer'
+            }}
+          >
+            <ArrowLeft size={14} />
+            <span>← Back to Settings Overview</span>
+          </button>
+        </div>
+        <BillingView
+          restaurantInfo={restaurantInfo}
+          settingsForm={settingsForm}
+          token={token}
+          capabilities={capabilities}
+          currencySymbol={settingsForm.currency_symbol !== undefined && settingsForm.currency_symbol !== null ? settingsForm.currency_symbol : '₹'}
+          onUpgrade={() => {}}
+          onNavigate={(tab) => {}}
+          onRefreshInfo={() => loadSubscriptionStatus()}
+        />
+      </div>
+    );
+  };
+
+  const _deprecated_renderSubscriptionBillingFullPage = () => {
     const activePlanPrice = subData?.plan_price || restaurantInfo?.plan_price || 999;
     const isComplimentary = subData?.mandate_status === 'admin_granted' || 
                             restaurantInfo?.subscription_type === 'ADMIN_GRANTED' || 
