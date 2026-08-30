@@ -57,6 +57,7 @@ export default function OrdersView({
   currencySymbol = '₹',
   ordersEnabled = true,
   settingsForm = {},
+  capabilities = {},
   token = null,
   onNavigateToSetup = null
 }) {
@@ -409,7 +410,14 @@ export default function OrdersView({
   const kitchenCount = validOrders.filter(o => o.status === 'kitchen' || o.status === 'accepted' || o.status === 'preparing').length;
   const servedCount = validOrders.filter(o => o.status === 'served' || o.status === 'ready').length;
   const completedCount = validOrders.filter(o => o.status === 'completed').length;
-  const todayTotalSales = validOrders.reduce((sum, o) => sum + (Number(o.total_amount) || 0), 0);
+  const completedSales = validOrders.filter(o => o.status === 'completed').reduce((sum, o) => sum + (Number(o.total_amount) || 0), 0);
+
+  const getOrderSourceDisplay = (order) => {
+    const src = String(order?.order_source || order?.order_type || '').toLowerCase();
+    if (src === 'whatsapp') return '💬 WhatsApp';
+    if (src === 'pos' || src === 'manual') return '🖥️ POS';
+    return '📱 Direct QR';
+  };
 
   // Filtered Orders
   const filteredOrders = validOrders.filter(o => {
@@ -420,9 +428,18 @@ export default function OrdersView({
     if (kotFilter === 'completed' && o.status !== 'completed') return false;
 
     // Source Filter
-    if (sourceFilter === 'direct' && o.order_source !== 'direct_qr' && o.order_type !== 'direct') return false;
-    if (sourceFilter === 'whatsapp' && o.order_source !== 'whatsapp') return false;
-    if (sourceFilter === 'manual' && o.order_source !== 'pos' && o.order_source !== 'manual') return false;
+    const src = String(o.order_source || o.order_type || '').toLowerCase();
+    if (sourceFilter === 'direct') {
+      const isDirect = !src || src === 'direct_qr' || src === 'direct' || src === 'qr';
+      if (!isDirect) return false;
+    }
+    if (sourceFilter === 'whatsapp') {
+      if (src !== 'whatsapp') return false;
+    }
+    if (sourceFilter === 'manual') {
+      const isManual = src === 'pos' || src === 'manual';
+      if (!isManual) return false;
+    }
 
     return true;
   });
@@ -616,8 +633,9 @@ export default function OrdersView({
           {/* KDS Subtab */}
           <button
             onClick={() => {
-              if (settingsForm?.kds_enabled || restaurantInfo?.kds_enabled) {
-                window.open('/kds', '_blank');
+              if (capabilities?.kds_enabled || settingsForm?.kds_enabled || restaurantInfo?.kds_enabled) {
+                const currentSlug = restaurantInfo?.slug || '';
+                window.open(currentSlug ? `/${currentSlug}/kitchen` : '/kitchen', '_blank');
               } else {
                 setActiveSubTab && setActiveSubTab('kds');
               }
@@ -804,7 +822,7 @@ export default function OrdersView({
               {completedCount}
             </div>
             <span style={{ fontSize: '0.68rem', color: '#7E22CE', fontWeight: 700 }}>
-              {currencySymbol}{Math.round(todayTotalSales).toLocaleString('en-IN')} sales
+              {currencySymbol}{Math.round(completedSales).toLocaleString('en-IN')} sales
             </span>
           </div>
         </div>
@@ -976,7 +994,7 @@ export default function OrdersView({
                       <td style={{ padding: '14px 18px', fontWeight: 800, color: '#0F172A' }}>
                         <div>#{order.id}</div>
                         <span style={{ fontSize: '0.68rem', color: '#64748B', fontWeight: 600 }}>
-                          {order.order_source === 'whatsapp' ? '💬 WhatsApp' : order.order_source === 'pos' ? '🖥️ POS' : '📱 QR Order'}
+                          {getOrderSourceDisplay(order)}
                         </span>
                       </td>
 
@@ -1170,7 +1188,7 @@ export default function OrdersView({
                   <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', fontSize: '0.78rem' }}>
                     <span style={{ fontWeight: 700, color: '#0F172A' }}>{cleanLoc}</span>
                     <span style={{ color: '#64748B', fontSize: '0.72rem' }}>
-                      {order.order_source === 'whatsapp' ? '💬 WhatsApp' : order.order_source === 'pos' ? '🖥️ POS' : '📱 Direct QR'}
+                      {getOrderSourceDisplay(order)}
                     </span>
                   </div>
 
@@ -1692,19 +1710,37 @@ export default function OrdersView({
 
             {/* Scrollable Content */}
             <div style={{ padding: '24px', flex: 1, overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '18px' }}>
-              {/* Status Pill */}
-              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', background: '#F8FAFC', padding: '12px 16px', borderRadius: '12px', border: '1px solid #E2E8F0' }}>
-                <span style={{ fontSize: '0.78rem', color: '#64748B', fontWeight: 600 }}>Order Status:</span>
-                <span style={{
-                  padding: '4px 10px',
-                  borderRadius: '8px',
-                  background: getStatusBadge(selectedOrder.status).bg,
-                  color: getStatusBadge(selectedOrder.status).color,
-                  fontWeight: 800,
-                  fontSize: '0.72rem'
-                }}>
-                  {getStatusBadge(selectedOrder.status).label}
-                </span>
+              {/* Status & Customer Info Card */}
+              <div style={{ background: '#F8FAFC', padding: '14px 16px', borderRadius: '14px', border: '1px solid #E2E8F0', display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                  <span style={{ fontSize: '0.78rem', color: '#64748B', fontWeight: 600 }}>Order Status:</span>
+                  <span style={{
+                    padding: '4px 10px',
+                    borderRadius: '8px',
+                    background: getStatusBadge(selectedOrder.status).bg,
+                    color: getStatusBadge(selectedOrder.status).color,
+                    fontWeight: 800,
+                    fontSize: '0.72rem'
+                  }}>
+                    {getStatusBadge(selectedOrder.status).label}
+                  </span>
+                </div>
+
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', fontSize: '0.76rem', color: '#334155', borderTop: '1px solid #E2E8F0', paddingTop: '8px' }}>
+                  <span>Source: <strong>{getOrderSourceDisplay(selectedOrder)}</strong></span>
+                  {selectedOrder.round_number && selectedOrder.round_number > 1 && (
+                    <span style={{ background: '#E0F2FE', color: '#0284C7', padding: '2px 6px', borderRadius: '6px', fontWeight: 700, fontSize: '0.68rem' }}>
+                      Round #{selectedOrder.round_number}
+                    </span>
+                  )}
+                </div>
+
+                {selectedOrder.customer_name && (
+                  <div style={{ fontSize: '0.74rem', color: '#64748B' }}>
+                    Guest: <strong style={{ color: '#0F172A' }}>{selectedOrder.customer_name}</strong>
+                    {selectedOrder.customer_phone ? ` (${selectedOrder.customer_phone})` : ''}
+                  </div>
+                )}
               </div>
 
               {/* Itemized Dishes */}
@@ -1713,39 +1749,76 @@ export default function OrdersView({
                   Order Items
                 </h4>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                  {safeParseItems(selectedOrder.items).map((item, idx) => (
-                    <div key={idx} style={{ display: 'flex', justifyContent: 'space-between', padding: '8px 0', borderBottom: '1px solid #F1F5F9' }}>
-                      <div>
-                        <strong style={{ fontSize: '0.82rem', color: '#0F172A' }}>{item.quantity || 1}x {item.name}</strong>
-                        {item.modifiers && item.modifiers.length > 0 && (
-                          <div style={{ fontSize: '0.70rem', color: '#64748B' }}>
-                            {item.modifiers.map(m => m.name || m).join(', ')}
+                  {safeParseItems(selectedOrder.items).map((item, idx) => {
+                    const itemQty = Number(item.quantity || item.qty || 1);
+                    const itemPrice = Number(item.price || 0);
+                    const itemRegularPrice = Number(item.regular_price || 0);
+                    const hasOffer = itemRegularPrice > itemPrice && itemPrice > 0;
+
+                    return (
+                      <div key={idx} style={{ display: 'flex', justifyContent: 'space-between', padding: '8px 0', borderBottom: '1px solid #F1F5F9' }}>
+                        <div>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                            <strong style={{ fontSize: '0.82rem', color: '#0F172A' }}>{itemQty}x {item.name}</strong>
+                            {hasOffer && (
+                              <span style={{ fontSize: '0.64rem', color: '#16A34A', background: '#DCFCE7', padding: '1px 6px', borderRadius: '4px', fontWeight: 700 }}>
+                                {item.offer_badge || 'OFFER'}
+                              </span>
+                            )}
                           </div>
-                        )}
+                          {item.modifiers && item.modifiers.length > 0 && (
+                            <div style={{ fontSize: '0.70rem', color: '#64748B', marginTop: '2px' }}>
+                              {item.modifiers.map(m => m.name || m).join(', ')}
+                            </div>
+                          )}
+                        </div>
+                        <div style={{ textAlign: 'right' }}>
+                          <span style={{ fontWeight: 800, fontSize: '0.84rem', color: '#0F172A' }}>
+                            {currencySymbol}{Math.round(itemPrice * itemQty)}
+                          </span>
+                          {hasOffer && (
+                            <div style={{ fontSize: '0.68rem', color: '#94A3B8', textDecoration: 'line-through' }}>
+                              {currencySymbol}{Math.round(itemRegularPrice * itemQty)}
+                            </div>
+                          )}
+                        </div>
                       </div>
-                      <span style={{ fontWeight: 800, fontSize: '0.84rem', color: '#0F172A' }}>
-                        {currencySymbol}{Math.round((item.price || 0) * (item.quantity || 1))}
-                      </span>
-                    </div>
-                  ))}
+                    );
+                  })}
                 </div>
               </div>
 
               {/* Bill Breakdown */}
-              <div style={{ background: '#F8FAFC', padding: '16px', borderRadius: '14px', border: '1px solid #E2E8F0' }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.78rem', color: '#64748B', marginBottom: '6px' }}>
+              <div style={{ background: '#F8FAFC', padding: '16px', borderRadius: '14px', border: '1px solid #E2E8F0', display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.78rem', color: '#64748B' }}>
                   <span>Subtotal</span>
-                  <span>{currencySymbol}{Math.round(selectedOrder.subtotal || selectedOrder.total_amount || 0)}</span>
+                  <span>{currencySymbol}{Math.round(Number(selectedOrder.subtotal_amount || selectedOrder.subtotal || selectedOrder.total_amount || 0))}</span>
                 </div>
-                {selectedOrder.gst_amount > 0 && (
-                  <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.78rem', color: '#64748B', marginBottom: '6px' }}>
-                    <span>GST (Tax)</span>
-                    <span>{currencySymbol}{Math.round(selectedOrder.gst_amount)}</span>
+
+                {Number(selectedOrder.discount_amount || 0) > 0 && (
+                  <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.78rem', color: '#16A34A', fontWeight: 700 }}>
+                    <span>Discount / Promo</span>
+                    <span>-{currencySymbol}{Math.round(Number(selectedOrder.discount_amount))}</span>
                   </div>
                 )}
+
+                {(Number(selectedOrder.tax_amount || 0) > 0 || Number(selectedOrder.gst_amount || 0) > 0 || Number(selectedOrder.cgst_amount || 0) > 0) && (
+                  <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.78rem', color: '#64748B' }}>
+                    <span>GST (Tax{selectedOrder.gst_rate ? ` ${selectedOrder.gst_rate}%` : ''})</span>
+                    <span>{currencySymbol}{Math.round(Number(selectedOrder.tax_amount || selectedOrder.gst_amount || (Number(selectedOrder.cgst_amount || 0) + Number(selectedOrder.sgst_amount || 0))))}</span>
+                  </div>
+                )}
+
+                <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.76rem', color: '#64748B', borderTop: '1px solid #E2E8F0', paddingTop: '6px', marginTop: '2px' }}>
+                  <span>Payment Mode</span>
+                  <span style={{ fontWeight: 700, color: '#0F172A', textTransform: 'uppercase' }}>
+                    {selectedOrder.payment_method || 'Cash at Counter'} {selectedOrder.is_settled === 1 ? '• Paid' : '• Pending'}
+                  </span>
+                </div>
+
                 <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.94rem', fontWeight: 900, color: '#0F172A', borderTop: '1px solid #E2E8F0', paddingTop: '8px', marginTop: '4px' }}>
-                  <span>Total Amount</span>
-                  <span>{currencySymbol}{Math.round(selectedOrder.total_amount || selectedOrder.total || 0)}</span>
+                  <span>Grand Total</span>
+                  <span>{currencySymbol}{Math.round(Number(selectedOrder.grand_total_amount || selectedOrder.total_amount || selectedOrder.total || 0))}</span>
                 </div>
               </div>
 
