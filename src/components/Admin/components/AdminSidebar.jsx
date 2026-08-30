@@ -298,10 +298,10 @@ export default function AdminSidebar({
             </div>
           </button>
 
-          {/* Customers */}
+          {/* Customers & Guest Insights */}
           <button
-            onClick={() => setActiveTab('orders')}
-            className="sidebar-nav-item"
+            onClick={() => setActiveTab('customers')}
+            className={`sidebar-nav-item ${activeTab === 'customers' ? 'active' : ''}`}
             style={{
               display: 'flex',
               alignItems: 'center',
@@ -309,16 +309,16 @@ export default function AdminSidebar({
               width: '100%',
               padding: '9px 12px',
               borderRadius: '10px',
-              border: '1px solid transparent',
+              border: activeTab === 'customers' ? '1px solid #1E293B' : '1px solid transparent',
               cursor: 'pointer',
-              background: 'transparent',
-              color: '#94A3B8',
-              fontWeight: 500,
+              background: activeTab === 'customers' ? '#0F172A' : 'transparent',
+              color: activeTab === 'customers' ? '#FFFFFF' : '#94A3B8',
+              fontWeight: activeTab === 'customers' ? 700 : 500,
               fontSize: '0.84rem'
             }}
           >
             <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-              <Users size={17} color="#94A3B8" />
+              <Users size={17} color={activeTab === 'customers' ? '#10B981' : '#94A3B8'} />
               <span>Customers</span>
             </div>
           </button>

@@ -28,6 +28,7 @@ import ReviewView from './views/ReviewView';
 import NotificationView from './views/NotificationView';
 import SupportView from './views/SupportView';
 import OffersView from './views/OffersView';
+import CustomersView from './views/CustomersView';
 
 export default function AdminDashboard({
   token,
@@ -3056,6 +3057,23 @@ export default function AdminDashboard({
                 categories={categories}
                 token={token}
                 capabilities={tenantCaps}
+                onUpgrade={() => {
+                  setInitialSetupDrawer('subscription');
+                  setActiveTab('settings');
+                }}
+                onNavigate={(tab) => setActiveTab(tab)}
+              />
+            )}
+
+            {/* CUSTOMERS & GUEST INSIGHTS VIEW */}
+            {activeTab === 'customers' && (
+              <CustomersView
+                restaurantInfo={restaurantInfo}
+                settingsForm={settingsForm}
+                orders={orders}
+                token={token}
+                capabilities={tenantCaps}
+                currencySymbol={settingsForm.currency_symbol !== undefined && settingsForm.currency_symbol !== null ? settingsForm.currency_symbol : '₹'}
                 onUpgrade={() => {
                   setInitialSetupDrawer('subscription');
                   setActiveTab('settings');
