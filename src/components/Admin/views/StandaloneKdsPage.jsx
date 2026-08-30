@@ -1,5 +1,22 @@
-import React, { useState, useEffect, useRef } from 'react';
-import { Clock, Maximize2, Minimize2, Flame, Bell, AlertTriangle, Lock, KeyRound, CheckCircle, Delete, LogOut } from 'lucide-react';
+import React, { useState, useEffect, useRef, useMemo } from 'react';
+import { 
+  Clock, 
+  Maximize2, 
+  Minimize2, 
+  Flame, 
+  Bell, 
+  BellRing,
+  AlertTriangle, 
+  Lock, 
+  KeyRound, 
+  CheckCircle, 
+  Delete, 
+  LogOut,
+  RotateCcw,
+  Layers,
+  CheckSquare,
+  Square
+} from 'lucide-react';
 
 export default function StandaloneKdsPage({ slug = '' }) {
   const [orders, setOrders] = useState([]);
@@ -16,6 +33,10 @@ export default function StandaloneKdsPage({ slug = '' }) {
   const [pinSubmitting, setPinSubmitting] = useState(false);
   const [audioUnlocked, setAudioUnlocked] = useState(false);
   const [restaurantMeta, setRestaurantMeta] = useState(null);
+  const [checkedItemsMap, setCheckedItemsMap] = useState({});
+  const [showPrepSummary, setShowPrepSummary] = useState(true);
+  const [recentlyCompleted, setRecentlyCompleted] = useState([]);
+  const [showCompletedDrawer, setShowCompletedDrawer] = useState(false);
 
   const knownOrderIdsRef = useRef(null);
 
@@ -665,8 +686,75 @@ export default function StandaloneKdsPage({ slug = '' }) {
     );
   }
 
+  const toggleItemCheck = (orderId, idx) => {
+    const key = `${orderId}_${idx}`;
+    setCheckedItemsMap(prev => ({
+      ...prev,
+      [key]: !prev[key]
+    }));
+  };
+
+  const handleRecallOrder = async (order) => {
+    if (!order) return;
+    setRecentlyCompleted(prev => prev.filter(o => o.id !== order.id));
+    setOrders(prev => [order, ...prev]);
+    const targetSlug = resolveCurrentSlug();
+    const token = getStoredKdsToken(targetSlug);
+    try {
+      await fetch(`/api/kitchen/orders/${order.id}/recall?slug=${encodeURIComponent(targetSlug)}`, {
+        method: 'PATCH',
+        headers: token ? { 'Authorization': `Bearer ${token}` } : {}
+      });
+      fetchOrders();
+    } catch (e) {
+      console.warn('Recall error:', e);
+    }
+  };
+
+  const aggregatedPrepItems = useMemo(() => {
+    const map = {};
+    orders.forEach(o => {
+      const items = parseItems(o.items);
+      items.forEach(it => {
+        const name = it.name || it.dish_name || 'Item';
+        const qty = Number(it.quantity || it.qty || 1);
+        const portion = it.portion ? ` (${it.portion})` : '';
+        const key = `${name}${portion}`;
+        map[key] = (map[key] || 0) + qty;
+      });
+    });
+    return Object.entries(map).map(([name, count]) => ({ name, count })).sort((a, b) => b.count - a.count);
+  }, [orders]);
+
+  const rushCount = orders.filter(o => getElapsedMins(o.created_at) >= 15).length;
+  const totalDishesCount = orders.reduce((sum, o) => {
+    const items = parseItems(o.items);
+    return sum + items.reduce((iSum, it) => iSum + Number(it.quantity || it.qty || 1), 0);
+  }, 0);
+
   return (
-    <div style={{ minHeight: '100vh', background: '#090D16', color: '#F8FAFC', padding: '16px', fontFamily: 'system-ui, sans-serif' }}>
+    <div style={{ minHeight: '100vh', background: '#070B14', color: '#F8FAFC', padding: '16px', fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif' }}>
+      <style>{`
+        .kds-card-rush-glow {
+          box-shadow: 0 0 25px rgba(239, 68, 68, 0.35) !important;
+          animation: kdsRushPulse 2s infinite ease-in-out;
+        }
+        @keyframes kdsRushPulse {
+          0%, 100% { border-color: #EF4444; }
+          50% { border-color: #F87171; box-shadow: 0 0 35px rgba(239, 68, 68, 0.55); }
+        }
+        .kds-item-row {
+          transition: all 0.15s ease;
+        }
+        .kds-item-row:hover {
+          background: #1E293B !important;
+        }
+        .kds-action-btn:hover {
+          transform: translateY(-1px);
+          filter: brightness(1.08);
+        }
+      `}</style>
+
       {!audioUnlocked && (
         <div
           onClick={unlockAudio}
@@ -674,7 +762,7 @@ export default function StandaloneKdsPage({ slug = '' }) {
             background: 'linear-gradient(90deg, #EA580C 0%, #DC2626 100%)',
             color: '#FFFFFF',
             padding: '14px 20px',
-            borderRadius: '12px',
+            borderRadius: '14px',
             marginBottom: '16px',
             textAlign: 'center',
             fontWeight: 900,
@@ -688,58 +776,194 @@ export default function StandaloneKdsPage({ slug = '' }) {
         </div>
       )}
 
+      {/* TOP COMMAND HEADER */}
       <div style={{
         display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-        flexWrap: 'wrap', gap: '12px', background: '#0F172A', padding: '14px 20px',
-        borderRadius: '16px', border: '1px solid #1E293B', marginBottom: '20px'
+        flexWrap: 'wrap', gap: '12px', background: 'linear-gradient(180deg, #0F172A 0%, #0B1120 100%)',
+        padding: '14px 20px', borderRadius: '16px', border: '1px solid #1E293B', marginBottom: '14px'
       }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-          <div style={{ width: '42px', height: '42px', borderRadius: '12px', background: 'linear-gradient(135deg, #EF4444 0%, #B91C1C 100%)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#FFF' }}>
-            <Flame size={24} />
+          <div style={{
+            width: '44px', height: '44px', borderRadius: '12px',
+            background: 'linear-gradient(135deg, #10B981 0%, #059669 100%)',
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            fontSize: '1.5rem', boxShadow: '0 4px 14px rgba(16, 185, 129, 0.3)'
+          }}>
+            🍳
           </div>
           <div>
-            <h1 style={{ fontSize: '1.25rem', fontWeight: 900, color: '#F8FAFC', margin: 0, letterSpacing: '0.3px' }}>
-              {restaurantName} — KITCHEN KDS
-            </h1>
-            <span style={{ fontSize: '0.78rem', color: '#38BDF8', fontWeight: 700 }}>
-              ⚡ Dedicated Live Chef Screen • {orders.length} Active Kitchen Ticket(s)
-            </span>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <h1 style={{ fontSize: '1.25rem', fontWeight: 900, color: '#F8FAFC', margin: 0, letterSpacing: '-0.02em' }}>
+                {restaurantName} — KDS
+              </h1>
+              <span style={{ fontSize: '0.66rem', fontWeight: 900, background: '#10B981', color: '#022C22', padding: '2px 8px', borderRadius: '6px', textTransform: 'uppercase' }}>
+                LIVE CHEF SCREEN
+              </span>
+            </div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginTop: '2px', fontSize: '0.74rem', color: '#94A3B8' }}>
+              <span>Active Tickets: <strong style={{ color: '#38BDF8' }}>{orders.length}</strong></span>
+              <span>•</span>
+              <span>Total Dishes: <strong style={{ color: '#FCD34D' }}>{totalDishesCount} qty</strong></span>
+              {rushCount > 0 && (
+                <>
+                  <span>•</span>
+                  <span style={{ color: '#F87171', fontWeight: 800 }}>⚠️ {rushCount} RUSH (&gt;15m)</span>
+                </>
+              )}
+            </div>
           </div>
         </div>
 
-        <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-          <div style={{ background: '#1E293B', color: '#38BDF8', padding: '8px 14px', borderRadius: '10px', fontWeight: 800, fontSize: '0.9rem', border: '1px solid #334155' }}>
-            <Clock size={16} style={{ display: 'inline', marginRight: '6px', verticalAlign: 'middle' }} />
-            {currentTime.toLocaleTimeString('en-IN')}
+        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
+          <button
+            type="button"
+            onClick={() => setShowPrepSummary(!showPrepSummary)}
+            style={{
+              height: '36px', padding: '0 10px', borderRadius: '10px', border: '1px solid #334155',
+              background: showPrepSummary ? 'rgba(56, 189, 248, 0.15)' : '#1E293B',
+              color: showPrepSummary ? '#38BDF8' : '#94A3B8', fontSize: '0.74rem', fontWeight: 800,
+              cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: '6px'
+            }}
+          >
+            <Layers size={14} />
+            <span>{showPrepSummary ? 'Hide Totals' : 'Dish Totals'}</span>
+          </button>
+
+          {recentlyCompleted.length > 0 && (
+            <button
+              type="button"
+              onClick={() => setShowCompletedDrawer(!showCompletedDrawer)}
+              style={{
+                height: '36px', padding: '0 10px', borderRadius: '10px', border: '1px solid #334155',
+                background: '#1E293B', color: '#F1F5F9', fontSize: '0.74rem', fontWeight: 800,
+                cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: '6px'
+              }}
+            >
+              <RotateCcw size={13} color="#F59E0B" />
+              <span>Recall ({recentlyCompleted.length})</span>
+            </button>
+          )}
+
+          <div style={{ background: '#0F172A', color: '#38BDF8', padding: '6px 12px', borderRadius: '10px', fontWeight: 900, fontSize: '0.84rem', border: '1px solid #334155', display: 'flex', alignItems: 'center', gap: '6px' }}>
+            <Clock size={14} />
+            <span>{currentTime.toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: true })}</span>
           </div>
 
           <button
             onClick={toggleFullscreen}
             style={{
-              background: '#334155', border: 'none', color: '#F8FAFC', padding: '8px 14px', borderRadius: '10px',
-              fontWeight: 800, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.84rem'
+              height: '36px', background: '#2563EB', border: 'none', color: '#F8FAFC', padding: '0 12px', borderRadius: '10px',
+              fontWeight: 800, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.74rem'
             }}
           >
-            {isFullscreen ? <Minimize2 size={16} /> : <Maximize2 size={16} />}
-            <span>{isFullscreen ? 'Exit Fullscreen' : 'Fullscreen'}</span>
+            {isFullscreen ? <Minimize2 size={14} /> : <Maximize2 size={14} />}
+            <span>{isFullscreen ? 'Exit' : 'Fullscreen'}</span>
           </button>
 
           <button
             onClick={handleLockScreen}
             title="Lock Kitchen Display Screen"
             style={{
-              background: '#450A0A', border: '1px solid #991B1B', color: '#FCA5A5', padding: '8px 12px', borderRadius: '10px',
-              fontWeight: 800, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.84rem'
+              height: '36px', background: '#450A0A', border: '1px solid #991B1B', color: '#FCA5A5', padding: '0 12px', borderRadius: '10px',
+              fontWeight: 800, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.74rem'
             }}
           >
-            <Lock size={15} />
+            <Lock size={14} />
             <span>Lock</span>
           </button>
         </div>
       </div>
 
+      {/* CHEF PREP SUMMARY MATRIX */}
+      {showPrepSummary && aggregatedPrepItems.length > 0 && (
+        <div style={{
+          background: '#0D1526', border: '1px solid #1E293B', borderRadius: '14px',
+          padding: '10px 14px', display: 'flex', alignItems: 'center', gap: '10px',
+          overflowX: 'auto', scrollbarWidth: 'none', marginBottom: '14px'
+        }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '6px', whiteSpace: 'nowrap', color: '#94A3B8', fontSize: '0.70rem', fontWeight: 800, textTransform: 'uppercase' }}>
+            <Flame size={14} color="#F59E0B" />
+            <span>Active Drop Totals:</span>
+          </div>
+
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'nowrap' }}>
+            {aggregatedPrepItems.map(item => (
+              <div
+                key={item.name}
+                style={{
+                  background: '#1E293B', border: '1px solid #334155', borderRadius: '8px',
+                  padding: '4px 10px', display: 'flex', alignItems: 'center', gap: '6px', whiteSpace: 'nowrap'
+                }}
+              >
+                <span style={{ background: '#2563EB', color: '#FFFFFF', padding: '1px 6px', borderRadius: '5px', fontSize: '0.74rem', fontWeight: 900 }}>
+                  {item.count}×
+                </span>
+                <span style={{ fontSize: '0.76rem', fontWeight: 800, color: '#F1F5F9' }}>
+                  {item.name}
+                </span>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* RECALL DRAWER */}
+      {showCompletedDrawer && recentlyCompleted.length > 0 && (
+        <div style={{
+          background: '#0F172A', border: '1px solid #334155', borderRadius: '14px',
+          padding: '12px 16px', display: 'flex', flexDirection: 'column', gap: '10px', marginBottom: '14px'
+        }}>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+            <span style={{ fontSize: '0.74rem', fontWeight: 900, color: '#34D399', textTransform: 'uppercase' }}>
+              ✓ Recently Prepared Orders (Click Undo to restore to active queue)
+            </span>
+            <button
+              type="button"
+              onClick={() => setShowCompletedDrawer(false)}
+              style={{ background: 'none', border: 'none', color: '#94A3B8', fontSize: '0.72rem', cursor: 'pointer', fontWeight: 700 }}
+            >
+              Close ✕
+            </button>
+          </div>
+
+          <div style={{ display: 'flex', gap: '10px', overflowX: 'auto', paddingBottom: '4px' }}>
+            {recentlyCompleted.map(ord => (
+              <div
+                key={ord.id}
+                style={{
+                  background: '#1E293B', border: '1px solid #334155', borderRadius: '10px',
+                  padding: '8px 12px', display: 'flex', alignItems: 'center', gap: '10px', whiteSpace: 'nowrap'
+                }}
+              >
+                <div>
+                  <strong style={{ fontSize: '0.80rem', color: '#F8FAFC' }}>
+                    {formatKdsLocation(ord.table_number, ord.space_type)}
+                  </strong>
+                  <span style={{ fontSize: '0.68rem', color: '#94A3B8', display: 'block' }}>
+                    Order #{ord.id}
+                  </span>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => handleRecallOrder(ord)}
+                  style={{
+                    padding: '4px 8px', borderRadius: '6px', border: '1px solid #F59E0B',
+                    background: 'rgba(245, 158, 11, 0.15)', color: '#FDE68A', fontSize: '0.70rem',
+                    fontWeight: 800, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '4px'
+                  }}
+                >
+                  <RotateCcw size={11} />
+                  <span>Undo</span>
+                </button>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* TICKETS GRID */}
       {orders.length === 0 ? (
-        <div style={{ padding: '80px 20px', textAlign: 'center', background: '#0F172A', borderRadius: '20px', border: '2px dashed #1E293B', maxWidth: '600px', margin: '40px auto' }}>
+        <div style={{ padding: '80px 20px', textAlign: 'center', background: '#0B1120', borderRadius: '20px', border: '2px dashed #1E293B', maxWidth: '600px', margin: '40px auto' }}>
           <Flame size={56} color="#475569" style={{ marginBottom: '16px' }} />
           <h2 style={{ fontSize: '1.35rem', fontWeight: 900, color: '#94A3B8', margin: '0 0 8px 0' }}>
             Kitchen is Clear! Zero Active Orders
@@ -749,135 +973,227 @@ export default function StandaloneKdsPage({ slug = '' }) {
           </p>
         </div>
       ) : (
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(320px, 1fr))', gap: '18px' }}>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(330px, 1fr))', gap: '14px' }}>
           {orders.map(order => {
             const elapsedMins = getElapsedMins(order.created_at);
-            const isDelayed = elapsedMins >= 15;
+            const isRush = elapsedMins >= 15;
+            const isCritical = elapsedMins >= 25;
             const items = parseItems(order.items);
             const hasNotes = Boolean(order.notes || order.special_instructions || order.customer_notes);
             const notesText = order.notes || order.special_instructions || order.customer_notes || '';
+            const allItemsChecked = items.length > 0 && items.every((_, idx) => checkedItemsMap[`${order.id}_${idx}`]);
 
             return (
               <div
                 key={order.id}
+                className={isRush ? 'kds-card-rush-glow' : ''}
                 style={{
-                  background: '#0F172A',
+                  background: '#0E1626',
                   borderRadius: '16px',
-                  border: isDelayed ? '2px solid #EF4444' : '2px solid #3B82F6',
-                  boxShadow: isDelayed ? '0 0 20px rgba(239, 68, 68, 0.25)' : '0 4px 14px rgba(0,0,0,0.3)',
+                  border: isCritical ? '2px solid #EF4444' : isRush ? '2px solid #F59E0B' : '1.5px solid #1E293B',
+                  boxShadow: '0 4px 16px rgba(0,0,0,0.4)',
                   display: 'flex',
                   flexDirection: 'column',
                   justifyContent: 'space-between',
                   overflow: 'hidden'
                 }}
               >
-                <div style={{ background: isDelayed ? '#7F1D1D' : '#1E3A8A', padding: '12px 16px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                {/* TICKET TOP HEADER */}
+                <div style={{
+                  background: isCritical ? 'linear-gradient(135deg, #7F1D1D 0%, #991B1B 100%)' : (isRush ? 'linear-gradient(135deg, #78350F 0%, #92400E 100%)' : 'linear-gradient(135deg, #1E293B 0%, #0F172A 100%)'),
+                  padding: '12px 14px',
+                  borderBottom: '1px solid rgba(255,255,255,0.08)',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'space-between'
+                }}>
                   <div>
-                    <strong style={{ fontSize: '1.3rem', color: '#FFF', fontWeight: 900, display: 'block' }}>
+                    <div style={{ fontSize: '1.22rem', fontWeight: 900, color: '#FFFFFF', letterSpacing: '-0.02em', lineHeight: 1.1 }}>
                       {formatKdsLocation(order.table_number, order.space_type, restaurantMeta?.business_type === 'hotel_resort' ? 'room' : restaurantMeta?.table_prefix)}
-                    </strong>
-                    <span style={{ fontSize: '0.75rem', color: '#93C5FD', fontWeight: 700 }}>
-                      Order {order.id} • {order.customer_name || 'Dine-in'}
+                    </div>
+                    <span style={{ fontSize: '0.72rem', color: isRush ? '#FEF08A' : '#94A3B8', fontWeight: 700 }}>
+                      Ticket #{order.id} • {order.customer_name || 'Dine-in'}
                     </span>
                   </div>
 
                   <div style={{ textAlign: 'right' }}>
                     <div style={{
-                      background: isDelayed ? '#EF4444' : '#2563EB',
-                      color: '#FFF', padding: '4px 10px', borderRadius: '8px',
-                      fontSize: '0.82rem', fontWeight: 900, display: 'flex', alignItems: 'center', gap: '4px'
+                      background: isCritical ? '#DC2626' : (isRush ? '#D97706' : '#2563EB'),
+                      color: '#FFFFFF',
+                      padding: '4px 9px',
+                      borderRadius: '8px',
+                      fontSize: '0.78rem',
+                      fontWeight: 900,
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      gap: '4px'
                     }}>
-                      <Clock size={14} />
+                      <Clock size={13} />
                       <span>{elapsedMins}m ago</span>
                     </div>
-                    {isDelayed && (
-                      <span style={{ fontSize: '0.68rem', color: '#FCA5A5', fontWeight: 900, display: 'block', marginTop: '2px' }}>
-                        ⚠️ RUSH ORDER
+                    {isRush && (
+                      <span style={{ fontSize: '0.65rem', color: isCritical ? '#FCA5A5' : '#FDE68A', fontWeight: 900, display: 'block', marginTop: '2px' }}>
+                        {isCritical ? '🚨 CRITICAL DELAY' : '⚠️ RUSH TICKET'}
                       </span>
                     )}
                   </div>
                 </div>
 
-                <div style={{ padding: '16px', flex: 1, display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                {/* TICKET BODY */}
+                <div style={{ padding: '12px 14px', flex: 1, display: 'flex', flexDirection: 'column', gap: '8px' }}>
                   {hasNotes && (
-                    <div style={{ padding: '10px 12px', background: '#451A03', border: '1px solid #F59E0B', borderRadius: '10px', color: '#FDE68A', fontSize: '0.85rem', fontWeight: 800, display: 'flex', alignItems: 'flex-start', gap: '8px' }}>
-                      <AlertTriangle size={18} color="#F59E0B" style={{ flexShrink: 0, marginTop: '2px' }} />
+                    <div style={{
+                      background: 'rgba(245, 158, 11, 0.15)',
+                      border: '1.5px solid #F59E0B',
+                      borderRadius: '10px',
+                      padding: '8px 10px',
+                      color: '#FDE68A',
+                      fontSize: '0.78rem',
+                      fontWeight: 800,
+                      display: 'flex',
+                      alignItems: 'flex-start',
+                      gap: '8px'
+                    }}>
+                      <AlertTriangle size={16} color="#F59E0B" style={{ flexShrink: 0, marginTop: '2px' }} />
                       <div>
-                        <strong style={{ display: 'block', fontSize: '0.72rem', textTransform: 'uppercase', color: '#F59E0B' }}>KITCHEN INSTRUCTION:</strong>
-                        <span>"{notesText}"</span>
+                        <span style={{ fontSize: '0.66rem', color: '#FBBF24', textTransform: 'uppercase', display: 'block', letterSpacing: '0.04em' }}>
+                          CHEF INSTRUCTION:
+                        </span>
+                        <span style={{ color: '#FFFFFF', fontWeight: 800 }}>"{notesText}"</span>
                       </div>
                     </div>
                   )}
 
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                    {items.map((item, idx) => (
-                      <div
-                        key={idx}
-                        style={{
-                          display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-                          background: '#1E293B', padding: '10px 12px', borderRadius: '10px',
-                          border: '1px solid #334155'
-                        }}
-                      >
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                          <span style={{
-                            background: '#2563EB', color: '#FFF',
-                            width: '28px', height: '28px', borderRadius: '6px',
-                            display: 'flex', alignItems: 'center', justifyContent: 'center',
-                            fontSize: '0.95rem', fontWeight: 900
-                          }}>
-                            {item.quantity || item.qty || 1}×
-                          </span>
-                          <div>
-                            <strong style={{ fontSize: '1.02rem', color: '#F8FAFC', display: 'block' }}>
-                              {item.name}
-                            </strong>
-                            <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap', marginTop: '2px', alignItems: 'center' }}>
-                              {item.portion && (
-                                <span style={{ fontSize: '0.74rem', color: '#94A3B8', fontWeight: 700 }}>
-                                  Portion: {item.portion}
-                                </span>
-                              )}
-                              {(() => {
-                                const rawMods = item.modifiers;
-                                let mods = [];
-                                if (Array.isArray(rawMods)) mods = rawMods;
-                                else if (typeof rawMods === 'string') {
-                                  try { const p = JSON.parse(rawMods); if (Array.isArray(p)) mods = p; } catch {}
-                                }
-                                if (mods.length === 0) return null;
-                                return (
-                                  <div style={{ display: 'flex', gap: '4px', flexWrap: 'wrap' }}>
-                                    {mods.map((m, mIdx) => (
-                                      <span key={mIdx} style={{ fontSize: '0.72rem', color: '#FEF08A', background: '#854D0E', border: '1px solid #CA8A04', padding: '1px 6px', borderRadius: '4px', fontWeight: 800 }}>
-                                        ➕ {m.name}
-                                      </span>
-                                    ))}
-                                  </div>
-                                );
-                              })()}
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                    {items.map((item, idx) => {
+                      const isChecked = Boolean(checkedItemsMap[`${order.id}_${idx}`]);
+                      const rawMods = item.modifiers;
+                      let mods = [];
+                      if (Array.isArray(rawMods)) mods = rawMods;
+                      else if (typeof rawMods === 'string') {
+                        try { const p = JSON.parse(rawMods); if (Array.isArray(p)) mods = p; } catch {}
+                      }
+
+                      return (
+                        <div
+                          key={idx}
+                          onClick={() => toggleItemCheck(order.id, idx)}
+                          className="kds-item-row"
+                          style={{
+                            background: isChecked ? 'rgba(30, 41, 59, 0.5)' : '#131D31',
+                            border: '1px solid #1E293B',
+                            borderRadius: '10px',
+                            padding: '8px 10px',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'space-between',
+                            cursor: 'pointer',
+                            opacity: isChecked ? 0.6 : 1,
+                            userSelect: 'none'
+                          }}
+                        >
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '10px', minWidth: 0 }}>
+                            <div style={{
+                              color: isChecked ? '#10B981' : '#64748B',
+                              display: 'flex',
+                              alignItems: 'center',
+                              justifyContent: 'center',
+                              flexShrink: 0
+                            }}>
+                              {isChecked ? <CheckSquare size={18} /> : <Square size={18} />}
+                            </div>
+
+                            <span style={{
+                              background: isChecked ? '#334155' : '#2563EB',
+                              color: '#FFFFFF',
+                              minWidth: '28px',
+                              height: '28px',
+                              padding: '0 6px',
+                              borderRadius: '7px',
+                              display: 'flex',
+                              alignItems: 'center',
+                              justifyContent: 'center',
+                              fontSize: '0.90rem',
+                              fontWeight: 900,
+                              flexShrink: 0
+                            }}>
+                              ×{item.quantity || item.qty || 1}
+                            </span>
+
+                            <div style={{ minWidth: 0 }}>
+                              <strong style={{
+                                fontSize: '0.92rem',
+                                color: isChecked ? '#94A3B8' : '#F8FAFC',
+                                fontWeight: 800,
+                                textDecoration: isChecked ? 'line-through' : 'none',
+                                display: 'block',
+                                lineHeight: 1.2
+                              }}>
+                                {item.name || item.dish_name}
+                              </strong>
+
+                              <div style={{ display: 'flex', alignItems: 'center', gap: '4px', flexWrap: 'wrap', marginTop: '2px' }}>
+                                {item.portion && (
+                                  <span style={{ fontSize: '0.68rem', color: '#93C5FD', fontWeight: 700, background: 'rgba(59, 130, 246, 0.15)', padding: '1px 5px', borderRadius: '4px' }}>
+                                    {item.portion}
+                                  </span>
+                                )}
+
+                                {mods.map((m, mIdx) => (
+                                  <span
+                                    key={mIdx}
+                                    style={{
+                                      fontSize: '0.66rem',
+                                      color: '#FEF08A',
+                                      background: 'rgba(202, 138, 4, 0.2)',
+                                      border: '1px solid #CA8A04',
+                                      padding: '1px 5px',
+                                      borderRadius: '4px',
+                                      fontWeight: 800
+                                    }}
+                                  >
+                                    ➕ {m.name}
+                                  </span>
+                                ))}
+                              </div>
                             </div>
                           </div>
                         </div>
-                      </div>
-                    ))}
+                      );
+                    })}
                   </div>
                 </div>
 
-                <div style={{ padding: '14px 16px', background: '#0F172A', borderTop: '1px solid #334155' }}>
+                {/* TICKET FOOTER: READY BUTTON */}
+                <div style={{ padding: '12px 14px', background: '#0A101C', borderTop: '1px solid #1E293B' }}>
                   <button
-                    onClick={() => handleMarkPrepared(order.id)}
+                    onClick={() => {
+                      setRecentlyCompleted(prev => [{ ...order, completedAt: new Date() }, ...prev.slice(0, 9)]);
+                      handleMarkPrepared(order.id);
+                    }}
+                    className="kds-action-btn"
                     style={{
-                      width: '100%', padding: '14px', borderRadius: '12px',
-                      background: 'linear-gradient(135deg, #22C55E 0%, #16A34A 100%)',
-                      color: '#052E16', border: 'none', fontSize: '1.05rem',
-                      fontWeight: 900, cursor: 'pointer', display: 'flex',
-                      alignItems: 'center', justifyContent: 'center', gap: '8px',
-                      boxShadow: '0 4px 14px rgba(34, 197, 94, 0.4)'
+                      width: '100%',
+                      minHeight: '44px',
+                      borderRadius: '10px',
+                      border: 'none',
+                      background: allItemsChecked 
+                        ? 'linear-gradient(135deg, #10B981 0%, #059669 100%)' 
+                        : 'linear-gradient(135deg, #10B981 0%, #047857 100%)',
+                      color: '#FFFFFF',
+                      fontSize: '0.86rem',
+                      fontWeight: 900,
+                      cursor: 'pointer',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      gap: '8px',
+                      boxShadow: '0 4px 14px rgba(16, 185, 129, 0.3)',
+                      transition: 'all 0.15s ease'
                     }}
                   >
-                    <Bell size={22} />
-                    <span>🔔 MARK FOOD PREPARED (NOTIFY WAITER)</span>
+                    <BellRing size={17} />
+                    <span>🔔 READY • NOTIFY WAITER</span>
                   </button>
                 </div>
               </div>
