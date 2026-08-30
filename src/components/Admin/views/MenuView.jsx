@@ -480,82 +480,102 @@ export default function MenuView({
           </div>
 
           {/* Split + Add Dish CTA */}
-          <div style={{ position: 'relative', display: 'flex', borderRadius: '10px', overflow: 'hidden', boxShadow: '0 3px 10px rgba(10,35,21,0.25)' }}>
-            <button
-              onClick={activeSubTab === 'combos' ? onOpenAddCombo : activeSubTab === 'categories' ? onOpenAddCategory : onOpenAddDish}
-              disabled={dishQuota.isAtLimit}
-              style={{
-                padding: '11px 18px',
-                background: dishQuota.isAtLimit ? '#94A3B8' : '#0A2315',
-                color: '#FFFFFF',
-                fontSize: '0.84rem',
-                fontWeight: 800,
-                border: 'none',
-                cursor: dishQuota.isAtLimit ? 'not-allowed' : 'pointer',
-                display: 'flex',
-                alignItems: 'center',
-                gap: '6px'
-              }}
-            >
-              <Plus size={16} color="#FFFFFF" strokeWidth={2.5} />
-              <span>
-                {activeSubTab === 'combos' ? 'Add Combo' : activeSubTab === 'categories' ? 'Add Category' : 'Add Dish'}
-              </span>
-            </button>
-            <button
-              onClick={() => setShowAddMenuDropdown(!showAddMenuDropdown)}
-              style={{
-                padding: '11px 11px',
-                background: '#061D11',
-                color: '#FFFFFF',
-                border: 'none',
-                borderLeft: '1px solid rgba(255,255,255,0.15)',
-                cursor: 'pointer',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center'
-              }}
-              title="Add more options"
-            >
-              <ChevronDown size={14} />
-            </button>
+          <div style={{ position: 'relative' }}>
+            <div style={{ display: 'flex', borderRadius: '10px', overflow: 'hidden', boxShadow: '0 3px 10px rgba(10,35,21,0.25)' }}>
+              <button
+                onClick={activeSubTab === 'combos' ? onOpenAddCombo : activeSubTab === 'categories' ? onOpenAddCategory : onOpenAddDish}
+                disabled={dishQuota.isAtLimit}
+                style={{
+                  padding: '11px 18px',
+                  background: dishQuota.isAtLimit ? '#94A3B8' : '#0A2315',
+                  color: '#FFFFFF',
+                  fontSize: '0.84rem',
+                  fontWeight: 800,
+                  border: 'none',
+                  cursor: dishQuota.isAtLimit ? 'not-allowed' : 'pointer',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '6px'
+                }}
+              >
+                <Plus size={16} color="#FFFFFF" strokeWidth={2.5} />
+                <span>
+                  {activeSubTab === 'combos' ? 'Add Combo' : activeSubTab === 'categories' ? 'Add Category' : 'Add Dish'}
+                </span>
+              </button>
+              <button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setShowAddMenuDropdown(!showAddMenuDropdown);
+                }}
+                style={{
+                  padding: '11px 11px',
+                  background: '#061D11',
+                  color: '#FFFFFF',
+                  border: 'none',
+                  borderLeft: '1px solid rgba(255,255,255,0.15)',
+                  cursor: 'pointer',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center'
+                }}
+                title="Add more options"
+              >
+                <ChevronDown size={14} />
+              </button>
+            </div>
 
-            {/* Dropdown Options */}
+            {/* Dropdown Options with Backdrop */}
             {showAddMenuDropdown && (
-              <div style={{
-                position: 'absolute',
-                top: '110%',
-                right: 0,
-                background: '#FFFFFF',
-                borderRadius: '12px',
-                border: '1px solid #E2E8F0',
-                boxShadow: '0 10px 25px rgba(0,0,0,0.12)',
-                padding: '6px',
-                zIndex: 1000,
-                minWidth: '170px'
-              }}>
-                <button
-                  onClick={() => { onOpenAddDish(); setShowAddMenuDropdown(false); }}
-                  style={{ width: '100%', textAlign: 'left', padding: '8px 12px', borderRadius: '8px', border: 'none', background: 'transparent', color: '#0F172A', fontSize: '0.78rem', fontWeight: 700, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '8px' }}
-                >
-                  <Plus size={14} color="#16A34A" />
-                  <span>+ Add Dish</span>
-                </button>
-                <button
-                  onClick={() => { onOpenAddCategory(); setShowAddMenuDropdown(false); }}
-                  style={{ width: '100%', textAlign: 'left', padding: '8px 12px', borderRadius: '8px', border: 'none', background: 'transparent', color: '#0F172A', fontSize: '0.78rem', fontWeight: 700, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '8px' }}
-                >
-                  <FolderPlus size={14} color="#0284C7" />
-                  <span>+ Add Category</span>
-                </button>
-                <button
-                  onClick={() => { onOpenAddCombo(); setShowAddMenuDropdown(false); }}
-                  style={{ width: '100%', textAlign: 'left', padding: '8px 12px', borderRadius: '8px', border: 'none', background: 'transparent', color: '#0F172A', fontSize: '0.78rem', fontWeight: 700, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '8px' }}
-                >
-                  <Package size={14} color="#9333EA" />
-                  <span>+ Add Combo</span>
-                </button>
-              </div>
+              <>
+                <div
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setShowAddMenuDropdown(false);
+                  }}
+                  style={{
+                    position: 'fixed',
+                    inset: 0,
+                    zIndex: 999,
+                    cursor: 'default'
+                  }}
+                />
+
+                <div style={{
+                  position: 'absolute',
+                  top: 'calc(100% + 6px)',
+                  right: 0,
+                  background: '#FFFFFF',
+                  borderRadius: '12px',
+                  border: '1px solid #E2E8F0',
+                  boxShadow: '0 10px 30px rgba(0,0,0,0.18)',
+                  padding: '6px',
+                  zIndex: 1000,
+                  minWidth: '170px'
+                }}>
+                  <button
+                    onClick={() => { onOpenAddDish(); setShowAddMenuDropdown(false); }}
+                    style={{ width: '100%', textAlign: 'left', padding: '8px 12px', borderRadius: '8px', border: 'none', background: 'transparent', color: '#0F172A', fontSize: '0.78rem', fontWeight: 700, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '8px' }}
+                  >
+                    <Plus size={14} color="#16A34A" />
+                    <span>+ Add Dish</span>
+                  </button>
+                  <button
+                    onClick={() => { onOpenAddCategory(); setShowAddMenuDropdown(false); }}
+                    style={{ width: '100%', textAlign: 'left', padding: '8px 12px', borderRadius: '8px', border: 'none', background: 'transparent', color: '#0F172A', fontSize: '0.78rem', fontWeight: 700, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '8px' }}
+                  >
+                    <FolderPlus size={14} color="#0284C7" />
+                    <span>+ Add Category</span>
+                  </button>
+                  <button
+                    onClick={() => { onOpenAddCombo(); setShowAddMenuDropdown(false); }}
+                    style={{ width: '100%', textAlign: 'left', padding: '8px 12px', borderRadius: '8px', border: 'none', background: 'transparent', color: '#0F172A', fontSize: '0.78rem', fontWeight: 700, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '8px' }}
+                  >
+                    <Package size={14} color="#9333EA" />
+                    <span>+ Add Combo</span>
+                  </button>
+                </div>
+              </>
             )}
           </div>
         </div>
@@ -685,58 +705,75 @@ export default function MenuView({
           </button>
         </div>
 
-        {/* Mobile Add Dropdown Modal */}
+        {/* Mobile Add Dropdown Modal with Backdrop */}
         {showMobileAddDropdown && (
-          <div style={{
-            position: 'absolute',
-            bottom: '12px',
-            left: '18px',
-            right: '18px',
-            background: '#FFFFFF',
-            borderRadius: '16px',
-            border: '1px solid #E2E8F0',
-            boxShadow: '0 10px 30px rgba(0,0,0,0.35)',
-            padding: '8px',
-            zIndex: 1000,
-            color: '#0F172A'
-          }}>
-            <button
-              onClick={() => { onOpenAddDish(); setShowMobileAddDropdown(false); }}
-              style={{ width: '100%', textAlign: 'left', padding: '10px 12px', borderRadius: '10px', border: 'none', background: 'transparent', color: '#0F172A', fontSize: '0.82rem', fontWeight: 700, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '10px' }}
-            >
-              <div style={{ width: '28px', height: '28px', borderRadius: '8px', background: '#DCFCE7', color: '#16A34A', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                <Plus size={16} />
-              </div>
-              <div>
-                <strong>+ Add Dish</strong>
-                <span style={{ fontSize: '0.68rem', color: '#64748B', display: 'block' }}>Add single food item</span>
-              </div>
-            </button>
-            <button
-              onClick={() => { onOpenAddCategory(); setShowMobileAddDropdown(false); }}
-              style={{ width: '100%', textAlign: 'left', padding: '10px 12px', borderRadius: '10px', border: 'none', background: 'transparent', color: '#0F172A', fontSize: '0.82rem', fontWeight: 700, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '10px' }}
-            >
-              <div style={{ width: '28px', height: '28px', borderRadius: '8px', background: '#EFF6FF', color: '#0284C7', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                <FolderPlus size={16} />
-              </div>
-              <div>
-                <strong>+ Add Category</strong>
-                <span style={{ fontSize: '0.68rem', color: '#64748B', display: 'block' }}>Create a new food section</span>
-              </div>
-            </button>
-            <button
-              onClick={() => { onOpenAddCombo(); setShowMobileAddDropdown(false); }}
-              style={{ width: '100%', textAlign: 'left', padding: '10px 12px', borderRadius: '10px', border: 'none', background: 'transparent', color: '#0F172A', fontSize: '0.82rem', fontWeight: 700, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '10px' }}
-            >
-              <div style={{ width: '28px', height: '28px', borderRadius: '8px', background: '#FAF5FF', color: '#9333EA', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                <Package size={16} />
-              </div>
-              <div>
-                <strong>+ Add Combo</strong>
-                <span style={{ fontSize: '0.68rem', color: '#64748B', display: 'block' }}>Create value meal bundle</span>
-              </div>
-            </button>
-          </div>
+          <>
+            <div
+              onClick={(e) => {
+                e.stopPropagation();
+                setShowMobileAddDropdown(false);
+              }}
+              style={{
+                position: 'fixed',
+                inset: 0,
+                zIndex: 999,
+                background: 'rgba(0,0,0,0.4)',
+                backdropFilter: 'blur(2px)',
+                cursor: 'default'
+              }}
+            />
+
+            <div style={{
+              position: 'absolute',
+              bottom: '12px',
+              left: '18px',
+              right: '18px',
+              background: '#FFFFFF',
+              borderRadius: '16px',
+              border: '1px solid #E2E8F0',
+              boxShadow: '0 10px 30px rgba(0,0,0,0.35)',
+              padding: '8px',
+              zIndex: 1000,
+              color: '#0F172A'
+            }}>
+              <button
+                onClick={() => { onOpenAddDish(); setShowMobileAddDropdown(false); }}
+                style={{ width: '100%', textAlign: 'left', padding: '10px 12px', borderRadius: '10px', border: 'none', background: 'transparent', color: '#0F172A', fontSize: '0.82rem', fontWeight: 700, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '10px' }}
+              >
+                <div style={{ width: '28px', height: '28px', borderRadius: '8px', background: '#DCFCE7', color: '#16A34A', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                  <Plus size={16} />
+                </div>
+                <div>
+                  <strong>+ Add Dish</strong>
+                  <span style={{ fontSize: '0.68rem', color: '#64748B', display: 'block' }}>Add single food item</span>
+                </div>
+              </button>
+              <button
+                onClick={() => { onOpenAddCategory(); setShowMobileAddDropdown(false); }}
+                style={{ width: '100%', textAlign: 'left', padding: '10px 12px', borderRadius: '10px', border: 'none', background: 'transparent', color: '#0F172A', fontSize: '0.82rem', fontWeight: 700, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '10px' }}
+              >
+                <div style={{ width: '28px', height: '28px', borderRadius: '8px', background: '#EFF6FF', color: '#0284C7', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                  <FolderPlus size={16} />
+                </div>
+                <div>
+                  <strong>+ Add Category</strong>
+                  <span style={{ fontSize: '0.68rem', color: '#64748B', display: 'block' }}>Create a new food section</span>
+                </div>
+              </button>
+              <button
+                onClick={() => { onOpenAddCombo(); setShowMobileAddDropdown(false); }}
+                style={{ width: '100%', textAlign: 'left', padding: '10px 12px', borderRadius: '10px', border: 'none', background: 'transparent', color: '#0F172A', fontSize: '0.82rem', fontWeight: 700, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '10px' }}
+              >
+                <div style={{ width: '28px', height: '28px', borderRadius: '8px', background: '#FAF5FF', color: '#9333EA', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                  <Package size={16} />
+                </div>
+                <div>
+                  <strong>+ Add Combo</strong>
+                  <span style={{ fontSize: '0.68rem', color: '#64748B', display: 'block' }}>Create value meal bundle</span>
+                </div>
+              </button>
+            </div>
+          </>
         )}
       </div>
 
