@@ -194,7 +194,7 @@ export default function MenuView({
     return '🍽️';
   };
 
-  // Helper to format price in exact segmented pill [ Full 160 | Half 95 ]
+  // Helper to format price: Clean standard price (e.g. ₹59) OR Portion segmented pill [ Full ₹160 | Half ₹95 ]
   const renderDishPrice = (dish, layout = 'card') => {
     const currentPrice = Number(dish.price) || 0;
     const rawOldPrice = Number(dish.original_price || dish.mrp || dish.old_price || dish.compare_at_price);
@@ -204,40 +204,53 @@ export default function MenuView({
 
     return (
       <div style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', flexWrap: 'wrap' }}>
-        {/* Single Compact Segmented Pill */}
-        <div style={{
-          display: 'inline-flex',
-          alignItems: 'center',
-          background: '#F8FAFC',
-          border: '1px solid #E2E8F0',
-          borderRadius: '8px',
-          padding: '3px 8px',
-          gap: '8px',
-          boxShadow: '0 1px 2px rgba(0,0,0,0.02)'
-        }}>
-          {/* Full price section */}
-          <div style={{ display: 'inline-flex', alignItems: 'baseline', gap: '3px' }}>
-            <span style={{ fontSize: '0.64rem', color: '#64748B', fontWeight: 600 }}>Full</span>
-            <strong style={{ fontSize: layout === 'card' ? '0.94rem' : '0.88rem', fontWeight: 800, color: '#0F172A', lineHeight: 1 }}>
-              {currentPrice}
+        {hasHalfPrice ? (
+          /* Dual Portion Segmented Pill for dishes with Full/Half portions */
+          <div style={{
+            display: 'inline-flex',
+            alignItems: 'center',
+            background: '#F8FAFC',
+            border: '1px solid #E2E8F0',
+            borderRadius: '8px',
+            padding: '3px 8px',
+            gap: '8px',
+            boxShadow: '0 1px 2px rgba(0,0,0,0.02)'
+          }}>
+            {/* Full portion */}
+            <div style={{ display: 'inline-flex', alignItems: 'baseline', gap: '3px' }}>
+              <span style={{ fontSize: '0.64rem', color: '#64748B', fontWeight: 600 }}>Full</span>
+              <strong style={{ fontSize: layout === 'card' ? '0.94rem' : '0.88rem', fontWeight: 800, color: '#0F172A', lineHeight: 1 }}>
+                {curr}{currentPrice}
+              </strong>
+            </div>
+
+            {/* Subtle vertical divider */}
+            <span style={{ width: '1px', height: '11px', background: '#CBD5E1', display: 'inline-block' }} />
+
+            {/* Half portion */}
+            <div style={{ display: 'inline-flex', alignItems: 'baseline', gap: '3px' }}>
+              <span style={{ fontSize: '0.64rem', color: '#64748B', fontWeight: 600 }}>Half</span>
+              <strong style={{ fontSize: layout === 'card' ? '0.90rem' : '0.84rem', fontWeight: 800, color: '#334155', lineHeight: 1 }}>
+                {curr}{rawHalfPrice}
+              </strong>
+            </div>
+          </div>
+        ) : (
+          /* Standard Single Item Price across all business types */
+          <div style={{ display: 'inline-flex', alignItems: 'baseline', gap: '2px' }}>
+            <strong style={{
+              fontSize: layout === 'card' ? '1.02rem' : '0.92rem',
+              fontWeight: 900,
+              color: '#0F172A',
+              lineHeight: 1,
+              letterSpacing: '-0.01em'
+            }}>
+              {curr}{currentPrice}
             </strong>
           </div>
+        )}
 
-          {/* Half price section ONLY WHEN VALID */}
-          {hasHalfPrice && (
-            <>
-              <span style={{ width: '1px', height: '11px', background: '#CBD5E1', display: 'inline-block' }} />
-              <div style={{ display: 'inline-flex', alignItems: 'baseline', gap: '3px' }}>
-                <span style={{ fontSize: '0.64rem', color: '#64748B', fontWeight: 600 }}>Half</span>
-                <strong style={{ fontSize: layout === 'card' ? '0.90rem' : '0.84rem', fontWeight: 800, color: '#334155', lineHeight: 1 }}>
-                  {rawHalfPrice}
-                </strong>
-              </div>
-            </>
-          )}
-        </div>
-
-        {/* Struck-through Old Price */}
+        {/* Struck-through Old/Original Price */}
         {hasValidOldPrice && (
           <span style={{
             fontSize: '0.74rem',
