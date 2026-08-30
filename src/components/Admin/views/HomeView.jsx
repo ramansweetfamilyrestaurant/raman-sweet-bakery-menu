@@ -15,7 +15,9 @@ import {
   Crown,
   ChefHat,
   Receipt,
-  VolumeX
+  VolumeX,
+  Users,
+  Tag
 } from 'lucide-react';
 import { formatQuota } from '../../../utils/planCapabilities';
 import { getDishImageUrl } from '../../../utils/imageHelper';
@@ -768,6 +770,46 @@ export default function HomeView({
                     <Share2 size={16} />
                   </div>
                   <span style={{ fontSize: '0.78rem', fontWeight: 700, color: '#0F172A' }}>Share Menu</span>
+                </button>
+
+                <button
+                  onClick={() => onNavigateTab('customers')}
+                  style={{
+                    background: '#FFFFFF',
+                    border: '1px solid #E2E8F0',
+                    borderRadius: '12px',
+                    padding: '12px 10px',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '10px',
+                    cursor: 'pointer',
+                    textAlign: 'left'
+                  }}
+                >
+                  <div style={{ width: '32px', height: '32px', borderRadius: '8px', background: '#ECFDF5', color: '#059669', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                    <Users size={16} />
+                  </div>
+                  <span style={{ fontSize: '0.78rem', fontWeight: 700, color: '#0F172A' }}>Customers</span>
+                </button>
+
+                <button
+                  onClick={() => onNavigateTab('offers')}
+                  style={{
+                    background: '#FFFFFF',
+                    border: '1px solid #E2E8F0',
+                    borderRadius: '12px',
+                    padding: '12px 10px',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '10px',
+                    cursor: 'pointer',
+                    textAlign: 'left'
+                  }}
+                >
+                  <div style={{ width: '32px', height: '32px', borderRadius: '8px', background: '#FFFBEB', color: '#D97706', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                    <Tag size={16} />
+                  </div>
+                  <span style={{ fontSize: '0.78rem', fontWeight: 700, color: '#0F172A' }}>Offers & Deals</span>
                 </button>
               </div>
             </div>

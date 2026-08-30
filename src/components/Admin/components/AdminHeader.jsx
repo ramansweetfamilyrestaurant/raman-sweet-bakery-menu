@@ -1,5 +1,26 @@
 import React, { useState, useEffect } from 'react';
-import { Store, Bell, ChevronDown, Menu, HelpCircle, Phone, LogOut, ExternalLink } from 'lucide-react';
+import { 
+  Store, 
+  Bell, 
+  ChevronDown, 
+  Menu, 
+  HelpCircle, 
+  Phone, 
+  LogOut, 
+  ExternalLink,
+  Home,
+  ShoppingBag,
+  Utensils,
+  BarChart2,
+  Settings,
+  Users,
+  Tag,
+  QrCode,
+  CreditCard,
+  Star,
+  Megaphone,
+  X
+} from 'lucide-react';
 import { resolveImageUrl } from '../../../utils/imageHelper';
 
 export default function AdminHeader({
@@ -17,6 +38,7 @@ export default function AdminHeader({
 }) {
   const [showUserMenu, setShowUserMenu] = useState(false);
   const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
+  const [showMobileDrawer, setShowMobileDrawer] = useState(false);
 
   useEffect(() => {
     if (!showUserMenu) return;
@@ -63,6 +85,7 @@ export default function AdminHeader({
       {/* LEFT: Menu Toggle + Dynamic Greeting */}
       <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
         <button
+          onClick={() => setShowMobileDrawer(true)}
           style={{
             background: 'transparent',
             border: 'none',
@@ -73,9 +96,9 @@ export default function AdminHeader({
             alignItems: 'center',
             justifyContent: 'center'
           }}
-          title="Menu"
+          title="Open Navigation Menu"
         >
-          <Menu size={20} />
+          <Menu size={22} />
         </button>
 
         <div>
@@ -343,6 +366,208 @@ export default function AdminHeader({
                   }}
                 >
                   Yes, Logout
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+        {/* Mobile Navigation Drawer */}
+        {showMobileDrawer && (
+          <div style={{
+            position: 'fixed',
+            inset: 0,
+            zIndex: 10000,
+            display: 'flex'
+          }}>
+            {/* Backdrop */}
+            <div
+              onClick={() => setShowMobileDrawer(false)}
+              style={{
+                position: 'fixed',
+                inset: 0,
+                background: 'rgba(0, 0, 0, 0.65)',
+                backdropFilter: 'blur(3px)'
+              }}
+            />
+
+            {/* Slide-out Panel */}
+            <div style={{
+              position: 'relative',
+              width: '82%',
+              maxWidth: '310px',
+              height: '100%',
+              background: '#0B0F19',
+              color: '#F8FAFC',
+              display: 'flex',
+              flexDirection: 'column',
+              justifyContent: 'space-between',
+              padding: '20px 16px',
+              boxShadow: '4px 0 25px rgba(0,0,0,0.5)',
+              zIndex: 10001,
+              overflowY: 'auto'
+            }}>
+              <div>
+                {/* Header */}
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '20px', paddingBottom: '14px', borderBottom: '1px solid #1E293B' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                    <div style={{
+                      width: '38px',
+                      height: '38px',
+                      borderRadius: '10px',
+                      background: '#D97706',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      fontWeight: 900,
+                      color: '#FFF',
+                      fontSize: '1.1rem'
+                    }}>
+                      ⚡
+                    </div>
+                    <div>
+                      <strong style={{ fontSize: '0.95rem', color: '#F8FAFC', display: 'block', fontWeight: 900 }}>
+                        TouchQR
+                      </strong>
+                      <span style={{ fontSize: '0.70rem', color: '#94A3B8' }}>
+                        {restaurantInfo?.name || 'Restaurant Admin'}
+                      </span>
+                    </div>
+                  </div>
+
+                  <button
+                    onClick={() => setShowMobileDrawer(false)}
+                    style={{
+                      background: '#1E293B',
+                      border: '1px solid #334155',
+                      color: '#94A3B8',
+                      width: '32px',
+                      height: '32px',
+                      borderRadius: '8px',
+                      cursor: 'pointer',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center'
+                    }}
+                  >
+                    <X size={16} />
+                  </button>
+                </div>
+
+                {/* Navigation Links */}
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                  {[
+                    { id: 'home', label: 'Dashboard', icon: Home },
+                    { id: 'orders', label: 'Orders', icon: ShoppingBag, badge: pendingOrdersCount > 0 ? pendingOrdersCount : null },
+                    { id: 'dishes', label: 'Menu & Catalog', icon: Utensils },
+                    { id: 'customers', label: 'Customers & Guests', icon: Users, highlight: true },
+                    { id: 'offers', label: 'Offers & Deals', icon: Tag, highlight: true },
+                    { id: 'analytics', label: 'Analytics', icon: BarChart2 },
+                    { id: 'qr-generator', label: 'QR Standees', icon: QrCode },
+                    { id: 'billing', label: 'Billing & Plans', icon: CreditCard },
+                    { id: 'review', label: 'Reviews & Feedback', icon: Star },
+                    { id: 'notifications', label: 'Notifications', icon: Bell },
+                    { id: 'settings', label: 'Settings & Setup', icon: Settings }
+                  ].map(item => {
+                    const Icon = item.icon;
+                    const isActive = activeTab === item.id || (item.id === 'dishes' && ['categories', 'combos'].includes(activeTab)) || (item.id === 'orders' && ['floor-map', 'service-requests'].includes(activeTab));
+
+                    return (
+                      <button
+                        key={item.id}
+                        onClick={() => {
+                          setShowMobileDrawer(false);
+                          if (setActiveTab) setActiveTab(item.id);
+                        }}
+                        style={{
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'space-between',
+                          width: '100%',
+                          padding: '11px 12px',
+                          borderRadius: '10px',
+                          border: isActive ? '1px solid rgba(217, 119, 6, 0.35)' : '1px solid transparent',
+                          background: isActive ? '#1E293B' : 'transparent',
+                          color: isActive ? '#FFFFFF' : '#94A3B8',
+                          fontSize: '0.84rem',
+                          fontWeight: isActive ? 800 : 600,
+                          cursor: 'pointer',
+                          textAlign: 'left',
+                          transition: 'all 0.15s ease'
+                        }}
+                      >
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                          <Icon size={17} color={isActive ? '#F59E0B' : (item.highlight ? '#34D399' : '#94A3B8')} />
+                          <span style={{ color: isActive ? '#FFFFFF' : (item.highlight ? '#F1F5F9' : '#94A3B8') }}>
+                            {item.label}
+                          </span>
+                        </div>
+
+                        {item.badge && (
+                          <span style={{
+                            background: '#DC2626',
+                            color: '#FFFFFF',
+                            fontSize: '0.66rem',
+                            fontWeight: 900,
+                            padding: '1px 6px',
+                            borderRadius: '10px'
+                          }}>
+                            {item.badge}
+                          </span>
+                        )}
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+
+              {/* Bottom Support & Logout in Drawer */}
+              <div style={{ borderTop: '1px solid #1E293B', paddingTop: '14px', marginTop: '16px', display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                <button
+                  onClick={() => {
+                    setShowMobileDrawer(false);
+                    if (onOpenHelp) onOpenHelp();
+                  }}
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '10px',
+                    width: '100%',
+                    padding: '10px 12px',
+                    borderRadius: '10px',
+                    border: '1px solid #334155',
+                    background: '#1E293B',
+                    color: '#F8FAFC',
+                    fontSize: '0.80rem',
+                    fontWeight: 700,
+                    cursor: 'pointer'
+                  }}
+                >
+                  <HelpCircle size={16} color="#38BDF8" />
+                  <span>Need Help? Support</span>
+                </button>
+
+                <button
+                  onClick={() => {
+                    setShowMobileDrawer(false);
+                    setShowLogoutConfirm(true);
+                  }}
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '10px',
+                    width: '100%',
+                    padding: '10px 12px',
+                    borderRadius: '10px',
+                    border: '1px solid rgba(220, 38, 38, 0.3)',
+                    background: 'rgba(220, 38, 38, 0.1)',
+                    color: '#FCA5A5',
+                    fontSize: '0.80rem',
+                    fontWeight: 800,
+                    cursor: 'pointer'
+                  }}
+                >
+                  <LogOut size={16} color="#EF4444" />
+                  <span>Logout</span>
                 </button>
               </div>
             </div>
