@@ -9,7 +9,6 @@ import {
   Headphones,
   LogOut,
   QrCode,
-  Tv,
   Users,
   Megaphone,
   CreditCard,
@@ -245,31 +244,6 @@ export default function AdminSidebar({
             <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
               <Utensils size={17} color={isMenuActive ? '#FB923C' : '#94A3B8'} />
               <span>Menu</span>
-            </div>
-          </button>
-
-          {/* KDS */}
-          <button
-            onClick={() => setActiveTab('orders')}
-            className="sidebar-nav-item"
-            style={{
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'space-between',
-              width: '100%',
-              padding: '9px 12px',
-              borderRadius: '10px',
-              border: '1px solid transparent',
-              cursor: 'pointer',
-              background: 'transparent',
-              color: '#94A3B8',
-              fontWeight: 500,
-              fontSize: '0.84rem'
-            }}
-          >
-            <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-              <Tv size={17} color="#94A3B8" />
-              <span>KDS</span>
             </div>
           </button>
 
