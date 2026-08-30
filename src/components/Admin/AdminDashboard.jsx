@@ -2967,7 +2967,7 @@ export default function AdminDashboard({
                 printingOrderId={printingOrderId}
                 printingType={printingType}
                 currencySymbol={settingsForm.currency_symbol !== undefined && settingsForm.currency_symbol !== null ? settingsForm.currency_symbol : '₹'}
-                capabilities={capabilities}
+                capabilities={tenantCaps}
                 settingsForm={settingsForm}
                 token={token}
                 onNavigateToSetup={(drawer = null) => {
