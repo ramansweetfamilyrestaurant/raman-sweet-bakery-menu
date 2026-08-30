@@ -199,13 +199,12 @@ export default function MenuView({
     const currentPrice = Number(dish.price) || 0;
     const rawOldPrice = Number(dish.original_price || dish.mrp || dish.old_price || dish.compare_at_price);
     const hasValidOldPrice = !isNaN(rawOldPrice) && rawOldPrice > currentPrice;
-    const savings = hasValidOldPrice ? rawOldPrice - currentPrice : 0;
     const rawHalfPrice = Number(dish.price_half);
     const hasHalfPrice = !isNaN(rawHalfPrice) && rawHalfPrice > 0;
 
     return (
       <div style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', flexWrap: 'wrap' }}>
-        {/* Single Compact Segmented Pill: [ Full 160 | Half 95 ] */}
+        {/* Single Compact Segmented Pill */}
         <div style={{
           display: 'inline-flex',
           alignItems: 'center',
@@ -224,16 +223,18 @@ export default function MenuView({
             </strong>
           </div>
 
-          {/* Subtle vertical divider */}
-          <span style={{ width: '1px', height: '11px', background: '#CBD5E1', display: 'inline-block' }} />
-
-          {/* Half price section */}
-          <div style={{ display: 'inline-flex', alignItems: 'baseline', gap: '3px' }}>
-            <span style={{ fontSize: '0.64rem', color: '#64748B', fontWeight: 600 }}>Half</span>
-            <strong style={{ fontSize: layout === 'card' ? '0.90rem' : '0.84rem', fontWeight: 800, color: hasHalfPrice ? '#334155' : '#94A3B8', lineHeight: 1 }}>
-              {hasHalfPrice ? rawHalfPrice : '0'}
-            </strong>
-          </div>
+          {/* Half price section ONLY WHEN VALID */}
+          {hasHalfPrice && (
+            <>
+              <span style={{ width: '1px', height: '11px', background: '#CBD5E1', display: 'inline-block' }} />
+              <div style={{ display: 'inline-flex', alignItems: 'baseline', gap: '3px' }}>
+                <span style={{ fontSize: '0.64rem', color: '#64748B', fontWeight: 600 }}>Half</span>
+                <strong style={{ fontSize: layout === 'card' ? '0.90rem' : '0.84rem', fontWeight: 800, color: '#334155', lineHeight: 1 }}>
+                  {rawHalfPrice}
+                </strong>
+              </div>
+            </>
+          )}
         </div>
 
         {/* Struck-through Old Price */}
@@ -250,6 +251,47 @@ export default function MenuView({
       </div>
     );
   };
+
+  // Real Mathematical Menu Health Score from actual catalog data
+  const menuHealth = useMemo(() => {
+    if (safeDishes.length === 0) {
+      return {
+        score: 0,
+        dishesAdded: false,
+        imagesUploaded: false,
+        categoriesOrganized: false,
+        readyForCustomers: false,
+        statusText: 'Add dishes to start'
+      };
+    }
+
+    const dishesAdded = safeDishes.length >= 1;
+    const dishesWithImg = safeDishes.filter(d => d.image || d.image_url).length;
+    const imgRatio = dishesWithImg / safeDishes.length;
+    const imagesUploaded = imgRatio >= 0.4;
+    const categoriesOrganized = safeCategories.length >= 1;
+    const readyForCustomers = safeDishes.some(d => d.is_available !== false);
+
+    let score = 0;
+    if (safeDishes.length >= 10) score += 35;
+    else score += Math.round((safeDishes.length / 10) * 35);
+
+    score += Math.round(imgRatio * 35);
+
+    if (safeCategories.length >= 3) score += 15;
+    else if (safeCategories.length >= 1) score += 10;
+
+    if (readyForCustomers) score += 15;
+
+    return {
+      score: Math.min(100, Math.max(10, score)),
+      dishesAdded,
+      imagesUploaded,
+      categoriesOrganized,
+      readyForCustomers,
+      statusText: score >= 80 ? 'Your menu looks great!' : (score >= 50 ? 'Good progress!' : 'Needs more details')
+    };
+  }, [safeDishes, safeCategories]);
 
   return (
     <div style={{
@@ -729,9 +771,9 @@ export default function MenuView({
 
           <div style={{ textAlign: 'right' }}>
             <span style={{ fontSize: '0.70rem', color: '#16A34A', fontWeight: 800, display: 'inline-flex', alignItems: 'center', gap: '2px' }}>
-              ↑ +12%
+              • Live
             </span>
-            <span style={{ fontSize: '0.62rem', color: '#94A3B8', display: 'block' }}>vs last month</span>
+            <span style={{ fontSize: '0.62rem', color: '#94A3B8', display: 'block' }}>Active catalog</span>
           </div>
         </div>
 
@@ -870,7 +912,7 @@ export default function MenuView({
             </div>
             <div>
               <div style={{ fontSize: '1.45rem', fontWeight: 900, color: '#0F172A', lineHeight: 1.1 }}>
-                100
+                {Number(restaurantInfo?.scan_count || 0)}
               </div>
               <div style={{ fontSize: '0.74rem', color: '#64748B', fontWeight: 600, marginTop: '2px' }}>
                 Menu Views
@@ -880,9 +922,9 @@ export default function MenuView({
 
           <div style={{ textAlign: 'right' }}>
             <span style={{ fontSize: '0.70rem', color: '#D97706', fontWeight: 800, display: 'inline-flex', alignItems: 'center', gap: '2px' }}>
-              ↑ +28%
+              • Realtime
             </span>
-            <span style={{ fontSize: '0.62rem', color: '#94A3B8', display: 'block' }}>this month</span>
+            <span style={{ fontSize: '0.62rem', color: '#94A3B8', display: 'block' }}>QR Scans</span>
           </div>
         </div>
       </div>
@@ -1542,90 +1584,164 @@ export default function MenuView({
                 })}
               </div>
             ) : (
-              /* LIST VIEW (Table on Desktop, Cards on Mobile) */
-              <>
-                <div className="desktop-table-view" style={{ background: '#FFFFFF', borderRadius: '16px', border: '1px solid #E2E8F0', overflow: 'hidden' }}>
-                  <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left' }}>
-                    <thead>
-                      <tr style={{ background: '#F8FAFC', borderBottom: '1px solid #E2E8F0', color: '#64748B', fontSize: '0.68rem', fontWeight: 800, textTransform: 'uppercase' }}>
-                        <th style={{ padding: '10px 14px' }}>IMAGE</th>
-                        <th style={{ padding: '10px 14px' }}>DISH</th>
-                        <th style={{ padding: '10px 14px' }}>CATEGORY</th>
-                        <th style={{ padding: '10px 14px' }}>PRICE</th>
-                        <th style={{ padding: '10px 14px' }}>STATUS</th>
-                        <th style={{ padding: '10px 14px', textAlign: 'right' }}>ACTIONS</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {paginatedDishes.map(dish => {
-                        const isAvailable = dish.is_available !== false;
-                        const catObj = safeCategories.find(c => String(c.id) === String(dish.category_id));
+              /* LIST VIEW TABLE */
+              <div style={{
+                background: '#FFFFFF',
+                borderRadius: '16px',
+                border: '1px solid #E2E8F0',
+                overflow: 'hidden',
+                boxShadow: '0 1px 3px rgba(0,0,0,0.02)'
+              }}>
+                <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left', fontSize: '0.84rem' }}>
+                  <thead>
+                    <tr style={{ background: '#F8FAFC', borderBottom: '1px solid #E2E8F0', color: '#64748B', fontWeight: 800, fontSize: '0.74rem' }}>
+                      <th style={{ padding: '12px 16px' }}>DISH</th>
+                      <th style={{ padding: '12px 14px' }}>CATEGORY</th>
+                      <th style={{ padding: '12px 14px' }}>PRICE</th>
+                      <th style={{ padding: '12px 14px' }}>STATUS</th>
+                      <th style={{ padding: '12px 16px', textAlign: 'right' }}>ACTIONS</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {paginatedDishes.map((dish, idx) => {
+                      const isAvailable = dish.is_available !== false;
+                      const catObj = safeCategories.find(c => String(c.id) === String(dish.category_id));
 
-                        return (
-                          <tr key={dish.id} style={{ borderBottom: '1px solid #F1F5F9' }}>
-                            <td style={{ padding: '8px 14px' }}>
-                              <div style={{ width: '40px', height: '40px', borderRadius: '8px', overflow: 'hidden', background: '#F8FAFC', border: '1px solid #E2E8F0' }}>
-                                <img src={getDishImageUrl(dish.image || dish.image_url)} alt={dish.name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} onError={(e) => { e.currentTarget.src = '/images/default-dish.webp'; }} />
-                              </div>
-                            </td>
-                            <td style={{ padding: '8px 14px' }}>
-                              <strong style={{ fontSize: '0.86rem', color: '#0F172A' }}>{dish.name}</strong>
-                            </td>
-                            <td style={{ padding: '8px 14px' }}>
-                              <span style={{ fontSize: '0.72rem', color: '#64748B' }}>{catObj?.name || 'Main Course'}</span>
-                            </td>
-                            <td style={{ padding: '8px 14px' }}>
-                              {renderDishPrice(dish, 'table')}
-                            </td>
-                            <td style={{ padding: '8px 14px' }}>
+                      return (
+                        <tr key={dish.id} style={{ borderBottom: idx === paginatedDishes.length - 1 ? 'none' : '1px solid #F1F5F9' }}>
+                          <td style={{ padding: '12px 16px', display: 'flex', alignItems: 'center', gap: '10px' }}>
+                            <img
+                              src={getDishImageUrl(dish.image || dish.image_url)}
+                              alt={dish.name}
+                              style={{ width: '40px', height: '40px', borderRadius: '8px', objectFit: 'cover', border: '1px solid #E2E8F0' }}
+                              onError={(e) => { e.currentTarget.src = '/images/default-dish.webp'; }}
+                            />
+                            <div>
+                              <strong style={{ fontSize: '0.88rem', color: '#0F172A', display: 'block' }}>{dish.name}</strong>
+                              <span style={{ fontSize: '0.70rem', color: '#64748B' }}>{dish.description ? (dish.description.length > 35 ? `${dish.description.substring(0, 35)}...` : dish.description) : 'No description'}</span>
+                            </div>
+                          </td>
+                          <td style={{ padding: '12px 14px', color: '#475569', fontWeight: 600, fontSize: '0.80rem' }}>
+                            {catObj?.name || dish.category_name || dish.category || 'General'}
+                          </td>
+                          <td style={{ padding: '12px 14px' }}>
+                            {renderDishPrice(dish, 'list')}
+                          </td>
+                          <td style={{ padding: '12px 14px' }}>
+                            <button
+                              onClick={() => onToggleAvailability && onToggleAvailability(dish.id, !isAvailable)}
+                              style={{
+                                background: isAvailable ? '#E6F9EE' : '#FEE2E2',
+                                color: isAvailable ? '#15803D' : '#DC2626',
+                                border: `1px solid ${isAvailable ? '#C6F6D5' : '#FECACA'}`,
+                                padding: '3px 8px',
+                                borderRadius: '6px',
+                                fontSize: '0.68rem',
+                                fontWeight: 800,
+                                cursor: 'pointer'
+                              }}
+                            >
+                              {isAvailable ? 'In Stock' : 'Sold Out'}
+                            </button>
+                          </td>
+                          <td style={{ padding: '12px 16px', textAlign: 'right' }}>
+                            <div style={{ display: 'inline-flex', gap: '6px' }}>
                               <button
-                                onClick={() => onToggleAvailability && onToggleAvailability(dish.id, !isAvailable)}
-                                style={{ background: isAvailable ? '#E6F9EE' : '#FEE2E2', color: isAvailable ? '#15803D' : '#DC2626', border: 'none', padding: '3px 8px', borderRadius: '6px', fontSize: '0.66rem', fontWeight: 800, cursor: 'pointer' }}
+                                onClick={() => onOpenEditDish(dish)}
+                                style={{ background: '#F1F5F9', border: '1px solid #E2E8F0', padding: '5px', borderRadius: '6px', cursor: 'pointer', color: '#0F172A' }}
+                                title="Edit"
                               >
-                                {isAvailable ? 'In Stock' : 'Sold Out'}
+                                <Edit3 size={13} />
                               </button>
-                            </td>
-                            <td style={{ padding: '8px 14px', textAlign: 'right' }}>
-                              <button onClick={() => onOpenEditDish(dish)} style={{ padding: '4px 8px', borderRadius: '6px', border: '1px solid #E2E8F0', background: '#FFFFFF', color: '#0F172A', fontSize: '0.70rem', fontWeight: 700, cursor: 'pointer' }}>Edit</button>
-                            </td>
-                          </tr>
-                        );
-                      })}
-                    </tbody>
-                  </table>
-                </div>
+                              <button
+                                onClick={() => setDeleteConfirmDish(dish)}
+                                style={{ background: '#FEE2E2', border: '1px solid #FECACA', padding: '5px', borderRadius: '6px', cursor: 'pointer', color: '#DC2626' }}
+                                title="Delete"
+                              >
+                                <Trash2 size={13} />
+                              </button>
+                            </div>
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
+            )}
 
-                {/* Mobile List View Cards */}
-                <div className="mobile-dish-list-container" style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
-                  {paginatedDishes.map(dish => {
-                    const isAvailable = dish.is_available !== false;
-                    const catObj = safeCategories.find(c => String(c.id) === String(dish.category_id));
-                    return (
-                      <div key={dish.id} style={{ background: '#FFFFFF', borderRadius: '14px', border: '1px solid #E2E8F0', padding: '10px', display: 'flex', alignItems: 'center', gap: '12px' }}>
-                        <div style={{ width: '56px', height: '56px', borderRadius: '10px', overflow: 'hidden', background: '#F8FAFC', border: '1px solid #E2E8F0', flexShrink: 0 }}>
-                          <img src={getDishImageUrl(dish.image || dish.image_url)} alt={dish.name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} onError={(e) => { e.currentTarget.src = '/images/default-dish.webp'; }} />
-                        </div>
-                        <div style={{ flex: 1, minWidth: 0 }}>
-                          <strong style={{ fontSize: '0.86rem', color: '#0F172A', display: 'block', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{dish.name}</strong>
-                          <span style={{ fontSize: '0.66rem', color: '#64748B', display: 'block', margin: '1px 0 4px 0' }}>{catObj?.name || 'Main Course'}</span>
-                          {renderDishPrice(dish, 'list')}
-                        </div>
-                        <button onClick={() => onToggleAvailability && onToggleAvailability(dish.id, !isAvailable)} style={{ background: isAvailable ? '#E6F9EE' : '#FEE2E2', color: isAvailable ? '#15803D' : '#DC2626', border: 'none', padding: '4px 8px', borderRadius: '6px', fontSize: '0.64rem', fontWeight: 800, cursor: 'pointer', flexShrink: 0 }}>
-                          {isAvailable ? 'In Stock' : 'Sold Out'}
-                        </button>
-                      </div>
-                    );
-                  })}
+            {/* Pagination Controls */}
+            {totalPages > 1 && (
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: '14px', flexWrap: 'wrap', gap: '10px' }}>
+                <span style={{ fontSize: '0.78rem', color: '#64748B', fontWeight: 600 }}>
+                  Showing <strong>{totalItems > 0 ? (safeCurrentPage - 1) * effectivePageSize + 1 : 0}–{Math.min(safeCurrentPage * effectivePageSize, totalItems)}</strong> of <strong>{totalItems}</strong> dishes
+                </span>
+
+                <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                  <button
+                    onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
+                    disabled={safeCurrentPage === 1}
+                    style={{
+                      width: '32px',
+                      height: '32px',
+                      borderRadius: '8px',
+                      border: '1px solid #CBD5E1',
+                      background: '#FFFFFF',
+                      color: safeCurrentPage === 1 ? '#CBD5E1' : '#0F172A',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      cursor: safeCurrentPage === 1 ? 'not-allowed' : 'pointer'
+                    }}
+                  >
+                    <ChevronLeft size={16} />
+                  </button>
+
+                  {Array.from({ length: totalPages }, (_, i) => i + 1).map(pageNum => (
+                    <button
+                      key={pageNum}
+                      onClick={() => setCurrentPage(pageNum)}
+                      style={{
+                        width: '32px',
+                        height: '32px',
+                        borderRadius: '8px',
+                        border: pageNum === safeCurrentPage ? '1px solid #261B14' : '1px solid #CBD5E1',
+                        background: pageNum === safeCurrentPage ? '#261B14' : '#FFFFFF',
+                        color: pageNum === safeCurrentPage ? '#FFFFFF' : '#0F172A',
+                        fontSize: '0.80rem',
+                        fontWeight: 800,
+                        cursor: 'pointer'
+                      }}
+                    >
+                      {pageNum}
+                    </button>
+                  ))}
+
+                  <button
+                    onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
+                    disabled={safeCurrentPage === totalPages}
+                    style={{
+                      width: '32px',
+                      height: '32px',
+                      borderRadius: '8px',
+                      border: '1px solid #CBD5E1',
+                      background: '#FFFFFF',
+                      color: safeCurrentPage === totalPages ? '#CBD5E1' : '#0F172A',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      cursor: safeCurrentPage === totalPages ? 'not-allowed' : 'pointer'
+                    }}
+                  >
+                    <ChevronRight size={16} />
+                  </button>
                 </div>
-              </>
+              </div>
             )}
           </div>
 
-          {/* ========================================================
-              COLUMN 3: SIDEBAR WIDGETS (RIGHT)
-             ======================================================== */}
+          {/* RIGHT COLUMN: QUICK ACTIONS + MENU HEALTH + PRO TIP WIDGETS */}
           <div className="right-widgets-column" style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
-            
             {/* Widget 1: Quick Actions */}
             <div style={{
               background: '#FFFFFF',
@@ -1635,44 +1751,48 @@ export default function MenuView({
               boxShadow: '0 1px 3px rgba(0,0,0,0.02)'
             }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '12px' }}>
-                <span style={{ fontSize: '1.15rem' }}>👨‍🍳</span>
+                <span style={{ fontSize: '1.15rem' }}>🧑‍🍳</span>
                 <strong style={{ fontSize: '0.88rem', fontWeight: 900, color: '#0F172A' }}>Quick Actions</strong>
               </div>
 
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '3px' }}>
                 {[
-                  { label: '+ Add Dish', icon: '➕', action: onOpenAddDish },
-                  { label: 'Bulk Upload', icon: '⬆️', action: () => alert('Bulk upload template will open') },
-                  { label: 'Manage Categories', icon: '📁', action: onOpenAddCategory },
-                  { label: 'Create Combo', icon: '🍱', action: onOpenAddCombo },
-                  { label: 'View Menu', icon: '👁️', action: () => { if (onReturnToMenu) onReturnToMenu(restaurantInfo?.slug); } }
-                ].map((item, idx) => (
-                  <button
-                    key={idx}
-                    onClick={item.action}
-                    className="widget-action-row"
-                    style={{
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'space-between',
-                      width: '100%',
-                      padding: '8px 10px',
-                      borderRadius: '8px',
-                      border: 'none',
-                      background: 'transparent',
-                      cursor: 'pointer',
-                      color: '#0F172A',
-                      fontSize: '0.78rem',
-                      fontWeight: 700
-                    }}
-                  >
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                      <span style={{ fontSize: '0.84rem' }}>{item.icon}</span>
-                      <span>{item.label}</span>
-                    </div>
-                    <span style={{ color: '#94A3B8', fontSize: '0.80rem' }}>›</span>
-                  </button>
-                ))}
+                  { label: '+ Add Dish', icon: Plus, color: '#16A34A', onClick: onOpenAddDish },
+                  { label: 'Bulk Upload', icon: UploadCloud, color: '#0284C7', onClick: () => alert('Bulk Upload: Download template or drag & drop CSV file in Settings.') },
+                  { label: 'Manage Categories', icon: FolderPlus, color: '#D97706', onClick: onOpenAddCategory },
+                  { label: 'Create Combo', icon: Package, color: '#9333EA', onClick: onOpenAddCombo },
+                  { label: 'View Menu', icon: Eye, color: '#475569', onClick: onReturnToMenu }
+                ].map((act, idx) => {
+                  const Icon = act.icon;
+                  return (
+                    <button
+                      key={idx}
+                      onClick={act.onClick}
+                      className="widget-action-row"
+                      style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'space-between',
+                        width: '100%',
+                        padding: '8px 10px',
+                        borderRadius: '8px',
+                        border: 'none',
+                        background: 'transparent',
+                        color: '#0F172A',
+                        fontSize: '0.78rem',
+                        fontWeight: 700,
+                        cursor: 'pointer',
+                        textAlign: 'left'
+                      }}
+                    >
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                        <Icon size={14} color={act.color} strokeWidth={2.5} />
+                        <span>{act.label}</span>
+                      </div>
+                      <ChevronRight size={13} color="#94A3B8" />
+                    </button>
+                  );
+                })}
               </div>
             </div>
 
@@ -1688,7 +1808,7 @@ export default function MenuView({
                 <span style={{ fontSize: '1.15rem' }}>🛡️</span>
                 <div>
                   <strong style={{ fontSize: '0.88rem', fontWeight: 900, color: '#0F172A', display: 'block' }}>Menu Health</strong>
-                  <span style={{ fontSize: '0.66rem', color: '#64748B' }}>Your menu looks great!</span>
+                  <span style={{ fontSize: '0.66rem', color: '#64748B' }}>{menuHealth.statusText}</span>
                 </div>
               </div>
 
@@ -1699,7 +1819,7 @@ export default function MenuView({
                   height: '68px',
                   borderRadius: '50%',
                   border: '6px solid #DCFCE7',
-                  borderTopColor: '#16A34A',
+                  borderTopColor: menuHealth.score >= 75 ? '#16A34A' : '#D97706',
                   display: 'flex',
                   alignItems: 'center',
                   justifyContent: 'center',
@@ -1708,21 +1828,23 @@ export default function MenuView({
                   fontSize: '1.05rem',
                   color: '#0F172A'
                 }}>
-                  92%
+                  {menuHealth.score}%
                 </div>
               </div>
 
               {/* Checklist */}
               <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
                 {[
-                  'Dishes added',
-                  'Images uploaded',
-                  'Categories organized',
-                  'Ready for customers'
-                ].map((txt, idx) => (
-                  <div key={idx} style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.72rem', color: '#0F172A', fontWeight: 600 }}>
-                    <span style={{ color: '#16A34A', fontSize: '0.76rem', fontWeight: 900 }}>✓</span>
-                    <span>{txt}</span>
+                  { label: 'Dishes added', done: menuHealth.dishesAdded },
+                  { label: 'Images uploaded', done: menuHealth.imagesUploaded },
+                  { label: 'Categories organized', done: menuHealth.categoriesOrganized },
+                  { label: 'Ready for customers', done: menuHealth.readyForCustomers }
+                ].map((item, idx) => (
+                  <div key={idx} style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.72rem', color: item.done ? '#0F172A' : '#64748B', fontWeight: 600 }}>
+                    <span style={{ color: item.done ? '#16A34A' : '#94A3B8', fontSize: '0.76rem', fontWeight: 900 }}>
+                      {item.done ? '✓' : '○'}
+                    </span>
+                    <span>{item.label}</span>
                   </div>
                 ))}
               </div>
