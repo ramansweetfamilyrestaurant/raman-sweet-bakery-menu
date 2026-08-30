@@ -183,15 +183,63 @@ export default function HomeView({
   const catQuota = formatQuota(safeCategories.length, capabilities?.max_categories);
   const comboQuota = formatQuota(safeCombos.length, capabilities?.max_combos);
 
-  // 8. Canonical Plan Details
-  const planName = capabilities?.plan_name || (restaurantInfo?.plan_name ? restaurantInfo.plan_name.toUpperCase() : 'ENTERPRISE PLAN');
-  const planPrice = capabilities?.plan_price !== undefined ? capabilities.plan_price : (restaurantInfo?.plan_price || 1999);
-  const subStatus = (subscriptionStatus?.status || capabilities?.subscription_status || restaurantInfo?.subscription_status || 'active').toLowerCase();
+  // 8. Canonical Plan & VIP / Lifetime Details
+  const isComplimentary = Boolean(
+    restaurantInfo?.subscription_type === 'ADMIN_GRANTED' || 
+    restaurantInfo?.mandate_status === 'admin_granted' ||
+    subscriptionStatus?.mandate_status === 'admin_granted' ||
+    subscriptionStatus?.subscription_type === 'ADMIN_GRANTED' ||
+    capabilities?.is_complimentary ||
+    capabilities?.is_vip ||
+    restaurantInfo?.is_vip === 1 ||
+    restaurantInfo?.is_vip === true ||
+    restaurantInfo?.is_vip === '1' ||
+    restaurantInfo?.plan_tier === 'vip'
+  );
+
+  const planName = isComplimentary
+    ? (capabilities?.plan_name ? `${capabilities.plan_name.toUpperCase()}` : (restaurantInfo?.plan_name ? `${restaurantInfo.plan_name.toUpperCase()}` : 'ENTERPRISE VIP ACCESS'))
+    : (capabilities?.plan_name || (restaurantInfo?.plan_name ? restaurantInfo.plan_name.toUpperCase() : 'ENTERPRISE PLAN'));
+
+  const planPrice = isComplimentary 
+    ? 0 
+    : (capabilities?.plan_price !== undefined ? capabilities.plan_price : (restaurantInfo?.plan_price || 1999));
+
+  const subStatus = isComplimentary
+    ? 'vip_lifetime'
+    : (subscriptionStatus?.status || capabilities?.subscription_status || restaurantInfo?.subscription_status || 'active').toLowerCase();
+
   const isTrial = subStatus === 'trialing';
 
-  const nextBillingDate = restaurantInfo?.subscription_end_date 
-    ? new Date(restaurantInfo.subscription_end_date).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })
-    : (subscriptionStatus?.current_period_end ? new Date(subscriptionStatus.current_period_end).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' }) : 'Ongoing Auto-Renew');
+  const rawExpiryDate = restaurantInfo?.subscription_end_date || 
+                        restaurantInfo?.plan_expires_at || 
+                        subscriptionStatus?.access_until || 
+                        subscriptionStatus?.current_period_end;
+
+  const nextBillingDate = useMemo(() => {
+    if (isComplimentary) {
+      if (!rawExpiryDate || rawExpiryDate === 'Lifetime') {
+        return 'No renewal required (Lifetime)';
+      }
+      const expD = new Date(rawExpiryDate);
+      if (!isNaN(expD.getTime())) {
+        const yearsAway = (expD.getFullYear() - new Date().getFullYear());
+        if (yearsAway >= 5) {
+          return 'No renewal required (Lifetime)';
+        }
+        return `Valid until: ${expD.toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })}`;
+      }
+      return 'No renewal required (Lifetime)';
+    }
+
+    if (rawExpiryDate) {
+      const expD = new Date(rawExpiryDate);
+      if (!isNaN(expD.getTime())) {
+        return expD.toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' });
+      }
+    }
+    return 'Ongoing Auto-Renew';
+  }, [isComplimentary, rawExpiryDate]);
 
   // 9. Top Selling Items (100% Real Analytics/Order Data, Zero Mock Fallback)
   const topDishes = useMemo(() => {
@@ -829,7 +877,7 @@ export default function HomeView({
                       cursor: 'pointer'
                     }}
                   >
-                    <span>All Time</span>
+                    <span>{analyticsData?.selected_period === '7d' ? '7 Days' : (analyticsData?.selected_period === '30d' ? '30 Days' : 'All Time')}</span>
                     <ChevronDown size={12} />
                   </button>
                 </div>
@@ -1086,7 +1134,8 @@ export default function HomeView({
                 <button
                   onClick={() => {
                     if (capabilities?.kds_enabled) {
-                      window.open('/kds', '_blank');
+                      const currentSlug = restaurantInfo?.slug || '';
+                      window.open(currentSlug ? `/${currentSlug}/kitchen` : '/kitchen', '_blank');
                     } else {
                       onNavigateTab('orders');
                     }
@@ -1240,7 +1289,7 @@ export default function HomeView({
           <div style={{
             background: '#071F14',
             borderRadius: '18px',
-            border: '1px solid rgba(212, 175, 55, 0.25)',
+            border: isComplimentary ? '1px solid rgba(212, 175, 55, 0.45)' : '1px solid rgba(212, 175, 55, 0.25)',
             padding: '20px 24px',
             color: '#FFFFFF',
             boxShadow: '0 4px 16px rgba(7, 31, 20, 0.12)',
@@ -1260,12 +1309,12 @@ export default function HomeView({
                     {currencySymbol}{planPrice.toLocaleString('en-IN')}
                   </span>
                   <span style={{ fontSize: '0.82rem', color: '#94A3B8', fontWeight: 500 }}>
-                    / month
+                    {isComplimentary ? '· Complimentary' : '/ month'}
                   </span>
                 </div>
 
                 <div style={{ fontSize: '0.74rem', color: '#CBD5E1', marginTop: '3px' }}>
-                  Next billing: {nextBillingDate}
+                  {isComplimentary ? nextBillingDate : `Next billing: ${nextBillingDate}`}
                 </div>
               </div>
 
@@ -1273,14 +1322,20 @@ export default function HomeView({
                 <span style={{
                   fontSize: '0.68rem',
                   fontWeight: 800,
-                  background: subStatus === 'trialing' ? 'rgba(245, 158, 11, 0.2)' : 'rgba(34, 197, 94, 0.2)',
-                  color: subStatus === 'trialing' ? '#FBBF24' : '#4ADE80',
-                  border: `1px solid ${subStatus === 'trialing' ? 'rgba(251, 191, 36, 0.4)' : 'rgba(74, 222, 128, 0.4)'}`,
+                  background: isComplimentary 
+                    ? 'rgba(212, 175, 55, 0.2)' 
+                    : (subStatus === 'trialing' ? 'rgba(245, 158, 11, 0.2)' : 'rgba(34, 197, 94, 0.2)'),
+                  color: isComplimentary 
+                    ? '#FDE047' 
+                    : (subStatus === 'trialing' ? '#FBBF24' : '#4ADE80'),
+                  border: `1px solid ${isComplimentary 
+                    ? 'rgba(253, 224, 71, 0.4)' 
+                    : (subStatus === 'trialing' ? 'rgba(251, 191, 36, 0.4)' : 'rgba(74, 222, 128, 0.4)')}`,
                   padding: '3px 10px',
                   borderRadius: '8px',
-                  textTransform: 'capitalize'
+                  textTransform: isComplimentary ? 'none' : 'capitalize'
                 }}>
-                  {subStatus === 'trialing' ? 'Trial' : (subStatus === 'active' ? 'Active' : subStatus)}
+                  {isComplimentary ? 'VIP Lifetime' : (subStatus === 'trialing' ? 'Trial' : (subStatus === 'active' ? 'Active' : subStatus))}
                 </span>
 
                 <button
@@ -1330,7 +1385,7 @@ export default function HomeView({
                 </div>
                 <div style={{ width: '100%', height: '5px', background: '#F1F5F9', borderRadius: '4px', overflow: 'hidden' }}>
                   <div style={{ 
-                    width: `${dishQuota.isUnlimited ? 100 : Math.min(100, Math.round((dishQuota.count / (dishQuota.limit || 1)) * 100))}%`, 
+                    width: `${dishQuota.isUnlimited ? Math.min(100, Math.max(10, Math.round((dishQuota.count / 50) * 100))) : Math.min(100, Math.round((dishQuota.count / (dishQuota.limit || 1)) * 100))}%`, 
                     height: '100%', 
                     background: dishQuota.isAtLimit ? '#DC2626' : '#0D3823', 
                     borderRadius: '4px' 
@@ -1346,7 +1401,7 @@ export default function HomeView({
                 </div>
                 <div style={{ width: '100%', height: '5px', background: '#F1F5F9', borderRadius: '4px', overflow: 'hidden' }}>
                   <div style={{ 
-                    width: `${catQuota.isUnlimited ? 100 : Math.min(100, Math.round((catQuota.count / (catQuota.limit || 1)) * 100))}%`, 
+                    width: `${catQuota.isUnlimited ? Math.min(100, Math.max(10, Math.round((catQuota.count / 20) * 100))) : Math.min(100, Math.round((catQuota.count / (catQuota.limit || 1)) * 100))}%`, 
                     height: '100%', 
                     background: catQuota.isAtLimit ? '#DC2626' : '#0D3823', 
                     borderRadius: '4px' 
@@ -1362,7 +1417,7 @@ export default function HomeView({
                 </div>
                 <div style={{ width: '100%', height: '5px', background: '#F1F5F9', borderRadius: '4px', overflow: 'hidden' }}>
                   <div style={{ 
-                    width: `${comboQuota.isUnlimited ? 100 : Math.min(100, Math.round((comboQuota.count / (comboQuota.limit || 1)) * 100))}%`, 
+                    width: `${comboQuota.isUnlimited ? Math.min(100, Math.max(10, Math.round((comboQuota.count / 10) * 100))) : Math.min(100, Math.round((comboQuota.count / (comboQuota.limit || 1)) * 100))}%`, 
                     height: '100%', 
                     background: comboQuota.isAtLimit ? '#DC2626' : '#D97706', 
                     borderRadius: '4px' 

@@ -95,6 +95,13 @@ export const FEATURE_METADATA = Object.freeze({
 export function resolveTenantCapabilities(restaurantInfo = {}, settingsForm = {}) {
   const planTier = (restaurantInfo?.plan_tier || settingsForm?.plan_tier || 'pro').toLowerCase();
   const perms = restaurantInfo?.permissions || {};
+  const isComplimentary = restaurantInfo?.subscription_type === 'ADMIN_GRANTED' || 
+                          restaurantInfo?.mandate_status === 'admin_granted' ||
+                          settingsForm?.subscription_type === 'ADMIN_GRANTED' ||
+                          restaurantInfo?.is_vip === 1 ||
+                          restaurantInfo?.is_vip === true ||
+                          restaurantInfo?.is_vip === '1' ||
+                          planTier === 'vip';
 
   const isBoolTrue = (val, fallback = false) => {
     if (val === undefined || val === null) return fallback;
@@ -109,9 +116,11 @@ export function resolveTenantCapabilities(restaurantInfo = {}, settingsForm = {}
 
   return {
     plan_tier: planTier,
-    plan_name: restaurantInfo?.plan_name || `${planTier.toUpperCase()} Plan`,
-    plan_price: getNum(restaurantInfo?.plan_price, 999),
-    subscription_status: restaurantInfo?.subscription_status || 'active',
+    plan_name: restaurantInfo?.plan_name || (isComplimentary ? 'Enterprise VIP Access' : `${planTier.toUpperCase()} Plan`),
+    plan_price: getNum(restaurantInfo?.plan_price, isComplimentary ? 0 : 999),
+    subscription_status: isComplimentary ? 'active' : (restaurantInfo?.subscription_status || 'active'),
+    is_complimentary: isComplimentary,
+    is_vip: isComplimentary || planTier === 'vip',
     business_type: restaurantInfo?.business_type || 'restaurant',
     service_model: restaurantInfo?.service_model || 'dine_in',
 
@@ -120,7 +129,7 @@ export function resolveTenantCapabilities(restaurantInfo = {}, settingsForm = {}
     whatsapp_ordering_enabled: isBoolTrue(restaurantInfo?.whatsapp_ordering_enabled ?? perms?.whatsapp_ordering_enabled, true),
     kds_enabled: isBoolTrue(restaurantInfo?.kds_enabled ?? perms?.kds_enabled, true),
     bluetooth_kot_enabled: isBoolTrue(restaurantInfo?.bluetooth_kot_enabled ?? perms?.bluetooth_kot_enabled, false),
-    dual_printer_enabled: isBoolTrue(restaurantInfo?.dual_printer_enabled ?? perms?.dual_printer_enabled, false),
+    dual_printer_enabled: isBoolTrue(restaurantInfo?.dual_printer_enabled ?? perms?.dual_printer_enabled, isComplimentary || planTier === 'vip'),
     gst_invoice_enabled: isBoolTrue(restaurantInfo?.gst_invoice_enabled ?? perms?.gst_invoice_enabled, true),
     analytics_export_enabled: isBoolTrue(restaurantInfo?.analytics_export_enabled ?? perms?.analytics_export_enabled, true),
     modifiers_enabled: isBoolTrue(restaurantInfo?.modifiers_enabled ?? perms?.modifiers_enabled, true),
