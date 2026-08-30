@@ -3095,7 +3095,7 @@ export default function AdminDashboard({
                   setActiveTab('billing');
                 }}
                 onNavigate={(tab) => setActiveTab(tab)}
-                onRefreshInfo={handleRefreshInfo}
+                onRefreshInfo={() => loadData(true)}
               />
             )}
 
