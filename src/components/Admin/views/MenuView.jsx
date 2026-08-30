@@ -388,6 +388,9 @@ export default function MenuView({
           .desktop-table-view {
             display: none !important;
           }
+          .mobile-floating-add-btn {
+            display: flex !important;
+          }
         }
 
         @media (min-width: 769px) {
@@ -395,6 +398,9 @@ export default function MenuView({
             display: none !important;
           }
           .mobile-dish-list-container {
+            display: none !important;
+          }
+          .mobile-floating-add-btn {
             display: none !important;
           }
         }
@@ -2244,6 +2250,7 @@ export default function MenuView({
           7. FLOATING + ADD ACTION BUTTON (MOBILE ONLY)
          ======================================================== */}
       <button
+        className="mobile-floating-add-btn"
         onClick={activeSubTab === 'combos' ? onOpenAddCombo : activeSubTab === 'categories' ? onOpenAddCategory : onOpenAddDish}
         disabled={dishQuota.isAtLimit}
         style={{
