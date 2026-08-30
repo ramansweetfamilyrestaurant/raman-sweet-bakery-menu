@@ -460,6 +460,52 @@ export default function StandaloneKdsPage({ slug = '' }) {
     return `TABLE ${str}`;
   };
 
+  const toggleItemCheck = (orderId, idx) => {
+    const key = `${orderId}_${idx}`;
+    setCheckedItemsMap(prev => ({
+      ...prev,
+      [key]: !prev[key]
+    }));
+  };
+
+  const handleRecallOrder = async (order) => {
+    if (!order) return;
+    setRecentlyCompleted(prev => prev.filter(o => o.id !== order.id));
+    setOrders(prev => [order, ...prev]);
+    const targetSlug = resolveCurrentSlug();
+    const token = getStoredKdsToken(targetSlug);
+    try {
+      await fetch(`/api/kitchen/orders/${order.id}/recall?slug=${encodeURIComponent(targetSlug)}`, {
+        method: 'PATCH',
+        headers: token ? { 'Authorization': `Bearer ${token}` } : {}
+      });
+      fetchOrders();
+    } catch (e) {
+      console.warn('Recall error:', e);
+    }
+  };
+
+  const aggregatedPrepItems = useMemo(() => {
+    const map = {};
+    orders.forEach(o => {
+      const items = parseItems(o.items);
+      items.forEach(it => {
+        const name = it.name || it.dish_name || 'Item';
+        const qty = Number(it.quantity || it.qty || 1);
+        const portion = it.portion ? ` (${it.portion})` : '';
+        const key = `${name}${portion}`;
+        map[key] = (map[key] || 0) + qty;
+      });
+    });
+    return Object.entries(map).map(([name, count]) => ({ name, count })).sort((a, b) => b.count - a.count);
+  }, [orders]);
+
+  const rushCount = orders.filter(o => getElapsedMins(o.created_at) >= 15).length;
+  const totalDishesCount = orders.reduce((sum, o) => {
+    const items = parseItems(o.items);
+    return sum + items.reduce((iSum, it) => iSum + Number(it.quantity || it.qty || 1), 0);
+  }, 0);
+
   if (loading) {
     return (
       <div style={{
@@ -685,52 +731,6 @@ export default function StandaloneKdsPage({ slug = '' }) {
       </div>
     );
   }
-
-  const toggleItemCheck = (orderId, idx) => {
-    const key = `${orderId}_${idx}`;
-    setCheckedItemsMap(prev => ({
-      ...prev,
-      [key]: !prev[key]
-    }));
-  };
-
-  const handleRecallOrder = async (order) => {
-    if (!order) return;
-    setRecentlyCompleted(prev => prev.filter(o => o.id !== order.id));
-    setOrders(prev => [order, ...prev]);
-    const targetSlug = resolveCurrentSlug();
-    const token = getStoredKdsToken(targetSlug);
-    try {
-      await fetch(`/api/kitchen/orders/${order.id}/recall?slug=${encodeURIComponent(targetSlug)}`, {
-        method: 'PATCH',
-        headers: token ? { 'Authorization': `Bearer ${token}` } : {}
-      });
-      fetchOrders();
-    } catch (e) {
-      console.warn('Recall error:', e);
-    }
-  };
-
-  const aggregatedPrepItems = useMemo(() => {
-    const map = {};
-    orders.forEach(o => {
-      const items = parseItems(o.items);
-      items.forEach(it => {
-        const name = it.name || it.dish_name || 'Item';
-        const qty = Number(it.quantity || it.qty || 1);
-        const portion = it.portion ? ` (${it.portion})` : '';
-        const key = `${name}${portion}`;
-        map[key] = (map[key] || 0) + qty;
-      });
-    });
-    return Object.entries(map).map(([name, count]) => ({ name, count })).sort((a, b) => b.count - a.count);
-  }, [orders]);
-
-  const rushCount = orders.filter(o => getElapsedMins(o.created_at) >= 15).length;
-  const totalDishesCount = orders.reduce((sum, o) => {
-    const items = parseItems(o.items);
-    return sum + items.reduce((iSum, it) => iSum + Number(it.quantity || it.qty || 1), 0);
-  }, 0);
 
   return (
     <div style={{ minHeight: '100vh', background: '#070B14', color: '#F8FAFC', padding: '16px', fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif' }}>
