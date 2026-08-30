@@ -200,24 +200,26 @@ export default function AdminHeader({
           title="Notifications & Live Orders"
         >
           <Bell size={17} color="#0F172A" />
-          <span style={{
-            position: 'absolute',
-            top: '-2px',
-            right: '-2px',
-            background: '#DC2626',
-            color: '#FFFFFF',
-            fontSize: '0.58rem',
-            fontWeight: 900,
-            width: '15px',
-            height: '15px',
-            borderRadius: '50%',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            border: '1.5px solid #FFFFFF'
-          }}>
-            {pendingOrdersCount > 0 ? pendingOrdersCount : 3}
-          </span>
+          {pendingOrdersCount > 0 && (
+            <span style={{
+              position: 'absolute',
+              top: '-2px',
+              right: '-2px',
+              background: '#DC2626',
+              color: '#FFFFFF',
+              fontSize: '0.58rem',
+              fontWeight: 900,
+              width: '15px',
+              height: '15px',
+              borderRadius: '50%',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              border: '1.5px solid #FFFFFF'
+            }}>
+              {pendingOrdersCount}
+            </span>
+          )}
         </button>
 
         {/* User Avatar Circle */}

@@ -2884,7 +2884,7 @@ export default function AdminDashboard({
             setActiveTab={setActiveTab}
             restaurantInfo={restaurantInfo}
             username={username}
-            pendingOrdersCount={orders.filter(o => o.status === 'pending').length}
+            pendingOrdersCount={orders.filter(o => o.status === 'pending' || o.status === 'ordered').length}
             onLogout={onLogout}
             onOpenHelp={() => setActiveTab('support')}
             onReturnToMenu={onReturnToMenu}
@@ -2903,7 +2903,7 @@ export default function AdminDashboard({
           supportPhone={masterSupportPhone}
           activeTab={activeTab}
           setActiveTab={setActiveTab}
-          pendingOrdersCount={orders.filter(o => o.status === 'pending').length}
+          pendingOrdersCount={orders.filter(o => o.status === 'pending' || o.status === 'ordered').length}
           analyticsEnabled={isAnalyticsEnabled}
           ordersEnabled={isDirectOrderingEnabled}
         />

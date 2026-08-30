@@ -210,16 +210,18 @@ export default function AdminSidebar({
               <ShoppingBag size={17} color={isOrdersActive ? '#FFFFFF' : '#94A3B8'} />
               <span>Orders</span>
             </div>
-            <span style={{
-              background: '#EA580C',
-              color: '#FFFFFF',
-              fontSize: '0.66rem',
-              fontWeight: 900,
-              padding: '1px 7px',
-              borderRadius: '10px'
-            }}>
-              {pendingOrdersCount > 0 ? pendingOrdersCount : 12}
-            </span>
+            {pendingOrdersCount > 0 && (
+              <span style={{
+                background: '#EA580C',
+                color: '#FFFFFF',
+                fontSize: '0.66rem',
+                fontWeight: 900,
+                padding: '1px 7px',
+                borderRadius: '10px'
+              }}>
+                {pendingOrdersCount}
+              </span>
+            )}
           </button>
 
           {/* Menu (Active: Warm Caramel / Brown Pill from Reference) */}
