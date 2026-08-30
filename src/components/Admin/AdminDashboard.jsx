@@ -1680,12 +1680,13 @@ export default function AdminDashboard({
     }
     try {
       const currentSlug = propSlug || localStorage.getItem('touchqr_admin_slug') || (restaurantInfo && restaurantInfo.slug) || '';
-      let [catData, dishData, infoData, comboData, subStatusData] = await Promise.all([
+      let [catData, dishData, infoData, comboData, subStatusData, analyticsResp] = await Promise.all([
         fetchCategories({ adminView: true, token, slug: currentSlug }).catch(() => []),
         fetchDishes({ adminView: true, token, slug: currentSlug }).catch(() => []),
         fetchRestaurantInfo({ token, slug: currentSlug }).catch((err) => { console.warn('[MENU] fetchRestaurantInfo notice:', err); return null; }),
         fetchAdminCombos(token).catch(() => []),
-        fetch('/api/admin/subscription-status', { headers: { Authorization: `Bearer ${token}` } }).then(r => r.ok ? r.json() : null).catch(() => null)
+        fetch('/api/admin/subscription-status', { headers: { Authorization: `Bearer ${token}` } }).then(r => r.ok ? r.json() : null).catch(() => null),
+        fetchAdminAnalytics(token, 'all').catch(() => null)
       ]);
 
       const safeCats = Array.isArray(catData) ? catData : [];
@@ -1713,6 +1714,7 @@ export default function AdminDashboard({
       }
 
       if (subStatusData) setSubscriptionStatus(subStatusData);
+      if (analyticsResp) setAnalyticsData(analyticsResp);
       if (infoData) {
         const defaultVis = { must_try: true, combo: true, special: true, under100: true };
         setSettingsForm({
@@ -2918,9 +2920,14 @@ export default function AdminDashboard({
                 dishes={safeDishes}
                 categories={safeCategories}
                 combos={combos}
+                totalTablesCount={totalTablesCount}
+                settingsForm={settingsForm}
+                isAudioReady={isAudioReady}
+                subscriptionStatus={subscriptionStatus}
                 capabilities={tenantCaps}
                 onNavigateTab={(tab) => setActiveTab(tab)}
                 onOpenAddDish={() => setDishModalData('new')}
+                onOpenAddCategory={() => setCatModalData('new')}
                 onReturnToMenu={onReturnToMenu}
                 onNavigateToSetup={(drawer = null) => {
                   setInitialSetupDrawer(drawer);
