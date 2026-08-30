@@ -1315,14 +1315,15 @@ export default function MenuView({
               </h3>
 
               <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                {/* Segmented Toggle [ ▦ Grid ] [ ☷ Sort ] */}
+                {/* View Mode Segmented Switch [ ▦ Grid | ☰ List ] */}
                 <div style={{
                   display: 'inline-flex',
                   background: '#FFFFFF',
                   border: '1px solid #E2E8F0',
                   borderRadius: '10px',
                   padding: '3px',
-                  gap: '4px'
+                  gap: '2px',
+                  boxShadow: '0 1px 2px rgba(0,0,0,0.02)'
                 }}>
                   <button
                     onClick={() => setViewMode('grid')}
@@ -1330,38 +1331,72 @@ export default function MenuView({
                       padding: '5px 10px',
                       border: 'none',
                       borderRadius: '7px',
-                      background: viewMode === 'grid' ? '#F1F5F9' : 'transparent',
-                      color: viewMode === 'grid' ? '#0F172A' : '#64748B',
+                      background: viewMode === 'grid' ? '#261B14' : 'transparent',
+                      color: viewMode === 'grid' ? '#FFFFFF' : '#64748B',
                       cursor: 'pointer',
                       display: 'flex',
                       alignItems: 'center',
-                      gap: '4px',
+                      gap: '5px',
                       fontSize: '0.74rem',
-                      fontWeight: 800
+                      fontWeight: 800,
+                      transition: 'all 0.15s ease'
                     }}
+                    title="Grid View"
                   >
                     <LayoutGrid size={13} />
                     <span>Grid</span>
                   </button>
                   <button
-                    onClick={() => setSortBy(sortBy === 'price_asc' ? 'recent' : 'price_asc')}
+                    onClick={() => setViewMode('list')}
                     style={{
                       padding: '5px 10px',
                       border: 'none',
                       borderRadius: '7px',
-                      background: 'transparent',
-                      color: '#64748B',
+                      background: viewMode === 'list' ? '#261B14' : 'transparent',
+                      color: viewMode === 'list' ? '#FFFFFF' : '#64748B',
                       cursor: 'pointer',
                       display: 'flex',
                       alignItems: 'center',
-                      gap: '4px',
+                      gap: '5px',
                       fontSize: '0.74rem',
-                      fontWeight: 800
+                      fontWeight: 800,
+                      transition: 'all 0.15s ease'
                     }}
+                    title="List View"
                   >
                     <List size={13} />
-                    <span>Sort</span>
+                    <span>List</span>
                   </button>
+                </div>
+
+                {/* Sort Dropdown Selector */}
+                <div style={{ position: 'relative' }}>
+                  <select
+                    value={sortBy}
+                    onChange={(e) => setSortBy(e.target.value)}
+                    style={{
+                      height: '31px',
+                      padding: '0 28px 0 10px',
+                      borderRadius: '10px',
+                      border: '1px solid #E2E8F0',
+                      background: '#FFFFFF',
+                      color: '#0F172A',
+                      fontSize: '0.74rem',
+                      fontWeight: 800,
+                      cursor: 'pointer',
+                      outline: 'none',
+                      appearance: 'none',
+                      boxShadow: '0 1px 2px rgba(0,0,0,0.02)'
+                    }}
+                    title="Sort Dishes"
+                  >
+                    <option value="recent">⚡ Sort: Default</option>
+                    <option value="name_asc">🔤 Name (A to Z)</option>
+                    <option value="price_asc">💰 Price: Low to High</option>
+                    <option value="price_desc">💎 Price: High to Low</option>
+                    <option value="instock_first">🟢 In Stock First</option>
+                  </select>
+                  <SlidersHorizontal size={12} color="#64748B" style={{ position: 'absolute', right: '9px', top: '9.5px', pointerEvents: 'none' }} />
                 </div>
               </div>
             </div>
