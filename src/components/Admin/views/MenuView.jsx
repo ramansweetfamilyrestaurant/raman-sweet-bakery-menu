@@ -1412,26 +1412,32 @@ export default function MenuView({
                       }}
                     >
                       <div>
-                        {/* Image Container */}
+                        {/* Image Container with unclipped 3-Dot floating overlay */}
                         <div style={{
                           position: 'relative',
                           width: '100%',
                           height: '136px',
-                          borderRadius: '12px',
-                          background: '#F8FAFC',
-                          overflow: 'hidden',
-                          marginBottom: '8px',
-                          border: '1px solid #F1F5F9'
+                          marginBottom: '8px'
                         }}>
-                          <img
-                            src={getDishImageUrl(dish.image || dish.image_url)}
-                            alt={dish.name}
-                            style={{ width: '100%', height: '100%', objectFit: 'cover' }}
-                            onError={(e) => { e.currentTarget.src = '/images/default-dish.webp'; }}
-                          />
+                          {/* Clipped Rounded Food Image */}
+                          <div style={{
+                            width: '100%',
+                            height: '100%',
+                            borderRadius: '12px',
+                            background: '#F8FAFC',
+                            overflow: 'hidden',
+                            border: '1px solid #F1F5F9'
+                          }}>
+                            <img
+                              src={getDishImageUrl(dish.image || dish.image_url)}
+                              alt={dish.name}
+                              style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                              onError={(e) => { e.currentTarget.src = '/images/default-dish.webp'; }}
+                            />
+                          </div>
 
                           {/* Bestseller Badge or Veg Stamp */}
-                          <div style={{ position: 'absolute', top: '6px', left: '6px', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                          <div style={{ position: 'absolute', top: '6px', left: '6px', display: 'flex', alignItems: 'center', gap: '4px', zIndex: 2 }}>
                             {dish.must_try ? (
                               <span style={{
                                 background: '#D97706',
@@ -1461,10 +1467,13 @@ export default function MenuView({
                             )}
                           </div>
 
-                          {/* 3-Dot Menu */}
-                          <div style={{ position: 'absolute', top: '6px', right: '6px' }}>
+                          {/* 3-Dot Menu Container */}
+                          <div style={{ position: 'absolute', top: '6px', right: '6px', zIndex: openDishMenuId === dish.id ? 100 : 10 }}>
                             <button
-                              onClick={() => setOpenDishMenuId(openDishMenuId === dish.id ? null : dish.id)}
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                setOpenDishMenuId(openDishMenuId === dish.id ? null : dish.id);
+                              }}
                               style={{
                                 width: '26px',
                                 height: '26px',
@@ -1476,60 +1485,77 @@ export default function MenuView({
                                 alignItems: 'center',
                                 justifyContent: 'center',
                                 cursor: 'pointer',
-                                padding: 0
+                                padding: 0,
+                                boxShadow: '0 2px 5px rgba(0,0,0,0.12)'
                               }}
                               title="Actions"
                             >
                               <MoreVertical size={13} />
                             </button>
 
-                            {/* Dropdown Menu */}
+                            {/* Dropdown Menu with Backdrop */}
                             {openDishMenuId === dish.id && (
-                              <div style={{
-                                position: 'absolute',
-                                top: '30px',
-                                right: 0,
-                                background: '#FFFFFF',
-                                borderRadius: '10px',
-                                border: '1px solid #E2E8F0',
-                                boxShadow: '0 8px 24px rgba(0,0,0,0.15)',
-                                padding: '4px',
-                                zIndex: 100,
-                                minWidth: '135px'
-                              }}>
-                                <button
-                                  onClick={() => { onOpenEditDish(dish); setOpenDishMenuId(null); }}
-                                  style={{ width: '100%', textAlign: 'left', padding: '6px 10px', borderRadius: '6px', border: 'none', background: 'transparent', color: '#0F172A', fontSize: '0.74rem', fontWeight: 700, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '6px' }}
-                                >
-                                  <Edit3 size={12} />
-                                  <span>Edit</span>
-                                </button>
-                                <button
-                                  onClick={() => {
-                                    setQuickPriceDish(dish);
-                                    setQuickPriceVal({ price: dish.price || '', price_half: dish.price_half || '' });
+                              <>
+                                <div
+                                  onClick={(e) => {
+                                    e.stopPropagation();
                                     setOpenDishMenuId(null);
                                   }}
-                                  style={{ width: '100%', textAlign: 'left', padding: '6px 10px', borderRadius: '6px', border: 'none', background: 'transparent', color: '#0284C7', fontSize: '0.74rem', fontWeight: 700, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '6px' }}
-                                >
-                                  <DollarSign size={12} />
-                                  <span>Quick Price</span>
-                                </button>
-                                <button
-                                  onClick={() => { onToggleAvailability(dish.id, !isAvailable); setOpenDishMenuId(null); }}
-                                  style={{ width: '100%', textAlign: 'left', padding: '6px 10px', borderRadius: '6px', border: 'none', background: 'transparent', color: isAvailable ? '#DC2626' : '#16A34A', fontSize: '0.74rem', fontWeight: 700, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '6px' }}
-                                >
-                                  <CheckCircle2 size={12} />
-                                  <span>{isAvailable ? 'Mark Sold Out' : 'Mark In Stock'}</span>
-                                </button>
-                                <button
-                                  onClick={() => { setDeleteConfirmDish(dish); setOpenDishMenuId(null); }}
-                                  style={{ width: '100%', textAlign: 'left', padding: '6px 10px', borderRadius: '6px', border: 'none', background: 'transparent', color: '#DC2626', fontSize: '0.74rem', fontWeight: 700, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '6px' }}
-                                >
-                                  <Trash2 size={12} />
-                                  <span>Delete</span>
-                                </button>
-                              </div>
+                                  style={{
+                                    position: 'fixed',
+                                    inset: 0,
+                                    zIndex: 101,
+                                    cursor: 'default'
+                                  }}
+                                />
+
+                                <div style={{
+                                  position: 'absolute',
+                                  top: '30px',
+                                  right: 0,
+                                  background: '#FFFFFF',
+                                  borderRadius: '10px',
+                                  border: '1px solid #E2E8F0',
+                                  boxShadow: '0 10px 30px rgba(0,0,0,0.2)',
+                                  padding: '4px',
+                                  zIndex: 102,
+                                  minWidth: '145px'
+                                }}>
+                                  <button
+                                    onClick={() => { onOpenEditDish(dish); setOpenDishMenuId(null); }}
+                                    style={{ width: '100%', textAlign: 'left', padding: '7px 10px', borderRadius: '6px', border: 'none', background: 'transparent', color: '#0F172A', fontSize: '0.74rem', fontWeight: 700, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '8px' }}
+                                  >
+                                    <Edit3 size={12} color="#0F172A" />
+                                    <span>Edit</span>
+                                  </button>
+                                  <button
+                                    onClick={() => {
+                                      setQuickPriceDish(dish);
+                                      setQuickPriceVal({ price: dish.price || '', price_half: dish.price_half || '' });
+                                      setOpenDishMenuId(null);
+                                    }}
+                                    style={{ width: '100%', textAlign: 'left', padding: '7px 10px', borderRadius: '6px', border: 'none', background: 'transparent', color: '#0284C7', fontSize: '0.74rem', fontWeight: 700, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '8px' }}
+                                  >
+                                    <DollarSign size={12} color="#0284C7" />
+                                    <span>Quick Price</span>
+                                  </button>
+                                  <button
+                                    onClick={() => { onToggleAvailability(dish.id, !isAvailable); setOpenDishMenuId(null); }}
+                                    style={{ width: '100%', textAlign: 'left', padding: '7px 10px', borderRadius: '6px', border: 'none', background: 'transparent', color: isAvailable ? '#D97706' : '#16A34A', fontSize: '0.74rem', fontWeight: 700, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '8px' }}
+                                  >
+                                    <CheckCircle2 size={12} color={isAvailable ? '#D97706' : '#16A34A'} />
+                                    <span>{isAvailable ? 'Mark Sold Out' : 'Mark In Stock'}</span>
+                                  </button>
+                                  <div style={{ height: '1px', background: '#F1F5F9', margin: '2px 0' }} />
+                                  <button
+                                    onClick={() => { setDeleteConfirmDish(dish); setOpenDishMenuId(null); }}
+                                    style={{ width: '100%', textAlign: 'left', padding: '7px 10px', borderRadius: '6px', border: 'none', background: 'transparent', color: '#DC2626', fontSize: '0.74rem', fontWeight: 700, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '8px' }}
+                                  >
+                                    <Trash2 size={12} color="#DC2626" />
+                                    <span>Delete</span>
+                                  </button>
+                                </div>
+                              </>
                             )}
                           </div>
                         </div>
