@@ -2123,40 +2123,411 @@ export default function MenuView({
         </div>
       ) : activeSubTab === 'combos' ? (
         /* ========================================================
-            COMBOS MANAGEMENT WORKSPACE (WHEN activeSubTab === 'combos')
+            UPGRADED VALUE MEAL COMBOS WORKSPACE
            ======================================================== */
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', background: '#FFFFFF', borderRadius: '16px', border: '1px solid #E2E8F0', padding: '14px 18px', flexWrap: 'wrap', gap: '10px' }}>
-            <div>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                <span style={{ fontSize: '1.25rem' }}>🍱</span>
-                <h3 style={{ fontSize: '1rem', fontWeight: 900, color: '#0F172A', margin: 0 }}>
-                  Value Meal Combos ({safeCombos.length})
-                </h3>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+          {/* Combos Workspace Header Banner */}
+          <div style={{
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            background: 'linear-gradient(135deg, #FAF5FF 0%, #FFFFFF 100%)',
+            borderRadius: '18px',
+            border: '1.5px solid #F3E8FF',
+            padding: '16px 20px',
+            flexWrap: 'wrap',
+            gap: '12px',
+            boxShadow: '0 2px 6px rgba(147, 51, 234, 0.04)'
+          }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+              <div style={{
+                width: '44px',
+                height: '44px',
+                borderRadius: '12px',
+                background: '#F3E8FF',
+                color: '#9333EA',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                fontSize: '1.4rem',
+                flexShrink: 0
+              }}>
+                🍱
               </div>
-              <span style={{ fontSize: '0.74rem', color: '#64748B', display: 'block', marginTop: '2px' }}>
-                Multi-dish bundles to boost Average Order Value
-              </span>
+              <div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                  <h3 style={{ fontSize: '1.05rem', fontWeight: 900, color: '#0F172A', margin: 0 }}>
+                    Value Meal Combos
+                  </h3>
+                  <span style={{
+                    background: '#9333EA',
+                    color: '#FFFFFF',
+                    fontSize: '0.64rem',
+                    fontWeight: 900,
+                    padding: '2px 8px',
+                    borderRadius: '10px'
+                  }}>
+                    {safeCombos.length} Active
+                  </span>
+                </div>
+                <span style={{ fontSize: '0.74rem', color: '#64748B', display: 'block', marginTop: '2px' }}>
+                  Multi-dish bundles to boost Average Order Value & customer savings.
+                </span>
+              </div>
             </div>
-            <button onClick={onOpenAddCombo} style={{ padding: '9px 18px', borderRadius: '10px', background: '#0A2315', color: '#FFFFFF', fontSize: '0.80rem', fontWeight: 800, border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '6px' }}>
-              <Package size={15} color="#C084FC" />
+
+            <button
+              onClick={onOpenAddCombo}
+              disabled={comboQuota.isAtLimit}
+              style={{
+                padding: '10px 20px',
+                borderRadius: '10px',
+                background: comboQuota.isAtLimit ? '#94A3B8' : '#0A2315',
+                color: '#FFFFFF',
+                fontSize: '0.82rem',
+                fontWeight: 800,
+                border: 'none',
+                cursor: comboQuota.isAtLimit ? 'not-allowed' : 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '8px',
+                boxShadow: '0 3px 10px rgba(10,35,21,0.2)'
+              }}
+            >
+              <Plus size={16} color="#FFFFFF" strokeWidth={2.5} />
               <span>+ Add Combo</span>
             </button>
           </div>
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: '14px' }}>
-            {safeCombos.map(combo => (
-              <div key={combo.id} style={{ background: '#FFFFFF', borderRadius: '16px', border: '1px solid #E2E8F0', padding: '16px', display: 'flex', flexDirection: 'column', justifyContent: 'space-between', gap: '12px', boxShadow: '0 1px 3px rgba(0,0,0,0.02)' }}>
-                <div>
-                  <h4 style={{ fontSize: '0.96rem', fontWeight: 800, color: '#0F172A', margin: '0 0 4px 0' }}>{combo.name}</h4>
-                  <div style={{ fontSize: '1.15rem', fontWeight: 900, color: '#0F172A', marginTop: '6px' }}>{curr}{formatPriceNumber(combo.price)}</div>
-                </div>
-                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: '6px', borderTop: '1px solid #F1F5F9', paddingTop: '10px' }}>
-                  <button onClick={() => onOpenEditCombo(combo)} style={{ padding: '6px 12px', borderRadius: '8px', border: '1px solid #E2E8F0', background: '#F8FAFC', color: '#0F172A', fontSize: '0.74rem', fontWeight: 700, cursor: 'pointer' }}>Edit</button>
-                  <button onClick={() => setDeleteConfirmCombo(combo)} style={{ padding: '6px 8px', borderRadius: '8px', border: '1px solid #FEE2E2', background: '#FFF5F5', color: '#DC2626', cursor: 'pointer' }}><Trash2 size={13} /></button>
-                </div>
+
+          {/* Combos Empty State */}
+          {safeCombos.length === 0 ? (
+            <div style={{
+              background: '#FFFFFF',
+              borderRadius: '18px',
+              border: '1px solid #E2E8F0',
+              padding: '48px 20px',
+              textAlign: 'center'
+            }}>
+              <div style={{ width: '56px', height: '56px', borderRadius: '16px', background: '#FAF5FF', color: '#9333EA', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1.8rem', margin: '0 auto 12px auto' }}>
+                🍱
               </div>
-            ))}
-          </div>
+              <h3 style={{ fontSize: '1.05rem', fontWeight: 900, color: '#0F172A', margin: '0 0 6px 0' }}>No combo meals created yet</h3>
+              <p style={{ fontSize: '0.78rem', color: '#64748B', margin: '0 0 18px 0', maxWidth: '380px', marginLeft: 'auto', marginRight: 'auto' }}>
+                Bundle popular dishes together with special pricing to increase average ticket size.
+              </p>
+              <button
+                onClick={onOpenAddCombo}
+                style={{ padding: '10px 20px', borderRadius: '10px', background: '#0A2315', color: '#FFFFFF', border: 'none', fontSize: '0.80rem', fontWeight: 800, cursor: 'pointer' }}
+              >
+                + Create First Combo
+              </button>
+            </div>
+          ) : (
+            /* Combos Grid */
+            <div style={{
+              display: 'grid',
+              gridTemplateColumns: 'repeat(auto-fill, minmax(320px, 1fr))',
+              gap: '16px'
+            }}>
+              {safeCombos.map(combo => {
+                let parsedItems = [];
+                try {
+                  parsedItems = typeof combo.items === 'string' ? JSON.parse(combo.items) : (Array.isArray(combo.items) ? combo.items : []);
+                } catch {
+                  parsedItems = [];
+                }
+                const originalTotal = parsedItems.reduce((sum, item) => sum + (Number(item.original_price || item.price || 0) * Number(item.qty || 1)), 0);
+                const comboPrice = Number(combo.price) || 0;
+                const hasSavings = originalTotal > comboPrice;
+                const savingsAmount = hasSavings ? originalTotal - comboPrice : 0;
+                const isAvailable = combo.available !== 0 && combo.available !== false && combo.is_available !== false;
+                const comboImg = combo.image || combo.image_url;
+
+                return (
+                  <div
+                    key={combo.id}
+                    style={{
+                      background: '#FFFFFF',
+                      borderRadius: '18px',
+                      border: '1px solid #E2E8F0',
+                      overflow: 'hidden',
+                      display: 'flex',
+                      flexDirection: 'column',
+                      justifyContent: 'space-between',
+                      boxShadow: '0 2px 8px rgba(0,0,0,0.03)',
+                      transition: 'all 0.16s ease',
+                      opacity: isAvailable ? 1 : 0.75
+                    }}
+                  >
+                    {/* Top: Image / Banner & Badges */}
+                    <div style={{
+                      position: 'relative',
+                      width: '100%',
+                      height: '140px',
+                      background: 'linear-gradient(135deg, #FAF5FF 0%, #F3E8FF 100%)',
+                      overflow: 'hidden'
+                    }}>
+                      {comboImg ? (
+                        <img
+                          src={resolveImageUrl(comboImg)}
+                          alt={combo.name}
+                          style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                          onError={(e) => { e.currentTarget.style.display = 'none'; }}
+                        />
+                      ) : (
+                        <div style={{
+                          width: '100%',
+                          height: '100%',
+                          display: 'flex',
+                          flexDirection: 'column',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          gap: '6px',
+                          color: '#9333EA'
+                        }}>
+                          <div style={{
+                            width: '52px',
+                            height: '52px',
+                            borderRadius: '14px',
+                            background: 'rgba(147, 51, 234, 0.12)',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            fontSize: '1.6rem'
+                          }}>
+                            🍱
+                          </div>
+                          <span style={{ fontSize: '0.70rem', fontWeight: 800, color: '#7E22CE', letterSpacing: '0.04em', textTransform: 'uppercase' }}>
+                            Value Meal Bundle
+                          </span>
+                        </div>
+                      )}
+
+                      {/* Top Badges */}
+                      <div style={{
+                        position: 'absolute',
+                        top: '8px',
+                        left: '8px',
+                        right: '8px',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'space-between',
+                        gap: '6px',
+                        zIndex: 2
+                      }}>
+                        {combo.badge ? (
+                          <span style={{
+                            background: '#9333EA',
+                            color: '#FFFFFF',
+                            fontSize: '0.62rem',
+                            fontWeight: 800,
+                            padding: '2.5px 8px',
+                            borderRadius: '6px',
+                            boxShadow: '0 2px 6px rgba(147, 51, 234, 0.35)',
+                            textTransform: 'uppercase',
+                            letterSpacing: '0.03em'
+                          }}>
+                            ⭐ {combo.badge}
+                          </span>
+                        ) : hasSavings ? (
+                          <span style={{
+                            background: '#16A34A',
+                            color: '#FFFFFF',
+                            fontSize: '0.62rem',
+                            fontWeight: 800,
+                            padding: '2.5px 8px',
+                            borderRadius: '6px',
+                            boxShadow: '0 2px 6px rgba(22, 163, 74, 0.35)'
+                          }}>
+                            ⚡ VALUE PACK
+                          </span>
+                        ) : <span />}
+
+                        <span style={{
+                          background: isAvailable ? 'rgba(220, 252, 231, 0.95)' : 'rgba(254, 226, 226, 0.95)',
+                          color: isAvailable ? '#15803D' : '#DC2626',
+                          border: `1px solid ${isAvailable ? '#BBF7D0' : '#FECACA'}`,
+                          fontSize: '0.62rem',
+                          fontWeight: 800,
+                          padding: '2px 7px',
+                          borderRadius: '6px',
+                          backdropFilter: 'blur(4px)'
+                        }}>
+                          {isAvailable ? 'In Stock' : 'Sold Out'}
+                        </span>
+                      </div>
+                    </div>
+
+                    {/* Middle: Title, Description & Included Items Chips */}
+                    <div style={{ padding: '14px', flex: 1, display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                      <div>
+                        <h4 style={{
+                          fontSize: '1rem',
+                          fontWeight: 900,
+                          color: '#0F172A',
+                          margin: '0 0 4px 0',
+                          lineHeight: 1.25
+                        }}>
+                          {combo.name}
+                        </h4>
+                        {combo.description && (
+                          <p style={{
+                            fontSize: '0.74rem',
+                            color: '#64748B',
+                            margin: 0,
+                            lineHeight: 1.35,
+                            display: '-webkit-box',
+                            WebkitLineClamp: 2,
+                            WebkitBoxOrient: 'vertical',
+                            overflow: 'hidden'
+                          }}>
+                            {combo.description}
+                          </p>
+                        )}
+                      </div>
+
+                      {/* Included Items Container */}
+                      {parsedItems.length > 0 && (
+                        <div style={{
+                          background: '#F8FAFC',
+                          border: '1px solid #F1F5F9',
+                          borderRadius: '12px',
+                          padding: '8px 10px',
+                          display: 'flex',
+                          flexDirection: 'column',
+                          gap: '4px'
+                        }}>
+                          <div style={{ fontSize: '0.64rem', color: '#64748B', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.04em' }}>
+                            Includes {parsedItems.length} {parsedItems.length === 1 ? 'Item' : 'Items'}:
+                          </div>
+                          <div style={{ display: 'flex', flexWrap: 'wrap', gap: '4px' }}>
+                            {parsedItems.map((item, idx) => (
+                              <span
+                                key={idx}
+                                style={{
+                                  fontSize: '0.68rem',
+                                  color: '#334155',
+                                  background: '#FFFFFF',
+                                  border: '1px solid #E2E8F0',
+                                  borderRadius: '6px',
+                                  padding: '2px 6px',
+                                  fontWeight: 700,
+                                  display: 'inline-flex',
+                                  alignItems: 'center',
+                                  gap: '3px'
+                                }}
+                              >
+                                <span style={{ color: '#9333EA', fontWeight: 800 }}>{item.qty || 1}x</span>
+                                <span>{item.dish_name || item.name || 'Dish'}</span>
+                                {item.portion && item.portion !== 'full' && (
+                                  <span style={{ fontSize: '0.60rem', color: '#64748B' }}>({item.portion})</span>
+                                )}
+                              </span>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+
+                      {/* Pricing Row */}
+                      <div style={{ display: 'flex', alignItems: 'baseline', gap: '8px', marginTop: 'auto', paddingTop: '4px' }}>
+                        <strong style={{ fontSize: '1.25rem', fontWeight: 900, color: '#0F172A', lineHeight: 1 }}>
+                          {curr}{formatPriceNumber(comboPrice)}
+                        </strong>
+                        {hasSavings && (
+                          <>
+                            <span style={{ fontSize: '0.80rem', color: '#94A3B8', textDecoration: 'line-through', fontWeight: 600 }}>
+                              {curr}{formatPriceNumber(originalTotal)}
+                            </span>
+                            <span style={{
+                              fontSize: '0.68rem',
+                              color: '#15803D',
+                              background: '#DCFCE7',
+                              border: '1px solid #BBF7D0',
+                              fontWeight: 800,
+                              padding: '1px 6px',
+                              borderRadius: '6px'
+                            }}>
+                              Save {curr}{formatPriceNumber(savingsAmount)}
+                            </span>
+                          </>
+                        )}
+                      </div>
+                    </div>
+
+                    {/* Footer: Quick Stock Toggle + Edit & Delete Actions */}
+                    <div style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'space-between',
+                      padding: '10px 14px',
+                      borderTop: '1px solid #F1F5F9',
+                      background: '#FAFAFA'
+                    }}>
+                      <button
+                        onClick={() => onToggleComboAvailability && onToggleComboAvailability(combo.id, !isAvailable)}
+                        style={{
+                          padding: '5px 10px',
+                          borderRadius: '7px',
+                          border: `1px solid ${isAvailable ? '#C6F6D5' : '#FECACA'}`,
+                          background: isAvailable ? '#E6F9EE' : '#FEE2E2',
+                          color: isAvailable ? '#15803D' : '#DC2626',
+                          fontSize: '0.70rem',
+                          fontWeight: 800,
+                          cursor: 'pointer',
+                          display: 'inline-flex',
+                          alignItems: 'center',
+                          gap: '4px'
+                        }}
+                      >
+                        <span style={{ width: '5px', height: '5px', borderRadius: '50%', backgroundColor: isAvailable ? '#15803D' : '#DC2626' }} />
+                        <span>{isAvailable ? 'In Stock' : 'Sold Out'}</span>
+                      </button>
+
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                        <button
+                          onClick={() => onOpenEditCombo(combo)}
+                          style={{
+                            padding: '6px 12px',
+                            borderRadius: '8px',
+                            border: '1px solid #CBD5E1',
+                            background: '#FFFFFF',
+                            color: '#0F172A',
+                            fontSize: '0.74rem',
+                            fontWeight: 800,
+                            cursor: 'pointer',
+                            display: 'inline-flex',
+                            alignItems: 'center',
+                            gap: '4px',
+                            boxShadow: '0 1px 2px rgba(0,0,0,0.03)'
+                          }}
+                        >
+                          <Edit3 size={12} color="#0F172A" />
+                          <span>Edit</span>
+                        </button>
+                        <button
+                          onClick={() => setDeleteConfirmCombo(combo)}
+                          style={{
+                            padding: '6px 8px',
+                            borderRadius: '8px',
+                            border: '1px solid #FEE2E2',
+                            background: '#FFF5F5',
+                            color: '#DC2626',
+                            cursor: 'pointer',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center'
+                          }}
+                          title="Delete Combo"
+                        >
+                          <Trash2 size={13} />
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          )}
         </div>
       ) : null}
 
