@@ -3006,6 +3006,8 @@ router.get('/analytics', authenticateToken, requireActiveSubscription, async (re
     const growthPercentage = prevMonthSales > 0 ? parseFloat((((monthlySales - prevMonthSales) / prevMonthSales) * 100).toFixed(1)) : 0;
 
     const activeDishMap = selectedPeriod === 'all' ? allTimeDishSalesMap : periodDishSalesMap;
+    const distinctDishesCount = Object.keys(activeDishMap).length;
+    const totalItemsSold = Object.values(activeDishMap).reduce((sum, d) => sum + Number(d.quantity || 0), 0);
     const topDishes = Object.values(activeDishMap)
       .sort((a, b) => b.quantity - a.quantity)
       .slice(0, 10);
@@ -3038,6 +3040,8 @@ router.get('/analytics', authenticateToken, requireActiveSubscription, async (re
       period_aov: periodAov,
       period_payment_methods: selectedPeriod === 'all' ? allTimePaymentMethods : periodPaymentMethods,
       category_sales: categorySales,
+      distinct_dishes_count: distinctDishesCount,
+      total_items_sold: totalItemsSold,
       today_sales: todaySales,
       today_revenue: todaySales,
       today_orders: todayOrders,
@@ -3054,6 +3058,7 @@ router.get('/analytics', authenticateToken, requireActiveSubscription, async (re
       available_months: availableMonths,
       selected_period: selectedPeriod,
       top_dishes: topDishes,
+      daily_chart_data: dailyChartData,
       daily_chart: dailyChartData,
       summarized_days_count: summaries.length,
       last_updated: new Date().toISOString(),

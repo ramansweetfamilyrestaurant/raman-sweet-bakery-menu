@@ -81,11 +81,12 @@ export default function AnalyticsView({
 
   // 2. Dynamic Daily Sales Chart Data Points (SVG Area & Line)
   const rawChartData = useMemo(() => {
-    if (Array.isArray(analyticsData?.daily_chart_data) && analyticsData.daily_chart_data.length > 0) {
-      return analyticsData.daily_chart_data;
+    const list = analyticsData?.daily_chart_data || analyticsData?.daily_chart;
+    if (Array.isArray(list) && list.length > 0) {
+      return list;
     }
     return [{ date: 'Today', displayDate: 'Today', sales: totalSales }];
-  }, [analyticsData?.daily_chart_data, totalSales]);
+  }, [analyticsData?.daily_chart_data, analyticsData?.daily_chart, totalSales]);
 
   const maxSales = useMemo(() => {
     const max = Math.max(...rawChartData.map(d => Number(d.sales || 0)));
@@ -516,7 +517,7 @@ export default function AnalyticsView({
             </div>
 
             <div style={{ display: 'flex', alignItems: 'center', gap: '4px', marginTop: '6px' }}>
-              <span style={{ fontSize: '0.70rem', color: '#0284C7', fontWeight: 800 }}>Settled</span>
+              <span style={{ fontSize: '0.70rem', color: '#0284C7', fontWeight: 800 }}>Orders</span>
               <span style={{ fontSize: '0.62rem', color: '#94A3B8' }}>in {activeDateRangeLabel}</span>
             </div>
           </div>
@@ -620,11 +621,11 @@ export default function AnalyticsView({
             </div>
 
             <div style={{ fontSize: '1.45rem', fontWeight: 900, color: '#0F172A', letterSpacing: '-0.02em', lineHeight: 1.1 }}>
-              {topDishesList.length}
+              {Number(analyticsData?.distinct_dishes_count ?? 0)}
             </div>
 
             <div style={{ display: 'flex', alignItems: 'center', gap: '4px', marginTop: '6px' }}>
-              <span style={{ fontSize: '0.70rem', color: '#16A34A', fontWeight: 800 }}>{topDishesList.reduce((sum, d) => sum + d.qty, 0)} items</span>
+              <span style={{ fontSize: '0.70rem', color: '#16A34A', fontWeight: 800 }}>{Number(analyticsData?.total_items_sold ?? 0).toLocaleString('en-IN')} items</span>
               <span style={{ fontSize: '0.62rem', color: '#94A3B8' }}>ordered total</span>
             </div>
           </div>
@@ -859,7 +860,7 @@ export default function AnalyticsView({
                   <div style={{ fontSize: '0.86rem', fontWeight: 900, color: '#0F172A', lineHeight: 1.1 }}>
                     {currencySymbol}{paymentAnalytics.totalAmt.toLocaleString('en-IN')}
                   </div>
-                  <span style={{ fontSize: '0.58rem', color: '#64748B', fontWeight: 600 }}>Total Settled</span>
+                  <span style={{ fontSize: '0.58rem', color: '#64748B', fontWeight: 600 }}>Total Sales</span>
                 </div>
               </div>
 
