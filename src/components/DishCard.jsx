@@ -2,6 +2,7 @@ import React from 'react';
 import { ChevronRight } from 'lucide-react';
 import { getDishImageUrl } from '../utils/imageHelper';
 import { getCurrencySymbol, formatPriceNumber } from '../utils/currencyHelper';
+import { triggerHaptic } from '../utils/haptics';
 
 export default function DishCard({ dish, onClick, onAddToCart, currencySymbol = '₹', lang = 'en', filtersVisibility }) {
   const symbol = getCurrencySymbol(currencySymbol);
@@ -19,7 +20,10 @@ export default function DishCard({ dish, onClick, onAddToCart, currencySymbol = 
 
   return (
     <article 
-      onClick={() => onClick(dish)}
+      onClick={() => {
+        triggerHaptic('light');
+        onClick(dish);
+      }}
       style={{
         background: 'var(--theme-card-bg, var(--bg-card, #FFFFFF))',
         borderRadius: 'var(--radius-md)',
@@ -57,6 +61,7 @@ export default function DishCard({ dish, onClick, onAddToCart, currencySymbol = 
           src={imageSrc} 
           alt={dish.name}
           loading="lazy"
+          decoding="async"
           onError={(e) => {
             e.currentTarget.src = '/images/default-dish.webp';
           }}
@@ -358,6 +363,7 @@ export default function DishCard({ dish, onClick, onAddToCart, currencySymbol = 
                   <button
                     onClick={(e) => {
                       e.stopPropagation();
+                      triggerHaptic('medium');
                       onAddToCart(dish, 'half');
                     }}
                     style={{
@@ -380,6 +386,7 @@ export default function DishCard({ dish, onClick, onAddToCart, currencySymbol = 
                   <button
                     onClick={(e) => {
                       e.stopPropagation();
+                      triggerHaptic('medium');
                       onAddToCart(dish, 'full');
                     }}
                     style={{
@@ -404,6 +411,7 @@ export default function DishCard({ dish, onClick, onAddToCart, currencySymbol = 
                 <button
                   onClick={(e) => {
                     e.stopPropagation();
+                    triggerHaptic('medium');
                     onAddToCart(dish, 'full');
                   }}
                   style={{

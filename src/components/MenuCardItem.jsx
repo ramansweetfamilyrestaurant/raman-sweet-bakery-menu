@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { getDishImageUrl } from '../utils/imageHelper';
 import { getCurrencySymbol, formatPriceNumber } from '../utils/currencyHelper';
+import { triggerHaptic } from '../utils/haptics';
 
 export default function MenuCardItem({ dish, lang, onClick, onAddToCart, currencySymbol, filtersVisibility }) {
   const symbol = getCurrencySymbol(currencySymbol);
@@ -43,7 +44,13 @@ export default function MenuCardItem({ dish, lang, onClick, onAddToCart, currenc
       }}
     >
       {/* Left Details */}
-      <div style={{ flexGrow: 1, minWidth: 0, cursor: 'pointer' }} onClick={() => onClick(dish)}>
+      <div 
+        style={{ flexGrow: 1, minWidth: 0, cursor: 'pointer' }} 
+        onClick={() => {
+          triggerHaptic('light');
+          onClick(dish);
+        }}
+      >
         {/* Dish Title with Veg Icon */}
         <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '2px' }}>
           {/* Dynamic FSSAI Dietary Symbol (Veg 🟢 / Non-Veg 🔴 / Egg 🟡) */}
@@ -113,7 +120,7 @@ export default function MenuCardItem({ dish, lang, onClick, onAddToCart, currenc
             margin: 0,
             lineHeight: 1.25,
             whiteSpace: 'normal',
-            wordBreak: 'keep-all'
+            wordBreak: 'break-word'
           }}>
             {displayName}
           </h4>
@@ -148,152 +155,156 @@ export default function MenuCardItem({ dish, lang, onClick, onAddToCart, currenc
               let border = '1px solid #D97706';
               let icon = '🏷️';
               
-              if (lower.includes('bestseller')) {
-                bg = 'linear-gradient(135deg, #FFFBEB 0%, #FEF3C7 100%)';
-                color = '#B45309';
-                border = '1px solid #F59E0B';
-                icon = '🔥';
-              } else if (lower.includes('must try') || lower.includes('musttry')) {
-                if (filtersVisibility?.must_try === false) return null;
+              if (lower.includes('must') || lower.includes('try')) {
                 bg = 'linear-gradient(135deg, #FEF2F2 0%, #FEE2E2 100%)';
-                color = '#B91C1C';
-                border = '1px solid #EF4444';
+                color = '#991B1B';
+                border = '1px solid #DC2626';
+                icon = '🔥';
+              } else if (lower.includes('best') || lower.includes('seller') || lower.includes('star')) {
+                bg = 'linear-gradient(135deg, #FEF3C7 0%, #FDE68A 100%)';
+                color = '#78350F';
+                border = '1px solid #D97706';
                 icon = '⭐';
-              } else if (lower.includes('special')) {
-                if (filtersVisibility?.special === false) return null;
-                bg = 'linear-gradient(135deg, #EEF2FF 0%, #E0E7FF 100%)';
-                color = '#4338CA';
-                border = '1px solid #6366F1';
-                icon = '✨';
-              } else if (lower.includes('combo')) {
-                if (filtersVisibility?.combo === false) return null;
-                bg = 'linear-gradient(135deg, #F3E8FF 0%, #E9D5FF 100%)';
-                color = '#6B21A8';
-                border = '1px solid #A855F7';
-                icon = '🍕';
-              } else if (lower.includes('100') || lower.includes('under')) {
-                if (filtersVisibility?.under100 === false) return null;
+              } else if (lower.includes('chef') || lower.includes('special')) {
                 bg = 'linear-gradient(135deg, #F0FDF4 0%, #DCFCE7 100%)';
-                color = '#15803D';
-                border = '1px solid #22C55E';
-                icon = '⚡';
+                color = '#14532D';
+                border = '1px solid #16A34A';
+                icon = '👨‍🍳';
+              } else if (lower.includes('sweet') || lower.includes('sugar') || lower.includes('mithai')) {
+                bg = 'linear-gradient(135deg, #FDF2F8 0%, #FCE7F3 100%)';
+                color = '#831843';
+                border = '1px solid #DB2777';
+                icon = '🍬';
               }
 
               return (
                 <span style={{
-                  fontSize: '0.64rem',
-                  fontWeight: 900,
-                  color: color,
                   background: bg,
+                  color: color,
                   border: border,
-                  padding: '2px 7px',
                   borderRadius: 'var(--radius-pill)',
-                  whiteSpace: 'nowrap',
+                  padding: '2px 7px',
+                  fontSize: '0.62rem',
+                  fontWeight: 900,
+                  boxShadow: '0 1px 4px rgba(0,0,0,0.08)',
                   display: 'inline-flex',
                   alignItems: 'center',
-                  gap: '3px',
-                  flexShrink: 0
+                  gap: '2px'
                 }}>
-                  <span>{icon}</span>
-                  <span>{dish.badge}</span>
+                  {icon} {dish.badge}
                 </span>
               );
             })()}
-
-            {!isAvailable && (
-              <span style={{ fontSize: '0.65rem', fontWeight: 800, color: '#DC2626', background: '#FEE2E2', padding: '1px 6px', borderRadius: '4px' }}>
-                Sold Out
-              </span>
-            )}
           </div>
         )}
 
-        {/* Description snippet */}
-        {dish.description && (
+        {/* Short description */}
+        {(dish.description || dish.description_hi) && (
           <p style={{
-            fontSize: '0.74rem',
+            margin: '4px 0 0 0',
+            fontSize: '0.72rem',
             color: 'var(--text-muted)',
-            margin: '2px 0 0 0',
-            lineHeight: 1.25,
+            lineHeight: 1.35,
             display: '-webkit-box',
-            WebkitLineClamp: 1,
+            WebkitLineClamp: 2,
             WebkitBoxOrient: 'vertical',
             overflow: 'hidden'
           }}>
-            {dish.description}
+            {(lang === 'hi' && dish.description_hi) ? dish.description_hi : dish.description}
           </p>
         )}
-      </div>
 
-      {/* Right Side: Price Pills + Image */}
-      <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexShrink: 0 }}>
-
-        {/* Price Area */}
-        {hasHalfPrice ? (
-          /* Half/Full Price Pills — Original horizontal pill buttons */
-          <div 
-            style={{ display: 'flex', gap: '4px' }}
-            onClick={(e) => e.stopPropagation()}
-          >
+        {/* Portion Selector Pill (Half vs Full) */}
+        {hasHalfPrice && (
+          <div style={{ display: 'flex', alignItems: 'center', gap: '4px', marginTop: '6px' }}>
             <button
-              className="price-pill-btn"
-              onClick={() => setPortionMode('half')}
+              type="button"
+              onClick={(e) => {
+                e.stopPropagation();
+                triggerHaptic('light');
+                setPortionMode('half');
+              }}
               style={{
-                fontSize: '0.74rem',
+                fontSize: '0.66rem',
                 fontWeight: 800,
-                padding: '4px 8px',
-                minHeight: 'unset',
+                padding: '2px 8px',
                 borderRadius: 'var(--radius-pill)',
                 background: portionMode === 'half' ? 'var(--primary-emerald)' : 'var(--bg-secondary)',
                 color: portionMode === 'half' ? '#FFFFFF' : 'var(--text-muted)',
-                border: portionMode === 'half' ? '1.5px solid var(--primary-emerald)' : '1.5px solid var(--border-light)',
-                cursor: 'pointer',
-                transition: 'all 0.2s ease',
-                whiteSpace: 'nowrap',
-                lineHeight: 1.2
+                border: portionMode === 'half' ? '1px solid var(--primary-emerald)' : '1px solid var(--border-light)',
+                cursor: 'pointer'
               }}
             >
-              Half {symbol}{halfPriceNum}
+              {dish.portion_half_label || 'Half'}
             </button>
             <button
-              className="price-pill-btn"
-              onClick={() => setPortionMode('full')}
+              type="button"
+              onClick={(e) => {
+                e.stopPropagation();
+                triggerHaptic('light');
+                setPortionMode('full');
+              }}
               style={{
-                fontSize: '0.74rem',
+                fontSize: '0.66rem',
                 fontWeight: 800,
-                padding: '4px 8px',
-                minHeight: 'unset',
+                padding: '2px 8px',
                 borderRadius: 'var(--radius-pill)',
                 background: portionMode === 'full' ? 'var(--primary-emerald)' : 'var(--bg-secondary)',
                 color: portionMode === 'full' ? '#FFFFFF' : 'var(--text-muted)',
-                border: portionMode === 'full' ? '1.5px solid var(--primary-emerald)' : '1.5px solid var(--border-light)',
-                cursor: 'pointer',
-                transition: 'all 0.2s ease',
-                whiteSpace: 'nowrap',
-                lineHeight: 1.2
+                border: portionMode === 'full' ? '1px solid var(--primary-emerald)' : '1px solid var(--border-light)',
+                cursor: 'pointer'
               }}
             >
-              Full {symbol}{formatPriceNumber(dish.offer_price !== undefined && dish.offer_price !== null && Number(dish.offer_price) < fullPriceNum ? dish.offer_price : fullPriceNum)}
+              {dish.portion_full_label || 'Full'}
             </button>
           </div>
+        )}
+      </div>
+
+      {/* Right Pricing & Thumbnail */}
+      <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexShrink: 0 }}>
+        {/* Pricing Pill */}
+        {hasHalfPrice ? (
+          <div 
+            style={{
+              fontSize: '0.86rem',
+              fontWeight: 900,
+              padding: '3px 10px',
+              borderRadius: 'var(--radius-pill)',
+              background: 'var(--theme-badge-bg, var(--bg-card-soft, #FFFFFF))',
+              color: 'var(--theme-price-color, var(--text-dark))',
+              border: '1.5px solid var(--theme-card-border, var(--border-light))',
+              whiteSpace: 'nowrap',
+              lineHeight: 1.2,
+              boxShadow: 'var(--theme-shadow, 0 1px 4px rgba(0,0,0,0.06))',
+              cursor: 'pointer'
+            }}
+            onClick={() => {
+              triggerHaptic('light');
+              onClick(dish);
+            }}
+          >
+            {symbol}{formatPriceNumber(portionMode === 'half' ? halfPriceNum : fullPriceNum)}
+          </div>
         ) : (
-          /* Single Price Pill — Offer Dual Price or Standard White Oval Pill */
-          dish.offer_price !== undefined && dish.offer_price !== null && Number(dish.offer_price) < fullPriceNum ? (
+          dish.offer_price !== undefined && dish.offer_price !== null ? (
             <div 
-              style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: '1px', cursor: 'pointer' }}
-              onClick={() => onClick(dish)}
+              style={{
+                display: 'flex',
+                flexDirection: 'column',
+                alignItems: 'flex-end',
+                cursor: 'pointer'
+              }}
+              onClick={() => {
+                triggerHaptic('light');
+                onClick(dish);
+              }}
             >
               <div style={{
-                fontSize: '0.86rem',
+                fontSize: '0.88rem',
                 fontWeight: 900,
-                padding: '2px 8px',
-                borderRadius: 'var(--radius-pill)',
-                background: '#ECFDF5',
-                color: '#064E3B',
-                border: '1.5px solid #A7F3D0',
-                whiteSpace: 'nowrap',
-                lineHeight: 1.2,
-                boxShadow: '0 1px 4px rgba(6, 78, 59, 0.12)'
+                color: '#059669',
+                lineHeight: 1.1
               }}>
                 {symbol}{formatPriceNumber(dish.offer_price)}
               </div>
@@ -322,7 +333,10 @@ export default function MenuCardItem({ dish, lang, onClick, onAddToCart, currenc
                 boxShadow: 'var(--theme-shadow, 0 1px 4px rgba(0,0,0,0.06))',
                 cursor: 'pointer'
               }}
-              onClick={() => onClick(dish)}
+              onClick={() => {
+                triggerHaptic('light');
+                onClick(dish);
+              }}
             >
               {symbol}{formatPriceNumber(fullPriceNum)}
             </div>
@@ -332,7 +346,10 @@ export default function MenuCardItem({ dish, lang, onClick, onAddToCart, currenc
         {/* Dish Thumbnail & + Add WhatsApp Button */}
         <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '4px' }}>
           <div 
-            onClick={() => onClick(dish)}
+            onClick={() => {
+              triggerHaptic('light');
+              onClick(dish);
+            }}
             style={{
               width: '46px',
               height: '46px',
@@ -350,6 +367,8 @@ export default function MenuCardItem({ dish, lang, onClick, onAddToCart, currenc
             <img
               src={imageSrc}
               alt={displayName}
+              loading="lazy"
+              decoding="async"
               style={{ width: '100%', height: '100%', objectFit: 'cover' }}
               onError={(e) => { e.currentTarget.src = '/images/default-dish.webp'; }}
             />
@@ -359,6 +378,7 @@ export default function MenuCardItem({ dish, lang, onClick, onAddToCart, currenc
             <button
               onClick={(e) => {
                 e.stopPropagation();
+                triggerHaptic('medium');
                 onAddToCart(dish, hasHalfPrice ? portionMode : 'full');
               }}
               style={{

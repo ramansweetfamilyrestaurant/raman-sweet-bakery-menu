@@ -20,6 +20,7 @@ import CategoryImage from './components/CategoryImage';
 import { isValidQrTokenFormat, normalizeSpaceType, normalizeSpaceNumber } from './utils/qrSecurity';
 import { resolveTheme, DEFAULT_THEME } from './constants/themes';
 import { getCurrencySymbol, formatPriceNumber, formatPrice } from './utils/currencyHelper';
+import { triggerHaptic } from './utils/haptics';
 
 // Robust Lazy Loading with automatic retry on new production deploys
 const lazyWithRetry = (componentImport) =>
@@ -287,6 +288,20 @@ export default function App() {
   // Language State ('en' or 'hi')
   const [lang, setLang] = useState('en');
 
+  // Network Connectivity State (Online / Offline detection)
+  const [isOnline, setIsOnline] = useState(() => (typeof navigator !== 'undefined' ? navigator.onLine : true));
+
+  useEffect(() => {
+    const handleOnline = () => setIsOnline(true);
+    const handleOffline = () => setIsOnline(false);
+    window.addEventListener('online', handleOnline);
+    window.addEventListener('offline', handleOffline);
+    return () => {
+      window.removeEventListener('online', handleOnline);
+      window.removeEventListener('offline', handleOffline);
+    };
+  }, []);
+
   const getInitialView = () => {
     const path = (window.location.pathname || '/').toLowerCase().replace(/\/$/, '') || '/';
     const hash = (window.location.hash || '').toLowerCase();
@@ -516,6 +531,7 @@ export default function App() {
   const [showCartDrawer, setShowCartDrawer] = useState(false);
 
   const handleAddToCart = (dish, portionType = 'full', selectedModifiers = []) => {
+    triggerHaptic('success');
     const hasHalfPrice = dish.price_half !== null && dish.price_half !== undefined && Number(dish.price_half) > 0;
     const isHalf = portionType === 'half' && hasHalfPrice;
     
@@ -563,6 +579,7 @@ export default function App() {
   };
 
   const handleAddComboToCart = (combo) => {
+    triggerHaptic('success');
     let comboItems = [];
     try { comboItems = typeof combo.items === 'string' ? JSON.parse(combo.items) : (combo.items || []); } catch { comboItems = []; }
     const includesText = comboItems.map(i => `${i.qty > 1 ? i.qty + 'x ' : ''}${i.dish_name}${i.portion === 'half' ? ' (H)' : ''}`).join(' + ');
@@ -593,6 +610,7 @@ export default function App() {
   };
 
   const handleRemoveFromCart = (cartKey) => {
+    triggerHaptic('light');
     setCartItems(cartItems.filter(i => (i.key || i.dish.id) !== cartKey));
   };
 
@@ -2103,14 +2121,43 @@ export default function App() {
   return (
     <div style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column', position: 'relative' }}>
 
+      {/* 📶 Offline / Network Status Banner */}
+      {!isOnline && (
+        <div style={{
+          background: 'linear-gradient(135deg, #334155 0%, #1E293B 100%)',
+          color: '#F8FAFC',
+          padding: '8px 14px',
+          borderBottom: '1.5px solid #64748B',
+          display: 'flex',
+          justifyContent: 'center',
+          alignItems: 'center',
+          gap: '8px',
+          fontSize: '0.76rem',
+          fontWeight: 800,
+          position: 'sticky',
+          top: 0,
+          zIndex: 4000,
+          boxShadow: '0 4px 12px rgba(0,0,0,0.25)'
+        }}>
+          <span>📶</span>
+          <span>{lang === 'hi' ? 'ऑफ़लाइन मोड • सहेजा गया मेनू प्रदर्शित हो रहा है' : 'Offline Mode • Showing saved digital menu'}</span>
+        </div>
+      )}
+
       {/* Customer Header */}
       <CustomerHeader
         info={info}
         lang={lang}
         tableNum={effectiveTableNum}
         spaceLabel={getDynamicSpaceLabel()}
-        onToggleLang={() => setLang(lang === 'en' ? 'hi' : 'en')}
-        onOpenInfoModal={() => setShowInfoModal(true)}
+        onToggleLang={() => {
+          triggerHaptic('light');
+          setLang(lang === 'en' ? 'hi' : 'en');
+        }}
+        onOpenInfoModal={() => {
+          triggerHaptic('light');
+          setShowInfoModal(true);
+        }}
         onCallStaff={(info?.business_type === 'cinema_theatre' || info?.service_model === 'cinema' || info?.service_model === 'seat_service' || currentSpaceType === 'cinema_seat' || currentSpaceType === 'cinema' || String(info?.table_prefix || '').toLowerCase() === 'cinema_seat') ? null : () => setShowServiceModal(true)}
         onOpenReviewModal={handleRateUsClick}
         onOpenAdmin={() => {
@@ -2346,7 +2393,10 @@ export default function App() {
           border: '1px solid var(--border-light)'
         }}>
           <button
-            onClick={() => setLayoutMode('list')}
+            onClick={() => {
+              triggerHaptic('light');
+              setLayoutMode('list');
+            }}
             style={{
               padding: '4px 10px',
               borderRadius: 'var(--radius-pill)',
@@ -2367,7 +2417,10 @@ export default function App() {
           </button>
 
           <button
-            onClick={() => setLayoutMode('grid')}
+            onClick={() => {
+              triggerHaptic('light');
+              setLayoutMode('grid');
+            }}
             style={{
               padding: '4px 10px',
               borderRadius: 'var(--radius-pill)',
