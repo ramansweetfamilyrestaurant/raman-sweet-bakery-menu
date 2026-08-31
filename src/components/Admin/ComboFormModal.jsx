@@ -435,7 +435,7 @@ export default function ComboFormModal({ combo, dishes, token, onSave, onClose }
                   {image ? (
                     <img src={image} alt="combo" style={{ width: '42px', height: '42px', borderRadius: '8px', objectFit: 'cover', border: '1px solid #E2E8F0' }} />
                   ) : (
-                    <div style={{ width: '42px', height: '42px', borderRadius: '8px', background: '#FFFFFF', border: '1px solid #E2E8F0', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1.1rem' }}>🍱</div>
+                    <img src="/images/default-combo.webp" alt="default combo" style={{ width: '42px', height: '42px', borderRadius: '8px', objectFit: 'cover', border: '1px solid #E2E8F0' }} />
                   )}
                   
                   <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap' }}>
