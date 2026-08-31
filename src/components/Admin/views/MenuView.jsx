@@ -351,7 +351,7 @@ export default function MenuView({
     const hasHalfPrice = !isNaN(rawHalfPrice) && rawHalfPrice > 0;
 
     return (
-      <div style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', flexWrap: 'wrap' }}>
+      <div style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', flexWrap: 'wrap', maxWidth: '100%', boxSizing: 'border-box' }}>
         {hasHalfPrice ? (
           /* Dual Portion Segmented Pill for dishes with Full/Half portions */
           <div style={{
@@ -359,26 +359,28 @@ export default function MenuView({
             alignItems: 'center',
             background: '#F8FAFC',
             border: '1px solid #E2E8F0',
-            borderRadius: '8px',
-            padding: '3px 8px',
-            gap: '8px',
-            boxShadow: '0 1px 2px rgba(0,0,0,0.02)'
+            borderRadius: '6px',
+            padding: layout === 'card' ? '2px 5px' : '3px 7px',
+            gap: layout === 'card' ? '4px' : '6px',
+            boxShadow: '0 1px 2px rgba(0,0,0,0.02)',
+            maxWidth: '100%',
+            boxSizing: 'border-box'
           }}>
             {/* Full portion */}
-            <div style={{ display: 'inline-flex', alignItems: 'baseline', gap: '3px' }}>
-              <span style={{ fontSize: '0.64rem', color: '#64748B', fontWeight: 600 }}>Full</span>
-              <strong style={{ fontSize: layout === 'card' ? '0.94rem' : '0.88rem', fontWeight: 800, color: '#0F172A', lineHeight: 1 }}>
+            <div style={{ display: 'inline-flex', alignItems: 'baseline', gap: '2px' }}>
+              <span style={{ fontSize: '0.58rem', color: '#64748B', fontWeight: 600 }}>Full</span>
+              <strong style={{ fontSize: layout === 'card' ? '0.80rem' : '0.86rem', fontWeight: 800, color: '#0F172A', lineHeight: 1 }}>
                 {curr}{currentPrice}
               </strong>
             </div>
 
             {/* Subtle vertical divider */}
-            <span style={{ width: '1px', height: '11px', background: '#CBD5E1', display: 'inline-block' }} />
+            <span style={{ width: '1px', height: '9px', background: '#CBD5E1', display: 'inline-block' }} />
 
             {/* Half portion */}
-            <div style={{ display: 'inline-flex', alignItems: 'baseline', gap: '3px' }}>
-              <span style={{ fontSize: '0.64rem', color: '#64748B', fontWeight: 600 }}>Half</span>
-              <strong style={{ fontSize: layout === 'card' ? '0.90rem' : '0.84rem', fontWeight: 800, color: '#334155', lineHeight: 1 }}>
+            <div style={{ display: 'inline-flex', alignItems: 'baseline', gap: '2px' }}>
+              <span style={{ fontSize: '0.58rem', color: '#64748B', fontWeight: 600 }}>Half</span>
+              <strong style={{ fontSize: layout === 'card' ? '0.78rem' : '0.82rem', fontWeight: 800, color: '#334155', lineHeight: 1 }}>
                 {curr}{rawHalfPrice}
               </strong>
             </div>
@@ -387,7 +389,7 @@ export default function MenuView({
           /* Standard Single Item Price across all business types */
           <div style={{ display: 'inline-flex', alignItems: 'baseline', gap: '2px' }}>
             <strong style={{
-              fontSize: layout === 'card' ? '1.02rem' : '0.92rem',
+              fontSize: layout === 'card' ? '0.86rem' : '0.88rem',
               fontWeight: 900,
               color: '#0F172A',
               lineHeight: 1,
@@ -401,7 +403,7 @@ export default function MenuView({
         {/* Struck-through Old/Original Price */}
         {hasValidOldPrice && (
           <span style={{
-            fontSize: '0.74rem',
+            fontSize: '0.68rem',
             color: '#94A3B8',
             textDecoration: 'line-through',
             fontWeight: 500
@@ -538,68 +540,17 @@ export default function MenuView({
           }
         }
 
-        @media (max-width: 600px) {
-          .center-dish-grid {
-            grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
-            gap: 6px !important;
-            width: 100% !important;
-            max-width: 100% !important;
-            min-width: 0 !important;
-          }
-          .dish-grid-card {
-            padding: 6px !important;
-            border-radius: 12px !important;
-            min-width: 0 !important;
-            max-width: 100% !important;
-            box-sizing: border-box !important;
-          }
-          .dish-grid-img-wrap {
-            height: 98px !important;
-            margin-bottom: 6px !important;
-          }
-          .dish-grid-card h4 {
-            font-size: 0.76rem !important;
-            white-space: nowrap !important;
-            overflow: hidden !important;
-            text-overflow: ellipsis !important;
-          }
-          .header-cursive-quote {
-            display: none !important;
-          }
-          .mobile-only-hero {
-            padding: 12px 10px !important;
-            border-radius: 16px !important;
-          }
-        }
-
-        @media (max-width: 420px) {
-          .center-dish-grid {
-            grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
-            gap: 6px !important;
-          }
-          .dish-grid-img-wrap {
-            height: 90px !important;
-          }
-          .category-square-tile {
-            width: 66px !important;
-            min-width: 66px !important;
-            height: 72px !important;
-            padding: 4px !important;
-          }
-          .category-square-tile span {
-            font-size: 0.66rem !important;
-          }
-          .mobile-only-hero {
-            padding: 10px 8px !important;
-          }
-        }
-
         @media (max-width: 768px) {
           .desktop-only-header {
             display: none !important;
           }
           .mobile-only-hero {
             display: block !important;
+            padding: 14px 12px !important;
+            border-radius: 16px !important;
+            box-sizing: border-box !important;
+            width: 100% !important;
+            max-width: 100% !important;
           }
           .desktop-summary-cards {
             display: none !important;
@@ -612,9 +563,90 @@ export default function MenuView({
             flex-direction: column !important;
             gap: 8px !important;
             width: 100% !important;
+            max-width: 100% !important;
+            box-sizing: border-box !important;
           }
           .mobile-floating-add-btn {
-            display: flex !important;
+            display: none !important;
+          }
+          .center-dish-grid {
+            grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+            gap: 8px !important;
+            width: 100% !important;
+            max-width: 100% !important;
+            min-width: 0 !important;
+            box-sizing: border-box !important;
+          }
+          .dish-grid-card {
+            padding: 7px 6px !important;
+            border-radius: 12px !important;
+            min-width: 0 !important;
+            max-width: 100% !important;
+            width: 100% !important;
+            box-sizing: border-box !important;
+          }
+          .dish-grid-img-wrap {
+            aspect-ratio: 4 / 3 !important;
+            height: auto !important;
+            max-height: 110px !important;
+            border-radius: 9px !important;
+            margin-bottom: 6px !important;
+          }
+          .dish-grid-card h4 {
+            font-size: 0.78rem !important;
+            line-height: 1.25 !important;
+            word-break: break-word !important;
+            overflow: hidden !important;
+            display: -webkit-box !important;
+            -webkit-line-clamp: 2 !important;
+            -webkit-box-orient: vertical !important;
+          }
+          .header-cursive-quote {
+            display: none !important;
+          }
+        }
+
+        @media (max-width: 480px) {
+          .center-dish-grid {
+            grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+            gap: 6px !important;
+          }
+          .dish-grid-card {
+            padding: 6px 5px !important;
+          }
+          .dish-grid-img-wrap {
+            aspect-ratio: 4 / 3 !important;
+            max-height: 98px !important;
+          }
+          .category-square-tile {
+            width: 68px !important;
+            min-width: 68px !important;
+            height: 74px !important;
+            padding: 4px !important;
+          }
+          .category-square-tile span {
+            font-size: 0.68rem !important;
+          }
+          .mobile-only-hero {
+            padding: 12px 10px !important;
+          }
+        }
+
+        @media (max-width: 360px) {
+          .center-dish-grid {
+            gap: 5px !important;
+          }
+          .dish-grid-card {
+            padding: 5px 4px !important;
+          }
+          .category-square-tile {
+            width: 64px !important;
+            min-width: 64px !important;
+            height: 70px !important;
+            padding: 3px !important;
+          }
+          .mobile-only-hero {
+            padding: 10px 8px !important;
           }
         }
 
@@ -1262,10 +1294,16 @@ export default function MenuView({
         {/* Scrollable Category Cards */}
         <div ref={categoryScrollRef} className="no-scrollbar" style={{
           display: 'flex',
-          gap: '10px',
+          gap: '8px',
           overflowX: 'auto',
+          overflowY: 'hidden',
+          whiteSpace: 'nowrap',
           padding: '4px 2px 8px 2px',
-          WebkitOverflowScrolling: 'touch'
+          WebkitOverflowScrolling: 'touch',
+          width: '100%',
+          maxWidth: '100%',
+          minWidth: 0,
+          boxSizing: 'border-box'
         }}>
           {/* Tile 1: All Dishes (Dark brown background when active) */}
           <button
@@ -1394,8 +1432,8 @@ export default function MenuView({
          ======================================================== */}
       <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
         {/* Search Row + Filters Button */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-          <div style={{ position: 'relative', flex: 1 }}>
+        <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 1fr) 42px', gap: '8px', width: '100%', maxWidth: '100%', boxSizing: 'border-box' }}>
+          <div style={{ position: 'relative', width: '100%', minWidth: 0 }}>
             <Search size={16} color="#94A3B8" style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)' }} />
             <input
               type="text"
@@ -1404,11 +1442,11 @@ export default function MenuView({
               placeholder="Search dishes, ingredients..."
               style={{
                 width: '100%',
-                padding: '11px 32px 11px 36px',
-                borderRadius: '12px',
+                padding: '10px 30px 10px 34px',
+                borderRadius: '11px',
                 border: '1px solid #E2E8F0',
                 background: '#FFFFFF',
-                fontSize: '0.82rem',
+                fontSize: '0.80rem',
                 color: '#0F172A',
                 outline: 'none',
                 boxSizing: 'border-box',
@@ -1430,8 +1468,8 @@ export default function MenuView({
             onClick={() => setShowFilterModal(true)}
             style={{
               width: '42px',
-              height: '42px',
-              borderRadius: '12px',
+              height: '40px',
+              borderRadius: '11px',
               border: activeFilterCount > 0 ? '1.5px solid #D97706' : '1px solid #E2E8F0',
               background: activeFilterCount > 0 ? '#FFFBEB' : '#FFFFFF',
               color: activeFilterCount > 0 ? '#D97706' : '#0F172A',
@@ -1453,10 +1491,10 @@ export default function MenuView({
                 right: '-4px',
                 background: '#D97706',
                 color: '#FFFFFF',
-                fontSize: '0.62rem',
+                fontSize: '0.60rem',
                 fontWeight: 900,
-                width: '18px',
-                height: '18px',
+                width: '16px',
+                height: '16px',
                 borderRadius: '50%',
                 display: 'flex',
                 alignItems: 'center',
@@ -1473,9 +1511,16 @@ export default function MenuView({
         <div className="no-scrollbar" style={{
           display: 'flex',
           alignItems: 'center',
-          gap: '8px',
+          gap: '6px',
           overflowX: 'auto',
-          paddingBottom: '4px'
+          overflowY: 'hidden',
+          whiteSpace: 'nowrap',
+          paddingBottom: '4px',
+          WebkitOverflowScrolling: 'touch',
+          width: '100%',
+          maxWidth: '100%',
+          minWidth: 0,
+          boxSizing: 'border-box'
         }}>
           {[
             { id: 'all', label: 'All', count: counts.all },
@@ -1502,28 +1547,28 @@ export default function MenuView({
                   }
                 }}
                 style={{
-                  padding: '7px 14px',
-                  borderRadius: '20px',
+                  padding: '6px 11px',
+                  borderRadius: '16px',
                   border: isActive ? '1px solid #261B14' : '1px solid #E2E8F0',
                   background: isActive ? '#261B14' : '#FFFFFF',
                   color: isActive ? '#FFFFFF' : '#475569',
-                  fontSize: '0.76rem',
+                  fontSize: '0.72rem',
                   fontWeight: 700,
                   cursor: 'pointer',
                   whiteSpace: 'nowrap',
                   display: 'inline-flex',
                   alignItems: 'center',
-                  gap: '5px',
+                  gap: '4px',
                   boxShadow: '0 1px 2px rgba(0,0,0,0.02)',
                   transition: 'all 0.15s ease',
                   flexShrink: 0
                 }}
               >
-                {chip.dot && <span style={{ fontSize: '0.70rem' }}>{chip.dot}</span>}
+                {chip.dot && <span style={{ fontSize: '0.68rem' }}>{chip.dot}</span>}
                 {chip.icon && <span>{chip.icon}</span>}
                 <span>{chip.label}</span>
                 <span style={{
-                  fontSize: '0.66rem',
+                  fontSize: '0.64rem',
                   opacity: isActive ? 0.9 : 0.65,
                   fontWeight: 600,
                   marginLeft: '2px'
@@ -1659,30 +1704,33 @@ export default function MenuView({
               justifyContent: 'space-between',
               padding: '0 2px',
               flexWrap: 'wrap',
-              gap: '8px'
+              gap: '8px',
+              width: '100%',
+              maxWidth: '100%',
+              boxSizing: 'border-box'
             }}>
-              <h3 style={{ fontSize: '1rem', fontWeight: 900, color: '#0F172A', margin: 0 }}>
+              <h3 style={{ fontSize: '0.94rem', fontWeight: 900, color: '#0F172A', margin: 0 }}>
                 {activeCategoryObj ? `${activeCategoryObj.name}` : `All Dishes`}
-                <span style={{ fontSize: '0.80rem', color: '#64748B', fontWeight: 600, marginLeft: '6px' }}>
+                <span style={{ fontSize: '0.78rem', color: '#64748B', fontWeight: 600, marginLeft: '6px' }}>
                   ({filteredDishes.length})
                 </span>
               </h3>
 
-              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flexWrap: 'wrap' }}>
                 {/* View Mode Segmented Switch [ ▦ Grid | ☰ List ] */}
                 <div style={{
                   display: 'inline-flex',
                   background: '#FFFFFF',
                   border: '1px solid #E2E8F0',
-                  borderRadius: '10px',
-                  padding: '3px',
+                  borderRadius: '9px',
+                  padding: '2px',
                   gap: '2px',
                   boxShadow: '0 1px 2px rgba(0,0,0,0.02)'
                 }}>
                   <button
                     onClick={() => setViewMode('grid')}
                     style={{
-                      padding: '5px 10px',
+                      padding: '4px 8px',
                       border: 'none',
                       borderRadius: '7px',
                       background: viewMode === 'grid' ? '#261B14' : 'transparent',
@@ -1690,20 +1738,20 @@ export default function MenuView({
                       cursor: 'pointer',
                       display: 'flex',
                       alignItems: 'center',
-                      gap: '5px',
-                      fontSize: '0.74rem',
+                      gap: '4px',
+                      fontSize: '0.70rem',
                       fontWeight: 800,
                       transition: 'all 0.15s ease'
                     }}
                     title="Grid View"
                   >
-                    <LayoutGrid size={13} />
+                    <LayoutGrid size={12} />
                     <span>Grid</span>
                   </button>
                   <button
                     onClick={() => setViewMode('list')}
                     style={{
-                      padding: '5px 10px',
+                      padding: '4px 8px',
                       border: 'none',
                       borderRadius: '7px',
                       background: viewMode === 'list' ? '#261B14' : 'transparent',
@@ -1711,14 +1759,14 @@ export default function MenuView({
                       cursor: 'pointer',
                       display: 'flex',
                       alignItems: 'center',
-                      gap: '5px',
-                      fontSize: '0.74rem',
+                      gap: '4px',
+                      fontSize: '0.70rem',
                       fontWeight: 800,
                       transition: 'all 0.15s ease'
                     }}
                     title="List View"
                   >
-                    <List size={13} />
+                    <List size={12} />
                     <span>List</span>
                   </button>
                 </div>
@@ -1729,28 +1777,29 @@ export default function MenuView({
                     value={sortBy}
                     onChange={(e) => setSortBy(e.target.value)}
                     style={{
-                      height: '31px',
-                      padding: '0 28px 0 10px',
-                      borderRadius: '10px',
+                      height: '28px',
+                      padding: '0 22px 0 8px',
+                      borderRadius: '9px',
                       border: '1px solid #E2E8F0',
                       background: '#FFFFFF',
                       color: '#0F172A',
-                      fontSize: '0.74rem',
+                      fontSize: '0.70rem',
                       fontWeight: 800,
                       cursor: 'pointer',
                       outline: 'none',
                       appearance: 'none',
+                      maxWidth: '120px',
                       boxShadow: '0 1px 2px rgba(0,0,0,0.02)'
                     }}
                     title="Sort Dishes"
                   >
-                    <option value="recent">⚡ Sort: Default</option>
-                    <option value="name_asc">🔤 Name (A to Z)</option>
-                    <option value="price_asc">💰 Price: Low to High</option>
-                    <option value="price_desc">💎 Price: High to Low</option>
-                    <option value="instock_first">🟢 In Stock First</option>
+                    <option value="recent">⚡ Default</option>
+                    <option value="name_asc">🔤 Name (A-Z)</option>
+                    <option value="price_asc">💰 Price (Low)</option>
+                    <option value="price_desc">💎 Price (High)</option>
+                    <option value="instock_first">🟢 In-Stock First</option>
                   </select>
-                  <SlidersHorizontal size={12} color="#64748B" style={{ position: 'absolute', right: '9px', top: '9.5px', pointerEvents: 'none' }} />
+                  <ChevronDown size={11} color="#64748B" style={{ position: 'absolute', right: '6px', top: '50%', transform: 'translateY(-50%)', pointerEvents: 'none' }} />
                 </div>
               </div>
             </div>
@@ -2085,24 +2134,26 @@ export default function MenuView({
 
                         {/* Dish Name */}
                         <h4 style={{
-                          fontSize: '0.90rem',
+                          fontSize: '0.80rem',
                           fontWeight: 800,
                           color: '#0F172A',
                           margin: '0 0 2px 0',
-                          lineHeight: 1.2,
-                          whiteSpace: 'nowrap',
+                          lineHeight: 1.25,
+                          wordBreak: 'break-word',
                           overflow: 'hidden',
-                          textOverflow: 'ellipsis'
+                          display: '-webkit-box',
+                          WebkitLineClamp: 2,
+                          WebkitBoxOrient: 'vertical'
                         }} title={dish.name}>
                           {dish.name}
                         </h4>
 
                         {/* Category */}
                         <span style={{
-                          fontSize: '0.68rem',
+                          fontSize: '0.64rem',
                           color: '#64748B',
                           display: 'block',
-                          marginBottom: '8px',
+                          marginBottom: '4px',
                           whiteSpace: 'nowrap',
                           overflow: 'hidden',
                           textOverflow: 'ellipsis'
@@ -2117,8 +2168,10 @@ export default function MenuView({
                         alignItems: 'center',
                         justifyContent: 'space-between',
                         marginTop: '4px',
-                        paddingTop: '6px',
-                        borderTop: '1px solid #F1F5F9'
+                        paddingTop: '4px',
+                        borderTop: '1px solid #F1F5F9',
+                        flexWrap: 'wrap',
+                        gap: '3px'
                       }}>
                         {renderDishPrice(dish, 'card')}
 
@@ -2132,15 +2185,16 @@ export default function MenuView({
                             background: isAvailable ? '#E6F9EE' : '#FEE2E2',
                             color: isAvailable ? '#15803D' : '#DC2626',
                             border: `1px solid ${isAvailable ? '#C6F6D5' : '#FECACA'}`,
-                            padding: '3px 8px',
-                            borderRadius: '6px',
-                            fontSize: '0.66rem',
+                            padding: '2px 6px',
+                            borderRadius: '5px',
+                            fontSize: '0.62rem',
                             fontWeight: 800,
                             cursor: 'pointer',
                             display: 'inline-flex',
                             alignItems: 'center',
-                            gap: '3px',
-                            userSelect: 'none'
+                            gap: '2px',
+                            userSelect: 'none',
+                            flexShrink: 0
                           }}
                         >
                           <span>{isAvailable ? 'In Stock' : 'Sold Out'}</span>
@@ -3280,14 +3334,17 @@ export default function MenuView({
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'space-between',
-          padding: '16px 6px 0 6px',
+          padding: '14px 2px 0 2px',
           flexWrap: 'wrap',
-          gap: '10px',
+          gap: '8px',
           borderTop: '1px solid #E2E8F0',
-          marginTop: '6px'
+          marginTop: '6px',
+          width: '100%',
+          maxWidth: '100%',
+          boxSizing: 'border-box'
         }}>
           {/* Left: Showing count */}
-          <span style={{ fontSize: '0.76rem', color: '#64748B', fontWeight: 600 }}>
+          <span style={{ fontSize: '0.72rem', color: '#64748B', fontWeight: 600 }}>
             Showing{' '}
             <strong style={{ color: '#0F172A' }}>
               {isAllPages ? 1 : Math.min(totalItems, (safeCurrentPage - 1) * effectivePageSize + 1)}
@@ -3296,18 +3353,18 @@ export default function MenuView({
             <strong style={{ color: '#0F172A' }}>
               {isAllPages ? totalItems : Math.min(totalItems, safeCurrentPage * effectivePageSize)}
             </strong>
-            {' '}of <strong style={{ color: '#0F172A' }}>{totalItems}</strong> dishes
+            {' '}of <strong style={{ color: '#0F172A' }}>{totalItems}</strong>
           </span>
 
           {/* Center: Pagination numbers with dark brown active circle */}
           {!isAllPages && totalPages > 1 && (
-            <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
               <button
                 onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
                 disabled={safeCurrentPage === 1}
                 style={{
-                  width: '28px',
-                  height: '28px',
+                  width: '26px',
+                  height: '26px',
                   borderRadius: '6px',
                   border: 'none',
                   background: 'transparent',
@@ -3318,7 +3375,7 @@ export default function MenuView({
                   justifyContent: 'center'
                 }}
               >
-                <ChevronLeft size={14} />
+                <ChevronLeft size={13} />
               </button>
 
               {Array.from({ length: totalPages }, (_, i) => i + 1)
@@ -3327,17 +3384,17 @@ export default function MenuView({
                   const isPrevGap = idx > 0 && p - arr[idx - 1] > 1;
                   return (
                     <React.Fragment key={p}>
-                      {isPrevGap && <span style={{ padding: '0 2px', color: '#94A3B8', fontSize: '0.72rem' }}>⋯</span>}
+                      {isPrevGap && <span style={{ padding: '0 2px', color: '#94A3B8', fontSize: '0.70rem' }}>⋯</span>}
                       <button
                         onClick={() => setCurrentPage(p)}
                         style={{
-                          width: '28px',
-                          height: '28px',
+                          width: '26px',
+                          height: '26px',
                           borderRadius: '50%',
                           border: 'none',
                           background: p === safeCurrentPage ? '#261B14' : 'transparent',
                           color: p === safeCurrentPage ? '#FFFFFF' : '#0F172A',
-                          fontSize: '0.76rem',
+                          fontSize: '0.72rem',
                           fontWeight: p === safeCurrentPage ? 900 : 600,
                           cursor: 'pointer'
                         }}
@@ -3352,8 +3409,8 @@ export default function MenuView({
                 onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
                 disabled={safeCurrentPage === totalPages}
                 style={{
-                  width: '28px',
-                  height: '28px',
+                  width: '26px',
+                  height: '26px',
                   borderRadius: '6px',
                   border: 'none',
                   background: 'transparent',
@@ -3364,7 +3421,7 @@ export default function MenuView({
                   justifyContent: 'center'
                 }}
               >
-                <ChevronRight size={14} />
+                <ChevronRight size={13} />
               </button>
             </div>
           )}
@@ -3375,20 +3432,21 @@ export default function MenuView({
               value={pageSize}
               onChange={(e) => setPageSize(e.target.value === 'all' ? 'all' : Number(e.target.value))}
               style={{
-                padding: '5px 10px',
+                padding: '4px 8px',
                 borderRadius: '8px',
                 border: '1px solid #E2E8F0',
                 background: '#FFFFFF',
                 color: '#0F172A',
-                fontSize: '0.74rem',
+                fontSize: '0.70rem',
                 fontWeight: 700,
                 cursor: 'pointer',
-                outline: 'none'
+                outline: 'none',
+                height: '28px'
               }}
             >
-              <option value={12}>12 per page</option>
-              <option value={24}>24 per page</option>
-              <option value={48}>48 per page</option>
+              <option value={12}>12 / page</option>
+              <option value={24}>24 / page</option>
+              <option value={48}>48 / page</option>
               <option value="all">All ({filteredDishes.length})</option>
             </select>
           </div>
