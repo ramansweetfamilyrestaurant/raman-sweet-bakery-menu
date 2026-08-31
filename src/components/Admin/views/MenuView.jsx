@@ -1427,32 +1427,34 @@ export default function MenuView({
               COLUMN 1: PROMO / MOTIVATIONAL BANNER (LEFT)
              ======================================================== */}
           <div className="left-promo-banner" style={{
-            background: 'linear-gradient(180deg, #FFEFE7 0%, #FFDFD0 100%)',
+            background: 'linear-gradient(180deg, #FDECE5 0%, #FDE4D8 100%)',
             borderRadius: '20px',
-            border: '1px solid #FFD9C7',
-            padding: '20px 16px',
+            border: '1px solid #FAD6C6',
+            padding: '22px 18px 0 18px',
             display: 'flex',
             flexDirection: 'column',
             justifyContent: 'space-between',
             minHeight: '440px',
-            boxShadow: '0 2px 8px rgba(234, 88, 12, 0.05)'
+            boxShadow: '0 2px 10px rgba(234, 88, 12, 0.04)',
+            overflow: 'hidden'
           }}>
             <div>
               <h3 style={{
-                fontSize: '1.20rem',
+                fontSize: '1.28rem',
                 fontWeight: 900,
-                color: '#261B14',
-                lineHeight: 1.25,
-                margin: '0 0 8px 0',
-                letterSpacing: '-0.01em'
+                color: '#1E1B18',
+                lineHeight: 1.22,
+                margin: '0 0 10px 0',
+                letterSpacing: '-0.02em'
               }}>
-                Everything your menu needs.
+                Everything your<br />menu needs.
               </h3>
               <p style={{
-                fontSize: '0.76rem',
-                color: '#7C4A32',
-                margin: '0 0 16px 0',
-                lineHeight: 1.4
+                fontSize: '0.78rem',
+                color: '#655347',
+                margin: '0 0 18px 0',
+                lineHeight: 1.44,
+                fontWeight: 500
               }}>
                 Keep your products, categories and pricing organized and always up to date.
               </p>
@@ -1460,18 +1462,19 @@ export default function MenuView({
               <button
                 onClick={onOpenAddDish}
                 style={{
-                  padding: '9px 14px',
-                  background: '#261B14',
+                  padding: '9px 16px',
+                  background: '#181512',
                   color: '#FFFFFF',
                   border: 'none',
-                  borderRadius: '10px',
-                  fontSize: '0.78rem',
+                  borderRadius: '11px',
+                  fontSize: '0.80rem',
                   fontWeight: 800,
                   cursor: 'pointer',
                   display: 'inline-flex',
                   alignItems: 'center',
                   gap: '6px',
-                  boxShadow: '0 3px 8px rgba(38, 27, 20, 0.25)'
+                  boxShadow: '0 3px 10px rgba(24, 21, 18, 0.25)',
+                  transition: 'transform 0.14s ease'
                 }}
               >
                 <span>+ Add Item</span>
@@ -1479,20 +1482,19 @@ export default function MenuView({
               </button>
             </div>
 
-            {/* Bottom Digital Menu 3D Illustration */}
+            {/* Seamless Bottom Digital Menu 3D Illustration */}
             <div style={{
-              width: '100%',
-              height: '160px',
-              borderRadius: '14px',
+              width: 'calc(100% + 36px)',
+              margin: '16px -18px 0 -18px',
+              borderBottomLeftRadius: '20px',
+              borderBottomRightRadius: '20px',
               overflow: 'hidden',
-              marginTop: '16px',
-              boxShadow: '0 4px 12px rgba(0,0,0,0.08)',
-              background: '#FFFFFF'
+              lineHeight: 0
             }}>
               <img
-                src="/images/promo-menu-banner.webp"
+                src="/images/promo-menu-banner.webp?v=2"
                 alt="TouchQR digital menu"
-                style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                style={{ width: '100%', height: 'auto', display: 'block', objectFit: 'contain' }}
                 onError={(e) => { e.currentTarget.onerror = null; e.currentTarget.src = '/images/default-dish.webp'; }}
               />
             </div>
