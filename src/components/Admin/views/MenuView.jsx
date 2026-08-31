@@ -1446,7 +1446,7 @@ export default function MenuView({
                 margin: '0 0 8px 0',
                 letterSpacing: '-0.01em'
               }}>
-                Good food deserves a great menu!
+                Everything your menu needs.
               </h3>
               <p style={{
                 fontSize: '0.76rem',
@@ -1454,7 +1454,7 @@ export default function MenuView({
                 margin: '0 0 16px 0',
                 lineHeight: 1.4
               }}>
-                Keep your menu fresh, organized and always up to date.
+                Keep your products, categories and pricing organized and always up to date.
               </p>
 
               <button
@@ -1474,23 +1474,24 @@ export default function MenuView({
                   boxShadow: '0 3px 8px rgba(38, 27, 20, 0.25)'
                 }}
               >
-                <span>Add New Dish</span>
+                <span>+ Add Item</span>
                 <ArrowRight size={13} />
               </button>
             </div>
 
-            {/* Bottom Culinary Flatlay Image */}
+            {/* Bottom Digital Menu 3D Illustration */}
             <div style={{
               width: '100%',
-              height: '140px',
+              height: '160px',
               borderRadius: '14px',
               overflow: 'hidden',
               marginTop: '16px',
-              boxShadow: '0 4px 12px rgba(0,0,0,0.1)'
+              boxShadow: '0 4px 12px rgba(0,0,0,0.08)',
+              background: '#FFFFFF'
             }}>
               <img
-                src="https://images.unsplash.com/photo-1546069901-ba9599a7e63c?auto=format&fit=crop&w=400&q=80"
-                alt="Appetizing Food Ingredients"
+                src="/images/promo-menu-banner.webp"
+                alt="TouchQR digital menu"
                 style={{ width: '100%', height: '100%', objectFit: 'cover' }}
                 onError={(e) => { e.currentTarget.onerror = null; e.currentTarget.src = '/images/default-dish.webp'; }}
               />
