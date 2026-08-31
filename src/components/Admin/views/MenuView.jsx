@@ -463,7 +463,7 @@ export default function MenuView({
       maxWidth: '100%',
       boxSizing: 'border-box',
       fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif',
-      paddingBottom: '110px'
+      paddingBottom: '160px'
     }}>
       <style>{`
         .no-scrollbar::-webkit-scrollbar { display: none; }
@@ -541,20 +541,21 @@ export default function MenuView({
         @media (max-width: 600px) {
           .center-dish-grid {
             grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
-            gap: 8px !important;
+            gap: 6px !important;
             width: 100% !important;
             max-width: 100% !important;
             min-width: 0 !important;
           }
           .dish-grid-card {
-            padding: 7px !important;
+            padding: 6px !important;
             border-radius: 12px !important;
             min-width: 0 !important;
             max-width: 100% !important;
             box-sizing: border-box !important;
           }
           .dish-grid-img-wrap {
-            height: 105px !important;
+            height: 98px !important;
+            margin-bottom: 6px !important;
           }
           .dish-grid-card h4 {
             font-size: 0.76rem !important;
@@ -568,6 +569,28 @@ export default function MenuView({
           .mobile-only-hero {
             padding: 12px 10px !important;
             border-radius: 16px !important;
+          }
+        }
+
+        @media (max-width: 420px) {
+          .center-dish-grid {
+            grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+            gap: 6px !important;
+          }
+          .dish-grid-img-wrap {
+            height: 90px !important;
+          }
+          .category-square-tile {
+            width: 66px !important;
+            min-width: 66px !important;
+            height: 72px !important;
+            padding: 4px !important;
+          }
+          .category-square-tile span {
+            font-size: 0.66rem !important;
+          }
+          .mobile-only-hero {
+            padding: 10px 8px !important;
           }
         }
 
@@ -587,7 +610,7 @@ export default function MenuView({
           .mobile-list-view {
             display: flex !important;
             flex-direction: column !important;
-            gap: 10px !important;
+            gap: 8px !important;
             width: 100% !important;
           }
           .mobile-floating-add-btn {
@@ -3381,27 +3404,24 @@ export default function MenuView({
         disabled={dishQuota.isAtLimit}
         style={{
           position: 'fixed',
-          bottom: '84px',
-          right: '16px',
+          bottom: '76px',
+          right: '14px',
+          width: '46px',
+          height: '46px',
+          borderRadius: '50%',
           background: dishQuota.isAtLimit ? '#64748B' : 'linear-gradient(135deg, #0A2315 0%, #062B1C 100%)',
           color: '#FFFFFF',
-          border: '1.5px solid rgba(212, 175, 55, 0.4)',
-          borderRadius: '30px',
-          padding: '11px 20px',
-          fontSize: '0.84rem',
-          fontWeight: 900,
-          boxShadow: '0 6px 20px rgba(0,0,0,0.28)',
+          border: '1.5px solid #D4AF37',
+          boxShadow: '0 6px 18px rgba(0,0,0,0.3)',
           display: 'flex',
           alignItems: 'center',
-          gap: '6px',
+          justifyContent: 'center',
           zIndex: 89,
           cursor: dishQuota.isAtLimit ? 'not-allowed' : 'pointer'
         }}
+        title={activeSubTab === 'combos' ? 'Add Combo' : activeSubTab === 'categories' ? 'Add Category' : 'Add Dish'}
       >
-        <Plus size={16} color="#D4AF37" strokeWidth={3} />
-        <span>
-          {activeSubTab === 'combos' ? 'Add Combo' : activeSubTab === 'categories' ? 'Add Category' : 'Add Dish'}
-        </span>
+        <Plus size={22} color="#D4AF37" strokeWidth={3} />
       </button>
 
       {/* ========================================================
