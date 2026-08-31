@@ -953,6 +953,15 @@ router.post('/categories', authenticateToken, requireActiveSubscription, async (
       'INSERT INTO categories (restaurant_id, name, name_hi, image, sort_order) VALUES ($1, $2, $3, $4, $5) RETURNING id',
       [targetId, name, name_hi || '', processedImage || null, order]
     );
+
+    // Invalidate cache
+    try {
+      const slugRows = await query('SELECT slug FROM restaurants WHERE id = $1', [targetId]);
+      if (slugRows && slugRows.length > 0 && slugRows[0].slug) {
+        clearMenuBundleCache(slugRows[0].slug);
+      }
+    } catch (_) {}
+
     res.json({ success: true, id: result[0]?.id || result.lastInsertRowid });
   } catch (err) {
     console.error('Create category error:', err);
@@ -986,6 +995,15 @@ router.put('/categories/:id', authenticateToken, requireActiveSubscription, asyn
       'UPDATE categories SET name = $1, name_hi = $2, image = $3, sort_order = $4 WHERE id = $5 AND restaurant_id = $6',
       [name, name_hi || '', processedImage, sort_order || 0, id, targetId]
     );
+
+    // Invalidate cache
+    try {
+      const slugRows = await query('SELECT slug FROM restaurants WHERE id = $1', [targetId]);
+      if (slugRows && slugRows.length > 0 && slugRows[0].slug) {
+        clearMenuBundleCache(slugRows[0].slug);
+      }
+    } catch (_) {}
+
     res.json({ success: true });
   } catch (err) {
     console.error('Update category error:', err);
@@ -1008,6 +1026,15 @@ router.delete('/categories/:id', authenticateToken, requireActiveSubscription, a
     }
 
     await query('DELETE FROM categories WHERE id = $1 AND restaurant_id = $2', [id, targetId]);
+
+    // Invalidate cache
+    try {
+      const slugRows = await query('SELECT slug FROM restaurants WHERE id = $1', [targetId]);
+      if (slugRows && slugRows.length > 0 && slugRows[0].slug) {
+        clearMenuBundleCache(slugRows[0].slug);
+      }
+    } catch (_) {}
+
     res.json({ success: true });
   } catch (err) {
     console.error('Delete category error:', err);
@@ -1265,6 +1292,15 @@ router.patch('/dishes/:id/price', authenticateToken, requireActiveSubscription, 
       'UPDATE dishes SET price = $1, price_half = $2 WHERE id = $3 AND restaurant_id = $4',
       [numPrice, numPriceHalf, id, targetId]
     );
+
+    // Invalidate cache
+    try {
+      const slugRows = await query('SELECT slug FROM restaurants WHERE id = $1', [targetId]);
+      if (slugRows && slugRows.length > 0 && slugRows[0].slug) {
+        clearMenuBundleCache(slugRows[0].slug);
+      }
+    } catch (_) {}
+
     res.json({ success: true, price: numPrice, price_half: numPriceHalf });
   } catch (err) {
     console.error('Update price error:', err);
@@ -1287,6 +1323,15 @@ router.delete('/dishes/:id', authenticateToken, requireActiveSubscription, async
     }
 
     await query('DELETE FROM dishes WHERE id = $1 AND restaurant_id = $2', [id, targetId]);
+
+    // Invalidate cache
+    try {
+      const slugRows = await query('SELECT slug FROM restaurants WHERE id = $1', [targetId]);
+      if (slugRows && slugRows.length > 0 && slugRows[0].slug) {
+        clearMenuBundleCache(slugRows[0].slug);
+      }
+    } catch (_) {}
+
     res.json({ success: true });
   } catch (err) {
     console.error('Delete dish error:', err);

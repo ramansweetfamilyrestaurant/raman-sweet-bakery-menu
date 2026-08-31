@@ -3060,6 +3060,7 @@ export default function AdminDashboard({
             {/* MENU VIEW */}
             {['dishes', 'categories', 'combos'].includes(activeTab) && (
               <MenuView
+                token={token}
                 dishes={safeDishes}
                 categories={safeCategories}
                 combos={combos}
@@ -3084,6 +3085,7 @@ export default function AdminDashboard({
                 onDeleteCombo={handleDeleteCombo}
                 onToggleComboAvailability={handleToggleComboAvailability}
                 onToggleBadge={handleToggleBadge}
+                onRefreshData={loadData}
                 currencySymbol={settingsForm.currency_symbol !== undefined && settingsForm.currency_symbol !== null ? settingsForm.currency_symbol : '₹'}
                 maxDishes={tenantCaps.max_dishes}
                 maxCategories={tenantCaps.max_categories}

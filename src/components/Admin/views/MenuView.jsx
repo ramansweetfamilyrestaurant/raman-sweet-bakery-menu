@@ -33,13 +33,18 @@ import {
   ShieldCheck,
   Lightbulb,
   ArrowRight,
-  TrendingUp
+  TrendingUp,
+  Download,
+  FileText,
+  Upload
 } from 'lucide-react';
 import { resolveImageUrl, getDishImageUrl, getCategoryImageUrl } from '../../../utils/imageHelper';
 import { formatQuota } from '../../../utils/planCapabilities';
 import { getCurrencySymbol, formatPriceNumber } from '../../../utils/currencyHelper';
+import { createDish } from '../../../api/client';
 
 export default function MenuView({
+  token = '',
   dishes = [],
   categories = [],
   combos = [],
@@ -64,6 +69,7 @@ export default function MenuView({
   onDeleteCombo,
   onToggleComboAvailability,
   onToggleBadge,
+  onRefreshData = null,
   currencySymbol = '₹',
   maxDishes = 9999,
   maxCategories = 9999,
@@ -80,6 +86,7 @@ export default function MenuView({
   const [dietFilter, setDietFilter] = useState('all'); // 'all', 'veg', 'nonveg', 'egg', 'must_try', 'special', 'available', 'sold_out'
   const [priceFilter, setPriceFilter] = useState('all'); // 'all', 'under_100', '100_250', 'above_250'
   const [showFilterModal, setShowFilterModal] = useState(false);
+  const [showBulkUploadModal, setShowBulkUploadModal] = useState(false);
   const [sortBy, setSortBy] = useState('recent'); // 'recent', 'name_asc', 'price_asc', 'price_desc', 'instock_first'
   const [viewMode, setViewMode] = useState('grid'); // 'grid' | 'list'
   const [showAddMenuDropdown, setShowAddMenuDropdown] = useState(false);
@@ -2435,7 +2442,7 @@ export default function MenuView({
               <div style={{ display: 'flex', flexDirection: 'column', gap: '3px' }}>
                 {[
                   { label: '+ Add Dish', icon: Plus, color: '#16A34A', onClick: onOpenAddDish },
-                  { label: 'Bulk Upload', icon: UploadCloud, color: '#0284C7', onClick: () => alert('Bulk Upload: Download template or drag & drop CSV file in Settings.') },
+                  { label: 'Bulk Upload', icon: UploadCloud, color: '#0284C7', onClick: () => setShowBulkUploadModal(true) },
                   { label: 'Manage Categories', icon: FolderPlus, color: '#D97706', onClick: onOpenAddCategory },
                   { label: 'Create Combo', icon: Package, color: '#9333EA', onClick: onOpenAddCombo },
                   { label: 'View Menu', icon: Eye, color: '#475569', onClick: onReturnToMenu }
@@ -3794,6 +3801,547 @@ export default function MenuView({
           </div>
         </div>
       )}
+
+      {/* 🚀 BULK CSV DISH UPLOAD MODAL */}
+      {showBulkUploadModal && (
+        <BulkDishUploadModal
+          token={token}
+          categories={safeCategories}
+          existingDishCount={safeDishes.length}
+          maxDishes={maxDishes}
+          currencySymbol={curr}
+          onSuccess={() => {
+            if (onRefreshData) onRefreshData();
+            setShowBulkUploadModal(false);
+          }}
+          onClose={() => setShowBulkUploadModal(false)}
+        />
+      )}
+    </div>
+  );
+}
+
+// ========================================================
+// REUSABLE BULK DISH CSV UPLOAD MODAL COMPONENT
+// ========================================================
+function BulkDishUploadModal({
+  token,
+  categories = [],
+  existingDishCount = 0,
+  maxDishes = 9999,
+  currencySymbol = '₹',
+  onSuccess,
+  onClose
+}) {
+  const [csvFile, setCsvFile] = useState(null);
+  const [parsedRows, setParsedRows] = useState([]);
+  const [parsingError, setParsingError] = useState('');
+  const [importing, setImporting] = useState(false);
+  const [progress, setProgress] = useState({ current: 0, total: 0 });
+  const [importResults, setImportResults] = useState(null);
+  const fileInputRef = useRef(null);
+
+  // Step 1: Download RFC 4180 CSV Template
+  const handleDownloadTemplate = () => {
+    const defaultCat = categories[0]?.name || 'Main Course';
+    const headers = ['Dish Name', 'Category', 'Price', 'Half Price', 'Dietary Type (veg/nonveg/egg)', 'Description', 'Badge (Must Try/Bestseller/Special)', 'Ingredients', 'Portion'];
+    const sampleRows = [
+      ['Paneer Butter Masala', defaultCat, '240', '140', 'veg', 'Cottage cheese cubes simmered in rich creamy tomato gravy', 'Must Try', 'Paneer, Butter, Cream, Spices', 'Full'],
+      ['Crispy Veg Burger', defaultCat, '120', '', 'veg', 'Crunchy vegetable patty with house sauce and fresh lettuce', 'Bestseller', 'Bun, Veg Patty, Lettuce, Sauce', 'Single'],
+      ['Chicken Biryani', defaultCat, '280', '170', 'nonveg', 'Aromatic basmati rice cooked with tender spiced chicken pieces', 'Special', 'Basmati Rice, Chicken, Saffron, Spices', 'Full']
+    ];
+    const csvContent = '\uFEFF' + [
+      headers.map(h => `"${h.replace(/"/g, '""')}"`).join(','),
+      ...sampleRows.map(row => row.map(cell => `"${String(cell || '').replace(/"/g, '""')}"`).join(','))
+    ].join('\r\n');
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = 'TouchQR_Menu_Bulk_Import_Template.csv';
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+  };
+
+  // Robust RFC 4180 CSV Line Parser
+  const parseCSVLine = (text) => {
+    const result = [];
+    let cur = '';
+    let inQuote = false;
+    for (let i = 0; i < text.length; i++) {
+      const c = text[i];
+      if (c === '"') {
+        if (inQuote && text[i + 1] === '"') {
+          cur += '"';
+          i++;
+        } else {
+          inQuote = !inQuote;
+        }
+      } else if (c === ',' && !inQuote) {
+        result.push(cur.trim());
+        cur = '';
+      } else {
+        cur += c;
+      }
+    }
+    result.push(cur.trim());
+    return result;
+  };
+
+  // Parse uploaded file
+  const handleFileChange = (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setCsvFile(file);
+    setParsingError('');
+    setImportResults(null);
+
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      try {
+        const rawText = event.target?.result || '';
+        const lines = rawText.split(/\r?\n/).filter(line => line.trim().length > 0);
+        if (lines.length <= 1) {
+          setParsingError('CSV file is empty or missing data rows.');
+          setParsedRows([]);
+          return;
+        }
+
+        // Header mapping
+        const headerCols = parseCSVLine(lines[0]).map(h => h.toLowerCase().replace(/[^a-z0-9]/g, ''));
+        const nameIdx = headerCols.findIndex(h => h.includes('name') || h.includes('dish'));
+        const catIdx = headerCols.findIndex(h => h.includes('cat'));
+        const priceIdx = headerCols.findIndex(h => h.includes('price') && !h.includes('half'));
+        const halfPriceIdx = headerCols.findIndex(h => h.includes('half'));
+        const typeIdx = headerCols.findIndex(h => h.includes('type') || h.includes('diet'));
+        const descIdx = headerCols.findIndex(h => h.includes('desc'));
+        const badgeIdx = headerCols.findIndex(h => h.includes('badge') || h.includes('tag'));
+        const ingIdx = headerCols.findIndex(h => h.includes('ingred'));
+        const portionIdx = headerCols.findIndex(h => h.includes('portion'));
+
+        const rows = [];
+        for (let i = 1; i < lines.length; i++) {
+          const cols = parseCSVLine(lines[i]);
+          if (cols.length === 0 || !cols.some(c => c.length > 0)) continue;
+
+          const rawName = nameIdx !== -1 ? cols[nameIdx] : cols[0];
+          const rawCat = catIdx !== -1 ? cols[catIdx] : (cols[1] || '');
+          const rawPrice = priceIdx !== -1 ? cols[priceIdx] : cols[2];
+          const rawHalf = halfPriceIdx !== -1 ? cols[halfPriceIdx] : '';
+          const rawType = typeIdx !== -1 ? cols[typeIdx] : '';
+          const rawDesc = descIdx !== -1 ? cols[descIdx] : '';
+          const rawBadge = badgeIdx !== -1 ? cols[badgeIdx] : '';
+          const rawIng = ingIdx !== -1 ? cols[ingIdx] : '';
+          const rawPortion = portionIdx !== -1 ? cols[portionIdx] : '';
+
+          if (!rawName || !rawPrice) continue;
+
+          // Find category ID
+          let matchedCat = categories.find(c => (c.name || '').toLowerCase() === rawCat.toLowerCase().trim());
+          if (!matchedCat && categories.length > 0) {
+            matchedCat = categories[0];
+          }
+
+          const parsedPrice = parseFloat(rawPrice.replace(/[^0-9.]/g, ''));
+          const parsedHalf = rawHalf ? parseFloat(rawHalf.replace(/[^0-9.]/g, '')) : null;
+          let normType = (rawType || '').toLowerCase().trim();
+          if (!['veg', 'nonveg', 'egg'].includes(normType)) {
+            normType = normType.includes('non') ? 'nonveg' : (normType.includes('egg') ? 'egg' : 'veg');
+          }
+
+          if (!isNaN(parsedPrice) && parsedPrice >= 0 && matchedCat) {
+            rows.push({
+              name: rawName.trim(),
+              category_id: matchedCat.id,
+              category_name: matchedCat.name,
+              price: parsedPrice,
+              price_half: !isNaN(parsedHalf) && parsedHalf > 0 ? parsedHalf : null,
+              type: normType,
+              description: rawDesc.trim(),
+              badge: rawBadge.trim(),
+              ingredients: rawIng.trim(),
+              portion: rawPortion.trim(),
+              available: true
+            });
+          }
+        }
+
+        if (rows.length === 0) {
+          setParsingError('No valid dishes could be extracted from this CSV. Please verify required columns (Dish Name, Category, Price).');
+        } else if (existingDishCount + rows.length > maxDishes) {
+          setParsingError(`Importing ${rows.length} dishes exceeds your current plan quota (${maxDishes} max dishes). Please reduce file size or upgrade plan.`);
+        }
+        setParsedRows(rows);
+      } catch (err) {
+        setParsingError('Error reading CSV: ' + err.message);
+        setParsedRows([]);
+      }
+    };
+    reader.readAsText(file);
+  };
+
+  // Run Bulk Import
+  const handleStartImport = async () => {
+    if (parsedRows.length === 0 || !token) return;
+    setImporting(true);
+    setProgress({ current: 0, total: parsedRows.length });
+    let successCount = 0;
+    let errorCount = 0;
+    const errMessages = [];
+
+    for (let i = 0; i < parsedRows.length; i++) {
+      const item = parsedRows[i];
+      try {
+        await createDish({
+          category_id: item.category_id,
+          name: item.name,
+          price: item.price,
+          price_half: item.price_half,
+          type: item.type,
+          description: item.description,
+          badge: item.badge,
+          ingredients: item.ingredients,
+          portion: item.portion,
+          available: true
+        }, token);
+        successCount++;
+      } catch (err) {
+        errorCount++;
+        errMessages.push(`${item.name}: ${err.message || 'Failed'}`);
+      }
+      setProgress({ current: i + 1, total: parsedRows.length });
+    }
+
+    setImporting(false);
+    setImportResults({ successCount, errorCount, errors: errMessages });
+    if (successCount > 0) {
+      setTimeout(() => {
+        onSuccess && onSuccess();
+      }, 1200);
+    }
+  };
+
+  return (
+    <div style={{
+      position: 'fixed',
+      inset: 0,
+      zIndex: 3500,
+      background: 'rgba(10, 25, 16, 0.70)',
+      backdropFilter: 'blur(6px)',
+      display: 'flex',
+      alignItems: 'center',
+      justifyContent: 'center',
+      padding: '12px',
+      boxSizing: 'border-box'
+    }} onClick={onClose}>
+      <div 
+        onClick={(e) => e.stopPropagation()}
+        style={{
+          background: '#FFFFFF',
+          borderRadius: '20px',
+          width: '100%',
+          maxWidth: '520px',
+          maxHeight: '92vh',
+          boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.25)',
+          border: '1px solid #E2E8F0',
+          overflow: 'hidden',
+          display: 'flex',
+          flexDirection: 'column'
+        }}
+      >
+        {/* Header */}
+        <div style={{
+          padding: '16px 20px',
+          borderBottom: '1px solid #F1F5F9',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          background: '#FAFBFD'
+        }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+            <div style={{
+              width: '36px',
+              height: '36px',
+              borderRadius: '10px',
+              background: '#E0F2FE',
+              color: '#0284C7',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center'
+            }}>
+              <UploadCloud size={18} />
+            </div>
+            <div>
+              <h3 style={{ margin: 0, fontSize: '1.05rem', fontWeight: 900, color: '#0F172A' }}>Bulk Dish CSV Import</h3>
+              <p style={{ margin: '2px 0 0', fontSize: '0.72rem', color: '#64748B' }}>
+                Upload multiple dishes into your menu catalog at once
+              </p>
+            </div>
+          </div>
+          <button 
+            type="button" 
+            onClick={onClose}
+            style={{ border: 'none', background: 'transparent', cursor: 'pointer', color: '#94A3B8', padding: '4px' }}
+          >
+            <X size={18} />
+          </button>
+        </div>
+
+        {/* Modal Body */}
+        <div style={{ padding: '16px 20px', overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '14px' }}>
+          {/* Step 1: Download Template */}
+          <div style={{
+            background: '#F8FAFC',
+            border: '1px solid #E2E8F0',
+            borderRadius: '12px',
+            padding: '12px 14px',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            gap: '12px'
+          }}>
+            <div>
+              <strong style={{ fontSize: '0.82rem', color: '#0F172A', display: 'block', fontWeight: 800 }}>
+                1. Download Sample CSV Template
+              </strong>
+              <span style={{ fontSize: '0.70rem', color: '#64748B' }}>
+                Use our pre-formatted spreadsheet template with valid column headers
+              </span>
+            </div>
+            <button
+              type="button"
+              onClick={handleDownloadTemplate}
+              style={{
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '6px',
+                padding: '7px 12px',
+                borderRadius: '8px',
+                border: '1px solid #CBD5E1',
+                background: '#FFFFFF',
+                color: '#0F172A',
+                fontSize: '0.74rem',
+                fontWeight: 700,
+                cursor: 'pointer',
+                flexShrink: 0
+              }}
+            >
+              <Download size={13} color="#0284C7" />
+              <span>Template.csv</span>
+            </button>
+          </div>
+
+          {/* Step 2: Upload CSV File Area */}
+          <div>
+            <strong style={{ fontSize: '0.82rem', color: '#0F172A', display: 'block', fontWeight: 800, marginBottom: '6px' }}>
+              2. Select or Drag & Drop CSV File
+            </strong>
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept=".csv,text/csv"
+              onChange={handleFileChange}
+              style={{ display: 'none' }}
+            />
+            <div
+              onClick={() => fileInputRef.current?.click()}
+              style={{
+                border: '2px dashed #CBD5E1',
+                borderRadius: '14px',
+                padding: '20px 16px',
+                textAlign: 'center',
+                cursor: 'pointer',
+                background: csvFile ? '#F0FDF4' : '#FAFAFA',
+                borderColor: csvFile ? '#86EFAC' : '#CBD5E1',
+                transition: 'all 0.2s ease'
+              }}
+            >
+              <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '6px' }}>
+                <FileText size={28} color={csvFile ? '#16A34A' : '#94A3B8'} />
+                {csvFile ? (
+                  <div>
+                    <strong style={{ fontSize: '0.84rem', color: '#15803D', display: 'block' }}>{csvFile.name}</strong>
+                    <span style={{ fontSize: '0.70rem', color: '#4ADE80' }}>Click to choose a different file</span>
+                  </div>
+                ) : (
+                  <div>
+                    <strong style={{ fontSize: '0.82rem', color: '#0F172A', display: 'block' }}>Click to browse or drop CSV file</strong>
+                    <span style={{ fontSize: '0.70rem', color: '#94A3B8' }}>Supports .csv files up to 5MB</span>
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+
+          {/* Parsing Errors Banner */}
+          {parsingError && (
+            <div style={{
+              background: '#FEF2F2',
+              border: '1px solid #FECACA',
+              borderRadius: '10px',
+              padding: '10px 12px',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '8px',
+              color: '#B91C1C',
+              fontSize: '0.74rem'
+            }}>
+              <AlertCircle size={14} style={{ flexShrink: 0 }} />
+              <span>{parsingError}</span>
+            </div>
+          )}
+
+          {/* Parsed Preview Table */}
+          {parsedRows.length > 0 && !importResults && (
+            <div style={{ border: '1px solid #E2E8F0', borderRadius: '12px', overflow: 'hidden' }}>
+              <div style={{
+                padding: '8px 12px',
+                background: '#F8FAFC',
+                borderBottom: '1px solid #E2E8F0',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between'
+              }}>
+                <span style={{ fontSize: '0.74rem', fontWeight: 800, color: '#0F172A' }}>
+                  Preview: {parsedRows.length} Valid Dishes Detected
+                </span>
+                <span style={{ fontSize: '0.68rem', color: '#64748B' }}>
+                  Showing first {Math.min(parsedRows.length, 4)} rows
+                </span>
+              </div>
+              <div style={{ maxHeight: '140px', overflowY: 'auto' }}>
+                <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.72rem' }}>
+                  <thead>
+                    <tr style={{ background: '#FAFBFD', color: '#64748B', textAlign: 'left', borderBottom: '1px solid #F1F5F9' }}>
+                      <th style={{ padding: '6px 10px' }}>Dish Name</th>
+                      <th style={{ padding: '6px 10px' }}>Category</th>
+                      <th style={{ padding: '6px 10px' }}>Price</th>
+                      <th style={{ padding: '6px 10px' }}>Type</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {parsedRows.slice(0, 4).map((row, idx) => (
+                      <tr key={idx} style={{ borderBottom: '1px solid #F8FAFC' }}>
+                        <td style={{ padding: '6px 10px', fontWeight: 700, color: '#0F172A' }}>{row.name}</td>
+                        <td style={{ padding: '6px 10px', color: '#64748B' }}>{row.category_name}</td>
+                        <td style={{ padding: '6px 10px', fontWeight: 800, color: '#0F172A' }}>{currencySymbol}{row.price}</td>
+                        <td style={{ padding: '6px 10px' }}>
+                          <span style={{
+                            padding: '1px 6px',
+                            borderRadius: '4px',
+                            fontSize: '0.62rem',
+                            fontWeight: 800,
+                            background: row.type === 'veg' ? '#DCFCE7' : (row.type === 'egg' ? '#FEF3C7' : '#FEE2E2'),
+                            color: row.type === 'veg' ? '#15803D' : (row.type === 'egg' ? '#B45309' : '#DC2626')
+                          }}>
+                            {row.type}
+                          </span>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          )}
+
+          {/* Progress Indicator */}
+          {importing && (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.74rem', color: '#0F172A', fontWeight: 700 }}>
+                <span>Importing dishes to catalog...</span>
+                <span>{progress.current} / {progress.total}</span>
+              </div>
+              <div style={{ width: '100%', height: '8px', background: '#E2E8F0', borderRadius: '4px', overflow: 'hidden' }}>
+                <div style={{
+                  width: `${(progress.current / Math.max(1, progress.total)) * 100}%`,
+                  height: '100%',
+                  background: 'linear-gradient(135deg, #059669 0%, #10B981 100%)',
+                  transition: 'width 0.2s ease'
+                }} />
+              </div>
+            </div>
+          )}
+
+          {/* Completion Status */}
+          {importResults && (
+            <div style={{
+              background: importResults.successCount > 0 ? '#F0FDF4' : '#FEF2F2',
+              border: `1px solid ${importResults.successCount > 0 ? '#BBF7D0' : '#FECACA'}`,
+              borderRadius: '12px',
+              padding: '12px 14px',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '10px'
+            }}>
+              <CheckCircle2 size={20} color={importResults.successCount > 0 ? '#16A34A' : '#DC2626'} />
+              <div>
+                <strong style={{ fontSize: '0.84rem', color: importResults.successCount > 0 ? '#15803D' : '#991B1B', display: 'block' }}>
+                  {importResults.successCount > 0 ? `Successfully imported ${importResults.successCount} dishes!` : 'Import failed'}
+                </strong>
+                <span style={{ fontSize: '0.72rem', color: '#64748B' }}>
+                  {importResults.errorCount > 0 ? `${importResults.errorCount} dishes had errors and were skipped.` : 'Your menu and public catalog have been refreshed.'}
+                </span>
+              </div>
+            </div>
+          )}
+        </div>
+
+        {/* Modal Footer */}
+        <div style={{
+          padding: '12px 20px',
+          borderTop: '1px solid #F1F5F9',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'flex-end',
+          gap: '10px',
+          background: '#FAFBFD'
+        }}>
+          <button
+            type="button"
+            onClick={onClose}
+            disabled={importing}
+            style={{
+              padding: '9px 16px',
+              borderRadius: '10px',
+              border: '1px solid #CBD5E1',
+              background: '#FFFFFF',
+              color: '#475569',
+              fontSize: '0.78rem',
+              fontWeight: 700,
+              cursor: 'pointer'
+            }}
+          >
+            {importResults ? 'Close' : 'Cancel'}
+          </button>
+          {!importResults && (
+            <button
+              type="button"
+              onClick={handleStartImport}
+              disabled={importing || parsedRows.length === 0}
+              style={{
+                padding: '9px 18px',
+                borderRadius: '10px',
+                border: 'none',
+                background: (importing || parsedRows.length === 0) ? '#94A3B8' : '#0A2315',
+                color: '#FFFFFF',
+                fontSize: '0.80rem',
+                fontWeight: 800,
+                cursor: (importing || parsedRows.length === 0) ? 'not-allowed' : 'pointer',
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '6px',
+                boxShadow: (importing || parsedRows.length === 0) ? 'none' : '0 3px 10px rgba(10,35,21,0.2)'
+              }}
+            >
+              <Upload size={13} />
+              <span>{importing ? 'Importing...' : `Import ${parsedRows.length} Dishes`}</span>
+            </button>
+          )}
+        </div>
+      </div>
     </div>
   );
 }
