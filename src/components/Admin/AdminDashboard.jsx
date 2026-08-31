@@ -3054,6 +3054,8 @@ export default function AdminDashboard({
                 exportingAll={exportingReport}
                 analyticsExportEnabled={tenantCaps.analytics_export_enabled}
                 currencySymbol={settingsForm.currency_symbol !== undefined && settingsForm.currency_symbol !== null ? settingsForm.currency_symbol : '₹'}
+                categories={safeCategories}
+                dishes={safeDishes}
               />
             )}
 
