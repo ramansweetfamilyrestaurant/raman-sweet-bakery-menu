@@ -59,10 +59,10 @@ export function getDishImageUrl(url) {
  * Combo Image Fallback Helper
  */
 export function getComboImageUrl(url) {
-  if (!url || typeof url !== 'string') return '/images/default-combo.webp';
+  if (!url || typeof url !== 'string') return '/images/default-combo.webp?v=3';
   const cleanUrl = url.trim();
   if (!cleanUrl || cleanUrl === 'null' || cleanUrl === 'undefined' || cleanUrl === '/uploads/logo.jpg') {
-    return '/images/default-combo.webp';
+    return '/images/default-combo.webp?v=3';
   }
   return resolveImageUrl(cleanUrl);
 }

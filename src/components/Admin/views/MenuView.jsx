@@ -2983,7 +2983,7 @@ export default function MenuView({
                         style={{ width: '100%', height: '100%', objectFit: 'cover' }}
                         onError={(e) => {
                           e.currentTarget.onerror = null;
-                          e.currentTarget.src = '/images/default-combo.webp';
+                          e.currentTarget.src = '/images/default-combo.webp?v=3';
                         }}
                       />
 

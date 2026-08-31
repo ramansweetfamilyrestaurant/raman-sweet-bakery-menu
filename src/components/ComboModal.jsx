@@ -114,7 +114,7 @@ export default function ComboModal({ combo, onClose, onAddToCart, canOrder = fal
             }}
             onError={(e) => {
               e.currentTarget.onerror = null;
-              e.currentTarget.src = '/images/default-combo.webp';
+              e.currentTarget.src = '/images/default-combo.webp?v=3';
             }}
           />
 
