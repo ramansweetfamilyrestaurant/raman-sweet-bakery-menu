@@ -359,7 +359,7 @@ export default function MenuView({
     const hasHalfPrice = !isNaN(rawHalfPrice) && rawHalfPrice > 0;
 
     return (
-      <div style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', flexWrap: 'wrap', maxWidth: '100%', boxSizing: 'border-box' }}>
+      <div style={{ display: 'inline-flex', alignItems: 'center', gap: '3px', flexWrap: 'nowrap', maxWidth: '100%', boxSizing: 'border-box' }}>
         {hasHalfPrice ? (
           /* Dual Portion Segmented Pill for dishes with Full/Half portions */
           <div style={{
@@ -367,28 +367,30 @@ export default function MenuView({
             alignItems: 'center',
             background: '#F8FAFC',
             border: '1px solid #E2E8F0',
-            borderRadius: '6px',
-            padding: layout === 'card' ? '2px 5px' : '3px 7px',
-            gap: layout === 'card' ? '4px' : '6px',
+            borderRadius: '5px',
+            padding: '2px 5px',
+            gap: '4px',
+            height: '24px',
             boxShadow: '0 1px 2px rgba(0,0,0,0.02)',
             maxWidth: '100%',
-            boxSizing: 'border-box'
+            boxSizing: 'border-box',
+            flexShrink: 0
           }}>
             {/* Full portion */}
             <div style={{ display: 'inline-flex', alignItems: 'baseline', gap: '2px' }}>
-              <span style={{ fontSize: '0.58rem', color: '#64748B', fontWeight: 600 }}>Full</span>
-              <strong style={{ fontSize: layout === 'card' ? '0.80rem' : '0.86rem', fontWeight: 800, color: '#0F172A', lineHeight: 1 }}>
+              <span style={{ fontSize: '0.56rem', color: '#64748B', fontWeight: 600, textTransform: 'capitalize' }}>Full</span>
+              <strong style={{ fontSize: '0.74rem', fontWeight: 800, color: '#0F172A', lineHeight: 1 }}>
                 {curr}{currentPrice}
               </strong>
             </div>
 
             {/* Subtle vertical divider */}
-            <span style={{ width: '1px', height: '9px', background: '#CBD5E1', display: 'inline-block' }} />
+            <span style={{ width: '1px', height: '8px', background: '#CBD5E1', display: 'inline-block' }} />
 
             {/* Half portion */}
             <div style={{ display: 'inline-flex', alignItems: 'baseline', gap: '2px' }}>
-              <span style={{ fontSize: '0.58rem', color: '#64748B', fontWeight: 600 }}>Half</span>
-              <strong style={{ fontSize: layout === 'card' ? '0.78rem' : '0.82rem', fontWeight: 800, color: '#334155', lineHeight: 1 }}>
+              <span style={{ fontSize: '0.56rem', color: '#64748B', fontWeight: 600, textTransform: 'capitalize' }}>Half</span>
+              <strong style={{ fontSize: '0.72rem', fontWeight: 800, color: '#334155', lineHeight: 1 }}>
                 {curr}{rawHalfPrice}
               </strong>
             </div>
@@ -397,8 +399,8 @@ export default function MenuView({
           /* Standard Single Item Price across all business types */
           <div style={{ display: 'inline-flex', alignItems: 'baseline', gap: '2px' }}>
             <strong style={{
-              fontSize: layout === 'card' ? '0.86rem' : '0.88rem',
-              fontWeight: 900,
+              fontSize: layout === 'card' ? '0.82rem' : '0.86rem',
+              fontWeight: 800,
               color: '#0F172A',
               lineHeight: 1,
               letterSpacing: '-0.01em'
@@ -411,7 +413,7 @@ export default function MenuView({
         {/* Struck-through Old/Original Price */}
         {hasValidOldPrice && (
           <span style={{
-            fontSize: '0.68rem',
+            fontSize: '0.64rem',
             color: '#94A3B8',
             textDecoration: 'line-through',
             fontWeight: 500
@@ -2143,8 +2145,9 @@ export default function MenuView({
                         marginTop: '4px',
                         paddingTop: '4px',
                         borderTop: '1px solid #F1F5F9',
-                        flexWrap: 'wrap',
-                        gap: '3px'
+                        flexWrap: 'nowrap',
+                        gap: '3px',
+                        minWidth: 0
                       }}>
                         {renderDishPrice(dish, 'card')}
 
@@ -2158,16 +2161,18 @@ export default function MenuView({
                             background: isAvailable ? '#E6F9EE' : '#FEE2E2',
                             color: isAvailable ? '#15803D' : '#DC2626',
                             border: `1px solid ${isAvailable ? '#C6F6D5' : '#FECACA'}`,
-                            padding: '2px 6px',
+                            padding: '2px 5px',
+                            height: '22px',
                             borderRadius: '5px',
-                            fontSize: '0.62rem',
+                            fontSize: '0.60rem',
                             fontWeight: 800,
                             cursor: 'pointer',
                             display: 'inline-flex',
                             alignItems: 'center',
                             gap: '2px',
                             userSelect: 'none',
-                            flexShrink: 0
+                            flexShrink: 0,
+                            whiteSpace: 'nowrap'
                           }}
                         >
                           <span>{isAvailable ? 'In Stock' : 'Sold Out'}</span>
