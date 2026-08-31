@@ -75,7 +75,9 @@ export default function MenuView({
   const [deleteConfirmCombo, setDeleteConfirmCombo] = useState(null);
   const [quickPriceDish, setQuickPriceDish] = useState(null);
   const [quickPriceVal, setQuickPriceVal] = useState({ price: '', price_half: '' });
-  const [dietFilter, setDietFilter] = useState('all'); // 'all', 'veg', 'nonveg', 'must_try', 'available', 'sold_out'
+  const [dietFilter, setDietFilter] = useState('all'); // 'all', 'veg', 'nonveg', 'egg', 'must_try', 'special', 'available', 'sold_out'
+  const [priceFilter, setPriceFilter] = useState('all'); // 'all', 'under_100', '100_250', 'above_250'
+  const [showFilterModal, setShowFilterModal] = useState(false);
   const [sortBy, setSortBy] = useState('recent'); // 'recent', 'name_asc', 'price_asc', 'price_desc', 'instock_first'
   const [viewMode, setViewMode] = useState('grid'); // 'grid' | 'list'
   const [showAddMenuDropdown, setShowAddMenuDropdown] = useState(false);
@@ -100,10 +102,27 @@ export default function MenuView({
   // Dynamic currency resolver from restaurant settings or props
   const curr = getCurrencySymbol(restaurantInfo?.currency_symbol !== undefined ? restaurantInfo.currency_symbol : currencySymbol);
 
+  // Dynamic live dish counts by filter criteria
+  const counts = useMemo(() => {
+    return {
+      all: safeDishes.length,
+      veg: safeDishes.filter(d => d.type === 'veg').length,
+      nonveg: safeDishes.filter(d => d.type === 'nonveg').length,
+      egg: safeDishes.filter(d => d.type === 'egg').length,
+      must_try: safeDishes.filter(d => Boolean(d.must_try) || (typeof d.badge === 'string' && (d.badge.toLowerCase().includes('must try') || d.badge.toLowerCase().includes('bestseller') || d.badge.toLowerCase().includes('popular')))).length,
+      available: safeDishes.filter(d => d.is_available !== false && d.available !== false && d.available !== 0).length,
+      sold_out: safeDishes.filter(d => d.is_available === false || d.available === false || d.available === 0).length,
+      under_100: safeDishes.filter(d => (Number(d.price) || 0) <= 100).length
+    };
+  }, [safeDishes]);
+
+  const activeFilterCount = (dietFilter !== 'all' ? 1 : 0) + (priceFilter !== 'all' ? 1 : 0) + (selectedCatFilter !== 'all' ? 1 : 0) + (sortBy !== 'recent' ? 1 : 0);
+  const hasActiveFilters = activeFilterCount > 0 || Boolean(search);
+
   // Reset pagination on filter or search change
   useEffect(() => {
     setCurrentPage(1);
-  }, [search, selectedCatFilter, dietFilter, sortBy, pageSize]);
+  }, [search, selectedCatFilter, dietFilter, priceFilter, sortBy, pageSize]);
 
   // Close open menus on outside click / escape
   useEffect(() => {
@@ -142,7 +161,8 @@ export default function MenuView({
       
       let matchesDiet = true;
       if (dietFilter === 'veg') matchesDiet = d.type === 'veg';
-      if (dietFilter === 'nonveg') matchesDiet = d.type === 'nonveg' || d.type === 'egg';
+      if (dietFilter === 'nonveg') matchesDiet = d.type === 'nonveg';
+      if (dietFilter === 'egg') matchesDiet = d.type === 'egg';
       if (dietFilter === 'must_try') {
         matchesDiet = Boolean(d.must_try) || (typeof d.badge === 'string' && (
           d.badge.toLowerCase().includes('must try') || 
@@ -152,10 +172,22 @@ export default function MenuView({
           d.badge.toLowerCase().includes('chef')
         ));
       }
+      if (dietFilter === 'special') {
+        matchesDiet = typeof d.badge === 'string' && (
+          d.badge.toLowerCase().includes('special') || 
+          d.badge.toLowerCase().includes('chef')
+        );
+      }
       if (dietFilter === 'available') matchesDiet = d.is_available !== false && d.available !== false && d.available !== 0;
       if (dietFilter === 'sold_out') matchesDiet = d.is_available === false || d.available === false || d.available === 0;
 
-      return matchesSearch && matchesCat && matchesDiet;
+      let matchesPrice = true;
+      const numP = Number(d.price) || 0;
+      if (priceFilter === 'under_100') matchesPrice = numP <= 100;
+      else if (priceFilter === '100_250') matchesPrice = numP > 100 && numP <= 250;
+      else if (priceFilter === 'above_250') matchesPrice = numP > 250;
+
+      return matchesSearch && matchesCat && matchesDiet && matchesPrice;
     });
 
     if (sortBy === 'price_asc') {
@@ -169,7 +201,7 @@ export default function MenuView({
     }
 
     return list;
-  }, [safeDishes, search, selectedCatFilter, dietFilter, sortBy, activeCategoryObj]);
+  }, [safeDishes, search, selectedCatFilter, dietFilter, priceFilter, sortBy, activeCategoryObj]);
 
   // Filtered categories for Categories Workspace
   const filteredCategories = useMemo(() => {
@@ -1240,45 +1272,79 @@ export default function MenuView({
           </div>
 
           <button
-            onClick={() => { setDietFilter(dietFilter === 'all' ? 'veg' : 'all'); }}
+            type="button"
+            onClick={() => setShowFilterModal(true)}
             style={{
               width: '42px',
               height: '42px',
               borderRadius: '12px',
-              border: '1px solid #E2E8F0',
-              background: '#FFFFFF',
-              color: '#0F172A',
+              border: activeFilterCount > 0 ? '1.5px solid #D97706' : '1px solid #E2E8F0',
+              background: activeFilterCount > 0 ? '#FFFBEB' : '#FFFFFF',
+              color: activeFilterCount > 0 ? '#D97706' : '#0F172A',
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
               cursor: 'pointer',
               boxShadow: '0 1px 2px rgba(0,0,0,0.02)',
-              flexShrink: 0
+              flexShrink: 0,
+              position: 'relative'
             }}
-            title="Filter Options"
+            title="Filter & Sort Options"
           >
-            <SlidersHorizontal size={17} color="#475569" />
+            <SlidersHorizontal size={17} color={activeFilterCount > 0 ? '#D97706' : '#475569'} />
+            {activeFilterCount > 0 && (
+              <span style={{
+                position: 'absolute',
+                top: '-4px',
+                right: '-4px',
+                background: '#D97706',
+                color: '#FFFFFF',
+                fontSize: '0.62rem',
+                fontWeight: 900,
+                width: '18px',
+                height: '18px',
+                borderRadius: '50%',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                boxShadow: '0 2px 5px rgba(217,119,6,0.35)'
+              }}>
+                {activeFilterCount}
+              </span>
+            )}
           </button>
         </div>
 
-        {/* Filter Pills Row */}
+        {/* Filter Pills Row with Dynamic Live Counts */}
         <div className="no-scrollbar" style={{
           display: 'flex',
           alignItems: 'center',
           gap: '8px',
           overflowX: 'auto',
-          paddingBottom: '2px'
+          paddingBottom: '4px'
         }}>
           {[
-            { id: 'veg', label: 'Veg', dot: '🟢' },
-            { id: 'nonveg', label: 'Non-Veg', dot: '🔴' },
-            { id: 'must_try', label: 'Best Sellers', icon: '⭐' }
+            { id: 'all', label: 'All', count: counts.all },
+            { id: 'veg', label: 'Veg', dot: '🟢', count: counts.veg },
+            { id: 'nonveg', label: 'Non-Veg', dot: '🔴', count: counts.nonveg },
+            { id: 'egg', label: 'Egg', dot: '🟡', count: counts.egg },
+            { id: 'must_try', label: 'Best Sellers', icon: '⭐', count: counts.must_try },
+            { id: 'available', label: 'In Stock', dot: '🟢', count: counts.available },
+            { id: 'sold_out', label: 'Sold Out', dot: '🔴', count: counts.sold_out },
+            { id: 'under_100', label: `Under ${curr}100`, count: counts.under_100 }
           ].map(chip => {
-            const isActive = dietFilter === chip.id;
+            const isActive = chip.id === 'under_100' ? (priceFilter === 'under_100') : (dietFilter === chip.id);
             return (
               <button
                 key={chip.id}
-                onClick={() => setDietFilter(isActive ? 'all' : chip.id)}
+                type="button"
+                onClick={() => {
+                  if (chip.id === 'under_100') {
+                    setPriceFilter(priceFilter === 'under_100' ? 'all' : 'under_100');
+                  } else {
+                    setDietFilter(chip.id);
+                  }
+                }}
                 style={{
                   padding: '7px 14px',
                   borderRadius: '20px',
@@ -1293,15 +1359,55 @@ export default function MenuView({
                   alignItems: 'center',
                   gap: '5px',
                   boxShadow: '0 1px 2px rgba(0,0,0,0.02)',
-                  transition: 'all 0.15s ease'
+                  transition: 'all 0.15s ease',
+                  flexShrink: 0
                 }}
               >
                 {chip.dot && <span style={{ fontSize: '0.70rem' }}>{chip.dot}</span>}
                 {chip.icon && <span>{chip.icon}</span>}
                 <span>{chip.label}</span>
+                <span style={{
+                  fontSize: '0.66rem',
+                  opacity: isActive ? 0.9 : 0.65,
+                  fontWeight: 600,
+                  marginLeft: '2px'
+                }}>
+                  ({chip.count})
+                </span>
               </button>
             );
           })}
+
+          {hasActiveFilters && (
+            <button
+              type="button"
+              onClick={() => {
+                setDietFilter('all');
+                setPriceFilter('all');
+                setSelectedCatFilter('all');
+                setSearch('');
+                setSortBy('recent');
+              }}
+              style={{
+                padding: '7px 12px',
+                borderRadius: '20px',
+                border: '1px dashed #EF4444',
+                background: '#FEF2F2',
+                color: '#DC2626',
+                fontSize: '0.74rem',
+                fontWeight: 800,
+                cursor: 'pointer',
+                whiteSpace: 'nowrap',
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '4px',
+                flexShrink: 0
+              }}
+            >
+              <X size={12} />
+              <span>Clear All Filters</span>
+            </button>
+          )}
         </div>
       </div>
 
@@ -2799,6 +2905,347 @@ export default function MenuView({
               </button>
               <button onClick={() => { onDeleteCombo(deleteConfirmCombo.id); setDeleteConfirmCombo(null); }} style={{ padding: '8px 14px', borderRadius: '8px', border: 'none', background: '#DC2626', color: '#FFFFFF', fontWeight: 800, cursor: 'pointer' }}>
                 Delete
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ========================================================
+          10. 🎛️ FILTER & SORT OPTIONS MODAL
+         ======================================================== */}
+      {showFilterModal && (
+        <div
+          onClick={() => setShowFilterModal(false)}
+          style={{
+            position: 'fixed',
+            inset: 0,
+            background: 'rgba(15, 23, 42, 0.65)',
+            backdropFilter: 'blur(4px)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            zIndex: 10000,
+            padding: '16px'
+          }}
+        >
+          <div
+            onClick={(e) => e.stopPropagation()}
+            style={{
+              background: '#FFFFFF',
+              borderRadius: '24px',
+              maxWidth: '500px',
+              width: '100%',
+              maxHeight: '90vh',
+              overflowY: 'auto',
+              boxShadow: '0 20px 60px rgba(0,0,0,0.25)',
+              display: 'flex',
+              flexDirection: 'column',
+              boxSizing: 'border-box',
+              animation: 'fadeIn 0.2s ease-out'
+            }}
+          >
+            {/* Modal Header */}
+            <div style={{
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+              padding: '18px 22px',
+              borderBottom: '1px solid #F1F5F9'
+            }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                <div style={{
+                  width: '36px',
+                  height: '36px',
+                  borderRadius: '10px',
+                  background: '#FFFBEB',
+                  color: '#D97706',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center'
+                }}>
+                  <SlidersHorizontal size={18} />
+                </div>
+                <div>
+                  <h3 style={{ fontSize: '1.05rem', fontWeight: 900, color: '#0F172A', margin: 0 }}>
+                    Filter & Sort Options
+                  </h3>
+                  <span style={{ fontSize: '0.74rem', color: '#64748B', display: 'block' }}>
+                    Custom catalog search & preferences
+                  </span>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setShowFilterModal(false)}
+                style={{
+                  background: '#F1F5F9',
+                  border: 'none',
+                  borderRadius: '50%',
+                  width: '32px',
+                  height: '32px',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  cursor: 'pointer',
+                  color: '#64748B'
+                }}
+              >
+                <X size={16} />
+              </button>
+            </div>
+
+            {/* Modal Body */}
+            <div style={{ padding: '20px 22px', display: 'flex', flexDirection: 'column', gap: '18px' }}>
+              
+              {/* 1. Dietary Preference */}
+              <div>
+                <label style={{ fontSize: '0.80rem', fontWeight: 800, color: '#334155', display: 'block', marginBottom: '8px' }}>
+                  🥗 Dietary Preference
+                </label>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '8px' }}>
+                  {[
+                    { id: 'all', label: `All Items (${counts.all})`, icon: '🍽️' },
+                    { id: 'veg', label: `Pure Veg (${counts.veg})`, icon: '🟢' },
+                    { id: 'nonveg', label: `Non-Veg (${counts.nonveg})`, icon: '🔴' },
+                    { id: 'egg', label: `Contains Egg (${counts.egg})`, icon: '🟡' }
+                  ].map(opt => {
+                    const isSel = (dietFilter === opt.id) || (opt.id === 'all' && ['all', 'available', 'sold_out', 'must_try', 'special'].includes(dietFilter));
+                    return (
+                      <button
+                        key={opt.id}
+                        type="button"
+                        onClick={() => setDietFilter(opt.id)}
+                        style={{
+                          padding: '9px 12px',
+                          borderRadius: '12px',
+                          border: isSel ? '1.5px solid #261B14' : '1px solid #E2E8F0',
+                          background: isSel ? '#F8FAFC' : '#FFFFFF',
+                          color: '#0F172A',
+                          fontWeight: isSel ? 800 : 600,
+                          fontSize: '0.78rem',
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: '8px',
+                          cursor: 'pointer'
+                        }}
+                      >
+                        <span>{opt.icon}</span>
+                        <span>{opt.label}</span>
+                        {isSel && <Check size={14} color="#16A34A" style={{ marginLeft: 'auto' }} />}
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+
+              {/* 2. Stock & Availability Status */}
+              <div>
+                <label style={{ fontSize: '0.80rem', fontWeight: 800, color: '#334155', display: 'block', marginBottom: '8px' }}>
+                  📦 Inventory & Stock Status
+                </label>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '8px' }}>
+                  {[
+                    { id: 'all', label: 'All Items' },
+                    { id: 'available', label: `In Stock (${counts.available}) 🟢` },
+                    { id: 'sold_out', label: `Sold Out (${counts.sold_out}) 🔴` }
+                  ].map(opt => {
+                    const isSel = dietFilter === opt.id;
+                    return (
+                      <button
+                        key={opt.id}
+                        type="button"
+                        onClick={() => setDietFilter(opt.id)}
+                        style={{
+                          padding: '9px 6px',
+                          borderRadius: '12px',
+                          border: isSel ? '1.5px solid #261B14' : '1px solid #E2E8F0',
+                          background: isSel ? '#F8FAFC' : '#FFFFFF',
+                          color: '#0F172A',
+                          fontWeight: isSel ? 800 : 600,
+                          fontSize: '0.74rem',
+                          textAlign: 'center',
+                          cursor: 'pointer'
+                        }}
+                      >
+                        {opt.label}
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+
+              {/* 3. Badges & Highlights */}
+              <div>
+                <label style={{ fontSize: '0.80rem', fontWeight: 800, color: '#334155', display: 'block', marginBottom: '8px' }}>
+                  ⭐ Highlights & Badges
+                </label>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '8px' }}>
+                  {[
+                    { id: 'must_try', label: `Best Sellers (${counts.must_try})`, icon: '⭐' },
+                    { id: 'special', label: "Chef's Special", icon: '✨' }
+                  ].map(opt => {
+                    const isSel = dietFilter === opt.id;
+                    return (
+                      <button
+                        key={opt.id}
+                        type="button"
+                        onClick={() => setDietFilter(isSel ? 'all' : opt.id)}
+                        style={{
+                          padding: '9px 12px',
+                          borderRadius: '12px',
+                          border: isSel ? '1.5px solid #D97706' : '1px solid #E2E8F0',
+                          background: isSel ? '#FFFBEB' : '#FFFFFF',
+                          color: isSel ? '#B45309' : '#0F172A',
+                          fontWeight: isSel ? 800 : 600,
+                          fontSize: '0.78rem',
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: '8px',
+                          cursor: 'pointer'
+                        }}
+                      >
+                        <span>{opt.icon}</span>
+                        <span>{opt.label}</span>
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+
+              {/* 4. Price Filter */}
+              <div>
+                <label style={{ fontSize: '0.80rem', fontWeight: 800, color: '#334155', display: 'block', marginBottom: '8px' }}>
+                  💰 Price Range
+                </label>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '6px' }}>
+                  {[
+                    { id: 'all', label: 'All Prices' },
+                    { id: 'under_100', label: `< ${curr}100` },
+                    { id: '100_250', label: `${curr}100 - ${curr}250` },
+                    { id: 'above_250', label: `> ${curr}250` }
+                  ].map(opt => {
+                    const isSel = priceFilter === opt.id;
+                    return (
+                      <button
+                        key={opt.id}
+                        type="button"
+                        onClick={() => setPriceFilter(opt.id)}
+                        style={{
+                          padding: '8px 4px',
+                          borderRadius: '10px',
+                          border: isSel ? '1.5px solid #0284C7' : '1px solid #E2E8F0',
+                          background: isSel ? '#F0F9FF' : '#FFFFFF',
+                          color: isSel ? '#0369A1' : '#0F172A',
+                          fontWeight: isSel ? 800 : 600,
+                          fontSize: '0.72rem',
+                          textAlign: 'center',
+                          cursor: 'pointer'
+                        }}
+                      >
+                        {opt.label}
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+
+              {/* 5. Sort Order */}
+              <div>
+                <label style={{ fontSize: '0.80rem', fontWeight: 800, color: '#334155', display: 'block', marginBottom: '8px' }}>
+                  ⚡ Sort Order
+                </label>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '8px' }}>
+                  {[
+                    { id: 'recent', label: 'Default / Recent' },
+                    { id: 'name_asc', label: 'Name (A to Z)' },
+                    { id: 'price_asc', label: 'Price (Low to High)' },
+                    { id: 'price_desc', label: 'Price (High to Low)' },
+                    { id: 'instock_first', label: 'In Stock First 🟢' }
+                  ].map(opt => {
+                    const isSel = sortBy === opt.id;
+                    return (
+                      <button
+                        key={opt.id}
+                        type="button"
+                        onClick={() => setSortBy(opt.id)}
+                        style={{
+                          padding: '9px 10px',
+                          borderRadius: '10px',
+                          border: isSel ? '1.5px solid #261B14' : '1px solid #E2E8F0',
+                          background: isSel ? '#F8FAFC' : '#FFFFFF',
+                          color: '#0F172A',
+                          fontWeight: isSel ? 800 : 600,
+                          fontSize: '0.74rem',
+                          textAlign: 'left',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'space-between',
+                          cursor: 'pointer'
+                        }}
+                      >
+                        <span>{opt.label}</span>
+                        {isSel && <Check size={12} color="#16A34A" />}
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+
+            </div>
+
+            {/* Modal Footer */}
+            <div style={{
+              padding: '14px 22px',
+              borderTop: '1px solid #F1F5F9',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+              gap: '12px',
+              background: '#F8FAFC',
+              borderBottomLeftRadius: '24px',
+              borderBottomRightRadius: '24px'
+            }}>
+              <button
+                type="button"
+                onClick={() => {
+                  setDietFilter('all');
+                  setPriceFilter('all');
+                  setSortBy('recent');
+                  setSelectedCatFilter('all');
+                  setSearch('');
+                }}
+                style={{
+                  padding: '9px 16px',
+                  borderRadius: '12px',
+                  border: '1px solid #CBD5E1',
+                  background: '#FFFFFF',
+                  color: '#475569',
+                  fontSize: '0.80rem',
+                  fontWeight: 700,
+                  cursor: 'pointer'
+                }}
+              >
+                Reset All
+              </button>
+
+              <button
+                type="button"
+                onClick={() => setShowFilterModal(false)}
+                style={{
+                  flex: 1,
+                  padding: '10px 20px',
+                  borderRadius: '12px',
+                  border: 'none',
+                  background: '#0A2315',
+                  color: '#FFFFFF',
+                  fontSize: '0.84rem',
+                  fontWeight: 800,
+                  cursor: 'pointer',
+                  boxShadow: '0 3px 10px rgba(10,35,21,0.2)'
+                }}
+              >
+                Apply Filters ({filteredDishes.length} Items)
               </button>
             </div>
           </div>
