@@ -655,6 +655,41 @@
   .header-cursive-quote {
     display: none !important;
   }
+  .catalog-header-bar {
+    gap: 6px !important;
+  }
+  .catalog-header-bar h3 {
+    font-size: 0.88rem !important;
+  }
+  .catalog-actions-wrap {
+    gap: 4px !important;
+  }
+  .view-mode-toggle-group {
+    padding: 1px !important;
+    gap: 1px !important;
+    border-radius: 8px !important;
+  }
+  .view-mode-toggle-group button {
+    padding: 3px 6px !important;
+    font-size: 0.65rem !important;
+    gap: 3px !important;
+    border-radius: 6px !important;
+  }
+  .catalog-sort-select {
+    height: 26px !important;
+    padding: 0 18px 0 6px !important;
+    font-size: 0.65rem !important;
+    font-weight: 700 !important;
+    max-width: 96px !important;
+    width: auto !important;
+    min-width: 0 !important;
+    border-radius: 8px !important;
+  }
+  .catalog-sort-icon {
+    right: 4px !important;
+    width: 10px !important;
+    height: 10px !important;
+  }
 }
 
 @media (max-width: 480px) {
@@ -681,6 +716,12 @@
   .mobile-only-hero {
     padding: 12px 10px !important;
   }
+  .catalog-sort-select {
+    height: 25px !important;
+    padding: 0 16px 0 5px !important;
+    font-size: 0.64rem !important;
+    max-width: 90px !important;
+  }
 }
 
 @media (max-width: 360px) {
@@ -698,5 +739,21 @@
   }
   .mobile-only-hero {
     padding: 10px 8px !important;
+  }
+  .catalog-header-bar h3 {
+    font-size: 0.80rem !important;
+  }
+  .catalog-header-bar h3 span {
+    font-size: 0.70rem !important;
+  }
+  .view-mode-toggle-group button {
+    padding: 2px 5px !important;
+    font-size: 0.60rem !important;
+  }
+  .catalog-sort-select {
+    height: 24px !important;
+    padding: 0 15px 0 4px !important;
+    font-size: 0.60rem !important;
+    max-width: 82px !important;
   }
 }

@@ -1482,7 +1482,7 @@ export default function MenuView({
           <div className="center-catalog-column" style={{ display: 'flex', flexDirection: 'column', gap: '12px', width: '100%', maxWidth: '100%', minWidth: 0, boxSizing: 'border-box' }}>
             
             {/* Catalog Controls Header */}
-            <div style={{
+            <div className="catalog-header-bar" style={{
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'space-between',
@@ -1500,9 +1500,9 @@ export default function MenuView({
                 </span>
               </h3>
 
-              <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flexWrap: 'wrap' }}>
+              <div className="catalog-actions-wrap" style={{ display: 'flex', alignItems: 'center', gap: '6px', flexWrap: 'wrap' }}>
                 {/* View Mode Segmented Switch [ ▦ Grid | ☰ List ] */}
-                <div style={{
+                <div className="view-mode-toggle-group" style={{
                   display: 'inline-flex',
                   background: '#FFFFFF',
                   border: '1px solid #E2E8F0',
@@ -1556,8 +1556,9 @@ export default function MenuView({
                 </div>
 
                 {/* Sort Dropdown Selector */}
-                <div style={{ position: 'relative' }}>
+                <div className="sort-select-wrapper" style={{ position: 'relative' }}>
                   <select
+                    className="catalog-sort-select"
                     value={sortBy}
                     onChange={(e) => setSortBy(e.target.value)}
                     style={{
@@ -1583,7 +1584,7 @@ export default function MenuView({
                     <option value="price_desc">💎 Price (High)</option>
                     <option value="instock_first">🟢 In-Stock First</option>
                   </select>
-                  <ChevronDown size={11} color="#64748B" style={{ position: 'absolute', right: '6px', top: '50%', transform: 'translateY(-50%)', pointerEvents: 'none' }} />
+                  <ChevronDown className="catalog-sort-icon" size={11} color="#64748B" style={{ position: 'absolute', right: '6px', top: '50%', transform: 'translateY(-50%)', pointerEvents: 'none' }} />
                 </div>
               </div>
             </div>
