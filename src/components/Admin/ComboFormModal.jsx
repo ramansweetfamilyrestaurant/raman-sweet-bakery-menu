@@ -564,20 +564,18 @@ export default function ComboFormModal({ combo, dishes, token, onSave, onClose }
               )}
 
               {/* Search & Dish Picker */}
-              <div style={{ position: 'relative', marginTop: '2px', display: 'flex', alignItems: 'center' }}>
-                <Search size={15} color="#94A3B8" style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', pointerEvents: 'none', zIndex: 2 }} />
+              <div style={{ position: 'relative', width: '100%', minWidth: 0, marginTop: '2px', boxSizing: 'border-box' }}>
+                <Search size={16} color="#94A3B8" style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', pointerEvents: 'none', zIndex: 2 }} />
                 <input
                   type="text"
+                  className="combo-dish-search-input"
                   value={dishSearch}
                   onChange={e => setDishSearch(e.target.value)}
                   placeholder="Search dishes to add..."
                   style={{
                     width: '100%',
-                    paddingLeft: '38px',
-                    paddingRight: '12px',
-                    paddingTop: '9px',
-                    paddingBottom: '9px',
-                    borderRadius: '8px',
+                    padding: '10px 12px 10px 40px',
+                    borderRadius: '9px',
                     border: '1.5px solid #CBD5E1',
                     fontSize: '0.82rem',
                     outline: 'none',
