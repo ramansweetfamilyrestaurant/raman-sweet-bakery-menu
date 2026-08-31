@@ -3386,13 +3386,11 @@ export default function MenuView({
           6. BOTTOM PAGINATION ROW (MATCHING REFERENCE EXACTLY)
          ======================================================== */}
       {filteredDishes.length > 0 && activeSubTab === 'dishes' && (
-        <div style={{
+        <div className="menu-pagination-bar" style={{
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'space-between',
           padding: '14px 2px 0 2px',
-          flexWrap: 'wrap',
-          gap: '8px',
           borderTop: '1px solid #E2E8F0',
           marginTop: '6px',
           width: '100%',
@@ -3400,7 +3398,7 @@ export default function MenuView({
           boxSizing: 'border-box'
         }}>
           {/* Left: Showing count */}
-          <span style={{ fontSize: '0.72rem', color: '#64748B', fontWeight: 600 }}>
+          <span className="menu-pagination-info" style={{ fontSize: '0.72rem', color: '#64748B', fontWeight: 600 }}>
             Showing{' '}
             <strong style={{ color: '#0F172A' }}>
               {isAllPages ? 1 : Math.min(totalItems, (safeCurrentPage - 1) * effectivePageSize + 1)}
@@ -3414,13 +3412,14 @@ export default function MenuView({
 
           {/* Center: Pagination numbers with dark brown active circle */}
           {!isAllPages && totalPages > 1 && (
-            <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+            <div className="menu-pagination-pages" style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
               <button
                 onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
                 disabled={safeCurrentPage === 1}
+                aria-label="Previous page"
                 style={{
-                  width: '26px',
-                  height: '26px',
+                  width: '28px',
+                  height: '28px',
                   borderRadius: '6px',
                   border: 'none',
                   background: 'transparent',
@@ -3431,7 +3430,7 @@ export default function MenuView({
                   justifyContent: 'center'
                 }}
               >
-                <ChevronLeft size={13} />
+                <ChevronLeft size={14} />
               </button>
 
               {Array.from({ length: totalPages }, (_, i) => i + 1)
@@ -3443,16 +3442,21 @@ export default function MenuView({
                       {isPrevGap && <span style={{ padding: '0 2px', color: '#94A3B8', fontSize: '0.70rem' }}>⋯</span>}
                       <button
                         onClick={() => setCurrentPage(p)}
+                        aria-label={`Go to page ${p}`}
+                        aria-current={p === safeCurrentPage ? 'page' : undefined}
                         style={{
-                          width: '26px',
-                          height: '26px',
+                          width: '28px',
+                          height: '28px',
                           borderRadius: '50%',
                           border: 'none',
-                          background: p === safeCurrentPage ? '#261B14' : 'transparent',
+                          background: p === safeCurrentPage ? '#0A2315' : 'transparent',
                           color: p === safeCurrentPage ? '#FFFFFF' : '#0F172A',
-                          fontSize: '0.72rem',
-                          fontWeight: p === safeCurrentPage ? 900 : 600,
-                          cursor: 'pointer'
+                          fontSize: '0.74rem',
+                          fontWeight: p === safeCurrentPage ? 800 : 600,
+                          cursor: 'pointer',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center'
                         }}
                       >
                         {p}
@@ -3464,9 +3468,10 @@ export default function MenuView({
               <button
                 onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
                 disabled={safeCurrentPage === totalPages}
+                aria-label="Next page"
                 style={{
-                  width: '26px',
-                  height: '26px',
+                  width: '28px',
+                  height: '28px',
                   borderRadius: '6px',
                   border: 'none',
                   background: 'transparent',
@@ -3477,27 +3482,29 @@ export default function MenuView({
                   justifyContent: 'center'
                 }}
               >
-                <ChevronRight size={13} />
+                <ChevronRight size={14} />
               </button>
             </div>
           )}
 
           {/* Right: Items per page selector */}
-          <div>
+          <div className="menu-pagination-size">
             <select
               value={pageSize}
               onChange={(e) => setPageSize(e.target.value === 'all' ? 'all' : Number(e.target.value))}
+              aria-label="Items per page"
               style={{
                 padding: '4px 8px',
                 borderRadius: '8px',
                 border: '1px solid #E2E8F0',
                 background: '#FFFFFF',
                 color: '#0F172A',
-                fontSize: '0.70rem',
+                fontSize: '0.72rem',
                 fontWeight: 700,
                 cursor: 'pointer',
                 outline: 'none',
-                height: '28px'
+                height: '30px',
+                boxSizing: 'border-box'
               }}
             >
               <option value={12}>12 / page</option>

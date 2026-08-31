@@ -766,3 +766,48 @@
   padding-bottom: 10px !important;
   box-sizing: border-box !important;
 }
+
+/* Menu Pagination Responsive Layout */
+.menu-pagination-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+@media (max-width: 768px) {
+  .menu-pagination-bar {
+    display: grid !important;
+    grid-template-columns: 1fr auto !important;
+    grid-template-areas:
+      "info size"
+      "pages pages" !important;
+    row-gap: 10px !important;
+    column-gap: 8px !important;
+    align-items: center !important;
+    padding: 12px 2px 0 2px !important;
+  }
+  .menu-pagination-info {
+    grid-area: info !important;
+    justify-self: start !important;
+    font-size: 0.70rem !important;
+    white-space: nowrap !important;
+    overflow: hidden !important;
+    text-overflow: ellipsis !important;
+    max-width: 100% !important;
+  }
+  .menu-pagination-size {
+    grid-area: size !important;
+    justify-self: end !important;
+  }
+  .menu-pagination-pages {
+    grid-area: pages !important;
+    justify-self: center !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    gap: 4px !important;
+    width: 100% !important;
+  }
+}
