@@ -475,12 +475,28 @@ export default function MenuView({
           grid-template-columns: 220px minmax(0, 1fr) 250px;
           gap: 18px;
           align-items: start;
+          width: 100%;
+          max-width: 100%;
+          min-width: 0;
+          box-sizing: border-box;
         }
 
         .center-dish-grid {
           display: grid;
           grid-template-columns: repeat(4, minmax(0, 1fr));
           gap: 14px;
+          width: 100%;
+          max-width: 100%;
+          min-width: 0;
+          box-sizing: border-box;
+        }
+
+        .mobile-table-scroll-wrap {
+          overflow-x: auto !important;
+          -webkit-overflow-scrolling: touch !important;
+          width: 100% !important;
+          max-width: 100% !important;
+          box-sizing: border-box !important;
         }
 
         @media (max-width: 1440px) {
@@ -503,7 +519,16 @@ export default function MenuView({
 
         @media (max-width: 990px) {
           .master-workspace-layout {
-            grid-template-columns: 1fr !important;
+            display: flex !important;
+            flex-direction: column !important;
+            grid-template-columns: 100% !important;
+            width: 100% !important;
+            max-width: 100% !important;
+            min-width: 0 !important;
+            gap: 12px !important;
+          }
+          .left-promo-banner {
+            display: none !important;
           }
           .right-widgets-column {
             display: none !important;
@@ -516,10 +541,33 @@ export default function MenuView({
         @media (max-width: 600px) {
           .center-dish-grid {
             grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
-            gap: 10px !important;
+            gap: 8px !important;
+            width: 100% !important;
+            max-width: 100% !important;
+            min-width: 0 !important;
+          }
+          .dish-grid-card {
+            padding: 7px !important;
+            border-radius: 12px !important;
+            min-width: 0 !important;
+            max-width: 100% !important;
+            box-sizing: border-box !important;
+          }
+          .dish-grid-img-wrap {
+            height: 105px !important;
+          }
+          .dish-grid-card h4 {
+            font-size: 0.76rem !important;
+            white-space: nowrap !important;
+            overflow: hidden !important;
+            text-overflow: ellipsis !important;
           }
           .header-cursive-quote {
             display: none !important;
+          }
+          .mobile-only-hero {
+            padding: 12px 10px !important;
+            border-radius: 16px !important;
           }
         }
 
@@ -531,9 +579,6 @@ export default function MenuView({
             display: block !important;
           }
           .desktop-summary-cards {
-            display: none !important;
-          }
-          .desktop-table-view {
             display: none !important;
           }
           .mobile-floating-add-btn {
@@ -1787,7 +1832,7 @@ export default function MenuView({
                     >
                       <div>
                         {/* Image Container with unclipped 3-Dot floating overlay & Selection Checkbox */}
-                        <div style={{
+                        <div className="dish-grid-img-wrap" style={{
                           position: 'relative',
                           width: '100%',
                           height: '136px',
@@ -2069,14 +2114,17 @@ export default function MenuView({
               </div>
             ) : (
               /* LIST VIEW TABLE */
-              <div style={{
+              <div className="mobile-table-scroll-wrap" style={{
                 background: '#FFFFFF',
                 borderRadius: '16px',
                 border: '1px solid #E2E8F0',
-                overflow: 'hidden',
+                overflowX: 'auto',
+                WebkitOverflowScrolling: 'touch',
+                width: '100%',
+                maxWidth: '100%',
                 boxShadow: '0 1px 3px rgba(0,0,0,0.02)'
               }}>
-                <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left', fontSize: '0.84rem' }}>
+                <table style={{ width: '100%', minWidth: '540px', borderCollapse: 'collapse', textAlign: 'left', fontSize: '0.84rem' }}>
                   <thead>
                     <tr style={{ background: '#F8FAFC', borderBottom: '1px solid #E2E8F0', color: '#64748B', fontWeight: 800, fontSize: '0.74rem' }}>
                       <th style={{ padding: '12px 10px', width: '36px', textAlign: 'center' }}>
