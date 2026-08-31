@@ -2445,7 +2445,16 @@ export default function MenuView({
                   { label: 'Bulk Upload', icon: UploadCloud, color: '#0284C7', onClick: () => setShowBulkUploadModal(true) },
                   { label: 'Manage Categories', icon: FolderPlus, color: '#D97706', onClick: onOpenAddCategory },
                   { label: 'Create Combo', icon: Package, color: '#9333EA', onClick: onOpenAddCombo },
-                  { label: 'View Menu', icon: Eye, color: '#475569', onClick: onReturnToMenu }
+                  { 
+                    label: 'View Menu', 
+                    icon: Eye, 
+                    color: '#475569', 
+                    onClick: () => {
+                      if (typeof onReturnToMenu === 'function') {
+                        onReturnToMenu(restaurantInfo?.slug);
+                      }
+                    } 
+                  }
                 ].map((act, idx) => {
                   const Icon = act.icon;
                   return (

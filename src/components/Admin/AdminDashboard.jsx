@@ -3086,6 +3086,8 @@ export default function AdminDashboard({
                 onToggleComboAvailability={handleToggleComboAvailability}
                 onToggleBadge={handleToggleBadge}
                 onRefreshData={loadData}
+                onReturnToMenu={onReturnToMenu}
+                restaurantInfo={restaurantInfo}
                 currencySymbol={settingsForm.currency_symbol !== undefined && settingsForm.currency_symbol !== null ? settingsForm.currency_symbol : '₹'}
                 maxDishes={tenantCaps.max_dishes}
                 maxCategories={tenantCaps.max_categories}
