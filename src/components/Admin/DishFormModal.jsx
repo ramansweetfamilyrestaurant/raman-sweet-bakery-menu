@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { X, Upload, Image as ImageIcon } from 'lucide-react';
+import { X, Upload, Image as ImageIcon, Sparkles, AlertCircle, Trash2, ArrowUpDown, Plus, Minus, Tag, Globe, Sliders } from 'lucide-react';
 import { uploadImage, deleteImageApi } from '../../api/client';
 import { getDishImageUrl } from '../../utils/imageHelper';
 
@@ -20,6 +20,7 @@ export default function DishFormModal({ dish, categories, token, modifiersEnable
       setCategoryId(dish?.category_id || categories[0].id);
     }
   }, [categories, dish, categoryId]);
+
   const [name, setName] = useState(dish?.name || '');
   const [nameHi, setNameHi] = useState(dish?.name_hi || '');
   const [description, setDescription] = useState(dish?.description || '');
@@ -131,65 +132,97 @@ export default function DishFormModal({ dish, categories, token, modifiersEnable
       position: 'fixed',
       inset: 0,
       zIndex: 3500,
-      background: 'rgba(15, 44, 29, 0.75)',
-      backdropFilter: 'blur(6px)',
+      background: 'rgba(15, 35, 21, 0.65)',
+      backdropFilter: 'blur(8px)',
       display: 'flex',
       alignItems: 'center',
       justifyContent: 'center',
-      padding: '20px'
+      padding: '16px',
+      boxSizing: 'border-box'
     }} onClick={onClose}>
       <div 
         onClick={(e) => e.stopPropagation()}
         style={{
-          background: 'var(--bg-card)',
-          borderRadius: 'var(--radius-lg)',
+          background: '#FFFFFF',
+          borderRadius: '24px',
           width: '100%',
           maxWidth: '560px',
           maxHeight: '90vh',
-          boxShadow: 'var(--shadow-lg)',
-          border: '1.5px solid var(--accent-gold)',
+          boxShadow: '0 20px 40px rgba(0, 0, 0, 0.18)',
+          border: '1px solid #E2E8F0',
           overflow: 'hidden',
           display: 'flex',
-          flexDirection: 'column'
+          flexDirection: 'column',
+          animation: 'modalSlideIn 0.3s cubic-bezier(0.16, 1, 0.3, 1)'
         }}
       >
+        <style dangerouslySetInnerHTML={{__html: `
+          @keyframes modalSlideIn {
+            from { transform: translateY(12px); opacity: 0; }
+            to { transform: translateY(0); opacity: 1; }
+          }
+        `}} />
+
         {/* Header */}
         <div style={{
-          background: 'var(--primary-dark-green)',
+          padding: '18px 24px',
+          background: 'linear-gradient(135deg, #0A2315 0%, #143A24 100%)',
           color: '#FFFFFF',
-          padding: '16px 20px',
           display: 'flex',
           justifyContent: 'space-between',
           alignItems: 'center',
-          borderBottom: '1px solid var(--accent-gold)'
+          borderBottom: '1px solid rgba(255, 255, 255, 0.08)'
         }}>
-          <h3 style={{ fontFamily: 'var(--font-heading)', fontSize: '1.2rem', color: '#FFFFFF' }}>
-            {dish ? 'Edit Dish' : 'Add New Dish'}
-          </h3>
-          <button onClick={onClose} style={{ color: '#FFFFFF' }}>
-            <X size={20} />
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+            <Sparkles size={18} color="#D4AF37" />
+            <h3 style={{ fontSize: '1.05rem', fontWeight: 800, margin: 0, letterSpacing: '0.3px' }}>
+              {dish ? 'Edit Dish details' : 'Add New Dish to Menu'}
+            </h3>
+          </div>
+          <button 
+            onClick={onClose} 
+            style={{ 
+              background: 'rgba(255, 255, 255, 0.1)', 
+              border: 'none', 
+              color: '#FFFFFF', 
+              cursor: 'pointer',
+              width: '28px',
+              height: '28px',
+              borderRadius: '50%',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              transition: 'background-color 0.2s'
+            }}
+          >
+            <X size={16} />
           </button>
         </div>
 
         {/* Form Body */}
-        <form onSubmit={handleSubmit} style={{ padding: '20px', overflowY: 'auto' }}>
+        <form onSubmit={handleSubmit} style={{ padding: '22px 24px', overflowY: 'auto', margin: 0 }}>
           {error && (
             <div style={{
-              background: '#FEF2F2',
+              background: '#FEE2E2',
               border: '1px solid #FCA5A5',
-              borderRadius: 'var(--radius-sm)',
-              padding: '8px 12px',
               color: '#991B1B',
-              fontSize: '0.84rem',
-              marginBottom: '14px'
+              padding: '10px 14px',
+              borderRadius: '10px',
+              fontSize: '0.80rem',
+              fontWeight: 600,
+              marginBottom: '16px',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '6px'
             }}>
-              {error}
+              <AlertCircle size={14} />
+              <span>{error}</span>
             </div>
           )}
 
           {/* Category */}
           <div style={{ marginBottom: '14px' }}>
-            <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: 600, marginBottom: '4px' }}>
+            <label style={{ display: 'block', fontSize: '0.78rem', fontWeight: 800, color: '#334155', marginBottom: '6px' }}>
               Category *
             </label>
             <select
@@ -198,10 +231,15 @@ export default function DishFormModal({ dish, categories, token, modifiersEnable
               required
               style={{
                 width: '100%',
-                padding: '10px',
-                borderRadius: 'var(--radius-sm)',
-                border: '1px solid rgba(197, 160, 89, 0.4)',
-                fontSize: '0.9rem'
+                padding: '11px 14px',
+                borderRadius: '10px',
+                border: '1.5px solid #E2E8F0',
+                fontSize: '0.88rem',
+                outline: 'none',
+                boxSizing: 'border-box',
+                background: '#FFFFFF',
+                color: '#0F172A',
+                cursor: 'pointer'
               }}
             >
               <option value="" disabled>Select Category</option>
@@ -212,92 +250,86 @@ export default function DishFormModal({ dish, categories, token, modifiersEnable
           </div>
 
           {/* Food Type Selector (Veg / Non-Veg / Egg) */}
-          <div style={{ marginBottom: '14px' }}>
-            <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: 700, color: 'var(--primary-dark-green)', marginBottom: '6px' }}>
-              Food Preference / Dietary Type:
+          <div style={{ marginBottom: '16px' }}>
+            <label style={{ display: 'block', fontSize: '0.78rem', fontWeight: 800, color: '#334155', marginBottom: '6px' }}>
+              Dietary Preference *
             </label>
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '8px' }}>
               <button
                 type="button"
                 onClick={() => setType('veg')}
                 style={{
-                  padding: '8px 10px',
-                  borderRadius: 'var(--radius-pill)',
-                  fontSize: '0.8rem',
+                  padding: '9px 12px',
+                  borderRadius: '10px',
+                  fontSize: '0.80rem',
                   fontWeight: 800,
                   display: 'flex',
                   alignItems: 'center',
                   justifyContent: 'center',
                   gap: '6px',
-                  background: type === 'veg' ? '#DCFCE7' : '#F9FAFB',
-                  color: type === 'veg' ? '#15803D' : '#4B5563',
-                  border: type === 'veg' ? '2px solid #16A34A' : '1px solid #E5E7EB',
+                  background: type === 'veg' ? '#F0FDF4' : '#FFFFFF',
+                  color: type === 'veg' ? '#16A34A' : '#475569',
+                  border: type === 'veg' ? '1.5px solid #16A34A' : '1.5px solid #E2E8F0',
                   cursor: 'pointer',
                   transition: 'all 0.2s ease'
                 }}
               >
-                <span style={{ width: '10px', height: '10px', border: '1.5px solid #16A34A', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', borderRadius: '2px', background: '#FFFFFF' }}>
-                  <span style={{ width: '4px', height: '4px', borderRadius: '50%', backgroundColor: '#16A34A' }} />
-                </span>
-                Pure Veg
+                <span style={{ width: '8px', height: '8px', borderRadius: '50%', backgroundColor: '#16A34A' }} />
+                <span>Pure Veg</span>
               </button>
 
               <button
                 type="button"
                 onClick={() => setType('nonveg')}
                 style={{
-                  padding: '8px 10px',
-                  borderRadius: 'var(--radius-pill)',
-                  fontSize: '0.8rem',
+                  padding: '9px 12px',
+                  borderRadius: '10px',
+                  fontSize: '0.80rem',
                   fontWeight: 800,
                   display: 'flex',
                   alignItems: 'center',
                   justifyContent: 'center',
                   gap: '6px',
-                  background: type === 'nonveg' ? '#FEE2E2' : '#F9FAFB',
-                  color: type === 'nonveg' ? '#B91C1C' : '#4B5563',
-                  border: type === 'nonveg' ? '2px solid #DC2626' : '1px solid #E5E7EB',
+                  background: type === 'nonveg' ? '#FDF2F2' : '#FFFFFF',
+                  color: type === 'nonveg' ? '#DC2626' : '#475569',
+                  border: type === 'nonveg' ? '1.5px solid #DC2626' : '1.5px solid #E2E8F0',
                   cursor: 'pointer',
                   transition: 'all 0.2s ease'
                 }}
               >
-                <span style={{ width: '10px', height: '10px', border: '1.5px solid #DC2626', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', borderRadius: '2px', background: '#FFFFFF' }}>
-                  <span style={{ width: '4px', height: '4px', borderRadius: '50%', backgroundColor: '#DC2626' }} />
-                </span>
-                Non-Veg
+                <span style={{ width: '8px', height: '8px', borderRadius: '50%', backgroundColor: '#DC2626' }} />
+                <span>Non-Veg</span>
               </button>
 
               <button
                 type="button"
                 onClick={() => setType('egg')}
                 style={{
-                  padding: '8px 10px',
-                  borderRadius: 'var(--radius-pill)',
-                  fontSize: '0.8rem',
+                  padding: '9px 12px',
+                  borderRadius: '10px',
+                  fontSize: '0.80rem',
                   fontWeight: 800,
                   display: 'flex',
                   alignItems: 'center',
                   justifyContent: 'center',
                   gap: '6px',
-                  background: type === 'egg' ? '#FEF3C7' : '#F9FAFB',
-                  color: type === 'egg' ? '#B45309' : '#4B5563',
-                  border: type === 'egg' ? '2px solid #D97706' : '1px solid #E5E7EB',
+                  background: type === 'egg' ? '#FFFBEB' : '#FFFFFF',
+                  color: type === 'egg' ? '#D97706' : '#475569',
+                  border: type === 'egg' ? '1.5px solid #D97706' : '1.5px solid #E2E8F0',
                   cursor: 'pointer',
                   transition: 'all 0.2s ease'
                 }}
               >
-                <span style={{ width: '10px', height: '10px', border: '1.5px solid #D97706', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', borderRadius: '2px', background: '#FFFFFF' }}>
-                  <span style={{ width: '4px', height: '4px', borderRadius: '50%', backgroundColor: '#D97706' }} />
-                </span>
-                Egg
+                <span style={{ width: '8px', height: '8px', borderRadius: '50%', backgroundColor: '#D97706' }} />
+                <span>Egg</span>
               </button>
             </div>
           </div>
 
-          {/* Name & Badge */}
-          <div style={{ display: 'grid', gridTemplateColumns: '1.4fr 1fr', gap: '12px', marginBottom: '14px' }}>
+          {/* Name & Hindi Name */}
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', marginBottom: '14px' }}>
             <div>
-              <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: 700, color: 'var(--primary-dark-green)', marginBottom: '4px' }}>
+              <label style={{ display: 'block', fontSize: '0.78rem', fontWeight: 800, color: '#334155', marginBottom: '6px' }}>
                 Dish Name *
               </label>
               <input
@@ -308,195 +340,150 @@ export default function DishFormModal({ dish, categories, token, modifiersEnable
                 placeholder="e.g. Royal Shahi Paneer"
                 style={{
                   width: '100%',
-                  padding: '10px 12px',
-                  borderRadius: 'var(--radius-sm)',
-                  border: '1px solid rgba(197, 160, 89, 0.4)',
-                  fontSize: '0.9rem',
-                  boxSizing: 'border-box'
+                  padding: '11px 14px',
+                  borderRadius: '10px',
+                  border: '1.5px solid #E2E8F0',
+                  fontSize: '0.88rem',
+                  outline: 'none',
+                  boxSizing: 'border-box',
+                  color: '#0F172A'
                 }}
+                onFocus={(e) => e.target.style.borderColor = '#0A2315'}
+                onBlur={(e) => e.target.style.borderColor = '#E2E8F0'}
               />
             </div>
 
             <div>
-              <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: 700, color: 'var(--primary-dark-green)', marginBottom: '4px' }}>
-                Badge Tag (Optional)
+              <label style={{ display: 'flex', alignItems: 'center', gap: '4px', fontSize: '0.78rem', fontWeight: 800, color: '#334155', marginBottom: '6px' }}>
+                <Globe size={12} color="#64748B" />
+                Hindi Name
               </label>
               <input
                 type="text"
-                value={badge}
-                onChange={(e) => setBadge(e.target.value)}
-                placeholder="🔥 Bestseller"
+                value={nameHi}
+                onChange={(e) => setNameHi(e.target.value)}
+                placeholder="उदा. शाही पनीर"
                 style={{
                   width: '100%',
-                  padding: '10px 12px',
-                  borderRadius: 'var(--radius-sm)',
-                  border: '1px solid rgba(197, 160, 89, 0.4)',
-                  fontSize: '0.9rem',
-                  boxSizing: 'border-box'
+                  padding: '11px 14px',
+                  borderRadius: '10px',
+                  border: '1.5px solid #E2E8F0',
+                  fontSize: '0.88rem',
+                  outline: 'none',
+                  boxSizing: 'border-box',
+                  color: '#0F172A'
                 }}
+                onFocus={(e) => e.target.style.borderColor = '#0A2315'}
+                onBlur={(e) => e.target.style.borderColor = '#E2E8F0'}
               />
-              <div style={{ display: 'flex', gap: '4px', marginTop: '6px', flexWrap: 'wrap' }}>
-                <button
-                  type="button"
-                  onClick={() => setBadge(badge === 'Must Try' ? '' : 'Must Try')}
-                  style={{
-                    fontSize: '0.68rem',
-                    fontWeight: 700,
-                    padding: '2px 8px',
-                    borderRadius: 'var(--radius-pill)',
-                    background: badge === 'Must Try' ? '#FEF3C7' : '#F3F4F6',
-                    color: badge === 'Must Try' ? '#D97706' : '#374151',
-                    border: badge === 'Must Try' ? '1px solid #F59E0B' : '1px solid #D1D5DB'
-                  }}
-                >
-                  ⭐ Must Try
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setBadge(badge === 'Bestseller' ? '' : 'Bestseller')}
-                  style={{
-                    fontSize: '0.68rem',
-                    fontWeight: 700,
-                    padding: '2px 8px',
-                    borderRadius: 'var(--radius-pill)',
-                    background: badge === 'Bestseller' ? '#FFFBEB' : '#F3F4F6',
-                    color: badge === 'Bestseller' ? '#B45309' : '#374151',
-                    border: badge === 'Bestseller' ? '1px solid #F59E0B' : '1px solid #D1D5DB'
-                  }}
-                >
-                  🔥 Bestseller
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setBadge(badge === 'Special' ? '' : 'Special')}
-                  style={{
-                    fontSize: '0.68rem',
-                    fontWeight: 700,
-                    padding: '2px 8px',
-                    borderRadius: 'var(--radius-pill)',
-                    background: badge === 'Special' ? '#E0E7FF' : '#F3F4F6',
-                    color: badge === 'Special' ? '#4338CA' : '#374151',
-                    border: badge === 'Special' ? '1px solid #818CF8' : '1px solid #D1D5DB'
-                  }}
-                >
-                  ✨ Special
-                </button>
-              </div>
             </div>
           </div>
 
-          {/* Pricing: Full & Optional Half Price & Modifiers */}
-          <div style={{
-            background: modifiersEnabled !== false ? '#FDFBF7' : '#F8FAFC',
-            padding: '16px',
-            borderRadius: '12px',
-            border: modifiersEnabled !== false ? '1.5px solid #DFBA67' : '1px solid #E2E8F0',
-            marginBottom: '16px',
-            boxShadow: '0 2px 8px rgba(0,0,0,0.04)'
-          }}>
-            {/* Header with SuperAdmin Permission Status */}
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '12px', flexWrap: 'wrap', gap: '8px' }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                <span style={{ fontSize: '0.9rem', fontWeight: 900, color: '#0A2315' }}>
-                  ⚡ Portion Pricing & Variants
-                </span>
-                <span style={{
-                  fontSize: '0.72rem',
-                  fontWeight: 800,
-                  padding: '3px 8px',
-                  borderRadius: '20px',
-                  background: modifiersEnabled !== false ? '#DCFCE7' : '#FEE2E2',
-                  color: modifiersEnabled !== false ? '#15803D' : '#DC2626',
-                  border: modifiersEnabled !== false ? '1px solid #86EFAC' : '1px solid #FCA5A5'
-                }}>
-                  {modifiersEnabled !== false ? '● PLAN PERMISSION: ACTIVE' : '● PLAN PERMISSION: DISABLED'}
-                </span>
-              </div>
+          {/* Badge Tag */}
+          <div style={{ marginBottom: '14px' }}>
+            <label style={{ display: 'flex', alignItems: 'center', gap: '4px', fontSize: '0.78rem', fontWeight: 800, color: '#334155', marginBottom: '6px' }}>
+              <Tag size={12} color="#64748B" />
+              Special Tag / Badge
+            </label>
+            <input
+              type="text"
+              value={badge}
+              onChange={(e) => setBadge(e.target.value)}
+              placeholder="Select quick tag or type custom tag"
+              style={{
+                width: '100%',
+                padding: '11px 14px',
+                borderRadius: '10px',
+                border: '1.5px solid #E2E8F0',
+                fontSize: '0.88rem',
+                outline: 'none',
+                boxSizing: 'border-box',
+                color: '#0F172A'
+              }}
+              onFocus={(e) => e.target.style.borderColor = '#0A2315'}
+              onBlur={(e) => e.target.style.borderColor = '#E2E8F0'}
+            />
+            <div style={{ display: 'flex', gap: '6px', marginTop: '6px', flexWrap: 'wrap' }}>
+              {[
+                { label: '🔥 Must Try', val: 'Must Try' },
+                { label: '⭐ Bestseller', val: 'Bestseller' },
+                { label: '✨ Special', val: 'Special' }
+              ].map(badgeOpt => {
+                const isActiveBadge = badge === badgeOpt.val;
+                return (
+                  <button
+                    key={badgeOpt.val}
+                    type="button"
+                    onClick={() => setBadge(isActiveBadge ? '' : badgeOpt.val)}
+                    style={{
+                      fontSize: '0.70rem',
+                      fontWeight: 700,
+                      padding: '4px 10px',
+                      borderRadius: '100px',
+                      background: isActiveBadge ? '#FDF2F2' : '#F8FAFC',
+                      color: isActiveBadge ? '#DC2626' : '#475569',
+                      border: `1px solid ${isActiveBadge ? '#FCA5A5' : '#E2E8F0'}`,
+                      cursor: 'pointer'
+                    }}
+                  >
+                    {badgeOpt.label}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
 
-              {modifiersEnabled === false && (
-                <span style={{ fontSize: '0.74rem', fontWeight: 800, color: '#DC2626' }}>
-                  🔒 Locked in SuperAdmin
-                </span>
+          {/* Pricing & Custom Portions */}
+          <div style={{
+            background: '#FDFBF7',
+            padding: '16px',
+            borderRadius: '16px',
+            border: '1px solid #DFBA67',
+            marginBottom: '16px',
+            boxShadow: '0 2px 8px rgba(0,0,0,0.02)'
+          }}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '12px' }}>
+              <span style={{ fontSize: '0.84rem', fontWeight: 800, color: '#0A2315', display: 'flex', alignItems: 'center', gap: '5px' }}>
+                <Sliders size={13} color="#D4AF37" />
+                Portion Pricing & Portions
+              </span>
+              
+              {modifiersEnabled !== false && (
+                <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                  <input
+                    type="checkbox"
+                    id="hasHalfPortion"
+                    checked={hasHalf}
+                    onChange={(e) => setHasHalf(e.target.checked)}
+                    style={{ cursor: 'pointer', width: '15px', height: '15px', accentColor: '#0A2315' }}
+                  />
+                  <label htmlFor="hasHalfPortion" style={{ fontSize: '0.76rem', fontWeight: 700, color: '#475569', cursor: 'pointer' }}>
+                    Enable Half Portion
+                  </label>
+                </div>
               )}
             </div>
 
-            {/* Mode Selector Buttons (Single Price vs Half/Full Dual Portion) */}
-            {modifiersEnabled !== false ? (
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px', marginBottom: '14px' }}>
-                <button
-                  type="button"
-                  onClick={() => setHasHalf(false)}
-                  style={{
-                    padding: '10px 12px',
-                    borderRadius: '10px',
-                    fontSize: '0.82rem',
-                    fontWeight: 800,
-                    cursor: 'pointer',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    gap: '6px',
-                    transition: 'all 0.2s ease',
-                    background: !hasHalf ? '#0A2315' : '#FFFFFF',
-                    color: !hasHalf ? '#DFBA67' : '#4B5563',
-                    border: !hasHalf ? '1.5px solid #0A2315' : '1px solid #D1D5DB',
-                    boxShadow: !hasHalf ? '0 3px 8px rgba(10,35,21,0.2)' : 'none'
-                  }}
-                >
-                  <span>🍽️</span>
-                  <span>Single Price Only</span>
-                </button>
-
-                <button
-                  type="button"
-                  onClick={() => setHasHalf(true)}
-                  style={{
-                    padding: '10px 12px',
-                    borderRadius: '10px',
-                    fontSize: '0.82rem',
-                    fontWeight: 800,
-                    cursor: 'pointer',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    gap: '6px',
-                    transition: 'all 0.2s ease',
-                    background: hasHalf ? '#0A2315' : '#FFFFFF',
-                    color: hasHalf ? '#DFBA67' : '#4B5563',
-                    border: hasHalf ? '1.5px solid #0A2315' : '1px solid #D1D5DB',
-                    boxShadow: hasHalf ? '0 3px 8px rgba(10,35,21,0.2)' : 'none'
-                  }}
-                >
-                  <span>🥣 🍲</span>
-                  <span>Half & Full Portions</span>
-                </button>
-              </div>
-            ) : (
-              <div style={{ padding: '10px 12px', background: '#FEF2F2', border: '1px solid #FECACA', borderRadius: '8px', color: '#991B1B', fontSize: '0.78rem', fontWeight: 700, marginBottom: '12px' }}>
-                ⚠️ Half/Full Portion variants are DISABLED in Super Admin for your current subscription tier. Only single standard pricing is active.
-              </div>
-            )}
-
-            {/* Price Inputs */}
+            {/* Pricing fields */}
             <div style={{ display: 'grid', gridTemplateColumns: (hasHalf && modifiersEnabled !== false) ? '1fr 1fr' : '1fr', gap: '12px' }}>
               <div>
-                <label style={{ display: 'block', fontSize: '0.78rem', fontWeight: 700, color: '#374151', marginBottom: '4px' }}>
-                  {(hasHalf && modifiersEnabled !== false) ? '🍲 Full Portion Price (₹) *' : '🍽️ Dish Price (₹) *'}
+                <label style={{ display: 'block', fontSize: '0.74rem', fontWeight: 800, color: '#475569', marginBottom: '4px' }}>
+                  {(hasHalf && modifiersEnabled !== false) ? 'Full Price (₹) *' : 'Dish Price (₹) *'}
                 </label>
                 <input
                   type="number"
-                  step="1"
                   required
                   value={price}
                   onChange={(e) => setPrice(e.target.value)}
-                  placeholder="e.g. 260"
+                  placeholder="e.g. 250"
                   style={{
                     width: '100%',
                     padding: '10px 12px',
                     borderRadius: '8px',
-                    border: '1.5px solid #D1D5DB',
-                    fontSize: '0.95rem',
+                    border: '1.5px solid #E2E8F0',
+                    fontSize: '0.92rem',
                     fontWeight: 800,
+                    color: '#16A34A',
                     boxSizing: 'border-box'
                   }}
                 />
@@ -504,23 +491,23 @@ export default function DishFormModal({ dish, categories, token, modifiersEnable
 
               {(hasHalf && modifiersEnabled !== false) && (
                 <div>
-                  <label style={{ display: 'block', fontSize: '0.78rem', fontWeight: 700, color: '#374151', marginBottom: '4px' }}>
-                    🥣 Half Portion Price (₹) *
+                  <label style={{ display: 'block', fontSize: '0.74rem', fontWeight: 800, color: '#475569', marginBottom: '4px' }}>
+                    Half Price (₹) *
                   </label>
                   <input
                     type="number"
-                    step="1"
                     required={hasHalf}
                     value={priceHalf}
                     onChange={(e) => setPriceHalf(e.target.value)}
-                    placeholder="e.g. 160"
+                    placeholder="e.g. 150"
                     style={{
                       width: '100%',
                       padding: '10px 12px',
                       borderRadius: '8px',
                       border: '1.5px solid #DFBA67',
-                      fontSize: '0.95rem',
+                      fontSize: '0.92rem',
                       fontWeight: 800,
+                      color: '#D97706',
                       boxSizing: 'border-box'
                     }}
                   />
@@ -532,39 +519,39 @@ export default function DishFormModal({ dish, categories, token, modifiersEnable
             {(hasHalf && modifiersEnabled !== false) && (
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', marginTop: '12px' }}>
                 <div>
-                  <label style={{ display: 'block', fontSize: '0.72rem', fontWeight: 700, color: '#6B7280', marginBottom: '4px' }}>
-                    Full Label (Display Text)
+                  <label style={{ display: 'block', fontSize: '0.70rem', fontWeight: 700, color: '#64748B', marginBottom: '4px' }}>
+                    Full Label
                   </label>
                   <input
                     type="text"
                     value={portionFullLabel}
                     onChange={(e) => setPortionFullLabel(e.target.value)}
-                    placeholder="e.g. Full Portion / 500g"
+                    placeholder="e.g. Full Portion"
                     style={{
                       width: '100%',
                       padding: '8px 10px',
-                      borderRadius: '8px',
-                      border: '1px solid #D1D5DB',
-                      fontSize: '0.82rem',
+                      borderRadius: '6px',
+                      border: '1.5px solid #E2E8F0',
+                      fontSize: '0.80rem',
                       boxSizing: 'border-box'
                     }}
                   />
                 </div>
                 <div>
-                  <label style={{ display: 'block', fontSize: '0.72rem', fontWeight: 700, color: '#6B7280', marginBottom: '4px' }}>
-                    Half Label (Display Text)
+                  <label style={{ display: 'block', fontSize: '0.70rem', fontWeight: 700, color: '#64748B', marginBottom: '4px' }}>
+                    Half Label
                   </label>
                   <input
                     type="text"
                     value={portionHalfLabel}
                     onChange={(e) => setPortionHalfLabel(e.target.value)}
-                    placeholder="e.g. Half Portion / 250g"
+                    placeholder="e.g. Half Portion"
                     style={{
                       width: '100%',
                       padding: '8px 10px',
-                      borderRadius: '8px',
-                      border: '1px solid #D1D5DB',
-                      fontSize: '0.82rem',
+                      borderRadius: '6px',
+                      border: '1.5px solid #E2E8F0',
+                      fontSize: '0.80rem',
                       boxSizing: 'border-box'
                     }}
                   />
@@ -572,92 +559,52 @@ export default function DishFormModal({ dish, categories, token, modifiersEnable
               </div>
             )}
 
-            {/* Custom Add-ons & Modifiers Section */}
+            {/* Custom Modifiers / Toppings */}
             {modifiersEnabled !== false && (
-              <div style={{ marginTop: '16px', paddingTop: '14px', borderTop: '1px dashed #D1D5DB' }}>
-                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '10px', flexWrap: 'wrap', gap: '8px' }}>
-                  <div>
-                    <span style={{ fontSize: '0.82rem', fontWeight: 900, color: '#0A2315', display: 'flex', alignItems: 'center', gap: '5px' }}>
-                      ➕ Custom Add-on Modifiers & Toppings ({modifiers.length})
-                    </span>
-                    <span style={{ fontSize: '0.72rem', color: '#6B7280' }}>
-                      Extra toppings customers can check on the menu
-                    </span>
-                  </div>
+              <div style={{ marginTop: '14px', paddingTop: '12px', borderTop: '1px dashed #DFBA67' }}>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '8px' }}>
+                  <span style={{ fontSize: '0.78rem', fontWeight: 800, color: '#0A2315' }}>
+                    Add-ons / Custom Toppings ({modifiers.length})
+                  </span>
                   <button
                     type="button"
                     onClick={handleAddModifier}
                     style={{
-                      padding: '5px 14px',
-                      borderRadius: '20px',
+                      padding: '4px 10px',
+                      borderRadius: '6px',
                       background: '#0A2315',
-                      color: '#DFBA67',
-                      fontSize: '0.75rem',
-                      fontWeight: 900,
-                      border: '1px solid #DFBA67',
+                      color: '#FFFFFF',
+                      fontSize: '0.70rem',
+                      fontWeight: 700,
+                      border: 'none',
                       cursor: 'pointer'
                     }}
                   >
-                    + Add New Option
+                    + Add option
                   </button>
                 </div>
 
-                {/* Quick Preset Buttons */}
-                <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap', marginBottom: '10px' }}>
-                  {[
-                    { name: 'Extra Cheese', price: '30' },
-                    { name: 'Extra Butter', price: '20' },
-                    { name: 'Mayo Dip', price: '15' },
-                    { name: 'Spicy Chutney', price: '10' }
-                  ].map((preset, pIdx) => (
-                    <button
-                      key={pIdx}
-                      type="button"
-                      onClick={() => {
-                        if (!modifiers.some(m => m.name.toLowerCase() === preset.name.toLowerCase())) {
-                          setModifiers([...modifiers, { name: preset.name, price: preset.price }]);
-                        }
-                      }}
-                      style={{
-                        padding: '3px 8px',
-                        borderRadius: '6px',
-                        background: '#FFFFFF',
-                        border: '1px solid #E5E7EB',
-                        fontSize: '0.72rem',
-                        fontWeight: 700,
-                        color: '#374151',
-                        cursor: 'pointer'
-                      }}
-                    >
-                      + {preset.name} (+₹{preset.price})
-                    </button>
-                  ))}
-                </div>
-
-                {modifiers.length === 0 ? (
-                  <div style={{ padding: '8px 12px', background: '#FFFFFF', borderRadius: '8px', border: '1px solid #E5E7EB', color: '#6B7280', fontSize: '0.75rem', fontStyle: 'italic' }}>
-                    No custom add-ons added yet. Click "+ Add New Option" or one of the quick presets above.
-                  </div>
-                ) : (
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                {/* Modifiers List */}
+                {modifiers.length > 0 ? (
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
                     {modifiers.map((mod, idx) => (
-                      <div key={idx} style={{ display: 'flex', alignItems: 'center', gap: '8px', background: '#FFFFFF', padding: '8px', borderRadius: '8px', border: '1px solid #E5E7EB' }}>
+                      <div key={idx} style={{ display: 'flex', alignItems: 'center', gap: '8px', background: '#FFFFFF', padding: '6px 8px', borderRadius: '8px', border: '1px solid #E2E8F0' }}>
                         <input
                           type="text"
-                          placeholder="e.g. Extra Cheese / Dip"
+                          placeholder="e.g. Extra Cheese"
                           value={mod.name}
                           onChange={(e) => handleUpdateModifier(idx, 'name', e.target.value)}
                           style={{
                             flex: 2,
-                            padding: '6px 10px',
+                            padding: '6px 8px',
                             borderRadius: '6px',
-                            border: '1px solid #D1D5DB',
-                            fontSize: '0.82rem',
-                            fontWeight: 700
+                            border: '1px solid #E2E8F0',
+                            fontSize: '0.80rem',
+                            outline: 'none'
                           }}
                         />
                         <div style={{ display: 'flex', alignItems: 'center', gap: '4px', flex: 1 }}>
-                          <span style={{ fontSize: '0.82rem', fontWeight: 800, color: '#0A2315' }}>+₹</span>
+                          <span style={{ fontSize: '0.80rem', fontWeight: 800, color: '#64748B' }}>+₹</span>
                           <input
                             type="number"
                             placeholder="30"
@@ -667,9 +614,10 @@ export default function DishFormModal({ dish, categories, token, modifiersEnable
                               width: '100%',
                               padding: '6px 8px',
                               borderRadius: '6px',
-                              border: '1px solid #D1D5DB',
-                              fontSize: '0.82rem',
-                              fontWeight: 800
+                              border: '1px solid #E2E8F0',
+                              fontSize: '0.80rem',
+                              fontWeight: 800,
+                              outline: 'none'
                             }}
                           />
                         </div>
@@ -677,178 +625,272 @@ export default function DishFormModal({ dish, categories, token, modifiersEnable
                           type="button"
                           onClick={() => handleRemoveModifier(idx)}
                           style={{
-                            background: '#FEE2E2',
+                            background: '#FFF5F5',
                             color: '#DC2626',
-                            border: '1px solid #FCA5A5',
+                            border: '1px solid #FEE2E2',
                             borderRadius: '6px',
-                            padding: '6px 10px',
-                            cursor: 'pointer',
-                            fontSize: '0.75rem',
-                            fontWeight: 900
+                            width: '26px',
+                            height: '26px',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            cursor: 'pointer'
                           }}
-                          title="Delete"
                         >
                           ✕
                         </button>
                       </div>
                     ))}
                   </div>
+                ) : (
+                  <span style={{ fontSize: '0.72rem', color: '#64748B', fontStyle: 'italic' }}>
+                    No custom modifiers added yet.
+                  </span>
                 )}
               </div>
             )}
           </div>
 
-          {/* Description */}
-          <div style={{ marginBottom: '14px' }}>
-            <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: 700, color: 'var(--primary-dark-green)', marginBottom: '4px' }}>
-              Description
-            </label>
-            <textarea
-              rows="2"
-              value={description}
-              onChange={(e) => setDescription(e.target.value)}
-              placeholder="Fresh paneer cooked in velvety tomato gravy with aromatic spices..."
-              style={{
-                width: '100%',
-                padding: '10px 12px',
-                borderRadius: 'var(--radius-sm)',
-                border: '1px solid rgba(197, 160, 89, 0.4)',
-                fontSize: '0.85rem',
-                boxSizing: 'border-box'
-              }}
-            />
-          </div>
-
-          {/* Ingredients & Portion Size text */}
+          {/* Description & Description Hindi */}
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', marginBottom: '14px' }}>
             <div>
-              <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: 600, marginBottom: '4px' }}>
+              <label style={{ display: 'block', fontSize: '0.78rem', fontWeight: 800, color: '#334155', marginBottom: '6px' }}>
+                Description
+              </label>
+              <textarea
+                rows="2"
+                value={description}
+                onChange={(e) => setDescription(e.target.value)}
+                placeholder="Delicious fresh cooked paneer gravy..."
+                style={{
+                  width: '100%',
+                  padding: '10px 12px',
+                  borderRadius: '10px',
+                  border: '1.5px solid #E2E8F0',
+                  fontSize: '0.82rem',
+                  outline: 'none',
+                  resize: 'none',
+                  boxSizing: 'border-box',
+                  color: '#0F172A'
+                }}
+              />
+            </div>
+            <div>
+              <label style={{ display: 'flex', alignItems: 'center', gap: '4px', fontSize: '0.78rem', fontWeight: 800, color: '#334155', marginBottom: '6px' }}>
+                <Globe size={12} color="#64748B" />
+                Hindi Description
+              </label>
+              <textarea
+                rows="2"
+                value={descriptionHi}
+                onChange={(e) => setDescriptionHi(e.target.value)}
+                placeholder="स्वादिष्ट ताज़ा पनीर की तरी..."
+                style={{
+                  width: '100%',
+                  padding: '10px 12px',
+                  borderRadius: '10px',
+                  border: '1.5px solid #E2E8F0',
+                  fontSize: '0.82rem',
+                  outline: 'none',
+                  resize: 'none',
+                  boxSizing: 'border-box',
+                  color: '#0F172A'
+                }}
+              />
+            </div>
+          </div>
+
+          {/* Ingredients & Portion Size */}
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', marginBottom: '14px' }}>
+            <div>
+              <label style={{ display: 'block', fontSize: '0.78rem', fontWeight: 800, color: '#334155', marginBottom: '6px' }}>
                 Ingredients (comma separated)
               </label>
               <input
                 type="text"
                 value={ingredients}
                 onChange={(e) => setIngredients(e.target.value)}
-                placeholder="Paneer, Cashew, Butter"
+                placeholder="e.g. Paneer, Cashews, Cream"
                 style={{
                   width: '100%',
-                  padding: '8px 10px',
-                  borderRadius: 'var(--radius-sm)',
-                  border: '1px solid rgba(197, 160, 89, 0.4)',
-                  fontSize: '0.82rem'
+                  padding: '10px 12px',
+                  borderRadius: '10px',
+                  border: '1.5px solid #E2E8F0',
+                  fontSize: '0.82rem',
+                  outline: 'none',
+                  boxSizing: 'border-box',
+                  color: '#0F172A'
                 }}
               />
             </div>
 
             <div>
-              <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: 600, marginBottom: '4px' }}>
-                Portion Size Label
+              <label style={{ display: 'block', fontSize: '0.78rem', fontWeight: 800, color: '#334155', marginBottom: '6px' }}>
+                Portion Size (Servings)
               </label>
               <input
                 type="text"
                 value={portion}
                 onChange={(e) => setPortion(e.target.value)}
-                placeholder="Serves 1-2 • 350ml"
+                placeholder="e.g. Serves 1-2 • 300g"
                 style={{
                   width: '100%',
-                  padding: '8px 10px',
-                  borderRadius: 'var(--radius-sm)',
-                  border: '1px solid rgba(197, 160, 89, 0.4)',
-                  fontSize: '0.82rem'
+                  padding: '10px 12px',
+                  borderRadius: '10px',
+                  border: '1.5px solid #E2E8F0',
+                  fontSize: '0.82rem',
+                  outline: 'none',
+                  boxSizing: 'border-box',
+                  color: '#0F172A'
                 }}
               />
             </div>
           </div>
 
           {/* Dish Image */}
-          <div style={{ marginBottom: '16px' }}>
-            <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: 600, marginBottom: '4px' }}>
+          <div style={{ marginBottom: '18px' }}>
+            <label style={{ display: 'block', fontSize: '0.78rem', fontWeight: 800, color: '#334155', marginBottom: '6px' }}>
               Dish Image
             </label>
-            <div style={{ display: 'flex', gap: '10px', alignItems: 'center', marginBottom: '8px' }}>
+            <div style={{ 
+              display: 'flex', 
+              gap: '12px', 
+              alignItems: 'center',
+              background: '#F8FAFC',
+              padding: '10px 12px',
+              borderRadius: '12px',
+              border: '1px dashed #E2E8F0',
+              marginBottom: '8px'
+            }}>
               <img
                 src={getDishImageUrl(image)}
                 alt="Preview"
                 style={{
-                  width: '54px',
-                  height: '54px',
-                  borderRadius: 'var(--radius-sm)',
+                  width: '52px',
+                  height: '52px',
+                  borderRadius: '10px',
                   objectFit: 'cover',
-                  border: '1px solid var(--accent-gold)'
+                  border: '1.5px solid #E2E8F0',
+                  background: '#FFFFFF'
                 }}
                 onError={(e) => {
                   e.currentTarget.src = '/images/default-dish.webp';
                 }}
               />
-              <label style={{
-                cursor: 'pointer',
-                display: 'inline-flex',
-                alignItems: 'center',
-                gap: '6px',
-                background: 'var(--bg-cream-secondary)',
-                border: '1px solid var(--accent-gold)',
-                padding: '8px 14px',
-                borderRadius: 'var(--radius-sm)',
-                fontSize: '0.82rem',
-                fontWeight: 600
-              }}>
-                <Upload size={14} />
-                {uploading ? 'Uploading...' : 'Upload File'}
-                <input
-                  type="file"
-                  accept="image/*"
-                  onChange={handleFileUpload}
-                  style={{ display: 'none' }}
-                />
-              </label>
+              
+              <div style={{ display: 'flex', gap: '6px' }}>
+                <label style={{
+                  cursor: 'pointer',
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: '6px',
+                  background: '#0A2315',
+                  color: '#FFFFFF',
+                  padding: '7px 14px',
+                  borderRadius: '8px',
+                  fontSize: '0.76rem',
+                  fontWeight: 700,
+                  transition: 'background-color 0.2s',
+                  boxShadow: '0 2px 5px rgba(10, 35, 21, 0.15)'
+                }}
+                  onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#143A24'}
+                  onMouseLeave={(e) => e.currentTarget.style.backgroundColor = '#0A2315'}
+                >
+                  <Upload size={13} color="#D4AF37" />
+                  <span>{uploading ? 'Uploading...' : 'Upload Image'}</span>
+                  <input
+                    type="file"
+                    accept="image/*"
+                    onChange={handleFileUpload}
+                    style={{ display: 'none' }}
+                  />
+                </label>
+              </div>
             </div>
 
             <input
               type="text"
               value={image}
               onChange={(e) => setImage(e.target.value)}
-              placeholder="Or paste image URL"
+              placeholder="Or enter image URL (optional)"
               style={{
                 width: '100%',
-                padding: '8px 10px',
-                borderRadius: 'var(--radius-sm)',
-                border: '1px solid rgba(197, 160, 89, 0.4)',
-                fontSize: '0.8rem'
+                padding: '9px 12px',
+                borderRadius: '8px',
+                border: '1.5px solid #E2E8F0',
+                fontSize: '0.80rem',
+                outline: 'none',
+                boxSizing: 'border-box',
+                color: '#0F172A'
               }}
+              onFocus={(e) => e.target.style.borderColor = '#0A2315'}
+              onBlur={(e) => e.target.style.borderColor = '#E2E8F0'}
             />
           </div>
 
-          {/* Availability Toggle */}
+          {/* Availability Switch */}
           <div style={{
-            background: 'var(--bg-cream-primary)',
-            padding: '10px 14px',
-            borderRadius: 'var(--radius-sm)',
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'space-between',
+            background: '#F8FAFC',
+            padding: '12px 16px',
+            borderRadius: '12px',
+            border: '1px solid #E2E8F0',
             marginBottom: '20px'
           }}>
-            <span style={{ fontSize: '0.85rem', fontWeight: 600, color: 'var(--primary-dark-green)' }}>
-              Item Available on Menu
-            </span>
-            <input
-              type="checkbox"
-              checked={available}
-              onChange={(e) => setAvailable(e.target.checked)}
-              style={{ width: '18px', height: '18px', accentColor: 'var(--primary-dark-green)', cursor: 'pointer' }}
-            />
+            <div>
+              <span style={{ fontSize: '0.86rem', fontWeight: 800, color: '#0A2315', display: 'block' }}>
+                Item Available on Menu
+              </span>
+              <span style={{ fontSize: '0.70rem', color: '#64748B' }}>
+                In stock items can be ordered by customers immediately
+              </span>
+            </div>
+            
+            <div
+              onClick={() => setAvailable(!available)}
+              style={{
+                width: '36px',
+                height: '20px',
+                borderRadius: '10px',
+                background: available ? '#10B981' : '#CBD5E1',
+                position: 'relative',
+                cursor: 'pointer',
+                transition: 'background-color 0.2s',
+                display: 'inline-flex',
+                alignItems: 'center',
+                padding: '0 2px'
+              }}
+            >
+              <div style={{
+                width: '16px',
+                height: '16px',
+                borderRadius: '50%',
+                background: '#FFFFFF',
+                position: 'absolute',
+                left: available ? '18px' : '2px',
+                transition: 'left 0.2s',
+                boxShadow: '0 1px 3px rgba(0,0,0,0.18)'
+              }} />
+            </div>
           </div>
 
           {/* Action Buttons */}
-          <div style={{ display: 'flex', gap: '10px', justifyContent: 'flex-end' }}>
+          <div style={{ display: 'flex', gap: '10px', justifyContent: 'flex-end', borderTop: '1px solid #F1F5F9', paddingTop: '16px' }}>
             <button
               type="button"
               onClick={onClose}
               style={{
-                padding: '8px 16px',
-                borderRadius: 'var(--radius-pill)',
-                border: '1px solid var(--text-muted)',
-                fontSize: '0.85rem'
+                padding: '10px 18px',
+                borderRadius: '100px',
+                border: '1.5px solid #CBD5E1',
+                background: '#FFFFFF',
+                color: '#475569',
+                fontSize: '0.82rem',
+                fontWeight: 700,
+                cursor: 'pointer',
+                transition: 'all 0.2s'
               }}
             >
               Cancel
@@ -857,15 +899,16 @@ export default function DishFormModal({ dish, categories, token, modifiersEnable
               type="submit"
               disabled={saving || uploading}
               style={{
-                padding: '10px 26px',
-                borderRadius: 'var(--radius-pill)',
+                padding: '10px 24px',
+                borderRadius: '100px',
                 background: 'linear-gradient(135deg, #0A2315 0%, #143A24 100%)',
                 color: '#FFFFFF',
                 border: '1.5px solid #D4AF37',
-                fontSize: '0.88rem',
+                fontSize: '0.84rem',
                 fontWeight: 800,
-                boxShadow: '0 4px 14px rgba(10, 35, 21, 0.35)',
-                cursor: (saving || uploading) ? 'not-allowed' : 'pointer'
+                boxShadow: '0 4px 12px rgba(10, 35, 21, 0.2)',
+                cursor: (saving || uploading) ? 'not-allowed' : 'pointer',
+                transition: 'all 0.2s'
               }}
             >
               {saving ? 'Saving...' : (dish ? '✓ Update Dish' : '✓ Save Dish')}
