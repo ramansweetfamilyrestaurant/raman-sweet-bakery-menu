@@ -581,6 +581,15 @@ export default function MenuView({
           .desktop-summary-cards {
             display: none !important;
           }
+          .desktop-table-view {
+            display: none !important;
+          }
+          .mobile-list-view {
+            display: flex !important;
+            flex-direction: column !important;
+            gap: 10px !important;
+            width: 100% !important;
+          }
           .mobile-floating-add-btn {
             display: flex !important;
           }
@@ -588,6 +597,12 @@ export default function MenuView({
 
         @media (min-width: 769px) {
           .mobile-only-hero {
+            display: none !important;
+          }
+          .desktop-table-view {
+            display: block !important;
+          }
+          .mobile-list-view {
             display: none !important;
           }
           .mobile-dish-list-container {
@@ -2113,227 +2128,362 @@ export default function MenuView({
                 })}
               </div>
             ) : (
-              /* LIST VIEW TABLE */
-              <div className="mobile-table-scroll-wrap" style={{
-                background: '#FFFFFF',
-                borderRadius: '16px',
-                border: '1px solid #E2E8F0',
-                overflowX: 'auto',
-                WebkitOverflowScrolling: 'touch',
-                width: '100%',
-                maxWidth: '100%',
-                boxShadow: '0 1px 3px rgba(0,0,0,0.02)'
-              }}>
-                <table style={{ width: '100%', minWidth: '540px', borderCollapse: 'collapse', textAlign: 'left', fontSize: '0.84rem' }}>
-                  <thead>
-                    <tr style={{ background: '#F8FAFC', borderBottom: '1px solid #E2E8F0', color: '#64748B', fontWeight: 800, fontSize: '0.74rem' }}>
-                      <th style={{ padding: '12px 10px', width: '36px', textAlign: 'center' }}>
-                        <input
-                          type="checkbox"
-                          checked={isAllVisibleSelected}
-                          onChange={toggleSelectAllVisible}
-                          style={{ width: '16px', height: '16px', cursor: 'pointer', accentColor: '#0A2315' }}
-                          title="Select all visible dishes"
-                        />
-                      </th>
-                      <th style={{ padding: '12px 14px' }}>DISH</th>
-                      <th style={{ padding: '12px 14px' }}>CATEGORY</th>
-                      <th style={{ padding: '12px 14px' }}>PRICE (CLICK TO EDIT)</th>
-                      <th style={{ padding: '12px 14px' }}>STATUS</th>
-                      <th style={{ padding: '12px 16px', textAlign: 'right' }}>ACTIONS</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {paginatedDishes.map((dish, idx) => {
-                      const isAvailable = dish.is_available !== false && dish.available !== false && dish.available !== 0;
-                      const isVeg = dish.type === 'veg';
-                      const isEgg = dish.type === 'egg';
-                      const dishBadge = getDishBadge(dish);
-                      const catObj = safeCategories.find(c => String(c.id) === String(dish.category_id));
+              /* LIST VIEW: DESKTOP TABLE & MOBILE LIST CARDS */
+              <>
+                {/* 1. DESKTOP TABLE VIEW (>768px) */}
+                <div className="desktop-table-view" style={{
+                  background: '#FFFFFF',
+                  borderRadius: '16px',
+                  border: '1px solid #E2E8F0',
+                  overflowX: 'auto',
+                  WebkitOverflowScrolling: 'touch',
+                  width: '100%',
+                  maxWidth: '100%',
+                  boxShadow: '0 1px 3px rgba(0,0,0,0.02)'
+                }}>
+                  <table style={{ width: '100%', minWidth: '540px', borderCollapse: 'collapse', textAlign: 'left', fontSize: '0.84rem' }}>
+                    <thead>
+                      <tr style={{ background: '#F8FAFC', borderBottom: '1px solid #E2E8F0', color: '#64748B', fontWeight: 800, fontSize: '0.74rem' }}>
+                        <th style={{ padding: '12px 10px', width: '36px', textAlign: 'center' }}>
+                          <input
+                            type="checkbox"
+                            checked={isAllVisibleSelected}
+                            onChange={toggleSelectAllVisible}
+                            style={{ width: '16px', height: '16px', cursor: 'pointer', accentColor: '#0A2315' }}
+                            title="Select all visible dishes"
+                          />
+                        </th>
+                        <th style={{ padding: '12px 14px' }}>DISH</th>
+                        <th style={{ padding: '12px 14px' }}>CATEGORY</th>
+                        <th style={{ padding: '12px 14px' }}>PRICE (CLICK TO EDIT)</th>
+                        <th style={{ padding: '12px 14px' }}>STATUS</th>
+                        <th style={{ padding: '12px 16px', textAlign: 'right' }}>ACTIONS</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {paginatedDishes.map((dish, idx) => {
+                        const isAvailable = dish.is_available !== false && dish.available !== false && dish.available !== 0;
+                        const isVeg = dish.type === 'veg';
+                        const isEgg = dish.type === 'egg';
+                        const dishBadge = getDishBadge(dish);
+                        const catObj = safeCategories.find(c => String(c.id) === String(dish.category_id));
 
-                      return (
-                        <tr 
-                          key={dish.id} 
-                          style={{ 
-                            borderBottom: idx === paginatedDishes.length - 1 ? 'none' : '1px solid #F1F5F9',
-                            background: selectedDishIds.includes(dish.id) ? '#F0FDF4' : 'transparent'
-                          }}
-                        >
-                          <td style={{ padding: '12px 10px', width: '36px', textAlign: 'center' }}>
-                            <input
-                              type="checkbox"
-                              checked={selectedDishIds.includes(dish.id)}
-                              onChange={() => toggleSelectDish(dish.id)}
-                              style={{ width: '16px', height: '16px', cursor: 'pointer', accentColor: '#0A2315' }}
-                            />
-                          </td>
-                          <td style={{ padding: '12px 14px', display: 'flex', alignItems: 'center', gap: '10px' }}>
-                            <img
-                              src={getDishImageUrl(dish.image || dish.image_url)}
-                              alt={dish.name}
-                              style={{ width: '40px', height: '40px', borderRadius: '8px', objectFit: 'cover', border: '1px solid #E2E8F0' }}
-                              onError={(e) => { e.currentTarget.src = '/images/default-dish.webp'; }}
-                            />
-                            <div>
-                              <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                                <span style={{
-                                  width: '12px',
-                                  height: '12px',
-                                  background: '#FFFFFF',
-                                  border: `1.5px solid ${isVeg ? '#16A34A' : isEgg ? '#D97706' : '#DC2626'}`,
-                                  borderRadius: '3px',
-                                  display: 'inline-flex',
-                                  alignItems: 'center',
-                                  justifyContent: 'center',
-                                  flexShrink: 0
-                                }}>
-                                  <span style={{ width: '4px', height: '4px', borderRadius: '50%', backgroundColor: isVeg ? '#16A34A' : isEgg ? '#D97706' : '#DC2626' }} />
-                                </span>
-                                <strong style={{ fontSize: '0.88rem', color: '#0F172A' }}>{dish.name}</strong>
-                                {dishBadge && (
+                        return (
+                          <tr 
+                            key={dish.id} 
+                            style={{ 
+                              borderBottom: idx === paginatedDishes.length - 1 ? 'none' : '1px solid #F1F5F9',
+                              background: selectedDishIds.includes(dish.id) ? '#F0FDF4' : 'transparent'
+                            }}
+                          >
+                            <td style={{ padding: '12px 10px', width: '36px', textAlign: 'center' }}>
+                              <input
+                                type="checkbox"
+                                checked={selectedDishIds.includes(dish.id)}
+                                onChange={() => toggleSelectDish(dish.id)}
+                                style={{ width: '16px', height: '16px', cursor: 'pointer', accentColor: '#0A2315' }}
+                              />
+                            </td>
+                            <td style={{ padding: '12px 14px', display: 'flex', alignItems: 'center', gap: '10px' }}>
+                              <img
+                                src={getDishImageUrl(dish.image || dish.image_url)}
+                                alt={dish.name}
+                                style={{ width: '40px', height: '40px', borderRadius: '8px', objectFit: 'cover', border: '1px solid #E2E8F0' }}
+                                onError={(e) => { e.currentTarget.src = '/images/default-dish.webp'; }}
+                              />
+                              <div>
+                                <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
                                   <span style={{
-                                    background: dishBadge.bg,
-                                    color: dishBadge.color || '#FFFFFF',
-                                    fontSize: '0.58rem',
-                                    fontWeight: 800,
-                                    padding: '1px 5px',
-                                    borderRadius: '4px',
+                                    width: '12px',
+                                    height: '12px',
+                                    background: '#FFFFFF',
+                                    border: `1.5px solid ${isVeg ? '#16A34A' : isEgg ? '#D97706' : '#DC2626'}`,
+                                    borderRadius: '3px',
                                     display: 'inline-flex',
                                     alignItems: 'center',
-                                    gap: '2px'
+                                    justifyContent: 'center',
+                                    flexShrink: 0
                                   }}>
-                                    <span>{dishBadge.icon}</span>
-                                    <span>{dishBadge.text}</span>
+                                    <span style={{ width: '4px', height: '4px', borderRadius: '50%', backgroundColor: isVeg ? '#16A34A' : isEgg ? '#D97706' : '#DC2626' }} />
                                   </span>
-                                )}
+                                  <strong style={{ fontSize: '0.88rem', color: '#0F172A' }}>{dish.name}</strong>
+                                  {dishBadge && (
+                                    <span style={{
+                                      background: dishBadge.bg,
+                                      color: dishBadge.color || '#FFFFFF',
+                                      fontSize: '0.58rem',
+                                      fontWeight: 800,
+                                      padding: '1px 5px',
+                                      borderRadius: '4px',
+                                      display: 'inline-flex',
+                                      alignItems: 'center',
+                                      gap: '2px'
+                                    }}>
+                                      <span>{dishBadge.icon}</span>
+                                      <span>{dishBadge.text}</span>
+                                    </span>
+                                  )}
+                                </div>
+                                <span style={{ fontSize: '0.70rem', color: '#64748B' }}>{dish.description ? (dish.description.length > 35 ? `${dish.description.substring(0, 35)}...` : dish.description) : 'No description'}</span>
                               </div>
-                              <span style={{ fontSize: '0.70rem', color: '#64748B' }}>{dish.description ? (dish.description.length > 35 ? `${dish.description.substring(0, 35)}...` : dish.description) : 'No description'}</span>
-                            </div>
-                          </td>
-                          <td style={{ padding: '12px 14px', color: '#475569', fontWeight: 600, fontSize: '0.80rem' }}>
-                            {catObj?.name || dish.category_name || dish.category || 'General'}
-                          </td>
-                          <td style={{ padding: '12px 14px' }}>
-                            {inlinePriceDishId === dish.id ? (
-                              <div style={{ display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
-                                <span style={{ fontSize: '0.80rem', fontWeight: 800, color: '#0F172A' }}>{curr}</span>
-                                <input
-                                  type="number"
-                                  autoFocus
-                                  value={inlinePriceVal}
-                                  onChange={(e) => setInlinePriceVal(e.target.value)}
-                                  onKeyDown={(e) => {
-                                    if (e.key === 'Enter') {
+                            </td>
+                            <td style={{ padding: '12px 14px', color: '#475569', fontWeight: 600, fontSize: '0.80rem' }}>
+                              {catObj?.name || dish.category_name || dish.category || 'General'}
+                            </td>
+                            <td style={{ padding: '12px 14px' }}>
+                              {inlinePriceDishId === dish.id ? (
+                                <div style={{ display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
+                                  <span style={{ fontSize: '0.80rem', fontWeight: 800, color: '#0F172A' }}>{curr}</span>
+                                  <input
+                                    type="number"
+                                    autoFocus
+                                    value={inlinePriceVal}
+                                    onChange={(e) => setInlinePriceVal(e.target.value)}
+                                    onKeyDown={(e) => {
+                                      if (e.key === 'Enter') {
+                                        if (inlinePriceVal !== '' && Number(inlinePriceVal) >= 0) {
+                                          onUpdateQuickPrice && onUpdateQuickPrice(dish.id, Number(inlinePriceVal), dish.price_half);
+                                        }
+                                        setInlinePriceDishId(null);
+                                      } else if (e.key === 'Escape') {
+                                        setInlinePriceDishId(null);
+                                      }
+                                    }}
+                                    style={{
+                                      width: '72px',
+                                      padding: '3px 6px',
+                                      borderRadius: '6px',
+                                      border: '1.5px solid #0A2315',
+                                      fontSize: '0.84rem',
+                                      fontWeight: 800,
+                                      outline: 'none'
+                                    }}
+                                  />
+                                  <button
+                                    type="button"
+                                    onClick={() => {
                                       if (inlinePriceVal !== '' && Number(inlinePriceVal) >= 0) {
                                         onUpdateQuickPrice && onUpdateQuickPrice(dish.id, Number(inlinePriceVal), dish.price_half);
                                       }
                                       setInlinePriceDishId(null);
-                                    } else if (e.key === 'Escape') {
-                                      setInlinePriceDishId(null);
-                                    }
-                                  }}
-                                  style={{
-                                    width: '72px',
-                                    padding: '3px 6px',
-                                    borderRadius: '6px',
-                                    border: '1.5px solid #0A2315',
-                                    fontSize: '0.84rem',
-                                    fontWeight: 800,
-                                    outline: 'none'
-                                  }}
-                                />
-                                <button
-                                  type="button"
+                                    }}
+                                    style={{ background: '#16A34A', color: '#FFFFFF', border: 'none', borderRadius: '4px', width: '22px', height: '22px', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}
+                                    title="Save Price (Enter)"
+                                  >
+                                    <Check size={12} />
+                                  </button>
+                                  <button
+                                    type="button"
+                                    onClick={() => setInlinePriceDishId(null)}
+                                    style={{ background: '#E2E8F0', color: '#475569', border: 'none', borderRadius: '4px', width: '22px', height: '22px', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}
+                                    title="Cancel (Esc)"
+                                  >
+                                    <X size={12} />
+                                  </button>
+                                </div>
+                              ) : (
+                                <div 
                                   onClick={() => {
-                                    if (inlinePriceVal !== '' && Number(inlinePriceVal) >= 0) {
-                                      onUpdateQuickPrice && onUpdateQuickPrice(dish.id, Number(inlinePriceVal), dish.price_half);
-                                    }
-                                    setInlinePriceDishId(null);
+                                    setInlinePriceDishId(dish.id);
+                                    setInlinePriceVal(dish.price || '');
                                   }}
-                                  style={{ background: '#16A34A', color: '#FFFFFF', border: 'none', borderRadius: '4px', width: '22px', height: '22px', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}
-                                  title="Save Price (Enter)"
+                                  title="Click to edit price directly"
+                                  style={{
+                                    cursor: 'pointer',
+                                    display: 'inline-flex',
+                                    alignItems: 'center',
+                                    gap: '6px',
+                                    padding: '2px 6px',
+                                    borderRadius: '6px',
+                                    transition: 'background 0.15s ease'
+                                  }}
+                                  onMouseOver={(e) => e.currentTarget.style.background = '#F1F5F9'}
+                                  onMouseOut={(e) => e.currentTarget.style.background = 'transparent'}
                                 >
-                                  <Check size={12} />
+                                  {renderDishPrice(dish, 'list')}
+                                  <Edit3 size={11} color="#94A3B8" style={{ opacity: 0.6 }} />
+                                </div>
+                              )}
+                            </td>
+                            <td style={{ padding: '12px 14px' }}>
+                              <button
+                                type="button"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  onToggleAvailability && onToggleAvailability(dish.id, !isAvailable);
+                                }}
+                                style={{
+                                  background: isAvailable ? '#E6F9EE' : '#FEE2E2',
+                                  color: isAvailable ? '#15803D' : '#DC2626',
+                                  border: `1px solid ${isAvailable ? '#C6F6D5' : '#FECACA'}`,
+                                  padding: '3px 8px',
+                                  borderRadius: '6px',
+                                  fontSize: '0.68rem',
+                                  fontWeight: 800,
+                                  cursor: 'pointer',
+                                  userSelect: 'none'
+                                }}
+                              >
+                                {isAvailable ? 'In Stock' : 'Sold Out'}
+                              </button>
+                            </td>
+                            <td style={{ padding: '12px 16px', textAlign: 'right' }}>
+                              <div style={{ display: 'inline-flex', gap: '6px' }}>
+                                <button
+                                  onClick={() => onOpenEditDish(dish)}
+                                  style={{ background: '#F1F5F9', border: '1px solid #E2E8F0', padding: '5px', borderRadius: '6px', cursor: 'pointer', color: '#0F172A' }}
+                                  title="Edit"
+                                >
+                                  <Edit3 size={13} />
                                 </button>
                                 <button
-                                  type="button"
-                                  onClick={() => setInlinePriceDishId(null)}
-                                  style={{ background: '#E2E8F0', color: '#475569', border: 'none', borderRadius: '4px', width: '22px', height: '22px', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}
-                                  title="Cancel (Esc)"
+                                  onClick={() => setDeleteConfirmDish(dish)}
+                                  style={{ background: '#FEE2E2', border: '1px solid #FECACA', padding: '5px', borderRadius: '6px', cursor: 'pointer', color: '#DC2626' }}
+                                  title="Delete"
                                 >
-                                  <X size={12} />
+                                  <Trash2 size={13} />
                                 </button>
                               </div>
-                            ) : (
-                              <div 
-                                onClick={() => {
-                                  setInlinePriceDishId(dish.id);
-                                  setInlinePriceVal(dish.price || '');
-                                }}
-                                title="Click to edit price directly"
-                                style={{
-                                  cursor: 'pointer',
-                                  display: 'inline-flex',
-                                  alignItems: 'center',
-                                  gap: '6px',
-                                  padding: '2px 6px',
-                                  borderRadius: '6px',
-                                  transition: 'background 0.15s ease'
-                                }}
-                                onMouseOver={(e) => e.currentTarget.style.background = '#F1F5F9'}
-                                onMouseOut={(e) => e.currentTarget.style.background = 'transparent'}
-                              >
-                                {renderDishPrice(dish, 'list')}
-                                <Edit3 size={11} color="#94A3B8" style={{ opacity: 0.6 }} />
-                              </div>
-                            )}
-                          </td>
-                          <td style={{ padding: '12px 14px' }}>
-                            <button
-                              type="button"
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                onToggleAvailability && onToggleAvailability(dish.id, !isAvailable);
-                              }}
-                              style={{
-                                background: isAvailable ? '#E6F9EE' : '#FEE2E2',
-                                color: isAvailable ? '#15803D' : '#DC2626',
-                                border: `1px solid ${isAvailable ? '#C6F6D5' : '#FECACA'}`,
-                                padding: '3px 8px',
-                                borderRadius: '6px',
-                                fontSize: '0.68rem',
-                                fontWeight: 800,
-                                cursor: 'pointer',
-                                userSelect: 'none'
-                              }}
-                            >
-                              {isAvailable ? 'In Stock' : 'Sold Out'}
-                            </button>
-                          </td>
-                          <td style={{ padding: '12px 16px', textAlign: 'right' }}>
-                            <div style={{ display: 'inline-flex', gap: '6px' }}>
-                              <button
-                                onClick={() => onOpenEditDish(dish)}
-                                style={{ background: '#F1F5F9', border: '1px solid #E2E8F0', padding: '5px', borderRadius: '6px', cursor: 'pointer', color: '#0F172A' }}
-                                title="Edit"
-                              >
-                                <Edit3 size={13} />
-                              </button>
-                              <button
-                                onClick={() => setDeleteConfirmDish(dish)}
-                                style={{ background: '#FEE2E2', border: '1px solid #FECACA', padding: '5px', borderRadius: '6px', cursor: 'pointer', color: '#DC2626' }}
-                                title="Delete"
-                              >
-                                <Trash2 size={13} />
-                              </button>
+                            </td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
+                </div>
+
+                {/* 2. MOBILE-NATIVE LIST VIEW (<=768px) */}
+                <div className="mobile-list-view">
+                  {paginatedDishes.map((dish) => {
+                    const isAvailable = dish.is_available !== false && dish.available !== false && dish.available !== 0;
+                    const isVeg = dish.type === 'veg';
+                    const isEgg = dish.type === 'egg';
+                    const dishBadge = getDishBadge(dish);
+                    const catObj = safeCategories.find(c => String(c.id) === String(dish.category_id));
+
+                    return (
+                      <div
+                        key={dish.id}
+                        style={{
+                          background: '#FFFFFF',
+                          borderRadius: '14px',
+                          border: selectedDishIds.includes(dish.id) ? '2px solid #0A2315' : '1px solid #E2E8F0',
+                          padding: '10px 12px',
+                          display: 'flex',
+                          flexDirection: 'column',
+                          gap: '8px',
+                          boxShadow: '0 1px 3px rgba(0,0,0,0.02)',
+                          boxSizing: 'border-box',
+                          width: '100%'
+                        }}
+                      >
+                        {/* Top Row: Checkbox + Food Image + Details + Action Buttons */}
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '10px', width: '100%' }}>
+                          <input
+                            type="checkbox"
+                            checked={selectedDishIds.includes(dish.id)}
+                            onChange={() => toggleSelectDish(dish.id)}
+                            style={{ width: '18px', height: '18px', cursor: 'pointer', accentColor: '#0A2315', flexShrink: 0 }}
+                          />
+
+                          <img
+                            src={getDishImageUrl(dish.image || dish.image_url)}
+                            alt={dish.name}
+                            style={{ width: '48px', height: '48px', borderRadius: '10px', objectFit: 'cover', border: '1px solid #E2E8F0', flexShrink: 0 }}
+                            onError={(e) => { e.currentTarget.src = '/images/default-dish.webp'; }}
+                          />
+
+                          <div style={{ flex: 1, minWidth: 0 }}>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '5px', flexWrap: 'wrap' }}>
+                              <span style={{
+                                width: '12px',
+                                height: '12px',
+                                background: '#FFFFFF',
+                                border: `1.5px solid ${isVeg ? '#16A34A' : isEgg ? '#D97706' : '#DC2626'}`,
+                                borderRadius: '3px',
+                                display: 'inline-flex',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                                flexShrink: 0
+                              }}>
+                                <span style={{ width: '4px', height: '4px', borderRadius: '50%', backgroundColor: isVeg ? '#16A34A' : isEgg ? '#D97706' : '#DC2626' }} />
+                              </span>
+                              <strong style={{ fontSize: '0.86rem', color: '#0F172A', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', maxWidth: '140px' }}>
+                                {dish.name}
+                              </strong>
+                              {dishBadge && (
+                                <span style={{
+                                  background: dishBadge.bg,
+                                  color: dishBadge.color || '#FFFFFF',
+                                  fontSize: '0.55rem',
+                                  fontWeight: 800,
+                                  padding: '1px 5px',
+                                  borderRadius: '4px',
+                                  whiteSpace: 'nowrap'
+                                }}>
+                                  {dishBadge.icon} {dishBadge.text}
+                                </span>
+                              )}
                             </div>
-                          </td>
-                        </tr>
-                      );
-                    })}
-                  </tbody>
-                </table>
-              </div>
+                            <span style={{ fontSize: '0.70rem', color: '#64748B', display: 'block', marginTop: '1px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                              {catObj?.name || dish.category_name || dish.category || 'General'}
+                            </span>
+                          </div>
+
+                          {/* Edit / Delete Buttons */}
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '4px', flexShrink: 0 }}>
+                            <button
+                              onClick={() => onOpenEditDish(dish)}
+                              style={{ background: '#F1F5F9', border: '1px solid #E2E8F0', padding: '6px', borderRadius: '7px', cursor: 'pointer', color: '#0F172A' }}
+                              title="Edit"
+                            >
+                              <Edit3 size={13} />
+                            </button>
+                            <button
+                              onClick={() => setDeleteConfirmDish(dish)}
+                              style={{ background: '#FEE2E2', border: '1px solid #FECACA', padding: '6px', borderRadius: '7px', cursor: 'pointer', color: '#DC2626' }}
+                              title="Delete"
+                            >
+                              <Trash2 size={13} />
+                            </button>
+                          </div>
+                        </div>
+
+                        {/* Bottom Row: Price + Stock Toggle Button */}
+                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', borderTop: '1px solid #F1F5F9', paddingTop: '6px' }}>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                            <span style={{ fontSize: '0.70rem', color: '#64748B', fontWeight: 600 }}>Price:</span>
+                            {renderDishPrice(dish, 'list')}
+                          </div>
+
+                          <button
+                            type="button"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              onToggleAvailability && onToggleAvailability(dish.id, !isAvailable);
+                            }}
+                            style={{
+                              background: isAvailable ? '#E6F9EE' : '#FEE2E2',
+                              color: isAvailable ? '#15803D' : '#DC2626',
+                              border: `1px solid ${isAvailable ? '#C6F6D5' : '#FECACA'}`,
+                              padding: '4px 10px',
+                              borderRadius: '6px',
+                              fontSize: '0.70rem',
+                              fontWeight: 800,
+                              cursor: 'pointer',
+                              display: 'inline-flex',
+                              alignItems: 'center',
+                              gap: '4px'
+                            }}
+                          >
+                            <span>{isAvailable ? '● In Stock' : '○ Sold Out'}</span>
+                          </button>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </>
             )}
           </div>
 
