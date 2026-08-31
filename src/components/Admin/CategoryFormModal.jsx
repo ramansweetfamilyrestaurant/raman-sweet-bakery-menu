@@ -7,6 +7,7 @@ export default function CategoryFormModal({ category, token, onSave, onClose }) 
   const [name, setName] = useState(category?.name || '');
   const [nameHi, setNameHi] = useState(category?.name_hi || '');
   const [image, setImage] = useState(category?.image && category.image !== '/uploads/logo.jpg' ? category.image : '');
+  const [showUrlInput, setShowUrlInput] = useState(false);
   const [sortOrder, setSortOrder] = useState(category?.sort_order || 0);
 
   const [uploading, setUploading] = useState(false);
@@ -55,40 +56,57 @@ export default function CategoryFormModal({ category, token, onSave, onClose }) 
     <div style={{
       position: 'fixed',
       inset: 0,
-      zIndex: 3000,
-      background: 'rgba(15, 35, 21, 0.65)',
-      backdropFilter: 'blur(8px)',
+      zIndex: 3500,
+      background: 'rgba(10, 25, 16, 0.70)',
+      backdropFilter: 'blur(6px)',
       display: 'flex',
       alignItems: 'center',
       justifyContent: 'center',
-      padding: '16px',
+      padding: '12px',
       boxSizing: 'border-box'
     }} onClick={onClose}>
       <div 
         onClick={(e) => e.stopPropagation()}
+        className="cat-modal-container"
         style={{
           background: '#FFFFFF',
-          borderRadius: '24px',
+          borderRadius: '20px',
           width: '100%',
-          maxWidth: '450px',
-          boxShadow: '0 20px 40px rgba(0, 0, 0, 0.18)',
+          maxWidth: '440px',
+          maxHeight: '92vh',
+          boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.25)',
           border: '1px solid #E2E8F0',
           overflow: 'hidden',
           display: 'flex',
           flexDirection: 'column',
-          animation: 'modalSlideIn 0.3s cubic-bezier(0.16, 1, 0.3, 1)'
+          animation: 'modalSlideIn 0.25s cubic-bezier(0.16, 1, 0.3, 1)'
         }}
       >
         <style dangerouslySetInnerHTML={{__html: `
           @keyframes modalSlideIn {
-            from { transform: translateY(12px); opacity: 0; }
+            from { transform: translateY(16px); opacity: 0; }
             to { transform: translateY(0); opacity: 1; }
+          }
+          @media (max-width: 600px) {
+            .cat-modal-container {
+              max-width: 100% !important;
+              border-radius: 16px !important;
+              max-height: 94vh !important;
+            }
+            .cat-modal-body-form {
+              padding: 12px 14px !important;
+            }
+            .cat-modal-body-form input,
+            .cat-modal-body-form select {
+              font-size: 16px !important;
+              padding: 9px 11px !important;
+            }
           }
         `}} />
 
         {/* Modal Header */}
         <div style={{
-          padding: '18px 24px',
+          padding: '14px 18px',
           background: 'linear-gradient(135deg, #0A2315 0%, #143A24 100%)',
           color: '#FFFFFF',
           display: 'flex',
@@ -97,45 +115,44 @@ export default function CategoryFormModal({ category, token, onSave, onClose }) 
           borderBottom: '1px solid rgba(255, 255, 255, 0.08)'
         }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-            <FolderOpen size={18} color="#D4AF37" />
-            <h3 style={{ fontSize: '1.05rem', fontWeight: 800, margin: 0, letterSpacing: '0.3px' }}>
+            <FolderOpen size={16} color="#D4AF37" />
+            <h3 style={{ fontSize: '0.98rem', fontWeight: 800, margin: 0, letterSpacing: '0.2px' }}>
               {category ? 'Edit Category' : 'Create New Category'}
             </h3>
           </div>
           <button 
             onClick={onClose}
+            type="button"
             style={{ 
-              background: 'rgba(255, 255, 255, 0.1)', 
+              background: 'rgba(255, 255, 255, 0.12)', 
               border: 'none', 
               color: '#FFFFFF', 
               cursor: 'pointer',
-              width: '28px',
-              height: '28px',
+              width: '26px',
+              height: '26px',
               borderRadius: '50%',
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
               transition: 'background-color 0.2s'
             }}
-            onMouseEnter={(e) => e.currentTarget.style.backgroundColor = 'rgba(255, 255, 255, 0.2)'}
-            onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'rgba(255, 255, 255, 0.1)'}
           >
-            <X size={16} />
+            <X size={15} />
           </button>
         </div>
 
         {/* Form */}
-        <form onSubmit={handleSubmit} style={{ padding: '22px 24px', margin: 0 }}>
+        <form onSubmit={handleSubmit} className="cat-modal-body-form" style={{ padding: '16px 18px', overflowY: 'auto', flex: 1, margin: 0 }}>
           {error && (
             <div style={{
               background: '#FEE2E2',
               border: '1px solid #FCA5A5',
               color: '#991B1B',
-              padding: '10px 14px',
-              borderRadius: '10px',
-              fontSize: '0.80rem',
+              padding: '8px 12px',
+              borderRadius: '8px',
+              fontSize: '0.78rem',
               fontWeight: 600,
-              marginBottom: '16px',
+              marginBottom: '12px',
               display: 'flex',
               alignItems: 'center',
               gap: '6px'
@@ -145,245 +162,207 @@ export default function CategoryFormModal({ category, token, onSave, onClose }) 
             </div>
           )}
 
-          {/* 1. Category Name English */}
-          <div style={{ marginBottom: '14px' }}>
-            <label style={{ display: 'flex', alignItems: 'center', gap: '4px', fontSize: '0.78rem', fontWeight: 800, color: '#334155', marginBottom: '6px' }}>
-              Category Name *
-            </label>
-            <input
-              type="text"
-              required
-              value={name}
-              onChange={(e) => setName(e.target.value)}
-              placeholder="e.g. Pure Desi Ghee Sweets"
-              style={{
-                width: '100%',
-                padding: '11px 14px',
-                borderRadius: '10px',
-                border: '1.5px solid #E2E8F0',
-                fontSize: '0.88rem',
-                outline: 'none',
-                boxSizing: 'border-box',
-                transition: 'all 0.2s ease',
-                color: '#0F172A'
-              }}
-              onFocus={(e) => {
-                e.target.style.borderColor = '#0A2315';
-                e.target.style.boxShadow = '0 0 0 3px rgba(10, 35, 21, 0.08)';
-              }}
-              onBlur={(e) => {
-                e.target.style.borderColor = '#E2E8F0';
-                e.target.style.boxShadow = 'none';
-              }}
-            />
-          </div>
-
-          {/* 2. Category Name Hindi */}
-          <div style={{ marginBottom: '14px' }}>
-            <label style={{ display: 'flex', alignItems: 'center', gap: '4px', fontSize: '0.78rem', fontWeight: 800, color: '#334155', marginBottom: '6px' }}>
-              <Globe size={13} color="#64748B" />
-              Category Name in Hindi (optional)
-            </label>
-            <input
-              type="text"
-              value={nameHi}
-              onChange={(e) => setNameHi(e.target.value)}
-              placeholder="उदा. शुद्ध देसी घी की मिठाइयां"
-              style={{
-                width: '100%',
-                padding: '11px 14px',
-                borderRadius: '10px',
-                border: '1.5px solid #E2E8F0',
-                fontSize: '0.88rem',
-                outline: 'none',
-                boxSizing: 'border-box',
-                transition: 'all 0.2s ease',
-                color: '#0F172A'
-              }}
-              onFocus={(e) => {
-                e.target.style.borderColor = '#0A2315';
-                e.target.style.boxShadow = '0 0 0 3px rgba(10, 35, 21, 0.08)';
-              }}
-              onBlur={(e) => {
-                e.target.style.borderColor = '#E2E8F0';
-                e.target.style.boxShadow = 'none';
-              }}
-            />
-          </div>
-
-          {/* 3. Display Sort Order */}
-          <div style={{ marginBottom: '16px' }}>
-            <label style={{ display: 'flex', alignItems: 'center', gap: '4px', fontSize: '0.78rem', fontWeight: 800, color: '#334155', marginBottom: '6px' }}>
-              <ArrowUpDown size={13} color="#64748B" />
-              Display Sort Order
-            </label>
-            <input
-              type="number"
-              value={sortOrder}
-              onChange={(e) => setSortOrder(e.target.value)}
-              placeholder="0"
-              style={{
-                width: '100%',
-                padding: '11px 14px',
-                borderRadius: '10px',
-                border: '1.5px solid #E2E8F0',
-                fontSize: '0.88rem',
-                outline: 'none',
-                boxSizing: 'border-box',
-                transition: 'all 0.2s ease',
-                color: '#0F172A'
-              }}
-              onFocus={(e) => {
-                e.target.style.borderColor = '#0A2315';
-                e.target.style.boxShadow = '0 0 0 3px rgba(10, 35, 21, 0.08)';
-              }}
-              onBlur={(e) => {
-                e.target.style.borderColor = '#E2E8F0';
-                e.target.style.boxShadow = 'none';
-              }}
-            />
-          </div>
-
-          {/* 4. Category Image Upload & Preview */}
-          <div style={{ marginBottom: '22px' }}>
-            <label style={{ display: 'block', fontSize: '0.78rem', fontWeight: 800, color: '#334155', marginBottom: '6px' }}>
-              Category Image
-            </label>
-            
-            <div style={{ 
-              display: 'flex', 
-              gap: '12px', 
-              alignItems: 'center', 
-              marginBottom: '10px',
-              background: '#F8FAFC',
-              padding: '10px 12px',
-              borderRadius: '12px',
-              border: '1px dashed #E2E8F0'
-            }}>
-              <div style={{
-                width: '48px',
-                height: '48px',
-                borderRadius: '12px',
-                overflow: 'hidden',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                border: '1.5px solid #E2E8F0',
-                background: '#FFFFFF',
-                flexShrink: 0
-              }}>
-                <img
-                  src={getCategoryImageUrl(image)}
-                  alt="Preview"
-                  style={{ width: '100%', height: '100%', objectFit: 'cover' }}
-                  onError={(e) => {
-                    if (e.currentTarget.src !== '/images/default-category.webp') {
-                      e.currentTarget.src = '/images/default-category.webp';
-                    }
-                  }}
-                />
-              </div>
-
-              <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px', flex: 1 }}>
-                <label style={{
-                  cursor: 'pointer',
-                  display: 'inline-flex',
-                  alignItems: 'center',
-                  gap: '6px',
-                  background: '#0A2315',
-                  color: '#FFFFFF',
-                  padding: '7px 14px',
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '11px' }}>
+            {/* 1. Category Name English */}
+            <div>
+              <label style={{ display: 'block', fontSize: '0.74rem', fontWeight: 800, color: '#334155', marginBottom: '4px' }}>
+                Category Name (English) *
+              </label>
+              <input
+                type="text"
+                required
+                value={name}
+                onChange={(e) => setName(e.target.value)}
+                placeholder="e.g. Pure Desi Ghee Sweets"
+                style={{
+                  width: '100%',
+                  padding: '9px 12px',
                   borderRadius: '8px',
-                  fontSize: '0.76rem',
-                  fontWeight: 700,
-                  transition: 'background-color 0.2s',
-                  boxShadow: '0 2px 5px rgba(10, 35, 21, 0.15)'
+                  border: '1.5px solid #CBD5E1',
+                  fontSize: '0.86rem',
+                  outline: 'none',
+                  boxSizing: 'border-box',
+                  color: '#0F172A'
                 }}
-                  onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#143A24'}
-                  onMouseLeave={(e) => e.currentTarget.style.backgroundColor = '#0A2315'}
-                >
-                  <Upload size={13} color="#D4AF37" />
-                  {uploading ? 'Uploading...' : 'Upload File'}
-                  <input
-                    type="file"
-                    accept="image/*"
-                    onChange={handleFileUpload}
-                    style={{ display: 'none' }}
-                  />
-                </label>
+                onFocus={(e) => e.target.style.borderColor = '#0A2315'}
+                onBlur={(e) => e.target.style.borderColor = '#CBD5E1'}
+              />
+            </div>
 
-                {hasCustomCategoryImage(image) && (
-                  <button
-                    type="button"
-                    onClick={() => setImage('')}
-                    style={{
+            {/* 2. Category Name Hindi */}
+            <div>
+              <label style={{ display: 'flex', alignItems: 'center', gap: '4px', fontSize: '0.74rem', fontWeight: 800, color: '#334155', marginBottom: '4px' }}>
+                <Globe size={11} color="#64748B" />
+                Category Name in Hindi (हिंदी नाम)
+              </label>
+              <input
+                type="text"
+                value={nameHi}
+                onChange={(e) => setNameHi(e.target.value)}
+                placeholder="उदा. शुद्ध देसी घी की मिठाइयां"
+                style={{
+                  width: '100%',
+                  padding: '9px 12px',
+                  borderRadius: '8px',
+                  border: '1.5px solid #CBD5E1',
+                  fontSize: '0.86rem',
+                  outline: 'none',
+                  boxSizing: 'border-box',
+                  color: '#0F172A'
+                }}
+                onFocus={(e) => e.target.style.borderColor = '#0A2315'}
+                onBlur={(e) => e.target.style.borderColor = '#CBD5E1'}
+              />
+            </div>
+
+            {/* 3. Display Sort Order */}
+            <div>
+              <label style={{ display: 'flex', alignItems: 'center', gap: '4px', fontSize: '0.74rem', fontWeight: 800, color: '#334155', marginBottom: '4px' }}>
+                <ArrowUpDown size={11} color="#64748B" />
+                Display Sort Order
+              </label>
+              <input
+                type="number"
+                value={sortOrder}
+                onChange={(e) => setSortOrder(e.target.value)}
+                placeholder="0"
+                style={{
+                  width: '100%',
+                  padding: '9px 12px',
+                  borderRadius: '8px',
+                  border: '1.5px solid #CBD5E1',
+                  fontSize: '0.86rem',
+                  outline: 'none',
+                  boxSizing: 'border-box',
+                  color: '#0F172A'
+                }}
+                onFocus={(e) => e.target.style.borderColor = '#0A2315'}
+                onBlur={(e) => e.target.style.borderColor = '#CBD5E1'}
+              />
+            </div>
+
+            {/* 4. Category Image Upload */}
+            <div>
+              <label style={{ display: 'block', fontSize: '0.74rem', fontWeight: 800, color: '#334155', marginBottom: '4px' }}>
+                Category Image (Optional)
+              </label>
+              
+              <div style={{ 
+                display: 'flex', 
+                gap: '10px', 
+                alignItems: 'center', 
+                background: '#F8FAFC',
+                padding: '8px 10px',
+                borderRadius: '10px',
+                border: '1px dashed #CBD5E1'
+              }}>
+                <div style={{
+                  width: '42px',
+                  height: '42px',
+                  borderRadius: '8px',
+                  overflow: 'hidden',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  border: '1px solid #E2E8F0',
+                  background: '#FFFFFF',
+                  flexShrink: 0
+                }}>
+                  <img
+                    src={getCategoryImageUrl(image)}
+                    alt="Preview"
+                    style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                    onError={(e) => {
+                      if (e.currentTarget.src !== '/images/default-category.webp') {
+                        e.currentTarget.src = '/images/default-category.webp';
+                      }
+                    }}
+                  />
+                </div>
+
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '3px', flex: 1 }}>
+                  <div style={{ display: 'flex', gap: '6px' }}>
+                    <label style={{
+                      cursor: 'pointer',
                       display: 'inline-flex',
                       alignItems: 'center',
                       gap: '4px',
-                      background: '#FEE2E2',
-                      border: '1px solid #FCA5A5',
-                      color: '#991B1B',
-                      padding: '7px 12px',
-                      borderRadius: '8px',
-                      fontSize: '0.76rem',
-                      fontWeight: 700,
-                      cursor: 'pointer',
-                      transition: 'background-color 0.2s'
-                    }}
-                    onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#FCA5A5'}
-                    onMouseLeave={(e) => e.currentTarget.style.backgroundColor = '#FEE2E2'}
-                  >
-                    <Trash2 size={12} color="#DC2626" />
-                    <span>Remove</span>
-                  </button>
-                )}
-              </div>
-            </div>
+                      background: '#0A2315',
+                      color: '#FFFFFF',
+                      padding: '5px 10px',
+                      borderRadius: '6px',
+                      fontSize: '0.72rem',
+                      fontWeight: 700
+                    }}>
+                      <Upload size={11} color="#D4AF37" />
+                      <span>{uploading ? 'Uploading...' : 'Upload Image'}</span>
+                      <input type="file" accept="image/*" onChange={handleFileUpload} style={{ display: 'none' }} />
+                    </label>
 
-            <input
-              type="text"
-              value={image}
-              onChange={(e) => setImage(e.target.value)}
-              placeholder="Or enter image URL (optional)"
-              style={{
-                width: '100%',
-                padding: '9px 12px',
-                borderRadius: '8px',
-                border: '1.5px solid #E2E8F0',
-                fontSize: '0.80rem',
-                outline: 'none',
-                boxSizing: 'border-box',
-                transition: 'all 0.2s ease',
-                color: '#0F172A'
-              }}
-              onFocus={(e) => e.target.style.borderColor = '#0A2315'}
-              onBlur={(e) => e.target.style.borderColor = '#E2E8F0'}
-            />
+                    {hasCustomCategoryImage(image) && (
+                      <button
+                        type="button"
+                        onClick={() => setImage('')}
+                        style={{
+                          background: '#FEE2E2',
+                          border: 'none',
+                          color: '#DC2626',
+                          padding: '5px 8px',
+                          borderRadius: '6px',
+                          fontSize: '0.70rem',
+                          fontWeight: 700,
+                          cursor: 'pointer'
+                        }}
+                      >
+                        Remove
+                      </button>
+                    )}
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => setShowUrlInput(!showUrlInput)}
+                    style={{ background: 'none', border: 'none', color: '#64748B', fontSize: '0.66rem', cursor: 'pointer', padding: 0, textAlign: 'left' }}
+                  >
+                    {showUrlInput ? 'Hide URL input' : 'Or paste URL'}
+                  </button>
+                </div>
+              </div>
+
+              {showUrlInput && (
+                <input
+                  type="text"
+                  value={image}
+                  onChange={(e) => setImage(e.target.value)}
+                  placeholder="Paste direct image URL (https://...)"
+                  style={{
+                    width: '100%',
+                    padding: '7px 10px',
+                    borderRadius: '6px',
+                    border: '1px solid #CBD5E1',
+                    fontSize: '0.76rem',
+                    outline: 'none',
+                    boxSizing: 'border-box',
+                    marginTop: '6px'
+                  }}
+                />
+              )}
+            </div>
           </div>
 
-          {/* Action Buttons */}
-          <div style={{ display: 'flex', gap: '10px', justifyContent: 'flex-end', borderTop: '1px solid #F1F5F9', paddingTop: '16px' }}>
+          {/* Sticky Action Buttons */}
+          <div style={{ display: 'flex', gap: '8px', justifyContent: 'flex-end', borderTop: '1px solid #E2E8F0', paddingTop: '12px', marginTop: '14px' }}>
             <button
               type="button"
               onClick={onClose}
               style={{
-                padding: '10px 18px',
-                borderRadius: '100px',
+                padding: '8px 14px',
+                borderRadius: '8px',
                 border: '1.5px solid #CBD5E1',
                 background: '#FFFFFF',
                 color: '#475569',
-                fontSize: '0.82rem',
+                fontSize: '0.78rem',
                 fontWeight: 700,
-                cursor: 'pointer',
-                transition: 'all 0.2s'
-              }}
-              onMouseEnter={(e) => {
-                e.currentTarget.style.backgroundColor = '#F8FAFC';
-                e.currentTarget.style.borderColor = '#94A3B8';
-              }}
-              onMouseLeave={(e) => {
-                e.currentTarget.style.backgroundColor = '#FFFFFF';
-                e.currentTarget.style.borderColor = '#CBD5E1';
+                cursor: 'pointer'
               }}
             >
               Cancel
@@ -392,26 +371,15 @@ export default function CategoryFormModal({ category, token, onSave, onClose }) 
               type="submit"
               disabled={saving || uploading}
               style={{
-                padding: '10px 24px',
-                borderRadius: '100px',
+                padding: '8px 18px',
+                borderRadius: '8px',
                 background: 'linear-gradient(135deg, #0A2315 0%, #143A24 100%)',
                 color: '#FFFFFF',
-                border: '1.5px solid #D4AF37',
-                fontSize: '0.84rem',
+                border: '1px solid #D4AF37',
+                fontSize: '0.80rem',
                 fontWeight: 800,
-                boxShadow: '0 4px 12px rgba(10, 35, 21, 0.2)',
-                cursor: (saving || uploading) ? 'not-allowed' : 'pointer',
-                transition: 'all 0.2s'
-              }}
-              onMouseEnter={(e) => {
-                if (!saving && !uploading) {
-                  e.currentTarget.style.boxShadow = '0 6px 16px rgba(10, 35, 21, 0.3)';
-                  e.currentTarget.style.transform = 'translateY(-1px)';
-                }
-              }}
-              onMouseLeave={(e) => {
-                e.currentTarget.style.boxShadow = '0 4px 12px rgba(10, 35, 21, 0.2)';
-                e.currentTarget.style.transform = 'translateY(0)';
+                boxShadow: '0 2px 8px rgba(10, 35, 21, 0.2)',
+                cursor: (saving || uploading) ? 'not-allowed' : 'pointer'
               }}
             >
               {saving ? 'Saving...' : (category ? '✓ Update Category' : '✓ Save Category')}
