@@ -786,20 +786,36 @@
     row-gap: 10px !important;
     column-gap: 8px !important;
     align-items: center !important;
-    padding: 12px 2px 0 2px !important;
+    padding: 10px 0 0 0 !important;
   }
   .menu-pagination-info {
     grid-area: info !important;
     justify-self: start !important;
-    font-size: 0.70rem !important;
+    font-size: 11px !important;
+    font-weight: 500 !important;
+    color: #64748B !important;
     white-space: nowrap !important;
     overflow: hidden !important;
     text-overflow: ellipsis !important;
     max-width: 100% !important;
+    line-height: 1.2 !important;
   }
   .menu-pagination-size {
     grid-area: size !important;
     justify-self: end !important;
+  }
+  .menu-page-size-select {
+    height: 40px !important;
+    font-size: 12px !important;
+    padding: 0 10px !important;
+    border-radius: 8px !important;
+    border: 1px solid #E2E8F0 !important;
+    background: #FFFFFF !important;
+    color: #0F172A !important;
+    font-weight: 600 !important;
+    width: fit-content !important;
+    min-width: 0 !important;
+    box-sizing: border-box !important;
   }
   .menu-pagination-pages {
     grid-area: pages !important;
@@ -807,7 +823,40 @@
     display: flex !important;
     align-items: center !important;
     justify-content: center !important;
-    gap: 4px !important;
+    gap: 6px !important;
     width: 100% !important;
   }
+  .menu-page-btn {
+    width: 34px !important;
+    height: 34px !important;
+    font-size: 13px !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+  }
+  .menu-page-btn.active {
+    background: #0A2315 !important;
+    color: #FFFFFF !important;
+    font-weight: 800 !important;
+  }
 }
+
+@media (max-width: 360px) {
+  .menu-page-btn {
+    width: 30px !important;
+    height: 30px !important;
+    font-size: 12px !important;
+  }
+  .menu-pagination-pages {
+    gap: 3px !important;
+  }
+  .menu-page-size-select {
+    height: 38px !important;
+    font-size: 11px !important;
+    padding: 0 6px !important;
+  }
+  .menu-pagination-info {
+    font-size: 10px !important;
+  }
+}
+

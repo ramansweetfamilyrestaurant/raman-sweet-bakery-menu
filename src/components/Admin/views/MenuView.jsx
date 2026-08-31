@@ -3398,22 +3398,23 @@ export default function MenuView({
           boxSizing: 'border-box'
         }}>
           {/* Left: Showing count */}
-          <span className="menu-pagination-info" style={{ fontSize: '0.72rem', color: '#64748B', fontWeight: 600 }}>
+          <span className="menu-pagination-info" style={{ fontSize: '0.72rem', color: '#64748B', fontWeight: 500 }}>
             Showing{' '}
-            <strong style={{ color: '#0F172A' }}>
+            <strong style={{ color: '#0F172A', fontWeight: 700 }}>
               {isAllPages ? 1 : Math.min(totalItems, (safeCurrentPage - 1) * effectivePageSize + 1)}
             </strong>
             –
-            <strong style={{ color: '#0F172A' }}>
+            <strong style={{ color: '#0F172A', fontWeight: 700 }}>
               {isAllPages ? totalItems : Math.min(totalItems, safeCurrentPage * effectivePageSize)}
             </strong>
-            {' '}of <strong style={{ color: '#0F172A' }}>{totalItems}</strong>
+            {' '}of <strong style={{ color: '#0F172A', fontWeight: 700 }}>{totalItems}</strong>
           </span>
 
           {/* Center: Pagination numbers with dark brown active circle */}
           {!isAllPages && totalPages > 1 && (
             <div className="menu-pagination-pages" style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
               <button
+                className="menu-page-btn menu-page-nav-btn"
                 onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
                 disabled={safeCurrentPage === 1}
                 aria-label="Previous page"
@@ -3439,8 +3440,9 @@ export default function MenuView({
                   const isPrevGap = idx > 0 && p - arr[idx - 1] > 1;
                   return (
                     <React.Fragment key={p}>
-                      {isPrevGap && <span style={{ padding: '0 2px', color: '#94A3B8', fontSize: '0.70rem' }}>⋯</span>}
+                      {isPrevGap && <span className="menu-page-gap" style={{ padding: '0 2px', color: '#94A3B8', fontSize: '0.70rem' }}>⋯</span>}
                       <button
+                        className={`menu-page-btn ${p === safeCurrentPage ? 'active' : ''}`}
                         onClick={() => setCurrentPage(p)}
                         aria-label={`Go to page ${p}`}
                         aria-current={p === safeCurrentPage ? 'page' : undefined}
@@ -3466,6 +3468,7 @@ export default function MenuView({
                 })}
 
               <button
+                className="menu-page-btn menu-page-nav-btn"
                 onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
                 disabled={safeCurrentPage === totalPages}
                 aria-label="Next page"
@@ -3490,6 +3493,7 @@ export default function MenuView({
           {/* Right: Items per page selector */}
           <div className="menu-pagination-size">
             <select
+              className="menu-page-size-select"
               value={pageSize}
               onChange={(e) => setPageSize(e.target.value === 'all' ? 'all' : Number(e.target.value))}
               aria-label="Items per page"
