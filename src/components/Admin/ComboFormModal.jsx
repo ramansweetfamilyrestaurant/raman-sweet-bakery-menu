@@ -565,17 +565,17 @@ export default function ComboFormModal({ combo, dishes, token, onSave, onClose }
 
               {/* Search & Dish Picker */}
               <div style={{ position: 'relative', marginTop: '2px' }}>
-                <Search size={12} style={{ position: 'absolute', left: '10px', top: '50%', transform: 'translateY(-50%)', color: '#64748B' }} />
+                <Search size={14} style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', color: '#94A3B8', pointerEvents: 'none' }} />
                 <input
                   value={dishSearch}
                   onChange={e => setDishSearch(e.target.value)}
                   placeholder="Search dishes to add..."
                   style={{
                     width: '100%',
-                    padding: '7px 10px 7px 28px',
-                    borderRadius: '7px',
+                    padding: '9px 12px 9px 36px',
+                    borderRadius: '8px',
                     border: '1.5px solid #CBD5E1',
-                    fontSize: '0.78rem',
+                    fontSize: '0.82rem',
                     outline: 'none',
                     boxSizing: 'border-box',
                     color: '#0F172A'
