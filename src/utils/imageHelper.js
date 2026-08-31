@@ -68,6 +68,16 @@ export function getCategoryImageUrl(url) {
 }
 
 /**
+ * Dish Custom Image Checker
+ */
+export function hasCustomDishImage(image) {
+  if (!image || typeof image !== 'string') return false;
+  const clean = image.trim();
+  if (!clean || clean === 'null' || clean === 'undefined' || clean === '/uploads/logo.jpg' || clean === '/images/default-dish.webp') return false;
+  return true;
+}
+
+/**
  * Category Custom Image Checker
  */
 export function hasCustomCategoryImage(image) {

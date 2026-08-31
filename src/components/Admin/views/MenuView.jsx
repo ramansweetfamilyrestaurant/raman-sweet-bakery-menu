@@ -38,7 +38,7 @@ import {
   FileText,
   Upload
 } from 'lucide-react';
-import { resolveImageUrl, getDishImageUrl, getCategoryImageUrl, hasCustomCategoryImage } from '../../../utils/imageHelper';
+import { resolveImageUrl, getDishImageUrl, getCategoryImageUrl, hasCustomCategoryImage, hasCustomDishImage } from '../../../utils/imageHelper';
 import { formatQuota } from '../../../utils/planCapabilities';
 import { getCurrencySymbol, formatPriceNumber } from '../../../utils/currencyHelper';
 import { createDish } from '../../../api/client';
@@ -437,7 +437,7 @@ export default function MenuView({
     }
 
     const dishesAdded = safeDishes.length >= 1;
-    const dishesWithImg = safeDishes.filter(d => d.image || d.image_url).length;
+    const dishesWithImg = safeDishes.filter(d => hasCustomDishImage(d.image || d.image_url)).length;
     const imgRatio = dishesWithImg / safeDishes.length;
     const imagesUploaded = imgRatio >= 0.4;
     const categoriesOrganized = safeCategories.length >= 1;
