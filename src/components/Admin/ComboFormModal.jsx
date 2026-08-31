@@ -170,9 +170,9 @@ export default function ComboFormModal({ combo, dishes, token, onSave, onClose }
           }
           .combo-tab-btn {
             flex: 1;
-            padding: 8px 10px;
-            font-size: 0.76rem;
-            font-weight: 700;
+            padding: 7px 8px;
+            font-size: 0.72rem;
+            font-weight: 650;
             border: none;
             background: transparent;
             cursor: pointer;
@@ -181,15 +181,16 @@ export default function ComboFormModal({ combo, dishes, token, onSave, onClose }
             justifyContent: center;
             gap: 5px;
             transition: all 0.2s ease;
-            border-radius: 8px;
+            border-radius: 7px;
             color: #64748B;
             white-space: nowrap;
+            height: 36px;
           }
           .combo-tab-btn.active {
             background: #FFFFFF;
             color: #0A2315;
-            box-shadow: 0 1px 4px rgba(0,0,0,0.08);
-            font-weight: 800;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.08);
+            font-weight: 750;
           }
           @media (max-width: 600px) {
             .combo-modal-container {
@@ -203,16 +204,16 @@ export default function ComboFormModal({ combo, dishes, token, onSave, onClose }
             .combo-modal-body-form input:not(.combo-dish-search-input),
             .combo-modal-body-form select,
             .combo-modal-body-form textarea {
-              font-size: 16px !important;
-              padding: 9px 11px !important;
+              font-size: 14px !important;
+              padding: 8px 11px !important;
             }
             .combo-modal-body-form input.combo-dish-search-input {
-              font-size: 15px !important;
+              font-size: 14px !important;
               padding-left: 40px !important;
               padding-right: 12px !important;
-              padding-top: 10px !important;
-              padding-bottom: 10px !important;
-              min-height: 44px !important;
+              padding-top: 9px !important;
+              padding-bottom: 9px !important;
+              min-height: 42px !important;
               box-sizing: border-box !important;
             }
           }
@@ -220,7 +221,7 @@ export default function ComboFormModal({ combo, dishes, token, onSave, onClose }
 
         {/* Header */}
         <div style={{
-          padding: '14px 18px',
+          padding: '12px 16px',
           background: 'linear-gradient(135deg, #0A2315 0%, #143A24 100%)',
           color: '#FFFFFF',
           display: 'flex',
@@ -228,9 +229,9 @@ export default function ComboFormModal({ combo, dishes, token, onSave, onClose }
           alignItems: 'center',
           borderBottom: '1px solid rgba(255, 255, 255, 0.08)'
         }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-            <ShoppingBag size={16} color="#D4AF37" />
-            <h3 style={{ fontSize: '0.98rem', fontWeight: 800, margin: 0, letterSpacing: '0.2px' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '7px' }}>
+            <ShoppingBag size={15} color="#D4AF37" />
+            <h3 style={{ fontSize: '0.94rem', fontWeight: 700, margin: 0, letterSpacing: '0.1px', lineHeight: 1.2 }}>
               {isEdit ? 'Edit Value Combo' : 'Create Value Combo'}
             </h3>
           </div>
@@ -242,8 +243,8 @@ export default function ComboFormModal({ combo, dishes, token, onSave, onClose }
               border: 'none', 
               color: '#FFFFFF', 
               cursor: 'pointer',
-              width: '26px',
-              height: '26px',
+              width: '28px',
+              height: '28px',
               borderRadius: '50%',
               display: 'flex',
               alignItems: 'center',
@@ -251,16 +252,16 @@ export default function ComboFormModal({ combo, dishes, token, onSave, onClose }
               transition: 'background-color 0.2s'
             }}
           >
-            <X size={15} />
+            <X size={14} />
           </button>
         </div>
 
         {/* Segmented Tabs */}
         <div style={{
           background: '#F1F5F9',
-          padding: '4px',
+          padding: '3px',
           display: 'flex',
-          gap: '4px',
+          gap: '3px',
           borderBottom: '1px solid #E2E8F0'
         }}>
           <button
@@ -268,7 +269,7 @@ export default function ComboFormModal({ combo, dishes, token, onSave, onClose }
             className={`combo-tab-btn ${activeTab === 'info' ? 'active' : ''}`}
             onClick={() => setActiveTab('info')}
           >
-            <ShoppingBag size={13} color={activeTab === 'info' ? '#0A2315' : '#64748B'} />
+            <ShoppingBag size={12} color={activeTab === 'info' ? '#0A2315' : '#64748B'} />
             <span>1. Combo Info & Price</span>
           </button>
 
@@ -277,41 +278,41 @@ export default function ComboFormModal({ combo, dishes, token, onSave, onClose }
             className={`combo-tab-btn ${activeTab === 'dishes' ? 'active' : ''}`}
             onClick={() => setActiveTab('dishes')}
           >
-            <Utensils size={13} color={activeTab === 'dishes' ? '#0A2315' : '#64748B'} />
+            <Utensils size={12} color={activeTab === 'dishes' ? '#0A2315' : '#64748B'} />
             <span>2. Included Dishes ({selectedItems.length})</span>
             {selectedItems.length >= 2 && (
-              <Check size={12} color="#16A34A" />
+              <Check size={11} color="#16A34A" />
             )}
           </button>
         </div>
 
         {/* Modal Body */}
-        <div className="combo-modal-body-form" style={{ flex: 1, overflowY: 'auto', padding: '16px 18px' }}>
+        <div className="combo-modal-body-form" style={{ flex: 1, overflowY: 'auto', padding: '14px 16px' }}>
           {error && (
             <div style={{
               background: '#FEE2E2',
               border: '1px solid #FCA5A5',
               color: '#991B1B',
-              padding: '8px 12px',
-              borderRadius: '8px',
-              fontSize: '0.78rem',
+              padding: '7px 10px',
+              borderRadius: '7px',
+              fontSize: '0.74rem',
               fontWeight: 600,
-              marginBottom: '12px',
+              marginBottom: '10px',
               display: 'flex',
               alignItems: 'center',
               gap: '6px'
             }}>
-              <AlertCircle size={14} />
+              <AlertCircle size={13} />
               <span>{error}</span>
             </div>
           )}
 
           {/* TAB 1: COMBO INFO */}
           {activeTab === 'info' && (
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '11px' }}>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
               {/* Name */}
               <div>
-                <label style={{ display: 'block', fontSize: '0.74rem', fontWeight: 800, color: '#334155', marginBottom: '4px' }}>
+                <label style={{ display: 'block', fontSize: '0.72rem', fontWeight: 700, color: '#334155', marginBottom: '4px' }}>
                   Combo / Thali Name *
                 </label>
                 <input
@@ -321,13 +322,14 @@ export default function ComboFormModal({ combo, dishes, token, onSave, onClose }
                   placeholder="e.g. Special Maharaja Thali, Family Pack"
                   style={{
                     width: '100%',
-                    padding: '9px 12px',
+                    padding: '8px 11px',
                     borderRadius: '8px',
                     border: '1.5px solid #CBD5E1',
-                    fontSize: '0.86rem',
+                    fontSize: '0.82rem',
                     outline: 'none',
                     boxSizing: 'border-box',
-                    color: '#0F172A'
+                    color: '#0F172A',
+                    lineHeight: 1.35
                   }}
                   onFocus={(e) => e.target.style.borderColor = '#0A2315'}
                   onBlur={(e) => e.target.style.borderColor = '#CBD5E1'}
@@ -337,7 +339,7 @@ export default function ComboFormModal({ combo, dishes, token, onSave, onClose }
               {/* Price + Badge Row */}
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
                 <div>
-                  <label style={{ display: 'block', fontSize: '0.74rem', fontWeight: 800, color: '#334155', marginBottom: '4px' }}>
+                  <label style={{ display: 'block', fontSize: '0.72rem', fontWeight: 700, color: '#334155', marginBottom: '4px' }}>
                     Combo Price (₹) *
                   </label>
                   <input
@@ -347,19 +349,20 @@ export default function ComboFormModal({ combo, dishes, token, onSave, onClose }
                     placeholder="199"
                     style={{
                       width: '100%',
-                      padding: '9px 11px',
+                      padding: '8px 11px',
                       borderRadius: '8px',
                       border: '1.5px solid #CBD5E1',
-                      fontSize: '0.90rem',
-                      fontWeight: 800,
+                      fontSize: '0.84rem',
+                      fontWeight: 750,
                       outline: 'none',
                       boxSizing: 'border-box',
-                      color: '#16A34A'
+                      color: '#16A34A',
+                      lineHeight: 1.35
                     }}
                   />
                 </div>
                 <div>
-                  <label style={{ display: 'block', fontSize: '0.74rem', fontWeight: 800, color: '#334155', marginBottom: '4px' }}>
+                  <label style={{ display: 'block', fontSize: '0.72rem', fontWeight: 700, color: '#334155', marginBottom: '4px' }}>
                     Highlight Badge
                   </label>
                   <select
@@ -367,15 +370,16 @@ export default function ComboFormModal({ combo, dishes, token, onSave, onClose }
                     onChange={e => setBadge(e.target.value)}
                     style={{
                       width: '100%',
-                      padding: '9px 11px',
+                      padding: '8px 11px',
                       borderRadius: '8px',
                       border: '1.5px solid #CBD5E1',
                       background: '#FFFFFF',
                       color: '#0F172A',
-                      fontSize: '0.82rem',
+                      fontSize: '0.78rem',
                       outline: 'none',
                       boxSizing: 'border-box',
-                      cursor: 'pointer'
+                      cursor: 'pointer',
+                      lineHeight: 1.35
                     }}
                   >
                     {badgeOptions.map(b => <option key={b.value} value={b.value}>{b.label}</option>)}
@@ -387,17 +391,17 @@ export default function ComboFormModal({ combo, dishes, token, onSave, onClose }
               {selectedItems.length > 0 && price !== '' && (
                 <div style={{
                   background: savings > 0 ? '#F0FDF4' : '#F8FAFC',
-                  borderRadius: '8px',
-                  padding: '8px 12px',
+                  borderRadius: '7px',
+                  padding: '7px 10px',
                   border: savings > 0 ? '1px solid #BBF7D0' : '1px solid #E2E8F0',
                   display: 'flex',
                   justifyContent: 'space-between',
                   alignItems: 'center'
                 }}>
-                  <span style={{ color: '#64748B', fontSize: '0.74rem', fontWeight: 600 }}>
+                  <span style={{ color: '#64748B', fontSize: '0.72rem', fontWeight: 600 }}>
                     Items Total: <span style={{ textDecoration: 'line-through', color: '#EF4444', fontWeight: 700 }}>₹{originalTotal}</span>
                   </span>
-                  <span style={{ color: savings > 0 ? '#15803D' : '#D97706', fontWeight: 800, fontSize: '0.80rem' }}>
+                  <span style={{ color: savings > 0 ? '#15803D' : '#D97706', fontWeight: 750, fontSize: '0.76rem' }}>
                     {savings > 0 ? `🎉 Save ₹${savings}!` : savings < 0 ? '⚠️ Costs more' : '➡️ Same price'}
                   </span>
                 </div>
@@ -405,7 +409,7 @@ export default function ComboFormModal({ combo, dishes, token, onSave, onClose }
 
               {/* Description */}
               <div>
-                <label style={{ display: 'block', fontSize: '0.74rem', fontWeight: 800, color: '#334155', marginBottom: '4px' }}>
+                <label style={{ display: 'block', fontSize: '0.72rem', fontWeight: 700, color: '#334155', marginBottom: '4px' }}>
                   Description (Optional)
                 </label>
                 <textarea
@@ -415,21 +419,24 @@ export default function ComboFormModal({ combo, dishes, token, onSave, onClose }
                   rows={2}
                   style={{
                     width: '100%',
-                    padding: '8px 10px',
+                    minHeight: '68px',
+                    maxHeight: '76px',
+                    padding: '7px 10px',
                     borderRadius: '8px',
                     border: '1.5px solid #CBD5E1',
-                    fontSize: '0.82rem',
+                    fontSize: '0.80rem',
                     outline: 'none',
                     resize: 'none',
                     boxSizing: 'border-box',
-                    color: '#0F172A'
+                    color: '#0F172A',
+                    lineHeight: 1.35
                   }}
                 />
               </div>
 
               {/* Image Upload */}
               <div>
-                <label style={{ display: 'block', fontSize: '0.74rem', fontWeight: 800, color: '#334155', marginBottom: '4px' }}>
+                <label style={{ display: 'block', fontSize: '0.72rem', fontWeight: 700, color: '#334155', marginBottom: '4px' }}>
                   Combo Image (Optional)
                 </label>
                 <div style={{ 
@@ -437,28 +444,30 @@ export default function ComboFormModal({ combo, dishes, token, onSave, onClose }
                   gap: '10px', 
                   alignItems: 'center',
                   background: '#F8FAFC',
-                  padding: '8px 10px',
-                  borderRadius: '10px',
+                  padding: '7px 10px',
+                  borderRadius: '8px',
                   border: '1px dashed #CBD5E1'
                 }}>
                   {image ? (
-                    <img src={image} alt="combo" style={{ width: '42px', height: '42px', borderRadius: '8px', objectFit: 'cover', border: '1px solid #E2E8F0' }} />
+                    <img src={image} alt="combo" style={{ width: '48px', height: '48px', borderRadius: '7px', objectFit: 'cover', border: '1px solid #E2E8F0' }} />
                   ) : (
-                    <img src="/images/default-combo.webp?v=3" alt="default combo" style={{ width: '42px', height: '42px', borderRadius: '8px', objectFit: 'cover', border: '1px solid #E2E8F0' }} />
+                    <img src="/images/default-combo.webp?v=3" alt="default combo" style={{ width: '48px', height: '48px', borderRadius: '7px', objectFit: 'cover', border: '1px solid #E2E8F0' }} />
                   )}
                   
-                  <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap' }}>
+                  <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap', alignItems: 'center' }}>
                     <label style={{
-                      padding: '5px 10px',
+                      padding: '6px 12px',
                       borderRadius: '6px',
                       cursor: 'pointer',
                       background: '#0A2315',
                       color: '#FFFFFF',
                       fontSize: '0.72rem',
-                      fontWeight: 700,
+                      fontWeight: 650,
                       display: 'flex',
                       alignItems: 'center',
-                      gap: '4px'
+                      gap: '4px',
+                      minWidth: '100px',
+                      justifyContent: 'center'
                     }}>
                       <Upload size={11} color="#D4AF37" />
                       <span>{uploading ? 'Uploading...' : 'Upload Photo'}</span>
@@ -476,7 +485,7 @@ export default function ComboFormModal({ combo, dishes, token, onSave, onClose }
                           border: 'none',
                           color: '#991B1B',
                           fontSize: '0.70rem',
-                          fontWeight: 700,
+                          fontWeight: 650,
                           cursor: 'pointer'
                         }}
                       >
@@ -493,17 +502,18 @@ export default function ComboFormModal({ combo, dishes, token, onSave, onClose }
                 onClick={() => setActiveTab('dishes')}
                 style={{
                   padding: '8px 12px',
+                  height: '40px',
                   borderRadius: '8px',
                   background: '#F1F5F9',
                   border: '1px solid #CBD5E1',
                   color: '#0A2315',
-                  fontSize: '0.76rem',
-                  fontWeight: 800,
+                  fontSize: '0.74rem',
+                  fontWeight: 650,
                   cursor: 'pointer',
                   display: 'flex',
                   alignItems: 'center',
                   justifyContent: 'space-between',
-                  marginTop: '4px'
+                  marginTop: '2px'
                 }}
               >
                 <span>🍱 Next: Select Included Dishes ({selectedItems.length} added)</span>
@@ -514,10 +524,10 @@ export default function ComboFormModal({ combo, dishes, token, onSave, onClose }
 
           {/* TAB 2: INCLUDED DISHES PICKER */}
           {activeTab === 'dishes' && (
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '9px' }}>
               {/* Selected Items List */}
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                <label style={{ fontSize: '0.74rem', fontWeight: 800, color: '#334155' }}>
+                <label style={{ fontSize: '0.72rem', fontWeight: 700, color: '#334155' }}>
                   Selected Items in Combo ({selectedItems.length})
                 </label>
                 {selectedItems.length < 2 && (
@@ -528,19 +538,19 @@ export default function ComboFormModal({ combo, dishes, token, onSave, onClose }
               </div>
 
               {selectedItems.length > 0 ? (
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '5px', maxHeight: '140px', overflowY: 'auto' }}>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '5px', maxHeight: '135px', overflowY: 'auto' }}>
                   {selectedItems.map((si, idx) => (
                     <div key={`${si.dish_id}-${si.portion}-${idx}`} style={{
                       background: '#F8FAFC',
-                      borderRadius: '8px',
-                      padding: '6px 10px',
+                      borderRadius: '7px',
+                      padding: '5px 8px',
                       display: 'flex',
                       alignItems: 'center',
                       justifyContent: 'space-between',
                       border: '1px solid #CBD5E1'
                     }}>
                       <div style={{ flex: 1, minWidth: 0 }}>
-                        <span style={{ color: '#0F172A', fontSize: '0.78rem', fontWeight: 700, display: 'block', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{si.dish_name}</span>
+                        <span style={{ color: '#0F172A', fontSize: '0.76rem', fontWeight: 700, display: 'block', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{si.dish_name}</span>
                         <span style={{ color: '#64748B', fontSize: '0.68rem' }}>
                           {si.portion === 'half' ? 'Half' : 'Full'} • ₹{si.original_price}
                         </span>
@@ -551,7 +561,7 @@ export default function ComboFormModal({ combo, dishes, token, onSave, onClose }
                           background: '#FFFFFF', color: '#475569', cursor: 'pointer',
                           display: 'flex', alignItems: 'center', justifyContent: 'center'
                         }}><Minus size={10} /></button>
-                        <span style={{ color: '#0F172A', fontWeight: 800, fontSize: '0.80rem', minWidth: '16px', textAlign: 'center' }}>{si.qty}</span>
+                        <span style={{ color: '#0F172A', fontWeight: 750, fontSize: '0.78rem', minWidth: '16px', textAlign: 'center' }}>{si.qty}</span>
                         <button type="button" onClick={() => handleQtyChange(si.dish_id, si.portion, 1)} style={{
                           width: '22px', height: '22px', borderRadius: '4px', border: '1px solid #CBD5E1',
                           background: '#FFFFFF', color: '#475569', cursor: 'pointer',
@@ -567,14 +577,14 @@ export default function ComboFormModal({ combo, dishes, token, onSave, onClose }
                   ))}
                 </div>
               ) : (
-                <div style={{ padding: '12px', background: '#F8FAFC', borderRadius: '8px', textAlign: 'center', fontSize: '0.74rem', color: '#64748B', border: '1px dashed #CBD5E1' }}>
+                <div style={{ padding: '10px', background: '#F8FAFC', borderRadius: '7px', textAlign: 'center', fontSize: '0.72rem', color: '#64748B', border: '1px dashed #CBD5E1' }}>
                   No dishes added to combo yet. Tap below to add items.
                 </div>
               )}
 
               {/* Search & Dish Picker */}
               <div style={{ position: 'relative', width: '100%', minWidth: 0, marginTop: '2px', boxSizing: 'border-box' }}>
-                <Search size={16} color="#94A3B8" style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', pointerEvents: 'none', zIndex: 2 }} />
+                <Search size={15} color="#94A3B8" style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', pointerEvents: 'none', zIndex: 2 }} />
                 <input
                   type="text"
                   className="combo-dish-search-input"
@@ -583,10 +593,10 @@ export default function ComboFormModal({ combo, dishes, token, onSave, onClose }
                   placeholder="Search dishes to add..."
                   style={{
                     width: '100%',
-                    padding: '10px 12px 10px 40px',
-                    borderRadius: '9px',
+                    padding: '9px 12px 9px 40px',
+                    borderRadius: '8px',
                     border: '1.5px solid #CBD5E1',
-                    fontSize: '0.82rem',
+                    fontSize: '0.80rem',
                     outline: 'none',
                     boxSizing: 'border-box',
                     color: '#0F172A',
@@ -598,19 +608,19 @@ export default function ComboFormModal({ combo, dishes, token, onSave, onClose }
               </div>
 
               <div style={{
-                maxHeight: '140px',
+                maxHeight: '135px',
                 overflowY: 'auto',
                 borderRadius: '8px',
                 border: '1px solid #CBD5E1',
                 background: '#F8FAFC'
               }}>
                 {availableDishes.length === 0 ? (
-                  <div style={{ padding: '14px', textAlign: 'center', color: '#64748B', fontSize: '0.74rem' }}>
+                  <div style={{ padding: '12px', textAlign: 'center', color: '#64748B', fontSize: '0.72rem' }}>
                     {dishSearch ? 'No matching dishes found' : 'All available dishes added'}
                   </div>
                 ) : availableDishes.map(dish => (
                   <div key={dish.id} style={{
-                    padding: '6px 10px',
+                    padding: '6px 9px',
                     display: 'flex',
                     alignItems: 'center',
                     justifyContent: 'space-between',
@@ -618,8 +628,8 @@ export default function ComboFormModal({ combo, dishes, token, onSave, onClose }
                     background: '#FFFFFF'
                   }}>
                     <div style={{ flex: 1, minWidth: 0 }}>
-                      <span style={{ color: '#0F172A', fontSize: '0.76rem', fontWeight: 700, display: 'block', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{dish.name}</span>
-                      <span style={{ color: '#64748B', fontSize: '0.68rem' }}>₹{dish.price}{dish.price_half ? ` / ₹${dish.price_half} Half` : ''}</span>
+                      <span style={{ color: '#0F172A', fontSize: '0.75rem', fontWeight: 700, display: 'block', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{dish.name}</span>
+                      <span style={{ color: '#64748B', fontSize: '0.67rem' }}>₹{dish.price}{dish.price_half ? ` / ₹${dish.price_half} Half` : ''}</span>
                     </div>
                     <div style={{ display: 'flex', gap: '4px', flexShrink: 0 }}>
                       <button type="button" onClick={() => handleAddDish(dish, 'full')} style={{
@@ -644,7 +654,7 @@ export default function ComboFormModal({ combo, dishes, token, onSave, onClose }
 
         {/* Sticky Footer */}
         <div style={{
-          padding: '12px 18px',
+          padding: '10px 16px',
           borderTop: '1px solid #E2E8F0',
           display: 'flex',
           gap: '8px',
@@ -655,12 +665,13 @@ export default function ComboFormModal({ combo, dishes, token, onSave, onClose }
             onClick={onClose} 
             style={{
               padding: '8px 14px',
+              height: '42px',
               borderRadius: '8px',
               border: '1.5px solid #CBD5E1',
               background: '#FFFFFF',
               color: '#475569',
-              fontSize: '0.78rem',
-              fontWeight: 700,
+              fontSize: '0.74rem',
+              fontWeight: 650,
               cursor: 'pointer'
             }}
           >
@@ -672,14 +683,15 @@ export default function ComboFormModal({ combo, dishes, token, onSave, onClose }
             disabled={saving} 
             style={{
               flex: 1,
-              padding: '8px 18px',
+              padding: '8px 16px',
+              height: '42px',
               borderRadius: '8px',
               border: '1px solid #D4AF37',
               background: 'linear-gradient(135deg, #0A2315 0%, #143A24 100%)',
               color: '#FFFFFF',
-              fontWeight: 800,
-              fontSize: '0.80rem',
-              boxShadow: '0 2px 8px rgba(10, 35, 21, 0.2)',
+              fontWeight: 700,
+              fontSize: '0.76rem',
+              boxShadow: '0 2px 6px rgba(10, 35, 21, 0.18)',
               cursor: saving ? 'not-allowed' : 'pointer'
             }}
           >
