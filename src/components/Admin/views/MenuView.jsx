@@ -86,6 +86,11 @@ export default function MenuView({
   const [showMobileAddDropdown, setShowMobileAddDropdown] = useState(false);
   const [openDishMenuId, setOpenDishMenuId] = useState(null);
 
+  // Multi-Select Bulk Actions State
+  const [selectedDishIds, setSelectedDishIds] = useState([]);
+  const [inlinePriceDishId, setInlinePriceDishId] = useState(null);
+  const [inlinePriceVal, setInlinePriceVal] = useState('');
+
   // Pagination state (default 12 per page matching the master reference)
   const [currentPage, setCurrentPage] = useState(1);
   const [pageSize, setPageSize] = useState(12);
@@ -234,6 +239,39 @@ export default function MenuView({
     const startIndex = (safeCurrentPage - 1) * effectivePageSize;
     return filteredDishes.slice(startIndex, startIndex + effectivePageSize);
   }, [filteredDishes, isAllPages, safeCurrentPage, effectivePageSize]);
+
+  // Bulk Actions Handlers
+  const isAllVisibleSelected = paginatedDishes.length > 0 && paginatedDishes.every(d => selectedDishIds.includes(d.id));
+
+  const toggleSelectDish = (id) => {
+    setSelectedDishIds(prev => prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id]);
+  };
+
+  const toggleSelectAllVisible = () => {
+    const visibleIds = paginatedDishes.map(d => d.id);
+    if (isAllVisibleSelected) {
+      setSelectedDishIds(prev => prev.filter(id => !visibleIds.includes(id)));
+    } else {
+      setSelectedDishIds(prev => Array.from(new Set([...prev, ...visibleIds])));
+    }
+  };
+
+  const handleBulkAvailability = async (isAvailable) => {
+    if (selectedDishIds.length === 0 || !onToggleAvailability) return;
+    for (const id of selectedDishIds) {
+      await onToggleAvailability(id, isAvailable);
+    }
+    setSelectedDishIds([]);
+  };
+
+  const handleBulkDelete = async () => {
+    if (selectedDishIds.length === 0 || !onDeleteDish) return;
+    if (!window.confirm(`Are you sure you want to delete ${selectedDishIds.length} selected dishes?`)) return;
+    for (const id of selectedDishIds) {
+      await onDeleteDish(id);
+    }
+    setSelectedDishIds([]);
+  };
 
   const handleQuickPriceSubmit = (e) => {
     e.preventDefault();
@@ -1634,6 +1672,72 @@ export default function MenuView({
               </div>
             </div>
 
+            {/* 🚀 Floating / Sticky Bulk Actions Toolbar */}
+            {selectedDishIds.length > 0 && (
+              <div style={{
+                position: 'sticky',
+                top: '12px',
+                zIndex: 800,
+                background: 'linear-gradient(135deg, #0A2315 0%, #143A24 100%)',
+                color: '#FFFFFF',
+                borderRadius: '12px',
+                padding: '10px 14px',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                flexWrap: 'wrap',
+                gap: '8px',
+                boxShadow: '0 8px 24px rgba(10,35,21,0.3)',
+                border: '1.5px solid #D4AF37',
+                marginBottom: '14px',
+                animation: 'fadeIn 0.2s ease-out'
+              }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                  <span style={{ background: '#D4AF37', color: '#0A2315', fontWeight: 900, padding: '2px 8px', borderRadius: '6px', fontSize: '0.74rem' }}>
+                    {selectedDishIds.length}
+                  </span>
+                  <strong style={{ fontSize: '0.82rem' }}>Dishes Selected</strong>
+                </div>
+
+                <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flexWrap: 'wrap' }}>
+                  <button
+                    type="button"
+                    onClick={() => handleBulkAvailability(true)}
+                    style={{ background: '#16A34A', color: '#FFFFFF', border: 'none', padding: '5px 10px', borderRadius: '6px', fontSize: '0.72rem', fontWeight: 700, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '4px' }}
+                  >
+                    <CheckCircle2 size={12} />
+                    <span>In Stock</span>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => handleBulkAvailability(false)}
+                    style={{ background: '#DC2626', color: '#FFFFFF', border: 'none', padding: '5px 10px', borderRadius: '6px', fontSize: '0.72rem', fontWeight: 700, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '4px' }}
+                  >
+                    <AlertCircle size={12} />
+                    <span>Sold Out</span>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={handleBulkDelete}
+                    style={{ background: 'rgba(255,255,255,0.15)', color: '#FCA5A5', border: '1px solid rgba(252,165,165,0.4)', padding: '5px 10px', borderRadius: '6px', fontSize: '0.72rem', fontWeight: 700, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '4px' }}
+                  >
+                    <Trash2 size={12} />
+                    <span>Delete ({selectedDishIds.length})</span>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => setSelectedDishIds([])}
+                    style={{ background: 'transparent', color: '#94A3B8', border: 'none', padding: '4px 6px', fontSize: '0.72rem', fontWeight: 700, cursor: 'pointer' }}
+                  >
+                    Clear ✖
+                  </button>
+                </div>
+              </div>
+            )}
+
             {/* Empty State */}
             {filteredDishes.length === 0 ? (
               <div style={{
@@ -1670,7 +1774,7 @@ export default function MenuView({
                       style={{
                         background: '#FFFFFF',
                         borderRadius: '16px',
-                        border: '1px solid #E2E8F0',
+                        border: selectedDishIds.includes(dish.id) ? '2px solid #0A2315' : '1px solid #E2E8F0',
                         padding: '10px',
                         boxShadow: '0 1px 3px rgba(0,0,0,0.02)',
                         display: 'flex',
@@ -1682,7 +1786,7 @@ export default function MenuView({
                       }}
                     >
                       <div>
-                        {/* Image Container with unclipped 3-Dot floating overlay */}
+                        {/* Image Container with unclipped 3-Dot floating overlay & Selection Checkbox */}
                         <div style={{
                           position: 'relative',
                           width: '100%',
@@ -1707,7 +1811,7 @@ export default function MenuView({
                           </div>
 
                           {/* Dietary Stamp + Badge Pill */}
-                          <div style={{ position: 'absolute', top: '6px', left: '6px', display: 'flex', alignItems: 'center', gap: '4px', zIndex: 2, flexWrap: 'wrap', maxWidth: 'calc(100% - 36px)' }}>
+                          <div style={{ position: 'absolute', top: '6px', left: '6px', display: 'flex', alignItems: 'center', gap: '4px', zIndex: 2, flexWrap: 'wrap', maxWidth: 'calc(100% - 65px)' }}>
                             <span style={{
                               width: '14px',
                               height: '14px',
@@ -1741,6 +1845,25 @@ export default function MenuView({
                                 <span>{dishBadge.text}</span>
                               </span>
                             )}
+                          </div>
+
+                          {/* Selection Checkbox (Top Right before 3-dots) */}
+                          <div style={{ position: 'absolute', top: '6px', right: '34px', zIndex: 10 }}>
+                            <input
+                              type="checkbox"
+                              checked={selectedDishIds.includes(dish.id)}
+                              onChange={(e) => {
+                                e.stopPropagation();
+                                toggleSelectDish(dish.id);
+                              }}
+                              style={{
+                                width: '18px',
+                                height: '18px',
+                                cursor: 'pointer',
+                                accentColor: '#0A2315'
+                              }}
+                              title="Select dish"
+                            />
                           </div>
 
                           {/* 3-Dot Menu Container */}
@@ -1956,9 +2079,18 @@ export default function MenuView({
                 <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left', fontSize: '0.84rem' }}>
                   <thead>
                     <tr style={{ background: '#F8FAFC', borderBottom: '1px solid #E2E8F0', color: '#64748B', fontWeight: 800, fontSize: '0.74rem' }}>
-                      <th style={{ padding: '12px 16px' }}>DISH</th>
+                      <th style={{ padding: '12px 10px', width: '36px', textAlign: 'center' }}>
+                        <input
+                          type="checkbox"
+                          checked={isAllVisibleSelected}
+                          onChange={toggleSelectAllVisible}
+                          style={{ width: '16px', height: '16px', cursor: 'pointer', accentColor: '#0A2315' }}
+                          title="Select all visible dishes"
+                        />
+                      </th>
+                      <th style={{ padding: '12px 14px' }}>DISH</th>
                       <th style={{ padding: '12px 14px' }}>CATEGORY</th>
-                      <th style={{ padding: '12px 14px' }}>PRICE</th>
+                      <th style={{ padding: '12px 14px' }}>PRICE (CLICK TO EDIT)</th>
                       <th style={{ padding: '12px 14px' }}>STATUS</th>
                       <th style={{ padding: '12px 16px', textAlign: 'right' }}>ACTIONS</th>
                     </tr>
@@ -1972,8 +2104,22 @@ export default function MenuView({
                       const catObj = safeCategories.find(c => String(c.id) === String(dish.category_id));
 
                       return (
-                        <tr key={dish.id} style={{ borderBottom: idx === paginatedDishes.length - 1 ? 'none' : '1px solid #F1F5F9' }}>
-                          <td style={{ padding: '12px 16px', display: 'flex', alignItems: 'center', gap: '10px' }}>
+                        <tr 
+                          key={dish.id} 
+                          style={{ 
+                            borderBottom: idx === paginatedDishes.length - 1 ? 'none' : '1px solid #F1F5F9',
+                            background: selectedDishIds.includes(dish.id) ? '#F0FDF4' : 'transparent'
+                          }}
+                        >
+                          <td style={{ padding: '12px 10px', width: '36px', textAlign: 'center' }}>
+                            <input
+                              type="checkbox"
+                              checked={selectedDishIds.includes(dish.id)}
+                              onChange={() => toggleSelectDish(dish.id)}
+                              style={{ width: '16px', height: '16px', cursor: 'pointer', accentColor: '#0A2315' }}
+                            />
+                          </td>
+                          <td style={{ padding: '12px 14px', display: 'flex', alignItems: 'center', gap: '10px' }}>
                             <img
                               src={getDishImageUrl(dish.image || dish.image_url)}
                               alt={dish.name}
@@ -2020,7 +2166,79 @@ export default function MenuView({
                             {catObj?.name || dish.category_name || dish.category || 'General'}
                           </td>
                           <td style={{ padding: '12px 14px' }}>
-                            {renderDishPrice(dish, 'list')}
+                            {inlinePriceDishId === dish.id ? (
+                              <div style={{ display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
+                                <span style={{ fontSize: '0.80rem', fontWeight: 800, color: '#0F172A' }}>{curr}</span>
+                                <input
+                                  type="number"
+                                  autoFocus
+                                  value={inlinePriceVal}
+                                  onChange={(e) => setInlinePriceVal(e.target.value)}
+                                  onKeyDown={(e) => {
+                                    if (e.key === 'Enter') {
+                                      if (inlinePriceVal !== '' && Number(inlinePriceVal) >= 0) {
+                                        onUpdateQuickPrice && onUpdateQuickPrice(dish.id, Number(inlinePriceVal), dish.price_half);
+                                      }
+                                      setInlinePriceDishId(null);
+                                    } else if (e.key === 'Escape') {
+                                      setInlinePriceDishId(null);
+                                    }
+                                  }}
+                                  style={{
+                                    width: '72px',
+                                    padding: '3px 6px',
+                                    borderRadius: '6px',
+                                    border: '1.5px solid #0A2315',
+                                    fontSize: '0.84rem',
+                                    fontWeight: 800,
+                                    outline: 'none'
+                                  }}
+                                />
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    if (inlinePriceVal !== '' && Number(inlinePriceVal) >= 0) {
+                                      onUpdateQuickPrice && onUpdateQuickPrice(dish.id, Number(inlinePriceVal), dish.price_half);
+                                    }
+                                    setInlinePriceDishId(null);
+                                  }}
+                                  style={{ background: '#16A34A', color: '#FFFFFF', border: 'none', borderRadius: '4px', width: '22px', height: '22px', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}
+                                  title="Save Price (Enter)"
+                                >
+                                  <Check size={12} />
+                                </button>
+                                <button
+                                  type="button"
+                                  onClick={() => setInlinePriceDishId(null)}
+                                  style={{ background: '#E2E8F0', color: '#475569', border: 'none', borderRadius: '4px', width: '22px', height: '22px', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}
+                                  title="Cancel (Esc)"
+                                >
+                                  <X size={12} />
+                                </button>
+                              </div>
+                            ) : (
+                              <div 
+                                onClick={() => {
+                                  setInlinePriceDishId(dish.id);
+                                  setInlinePriceVal(dish.price || '');
+                                }}
+                                title="Click to edit price directly"
+                                style={{
+                                  cursor: 'pointer',
+                                  display: 'inline-flex',
+                                  alignItems: 'center',
+                                  gap: '6px',
+                                  padding: '2px 6px',
+                                  borderRadius: '6px',
+                                  transition: 'background 0.15s ease'
+                                }}
+                                onMouseOver={(e) => e.currentTarget.style.background = '#F1F5F9'}
+                                onMouseOut={(e) => e.currentTarget.style.background = 'transparent'}
+                              >
+                                {renderDishPrice(dish, 'list')}
+                                <Edit3 size={11} color="#94A3B8" style={{ opacity: 0.6 }} />
+                              </div>
+                            )}
                           </td>
                           <td style={{ padding: '12px 14px' }}>
                             <button
