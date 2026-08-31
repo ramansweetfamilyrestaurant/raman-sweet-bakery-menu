@@ -529,11 +529,13 @@ export default function AnalyticsView({
                 </div>
               </div>
 
-              {/* Mini Sparkline (Blue) */}
+              {/* Dynamic Mini Sparkline (Blue) */}
               <div style={{ width: '100%', height: '24px', marginTop: '8px' }}>
                 <svg viewBox="0 0 100 20" style={{ width: '100%', height: '100%', overflow: 'visible' }}>
                   <path
-                    d="M 0,16 Q 30,8 60,14 T 100,6"
+                    d={totalOrders > 0 && chartPoints.length > 1
+                      ? chartPoints.map((p, i) => `${i === 0 ? 'M' : 'L'} ${(p.x / 460) * 100},${(p.y / 200) * 20}`).join(' ')
+                      : 'M 0,10 L 100,10'}
                     fill="none"
                     stroke="#38BDF8"
                     strokeWidth="2"
@@ -583,15 +585,16 @@ export default function AnalyticsView({
                 </div>
               </div>
 
-              {/* Mini Sparkline (Purple) */}
+              {/* Truthful Baseline Sparkline (Purple) */}
               <div style={{ width: '100%', height: '24px', marginTop: '8px' }}>
                 <svg viewBox="0 0 100 20" style={{ width: '100%', height: '100%', overflow: 'visible' }}>
                   <path
-                    d="M 0,14 Q 40,6 70,16 T 100,8"
+                    d="M 0,10 L 100,10"
                     fill="none"
                     stroke="#C084FC"
                     strokeWidth="2"
                     strokeLinecap="round"
+                    strokeDasharray={aov > 0 ? "none" : "3 3"}
                   />
                 </svg>
               </div>
@@ -628,7 +631,7 @@ export default function AnalyticsView({
                 </div>
 
                 <div style={{ fontSize: '1.45rem', fontWeight: 900, color: '#0F172A', letterSpacing: '-0.02em', lineHeight: 1.1 }}>
-                  {Number(analyticsData?.distinct_dishes_count ?? 0)}
+                  {Number(analyticsData?.distinct_dishes_count ?? 0).toLocaleString('en-IN')}
                 </div>
 
                 <div style={{ display: 'flex', alignItems: 'center', gap: '4px', marginTop: '6px' }}>
@@ -637,15 +640,16 @@ export default function AnalyticsView({
                 </div>
               </div>
 
-              {/* Mini Sparkline (Green) */}
+              {/* Truthful Baseline Sparkline (Green) */}
               <div style={{ width: '100%', height: '24px', marginTop: '8px' }}>
                 <svg viewBox="0 0 100 20" style={{ width: '100%', height: '100%', overflow: 'visible' }}>
                   <path
-                    d="M 0,18 Q 30,12 60,6 T 100,4"
+                    d="M 0,10 L 100,10"
                     fill="none"
                     stroke="#4ADE80"
                     strokeWidth="2"
                     strokeLinecap="round"
+                    strokeDasharray={Number(analyticsData?.distinct_dishes_count ?? 0) > 0 ? "none" : "3 3"}
                   />
                 </svg>
               </div>
