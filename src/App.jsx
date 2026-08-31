@@ -17,6 +17,7 @@ import ServiceRequestModal from './components/ServiceRequestModal';
 import CustomerReviewModal from './components/CustomerReviewModal';
 import PresenceVerificationModal from './components/PresenceVerificationModal';
 import CategoryImage from './components/CategoryImage';
+import { resolveImageUrl } from './utils/imageHelper';
 import { isValidQrTokenFormat, normalizeSpaceType, normalizeSpaceNumber } from './utils/qrSecurity';
 import { resolveTheme, DEFAULT_THEME } from './constants/themes';
 import { getCurrencySymbol, formatPriceNumber, formatPrice } from './utils/currencyHelper';
@@ -2747,10 +2748,13 @@ export default function App() {
                           position: 'relative'
                         }}>
                           <img 
-                            src={combo.image || '/images/default-category.webp'} 
+                            src={combo.image ? resolveImageUrl(combo.image) : '/images/default-dish.webp'} 
                             alt={combo.name}
                             style={{ width: '100%', height: '100%', objectFit: 'cover' }}
-                            onError={(e) => { e.target.src = '/images/default-category.webp'; }}
+                            onError={(e) => {
+                              e.currentTarget.onerror = null;
+                              e.currentTarget.src = '/images/default-dish.webp';
+                            }}
                           />
                         </div>
 
