@@ -1430,20 +1430,19 @@ export default function MenuView({
             background: 'linear-gradient(180deg, #FDECE5 0%, #FDE4D8 100%)',
             borderRadius: '20px',
             border: '1px solid #FAD6C6',
-            padding: '24px 18px 0 18px',
+            padding: '22px 18px 18px 18px',
             display: 'flex',
             flexDirection: 'column',
-            justifyContent: 'flex-start',
-            boxShadow: '0 2px 10px rgba(234, 88, 12, 0.04)',
-            overflow: 'hidden'
+            justifyContent: 'space-between',
+            boxShadow: '0 2px 10px rgba(234, 88, 12, 0.04)'
           }}>
             <div>
               <h3 style={{
-                fontSize: '1.28rem',
+                fontSize: '1.25rem',
                 fontWeight: 900,
                 color: '#1E1B18',
                 lineHeight: 1.22,
-                margin: '0 0 10px 0',
+                margin: '0 0 8px 0',
                 letterSpacing: '-0.02em'
               }}>
                 Everything your<br />menu needs.
@@ -1452,7 +1451,7 @@ export default function MenuView({
                 fontSize: '0.78rem',
                 color: '#655347',
                 margin: '0 0 16px 0',
-                lineHeight: 1.44,
+                lineHeight: 1.42,
                 fontWeight: 500
               }}>
                 Keep your products, categories and pricing organized and always up to date.
@@ -1481,19 +1480,23 @@ export default function MenuView({
               </button>
             </div>
 
-            {/* Seamless Bottom Digital Menu 3D Illustration (Tight 22px Gap Below CTA) */}
+            {/* Large Digital Menu 3D Product Visual (Occupies lower 42% with 20px gap) */}
             <div style={{
-              width: 'calc(100% + 36px)',
-              margin: '22px -18px 0 -18px',
-              borderBottomLeftRadius: '20px',
-              borderBottomRightRadius: '20px',
+              width: '100%',
+              height: '175px',
+              marginTop: '20px',
+              borderRadius: '16px',
               overflow: 'hidden',
-              lineHeight: 0
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              background: 'rgba(255, 255, 255, 0.40)',
+              border: '1px solid rgba(250, 214, 198, 0.60)'
             }}>
               <img
                 src="/images/promo-menu-banner.webp?v=2"
                 alt="TouchQR digital menu"
-                style={{ width: '100%', height: 'auto', display: 'block', objectFit: 'contain' }}
+                style={{ width: '100%', height: '100%', objectFit: 'contain', display: 'block' }}
                 onError={(e) => { e.currentTarget.onerror = null; e.currentTarget.src = '/images/default-dish.webp'; }}
               />
             </div>
