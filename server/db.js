@@ -108,6 +108,7 @@ async function createTables() {
         taste_profile VARCHAR(100),
         type VARCHAR(20) DEFAULT 'veg',
         available BOOLEAN DEFAULT TRUE,
+        modifiers TEXT DEFAULT '[]',
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
         updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
       );`,
@@ -369,6 +370,7 @@ async function createTables() {
     }
 
     const pgAlters = [
+      `ALTER TABLE dishes ADD COLUMN IF NOT EXISTS modifiers TEXT DEFAULT '[]';`,
       `ALTER TABLE table_location_verifications ALTER COLUMN expires_at TYPE TIMESTAMP WITH TIME ZONE;`,
       `ALTER TABLE table_location_verifications ALTER COLUMN verified_at TYPE TIMESTAMP WITH TIME ZONE;`,
       `ALTER TABLE pending_registrations ADD COLUMN IF NOT EXISTS name VARCHAR(255);`,
@@ -755,6 +757,7 @@ async function createTables() {
         taste_profile TEXT,
         type TEXT DEFAULT 'veg',
         available INTEGER DEFAULT 1,
+        modifiers TEXT DEFAULT '[]',
         created_at TEXT DEFAULT CURRENT_TIMESTAMP,
         updated_at TEXT DEFAULT CURRENT_TIMESTAMP,
         FOREIGN KEY (category_id) REFERENCES categories (id) ON DELETE CASCADE,
@@ -1017,6 +1020,7 @@ async function createTables() {
       const dishCols = sqliteDb.pragma('table_info(dishes)');
       if (!dishCols.some(c => c.name === 'restaurant_id')) sqliteDb.exec('ALTER TABLE dishes ADD COLUMN restaurant_id INTEGER DEFAULT 1');
       if (!dishCols.some(c => c.name === 'type')) sqliteDb.exec("ALTER TABLE dishes ADD COLUMN type TEXT DEFAULT 'veg'");
+      if (!dishCols.some(c => c.name === 'modifiers')) sqliteDb.exec("ALTER TABLE dishes ADD COLUMN modifiers TEXT DEFAULT '[]'");
 
       const adminCols = sqliteDb.pragma('table_info(admins)');
       if (!adminCols.some(c => c.name === 'restaurant_id')) sqliteDb.exec('ALTER TABLE admins ADD COLUMN restaurant_id INTEGER DEFAULT 1');

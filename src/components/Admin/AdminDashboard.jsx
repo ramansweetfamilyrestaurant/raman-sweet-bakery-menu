@@ -3289,6 +3289,7 @@ export default function AdminDashboard({
               ? Boolean(subscriptionStatus.matrix_permissions.modifiers_enabled)
               : (restaurantInfo?.modifiers_enabled !== undefined ? Boolean(restaurantInfo.modifiers_enabled) : true)
           }
+          currencySymbol={restaurantInfo?.currency_symbol || settingsForm?.currency_symbol || '₹'}
           onSave={handleSaveDish}
           onClose={() => setDishModalData(null)}
         />

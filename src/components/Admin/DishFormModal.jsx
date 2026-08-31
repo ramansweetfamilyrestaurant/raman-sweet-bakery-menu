@@ -12,7 +12,7 @@ const resolveImageUrl = (url) => {
   return url;
 };
 
-export default function DishFormModal({ dish, categories, token, modifiersEnabled = true, onSave, onClose }) {
+export default function DishFormModal({ dish, categories, token, modifiersEnabled = true, currencySymbol = '₹', onSave, onClose }) {
   const [categoryId, setCategoryId] = useState(dish?.category_id || categories?.[0]?.id || '');
 
   useEffect(() => {
@@ -49,7 +49,11 @@ export default function DishFormModal({ dish, categories, token, modifiersEnable
   const [tasteProfile, setTasteProfile] = useState(dish?.taste_profile || '');
   const [type, setType] = useState(dish?.type || 'veg'); // 'veg', 'nonveg', 'egg'
   const [image, setImage] = useState(dish?.image ? resolveImageUrl(dish.image) : '');
-  const [available, setAvailable] = useState(dish?.available !== false);
+  const [available, setAvailable] = useState(
+    dish
+      ? (dish.available !== false && dish.available !== 0 && dish.is_available !== false)
+      : true
+  );
   
   const [uploading, setUploading] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -68,6 +72,11 @@ export default function DishFormModal({ dish, categories, token, modifiersEnable
   const handleFileUpload = async (e) => {
     const file = e.target.files[0];
     if (!file) return;
+
+    if (file.size > 5 * 1024 * 1024) {
+      setError('File size must be under 5MB.');
+      return;
+    }
 
     setUploading(true);
     setError('');
@@ -89,8 +98,40 @@ export default function DishFormModal({ dish, categories, token, modifiersEnable
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    if (!name || !price || !categoryId) {
+    const trimmedName = name.trim();
+    if (!trimmedName || !price || !categoryId) {
       setError('Category, Name, and Full Price are required.');
+      return;
+    }
+
+    if (isNaN(Number(price)) || Number(price) < 0) {
+      setError('Full price must be a valid non-negative number.');
+      return;
+    }
+
+    if (hasHalf && modifiersEnabled !== false) {
+      if (!priceHalf) {
+        setError('Half price is required when half portion is enabled.');
+        return;
+      }
+      if (isNaN(Number(priceHalf)) || Number(priceHalf) < 0) {
+        setError('Half price must be a valid non-negative number.');
+        return;
+      }
+      if (Number(priceHalf) > Number(price)) {
+        setError('Half price cannot be greater than full price.');
+        return;
+      }
+    }
+
+    const hasInvalidModifier = modifiers.some(m => m.name && m.name.trim() !== '' && (isNaN(Number(m.price)) || Number(m.price) < 0));
+    if (hasInvalidModifier) {
+      setError('Add-on prices must be valid non-negative numbers.');
+      return;
+    }
+
+    if (image && !image.startsWith('http://') && !image.startsWith('https://') && !image.startsWith('/api/') && !image.startsWith('/uploads/')) {
+      setError('Please enter a valid image URL (must start with http://, https://, or local paths).');
       return;
     }
 
@@ -104,10 +145,10 @@ export default function DishFormModal({ dish, categories, token, modifiersEnable
 
       await onSave({
         category_id: Number(categoryId),
-        name,
-        name_hi: nameHi,
-        description,
-        description_hi: descriptionHi,
+        name: trimmedName,
+        name_hi: nameHi.trim(),
+        description: description.trim(),
+        description_hi: descriptionHi.trim(),
         image,
         price: Number(price),
         price_half: (modifiersEnabled !== false && hasHalf && priceHalf) ? Number(priceHalf) : null,
@@ -247,6 +288,11 @@ export default function DishFormModal({ dish, categories, token, modifiersEnable
                 <option key={c.id} value={c.id}>{c.name}</option>
               ))}
             </select>
+            {(!categories || categories.length === 0) && (
+              <div style={{ fontSize: '0.74rem', color: '#DC2626', marginTop: '6px', fontWeight: 600 }}>
+                ⚠️ No categories available. Please create a category before adding a dish.
+              </div>
+            )}
           </div>
 
           {/* Food Type Selector (Veg / Non-Veg / Egg) */}
@@ -468,7 +514,7 @@ export default function DishFormModal({ dish, categories, token, modifiersEnable
             <div style={{ display: 'grid', gridTemplateColumns: (hasHalf && modifiersEnabled !== false) ? '1fr 1fr' : '1fr', gap: '12px' }}>
               <div>
                 <label style={{ display: 'block', fontSize: '0.74rem', fontWeight: 800, color: '#475569', marginBottom: '4px' }}>
-                  {(hasHalf && modifiersEnabled !== false) ? 'Full Price (₹) *' : 'Dish Price (₹) *'}
+                  {(hasHalf && modifiersEnabled !== false) ? `Full Price (${currencySymbol}) *` : `Dish Price (${currencySymbol}) *`}
                 </label>
                 <input
                   type="number"
@@ -492,7 +538,7 @@ export default function DishFormModal({ dish, categories, token, modifiersEnable
               {(hasHalf && modifiersEnabled !== false) && (
                 <div>
                   <label style={{ display: 'block', fontSize: '0.74rem', fontWeight: 800, color: '#475569', marginBottom: '4px' }}>
-                    Half Price (₹) *
+                    Half Price ({currencySymbol}) *
                   </label>
                   <input
                     type="number"
@@ -604,7 +650,7 @@ export default function DishFormModal({ dish, categories, token, modifiersEnable
                           }}
                         />
                         <div style={{ display: 'flex', alignItems: 'center', gap: '4px', flex: 1 }}>
-                          <span style={{ fontSize: '0.80rem', fontWeight: 800, color: '#64748B' }}>+₹</span>
+                          <span style={{ fontSize: '0.80rem', fontWeight: 800, color: '#64748B' }}>+{currencySymbol}</span>
                           <input
                             type="number"
                             placeholder="30"
