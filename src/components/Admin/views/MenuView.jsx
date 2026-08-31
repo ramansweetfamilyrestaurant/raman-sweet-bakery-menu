@@ -1430,11 +1430,10 @@ export default function MenuView({
             background: 'linear-gradient(180deg, #FDECE5 0%, #FDE4D8 100%)',
             borderRadius: '20px',
             border: '1px solid #FAD6C6',
-            padding: '22px 18px 0 18px',
+            padding: '24px 18px 0 18px',
             display: 'flex',
             flexDirection: 'column',
-            justifyContent: 'space-between',
-            minHeight: '440px',
+            justifyContent: 'flex-start',
             boxShadow: '0 2px 10px rgba(234, 88, 12, 0.04)',
             overflow: 'hidden'
           }}>
@@ -1452,7 +1451,7 @@ export default function MenuView({
               <p style={{
                 fontSize: '0.78rem',
                 color: '#655347',
-                margin: '0 0 18px 0',
+                margin: '0 0 16px 0',
                 lineHeight: 1.44,
                 fontWeight: 500
               }}>
@@ -1482,10 +1481,10 @@ export default function MenuView({
               </button>
             </div>
 
-            {/* Seamless Bottom Digital Menu 3D Illustration */}
+            {/* Seamless Bottom Digital Menu 3D Illustration (Tight 22px Gap Below CTA) */}
             <div style={{
               width: 'calc(100% + 36px)',
-              margin: '16px -18px 0 -18px',
+              margin: '22px -18px 0 -18px',
               borderBottomLeftRadius: '20px',
               borderBottomRightRadius: '20px',
               overflow: 'hidden',
