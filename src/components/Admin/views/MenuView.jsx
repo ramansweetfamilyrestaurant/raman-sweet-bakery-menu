@@ -2256,27 +2256,6 @@ export default function MenuView({
                   grid-template-columns: 1fr !important;
                   gap: 10px !important;
                 }
-                .category-card-responsive {
-                  flex-direction: row !important;
-                  align-items: center !important;
-                  justify-content: space-between !important;
-                  padding: 12px 14px !important;
-                  gap: 8px !important;
-                }
-                .category-card-controls-row {
-                  flex-direction: row !important;
-                  align-items: center !important;
-                  gap: 10px !important;
-                  margin-left: auto !important;
-                  border-top: none !important;
-                  padding-top: 0 !important;
-                }
-                .category-card-actions-row {
-                  border-top: none !important;
-                  padding-top: 0 !important;
-                  margin-top: 0 !important;
-                  gap: 4px !important;
-                }
                 .hidden-xs {
                   display: none !important;
                 }
@@ -2294,12 +2273,11 @@ export default function MenuView({
               return (
                 <div
                   key={cat.id}
-                  className="category-card-responsive"
                   style={{
                     background: '#FFFFFF',
                     borderRadius: '16px',
                     border: '1px solid #E2E8F0',
-                    padding: '16px',
+                    padding: '14px',
                     display: 'flex',
                     flexDirection: 'column',
                     justifyContent: 'space-between',
@@ -2308,82 +2286,35 @@ export default function MenuView({
                     transition: 'all 0.2s ease'
                   }}
                 >
-                  {/* Category Details */}
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '12px', minWidth: 0 }}>
-                    <div style={{
-                      width: '44px',
-                      height: '44px',
-                      borderRadius: '12px',
-                      background: '#F8FAFC',
-                      border: '1px solid #E2E8F0',
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      fontSize: '1.3rem',
-                      flexShrink: 0
-                    }}>
-                      {emoji}
-                    </div>
-                    <div style={{ minWidth: 0 }}>
-                      <h4 style={{ fontSize: '0.92rem', fontWeight: 800, color: '#0F172A', margin: '0 0 2px 0', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                        {cat.name}
-                      </h4>
-                      <span style={{ fontSize: '0.70rem', color: '#64748B', fontWeight: 600 }}>
-                        {dishCount} {dishCount === 1 ? 'dish' : 'dishes'}
-                      </span>
-                    </div>
-                  </div>
-
-                  {/* Reorder Arrows & Status Toggle Switch */}
-                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '10px' }} className="category-card-controls-row">
-                    {/* Reordering Up/Down controls */}
-                    <div style={{ display: 'flex', gap: '4px' }}>
-                      <button
-                        type="button"
-                        disabled={idx === 0}
-                        onClick={(e) => { e.stopPropagation(); handleMoveCategory(idx, 'up'); }}
-                        style={{
-                          width: '30px',
-                          height: '30px',
-                          borderRadius: '8px',
-                          border: '1px solid #E2E8F0',
-                          background: idx === 0 ? '#F1F5F9' : '#FFFFFF',
-                          color: idx === 0 ? '#94A3B8' : '#475569',
-                          display: 'flex',
-                          alignItems: 'center',
-                          justifyContent: 'center',
-                          cursor: idx === 0 ? 'not-allowed' : 'pointer',
-                          transition: 'all 0.15s'
-                        }}
-                        title="Move Up"
-                      >
-                        <ChevronUp size={14} />
-                      </button>
-                      <button
-                        type="button"
-                        disabled={idx === safeCategories.length - 1}
-                        onClick={(e) => { e.stopPropagation(); handleMoveCategory(idx, 'down'); }}
-                        style={{
-                          width: '30px',
-                          height: '30px',
-                          borderRadius: '8px',
-                          border: '1px solid #E2E8F0',
-                          background: idx === safeCategories.length - 1 ? '#F1F5F9' : '#FFFFFF',
-                          color: idx === safeCategories.length - 1 ? '#94A3B8' : '#475569',
-                          display: 'flex',
-                          alignItems: 'center',
-                          justifyContent: 'center',
-                          cursor: idx === safeCategories.length - 1 ? 'not-allowed' : 'pointer',
-                          transition: 'all 0.15s'
-                        }}
-                        title="Move Down"
-                      >
-                        <ChevronDown size={14} />
-                      </button>
+                  {/* Row 1: Details (Left) & Active Switch (Right) */}
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '10px', width: '100%' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '10px', minWidth: 0, flex: 1 }}>
+                      <div style={{
+                        width: '42px',
+                        height: '42px',
+                        borderRadius: '12px',
+                        background: '#F8FAFC',
+                        border: '1px solid #E2E8F0',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        fontSize: '1.25rem',
+                        flexShrink: 0
+                      }}>
+                        {emoji}
+                      </div>
+                      <div style={{ minWidth: 0 }}>
+                        <h4 style={{ fontSize: '0.90rem', fontWeight: 800, color: '#0F172A', margin: '0 0 2px 0', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                          {cat.name}
+                        </h4>
+                        <span style={{ fontSize: '0.68rem', color: '#64748B', fontWeight: 600 }}>
+                          {dishCount} {dishCount === 1 ? 'dish' : 'dishes'}
+                        </span>
+                      </div>
                     </div>
 
                     {/* Status iOS Toggle switch */}
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flexShrink: 0 }}>
                       <div
                         onClick={(e) => { e.stopPropagation(); onToggleCategoryActive && onToggleCategoryActive(cat.id, !isActive); }}
                         style={{
@@ -2417,26 +2348,75 @@ export default function MenuView({
                     </div>
                   </div>
 
-                  {/* Actions (View Dishes, Edit, Delete) */}
-                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: '6px', borderTop: '1px solid #F1F5F9', paddingTop: '10px' }} className="category-card-actions-row">
-                    <button
-                      onClick={() => { setSelectedCatFilter(cat.id); setActiveSubTab('dishes'); }}
-                      style={{ padding: '6px 10px', borderRadius: '8px', border: '1px solid #E2E8F0', background: '#F8FAFC', color: '#0F172A', fontSize: '0.72rem', fontWeight: 700, cursor: 'pointer' }}
-                    >
-                      View
-                    </button>
-                    <button
-                      onClick={() => onOpenEditCategory && onOpenEditCategory(cat)}
-                      style={{ padding: '6px 8px', borderRadius: '8px', border: '1px solid #E2E8F0', background: '#FFFFFF', color: '#0284C7', fontSize: '0.72rem', fontWeight: 700, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
-                    >
-                      <Edit3 size={12} />
-                    </button>
-                    <button
-                      onClick={() => setDeleteConfirmCategory(cat)}
-                      style={{ padding: '6px 8px', borderRadius: '8px', border: '1px solid #FEE2E2', background: '#FFF5F5', color: '#DC2626', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
-                    >
-                      <Trash2 size={12} />
-                    </button>
+                  {/* Row 2: Reorder Controls (Left) & Actions (Right) */}
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '8px', borderTop: '1px solid #F1F5F9', paddingTop: '10px', width: '100%' }}>
+                    {/* Reordering Up/Down controls */}
+                    <div style={{ display: 'flex', gap: '4px' }}>
+                      <button
+                        type="button"
+                        disabled={idx === 0}
+                        onClick={(e) => { e.stopPropagation(); handleMoveCategory(idx, 'up'); }}
+                        style={{
+                          width: '28px',
+                          height: '28px',
+                          borderRadius: '8px',
+                          border: '1px solid #E2E8F0',
+                          background: idx === 0 ? '#F1F5F9' : '#FFFFFF',
+                          color: idx === 0 ? '#94A3B8' : '#475569',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          cursor: idx === 0 ? 'not-allowed' : 'pointer',
+                          transition: 'all 0.15s'
+                        }}
+                        title="Move Up"
+                      >
+                        <ChevronUp size={13} />
+                      </button>
+                      <button
+                        type="button"
+                        disabled={idx === safeCategories.length - 1}
+                        onClick={(e) => { e.stopPropagation(); handleMoveCategory(idx, 'down'); }}
+                        style={{
+                          width: '28px',
+                          height: '28px',
+                          borderRadius: '8px',
+                          border: '1px solid #E2E8F0',
+                          background: idx === safeCategories.length - 1 ? '#F1F5F9' : '#FFFFFF',
+                          color: idx === safeCategories.length - 1 ? '#94A3B8' : '#475569',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          cursor: idx === safeCategories.length - 1 ? 'not-allowed' : 'pointer',
+                          transition: 'all 0.15s'
+                        }}
+                        title="Move Down"
+                      >
+                        <ChevronDown size={13} />
+                      </button>
+                    </div>
+
+                    {/* Actions (View Dishes, Edit, Delete) */}
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                      <button
+                        onClick={() => { setSelectedCatFilter(cat.id); setActiveSubTab('dishes'); }}
+                        style={{ padding: '5px 8px', borderRadius: '6px', border: '1px solid #E2E8F0', background: '#F8FAFC', color: '#0F172A', fontSize: '0.70rem', fontWeight: 700, cursor: 'pointer' }}
+                      >
+                        View
+                      </button>
+                      <button
+                        onClick={() => onOpenEditCategory && onOpenEditCategory(cat)}
+                        style={{ width: '28px', height: '28px', borderRadius: '6px', border: '1px solid #E2E8F0', background: '#FFFFFF', color: '#0284C7', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+                      >
+                        <Edit3 size={11} />
+                      </button>
+                      <button
+                        onClick={() => setDeleteConfirmCategory(cat)}
+                        style={{ width: '28px', height: '28px', borderRadius: '6px', border: '1px solid #FEE2E2', background: '#FFF5F5', color: '#DC2626', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+                      >
+                        <Trash2 size={11} />
+                      </button>
+                    </div>
                   </div>
                 </div>
               );
