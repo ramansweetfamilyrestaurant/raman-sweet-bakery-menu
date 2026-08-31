@@ -2725,6 +2725,32 @@ router.get('/analytics', authenticateToken, requireActiveSubscription, async (re
       [targetId]
     );
 
+    // Load tenant categories and dishes for complete 100% category resolution
+    const [tenantCategories, tenantDishes] = await Promise.all([
+      query('SELECT id, name FROM categories WHERE restaurant_id = $1 ORDER BY sort_order ASC, id ASC', [targetId]),
+      query('SELECT id, name, category_id FROM dishes WHERE restaurant_id = $1', [targetId])
+    ]);
+
+    const dishIdToCategory = {};
+    const dishNameToCategory = {};
+    const categoryInfoMap = {};
+
+    (tenantCategories || []).forEach(c => {
+      categoryInfoMap[c.id] = { id: c.id, name: c.name };
+    });
+
+    (tenantDishes || []).forEach(d => {
+      const catObj = categoryInfoMap[d.category_id];
+      const catInfo = {
+        category_id: d.category_id || null,
+        category_name: catObj?.name || 'General'
+      };
+      dishIdToCategory[d.id] = catInfo;
+      if (d.name) {
+        dishNameToCategory[d.name.toLowerCase()] = catInfo;
+      }
+    });
+
     let todaySales = 0;
     let todayOrders = 0;
     let weeklySales = 0;
@@ -2738,6 +2764,8 @@ router.get('/analytics', authenticateToken, requireActiveSubscription, async (re
 
     const allTimeDishSalesMap = {};
     const periodDishSalesMap = {};
+    const allTimeCatSalesMap = {};
+    const periodCatSalesMap = {};
     const availableMonthsMap = {};
 
     const allTimePaymentMethods = { upi: { count: 0, amount: 0 }, cash: { count: 0, amount: 0 }, card: { count: 0, amount: 0 }, other: { count: 0, amount: 0 } };
@@ -2831,12 +2859,28 @@ router.get('/analytics', authenticateToken, requireActiveSubscription, async (re
         allTimeDishSalesMap[dishName].quantity += qty;
         allTimeDishSalesMap[dishName].revenue += lineTotal;
 
+        // Complete 100% Category Sales Accumulation
+        const catInfo = (dishId && dishIdToCategory[dishId]) || dishNameToCategory[dishName.toLowerCase()] || { category_id: null, category_name: 'General' };
+        const cKey = catInfo.category_name;
+
+        if (!allTimeCatSalesMap[cKey]) {
+          allTimeCatSalesMap[cKey] = { category_id: catInfo.category_id, name: cKey, amount: 0, count: 0 };
+        }
+        allTimeCatSalesMap[cKey].amount += lineTotal;
+        allTimeCatSalesMap[cKey].count += qty;
+
         if (inPeriod) {
           if (!periodDishSalesMap[dishName]) {
             periodDishSalesMap[dishName] = { dish_id: dishId, name: dishName, quantity: 0, revenue: 0 };
           }
           periodDishSalesMap[dishName].quantity += qty;
           periodDishSalesMap[dishName].revenue += lineTotal;
+
+          if (!periodCatSalesMap[cKey]) {
+            periodCatSalesMap[cKey] = { category_id: catInfo.category_id, name: cKey, amount: 0, count: 0 };
+          }
+          periodCatSalesMap[cKey].amount += lineTotal;
+          periodCatSalesMap[cKey].count += qty;
         }
       });
     });
@@ -2930,12 +2974,28 @@ router.get('/analytics', authenticateToken, requireActiveSubscription, async (re
           allTimeDishSalesMap[dName].quantity += dQty;
           allTimeDishSalesMap[dName].revenue += dRev;
 
+          // Complete 100% Category Sales Accumulation for rollups
+          const catInfo = (dishId && dishIdToCategory[dishId]) || dishNameToCategory[dName.toLowerCase()] || { category_id: null, category_name: 'General' };
+          const cKey = catInfo.category_name;
+
+          if (!allTimeCatSalesMap[cKey]) {
+            allTimeCatSalesMap[cKey] = { category_id: catInfo.category_id, name: cKey, amount: 0, count: 0 };
+          }
+          allTimeCatSalesMap[cKey].amount += dRev;
+          allTimeCatSalesMap[cKey].count += dQty;
+
           if (inPeriod) {
             if (!periodDishSalesMap[dName]) {
               periodDishSalesMap[dName] = { dish_id: dishId, name: dName, quantity: 0, revenue: 0 };
             }
             periodDishSalesMap[dName].quantity += dQty;
             periodDishSalesMap[dName].revenue += dRev;
+
+            if (!periodCatSalesMap[cKey]) {
+              periodCatSalesMap[cKey] = { category_id: catInfo.category_id, name: cKey, amount: 0, count: 0 };
+            }
+            periodCatSalesMap[cKey].amount += dRev;
+            periodCatSalesMap[cKey].count += dQty;
           }
         });
       }
@@ -2950,6 +3010,20 @@ router.get('/analytics', authenticateToken, requireActiveSubscription, async (re
       .sort((a, b) => b.quantity - a.quantity)
       .slice(0, 10);
 
+    // Complete Category Distribution across 100% of sold items in selected period
+    const activeCatMap = selectedPeriod === 'all' ? allTimeCatSalesMap : periodCatSalesMap;
+    const totalCatRevenue = Object.values(activeCatMap).reduce((sum, c) => sum + c.amount, 0);
+    const categorySales = Object.values(activeCatMap)
+      .filter(c => c.amount > 0 || c.count > 0)
+      .sort((a, b) => b.amount - a.amount)
+      .map(c => ({
+        category_id: c.category_id,
+        name: c.name,
+        amount: Math.round(c.amount),
+        count: c.count,
+        percentage: totalCatRevenue > 0 ? Math.round((c.amount / totalCatRevenue) * 100) : 0
+      }));
+
     const dailyChartData = Object.keys(dailySalesMap).sort().map(dateKey => ({
       date: dateKey,
       displayDate: new Date(dateKey + 'T12:00:00Z').toLocaleDateString('en-US', { month: 'short', day: 'numeric', timeZone: 'Asia/Kolkata' }),
@@ -2963,6 +3037,7 @@ router.get('/analytics', authenticateToken, requireActiveSubscription, async (re
       period_orders: periodOrdersCount,
       period_aov: periodAov,
       period_payment_methods: selectedPeriod === 'all' ? allTimePaymentMethods : periodPaymentMethods,
+      category_sales: categorySales,
       today_sales: todaySales,
       today_revenue: todaySales,
       today_orders: todayOrders,

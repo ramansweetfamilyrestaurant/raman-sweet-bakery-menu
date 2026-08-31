@@ -168,42 +168,20 @@ export default function AnalyticsView({
     });
   }, [analyticsData?.top_dishes, dishes]);
 
-  // 4. Dynamic Category Breakdown
+  // 4. Dynamic Category Breakdown (Direct from backend 100% complete dataset)
   const categoriesList = useMemo(() => {
-    const catSalesMap = {};
-    const dishesRaw = Array.isArray(analyticsData?.top_dishes) ? analyticsData.top_dishes : [];
-    let totalCatRevenue = 0;
-
-    dishesRaw.forEach(td => {
-      const matchedDish = dishes.find(d => 
-        String(d.id) === String(td.dish_id) || 
-        (d.name && d.name.toLowerCase() === (td.name || '').toLowerCase())
-      );
-      const catId = matchedDish?.category_id;
-      const matchedCat = categories.find(c => String(c.id) === String(catId));
-      const catName = matchedCat?.name || matchedDish?.category || 'General';
-      const rev = Number(td.revenue || 0);
-
-      if (!catSalesMap[catName]) {
-        catSalesMap[catName] = { name: catName, amount: 0, count: 0 };
-      }
-      catSalesMap[catName].amount += rev;
-      catSalesMap[catName].count += Number(td.quantity || 1);
-      totalCatRevenue += rev;
-    });
-
+    const raw = Array.isArray(analyticsData?.category_sales) ? analyticsData.category_sales : [];
     const colors = ['#EA580C', '#0284C7', '#16A34A', '#9333EA', '#D97706', '#E11D48'];
     const emojis = ['🍲', '🧃', '🍟', '🧁', '🫓', '🥗'];
 
-    const sorted = Object.values(catSalesMap).sort((a, b) => b.amount - a.amount);
-    return sorted.map((cat, idx) => ({
+    return raw.map((cat, idx) => ({
       name: cat.name,
       emoji: emojis[idx % emojis.length],
-      amount: cat.amount,
-      percentage: totalCatRevenue > 0 ? Math.round((cat.amount / totalCatRevenue) * 100) : 0,
+      amount: Number(cat.amount || 0),
+      percentage: Number(cat.percentage || 0),
       color: colors[idx % colors.length]
     }));
-  }, [analyticsData?.top_dishes, dishes, categories]);
+  }, [analyticsData?.category_sales]);
 
   // 5. Dynamic Payment Methods Donut Breakdown
   const paymentAnalytics = useMemo(() => {
