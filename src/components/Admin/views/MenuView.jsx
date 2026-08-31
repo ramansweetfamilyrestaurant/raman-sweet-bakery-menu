@@ -1513,48 +1513,63 @@ export default function MenuView({
             {/* Card 2: Informational Card (How it works) */}
             <div style={{
               background: '#FFFFFF',
-              borderRadius: '20px',
+              borderRadius: '18px',
               border: '1px solid #E2E8F0',
               padding: '18px 16px',
               display: 'flex',
               flexDirection: 'column',
-              boxShadow: '0 2px 8px rgba(0,0,0,0.03)'
+              boxShadow: '0 4px 14px rgba(15, 23, 42, 0.03)'
             }}>
-              <h4 style={{
-                fontSize: '0.92rem',
-                fontWeight: 900,
-                color: '#0F172A',
-                letterSpacing: '-0.01em',
-                margin: '0 0 16px 0'
+              {/* Header with subtle green micro-accent */}
+              <div style={{
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                marginBottom: '16px'
               }}>
-                How it works
-              </h4>
+                <h4 style={{
+                  fontSize: '0.92rem',
+                  fontWeight: 900,
+                  color: '#0F172A',
+                  letterSpacing: '-0.01em',
+                  margin: 0
+                }}>
+                  How it works
+                </h4>
+                <div style={{
+                  width: '6px',
+                  height: '6px',
+                  borderRadius: '50%',
+                  background: '#10B981',
+                  boxShadow: '0 0 6px rgba(16, 185, 129, 0.4)'
+                }} />
+              </div>
 
               {/* Steps List */}
               <div style={{ display: 'flex', flexDirection: 'column' }}>
                 {/* Step 01 */}
                 <div style={{ display: 'flex', gap: '12px', alignItems: 'flex-start' }}>
                   <div style={{
-                    width: '30px',
-                    height: '30px',
+                    width: '28px',
+                    height: '28px',
                     borderRadius: '8px',
                     background: '#0A2315',
                     color: '#FFFFFF',
-                    fontSize: '0.74rem',
+                    fontSize: '0.72rem',
                     fontWeight: 800,
                     display: 'flex',
                     alignItems: 'center',
                     justifyContent: 'center',
                     flexShrink: 0,
-                    boxShadow: '0 2px 5px rgba(10, 35, 21, 0.18)'
+                    boxShadow: '0 2px 4px rgba(10, 35, 21, 0.15)'
                   }}>
                     01
                   </div>
-                  <div style={{ flex: 1 }}>
-                    <div style={{ fontSize: '0.84rem', fontWeight: 800, color: '#0F172A', lineHeight: 1.25 }}>
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <div style={{ fontSize: '0.82rem', fontWeight: 800, color: '#0F172A', lineHeight: 1.25 }}>
                       Set up
                     </div>
-                    <div style={{ fontSize: '0.72rem', color: '#64748B', lineHeight: 1.40, marginTop: '3px' }}>
+                    <div style={{ fontSize: '0.72rem', color: '#64748B', lineHeight: 1.40, marginTop: '2px' }}>
                       Organize your items, categories and pricing.
                     </div>
                   </div>
@@ -1563,34 +1578,34 @@ export default function MenuView({
                 {/* Vertical Connector */}
                 <div style={{
                   width: '2px',
-                  height: '18px',
+                  height: '16px',
                   background: '#E2E8F0',
-                  margin: '4px 0 4px 14px'
+                  margin: '3px 0 3px 13px'
                 }} />
 
                 {/* Step 02 */}
                 <div style={{ display: 'flex', gap: '12px', alignItems: 'flex-start' }}>
                   <div style={{
-                    width: '30px',
-                    height: '30px',
+                    width: '28px',
+                    height: '28px',
                     borderRadius: '8px',
                     background: '#0A2315',
                     color: '#FFFFFF',
-                    fontSize: '0.74rem',
+                    fontSize: '0.72rem',
                     fontWeight: 800,
                     display: 'flex',
                     alignItems: 'center',
                     justifyContent: 'center',
                     flexShrink: 0,
-                    boxShadow: '0 2px 5px rgba(10, 35, 21, 0.18)'
+                    boxShadow: '0 2px 4px rgba(10, 35, 21, 0.15)'
                   }}>
                     02
                   </div>
-                  <div style={{ flex: 1 }}>
-                    <div style={{ fontSize: '0.84rem', fontWeight: 800, color: '#0F172A', lineHeight: 1.25 }}>
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <div style={{ fontSize: '0.82rem', fontWeight: 800, color: '#0F172A', lineHeight: 1.25 }}>
                       Share
                     </div>
-                    <div style={{ fontSize: '0.72rem', color: '#64748B', lineHeight: 1.40, marginTop: '3px' }}>
+                    <div style={{ fontSize: '0.72rem', color: '#64748B', lineHeight: 1.40, marginTop: '2px' }}>
                       Let customers discover your digital menu.
                     </div>
                   </div>
@@ -1599,34 +1614,34 @@ export default function MenuView({
                 {/* Vertical Connector */}
                 <div style={{
                   width: '2px',
-                  height: '18px',
+                  height: '16px',
                   background: '#E2E8F0',
-                  margin: '4px 0 4px 14px'
+                  margin: '3px 0 3px 13px'
                 }} />
 
                 {/* Step 03 */}
                 <div style={{ display: 'flex', gap: '12px', alignItems: 'flex-start' }}>
                   <div style={{
-                    width: '30px',
-                    height: '30px',
+                    width: '28px',
+                    height: '28px',
                     borderRadius: '8px',
                     background: '#0A2315',
                     color: '#FFFFFF',
-                    fontSize: '0.74rem',
+                    fontSize: '0.72rem',
                     fontWeight: 800,
                     display: 'flex',
                     alignItems: 'center',
                     justifyContent: 'center',
                     flexShrink: 0,
-                    boxShadow: '0 2px 5px rgba(10, 35, 21, 0.18)'
+                    boxShadow: '0 2px 4px rgba(10, 35, 21, 0.15)'
                   }}>
                     03
                   </div>
-                  <div style={{ flex: 1 }}>
-                    <div style={{ fontSize: '0.84rem', fontWeight: 800, color: '#0F172A', lineHeight: 1.25 }}>
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <div style={{ fontSize: '0.82rem', fontWeight: 800, color: '#0F172A', lineHeight: 1.25 }}>
                       Get orders
                     </div>
-                    <div style={{ fontSize: '0.72rem', color: '#64748B', lineHeight: 1.40, marginTop: '3px' }}>
+                    <div style={{ fontSize: '0.72rem', color: '#64748B', lineHeight: 1.40, marginTop: '2px' }}>
                       Turn menu visits into easy customer orders.
                     </div>
                   </div>
@@ -1636,7 +1651,7 @@ export default function MenuView({
               {/* Bottom Signature */}
               <div style={{
                 borderTop: '1px solid #F1F5F9',
-                paddingTop: '14px',
+                paddingTop: '12px',
                 marginTop: '16px'
               }}>
                 <div style={{ fontSize: '0.76rem', fontWeight: 800, color: '#0F172A', lineHeight: 1.3 }}>
