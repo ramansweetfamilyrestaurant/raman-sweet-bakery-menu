@@ -517,7 +517,7 @@
 }
 
 .mobile-list-view {
-  display: none;
+  display: none !important;
 }
 
 .desktop-table-view {

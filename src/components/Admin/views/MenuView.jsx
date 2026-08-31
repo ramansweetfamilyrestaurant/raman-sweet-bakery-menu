@@ -2408,15 +2408,7 @@ export default function MenuView({
                 </div>
 
                 {/* 2. MOBILE-NATIVE LIST VIEW (<=768px) */}
-                <div className="mobile-list-view" style={{
-                  display: 'flex',
-                  flexDirection: 'column',
-                  gap: '8px',
-                  width: '100%',
-                  maxWidth: '100%',
-                  minWidth: 0,
-                  boxSizing: 'border-box'
-                }}>
+                <div className="mobile-list-view">
                   {paginatedDishes.map((dish) => {
                     const isAvailable = dish.is_available !== false && dish.available !== false && dish.available !== 0;
                     const isVeg = dish.type === 'veg';
