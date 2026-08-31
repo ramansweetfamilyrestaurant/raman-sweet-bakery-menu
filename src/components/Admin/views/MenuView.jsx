@@ -91,6 +91,7 @@ export default function MenuView({
   const safeDishes = Array.isArray(dishes) ? dishes : [];
   const safeCategories = Array.isArray(categories) ? categories : [];
   const safeCombos = Array.isArray(combos) ? combos : [];
+  const activeCategoryObj = safeCategories.find(c => String(c.id) === String(selectedCatFilter));
 
   const dishQuota = formatQuota(safeDishes.length, maxDishes);
   const catQuota = formatQuota(safeCategories.length, maxCategories);
@@ -203,8 +204,6 @@ export default function MenuView({
     const startIndex = (safeCurrentPage - 1) * effectivePageSize;
     return filteredDishes.slice(startIndex, startIndex + effectivePageSize);
   }, [filteredDishes, isAllPages, safeCurrentPage, effectivePageSize]);
-
-  const activeCategoryObj = safeCategories.find(c => String(c.id) === String(selectedCatFilter));
 
   const handleQuickPriceSubmit = (e) => {
     e.preventDefault();
