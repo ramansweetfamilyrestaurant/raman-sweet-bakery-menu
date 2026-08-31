@@ -501,6 +501,30 @@ export default function MenuView({
           box-sizing: border-box !important;
         }
 
+        .center-catalog-column {
+          width: 100% !important;
+          max-width: 100% !important;
+          min-width: 0 !important;
+          box-sizing: border-box !important;
+        }
+
+        .mobile-list-view {
+          display: flex !important;
+          flex-direction: column !important;
+          gap: 8px !important;
+          width: 100% !important;
+          max-width: 100% !important;
+          min-width: 0 !important;
+          box-sizing: border-box !important;
+        }
+
+        .mobile-dish-list-card {
+          width: 100% !important;
+          max-width: 100% !important;
+          min-width: 0 !important;
+          box-sizing: border-box !important;
+        }
+
         @media (max-width: 1440px) {
           .center-dish-grid {
             grid-template-columns: repeat(3, minmax(0, 1fr)) !important;
@@ -535,6 +559,11 @@ export default function MenuView({
           .right-widgets-column {
             display: none !important;
           }
+          .center-catalog-column {
+            width: 100% !important;
+            max-width: 100% !important;
+            min-width: 0 !important;
+          }
           .center-dish-grid {
             grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
           }
@@ -564,6 +593,13 @@ export default function MenuView({
             gap: 8px !important;
             width: 100% !important;
             max-width: 100% !important;
+            min-width: 0 !important;
+            box-sizing: border-box !important;
+          }
+          .mobile-dish-list-card {
+            width: 100% !important;
+            max-width: 100% !important;
+            min-width: 0 !important;
             box-sizing: border-box !important;
           }
           .mobile-floating-add-btn {
@@ -1695,7 +1731,7 @@ export default function MenuView({
           {/* ========================================================
               COLUMN 2: DISHES CATALOG (CENTER)
              ======================================================== */}
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+          <div className="center-catalog-column" style={{ display: 'flex', flexDirection: 'column', gap: '12px', width: '100%', maxWidth: '100%', minWidth: 0, boxSizing: 'border-box' }}>
             
             {/* Catalog Controls Header */}
             <div style={{
@@ -2430,7 +2466,15 @@ export default function MenuView({
                 </div>
 
                 {/* 2. MOBILE-NATIVE LIST VIEW (<=768px) */}
-                <div className="mobile-list-view">
+                <div className="mobile-list-view" style={{
+                  display: 'flex',
+                  flexDirection: 'column',
+                  gap: '8px',
+                  width: '100%',
+                  maxWidth: '100%',
+                  minWidth: 0,
+                  boxSizing: 'border-box'
+                }}>
                   {paginatedDishes.map((dish) => {
                     const isAvailable = dish.is_available !== false && dish.available !== false && dish.available !== 0;
                     const isVeg = dish.type === 'veg';
@@ -2441,96 +2485,165 @@ export default function MenuView({
                     return (
                       <div
                         key={dish.id}
+                        className="mobile-dish-list-card"
                         style={{
                           background: '#FFFFFF',
                           borderRadius: '14px',
                           border: selectedDishIds.includes(dish.id) ? '2px solid #0A2315' : '1px solid #E2E8F0',
-                          padding: '10px 12px',
+                          padding: '8px 10px',
                           display: 'flex',
-                          flexDirection: 'column',
+                          alignItems: 'center',
+                          justifyContent: 'space-between',
                           gap: '8px',
                           boxShadow: '0 1px 3px rgba(0,0,0,0.02)',
                           boxSizing: 'border-box',
-                          width: '100%'
+                          width: '100%',
+                          maxWidth: '100%',
+                          minWidth: 0,
+                          position: 'relative'
                         }}
                       >
-                        {/* Top Row: Checkbox + Food Image + Details + Action Buttons */}
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '10px', width: '100%' }}>
+                        {/* LEFT: Checkbox + Dish Image Thumbnail */}
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexShrink: 0 }}>
                           <input
                             type="checkbox"
                             checked={selectedDishIds.includes(dish.id)}
                             onChange={() => toggleSelectDish(dish.id)}
                             style={{ width: '18px', height: '18px', cursor: 'pointer', accentColor: '#0A2315', flexShrink: 0 }}
+                            title="Select dish"
                           />
 
-                          <img
-                            src={getDishImageUrl(dish.image || dish.image_url)}
-                            alt={dish.name}
-                            style={{ width: '48px', height: '48px', borderRadius: '10px', objectFit: 'cover', border: '1px solid #E2E8F0', flexShrink: 0 }}
-                            onError={(e) => { e.currentTarget.src = '/images/default-dish.webp'; }}
-                          />
-
-                          <div style={{ flex: 1, minWidth: 0 }}>
-                            <div style={{ display: 'flex', alignItems: 'center', gap: '5px', flexWrap: 'wrap' }}>
-                              <span style={{
-                                width: '12px',
-                                height: '12px',
-                                background: '#FFFFFF',
-                                border: `1.5px solid ${isVeg ? '#16A34A' : isEgg ? '#D97706' : '#DC2626'}`,
-                                borderRadius: '3px',
-                                display: 'inline-flex',
-                                alignItems: 'center',
-                                justifyContent: 'center',
-                                flexShrink: 0
-                              }}>
-                                <span style={{ width: '4px', height: '4px', borderRadius: '50%', backgroundColor: isVeg ? '#16A34A' : isEgg ? '#D97706' : '#DC2626' }} />
-                              </span>
-                              <strong style={{ fontSize: '0.86rem', color: '#0F172A', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', maxWidth: '140px' }}>
-                                {dish.name}
-                              </strong>
-                              {dishBadge && (
-                                <span style={{
-                                  background: dishBadge.bg,
-                                  color: dishBadge.color || '#FFFFFF',
-                                  fontSize: '0.55rem',
-                                  fontWeight: 800,
-                                  padding: '1px 5px',
-                                  borderRadius: '4px',
-                                  whiteSpace: 'nowrap'
-                                }}>
-                                  {dishBadge.icon} {dishBadge.text}
-                                </span>
-                              )}
-                            </div>
-                            <span style={{ fontSize: '0.70rem', color: '#64748B', display: 'block', marginTop: '1px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                              {catObj?.name || dish.category_name || dish.category || 'General'}
+                          <div style={{
+                            position: 'relative',
+                            width: '56px',
+                            height: '56px',
+                            borderRadius: '10px',
+                            overflow: 'hidden',
+                            border: '1px solid #F1F5F9',
+                            background: '#F8FAFC',
+                            flexShrink: 0
+                          }}>
+                            <img
+                              src={getDishImageUrl(dish.image || dish.image_url)}
+                              alt={dish.name}
+                              style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                              onError={(e) => { e.currentTarget.src = '/images/default-dish.webp'; }}
+                            />
+                            {/* Dietary dot badge overlay on image */}
+                            <span style={{
+                              position: 'absolute',
+                              top: '3px',
+                              left: '3px',
+                              width: '12px',
+                              height: '12px',
+                              background: '#FFFFFF',
+                              border: `1.5px solid ${isVeg ? '#16A34A' : isEgg ? '#D97706' : '#DC2626'}`,
+                              borderRadius: '3px',
+                              display: 'flex',
+                              alignItems: 'center',
+                              justifyContent: 'center',
+                              boxShadow: '0 1px 2px rgba(0,0,0,0.2)',
+                              flexShrink: 0
+                            }}>
+                              <span style={{ width: '4px', height: '4px', borderRadius: '50%', backgroundColor: isVeg ? '#16A34A' : isEgg ? '#D97706' : '#DC2626' }} />
                             </span>
-                          </div>
-
-                          {/* Edit / Delete Buttons */}
-                          <div style={{ display: 'flex', alignItems: 'center', gap: '4px', flexShrink: 0 }}>
-                            <button
-                              onClick={() => onOpenEditDish(dish)}
-                              style={{ background: '#F1F5F9', border: '1px solid #E2E8F0', padding: '6px', borderRadius: '7px', cursor: 'pointer', color: '#0F172A' }}
-                              title="Edit"
-                            >
-                              <Edit3 size={13} />
-                            </button>
-                            <button
-                              onClick={() => setDeleteConfirmDish(dish)}
-                              style={{ background: '#FEE2E2', border: '1px solid #FECACA', padding: '6px', borderRadius: '7px', cursor: 'pointer', color: '#DC2626' }}
-                              title="Delete"
-                            >
-                              <Trash2 size={13} />
-                            </button>
                           </div>
                         </div>
 
-                        {/* Bottom Row: Price + Stock Toggle Button */}
-                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', borderTop: '1px solid #F1F5F9', paddingTop: '6px' }}>
-                          <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                            <span style={{ fontSize: '0.70rem', color: '#64748B', fontWeight: 600 }}>Price:</span>
+                        {/* CENTER: Name + Category + Badge + Price */}
+                        <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', gap: '2px' }}>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '4px', flexWrap: 'wrap' }}>
+                            <strong style={{
+                              fontSize: '0.82rem',
+                              fontWeight: 800,
+                              color: '#0F172A',
+                              lineHeight: 1.25,
+                              wordBreak: 'break-word',
+                              overflow: 'hidden',
+                              display: '-webkit-box',
+                              WebkitLineClamp: 1,
+                              WebkitBoxOrient: 'vertical'
+                            }} title={dish.name}>
+                              {dish.name}
+                            </strong>
+                            {dishBadge && (
+                              <span style={{
+                                background: dishBadge.bg,
+                                color: dishBadge.color || '#FFFFFF',
+                                fontSize: '0.52rem',
+                                fontWeight: 800,
+                                padding: '1px 4px',
+                                borderRadius: '4px',
+                                whiteSpace: 'nowrap',
+                                display: 'inline-flex',
+                                alignItems: 'center',
+                                gap: '2px'
+                              }}>
+                                {dishBadge.icon} {dishBadge.text}
+                              </span>
+                            )}
+                          </div>
+
+                          <span style={{
+                            fontSize: '0.64rem',
+                            color: '#64748B',
+                            fontWeight: 600,
+                            textTransform: 'uppercase',
+                            letterSpacing: '0.02em',
+                            whiteSpace: 'nowrap',
+                            overflow: 'hidden',
+                            textOverflow: 'ellipsis'
+                          }}>
+                            {catObj?.name || dish.category_name || dish.category || 'General'}
+                          </span>
+
+                          <div style={{ marginTop: '2px' }}>
                             {renderDishPrice(dish, 'list')}
+                          </div>
+                        </div>
+
+                        {/* RIGHT: Actions (Edit, Delete) + Availability */}
+                        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: '5px', flexShrink: 0 }}>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                            <button
+                              onClick={() => onOpenEditDish(dish)}
+                              style={{
+                                background: '#F1F5F9',
+                                border: '1px solid #E2E8F0',
+                                width: '28px',
+                                height: '28px',
+                                borderRadius: '7px',
+                                cursor: 'pointer',
+                                color: '#0F172A',
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                                padding: 0
+                              }}
+                              title="Edit Dish"
+                            >
+                              <Edit3 size={13} />
+                            </button>
+
+                            <button
+                              onClick={() => setDeleteConfirmDish(dish)}
+                              style={{
+                                background: '#FEE2E2',
+                                border: '1px solid #FECACA',
+                                width: '28px',
+                                height: '28px',
+                                borderRadius: '7px',
+                                cursor: 'pointer',
+                                color: '#DC2626',
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                                padding: 0
+                              }}
+                              title="Delete Dish"
+                            >
+                              <Trash2 size={13} />
+                            </button>
                           </div>
 
                           <button
@@ -2543,17 +2656,19 @@ export default function MenuView({
                               background: isAvailable ? '#E6F9EE' : '#FEE2E2',
                               color: isAvailable ? '#15803D' : '#DC2626',
                               border: `1px solid ${isAvailable ? '#C6F6D5' : '#FECACA'}`,
-                              padding: '4px 10px',
-                              borderRadius: '6px',
-                              fontSize: '0.70rem',
+                              padding: '2px 6px',
+                              borderRadius: '5px',
+                              fontSize: '0.60rem',
                               fontWeight: 800,
                               cursor: 'pointer',
                               display: 'inline-flex',
                               alignItems: 'center',
-                              gap: '4px'
+                              gap: '2px',
+                              whiteSpace: 'nowrap',
+                              userSelect: 'none'
                             }}
                           >
-                            <span>{isAvailable ? '● In Stock' : '○ Sold Out'}</span>
+                            <span>{isAvailable ? '✓ In Stock' : '○ Sold Out'}</span>
                           </button>
                         </div>
                       </div>
