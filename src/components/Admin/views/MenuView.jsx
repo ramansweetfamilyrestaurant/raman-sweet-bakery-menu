@@ -109,7 +109,9 @@ export default function MenuView({
       veg: safeDishes.filter(d => d.type === 'veg').length,
       nonveg: safeDishes.filter(d => d.type === 'nonveg').length,
       egg: safeDishes.filter(d => d.type === 'egg').length,
-      must_try: safeDishes.filter(d => Boolean(d.must_try) || (typeof d.badge === 'string' && (d.badge.toLowerCase().includes('must try') || d.badge.toLowerCase().includes('bestseller') || d.badge.toLowerCase().includes('popular')))).length,
+      must_try: safeDishes.filter(d => Boolean(d.must_try) || (typeof d.badge === 'string' && d.badge.toLowerCase().includes('must try'))).length,
+      bestseller: safeDishes.filter(d => typeof d.badge === 'string' && (d.badge.toLowerCase().includes('bestseller') || d.badge.toLowerCase().includes('popular'))).length,
+      special: safeDishes.filter(d => typeof d.badge === 'string' && (d.badge.toLowerCase().includes('special') || d.badge.toLowerCase().includes('chef'))).length,
       available: safeDishes.filter(d => d.is_available !== false && d.available !== false && d.available !== 0).length,
       sold_out: safeDishes.filter(d => d.is_available === false || d.available === false || d.available === 0).length,
       under_100: safeDishes.filter(d => (Number(d.price) || 0) <= 100).length
@@ -164,19 +166,13 @@ export default function MenuView({
       if (dietFilter === 'nonveg') matchesDiet = d.type === 'nonveg';
       if (dietFilter === 'egg') matchesDiet = d.type === 'egg';
       if (dietFilter === 'must_try') {
-        matchesDiet = Boolean(d.must_try) || (typeof d.badge === 'string' && (
-          d.badge.toLowerCase().includes('must try') || 
-          d.badge.toLowerCase().includes('bestseller') || 
-          d.badge.toLowerCase().includes('special') ||
-          d.badge.toLowerCase().includes('popular') ||
-          d.badge.toLowerCase().includes('chef')
-        ));
+        matchesDiet = Boolean(d.must_try) || (typeof d.badge === 'string' && d.badge.toLowerCase().includes('must try'));
+      }
+      if (dietFilter === 'bestseller') {
+        matchesDiet = typeof d.badge === 'string' && (d.badge.toLowerCase().includes('bestseller') || d.badge.toLowerCase().includes('popular'));
       }
       if (dietFilter === 'special') {
-        matchesDiet = typeof d.badge === 'string' && (
-          d.badge.toLowerCase().includes('special') || 
-          d.badge.toLowerCase().includes('chef')
-        );
+        matchesDiet = typeof d.badge === 'string' && (d.badge.toLowerCase().includes('special') || d.badge.toLowerCase().includes('chef'));
       }
       if (dietFilter === 'available') matchesDiet = d.is_available !== false && d.available !== false && d.available !== 0;
       if (dietFilter === 'sold_out') matchesDiet = d.is_available === false || d.available === false || d.available === 0;
@@ -269,6 +265,28 @@ export default function MenuView({
     if (n.includes('breakfast') || n.includes('morning')) return '🍳';
     if (n.includes('combo') || n.includes('meal') || n.includes('bundle')) return '🍱';
     return '🍽️';
+  };
+
+  // Helper for dish badge details (Must Try, Bestseller, Special)
+  const getDishBadge = (dish) => {
+    const b = (dish.badge || '').toLowerCase();
+    const isMustTry = Boolean(dish.must_try) || b.includes('must try');
+    const isBestseller = b.includes('bestseller') || b.includes('popular');
+    const isSpecial = b.includes('special') || b.includes('chef');
+
+    if (isMustTry) {
+      return { text: 'Must Try', icon: '🔥', bg: 'linear-gradient(135deg, #FF6B00 0%, #EA580C 100%)', color: '#FFFFFF' };
+    }
+    if (isBestseller) {
+      return { text: 'Bestseller', icon: '⭐', bg: 'linear-gradient(135deg, #D97706 0%, #B45309 100%)', color: '#FFFFFF' };
+    }
+    if (isSpecial) {
+      return { text: 'Special', icon: '✨', bg: 'linear-gradient(135deg, #7C3AED 0%, #6D28D9 100%)', color: '#FFFFFF' };
+    }
+    if (dish.badge && dish.badge.trim()) {
+      return { text: dish.badge, icon: '🏷️', bg: '#0A2315', color: '#D4AF37' };
+    }
+    return null;
   };
 
   // Helper to format price: Clean standard price (e.g. ₹59) OR Portion segmented pill [ Full ₹160 | Half ₹95 ]
@@ -1328,7 +1346,9 @@ export default function MenuView({
             { id: 'veg', label: 'Veg', dot: '🟢', count: counts.veg },
             { id: 'nonveg', label: 'Non-Veg', dot: '🔴', count: counts.nonveg },
             { id: 'egg', label: 'Egg', dot: '🟡', count: counts.egg },
-            { id: 'must_try', label: 'Best Sellers', icon: '⭐', count: counts.must_try },
+            { id: 'must_try', label: 'Must Try', icon: '🔥', count: counts.must_try },
+            { id: 'bestseller', label: 'Bestseller', icon: '⭐', count: counts.bestseller },
+            { id: 'special', label: 'Special', icon: '✨', count: counts.special },
             { id: 'available', label: 'In Stock', dot: '🟢', count: counts.available },
             { id: 'sold_out', label: 'Sold Out', dot: '🔴', count: counts.sold_out },
             { id: 'under_100', label: `Under ${curr}100`, count: counts.under_100 }
@@ -1625,12 +1645,7 @@ export default function MenuView({
                   const isAvailable = dish.is_available !== false && dish.available !== false && dish.available !== 0;
                   const isVeg = dish.type === 'veg';
                   const isEgg = dish.type === 'egg';
-                  const isBestseller = Boolean(dish.must_try) || (typeof dish.badge === 'string' && (
-                    dish.badge.toLowerCase().includes('must try') || 
-                    dish.badge.toLowerCase().includes('bestseller') || 
-                    dish.badge.toLowerCase().includes('special') ||
-                    dish.badge.toLowerCase().includes('popular')
-                  ));
+                  const dishBadge = getDishBadge(dish);
                   const catObj = safeCategories.find(c => String(c.id) === String(dish.category_id));
 
                   return (
@@ -1676,33 +1691,39 @@ export default function MenuView({
                             />
                           </div>
 
-                          {/* Bestseller Badge or Veg Stamp */}
-                          <div style={{ position: 'absolute', top: '6px', left: '6px', display: 'flex', alignItems: 'center', gap: '4px', zIndex: 2 }}>
-                            {isBestseller ? (
+                          {/* Dietary Stamp + Badge Pill */}
+                          <div style={{ position: 'absolute', top: '6px', left: '6px', display: 'flex', alignItems: 'center', gap: '4px', zIndex: 2, flexWrap: 'wrap', maxWidth: 'calc(100% - 36px)' }}>
+                            <span style={{
+                              width: '14px',
+                              height: '14px',
+                              background: '#FFFFFF',
+                              border: `1.5px solid ${isVeg ? '#16A34A' : isEgg ? '#D97706' : '#DC2626'}`,
+                              borderRadius: '3px',
+                              display: 'flex',
+                              alignItems: 'center',
+                              justifyContent: 'center',
+                              boxShadow: '0 1px 3px rgba(0,0,0,0.18)',
+                              flexShrink: 0
+                            }}>
+                              <span style={{ width: '5px', height: '5px', borderRadius: '50%', backgroundColor: isVeg ? '#16A34A' : isEgg ? '#D97706' : '#DC2626' }} />
+                            </span>
+
+                            {dishBadge && (
                               <span style={{
-                                background: '#D97706',
-                                color: '#FFFFFF',
+                                background: dishBadge.bg,
+                                color: dishBadge.color || '#FFFFFF',
                                 fontSize: '0.58rem',
                                 fontWeight: 800,
-                                padding: '2px 7px',
+                                padding: '2px 6px',
                                 borderRadius: '5px',
-                                boxShadow: '0 2px 4px rgba(0,0,0,0.2)'
-                              }}>
-                                {dish.badge && dish.badge.includes('⭐') ? 'Must Try' : 'Bestseller'}
-                              </span>
-                            ) : (
-                              <span style={{
-                                width: '14px',
-                                height: '14px',
-                                background: '#FFFFFF',
-                                border: `1.5px solid ${isVeg ? '#16A34A' : isEgg ? '#D97706' : '#DC2626'}`,
-                                borderRadius: '3px',
-                                display: 'flex',
+                                boxShadow: '0 2px 4px rgba(0,0,0,0.2)',
+                                display: 'inline-flex',
                                 alignItems: 'center',
-                                justifyContent: 'center',
-                                boxShadow: '0 1px 3px rgba(0,0,0,0.18)'
+                                gap: '3px',
+                                whiteSpace: 'nowrap'
                               }}>
-                                <span style={{ width: '5px', height: '5px', borderRadius: '50%', backgroundColor: isVeg ? '#16A34A' : isEgg ? '#D97706' : '#DC2626' }} />
+                                <span>{dishBadge.icon}</span>
+                                <span>{dishBadge.text}</span>
                               </span>
                             )}
                           </div>
@@ -1754,12 +1775,12 @@ export default function MenuView({
                                   top: '30px',
                                   right: 0,
                                   background: '#FFFFFF',
-                                  borderRadius: '10px',
+                                  borderRadius: '12px',
                                   border: '1px solid #E2E8F0',
                                   boxShadow: '0 10px 30px rgba(0,0,0,0.2)',
-                                  padding: '4px',
+                                  padding: '5px',
                                   zIndex: 102,
-                                  minWidth: '145px'
+                                  minWidth: '155px'
                                 }}>
                                   <button
                                     onClick={() => { onOpenEditDish(dish); setOpenDishMenuId(null); }}
@@ -1786,7 +1807,48 @@ export default function MenuView({
                                     <CheckCircle2 size={12} color={isAvailable ? '#D97706' : '#16A34A'} />
                                     <span>{isAvailable ? 'Mark Sold Out' : 'Mark In Stock'}</span>
                                   </button>
-                                  <div style={{ height: '1px', background: '#F1F5F9', margin: '2px 0' }} />
+                                  
+                                  <div style={{ height: '1px', background: '#F1F5F9', margin: '3px 0' }} />
+
+                                  {/* Quick Badge Toggles */}
+                                  <button
+                                    type="button"
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      onToggleBadge && onToggleBadge(dish, 'Must Try');
+                                      setOpenDishMenuId(null);
+                                    }}
+                                    style={{ width: '100%', textAlign: 'left', padding: '6px 10px', borderRadius: '6px', border: 'none', background: 'transparent', color: (dish.badge || '').toLowerCase().includes('must try') || dish.must_try ? '#EA580C' : '#475569', fontSize: '0.72rem', fontWeight: 700, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '8px' }}
+                                  >
+                                    <span>🔥</span>
+                                    <span>{(dish.badge || '').toLowerCase().includes('must try') || dish.must_try ? 'Remove Must Try' : 'Mark Must Try'}</span>
+                                  </button>
+                                  <button
+                                    type="button"
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      onToggleBadge && onToggleBadge(dish, 'Bestseller');
+                                      setOpenDishMenuId(null);
+                                    }}
+                                    style={{ width: '100%', textAlign: 'left', padding: '6px 10px', borderRadius: '6px', border: 'none', background: 'transparent', color: (dish.badge || '').toLowerCase().includes('bestseller') ? '#D97706' : '#475569', fontSize: '0.72rem', fontWeight: 700, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '8px' }}
+                                  >
+                                    <span>⭐</span>
+                                    <span>{(dish.badge || '').toLowerCase().includes('bestseller') ? 'Remove Bestseller' : 'Mark Bestseller'}</span>
+                                  </button>
+                                  <button
+                                    type="button"
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      onToggleBadge && onToggleBadge(dish, 'Special');
+                                      setOpenDishMenuId(null);
+                                    }}
+                                    style={{ width: '100%', textAlign: 'left', padding: '6px 10px', borderRadius: '6px', border: 'none', background: 'transparent', color: (dish.badge || '').toLowerCase().includes('special') ? '#7C3AED' : '#475569', fontSize: '0.72rem', fontWeight: 700, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '8px' }}
+                                  >
+                                    <span>✨</span>
+                                    <span>{(dish.badge || '').toLowerCase().includes('special') ? 'Remove Special' : 'Mark Special'}</span>
+                                  </button>
+
+                                  <div style={{ height: '1px', background: '#F1F5F9', margin: '3px 0' }} />
                                   <button
                                     onClick={() => { setDeleteConfirmDish(dish); setOpenDishMenuId(null); }}
                                     style={{ width: '100%', textAlign: 'left', padding: '7px 10px', borderRadius: '6px', border: 'none', background: 'transparent', color: '#DC2626', fontSize: '0.74rem', fontWeight: 700, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '8px' }}
@@ -1891,6 +1953,7 @@ export default function MenuView({
                       const isAvailable = dish.is_available !== false && dish.available !== false && dish.available !== 0;
                       const isVeg = dish.type === 'veg';
                       const isEgg = dish.type === 'egg';
+                      const dishBadge = getDishBadge(dish);
                       const catObj = safeCategories.find(c => String(c.id) === String(dish.category_id));
 
                       return (
@@ -1903,7 +1966,38 @@ export default function MenuView({
                               onError={(e) => { e.currentTarget.src = '/images/default-dish.webp'; }}
                             />
                             <div>
-                              <strong style={{ fontSize: '0.88rem', color: '#0F172A', display: 'block' }}>{dish.name}</strong>
+                              <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                                <span style={{
+                                  width: '12px',
+                                  height: '12px',
+                                  background: '#FFFFFF',
+                                  border: `1.5px solid ${isVeg ? '#16A34A' : isEgg ? '#D97706' : '#DC2626'}`,
+                                  borderRadius: '3px',
+                                  display: 'inline-flex',
+                                  alignItems: 'center',
+                                  justifyContent: 'center',
+                                  flexShrink: 0
+                                }}>
+                                  <span style={{ width: '4px', height: '4px', borderRadius: '50%', backgroundColor: isVeg ? '#16A34A' : isEgg ? '#D97706' : '#DC2626' }} />
+                                </span>
+                                <strong style={{ fontSize: '0.88rem', color: '#0F172A' }}>{dish.name}</strong>
+                                {dishBadge && (
+                                  <span style={{
+                                    background: dishBadge.bg,
+                                    color: dishBadge.color || '#FFFFFF',
+                                    fontSize: '0.58rem',
+                                    fontWeight: 800,
+                                    padding: '1px 5px',
+                                    borderRadius: '4px',
+                                    display: 'inline-flex',
+                                    alignItems: 'center',
+                                    gap: '2px'
+                                  }}>
+                                    <span>{dishBadge.icon}</span>
+                                    <span>{dishBadge.text}</span>
+                                  </span>
+                                )}
+                              </div>
                               <span style={{ fontSize: '0.70rem', color: '#64748B' }}>{dish.description ? (dish.description.length > 35 ? `${dish.description.substring(0, 35)}...` : dish.description) : 'No description'}</span>
                             </div>
                           </td>
@@ -3080,10 +3174,11 @@ export default function MenuView({
                 <label style={{ fontSize: '0.80rem', fontWeight: 800, color: '#334155', display: 'block', marginBottom: '8px' }}>
                   ⭐ Highlights & Badges
                 </label>
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '8px' }}>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '8px' }}>
                   {[
-                    { id: 'must_try', label: `Best Sellers (${counts.must_try})`, icon: '⭐' },
-                    { id: 'special', label: "Chef's Special", icon: '✨' }
+                    { id: 'must_try', label: `Must Try (${counts.must_try})`, icon: '🔥' },
+                    { id: 'bestseller', label: `Bestseller (${counts.bestseller})`, icon: '⭐' },
+                    { id: 'special', label: `Special (${counts.special})`, icon: '✨' }
                   ].map(opt => {
                     const isSel = dietFilter === opt.id;
                     return (
@@ -3092,17 +3187,19 @@ export default function MenuView({
                         type="button"
                         onClick={() => setDietFilter(isSel ? 'all' : opt.id)}
                         style={{
-                          padding: '9px 12px',
+                          padding: '9px 6px',
                           borderRadius: '12px',
                           border: isSel ? '1.5px solid #D97706' : '1px solid #E2E8F0',
                           background: isSel ? '#FFFBEB' : '#FFFFFF',
                           color: isSel ? '#B45309' : '#0F172A',
                           fontWeight: isSel ? 800 : 600,
-                          fontSize: '0.78rem',
+                          fontSize: '0.73rem',
                           display: 'flex',
                           alignItems: 'center',
-                          gap: '8px',
-                          cursor: 'pointer'
+                          justifyContent: 'center',
+                          gap: '5px',
+                          cursor: 'pointer',
+                          textAlign: 'center'
                         }}
                       >
                         <span>{opt.icon}</span>

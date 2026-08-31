@@ -1802,9 +1802,15 @@ export default function AdminDashboard({
   };
 
   const handleToggleBadge = async (dish, targetBadge) => {
-    const isTarget = dish.badge === targetBadge;
+    const isTarget = (dish.badge || '').toLowerCase().includes(targetBadge.toLowerCase()) || 
+                     (targetBadge.toLowerCase().includes('must try') && Boolean(dish.must_try));
     const newBadge = isTarget ? '' : targetBadge;
+    const newMustTry = targetBadge.toLowerCase().includes('must try') ? (!isTarget ? 1 : 0) : (dish.must_try ? 1 : 0);
+    
     try {
+      // Optimistic state update
+      setDishes(prev => prev.map(d => String(d.id) === String(dish.id) ? { ...d, badge: newBadge, must_try: newMustTry } : d));
+      
       const res = await fetch(`/api/admin/dishes/${dish.id}`, {
         method: 'PUT',
         headers: {
@@ -1813,13 +1819,15 @@ export default function AdminDashboard({
         },
         body: JSON.stringify({
           ...dish,
-          badge: newBadge
+          badge: newBadge,
+          must_try: newMustTry
         })
       });
-      if (!res.ok) throw new Error('Failed');
-      setDishes(prev => prev.map(d => String(d.id) === String(dish.id) ? { ...d, badge: newBadge } : d));
+      if (!res.ok) throw new Error('Failed to update badge');
     } catch (err) {
+      console.error('Badge toggle error:', err);
       alert(`Failed to update ${targetBadge} badge`);
+      loadData(true);
     }
   };
 
