@@ -87,6 +87,7 @@ export default function MenuView({
   const [priceFilter, setPriceFilter] = useState('all'); // 'all', 'under_100', '100_250', 'above_250'
   const [showFilterModal, setShowFilterModal] = useState(false);
   const [showBulkUploadModal, setShowBulkUploadModal] = useState(false);
+  const [showImageTipModal, setShowImageTipModal] = useState(false);
   const [sortBy, setSortBy] = useState('recent'); // 'recent', 'name_asc', 'price_asc', 'price_desc', 'instock_first'
   const [viewMode, setViewMode] = useState('grid'); // 'grid' | 'list'
   const [showAddMenuDropdown, setShowAddMenuDropdown] = useState(false);
@@ -440,7 +441,9 @@ export default function MenuView({
     const imgRatio = dishesWithImg / safeDishes.length;
     const imagesUploaded = imgRatio >= 0.4;
     const categoriesOrganized = safeCategories.length >= 1;
-    const readyForCustomers = safeDishes.some(d => d.is_available !== false);
+    const readyForCustomers = safeDishes.some(
+      d => d.is_available !== false && d.available !== false && d.available !== 0
+    );
 
     let score = 0;
     if (safeDishes.length >= 10) score += 35;
@@ -2558,16 +2561,29 @@ export default function MenuView({
                 <strong style={{ fontSize: '0.80rem', color: '#92400E', fontWeight: 800 }}>Pro Tip</strong>
               </div>
               <p style={{ fontSize: '0.72rem', color: '#78350F', margin: 0, lineHeight: 1.35 }}>
-                Add high quality images to increase orders by up to 40%.
+                High-quality food images can make your digital menu more appealing.
               </p>
-              <a
-                href="#learn-more"
-                onClick={(e) => { e.preventDefault(); alert('Tip: High resolution 1:1 food photos increase conversion rate!'); }}
-                style={{ fontSize: '0.70rem', color: '#92400E', fontWeight: 800, textDecoration: 'none', marginTop: '2px', display: 'inline-flex', alignItems: 'center', gap: '4px' }}
+              <button
+                type="button"
+                onClick={() => setShowImageTipModal(true)}
+                style={{
+                  fontSize: '0.70rem',
+                  color: '#92400E',
+                  fontWeight: 800,
+                  background: 'transparent',
+                  border: 'none',
+                  padding: 0,
+                  cursor: 'pointer',
+                  textAlign: 'left',
+                  marginTop: '2px',
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: '4px'
+                }}
               >
                 <span>Learn more</span>
                 <span>→</span>
-              </a>
+              </button>
             </div>
           </div>
         </div>
@@ -3825,6 +3841,95 @@ export default function MenuView({
           }}
           onClose={() => setShowBulkUploadModal(false)}
         />
+      )}
+
+      {/* 💡 WHY QUALITY IMAGES MATTER MODAL */}
+      {showImageTipModal && (
+        <div 
+          style={{
+            position: 'fixed',
+            inset: 0,
+            zIndex: 3500,
+            background: 'rgba(10, 25, 16, 0.65)',
+            backdropFilter: 'blur(4px)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            padding: '16px',
+            boxSizing: 'border-box'
+          }}
+          onClick={() => setShowImageTipModal(false)}
+        >
+          <div 
+            onClick={(e) => e.stopPropagation()}
+            style={{
+              background: '#FFFFFF',
+              borderRadius: '20px',
+              width: '100%',
+              maxWidth: '440px',
+              padding: '20px',
+              boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.25)',
+              border: '1px solid #E2E8F0',
+              display: 'flex',
+              flexDirection: 'column',
+              gap: '14px'
+            }}
+          >
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <span style={{ fontSize: '1.2rem' }}>📸</span>
+                <h3 style={{ margin: 0, fontSize: '0.98rem', fontWeight: 900, color: '#0F172A' }}>
+                  Why quality images matter
+                </h3>
+              </div>
+              <button 
+                type="button" 
+                onClick={() => setShowImageTipModal(false)}
+                style={{ border: 'none', background: 'transparent', cursor: 'pointer', color: '#94A3B8', padding: '4px' }}
+              >
+                <X size={18} />
+              </button>
+            </div>
+
+            <p style={{ margin: 0, fontSize: '0.80rem', color: '#475569', lineHeight: 1.45 }}>
+              High-quality food images can make your digital menu more appealing and help customers make decisions faster.
+            </p>
+
+            <div style={{ background: '#F8FAFC', borderRadius: '12px', padding: '12px 14px', display: 'flex', flexDirection: 'column', gap: '8px', border: '1px solid #E2E8F0' }}>
+              <strong style={{ fontSize: '0.76rem', color: '#0F172A', fontWeight: 800 }}>Quick Photography Tips:</strong>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '0.74rem', color: '#334155' }}>
+                <span style={{ color: '#16A34A', fontWeight: 900 }}>✓</span>
+                <span>Use clear, natural lighting for vibrant dishes</span>
+              </div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '0.74rem', color: '#334155' }}>
+                <span style={{ color: '#16A34A', fontWeight: 900 }}>✓</span>
+                <span>Use square (1:1) aspect ratio photos</span>
+              </div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '0.74rem', color: '#334155' }}>
+                <span style={{ color: '#16A34A', fontWeight: 900 }}>✓</span>
+                <span>Keep backgrounds clean and clutter-free</span>
+              </div>
+            </div>
+
+            <button
+              type="button"
+              onClick={() => setShowImageTipModal(false)}
+              style={{
+                width: '100%',
+                padding: '10px',
+                borderRadius: '10px',
+                border: 'none',
+                background: '#0A2315',
+                color: '#FFFFFF',
+                fontSize: '0.82rem',
+                fontWeight: 800,
+                cursor: 'pointer'
+              }}
+            >
+              Got it
+            </button>
+          </div>
+        </div>
       )}
     </div>
   );
