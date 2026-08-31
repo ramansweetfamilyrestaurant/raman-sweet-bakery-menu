@@ -4042,10 +4042,6 @@ router.patch('/combos/:id/toggle', authenticateToken, requireActiveSubscription,
     res.status(500).json({ error: 'Failed to toggle combo' });
   }
 });
-    console.error('Toggle combo error:', err);
-    res.status(500).json({ error: 'Failed to toggle combo' });
-  }
-});
 
 // DELETE combo
 router.delete('/combos/:id', authenticateToken, requireActiveSubscription, async (req, res) => {
