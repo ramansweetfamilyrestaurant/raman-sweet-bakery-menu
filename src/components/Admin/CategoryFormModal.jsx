@@ -98,15 +98,15 @@ export default function CategoryFormModal({ category, token, onSave, onClose }) 
             }
             .cat-modal-body-form input,
             .cat-modal-body-form select {
-              font-size: 16px !important;
-              padding: 9px 11px !important;
+              font-size: 14px !important;
+              padding: 8px 11px !important;
             }
           }
         `}} />
 
         {/* Modal Header */}
         <div style={{
-          padding: '14px 18px',
+          padding: '12px 16px',
           background: 'linear-gradient(135deg, #0A2315 0%, #143A24 100%)',
           color: '#FFFFFF',
           display: 'flex',
@@ -114,9 +114,9 @@ export default function CategoryFormModal({ category, token, onSave, onClose }) 
           alignItems: 'center',
           borderBottom: '1px solid rgba(255, 255, 255, 0.08)'
         }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-            <FolderOpen size={16} color="#D4AF37" />
-            <h3 style={{ fontSize: '0.98rem', fontWeight: 800, margin: 0, letterSpacing: '0.2px' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '7px' }}>
+            <FolderOpen size={15} color="#D4AF37" />
+            <h3 style={{ fontSize: '0.94rem', fontWeight: 700, margin: 0, letterSpacing: '0.1px', lineHeight: 1.2 }}>
               {category ? 'Edit Category' : 'Create New Category'}
             </h3>
           </div>
@@ -128,8 +128,8 @@ export default function CategoryFormModal({ category, token, onSave, onClose }) 
               border: 'none', 
               color: '#FFFFFF', 
               cursor: 'pointer',
-              width: '26px',
-              height: '26px',
+              width: '28px',
+              height: '28px',
               borderRadius: '50%',
               display: 'flex',
               alignItems: 'center',
@@ -137,22 +137,22 @@ export default function CategoryFormModal({ category, token, onSave, onClose }) 
               transition: 'background-color 0.2s'
             }}
           >
-            <X size={15} />
+            <X size={14} />
           </button>
         </div>
 
         {/* Form */}
-        <form onSubmit={handleSubmit} className="cat-modal-body-form" style={{ padding: '16px 18px', overflowY: 'auto', flex: 1, margin: 0 }}>
+        <form onSubmit={handleSubmit} className="cat-modal-body-form" style={{ padding: '14px 16px', overflowY: 'auto', flex: 1, margin: 0 }}>
           {error && (
             <div style={{
               background: '#FEE2E2',
               border: '1px solid #FCA5A5',
               color: '#991B1B',
-              padding: '8px 12px',
-              borderRadius: '8px',
-              fontSize: '0.78rem',
+              padding: '7px 10px',
+              borderRadius: '7px',
+              fontSize: '0.74rem',
               fontWeight: 600,
-              marginBottom: '12px',
+              marginBottom: '10px',
               display: 'flex',
               alignItems: 'center',
               gap: '6px'
@@ -162,10 +162,10 @@ export default function CategoryFormModal({ category, token, onSave, onClose }) 
             </div>
           )}
 
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '11px' }}>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
             {/* 1. Category Name English */}
             <div>
-              <label style={{ display: 'block', fontSize: '0.74rem', fontWeight: 800, color: '#334155', marginBottom: '4px' }}>
+              <label style={{ display: 'block', fontSize: '0.72rem', fontWeight: 700, color: '#334155', marginBottom: '4px' }}>
                 Category Name (English) *
               </label>
               <input
@@ -176,13 +176,14 @@ export default function CategoryFormModal({ category, token, onSave, onClose }) 
                 placeholder="e.g. Pure Desi Ghee Sweets"
                 style={{
                   width: '100%',
-                  padding: '9px 12px',
+                  padding: '8px 11px',
                   borderRadius: '8px',
                   border: '1.5px solid #CBD5E1',
-                  fontSize: '0.86rem',
+                  fontSize: '0.82rem',
                   outline: 'none',
                   boxSizing: 'border-box',
-                  color: '#0F172A'
+                  color: '#0F172A',
+                  lineHeight: 1.35
                 }}
                 onFocus={(e) => e.target.style.borderColor = '#0A2315'}
                 onBlur={(e) => e.target.style.borderColor = '#CBD5E1'}
@@ -191,7 +192,7 @@ export default function CategoryFormModal({ category, token, onSave, onClose }) 
 
             {/* 2. Category Name Hindi */}
             <div>
-              <label style={{ display: 'flex', alignItems: 'center', gap: '4px', fontSize: '0.74rem', fontWeight: 800, color: '#334155', marginBottom: '4px' }}>
+              <label style={{ display: 'flex', alignItems: 'center', gap: '4px', fontSize: '0.72rem', fontWeight: 700, color: '#334155', marginBottom: '4px' }}>
                 <Globe size={11} color="#64748B" />
                 Category Name in Hindi (हिंदी नाम)
               </label>
@@ -202,13 +203,14 @@ export default function CategoryFormModal({ category, token, onSave, onClose }) 
                 placeholder="उदा. शुद्ध देसी घी की मिठाइयां"
                 style={{
                   width: '100%',
-                  padding: '9px 12px',
+                  padding: '8px 11px',
                   borderRadius: '8px',
                   border: '1.5px solid #CBD5E1',
-                  fontSize: '0.86rem',
+                  fontSize: '0.82rem',
                   outline: 'none',
                   boxSizing: 'border-box',
-                  color: '#0F172A'
+                  color: '#0F172A',
+                  lineHeight: 1.35
                 }}
                 onFocus={(e) => e.target.style.borderColor = '#0A2315'}
                 onBlur={(e) => e.target.style.borderColor = '#CBD5E1'}
@@ -217,7 +219,7 @@ export default function CategoryFormModal({ category, token, onSave, onClose }) 
 
             {/* 3. Display Sort Order */}
             <div>
-              <label style={{ display: 'flex', alignItems: 'center', gap: '4px', fontSize: '0.74rem', fontWeight: 800, color: '#334155', marginBottom: '4px' }}>
+              <label style={{ display: 'flex', alignItems: 'center', gap: '4px', fontSize: '0.72rem', fontWeight: 700, color: '#334155', marginBottom: '4px' }}>
                 <ArrowUpDown size={11} color="#64748B" />
                 Display Sort Order
               </label>
@@ -228,13 +230,14 @@ export default function CategoryFormModal({ category, token, onSave, onClose }) 
                 placeholder="0"
                 style={{
                   width: '100%',
-                  padding: '9px 12px',
+                  padding: '8px 11px',
                   borderRadius: '8px',
                   border: '1.5px solid #CBD5E1',
-                  fontSize: '0.86rem',
+                  fontSize: '0.82rem',
                   outline: 'none',
                   boxSizing: 'border-box',
-                  color: '#0F172A'
+                  color: '#0F172A',
+                  lineHeight: 1.35
                 }}
                 onFocus={(e) => e.target.style.borderColor = '#0A2315'}
                 onBlur={(e) => e.target.style.borderColor = '#CBD5E1'}
@@ -243,7 +246,7 @@ export default function CategoryFormModal({ category, token, onSave, onClose }) 
 
             {/* 4. Category Image Upload */}
             <div>
-              <label style={{ display: 'block', fontSize: '0.74rem', fontWeight: 800, color: '#334155', marginBottom: '4px' }}>
+              <label style={{ display: 'block', fontSize: '0.72rem', fontWeight: 700, color: '#334155', marginBottom: '4px' }}>
                 Category Image (Optional)
               </label>
               
@@ -252,14 +255,14 @@ export default function CategoryFormModal({ category, token, onSave, onClose }) 
                 gap: '10px', 
                 alignItems: 'center', 
                 background: '#F8FAFC',
-                padding: '8px 10px',
-                borderRadius: '10px',
+                padding: '7px 10px',
+                borderRadius: '8px',
                 border: '1px dashed #CBD5E1'
               }}>
                 <div style={{
-                  width: '42px',
-                  height: '42px',
-                  borderRadius: '8px',
+                  width: '48px',
+                  height: '48px',
+                  borderRadius: '7px',
                   overflow: 'hidden',
                   display: 'flex',
                   alignItems: 'center',
@@ -281,7 +284,7 @@ export default function CategoryFormModal({ category, token, onSave, onClose }) 
                 </div>
 
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '3px', flex: 1 }}>
-                  <div style={{ display: 'flex', gap: '6px' }}>
+                  <div style={{ display: 'flex', gap: '6px', alignItems: 'center', flexWrap: 'wrap' }}>
                     <label style={{
                       cursor: 'pointer',
                       display: 'inline-flex',
@@ -289,10 +292,12 @@ export default function CategoryFormModal({ category, token, onSave, onClose }) 
                       gap: '4px',
                       background: '#0A2315',
                       color: '#FFFFFF',
-                      padding: '5px 10px',
+                      padding: '6px 12px',
                       borderRadius: '6px',
                       fontSize: '0.72rem',
-                      fontWeight: 700
+                      fontWeight: 650,
+                      minWidth: '100px',
+                      justifyContent: 'center'
                     }}>
                       <Upload size={11} color="#D4AF37" />
                       <span>{uploading ? 'Uploading...' : 'Upload Image'}</span>
@@ -310,7 +315,7 @@ export default function CategoryFormModal({ category, token, onSave, onClose }) 
                           padding: '5px 8px',
                           borderRadius: '6px',
                           fontSize: '0.70rem',
-                          fontWeight: 700,
+                          fontWeight: 650,
                           cursor: 'pointer'
                         }}
                       >
@@ -321,7 +326,7 @@ export default function CategoryFormModal({ category, token, onSave, onClose }) 
                   <button
                     type="button"
                     onClick={() => setShowUrlInput(!showUrlInput)}
-                    style={{ background: 'none', border: 'none', color: '#64748B', fontSize: '0.66rem', cursor: 'pointer', padding: 0, textAlign: 'left' }}
+                    style={{ background: 'none', border: 'none', color: '#64748B', fontSize: '0.68rem', cursor: 'pointer', padding: 0, textAlign: 'left', marginTop: '2px' }}
                   >
                     {showUrlInput ? 'Hide URL input' : 'Or paste URL'}
                   </button>
@@ -342,7 +347,8 @@ export default function CategoryFormModal({ category, token, onSave, onClose }) 
                     fontSize: '0.76rem',
                     outline: 'none',
                     boxSizing: 'border-box',
-                    marginTop: '6px'
+                    marginTop: '6px',
+                    color: '#0F172A'
                   }}
                 />
               )}
@@ -356,12 +362,13 @@ export default function CategoryFormModal({ category, token, onSave, onClose }) 
               onClick={onClose}
               style={{
                 padding: '8px 14px',
+                height: '42px',
                 borderRadius: '8px',
                 border: '1.5px solid #CBD5E1',
                 background: '#FFFFFF',
                 color: '#475569',
-                fontSize: '0.78rem',
-                fontWeight: 700,
+                fontSize: '0.74rem',
+                fontWeight: 650,
                 cursor: 'pointer'
               }}
             >
@@ -371,14 +378,15 @@ export default function CategoryFormModal({ category, token, onSave, onClose }) 
               type="submit"
               disabled={saving || uploading}
               style={{
-                padding: '8px 18px',
+                padding: '8px 16px',
+                height: '42px',
                 borderRadius: '8px',
                 background: 'linear-gradient(135deg, #0A2315 0%, #143A24 100%)',
                 color: '#FFFFFF',
                 border: '1px solid #D4AF37',
-                fontSize: '0.80rem',
-                fontWeight: 800,
-                boxShadow: '0 2px 8px rgba(10, 35, 21, 0.2)',
+                fontSize: '0.76rem',
+                fontWeight: 700,
+                boxShadow: '0 2px 6px rgba(10, 35, 21, 0.18)',
                 cursor: (saving || uploading) ? 'not-allowed' : 'pointer'
               }}
             >
