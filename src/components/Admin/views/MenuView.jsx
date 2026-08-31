@@ -2632,7 +2632,7 @@ export default function MenuView({
                 {[
                   { label: '+ Add Dish', icon: Plus, color: '#16A34A', onClick: onOpenAddDish },
                   { label: 'Bulk Upload', icon: UploadCloud, color: '#0284C7', onClick: () => setShowBulkUploadModal(true) },
-                  { label: 'Manage Categories', icon: FolderPlus, color: '#D97706', onClick: onOpenAddCategory },
+                  { label: 'Manage Categories', icon: FolderPlus, color: '#D97706', onClick: () => setActiveSubTab && setActiveSubTab('categories') },
                   { label: 'Create Combo', icon: Package, color: '#9333EA', onClick: onOpenAddCombo },
                   { 
                     label: 'View Menu', 
