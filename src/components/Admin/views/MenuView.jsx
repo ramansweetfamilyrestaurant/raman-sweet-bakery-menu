@@ -467,268 +467,6 @@ export default function MenuView({
       fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif',
       paddingBottom: '160px'
     }}>
-      <style>{`
-        .no-scrollbar::-webkit-scrollbar { display: none; }
-        .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
-        
-        /* 3-Column Master Workspace Grid on Desktop */
-        .master-workspace-layout {
-          display: grid;
-          grid-template-columns: 220px minmax(0, 1fr) 250px;
-          gap: 18px;
-          align-items: start;
-          width: 100%;
-          max-width: 100%;
-          min-width: 0;
-          box-sizing: border-box;
-        }
-
-        .center-dish-grid {
-          display: grid;
-          grid-template-columns: repeat(4, minmax(0, 1fr));
-          gap: 14px;
-          width: 100%;
-          max-width: 100%;
-          min-width: 0;
-          box-sizing: border-box;
-        }
-
-        .mobile-table-scroll-wrap {
-          overflow-x: auto !important;
-          -webkit-overflow-scrolling: touch !important;
-          width: 100% !important;
-          max-width: 100% !important;
-          box-sizing: border-box !important;
-        }
-
-        .center-catalog-column {
-          width: 100% !important;
-          max-width: 100% !important;
-          min-width: 0 !important;
-          box-sizing: border-box !important;
-        }
-
-        .mobile-list-view {
-          display: flex !important;
-          flex-direction: column !important;
-          gap: 8px !important;
-          width: 100% !important;
-          max-width: 100% !important;
-          min-width: 0 !important;
-          box-sizing: border-box !important;
-        }
-
-        .mobile-dish-list-card {
-          width: 100% !important;
-          max-width: 100% !important;
-          min-width: 0 !important;
-          box-sizing: border-box !important;
-        }
-
-        @media (max-width: 1440px) {
-          .center-dish-grid {
-            grid-template-columns: repeat(3, minmax(0, 1fr)) !important;
-          }
-        }
-
-        @media (max-width: 1200px) {
-          .master-workspace-layout {
-            grid-template-columns: minmax(0, 1fr) 250px !important;
-          }
-          .left-promo-banner {
-            display: none !important;
-          }
-          .center-dish-grid {
-            grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
-          }
-        }
-
-        @media (max-width: 990px) {
-          .master-workspace-layout {
-            display: flex !important;
-            flex-direction: column !important;
-            grid-template-columns: 100% !important;
-            width: 100% !important;
-            max-width: 100% !important;
-            min-width: 0 !important;
-            gap: 12px !important;
-          }
-          .left-promo-banner {
-            display: none !important;
-          }
-          .right-widgets-column {
-            display: none !important;
-          }
-          .center-catalog-column {
-            width: 100% !important;
-            max-width: 100% !important;
-            min-width: 0 !important;
-          }
-          .center-dish-grid {
-            grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
-          }
-        }
-
-        @media (max-width: 768px) {
-          .desktop-only-header {
-            display: none !important;
-          }
-          .mobile-only-hero {
-            display: block !important;
-            padding: 14px 12px !important;
-            border-radius: 16px !important;
-            box-sizing: border-box !important;
-            width: 100% !important;
-            max-width: 100% !important;
-          }
-          .desktop-summary-cards {
-            display: none !important;
-          }
-          .desktop-table-view {
-            display: none !important;
-          }
-          .mobile-list-view {
-            display: flex !important;
-            flex-direction: column !important;
-            gap: 8px !important;
-            width: 100% !important;
-            max-width: 100% !important;
-            min-width: 0 !important;
-            box-sizing: border-box !important;
-          }
-          .mobile-dish-list-card {
-            width: 100% !important;
-            max-width: 100% !important;
-            min-width: 0 !important;
-            box-sizing: border-box !important;
-          }
-          .mobile-floating-add-btn {
-            display: none !important;
-          }
-          .center-dish-grid {
-            grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
-            gap: 8px !important;
-            width: 100% !important;
-            max-width: 100% !important;
-            min-width: 0 !important;
-            box-sizing: border-box !important;
-          }
-          .dish-grid-card {
-            padding: 7px 6px !important;
-            border-radius: 12px !important;
-            min-width: 0 !important;
-            max-width: 100% !important;
-            width: 100% !important;
-            box-sizing: border-box !important;
-          }
-          .dish-grid-img-wrap {
-            aspect-ratio: 4 / 3 !important;
-            height: auto !important;
-            max-height: 110px !important;
-            border-radius: 9px !important;
-            margin-bottom: 6px !important;
-          }
-          .dish-grid-card h4 {
-            font-size: 0.78rem !important;
-            line-height: 1.25 !important;
-            word-break: break-word !important;
-            overflow: hidden !important;
-            display: -webkit-box !important;
-            -webkit-line-clamp: 2 !important;
-            -webkit-box-orient: vertical !important;
-          }
-          .header-cursive-quote {
-            display: none !important;
-          }
-        }
-
-        @media (max-width: 480px) {
-          .center-dish-grid {
-            grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
-            gap: 6px !important;
-          }
-          .dish-grid-card {
-            padding: 6px 5px !important;
-          }
-          .dish-grid-img-wrap {
-            aspect-ratio: 4 / 3 !important;
-            max-height: 98px !important;
-          }
-          .category-square-tile {
-            width: 68px !important;
-            min-width: 68px !important;
-            height: 74px !important;
-            padding: 4px !important;
-          }
-          .category-square-tile span {
-            font-size: 0.68rem !important;
-          }
-          .mobile-only-hero {
-            padding: 12px 10px !important;
-          }
-        }
-
-        @media (max-width: 360px) {
-          .center-dish-grid {
-            gap: 5px !important;
-          }
-          .dish-grid-card {
-            padding: 5px 4px !important;
-          }
-          .category-square-tile {
-            width: 64px !important;
-            min-width: 64px !important;
-            height: 70px !important;
-            padding: 3px !important;
-          }
-          .mobile-only-hero {
-            padding: 10px 8px !important;
-          }
-        }
-
-        @media (min-width: 769px) {
-          .mobile-only-hero {
-            display: none !important;
-          }
-          .desktop-table-view {
-            display: block !important;
-          }
-          .mobile-list-view {
-            display: none !important;
-          }
-          .mobile-dish-list-container {
-            display: none !important;
-          }
-          .mobile-floating-add-btn {
-            display: none !important;
-          }
-        }
-
-        .dish-grid-card {
-          transition: transform 0.16s ease, box-shadow 0.16s ease, border-color 0.16s ease;
-        }
-        .dish-grid-card:hover {
-          transform: translateY(-2px);
-          box-shadow: 0 8px 22px rgba(0,0,0,0.06) !important;
-          border-color: #CBD5E1 !important;
-        }
-
-        .category-square-tile {
-          transition: all 0.16s cubic-bezier(0.16, 1, 0.3, 1);
-        }
-        .category-square-tile:hover {
-          transform: translateY(-2px);
-          box-shadow: 0 4px 12px rgba(0,0,0,0.06);
-        }
-
-        .widget-action-row {
-          transition: background 0.15s ease;
-        }
-        .widget-action-row:hover {
-          background-color: #F8FAFC;
-        }
-      `}</style>
-
       {/* ========================================================
           1. DESKTOP PAGE HEADER ROW (WITH CURSIVE QUOTE & SPLIT CTA)
          ======================================================== */}
@@ -1723,7 +1461,7 @@ export default function MenuView({
                 src="https://images.unsplash.com/photo-1546069901-ba9599a7e63c?auto=format&fit=crop&w=400&q=80"
                 alt="Appetizing Food Ingredients"
                 style={{ width: '100%', height: '100%', objectFit: 'cover' }}
-                onError={(e) => { e.currentTarget.src = '/images/default-dish.webp'; }}
+                onError={(e) => { e.currentTarget.onerror = null; e.currentTarget.src = '/images/default-dish.webp'; }}
               />
             </div>
           </div>
@@ -1974,7 +1712,7 @@ export default function MenuView({
                               src={getDishImageUrl(dish.image || dish.image_url)}
                               alt={dish.name}
                               style={{ width: '100%', height: '100%', objectFit: 'cover' }}
-                              onError={(e) => { e.currentTarget.src = '/images/default-dish.webp'; }}
+                              onError={(e) => { e.currentTarget.onerror = null; e.currentTarget.src = '/images/default-dish.webp'; }}
                             />
                           </div>
 
@@ -2302,7 +2040,7 @@ export default function MenuView({
                                 src={getDishImageUrl(dish.image || dish.image_url)}
                                 alt={dish.name}
                                 style={{ width: '40px', height: '40px', borderRadius: '8px', objectFit: 'cover', border: '1px solid #E2E8F0' }}
-                                onError={(e) => { e.currentTarget.src = '/images/default-dish.webp'; }}
+                                onError={(e) => { e.currentTarget.onerror = null; e.currentTarget.src = '/images/default-dish.webp'; }}
                               />
                               <div>
                                 <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
@@ -2527,7 +2265,7 @@ export default function MenuView({
                               src={getDishImageUrl(dish.image || dish.image_url)}
                               alt={dish.name}
                               style={{ width: '100%', height: '100%', objectFit: 'cover' }}
-                              onError={(e) => { e.currentTarget.src = '/images/default-dish.webp'; }}
+                              onError={(e) => { e.currentTarget.onerror = null; e.currentTarget.src = '/images/default-dish.webp'; }}
                             />
                             {/* Dietary dot badge overlay on image */}
                             <span style={{
