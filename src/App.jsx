@@ -3546,6 +3546,7 @@ export default function App() {
           categories={categories}
           token={adminToken}
           modifiersEnabled={info?.modifiers_enabled !== false}
+          currencySymbol={getCurrencySymbol(info?.currency_symbol)}
           onSave={handleSaveInlineDish}
           onClose={() => setOwnerDishModalData(null)}
         />

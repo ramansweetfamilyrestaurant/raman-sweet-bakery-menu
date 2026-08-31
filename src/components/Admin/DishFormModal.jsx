@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { X, Upload, Image as ImageIcon, Sparkles, AlertCircle, Trash2, ArrowUpDown, Plus, Minus, Tag, Globe, Sliders } from 'lucide-react';
+import { X, Upload, Image as ImageIcon, Sparkles, AlertCircle, Trash2, ArrowUpDown, Plus, Minus, Tag, Globe, Sliders, Flame } from 'lucide-react';
 import { uploadImage, deleteImageApi } from '../../api/client';
 import { getDishImageUrl } from '../../utils/imageHelper';
 
@@ -25,9 +25,9 @@ export default function DishFormModal({ dish, categories, token, modifiersEnable
   const [nameHi, setNameHi] = useState(dish?.name_hi || '');
   const [description, setDescription] = useState(dish?.description || '');
   const [descriptionHi, setDescriptionHi] = useState(dish?.description_hi || '');
-  const [price, setPrice] = useState(dish?.price || '');
-  const [priceHalf, setPriceHalf] = useState(dish?.price_half || '');
-  const [hasHalf, setHasHalf] = useState(Boolean(dish?.price_half && modifiersEnabled !== false));
+  const [price, setPrice] = useState(dish?.price !== undefined && dish?.price !== null ? dish.price : '');
+  const [priceHalf, setPriceHalf] = useState(dish?.price_half !== undefined && dish?.price_half !== null ? dish.price_half : '');
+  const [hasHalf, setHasHalf] = useState(Boolean(dish?.price_half !== undefined && dish?.price_half !== null && dish?.price_half !== '' && modifiersEnabled !== false));
   const [portionHalfLabel, setPortionHalfLabel] = useState(dish?.portion_half_label || 'Half Portion');
   const [portionFullLabel, setPortionFullLabel] = useState(dish?.portion_full_label || 'Full Portion');
   
@@ -55,9 +55,21 @@ export default function DishFormModal({ dish, categories, token, modifiersEnable
       : true
   );
   
+  const [tempUploadedImages, setTempUploadedImages] = useState([]);
   const [uploading, setUploading] = useState(false);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
+
+  const handleCancelClose = () => {
+    if (tempUploadedImages.length > 0) {
+      tempUploadedImages.forEach(img => {
+        if (img && img !== dish?.image) {
+          deleteImageApi(img, token).catch(() => {});
+        }
+      });
+    }
+    onClose();
+  };
 
   const handleAddModifier = () => {
     setModifiers([...modifiers, { name: '', price: '' }]);
@@ -85,6 +97,7 @@ export default function DishFormModal({ dish, categories, token, modifiersEnable
       const res = await uploadImage(file, token, 'dishes');
       const resolvedRes = resolveImageUrl(res);
       setImage(resolvedRes);
+      setTempUploadedImages(prev => [...prev, resolvedRes]);
       // Delete old temp image if replaced before saving
       if (oldTempImage && oldTempImage !== dish?.image) {
         deleteImageApi(oldTempImage, token).catch(() => {});
@@ -99,7 +112,7 @@ export default function DishFormModal({ dish, categories, token, modifiersEnable
   const handleSubmit = async (e) => {
     e.preventDefault();
     const trimmedName = name.trim();
-    if (!trimmedName || !price || !categoryId) {
+    if (!trimmedName || price === '' || price === null || categoryId === '' || categoryId === null) {
       setError('Category, Name, and Full Price are required.');
       return;
     }
@@ -110,7 +123,7 @@ export default function DishFormModal({ dish, categories, token, modifiersEnable
     }
 
     if (hasHalf && modifiersEnabled !== false) {
-      if (!priceHalf) {
+      if (priceHalf === '' || priceHalf === null) {
         setError('Half price is required when half portion is enabled.');
         return;
       }
@@ -151,7 +164,7 @@ export default function DishFormModal({ dish, categories, token, modifiersEnable
         description_hi: descriptionHi.trim(),
         image,
         price: Number(price),
-        price_half: (modifiersEnabled !== false && hasHalf && priceHalf) ? Number(priceHalf) : null,
+        price_half: (modifiersEnabled !== false && hasHalf && priceHalf !== '' && priceHalf !== null) ? Number(priceHalf) : null,
         portion,
         portion_half_label: (modifiersEnabled !== false && hasHalf) ? (portionHalfLabel || 'Half Portion') : '',
         portion_full_label: (modifiersEnabled !== false && hasHalf) ? (portionFullLabel || 'Full Portion') : '',
@@ -162,6 +175,7 @@ export default function DishFormModal({ dish, categories, token, modifiersEnable
         type,
         available
       });
+      setTempUploadedImages([]);
     } catch (err) {
       setError(err.message || 'Failed to save dish');
       setSaving(false);
@@ -180,9 +194,10 @@ export default function DishFormModal({ dish, categories, token, modifiersEnable
       justifyContent: 'center',
       padding: '16px',
       boxSizing: 'border-box'
-    }} onClick={onClose}>
+    }} onClick={handleCancelClose}>
       <div 
         onClick={(e) => e.stopPropagation()}
+        className="dish-modal-container"
         style={{
           background: '#FFFFFF',
           borderRadius: '24px',
@@ -201,6 +216,49 @@ export default function DishFormModal({ dish, categories, token, modifiersEnable
           @keyframes modalSlideIn {
             from { transform: translateY(12px); opacity: 0; }
             to { transform: translateY(0); opacity: 1; }
+          }
+          @media (max-width: 600px) {
+            .dish-modal-container {
+              max-width: 95% !important;
+              border-radius: 16px !important;
+              max-height: 95vh !important;
+            }
+            .dish-modal-body-form {
+              padding: 14px 16px !important;
+            }
+            .dish-modal-body-form input,
+            .dish-modal-body-form select,
+            .dish-modal-body-form textarea {
+              font-size: 16px !important;
+            }
+            .dish-form-grid {
+              grid-template-columns: 1fr !important;
+              gap: 12px !important;
+            }
+            .dish-addon-row {
+              flex-direction: column !important;
+              align-items: stretch !important;
+              gap: 6px !important;
+              padding: 10px !important;
+            }
+            .dish-addon-name-input {
+              width: 100% !important;
+              flex: none !important;
+            }
+            .dish-addon-price-group {
+              width: 100% !important;
+              flex: none !important;
+            }
+            .dish-addon-delete-btn {
+              align-self: flex-end !important;
+              width: 100% !important;
+              height: 32px !important;
+              margin-top: 2px !important;
+            }
+            .dish-input-field {
+              padding: 9px 12px !important;
+              font-size: 16px !important;
+            }
           }
         `}} />
 
@@ -221,7 +279,7 @@ export default function DishFormModal({ dish, categories, token, modifiersEnable
             </h3>
           </div>
           <button 
-            onClick={onClose} 
+            onClick={handleCancelClose} 
             style={{ 
               background: 'rgba(255, 255, 255, 0.1)', 
               border: 'none', 
@@ -241,7 +299,7 @@ export default function DishFormModal({ dish, categories, token, modifiersEnable
         </div>
 
         {/* Form Body */}
-        <form onSubmit={handleSubmit} style={{ padding: '22px 24px', overflowY: 'auto', margin: 0 }}>
+        <form onSubmit={handleSubmit} className="dish-modal-body-form" style={{ padding: '22px 24px', overflowY: 'auto', margin: 0 }}>
           {error && (
             <div style={{
               background: '#FEE2E2',
@@ -793,6 +851,62 @@ export default function DishFormModal({ dish, categories, token, modifiersEnable
             </div>
           </div>
 
+          {/* Taste Profile / Spiciness Level */}
+          <div style={{ marginBottom: '14px' }}>
+            <label style={{ display: 'flex', alignItems: 'center', gap: '5px', fontSize: '0.78rem', fontWeight: 800, color: '#334155', marginBottom: '6px' }}>
+              <Flame size={12} color="#EA580C" />
+              Taste Profile / Spiciness (Optional)
+            </label>
+            <input
+              type="text"
+              value={tasteProfile}
+              onChange={(e) => setTasteProfile(e.target.value)}
+              placeholder="e.g. Mild, Medium Spicy, Rich Gravy, Sweet"
+              style={{
+                width: '100%',
+                padding: '10px 12px',
+                borderRadius: '10px',
+                border: '1.5px solid #E2E8F0',
+                fontSize: '0.82rem',
+                outline: 'none',
+                boxSizing: 'border-box',
+                color: '#0F172A'
+              }}
+              onFocus={(e) => e.target.style.borderColor = '#0A2315'}
+              onBlur={(e) => e.target.style.borderColor = '#E2E8F0'}
+            />
+            <div style={{ display: 'flex', gap: '6px', marginTop: '6px', flexWrap: 'wrap' }}>
+              {[
+                { label: '🌶️ Mild', val: 'Mild' },
+                { label: '🌶️🌶️ Medium Spicy', val: 'Medium Spicy' },
+                { label: '🔥 Extra Spicy', val: 'Extra Spicy' },
+                { label: '🍬 Sweet', val: 'Sweet' },
+                { label: '🌿 Tangy', val: 'Tangy' }
+              ].map(opt => {
+                const isActive = tasteProfile === opt.val;
+                return (
+                  <button
+                    key={opt.val}
+                    type="button"
+                    onClick={() => setTasteProfile(isActive ? '' : opt.val)}
+                    style={{
+                      fontSize: '0.70rem',
+                      fontWeight: 700,
+                      padding: '4px 10px',
+                      borderRadius: '100px',
+                      background: isActive ? '#FFF7ED' : '#F8FAFC',
+                      color: isActive ? '#EA580C' : '#475569',
+                      border: `1px solid ${isActive ? '#FDBA74' : '#E2E8F0'}`,
+                      cursor: 'pointer'
+                    }}
+                  >
+                    {opt.label}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+
           {/* Dish Image */}
           <div style={{ marginBottom: '18px' }}>
             <label style={{ display: 'block', fontSize: '0.78rem', fontWeight: 800, color: '#334155', marginBottom: '6px' }}>
@@ -926,7 +1040,7 @@ export default function DishFormModal({ dish, categories, token, modifiersEnable
           <div style={{ display: 'flex', gap: '10px', justifyContent: 'flex-end', borderTop: '1px solid #F1F5F9', paddingTop: '16px' }}>
             <button
               type="button"
-              onClick={onClose}
+              onClick={handleCancelClose}
               style={{
                 padding: '10px 18px',
                 borderRadius: '100px',
