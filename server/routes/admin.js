@@ -1092,7 +1092,7 @@ router.post('/dishes', authenticateToken, requireActiveSubscription, async (req,
     const processedImage = await processExternalImageUrl(image, targetId, 'dishes');
     const modifiersVal = Array.isArray(req.body.modifiers) ? JSON.stringify(req.body.modifiers) : (typeof req.body.modifiers === 'string' ? req.body.modifiers : '[]');
 
-    const availVal = available === false ? 0 : 1;
+    const availBool = available !== false && available !== 0 && available !== 'false' && available !== '0';
     const result = await query(
       `INSERT INTO dishes (
         restaurant_id, category_id, name, name_hi, description, description_hi, image, price, price_half, 
@@ -1100,9 +1100,18 @@ router.post('/dishes', authenticateToken, requireActiveSubscription, async (req,
       ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18) RETURNING id`,
       [
         targetId, category_id, name, name_hi || '', description || '', description_hi || '', processedImage || '', price, price_half || null,
-        portion || '', portion_half_label || '', portion_full_label || '', badge || '', ingredients || '', taste_profile || '', type || 'veg', availVal, modifiersVal
+        portion || '', portion_half_label || '', portion_full_label || '', badge || '', ingredients || '', taste_profile || '', type || 'veg', availBool, modifiersVal
       ]
     );
+
+    // Invalidate cache
+    try {
+      const slugRows = await query('SELECT slug FROM restaurants WHERE id = $1', [targetId]);
+      if (slugRows && slugRows.length > 0 && slugRows[0].slug) {
+        clearMenuBundleCache(slugRows[0].slug);
+      }
+    } catch (_) {}
+
     res.json({ success: true, id: result[0]?.id || result.lastInsertRowid });
   } catch (err) {
     console.error('Create dish error:', err);
@@ -1144,7 +1153,7 @@ router.put('/dishes/:id', authenticateToken, requireActiveSubscription, async (r
       console.warn('Notice cleaning up replaced dish image:', cleanErr.message);
     }
 
-    const availVal = available ? 1 : 0;
+    const availBool = available !== false && available !== 0 && available !== 'false' && available !== '0';
     await query(
       `UPDATE dishes 
        SET category_id = $1, name = $2, name_hi = $3, description = $4, description_hi = $5, image = $6, price = $7, price_half = $8,
@@ -1154,9 +1163,18 @@ router.put('/dishes/:id', authenticateToken, requireActiveSubscription, async (r
       [
         category_id, name, name_hi || '', description || '', description_hi || '', processedImage, price, price_half || null,
         portion || '', portion_half_label || '', portion_full_label || '', badge || '',
-        ingredients || '', taste_profile || '', type || 'veg', availVal, modifiersVal, id, targetId
+        ingredients || '', taste_profile || '', type || 'veg', availBool, modifiersVal, id, targetId
       ]
     );
+
+    // Invalidate cache
+    try {
+      const slugRows = await query('SELECT slug FROM restaurants WHERE id = $1', [targetId]);
+      if (slugRows && slugRows.length > 0 && slugRows[0].slug) {
+        clearMenuBundleCache(slugRows[0].slug);
+      }
+    } catch (_) {}
+
     res.json({ success: true });
   } catch (err) {
     console.error('Update dish error:', err);
@@ -1172,9 +1190,18 @@ router.patch('/dishes/:id/toggle', authenticateToken, requireActiveSubscription,
     }
     const { id } = req.params;
     const { available } = req.body;
-    const availVal = available ? 1 : 0;
-    await query('UPDATE dishes SET available = $1 WHERE id = $2 AND restaurant_id = $3', [availVal, id, targetId]);
-    res.json({ success: true });
+    const availBool = (available === true || available === 1 || available === 'true' || available === '1');
+    await query('UPDATE dishes SET available = $1 WHERE id = $2 AND restaurant_id = $3', [availBool, id, targetId]);
+    
+    // Invalidate cache so changes reflect instantly
+    try {
+      const slugRows = await query('SELECT slug FROM restaurants WHERE id = $1', [targetId]);
+      if (slugRows && slugRows.length > 0 && slugRows[0].slug) {
+        clearMenuBundleCache(slugRows[0].slug);
+      }
+    } catch (_) {}
+
+    res.json({ success: true, available: availBool });
   } catch (err) {
     console.error('Toggle dish error:', err);
     res.status(500).json({ error: 'Failed to toggle availability' });
@@ -1188,9 +1215,15 @@ router.patch('/dishes/:id/price', authenticateToken, requireActiveSubscription, 
       return res.status(401).json({ error: 'Restaurant identity is missing from authentication context' });
     }
     const { id } = req.params;
-    const { price } = req.body;
-    await query('UPDATE dishes SET price = $1 WHERE id = $2 AND restaurant_id = $3', [price, id, targetId]);
-    res.json({ success: true });
+    const { price, price_half } = req.body;
+    const numPrice = Number(price);
+    const numPriceHalf = (price_half !== undefined && price_half !== null && price_half !== '') ? Number(price_half) : null;
+
+    await query(
+      'UPDATE dishes SET price = $1, price_half = $2 WHERE id = $3 AND restaurant_id = $4',
+      [numPrice, numPriceHalf, id, targetId]
+    );
+    res.json({ success: true, price: numPrice, price_half: numPriceHalf });
   } catch (err) {
     console.error('Update price error:', err);
     res.status(500).json({ error: 'Failed to update price' });
@@ -3992,9 +4025,23 @@ router.patch('/combos/:id/toggle', authenticateToken, requireActiveSubscription,
       return res.status(401).json({ error: 'Restaurant identity is missing from authentication context' });
     }
     const { available } = req.body;
-    await query('UPDATE combos SET available = $1 WHERE id = $2 AND restaurant_id = $3', [available ? 1 : 0, req.params.id, targetId]);
-    res.json({ message: 'Combo availability updated' });
+    const availBool = (available === true || available === 1 || available === 'true' || available === '1');
+    await query('UPDATE combos SET available = $1 WHERE id = $2 AND restaurant_id = $3', [availBool, req.params.id, targetId]);
+    
+    // Invalidate cache
+    try {
+      const slugRows = await query('SELECT slug FROM restaurants WHERE id = $1', [targetId]);
+      if (slugRows && slugRows.length > 0 && slugRows[0].slug) {
+        clearMenuBundleCache(slugRows[0].slug);
+      }
+    } catch (_) {}
+
+    res.json({ success: true, message: 'Combo availability updated', available: availBool });
   } catch (err) {
+    console.error('Toggle combo error:', err);
+    res.status(500).json({ error: 'Failed to toggle combo' });
+  }
+});
     console.error('Toggle combo error:', err);
     res.status(500).json({ error: 'Failed to toggle combo' });
   }

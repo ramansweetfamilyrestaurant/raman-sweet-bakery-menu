@@ -126,15 +126,33 @@ export default function MenuView({
   const filteredDishes = useMemo(() => {
     let list = safeDishes.filter(d => {
       const q = (search || '').toLowerCase().trim();
-      const matchesSearch = !q || (d.name || '').toLowerCase().includes(q) || (d.description || '').toLowerCase().includes(q);
-      const matchesCat = selectedCatFilter === 'all' || String(d.category_id) === String(selectedCatFilter);
+      const matchesSearch = !q || 
+        (d.name || '').toLowerCase().includes(q) || 
+        (d.name_hi || '').toLowerCase().includes(q) || 
+        (d.description || '').toLowerCase().includes(q) || 
+        (d.description_hi || '').toLowerCase().includes(q) || 
+        (d.ingredients || '').toLowerCase().includes(q) ||
+        (d.badge || '').toLowerCase().includes(q);
+        
+      const matchesCat = selectedCatFilter === 'all' || 
+        String(d.category_id) === String(selectedCatFilter) ||
+        (d.category_name && d.category_name.toLowerCase() === (activeCategoryObj?.name || '').toLowerCase()) ||
+        (d.category && d.category.toLowerCase() === (activeCategoryObj?.name || '').toLowerCase());
       
       let matchesDiet = true;
       if (dietFilter === 'veg') matchesDiet = d.type === 'veg';
-      if (dietFilter === 'nonveg') matchesDiet = d.type === 'nonveg';
-      if (dietFilter === 'must_try') matchesDiet = Boolean(d.must_try);
-      if (dietFilter === 'available') matchesDiet = d.is_available !== false;
-      if (dietFilter === 'sold_out') matchesDiet = d.is_available === false;
+      if (dietFilter === 'nonveg') matchesDiet = d.type === 'nonveg' || d.type === 'egg';
+      if (dietFilter === 'must_try') {
+        matchesDiet = Boolean(d.must_try) || (typeof d.badge === 'string' && (
+          d.badge.toLowerCase().includes('must try') || 
+          d.badge.toLowerCase().includes('bestseller') || 
+          d.badge.toLowerCase().includes('special') ||
+          d.badge.toLowerCase().includes('popular') ||
+          d.badge.toLowerCase().includes('chef')
+        ));
+      }
+      if (dietFilter === 'available') matchesDiet = d.is_available !== false && d.available !== false && d.available !== 0;
+      if (dietFilter === 'sold_out') matchesDiet = d.is_available === false || d.available === false || d.available === 0;
 
       return matchesSearch && matchesCat && matchesDiet;
     });
@@ -146,11 +164,32 @@ export default function MenuView({
     } else if (sortBy === 'name_asc') {
       list.sort((a, b) => (a.name || '').localeCompare(b.name || ''));
     } else if (sortBy === 'instock_first') {
-      list.sort((a, b) => (b.is_available !== false ? 1 : 0) - (a.is_available !== false ? 1 : 0));
+      list.sort((a, b) => (b.is_available !== false && b.available !== false ? 1 : 0) - (a.is_available !== false && a.available !== false ? 1 : 0));
     }
 
     return list;
-  }, [safeDishes, search, selectedCatFilter, dietFilter, sortBy]);
+  }, [safeDishes, search, selectedCatFilter, dietFilter, sortBy, activeCategoryObj]);
+
+  // Filtered categories for Categories Workspace
+  const filteredCategories = useMemo(() => {
+    const q = (search || '').toLowerCase().trim();
+    if (!q) return safeCategories;
+    return safeCategories.filter(c => 
+      (c.name || '').toLowerCase().includes(q) || 
+      (c.name_hi || '').toLowerCase().includes(q)
+    );
+  }, [safeCategories, search]);
+
+  // Filtered combos for Combos Workspace
+  const filteredCombos = useMemo(() => {
+    const q = (search || '').toLowerCase().trim();
+    if (!q) return safeCombos;
+    return safeCombos.filter(c => 
+      (c.name || '').toLowerCase().includes(q) || 
+      (c.description || '').toLowerCase().includes(q) ||
+      (c.badge || '').toLowerCase().includes(q)
+    );
+  }, [safeCombos, search]);
 
   // Pagination calculation
   const totalItems = filteredDishes.length;
@@ -175,22 +214,29 @@ export default function MenuView({
     }
   };
 
-  // Helper for category food emojis
+  // Helper for category food emojis with comprehensive Indian & International coverage
   const getCategoryEmoji = (name = '') => {
     const n = name.toLowerCase();
-    if (n.includes('chaat') || n.includes('kachori')) return '🍲';
-    if (n.includes('snack') || n.includes('fries') || n.includes('pakora')) return '🍟';
-    if (n.includes('momo') || n.includes('dimsum')) return '🥟';
-    if (n.includes('chinese') || n.includes('noodle') || n.includes('manchurian')) return '🍜';
+    if (n.includes('pani puri') || n.includes('golgappa') || n.includes('golgapa') || n.includes('puchka')) return '🥣';
+    if (n.includes('chaat') || n.includes('kachori') || n.includes('papdi') || n.includes('bhel') || n.includes('tikki')) return '🍲';
+    if (n.includes('snack') || n.includes('fries') || n.includes('pakora') || n.includes('pakoda') || n.includes('samosa')) return '🍟';
+    if (n.includes('momo') || n.includes('dimsum') || n.includes('dumpling')) return '🥟';
+    if (n.includes('chinese') || n.includes('noodle') || n.includes('chowmein') || n.includes('manchurian') || n.includes('pasta')) return '🍜';
     if (n.includes('burger')) return '🍔';
-    if (n.includes('roll') || n.includes('wrap') || n.includes('kathi')) return '🌯';
+    if (n.includes('sandwich') || n.includes('toast') || n.includes('sub')) return '🥪';
+    if (n.includes('roll') || n.includes('wrap') || n.includes('kathi') || n.includes('frankie')) return '🌯';
     if (n.includes('pizza')) return '🍕';
     if (n.includes('paneer')) return '🧀';
-    if (n.includes('roti') || n.includes('naan') || n.includes('paratha') || n.includes('bread')) return '🫓';
-    if (n.includes('rice') || n.includes('biryani')) return '🍚';
-    if (n.includes('beverage') || n.includes('drink') || n.includes('shake') || n.includes('tea') || n.includes('coffee')) return '🥤';
-    if (n.includes('sweet') || n.includes('dessert') || n.includes('cake') || n.includes('ice cream')) return '🍰';
-    if (n.includes('south') || n.includes('dosa') || n.includes('idli')) return '🥞';
+    if (n.includes('dal') || n.includes('daal') || n.includes('tadka') || n.includes('makhani') || n.includes('soup')) return '🥣';
+    if (n.includes('rice') || n.includes('biryani') || n.includes('pulao') || n.includes('fried rice')) return '🍚';
+    if (n.includes('roti') || n.includes('naan') || n.includes('paratha') || n.includes('kulcha') || n.includes('bread') || n.includes('poori') || n.includes('puri') || n.includes('bhatura') || n.includes('bhature')) return '🫓';
+    if (n.includes('south') || n.includes('dosa') || n.includes('dosha') || n.includes('idli') || n.includes('vada') || n.includes('uttapam')) return '🥞';
+    if (n.includes('salad') || n.includes('raita') || n.includes('papad')) return '🥗';
+    if (n.includes('north') || n.includes('curry') || n.includes('gravy') || n.includes('sabzi') || n.includes('sabji') || n.includes('main course') || n.includes('thali')) return '🍛';
+    if (n.includes('beverage') || n.includes('drink') || n.includes('shake') || n.includes('tea') || n.includes('chai') || n.includes('coffee') || n.includes('juice') || n.includes('lassi') || n.includes('soda') || n.includes('mocktail')) return '🥤';
+    if (n.includes('sweet') || n.includes('dessert') || n.includes('cake') || n.includes('ice cream') || n.includes('mithai') || n.includes('gulab') || n.includes('rasgulla') || n.includes('jalebi') || n.includes('pastry') || n.includes('halwa')) return '🍰';
+    if (n.includes('breakfast') || n.includes('morning')) return '🍳';
+    if (n.includes('combo') || n.includes('meal') || n.includes('bundle')) return '🍱';
     return '🍽️';
   };
 
@@ -1104,7 +1150,11 @@ export default function MenuView({
 
           {/* Dynamic Category Tiles */}
           {safeCategories.map(cat => {
-            const count = safeDishes.filter(d => String(d.category_id) === String(cat.id)).length;
+            const count = safeDishes.filter(d => 
+              String(d.category_id) === String(cat.id) ||
+              (d.category_name && d.category_name.toLowerCase() === (cat.name || '').toLowerCase()) ||
+              (d.category && d.category.toLowerCase() === (cat.name || '').toLowerCase())
+            ).length;
             const isSelected = String(selectedCatFilter) === String(cat.id) && activeSubTab === 'dishes';
             const emoji = getCategoryEmoji(cat.name);
 
@@ -1467,8 +1517,15 @@ export default function MenuView({
               /* GRID VIEW (Both Desktop & Mobile 2-col) */
               <div className="center-dish-grid">
                 {paginatedDishes.map(dish => {
-                  const isAvailable = dish.is_available !== false;
+                  const isAvailable = dish.is_available !== false && dish.available !== false && dish.available !== 0;
                   const isVeg = dish.type === 'veg';
+                  const isEgg = dish.type === 'egg';
+                  const isBestseller = Boolean(dish.must_try) || (typeof dish.badge === 'string' && (
+                    dish.badge.toLowerCase().includes('must try') || 
+                    dish.badge.toLowerCase().includes('bestseller') || 
+                    dish.badge.toLowerCase().includes('special') ||
+                    dish.badge.toLowerCase().includes('popular')
+                  ));
                   const catObj = safeCategories.find(c => String(c.id) === String(dish.category_id));
 
                   return (
@@ -1516,7 +1573,7 @@ export default function MenuView({
 
                           {/* Bestseller Badge or Veg Stamp */}
                           <div style={{ position: 'absolute', top: '6px', left: '6px', display: 'flex', alignItems: 'center', gap: '4px', zIndex: 2 }}>
-                            {dish.must_try ? (
+                            {isBestseller ? (
                               <span style={{
                                 background: '#D97706',
                                 color: '#FFFFFF',
@@ -1526,21 +1583,21 @@ export default function MenuView({
                                 borderRadius: '5px',
                                 boxShadow: '0 2px 4px rgba(0,0,0,0.2)'
                               }}>
-                                Bestseller
+                                {dish.badge && dish.badge.includes('⭐') ? 'Must Try' : 'Bestseller'}
                               </span>
                             ) : (
                               <span style={{
                                 width: '14px',
                                 height: '14px',
                                 background: '#FFFFFF',
-                                border: `1.5px solid ${isVeg ? '#16A34A' : '#DC2626'}`,
+                                border: `1.5px solid ${isVeg ? '#16A34A' : isEgg ? '#D97706' : '#DC2626'}`,
                                 borderRadius: '3px',
                                 display: 'flex',
                                 alignItems: 'center',
                                 justifyContent: 'center',
                                 boxShadow: '0 1px 3px rgba(0,0,0,0.18)'
                               }}>
-                                <span style={{ width: '5px', height: '5px', borderRadius: '50%', backgroundColor: isVeg ? '#16A34A' : '#DC2626' }} />
+                                <span style={{ width: '5px', height: '5px', borderRadius: '50%', backgroundColor: isVeg ? '#16A34A' : isEgg ? '#D97706' : '#DC2626' }} />
                               </span>
                             )}
                           </div>
@@ -1662,7 +1719,7 @@ export default function MenuView({
                           overflow: 'hidden',
                           textOverflow: 'ellipsis'
                         }}>
-                          {catObj?.name || 'North Indian'}
+                          {catObj?.name || dish.category_name || dish.category || 'General'}
                         </span>
                       </div>
 
@@ -1678,7 +1735,11 @@ export default function MenuView({
                         {renderDishPrice(dish, 'card')}
 
                         <button
-                          onClick={() => onToggleAvailability && onToggleAvailability(dish.id, !isAvailable)}
+                          type="button"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            onToggleAvailability && onToggleAvailability(dish.id, !isAvailable);
+                          }}
                           style={{
                             background: isAvailable ? '#E6F9EE' : '#FEE2E2',
                             color: isAvailable ? '#15803D' : '#DC2626',
@@ -1690,7 +1751,8 @@ export default function MenuView({
                             cursor: 'pointer',
                             display: 'inline-flex',
                             alignItems: 'center',
-                            gap: '3px'
+                            gap: '3px',
+                            userSelect: 'none'
                           }}
                         >
                           <span>{isAvailable ? 'In Stock' : 'Sold Out'}</span>
@@ -1721,7 +1783,9 @@ export default function MenuView({
                   </thead>
                   <tbody>
                     {paginatedDishes.map((dish, idx) => {
-                      const isAvailable = dish.is_available !== false;
+                      const isAvailable = dish.is_available !== false && dish.available !== false && dish.available !== 0;
+                      const isVeg = dish.type === 'veg';
+                      const isEgg = dish.type === 'egg';
                       const catObj = safeCategories.find(c => String(c.id) === String(dish.category_id));
 
                       return (
@@ -1746,7 +1810,11 @@ export default function MenuView({
                           </td>
                           <td style={{ padding: '12px 14px' }}>
                             <button
-                              onClick={() => onToggleAvailability && onToggleAvailability(dish.id, !isAvailable)}
+                              type="button"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                onToggleAvailability && onToggleAvailability(dish.id, !isAvailable);
+                              }}
                               style={{
                                 background: isAvailable ? '#E6F9EE' : '#FEE2E2',
                                 color: isAvailable ? '#15803D' : '#DC2626',
@@ -1755,7 +1823,8 @@ export default function MenuView({
                                 borderRadius: '6px',
                                 fontSize: '0.68rem',
                                 fontWeight: 800,
-                                cursor: 'pointer'
+                                cursor: 'pointer',
+                                userSelect: 'none'
                               }}
                             >
                               {isAvailable ? 'In Stock' : 'Sold Out'}
@@ -1784,75 +1853,6 @@ export default function MenuView({
                     })}
                   </tbody>
                 </table>
-              </div>
-            )}
-
-            {/* Pagination Controls */}
-            {totalPages > 1 && (
-              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: '14px', flexWrap: 'wrap', gap: '10px' }}>
-                <span style={{ fontSize: '0.78rem', color: '#64748B', fontWeight: 600 }}>
-                  Showing <strong>{totalItems > 0 ? (safeCurrentPage - 1) * effectivePageSize + 1 : 0}–{Math.min(safeCurrentPage * effectivePageSize, totalItems)}</strong> of <strong>{totalItems}</strong> dishes
-                </span>
-
-                <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                  <button
-                    onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
-                    disabled={safeCurrentPage === 1}
-                    style={{
-                      width: '32px',
-                      height: '32px',
-                      borderRadius: '8px',
-                      border: '1px solid #CBD5E1',
-                      background: '#FFFFFF',
-                      color: safeCurrentPage === 1 ? '#CBD5E1' : '#0F172A',
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      cursor: safeCurrentPage === 1 ? 'not-allowed' : 'pointer'
-                    }}
-                  >
-                    <ChevronLeft size={16} />
-                  </button>
-
-                  {Array.from({ length: totalPages }, (_, i) => i + 1).map(pageNum => (
-                    <button
-                      key={pageNum}
-                      onClick={() => setCurrentPage(pageNum)}
-                      style={{
-                        width: '32px',
-                        height: '32px',
-                        borderRadius: '8px',
-                        border: pageNum === safeCurrentPage ? '1px solid #261B14' : '1px solid #CBD5E1',
-                        background: pageNum === safeCurrentPage ? '#261B14' : '#FFFFFF',
-                        color: pageNum === safeCurrentPage ? '#FFFFFF' : '#0F172A',
-                        fontSize: '0.80rem',
-                        fontWeight: 800,
-                        cursor: 'pointer'
-                      }}
-                    >
-                      {pageNum}
-                    </button>
-                  ))}
-
-                  <button
-                    onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
-                    disabled={safeCurrentPage === totalPages}
-                    style={{
-                      width: '32px',
-                      height: '32px',
-                      borderRadius: '8px',
-                      border: '1px solid #CBD5E1',
-                      background: '#FFFFFF',
-                      color: safeCurrentPage === totalPages ? '#CBD5E1' : '#0F172A',
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      cursor: safeCurrentPage === totalPages ? 'not-allowed' : 'pointer'
-                    }}
-                  >
-                    <ChevronRight size={16} />
-                  </button>
-                </div>
               </div>
             )}
           </div>
@@ -2036,10 +2036,14 @@ export default function MenuView({
 
           {/* Categories Grid */}
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(260px, 1fr))', gap: '14px' }}>
-            {safeCategories.map(cat => {
-              const dishCount = safeDishes.filter(d => String(d.category_id) === String(cat.id)).length;
+            {filteredCategories.map(cat => {
+              const dishCount = safeDishes.filter(d => 
+                String(d.category_id) === String(cat.id) ||
+                (d.category_name && d.category_name.toLowerCase() === (cat.name || '').toLowerCase()) ||
+                (d.category && d.category.toLowerCase() === (cat.name || '').toLowerCase())
+              ).length;
               const emoji = getCategoryEmoji(cat.name);
-              const isActive = cat.is_active !== false;
+              const isActive = cat.active !== false && cat.is_active !== false && cat.active !== 0 && cat.active !== 'false';
 
               return (
                 <div
@@ -2200,7 +2204,7 @@ export default function MenuView({
           </div>
 
           {/* Combos Empty State */}
-          {safeCombos.length === 0 ? (
+          {filteredCombos.length === 0 ? (
             <div style={{
               background: '#FFFFFF',
               borderRadius: '18px',
@@ -2229,7 +2233,7 @@ export default function MenuView({
               gridTemplateColumns: 'repeat(auto-fill, minmax(320px, 1fr))',
               gap: '16px'
             }}>
-              {safeCombos.map(combo => {
+              {filteredCombos.map(combo => {
                 let parsedItems = [];
                 try {
                   parsedItems = typeof combo.items === 'string' ? JSON.parse(combo.items) : (Array.isArray(combo.items) ? combo.items : []);

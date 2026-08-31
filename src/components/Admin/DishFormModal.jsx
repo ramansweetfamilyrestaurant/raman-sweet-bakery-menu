@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { X, Upload, Image as ImageIcon } from 'lucide-react';
 import { uploadImage, deleteImageApi } from '../../api/client';
 import { getDishImageUrl } from '../../utils/imageHelper';
@@ -13,7 +13,13 @@ const resolveImageUrl = (url) => {
 };
 
 export default function DishFormModal({ dish, categories, token, modifiersEnabled = true, onSave, onClose }) {
-  const [categoryId, setCategoryId] = useState(dish?.category_id || categories[0]?.id || '');
+  const [categoryId, setCategoryId] = useState(dish?.category_id || categories?.[0]?.id || '');
+
+  useEffect(() => {
+    if (!categoryId && Array.isArray(categories) && categories.length > 0) {
+      setCategoryId(dish?.category_id || categories[0].id);
+    }
+  }, [categories, dish, categoryId]);
   const [name, setName] = useState(dish?.name || '');
   const [nameHi, setNameHi] = useState(dish?.name_hi || '');
   const [description, setDescription] = useState(dish?.description || '');

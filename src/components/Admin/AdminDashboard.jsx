@@ -1784,12 +1784,20 @@ export default function AdminDashboard({
     }).catch(() => {});
   }, [token]);
 
-  const handleToggleDish = async (id, currentVal) => {
+  const handleToggleDish = async (id, nextAvailable) => {
     try {
-      await toggleDishAvailability(id, !currentVal, token);
-      setDishes(dishes.map(d => d.id === id ? { ...d, available: !currentVal } : d));
+      const dish = dishes.find(d => String(d.id) === String(id));
+      const currentAvail = dish ? (dish.available !== false && dish.available !== 0 && dish.is_available !== false) : true;
+      const isNext = typeof nextAvailable === 'boolean' ? nextAvailable : !currentAvail;
+      
+      // Optimistic state update
+      setDishes(prev => prev.map(d => String(d.id) === String(id) ? { ...d, available: isNext, is_available: isNext } : d));
+      
+      await toggleDishAvailability(id, isNext, token);
     } catch (err) {
-      alert('Failed to update dish availability');
+      console.error('Failed to update dish availability:', err);
+      alert('Failed to update dish availability: ' + (err.message || ''));
+      loadData(true);
     }
   };
 
@@ -1809,7 +1817,7 @@ export default function AdminDashboard({
         })
       });
       if (!res.ok) throw new Error('Failed');
-      setDishes(dishes.map(d => d.id === dish.id ? { ...d, badge: newBadge } : d));
+      setDishes(prev => prev.map(d => String(d.id) === String(dish.id) ? { ...d, badge: newBadge } : d));
     } catch (err) {
       alert(`Failed to update ${targetBadge} badge`);
     }
@@ -1818,19 +1826,18 @@ export default function AdminDashboard({
   const handleDeleteDish = async (id) => {
     try {
       await deleteDish(id, token);
-      setDishes(dishes.filter(d => d.id !== id));
+      setDishes(prev => prev.filter(d => String(d.id) !== String(id)));
     } catch (err) {
       alert('Failed to delete dish');
     }
   };
 
   const handleDeleteCategory = async (id) => {
-    if (!window.confirm('Deleting a category will delete all dishes inside it! Continue?')) return;
     try {
       await deleteCategory(id, token);
       loadData();
     } catch (err) {
-      alert('Failed to delete category');
+      alert('Failed to delete category: ' + (err.message || ''));
     }
   };
 
@@ -1838,13 +1845,44 @@ export default function AdminDashboard({
     return activeVal === true || activeVal === 1 || activeVal === '1' || activeVal === 'true' || activeVal === undefined;
   };
 
-  const handleToggleCategory = async (catId, currentActive) => {
+  const handleToggleCategory = async (catId, nextActive) => {
     try {
-      const nextActive = !currentActive;
-      await toggleCategoryActive(catId, nextActive, token);
-      setCategories(categories.map(c => c.id === catId ? { ...c, active: nextActive } : c));
+      const cat = categories.find(c => String(c.id) === String(catId));
+      const currentActive = cat ? isCatActive(cat.active) : true;
+      const isNext = typeof nextActive === 'boolean' ? nextActive : !currentActive;
+      
+      // Optimistic update
+      setCategories(prev => prev.map(c => String(c.id) === String(catId) ? { ...c, active: isNext, is_active: isNext } : c));
+      
+      await toggleCategoryActive(catId, isNext, token);
     } catch (err) {
       alert(err.message || 'Failed to update category status');
+      loadData(true);
+    }
+  };
+
+  const handleDeleteCombo = async (id) => {
+    try {
+      await deleteCombo(id, token);
+      setCombos(prev => prev.filter(c => String(c.id) !== String(id)));
+    } catch (err) {
+      alert('Failed to delete combo: ' + (err.message || ''));
+    }
+  };
+
+  const handleToggleComboAvailability = async (id, nextAvailable) => {
+    try {
+      const combo = combos.find(c => String(c.id) === String(id));
+      const currentAvail = combo ? (combo.available !== false && combo.available !== 0 && combo.is_available !== false) : true;
+      const isNext = typeof nextAvailable === 'boolean' ? nextAvailable : !currentAvail;
+      
+      // Optimistic update
+      setCombos(prev => prev.map(c => String(c.id) === String(id) ? { ...c, available: isNext ? 1 : 0, is_available: isNext } : c));
+      
+      await toggleComboAvailability(id, isNext, token);
+    } catch (err) {
+      alert('Failed to update combo availability: ' + (err.message || ''));
+      loadData(true);
     }
   };
 
@@ -2463,15 +2501,16 @@ export default function AdminDashboard({
       setCredMsg({ text: 'Network error, please try again', type: 'error' });
     }
   };
-  const handleQuickPriceSave = async (dishId) => {
+  const handleQuickPriceSave = async (dishId, newPrice, newPriceHalf) => {
     try {
-      const pFull = Number(quickPriceVal.price);
-      const pHalf = quickPriceVal.price_half ? Number(quickPriceVal.price_half) : null;
+      const pFull = Number(newPrice !== undefined ? newPrice : quickPriceVal.price);
+      const rawHalf = newPriceHalf !== undefined ? newPriceHalf : quickPriceVal.price_half;
+      const pHalf = (rawHalf !== undefined && rawHalf !== null && rawHalf !== '') ? Number(rawHalf) : null;
       await updateDishPrice(dishId, pFull, pHalf, token);
       setDishes(dishes.map(d => d.id === dishId ? { ...d, price: pFull, price_half: pHalf } : d));
       setEditingPriceId(null);
     } catch (err) {
-      alert('Failed to update price');
+      alert('Failed to update price: ' + (err.message || ''));
     }
   };
 
@@ -3015,8 +3054,8 @@ export default function AdminDashboard({
                 onOpenEditCategory={(cat) => setCatModalData(cat)}
                 onOpenAddCombo={() => setComboModalData('new')}
                 onOpenEditCombo={(combo) => setComboModalData(combo)}
-                onDeleteCombo={deleteCombo}
-                onToggleComboAvailability={toggleComboAvailability}
+                onDeleteCombo={handleDeleteCombo}
+                onToggleComboAvailability={handleToggleComboAvailability}
                 onToggleBadge={handleToggleBadge}
                 currencySymbol={settingsForm.currency_symbol !== undefined && settingsForm.currency_symbol !== null ? settingsForm.currency_symbol : '₹'}
                 maxDishes={tenantCaps.max_dishes}

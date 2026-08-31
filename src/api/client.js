@@ -399,14 +399,22 @@ export async function toggleDishAvailability(id, available, token) {
   return handleResponse(res, 'Failed to toggle availability');
 }
 
-export async function updateDishPrice(id, price, token) {
+export async function updateDishPrice(id, price, price_half, token) {
+  // Support both (id, price, token) legacy call and (id, price, price_half, token)
+  let actualPriceHalf = price_half;
+  let actualToken = token;
+  if (typeof price_half === 'string' && !token) {
+    actualToken = price_half;
+    actualPriceHalf = null;
+  }
+
   const res = await fetch(`${API_BASE}/admin/dishes/${id}/price`, {
     method: 'PATCH',
     headers: {
       'Content-Type': 'application/json',
-      Authorization: `Bearer ${token}`,
+      Authorization: `Bearer ${actualToken}`,
     },
-    body: JSON.stringify({ price }),
+    body: JSON.stringify({ price, price_half: actualPriceHalf }),
   });
   return handleResponse(res, 'Failed to update price');
 }
