@@ -1427,78 +1427,206 @@ export default function MenuView({
               COLUMN 1: PROMO / MOTIVATIONAL BANNER (LEFT)
              ======================================================== */}
           <div className="left-promo-banner" style={{
-            background: 'linear-gradient(180deg, #FDECE5 0%, #FDE4D8 100%)',
-            borderRadius: '20px',
-            border: '1px solid #FAD6C6',
-            padding: '22px 18px 18px 18px',
             display: 'flex',
             flexDirection: 'column',
-            justifyContent: 'space-between',
-            boxShadow: '0 2px 10px rgba(234, 88, 12, 0.04)'
+            gap: '18px',
+            width: '100%',
+            boxSizing: 'border-box'
           }}>
-            <div>
-              <h3 style={{
-                fontSize: '1.25rem',
-                fontWeight: 900,
-                color: '#1E1B18',
-                lineHeight: 1.22,
-                margin: '0 0 8px 0',
-                letterSpacing: '-0.02em'
-              }}>
-                Everything your<br />menu needs.
-              </h3>
-              <p style={{
-                fontSize: '0.78rem',
-                color: '#655347',
-                margin: '0 0 16px 0',
-                lineHeight: 1.42,
-                fontWeight: 500
-              }}>
-                Keep your products, categories and pricing organized and always up to date.
-              </p>
+            {/* Card 1: Promotional Card (Approved) */}
+            <div style={{
+              background: 'linear-gradient(180deg, #FDECE5 0%, #FDE4D8 100%)',
+              borderRadius: '20px',
+              border: '1px solid #FAD6C6',
+              padding: '22px 18px 18px 18px',
+              display: 'flex',
+              flexDirection: 'column',
+              justifyContent: 'space-between',
+              boxShadow: '0 2px 10px rgba(234, 88, 12, 0.04)'
+            }}>
+              <div>
+                <h3 style={{
+                  fontSize: '1.25rem',
+                  fontWeight: 900,
+                  color: '#1E1B18',
+                  lineHeight: 1.22,
+                  margin: '0 0 8px 0',
+                  letterSpacing: '-0.02em'
+                }}>
+                  Everything your<br />menu needs.
+                </h3>
+                <p style={{
+                  fontSize: '0.78rem',
+                  color: '#655347',
+                  margin: '0 0 16px 0',
+                  lineHeight: 1.42,
+                  fontWeight: 500
+                }}>
+                  Keep your products, categories and pricing organized and always up to date.
+                </p>
 
-              <button
-                onClick={onOpenAddDish}
-                style={{
-                  padding: '9px 16px',
-                  background: '#181512',
-                  color: '#FFFFFF',
-                  border: 'none',
-                  borderRadius: '11px',
-                  fontSize: '0.80rem',
-                  fontWeight: 800,
-                  cursor: 'pointer',
-                  display: 'inline-flex',
-                  alignItems: 'center',
-                  gap: '6px',
-                  boxShadow: '0 3px 10px rgba(24, 21, 18, 0.25)',
-                  transition: 'transform 0.14s ease'
-                }}
-              >
-                <span>+ Add Item</span>
-                <ArrowRight size={13} />
-              </button>
+                <button
+                  onClick={onOpenAddDish}
+                  style={{
+                    padding: '9px 16px',
+                    background: '#181512',
+                    color: '#FFFFFF',
+                    border: 'none',
+                    borderRadius: '11px',
+                    fontSize: '0.80rem',
+                    fontWeight: 800,
+                    cursor: 'pointer',
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: '6px',
+                    boxShadow: '0 3px 10px rgba(24, 21, 18, 0.25)',
+                    transition: 'transform 0.14s ease'
+                  }}
+                >
+                  <span>+ Add Item</span>
+                  <ArrowRight size={13} />
+                </button>
+              </div>
+
+              {/* Large Digital Menu 3D Product Visual (Occupies lower 42% with 20px gap) */}
+              <div style={{
+                width: '100%',
+                height: '175px',
+                marginTop: '20px',
+                borderRadius: '16px',
+                overflow: 'hidden',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                background: 'rgba(255, 255, 255, 0.40)',
+                border: '1px solid rgba(250, 214, 198, 0.60)'
+              }}>
+                <img
+                  src="/images/promo-menu-banner.webp?v=2"
+                  alt="TouchQR digital menu"
+                  style={{ width: '100%', height: '100%', objectFit: 'contain', display: 'block' }}
+                  onError={(e) => { e.currentTarget.onerror = null; e.currentTarget.src = '/images/default-dish.webp'; }}
+                />
+              </div>
             </div>
 
-            {/* Large Digital Menu 3D Product Visual (Occupies lower 42% with 20px gap) */}
+            {/* Card 2: Informational Card (How it works) */}
             <div style={{
-              width: '100%',
-              height: '175px',
-              marginTop: '20px',
-              borderRadius: '16px',
-              overflow: 'hidden',
+              background: '#FFFFFF',
+              borderRadius: '20px',
+              border: '1px solid #E2E8F0',
+              padding: '18px 16px',
               display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              background: 'rgba(255, 255, 255, 0.40)',
-              border: '1px solid rgba(250, 214, 198, 0.60)'
+              flexDirection: 'column',
+              gap: '14px',
+              boxShadow: '0 2px 8px rgba(0,0,0,0.03)'
             }}>
-              <img
-                src="/images/promo-menu-banner.webp?v=2"
-                alt="TouchQR digital menu"
-                style={{ width: '100%', height: '100%', objectFit: 'contain', display: 'block' }}
-                onError={(e) => { e.currentTarget.onerror = null; e.currentTarget.src = '/images/default-dish.webp'; }}
-              />
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <span style={{ fontSize: '0.90rem', fontWeight: 900, color: '#0F172A', letterSpacing: '-0.01em' }}>
+                  How it works
+                </span>
+              </div>
+
+              {/* Steps List */}
+              <div style={{ display: 'flex', flexDirection: 'column' }}>
+                {/* Step 01 */}
+                <div style={{ display: 'flex', gap: '10px', alignItems: 'flex-start' }}>
+                  <div style={{
+                    width: '24px',
+                    height: '24px',
+                    borderRadius: '7px',
+                    background: '#0A2315',
+                    color: '#DFBA67',
+                    fontSize: '0.68rem',
+                    fontWeight: 900,
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    flexShrink: 0,
+                    marginTop: '1px'
+                  }}>
+                    01
+                  </div>
+                  <div>
+                    <div style={{ fontSize: '0.78rem', fontWeight: 800, color: '#0F172A', lineHeight: 1.2 }}>Set up</div>
+                    <div style={{ fontSize: '0.70rem', color: '#64748B', lineHeight: 1.35, marginTop: '2px' }}>
+                      Organize your items, categories and pricing.
+                    </div>
+                  </div>
+                </div>
+
+                {/* Vertical Connector */}
+                <div style={{ width: '2px', height: '14px', background: '#E2E8F0', margin: '3px 0 3px 11px' }} />
+
+                {/* Step 02 */}
+                <div style={{ display: 'flex', gap: '10px', alignItems: 'flex-start' }}>
+                  <div style={{
+                    width: '24px',
+                    height: '24px',
+                    borderRadius: '7px',
+                    background: '#0A2315',
+                    color: '#DFBA67',
+                    fontSize: '0.68rem',
+                    fontWeight: 900,
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    flexShrink: 0,
+                    marginTop: '1px'
+                  }}>
+                    02
+                  </div>
+                  <div>
+                    <div style={{ fontSize: '0.78rem', fontWeight: 800, color: '#0F172A', lineHeight: 1.2 }}>Share</div>
+                    <div style={{ fontSize: '0.70rem', color: '#64748B', lineHeight: 1.35, marginTop: '2px' }}>
+                      Let customers discover your digital menu.
+                    </div>
+                  </div>
+                </div>
+
+                {/* Vertical Connector */}
+                <div style={{ width: '2px', height: '14px', background: '#E2E8F0', margin: '3px 0 3px 11px' }} />
+
+                {/* Step 03 */}
+                <div style={{ display: 'flex', gap: '10px', alignItems: 'flex-start' }}>
+                  <div style={{
+                    width: '24px',
+                    height: '24px',
+                    borderRadius: '7px',
+                    background: '#0A2315',
+                    color: '#DFBA67',
+                    fontSize: '0.68rem',
+                    fontWeight: 900,
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    flexShrink: 0,
+                    marginTop: '1px'
+                  }}>
+                    03
+                  </div>
+                  <div>
+                    <div style={{ fontSize: '0.78rem', fontWeight: 800, color: '#0F172A', lineHeight: 1.2 }}>Get orders</div>
+                    <div style={{ fontSize: '0.70rem', color: '#64748B', lineHeight: 1.35, marginTop: '2px' }}>
+                      Turn menu visits into easy customer orders.
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Bottom Signature */}
+              <div style={{
+                borderTop: '1px solid #F1F5F9',
+                paddingTop: '10px',
+                marginTop: '2px'
+              }}>
+                <div style={{ fontSize: '0.74rem', fontWeight: 800, color: '#0F172A', lineHeight: 1.25 }}>
+                  One smart menu.
+                </div>
+                <div style={{ fontSize: '0.70rem', fontWeight: 700, color: '#16A34A', lineHeight: 1.25, marginTop: '2px' }}>
+                  Endless possibilities.
+                </div>
+              </div>
             </div>
           </div>
 
