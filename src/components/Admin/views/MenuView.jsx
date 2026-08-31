@@ -54,6 +54,7 @@ export default function MenuView({
   onDeleteDish,
   onUpdateQuickPrice,
   onToggleCategoryActive,
+  onReorderCategories,
   onDeleteCategory,
   onOpenAddCategory,
   onOpenEditCategory,
@@ -239,6 +240,19 @@ export default function MenuView({
       onUpdateQuickPrice(quickPriceDish.id, quickPriceVal.price, quickPriceVal.price_half);
       setQuickPriceDish(null);
     }
+  };
+
+  const handleMoveCategory = (index, direction) => {
+    if (!onReorderCategories) return;
+    const newIndex = direction === 'up' ? index - 1 : index + 1;
+    if (newIndex < 0 || newIndex >= safeCategories.length) return;
+
+    const reordered = [...safeCategories];
+    const temp = reordered[index];
+    reordered[index] = reordered[newIndex];
+    reordered[newIndex] = temp;
+
+    onReorderCategories(reordered);
   };
 
   // Helper for category food emojis with comprehensive Indian & International coverage
@@ -2234,8 +2248,40 @@ export default function MenuView({
           </div>
 
           {/* Categories Grid */}
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(260px, 1fr))', gap: '14px' }}>
-            {filteredCategories.map(cat => {
+          <div className="category-grid-responsive" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(260px, 1fr))', gap: '14px' }}>
+            <style dangerouslySetInnerHTML={{__html: `
+              @media (max-width: 640px) {
+                .category-grid-responsive {
+                  grid-template-columns: 1fr !important;
+                  gap: 10px !important;
+                }
+                .category-card-responsive {
+                  flex-direction: row !important;
+                  align-items: center !important;
+                  justify-content: space-between !important;
+                  padding: 12px 14px !important;
+                  gap: 8px !important;
+                }
+                .category-card-controls-row {
+                  flex-direction: row !important;
+                  align-items: center !important;
+                  gap: 10px !important;
+                  margin-left: auto !important;
+                  border-top: none !important;
+                  padding-top: 0 !important;
+                }
+                .category-card-actions-row {
+                  border-top: none !important;
+                  padding-top: 0 !important;
+                  margin-top: 0 !important;
+                  gap: 4px !important;
+                }
+                .hidden-xs {
+                  display: none !important;
+                }
+              }
+            `}} />
+            {filteredCategories.map((cat, idx) => {
               const dishCount = safeDishes.filter(d => 
                 String(d.category_id) === String(cat.id) ||
                 (d.category_name && d.category_name.toLowerCase() === (cat.name || '').toLowerCase()) ||
@@ -2247,6 +2293,7 @@ export default function MenuView({
               return (
                 <div
                   key={cat.id}
+                  className="category-card-responsive"
                   style={{
                     background: '#FFFFFF',
                     borderRadius: '16px',
@@ -2256,67 +2303,138 @@ export default function MenuView({
                     flexDirection: 'column',
                     justifyContent: 'space-between',
                     gap: '12px',
-                    boxShadow: '0 1px 3px rgba(0,0,0,0.02)'
+                    boxShadow: '0 1px 3px rgba(0,0,0,0.02)',
+                    transition: 'all 0.2s ease'
                   }}
                 >
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                  {/* Category Details */}
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '12px', minWidth: 0 }}>
                     <div style={{
-                      width: '46px',
-                      height: '46px',
+                      width: '44px',
+                      height: '44px',
                       borderRadius: '12px',
                       background: '#F8FAFC',
                       border: '1px solid #E2E8F0',
                       display: 'flex',
                       alignItems: 'center',
                       justifyContent: 'center',
-                      fontSize: '1.4rem',
+                      fontSize: '1.3rem',
                       flexShrink: 0
                     }}>
                       {emoji}
                     </div>
-                    <div style={{ flex: 1, minWidth: 0 }}>
-                      <h4 style={{ fontSize: '0.94rem', fontWeight: 800, color: '#0F172A', margin: '0 0 2px 0', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                    <div style={{ minWidth: 0 }}>
+                      <h4 style={{ fontSize: '0.92rem', fontWeight: 800, color: '#0F172A', margin: '0 0 2px 0', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
                         {cat.name}
                       </h4>
-                      <span style={{ fontSize: '0.72rem', color: '#64748B', fontWeight: 600 }}>
+                      <span style={{ fontSize: '0.70rem', color: '#64748B', fontWeight: 600 }}>
                         {dishCount} {dishCount === 1 ? 'dish' : 'dishes'}
                       </span>
                     </div>
-                    <button
-                      onClick={() => onToggleCategoryActive && onToggleCategoryActive(cat.id, !isActive)}
-                      style={{
-                        background: isActive ? '#E6F9EE' : '#FEE2E2',
-                        color: isActive ? '#15803D' : '#DC2626',
-                        border: `1px solid ${isActive ? '#C6F6D5' : '#FECACA'}`,
-                        padding: '3px 8px',
-                        borderRadius: '6px',
-                        fontSize: '0.66rem',
-                        fontWeight: 800,
-                        cursor: 'pointer'
-                      }}
-                    >
-                      {isActive ? 'Active' : 'Hidden'}
-                    </button>
                   </div>
 
-                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: '6px', borderTop: '1px solid #F1F5F9', paddingTop: '10px' }}>
+                  {/* Reorder Arrows & Status Toggle Switch */}
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '10px' }} className="category-card-controls-row">
+                    {/* Reordering Up/Down controls */}
+                    <div style={{ display: 'flex', gap: '4px' }}>
+                      <button
+                        type="button"
+                        disabled={idx === 0}
+                        onClick={(e) => { e.stopPropagation(); handleMoveCategory(idx, 'up'); }}
+                        style={{
+                          width: '30px',
+                          height: '30px',
+                          borderRadius: '8px',
+                          border: '1px solid #E2E8F0',
+                          background: idx === 0 ? '#F1F5F9' : '#FFFFFF',
+                          color: idx === 0 ? '#94A3B8' : '#475569',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          cursor: idx === 0 ? 'not-allowed' : 'pointer',
+                          transition: 'all 0.15s'
+                        }}
+                        title="Move Up"
+                      >
+                        <ChevronUp size={14} />
+                      </button>
+                      <button
+                        type="button"
+                        disabled={idx === safeCategories.length - 1}
+                        onClick={(e) => { e.stopPropagation(); handleMoveCategory(idx, 'down'); }}
+                        style={{
+                          width: '30px',
+                          height: '30px',
+                          borderRadius: '8px',
+                          border: '1px solid #E2E8F0',
+                          background: idx === safeCategories.length - 1 ? '#F1F5F9' : '#FFFFFF',
+                          color: idx === safeCategories.length - 1 ? '#94A3B8' : '#475569',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          cursor: idx === safeCategories.length - 1 ? 'not-allowed' : 'pointer',
+                          transition: 'all 0.15s'
+                        }}
+                        title="Move Down"
+                      >
+                        <ChevronDown size={14} />
+                      </button>
+                    </div>
+
+                    {/* Status iOS Toggle switch */}
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                      <div
+                        onClick={(e) => { e.stopPropagation(); onToggleCategoryActive && onToggleCategoryActive(cat.id, !isActive); }}
+                        style={{
+                          width: '34px',
+                          height: '18px',
+                          borderRadius: '9px',
+                          background: isActive ? '#10B981' : '#CBD5E1',
+                          position: 'relative',
+                          cursor: 'pointer',
+                          transition: 'background-color 0.2s',
+                          display: 'inline-flex',
+                          alignItems: 'center',
+                          padding: '0 2px'
+                        }}
+                        title={isActive ? 'Deactivate Category' : 'Activate Category'}
+                      >
+                        <div style={{
+                          width: '14px',
+                          height: '14px',
+                          borderRadius: '50%',
+                          background: '#FFFFFF',
+                          position: 'absolute',
+                          left: isActive ? '18px' : '2px',
+                          transition: 'left 0.2s',
+                          boxShadow: '0 1px 2px rgba(0,0,0,0.18)'
+                        }} />
+                      </div>
+                      <span className="hidden-xs" style={{ fontSize: '0.68rem', fontWeight: 800, color: isActive ? '#10B981' : '#64748B' }}>
+                        {isActive ? 'Active' : 'Hidden'}
+                      </span>
+                    </div>
+                  </div>
+
+                  {/* Actions (View Dishes, Edit, Delete) */}
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: '6px', borderTop: '1px solid #F1F5F9', paddingTop: '10px' }} className="category-card-actions-row">
                     <button
                       onClick={() => { setSelectedCatFilter(cat.id); setActiveSubTab('dishes'); }}
-                      style={{ padding: '6px 12px', borderRadius: '8px', border: '1px solid #E2E8F0', background: '#F8FAFC', color: '#0F172A', fontSize: '0.72rem', fontWeight: 700, cursor: 'pointer' }}
+                      style={{ padding: '6px 10px', borderRadius: '8px', border: '1px solid #E2E8F0', background: '#F8FAFC', color: '#0F172A', fontSize: '0.72rem', fontWeight: 700, cursor: 'pointer' }}
                     >
-                      View Dishes
+                      View
                     </button>
                     <button
                       onClick={() => onOpenEditCategory && onOpenEditCategory(cat)}
-                      style={{ padding: '6px 10px', borderRadius: '8px', border: '1px solid #E2E8F0', background: '#FFFFFF', color: '#0F172A', fontSize: '0.72rem', fontWeight: 700, cursor: 'pointer' }}
+                      style={{ padding: '6px 8px', borderRadius: '8px', border: '1px solid #E2E8F0', background: '#FFFFFF', color: '#0284C7', fontSize: '0.72rem', fontWeight: 700, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
                     >
-                      <Edit3 size={13} />
+                      <Edit3 size={12} />
                     </button>
                     <button
                       onClick={() => setDeleteConfirmCategory(cat)}
-                      style={{ padding: '6px 10px', borderRadius: '8px', border: '1px solid #FEE2E2', background: '#FFF5F5', color: '#DC2626', cursor: 'pointer' }}
+                      style={{ padding: '6px 8px', borderRadius: '8px', border: '1px solid #FEE2E2', background: '#FFF5F5', color: '#DC2626', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
                     >
-                      <Trash2 size={13} />
+                      <Trash2 size={12} />
                     </button>
                   </div>
                 </div>

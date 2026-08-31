@@ -363,6 +363,18 @@ export async function toggleCategoryActive(id, active, token) {
   return handleResponse(res, 'Failed to toggle category active status');
 }
 
+export async function reorderCategories(orders, token) {
+  const res = await fetch(`${API_BASE}/admin/categories/reorder`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      Authorization: `Bearer ${token}`,
+    },
+    body: JSON.stringify({ orders }),
+  });
+  return handleResponse(res, 'Failed to reorder categories');
+}
+
 export async function createDish(dishData, token) {
   const res = await fetch(`${API_BASE}/admin/dishes`, {
     method: 'POST',

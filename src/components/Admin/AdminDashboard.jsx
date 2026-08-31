@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
-import { fetchCategories, fetchDishes, toggleDishAvailability, toggleCategoryActive, deleteDish, deleteCategory, fetchRestaurantInfo, updateDishPrice, fetchAnnouncements, fetchAdminOrders, updateOrderStatus, uploadImage, fetchServiceRequests, resolveServiceRequest, approvePresenceRequest, rejectPresenceRequest, fetchAdminAnalytics, exportAdminAnalyticsCSV, exportAdminAnalyticsXLSX, fetchAdminCombos, createCombo, updateCombo, deleteCombo, toggleComboAvailability, optimizeDatabase, updateTenantSettings } from '../../api/client';
+import { fetchCategories, fetchDishes, toggleDishAvailability, toggleCategoryActive, reorderCategories, deleteDish, deleteCategory, fetchRestaurantInfo, updateDishPrice, fetchAnnouncements, fetchAdminOrders, updateOrderStatus, uploadImage, fetchServiceRequests, resolveServiceRequest, approvePresenceRequest, rejectPresenceRequest, fetchAdminAnalytics, exportAdminAnalyticsCSV, exportAdminAnalyticsXLSX, fetchAdminCombos, createCombo, updateCombo, deleteCombo, toggleComboAvailability, optimizeDatabase, updateTenantSettings } from '../../api/client';
 import { getPlanDetails } from '../../config/plans';
 import { generateQrToken } from '../../utils/qrSecurity';
 import { getSpaceConfig } from '../../utils/businessTaxonomy';
@@ -1869,6 +1869,24 @@ export default function AdminDashboard({
     }
   };
 
+  const handleReorderCategories = async (newOrderedCategories) => {
+    try {
+      // Optimistic update
+      setCategories(newOrderedCategories);
+      
+      const payload = newOrderedCategories.map((cat, index) => ({
+        id: cat.id,
+        sort_order: index
+      }));
+      
+      await reorderCategories(payload, token);
+    } catch (err) {
+      console.error('Failed to reorder categories:', err);
+      alert('Failed to save category order: ' + (err.message || ''));
+      loadData(true);
+    }
+  };
+
   const handleDeleteCombo = async (id) => {
     try {
       await deleteCombo(id, token);
@@ -3057,6 +3075,7 @@ export default function AdminDashboard({
                 onDeleteDish={handleDeleteDish}
                 onUpdateQuickPrice={handleQuickPriceSave}
                 onToggleCategoryActive={handleToggleCategory}
+                onReorderCategories={handleReorderCategories}
                 onDeleteCategory={handleDeleteCategory}
                 onOpenAddCategory={() => setCatModalData('new')}
                 onOpenEditCategory={(cat) => setCatModalData(cat)}

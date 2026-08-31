@@ -1025,10 +1025,52 @@ router.patch('/categories/:id/toggle', authenticateToken, requireActiveSubscript
     const { active } = req.body;
     const activeBool = active === true || active === 1 || active === 'true';
     await query('UPDATE categories SET active = $1 WHERE id = $2 AND restaurant_id = $3', [activeBool, id, targetId]);
-    res.json({ success: true });
+    
+    // Invalidate cache
+    try {
+      const slugRows = await query('SELECT slug FROM restaurants WHERE id = $1', [targetId]);
+      if (slugRows && slugRows.length > 0 && slugRows[0].slug) {
+        clearMenuBundleCache(slugRows[0].slug);
+      }
+    } catch (_) {}
+
+    res.json({ success: true, active: activeBool });
   } catch (err) {
     console.error('Toggle category error:', err);
     res.status(500).json({ error: err.message || 'Failed to toggle category' });
+  }
+});
+
+router.post('/categories/reorder', authenticateToken, requireActiveSubscription, async (req, res) => {
+  try {
+    const targetId = req.user?.restaurant_id;
+    if (!targetId) {
+      return res.status(401).json({ error: 'Restaurant identity is missing from authentication context' });
+    }
+    const { orders } = req.body;
+    if (!Array.isArray(orders)) {
+      return res.status(400).json({ error: 'Orders array is required' });
+    }
+
+    for (const item of orders) {
+      await query(
+        'UPDATE categories SET sort_order = $1 WHERE id = $2 AND restaurant_id = $3',
+        [item.sort_order, item.id, targetId]
+      );
+    }
+
+    // Invalidate cache
+    try {
+      const slugRows = await query('SELECT slug FROM restaurants WHERE id = $1', [targetId]);
+      if (slugRows && slugRows.length > 0 && slugRows[0].slug) {
+        clearMenuBundleCache(slugRows[0].slug);
+      }
+    } catch (_) {}
+
+    res.json({ success: true });
+  } catch (err) {
+    console.error('Reorder categories error:', err);
+    res.status(500).json({ error: 'Failed to reorder categories' });
   }
 });
 
