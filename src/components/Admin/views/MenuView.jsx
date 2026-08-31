@@ -1518,96 +1518,115 @@ export default function MenuView({
               padding: '18px 16px',
               display: 'flex',
               flexDirection: 'column',
-              gap: '14px',
               boxShadow: '0 2px 8px rgba(0,0,0,0.03)'
             }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                <span style={{ fontSize: '0.90rem', fontWeight: 900, color: '#0F172A', letterSpacing: '-0.01em' }}>
-                  How it works
-                </span>
-              </div>
+              <h4 style={{
+                fontSize: '0.92rem',
+                fontWeight: 900,
+                color: '#0F172A',
+                letterSpacing: '-0.01em',
+                margin: '0 0 16px 0'
+              }}>
+                How it works
+              </h4>
 
               {/* Steps List */}
               <div style={{ display: 'flex', flexDirection: 'column' }}>
                 {/* Step 01 */}
-                <div style={{ display: 'flex', gap: '10px', alignItems: 'flex-start' }}>
+                <div style={{ display: 'flex', gap: '12px', alignItems: 'flex-start' }}>
                   <div style={{
-                    width: '24px',
-                    height: '24px',
-                    borderRadius: '7px',
+                    width: '30px',
+                    height: '30px',
+                    borderRadius: '8px',
                     background: '#0A2315',
-                    color: '#DFBA67',
-                    fontSize: '0.68rem',
-                    fontWeight: 900,
+                    color: '#FFFFFF',
+                    fontSize: '0.74rem',
+                    fontWeight: 800,
                     display: 'flex',
                     alignItems: 'center',
                     justifyContent: 'center',
                     flexShrink: 0,
-                    marginTop: '1px'
+                    boxShadow: '0 2px 5px rgba(10, 35, 21, 0.18)'
                   }}>
                     01
                   </div>
-                  <div>
-                    <div style={{ fontSize: '0.78rem', fontWeight: 800, color: '#0F172A', lineHeight: 1.2 }}>Set up</div>
-                    <div style={{ fontSize: '0.70rem', color: '#64748B', lineHeight: 1.35, marginTop: '2px' }}>
+                  <div style={{ flex: 1 }}>
+                    <div style={{ fontSize: '0.84rem', fontWeight: 800, color: '#0F172A', lineHeight: 1.25 }}>
+                      Set up
+                    </div>
+                    <div style={{ fontSize: '0.72rem', color: '#64748B', lineHeight: 1.40, marginTop: '3px' }}>
                       Organize your items, categories and pricing.
                     </div>
                   </div>
                 </div>
 
                 {/* Vertical Connector */}
-                <div style={{ width: '2px', height: '14px', background: '#E2E8F0', margin: '3px 0 3px 11px' }} />
+                <div style={{
+                  width: '2px',
+                  height: '18px',
+                  background: '#E2E8F0',
+                  margin: '4px 0 4px 14px'
+                }} />
 
                 {/* Step 02 */}
-                <div style={{ display: 'flex', gap: '10px', alignItems: 'flex-start' }}>
+                <div style={{ display: 'flex', gap: '12px', alignItems: 'flex-start' }}>
                   <div style={{
-                    width: '24px',
-                    height: '24px',
-                    borderRadius: '7px',
+                    width: '30px',
+                    height: '30px',
+                    borderRadius: '8px',
                     background: '#0A2315',
-                    color: '#DFBA67',
-                    fontSize: '0.68rem',
-                    fontWeight: 900,
+                    color: '#FFFFFF',
+                    fontSize: '0.74rem',
+                    fontWeight: 800,
                     display: 'flex',
                     alignItems: 'center',
                     justifyContent: 'center',
                     flexShrink: 0,
-                    marginTop: '1px'
+                    boxShadow: '0 2px 5px rgba(10, 35, 21, 0.18)'
                   }}>
                     02
                   </div>
-                  <div>
-                    <div style={{ fontSize: '0.78rem', fontWeight: 800, color: '#0F172A', lineHeight: 1.2 }}>Share</div>
-                    <div style={{ fontSize: '0.70rem', color: '#64748B', lineHeight: 1.35, marginTop: '2px' }}>
+                  <div style={{ flex: 1 }}>
+                    <div style={{ fontSize: '0.84rem', fontWeight: 800, color: '#0F172A', lineHeight: 1.25 }}>
+                      Share
+                    </div>
+                    <div style={{ fontSize: '0.72rem', color: '#64748B', lineHeight: 1.40, marginTop: '3px' }}>
                       Let customers discover your digital menu.
                     </div>
                   </div>
                 </div>
 
                 {/* Vertical Connector */}
-                <div style={{ width: '2px', height: '14px', background: '#E2E8F0', margin: '3px 0 3px 11px' }} />
+                <div style={{
+                  width: '2px',
+                  height: '18px',
+                  background: '#E2E8F0',
+                  margin: '4px 0 4px 14px'
+                }} />
 
                 {/* Step 03 */}
-                <div style={{ display: 'flex', gap: '10px', alignItems: 'flex-start' }}>
+                <div style={{ display: 'flex', gap: '12px', alignItems: 'flex-start' }}>
                   <div style={{
-                    width: '24px',
-                    height: '24px',
-                    borderRadius: '7px',
+                    width: '30px',
+                    height: '30px',
+                    borderRadius: '8px',
                     background: '#0A2315',
-                    color: '#DFBA67',
-                    fontSize: '0.68rem',
-                    fontWeight: 900,
+                    color: '#FFFFFF',
+                    fontSize: '0.74rem',
+                    fontWeight: 800,
                     display: 'flex',
                     alignItems: 'center',
                     justifyContent: 'center',
                     flexShrink: 0,
-                    marginTop: '1px'
+                    boxShadow: '0 2px 5px rgba(10, 35, 21, 0.18)'
                   }}>
                     03
                   </div>
-                  <div>
-                    <div style={{ fontSize: '0.78rem', fontWeight: 800, color: '#0F172A', lineHeight: 1.2 }}>Get orders</div>
-                    <div style={{ fontSize: '0.70rem', color: '#64748B', lineHeight: 1.35, marginTop: '2px' }}>
+                  <div style={{ flex: 1 }}>
+                    <div style={{ fontSize: '0.84rem', fontWeight: 800, color: '#0F172A', lineHeight: 1.25 }}>
+                      Get orders
+                    </div>
+                    <div style={{ fontSize: '0.72rem', color: '#64748B', lineHeight: 1.40, marginTop: '3px' }}>
                       Turn menu visits into easy customer orders.
                     </div>
                   </div>
@@ -1617,13 +1636,13 @@ export default function MenuView({
               {/* Bottom Signature */}
               <div style={{
                 borderTop: '1px solid #F1F5F9',
-                paddingTop: '10px',
-                marginTop: '2px'
+                paddingTop: '14px',
+                marginTop: '16px'
               }}>
-                <div style={{ fontSize: '0.74rem', fontWeight: 800, color: '#0F172A', lineHeight: 1.25 }}>
+                <div style={{ fontSize: '0.76rem', fontWeight: 800, color: '#0F172A', lineHeight: 1.3 }}>
                   One smart menu.
                 </div>
-                <div style={{ fontSize: '0.70rem', fontWeight: 700, color: '#16A34A', lineHeight: 1.25, marginTop: '2px' }}>
+                <div style={{ fontSize: '0.72rem', fontWeight: 700, color: '#16A34A', lineHeight: 1.3, marginTop: '2px' }}>
                   Endless possibilities.
                 </div>
               </div>
