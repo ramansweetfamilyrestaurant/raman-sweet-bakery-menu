@@ -1189,35 +1189,28 @@ export default function MenuView({
                   flexShrink: 0
                 }}
               >
-                {hasCustomCategoryImage(cat.image) ? (
-                  <div style={{
-                    width: '28px',
-                    height: '28px',
-                    borderRadius: '8px',
-                    overflow: 'hidden',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    background: '#F8FAFC',
-                    border: isSelected ? '1px solid rgba(255,255,255,0.4)' : '1px solid #E2E8F0',
-                    flexShrink: 0
-                  }}>
-                    <img
-                      src={resolveImageUrl(cat.image)}
-                      alt={cat.name}
-                      style={{ width: '100%', height: '100%', objectFit: 'cover' }}
-                      onError={(e) => {
-                        e.currentTarget.onerror = null;
-                        e.currentTarget.style.display = 'none';
-                        if (e.currentTarget.parentElement) {
-                          e.currentTarget.parentElement.innerHTML = `<span style="font-size: 1.25rem">${emoji}</span>`;
-                        }
-                      }}
-                    />
-                  </div>
-                ) : (
-                  <div style={{ fontSize: '1.25rem' }}>{emoji}</div>
-                )}
+                <div style={{
+                  width: '28px',
+                  height: '28px',
+                  borderRadius: '8px',
+                  overflow: 'hidden',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  background: '#F8FAFC',
+                  border: isSelected ? '1px solid rgba(255,255,255,0.4)' : '1px solid #E2E8F0',
+                  flexShrink: 0
+                }}>
+                  <img
+                    src={getCategoryImageUrl(cat.image)}
+                    alt={cat.name}
+                    style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                    onError={(e) => {
+                      e.currentTarget.onerror = null;
+                      e.currentTarget.src = '/images/default-category.webp';
+                    }}
+                  />
+                </div>
                 <span style={{
                   fontSize: '0.72rem',
                   fontWeight: 800,
@@ -2696,48 +2689,28 @@ export default function MenuView({
                   {/* Row 1: Details (Left) & Active Switch (Right) */}
                   <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '10px', width: '100%' }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '10px', minWidth: 0, flex: 1 }}>
-                      {hasCustomCategoryImage(cat.image) ? (
-                        <div style={{
-                          width: '42px',
-                          height: '42px',
-                          borderRadius: '12px',
-                          background: '#F8FAFC',
-                          border: '1px solid #E2E8F0',
-                          overflow: 'hidden',
-                          display: 'flex',
-                          alignItems: 'center',
-                          justifyContent: 'center',
-                          flexShrink: 0
-                        }}>
-                          <img
-                            src={resolveImageUrl(cat.image)}
-                            alt={cat.name}
-                            style={{ width: '100%', height: '100%', objectFit: 'cover' }}
-                            onError={(e) => {
-                              e.currentTarget.onerror = null;
-                              e.currentTarget.style.display = 'none';
-                              if (e.currentTarget.parentElement) {
-                                e.currentTarget.parentElement.innerHTML = `<span style="font-size: 1.25rem">${emoji}</span>`;
-                              }
-                            }}
-                          />
-                        </div>
-                      ) : (
-                        <div style={{
-                          width: '42px',
-                          height: '42px',
-                          borderRadius: '12px',
-                          background: '#F8FAFC',
-                          border: '1px solid #E2E8F0',
-                          display: 'flex',
-                          alignItems: 'center',
-                          justifyContent: 'center',
-                          fontSize: '1.25rem',
-                          flexShrink: 0
-                        }}>
-                          {emoji}
-                        </div>
-                      )}
+                      <div style={{
+                        width: '42px',
+                        height: '42px',
+                        borderRadius: '12px',
+                        background: '#F8FAFC',
+                        border: '1px solid #E2E8F0',
+                        overflow: 'hidden',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        flexShrink: 0
+                      }}>
+                        <img
+                          src={getCategoryImageUrl(cat.image)}
+                          alt={cat.name}
+                          style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                          onError={(e) => {
+                            e.currentTarget.onerror = null;
+                            e.currentTarget.src = '/images/default-category.webp';
+                          }}
+                        />
+                      </div>
                       <div style={{ minWidth: 0 }}>
                         <h4 style={{ fontSize: '0.90rem', fontWeight: 800, color: '#0F172A', margin: '0 0 2px 0', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
                           {cat.name}
