@@ -1,6 +1,6 @@
 import React from 'react';
 import { X, Plus, Sparkles, CheckCircle2, Utensils, Tag, ShieldCheck } from 'lucide-react';
-import { resolveImageUrl } from '../utils/imageHelper';
+import { resolveImageUrl, getComboImageUrl } from '../utils/imageHelper';
 import { getCurrencySymbol, formatPriceNumber } from '../utils/currencyHelper';
 
 export default function ComboModal({ combo, onClose, onAddToCart, canOrder = false, currencySymbol = '₹' }) {
@@ -17,7 +17,7 @@ export default function ComboModal({ combo, onClose, onAddToCart, canOrder = fal
 
   const originalTotal = comboItems.reduce((s, i) => s + ((Number(i.original_price) || 0) * (i.qty || 1)), 0);
   const savings = originalTotal - Number(combo.price || 0);
-  const imageSrc = resolveImageUrl(combo.image);
+  const imageSrc = getComboImageUrl(combo.image);
 
   return (
     <div style={{
@@ -102,21 +102,21 @@ export default function ComboModal({ combo, onClose, onAddToCart, canOrder = fal
           alignItems: 'center',
           justifyContent: 'center'
         }}>
-          <span style={{ fontSize: '4rem', color: '#DFBA67', position: 'absolute', pointerEvents: 'none' }}>🍱</span>
-          {imageSrc && (
-            <img
-              src={imageSrc}
-              alt={combo.name}
-              style={{
-                width: '100%',
-                height: '100%',
-                objectFit: 'cover',
-                position: 'relative',
-                zIndex: 1
-              }}
-              onError={(e) => { e.target.style.display = 'none'; }}
-            />
-          )}
+          <img
+            src={imageSrc}
+            alt={combo.name}
+            style={{
+              width: '100%',
+              height: '100%',
+              objectFit: 'cover',
+              position: 'relative',
+              zIndex: 1
+            }}
+            onError={(e) => {
+              e.currentTarget.onerror = null;
+              e.currentTarget.src = '/images/default-combo.webp';
+            }}
+          />
 
           {/* Savings Ribbon */}
           {savings > 0 && (

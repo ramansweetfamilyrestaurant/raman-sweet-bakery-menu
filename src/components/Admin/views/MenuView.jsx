@@ -38,7 +38,7 @@ import {
   FileText,
   Upload
 } from 'lucide-react';
-import { resolveImageUrl, getDishImageUrl, getCategoryImageUrl, hasCustomCategoryImage, hasCustomDishImage } from '../../../utils/imageHelper';
+import { resolveImageUrl, getDishImageUrl, getCategoryImageUrl, getComboImageUrl, hasCustomCategoryImage, hasCustomDishImage } from '../../../utils/imageHelper';
 import { formatQuota } from '../../../utils/planCapabilities';
 import { getCurrencySymbol, formatPriceNumber } from '../../../utils/currencyHelper';
 import { createDish } from '../../../api/client';
@@ -2977,41 +2977,15 @@ export default function MenuView({
                       background: 'linear-gradient(135deg, #FAF5FF 0%, #F3E8FF 100%)',
                       overflow: 'hidden'
                     }}>
-                      {comboImg ? (
-                        <img
-                          src={resolveImageUrl(comboImg)}
-                          alt={combo.name}
-                          style={{ width: '100%', height: '100%', objectFit: 'cover' }}
-                          onError={(e) => { e.currentTarget.style.display = 'none'; }}
-                        />
-                      ) : (
-                        <div style={{
-                          width: '100%',
-                          height: '100%',
-                          display: 'flex',
-                          flexDirection: 'column',
-                          alignItems: 'center',
-                          justifyContent: 'center',
-                          gap: '6px',
-                          color: '#9333EA'
-                        }}>
-                          <div style={{
-                            width: '52px',
-                            height: '52px',
-                            borderRadius: '14px',
-                            background: 'rgba(147, 51, 234, 0.12)',
-                            display: 'flex',
-                            alignItems: 'center',
-                            justifyContent: 'center',
-                            fontSize: '1.6rem'
-                          }}>
-                            🍱
-                          </div>
-                          <span style={{ fontSize: '0.70rem', fontWeight: 800, color: '#7E22CE', letterSpacing: '0.04em', textTransform: 'uppercase' }}>
-                            Value Meal Bundle
-                          </span>
-                        </div>
-                      )}
+                      <img
+                        src={getComboImageUrl(comboImg)}
+                        alt={combo.name}
+                        style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                        onError={(e) => {
+                          e.currentTarget.onerror = null;
+                          e.currentTarget.src = '/images/default-combo.webp';
+                        }}
+                      />
 
                       {/* Top Badges */}
                       <div style={{

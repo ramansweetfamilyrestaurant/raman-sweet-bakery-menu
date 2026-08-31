@@ -56,6 +56,18 @@ export function getDishImageUrl(url) {
 }
 
 /**
+ * Combo Image Fallback Helper
+ */
+export function getComboImageUrl(url) {
+  if (!url || typeof url !== 'string') return '/images/default-combo.webp';
+  const cleanUrl = url.trim();
+  if (!cleanUrl || cleanUrl === 'null' || cleanUrl === 'undefined' || cleanUrl === '/uploads/logo.jpg') {
+    return '/images/default-combo.webp';
+  }
+  return resolveImageUrl(cleanUrl);
+}
+
+/**
  * Category Image Fallback Helper
  */
 export function getCategoryImageUrl(url) {

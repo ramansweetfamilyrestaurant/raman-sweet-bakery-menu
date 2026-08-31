@@ -2748,12 +2748,12 @@ export default function App() {
                           position: 'relative'
                         }}>
                           <img 
-                            src={combo.image ? resolveImageUrl(combo.image) : '/images/default-dish.webp'} 
+                            src={combo.image ? resolveImageUrl(combo.image) : '/images/default-combo.webp'} 
                             alt={combo.name}
                             style={{ width: '100%', height: '100%', objectFit: 'cover' }}
                             onError={(e) => {
                               e.currentTarget.onerror = null;
-                              e.currentTarget.src = '/images/default-dish.webp';
+                              e.currentTarget.src = '/images/default-combo.webp';
                             }}
                           />
                         </div>
