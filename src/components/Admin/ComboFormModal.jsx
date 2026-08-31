@@ -200,11 +200,20 @@ export default function ComboFormModal({ combo, dishes, token, onSave, onClose }
             .combo-modal-body-form {
               padding: 12px 14px !important;
             }
-            .combo-modal-body-form input,
+            .combo-modal-body-form input:not(.combo-dish-search-input),
             .combo-modal-body-form select,
             .combo-modal-body-form textarea {
               font-size: 16px !important;
               padding: 9px 11px !important;
+            }
+            .combo-modal-body-form input.combo-dish-search-input {
+              font-size: 15px !important;
+              padding-left: 40px !important;
+              padding-right: 12px !important;
+              padding-top: 10px !important;
+              padding-bottom: 10px !important;
+              min-height: 44px !important;
+              box-sizing: border-box !important;
             }
           }
         `}} />
