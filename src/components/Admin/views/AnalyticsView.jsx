@@ -19,16 +19,22 @@ import { getDishImageUrl } from '../../../utils/imageHelper';
 /**
  * generateSparklinePath
  * Generates a smooth, normalized SVG path from an authoritative chronological numeric series.
- * Safely handles empty arrays, single points, flat/zero periods, and prevents NaN/Infinity coordinates.
+ * Safely handles empty arrays, sparse series (null values for unavailable dates), single points, flat/zero periods, and prevents NaN/Infinity coordinates.
  */
 const generateSparklinePath = (dataSeries, width = 100, height = 24, paddingY = 2) => {
   if (!Array.isArray(dataSeries) || dataSeries.length === 0) {
     return `M 0,${height / 2} L ${width},${height / 2}`;
   }
 
-  const validNumbers = dataSeries.map(v => 
-    (v !== null && v !== undefined && !isNaN(Number(v)) && isFinite(Number(v)) ? Number(v) : 0)
-  );
+  // Filter valid non-null numbers and track original index
+  const validIndices = [];
+  const validNumbers = [];
+  dataSeries.forEach((v, idx) => {
+    if (v !== null && v !== undefined && !isNaN(Number(v)) && isFinite(Number(v))) {
+      validIndices.push(idx);
+      validNumbers.push(Number(v));
+    }
+  });
 
   if (validNumbers.length === 0) {
     return `M 0,${height / 2} L ${width},${height / 2}`;
@@ -37,17 +43,19 @@ const generateSparklinePath = (dataSeries, width = 100, height = 24, paddingY = 
   const max = Math.max(...validNumbers);
   const min = Math.min(...validNumbers);
 
-  // If all values are 0 or equal or only 1 data point, render clean flat baseline
-  if (max === 0 || max === min || validNumbers.length === 1) {
+  // If all values are 0 or equal or only 1 valid point, render clean flat baseline
+  if (max === 0 || max === min || validNumbers.length <= 1) {
     return `M 0,${height / 2} L ${width},${height / 2}`;
   }
 
   const usableHeight = height - paddingY * 2;
   const range = Math.max(max - min, 1);
+  const totalLength = dataSeries.length;
 
-  const points = validNumbers.map((val, idx) => {
-    const x = validNumbers.length > 1
-      ? (idx / (validNumbers.length - 1)) * width
+  const points = validNumbers.map((val, i) => {
+    const origIdx = validIndices[i];
+    const x = totalLength > 1
+      ? (origIdx / (totalLength - 1)) * width
       : width / 2;
     const y = paddingY + usableHeight - ((val - min) / range) * usableHeight;
     return {
@@ -240,10 +248,14 @@ export default function AnalyticsView({
     const series = rawChartData.map(d => {
       const s = Number(d.sales || 0);
       const o = Number(d.orders || 0);
-      return o > 0 && s > 0 ? Math.round(s / o) : 0;
+      return o > 0 && s > 0 ? Math.round(s / o) : null;
     });
-    return generateSparklinePath(series, 100, 20, 3);
+    return generateSparklinePath(series, 100, 24, 2);
   }, [rawChartData]);
+
+  const aovSparklineAreaPath = useMemo(() => {
+    return generateSparklineAreaPath(aovSparklinePath, 100, 24);
+  }, [aovSparklinePath]);
 
   const activeDishesSparklinePath = useMemo(() => {
     // Historical distinct-dish breakdown per day is not retained; render honest baseline
@@ -686,7 +698,7 @@ export default function AnalyticsView({
               overflow: 'hidden'
             }}>
               <div>
-                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '8px' }}>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '6px' }}>
                   <span style={{ fontSize: '0.74rem', color: '#64748B', fontWeight: 600 }}>Average Order Value</span>
                   <div style={{
                     width: '32px',
@@ -696,7 +708,8 @@ export default function AnalyticsView({
                     color: '#9333EA',
                     display: 'flex',
                     alignItems: 'center',
-                    justifyContent: 'center'
+                    justifyContent: 'center',
+                    flexShrink: 0
                   }}>
                     <ShoppingCart size={16} />
                   </div>
@@ -706,21 +719,34 @@ export default function AnalyticsView({
                   {currencySymbol}{aov.toLocaleString('en-IN')}
                 </div>
 
-                <div style={{ display: 'flex', alignItems: 'center', gap: '4px', marginTop: '6px' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '4px', marginTop: '4px', marginBottom: '6px' }}>
                   <span style={{ fontSize: '0.70rem', color: '#9333EA', fontWeight: 800 }}>AOV</span>
                   <span style={{ fontSize: '0.62rem', color: '#94A3B8' }}>per customer order</span>
                 </div>
               </div>
 
-              {/* Dynamic Live / Truthful Sparkline (Purple) */}
-              <div style={{ width: '100%', height: '24px', marginTop: '8px' }}>
-                <svg viewBox="0 0 100 20" style={{ width: '100%', height: '100%', overflow: 'visible' }}>
+              {/* Dynamic Live Sparkline (Purple with Area Glow) */}
+              <div style={{ width: '100%', height: '28px', marginTop: 'auto' }}>
+                <svg viewBox="0 0 100 24" preserveAspectRatio="none" style={{ width: '100%', height: '100%', overflow: 'visible' }}>
+                  <defs>
+                    <linearGradient id="aovSparklineGrad" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="0%" stopColor="#9333EA" stopOpacity="0.20" />
+                      <stop offset="100%" stopColor="#9333EA" stopOpacity="0.0" />
+                    </linearGradient>
+                  </defs>
+                  {aovSparklineAreaPath && (
+                    <path
+                      d={aovSparklineAreaPath}
+                      fill="url(#aovSparklineGrad)"
+                    />
+                  )}
                   <path
                     d={aovSparklinePath}
                     fill="none"
-                    stroke="#C084FC"
-                    strokeWidth="2"
+                    stroke="#9333EA"
+                    strokeWidth="2.2"
                     strokeLinecap="round"
+                    strokeLinejoin="round"
                   />
                 </svg>
               </div>
