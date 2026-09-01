@@ -471,24 +471,26 @@ export default function AnalyticsView({
   }, [orders]);
 
   return (
-    <div style={{
-      display: 'flex',
-      flexDirection: 'column',
-      gap: '18px',
-      width: '100%',
-      maxWidth: '100%',
-      boxSizing: 'border-box',
-      fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif',
-      paddingBottom: '80px'
-    }}>
+    <div className="analytics-container">
       <style>{`
+        .analytics-container {
+          padding: 20px;
+          display: flex;
+          flex-direction: column;
+          gap: 16px;
+          color: #0F172A;
+          font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+          max-width: 1600px;
+          margin: 0 auto;
+          width: 100%;
+          box-sizing: border-box;
+        }
         .analytics-subtabs-row {
           display: flex;
           align-items: center;
-          gap: 24px;
           gap: 6px;
           border-bottom: 1px solid #E2E8F0;
-          margin-bottom: 4px;
+          margin-bottom: 2px;
           overflow-x: auto;
           white-space: nowrap;
           -webkit-overflow-scrolling: touch;
@@ -502,7 +504,7 @@ export default function AnalyticsView({
         .analytics-subtab-btn {
           background: none;
           border: none;
-          padding: 10px 16px;
+          padding: 9px 16px;
           font-size: 0.82rem;
           font-weight: 600;
           color: #64748B;
@@ -533,23 +535,23 @@ export default function AnalyticsView({
         .analytics-kpi-grid {
           display: grid;
           grid-template-columns: repeat(5, minmax(0, 1fr));
-          gap: 14px;
+          gap: 12px;
         }
         .analytics-row-1 {
           display: grid;
           grid-template-columns: 1.8fr 1fr;
-          gap: 16px;
+          gap: 14px;
         }
         .analytics-row-2 {
           display: grid;
           grid-template-columns: repeat(3, minmax(0, 1fr));
-          gap: 16px;
+          gap: 14px;
         }
         .analytics-card {
           background: #FFFFFF;
           border-radius: 16px;
           border: 1px solid #E2E8F0;
-          padding: 18px;
+          padding: 16px 18px;
           box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.03), 0 1px 2px -1px rgba(0, 0, 0, 0.02);
           display: flex;
           flex-direction: column;
@@ -563,7 +565,7 @@ export default function AnalyticsView({
         .analytics-payment-layout {
           display: flex;
           align-items: center;
-          gap: 20px;
+          gap: 18px;
         }
 
         /* Large Screens & Desktop (>1280px) */
@@ -1339,19 +1341,22 @@ export default function AnalyticsView({
                       </div>
                     </div>
 
-                    {/* Payment Breakdown Legend */}
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', flex: 1 }}>
+                    {/* Payment Breakdown Legend with Mini Progress Bars */}
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', flex: 1 }}>
                       {paymentAnalytics.slices.map((item, idx) => (
-                        <div key={idx} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', fontSize: '0.74rem' }}>
-                          <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                            <span style={{ width: '7px', height: '7px', borderRadius: '50%', backgroundColor: item.color }} />
-                            <div>
-                              <div style={{ color: '#0F172A', fontWeight: 700, lineHeight: 1.1 }}>{item.name}</div>
-                              <div style={{ color: '#94A3B8', fontSize: '0.62rem' }}>{currencySymbol}{item.amount.toLocaleString('en-IN')}</div>
+                        <div key={idx} style={{ background: '#F8FAFC', padding: '7px 10px', borderRadius: '8px', border: '1px solid #F1F5F9' }}>
+                          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', fontSize: '0.74rem', marginBottom: '4px' }}>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                              <span style={{ width: '7px', height: '7px', borderRadius: '50%', backgroundColor: item.color }} />
+                              <span style={{ color: '#0F172A', fontWeight: 700 }}>{item.name}</span>
+                            </div>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                              <span style={{ color: '#64748B', fontSize: '0.66rem' }}>{currencySymbol}{item.amount.toLocaleString('en-IN')}</span>
+                              <strong style={{ color: '#0F172A', fontSize: '0.74rem' }}>{item.percent}%</strong>
                             </div>
                           </div>
-                          <div style={{ textAlign: 'right' }}>
-                            <strong style={{ color: '#0F172A', fontSize: '0.76rem' }}>{item.percent}%</strong>
+                          <div style={{ width: '100%', height: '4px', background: '#E2E8F0', borderRadius: '2px', overflow: 'hidden' }}>
+                            <div style={{ width: `${item.percent}%`, height: '100%', background: item.color, borderRadius: '2px' }} />
                           </div>
                         </div>
                       ))}
@@ -1396,10 +1401,19 @@ export default function AnalyticsView({
                 {activeDateRangeLabel}
               </span>
 
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
                 {topDishesByRevenue.length > 0 ? (
                   topDishesByRevenue.map(item => (
-                    <div key={item.rank} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                    <div key={item.rank} style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'space-between',
+                      background: '#F8FAFC',
+                      padding: '8px 10px',
+                      borderRadius: '10px',
+                      border: '1px solid #F1F5F9',
+                      transition: 'background 0.15s ease'
+                    }}>
                       <div style={{ display: 'flex', alignItems: 'center', gap: '8px', minWidth: 0 }}>
                         <span style={{
                           width: '18px',
@@ -1416,7 +1430,7 @@ export default function AnalyticsView({
                         }}>
                           {item.rank}
                         </span>
-                        <div style={{ width: '32px', height: '32px', borderRadius: '8px', overflow: 'hidden', background: '#F8FAFC', flexShrink: 0 }}>
+                        <div style={{ width: '32px', height: '32px', borderRadius: '8px', overflow: 'hidden', background: '#F1F5F9', flexShrink: 0 }}>
                           <img
                             src={item.img}
                             alt={item.name}
@@ -1580,10 +1594,19 @@ export default function AnalyticsView({
                 {activeDateRangeLabel}
               </span>
 
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
                 {topDishesByQuantity.length > 0 ? (
                   topDishesByQuantity.map((item, idx) => (
-                    <div key={idx} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                    <div key={idx} style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'space-between',
+                      background: '#F8FAFC',
+                      padding: '8px 10px',
+                      borderRadius: '10px',
+                      border: '1px solid #F1F5F9',
+                      transition: 'background 0.15s ease'
+                    }}>
                       <div style={{ display: 'flex', alignItems: 'center', gap: '8px', minWidth: 0 }}>
                         <span style={{
                           width: '18px',
@@ -1600,7 +1623,7 @@ export default function AnalyticsView({
                         }}>
                           {item.rank}
                         </span>
-                        <div style={{ width: '32px', height: '32px', borderRadius: '8px', overflow: 'hidden', background: '#F8FAFC', flexShrink: 0 }}>
+                        <div style={{ width: '32px', height: '32px', borderRadius: '8px', overflow: 'hidden', background: '#F1F5F9', flexShrink: 0 }}>
                           <img
                             src={item.img}
                             alt={item.name}
