@@ -1128,17 +1128,24 @@ export default function CustomersView({
                       </div>
                     </div>
 
-                    <span style={{
-                      fontSize: '0.65rem',
-                      fontWeight: 800,
-                      color: guest.primarySource === 'WhatsApp' ? '#047857' : '#064E3B',
-                      background: guest.primarySource === 'WhatsApp' ? '#ECFDF5' : '#F0FDF4',
-                      border: '1px solid #A7F3D0',
-                      padding: '2px 6px',
-                      borderRadius: '4px'
-                    }}>
-                      {guest.primarySource}
-                    </span>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '4px', flexWrap: 'wrap' }}>
+                      {guest.sourcesList.map(src => (
+                        <span
+                          key={src}
+                          style={{
+                            fontSize: '0.62rem',
+                            fontWeight: 800,
+                            color: src === 'WhatsApp' ? '#047857' : (src === 'QR' ? '#064E3B' : '#475569'),
+                            background: src === 'WhatsApp' ? '#ECFDF5' : (src === 'QR' ? '#F0FDF4' : '#F1F5F9'),
+                            border: src === 'WhatsApp' ? '1px solid #A7F3D0' : (src === 'QR' ? '1px solid #BBF7D0' : '1px solid #E2E8F0'),
+                            padding: '2px 6px',
+                            borderRadius: '4px'
+                          }}
+                        >
+                          {src}
+                        </span>
+                      ))}
+                    </div>
                   </div>
 
                   {/* Mid: Orders + Spend + Last Activity */}
