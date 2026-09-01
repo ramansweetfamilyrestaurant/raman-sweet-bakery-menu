@@ -192,6 +192,30 @@ export default function QrGeneratorView({
   const currentTargetUrl = buildQrUrl(isCinema ? 'cinema' : spaceConfig.param, activeTableNum);
   const currentQrImgUrl = `https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=${encodeURIComponent(currentTargetUrl)}`;
 
+  const activeGenSpaceConfig = useMemo(() => {
+    const found = availableSpaceTypes.find(s => s.id === genSpaceType);
+    if (found) return found;
+    if (genSpaceType === 'cinema_seat' || genSpaceType === 'cinema') return { id: 'cinema_seat', label: '🎬 Cinema Seat', singular: 'Cinema Seat', plural: 'Cinema Seats', badge: 'CINEMA SEAT', param: 'cinema' };
+    if (genSpaceType === 'cabin') return { id: 'cabin', label: '🛋️ Private Cabin', singular: 'Cabin', plural: 'Cabins', badge: 'CABIN NO.', param: 'cabin' };
+    if (genSpaceType === 'room') return { id: 'room', label: '🏨 Hotel Room', singular: 'Room', plural: 'Rooms', badge: 'ROOM NO.', param: 'room' };
+    if (genSpaceType === 'vip') return { id: 'vip', label: '👑 VIP Lounge', singular: 'VIP Lounge', plural: 'VIP Lounges', badge: 'VIP LOUNGE', param: 'vip' };
+    if (genSpaceType === 'counter') return { id: 'counter', label: '🏪 Billing Counter', singular: 'Counter', plural: 'Counters', badge: 'COUNTER', param: 'table' };
+    return { id: 'table', label: '🍽️ Dining Table', singular: 'Table', plural: 'Tables', badge: 'TABLE NO.', param: 'table' };
+  }, [availableSpaceTypes, genSpaceType]);
+
+  const genSpaceCount = useMemo(() => {
+    if (genSpaceType === 'cinema_seat') return totalCinemaSeatsCount;
+    if (genSpaceType === 'counter') return 1;
+    return spaceCounts[genSpaceType] || 0;
+  }, [genSpaceType, totalCinemaSeatsCount, spaceCounts]);
+
+  const generatorTargetUrl = useMemo(() => {
+    const param = (genSpaceType === 'cinema_seat' || genSpaceType === 'cinema') ? 'cinema' : activeGenSpaceConfig.param;
+    return buildQrUrl(param, genIdentifier || '1');
+  }, [genSpaceType, activeGenSpaceConfig, genIdentifier, activeSlug, secretKey, liveOrigin]);
+
+  const generatorQrImgUrl = `https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=${encodeURIComponent(generatorTargetUrl)}`;
+
   // 5. Standee Inventory Management (Dynamic synchronization with physical spaces)
   const defaultStandeesList = useMemo(() => {
     const list = [];
@@ -354,15 +378,17 @@ export default function QrGeneratorView({
   };
 
   const handleCopyLink = () => {
-    navigator.clipboard.writeText(currentTargetUrl);
+    const target = activeTab === 'space-generator' ? generatorTargetUrl : currentTargetUrl;
+    navigator.clipboard.writeText(target);
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
   };
 
   const handleDownloadQr = (format = 'PNG') => {
     const a = document.createElement('a');
-    a.href = currentQrImgUrl;
-    a.download = `${activeSlug}_${activeStandee.identifier}_qr.${format.toLowerCase()}`;
+    a.href = activeTab === 'space-generator' ? generatorQrImgUrl : currentQrImgUrl;
+    const identifierLabel = activeTab === 'space-generator' ? genIdentifier : activeStandee.identifier;
+    a.download = `${activeSlug}_${identifierLabel}_qr.${format.toLowerCase()}`;
     a.target = '_blank';
     a.click();
   };
@@ -400,22 +426,44 @@ export default function QrGeneratorView({
   };
 
   const handleCreateStandeeFromGenerator = () => {
-    const newStandee = {
-      id: `standee-gen-${Date.now()}`,
-      name: `${genSpaceName} ${genIdentifier} Standee`,
-      spaceType: genSpaceType,
-      spaceLabel: `${genSpaceName} · ${genIdentifier}`,
-      identifier: genIdentifier,
-      qrType: genQrType,
-      status: 'active',
-      theme: qrColor === '#D97706' ? 'gold' : qrColor === '#0F172A' ? 'slate' : 'emerald',
-      message: genDescription || 'Scan to view menu & place orders',
-      lastUpdated: 'Just now'
-    };
-    setStandees(prev => [newStandee, ...prev]);
-    setSelectedStandeeId(newStandee.id);
-    setActiveTab('standees');
-    alert(`✓ Standee created for ${genSpaceName} (${genIdentifier}) and added to your Standee Management!`);
+    const spaceDisplayLabel = genSpaceType === 'counter' 
+      ? 'Billing Counter' 
+      : `${genSpaceName} · ${activeGenSpaceConfig.singular} ${genIdentifier}`;
+      
+    // Prevent duplicate standee record
+    const existingIndex = standees.findIndex(s => s.spaceType === genSpaceType && String(s.identifier) === String(genIdentifier));
+    
+    if (existingIndex >= 0) {
+      const updated = [...standees];
+      updated[existingIndex] = {
+        ...updated[existingIndex],
+        qrType: genQrType,
+        theme: qrColor === '#D97706' ? 'gold' : qrColor === '#0F172A' ? 'slate' : 'emerald',
+        message: genDescription || updated[existingIndex].message,
+        lastUpdated: 'Just now'
+      };
+      setStandees(updated);
+      setSelectedStandeeId(updated[existingIndex].id);
+      setActiveTab('standees');
+      alert(`✓ Standee updated for ${activeGenSpaceConfig.singular} ${genIdentifier} in Standee Management!`);
+    } else {
+      const newStandee = {
+        id: `standee-gen-${Date.now()}`,
+        name: `${activeGenSpaceConfig.singular} ${genIdentifier} Standee`,
+        spaceType: genSpaceType,
+        spaceLabel: spaceDisplayLabel,
+        identifier: String(genIdentifier),
+        qrType: genQrType,
+        status: 'active',
+        theme: qrColor === '#D97706' ? 'gold' : qrColor === '#0F172A' ? 'slate' : 'emerald',
+        message: genDescription || 'Scan to view menu & place orders',
+        lastUpdated: 'Just now'
+      };
+      setStandees(prev => [newStandee, ...prev]);
+      setSelectedStandeeId(newStandee.id);
+      setActiveTab('standees');
+      alert(`✓ Standee created for ${activeGenSpaceConfig.singular} ${genIdentifier} and added to Standee Management!`);
+    }
   };
 
   return (
@@ -1236,7 +1284,7 @@ export default function QrGeneratorView({
           {/* LEFT: Step-Based Configuration Workspace */}
           <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
 
-            {/* STEP 1: SPACE DETAILS */}
+            {/* STEP 1: SELECT PHYSICAL SPACE TYPE */}
             <div style={{
               background: '#FFFFFF',
               borderRadius: '16px',
@@ -1264,41 +1312,18 @@ export default function QrGeneratorView({
                   1
                 </div>
                 <strong style={{ fontSize: '0.94rem', color: '#0F172A', fontWeight: 900 }}>
-                  Space Details
+                  Select Space Type
                 </strong>
               </div>
 
               <div>
-                <label style={{ fontSize: '0.72rem', fontWeight: 800, color: '#475569', display: 'block', marginBottom: '4px', textTransform: 'uppercase' }}>
-                  Space / Zone Name *
+                <label style={{ fontSize: '0.72rem', fontWeight: 800, color: '#475569', display: 'block', marginBottom: '8px', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
+                  Available Physical Space Categories
                 </label>
-                <input
-                  type="text"
-                  value={genSpaceName}
-                  onChange={(e) => setGenSpaceName(e.target.value)}
-                  placeholder="e.g. Main Hall, Dining Terrace, VIP Lounge"
-                  style={{
-                    width: '100%',
-                    height: '40px',
-                    padding: '0 12px',
-                    borderRadius: '8px',
-                    border: '1px solid #CBD5E1',
-                    fontSize: '0.84rem',
-                    fontWeight: 700,
-                    color: '#0F172A',
-                    background: '#FFFFFF',
-                    boxSizing: 'border-box'
-                  }}
-                />
-              </div>
-
-              <div>
-                <label style={{ fontSize: '0.72rem', fontWeight: 800, color: '#475569', display: 'block', marginBottom: '6px', textTransform: 'uppercase' }}>
-                  Space Type (Adapted to your Business Model)
-                </label>
-                <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap' }}>
+                <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
                   {availableSpaceTypes.map(item => {
                     const isSelected = genSpaceType === item.id;
+                    const count = item.id === 'cinema_seat' ? totalCinemaSeatsCount : (spaceCounts[item.id] !== undefined ? spaceCounts[item.id] : 0);
                     return (
                       <button
                         key={item.id}
@@ -1306,51 +1331,342 @@ export default function QrGeneratorView({
                         onClick={() => {
                           setGenSpaceType(item.id);
                           handleSpaceTypeClick(item.id);
+                          if (item.id === 'counter') {
+                            setGenIdentifier('Counter');
+                            setGenSpaceName('Billing Counter');
+                          } else if (item.id === 'cinema_seat') {
+                            if (screenNum && selectedRowLabel && selectedSeatNum) {
+                              setGenIdentifier(`S${screenNum}-${selectedRowLabel}-${selectedSeatNum}`);
+                            } else {
+                              setGenIdentifier('S1-A-1');
+                            }
+                            setGenSpaceName('Multiplex Auditorium');
+                          } else {
+                            setGenIdentifier('1');
+                            if (item.id === 'cabin') setGenSpaceName('Private Area');
+                            else if (item.id === 'vip') setGenSpaceName('VIP Lounge');
+                            else if (item.id === 'room') setGenSpaceName('Guest Rooms');
+                            else setGenSpaceName('Main Hall');
+                          }
                         }}
                         style={{
-                          padding: '6px 12px',
-                          borderRadius: '8px',
+                          padding: '8px 14px',
+                          borderRadius: '10px',
                           border: isSelected ? '1.5px solid #064E3B' : '1px solid #EAE5DF',
                           background: isSelected ? '#ECFDF5' : '#FAF8F5',
                           color: isSelected ? '#064E3B' : '#475569',
-                          fontSize: '0.78rem',
+                          fontSize: '0.80rem',
                           fontWeight: isSelected ? 800 : 600,
-                          cursor: 'pointer'
+                          cursor: 'pointer',
+                          display: 'inline-flex',
+                          alignItems: 'center',
+                          gap: '6px',
+                          transition: 'all 0.15s ease'
                         }}
                       >
-                        {item.label}
+                        <span>{item.label}</span>
+                        <span style={{
+                          fontSize: '0.70rem',
+                          fontWeight: 900,
+                          padding: '1px 6px',
+                          borderRadius: '8px',
+                          background: isSelected ? '#064E3B' : '#E2E8F0',
+                          color: isSelected ? '#FFFFFF' : '#475569'
+                        }}>
+                          {count}
+                        </span>
                       </button>
                     );
                   })}
-                </div>
-              </div>
 
-              <div>
-                <label style={{ fontSize: '0.72rem', fontWeight: 800, color: '#475569', display: 'block', marginBottom: '4px', textTransform: 'uppercase' }}>
-                  Description (Optional)
-                </label>
-                <input
-                  type="text"
-                  value={genDescription}
-                  onChange={(e) => setGenDescription(e.target.value)}
-                  placeholder="e.g. Near Window, Ground Floor Family Section"
-                  style={{
-                    width: '100%',
-                    height: '40px',
-                    padding: '0 12px',
-                    borderRadius: '8px',
-                    border: '1px solid #CBD5E1',
-                    fontSize: '0.84rem',
-                    fontWeight: 600,
-                    color: '#0F172A',
-                    background: '#FFFFFF',
-                    boxSizing: 'border-box'
-                  }}
-                />
+                  {/* Billing Counter Option */}
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setGenSpaceType('counter');
+                      setGenIdentifier('Counter');
+                      setGenSpaceName('Billing Counter');
+                    }}
+                    style={{
+                      padding: '8px 14px',
+                      borderRadius: '10px',
+                      border: genSpaceType === 'counter' ? '1.5px solid #064E3B' : '1px solid #EAE5DF',
+                      background: genSpaceType === 'counter' ? '#ECFDF5' : '#FAF8F5',
+                      color: genSpaceType === 'counter' ? '#064E3B' : '#475569',
+                      fontSize: '0.80rem',
+                      fontWeight: genSpaceType === 'counter' ? 800 : 600,
+                      cursor: 'pointer',
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      gap: '6px',
+                      transition: 'all 0.15s ease'
+                    }}
+                  >
+                    <span>🏪 Billing Counter</span>
+                    <span style={{
+                      fontSize: '0.70rem',
+                      fontWeight: 900,
+                      padding: '1px 6px',
+                      borderRadius: '8px',
+                      background: genSpaceType === 'counter' ? '#064E3B' : '#E2E8F0',
+                      color: genSpaceType === 'counter' ? '#FFFFFF' : '#475569'
+                    }}>
+                      1
+                    </span>
+                  </button>
+                </div>
               </div>
             </div>
 
-            {/* STEP 2: QR TYPE (Plan-Aware) */}
+            {/* STEP 2: SELECT CONFIGURED PHYSICAL SPACE */}
+            <div style={{
+              background: '#FFFFFF',
+              borderRadius: '16px',
+              border: '1px solid #EAE5DF',
+              padding: '18px 20px',
+              boxShadow: '0 1px 3px rgba(0,0,0,0.02)',
+              display: 'flex',
+              flexDirection: 'column',
+              gap: '12px'
+            }}>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '8px' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                  <div style={{
+                    width: '24px',
+                    height: '24px',
+                    borderRadius: '6px',
+                    background: '#064E3B',
+                    color: '#FFF',
+                    fontSize: '0.74rem',
+                    fontWeight: 900,
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    flexShrink: 0
+                  }}>
+                    2
+                  </div>
+                  <strong style={{ fontSize: '0.94rem', color: '#0F172A', fontWeight: 900 }}>
+                    Select Configured {activeGenSpaceConfig.singular}
+                  </strong>
+                </div>
+
+                {/* Optional Contextual Add CTA */}
+                {!isCinema && genSpaceType !== 'counter' && onAddTable && (
+                  <button
+                    type="button"
+                    onClick={() => onAddTable((spaceCounts[genSpaceType] || 0) + 1, genSpaceType)}
+                    style={{
+                      padding: '4px 10px',
+                      borderRadius: '8px',
+                      border: '1px solid #A7F3D0',
+                      background: '#ECFDF5',
+                      color: '#064E3B',
+                      fontSize: '0.72rem',
+                      fontWeight: 800,
+                      cursor: 'pointer',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '4px'
+                    }}
+                  >
+                    <Plus size={13} />
+                    <span>+ Add {activeGenSpaceConfig.singular}</span>
+                  </button>
+                )}
+              </div>
+
+              {/* Standard Spaces Grid (Tables, Cabins, VIP, Rooms) */}
+              {genSpaceType !== 'cinema_seat' && genSpaceType !== 'counter' && (
+                <div>
+                  {genSpaceCount === 0 ? (
+                    <div style={{
+                      padding: '20px',
+                      borderRadius: '12px',
+                      background: '#FAF8F5',
+                      border: '1px dashed #CBD5E1',
+                      textAlign: 'center'
+                    }}>
+                      <p style={{ margin: '0 0 10px 0', fontSize: '0.82rem', color: '#64748B' }}>
+                        No {activeGenSpaceConfig.plural.toLowerCase()} currently configured in your restaurant profile.
+                      </p>
+                      {onAddTable && (
+                        <button
+                          type="button"
+                          onClick={() => onAddTable(1, genSpaceType)}
+                          style={{
+                            padding: '6px 14px',
+                            borderRadius: '8px',
+                            border: 'none',
+                            background: '#064E3B',
+                            color: '#FFF',
+                            fontSize: '0.76rem',
+                            fontWeight: 800,
+                            cursor: 'pointer'
+                          }}
+                        >
+                          + Add {activeGenSpaceConfig.singular} 1 Now
+                        </button>
+                      )}
+                    </div>
+                  ) : (
+                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(90px, 1fr))', gap: '8px' }}>
+                      {Array.from({ length: genSpaceCount }, (_, i) => String(i + 1)).map(num => {
+                        const isSelected = String(genIdentifier) === String(num);
+                        return (
+                          <button
+                            key={num}
+                            type="button"
+                            onClick={() => setGenIdentifier(num)}
+                            style={{
+                              padding: '10px 8px',
+                              borderRadius: '10px',
+                              border: isSelected ? '2px solid #064E3B' : '1px solid #EAE5DF',
+                              background: isSelected ? '#ECFDF5' : '#FFFFFF',
+                              color: isSelected ? '#064E3B' : '#0F172A',
+                              fontSize: '0.82rem',
+                              fontWeight: isSelected ? 800 : 600,
+                              cursor: 'pointer',
+                              textAlign: 'center',
+                              transition: 'all 0.15s ease',
+                              boxShadow: isSelected ? '0 2px 6px rgba(6, 78, 59, 0.15)' : 'none'
+                            }}
+                          >
+                            <div style={{ fontSize: '0.68rem', color: isSelected ? '#064E3B' : '#64748B', fontWeight: 700, textTransform: 'uppercase', marginBottom: '2px' }}>
+                              {activeGenSpaceConfig.singular}
+                            </div>
+                            <div style={{ fontSize: '1rem', fontWeight: 900 }}>
+                              {num}
+                            </div>
+                          </button>
+                        );
+                      })}
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {/* Counter Mode */}
+              {genSpaceType === 'counter' && (
+                <div style={{
+                  padding: '14px',
+                  borderRadius: '12px',
+                  background: '#ECFDF5',
+                  border: '1.5px solid #064E3B',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'space-between'
+                }}>
+                  <div>
+                    <strong style={{ fontSize: '0.86rem', color: '#064E3B', display: 'block' }}>
+                      🏪 Central Billing Counter
+                    </strong>
+                    <span style={{ fontSize: '0.72rem', color: '#047857' }}>
+                      General walk-in menu display standee (Browse Menu Only)
+                    </span>
+                  </div>
+                  <span style={{ fontSize: '0.72rem', fontWeight: 800, color: '#064E3B', background: '#D1FAE5', padding: '2px 8px', borderRadius: '8px' }}>
+                    Selected
+                  </span>
+                </div>
+              )}
+
+              {/* Cinema Seats Mode */}
+              {genSpaceType === 'cinema_seat' && (
+                <div>
+                  {cinemaSeats.length === 0 ? (
+                    <div style={{ padding: '20px', borderRadius: '12px', background: '#FAF8F5', border: '1px dashed #CBD5E1', textAlign: 'center' }}>
+                      <p style={{ margin: '0 0 8px 0', fontSize: '0.82rem', color: '#64748B' }}>
+                        No cinema auditorium seats configured yet.
+                      </p>
+                      {onBackToSetup && (
+                        <button
+                          type="button"
+                          onClick={() => onBackToSetup('cinema')}
+                          style={{ padding: '6px 14px', borderRadius: '8px', border: 'none', background: '#064E3B', color: '#FFF', fontSize: '0.76rem', fontWeight: 800, cursor: 'pointer' }}
+                        >
+                          Configure Cinema Seats ➔
+                        </button>
+                      )}
+                    </div>
+                  ) : (
+                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '8px' }}>
+                      <div>
+                        <label style={{ fontSize: '0.68rem', fontWeight: 800, color: '#64748B', display: 'block', marginBottom: '4px', textTransform: 'uppercase' }}>
+                          Screen
+                        </label>
+                        <select
+                          value={selectedScreenId}
+                          onChange={(e) => {
+                            const sId = e.target.value;
+                            setSelectedScreenId(sId);
+                            const screenSeats = cinemaSeats.filter(st => String(st.screen_id) === String(sId));
+                            const rows = [...new Set(screenSeats.map(st => st.row_label).filter(Boolean))].sort();
+                            if (rows.length > 0) {
+                              setSelectedRowLabel(rows[0]);
+                              const rowSeats = screenSeats.filter(st => st.row_label === rows[0]).map(st => String(st.seat_number));
+                              const firstSeat = rowSeats[0] || '1';
+                              setSelectedSeatNum(firstSeat);
+                              const scrObj = cinemaScreens.find(s => String(s.id) === String(sId));
+                              const scrN = scrObj ? scrObj.screen_number : '1';
+                              setGenIdentifier(`S${scrN}-${rows[0]}-${firstSeat}`);
+                            }
+                          }}
+                          style={{ width: '100%', height: '36px', padding: '0 8px', borderRadius: '8px', border: '1px solid #CBD5E1', fontSize: '0.78rem', fontWeight: 700 }}
+                        >
+                          {cinemaScreens.map(s => (
+                            <option key={s.id} value={String(s.id)}>Screen {s.screen_number} ({s.name || 'Main'})</option>
+                          ))}
+                        </select>
+                      </div>
+
+                      <div>
+                        <label style={{ fontSize: '0.68rem', fontWeight: 800, color: '#64748B', display: 'block', marginBottom: '4px', textTransform: 'uppercase' }}>
+                          Row
+                        </label>
+                        <select
+                          value={selectedRowLabel}
+                          onChange={(e) => {
+                            const rLabel = e.target.value;
+                            setSelectedRowLabel(rLabel);
+                            const rowSeats = cinemaSeats.filter(st => String(st.screen_id) === String(selectedScreenId) && st.row_label === rLabel).map(st => String(st.seat_number));
+                            const firstSeat = rowSeats[0] || '1';
+                            setSelectedSeatNum(firstSeat);
+                            setGenIdentifier(`S${screenNum}-${rLabel}-${firstSeat}`);
+                          }}
+                          style={{ width: '100%', height: '36px', padding: '0 8px', borderRadius: '8px', border: '1px solid #CBD5E1', fontSize: '0.78rem', fontWeight: 700 }}
+                        >
+                          {[...new Set(cinemaSeats.filter(st => String(st.screen_id) === String(selectedScreenId)).map(st => st.row_label).filter(Boolean))].sort().map(r => (
+                            <option key={r} value={r}>Row {r}</option>
+                          ))}
+                        </select>
+                      </div>
+
+                      <div>
+                        <label style={{ fontSize: '0.68rem', fontWeight: 800, color: '#64748B', display: 'block', marginBottom: '4px', textTransform: 'uppercase' }}>
+                          Seat No.
+                        </label>
+                        <select
+                          value={selectedSeatNum}
+                          onChange={(e) => {
+                            const sNum = e.target.value;
+                            setSelectedSeatNum(sNum);
+                            setGenIdentifier(`S${screenNum}-${selectedRowLabel}-${sNum}`);
+                          }}
+                          style={{ width: '100%', height: '36px', padding: '0 8px', borderRadius: '8px', border: '1px solid #CBD5E1', fontSize: '0.78rem', fontWeight: 700 }}
+                        >
+                          {cinemaSeats.filter(st => String(st.screen_id) === String(selectedScreenId) && st.row_label === selectedRowLabel).map(st => String(st.seat_number)).sort((a, b) => Number(a) - Number(b)).map(stNum => (
+                            <option key={stNum} value={stNum}>Seat {stNum}</option>
+                          ))}
+                        </select>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
+
+            {/* STEP 3: QR TYPE & EXPERIENCE (Plan-Aware) */}
             <div style={{
               background: '#FFFFFF',
               borderRadius: '16px',
@@ -1363,7 +1679,7 @@ export default function QrGeneratorView({
             }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                 <div style={{ width: '24px', height: '24px', borderRadius: '6px', background: '#064E3B', color: '#FFF', fontSize: '0.74rem', fontWeight: 900, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                  2
+                  3
                 </div>
                 <strong style={{ fontSize: '0.94rem', color: '#0F172A', fontWeight: 900 }}>
                   QR Type & Experience
@@ -1429,65 +1745,7 @@ export default function QrGeneratorView({
               </div>
             </div>
 
-            {/* STEP 3: SPACE IDENTIFIER */}
-            <div style={{
-              background: '#FFFFFF',
-              borderRadius: '16px',
-              border: '1px solid #EAE5DF',
-              padding: '18px 20px',
-              boxShadow: '0 1px 3px rgba(0,0,0,0.02)',
-              display: 'flex',
-              flexDirection: 'column',
-              gap: '12px'
-            }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                <div style={{ width: '24px', height: '24px', borderRadius: '6px', background: '#064E3B', color: '#FFF', fontSize: '0.74rem', fontWeight: 900, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                  3
-                </div>
-                <strong style={{ fontSize: '0.94rem', color: '#0F172A', fontWeight: 900 }}>
-                  Space Identifier
-                </strong>
-              </div>
-
-              <div>
-                <label style={{ fontSize: '0.72rem', fontWeight: 800, color: '#475569', display: 'block', marginBottom: '4px', textTransform: 'uppercase' }}>
-                  Table / Space Identifier
-                </label>
-                <div style={{ display: 'flex', gap: '8px' }}>
-                  <input
-                    type="text"
-                    value={genIdentifier}
-                    onChange={(e) => setGenIdentifier(e.target.value)}
-                    placeholder="e.g. MH-01, Table 1, Room 204"
-                    style={{
-                      flex: 1,
-                      padding: '8px 12px',
-                      borderRadius: '8px',
-                      border: '1px solid #CBD5E1',
-                      fontSize: '0.88rem',
-                      fontWeight: 800,
-                      color: '#0F172A',
-                      boxSizing: 'border-box'
-                    }}
-                  />
-                  <button
-                    type="button"
-                    onClick={() => {
-                      const num = parseInt(genIdentifier) || 0;
-                      setGenIdentifier(String(num + 1));
-                    }}
-                    style={{ padding: '0 12px', borderRadius: '8px', border: '1px solid #CBD5E1', background: '#FAF8F5', fontWeight: 800, fontSize: '0.78rem', cursor: 'pointer' }}
-                  >
-                    + Next
-                  </button>
-                </div>
-                <span style={{ fontSize: '0.70rem', color: '#64748B', marginTop: '4px', display: 'block' }}>
-                  Used to identify this space in orders, receipts and kitchen display operations.
-                </span>
-              </div>
-            </div>
-
-            {/* STEP 4: QR APPEARANCE */}
+            {/* STEP 4: QR APPEARANCE & STYLING */}
             <div style={{
               background: '#FFFFFF',
               borderRadius: '16px',
@@ -1593,7 +1851,7 @@ export default function QrGeneratorView({
                 marginBottom: '12px'
               }}>
                 <img
-                  src={currentQrImgUrl}
+                  src={generatorQrImgUrl}
                   alt="Generated Space QR"
                   style={{ width: '180px', height: '180px', display: 'block' }}
                 />
@@ -1609,7 +1867,7 @@ export default function QrGeneratorView({
                 fontWeight: 900,
                 marginBottom: '4px'
               }}>
-                {genSpaceName.toUpperCase()} · {genIdentifier}
+                {genSpaceType === 'counter' ? 'BILLING COUNTER' : `${activeGenSpaceConfig.badge} ${genIdentifier}`}
               </div>
 
               <h4 style={{ margin: '0 0 2px 0', fontSize: '1rem', fontWeight: 900, color: '#0F172A' }}>
@@ -1619,7 +1877,7 @@ export default function QrGeneratorView({
                 Scan with your smartphone camera to test
               </span>
 
-              {/* Test Button */}
+              {/* Test Button & Copy Link */}
               <div style={{ width: '100%', display: 'flex', gap: '8px', marginBottom: '14px' }}>
                 <button
                   type="button"
@@ -1751,7 +2009,7 @@ export default function QrGeneratorView({
                   marginTop: '4px'
                 }}
               >
-                <Sparkles size={14} color="#059669" />
+                <Plus size={15} />
                 <span>Create Standee from this QR</span>
               </button>
             </div>
@@ -1986,11 +2244,11 @@ export default function QrGeneratorView({
             </div>
 
             <div style={{ background: '#FAF8F5', padding: '14px', borderRadius: '16px', border: '1px solid #EAE5DF' }}>
-              <img src={currentQrImgUrl} alt="Test QR" style={{ width: '180px', height: '180px', display: 'block' }} />
+              <img src={activeTab === 'space-generator' ? generatorQrImgUrl : currentQrImgUrl} alt="Test QR" style={{ width: '180px', height: '180px', display: 'block' }} />
             </div>
 
             <div style={{ fontSize: '0.74rem', color: '#64748B', wordBreak: 'break-all', padding: '8px 12px', background: '#F8FAFC', borderRadius: '8px', border: '1px solid #E2E8F0' }}>
-              {currentTargetUrl}
+              {activeTab === 'space-generator' ? generatorTargetUrl : currentTargetUrl}
             </div>
 
             <div style={{ display: 'flex', gap: '8px', width: '100%', marginTop: '6px' }}>
@@ -2002,7 +2260,7 @@ export default function QrGeneratorView({
                 {copied ? '✓ Copied URL' : 'Copy Test URL'}
               </button>
               <a
-                href={currentTargetUrl}
+                href={activeTab === 'space-generator' ? generatorTargetUrl : currentTargetUrl}
                 target="_blank"
                 rel="noopener noreferrer"
                 style={{ flex: 1, height: '38px', borderRadius: '10px', background: '#064E3B', color: '#FFF', fontWeight: 800, fontSize: '0.78rem', textDecoration: 'none', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '4px' }}
