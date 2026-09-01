@@ -21,7 +21,7 @@ import { getDishImageUrl } from '../../../utils/imageHelper';
  * Generates a smooth, normalized SVG path from an authoritative chronological numeric series.
  * Safely handles empty arrays, single points, flat/zero periods, and prevents NaN/Infinity coordinates.
  */
-const generateSparklinePath = (dataSeries, width = 100, height = 20, paddingY = 3) => {
+const generateSparklinePath = (dataSeries, width = 100, height = 24, paddingY = 2) => {
   if (!Array.isArray(dataSeries) || dataSeries.length === 0) {
     return `M 0,${height / 2} L ${width},${height / 2}`;
   }
@@ -73,6 +73,13 @@ const generateSparklinePath = (dataSeries, width = 100, height = 20, paddingY = 
     path += ` C ${cp1x.toFixed(1)},${cp1y.toFixed(1)} ${cp2x.toFixed(1)},${cp2y.toFixed(1)} ${p2.x.toFixed(1)},${p2.y.toFixed(1)}`;
   }
   return path;
+};
+
+const generateSparklineAreaPath = (linePath, width = 100, height = 24) => {
+  if (!linePath || linePath.startsWith('M 0,12 L 100,12') || linePath.startsWith('M 0,10 L 100,10')) {
+    return '';
+  }
+  return `${linePath} L ${width},${height} L 0,${height} Z`;
 };
 
 export default function AnalyticsView({
@@ -213,12 +220,16 @@ export default function AnalyticsView({
   // Dynamic Live Sparkline Paths for KPI Cards (Strictly Data-Driven)
   const salesSparklinePath = useMemo(() => {
     const series = rawChartData.map(d => Number(d.sales || 0));
-    return generateSparklinePath(series);
+    return generateSparklinePath(series, 100, 24, 2);
   }, [rawChartData]);
+
+  const salesSparklineAreaPath = useMemo(() => {
+    return generateSparklineAreaPath(salesSparklinePath, 100, 24);
+  }, [salesSparklinePath]);
 
   const ordersSparklinePath = useMemo(() => {
     const series = rawChartData.map(d => (d.orders !== undefined ? Number(d.orders || 0) : 0));
-    return generateSparklinePath(series);
+    return generateSparklinePath(series, 100, 20, 3);
   }, [rawChartData]);
 
   const aovSparklinePath = useMemo(() => {
@@ -227,7 +238,7 @@ export default function AnalyticsView({
       const o = Number(d.orders || 0);
       return o > 0 && s > 0 ? Math.round(s / o) : 0;
     });
-    return generateSparklinePath(series);
+    return generateSparklinePath(series, 100, 20, 3);
   }, [rawChartData]);
 
   const activeDishesSparklinePath = useMemo(() => {
@@ -523,7 +534,7 @@ export default function AnalyticsView({
               overflow: 'hidden'
             }}>
               <div>
-                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '8px' }}>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '6px' }}>
                   <span style={{ fontSize: '0.74rem', color: '#64748B', fontWeight: 600 }}>Sales ({activeDateRangeLabel})</span>
                   <div style={{
                     width: '32px',
@@ -535,7 +546,8 @@ export default function AnalyticsView({
                     alignItems: 'center',
                     justifyContent: 'center',
                     fontWeight: 900,
-                    fontSize: '0.90rem'
+                    fontSize: '0.90rem',
+                    flexShrink: 0
                   }}>
                     {currencySymbol}
                   </div>
@@ -545,27 +557,46 @@ export default function AnalyticsView({
                   {currencySymbol}{totalSales.toLocaleString('en-IN')}
                 </div>
 
-                <div style={{ display: 'flex', alignItems: 'center', gap: '4px', marginTop: '6px' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '4px', marginTop: '4px', marginBottom: '6px' }}>
                   {growthPercentage !== null ? (
-                    <span style={{ fontSize: '0.70rem', color: growthPercentage >= 0 ? '#16A34A' : '#DC2626', fontWeight: 800 }}>
-                      {growthPercentage >= 0 ? '↑' : '↓'} {Math.abs(growthPercentage)}%
-                    </span>
+                    growthPercentage > 0 ? (
+                      <span style={{ fontSize: '0.70rem', color: '#16A34A', fontWeight: 800 }}>↑ {growthPercentage}%</span>
+                    ) : growthPercentage < 0 ? (
+                      <span style={{ fontSize: '0.70rem', color: '#DC2626', fontWeight: 800 }}>↓ {Math.abs(growthPercentage)}%</span>
+                    ) : (
+                      <span style={{ fontSize: '0.70rem', color: '#64748B', fontWeight: 800 }}>• 0%</span>
+                    )
                   ) : (
                     <span style={{ fontSize: '0.70rem', color: '#16A34A', fontWeight: 800 }}>Live</span>
                   )}
-                  <span style={{ fontSize: '0.62rem', color: '#94A3B8' }}>{activeDateRangeLabel}</span>
+                  <span style={{ fontSize: '0.62rem', color: '#94A3B8' }}>
+                    {growthPercentage !== null ? 'vs previous period' : activeDateRangeLabel}
+                  </span>
                 </div>
               </div>
 
-              {/* Dynamic Live Sparkline (Orange) */}
-              <div style={{ width: '100%', height: '24px', marginTop: '8px' }}>
-                <svg viewBox="0 0 100 20" style={{ width: '100%', height: '100%', overflow: 'visible' }}>
+              {/* Dynamic Live Sparkline (Orange with Area Glow) */}
+              <div style={{ width: '100%', height: '28px', marginTop: 'auto' }}>
+                <svg viewBox="0 0 100 24" preserveAspectRatio="none" style={{ width: '100%', height: '100%', overflow: 'visible' }}>
+                  <defs>
+                    <linearGradient id="salesSparklineGrad" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="0%" stopColor="#EA580C" stopOpacity="0.22" />
+                      <stop offset="100%" stopColor="#EA580C" stopOpacity="0.0" />
+                    </linearGradient>
+                  </defs>
+                  {salesSparklineAreaPath && (
+                    <path
+                      d={salesSparklineAreaPath}
+                      fill="url(#salesSparklineGrad)"
+                    />
+                  )}
                   <path
                     d={salesSparklinePath}
                     fill="none"
                     stroke="#F97316"
-                    strokeWidth="2"
+                    strokeWidth="2.2"
                     strokeLinecap="round"
+                    strokeLinejoin="round"
                   />
                 </svg>
               </div>
