@@ -409,9 +409,51 @@ export default function QrGeneratorView({
     const showWatermark = !settingsForm?.watermark_removal_enabled;
 
     try {
+      const width = 700;
+      // Pre-calculate text wrapping for name
+      const tempCanvas = document.createElement('canvas');
+      const tempCtx = tempCanvas.getContext('2d');
+      tempCtx.font = 'bold 34px "Playfair Display", Georgia, serif';
+
+      const words = currentName.split(' ');
+      let line = '';
+      const lines = [];
+      for (let n = 0; n < words.length; n++) {
+        const testLine = line + words[n] + ' ';
+        const metrics = tempCtx.measureText(testLine);
+        if (metrics.width > 580 && n > 0) {
+          lines.push(line.trim());
+          line = words[n] + ' ';
+        } else {
+          line = testLine;
+        }
+      }
+      lines.push(line.trim());
+
+      // Measure total vertical content
+      let totalH = 36; // top margin inside card
+      totalH += 44; // badge
+      totalH += 18; // gap
+      totalH += lines.length * 38; // restaurant name
+      totalH += 6; // gap
+      totalH += 22; // tagline
+      totalH += 20; // gap
+      totalH += 368; // QR Box
+      totalH += 22; // gap
+      totalH += 26; // primary inst
+      totalH += 6; // gap
+      totalH += 20; // hindi inst
+      totalH += 20; // gap
+      totalH += 2; // divider line
+      totalH += 18; // gap
+      if (currentAddress) totalH += 24;
+      if (currentPhone) totalH += 24;
+      if (showWatermark) totalH += 24;
+      totalH += 30; // bottom margin
+
+      const height = Math.ceil(totalH + 20); // total canvas height with outer border
+
       const canvas = document.createElement('canvas');
-      const width = 800;
-      const height = 1120;
       canvas.width = width;
       canvas.height = height;
       const ctx = canvas.getContext('2d');
@@ -420,11 +462,11 @@ export default function QrGeneratorView({
       ctx.fillStyle = '#FFFFFF';
       ctx.fillRect(0, 0, width, height);
 
-      // 2. Gold Outer Border with rounded corners
-      const margin = 20;
+      // 2. Gold Outer Border
+      const margin = 10;
       const cardW = width - margin * 2;
       const cardH = height - margin * 2;
-      const radius = 36;
+      const radius = 30;
 
       ctx.save();
       ctx.beginPath();
@@ -434,21 +476,21 @@ export default function QrGeneratorView({
         ctx.rect(margin, margin, cardW, cardH);
       }
       ctx.strokeStyle = '#D4AF37';
-      ctx.lineWidth = 7;
+      ctx.lineWidth = 6;
       ctx.stroke();
       ctx.restore();
 
       // 3. Top Space Badge
-      ctx.font = 'bold 18px "Plus Jakarta Sans", sans-serif';
+      ctx.font = 'bold 20px "Plus Jakarta Sans", sans-serif';
       const textMetrics = ctx.measureText(badgeText.toUpperCase());
-      const badgeW = Math.max(textMetrics.width + 44, 200);
-      const badgeH = 38;
+      const badgeW = Math.max(textMetrics.width + 48, 220);
+      const badgeH = 42;
       const badgeX = (width - badgeW) / 2;
-      const badgeY = 48;
+      const badgeY = 32;
 
       ctx.beginPath();
       if (ctx.roundRect) {
-        ctx.roundRect(badgeX, badgeY, badgeW, badgeH, 19);
+        ctx.roundRect(badgeX, badgeY, badgeW, badgeH, 21);
       } else {
         ctx.rect(badgeX, badgeY, badgeW, badgeH);
       }
@@ -460,56 +502,39 @@ export default function QrGeneratorView({
       ctx.textBaseline = 'middle';
       ctx.fillText(badgeText.toUpperCase(), width / 2, badgeY + badgeH / 2);
 
-      // 4. Restaurant Name with multi-line auto-wrap
+      // 4. Restaurant Name
       ctx.fillStyle = '#0A2315';
-      ctx.font = 'bold 30px "Playfair Display", Georgia, serif';
+      ctx.font = 'bold 34px "Playfair Display", Georgia, serif';
       ctx.textAlign = 'center';
       ctx.textBaseline = 'alphabetic';
 
-      const words = currentName.split(' ');
-      let line = '';
-      const lines = [];
-      for (let n = 0; n < words.length; n++) {
-        const testLine = line + words[n] + ' ';
-        const metrics = ctx.measureText(testLine);
-        if (metrics.width > 680 && n > 0) {
-          lines.push(line.trim());
-          line = words[n] + ' ';
-        } else {
-          line = testLine;
-        }
-      }
-      lines.push(line.trim());
-
-      let currentY = 124;
+      let curY = badgeY + badgeH + 34;
       for (let i = 0; i < lines.length; i++) {
-        ctx.fillText(lines[i], width / 2, currentY);
-        currentY += 36;
+        ctx.fillText(lines[i], width / 2, curY);
+        curY += 38;
       }
 
       // 5. Tagline
       ctx.fillStyle = '#16A34A';
-      ctx.font = 'bold 17px "Plus Jakarta Sans", sans-serif';
-      ctx.fillText(currentTagline, width / 2, currentY);
-      currentY += 28;
+      ctx.font = 'bold 18px "Plus Jakarta Sans", sans-serif';
+      ctx.fillText(currentTagline, width / 2, curY);
+      curY += 22;
 
-      // 6. QR Code Image
-      const qrSize = 390;
+      // 6. QR Code Image & Box
+      const qrSize = 340;
       const qrX = (width - qrSize) / 2;
-      const qrY = currentY;
+      const qrY = curY;
 
-      // Draw QR Box border
       ctx.beginPath();
       if (ctx.roundRect) {
-        ctx.roundRect(qrX - 12, qrY - 12, qrSize + 24, qrSize + 24, 18);
+        ctx.roundRect(qrX - 14, qrY - 14, qrSize + 28, qrSize + 28, 20);
       } else {
-        ctx.rect(qrX - 12, qrY - 12, qrSize + 24, qrSize + 24);
+        ctx.rect(qrX - 14, qrY - 14, qrSize + 28, qrSize + 28);
       }
       ctx.strokeStyle = '#E2E8F0';
       ctx.lineWidth = 2.5;
       ctx.stroke();
 
-      // Load QR Image
       const img = new Image();
       img.crossOrigin = 'anonymous';
       img.src = qrImg;
@@ -527,47 +552,47 @@ export default function QrGeneratorView({
         setTimeout(resolve, 3000);
       });
 
-      currentY += qrSize + 36;
+      curY += qrSize + 36;
 
-      // 7. Primary Instruction (English)
+      // 7. Primary Scan Instruction
       ctx.fillStyle = '#0A2315';
-      ctx.font = 'bold 22px "Plus Jakarta Sans", sans-serif';
-      ctx.fillText(instEn, width / 2, currentY);
-      currentY += 28;
+      ctx.font = 'bold 23px "Plus Jakarta Sans", sans-serif';
+      ctx.fillText(instEn, width / 2, curY);
+      curY += 28;
 
-      // 8. Secondary Instruction (Hindi)
+      // 8. Secondary Scan Instruction (Hindi)
       ctx.fillStyle = '#64748B';
-      ctx.font = 'bold 18px "Plus Jakarta Sans", sans-serif';
-      ctx.fillText(instHi, width / 2, currentY);
-      currentY += 32;
+      ctx.font = 'bold 19px "Plus Jakarta Sans", sans-serif';
+      ctx.fillText(instHi, width / 2, curY);
+      curY += 24;
 
-      // 9. Horizontal Divider
+      // 9. Divider Line
       ctx.beginPath();
-      ctx.moveTo(60, currentY);
-      ctx.lineTo(width - 60, currentY);
+      ctx.moveTo(50, curY);
+      ctx.lineTo(width - 50, curY);
       ctx.strokeStyle = '#F1F5F9';
       ctx.lineWidth = 2;
       ctx.stroke();
-      currentY += 28;
+      curY += 24;
 
       // 10. Footer Address & Phone
       ctx.fillStyle = '#64748B';
       ctx.font = '16px "Plus Jakarta Sans", sans-serif';
       if (currentAddress) {
-        ctx.fillText(currentAddress, width / 2, currentY);
-        currentY += 24;
+        ctx.fillText(currentAddress, width / 2, curY);
+        curY += 22;
       }
       if (currentPhone) {
         ctx.font = 'bold 16px "Plus Jakarta Sans", sans-serif';
-        ctx.fillText(`Phone: ${currentPhone}`, width / 2, currentY);
-        currentY += 24;
+        ctx.fillText(`Phone: ${currentPhone}`, width / 2, curY);
+        curY += 22;
       }
 
-      // 11. Powered by TouchQR
+      // 11. Watermark
       if (showWatermark) {
         ctx.fillStyle = '#15803D';
         ctx.font = 'bold 15px "Plus Jakarta Sans", sans-serif';
-        ctx.fillText('⚡ Powered by TouchQR', width / 2, currentY);
+        ctx.fillText('⚡ Powered by TouchQR', width / 2, curY);
       }
 
       // Trigger Download
