@@ -210,20 +210,20 @@ export default function AnalyticsView({
     const mid1 = Math.round(maxSales / 3);
     const bot = 0;
     return [
-      { label: formatCompactCurrency(top, currencySymbol), y: 20 },
-      { label: formatCompactCurrency(mid2, currencySymbol), y: 68 },
-      { label: formatCompactCurrency(mid1, currencySymbol), y: 116 },
-      { label: formatCompactCurrency(bot, currencySymbol), y: 165 }
+      { label: formatCompactCurrency(top, currencySymbol), y: 14 },
+      { label: formatCompactCurrency(mid2, currencySymbol), y: 71 },
+      { label: formatCompactCurrency(mid1, currencySymbol), y: 127 },
+      { label: formatCompactCurrency(bot, currencySymbol), y: 184 }
     ];
   }, [maxSales, currencySymbol]);
 
   const chartPoints = useMemo(() => {
     const chartWidth = 460;
-    const chartHeight = 200;
-    const paddingLeft = 44;
-    const paddingRight = 14;
-    const paddingTop = 20;
-    const paddingBottom = 35;
+    const chartHeight = 210;
+    const paddingLeft = 40;
+    const paddingRight = 12;
+    const paddingTop = 14;
+    const paddingBottom = 26;
     const usableWidth = chartWidth - paddingLeft - paddingRight;
     const usableHeight = chartHeight - paddingTop - paddingBottom;
 
@@ -266,7 +266,7 @@ export default function AnalyticsView({
     if (chartPoints.length <= 1) return '';
     const lastX = chartPoints[chartPoints.length - 1].x;
     const firstX = chartPoints[0].x;
-    return `${linePath} L ${lastX},165 L ${firstX},165 Z`;
+    return `${linePath} L ${lastX},184 L ${firstX},184 Z`;
   }, [linePath, chartPoints]);
 
   const visibleXLabels = useMemo(() => {
@@ -1163,14 +1163,14 @@ export default function AnalyticsView({
                 </div>
               </div>
 
-              {/* Dynamic SVG Area Line Chart with Subtle Y-Axis & Adaptive X-Axis */}
-              <div style={{ position: 'relative', width: '100%', height: '220px', marginTop: '10px' }}>
+              {/* Dynamic SVG Area Line Chart with Expanded Plotting Area */}
+              <div style={{ position: 'relative', width: '100%', height: '240px', marginTop: '4px' }}>
                 {activeHoverPoint && (
                   <div style={{
                     position: 'absolute',
                     left: `${(activeHoverPoint.x / 460) * 100}%`,
-                    top: `${(activeHoverPoint.y / 200) * 100 - 32}%`,
-                    transform: 'translate(-50%, -100%)',
+                    top: activeHoverPoint.y > 45 ? `${(activeHoverPoint.y / 210) * 100 - 12}%` : `${(activeHoverPoint.y / 210) * 100 + 12}%`,
+                    transform: activeHoverPoint.y > 45 ? 'translate(-50%, -100%)' : 'translate(-50%, 0%)',
                     background: '#FFFFFF',
                     border: '1px solid #E2E8F0',
                     borderRadius: '8px',
@@ -1195,19 +1195,19 @@ export default function AnalyticsView({
                   </div>
                 )}
 
-                <svg viewBox="0 0 460 200" style={{ width: '100%', height: '100%', overflow: 'visible' }}>
+                <svg viewBox="0 0 460 210" style={{ width: '100%', height: '100%', overflow: 'visible' }}>
                   <defs>
                     <linearGradient id="salesGradient" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="0%" stopColor="#EA580C" stopOpacity="0.16" />
+                      <stop offset="0%" stopColor="#EA580C" stopOpacity="0.18" />
                       <stop offset="100%" stopColor="#EA580C" stopOpacity="0.0" />
                     </linearGradient>
                   </defs>
 
-                  {/* Subtle Dynamic Y-Axis Values & Horizontal Grid Lines */}
+                  {/* Dynamic Y-Axis Values & Horizontal Grid Lines */}
                   {yAxisTicks.map((tick, idx) => (
                     <g key={idx}>
                       <line
-                        x1="44"
+                        x1="40"
                         y1={tick.y}
                         x2="450"
                         y2={tick.y}
@@ -1216,7 +1216,7 @@ export default function AnalyticsView({
                         strokeDasharray={idx === yAxisTicks.length - 1 ? 'none' : '3 3'}
                       />
                       <text
-                        x="38"
+                        x="34"
                         y={tick.y + 3}
                         textAnchor="end"
                         fill="#94A3B8"
@@ -1229,7 +1229,7 @@ export default function AnalyticsView({
                     </g>
                   ))}
 
-                  {/* Subtle Transparent Area Fill */}
+                  {/* Transparent Area Fill */}
                   {areaPath && (
                     <path
                       d={areaPath}
@@ -1237,9 +1237,9 @@ export default function AnalyticsView({
                     />
                   )}
 
-                  {/* Data Anchor Pillars & Point Drop-lines to eliminate empty chart feel */}
+                  {/* Data Anchor Pillars & Point Drop-lines */}
                   {chartPoints.map((pt, idx) => {
-                    const colH = Math.max(165 - pt.y, 0);
+                    const colH = Math.max(184 - pt.y, 0);
                     const isHovered = activeHoverPoint?.date === pt.date;
                     return (
                       <g key={`col-${idx}`}>
@@ -1257,7 +1257,7 @@ export default function AnalyticsView({
                           x1={pt.x}
                           y1={pt.y}
                           x2={pt.x}
-                          y2="165"
+                          y2="184"
                           stroke="#EA580C"
                           strokeWidth="1"
                           strokeDasharray="2 2"
@@ -1325,7 +1325,7 @@ export default function AnalyticsView({
                     <text
                       key={idx}
                       x={pt.x}
-                      y="186"
+                      y="198"
                       textAnchor="middle"
                       fill={activeHoverPoint?.date === pt.date ? '#0F172A' : '#94A3B8'}
                       fontSize="9"
