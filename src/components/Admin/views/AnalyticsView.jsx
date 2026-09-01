@@ -486,26 +486,35 @@ export default function AnalyticsView({
           display: flex;
           align-items: center;
           gap: 24px;
+          gap: 6px;
           border-bottom: 1px solid #E2E8F0;
-          padding-bottom: 2px;
+          margin-bottom: 4px;
           overflow-x: auto;
+          white-space: nowrap;
+          -webkit-overflow-scrolling: touch;
           scrollbar-width: none;
+          -ms-overflow-style: none;
+          padding-bottom: 1px;
         }
-        .analytics-subtabs-row::-webkit-scrollbar { display: none; }
+        .analytics-subtabs-row::-webkit-scrollbar {
+          display: none;
+        }
         .analytics-subtab-btn {
           background: none;
           border: none;
-          padding: 8px 4px 12px 4px;
-          font-size: 0.86rem;
+          padding: 10px 16px;
+          font-size: 0.82rem;
           font-weight: 600;
           color: #64748B;
           cursor: pointer;
           position: relative;
           white-space: nowrap;
-          transition: all 0.2s ease;
+          transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+          border-radius: 8px 8px 0 0;
         }
         .analytics-subtab-btn:hover {
           color: #0F172A;
+          background: #F8FAFC;
         }
         .analytics-subtab-btn.active {
           color: #EA580C;
@@ -514,7 +523,7 @@ export default function AnalyticsView({
         .analytics-subtab-btn.active::after {
           content: '';
           position: absolute;
-          bottom: -1px;
+          bottom: -2px;
           left: 0;
           right: 0;
           height: 2.5px;
@@ -523,7 +532,7 @@ export default function AnalyticsView({
         }
         .analytics-kpi-grid {
           display: grid;
-          grid-template-columns: repeat(5, 1fr);
+          grid-template-columns: repeat(5, minmax(0, 1fr));
           gap: 14px;
         }
         .analytics-row-1 {
@@ -533,54 +542,143 @@ export default function AnalyticsView({
         }
         .analytics-row-2 {
           display: grid;
-          grid-template-columns: repeat(3, 1fr);
+          grid-template-columns: repeat(3, minmax(0, 1fr));
           gap: 16px;
         }
         .analytics-card {
           background: #FFFFFF;
-          border-radius: 18px;
+          border-radius: 16px;
           border: 1px solid #E2E8F0;
           padding: 18px;
-          box-shadow: 0 1px 3px rgba(0,0,0,0.02);
+          box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.03), 0 1px 2px -1px rgba(0, 0, 0, 0.02);
           display: flex;
           flex-direction: column;
           position: relative;
           overflow: hidden;
+          transition: border-color 0.2s ease, box-shadow 0.2s ease;
         }
+        .analytics-card:hover {
+          border-color: #CBD5E1;
+        }
+        .analytics-payment-layout {
+          display: flex;
+          align-items: center;
+          gap: 20px;
+        }
+
+        /* Large Screens & Desktop (>1280px) */
+        @media (min-width: 1281px) {
+          .analytics-kpi-grid {
+            grid-template-columns: repeat(5, minmax(0, 1fr));
+          }
+          .analytics-row-2 {
+            grid-template-columns: repeat(3, minmax(0, 1fr));
+          }
+        }
+
+        /* Medium Desktop & Laptops (1024px - 1280px) */
         @media (max-width: 1280px) {
           .analytics-kpi-grid {
-            grid-template-columns: repeat(3, 1fr) !important;
+            grid-template-columns: repeat(3, minmax(0, 1fr)) !important;
+            gap: 12px !important;
+          }
+          .analytics-kpi-card:nth-child(4),
+          .analytics-kpi-card:nth-child(5) {
+            grid-column: span 1;
           }
           .analytics-row-2 {
             grid-template-columns: 1fr 1fr !important;
+            gap: 14px !important;
+          }
+          .analytics-row-2 > div:nth-child(3) {
+            grid-column: span 2;
           }
         }
+
+        /* Tablets (768px - 1024px) */
         @media (max-width: 1024px) {
+          .analytics-container {
+            padding: 18px;
+            gap: 16px;
+          }
           .analytics-row-1 {
             grid-template-columns: 1fr !important;
+            gap: 14px !important;
           }
         }
+
+        /* Small Tablets & Large Mobiles (640px - 768px) */
         @media (max-width: 768px) {
-          .analytics-kpi-grid {
-            grid-template-columns: repeat(2, 1fr) !important;
+          .analytics-container {
+            padding: 14px;
+            gap: 14px;
           }
-          .analytics-row-2 {
-            grid-template-columns: 1fr !important;
+          .analytics-header-row {
+            flex-direction: column !important;
+            align-items: stretch !important;
+            gap: 12px !important;
           }
           .analytics-header-controls {
             flex-wrap: wrap !important;
             width: 100% !important;
+            gap: 8px !important;
           }
-          .analytics-header-row {
-            flex-direction: column !important;
-            align-items: flex-start !important;
-            gap: 14px !important;
+          .analytics-header-control-item {
+            flex: 1 1 auto;
+          }
+          .analytics-kpi-grid {
+            grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+            gap: 10px !important;
+          }
+          .analytics-kpi-card:nth-child(5) {
+            grid-column: span 2 !important;
+          }
+          .analytics-row-2 {
+            grid-template-columns: 1fr !important;
+            gap: 12px !important;
+          }
+          .analytics-row-2 > div:nth-child(3) {
+            grid-column: span 1 !important;
           }
         }
+
+        /* Mobile Screens (<480px) */
         @media (max-width: 480px) {
+          .analytics-container {
+            padding: 10px;
+            gap: 12px;
+          }
+          .analytics-card {
+            padding: 14px !important;
+            border-radius: 14px !important;
+          }
+          .analytics-kpi-card {
+            padding: 12px 10px !important;
+          }
+          .analytics-kpi-title {
+            font-size: 0.68rem !important;
+          }
+          .analytics-kpi-val {
+            font-size: 1.20rem !important;
+          }
+          .analytics-kpi-icon {
+            width: 26px !important;
+            height: 26px !important;
+          }
+          .analytics-payment-layout {
+            flex-direction: column !important;
+            align-items: center !important;
+            gap: 16px !important;
+          }
+        }
+
+        /* Ultra Small Mobile (<360px) */
+        @media (max-width: 360px) {
           .analytics-kpi-grid {
-            grid-template-columns: 1fr 1fr !important;
-            gap: 10px !important;
+            grid-template-columns: 1fr !important;
+          }
+          .analytics-kpi-card:nth-child(5) {
+            grid-column: span 1 !important;
           }
         }
       `}</style>
@@ -622,7 +720,7 @@ export default function AnalyticsView({
           gap: '10px'
         }}>
           {/* Date Range Selector Pill */}
-          <div style={{
+          <div className="analytics-header-control-item" style={{
             position: 'relative',
             display: 'flex',
             alignItems: 'center',
@@ -662,7 +760,7 @@ export default function AnalyticsView({
           </div>
 
           {/* Auto-Refresh Live Pill */}
-          <div style={{
+          <div className="analytics-header-control-item" style={{
             display: 'flex',
             alignItems: 'center',
             gap: '6px',
@@ -684,6 +782,7 @@ export default function AnalyticsView({
             <button
               onClick={handleExportClick}
               disabled={isExporting}
+              className="analytics-header-control-item"
               style={{
                 display: 'flex',
                 alignItems: 'center',
@@ -736,11 +835,11 @@ export default function AnalyticsView({
           {/* Top 5 KPI Cards Grid */}
           <div className="analytics-kpi-grid">
             {/* Card 1: Sales */}
-            <div className="analytics-card">
+            <div className="analytics-card analytics-kpi-card">
               <div>
                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '4px' }}>
-                  <span style={{ fontSize: '0.74rem', color: '#64748B', fontWeight: 600 }}>Sales</span>
-                  <div style={{
+                  <span className="analytics-kpi-title" style={{ fontSize: '0.74rem', color: '#64748B', fontWeight: 600 }}>Sales</span>
+                  <div className="analytics-kpi-icon" style={{
                     width: '30px',
                     height: '30px',
                     borderRadius: '8px',
@@ -759,7 +858,7 @@ export default function AnalyticsView({
                   {activeDateRangeLabel}
                 </span>
 
-                <div style={{ fontSize: '1.45rem', fontWeight: 900, color: '#0F172A', letterSpacing: '-0.02em', lineHeight: 1.1 }}>
+                <div className="analytics-kpi-val" style={{ fontSize: '1.45rem', fontWeight: 900, color: '#0F172A', letterSpacing: '-0.02em', lineHeight: 1.1 }}>
                   {currencySymbol}{totalSales.toLocaleString('en-IN')}
                 </div>
 
@@ -794,11 +893,11 @@ export default function AnalyticsView({
             </div>
 
             {/* Card 2: Orders Count */}
-            <div className="analytics-card">
+            <div className="analytics-card analytics-kpi-card">
               <div>
                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '4px' }}>
-                  <span style={{ fontSize: '0.74rem', color: '#64748B', fontWeight: 600 }}>Orders Count</span>
-                  <div style={{
+                  <span className="analytics-kpi-title" style={{ fontSize: '0.74rem', color: '#64748B', fontWeight: 600 }}>Orders Count</span>
+                  <div className="analytics-kpi-icon" style={{
                     width: '30px',
                     height: '30px',
                     borderRadius: '8px',
@@ -817,7 +916,7 @@ export default function AnalyticsView({
                   {activeDateRangeLabel}
                 </span>
 
-                <div style={{ fontSize: '1.45rem', fontWeight: 900, color: '#0F172A', letterSpacing: '-0.02em', lineHeight: 1.1 }}>
+                <div className="analytics-kpi-val" style={{ fontSize: '1.45rem', fontWeight: 900, color: '#0F172A', letterSpacing: '-0.02em', lineHeight: 1.1 }}>
                   {totalOrders.toLocaleString('en-IN')}
                 </div>
 
@@ -852,11 +951,11 @@ export default function AnalyticsView({
             </div>
 
             {/* Card 3: Average Order Value */}
-            <div className="analytics-card">
+            <div className="analytics-card analytics-kpi-card">
               <div>
                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '4px' }}>
-                  <span style={{ fontSize: '0.74rem', color: '#64748B', fontWeight: 600 }}>Average Order Value</span>
-                  <div style={{
+                  <span className="analytics-kpi-title" style={{ fontSize: '0.74rem', color: '#64748B', fontWeight: 600 }}>Average Order Value</span>
+                  <div className="analytics-kpi-icon" style={{
                     width: '30px',
                     height: '30px',
                     borderRadius: '8px',
@@ -875,7 +974,7 @@ export default function AnalyticsView({
                   {activeDateRangeLabel}
                 </span>
 
-                <div style={{ fontSize: '1.45rem', fontWeight: 900, color: '#0F172A', letterSpacing: '-0.02em', lineHeight: 1.1 }}>
+                <div className="analytics-kpi-val" style={{ fontSize: '1.45rem', fontWeight: 900, color: '#0F172A', letterSpacing: '-0.02em', lineHeight: 1.1 }}>
                   {currencySymbol}{aov.toLocaleString('en-IN')}
                 </div>
 
@@ -910,11 +1009,11 @@ export default function AnalyticsView({
             </div>
 
             {/* Card 4: Active Dishes Sold */}
-            <div className="analytics-card">
+            <div className="analytics-card analytics-kpi-card">
               <div>
                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '4px' }}>
-                  <span style={{ fontSize: '0.74rem', color: '#64748B', fontWeight: 600 }}>Active Dishes Sold</span>
-                  <div style={{
+                  <span className="analytics-kpi-title" style={{ fontSize: '0.74rem', color: '#64748B', fontWeight: 600 }}>Active Dishes Sold</span>
+                  <div className="analytics-kpi-icon" style={{
                     width: '30px',
                     height: '30px',
                     borderRadius: '8px',
@@ -933,7 +1032,7 @@ export default function AnalyticsView({
                   {activeDateRangeLabel}
                 </span>
 
-                <div style={{ fontSize: '1.45rem', fontWeight: 900, color: '#0F172A', letterSpacing: '-0.02em', lineHeight: 1.1 }}>
+                <div className="analytics-kpi-val" style={{ fontSize: '1.45rem', fontWeight: 900, color: '#0F172A', letterSpacing: '-0.02em', lineHeight: 1.1 }}>
                   {distinctDishesCount.toLocaleString('en-IN')}
                 </div>
 
@@ -965,11 +1064,11 @@ export default function AnalyticsView({
             </div>
 
             {/* Card 5: Total Items Sold */}
-            <div className="analytics-card">
+            <div className="analytics-card analytics-kpi-card">
               <div>
                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '4px' }}>
-                  <span style={{ fontSize: '0.74rem', color: '#64748B', fontWeight: 600 }}>Total Items Sold</span>
-                  <div style={{
+                  <span className="analytics-kpi-title" style={{ fontSize: '0.74rem', color: '#64748B', fontWeight: 600 }}>Total Items Sold</span>
+                  <div className="analytics-kpi-icon" style={{
                     width: '30px',
                     height: '30px',
                     borderRadius: '8px',
@@ -988,7 +1087,7 @@ export default function AnalyticsView({
                   {activeDateRangeLabel}
                 </span>
 
-                <div style={{ fontSize: '1.45rem', fontWeight: 900, color: '#0F172A', letterSpacing: '-0.02em', lineHeight: 1.1 }}>
+                <div className="analytics-kpi-val" style={{ fontSize: '1.45rem', fontWeight: 900, color: '#0F172A', letterSpacing: '-0.02em', lineHeight: 1.1 }}>
                   {totalItemsSold.toLocaleString('en-IN')}
                 </div>
 
@@ -1200,60 +1299,63 @@ export default function AnalyticsView({
                   </span>
                 </div>
 
-                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '16px', margin: '20px 0' }}>
-                  {/* SVG Donut */}
-                  <div style={{ position: 'relative', width: '125px', height: '125px', flexShrink: 0 }}>
-                    <svg viewBox="0 0 36 36" style={{ width: '100%', height: '100%', transform: 'rotate(-90deg)' }}>
-                      <circle cx="18" cy="18" r="14" fill="transparent" stroke="#F1F5F9" strokeWidth="4.5" />
-                      {paymentAnalytics.slices.map((slice, idx) => {
-                        if (parseFloat(slice.percent) <= 0) return null;
-                        return (
-                          <circle
-                            key={idx}
-                            cx="18"
-                            cy="18"
-                            r="14"
-                            fill="transparent"
-                            stroke={slice.color}
-                            strokeWidth="4.5"
-                            strokeDasharray={slice.strokeDasharray}
-                            strokeDashoffset={slice.strokeDashoffset}
-                          />
-                        );
-                      })}
-                    </svg>
+                {/* Interactive Donut & Legend Container */}
+                <div style={{ marginTop: '14px', flex: 1, display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
+                  <div className="analytics-payment-layout">
+                    {/* SVG Donut */}
+                    <div style={{ position: 'relative', width: '120px', height: '120px', flexShrink: 0, margin: '0 auto' }}>
+                      <svg viewBox="0 0 36 36" style={{ width: '100%', height: '100%', transform: 'rotate(-90deg)' }}>
+                        <circle cx="18" cy="18" r="14" fill="transparent" stroke="#F1F5F9" strokeWidth="4.5" />
+                        {paymentAnalytics.slices.map((slice, idx) => {
+                          if (parseFloat(slice.percent) <= 0) return null;
+                          return (
+                            <circle
+                              key={idx}
+                              cx="18"
+                              cy="18"
+                              r="14"
+                              fill="transparent"
+                              stroke={slice.color}
+                              strokeWidth="4.5"
+                              strokeDasharray={slice.strokeDasharray}
+                              strokeDashoffset={slice.strokeDashoffset}
+                            />
+                          );
+                        })}
+                      </svg>
 
-                    <div style={{
-                      position: 'absolute',
-                      top: '50%',
-                      left: '50%',
-                      transform: 'translate(-50%, -50%)',
-                      textAlign: 'center',
-                      width: '85%'
-                    }}>
-                      <div style={{ fontSize: '0.86rem', fontWeight: 900, color: '#0F172A', lineHeight: 1.1 }}>
-                        {currencySymbol}{paymentAnalytics.totalAmt.toLocaleString('en-IN')}
+                      <div style={{
+                        position: 'absolute',
+                        top: '50%',
+                        left: '50%',
+                        transform: 'translate(-50%, -50%)',
+                        textAlign: 'center',
+                        width: '85%'
+                      }}>
+                        <div style={{ fontSize: '0.86rem', fontWeight: 900, color: '#0F172A', lineHeight: 1.1 }}>
+                          {currencySymbol}{paymentAnalytics.totalAmt.toLocaleString('en-IN')}
+                        </div>
+                        <span style={{ fontSize: '0.58rem', color: '#64748B', fontWeight: 600 }}>Total Sales</span>
                       </div>
-                      <span style={{ fontSize: '0.58rem', color: '#64748B', fontWeight: 600 }}>Total Sales</span>
                     </div>
-                  </div>
 
-                  {/* Payment Breakdown Legend */}
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', flex: 1 }}>
-                    {paymentAnalytics.slices.map((item, idx) => (
-                      <div key={idx} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', fontSize: '0.74rem' }}>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                          <span style={{ width: '7px', height: '7px', borderRadius: '50%', backgroundColor: item.color }} />
-                          <div>
-                            <div style={{ color: '#0F172A', fontWeight: 700, lineHeight: 1.1 }}>{item.name}</div>
-                            <div style={{ color: '#94A3B8', fontSize: '0.62rem' }}>{currencySymbol}{item.amount.toLocaleString('en-IN')}</div>
+                    {/* Payment Breakdown Legend */}
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', flex: 1 }}>
+                      {paymentAnalytics.slices.map((item, idx) => (
+                        <div key={idx} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', fontSize: '0.74rem' }}>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                            <span style={{ width: '7px', height: '7px', borderRadius: '50%', backgroundColor: item.color }} />
+                            <div>
+                              <div style={{ color: '#0F172A', fontWeight: 700, lineHeight: 1.1 }}>{item.name}</div>
+                              <div style={{ color: '#94A3B8', fontSize: '0.62rem' }}>{currencySymbol}{item.amount.toLocaleString('en-IN')}</div>
+                            </div>
+                          </div>
+                          <div style={{ textAlign: 'right' }}>
+                            <strong style={{ color: '#0F172A', fontSize: '0.76rem' }}>{item.percent}%</strong>
                           </div>
                         </div>
-                        <div style={{ textAlign: 'right' }}>
-                          <strong style={{ color: '#0F172A', fontSize: '0.76rem' }}>{item.percent}%</strong>
-                        </div>
-                      </div>
-                    ))}
+                      ))}
+                    </div>
                   </div>
                 </div>
               </div>
