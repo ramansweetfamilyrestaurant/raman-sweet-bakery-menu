@@ -420,8 +420,6 @@ export default function OffersView({
       display: 'flex',
       flexDirection: 'column',
       gap: '12px',
-      maxWidth: '1240px',
-      margin: '0 auto',
       width: '100%',
       boxSizing: 'border-box',
       paddingBottom: '90px',
@@ -881,29 +879,31 @@ export default function OffersView({
 
                 {/* Actions */}
                 <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                  <button
-                    type="button"
-                    onClick={(e) => handleToggleOffer(offer, e)}
-                    title={offer.active ? 'Pause Offer' : 'Resume Offer'}
-                    style={{
-                      height: '32px',
-                      padding: '0 10px',
-                      borderRadius: '8px',
-                      border: '1px solid #CBD5E1',
-                      background: '#FFFFFF',
-                      color: '#334155',
-                      fontSize: '0.72rem',
-                      fontWeight: 800,
-                      cursor: 'pointer',
-                      display: 'inline-flex',
-                      alignItems: 'center',
-                      gap: '4px',
-                      transition: 'all 0.15s ease'
-                    }}
-                  >
-                    {offer.active ? <Pause size={12} /> : <Play size={12} />}
-                    <span>{offer.active ? 'Pause' : 'Resume'}</span>
-                  </button>
+                  {status !== 'expired' && (
+                    <button
+                      type="button"
+                      onClick={(e) => handleToggleOffer(offer, e)}
+                      title={offer.active ? 'Pause Offer' : 'Resume Offer'}
+                      style={{
+                        height: '32px',
+                        padding: '0 10px',
+                        borderRadius: '8px',
+                        border: '1px solid #CBD5E1',
+                        background: '#FFFFFF',
+                        color: '#334155',
+                        fontSize: '0.72rem',
+                        fontWeight: 800,
+                        cursor: 'pointer',
+                        display: 'inline-flex',
+                        alignItems: 'center',
+                        gap: '4px',
+                        transition: 'all 0.15s ease'
+                      }}
+                    >
+                      {offer.active ? <Pause size={12} /> : <Play size={12} />}
+                      <span>{offer.active ? 'Pause' : 'Resume'}</span>
+                    </button>
+                  )}
 
                   <button
                     type="button"
