@@ -419,12 +419,12 @@ export default function OffersView({
     <div style={{
       display: 'flex',
       flexDirection: 'column',
-      gap: '14px',
+      gap: '12px',
       maxWidth: '1240px',
       margin: '0 auto',
       width: '100%',
       boxSizing: 'border-box',
-      paddingBottom: '120px',
+      paddingBottom: '90px',
       overflowX: 'hidden',
       fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif'
     }}>
@@ -433,7 +433,7 @@ export default function OffersView({
         .offers-metric-grid {
           display: grid;
           grid-template-columns: repeat(4, 1fr);
-          gap: 12px;
+          gap: 10px;
           width: 100%;
           box-sizing: border-box;
         }
@@ -441,61 +441,76 @@ export default function OffersView({
           background: #FFFFFF;
           border-radius: 14px;
           border: 1px solid #EAE5DF;
-          padding: 12px 16px;
+          padding: 12px 14px;
           display: flex;
           align-items: center;
           justify-content: space-between;
           min-width: 0;
           box-sizing: border-box;
+          transition: border-color 0.15s ease, box-shadow 0.15s ease;
+        }
+        .offers-metric-card:hover {
+          border-color: #CBD5E1;
         }
         .offer-filter-chip {
-          padding: 6px 14px;
-          border-radius: 20px;
-          font-size: 0.76rem;
-          font-weight: 800;
+          height: 32px;
+          padding: 0 12px;
+          border-radius: 8px;
+          font-size: 0.74rem;
+          font-weight: 700;
           cursor: pointer;
           border: 1px solid #EAE5DF;
-          background: #FAF8F5;
+          background: #FFFFFF;
           color: #64748B;
           transition: all 0.15s ease;
           white-space: nowrap;
           flex-shrink: 0;
+          display: inline-flex;
+          align-items: center;
+          justify-content: center;
+        }
+        .offer-filter-chip:hover {
+          background: #FAF8F5;
+          color: #0F172A;
+          border-color: #CBD5E1;
         }
         .offer-filter-chip.active {
           background: #064E3B;
           color: #FFFFFF;
           border-color: #064E3B;
-          box-shadow: 0 2px 6px rgba(6, 78, 59, 0.20);
+          box-shadow: 0 1px 4px rgba(6, 78, 59, 0.20);
         }
         .offer-row-card {
           background: #FFFFFF;
-          border-radius: 16px;
+          border-radius: 14px;
           border: 1px solid #EAE5DF;
-          padding: 16px 18px;
+          padding: 12px 16px;
           display: flex;
-          flex-direction: column;
-          gap: 12px;
-          box-shadow: 0 1px 3px rgba(0,0,0,0.02);
+          align-items: center;
+          justify-content: space-between;
+          box-shadow: 0 1px 2px rgba(0,0,0,0.02);
           transition: all 0.15s ease;
           box-sizing: border-box;
           width: 100%;
           min-width: 0;
+          flex-wrap: wrap;
+          gap: 10px;
         }
         .offer-row-card:hover {
           border-color: #CBD5E1;
-          box-shadow: 0 4px 12px rgba(0,0,0,0.04);
+          box-shadow: 0 2px 8px rgba(0,0,0,0.04);
         }
         .offers-insights-grid {
           display: grid;
           grid-template-columns: 1fr 1fr;
-          gap: 14px;
+          gap: 12px;
           width: 100%;
           box-sizing: border-box;
         }
         .offers-tips-grid {
           display: grid;
           grid-template-columns: repeat(3, 1fr);
-          gap: 12px;
+          gap: 10px;
           width: 100%;
           box-sizing: border-box;
         }
@@ -515,13 +530,16 @@ export default function OffersView({
         @media (max-width: 640px) {
           .offers-header-container {
             padding: 12px 14px !important;
-            gap: 10px !important;
+            gap: 8px !important;
           }
           .offers-metric-grid {
             gap: 8px !important;
           }
           .offers-metric-card {
-            padding: 10px 8px !important;
+            padding: 10px 10px !important;
+          }
+          .offer-row-card {
+            padding: 12px 12px !important;
           }
         }
       `}</style>
@@ -529,9 +547,9 @@ export default function OffersView({
       {/* Toast Notification */}
       {successToast && (
         <div style={{
-          padding: '12px 16px',
-          borderRadius: '14px',
-          fontSize: '0.82rem',
+          padding: '10px 14px',
+          borderRadius: '10px',
+          fontSize: '0.80rem',
           fontWeight: 700,
           display: 'flex',
           alignItems: 'center',
@@ -546,61 +564,74 @@ export default function OffersView({
             onClick={() => setSuccessToast('')}
             style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'inherit', padding: 0 }}
           >
-            <X size={16} />
+            <X size={15} />
           </button>
         </div>
       )}
 
       {/* =========================================================================
-          1. HEADER
+          1. HEADER CARD
          ========================================================================= */}
       <div className="offers-header-container" style={{
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'space-between',
         background: '#FFFFFF',
-        borderRadius: '16px',
+        borderRadius: '14px',
         border: '1px solid #EAE5DF',
-        padding: '16px 20px',
-        boxShadow: '0 1px 3px rgba(0,0,0,0.02)',
+        padding: '14px 18px',
+        boxShadow: '0 1px 2px rgba(0,0,0,0.02)',
         boxSizing: 'border-box',
         width: '100%',
         flexWrap: 'wrap',
-        gap: '12px'
+        gap: '10px'
       }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '10px', minWidth: 0, flex: 1 }}>
+          <div style={{
+            width: '34px',
+            height: '34px',
+            borderRadius: '8px',
+            background: '#ECFDF5',
+            color: '#064E3B',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            flexShrink: 0
+          }}>
+            <Tag size={16} />
+          </div>
           <div style={{ minWidth: 0, flex: 1 }}>
-            <h2 style={{ fontSize: '1.18rem', fontWeight: 900, color: '#0F172A', margin: 0, letterSpacing: '-0.02em', display: 'flex', alignItems: 'center', gap: '8px' }}>
-              <Tag size={18} color="#064E3B" />
-              <span>Offers & Promotions</span>
+            <h2 style={{ fontSize: '1.10rem', fontWeight: 900, color: '#0F172A', margin: 0, letterSpacing: '-0.02em', display: 'flex', alignItems: 'center', gap: '6px' }}>
+              Offers & Promotions
             </h2>
-            <p style={{ fontSize: '0.74rem', color: '#64748B', margin: 0 }}>
+            <p style={{ fontSize: '0.74rem', color: '#64748B', margin: 0, marginTop: '1px' }}>
               Create promotions for selected menu items and boost customer orders.
             </p>
           </div>
         </div>
 
-        <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
           <button
             type="button"
             onClick={handleOpenCreateModal}
             style={{
-              height: '38px',
-              padding: '0 16px',
-              borderRadius: '10px',
+              height: '36px',
+              padding: '0 14px',
+              borderRadius: '8px',
               border: 'none',
               background: '#064E3B',
               color: '#FFFFFF',
               fontSize: '0.78rem',
-              fontWeight: 900,
+              fontWeight: 800,
               cursor: 'pointer',
               display: 'inline-flex',
               alignItems: 'center',
               gap: '6px',
-              boxShadow: '0 2px 6px rgba(6, 78, 59, 0.25)'
+              boxShadow: '0 1px 4px rgba(6, 78, 59, 0.20)',
+              transition: 'background 0.15s ease'
             }}
           >
-            <Plus size={16} />
+            <Plus size={15} />
             <span>Create Offer</span>
           </button>
         </div>
@@ -612,56 +643,68 @@ export default function OffersView({
       <div className="offers-metric-grid">
         <div className="offers-metric-card">
           <div style={{ minWidth: 0 }}>
-            <span style={{ fontSize: '0.64rem', fontWeight: 800, color: '#059669', textTransform: 'uppercase', letterSpacing: '0.04em', display: 'block' }}>
+            <span style={{ fontSize: '0.65rem', fontWeight: 800, color: '#64748B', textTransform: 'uppercase', letterSpacing: '0.04em', display: 'block' }}>
               Active Offers
             </span>
-            <div style={{ fontSize: '1.25rem', fontWeight: 900, color: '#059669', marginTop: '1px' }}>
+            <div style={{ fontSize: '1.30rem', fontWeight: 900, color: '#0F172A', marginTop: '1px', lineHeight: 1.15 }}>
               {activeCount}
             </div>
+            <span style={{ fontSize: '0.66rem', color: '#059669', fontWeight: 700 }}>
+              Live on menu
+            </span>
           </div>
-          <div style={{ width: '32px', height: '32px', borderRadius: '8px', background: '#ECFDF5', color: '#059669', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+          <div style={{ width: '34px', height: '34px', borderRadius: '8px', background: '#ECFDF5', color: '#059669', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
             <Flame size={16} />
           </div>
         </div>
 
         <div className="offers-metric-card">
           <div style={{ minWidth: 0 }}>
-            <span style={{ fontSize: '0.64rem', fontWeight: 800, color: '#D97706', textTransform: 'uppercase', letterSpacing: '0.04em', display: 'block' }}>
+            <span style={{ fontSize: '0.65rem', fontWeight: 800, color: '#64748B', textTransform: 'uppercase', letterSpacing: '0.04em', display: 'block' }}>
               Scheduled
             </span>
-            <div style={{ fontSize: '1.25rem', fontWeight: 900, color: '#D97706', marginTop: '1px' }}>
+            <div style={{ fontSize: '1.30rem', fontWeight: 900, color: '#0F172A', marginTop: '1px', lineHeight: 1.15 }}>
               {scheduledCount}
             </div>
+            <span style={{ fontSize: '0.66rem', color: '#D97706', fontWeight: 700 }}>
+              Upcoming deals
+            </span>
           </div>
-          <div style={{ width: '32px', height: '32px', borderRadius: '8px', background: '#FEF3C7', color: '#D97706', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+          <div style={{ width: '34px', height: '34px', borderRadius: '8px', background: '#FEF3C7', color: '#D97706', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
             <Clock size={16} />
           </div>
         </div>
 
         <div className="offers-metric-card">
           <div style={{ minWidth: 0 }}>
-            <span style={{ fontSize: '0.64rem', fontWeight: 800, color: '#64748B', textTransform: 'uppercase', letterSpacing: '0.04em', display: 'block' }}>
+            <span style={{ fontSize: '0.65rem', fontWeight: 800, color: '#64748B', textTransform: 'uppercase', letterSpacing: '0.04em', display: 'block' }}>
               Paused / Expired
             </span>
-            <div style={{ fontSize: '1.25rem', fontWeight: 900, color: '#0F172A', marginTop: '1px' }}>
+            <div style={{ fontSize: '1.30rem', fontWeight: 900, color: '#0F172A', marginTop: '1px', lineHeight: 1.15 }}>
               {pausedOrExpiredCount}
             </div>
+            <span style={{ fontSize: '0.66rem', color: '#64748B', fontWeight: 700 }}>
+              Inactive offers
+            </span>
           </div>
-          <div style={{ width: '32px', height: '32px', borderRadius: '8px', background: '#F1F5F9', color: '#64748B', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+          <div style={{ width: '34px', height: '34px', borderRadius: '8px', background: '#F1F5F9', color: '#64748B', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
             <Pause size={16} />
           </div>
         </div>
 
         <div className="offers-metric-card">
           <div style={{ minWidth: 0 }}>
-            <span style={{ fontSize: '0.64rem', fontWeight: 800, color: '#064E3B', textTransform: 'uppercase', letterSpacing: '0.04em', display: 'block' }}>
+            <span style={{ fontSize: '0.65rem', fontWeight: 800, color: '#64748B', textTransform: 'uppercase', letterSpacing: '0.04em', display: 'block' }}>
               Items on Promotion
             </span>
-            <div style={{ fontSize: '1.25rem', fontWeight: 900, color: '#064E3B', marginTop: '1px' }}>
+            <div style={{ fontSize: '1.30rem', fontWeight: 900, color: '#064E3B', marginTop: '1px', lineHeight: 1.15 }}>
               {totalDiscountedItemsCount}
             </div>
+            <span style={{ fontSize: '0.66rem', color: '#64748B', fontWeight: 700 }}>
+              Dishes & combos
+            </span>
           </div>
-          <div style={{ width: '32px', height: '32px', borderRadius: '8px', background: '#FAF8F5', color: '#064E3B', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+          <div style={{ width: '34px', height: '34px', borderRadius: '8px', background: '#FAF8F5', color: '#064E3B', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
             <Utensils size={16} />
           </div>
         </div>
@@ -672,19 +715,19 @@ export default function OffersView({
          ========================================================================= */}
       <div style={{
         background: '#FFFFFF',
-        borderRadius: '16px',
+        borderRadius: '14px',
         border: '1px solid #EAE5DF',
-        padding: '14px 18px',
-        boxShadow: '0 1px 3px rgba(0,0,0,0.02)',
+        padding: '10px 14px',
+        boxShadow: '0 1px 2px rgba(0,0,0,0.02)',
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'space-between',
         flexWrap: 'wrap',
-        gap: '12px'
+        gap: '10px'
       }}>
         {/* Search */}
-        <div style={{ position: 'relative', minWidth: '240px', flex: 1 }}>
-          <Search size={16} color="#94A3B8" style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)' }} />
+        <div style={{ position: 'relative', minWidth: '220px', flex: 1 }}>
+          <Search size={15} color="#94A3B8" style={{ position: 'absolute', left: '10px', top: '50%', transform: 'translateY(-50%)' }} />
           <input
             type="text"
             value={searchQuery}
@@ -692,11 +735,11 @@ export default function OffersView({
             placeholder="Search offers by name or discount..."
             style={{
               width: '100%',
-              height: '38px',
-              borderRadius: '10px',
+              height: '34px',
+              borderRadius: '8px',
               border: '1px solid #CBD5E1',
-              padding: '0 12px 0 36px',
-              fontSize: '0.80rem',
+              padding: '0 10px 0 32px',
+              fontSize: '0.78rem',
               color: '#0F172A',
               background: '#FAF8F5',
               outline: 'none',
@@ -729,54 +772,54 @@ export default function OffersView({
       {/* =========================================================================
           4. OFFERS FEED / LIST
          ========================================================================= */}
-      <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
         {loading ? (
-          <div style={{ padding: '40px', textAlign: 'center', color: '#64748B', fontSize: '0.84rem' }}>
+          <div style={{ padding: '36px', textAlign: 'center', color: '#64748B', fontSize: '0.82rem' }}>
             Loading offers from server...
           </div>
         ) : filteredOffers.length === 0 ? (
           /* EMPTY STATE */
           <div style={{
             background: '#FFFFFF',
-            borderRadius: '16px',
+            borderRadius: '14px',
             border: '1px solid #EAE5DF',
-            padding: '44px 20px',
+            padding: '36px 20px',
             textAlign: 'center',
             display: 'flex',
             flexDirection: 'column',
             alignItems: 'center',
-            gap: '12px'
+            gap: '10px'
           }}>
-            <div style={{ width: '50px', height: '50px', borderRadius: '50%', background: '#FAF8F5', color: '#064E3B', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-              <Tag size={24} />
+            <div style={{ width: '44px', height: '44px', borderRadius: '50%', background: '#FAF8F5', color: '#064E3B', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+              <Tag size={20} />
             </div>
             <div>
-              <strong style={{ fontSize: '1.05rem', color: '#0F172A', fontWeight: 900, display: 'block' }}>
-                {searchQuery ? `No offers matching "${searchQuery}"` : 'No Offers Created Yet'}
+              <strong style={{ fontSize: '0.98rem', color: '#0F172A', fontWeight: 900, display: 'block' }}>
+                {searchQuery ? `No offers matching "${searchQuery}"` : 'No Promotions Yet'}
               </strong>
-              <p style={{ margin: '4px 0 0', fontSize: '0.78rem', color: '#64748B', maxWidth: '420px', lineHeight: 1.45 }}>
-                Launch percentage discounts, flat cashbacks, or special prices for your top dishes to boost customer sales.
+              <p style={{ margin: '3px 0 0', fontSize: '0.76rem', color: '#64748B', maxWidth: '380px', lineHeight: 1.4 }}>
+                Create your first promotion to highlight selected menu items and attract customer orders.
               </p>
             </div>
             <button
               type="button"
               onClick={handleOpenCreateModal}
               style={{
-                height: '38px',
-                padding: '0 16px',
-                borderRadius: '10px',
+                height: '34px',
+                padding: '0 14px',
+                borderRadius: '8px',
                 border: 'none',
                 background: '#064E3B',
                 color: '#FFFFFF',
-                fontSize: '0.78rem',
-                fontWeight: 900,
+                fontSize: '0.76rem',
+                fontWeight: 800,
                 cursor: 'pointer',
                 display: 'inline-flex',
                 alignItems: 'center',
                 gap: '6px'
               }}
             >
-              <Plus size={16} />
+              <Plus size={15} />
               <span>Create First Offer</span>
             </button>
           </div>
@@ -792,109 +835,120 @@ export default function OffersView({
 
             return (
               <div key={offer.id} className="offer-row-card">
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '10px' }}>
-                  <div style={{ display: 'flex', alignItems: 'flex-start', gap: '12px', minWidth: 0, flex: 1 }}>
-                    <div style={{ width: '40px', height: '40px', borderRadius: '12px', background: '#FAF8F5', color: '#064E3B', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-                      <Tag size={20} />
-                    </div>
-
-                    <div style={{ minWidth: 0, flex: 1 }}>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap', marginBottom: '4px' }}>
-                        <strong style={{ fontSize: '0.94rem', color: '#0F172A', fontWeight: 900 }}>
-                          {offer.name}
-                        </strong>
-                        <span style={{
-                          padding: '2px 8px',
-                          borderRadius: '6px',
-                          background: 'linear-gradient(135deg, #FFFBEB 0%, #FEF3C7 100%)',
-                          color: '#B45309',
-                          border: '1px solid #FDE68A',
-                          fontSize: '0.70rem',
-                          fontWeight: 900
-                        }}>
-                          {discountBadge}
-                        </span>
-                        {renderStatusBadge(status)}
-                      </div>
-
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '12px', fontSize: '0.72rem', color: '#64748B', flexWrap: 'wrap' }}>
-                        <span>🍽️ {itemsCount} menu item{itemsCount !== 1 ? 's' : ''} included</span>
-                        <span>•</span>
-                        <span>
-                          📅 {offer.ends_at ? `Valid till ${new Date(offer.ends_at).toLocaleDateString()}` : 'Always Active'}
-                        </span>
-                      </div>
-                    </div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '12px', minWidth: 0, flex: 1 }}>
+                  <div style={{
+                    width: '36px',
+                    height: '36px',
+                    borderRadius: '10px',
+                    background: '#FAF8F5',
+                    color: '#064E3B',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    flexShrink: 0
+                  }}>
+                    <Tag size={18} />
                   </div>
 
-                  {/* Actions */}
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                    <button
-                      type="button"
-                      onClick={(e) => handleToggleOffer(offer, e)}
-                      title={offer.active ? 'Pause Offer' : 'Resume Offer'}
-                      style={{
-                        height: '34px',
-                        padding: '0 10px',
-                        borderRadius: '8px',
-                        border: '1px solid #CBD5E1',
-                        background: '#FFFFFF',
-                        color: '#0F172A',
-                        fontSize: '0.74rem',
-                        fontWeight: 800,
-                        cursor: 'pointer',
-                        display: 'inline-flex',
-                        alignItems: 'center',
-                        gap: '4px'
-                      }}
-                    >
-                      {offer.active ? <Pause size={13} /> : <Play size={13} />}
-                      <span>{offer.active ? 'Pause' : 'Resume'}</span>
-                    </button>
+                  <div style={{ minWidth: 0, flex: 1 }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap', marginBottom: '2px' }}>
+                      <strong style={{ fontSize: '0.92rem', color: '#0F172A', fontWeight: 900 }}>
+                        {offer.name}
+                      </strong>
+                      <span style={{
+                        padding: '2px 7px',
+                        borderRadius: '6px',
+                        background: 'linear-gradient(135deg, #FFFBEB 0%, #FEF3C7 100%)',
+                        color: '#B45309',
+                        border: '1px solid #FDE68A',
+                        fontSize: '0.68rem',
+                        fontWeight: 900
+                      }}>
+                        {discountBadge}
+                      </span>
+                      {renderStatusBadge(status)}
+                    </div>
 
-                    <button
-                      type="button"
-                      onClick={() => handleOpenEditModal(offer)}
-                      title="Edit Offer"
-                      style={{
-                        height: '34px',
-                        padding: '0 10px',
-                        borderRadius: '8px',
-                        border: '1px solid #CBD5E1',
-                        background: '#FFFFFF',
-                        color: '#0F172A',
-                        fontSize: '0.74rem',
-                        fontWeight: 800,
-                        cursor: 'pointer',
-                        display: 'inline-flex',
-                        alignItems: 'center',
-                        gap: '4px'
-                      }}
-                    >
-                      <Edit size={13} />
-                      <span>Edit</span>
-                    </button>
-
-                    <button
-                      type="button"
-                      onClick={() => setDeleteConfirmId(offer.id)}
-                      title="Delete Offer"
-                      style={{
-                        height: '34px',
-                        width: '34px',
-                        borderRadius: '8px',
-                        border: '1px solid #FECACA',
-                        background: '#FEF2F2',
-                        color: '#DC2626',
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        cursor: 'pointer'
-                      }}
-                    >
-                      <Trash2 size={14} />
-                    </button>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '10px', fontSize: '0.70rem', color: '#64748B', flexWrap: 'wrap' }}>
+                      <span>🍽️ {itemsCount} menu item{itemsCount !== 1 ? 's' : ''} included</span>
+                      <span>•</span>
+                      <span>
+                        📅 {offer.ends_at ? `Valid till ${new Date(offer.ends_at).toLocaleDateString()}` : 'Always Active'}
+                      </span>
+                    </div>
                   </div>
+                </div>
+
+                {/* Actions */}
+                <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                  <button
+                    type="button"
+                    onClick={(e) => handleToggleOffer(offer, e)}
+                    title={offer.active ? 'Pause Offer' : 'Resume Offer'}
+                    style={{
+                      height: '32px',
+                      padding: '0 10px',
+                      borderRadius: '8px',
+                      border: '1px solid #CBD5E1',
+                      background: '#FFFFFF',
+                      color: '#334155',
+                      fontSize: '0.72rem',
+                      fontWeight: 800,
+                      cursor: 'pointer',
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      gap: '4px',
+                      transition: 'all 0.15s ease'
+                    }}
+                  >
+                    {offer.active ? <Pause size={12} /> : <Play size={12} />}
+                    <span>{offer.active ? 'Pause' : 'Resume'}</span>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => handleOpenEditModal(offer)}
+                    title="Edit Offer"
+                    style={{
+                      height: '32px',
+                      padding: '0 10px',
+                      borderRadius: '8px',
+                      border: '1px solid #CBD5E1',
+                      background: '#FFFFFF',
+                      color: '#334155',
+                      fontSize: '0.72rem',
+                      fontWeight: 800,
+                      cursor: 'pointer',
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      gap: '4px',
+                      transition: 'all 0.15s ease'
+                    }}
+                  >
+                    <Edit size={12} />
+                    <span>Edit</span>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => setDeleteConfirmId(offer.id)}
+                    title="Delete Offer"
+                    style={{
+                      height: '32px',
+                      width: '32px',
+                      borderRadius: '8px',
+                      border: '1px solid #FECACA',
+                      background: '#FEF2F2',
+                      color: '#DC2626',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      cursor: 'pointer',
+                      transition: 'all 0.15s ease'
+                    }}
+                  >
+                    <Trash2 size={13} />
+                  </button>
                 </div>
               </div>
             );
@@ -905,53 +959,53 @@ export default function OffersView({
       {/* =========================================================================
           5. PROMOTION INSIGHTS & HOW PROMOTIONS WORK (2-COLUMN GRID)
          ========================================================================= */}
-      <div className="offers-insights-grid" style={{ marginTop: '4px' }}>
+      <div className="offers-insights-grid" style={{ marginTop: '2px' }}>
         {/* Column 1: Promotion Insights */}
         <div style={{
           background: '#FFFFFF',
-          borderRadius: '16px',
+          borderRadius: '14px',
           border: '1px solid #EAE5DF',
-          padding: '18px 20px',
-          boxShadow: '0 1px 3px rgba(0,0,0,0.02)',
+          padding: '16px 18px',
+          boxShadow: '0 1px 2px rgba(0,0,0,0.02)',
           display: 'flex',
           flexDirection: 'column',
           justifyContent: 'space-between',
-          gap: '14px',
+          gap: '12px',
           boxSizing: 'border-box'
         }}>
           <div>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '4px' }}>
-              <TrendingUp size={18} color="#064E3B" />
-              <h3 style={{ fontSize: '0.94rem', fontWeight: 900, color: '#0F172A', margin: 0 }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '2px' }}>
+              <TrendingUp size={16} color="#064E3B" />
+              <h3 style={{ fontSize: '0.90rem', fontWeight: 900, color: '#0F172A', margin: 0 }}>
                 Promotion Insights
               </h3>
             </div>
-            <p style={{ fontSize: '0.74rem', color: '#64748B', margin: 0 }}>
+            <p style={{ fontSize: '0.72rem', color: '#64748B', margin: 0 }}>
               Overview of your menu promotion coverage and active campaigns.
             </p>
           </div>
 
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
-            <div style={{ background: '#FAF8F5', borderRadius: '10px', padding: '10px 12px', border: '1px solid #EAE5DF' }}>
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px' }}>
+            <div style={{ background: '#FAF8F5', borderRadius: '8px', padding: '10px 12px', border: '1px solid #EAE5DF' }}>
               <span style={{ fontSize: '0.64rem', fontWeight: 800, color: '#64748B', textTransform: 'uppercase', display: 'block' }}>
                 Promoted Items
               </span>
-              <strong style={{ fontSize: '1.15rem', fontWeight: 900, color: '#064E3B', marginTop: '2px', display: 'block' }}>
+              <strong style={{ fontSize: '1.15rem', fontWeight: 900, color: '#064E3B', marginTop: '1px', display: 'block' }}>
                 {totalDiscountedItemsCount}
               </strong>
-              <span style={{ fontSize: '0.66rem', color: '#64748B' }}>
+              <span style={{ fontSize: '0.65rem', color: '#64748B' }}>
                 of {Math.max(0, (dishes?.length || 0) + (combos?.length || 0))} catalog items
               </span>
             </div>
 
-            <div style={{ background: '#FAF8F5', borderRadius: '10px', padding: '10px 12px', border: '1px solid #EAE5DF' }}>
+            <div style={{ background: '#FAF8F5', borderRadius: '8px', padding: '10px 12px', border: '1px solid #EAE5DF' }}>
               <span style={{ fontSize: '0.64rem', fontWeight: 800, color: '#64748B', textTransform: 'uppercase', display: 'block' }}>
                 Catalog Coverage
               </span>
-              <strong style={{ fontSize: '1.15rem', fontWeight: 900, color: '#059669', marginTop: '2px', display: 'block' }}>
+              <strong style={{ fontSize: '1.15rem', fontWeight: 900, color: '#059669', marginTop: '1px', display: 'block' }}>
                 {((dishes?.length || 0) + (combos?.length || 0)) > 0 ? Math.round((totalDiscountedItemsCount / ((dishes?.length || 0) + (combos?.length || 0))) * 100) : 0}%
               </strong>
-              <span style={{ fontSize: '0.66rem', color: '#059669', fontWeight: 700 }}>
+              <span style={{ fontSize: '0.65rem', color: '#059669', fontWeight: 700 }}>
                 Active on menu
               </span>
             </div>
@@ -959,11 +1013,11 @@ export default function OffersView({
 
           {/* Progress Bar */}
           <div>
-            <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.72rem', color: '#64748B', marginBottom: '4px' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.70rem', color: '#64748B', marginBottom: '3px' }}>
               <span>Menu Items with Active Deals</span>
               <span style={{ fontWeight: 800, color: '#064E3B' }}>{totalDiscountedItemsCount} items</span>
             </div>
-            <div style={{ width: '100%', height: '6px', background: '#F1F5F9', borderRadius: '3px', overflow: 'hidden' }}>
+            <div style={{ width: '100%', height: '5px', background: '#F1F5F9', borderRadius: '3px', overflow: 'hidden' }}>
               <div style={{
                 width: `${((dishes?.length || 0) + (combos?.length || 0)) > 0 ? Math.min(100, Math.round((totalDiscountedItemsCount / ((dishes?.length || 0) + (combos?.length || 0))) * 100)) : 0}%`,
                 height: '100%',
@@ -973,8 +1027,8 @@ export default function OffersView({
             </div>
           </div>
 
-          <div style={{ fontSize: '0.70rem', color: '#64748B', background: '#FAF8F5', padding: '8px 10px', borderRadius: '8px', border: '1px solid #EAE5DF', display: 'flex', alignItems: 'center', gap: '6px' }}>
-            <Sparkles size={14} color="#D97706" />
+          <div style={{ fontSize: '0.68rem', color: '#64748B', background: '#FAF8F5', padding: '6px 8px', borderRadius: '6px', border: '1px solid #EAE5DF', display: 'flex', alignItems: 'center', gap: '6px' }}>
+            <Sparkles size={13} color="#D97706" />
             <span>Active promotions automatically display strike-through prices and discount badges on table QR menus.</span>
           </div>
         </div>
@@ -982,72 +1036,72 @@ export default function OffersView({
         {/* Column 2: How Promotions Work */}
         <div style={{
           background: '#FFFFFF',
-          borderRadius: '16px',
+          borderRadius: '14px',
           border: '1px solid #EAE5DF',
-          padding: '18px 20px',
-          boxShadow: '0 1px 3px rgba(0,0,0,0.02)',
+          padding: '16px 18px',
+          boxShadow: '0 1px 2px rgba(0,0,0,0.02)',
           display: 'flex',
           flexDirection: 'column',
           justifyContent: 'space-between',
-          gap: '12px',
+          gap: '10px',
           boxSizing: 'border-box'
         }}>
           <div>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '4px' }}>
-              <Sparkles size={18} color="#D97706" />
-              <h3 style={{ fontSize: '0.94rem', fontWeight: 900, color: '#0F172A', margin: 0 }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '2px' }}>
+              <Sparkles size={16} color="#D97706" />
+              <h3 style={{ fontSize: '0.90rem', fontWeight: 900, color: '#0F172A', margin: 0 }}>
                 How Promotions Work
               </h3>
             </div>
-            <p style={{ fontSize: '0.74rem', color: '#64748B', margin: 0 }}>
+            <p style={{ fontSize: '0.72rem', color: '#64748B', margin: 0 }}>
               Step-by-step promotion lifecycle from setup to diner checkout.
             </p>
           </div>
 
           <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-            <div style={{ display: 'flex', alignItems: 'flex-start', gap: '10px' }}>
-              <div style={{ width: '22px', height: '22px', borderRadius: '6px', background: '#ECFDF5', color: '#064E3B', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.70rem', fontWeight: 900, flexShrink: 0 }}>
-                1
+            <div style={{ display: 'flex', alignItems: 'flex-start', gap: '8px' }}>
+              <div style={{ width: '20px', height: '20px', borderRadius: '5px', background: '#ECFDF5', color: '#064E3B', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.65rem', fontWeight: 900, flexShrink: 0 }}>
+                01
               </div>
               <div style={{ minWidth: 0 }}>
-                <strong style={{ fontSize: '0.78rem', color: '#0F172A', display: 'block' }}>Create Offer</strong>
-                <span style={{ fontSize: '0.70rem', color: '#64748B', lineHeight: 1.35, display: 'block' }}>
-                  Choose percentage, flat amount, or special price and select targeted menu dishes or combos.
+                <strong style={{ fontSize: '0.76rem', color: '#0F172A', display: 'block' }}>Create Offer</strong>
+                <span style={{ fontSize: '0.68rem', color: '#64748B', lineHeight: 1.3, display: 'block' }}>
+                  Choose percentage, flat amount, or special price for selected dishes/combos.
                 </span>
               </div>
             </div>
 
-            <div style={{ display: 'flex', alignItems: 'flex-start', gap: '10px' }}>
-              <div style={{ width: '22px', height: '22px', borderRadius: '6px', background: '#FEF3C7', color: '#D97706', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.70rem', fontWeight: 900, flexShrink: 0 }}>
-                2
+            <div style={{ display: 'flex', alignItems: 'flex-start', gap: '8px' }}>
+              <div style={{ width: '20px', height: '20px', borderRadius: '5px', background: '#FEF3C7', color: '#D97706', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.65rem', fontWeight: 900, flexShrink: 0 }}>
+                02
               </div>
               <div style={{ minWidth: 0 }}>
-                <strong style={{ fontSize: '0.78rem', color: '#0F172A', display: 'block' }}>Set Schedule</strong>
-                <span style={{ fontSize: '0.70rem', color: '#64748B', lineHeight: 1.35, display: 'block' }}>
-                  Keep it "Always Active" for everyday deals, or set automated start & expiry dates for events.
+                <strong style={{ fontSize: '0.76rem', color: '#0F172A', display: 'block' }}>Set Schedule</strong>
+                <span style={{ fontSize: '0.68rem', color: '#64748B', lineHeight: 1.3, display: 'block' }}>
+                  Keep it "Always Active" or set automated start & expiry dates for events.
                 </span>
               </div>
             </div>
 
-            <div style={{ display: 'flex', alignItems: 'flex-start', gap: '10px' }}>
-              <div style={{ width: '22px', height: '22px', borderRadius: '6px', background: '#F1F5F9', color: '#475569', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.70rem', fontWeight: 900, flexShrink: 0 }}>
-                3
+            <div style={{ display: 'flex', alignItems: 'flex-start', gap: '8px' }}>
+              <div style={{ width: '20px', height: '20px', borderRadius: '5px', background: '#F1F5F9', color: '#475569', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.65rem', fontWeight: 900, flexShrink: 0 }}>
+                03
               </div>
               <div style={{ minWidth: 0 }}>
-                <strong style={{ fontSize: '0.78rem', color: '#0F172A', display: 'block' }}>Live on Digital Menu</strong>
-                <span style={{ fontSize: '0.70rem', color: '#64748B', lineHeight: 1.35, display: 'block' }}>
-                  Promotional tags and strike-through pricing immediately appear when guests scan table QR codes.
+                <strong style={{ fontSize: '0.76rem', color: '#0F172A', display: 'block' }}>Live on Digital Menu</strong>
+                <span style={{ fontSize: '0.68rem', color: '#64748B', lineHeight: 1.3, display: 'block' }}>
+                  Promotional tags and strike-through pricing appear on table QR menus.
                 </span>
               </div>
             </div>
 
-            <div style={{ display: 'flex', alignItems: 'flex-start', gap: '10px' }}>
-              <div style={{ width: '22px', height: '22px', borderRadius: '6px', background: '#FAF8F5', color: '#064E3B', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.70rem', fontWeight: 900, flexShrink: 0 }}>
-                4
+            <div style={{ display: 'flex', alignItems: 'flex-start', gap: '8px' }}>
+              <div style={{ width: '20px', height: '20px', borderRadius: '5px', background: '#FAF8F5', color: '#064E3B', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.65rem', fontWeight: 900, flexShrink: 0 }}>
+                04
               </div>
               <div style={{ minWidth: 0 }}>
-                <strong style={{ fontSize: '0.78rem', color: '#0F172A', display: 'block' }}>Verified at Checkout</strong>
-                <span style={{ fontSize: '0.70rem', color: '#64748B', lineHeight: 1.35, display: 'block' }}>
+                <strong style={{ fontSize: '0.76rem', color: '#0F172A', display: 'block' }}>Verified at Checkout</strong>
+                <span style={{ fontSize: '0.68rem', color: '#64748B', lineHeight: 1.3, display: 'block' }}>
                   Discounts are calculated and logged into the order snapshot.
                 </span>
               </div>
@@ -1061,47 +1115,47 @@ export default function OffersView({
          ========================================================================= */}
       <div style={{
         background: 'linear-gradient(135deg, #FAF8F5 0%, #F4EFE6 100%)',
-        borderRadius: '16px',
+        borderRadius: '14px',
         border: '1px solid #EAE5DF',
-        padding: '18px 20px',
-        boxShadow: '0 1px 3px rgba(0,0,0,0.02)',
+        padding: '14px 18px',
+        boxShadow: '0 1px 2px rgba(0,0,0,0.02)',
         display: 'flex',
         flexDirection: 'column',
-        gap: '12px',
+        gap: '10px',
         boxSizing: 'border-box',
         width: '100%'
       }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-          <CheckCircle2 size={18} color="#064E3B" />
-          <h3 style={{ fontSize: '0.94rem', fontWeight: 900, color: '#0F172A', margin: 0 }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+          <CheckCircle2 size={16} color="#064E3B" />
+          <h3 style={{ fontSize: '0.90rem', fontWeight: 900, color: '#0F172A', margin: 0 }}>
             Tips to Run Effective Promotions
           </h3>
         </div>
 
         <div className="offers-tips-grid">
-          <div style={{ background: '#FFFFFF', borderRadius: '12px', padding: '12px 14px', border: '1px solid #EAE5DF' }}>
-            <strong style={{ fontSize: '0.80rem', color: '#064E3B', display: 'block', marginBottom: '3px' }}>
+          <div style={{ background: '#FFFFFF', borderRadius: '10px', padding: '10px 12px', border: '1px solid #EAE5DF' }}>
+            <strong style={{ fontSize: '0.78rem', color: '#064E3B', display: 'block', marginBottom: '2px' }}>
               🎯 Keep It Simple
             </strong>
-            <span style={{ fontSize: '0.72rem', color: '#475569', lineHeight: 1.4, display: 'block' }}>
-              Clear percentage or flat discounts convert faster with diners than complex multi-condition deals.
+            <span style={{ fontSize: '0.70rem', color: '#475569', lineHeight: 1.35, display: 'block' }}>
+              Clear percentage or flat discounts convert faster with diners than complex deals.
             </span>
           </div>
 
-          <div style={{ background: '#FFFFFF', borderRadius: '12px', padding: '12px 14px', border: '1px solid #EAE5DF' }}>
-            <strong style={{ fontSize: '0.80rem', color: '#D97706', display: 'block', marginBottom: '3px' }}>
+          <div style={{ background: '#FFFFFF', borderRadius: '10px', padding: '10px 12px', border: '1px solid #EAE5DF' }}>
+            <strong style={{ fontSize: '0.78rem', color: '#D97706', display: 'block', marginBottom: '2px' }}>
               ⭐ Promote Bestsellers
             </strong>
-            <span style={{ fontSize: '0.72rem', color: '#475569', lineHeight: 1.4, display: 'block' }}>
+            <span style={{ fontSize: '0.70rem', color: '#475569', lineHeight: 1.35, display: 'block' }}>
               Discounts on popular appetizers and combo thalis increase overall table basket size.
             </span>
           </div>
 
-          <div style={{ background: '#FFFFFF', borderRadius: '12px', padding: '12px 14px', border: '1px solid #EAE5DF' }}>
-            <strong style={{ fontSize: '0.80rem', color: '#0F172A', display: 'block', marginBottom: '3px' }}>
+          <div style={{ background: '#FFFFFF', borderRadius: '10px', padding: '10px 12px', border: '1px solid #EAE5DF' }}>
+            <strong style={{ fontSize: '0.78rem', color: '#0F172A', display: 'block', marginBottom: '2px' }}>
               ⏳ Create Urgency
             </strong>
-            <span style={{ fontSize: '0.72rem', color: '#475569', lineHeight: 1.4, display: 'block' }}>
+            <span style={{ fontSize: '0.70rem', color: '#475569', lineHeight: 1.35, display: 'block' }}>
               Schedule weekend specials and happy hour timeframes to drive repeat dine-in visits.
             </span>
           </div>
