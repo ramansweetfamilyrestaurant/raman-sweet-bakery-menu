@@ -409,11 +409,16 @@ export default function QrGeneratorView({
     const showWatermark = !settingsForm?.watermark_removal_enabled;
 
     try {
-      const width = 480;
-      // Pre-calculate text wrapping for name
+      // 2x Retina Scale corresponding to 350px width Live Preview Card
+      const width = 700;
+      const margin = 12; // Outer margin to edge of canvas
+      const topPadding = 48; // Padding inside gold border to top badge
+      const bottomPadding = 40; // Padding inside gold border from footer to bottom border
+
+      // 1. Pre-calculate restaurant name wrapping
       const tempCanvas = document.createElement('canvas');
       const tempCtx = tempCanvas.getContext('2d');
-      tempCtx.font = 'bold 24px "Playfair Display", Georgia, serif';
+      tempCtx.font = 'bold 36px "Playfair Display", Georgia, serif';
 
       const words = currentName.split(' ');
       let line = '';
@@ -421,7 +426,7 @@ export default function QrGeneratorView({
       for (let n = 0; n < words.length; n++) {
         const testLine = line + words[n] + ' ';
         const metrics = tempCtx.measureText(testLine);
-        if (metrics.width > 380 && n > 0) {
+        if (metrics.width > 560 && n > 0) {
           lines.push(line.trim());
           line = words[n] + ' ';
         } else {
@@ -430,22 +435,72 @@ export default function QrGeneratorView({
       }
       lines.push(line.trim());
 
-      const height = 750;
+      // 2. Pre-calculate exact vertical positions
+      let curY = margin + topPadding;
+
+      const badgeY = curY;
+      const badgeH = 46;
+      curY += badgeH + 20;
+
+      const nameY = curY;
+      const nameLineH = 44;
+      curY += (lines.length * nameLineH) + 6;
+
+      const tagY = curY;
+      const tagH = 24;
+      curY += tagH + 24;
+
+      const qrBoxY = curY;
+      const qrImgSize = 340;
+      const qrBoxPadding = 24;
+      const qrBoxSize = qrImgSize + qrBoxPadding * 2;
+      curY += qrBoxSize + 24;
+
+      const instEnY = curY;
+      const instEnH = 28;
+      curY += instEnH + 6;
+
+      const instHiY = curY;
+      const instHiH = 24;
+      curY += instHiH + 24;
+
+      const divY = curY;
+      curY += 2 + 20;
+
+      let addressY = null;
+      if (currentAddress) {
+        addressY = curY;
+        curY += 26;
+      }
+
+      let phoneY = null;
+      if (currentPhone) {
+        phoneY = curY;
+        curY += 26;
+      }
+
+      let watermarkY = null;
+      if (showWatermark) {
+        watermarkY = curY;
+        curY += 24;
+      }
+
+      // 3. Exact Total Height (zero wasted bottom space)
+      const totalHeight = Math.ceil(curY + bottomPadding + margin);
 
       const canvas = document.createElement('canvas');
       canvas.width = width;
-      canvas.height = height;
+      canvas.height = totalHeight;
       const ctx = canvas.getContext('2d');
 
-      // 1. Background
+      // 4. Fill Background
       ctx.fillStyle = '#FFFFFF';
-      ctx.fillRect(0, 0, width, height);
+      ctx.fillRect(0, 0, width, totalHeight);
 
-      // 2. Gold Outer Border
-      const margin = 8;
+      // 5. Draw Gold Outer Border perfectly surrounding card
       const cardW = width - margin * 2;
-      const cardH = height - margin * 2;
-      const radius = 24;
+      const cardH = totalHeight - margin * 2;
+      const radius = 36;
 
       ctx.save();
       ctx.beginPath();
@@ -455,21 +510,19 @@ export default function QrGeneratorView({
         ctx.rect(margin, margin, cardW, cardH);
       }
       ctx.strokeStyle = '#D4AF37';
-      ctx.lineWidth = 4.5;
+      ctx.lineWidth = 6;
       ctx.stroke();
       ctx.restore();
 
-      // 3. Top Space Badge
-      ctx.font = 'bold 14px "Plus Jakarta Sans", sans-serif';
+      // 6. Draw Top Badge
+      ctx.font = 'bold 22px "Plus Jakarta Sans", sans-serif';
       const textMetrics = ctx.measureText(badgeText.toUpperCase());
-      const badgeW = Math.max(textMetrics.width + 36, 150);
-      const badgeH = 32;
+      const badgeW = Math.max(textMetrics.width + 48, 220);
       const badgeX = (width - badgeW) / 2;
-      const badgeY = 28;
 
       ctx.beginPath();
       if (ctx.roundRect) {
-        ctx.roundRect(badgeX, badgeY, badgeW, badgeH, 16);
+        ctx.roundRect(badgeX, badgeY, badgeW, badgeH, 23);
       } else {
         ctx.rect(badgeX, badgeY, badgeW, badgeH);
       }
@@ -481,37 +534,35 @@ export default function QrGeneratorView({
       ctx.textBaseline = 'middle';
       ctx.fillText(badgeText.toUpperCase(), width / 2, badgeY + badgeH / 2);
 
-      // 4. Restaurant Name
+      // 7. Draw Restaurant Name
       ctx.fillStyle = '#0A2315';
-      ctx.font = 'bold 24px "Playfair Display", Georgia, serif';
+      ctx.font = 'bold 36px "Playfair Display", Georgia, serif';
       ctx.textAlign = 'center';
       ctx.textBaseline = 'alphabetic';
 
-      let curY = badgeY + badgeH + 26;
+      let tempNameY = nameY + 32;
       for (let i = 0; i < lines.length; i++) {
-        ctx.fillText(lines[i], width / 2, curY);
-        curY += 28;
+        ctx.fillText(lines[i], width / 2, tempNameY);
+        tempNameY += nameLineH;
       }
 
-      // 5. Tagline
+      // 8. Draw Tagline
       ctx.fillStyle = '#16A34A';
-      ctx.font = 'bold 13px "Plus Jakarta Sans", sans-serif';
-      ctx.fillText(currentTagline, width / 2, curY);
-      curY += 16;
+      ctx.font = 'bold 20px "Plus Jakarta Sans", sans-serif';
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'alphabetic';
+      ctx.fillText(currentTagline, width / 2, tagY + 18);
 
-      // 6. QR Code Image & Box
-      const qrSize = 250;
-      const qrX = (width - qrSize) / 2;
-      const qrY = curY;
-
+      // 9. Draw QR Box & QR Image
+      const qrBoxX = (width - qrBoxSize) / 2;
       ctx.beginPath();
       if (ctx.roundRect) {
-        ctx.roundRect(qrX - 10, qrY - 10, qrSize + 20, qrSize + 20, 16);
+        ctx.roundRect(qrBoxX, qrBoxY, qrBoxSize, qrBoxSize, 28);
       } else {
-        ctx.rect(qrX - 10, qrY - 10, qrSize + 20, qrSize + 20);
+        ctx.rect(qrBoxX, qrBoxY, qrBoxSize, qrBoxSize);
       }
       ctx.strokeStyle = '#E2E8F0';
-      ctx.lineWidth = 1.5;
+      ctx.lineWidth = 2;
       ctx.stroke();
 
       const img = new Image();
@@ -520,58 +571,57 @@ export default function QrGeneratorView({
 
       await new Promise((resolve) => {
         img.onload = () => {
-          ctx.drawImage(img, qrX, qrY, qrSize, qrSize);
+          ctx.drawImage(img, qrBoxX + qrBoxPadding, qrBoxY + qrBoxPadding, qrImgSize, qrImgSize);
           resolve();
         };
         img.onerror = () => {
           ctx.fillStyle = '#F8FAFC';
-          ctx.fillRect(qrX, qrY, qrSize, qrSize);
+          ctx.fillRect(qrBoxX + qrBoxPadding, qrBoxY + qrBoxPadding, qrImgSize, qrImgSize);
           resolve();
         };
         setTimeout(resolve, 3000);
       });
 
-      curY += qrSize + 24;
-
-      // 7. Primary Scan Instruction
+      // 10. Primary Instruction (English)
       ctx.fillStyle = '#0A2315';
-      ctx.font = 'bold 16px "Plus Jakarta Sans", sans-serif';
-      ctx.fillText(instEn, width / 2, curY);
-      curY += 22;
+      ctx.font = 'bold 26px "Plus Jakarta Sans", sans-serif';
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'alphabetic';
+      ctx.fillText(instEn, width / 2, instEnY + 22);
 
-      // 8. Secondary Scan Instruction (Hindi)
+      // 11. Secondary Instruction (Hindi)
       ctx.fillStyle = '#64748B';
-      ctx.font = 'bold 13px "Plus Jakarta Sans", sans-serif';
-      ctx.fillText(instHi, width / 2, curY);
-      curY += 18;
+      ctx.font = 'bold 22px "Plus Jakarta Sans", sans-serif';
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'alphabetic';
+      ctx.fillText(instHi, width / 2, instHiY + 18);
 
-      // 9. Divider Line
+      // 12. Horizontal Divider
       ctx.beginPath();
-      ctx.moveTo(35, curY);
-      ctx.lineTo(width - 35, curY);
+      ctx.moveTo(60, divY);
+      ctx.lineTo(width - 60, divY);
       ctx.strokeStyle = '#F1F5F9';
-      ctx.lineWidth = 1.5;
+      ctx.lineWidth = 2;
       ctx.stroke();
-      curY += 18;
 
-      // 10. Footer Address & Phone
+      // 13. Footer Address & Phone
       ctx.fillStyle = '#64748B';
-      ctx.font = '12px "Plus Jakarta Sans", sans-serif';
-      if (currentAddress) {
-        ctx.fillText(currentAddress, width / 2, curY);
-        curY += 17;
+      ctx.font = '19px "Plus Jakarta Sans", sans-serif';
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'alphabetic';
+      if (addressY !== null) {
+        ctx.fillText(currentAddress, width / 2, addressY + 16);
       }
-      if (currentPhone) {
-        ctx.font = 'bold 12px "Plus Jakarta Sans", sans-serif';
-        ctx.fillText(`Phone: ${currentPhone}`, width / 2, curY);
-        curY += 17;
+      if (phoneY !== null) {
+        ctx.font = 'bold 19px "Plus Jakarta Sans", sans-serif';
+        ctx.fillText(`Phone: ${currentPhone}`, width / 2, phoneY + 16);
       }
 
-      // 11. Watermark
-      if (showWatermark) {
+      // 14. Watermark
+      if (watermarkY !== null) {
         ctx.fillStyle = '#15803D';
-        ctx.font = 'bold 11px "Plus Jakarta Sans", sans-serif';
-        ctx.fillText('⚡ Powered by TouchQR', width / 2, curY);
+        ctx.font = 'bold 17px "Plus Jakarta Sans", sans-serif';
+        ctx.fillText('⚡ Powered by TouchQR', width / 2, watermarkY + 16);
       }
 
       // Trigger Download
