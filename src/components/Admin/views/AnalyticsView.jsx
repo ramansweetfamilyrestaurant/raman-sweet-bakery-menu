@@ -153,6 +153,25 @@ export default function AnalyticsView({
     if (exportFn) exportFn(selectedPeriod, null, null);
   };
 
+  // Compact currency formatter for Y-axis guidance
+  const formatCompactCurrency = (val, sym = '₹') => {
+    const num = Number(val || 0);
+    if (num >= 10000000) return `${sym}${(num / 10000000).toFixed(1).replace(/\.0$/, '')}Cr`;
+    if (num >= 100000) return `${sym}${(num / 100000).toFixed(1).replace(/\.0$/, '')}L`;
+    if (num >= 1000) return `${sym}${(num / 1000).toFixed(1).replace(/\.0$/, '')}K`;
+    return `${sym}${num.toLocaleString('en-IN')}`;
+  };
+
+  const chartTrendSubtitle = useMemo(() => {
+    if (selectedPeriod === 'today') return "Today's Trend";
+    if (selectedPeriod === '7d') return '7-Day Trend';
+    if (selectedPeriod === '30d') return '30-Day Trend';
+    if (selectedPeriod === '6m') return '6-Month Trend';
+    if (selectedPeriod === 'all') return 'Lifetime Trend';
+    if (selectedPeriod.startsWith('month:')) return 'Monthly Trend';
+    return 'Sales Trend';
+  }, [selectedPeriod]);
+
   // 2. Dynamic Daily Sales Chart Data Points (SVG Area & Line)
   const rawChartData = useMemo(() => {
     const list = analyticsData?.daily_chart_data || analyticsData?.daily_chart;
@@ -167,19 +186,33 @@ export default function AnalyticsView({
     return max > 0 ? max : 100;
   }, [rawChartData]);
 
+  const yAxisTicks = useMemo(() => {
+    const top = maxSales;
+    const mid2 = Math.round((maxSales * 2) / 3);
+    const mid1 = Math.round(maxSales / 3);
+    const bot = 0;
+    return [
+      { label: formatCompactCurrency(top, currencySymbol), y: 20 },
+      { label: formatCompactCurrency(mid2, currencySymbol), y: 68 },
+      { label: formatCompactCurrency(mid1, currencySymbol), y: 116 },
+      { label: formatCompactCurrency(bot, currencySymbol), y: 165 }
+    ];
+  }, [maxSales, currencySymbol]);
+
   const chartPoints = useMemo(() => {
     const chartWidth = 460;
     const chartHeight = 200;
-    const paddingX = 25;
-    const paddingTop = 25;
+    const paddingLeft = 44;
+    const paddingRight = 14;
+    const paddingTop = 20;
     const paddingBottom = 35;
-    const usableWidth = chartWidth - paddingX * 2;
+    const usableWidth = chartWidth - paddingLeft - paddingRight;
     const usableHeight = chartHeight - paddingTop - paddingBottom;
 
     return rawChartData.map((d, idx) => {
       const x = rawChartData.length > 1
-        ? paddingX + (idx / (rawChartData.length - 1)) * usableWidth
-        : chartWidth / 2;
+        ? paddingLeft + (idx / (rawChartData.length - 1)) * usableWidth
+        : paddingLeft + usableWidth / 2;
       const salesVal = Number(d.sales || 0);
       const y = paddingTop + usableHeight - (salesVal / maxSales) * usableHeight;
       return {
@@ -215,8 +248,25 @@ export default function AnalyticsView({
     if (chartPoints.length <= 1) return '';
     const lastX = chartPoints[chartPoints.length - 1].x;
     const firstX = chartPoints[0].x;
-    return `${linePath} L ${lastX},190 L ${firstX},190 Z`;
+    return `${linePath} L ${lastX},165 L ${firstX},165 Z`;
   }, [linePath, chartPoints]);
+
+  const visibleXLabels = useMemo(() => {
+    if (!chartPoints || chartPoints.length === 0) return [];
+    const len = chartPoints.length;
+    if (len <= 7) return chartPoints.map((pt, i) => ({ ...pt, origIndex: i }));
+    const step = Math.ceil((len - 1) / 5);
+    const indices = new Set();
+    indices.add(0);
+    for (let i = step; i < len - 1; i += step) {
+      indices.add(i);
+    }
+    indices.add(len - 1);
+    return Array.from(indices).sort((a, b) => a - b).map(idx => ({
+      ...chartPoints[idx],
+      origIndex: idx
+    }));
+  }, [chartPoints]);
 
   const activeHoverPoint = useMemo(() => {
     if (chartHoverIndex !== null && chartPoints[chartHoverIndex]) {
@@ -839,7 +889,7 @@ export default function AnalyticsView({
                   </div>
 
                   <span style={{ fontSize: '0.72rem', color: '#64748B', fontWeight: 600 }}>
-                    {rawChartData.length} data point{rawChartData.length === 1 ? '' : 's'}
+                    {chartTrendSubtitle}
                   </span>
                 </div>
 
@@ -853,7 +903,7 @@ export default function AnalyticsView({
                 </div>
               </div>
 
-              {/* Dynamic SVG Area Line Chart */}
+              {/* Dynamic SVG Area Line Chart with Subtle Y-Axis & Adaptive X-Axis */}
               <div style={{ position: 'relative', width: '100%', height: '220px', marginTop: '10px' }}>
                 {activeHoverPoint && (
                   <div style={{
@@ -886,24 +936,38 @@ export default function AnalyticsView({
                 <svg viewBox="0 0 460 200" style={{ width: '100%', height: '100%', overflow: 'visible' }}>
                   <defs>
                     <linearGradient id="salesGradient" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="0%" stopColor="#EA580C" stopOpacity="0.25" />
+                      <stop offset="0%" stopColor="#EA580C" stopOpacity="0.16" />
                       <stop offset="100%" stopColor="#EA580C" stopOpacity="0.0" />
                     </linearGradient>
                   </defs>
 
-                  {[40, 80, 120, 160].map((yVal, idx) => (
-                    <line
-                      key={idx}
-                      x1="0"
-                      y1={yVal}
-                      x2="460"
-                      y2={yVal}
-                      stroke="#F1F5F9"
-                      strokeWidth="1"
-                      strokeDasharray="3 3"
-                    />
+                  {/* Subtle Dynamic Y-Axis Values & Horizontal Grid Lines */}
+                  {yAxisTicks.map((tick, idx) => (
+                    <g key={idx}>
+                      <line
+                        x1="44"
+                        y1={tick.y}
+                        x2="450"
+                        y2={tick.y}
+                        stroke="#F1F5F9"
+                        strokeWidth="1"
+                        strokeDasharray={idx === yAxisTicks.length - 1 ? 'none' : '3 3'}
+                      />
+                      <text
+                        x="38"
+                        y={tick.y + 3}
+                        textAnchor="end"
+                        fill="#94A3B8"
+                        fontSize="8.5"
+                        fontWeight="600"
+                        fontFamily="system-ui, -apple-system, sans-serif"
+                      >
+                        {tick.label}
+                      </text>
+                    </g>
                   ))}
 
+                  {/* Subtle Transparent Area Fill */}
                   {areaPath && (
                     <path
                       d={areaPath}
@@ -911,6 +975,7 @@ export default function AnalyticsView({
                     />
                   )}
 
+                  {/* Smooth Real Data Line */}
                   {linePath && (
                     <path
                       d={linePath}
@@ -918,41 +983,59 @@ export default function AnalyticsView({
                       stroke="#EA580C"
                       strokeWidth="2.5"
                       strokeLinecap="round"
+                      strokeLinejoin="round"
                     />
                   )}
 
+                  {/* Highlighted Active Hover Point with Subtle Ring Halo */}
+                  {activeHoverPoint && (
+                    <g pointerEvents="none">
+                      <circle
+                        cx={activeHoverPoint.x}
+                        cy={activeHoverPoint.y}
+                        r="7.5"
+                        fill="#EA580C"
+                        fillOpacity="0.18"
+                      />
+                      <circle
+                        cx={activeHoverPoint.x}
+                        cy={activeHoverPoint.y}
+                        r="4.5"
+                        fill="#EA580C"
+                        stroke="#FFFFFF"
+                        strokeWidth="2"
+                      />
+                    </g>
+                  )}
+
+                  {/* Invisible Hit Targets for Hover Interaction (No Permanent Circle Clutter) */}
                   {chartPoints.map((pt, idx) => (
                     <g key={idx} onMouseEnter={() => setChartHoverIndex(idx)} onClick={() => setChartHoverIndex(idx)} style={{ cursor: 'pointer' }}>
                       <circle
                         cx={pt.x}
                         cy={pt.y}
-                        r={activeHoverPoint?.date === pt.date ? "5" : "3.5"}
-                        fill={activeHoverPoint?.date === pt.date ? "#EA580C" : "#FFFFFF"}
-                        stroke="#EA580C"
-                        strokeWidth="2"
+                        r="14"
+                        fill="transparent"
                       />
                     </g>
                   ))}
-                </svg>
 
-                <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: '4px', padding: '0 10px' }}>
-                  {chartPoints.map((pt, idx) => {
-                    const shouldShow = chartPoints.length <= 7 || idx === 0 || idx === chartPoints.length - 1 || idx % Math.ceil(chartPoints.length / 6) === 0;
-                    if (!shouldShow) return <span key={idx} />;
-                    return (
-                      <span
-                        key={idx}
-                        style={{
-                          fontSize: '0.64rem',
-                          color: activeHoverPoint?.date === pt.date ? '#0F172A' : '#94A3B8',
-                          fontWeight: activeHoverPoint?.date === pt.date ? 800 : 500
-                        }}
-                      >
-                        {pt.displayDate || pt.date}
-                      </span>
-                    );
-                  })}
-                </div>
+                  {/* Adaptive X-Axis Labels Aligned with Data Points */}
+                  {visibleXLabels.map((pt, idx) => (
+                    <text
+                      key={idx}
+                      x={pt.x}
+                      y="186"
+                      textAnchor="middle"
+                      fill={activeHoverPoint?.date === pt.date ? '#0F172A' : '#94A3B8'}
+                      fontSize="9"
+                      fontWeight={activeHoverPoint?.date === pt.date ? '800' : '500'}
+                      fontFamily="system-ui, -apple-system, sans-serif"
+                    >
+                      {pt.displayDate || pt.date}
+                    </text>
+                  ))}
+                </svg>
               </div>
             </div>
 
