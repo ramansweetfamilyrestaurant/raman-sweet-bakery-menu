@@ -1632,117 +1632,196 @@ export default function QrGeneratorView({
           </div>
 
           {/* RIGHT: Live QR Preview & Download Panel */}
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '14px', alignItems: 'center' }}>
 
-            {/* LIVE QR PREVIEW CARD */}
+            {/* LIVE STANDEE PREVIEW LABEL */}
+            <div style={{ width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+              <span style={{ fontSize: '0.74rem', fontWeight: 800, color: '#475569', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                Live Standee Preview
+              </span>
+              <span style={{ fontSize: '0.70rem', color: '#047857', fontWeight: 800, background: '#DCFCE7', padding: '2px 8px', borderRadius: '6px' }}>
+                Physical Print Mockup
+              </span>
+            </div>
+
+            {/* PHYSICAL STANDEE CARD (Exact Reference Match) */}
             <div style={{
+              width: '100%',
+              maxWidth: '350px',
               background: '#FFFFFF',
-              borderRadius: '16px',
-              border: '1px solid #EAE5DF',
-              padding: '22px',
-              boxShadow: '0 1px 3px rgba(0,0,0,0.02)',
+              borderRadius: '22px',
+              border: '3px solid #D4AF37',
+              boxShadow: '0 16px 36px rgba(10, 35, 21, 0.10)',
+              padding: '24px 20px 18px 20px',
+              textAlign: 'center',
+              boxSizing: 'border-box',
               display: 'flex',
               flexDirection: 'column',
               alignItems: 'center',
-              textAlign: 'center',
-              boxSizing: 'border-box'
+              position: 'relative'
             }}>
-              <span style={{ fontSize: '0.72rem', fontWeight: 800, color: '#64748B', textTransform: 'uppercase', letterSpacing: '0.04em', marginBottom: '8px' }}>
-                QR Code Preview
-              </span>
+              {/* Top Space Badge */}
+              <div style={{
+                display: 'inline-block',
+                background: '#0A2315',
+                color: '#DFBA67',
+                fontSize: '0.76rem',
+                fontWeight: 900,
+                padding: '5px 16px',
+                borderRadius: '18px',
+                letterSpacing: '0.8px',
+                marginBottom: '10px',
+                textTransform: 'uppercase'
+              }}>
+                {genSpaceType === 'counter'
+                  ? '🏪 BILLING COUNTER'
+                  : isCinema
+                    ? (String(genIdentifier).match(/^S(\d+)-([A-Za-z]+)-(\d+)$/i)
+                        ? `🎬 SCREEN ${String(genIdentifier).match(/^S(\d+)-([A-Za-z]+)-(\d+)$/i)[1]} • ROW ${String(genIdentifier).match(/^S(\d+)-([A-Za-z]+)-(\d+)$/i)[2].toUpperCase()} • SEAT ${String(genIdentifier).match(/^S(\d+)-([A-Za-z]+)-(\d+)$/i)[3]}`
+                        : `🎬 CINEMA SEAT ${genIdentifier}`)
+                    : `${activeGenSpaceConfig.badge} ${genIdentifier}`}
+              </div>
 
-              {/* QR Container */}
+              {/* Restaurant Name */}
+              <h3 style={{
+                fontFamily: "'Playfair Display', serif, Georgia",
+                fontSize: '1.25rem',
+                fontWeight: 900,
+                color: '#0A2315',
+                margin: '0 0 3px 0',
+                lineHeight: 1.25
+              }}>
+                {settingsForm?.name || restaurantInfo?.name || 'Raman Sweet Bakery & Family Restaurant'}
+              </h3>
+
+              {/* Tagline / Subtitle */}
+              <div style={{
+                fontSize: '0.74rem',
+                fontWeight: 700,
+                color: '#16A34A',
+                marginBottom: '12px'
+              }}>
+                {settingsForm?.tagline || (isCinema ? 'In-Seat Food Ordering' : 'Scan QR Code for Digital Menu')}
+              </div>
+
+              {/* QR Code Container */}
               <div style={{
                 background: '#FFFFFF',
-                padding: '16px',
+                padding: '12px',
                 borderRadius: '16px',
-                border: '2px solid #EAE5DF',
-                boxShadow: '0 4px 12px rgba(0,0,0,0.04)',
-                marginBottom: '12px'
+                border: '1px solid #E2E8F0',
+                display: 'inline-block',
+                marginBottom: '12px',
+                boxShadow: '0 2px 8px rgba(0, 0, 0, 0.04)'
               }}>
                 <img
                   src={generatorQrImgUrl}
-                  alt="Generated Space QR"
-                  style={{ width: '180px', height: '180px', display: 'block' }}
+                  alt={`${activeGenSpaceConfig.singular} ${genIdentifier} QR Code`}
+                  style={{ width: '170px', height: '170px', display: 'block' }}
                 />
               </div>
 
+              {/* Primary Scan Instruction */}
               <div style={{
-                display: 'inline-block',
-                background: '#064E3B',
-                color: '#FFFFFF',
-                padding: '3px 12px',
-                borderRadius: '12px',
-                fontSize: '0.74rem',
+                fontSize: '0.84rem',
                 fontWeight: 900,
-                marginBottom: '4px'
+                color: '#0A2315',
+                letterSpacing: '0.4px',
+                marginBottom: '3px'
               }}>
-                {genSpaceType === 'counter' ? 'BILLING COUNTER' : `${activeGenSpaceConfig.badge} ${genIdentifier}`}
+                {isCinema ? '📱 SCAN FOR IN-SEAT FOOD ORDERING' : '📱 SCAN FOR DIGITAL MENU & ORDER'}
               </div>
 
-              <h4 style={{ margin: '0 0 2px 0', fontSize: '1rem', fontWeight: 900, color: '#0F172A' }}>
-                {settingsForm?.name || restaurantInfo?.name || 'TouchQR Restaurant'}
-              </h4>
-              <span style={{ fontSize: '0.70rem', color: '#64748B', marginBottom: '12px', display: 'block' }}>
-                Scan with your smartphone camera to test
-              </span>
-
-              {/* Test Button & Copy Link */}
-              <div style={{ width: '100%', display: 'flex', gap: '8px', marginBottom: '14px' }}>
-                <button
-                  type="button"
-                  onClick={() => setShowTestModal(true)}
-                  style={{
-                    flex: 1,
-                    height: '36px',
-                    borderRadius: '8px',
-                    border: '1px solid #CBD5E1',
-                    background: '#FAF8F5',
-                    color: '#0F172A',
-                    fontSize: '0.76rem',
-                    fontWeight: 800,
-                    cursor: 'pointer',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    gap: '4px'
-                  }}
-                >
-                  <Eye size={14} />
-                  <span>Test QR Code</span>
-                </button>
-
-                <button
-                  type="button"
-                  onClick={handleCopyLink}
-                  style={{
-                    flex: 1,
-                    height: '36px',
-                    borderRadius: '8px',
-                    border: '1px solid #CBD5E1',
-                    background: '#FFFFFF',
-                    color: '#0F172A',
-                    fontSize: '0.76rem',
-                    fontWeight: 800,
-                    cursor: 'pointer',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    gap: '4px'
-                  }}
-                >
-                  {copied ? <Check size={14} color="#059669" /> : <Copy size={14} />}
-                  <span>{copied ? 'Copied!' : 'Copy Link'}</span>
-                </button>
+              {/* Secondary Scan Instruction (Hindi) */}
+              <div style={{
+                fontSize: '0.74rem',
+                fontWeight: 700,
+                color: '#64748B',
+                marginBottom: '12px'
+              }}>
+                {isCinema ? 'स्कैन करें और सीट पर खाना मंगाएं' : 'स्कैन करें और डिजिटल मेन्यू देखें'}
               </div>
+
+              {/* Footer Divider & Live Contact Info */}
+              <div style={{
+                width: '100%',
+                borderTop: '1px solid #F1F5F9',
+                paddingTop: '10px',
+                fontSize: '0.68rem',
+                color: '#94A3B8',
+                lineHeight: 1.4
+              }}>
+                {settingsForm?.address || restaurantInfo?.address ? (
+                  <div>{settingsForm?.address || restaurantInfo?.address}</div>
+                ) : null}
+                {settingsForm?.phone || restaurantInfo?.phone ? (
+                  <div style={{ fontWeight: 600 }}>Phone: {settingsForm?.phone || restaurantInfo?.phone}</div>
+                ) : null}
+                {!settingsForm?.watermark_removal_enabled && (
+                  <div style={{ marginTop: '4px', fontSize: '0.64rem', color: '#15803D', fontWeight: 800 }}>
+                    ⚡ Powered by TouchQR
+                  </div>
+                )}
+              </div>
+            </div>
+
+            {/* Test Button & Copy Link */}
+            <div style={{ width: '100%', maxWidth: '350px', display: 'flex', gap: '8px' }}>
+              <button
+                type="button"
+                onClick={() => setShowTestModal(true)}
+                style={{
+                  flex: 1,
+                  height: '36px',
+                  borderRadius: '8px',
+                  border: '1px solid #CBD5E1',
+                  background: '#FAF8F5',
+                  color: '#0F172A',
+                  fontSize: '0.76rem',
+                  fontWeight: 800,
+                  cursor: 'pointer',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  gap: '4px'
+                }}
+              >
+                <Eye size={14} />
+                <span>Test QR Code</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={handleCopyLink}
+                style={{
+                  flex: 1,
+                  height: '36px',
+                  borderRadius: '8px',
+                  border: '1px solid #CBD5E1',
+                  background: '#FFFFFF',
+                  color: '#0F172A',
+                  fontSize: '0.76rem',
+                  fontWeight: 800,
+                  cursor: 'pointer',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  gap: '4px'
+                }}
+              >
+                {copied ? <Check size={14} color="#059669" /> : <Copy size={14} />}
+                <span>{copied ? 'Copied!' : 'Copy Link'}</span>
+              </button>
             </div>
 
             {/* DOWNLOAD / PRINT ACTIONS */}
             <div style={{
+              width: '100%',
+              maxWidth: '350px',
               background: '#FFFFFF',
               borderRadius: '16px',
               border: '1px solid #EAE5DF',
-              padding: '18px 20px',
+              padding: '16px 18px',
               boxShadow: '0 1px 3px rgba(0,0,0,0.02)',
               display: 'flex',
               flexDirection: 'column',
@@ -1816,7 +1895,7 @@ export default function QrGeneratorView({
                   alignItems: 'center',
                   justifyContent: 'center',
                   gap: '6px',
-                  marginTop: '4px'
+                  marginTop: '2px'
                 }}
               >
                 <Plus size={15} />
