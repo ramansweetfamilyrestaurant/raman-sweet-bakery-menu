@@ -2717,13 +2717,15 @@ router.get('/analytics', authenticateToken, requireActiveSubscription, async (re
       dailySalesMap[todayStr] = 0;
       dailyOrdersMap[todayStr] = 0;
     } else {
-      // 'all' -> default last 7 days in chart trend
-      for (let i = 6; i >= 0; i--) {
-        const dStr = getISTDateOffset(i);
-        dailySalesMap[dStr] = 0;
-        dailyOrdersMap[dStr] = 0;
-      }
+      // 'all' -> Full lifetime (periodStartDate & periodEndDate remain null)
+      periodStartDate = null;
+      periodEndDate = null;
     }
+
+    const monthlySalesMap = {};
+    const monthlyOrdersMap = {};
+    const currentMonthKey = todayStr.substring(0, 7);
+    let earliestMonthKey = currentMonthKey;
 
     // Query active non-cancelled orders for tenant
     const orders = await query(
@@ -2849,6 +2851,16 @@ router.get('/analytics', authenticateToken, requireActiveSubscription, async (re
         periodPaymentMethods[pCategory].amount += amt;
       }
 
+      // Monthly aggregation for All Time
+      if (dateStr && dateStr.length >= 7) {
+        const mKey = dateStr.substring(0, 7);
+        if (mKey < earliestMonthKey && mKey >= '2020-01') {
+          earliestMonthKey = mKey;
+        }
+        monthlySalesMap[mKey] = (monthlySalesMap[mKey] || 0) + amt;
+        monthlyOrdersMap[mKey] = (monthlyOrdersMap[mKey] || 0) + 1;
+      }
+
       if (dateStr && dailySalesMap[dateStr] !== undefined) {
         dailySalesMap[dateStr] += amt;
         dailyOrdersMap[dateStr] = (dailyOrdersMap[dateStr] || 0) + 1;
@@ -2929,6 +2941,16 @@ router.get('/analytics', authenticateToken, requireActiveSubscription, async (re
       if (inPeriod) {
         periodSales += amt;
         periodOrdersCount += orderCnt;
+      }
+
+      // Monthly aggregation for All Time
+      if (summaryDateStr && summaryDateStr.length >= 7) {
+        const mKey = summaryDateStr.substring(0, 7);
+        if (mKey < earliestMonthKey && mKey >= '2020-01') {
+          earliestMonthKey = mKey;
+        }
+        monthlySalesMap[mKey] = (monthlySalesMap[mKey] || 0) + amt;
+        monthlyOrdersMap[mKey] = (monthlyOrdersMap[mKey] || 0) + orderCnt;
       }
 
       if (summaryDateStr && dailySalesMap[summaryDateStr] !== undefined) {
@@ -3040,12 +3062,49 @@ router.get('/analytics', authenticateToken, requireActiveSubscription, async (re
         percentage: totalCatRevenue > 0 ? Math.round((c.amount / totalCatRevenue) * 100) : 0
       }));
 
-    const dailyChartData = Object.keys(dailySalesMap).sort().map(dateKey => ({
-      date: dateKey,
-      displayDate: new Date(dateKey + 'T12:00:00Z').toLocaleDateString('en-US', { month: 'short', day: 'numeric', timeZone: 'Asia/Kolkata' }),
-      sales: dailySalesMap[dateKey],
-      orders: dailyOrdersMap[dateKey] !== undefined ? dailyOrdersMap[dateKey] : 0
-    }));
+    let dailyChartData = [];
+    if (selectedPeriod === 'all') {
+      let curY = parseInt(earliestMonthKey.substring(0, 4), 10);
+      let curM = parseInt(earliestMonthKey.substring(5, 7), 10);
+      const endY = parseInt(currentMonthKey.substring(0, 4), 10);
+      const endM = parseInt(currentMonthKey.substring(5, 7), 10);
+      const contiguousMonthKeys = [];
+
+      let iterations = 0;
+      while ((curY < endY || (curY === endY && curM <= endM)) && iterations < 120) {
+        const k = `${curY}-${String(curM).padStart(2, '0')}`;
+        contiguousMonthKeys.push(k);
+        curM++;
+        if (curM > 12) {
+          curM = 1;
+          curY++;
+        }
+        iterations++;
+      }
+
+      if (contiguousMonthKeys.length === 0) {
+        contiguousMonthKeys.push(currentMonthKey);
+      }
+
+      dailyChartData = contiguousMonthKeys.map(mKey => {
+        const [y, m] = mKey.split('-');
+        const d = new Date(parseInt(y, 10), parseInt(m, 10) - 1, 1);
+        const displayDate = d.toLocaleDateString('en-US', { month: 'short', year: 'numeric' });
+        return {
+          date: mKey,
+          displayDate: displayDate,
+          sales: Math.round(monthlySalesMap[mKey] || 0),
+          orders: monthlyOrdersMap[mKey] || 0
+        };
+      });
+    } else {
+      dailyChartData = Object.keys(dailySalesMap).sort().map(dateKey => ({
+        date: dateKey,
+        displayDate: new Date(dateKey + 'T12:00:00Z').toLocaleDateString('en-US', { month: 'short', day: 'numeric', timeZone: 'Asia/Kolkata' }),
+        sales: dailySalesMap[dateKey] || 0,
+        orders: dailyOrdersMap[dateKey] !== undefined ? dailyOrdersMap[dateKey] : 0
+      }));
+    }
 
     const availableMonths = Object.values(availableMonthsMap).sort((a, b) => b.key.localeCompare(a.key));
 
