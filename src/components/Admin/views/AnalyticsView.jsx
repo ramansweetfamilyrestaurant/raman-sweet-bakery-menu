@@ -16,6 +16,65 @@ import {
 } from 'lucide-react';
 import { getDishImageUrl } from '../../../utils/imageHelper';
 
+/**
+ * generateSparklinePath
+ * Generates a smooth, normalized SVG path from an authoritative chronological numeric series.
+ * Safely handles empty arrays, single points, flat/zero periods, and prevents NaN/Infinity coordinates.
+ */
+const generateSparklinePath = (dataSeries, width = 100, height = 20, paddingY = 3) => {
+  if (!Array.isArray(dataSeries) || dataSeries.length === 0) {
+    return `M 0,${height / 2} L ${width},${height / 2}`;
+  }
+
+  const validNumbers = dataSeries.map(v => 
+    (v !== null && v !== undefined && !isNaN(Number(v)) && isFinite(Number(v)) ? Number(v) : 0)
+  );
+
+  if (validNumbers.length === 0) {
+    return `M 0,${height / 2} L ${width},${height / 2}`;
+  }
+
+  const max = Math.max(...validNumbers);
+  const min = Math.min(...validNumbers);
+
+  // If all values are 0 or equal or only 1 data point, render clean flat baseline
+  if (max === 0 || max === min || validNumbers.length === 1) {
+    return `M 0,${height / 2} L ${width},${height / 2}`;
+  }
+
+  const usableHeight = height - paddingY * 2;
+  const range = Math.max(max - min, 1);
+
+  const points = validNumbers.map((val, idx) => {
+    const x = validNumbers.length > 1
+      ? (idx / (validNumbers.length - 1)) * width
+      : width / 2;
+    const y = paddingY + usableHeight - ((val - min) / range) * usableHeight;
+    return {
+      x: Math.round(x * 10) / 10,
+      y: Math.round(y * 10) / 10
+    };
+  });
+
+  if (points.length === 2) {
+    return `M ${points[0].x},${points[0].y} L ${points[1].x},${points[1].y}`;
+  }
+
+  let path = `M ${points[0].x},${points[0].y}`;
+  for (let i = 0; i < points.length - 1; i++) {
+    const p0 = points[i === 0 ? 0 : i - 1];
+    const p1 = points[i];
+    const p2 = points[i + 1];
+    const p3 = points[i + 2] || p2;
+    const cp1x = p1.x + (p2.x - p0.x) / 6;
+    const cp1y = p1.y + (p2.y - p0.y) / 6;
+    const cp2x = p2.x - (p3.x - p1.x) / 6;
+    const cp2y = p2.y - (p3.y - p1.y) / 6;
+    path += ` C ${cp1x.toFixed(1)},${cp1y.toFixed(1)} ${cp2x.toFixed(1)},${cp2y.toFixed(1)} ${p2.x.toFixed(1)},${p2.y.toFixed(1)}`;
+  }
+  return path;
+};
+
 export default function AnalyticsView({
   analyticsData = {},
   onExportReport,
@@ -150,6 +209,31 @@ export default function AnalyticsView({
     }
     return chartPoints[chartPoints.length - 1] || null;
   }, [chartHoverIndex, chartPoints]);
+
+  // Dynamic Live Sparkline Paths for KPI Cards (Strictly Data-Driven)
+  const salesSparklinePath = useMemo(() => {
+    const series = rawChartData.map(d => Number(d.sales || 0));
+    return generateSparklinePath(series);
+  }, [rawChartData]);
+
+  const ordersSparklinePath = useMemo(() => {
+    const series = rawChartData.map(d => (d.orders !== undefined ? Number(d.orders || 0) : 0));
+    return generateSparklinePath(series);
+  }, [rawChartData]);
+
+  const aovSparklinePath = useMemo(() => {
+    const series = rawChartData.map(d => {
+      const s = Number(d.sales || 0);
+      const o = Number(d.orders || 0);
+      return o > 0 && s > 0 ? Math.round(s / o) : 0;
+    });
+    return generateSparklinePath(series);
+  }, [rawChartData]);
+
+  const activeDishesSparklinePath = useMemo(() => {
+    // Historical distinct-dish breakdown per day is not retained; render honest baseline
+    return 'M 0,10 L 100,10';
+  }, []);
 
   // 3. Dynamic Top Dishes (Authoritative from backend)
   const topDishesList = useMemo(() => {
@@ -473,13 +557,11 @@ export default function AnalyticsView({
                 </div>
               </div>
 
-              {/* Dynamic Mini Sparkline (Orange) */}
+              {/* Dynamic Live Sparkline (Orange) */}
               <div style={{ width: '100%', height: '24px', marginTop: '8px' }}>
                 <svg viewBox="0 0 100 20" style={{ width: '100%', height: '100%', overflow: 'visible' }}>
                   <path
-                    d={chartPoints.length > 1
-                      ? chartPoints.map((p, i) => `${i === 0 ? 'M' : 'L'} ${(p.x / 460) * 100},${(p.y / 200) * 20}`).join(' ')
-                      : 'M 0,10 L 100,10'}
+                    d={salesSparklinePath}
                     fill="none"
                     stroke="#F97316"
                     strokeWidth="2"
@@ -520,7 +602,7 @@ export default function AnalyticsView({
                 </div>
 
                 <div style={{ fontSize: '1.45rem', fontWeight: 900, color: '#0F172A', letterSpacing: '-0.02em', lineHeight: 1.1 }}>
-                  {totalOrders}
+                  {totalOrders.toLocaleString('en-IN')}
                 </div>
 
                 <div style={{ display: 'flex', alignItems: 'center', gap: '4px', marginTop: '6px' }}>
@@ -529,13 +611,11 @@ export default function AnalyticsView({
                 </div>
               </div>
 
-              {/* Dynamic Mini Sparkline (Blue) */}
+              {/* Dynamic Live Sparkline (Blue) */}
               <div style={{ width: '100%', height: '24px', marginTop: '8px' }}>
                 <svg viewBox="0 0 100 20" style={{ width: '100%', height: '100%', overflow: 'visible' }}>
                   <path
-                    d={totalOrders > 0 && chartPoints.length > 1
-                      ? chartPoints.map((p, i) => `${i === 0 ? 'M' : 'L'} ${(p.x / 460) * 100},${(p.y / 200) * 20}`).join(' ')
-                      : 'M 0,10 L 100,10'}
+                    d={ordersSparklinePath}
                     fill="none"
                     stroke="#38BDF8"
                     strokeWidth="2"
@@ -585,16 +665,15 @@ export default function AnalyticsView({
                 </div>
               </div>
 
-              {/* Truthful Baseline Sparkline (Purple) */}
+              {/* Dynamic Live / Truthful Sparkline (Purple) */}
               <div style={{ width: '100%', height: '24px', marginTop: '8px' }}>
                 <svg viewBox="0 0 100 20" style={{ width: '100%', height: '100%', overflow: 'visible' }}>
                   <path
-                    d="M 0,10 L 100,10"
+                    d={aovSparklinePath}
                     fill="none"
                     stroke="#C084FC"
                     strokeWidth="2"
                     strokeLinecap="round"
-                    strokeDasharray={aov > 0 ? "none" : "3 3"}
                   />
                 </svg>
               </div>
@@ -644,12 +723,11 @@ export default function AnalyticsView({
               <div style={{ width: '100%', height: '24px', marginTop: '8px' }}>
                 <svg viewBox="0 0 100 20" style={{ width: '100%', height: '100%', overflow: 'visible' }}>
                   <path
-                    d="M 0,10 L 100,10"
+                    d={activeDishesSparklinePath}
                     fill="none"
                     stroke="#4ADE80"
                     strokeWidth="2"
                     strokeLinecap="round"
-                    strokeDasharray={Number(analyticsData?.distinct_dishes_count ?? 0) > 0 ? "none" : "3 3"}
                   />
                 </svg>
               </div>

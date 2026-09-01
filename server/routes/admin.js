@@ -2671,6 +2671,7 @@ router.get('/analytics', authenticateToken, requireActiveSubscription, async (re
 
     // Initialize daily chart keys based on selected filter
     const dailySalesMap = {};
+    const dailyOrdersMap = {};
     let periodStartDate = null;
     let periodEndDate = null;
 
@@ -2682,34 +2683,45 @@ router.get('/analytics', authenticateToken, requireActiveSubscription, async (re
       for (let day = 1; day <= daysInMonth; day++) {
         const dayStr = `${monthPrefix}-${String(day).padStart(2, '0')}`;
         dailySalesMap[dayStr] = 0;
+        dailyOrdersMap[dayStr] = 0;
       }
     } else if (selectedPeriod === 'today') {
       periodStartDate = todayStr;
       periodEndDate = todayStr;
       dailySalesMap[todayStr] = 0;
+      dailyOrdersMap[todayStr] = 0;
     } else if (selectedPeriod === '7d') {
       periodStartDate = sevenDaysAgoStr;
       periodEndDate = todayStr;
       for (let i = 6; i >= 0; i--) {
-        dailySalesMap[getISTDateOffset(i)] = 0;
+        const dStr = getISTDateOffset(i);
+        dailySalesMap[dStr] = 0;
+        dailyOrdersMap[dStr] = 0;
       }
     } else if (selectedPeriod === '30d') {
       periodStartDate = thirtyDaysAgoStr;
       periodEndDate = todayStr;
       for (let i = 29; i >= 0; i--) {
-        dailySalesMap[getISTDateOffset(i)] = 0;
+        const dStr = getISTDateOffset(i);
+        dailySalesMap[dStr] = 0;
+        dailyOrdersMap[dStr] = 0;
       }
     } else if (selectedPeriod === '6m') {
       periodStartDate = sixMonthsAgoStr;
       periodEndDate = todayStr;
       for (let i = 180; i >= 0; i -= 5) {
-        dailySalesMap[getISTDateOffset(i)] = 0;
+        const dStr = getISTDateOffset(i);
+        dailySalesMap[dStr] = 0;
+        dailyOrdersMap[dStr] = 0;
       }
       dailySalesMap[todayStr] = 0;
+      dailyOrdersMap[todayStr] = 0;
     } else {
       // 'all' -> default last 7 days in chart trend
       for (let i = 6; i >= 0; i--) {
-        dailySalesMap[getISTDateOffset(i)] = 0;
+        const dStr = getISTDateOffset(i);
+        dailySalesMap[dStr] = 0;
+        dailyOrdersMap[dStr] = 0;
       }
     }
 
@@ -2839,6 +2851,7 @@ router.get('/analytics', authenticateToken, requireActiveSubscription, async (re
 
       if (dateStr && dailySalesMap[dateStr] !== undefined) {
         dailySalesMap[dateStr] += amt;
+        dailyOrdersMap[dateStr] = (dailyOrdersMap[dateStr] || 0) + 1;
       }
 
       let itemsList = [];
@@ -2920,6 +2933,7 @@ router.get('/analytics', authenticateToken, requireActiveSubscription, async (re
 
       if (summaryDateStr && dailySalesMap[summaryDateStr] !== undefined) {
         dailySalesMap[summaryDateStr] += amt;
+        dailyOrdersMap[summaryDateStr] = (dailyOrdersMap[summaryDateStr] || 0) + orderCnt;
       }
 
       // Process payment methods summary
@@ -3029,7 +3043,8 @@ router.get('/analytics', authenticateToken, requireActiveSubscription, async (re
     const dailyChartData = Object.keys(dailySalesMap).sort().map(dateKey => ({
       date: dateKey,
       displayDate: new Date(dateKey + 'T12:00:00Z').toLocaleDateString('en-US', { month: 'short', day: 'numeric', timeZone: 'Asia/Kolkata' }),
-      sales: dailySalesMap[dateKey]
+      sales: dailySalesMap[dateKey],
+      orders: dailyOrdersMap[dateKey] !== undefined ? dailyOrdersMap[dateKey] : 0
     }));
 
     const availableMonths = Object.values(availableMonthsMap).sort((a, b) => b.key.localeCompare(a.key));
