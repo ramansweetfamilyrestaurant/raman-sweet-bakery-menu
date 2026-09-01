@@ -545,11 +545,9 @@ export default function AnalyticsView({
                     display: 'flex',
                     alignItems: 'center',
                     justifyContent: 'center',
-                    fontWeight: 900,
-                    fontSize: '0.90rem',
                     flexShrink: 0
                   }}>
-                    {currencySymbol}
+                    <TrendingUp size={16} />
                   </div>
                 </div>
 
