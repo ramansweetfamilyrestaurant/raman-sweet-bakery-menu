@@ -1672,8 +1672,8 @@ router.post('/orders', orderCreationRateLimiter, async (req, res) => {
     const [dbDishes, dbCombos, rawOffers, rawOfferItems] = await Promise.all([
       query('SELECT id, name, price, price_half, available FROM dishes WHERE restaurant_id = $1', [targetId]),
       query('SELECT id, name, price, available, description FROM combos WHERE restaurant_id = $1', [targetId]),
-      query("SELECT * FROM offers WHERE restaurant_id = $1 AND (active IS NOT FALSE AND active::text NOT IN ('0', 'false', 'f'))", [targetId]).catch(() => []),
-      query("SELECT * FROM offer_items WHERE restaurant_id = $1", [targetId]).catch(() => [])
+      query("SELECT * FROM offers WHERE restaurant_id = $1 AND (active IS NOT FALSE AND active::text NOT IN ('0', 'false', 'f')) ORDER BY id DESC", [targetId]).catch(() => []),
+      query("SELECT * FROM offer_items WHERE restaurant_id = $1 ORDER BY id DESC", [targetId]).catch(() => [])
     ]);
 
     const dishMap = new Map((dbDishes || []).map(d => [String(d.id), d]));

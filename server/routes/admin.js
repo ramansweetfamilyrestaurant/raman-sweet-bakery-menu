@@ -4456,6 +4456,14 @@ router.post('/offers', authenticateToken, requireActiveSubscription, async (req,
       return res.status(400).json({ error: 'Percentage discount cannot exceed 100%' });
     }
 
+    // Verify dish and combo ownership for target restaurant
+    const [validDishes, validCombos] = await Promise.all([
+      query('SELECT id FROM dishes WHERE restaurant_id = $1', [targetId]),
+      query('SELECT id FROM combos WHERE restaurant_id = $1', [targetId])
+    ]);
+    const validDishSet = new Set((validDishes || []).map(d => Number(d.id)));
+    const validComboSet = new Set((validCombos || []).map(c => Number(c.id)));
+
     const offerResult = await query(
       'INSERT INTO offers (restaurant_id, name, type, value, starts_at, ends_at, active) VALUES ($1, $2, $3, $4, $5, $6, $7) RETURNING id',
       [targetId, name.trim(), type, numValue, starts_at || new Date().toISOString(), ends_at || null, active !== false && active !== 0 && active !== '0']
@@ -4463,13 +4471,25 @@ router.post('/offers', authenticateToken, requireActiveSubscription, async (req,
     const offerId = offerResult[0]?.id || offerResult.lastInsertRowid;
 
     if (Array.isArray(items) && items.length > 0) {
+      const insertedDishIds = new Set();
+      const insertedComboIds = new Set();
       for (const item of items) {
-        const dishId = item.dish_id || (typeof item === 'number' || !isNaN(Number(item)) ? Number(item) : null);
-        const comboId = item.combo_id || null;
-        if (dishId || comboId) {
+        const rawDishId = item.dish_id || (typeof item === 'number' || !isNaN(Number(item)) ? Number(item) : null);
+        const rawComboId = item.combo_id || null;
+        const dishId = rawDishId && validDishSet.has(Number(rawDishId)) ? Number(rawDishId) : null;
+        const comboId = rawComboId && validComboSet.has(Number(rawComboId)) ? Number(rawComboId) : null;
+
+        if (dishId && !insertedDishIds.has(dishId)) {
+          insertedDishIds.add(dishId);
           await query(
-            'INSERT INTO offer_items (offer_id, restaurant_id, dish_id, combo_id) VALUES ($1, $2, $3, $4)',
-            [offerId, targetId, dishId, comboId]
+            'INSERT INTO offer_items (offer_id, restaurant_id, dish_id, combo_id) VALUES ($1, $2, $3, NULL)',
+            [offerId, targetId, dishId]
+          );
+        } else if (comboId && !insertedComboIds.has(comboId)) {
+          insertedComboIds.add(comboId);
+          await query(
+            'INSERT INTO offer_items (offer_id, restaurant_id, dish_id, combo_id) VALUES ($1, $2, NULL, $3)',
+            [offerId, targetId, comboId]
           );
         }
       }
@@ -4491,7 +4511,27 @@ router.put('/offers/:id', authenticateToken, requireActiveSubscription, async (r
       return res.status(401).json({ error: 'Restaurant identity is missing from authentication context' });
     }
     const { name, type, value, starts_at, ends_at, active, items = [] } = req.body;
+    if (!name || !type || value === undefined || value === null) {
+      return res.status(400).json({ error: 'Name, type, and value are required' });
+    }
+    if (!['percentage', 'flat', 'special_price'].includes(type)) {
+      return res.status(400).json({ error: 'Invalid offer type. Allowed: percentage, flat, special_price' });
+    }
     const numValue = Number(value);
+    if (isNaN(numValue) || numValue <= 0) {
+      return res.status(400).json({ error: 'Offer value must be a positive number' });
+    }
+    if (type === 'percentage' && numValue > 100) {
+      return res.status(400).json({ error: 'Percentage discount cannot exceed 100%' });
+    }
+
+    // Verify dish and combo ownership for target restaurant
+    const [validDishes, validCombos] = await Promise.all([
+      query('SELECT id FROM dishes WHERE restaurant_id = $1', [targetId]),
+      query('SELECT id FROM combos WHERE restaurant_id = $1', [targetId])
+    ]);
+    const validDishSet = new Set((validDishes || []).map(d => Number(d.id)));
+    const validComboSet = new Set((validCombos || []).map(c => Number(c.id)));
 
     await query(
       'UPDATE offers SET name = $1, type = $2, value = $3, starts_at = $4, ends_at = $5, active = $6, updated_at = CURRENT_TIMESTAMP WHERE id = $7 AND restaurant_id = $8',
@@ -4501,13 +4541,25 @@ router.put('/offers/:id', authenticateToken, requireActiveSubscription, async (r
     // Re-sync offer_items
     await query('DELETE FROM offer_items WHERE offer_id = $1 AND restaurant_id = $2', [req.params.id, targetId]);
     if (Array.isArray(items) && items.length > 0) {
+      const insertedDishIds = new Set();
+      const insertedComboIds = new Set();
       for (const item of items) {
-        const dishId = item.dish_id || (typeof item === 'number' || !isNaN(Number(item)) ? Number(item) : null);
-        const comboId = item.combo_id || null;
-        if (dishId || comboId) {
+        const rawDishId = item.dish_id || (typeof item === 'number' || !isNaN(Number(item)) ? Number(item) : null);
+        const rawComboId = item.combo_id || null;
+        const dishId = rawDishId && validDishSet.has(Number(rawDishId)) ? Number(rawDishId) : null;
+        const comboId = rawComboId && validComboSet.has(Number(rawComboId)) ? Number(rawComboId) : null;
+
+        if (dishId && !insertedDishIds.has(dishId)) {
+          insertedDishIds.add(dishId);
           await query(
-            'INSERT INTO offer_items (offer_id, restaurant_id, dish_id, combo_id) VALUES ($1, $2, $3, $4)',
-            [req.params.id, targetId, dishId, comboId]
+            'INSERT INTO offer_items (offer_id, restaurant_id, dish_id, combo_id) VALUES ($1, $2, $3, NULL)',
+            [req.params.id, targetId, dishId]
+          );
+        } else if (comboId && !insertedComboIds.has(comboId)) {
+          insertedComboIds.add(comboId);
+          await query(
+            'INSERT INTO offer_items (offer_id, restaurant_id, dish_id, combo_id) VALUES ($1, $2, NULL, $3)',
+            [req.params.id, targetId, comboId]
           );
         }
       }
