@@ -485,9 +485,31 @@ export default function OffersView({
           border-color: #CBD5E1;
           box-shadow: 0 4px 12px rgba(0,0,0,0.04);
         }
+        .offers-insights-grid {
+          display: grid;
+          grid-template-columns: 1fr 1fr;
+          gap: 14px;
+          width: 100%;
+          box-sizing: border-box;
+        }
+        .offers-tips-grid {
+          display: grid;
+          grid-template-columns: repeat(3, 1fr);
+          gap: 12px;
+          width: 100%;
+          box-sizing: border-box;
+        }
         @media (max-width: 960px) {
           .offers-metric-grid {
             grid-template-columns: repeat(2, 1fr) !important;
+          }
+        }
+        @media (max-width: 860px) {
+          .offers-insights-grid {
+            grid-template-columns: 1fr !important;
+          }
+          .offers-tips-grid {
+            grid-template-columns: 1fr !important;
           }
         }
         @media (max-width: 640px) {
@@ -878,6 +900,212 @@ export default function OffersView({
             );
           })
         )}
+      </div>
+
+      {/* =========================================================================
+          5. PROMOTION INSIGHTS & HOW PROMOTIONS WORK (2-COLUMN GRID)
+         ========================================================================= */}
+      <div className="offers-insights-grid" style={{ marginTop: '4px' }}>
+        {/* Column 1: Promotion Insights */}
+        <div style={{
+          background: '#FFFFFF',
+          borderRadius: '16px',
+          border: '1px solid #EAE5DF',
+          padding: '18px 20px',
+          boxShadow: '0 1px 3px rgba(0,0,0,0.02)',
+          display: 'flex',
+          flexDirection: 'column',
+          justifyContent: 'space-between',
+          gap: '14px',
+          boxSizing: 'border-box'
+        }}>
+          <div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '4px' }}>
+              <TrendingUp size={18} color="#064E3B" />
+              <h3 style={{ fontSize: '0.94rem', fontWeight: 900, color: '#0F172A', margin: 0 }}>
+                Promotion Insights
+              </h3>
+            </div>
+            <p style={{ fontSize: '0.74rem', color: '#64748B', margin: 0 }}>
+              Overview of your menu promotion coverage and active campaigns.
+            </p>
+          </div>
+
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
+            <div style={{ background: '#FAF8F5', borderRadius: '10px', padding: '10px 12px', border: '1px solid #EAE5DF' }}>
+              <span style={{ fontSize: '0.64rem', fontWeight: 800, color: '#64748B', textTransform: 'uppercase', display: 'block' }}>
+                Promoted Items
+              </span>
+              <strong style={{ fontSize: '1.15rem', fontWeight: 900, color: '#064E3B', marginTop: '2px', display: 'block' }}>
+                {totalDiscountedItemsCount}
+              </strong>
+              <span style={{ fontSize: '0.66rem', color: '#64748B' }}>
+                of {Math.max(0, (dishes?.length || 0) + (combos?.length || 0))} catalog items
+              </span>
+            </div>
+
+            <div style={{ background: '#FAF8F5', borderRadius: '10px', padding: '10px 12px', border: '1px solid #EAE5DF' }}>
+              <span style={{ fontSize: '0.64rem', fontWeight: 800, color: '#64748B', textTransform: 'uppercase', display: 'block' }}>
+                Catalog Coverage
+              </span>
+              <strong style={{ fontSize: '1.15rem', fontWeight: 900, color: '#059669', marginTop: '2px', display: 'block' }}>
+                {((dishes?.length || 0) + (combos?.length || 0)) > 0 ? Math.round((totalDiscountedItemsCount / ((dishes?.length || 0) + (combos?.length || 0))) * 100) : 0}%
+              </strong>
+              <span style={{ fontSize: '0.66rem', color: '#059669', fontWeight: 700 }}>
+                Active on menu
+              </span>
+            </div>
+          </div>
+
+          {/* Progress Bar */}
+          <div>
+            <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.72rem', color: '#64748B', marginBottom: '4px' }}>
+              <span>Menu Items with Active Deals</span>
+              <span style={{ fontWeight: 800, color: '#064E3B' }}>{totalDiscountedItemsCount} items</span>
+            </div>
+            <div style={{ width: '100%', height: '6px', background: '#F1F5F9', borderRadius: '3px', overflow: 'hidden' }}>
+              <div style={{
+                width: `${((dishes?.length || 0) + (combos?.length || 0)) > 0 ? Math.min(100, Math.round((totalDiscountedItemsCount / ((dishes?.length || 0) + (combos?.length || 0))) * 100)) : 0}%`,
+                height: '100%',
+                background: '#064E3B',
+                borderRadius: '3px'
+              }} />
+            </div>
+          </div>
+
+          <div style={{ fontSize: '0.70rem', color: '#64748B', background: '#FAF8F5', padding: '8px 10px', borderRadius: '8px', border: '1px solid #EAE5DF', display: 'flex', alignItems: 'center', gap: '6px' }}>
+            <Sparkles size={14} color="#D97706" />
+            <span>Active promotions automatically display strike-through prices and discount badges on table QR menus.</span>
+          </div>
+        </div>
+
+        {/* Column 2: How Promotions Work */}
+        <div style={{
+          background: '#FFFFFF',
+          borderRadius: '16px',
+          border: '1px solid #EAE5DF',
+          padding: '18px 20px',
+          boxShadow: '0 1px 3px rgba(0,0,0,0.02)',
+          display: 'flex',
+          flexDirection: 'column',
+          justifyContent: 'space-between',
+          gap: '12px',
+          boxSizing: 'border-box'
+        }}>
+          <div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '4px' }}>
+              <Sparkles size={18} color="#D97706" />
+              <h3 style={{ fontSize: '0.94rem', fontWeight: 900, color: '#0F172A', margin: 0 }}>
+                How Promotions Work
+              </h3>
+            </div>
+            <p style={{ fontSize: '0.74rem', color: '#64748B', margin: 0 }}>
+              Step-by-step promotion lifecycle from setup to diner checkout.
+            </p>
+          </div>
+
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+            <div style={{ display: 'flex', alignItems: 'flex-start', gap: '10px' }}>
+              <div style={{ width: '22px', height: '22px', borderRadius: '6px', background: '#ECFDF5', color: '#064E3B', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.70rem', fontWeight: 900, flexShrink: 0 }}>
+                1
+              </div>
+              <div style={{ minWidth: 0 }}>
+                <strong style={{ fontSize: '0.78rem', color: '#0F172A', display: 'block' }}>Create Offer</strong>
+                <span style={{ fontSize: '0.70rem', color: '#64748B', lineHeight: 1.35, display: 'block' }}>
+                  Choose percentage, flat amount, or special price and select targeted menu dishes or combos.
+                </span>
+              </div>
+            </div>
+
+            <div style={{ display: 'flex', alignItems: 'flex-start', gap: '10px' }}>
+              <div style={{ width: '22px', height: '22px', borderRadius: '6px', background: '#FEF3C7', color: '#D97706', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.70rem', fontWeight: 900, flexShrink: 0 }}>
+                2
+              </div>
+              <div style={{ minWidth: 0 }}>
+                <strong style={{ fontSize: '0.78rem', color: '#0F172A', display: 'block' }}>Set Schedule</strong>
+                <span style={{ fontSize: '0.70rem', color: '#64748B', lineHeight: 1.35, display: 'block' }}>
+                  Keep it "Always Active" for everyday deals, or set automated start & expiry dates for events.
+                </span>
+              </div>
+            </div>
+
+            <div style={{ display: 'flex', alignItems: 'flex-start', gap: '10px' }}>
+              <div style={{ width: '22px', height: '22px', borderRadius: '6px', background: '#F1F5F9', color: '#475569', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.70rem', fontWeight: 900, flexShrink: 0 }}>
+                3
+              </div>
+              <div style={{ minWidth: 0 }}>
+                <strong style={{ fontSize: '0.78rem', color: '#0F172A', display: 'block' }}>Live on Digital Menu</strong>
+                <span style={{ fontSize: '0.70rem', color: '#64748B', lineHeight: 1.35, display: 'block' }}>
+                  Promotional tags and strike-through pricing immediately appear when guests scan table QR codes.
+                </span>
+              </div>
+            </div>
+
+            <div style={{ display: 'flex', alignItems: 'flex-start', gap: '10px' }}>
+              <div style={{ width: '22px', height: '22px', borderRadius: '6px', background: '#FAF8F5', color: '#064E3B', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.70rem', fontWeight: 900, flexShrink: 0 }}>
+                4
+              </div>
+              <div style={{ minWidth: 0 }}>
+                <strong style={{ fontSize: '0.78rem', color: '#0F172A', display: 'block' }}>Verified at Checkout</strong>
+                <span style={{ fontSize: '0.70rem', color: '#64748B', lineHeight: 1.35, display: 'block' }}>
+                  Discounts are calculated and logged into the order snapshot.
+                </span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* =========================================================================
+          6. PROMOTIONAL GUIDANCE / TIPS BANNER (FULL WIDTH)
+         ========================================================================= */}
+      <div style={{
+        background: 'linear-gradient(135deg, #FAF8F5 0%, #F4EFE6 100%)',
+        borderRadius: '16px',
+        border: '1px solid #EAE5DF',
+        padding: '18px 20px',
+        boxShadow: '0 1px 3px rgba(0,0,0,0.02)',
+        display: 'flex',
+        flexDirection: 'column',
+        gap: '12px',
+        boxSizing: 'border-box',
+        width: '100%'
+      }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+          <CheckCircle2 size={18} color="#064E3B" />
+          <h3 style={{ fontSize: '0.94rem', fontWeight: 900, color: '#0F172A', margin: 0 }}>
+            Tips to Run Effective Promotions
+          </h3>
+        </div>
+
+        <div className="offers-tips-grid">
+          <div style={{ background: '#FFFFFF', borderRadius: '12px', padding: '12px 14px', border: '1px solid #EAE5DF' }}>
+            <strong style={{ fontSize: '0.80rem', color: '#064E3B', display: 'block', marginBottom: '3px' }}>
+              🎯 Keep It Simple
+            </strong>
+            <span style={{ fontSize: '0.72rem', color: '#475569', lineHeight: 1.4, display: 'block' }}>
+              Clear percentage or flat discounts convert faster with diners than complex multi-condition deals.
+            </span>
+          </div>
+
+          <div style={{ background: '#FFFFFF', borderRadius: '12px', padding: '12px 14px', border: '1px solid #EAE5DF' }}>
+            <strong style={{ fontSize: '0.80rem', color: '#D97706', display: 'block', marginBottom: '3px' }}>
+              ⭐ Promote Bestsellers
+            </strong>
+            <span style={{ fontSize: '0.72rem', color: '#475569', lineHeight: 1.4, display: 'block' }}>
+              Discounts on popular appetizers and combo thalis increase overall table basket size.
+            </span>
+          </div>
+
+          <div style={{ background: '#FFFFFF', borderRadius: '12px', padding: '12px 14px', border: '1px solid #EAE5DF' }}>
+            <strong style={{ fontSize: '0.80rem', color: '#0F172A', display: 'block', marginBottom: '3px' }}>
+              ⏳ Create Urgency
+            </strong>
+            <span style={{ fontSize: '0.72rem', color: '#475569', lineHeight: 1.4, display: 'block' }}>
+              Schedule weekend specials and happy hour timeframes to drive repeat dine-in visits.
+            </span>
+          </div>
+        </div>
       </div>
 
       {/* =========================================================================
