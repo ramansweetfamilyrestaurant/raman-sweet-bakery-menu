@@ -229,8 +229,12 @@ export default function AnalyticsView({
 
   const ordersSparklinePath = useMemo(() => {
     const series = rawChartData.map(d => (d.orders !== undefined ? Number(d.orders || 0) : 0));
-    return generateSparklinePath(series, 100, 20, 3);
+    return generateSparklinePath(series, 100, 24, 2);
   }, [rawChartData]);
+
+  const ordersSparklineAreaPath = useMemo(() => {
+    return generateSparklineAreaPath(ordersSparklinePath, 100, 24);
+  }, [ordersSparklinePath]);
 
   const aovSparklinePath = useMemo(() => {
     const series = rawChartData.map(d => {
@@ -614,7 +618,7 @@ export default function AnalyticsView({
               overflow: 'hidden'
             }}>
               <div>
-                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '8px' }}>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '6px' }}>
                   <span style={{ fontSize: '0.74rem', color: '#64748B', fontWeight: 600 }}>Orders Count</span>
                   <div style={{
                     width: '32px',
@@ -624,7 +628,8 @@ export default function AnalyticsView({
                     color: '#0284C7',
                     display: 'flex',
                     alignItems: 'center',
-                    justifyContent: 'center'
+                    justifyContent: 'center',
+                    flexShrink: 0
                   }}>
                     <ShoppingBag size={16} />
                   </div>
@@ -634,21 +639,34 @@ export default function AnalyticsView({
                   {totalOrders.toLocaleString('en-IN')}
                 </div>
 
-                <div style={{ display: 'flex', alignItems: 'center', gap: '4px', marginTop: '6px' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '4px', marginTop: '4px', marginBottom: '6px' }}>
                   <span style={{ fontSize: '0.70rem', color: '#0284C7', fontWeight: 800 }}>Orders</span>
                   <span style={{ fontSize: '0.62rem', color: '#94A3B8' }}>in {activeDateRangeLabel}</span>
                 </div>
               </div>
 
-              {/* Dynamic Live Sparkline (Blue) */}
-              <div style={{ width: '100%', height: '24px', marginTop: '8px' }}>
-                <svg viewBox="0 0 100 20" style={{ width: '100%', height: '100%', overflow: 'visible' }}>
+              {/* Dynamic Live Sparkline (Blue with Area Glow) */}
+              <div style={{ width: '100%', height: '28px', marginTop: 'auto' }}>
+                <svg viewBox="0 0 100 24" preserveAspectRatio="none" style={{ width: '100%', height: '100%', overflow: 'visible' }}>
+                  <defs>
+                    <linearGradient id="ordersSparklineGrad" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="0%" stopColor="#0284C7" stopOpacity="0.20" />
+                      <stop offset="100%" stopColor="#0284C7" stopOpacity="0.0" />
+                    </linearGradient>
+                  </defs>
+                  {ordersSparklineAreaPath && (
+                    <path
+                      d={ordersSparklineAreaPath}
+                      fill="url(#ordersSparklineGrad)"
+                    />
+                  )}
                   <path
                     d={ordersSparklinePath}
                     fill="none"
-                    stroke="#38BDF8"
-                    strokeWidth="2"
+                    stroke="#0284C7"
+                    strokeWidth="2.2"
                     strokeLinecap="round"
+                    strokeLinejoin="round"
                   />
                 </svg>
               </div>
