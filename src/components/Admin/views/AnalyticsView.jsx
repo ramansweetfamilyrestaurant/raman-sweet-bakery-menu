@@ -218,10 +218,10 @@ export default function AnalyticsView({
   }, [maxSales, currencySymbol]);
 
   const chartPoints = useMemo(() => {
-    const chartWidth = 460;
+    const chartWidth = 800;
     const chartHeight = 210;
-    const paddingLeft = 40;
-    const paddingRight = 12;
+    const paddingLeft = 46;
+    const paddingRight = 20;
     const paddingTop = 14;
     const paddingBottom = 26;
     const usableWidth = chartWidth - paddingLeft - paddingRight;
@@ -1163,39 +1163,53 @@ export default function AnalyticsView({
                 </div>
               </div>
 
-              {/* Dynamic SVG Area Line Chart with Expanded Plotting Area */}
+              {/* Dynamic SVG Area Line Chart with Full Horizontal Width */}
               <div style={{ position: 'relative', width: '100%', height: '240px', marginTop: '4px' }}>
-                {activeHoverPoint && (
-                  <div style={{
-                    position: 'absolute',
-                    left: `${(activeHoverPoint.x / 460) * 100}%`,
-                    top: activeHoverPoint.y > 45 ? `${(activeHoverPoint.y / 210) * 100 - 12}%` : `${(activeHoverPoint.y / 210) * 100 + 12}%`,
-                    transform: activeHoverPoint.y > 45 ? 'translate(-50%, -100%)' : 'translate(-50%, 0%)',
-                    background: '#FFFFFF',
-                    border: '1px solid #E2E8F0',
-                    borderRadius: '8px',
-                    padding: '6px 10px',
-                    boxShadow: '0 6px 16px rgba(0,0,0,0.1)',
-                    pointerEvents: 'none',
-                    zIndex: 10,
-                    textAlign: 'center',
-                    whiteSpace: 'nowrap'
-                  }}>
-                    <span style={{ fontSize: '0.66rem', color: '#64748B', display: 'block' }}>
-                      {activeHoverPoint.displayDate || activeHoverPoint.date}
-                      {activeHoverPoint.isCurrentMonth ? ' · Month to date' : ''}
-                    </span>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '4px', marginTop: '1px' }}>
-                      <span style={{ width: '6px', height: '6px', borderRadius: '50%', backgroundColor: '#EA580C' }} />
-                      <strong style={{ fontSize: '0.74rem', color: '#0F172A' }}>
-                        Sales {activeHoverPoint.valueFormatted}
-                        {activeHoverPoint.isCurrentMonth ? ' (to date)' : ''}
-                      </strong>
-                    </div>
-                  </div>
-                )}
+                {activeHoverPoint && (() => {
+                  const hoverPercent = (activeHoverPoint.x / 800) * 100;
+                  let xTransform = '-50%';
+                  if (hoverPercent > 78) {
+                    xTransform = '-95%';
+                  } else if (hoverPercent < 22) {
+                    xTransform = '-5%';
+                  }
+                  const yTransform = activeHoverPoint.y > 45 ? '-100%' : '0%';
+                  const topPercent = activeHoverPoint.y > 45
+                    ? `${(activeHoverPoint.y / 210) * 100 - 10}%`
+                    : `${(activeHoverPoint.y / 210) * 100 + 10}%`;
 
-                <svg viewBox="0 0 460 210" style={{ width: '100%', height: '100%', overflow: 'visible' }}>
+                  return (
+                    <div style={{
+                      position: 'absolute',
+                      left: `${hoverPercent}%`,
+                      top: topPercent,
+                      transform: `translate(${xTransform}, ${yTransform})`,
+                      background: '#FFFFFF',
+                      border: '1px solid #E2E8F0',
+                      borderRadius: '8px',
+                      padding: '6px 10px',
+                      boxShadow: '0 6px 16px rgba(0,0,0,0.1)',
+                      pointerEvents: 'none',
+                      zIndex: 10,
+                      textAlign: 'center',
+                      whiteSpace: 'nowrap'
+                    }}>
+                      <span style={{ fontSize: '0.66rem', color: '#64748B', display: 'block' }}>
+                        {activeHoverPoint.displayDate || activeHoverPoint.date}
+                        {activeHoverPoint.isCurrentMonth ? ' · Month to date' : ''}
+                      </span>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '4px', marginTop: '1px' }}>
+                        <span style={{ width: '6px', height: '6px', borderRadius: '50%', backgroundColor: '#EA580C' }} />
+                        <strong style={{ fontSize: '0.74rem', color: '#0F172A' }}>
+                          Sales {activeHoverPoint.valueFormatted}
+                          {activeHoverPoint.isCurrentMonth ? ' (to date)' : ''}
+                        </strong>
+                      </div>
+                    </div>
+                  );
+                })()}
+
+                <svg viewBox="0 0 800 210" preserveAspectRatio="none" style={{ width: '100%', height: '100%', overflow: 'visible' }}>
                   <defs>
                     <linearGradient id="salesGradient" x1="0" y1="0" x2="0" y2="1">
                       <stop offset="0%" stopColor="#EA580C" stopOpacity="0.18" />
@@ -1207,16 +1221,16 @@ export default function AnalyticsView({
                   {yAxisTicks.map((tick, idx) => (
                     <g key={idx}>
                       <line
-                        x1="40"
+                        x1="46"
                         y1={tick.y}
-                        x2="450"
+                        x2="780"
                         y2={tick.y}
                         stroke="#F1F5F9"
                         strokeWidth="1"
                         strokeDasharray={idx === yAxisTicks.length - 1 ? 'none' : '3 3'}
                       />
                       <text
-                        x="34"
+                        x="40"
                         y={tick.y + 3}
                         textAnchor="end"
                         fill="#94A3B8"
@@ -1244,9 +1258,9 @@ export default function AnalyticsView({
                     return (
                       <g key={`col-${idx}`}>
                         <rect
-                          x={pt.x - 14}
+                          x={pt.x - 16}
                           y={pt.y}
-                          width="28"
+                          width="32"
                           height={colH}
                           rx="4"
                           fill="#EA580C"
@@ -1314,7 +1328,7 @@ export default function AnalyticsView({
                       <circle
                         cx={pt.x}
                         cy={pt.y}
-                        r="16"
+                        r="18"
                         fill="transparent"
                       />
                     </g>
@@ -1892,32 +1906,48 @@ export default function AnalyticsView({
             </div>
 
             <div style={{ position: 'relative', width: '100%', height: '240px', marginTop: '16px' }}>
-              {activeHoverPoint && (
-                <div style={{
-                  position: 'absolute',
-                  left: `${(activeHoverPoint.x / 460) * 100}%`,
-                  top: `${(activeHoverPoint.y / 200) * 100 - 32}%`,
-                  transform: 'translate(-50%, -100%)',
-                  background: '#FFFFFF',
-                  border: '1px solid #E2E8F0',
-                  borderRadius: '8px',
-                  padding: '6px 12px',
-                  boxShadow: '0 8px 20px rgba(0,0,0,0.12)',
-                  pointerEvents: 'none',
-                  zIndex: 10,
-                  textAlign: 'center',
-                  whiteSpace: 'nowrap'
-                }}>
-                  <span style={{ fontSize: '0.68rem', color: '#64748B', display: 'block' }}>
-                    {activeHoverPoint.displayDate || activeHoverPoint.date}
-                  </span>
-                  <strong style={{ fontSize: '0.80rem', color: '#0F172A' }}>
-                    {activeHoverPoint.valueFormatted}
-                  </strong>
-                </div>
-              )}
+              {activeHoverPoint && (() => {
+                const hoverPercent = (activeHoverPoint.x / 800) * 100;
+                let xTransform = '-50%';
+                if (hoverPercent > 78) {
+                  xTransform = '-95%';
+                } else if (hoverPercent < 22) {
+                  xTransform = '-5%';
+                }
+                const yTransform = activeHoverPoint.y > 45 ? '-100%' : '0%';
+                const topPercent = activeHoverPoint.y > 45
+                  ? `${(activeHoverPoint.y / 210) * 100 - 10}%`
+                  : `${(activeHoverPoint.y / 210) * 100 + 10}%`;
 
-              <svg viewBox="0 0 460 200" style={{ width: '100%', height: '100%', overflow: 'visible' }}>
+                return (
+                  <div style={{
+                    position: 'absolute',
+                    left: `${hoverPercent}%`,
+                    top: topPercent,
+                    transform: `translate(${xTransform}, ${yTransform})`,
+                    background: '#FFFFFF',
+                    border: '1px solid #E2E8F0',
+                    borderRadius: '8px',
+                    padding: '6px 12px',
+                    boxShadow: '0 8px 20px rgba(0,0,0,0.12)',
+                    pointerEvents: 'none',
+                    zIndex: 10,
+                    textAlign: 'center',
+                    whiteSpace: 'nowrap'
+                  }}>
+                    <span style={{ fontSize: '0.68rem', color: '#64748B', display: 'block' }}>
+                      {activeHoverPoint.displayDate || activeHoverPoint.date}
+                      {activeHoverPoint.isCurrentMonth ? ' · Month to date' : ''}
+                    </span>
+                    <strong style={{ fontSize: '0.80rem', color: '#0F172A' }}>
+                      {activeHoverPoint.valueFormatted}
+                      {activeHoverPoint.isCurrentMonth ? ' (to date)' : ''}
+                    </strong>
+                  </div>
+                );
+              })()}
+
+              <svg viewBox="0 0 800 210" preserveAspectRatio="none" style={{ width: '100%', height: '100%', overflow: 'visible' }}>
                 <defs>
                   <linearGradient id="salesGradientTab" x1="0" y1="0" x2="0" y2="1">
                     <stop offset="0%" stopColor="#EA580C" stopOpacity="0.28" />
@@ -1927,8 +1957,8 @@ export default function AnalyticsView({
 
                 {yAxisTicks.map((tick, idx) => (
                   <g key={idx}>
-                    <line x1="44" y1={tick.y} x2="450" y2={tick.y} stroke="#F1F5F9" strokeWidth="1" strokeDasharray="3 3" />
-                    <text x="38" y={tick.y + 3} textAnchor="end" fill="#94A3B8" fontSize="8.5" fontWeight="600">{tick.label}</text>
+                    <line x1="46" y1={tick.y} x2="780" y2={tick.y} stroke="#F1F5F9" strokeWidth="1" strokeDasharray="3 3" />
+                    <text x="40" y={tick.y + 3} textAnchor="end" fill="#94A3B8" fontSize="8.5" fontWeight="600">{tick.label}</text>
                   </g>
                 ))}
 
@@ -1944,12 +1974,12 @@ export default function AnalyticsView({
 
                 {chartPoints.map((pt, idx) => (
                   <g key={idx} onMouseEnter={() => setChartHoverIndex(idx)} onClick={() => setChartHoverIndex(idx)} style={{ cursor: 'pointer' }}>
-                    <circle cx={pt.x} cy={pt.y} r="14" fill="transparent" />
+                    <circle cx={pt.x} cy={pt.y} r="18" fill="transparent" />
                   </g>
                 ))}
 
                 {visibleXLabels.map((pt, idx) => (
-                  <text key={idx} x={pt.x} y="186" textAnchor="middle" fill={activeHoverPoint?.date === pt.date ? '#0F172A' : '#94A3B8'} fontSize="9" fontWeight={activeHoverPoint?.date === pt.date ? '800' : '500'}>
+                  <text key={idx} x={pt.x} y="198" textAnchor="middle" fill={activeHoverPoint?.date === pt.date ? '#0F172A' : '#94A3B8'} fontSize="9" fontWeight={activeHoverPoint?.date === pt.date ? '800' : '500'}>
                     {pt.displayDate || pt.date}
                   </text>
                 ))}
