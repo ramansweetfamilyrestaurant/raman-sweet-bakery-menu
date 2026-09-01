@@ -348,7 +348,7 @@ export default function AnalyticsView({
       });
   }, [analyticsData?.top_dishes_by_revenue, analyticsData?.top_dishes, dishes]);
 
-  // Top Dishes sorted strictly by Quantity Sold
+  // Top Dishes sorted strictly by Quantity Sold (Top 5 for overview)
   const topDishesByQuantity = useMemo(() => {
     const raw = Array.isArray(analyticsData?.top_dishes_by_quantity)
       ? analyticsData.top_dishes_by_quantity
@@ -356,6 +356,28 @@ export default function AnalyticsView({
     return [...raw]
       .sort((a, b) => Number(b.quantity || 0) - Number(a.quantity || 0))
       .slice(0, 5)
+      .map((td, idx) => {
+        const matched = dishes.find(d => 
+          String(d.id) === String(td.dish_id) || 
+          (d.name && d.name.toLowerCase() === (td.name || '').toLowerCase())
+        );
+        return {
+          rank: idx + 1,
+          name: td.name || 'Dish',
+          qty: Number(td.quantity || 0),
+          sales: Number(td.revenue || 0),
+          img: getDishImageUrl(matched?.image)
+        };
+      });
+  }, [analyticsData?.top_dishes_by_quantity, analyticsData?.top_dishes, dishes]);
+
+  // Full Top Dishes List for Dishes drilldown tab
+  const topDishesList = useMemo(() => {
+    const raw = Array.isArray(analyticsData?.top_dishes_by_quantity)
+      ? analyticsData.top_dishes_by_quantity
+      : (Array.isArray(analyticsData?.top_dishes) ? analyticsData.top_dishes : []);
+    return [...raw]
+      .sort((a, b) => Number(b.quantity || 0) - Number(a.quantity || 0))
       .map((td, idx) => {
         const matched = dishes.find(d => 
           String(d.id) === String(td.dish_id) || 
