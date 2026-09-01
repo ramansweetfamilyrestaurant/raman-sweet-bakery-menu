@@ -766,7 +766,7 @@ export default function AnalyticsView({
               overflow: 'hidden'
             }}>
               <div>
-                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '8px' }}>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '6px' }}>
                   <span style={{ fontSize: '0.74rem', color: '#64748B', fontWeight: 600 }}>Active Dishes Sold</span>
                   <div style={{
                     width: '32px',
@@ -776,7 +776,8 @@ export default function AnalyticsView({
                     color: '#16A34A',
                     display: 'flex',
                     alignItems: 'center',
-                    justifyContent: 'center'
+                    justifyContent: 'center',
+                    flexShrink: 0
                   }}>
                     <Utensils size={16} />
                   </div>
@@ -786,23 +787,31 @@ export default function AnalyticsView({
                   {Number(analyticsData?.distinct_dishes_count ?? 0).toLocaleString('en-IN')}
                 </div>
 
-                <div style={{ display: 'flex', alignItems: 'center', gap: '4px', marginTop: '6px' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '4px', marginTop: '4px', marginBottom: '6px' }}>
                   <span style={{ fontSize: '0.70rem', color: '#16A34A', fontWeight: 800 }}>{Number(analyticsData?.total_items_sold ?? 0).toLocaleString('en-IN')} items</span>
                   <span style={{ fontSize: '0.62rem', color: '#94A3B8' }}>ordered total</span>
                 </div>
               </div>
 
-              {/* Truthful Baseline Sparkline (Green) */}
-              <div style={{ width: '100%', height: '24px', marginTop: '8px' }}>
-                <svg viewBox="0 0 100 20" style={{ width: '100%', height: '100%', overflow: 'visible' }}>
-                  <path
-                    d={activeDishesSparklinePath}
-                    fill="none"
-                    stroke="#4ADE80"
-                    strokeWidth="2"
-                    strokeLinecap="round"
-                  />
-                </svg>
+              {/* Truthful Segmented Catalog Activity Visual (Green) */}
+              <div style={{ width: '100%', height: '28px', marginTop: 'auto', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                {Array.from({ length: 12 }).map((_, idx) => {
+                  const dishCount = Number(analyticsData?.distinct_dishes_count ?? 0);
+                  const isFilled = dishCount > 0 && idx < Math.min(dishCount, 12);
+                  return (
+                    <div
+                      key={idx}
+                      style={{
+                        flex: 1,
+                        height: '10px',
+                        borderRadius: '3px',
+                        background: isFilled ? '#16A34A' : '#F1F5F9',
+                        opacity: isFilled ? 0.85 : 0.6,
+                        transition: 'all 0.25s ease'
+                      }}
+                    />
+                  );
+                })}
               </div>
             </div>
           </div>
