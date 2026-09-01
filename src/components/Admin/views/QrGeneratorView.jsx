@@ -384,13 +384,177 @@ export default function QrGeneratorView({
     setTimeout(() => setCopied(false), 2000);
   };
 
-  const handleDownloadQr = (format = 'PNG') => {
-    const a = document.createElement('a');
-    a.href = activeTab === 'space-generator' ? generatorQrImgUrl : currentQrImgUrl;
-    const identifierLabel = activeTab === 'space-generator' ? genIdentifier : activeStandee.identifier;
-    a.download = `${activeSlug}_${identifierLabel}_qr.${format.toLowerCase()}`;
-    a.target = '_blank';
-    a.click();
+  const handleDownloadQr = async (format = 'PNG') => {
+    const isGenerator = activeTab === 'space-generator';
+    const identifierLabel = isGenerator ? genIdentifier : (activeStandee?.identifier || '1');
+    const qrImg = isGenerator ? generatorQrImgUrl : currentQrImgUrl;
+    const currentName = settingsForm?.name || restaurantInfo?.name || 'Raman Sweet Bakery & Family Restaurant';
+    const currentTagline = settingsForm?.tagline || (isCinema ? 'In-Seat Food Ordering' : 'Scan QR Code for Digital Menu');
+    const currentAddress = settingsForm?.address || restaurantInfo?.address || '';
+    const currentPhone = settingsForm?.phone || restaurantInfo?.phone || '';
+    const isCinemaMode = isGenerator ? isCinema : (activeStandee?.spaceType === 'cinema_seat');
+
+    let badgeText = isGenerator
+      ? (genSpaceType === 'counter'
+          ? 'BILLING COUNTER'
+          : isCinema
+            ? (String(genIdentifier).match(/^S(\d+)-([A-Za-z]+)-(\d+)$/i)
+                ? `SCREEN ${String(genIdentifier).match(/^S(\d+)-([A-Za-z]+)-(\d+)$/i)[1]} • ROW ${String(genIdentifier).match(/^S(\d+)-([A-Za-z]+)-(\d+)$/i)[2].toUpperCase()} • SEAT ${String(genIdentifier).match(/^S(\d+)-([A-Za-z]+)-(\d+)$/i)[3]}`
+                : `CINEMA SEAT ${genIdentifier}`)
+            : `${activeGenSpaceConfig.badge} ${genIdentifier}`)
+      : (activeStandee?.spaceLabel || `${activeStandee?.spaceType || 'TABLE'} ${identifierLabel}`);
+
+    const instEn = isCinemaMode ? '📱 SCAN FOR IN-SEAT FOOD ORDERING' : '📱 SCAN FOR DIGITAL MENU & ORDER';
+    const instHi = isCinemaMode ? 'स्कैन करें और सीट पर खाना मंगाएं' : 'स्कैन करें और डिजिटल मेन्यू देखें';
+    const showWatermark = !settingsForm?.watermark_removal_enabled;
+
+    try {
+      const canvas = document.createElement('canvas');
+      const width = 1200;
+      const height = 1800;
+      canvas.width = width;
+      canvas.height = height;
+      const ctx = canvas.getContext('2d');
+
+      // 1. Background
+      ctx.fillStyle = '#FFFFFF';
+      ctx.fillRect(0, 0, width, height);
+
+      // 2. Gold Outer Border with rounded corners
+      const margin = 40;
+      const cardW = width - margin * 2;
+      const cardH = height - margin * 2;
+      const radius = 60;
+
+      ctx.save();
+      ctx.beginPath();
+      if (ctx.roundRect) {
+        ctx.roundRect(margin, margin, cardW, cardH, radius);
+      } else {
+        ctx.rect(margin, margin, cardW, cardH);
+      }
+      ctx.strokeStyle = '#D4AF37';
+      ctx.lineWidth = 14;
+      ctx.stroke();
+      ctx.restore();
+
+      // 3. Top Space Badge
+      ctx.font = 'bold 30px "Plus Jakarta Sans", sans-serif';
+      const textMetrics = ctx.measureText(badgeText.toUpperCase());
+      const badgeW = Math.max(textMetrics.width + 80, 360);
+      const badgeH = 70;
+      const badgeX = (width - badgeW) / 2;
+      const badgeY = 120;
+
+      ctx.beginPath();
+      if (ctx.roundRect) {
+        ctx.roundRect(badgeX, badgeY, badgeW, badgeH, 35);
+      } else {
+        ctx.rect(badgeX, badgeY, badgeW, badgeH);
+      }
+      ctx.fillStyle = '#0A2315';
+      ctx.fill();
+
+      ctx.fillStyle = '#DFBA67';
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.fillText(badgeText.toUpperCase(), width / 2, badgeY + badgeH / 2);
+
+      // 4. Restaurant Name
+      ctx.fillStyle = '#0A2315';
+      ctx.font = 'bold 54px "Playfair Display", Georgia, serif';
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'alphabetic';
+      ctx.fillText(currentName, width / 2, 280);
+
+      // 5. Tagline
+      ctx.fillStyle = '#16A34A';
+      ctx.font = 'bold 30px "Plus Jakarta Sans", sans-serif';
+      ctx.fillText(currentTagline, width / 2, 340);
+
+      // 6. QR Code Image
+      const qrSize = 650;
+      const qrX = (width - qrSize) / 2;
+      const qrY = 400;
+
+      // Draw QR Box border
+      ctx.beginPath();
+      if (ctx.roundRect) {
+        ctx.roundRect(qrX - 20, qrY - 20, qrSize + 40, qrSize + 40, 30);
+      } else {
+        ctx.rect(qrX - 20, qrY - 20, qrSize + 40, qrSize + 40);
+      }
+      ctx.strokeStyle = '#E2E8F0';
+      ctx.lineWidth = 4;
+      ctx.stroke();
+
+      // Load QR Image
+      const img = new Image();
+      img.crossOrigin = 'anonymous';
+      img.src = qrImg;
+
+      await new Promise((resolve) => {
+        img.onload = () => {
+          ctx.drawImage(img, qrX, qrY, qrSize, qrSize);
+          resolve();
+        };
+        img.onerror = () => {
+          ctx.fillStyle = '#F8FAFC';
+          ctx.fillRect(qrX, qrY, qrSize, qrSize);
+          resolve();
+        };
+        setTimeout(resolve, 3000);
+      });
+
+      // 7. Primary Instruction (English)
+      ctx.fillStyle = '#0A2315';
+      ctx.font = 'bold 38px "Plus Jakarta Sans", sans-serif';
+      ctx.fillText(instEn, width / 2, 1160);
+
+      // 8. Secondary Instruction (Hindi)
+      ctx.fillStyle = '#64748B';
+      ctx.font = 'bold 32px "Plus Jakarta Sans", sans-serif';
+      ctx.fillText(instHi, width / 2, 1220);
+
+      // 9. Horizontal Divider
+      ctx.beginPath();
+      ctx.moveTo(120, 1300);
+      ctx.lineTo(width - 120, 1300);
+      ctx.strokeStyle = '#E2E8F0';
+      ctx.lineWidth = 3;
+      ctx.stroke();
+
+      // 10. Footer Address & Phone
+      ctx.fillStyle = '#64748B';
+      ctx.font = '28px "Plus Jakarta Sans", sans-serif';
+      if (currentAddress) {
+        ctx.fillText(currentAddress, width / 2, 1370);
+      }
+      if (currentPhone) {
+        ctx.font = 'bold 28px "Plus Jakarta Sans", sans-serif';
+        ctx.fillText(`Phone: ${currentPhone}`, width / 2, 1420);
+      }
+
+      // 11. Powered by TouchQR
+      if (showWatermark) {
+        ctx.fillStyle = '#15803D';
+        ctx.font = 'bold 26px "Plus Jakarta Sans", sans-serif';
+        ctx.fillText('⚡ Powered by TouchQR', width / 2, 1500);
+      }
+
+      // Trigger Download
+      const link = document.createElement('a');
+      link.download = `${activeSlug}_${identifierLabel}_standee.${format.toLowerCase()}`;
+      link.href = canvas.toDataURL('image/png');
+      link.click();
+    } catch (e) {
+      console.error('Error rendering standee PNG:', e);
+      const a = document.createElement('a');
+      a.href = qrImg;
+      a.download = `${activeSlug}_${identifierLabel}_qr.${format.toLowerCase()}`;
+      a.target = '_blank';
+      a.click();
+    }
   };
 
   const handleToggleStandeeStatus = (standeeId) => {
@@ -1763,55 +1927,6 @@ export default function QrGeneratorView({
                   </div>
                 )}
               </div>
-            </div>
-
-            {/* Test Button & Copy Link */}
-            <div style={{ width: '100%', maxWidth: '350px', display: 'flex', gap: '8px' }}>
-              <button
-                type="button"
-                onClick={() => setShowTestModal(true)}
-                style={{
-                  flex: 1,
-                  height: '36px',
-                  borderRadius: '8px',
-                  border: '1px solid #CBD5E1',
-                  background: '#FAF8F5',
-                  color: '#0F172A',
-                  fontSize: '0.76rem',
-                  fontWeight: 800,
-                  cursor: 'pointer',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  gap: '4px'
-                }}
-              >
-                <Eye size={14} />
-                <span>Test QR Code</span>
-              </button>
-
-              <button
-                type="button"
-                onClick={handleCopyLink}
-                style={{
-                  flex: 1,
-                  height: '36px',
-                  borderRadius: '8px',
-                  border: '1px solid #CBD5E1',
-                  background: '#FFFFFF',
-                  color: '#0F172A',
-                  fontSize: '0.76rem',
-                  fontWeight: 800,
-                  cursor: 'pointer',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  gap: '4px'
-                }}
-              >
-                {copied ? <Check size={14} color="#059669" /> : <Copy size={14} />}
-                <span>{copied ? 'Copied!' : 'Copy Link'}</span>
-              </button>
             </div>
 
             {/* DOWNLOAD / PRINT ACTIONS */}
