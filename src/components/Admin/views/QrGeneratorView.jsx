@@ -1378,42 +1378,6 @@ export default function QrGeneratorView({
                       </button>
                     );
                   })}
-
-                  {/* Billing Counter Option */}
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setGenSpaceType('counter');
-                      setGenIdentifier('Counter');
-                      setGenSpaceName('Billing Counter');
-                    }}
-                    style={{
-                      padding: '8px 14px',
-                      borderRadius: '10px',
-                      border: genSpaceType === 'counter' ? '1.5px solid #064E3B' : '1px solid #EAE5DF',
-                      background: genSpaceType === 'counter' ? '#ECFDF5' : '#FAF8F5',
-                      color: genSpaceType === 'counter' ? '#064E3B' : '#475569',
-                      fontSize: '0.80rem',
-                      fontWeight: genSpaceType === 'counter' ? 800 : 600,
-                      cursor: 'pointer',
-                      display: 'inline-flex',
-                      alignItems: 'center',
-                      gap: '6px',
-                      transition: 'all 0.15s ease'
-                    }}
-                  >
-                    <span>🏪 Billing Counter</span>
-                    <span style={{
-                      fontSize: '0.70rem',
-                      fontWeight: 900,
-                      padding: '1px 6px',
-                      borderRadius: '8px',
-                      background: genSpaceType === 'counter' ? '#064E3B' : '#E2E8F0',
-                      color: genSpaceType === 'counter' ? '#FFFFFF' : '#475569'
-                    }}>
-                      1
-                    </span>
-                  </button>
                 </div>
               </div>
             </div>
