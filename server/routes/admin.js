@@ -2265,9 +2265,11 @@ router.get('/orders', authenticateToken, requireActiveSubscription, async (req, 
       const midnightISO = new Date(`${istDateStr}T00:00:00+05:30`).toISOString();
       sql += " AND (status != 'completed' OR created_at >= $2)";
       params.push(midnightISO);
+      sql += " ORDER BY id DESC LIMIT 500";
+    } else {
+      // Scope 'all' for complete retained customer history (orders within retention window)
+      sql += " ORDER BY id DESC LIMIT 5000";
     }
-
-    sql += " ORDER BY id DESC LIMIT 500";
 
     const orders = await query(sql, params);
 

@@ -155,10 +155,10 @@ export default function CustomersView({
       const amount = Number(o.total_amount || o.grand_total_amount || 0);
       const createdAt = parseSafeDate(o.created_at);
 
-      // Determine order source
-      const isWhatsApp = String(o.payment_method || '').toLowerCase().includes('whatsapp') || 
-                         String(o.order_type || '').toLowerCase().includes('whatsapp');
-      const isQR = Boolean(sessionId) || String(o.order_type || '').toLowerCase().includes('qr') || tableNum !== 'Counter';
+      // Determine order source canonically (channel, not payment method)
+      const orderTypeStr = String(o.order_type || o.source || '').toLowerCase();
+      const isWhatsApp = orderTypeStr.includes('whatsapp');
+      const isQR = Boolean(sessionId) || orderTypeStr.includes('qr') || (tableNum && tableNum !== 'Counter' && tableNum !== 'Takeaway');
       const source = isWhatsApp ? 'WhatsApp' : (isQR ? 'QR' : 'Direct / POS');
 
       // Identification logic:
@@ -239,35 +239,37 @@ export default function CustomersView({
 
   // Summary Metrics calculations (Reliable Factual Data Only)
   const metrics = useMemo(() => {
-    const totalSessions = guestRecords.length;
-    const identifiedSessions = guestRecords.filter(g => g.isIdentified).length;
-    const anonymousSessions = totalSessions - identifiedSessions;
+    const totalGuests = guestRecords.length;
+    const identifiedGuests = guestRecords.filter(g => g.isIdentified).length;
+    const anonymousGuests = totalGuests - identifiedGuests;
+    const qrGuestsCount = guestRecords.filter(g => g.sources.has('QR')).length;
+    const waGuestsCount = guestRecords.filter(g => g.sources.has('WhatsApp')).length;
     
     const totalOrders = filteredTimeframeOrders.length;
     const totalRevenue = filteredTimeframeOrders.reduce((sum, o) => sum + Number(o.total_amount || o.grand_total_amount || 0), 0);
-    const avgSpendPerSession = totalSessions > 0 ? Math.round(totalRevenue / totalSessions) : 0;
+    const avgSpendPerGuest = totalGuests > 0 ? Math.round(totalRevenue / totalGuests) : 0;
     const avgSpendPerOrder = totalOrders > 0 ? Math.round(totalRevenue / totalOrders) : 0;
 
-    // Sources breakdown
+    // Sources breakdown by order volume
     let qrCount = 0;
     let waCount = 0;
     let directCount = 0;
 
     filteredTimeframeOrders.forEach(o => {
-      const isWhatsApp = String(o.payment_method || '').toLowerCase().includes('whatsapp') || 
-                         String(o.order_type || '').toLowerCase().includes('whatsapp');
-      const isQR = Boolean(o.session_id) || String(o.order_type || '').toLowerCase().includes('qr') || (o.table_number && o.table_number !== 'Counter');
+      const orderTypeStr = String(o.order_type || o.source || '').toLowerCase();
+      const isWhatsApp = orderTypeStr.includes('whatsapp');
+      const isQR = Boolean(o.session_id) || orderTypeStr.includes('qr') || (o.table_number && o.table_number !== 'Counter' && o.table_number !== 'Takeaway');
       if (isWhatsApp) waCount++;
       else if (isQR) qrCount++;
       else directCount++;
     });
 
-    // Returning sessions (Sessions with > 1 order in retained data)
+    // Returning guests (Guests with > 1 order in retained data)
     const returningCount = guestRecords.filter(g => g.ordersCount > 1).length;
-    const singleOrderCount = totalSessions - returningCount;
-    const returningRate = totalSessions > 0 ? Math.round((returningCount / totalSessions) * 100) : 0;
+    const singleOrderCount = totalGuests - returningCount;
+    const returningRate = totalGuests > 0 ? Math.round((returningCount / totalGuests) * 100) : 0;
 
-    // Top purchased items across all retained sessions
+    // Top purchased items across all retained orders
     const overallItemsMap = {};
     filteredTimeframeOrders.forEach(o => {
       const items = parseItems(o.items);
@@ -288,12 +290,14 @@ export default function CustomersView({
       .slice(0, 5);
 
     return {
-      totalSessions,
-      identifiedSessions,
-      anonymousSessions,
+      totalGuests,
+      identifiedGuests,
+      anonymousGuests,
+      qrGuestsCount,
+      waGuestsCount,
       totalOrders,
       totalRevenue,
-      avgSpendPerSession,
+      avgSpendPerGuest,
       avgSpendPerOrder,
       qrCount,
       waCount,
@@ -562,7 +566,7 @@ export default function CustomersView({
         gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))',
         gap: '12px'
       }}>
-        {/* Metric 1: Guest Sessions */}
+        {/* Metric 1: Guests */}
         <div style={{
           background: '#FFFFFF',
           borderRadius: '14px',
@@ -575,13 +579,13 @@ export default function CustomersView({
         }}>
           <div>
             <span style={{ fontSize: '0.66rem', fontWeight: 800, color: '#64748B', textTransform: 'uppercase', letterSpacing: '0.04em', display: 'block' }}>
-              Guest Sessions
+              Guests
             </span>
             <div style={{ fontSize: '1.35rem', fontWeight: 900, color: '#0F172A', marginTop: '2px' }}>
-              {metrics.totalSessions}
+              {metrics.totalGuests}
             </div>
             <span style={{ fontSize: '0.68rem', color: '#059669', fontWeight: 700, marginTop: '2px', display: 'block' }}>
-              {metrics.identifiedSessions} identified • {metrics.anonymousSessions} anonymous
+              {metrics.identifiedGuests} identified • {metrics.anonymousGuests} anonymous
             </span>
           </div>
           <div style={{ width: '36px', height: '36px', borderRadius: '10px', background: '#ECFDF5', color: '#064E3B', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
@@ -616,7 +620,7 @@ export default function CustomersView({
           </div>
         </div>
 
-        {/* Metric 3: Total Retained Spend */}
+        {/* Metric 3: Total Retained Revenue */}
         <div style={{
           background: '#FFFFFF',
           borderRadius: '14px',
@@ -635,7 +639,7 @@ export default function CustomersView({
               {sym}{formatPriceNumber(metrics.totalRevenue)}
             </div>
             <span style={{ fontSize: '0.68rem', color: '#059669', fontWeight: 700, marginTop: '2px', display: 'block' }}>
-              From table & digital orders
+              From retained customer orders
             </span>
           </div>
           <div style={{ width: '36px', height: '36px', borderRadius: '10px', background: '#ECFDF5', color: '#064E3B', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
@@ -656,10 +660,10 @@ export default function CustomersView({
         }}>
           <div>
             <span style={{ fontSize: '0.66rem', fontWeight: 800, color: '#64748B', textTransform: 'uppercase', letterSpacing: '0.04em', display: 'block' }}>
-              Average Spend / Session
+              Avg. Spend / Guest
             </span>
             <div style={{ fontSize: '1.35rem', fontWeight: 900, color: '#0F172A', marginTop: '2px' }}>
-              {sym}{formatPriceNumber(metrics.avgSpendPerSession)}
+              {sym}{formatPriceNumber(metrics.avgSpendPerGuest)}
             </div>
             <span style={{ fontSize: '0.68rem', color: '#64748B', fontWeight: 600, marginTop: '2px', display: 'block' }}>
               Avg per order: {sym}{formatPriceNumber(metrics.avgSpendPerOrder)}
@@ -702,11 +706,11 @@ export default function CustomersView({
             scrollbarWidth: 'none'
           }}>
             {[
-              { id: 'all', label: `All (${metrics.totalSessions})` },
-              { id: 'identified', label: `Identified (${metrics.identifiedSessions})` },
-              { id: 'anonymous', label: `Anonymous (${metrics.anonymousSessions})` },
-              { id: 'qr', label: `QR Orders (${metrics.qrCount})` },
-              { id: 'whatsapp', label: `WhatsApp (${metrics.waCount})` }
+              { id: 'all', label: `All (${metrics.totalGuests})` },
+              { id: 'identified', label: `Identified (${metrics.identifiedGuests})` },
+              { id: 'anonymous', label: `Anonymous (${metrics.anonymousGuests})` },
+              { id: 'qr', label: `QR Guests (${metrics.qrGuestsCount})` },
+              { id: 'whatsapp', label: `WhatsApp (${metrics.waGuestsCount})` }
             ].map(f => {
               const active = sourceFilter === f.id;
               return (
@@ -836,7 +840,7 @@ export default function CustomersView({
                 Recent Guest Activity
               </h2>
               <span style={{ fontSize: '0.72rem', color: '#64748B' }}>
-                Showing {displayedGuests.length} active guest sessions
+                Showing {displayedGuests.length} active guests
               </span>
             </div>
             {timeframeFilter !== 'all' && (
@@ -1334,11 +1338,11 @@ export default function CustomersView({
             <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '8px' }}>
               <TrendingUp size={18} color="#064E3B" />
               <h3 style={{ fontSize: '0.88rem', fontWeight: 900, color: '#0F172A', margin: 0 }}>
-                Repeat Guest Sessions
+                Repeat Guests
               </h3>
             </div>
             <p style={{ fontSize: '0.72rem', color: '#64748B', margin: '0 0 10px 0' }}>
-              Multi-order sessions vs single-order visits within retained window.
+              Multi-order guests vs single-order visits within retained window.
             </p>
 
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px', marginBottom: '8px' }}>
@@ -1348,7 +1352,7 @@ export default function CustomersView({
                 <span style={{ fontSize: '0.62rem', color: '#059669', display: 'block' }}>{metrics.returningRate}% rate</span>
               </div>
               <div style={{ background: '#FAF8F5', borderRadius: '10px', padding: '8px 10px', border: '1px solid #EAE5DF' }}>
-                <span style={{ fontSize: '0.64rem', color: '#64748B', display: 'block' }}>Single Visits</span>
+                <span style={{ fontSize: '0.64rem', color: '#64748B', display: 'block' }}>Single-Order Guests</span>
                 <strong style={{ fontSize: '1rem', fontWeight: 900, color: '#0F172A' }}>{metrics.singleOrderCount}</strong>
                 <span style={{ fontSize: '0.62rem', color: '#64748B', display: 'block' }}>{100 - metrics.returningRate}% rate</span>
               </div>
