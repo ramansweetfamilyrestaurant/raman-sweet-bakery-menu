@@ -410,8 +410,8 @@ export default function QrGeneratorView({
 
     try {
       const canvas = document.createElement('canvas');
-      const width = 1200;
-      const height = 1800;
+      const width = 800;
+      const height = 1120;
       canvas.width = width;
       canvas.height = height;
       const ctx = canvas.getContext('2d');
@@ -421,10 +421,10 @@ export default function QrGeneratorView({
       ctx.fillRect(0, 0, width, height);
 
       // 2. Gold Outer Border with rounded corners
-      const margin = 40;
+      const margin = 20;
       const cardW = width - margin * 2;
       const cardH = height - margin * 2;
-      const radius = 60;
+      const radius = 36;
 
       ctx.save();
       ctx.beginPath();
@@ -434,21 +434,21 @@ export default function QrGeneratorView({
         ctx.rect(margin, margin, cardW, cardH);
       }
       ctx.strokeStyle = '#D4AF37';
-      ctx.lineWidth = 14;
+      ctx.lineWidth = 7;
       ctx.stroke();
       ctx.restore();
 
       // 3. Top Space Badge
-      ctx.font = 'bold 30px "Plus Jakarta Sans", sans-serif';
+      ctx.font = 'bold 18px "Plus Jakarta Sans", sans-serif';
       const textMetrics = ctx.measureText(badgeText.toUpperCase());
-      const badgeW = Math.max(textMetrics.width + 80, 360);
-      const badgeH = 70;
+      const badgeW = Math.max(textMetrics.width + 44, 200);
+      const badgeH = 38;
       const badgeX = (width - badgeW) / 2;
-      const badgeY = 120;
+      const badgeY = 48;
 
       ctx.beginPath();
       if (ctx.roundRect) {
-        ctx.roundRect(badgeX, badgeY, badgeW, badgeH, 35);
+        ctx.roundRect(badgeX, badgeY, badgeW, badgeH, 19);
       } else {
         ctx.rect(badgeX, badgeY, badgeW, badgeH);
       }
@@ -460,32 +460,53 @@ export default function QrGeneratorView({
       ctx.textBaseline = 'middle';
       ctx.fillText(badgeText.toUpperCase(), width / 2, badgeY + badgeH / 2);
 
-      // 4. Restaurant Name
+      // 4. Restaurant Name with multi-line auto-wrap
       ctx.fillStyle = '#0A2315';
-      ctx.font = 'bold 54px "Playfair Display", Georgia, serif';
+      ctx.font = 'bold 30px "Playfair Display", Georgia, serif';
       ctx.textAlign = 'center';
       ctx.textBaseline = 'alphabetic';
-      ctx.fillText(currentName, width / 2, 280);
+
+      const words = currentName.split(' ');
+      let line = '';
+      const lines = [];
+      for (let n = 0; n < words.length; n++) {
+        const testLine = line + words[n] + ' ';
+        const metrics = ctx.measureText(testLine);
+        if (metrics.width > 680 && n > 0) {
+          lines.push(line.trim());
+          line = words[n] + ' ';
+        } else {
+          line = testLine;
+        }
+      }
+      lines.push(line.trim());
+
+      let currentY = 124;
+      for (let i = 0; i < lines.length; i++) {
+        ctx.fillText(lines[i], width / 2, currentY);
+        currentY += 36;
+      }
 
       // 5. Tagline
       ctx.fillStyle = '#16A34A';
-      ctx.font = 'bold 30px "Plus Jakarta Sans", sans-serif';
-      ctx.fillText(currentTagline, width / 2, 340);
+      ctx.font = 'bold 17px "Plus Jakarta Sans", sans-serif';
+      ctx.fillText(currentTagline, width / 2, currentY);
+      currentY += 28;
 
       // 6. QR Code Image
-      const qrSize = 650;
+      const qrSize = 390;
       const qrX = (width - qrSize) / 2;
-      const qrY = 400;
+      const qrY = currentY;
 
       // Draw QR Box border
       ctx.beginPath();
       if (ctx.roundRect) {
-        ctx.roundRect(qrX - 20, qrY - 20, qrSize + 40, qrSize + 40, 30);
+        ctx.roundRect(qrX - 12, qrY - 12, qrSize + 24, qrSize + 24, 18);
       } else {
-        ctx.rect(qrX - 20, qrY - 20, qrSize + 40, qrSize + 40);
+        ctx.rect(qrX - 12, qrY - 12, qrSize + 24, qrSize + 24);
       }
       ctx.strokeStyle = '#E2E8F0';
-      ctx.lineWidth = 4;
+      ctx.lineWidth = 2.5;
       ctx.stroke();
 
       // Load QR Image
@@ -506,40 +527,47 @@ export default function QrGeneratorView({
         setTimeout(resolve, 3000);
       });
 
+      currentY += qrSize + 36;
+
       // 7. Primary Instruction (English)
       ctx.fillStyle = '#0A2315';
-      ctx.font = 'bold 38px "Plus Jakarta Sans", sans-serif';
-      ctx.fillText(instEn, width / 2, 1160);
+      ctx.font = 'bold 22px "Plus Jakarta Sans", sans-serif';
+      ctx.fillText(instEn, width / 2, currentY);
+      currentY += 28;
 
       // 8. Secondary Instruction (Hindi)
       ctx.fillStyle = '#64748B';
-      ctx.font = 'bold 32px "Plus Jakarta Sans", sans-serif';
-      ctx.fillText(instHi, width / 2, 1220);
+      ctx.font = 'bold 18px "Plus Jakarta Sans", sans-serif';
+      ctx.fillText(instHi, width / 2, currentY);
+      currentY += 32;
 
       // 9. Horizontal Divider
       ctx.beginPath();
-      ctx.moveTo(120, 1300);
-      ctx.lineTo(width - 120, 1300);
-      ctx.strokeStyle = '#E2E8F0';
-      ctx.lineWidth = 3;
+      ctx.moveTo(60, currentY);
+      ctx.lineTo(width - 60, currentY);
+      ctx.strokeStyle = '#F1F5F9';
+      ctx.lineWidth = 2;
       ctx.stroke();
+      currentY += 28;
 
       // 10. Footer Address & Phone
       ctx.fillStyle = '#64748B';
-      ctx.font = '28px "Plus Jakarta Sans", sans-serif';
+      ctx.font = '16px "Plus Jakarta Sans", sans-serif';
       if (currentAddress) {
-        ctx.fillText(currentAddress, width / 2, 1370);
+        ctx.fillText(currentAddress, width / 2, currentY);
+        currentY += 24;
       }
       if (currentPhone) {
-        ctx.font = 'bold 28px "Plus Jakarta Sans", sans-serif';
-        ctx.fillText(`Phone: ${currentPhone}`, width / 2, 1420);
+        ctx.font = 'bold 16px "Plus Jakarta Sans", sans-serif';
+        ctx.fillText(`Phone: ${currentPhone}`, width / 2, currentY);
+        currentY += 24;
       }
 
       // 11. Powered by TouchQR
       if (showWatermark) {
         ctx.fillStyle = '#15803D';
-        ctx.font = 'bold 26px "Plus Jakarta Sans", sans-serif';
-        ctx.fillText('⚡ Powered by TouchQR', width / 2, 1500);
+        ctx.font = 'bold 15px "Plus Jakarta Sans", sans-serif';
+        ctx.fillText('⚡ Powered by TouchQR', width / 2, currentY);
       }
 
       // Trigger Download
