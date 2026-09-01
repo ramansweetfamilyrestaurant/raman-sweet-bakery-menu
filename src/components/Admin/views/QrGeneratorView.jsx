@@ -1642,7 +1642,19 @@ export default function QrGeneratorView({
               gap: '12px'
             }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                <div style={{ width: '24px', height: '24px', borderRadius: '6px', background: '#064E3B', color: '#FFF', fontSize: '0.74rem', fontWeight: 900, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                <div style={{
+                  width: '24px',
+                  height: '24px',
+                  borderRadius: '6px',
+                  background: '#064E3B',
+                  color: '#FFF',
+                  fontSize: '0.74rem',
+                  fontWeight: 900,
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  flexShrink: 0
+                }}>
                   3
                 </div>
                 <strong style={{ fontSize: '0.94rem', color: '#0F172A', fontWeight: 900 }}>
@@ -1650,30 +1662,40 @@ export default function QrGeneratorView({
                 </strong>
               </div>
 
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '10px' }}>
                 {/* Menu QR Card */}
-                <div
+                <button
+                  type="button"
                   onClick={() => setGenQrType('menu')}
                   style={{
-                    padding: '12px 14px',
+                    padding: '14px',
                     borderRadius: '12px',
-                    border: genQrType === 'menu' ? '2px solid #064E3B' : '1px solid #EAE5DF',
-                    background: genQrType === 'menu' ? '#F0FDF4' : '#FAF8F5',
+                    border: genQrType === 'menu' ? '1.5px solid #064E3B' : '1px solid #EAE5DF',
+                    background: genQrType === 'menu' ? '#ECFDF5' : '#FFFFFF',
                     cursor: 'pointer',
-                    transition: 'all 0.15s ease'
+                    textAlign: 'left',
+                    transition: 'all 0.15s ease',
+                    display: 'flex',
+                    flexDirection: 'column',
+                    justifyContent: 'space-between',
+                    minHeight: '84px',
+                    boxSizing: 'border-box'
                   }}
                 >
-                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '4px' }}>
-                    <strong style={{ fontSize: '0.84rem', color: '#0F172A', fontWeight: 800 }}>MENU QR</strong>
-                    <span style={{ fontSize: '0.68rem', fontWeight: 800, color: '#059669', background: '#DCFCE7', padding: '1px 6px', borderRadius: '6px' }}>Available</span>
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '6px', width: '100%' }}>
+                    <strong style={{ fontSize: '0.84rem', color: '#0F172A', fontWeight: genQrType === 'menu' ? 900 : 800 }}>MENU QR</strong>
+                    <span style={{ fontSize: '0.68rem', fontWeight: 800, color: '#047857', background: '#DCFCE7', padding: '2px 8px', borderRadius: '6px' }}>
+                      Menu Only
+                    </span>
                   </div>
-                  <span style={{ fontSize: '0.72rem', color: '#64748B', lineHeight: 1.35, display: 'block' }}>
+                  <span style={{ fontSize: '0.72rem', color: '#64748B', lineHeight: 1.4, display: 'block' }}>
                     View digital menu, dish photos & business information without ordering.
                   </span>
-                </div>
+                </button>
 
                 {/* Ordering QR Card (Plan-Aware) */}
-                <div
+                <button
+                  type="button"
                   onClick={() => {
                     if (isDirectOrderingAvailable) {
                       setGenQrType('ordering');
@@ -1682,30 +1704,38 @@ export default function QrGeneratorView({
                     }
                   }}
                   style={{
-                    padding: '12px 14px',
+                    padding: '14px',
                     borderRadius: '12px',
-                    border: genQrType === 'ordering' ? '2px solid #064E3B' : '1px solid #EAE5DF',
-                    background: genQrType === 'ordering' ? '#F0FDF4' : '#FAF8F5',
+                    border: genQrType === 'ordering' ? '1.5px solid #064E3B' : '1px solid #EAE5DF',
+                    background: genQrType === 'ordering' ? '#ECFDF5' : '#FFFFFF',
                     cursor: 'pointer',
+                    textAlign: 'left',
                     position: 'relative',
                     opacity: isDirectOrderingAvailable ? 1 : 0.85,
-                    transition: 'all 0.15s ease'
+                    transition: 'all 0.15s ease',
+                    display: 'flex',
+                    flexDirection: 'column',
+                    justifyContent: 'space-between',
+                    minHeight: '84px',
+                    boxSizing: 'border-box'
                   }}
                 >
-                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '4px' }}>
-                    <strong style={{ fontSize: '0.84rem', color: '#0F172A', fontWeight: 800 }}>ORDERING QR</strong>
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '6px', width: '100%' }}>
+                    <strong style={{ fontSize: '0.84rem', color: '#0F172A', fontWeight: genQrType === 'ordering' ? 900 : 800 }}>ORDERING QR</strong>
                     {isDirectOrderingAvailable ? (
-                      <span style={{ fontSize: '0.68rem', fontWeight: 800, color: '#059669', background: '#DCFCE7', padding: '1px 6px', borderRadius: '6px' }}>Live Order</span>
+                      <span style={{ fontSize: '0.68rem', fontWeight: 800, color: '#047857', background: '#DCFCE7', padding: '2px 8px', borderRadius: '6px' }}>
+                        Ordering Enabled
+                      </span>
                     ) : (
-                      <span style={{ fontSize: '0.68rem', fontWeight: 800, color: '#D97706', background: '#FEF3C7', padding: '1px 6px', borderRadius: '6px', display: 'flex', alignItems: 'center', gap: '2px' }}>
+                      <span style={{ fontSize: '0.68rem', fontWeight: 800, color: '#D97706', background: '#FEF3C7', padding: '2px 8px', borderRadius: '6px', display: 'flex', alignItems: 'center', gap: '3px' }}>
                         <Lock size={10} /> Pro Plan
                       </span>
                     )}
                   </div>
-                  <span style={{ fontSize: '0.72rem', color: '#64748B', lineHeight: 1.35, display: 'block' }}>
+                  <span style={{ fontSize: '0.72rem', color: '#64748B', lineHeight: 1.4, display: 'block' }}>
                     Direct ordering experience. Customers add items and send tickets directly to kitchen.
                   </span>
-                </div>
+                </button>
               </div>
             </div>
 
@@ -1721,7 +1751,19 @@ export default function QrGeneratorView({
               gap: '12px'
             }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                <div style={{ width: '24px', height: '24px', borderRadius: '6px', background: '#064E3B', color: '#FFF', fontSize: '0.74rem', fontWeight: 900, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                <div style={{
+                  width: '24px',
+                  height: '24px',
+                  borderRadius: '6px',
+                  background: '#064E3B',
+                  color: '#FFF',
+                  fontSize: '0.74rem',
+                  fontWeight: 900,
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  flexShrink: 0
+                }}>
                   4
                 </div>
                 <strong style={{ fontSize: '0.94rem', color: '#0F172A', fontWeight: 900 }}>
@@ -1729,56 +1771,69 @@ export default function QrGeneratorView({
                 </strong>
               </div>
 
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '14px', alignItems: 'center' }}>
                 {/* QR Color Picker */}
                 <div>
-                  <label style={{ fontSize: '0.72rem', fontWeight: 800, color: '#475569', display: 'block', marginBottom: '6px', textTransform: 'uppercase' }}>
+                  <label style={{ fontSize: '0.72rem', fontWeight: 800, color: '#475569', display: 'block', marginBottom: '8px', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
                     QR Color
                   </label>
-                  <div style={{ display: 'flex', gap: '6px' }}>
+                  <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
                     {[
                       { label: 'Forest Green', hex: '#064E3B' },
                       { label: 'Charcoal Black', hex: '#0F172A' },
                       { label: 'Royal Gold', hex: '#D97706' }
-                    ].map(col => (
-                      <div
-                        key={col.hex}
-                        onClick={() => setQrColor(col.hex)}
-                        title={col.label}
-                        style={{
-                          width: '28px',
-                          height: '28px',
-                          borderRadius: '50%',
-                          background: col.hex,
-                          cursor: 'pointer',
-                          border: qrColor === col.hex ? '3px solid #FFFFFF' : '2px solid transparent',
-                          boxShadow: qrColor === col.hex ? '0 0 0 2px #064E3B' : 'none'
-                        }}
-                      />
-                    ))}
+                    ].map(col => {
+                      const isSelected = qrColor === col.hex;
+                      return (
+                        <button
+                          key={col.hex}
+                          type="button"
+                          onClick={() => setQrColor(col.hex)}
+                          title={col.label}
+                          aria-label={col.label}
+                          style={{
+                            width: '26px',
+                            height: '26px',
+                            borderRadius: '50%',
+                            background: col.hex,
+                            cursor: 'pointer',
+                            padding: 0,
+                            border: isSelected ? '2.5px solid #FFFFFF' : '2px solid transparent',
+                            boxShadow: isSelected ? `0 0 0 2px ${col.hex === '#FFFFFF' ? '#0F172A' : col.hex}` : 'none',
+                            transition: 'all 0.15s ease',
+                            outline: 'none'
+                          }}
+                        />
+                      );
+                    })}
                   </div>
                 </div>
 
-                {/* Include Logo Toggle */}
+                {/* TouchQR Logo Branding Toggle */}
                 <div>
-                  <label style={{ fontSize: '0.72rem', fontWeight: 800, color: '#475569', display: 'block', marginBottom: '6px', textTransform: 'uppercase' }}>
+                  <label style={{ fontSize: '0.72rem', fontWeight: 800, color: '#475569', display: 'block', marginBottom: '8px', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
                     TouchQR Logo Branding
                   </label>
                   <button
                     type="button"
                     onClick={() => setIncludeLogo(!includeLogo)}
                     style={{
-                      padding: '4px 10px',
+                      height: '32px',
+                      padding: '0 12px',
                       borderRadius: '8px',
-                      border: '1px solid #CBD5E1',
+                      border: includeLogo ? '1px solid #A7F3D0' : '1px solid #CBD5E1',
                       background: includeLogo ? '#ECFDF5' : '#FAF8F5',
-                      color: includeLogo ? '#059669' : '#64748B',
+                      color: includeLogo ? '#064E3B' : '#64748B',
                       fontSize: '0.74rem',
                       fontWeight: 800,
-                      cursor: 'pointer'
+                      cursor: 'pointer',
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      gap: '6px',
+                      transition: 'all 0.15s ease'
                     }}
                   >
-                    {includeLogo ? '✓ Branding Active' : '○ Disabled'}
+                    <span>{includeLogo ? '✓ Branding Active' : '○ Disabled'}</span>
                   </button>
                 </div>
               </div>
