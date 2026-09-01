@@ -2729,7 +2729,7 @@ router.get('/analytics', authenticateToken, requireActiveSubscription, async (re
 
     // Query active non-cancelled orders for tenant
     const orders = await query(
-      "SELECT id, total_amount, status, payment_method, items, created_at FROM orders WHERE restaurant_id = $1 AND status NOT IN ('rejected', 'cancelled') ORDER BY id DESC",
+      "SELECT id, total_amount, status, payment_method, items, created_at, table_number FROM orders WHERE restaurant_id = $1 AND status NOT IN ('rejected', 'cancelled') ORDER BY id DESC",
       [targetId]
     );
 
@@ -3044,9 +3044,13 @@ router.get('/analytics', authenticateToken, requireActiveSubscription, async (re
     const activeDishMap = selectedPeriod === 'all' ? allTimeDishSalesMap : periodDishSalesMap;
     const distinctDishesCount = Object.keys(activeDishMap).length;
     const totalItemsSold = Object.values(activeDishMap).reduce((sum, d) => sum + Number(d.quantity || 0), 0);
-    const topDishes = Object.values(activeDishMap)
+    const topDishesByQuantity = Object.values(activeDishMap)
       .sort((a, b) => b.quantity - a.quantity)
       .slice(0, 10);
+    const topDishesByRevenue = Object.values(activeDishMap)
+      .sort((a, b) => b.revenue - a.revenue)
+      .slice(0, 10);
+    const topDishes = topDishesByRevenue;
 
     // Complete Category Distribution across 100% of sold items in selected period
     const activeCatMap = selectedPeriod === 'all' ? allTimeCatSalesMap : periodCatSalesMap;
@@ -3093,6 +3097,7 @@ router.get('/analytics', authenticateToken, requireActiveSubscription, async (re
         return {
           date: mKey,
           displayDate: displayDate,
+          isCurrentMonth: (mKey === currentMonthKey),
           sales: Math.round(monthlySalesMap[mKey] || 0),
           orders: monthlyOrdersMap[mKey] || 0
         };
@@ -3132,6 +3137,17 @@ router.get('/analytics', authenticateToken, requireActiveSubscription, async (re
       available_months: availableMonths,
       selected_period: selectedPeriod,
       top_dishes: topDishes,
+      top_dishes_by_revenue: topDishesByRevenue,
+      top_dishes_by_quantity: topDishesByQuantity,
+      recent_orders: orders.slice(0, 5).map(o => ({
+        id: o.id,
+        table_number: o.table_number || null,
+        total_amount: Number(o.total_amount) || 0,
+        payment_method: o.payment_method || 'cash',
+        status: o.status || 'completed',
+        items: o.items,
+        created_at: o.created_at
+      })),
       daily_chart_data: dailyChartData,
       daily_chart: dailyChartData,
       summarized_days_count: summaries.length,

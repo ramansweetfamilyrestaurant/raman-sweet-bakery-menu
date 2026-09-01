@@ -325,41 +325,51 @@ export default function AnalyticsView({
     return generateSparklineAreaPath(aovSparklinePath, 100, 24);
   }, [aovSparklinePath]);
 
-  // 3. Dynamic Top Dishes (Authoritative from backend)
-  const topDishesList = useMemo(() => {
-    const dishesRaw = Array.isArray(analyticsData?.top_dishes) ? analyticsData.top_dishes : [];
-    return dishesRaw.slice(0, 5).map((td, idx) => {
-      const matched = dishes.find(d => 
-        String(d.id) === String(td.dish_id) || 
-        (d.name && d.name.toLowerCase() === (td.name || '').toLowerCase())
-      );
-      return {
-        rank: idx + 1,
-        name: td.name || 'Dish',
-        qty: Number(td.quantity || 0),
-        sales: Number(td.revenue || 0),
-        img: getDishImageUrl(matched?.image)
-      };
-    });
-  }, [analyticsData?.top_dishes, dishes]);
+  // 3. Dynamic Top Dishes by Revenue (Top Selling Items)
+  const topDishesByRevenue = useMemo(() => {
+    const raw = Array.isArray(analyticsData?.top_dishes_by_revenue)
+      ? analyticsData.top_dishes_by_revenue
+      : (Array.isArray(analyticsData?.top_dishes) ? analyticsData.top_dishes : []);
+    return [...raw]
+      .sort((a, b) => Number(b.revenue || 0) - Number(a.revenue || 0))
+      .slice(0, 5)
+      .map((td, idx) => {
+        const matched = dishes.find(d => 
+          String(d.id) === String(td.dish_id) || 
+          (d.name && d.name.toLowerCase() === (td.name || '').toLowerCase())
+        );
+        return {
+          rank: idx + 1,
+          name: td.name || 'Dish',
+          qty: Number(td.quantity || 0),
+          sales: Number(td.revenue || 0),
+          img: getDishImageUrl(matched?.image)
+        };
+      });
+  }, [analyticsData?.top_dishes_by_revenue, analyticsData?.top_dishes, dishes]);
 
-  // Top Dishes sorted strictly by Quantity
+  // Top Dishes sorted strictly by Quantity Sold
   const topDishesByQuantity = useMemo(() => {
-    const dishesRaw = Array.isArray(analyticsData?.top_dishes) ? [...analyticsData.top_dishes] : [];
-    return dishesRaw.sort((a, b) => Number(b.quantity || 0) - Number(a.quantity || 0)).slice(0, 5).map((td, idx) => {
-      const matched = dishes.find(d => 
-        String(d.id) === String(td.dish_id) || 
-        (d.name && d.name.toLowerCase() === (td.name || '').toLowerCase())
-      );
-      return {
-        rank: idx + 1,
-        name: td.name || 'Dish',
-        qty: Number(td.quantity || 0),
-        sales: Number(td.revenue || 0),
-        img: getDishImageUrl(matched?.image)
-      };
-    });
-  }, [analyticsData?.top_dishes, dishes]);
+    const raw = Array.isArray(analyticsData?.top_dishes_by_quantity)
+      ? analyticsData.top_dishes_by_quantity
+      : (Array.isArray(analyticsData?.top_dishes) ? analyticsData.top_dishes : []);
+    return [...raw]
+      .sort((a, b) => Number(b.quantity || 0) - Number(a.quantity || 0))
+      .slice(0, 5)
+      .map((td, idx) => {
+        const matched = dishes.find(d => 
+          String(d.id) === String(td.dish_id) || 
+          (d.name && d.name.toLowerCase() === (td.name || '').toLowerCase())
+        );
+        return {
+          rank: idx + 1,
+          name: td.name || 'Dish',
+          qty: Number(td.quantity || 0),
+          sales: Number(td.revenue || 0),
+          img: getDishImageUrl(matched?.image)
+        };
+      });
+  }, [analyticsData?.top_dishes_by_quantity, analyticsData?.top_dishes, dishes]);
 
   // 4. Dynamic Category Breakdown (Direct from backend 100% complete dataset)
   const categoriesList = useMemo(() => {
@@ -425,10 +435,14 @@ export default function AnalyticsView({
     return { totalAmt, slices };
   }, [analyticsData?.period_payment_methods, analyticsData?.payment_methods]);
 
-  // 6. Recent Live Orders (Authoritative slice)
+  // 6. Recent Live Orders (Authoritative slice from analytics payload or live state)
   const recentOrdersList = useMemo(() => {
-    if (!Array.isArray(orders) || orders.length === 0) return [];
-    return orders.slice(0, 5).map(o => {
+    const rawList = Array.isArray(analyticsData?.recent_orders) && analyticsData.recent_orders.length > 0
+      ? analyticsData.recent_orders
+      : (Array.isArray(orders) ? orders : []);
+
+    if (rawList.length === 0) return [];
+    return rawList.slice(0, 5).map(o => {
       let itemsCount = 1;
       try {
         if (typeof o.items === 'string') {
@@ -1056,11 +1070,13 @@ export default function AnalyticsView({
                   }}>
                     <span style={{ fontSize: '0.66rem', color: '#64748B', display: 'block' }}>
                       {activeHoverPoint.displayDate || activeHoverPoint.date}
+                      {activeHoverPoint.isCurrentMonth ? ' · Month to date' : ''}
                     </span>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '4px', marginTop: '1px' }}>
                       <span style={{ width: '6px', height: '6px', borderRadius: '50%', backgroundColor: '#EA580C' }} />
                       <strong style={{ fontSize: '0.74rem', color: '#0F172A' }}>
                         Sales {activeHoverPoint.valueFormatted}
+                        {activeHoverPoint.isCurrentMonth ? ' (to date)' : ''}
                       </strong>
                     </div>
                   </div>
@@ -1257,7 +1273,7 @@ export default function AnalyticsView({
             <div className="analytics-card">
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '2px' }}>
                 <h3 style={{ fontSize: '0.92rem', fontWeight: 800, color: '#0F172A', margin: 0 }}>
-                  Top Selling Items
+                  Top Selling Items (By Revenue)
                 </h3>
                 <button
                   onClick={() => setActiveTab('top_items')}
@@ -1279,8 +1295,8 @@ export default function AnalyticsView({
               </span>
 
               <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
-                {topDishesList.length > 0 ? (
-                  topDishesList.map(item => (
+                {topDishesByRevenue.length > 0 ? (
+                  topDishesByRevenue.map(item => (
                     <div key={item.rank} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
                       <div style={{ display: 'flex', alignItems: 'center', gap: '8px', minWidth: 0 }}>
                         <span style={{
@@ -1467,6 +1483,21 @@ export default function AnalyticsView({
                   topDishesByQuantity.map((item, idx) => (
                     <div key={idx} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
                       <div style={{ display: 'flex', alignItems: 'center', gap: '8px', minWidth: 0 }}>
+                        <span style={{
+                          width: '18px',
+                          height: '18px',
+                          borderRadius: '50%',
+                          background: item.rank === 1 ? '#DCFCE7' : item.rank === 2 ? '#ECFDF5' : '#F1F5F9',
+                          color: item.rank === 1 ? '#16A34A' : item.rank === 2 ? '#059669' : '#64748B',
+                          fontSize: '0.64rem',
+                          fontWeight: 800,
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          flexShrink: 0
+                        }}>
+                          {item.rank}
+                        </span>
                         <div style={{ width: '32px', height: '32px', borderRadius: '8px', overflow: 'hidden', background: '#F8FAFC', flexShrink: 0 }}>
                           <img
                             src={item.img}
@@ -1488,7 +1519,7 @@ export default function AnalyticsView({
                         fontWeight: 800,
                         flexShrink: 0
                       }}>
-                        {item.qty}
+                        {item.qty} sold
                       </span>
                     </div>
                   ))
@@ -1605,7 +1636,21 @@ export default function AnalyticsView({
                   ) : (
                     <tr>
                       <td colSpan={8} style={{ padding: '24px 0', textAlign: 'center', color: '#94A3B8', fontSize: '0.76rem' }}>
-                        No recent orders recorded yet.
+                        {totalOrders > 0 ? (
+                          <span>
+                            No recent orders available in this view.{' '}
+                            {onViewOrders && (
+                              <button
+                                onClick={onViewOrders}
+                                style={{ background: 'none', border: 'none', color: '#0284C7', fontWeight: 700, cursor: 'pointer', padding: 0 }}
+                              >
+                                View complete history in Orders →
+                              </button>
+                            )}
+                          </span>
+                        ) : (
+                          'No recent orders recorded yet.'
+                        )}
                       </td>
                     </tr>
                   )}
