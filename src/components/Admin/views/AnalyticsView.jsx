@@ -1141,13 +1141,25 @@ export default function AnalyticsView({
                   </span>
                 </div>
 
-                <div style={{ display: 'flex', alignItems: 'baseline', gap: '8px', marginBottom: '14px' }}>
-                  <span style={{ fontSize: '1.40rem', fontWeight: 900, color: '#0F172A', letterSpacing: '-0.02em' }}>
-                    {currencySymbol}{totalSales.toLocaleString('en-IN')}
-                  </span>
-                  <span style={{ fontSize: '0.70rem', color: '#16A34A', fontWeight: 800 }}>
-                    • Live Data
-                  </span>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '8px', marginBottom: '10px' }}>
+                  <div style={{ display: 'flex', alignItems: 'baseline', gap: '8px' }}>
+                    <span style={{ fontSize: '1.40rem', fontWeight: 900, color: '#0F172A', letterSpacing: '-0.02em' }}>
+                      {currencySymbol}{totalSales.toLocaleString('en-IN')}
+                    </span>
+                    <span style={{ fontSize: '0.70rem', color: '#16A34A', fontWeight: 800 }}>
+                      • Live Data
+                    </span>
+                  </div>
+
+                  {/* Summary Metric Chips */}
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flexWrap: 'wrap' }}>
+                    <div style={{ background: '#FFF7ED', border: '1px solid #FFEDD5', borderRadius: '7px', padding: '3px 8px', fontSize: '0.68rem', color: '#C2410C', fontWeight: 700 }}>
+                      Peak: {currencySymbol}{Math.max(...rawChartData.map(d => Number(d.sales || 0)), 0).toLocaleString('en-IN')}
+                    </div>
+                    <div style={{ background: '#F8FAFC', border: '1px solid #E2E8F0', borderRadius: '7px', padding: '3px 8px', fontSize: '0.68rem', color: '#475569', fontWeight: 700 }}>
+                      {rawChartData.length} {selectedPeriod === 'all' ? 'Months' : 'Days'} Tracked
+                    </div>
+                  </div>
                 </div>
               </div>
 
@@ -1225,6 +1237,44 @@ export default function AnalyticsView({
                     />
                   )}
 
+                  {/* Data Anchor Pillars & Point Drop-lines to eliminate empty chart feel */}
+                  {chartPoints.map((pt, idx) => {
+                    const colH = Math.max(165 - pt.y, 0);
+                    const isHovered = activeHoverPoint?.date === pt.date;
+                    return (
+                      <g key={`col-${idx}`}>
+                        <rect
+                          x={pt.x - 14}
+                          y={pt.y}
+                          width="28"
+                          height={colH}
+                          rx="4"
+                          fill="#EA580C"
+                          fillOpacity={isHovered ? 0.16 : 0.05}
+                          style={{ transition: 'all 0.2s ease' }}
+                        />
+                        <line
+                          x1={pt.x}
+                          y1={pt.y}
+                          x2={pt.x}
+                          y2="165"
+                          stroke="#EA580C"
+                          strokeWidth="1"
+                          strokeDasharray="2 2"
+                          strokeOpacity={isHovered ? 0.5 : 0.2}
+                        />
+                        <circle
+                          cx={pt.x}
+                          cy={pt.y}
+                          r={isHovered ? 4.5 : 3}
+                          fill="#EA580C"
+                          stroke="#FFFFFF"
+                          strokeWidth="1.5"
+                        />
+                      </g>
+                    );
+                  })}
+
                   {/* Smooth Real Data Line */}
                   {linePath && (
                     <path
@@ -1237,7 +1287,7 @@ export default function AnalyticsView({
                     />
                   )}
 
-                  {/* Highlighted Active Hover Point with Subtle Ring Halo */}
+                  {/* Highlighted Active Hover Point with Outer Ring Halo */}
                   {activeHoverPoint && (
                     <g pointerEvents="none">
                       <circle
@@ -1245,7 +1295,7 @@ export default function AnalyticsView({
                         cy={activeHoverPoint.y}
                         r="7.5"
                         fill="#EA580C"
-                        fillOpacity="0.18"
+                        fillOpacity="0.22"
                       />
                       <circle
                         cx={activeHoverPoint.x}
@@ -1264,7 +1314,7 @@ export default function AnalyticsView({
                       <circle
                         cx={pt.x}
                         cy={pt.y}
-                        r="14"
+                        r="16"
                         fill="transparent"
                       />
                     </g>
@@ -1504,47 +1554,44 @@ export default function AnalyticsView({
                 {activeDateRangeLabel}
               </span>
 
-              <div style={{ display: 'flex', alignItems: 'center', gap: '14px' }}>
-                {/* Category Mini Donut */}
-                <div style={{ position: 'relative', width: '90px', height: '90px', flexShrink: 0 }}>
-                  <svg viewBox="0 0 36 36" style={{ width: '100%', height: '100%', transform: 'rotate(-90deg)' }}>
-                    <circle cx="18" cy="18" r="14" fill="transparent" stroke="#F1F5F9" strokeWidth="4.5" />
-                    {categoryDonutSlices.map((slice, idx) => {
-                      if (slice.percentage <= 0) return null;
-                      return (
-                        <circle
-                          key={idx}
-                          cx="18"
-                          cy="18"
-                          r="14"
-                          fill="transparent"
-                          stroke={slice.color}
-                          strokeWidth="4.5"
-                          strokeDasharray={slice.strokeDasharray}
-                          strokeDashoffset={slice.strokeDashoffset}
-                        />
-                      );
-                    })}
-                  </svg>
-                </div>
-
-                {/* Category List */}
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', flex: 1 }}>
-                  {categoriesList.slice(0, 5).map((cat, idx) => (
-                    <div key={idx} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', fontSize: '0.70rem' }}>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '5px', minWidth: 0 }}>
-                        <span style={{ width: '6px', height: '6px', borderRadius: '50%', backgroundColor: cat.color, flexShrink: 0 }} />
-                        <span style={{ color: '#0F172A', fontWeight: 600, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+              {/* Rich Categories List with Structured Progress Rows */}
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                {categoriesList.slice(0, 5).map((cat, idx) => (
+                  <div key={idx} style={{
+                    background: '#F8FAFC',
+                    padding: '8px 10px',
+                    borderRadius: '10px',
+                    border: '1px solid #F1F5F9',
+                    display: 'flex',
+                    flexDirection: 'column',
+                    gap: '4px',
+                    transition: 'background 0.15s ease'
+                  }}>
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', fontSize: '0.74rem' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '6px', minWidth: 0 }}>
+                        <span style={{ width: '8px', height: '8px', borderRadius: '50%', backgroundColor: cat.color, flexShrink: 0 }} />
+                        <strong style={{ color: '#0F172A', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
                           {cat.name}
-                        </span>
+                        </strong>
                       </div>
-                      <div style={{ textAlign: 'right', flexShrink: 0 }}>
-                        <strong style={{ color: '#0F172A' }}>{cat.percentage}%</strong>
-                        <span style={{ color: '#94A3B8', fontSize: '0.58rem', display: 'block' }}>{currencySymbol}{cat.amount.toLocaleString('en-IN')}</span>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flexShrink: 0 }}>
+                        <span style={{ color: '#64748B', fontSize: '0.66rem' }}>{currencySymbol}{cat.amount.toLocaleString('en-IN')}</span>
+                        <strong style={{ color: '#0F172A', fontSize: '0.74rem' }}>{cat.percentage}%</strong>
                       </div>
                     </div>
-                  ))}
-                </div>
+
+                    {/* Smooth Progress Bar */}
+                    <div style={{ width: '100%', height: '4px', background: '#E2E8F0', borderRadius: '2px', overflow: 'hidden' }}>
+                      <div style={{ width: `${cat.percentage}%`, height: '100%', background: cat.color, borderRadius: '2px', transition: 'width 0.3s ease' }} />
+                    </div>
+                  </div>
+                ))}
+
+                {categoriesList.length === 0 && (
+                  <div style={{ padding: '24px 0', textAlign: 'center', color: '#94A3B8', fontSize: '0.74rem' }}>
+                    No category sales recorded yet.
+                  </div>
+                )}
               </div>
 
               <div style={{ marginTop: 'auto', paddingTop: '14px' }}>
