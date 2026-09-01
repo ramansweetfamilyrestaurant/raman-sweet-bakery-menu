@@ -1245,43 +1245,32 @@ export default function QrGeneratorView({
               boxShadow: '0 1px 3px rgba(0,0,0,0.02)',
               display: 'flex',
               flexDirection: 'column',
-              gap: '14px'
+              gap: '12px'
             }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                 <div style={{
-                  width: '28px',
-                  height: '28px',
-                  borderRadius: '8px',
+                  width: '24px',
+                  height: '24px',
+                  borderRadius: '6px',
                   background: '#064E3B',
-                  color: '#FFFFFF',
-                  fontSize: '0.76rem',
+                  color: '#FFF',
+                  fontSize: '0.74rem',
                   fontWeight: 900,
                   display: 'flex',
                   alignItems: 'center',
                   justifyContent: 'center',
                   flexShrink: 0
                 }}>
-                  01
+                  1
                 </div>
-                <strong style={{ fontSize: '0.98rem', color: '#0F172A', fontWeight: 900, letterSpacing: '-0.01em' }}>
+                <strong style={{ fontSize: '0.94rem', color: '#0F172A', fontWeight: 900 }}>
                   Space Details
                 </strong>
               </div>
 
               <div>
-                <label style={{
-                  fontSize: '0.72rem',
-                  fontWeight: 800,
-                  color: '#475569',
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '4px',
-                  marginBottom: '6px',
-                  textTransform: 'uppercase',
-                  letterSpacing: '0.04em'
-                }}>
-                  <span>Space / Zone Name</span>
-                  <span style={{ color: '#DC2626' }}>*</span>
+                <label style={{ fontSize: '0.72rem', fontWeight: 800, color: '#475569', display: 'block', marginBottom: '4px', textTransform: 'uppercase' }}>
+                  Space / Zone Name *
                 </label>
                 <input
                   type="text"
@@ -1290,43 +1279,24 @@ export default function QrGeneratorView({
                   placeholder="e.g. Main Hall, Dining Terrace, VIP Lounge"
                   style={{
                     width: '100%',
-                    height: '42px',
-                    padding: '0 14px',
-                    borderRadius: '10px',
+                    height: '40px',
+                    padding: '0 12px',
+                    borderRadius: '8px',
                     border: '1px solid #CBD5E1',
-                    fontSize: '0.88rem',
+                    fontSize: '0.84rem',
                     fontWeight: 700,
                     color: '#0F172A',
                     background: '#FFFFFF',
-                    boxSizing: 'border-box',
-                    outline: 'none',
-                    lineHeight: 'normal',
-                    transition: 'border-color 0.15s ease, box-shadow 0.15s ease'
-                  }}
-                  onFocus={(e) => {
-                    e.target.style.borderColor = '#064E3B';
-                    e.target.style.boxShadow = '0 0 0 3px rgba(6, 78, 59, 0.12)';
-                  }}
-                  onBlur={(e) => {
-                    e.target.style.borderColor = '#CBD5E1';
-                    e.target.style.boxShadow = 'none';
+                    boxSizing: 'border-box'
                   }}
                 />
               </div>
 
               <div>
-                <label style={{
-                  fontSize: '0.72rem',
-                  fontWeight: 800,
-                  color: '#475569',
-                  display: 'block',
-                  marginBottom: '6px',
-                  textTransform: 'uppercase',
-                  letterSpacing: '0.04em'
-                }}>
+                <label style={{ fontSize: '0.72rem', fontWeight: 800, color: '#475569', display: 'block', marginBottom: '6px', textTransform: 'uppercase' }}>
                   Space Type (Adapted to your Business Model)
                 </label>
-                <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+                <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap' }}>
                   {availableSpaceTypes.map(item => {
                     const isSelected = genSpaceType === item.id;
                     return (
@@ -1338,23 +1308,17 @@ export default function QrGeneratorView({
                           handleSpaceTypeClick(item.id);
                         }}
                         style={{
-                          padding: '8px 14px',
-                          borderRadius: '10px',
-                          border: isSelected ? '1.5px solid #064E3B' : '1px solid #E2E8F0',
+                          padding: '6px 12px',
+                          borderRadius: '8px',
+                          border: isSelected ? '1.5px solid #064E3B' : '1px solid #EAE5DF',
                           background: isSelected ? '#ECFDF5' : '#FAF8F5',
                           color: isSelected ? '#064E3B' : '#475569',
                           fontSize: '0.78rem',
                           fontWeight: isSelected ? 800 : 600,
-                          cursor: 'pointer',
-                          display: 'inline-flex',
-                          alignItems: 'center',
-                          gap: '6px',
-                          transition: 'all 0.15s ease',
-                          boxShadow: isSelected ? '0 1px 3px rgba(6, 78, 59, 0.10)' : 'none'
+                          cursor: 'pointer'
                         }}
                       >
-                        {isSelected && <span style={{ fontSize: '0.80rem', fontWeight: 900 }}>✓</span>}
-                        <span>{item.label}</span>
+                        {item.label}
                       </button>
                     );
                   })}
@@ -1362,15 +1326,7 @@ export default function QrGeneratorView({
               </div>
 
               <div>
-                <label style={{
-                  fontSize: '0.72rem',
-                  fontWeight: 800,
-                  color: '#475569',
-                  display: 'block',
-                  marginBottom: '6px',
-                  textTransform: 'uppercase',
-                  letterSpacing: '0.04em'
-                }}>
+                <label style={{ fontSize: '0.72rem', fontWeight: 800, color: '#475569', display: 'block', marginBottom: '4px', textTransform: 'uppercase' }}>
                   Description (Optional)
                 </label>
                 <input
@@ -1380,26 +1336,15 @@ export default function QrGeneratorView({
                   placeholder="e.g. Near Window, Ground Floor Family Section"
                   style={{
                     width: '100%',
-                    height: '42px',
-                    padding: '0 14px',
-                    borderRadius: '10px',
+                    height: '40px',
+                    padding: '0 12px',
+                    borderRadius: '8px',
                     border: '1px solid #CBD5E1',
-                    fontSize: '0.86rem',
+                    fontSize: '0.84rem',
                     fontWeight: 600,
                     color: '#0F172A',
                     background: '#FFFFFF',
-                    boxSizing: 'border-box',
-                    outline: 'none',
-                    lineHeight: 'normal',
-                    transition: 'border-color 0.15s ease, box-shadow 0.15s ease'
-                  }}
-                  onFocus={(e) => {
-                    e.target.style.borderColor = '#064E3B';
-                    e.target.style.boxShadow = '0 0 0 3px rgba(6, 78, 59, 0.12)';
-                  }}
-                  onBlur={(e) => {
-                    e.target.style.borderColor = '#CBD5E1';
-                    e.target.style.boxShadow = 'none';
+                    boxSizing: 'border-box'
                   }}
                 />
               </div>
