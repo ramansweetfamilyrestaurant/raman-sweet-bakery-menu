@@ -782,8 +782,8 @@ router.put('/restaurants/:id', authenticateToken, requireSuperAdmin, async (req,
     }
 
     let cleanCategory = undefined;
-    if (service_model !== undefined || business_category !== undefined || business_type !== undefined) {
-      const rawCat = service_model || business_category || business_type;
+    if (business_type !== undefined || business_category !== undefined || service_model !== undefined) {
+      const rawCat = business_type || business_category || service_model;
       cleanCategory = resolveBusinessCategoryFromType(rawCat);
     }
 
@@ -818,8 +818,9 @@ router.put('/restaurants/:id', authenticateToken, requireSuperAdmin, async (req,
           owner_name = COALESCE($17, owner_name),
           owner_email = CASE WHEN $18::boolean THEN $19 ELSE owner_email END,
           service_model = COALESCE($20, service_model),
-          business_category = COALESCE($20, business_category)
-      WHERE id = $21
+          business_category = COALESCE($20, business_category),
+          business_type = COALESCE($21, business_type)
+      WHERE id = $22
     `, [
       name,
       tagline || '',
@@ -841,6 +842,7 @@ router.put('/restaurants/:id', authenticateToken, requireSuperAdmin, async (req,
       cleanOwnerEmail !== undefined,
       cleanOwnerEmail !== undefined ? cleanOwnerEmail : null,
       cleanCategory !== undefined ? cleanCategory : null,
+      business_type !== undefined ? business_type : null,
       id
     ]);
 
