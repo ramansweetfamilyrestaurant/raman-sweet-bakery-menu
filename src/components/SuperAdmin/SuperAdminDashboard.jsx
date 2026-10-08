@@ -252,6 +252,9 @@ export default function SuperAdminDashboard({ token, username, onLogout, onRetur
       setRestaurants(Array.isArray(data) ? data : []);
     } catch (err) {
       console.error('Error fetching shop / restaurants:', err);
+      if ((err.isUnauthorized || err.message?.includes('expired') || err.message?.includes('token') || err.message?.includes('403')) && onLogout) {
+        onLogout();
+      }
     } finally {
       setLoading(false);
     }
@@ -611,7 +614,11 @@ export default function SuperAdminDashboard({ token, username, onLogout, onRetur
   const filteredAndSortedRestaurants = restaurants
     .filter(r => {
       const status = getTenantStatus(r);
-      if (statusFilter !== 'all' && status !== statusFilter) return false;
+      if (statusFilter === 'active') {
+        if (status !== 'active' && status !== 'vip') return false;
+      } else if (statusFilter !== 'all' && status !== statusFilter) {
+        return false;
+      }
 
       // Extended Search (name, slug, owner_name, owner_username, phone, owner_email, id, business_type)
       if (!searchQuery.trim()) return true;
@@ -652,7 +659,10 @@ export default function SuperAdminDashboard({ token, username, onLogout, onRetur
   const totalActive = restaurants.filter(r => r.active !== false && r.active !== 0 && r.active !== '0').length;
   const totalDishes = restaurants.reduce((acc, r) => acc + (r.dish_count || 0), 0);
   const totalScans = restaurants.reduce((acc, r) => acc + (r.scan_count || 0), 0);
-  const paidTenants = restaurants.filter(r => getTenantStatus(r) === 'active');
+  const paidTenants = restaurants.filter(r => {
+    const s = getTenantStatus(r);
+    return s === 'active' || s === 'vip';
+  });
   const paidMrr = paidTenants.reduce((acc, r) => acc + getCatalogPlanPrice(r.plan_tier), 0);
   const potentialMrr = restaurants.filter(r => r.active !== false && r.subscription_type !== 'ADMIN_GRANTED' && r.mandate_status !== 'admin_granted').reduce((acc, r) => acc + getCatalogPlanPrice(r.plan_tier), 0);
 

@@ -40,7 +40,10 @@ export default function OverviewView({ restaurants, pendingRegistrations = [], o
   const trialCount = restaurants.filter(r => getTenantStatus(r) === 'trial').length;
   const pastDueCount = restaurants.filter(r => getTenantStatus(r) === 'failed').length;
 
-  const paidTenants = restaurants.filter(r => getTenantStatus(r) === 'active');
+  const paidTenants = restaurants.filter(r => {
+    const s = getTenantStatus(r);
+    return s === 'active' || s === 'vip';
+  });
   const paidMrr = paidTenants.reduce((sum, r) => sum + getCatalogPlanPrice(r.plan_tier), 0);
 
   // Grouped Attention Items
