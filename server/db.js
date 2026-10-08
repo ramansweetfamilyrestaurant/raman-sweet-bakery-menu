@@ -1396,7 +1396,7 @@ async function seedData() {
   // Update existing data to link to primaryRestoId
   await query('UPDATE categories SET restaurant_id = $1 WHERE restaurant_id IS NULL OR restaurant_id = 0', [primaryRestoId]);
   await query('UPDATE dishes SET restaurant_id = $1 WHERE restaurant_id IS NULL OR restaurant_id = 0', [primaryRestoId]);
-  await query('UPDATE admins SET restaurant_id = $1 WHERE restaurant_id IS NULL OR restaurant_id = 0', [primaryRestoId]);
+  await query("UPDATE admins SET restaurant_id = $1 WHERE (restaurant_id IS NULL OR restaurant_id = 0) AND role != 'superadmin'", [primaryRestoId]);
 
   const catCheck = await query('SELECT COUNT(*) as count FROM categories WHERE restaurant_id = $1', [primaryRestoId]);
   const count = parseInt(catCheck[0]?.count || 0, 10);
@@ -1463,7 +1463,7 @@ async function seedData() {
   if (superCount === 0) {
     const salt = await bcrypt.genSalt(10);
     const hash = await bcrypt.hash('superadmin123', salt);
-    await query('INSERT INTO admins (restaurant_id, username, password_hash, role) VALUES ($1, $2, $3, $4)', [primaryRestoId, 'superadmin', hash, 'superadmin']);
+    await query('INSERT INTO admins (restaurant_id, username, password_hash, role) VALUES ($1, $2, $3, $4)', [null, 'superadmin', hash, 'superadmin']);
     console.log('👑 Created Master Super Admin account: superadmin / superadmin123');
   }
 

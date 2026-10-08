@@ -63,14 +63,14 @@ async function runSaaSMigration() {
     // 4. Update orphan records to primaryRestoId
     await pool.query('UPDATE categories SET restaurant_id = $1 WHERE restaurant_id IS NULL;', [primaryRestoId]);
     await pool.query('UPDATE dishes SET restaurant_id = $1 WHERE restaurant_id IS NULL;', [primaryRestoId]);
-    await pool.query('UPDATE admins SET restaurant_id = $1 WHERE restaurant_id IS NULL;', [primaryRestoId]);
+    await pool.query("UPDATE admins SET restaurant_id = $1 WHERE restaurant_id IS NULL AND role != 'superadmin';", [primaryRestoId]);
 
     // 5. Ensure Super Admin account exists
     const superCheck = await pool.query("SELECT * FROM admins WHERE username = 'superadmin' OR role = 'superadmin'");
     if (superCheck.rows.length === 0) {
       const salt = await bcrypt.genSalt(10);
       const hash = await bcrypt.hash('superadmin123', salt);
-      await pool.query('INSERT INTO admins (restaurant_id, username, password_hash, role) VALUES ($1, $2, $3, $4)', [primaryRestoId, 'superadmin', hash, 'superadmin']);
+      await pool.query('INSERT INTO admins (restaurant_id, username, password_hash, role) VALUES ($1, $2, $3, $4)', [null, 'superadmin', hash, 'superadmin']);
       console.log('👑 Created Super Admin account on Neon PostgreSQL: superadmin / superadmin123');
     }
 

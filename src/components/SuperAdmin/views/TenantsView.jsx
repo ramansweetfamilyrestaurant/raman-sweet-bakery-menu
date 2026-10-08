@@ -30,7 +30,7 @@ export default function TenantsView({ restaurants, searchQuery, onSelectTenant, 
       <div className="sa-section-header">
         <div>
           <h2 className="sa-section-title">
-            <Store size={20} color="var(--sa-primary)" /> Tenant Restaurants ({filtered.length})
+            <Store size={20} color="var(--sa-primary)" /> Registered Shops & Businesses ({filtered.length})
           </h2>
           <span style={{ fontSize: '0.75rem', color: 'var(--sa-text-muted)', fontWeight: 600 }}>
             Manage client accounts, menu hosting, and access terms.

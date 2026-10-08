@@ -3220,7 +3220,7 @@ export default function SuperAdminDashboard({ token, username, onLogout, onRetur
 
             <form onSubmit={handleUpdateRestaurant} style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
               <div>
-                <label style={{ fontSize: '0.78rem', fontWeight: 800, color: 'var(--text-dark)', marginBottom: '4px', display: 'block' }}>RESTAURANT NAME</label>
+                <label style={{ fontSize: '0.78rem', fontWeight: 800, color: 'var(--text-dark)', marginBottom: '4px', display: 'block' }}>SHOP / BUSINESS NAME</label>
                 <input
                   type="text"
                   value={editModalData.name || ''}
