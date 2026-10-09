@@ -1407,142 +1407,376 @@ export default function QrGeneratorView({
             </div>
 
             {/* RIGHT: Standee Mockup Preview & Quick Actions */}
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
 
-              {/* Standee Realistic Mockup Card */}
+              {/* Preview Header Card */}
               <div style={{
                 background: '#FFFFFF',
                 borderRadius: '16px',
                 border: '1px solid #EAE5DF',
-                padding: '20px',
+                padding: '14px 18px',
                 boxShadow: '0 1px 3px rgba(0,0,0,0.02)',
+                display: 'flex',
+                justifyContent: 'space-between',
+                alignItems: 'center'
+              }}>
+                <div>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    <strong style={{ fontSize: '0.90rem', color: '#0F172A', fontWeight: 900 }}>
+                      Standee Live Preview
+                    </strong>
+                    <span style={{
+                      fontSize: '0.66rem',
+                      fontWeight: 800,
+                      color: activeStandee.status === 'active' ? '#059669' : '#94A3B8',
+                      background: activeStandee.status === 'active' ? '#ECFDF5' : '#F1F5F9',
+                      padding: '2px 8px',
+                      borderRadius: '12px',
+                      border: activeStandee.status === 'active' ? '1px solid #A7F3D0' : '1px solid #E2E8F0',
+                      textTransform: 'capitalize'
+                    }}>
+                      ● {activeStandee.status}
+                    </span>
+                  </div>
+                  <span style={{ fontSize: '0.72rem', color: '#64748B', display: 'block', marginTop: '2px' }}>
+                    Real 1:1 tabletop acrylic standee & print preview
+                  </span>
+                </div>
+
+                <button
+                  type="button"
+                  onClick={() => setShowTestModal(true)}
+                  title="Test Live QR Scan"
+                  style={{
+                    height: '32px',
+                    padding: '0 10px',
+                    borderRadius: '8px',
+                    border: '1px solid #CBD5E1',
+                    background: '#FFFFFF',
+                    color: '#0F172A',
+                    fontSize: '0.74rem',
+                    fontWeight: 700,
+                    cursor: 'pointer',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '4px'
+                  }}
+                >
+                  <Smartphone size={13} color="#064E3B" />
+                  <span>Test Scan</span>
+                </button>
+              </div>
+
+              {/* 3D Realistic Standee Scene on Tabletop */}
+              <div style={{
+                background: 'linear-gradient(180deg, #F8FAFC 0%, #EDE9E3 100%)',
+                borderRadius: '20px',
+                border: '1px solid #E2E8F0',
+                padding: '24px 16px 18px 16px',
                 display: 'flex',
                 flexDirection: 'column',
                 alignItems: 'center',
-                textAlign: 'center',
-                boxSizing: 'border-box'
+                position: 'relative',
+                overflow: 'hidden',
+                boxShadow: 'inset 0 2px 6px rgba(0,0,0,0.03)'
               }}>
-                <div style={{ width: '100%', display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
-                  <strong style={{ fontSize: '0.86rem', color: '#0F172A', fontWeight: 800 }}>
-                    Standee Live Preview
-                  </strong>
-                  <span style={{ fontSize: '0.70rem', color: '#059669', fontWeight: 800, background: '#ECFDF5', padding: '2px 8px', borderRadius: '10px' }}>
-                    ● {activeStandee.status}
-                  </span>
-                </div>
 
-                {/* The Acrylic / Gold Standee Mockup */}
+                {/* Subtle Horizon Light Sheen */}
+                <div style={{
+                  position: 'absolute',
+                  top: 0,
+                  left: 0,
+                  right: 0,
+                  height: '50px',
+                  background: 'linear-gradient(180deg, rgba(255,255,255,0.7) 0%, rgba(255,255,255,0) 100%)',
+                  pointerEvents: 'none'
+                }} />
+
+                {/* The Acrylic Standee Card itself */}
                 <div style={{
                   width: '100%',
-                  maxWidth: '290px',
-                  borderRadius: '18px',
-                  border: activeStandee.theme === 'gold' ? '3px double #D97706' : activeStandee.theme === 'slate' ? '2px solid #0F172A' : '2px solid #064E3B',
-                  background: activeStandee.theme === 'slate' ? '#0F172A' : 'linear-gradient(180deg, #FFFFFF 0%, #FAF8F5 100%)',
-                  color: activeStandee.theme === 'slate' ? '#FFFFFF' : '#0F172A',
-                  padding: '20px 16px',
-                  boxShadow: '0 10px 25px rgba(0,0,0,0.08)',
+                  maxWidth: '320px',
+                  background: activeStandee.theme === 'slate' ? '#0F172A' : '#FFFFFF',
+                  borderRadius: '22px',
+                  border: activeStandee.theme === 'gold' 
+                    ? '3px solid #D97706' 
+                    : activeStandee.theme === 'slate' 
+                      ? '2px solid #334155' 
+                      : '3px solid #D4AF37',
+                  boxShadow: activeStandee.theme === 'slate'
+                    ? '0 18px 36px rgba(15, 23, 42, 0.35), 0 2px 6px rgba(0,0,0,0.1)'
+                    : '0 18px 36px rgba(10, 35, 21, 0.12), 0 2px 6px rgba(0,0,0,0.04)',
+                  padding: '22px 16px 16px 16px',
+                  textAlign: 'center',
                   boxSizing: 'border-box',
-                  marginBottom: '14px'
+                  display: 'flex',
+                  flexDirection: 'column',
+                  alignItems: 'center',
+                  position: 'relative',
+                  zIndex: 2
                 }}>
-                  {/* Space Badge */}
+                  
+                  {/* Subtle Acrylic Glare Reflection at Top Right Corner */}
+                  <div style={{
+                    position: 'absolute',
+                    top: 0,
+                    right: 0,
+                    width: '110px',
+                    height: '110px',
+                    background: 'radial-gradient(circle at top right, rgba(255,255,255,0.35) 0%, rgba(255,255,255,0) 70%)',
+                    borderRadius: '0 22px 0 0',
+                    pointerEvents: 'none'
+                  }} />
+
+                  {/* Top Space Badge */}
                   <div style={{
                     display: 'inline-block',
-                    background: activeStandee.theme === 'slate' ? '#1E293B' : '#064E3B',
-                    color: activeStandee.theme === 'gold' ? '#F59E0B' : '#FFFFFF',
-                    padding: '4px 14px',
-                    borderRadius: '20px',
-                    fontSize: '0.76rem',
+                    background: activeStandee.theme === 'slate' 
+                      ? '#1E293B' 
+                      : '#0A2315',
+                    color: activeStandee.theme === 'slate' 
+                      ? '#F8FAFC' 
+                      : '#DFBA67',
+                    fontSize: '0.74rem',
                     fontWeight: 900,
-                    letterSpacing: '0.04em',
-                    marginBottom: '8px'
+                    padding: '5px 16px',
+                    borderRadius: '18px',
+                    letterSpacing: '0.8px',
+                    marginBottom: '10px',
+                    textTransform: 'uppercase',
+                    boxShadow: '0 2px 6px rgba(0,0,0,0.1)'
                   }}>
-                    {activeStandee.spaceLabel.toUpperCase()}
+                    {activeStandee.spaceType === 'counter'
+                      ? '🏪 BILLING COUNTER'
+                      : activeStandee.spaceType === 'cinema_seat'
+                        ? `🎬 ${activeStandee.spaceLabel || `CINEMA SEAT ${activeStandee.identifier}`}`
+                        : `${activeStandee.spaceLabel?.toUpperCase() || `TABLE ${activeStandee.identifier}`}`}
                   </div>
 
-                  <h4 style={{ margin: '0 0 2px 0', fontSize: '1.05rem', fontWeight: 900, color: activeStandee.theme === 'slate' ? '#FFFFFF' : '#064E3B' }}>
-                    {settingsForm?.name || restaurantInfo?.name || 'TouchQR Restaurant'}
-                  </h4>
-                  <span style={{ fontSize: '0.70rem', color: activeStandee.theme === 'slate' ? '#94A3B8' : '#64748B', display: 'block', marginBottom: '10px' }}>
-                    {activeStandee.qrType === 'ordering' ? '📱 Scan to View Menu & Order' : '📖 Scan to View Digital Menu'}
-                  </span>
+                  {/* Restaurant Name (Playfair Luxury Serif) */}
+                  <h3 style={{
+                    fontFamily: "'Playfair Display', serif, Georgia",
+                    fontSize: '1.20rem',
+                    fontWeight: 900,
+                    color: activeStandee.theme === 'slate' ? '#FFFFFF' : '#0A2315',
+                    margin: '0 0 3px 0',
+                    lineHeight: 1.25
+                  }}>
+                    {settingsForm?.name || restaurantInfo?.name || 'Raman Sweet Bakery & Family Restaurant'}
+                  </h3>
 
-                  {/* QR Image Box */}
+                  {/* Tagline / Subtitle */}
+                  <div style={{
+                    fontSize: '0.72rem',
+                    fontWeight: 700,
+                    color: activeStandee.theme === 'slate' ? '#94A3B8' : '#16A34A',
+                    marginBottom: '12px'
+                  }}>
+                    {settingsForm?.tagline || (activeStandee.spaceType === 'cinema_seat' ? 'In-Seat Food Ordering' : 'Scan QR Code for Digital Menu')}
+                  </div>
+
+                  {/* High Quality QR Container */}
                   <div style={{
                     background: '#FFFFFF',
-                    padding: '10px',
-                    borderRadius: '12px',
-                    border: '1px solid #EAE5DF',
+                    padding: '12px',
+                    borderRadius: '16px',
+                    border: '1px solid #E2E8F0',
                     display: 'inline-block',
-                    marginBottom: '10px'
+                    marginBottom: '12px',
+                    boxShadow: '0 3px 10px rgba(0, 0, 0, 0.05)'
                   }}>
                     <img
                       src={activeStandeeQrImgUrl}
-                      alt="Standee QR"
-                      style={{ width: '150px', height: '150px', display: 'block' }}
+                      alt={`${activeStandee.name} QR Code`}
+                      style={{ width: '160px', height: '160px', display: 'block' }}
                     />
                   </div>
 
-                  <div style={{ fontSize: '0.74rem', fontWeight: 800, color: activeStandee.theme === 'slate' ? '#F1F5F9' : '#0F172A', marginBottom: '2px' }}>
-                    {activeStandee.message || 'Thank you for dining with us!'}
+                  {/* Primary Scan Instruction */}
+                  <div style={{
+                    fontSize: '0.82rem',
+                    fontWeight: 900,
+                    color: activeStandee.theme === 'slate' ? '#F1F5F9' : '#0A2315',
+                    letterSpacing: '0.4px',
+                    marginBottom: '3px'
+                  }}>
+                    {activeStandee.spaceType === 'cinema_seat' ? '📱 SCAN FOR IN-SEAT FOOD ORDERING' : '📱 SCAN FOR DIGITAL MENU & ORDER'}
                   </div>
 
-                  <div style={{ fontSize: '0.62rem', color: activeStandee.theme === 'slate' ? '#64748B' : '#94A3B8', marginTop: '6px', borderTop: activeStandee.theme === 'slate' ? '1px solid #334155' : '1px solid #EAE5DF', paddingTop: '4px' }}>
-                    ⚡ Powered by TouchQR
+                  {/* Secondary Scan Instruction (Hindi) */}
+                  <div style={{
+                    fontSize: '0.72rem',
+                    fontWeight: 700,
+                    color: activeStandee.theme === 'slate' ? '#94A3B8' : '#64748B',
+                    marginBottom: activeStandee.message ? '8px' : '12px'
+                  }}>
+                    {activeStandee.spaceType === 'cinema_seat' ? 'स्कैन करें और सीट पर खाना मंगाएं' : 'स्कैन करें और डिजिटल मेन्यू देखें'}
+                  </div>
+
+                  {/* Custom Message / Greeting Note */}
+                  {activeStandee.message && (
+                    <div style={{
+                      fontSize: '0.72rem',
+                      fontStyle: 'italic',
+                      color: activeStandee.theme === 'slate' ? '#CBD5E1' : '#475569',
+                      marginBottom: '12px',
+                      padding: '4px 10px',
+                      background: activeStandee.theme === 'slate' ? 'rgba(255,255,255,0.05)' : '#FAF8F5',
+                      borderRadius: '8px',
+                      border: activeStandee.theme === 'slate' ? '1px solid rgba(255,255,255,0.1)' : '1px solid #EAE5DF'
+                    }}>
+                      "{activeStandee.message}"
+                    </div>
+                  )}
+
+                  {/* Footer Divider & Live Contact Info */}
+                  <div style={{
+                    width: '100%',
+                    borderTop: activeStandee.theme === 'slate' ? '1px solid #334155' : '1px solid #F1F5F9',
+                    paddingTop: '10px',
+                    fontSize: '0.68rem',
+                    color: activeStandee.theme === 'slate' ? '#94A3B8' : '#94A3B8',
+                    lineHeight: 1.4
+                  }}>
+                    {settingsForm?.address || restaurantInfo?.address ? (
+                      <div>{settingsForm?.address || restaurantInfo?.address}</div>
+                    ) : null}
+                    {settingsForm?.phone || restaurantInfo?.phone ? (
+                      <div style={{ fontWeight: 600 }}>Phone: {settingsForm?.phone || restaurantInfo?.phone}</div>
+                    ) : null}
+                    {!settingsForm?.watermark_removal_enabled && (
+                      <div style={{ marginTop: '4px', fontSize: '0.64rem', color: '#15803D', fontWeight: 800 }}>
+                        ⚡ Powered by TouchQR
+                      </div>
+                    )}
                   </div>
                 </div>
 
-                {/* Actions below Preview */}
-                <div style={{ width: '100%', display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                  <div style={{ display: 'flex', gap: '8px', width: '100%' }}>
-                    <button
-                      type="button"
-                      onClick={() => handleDownloadQr('PNG')}
-                      style={{
-                        flex: 1,
-                        height: '38px',
-                        padding: '0 10px',
-                        borderRadius: '10px',
-                        border: 'none',
-                        background: '#064E3B',
-                        color: '#FFFFFF',
-                        fontSize: '0.76rem',
-                        fontWeight: 900,
-                        cursor: 'pointer',
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        gap: '4px',
-                        boxShadow: '0 2px 6px rgba(6, 78, 59, 0.25)'
-                      }}
-                    >
-                      <Download size={14} />
-                      <span>Download PNG</span>
-                    </button>
+                {/* Realistic Acrylic Stand Base (Pedestal Footing) */}
+                <div style={{
+                  width: '210px',
+                  height: '14px',
+                  background: 'linear-gradient(180deg, #E2E8F0 0%, #94A3B8 100%)',
+                  borderRadius: '3px 3px 8px 8px',
+                  boxShadow: '0 8px 20px rgba(0,0,0,0.18)',
+                  margin: '-5px auto 4px auto',
+                  border: '1px solid #64748B',
+                  position: 'relative',
+                  zIndex: 3
+                }}>
+                  {/* Acrylic Slot Line */}
+                  <div style={{
+                    position: 'absolute',
+                    top: '2px',
+                    left: '12%',
+                    right: '12%',
+                    height: '2px',
+                    background: 'rgba(255,255,255,0.85)',
+                    borderRadius: '1px'
+                  }} />
+                </div>
 
-                    <button
-                      type="button"
-                      onClick={() => (onPrintQR ? onPrintQR(activeStandee.identifier, activeStandee.spaceType) : window.print())}
-                      style={{
-                        flex: 1,
-                        height: '38px',
-                        padding: '0 10px',
-                        borderRadius: '10px',
-                        border: '1px solid #CBD5E1',
-                        background: '#FFFFFF',
-                        color: '#0F172A',
-                        fontSize: '0.76rem',
-                        fontWeight: 800,
-                        cursor: 'pointer',
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        gap: '4px'
-                      }}
-                    >
-                      <Printer size={14} />
-                      <span>Print Standee</span>
-                    </button>
+                {/* Ground Table Shadow */}
+                <div style={{
+                  width: '260px',
+                  height: '12px',
+                  background: 'radial-gradient(ellipse at center, rgba(0,0,0,0.22) 0%, rgba(0,0,0,0) 75%)',
+                  borderRadius: '50%',
+                  margin: '0 auto',
+                  zIndex: 1
+                }} />
+              </div>
+
+              {/* DOWNLOAD & ACTION CONTROLS */}
+              <div style={{
+                background: '#FFFFFF',
+                borderRadius: '16px',
+                border: '1px solid #EAE5DF',
+                padding: '16px 18px',
+                boxShadow: '0 1px 3px rgba(0,0,0,0.02)',
+                display: 'flex',
+                flexDirection: 'column',
+                gap: '10px'
+              }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <span style={{ fontSize: '0.72rem', fontWeight: 800, color: '#64748B', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
+                    Print & Export Quality
+                  </span>
+                  <div style={{ display: 'flex', gap: '4px' }}>
+                    {[
+                      { id: '1024', label: '1K' },
+                      { id: '2048', label: '2K HD' },
+                      { id: '4096', label: '4K Print' }
+                    ].map(res => (
+                      <button
+                        key={res.id}
+                        type="button"
+                        onClick={() => setDownloadResolution(res.id)}
+                        style={{
+                          padding: '3px 8px',
+                          borderRadius: '6px',
+                          fontSize: '0.68rem',
+                          fontWeight: 700,
+                          border: downloadResolution === res.id ? '1.5px solid #064E3B' : '1px solid #CBD5E1',
+                          background: downloadResolution === res.id ? '#ECFDF5' : '#FFFFFF',
+                          color: downloadResolution === res.id ? '#064E3B' : '#64748B',
+                          cursor: 'pointer'
+                        }}
+                      >
+                        {res.label}
+                      </button>
+                    ))}
                   </div>
+                </div>
+
+                <button
+                  type="button"
+                  onClick={() => handleDownloadQr('PNG')}
+                  style={{
+                    width: '100%',
+                    height: '42px',
+                    borderRadius: '10px',
+                    border: 'none',
+                    background: '#064E3B',
+                    color: '#FFFFFF',
+                    fontSize: '0.80rem',
+                    fontWeight: 900,
+                    cursor: 'pointer',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    gap: '6px',
+                    boxShadow: '0 2px 6px rgba(6, 78, 59, 0.25)'
+                  }}
+                >
+                  <Download size={15} />
+                  <span>Download Standee PNG ({downloadResolution === '4096' ? '4K Ultra' : downloadResolution === '1024' ? '1K Standard' : '2K HD'})</span>
+                </button>
+
+                <div style={{ display: 'flex', gap: '8px', width: '100%' }}>
+                  <button
+                    type="button"
+                    onClick={() => (onPrintQR ? onPrintQR(activeStandee.identifier, activeStandee.spaceType) : window.print())}
+                    style={{
+                      flex: 1,
+                      height: '38px',
+                      padding: '0 10px',
+                      borderRadius: '10px',
+                      border: '1px solid #CBD5E1',
+                      background: '#FFFFFF',
+                      color: '#0F172A',
+                      fontSize: '0.76rem',
+                      fontWeight: 800,
+                      cursor: 'pointer',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      gap: '4px'
+                    }}
+                  >
+                    <Printer size={14} />
+                    <span>Print Standee</span>
+                  </button>
 
                   <button
                     type="button"
@@ -1551,15 +1785,15 @@ export default function QrGeneratorView({
                       setShowCreateModal(true);
                     }}
                     style={{
-                      width: '100%',
-                      height: '34px',
+                      flex: 1,
+                      height: '38px',
                       padding: '0 10px',
-                      borderRadius: '8px',
-                      border: '1px solid #E2E8F0',
-                      background: '#F8FAFC',
-                      color: '#475569',
-                      fontSize: '0.74rem',
-                      fontWeight: 700,
+                      borderRadius: '10px',
+                      border: '1px solid #CBD5E1',
+                      background: '#FFFFFF',
+                      color: '#0F172A',
+                      fontSize: '0.76rem',
+                      fontWeight: 800,
                       cursor: 'pointer',
                       display: 'flex',
                       alignItems: 'center',
@@ -1567,8 +1801,46 @@ export default function QrGeneratorView({
                       gap: '4px'
                     }}
                   >
-                    <Palette size={13} />
-                    <span>Customize Standee</span>
+                    <Palette size={14} />
+                    <span>Customize</span>
+                  </button>
+                </div>
+
+                {/* Quick Link Copy & Verification */}
+                <div style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'space-between',
+                  padding: '8px 10px',
+                  background: '#FAF8F5',
+                  borderRadius: '8px',
+                  border: '1px solid #EAE5DF',
+                  marginTop: '2px'
+                }}>
+                  <div style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', marginRight: '8px' }}>
+                    <span style={{ fontSize: '0.66rem', color: '#64748B', display: 'block' }}>Target Destination URL:</span>
+                    <span style={{ fontSize: '0.70rem', color: '#0F172A', fontWeight: 600 }}>{activeStandeeTargetUrl}</span>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={handleCopyLink}
+                    style={{
+                      padding: '4px 8px',
+                      borderRadius: '6px',
+                      border: '1px solid #CBD5E1',
+                      background: '#FFFFFF',
+                      fontSize: '0.70rem',
+                      fontWeight: 700,
+                      color: copied ? '#059669' : '#0F172A',
+                      cursor: 'pointer',
+                      flexShrink: 0,
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '4px'
+                    }}
+                  >
+                    {copied ? <Check size={12} /> : <Copy size={12} />}
+                    <span>{copied ? 'Copied' : 'Copy'}</span>
                   </button>
                 </div>
               </div>
