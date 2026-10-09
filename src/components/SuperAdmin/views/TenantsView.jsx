@@ -149,7 +149,7 @@ export default function TenantsView({ restaurants, searchQuery, onSelectTenant, 
                     <td>
                       <span style={{ fontWeight: 800, color: 'var(--sa-success)' }}>{(r.plan_tier || 'pro').toUpperCase()}</span>
                       <span style={{ fontSize: '0.68rem', color: 'var(--sa-text-muted)', display: 'block' }}>
-                        {r.subscription_type === 'ADMIN_GRANTED' ? '₹0/mo (Free)' : `₹${r.plan_price || 999}/mo`}
+                        {(isLifetime || r.subscription_type === 'ADMIN_GRANTED' || r.mandate_status === 'admin_granted' || Number(r.plan_price) === 0) ? '₹0/mo (VIP)' : `₹${r.plan_price || 999}/mo`}
                       </span>
                     </td>
                     <td>
@@ -194,7 +194,7 @@ export default function TenantsView({ restaurants, searchQuery, onSelectTenant, 
               </div>
 
               <div style={{ fontSize: '0.8rem', color: 'var(--sa-text-muted)', margin: '6px 0' }}>
-                <strong style={{ color: 'var(--sa-text-main)' }}>{(r.plan_tier || 'pro').toUpperCase()}</strong> · {r.subscription_type === 'ADMIN_GRANTED' ? '₹0/mo' : `₹${r.plan_price || 999}/mo`}
+                <strong style={{ color: 'var(--sa-text-main)' }}>{(r.plan_tier || 'pro').toUpperCase()}</strong> · {(isLifetime || r.subscription_type === 'ADMIN_GRANTED' || r.mandate_status === 'admin_granted' || Number(r.plan_price) === 0) ? '₹0/mo (VIP)' : `₹${r.plan_price || 999}/mo`}
                 <span style={{ marginLeft: '10px' }}>· {r.dish_count || 0} dishes</span>
               </div>
 

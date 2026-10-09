@@ -661,7 +661,8 @@ export default function SuperAdminDashboard({ token, username, onLogout, onRetur
   const totalScans = restaurants.reduce((acc, r) => acc + (r.scan_count || 0), 0);
   const paidTenants = restaurants.filter(r => {
     const s = getTenantStatus(r);
-    return s === 'active' || s === 'vip';
+    const isVip = (r.subscription_type === 'ADMIN_GRANTED' || r.mandate_status === 'admin_granted' || Number(r.plan_price) === 0);
+    return s === 'active' && !isVip;
   });
   const paidMrr = paidTenants.reduce((acc, r) => acc + getCatalogPlanPrice(r.plan_tier), 0);
   const potentialMrr = restaurants.filter(r => r.active !== false && r.subscription_type !== 'ADMIN_GRANTED' && r.mandate_status !== 'admin_granted').reduce((acc, r) => acc + getCatalogPlanPrice(r.plan_tier), 0);
@@ -912,7 +913,7 @@ export default function SuperAdminDashboard({ token, username, onLogout, onRetur
                     <td>
                       <span style={{ fontWeight: 800, color: 'var(--sa-primary)', fontSize: '0.78rem' }}>{(r.plan_tier || 'pro').toUpperCase()}</span>
                       <span style={{ fontSize: '0.68rem', color: 'var(--sa-text-muted)', display: 'block' }}>
-                        {isVip ? '₹0/mo (VIP)' : `₹${r.plan_price || 999}/mo`}
+                        {(isVip || Number(r.plan_price) === 0) ? '₹0/mo (VIP)' : `₹${r.plan_price || 999}/mo`}
                       </span>
                     </td>
                     <td>
@@ -1016,8 +1017,8 @@ export default function SuperAdminDashboard({ token, username, onLogout, onRetur
 
                   {/* 2. SaaS Badges Row */}
                   <div style={{ display: 'flex', gap: '5px', flexWrap: 'wrap', alignItems: 'center', marginBottom: '8px' }}>
-                    <span style={{ background: '#FEF3C7', color: '#B45309', padding: '2px 7px', borderRadius: '6px', fontSize: '0.66rem', fontWeight: 900 }}>
-                      👑 {(r.plan_tier || 'pro').toUpperCase()} (₹{r.plan_price || 999}/mo)
+                    <span style={{ background: isVip ? '#F3E8FF' : '#FEF3C7', color: isVip ? '#7E22CE' : '#B45309', padding: '2px 7px', borderRadius: '6px', fontSize: '0.66rem', fontWeight: 900 }}>
+                      👑 {(r.plan_tier || 'pro').toUpperCase()} ({isVip ? '₹0/mo (VIP)' : (Number(r.plan_price) === 0 ? '₹0/mo (Free)' : `₹${r.plan_price || 999}/mo`)})
                     </span>
 
                     <span style={{ background: '#F1F5F9', color: '#334155', border: '1px solid #CBD5E1', padding: '2px 7px', borderRadius: '6px', fontSize: '0.66rem', fontWeight: 800, display: 'inline-flex', alignItems: 'center', gap: '3px' }}>

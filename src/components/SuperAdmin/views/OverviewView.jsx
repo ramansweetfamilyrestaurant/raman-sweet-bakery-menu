@@ -42,7 +42,8 @@ export default function OverviewView({ restaurants, pendingRegistrations = [], o
 
   const paidTenants = restaurants.filter(r => {
     const s = getTenantStatus(r);
-    return s === 'active' || s === 'vip';
+    const isVip = (r.subscription_type === 'ADMIN_GRANTED' || r.mandate_status === 'admin_granted' || Number(r.plan_price) === 0);
+    return s === 'active' && !isVip;
   });
   const paidMrr = paidTenants.reduce((sum, r) => sum + getCatalogPlanPrice(r.plan_tier), 0);
 

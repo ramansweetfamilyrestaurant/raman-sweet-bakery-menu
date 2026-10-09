@@ -7,12 +7,13 @@ export default function SubscriptionsView({ restaurants, onSelectTenant }) {
   const [filter, setFilter] = useState('all');
 
   const filteredSubs = restaurants.filter(r => {
-    if (filter === 'active') return r.active !== false && r.subscription_type !== 'ADMIN_GRANTED';
+    const isVip = (r.subscription_type === 'ADMIN_GRANTED' || r.mandate_status === 'admin_granted' || Number(r.plan_price) === 0);
+    if (filter === 'active') return r.active !== false && !isVip;
     if (filter === 'trial') return r.subscription_status === 'trialing';
     if (filter === 'failed') return r.subscription_status === 'payment_failed';
     if (filter === 'cancelled') return r.cancel_requested_at !== null;
     if (filter === 'scheduled') return r.scheduled_plan_key !== null;
-    if (filter === 'complimentary') return r.subscription_type === 'ADMIN_GRANTED' || r.mandate_status === 'admin_granted';
+    if (filter === 'complimentary') return isVip;
     return true;
   });
 
@@ -102,7 +103,7 @@ export default function SubscriptionsView({ restaurants, onSelectTenant }) {
                     <td>
                       <span style={{ fontWeight: 800, color: 'var(--sa-success)' }}>{(r.plan_tier || 'pro').toUpperCase()}</span>
                       <span style={{ fontSize: '0.7rem', color: 'var(--sa-text-muted)', display: 'block' }}>
-                        {r.subscription_type === 'ADMIN_GRANTED' ? '₹0/mo (Free)' : `₹${r.plan_price || 999}/mo`}
+                        {(isLifetime || r.subscription_type === 'ADMIN_GRANTED' || r.mandate_status === 'admin_granted' || Number(r.plan_price) === 0) ? '₹0/mo (VIP)' : `₹${r.plan_price || 999}/mo`}
                       </span>
                     </td>
                     <td>
@@ -139,7 +140,7 @@ export default function SubscriptionsView({ restaurants, onSelectTenant }) {
                 <StatusBadge status={r.subscription_status || (r.active !== false ? 'active' : 'expired')} type={r.subscription_type} />
               </div>
               <div style={{ fontSize: '0.8rem', color: 'var(--sa-text-muted)', marginBottom: '8px' }}>
-                Plan: <strong style={{ color: 'var(--sa-text-main)' }}>{(r.plan_tier || 'pro').toUpperCase()} ({r.subscription_type === 'ADMIN_GRANTED' ? '₹0/mo' : `₹${r.plan_price || 999}/mo`})</strong>
+                Plan: <strong style={{ color: 'var(--sa-text-main)' }}>{(r.plan_tier || 'pro').toUpperCase()} ({(isLifetime || r.subscription_type === 'ADMIN_GRANTED' || r.mandate_status === 'admin_granted' || Number(r.plan_price) === 0) ? '₹0/mo (VIP)' : `₹${r.plan_price || 999}/mo`})</strong>
               </div>
 
               {/* Scheduled Plan Change Block */}
